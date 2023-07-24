@@ -236,11 +236,13 @@ DoInvokeLog(TMap<FName, TFunction<void(const FString&)>>& InMap, FName InLogger,
         loggerToUse))
     { return; }
 
-    const auto& formatted = ck::Format_UE
-    (
-        TEXT("{}\n== CONTEXT:[{}] =="),
-        InMsg,
-        UCk_Utils_Debug_StackTrace_UE::Get_BlueprintContext()
-    );
+    // logging the context can be expensive and can optionally be turned off
+#if !CK_LOG_NO_CONTEXT
+    const auto& bpContext = UCk_Utils_Debug_StackTrace_UE::Get_BlueprintContext();
+    const auto& formatted = ck::Format_UE(TEXT("{}\n== CONTEXT:[{}] =="), InMsg, bpContext);
+#else
+    const auto& formatted = ck::Format_UE(TEXT("{}"), InMsg);
+#endif
+
     InMap[loggerToUse](formatted);
 }
