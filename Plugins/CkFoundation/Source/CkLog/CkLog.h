@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkLog_Utils.h"
+#include "CkLog/CkLog_Utils.h"
 
 #include <CoreMinimal.h>
 #include <Modules/ModuleManager.h>
