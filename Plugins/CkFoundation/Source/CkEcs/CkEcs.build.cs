@@ -1,12 +1,10 @@
-using System.IO;
+using System;
 using UnrealBuildTool;
 
-public class CkThirdParty : ModuleRules
+public class CkEcs : CkModuleRules
 {
-	public CkThirdParty(ReadOnlyTargetRules Target) : base(Target)
-	{
-		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-
+    public CkEcs(ReadOnlyTargetRules Target) : base(Target)
+    {
 		PublicIncludePaths.AddRange(
 			new string[] {
 				// ... add public include paths required here ...
@@ -25,6 +23,10 @@ public class CkThirdParty : ModuleRules
 			new string[]
 			{
 				"Core",
+
+				"CkThirdParty",
+				"CkCore",
+				"CkLog",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -38,17 +40,10 @@ public class CkThirdParty : ModuleRules
 				"Slate",
 				"SlateCore",
 				"GameplayTags",
-				"DeveloperSettings"
+				"DeveloperSettings",
+
 				// ... add private dependencies that you statically link with here ...
 			}
 			);
-
-
-		DynamicallyLoadedModuleNames.AddRange(
-			new string[]
-			{
-				// ... add any modules that your module loads dynamically here ...
-			}
-			);
-	}
+    }
 }
