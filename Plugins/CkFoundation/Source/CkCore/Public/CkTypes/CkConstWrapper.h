@@ -1,0 +1,72 @@
+#pragma once
+#include "CkTypeTraits/CkTypeTraits.h"
+
+namespace ck
+{
+    // Intended to be used in another class to force const-correctness on types
+    // that are stored as pointers
+    template <typename T_ComplexPtrType>
+    class FPtrWrapper
+    {
+    public:
+        using ValueType = T_ComplexPtrType;
+        using ThisType = typename type_traits::extract_value_type<T_ComplexPtrType>::type;
+
+    public:
+        FPtrWrapper();
+
+        template <typename... T_Args>
+        FPtrWrapper(T_Args&&... InArgs);
+
+    public:
+        auto operator->() -> ValueType&;
+        auto operator->() const -> const ValueType&;
+
+        auto operator*() -> ValueType&;
+        auto operator*() const -> const ValueType&;
+
+    private:
+        ValueType _Ptr;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_ComplexPtrType>
+    FPtrWrapper<T_ComplexPtrType>::FPtrWrapper()
+        :  _Ptr(std::move(type_traits::make_new_ptr<ValueType>{}()))
+    {
+    }
+
+    template <typename T_ComplexPtrType>
+    template <typename ... T_Args>
+    FPtrWrapper<T_ComplexPtrType>::FPtrWrapper(T_Args&&... InArgs)
+        :  _Ptr(std::move(type_traits::make_new_ptr<ValueType>{}(std::forward<T_Args>(InArgs)...)))
+    {
+    }
+
+    template <typename T_ComplexPtrType>
+    auto FPtrWrapper<T_ComplexPtrType>::operator->() -> ValueType&
+    {
+        return *_Ptr;
+    }
+
+    template <typename T_ComplexPtrType>
+    auto FPtrWrapper<T_ComplexPtrType>::operator->() const -> const ValueType&
+    {
+        return *_Ptr;
+    }
+
+    template <typename T_ComplexPtrType>
+    auto FPtrWrapper<T_ComplexPtrType>::operator*() -> ValueType&
+    {
+        return *_Ptr;
+    }
+
+    template <typename T_ComplexPtrType>
+    auto FPtrWrapper<T_ComplexPtrType>::operator*() const -> const ValueType&
+    {
+        return *_Ptr;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+}
