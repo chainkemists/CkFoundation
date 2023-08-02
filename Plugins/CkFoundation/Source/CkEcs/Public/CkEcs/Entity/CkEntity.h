@@ -84,9 +84,9 @@ CK_DEFINE_CUSTOM_FORMATTER(FCk_Entity, [&]()
     return ck::Format
     (
         TEXT("{}|{}({})"),
-        InObj.Get_ID(),
-        InObj.Get_EntityNumber(),
-        InObj.Get_VersionNumber()
+        static_cast<int32>(InObj.Get_ID()),
+        static_cast<int32>(InObj.Get_EntityNumber()),
+        static_cast<int32>(InObj.Get_VersionNumber())
     );
 });
 
