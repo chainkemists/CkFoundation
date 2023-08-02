@@ -10,7 +10,7 @@ namespace ck
     {
     public:
         using ValueType = T_ComplexPtrType;
-        using ThisType = typename type_traits::extract_value_type<T_ComplexPtrType>::type;
+        using StoredValueType = typename type_traits::extract_value_type<T_ComplexPtrType>::type;
 
     public:
         FPtrWrapper();
@@ -19,11 +19,11 @@ namespace ck
         FPtrWrapper(T_Args&&... InArgs);
 
     public:
-        auto operator->() -> ValueType&;
-        auto operator->() const -> const ValueType&;
+        auto operator->() -> StoredValueType*;
+        auto operator->() const -> const StoredValueType*;
 
-        auto operator*() -> ValueType&;
-        auto operator*() const -> const ValueType&;
+        auto operator*() -> StoredValueType&;
+        auto operator*() const -> const StoredValueType&;
 
     private:
         ValueType _Ptr;
@@ -45,25 +45,25 @@ namespace ck
     }
 
     template <typename T_ComplexPtrType>
-    auto FPtrWrapper<T_ComplexPtrType>::operator->() -> ValueType&
+    auto FPtrWrapper<T_ComplexPtrType>::operator->() -> StoredValueType*
+    {
+        return _Ptr.Get();
+    }
+
+    template <typename T_ComplexPtrType>
+    auto FPtrWrapper<T_ComplexPtrType>::operator->() const -> const StoredValueType*
+    {
+        return _Ptr.Get();
+    }
+
+    template <typename T_ComplexPtrType>
+    auto FPtrWrapper<T_ComplexPtrType>::operator*() -> StoredValueType&
     {
         return *_Ptr;
     }
 
     template <typename T_ComplexPtrType>
-    auto FPtrWrapper<T_ComplexPtrType>::operator->() const -> const ValueType&
-    {
-        return *_Ptr;
-    }
-
-    template <typename T_ComplexPtrType>
-    auto FPtrWrapper<T_ComplexPtrType>::operator*() -> ValueType&
-    {
-        return *_Ptr;
-    }
-
-    template <typename T_ComplexPtrType>
-    auto FPtrWrapper<T_ComplexPtrType>::operator*() const -> const ValueType&
+    auto FPtrWrapper<T_ComplexPtrType>::operator*() const -> const StoredValueType&
     {
         return *_Ptr;
     }

@@ -74,6 +74,7 @@ namespace ck
     }
 }
 
+// convenience macro to enable the validator to access private members of a class/struct
 #define CK_ENABLE_CUSTOM_VALIDATION()                 \
     template <typename T, typename T_Policy, typename>\
     friend class ck::IsValid_Executor
