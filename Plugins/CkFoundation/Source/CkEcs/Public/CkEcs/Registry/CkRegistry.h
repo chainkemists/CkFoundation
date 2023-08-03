@@ -24,11 +24,12 @@ struct CKECS_API FCk_Registry
 
 public:
     CK_GENERATED_BODY(FCk_Registry);
+    CK_ENABLE_CUSTOM_FORMATTER(FCk_Registry);
 
 public:
     using ThisType = FCk_Registry;
     using InternalRegistryType = entt::registry;
-
+    using InternalRegistryPtrType = TSharedPtr<InternalRegistryType>;
     using EntityType = FCk_Entity;
 
 public:
@@ -67,8 +68,21 @@ public:
     auto IsValid(EntityType InEntity) -> bool;
 
 private:
-    ck::FPtrWrapper<TUniquePtr<InternalRegistryType>> _InternalRegistry;
+    ck::TPtrWrapper<InternalRegistryPtrType> _InternalRegistry;
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_DEFINE_CUSTOM_FORMATTER(FCk_Registry, [&]()
+{
+    return ck::Format
+    (
+        TEXT("{}"), static_cast<void*>(*InObj._InternalRegistry)
+    );
+});
+
+// --------------------------------------------------------------------------------------------------------------------
+
 
 template <typename T_FragmentType, typename ... T_Args>
 auto FCk_Registry::Add(EntityType InEntity, T_Args&&... InArgs) -> TOptional<std::reference_wrapper<T_FragmentType>>
