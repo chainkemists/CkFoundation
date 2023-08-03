@@ -77,6 +77,12 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// convenience macro to enable the formatter to access private members of a class/struct
+#define CK_ENABLE_CUSTOM_FORMATTER(_Class_)                  \
+    friend struct fmt::formatter<_Class_, TCHAR>
+
+// --------------------------------------------------------------------------------------------------------------------
+
 #define CK_DEFINE_CUSTOM_FORMATTER_PTR_FORWARDER(_Type_, _LambdaToReturnInvalidObj_)\
 namespace ck { namespace ck_format_detail {                                         \
     inline auto&                                                                    \
