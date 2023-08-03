@@ -21,6 +21,9 @@ namespace ck::type_traits
     template <typename T>
     struct extract_value_type<TSharedPtr<T>> { using type = T; };
 
+    template <typename T>
+    struct extract_value_type<TSharedPtr<T, ESPMode::NotThreadSafe>> { using type = T; };
+
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T>
@@ -29,8 +32,6 @@ namespace ck::type_traits
     template <typename T>
     struct make_new_ptr<TSharedPtr<T>>
     {
-        using type = T;
-
         template <typename... T_Args>
         auto operator()(T_Args&&... InArgs)
         {
@@ -39,14 +40,54 @@ namespace ck::type_traits
     };
 
     template <typename T>
+    struct make_new_ptr<TSharedPtr<T, ESPMode::NotThreadSafe>>
+    {
+        template <typename... T_Args>
+        auto operator()(T_Args&&... InArgs)
+        {
+            return MakeShared<T, ESPMode::NotThreadSafe>(std::forward<T_Args>(InArgs)...);
+        }
+    };
+
+    template <typename T>
     struct make_new_ptr<TUniquePtr<T>>
     {
-        using type = T;
-
         template <typename... T_Args>
         auto operator()(T_Args&&... InArgs)
         {
             return MakeUnique<T>(std::forward<T_Args>(InArgs)...);
+        }
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T>
+    struct move_or_copy_ptr;
+
+    template <typename T>
+    struct move_or_copy_ptr<TSharedPtr<T>>
+    {
+        auto operator()(const TSharedPtr<T>& InPtr) -> TSharedPtr<T>
+        {
+            return InPtr;
+        }
+    };
+
+    template <typename T>
+    struct move_or_copy_ptr<TSharedPtr<T, ESPMode::NotThreadSafe>>
+    {
+        auto operator()(const TSharedPtr<T, ESPMode::NotThreadSafe>& InPtr) -> TSharedPtr<T, ESPMode::NotThreadSafe>
+        {
+            return InPtr;
+        }
+    };
+
+    template <typename T>
+    struct move_or_copy_ptr<TUniquePtr<T>>
+    {
+        auto operator()(const TUniquePtr<T>& InOther) -> TUniquePtr<T>
+        {
+            return std::move(InOther);
         }
     };
 }
