@@ -205,5 +205,8 @@ if (NOT CK_ENSURE(InExpression, InFormat, ##__VA_ARGS__))
 #define CK_ENSURE_FALSE(InString, ...)\
 CK_ENSURE(false, InString, ##__VA_ARGS__)
 
+#define CK_ENSURE_FALSE_IF(InExpression, InString, ...)\
+if (InExpression) { CK_ENSURE_FALSE(InString, ##__VA_ARGS__); }
+
 #define CK_INVALID_ENUM(InEnsure)\
 CK_ENSURE_FALSE(TEXT("Encountered an invalid value for Enum [{}]"), InEnsure)
