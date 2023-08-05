@@ -27,6 +27,9 @@ public:
     CK_ENABLE_CUSTOM_FORMATTER(FCk_Registry);
 
 public:
+    friend class UCk_Utils_EntityLifetime_UE;
+
+public:
     using ThisType = FCk_Registry;
     using InternalRegistryType = entt::registry;
     using InternalRegistryPtrType = TSharedPtr<InternalRegistryType>;
@@ -63,6 +66,11 @@ public:
 
     template <typename... T_Fragment>
     auto Has_All(EntityType InEntity) -> bool;
+
+private:
+    auto CreateEntity() -> EntityType;
+    auto CreateEntity(EntityType InEntityHint) -> EntityType;
+    auto DestroyEntity(EntityType InEntity) -> void;
 
 public:
     auto IsValid(EntityType InEntity) -> bool;
