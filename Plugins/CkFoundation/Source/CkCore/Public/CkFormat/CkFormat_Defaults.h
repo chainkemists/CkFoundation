@@ -196,3 +196,9 @@ CK_DEFINE_CUSTOM_FORMATTER_T(TOptional<T>, [&]()
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(EAppReturnType::Type);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+#include "ctti/type_id.hpp"
+CK_DEFINE_CUSTOM_FORMATTER(ctti::detail::cstring, [&]()
+{
+    return FString(InObj.size(), InObj.begin());
+});
