@@ -7,6 +7,18 @@ void foo()
     FCk_Registry r;
     FCk_Entity e;
     r.Add<int>(e);
+
+    struct EmptyStruct {};
+    struct Struct {int32 i;};
+
+    using FViewType = decltype(r.View<Struct , EmptyStruct, ck::TExclude<Struct>>());
+    using FComponentsAndTags = FViewType::FComponentsAndTags;
+    using FOnlyComponents = FViewType::FOnlyComponents;
+    using ExcludesOnly = FViewType::TComponentsOnly<Struct, EmptyStruct>;
+
+    r.View<int32, float>().Each([&](FCk_Entity, int32, float)
+    {
+    });
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -26,7 +38,7 @@ auto FCk_Registry::DestroyEntity(EntityType InEntity) -> void
     _InternalRegistry->destroy(InEntity.Get_ID());
 }
 
-auto FCk_Registry::IsValid(EntityType InEntity) -> bool
+auto FCk_Registry::IsValid(EntityType InEntity) const -> bool
 {
     return _InternalRegistry->valid(InEntity.Get_ID());
 }
