@@ -70,4 +70,15 @@ namespace ck
 
 #define CK_DEFINE_TYPEHASH(_type_) auto GetTypeHash(const _type_& InObj) -> uint32;
 
+// exposes a 'This' function for classes with static polymorphism
+#define CK_ENABLE_SFINAE_THIS(_DerivedType_)           \
+    auto This() -> _DerivedType_*                      \
+    {                                                  \
+        return static_cast<_DerivedType_*>(this);      \
+    }                                                  \
+    auto This() const -> const _DerivedType_*          \
+    {                                                  \
+        return static_cast<const _DerivedType_*>(this);\
+    }
+
 #define CK_INTENTIONALLY_EMPTY()
