@@ -8,14 +8,20 @@
 #include "CkEnsure/CkEnsure.h"
 
 #include "entt/entt.hpp"
-#include "ctti/type_id.hpp"
 
 #include "CkRegistry.generated.h"
 
-CK_DEFINE_CUSTOM_FORMATTER(ctti::detail::cstring, [&]()
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
 {
-    return FString(InObj.size(), InObj.begin());
-});
+    // this is equivalent to entt::exclude for use with FRegistry::TView<...>
+    // usage: Registry.View<CompA, CompB, TExclude<CompC>>().Each(...)
+    template <typename... T>
+    struct TExclude { using FValueType = entt::type_list<T...>; };
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
 struct CKECS_API FCk_Registry
@@ -36,6 +42,75 @@ public:
     using EntityType = FCk_Entity;
 
 public:
+    template <typename T_RegistryType, typename ... T_Components>
+    class TView
+    {
+    public:
+        template <typename T>
+        struct TIsEmpty { static constexpr auto value = std::is_empty_v<T>; };
+
+        template <typename T>
+        struct TIsEmpty<ck::TExclude<T>>{ static constexpr auto value = std::is_empty_v<T>; };
+
+        template <typename... T_Args>
+        struct TTypeOnly { using FTypeList = entt::type_list<T_Args...>; };
+
+        template <typename... T_Args>
+        struct TTypeOnly<ck::TExclude<T_Args>...> { using FTypeList = entt::type_list<T_Args...>; };
+
+        template <typename... T_Args>
+        using TTypeOnly_T = entt::type_list_cat_t<typename TTypeOnly<T_Args>::FTypeList...>;
+
+        template <typename T>
+        struct TIsExcluded : std::false_type { };
+
+        template <typename T>
+        struct TIsExcluded<ck::TExclude<T>> : std::true_type { };
+
+        template <typename... T_Args>
+        using TExcludesStripped = entt::type_list_cat_t<std::conditional_t<TIsExcluded<T_Args>::value, entt::type_list<>, TTypeOnly_T<T_Args>>...>;
+
+        template <typename... T_Args>
+        using TExcludesOnly = entt::type_list_cat_t<std::conditional_t<TIsExcluded<T_Args>::value, TTypeOnly_T<T_Args>, entt::type_list<>>...>;
+
+        template <typename... T_Args>
+        using TComponentsOnly = entt::type_list_cat_t<std::conditional_t<TIsExcluded<T_Args>::value || TIsEmpty<T_Args>::value, entt::type_list<>, TTypeOnly_T<T_Args>>...>;
+
+    public:
+        using FRegistryType = T_RegistryType;
+        using FComponentsAndTags = TExcludesStripped<T_Components...>;
+        using FOnlyExcludes = TExcludesOnly<T_Components...>;
+        using FOnlyComponents = TComponentsOnly<T_Components...>;
+
+    public:
+        explicit TView(FRegistryType& InRegistry)
+            : _Registry(InRegistry)
+        {
+        }
+
+        template <typename T_Func>
+        auto Each(T_Func InFunc)
+        {
+            DoEach(InFunc, FComponentsAndTags{}, FOnlyExcludes{}, FOnlyComponents{});
+        }
+
+    private:
+        template <typename T_Func, typename... T_ComponentsAndTags, typename... T_OnlyExcludes, typename... T_OnlyComponents>
+        auto DoEach(T_Func InFunc, entt::type_list<T_ComponentsAndTags...>, entt::type_list<T_OnlyExcludes...>, entt::type_list<T_OnlyComponents...>)
+        {
+            _Registry.template view<T_ComponentsAndTags...>(entt::exclude<T_OnlyExcludes...>).each(
+            [InFunc](const EntityType::IdType InEntityId, T_OnlyComponents&... InComponents)
+            {
+                const auto TypeSafeEntity = FCk_Entity{InEntityId};
+                InFunc(TypeSafeEntity, InComponents...);
+            });
+        }
+
+    private:
+        FRegistryType& _Registry;
+    };
+
+public:
     template <typename T_FragmentType, typename... T_Args>
     auto Add(EntityType InEntity, T_Args&&... InArgs) -> TOptional<std::reference_wrapper<T_FragmentType>>;
 
@@ -48,11 +123,14 @@ public:
     template <typename T_Fragment>
     auto Try_Remove(EntityType InEntity) -> void;
 
-    template <typename... T_Fragment>
-    auto View(EntityType InEntity);
+    template <typename... T_Fragments>
+    auto Clear() -> void;
 
-    template <typename... T_Fragment>
-    auto View(EntityType InEntity) const;
+    template <typename... T_Fragments>
+    auto View() -> TView<InternalRegistryType, T_Fragments...>;
+
+    template <typename... T_Fragments>
+    auto View() const -> TView<const InternalRegistryType, T_Fragments...>;
 
     template <typename T_Fragment, typename T_Compare>
     auto Sort(T_Compare InCompare) -> void;
@@ -73,7 +151,7 @@ private:
     auto DestroyEntity(EntityType InEntity) -> void;
 
 public:
-    auto IsValid(EntityType InEntity) -> bool;
+    auto IsValid(EntityType InEntity) const -> bool;
 
 private:
     ck::TPtrWrapper<InternalRegistryPtrType> _InternalRegistry;
@@ -85,7 +163,7 @@ CK_DEFINE_CUSTOM_FORMATTER(FCk_Registry, [&]()
 {
     return ck::Format
     (
-        TEXT("{}"), static_cast<void*>(*InObj._InternalRegistry)
+        TEXT("{}"), static_cast<const void*>(&*InObj._InternalRegistry)
     );
 });
 
@@ -136,14 +214,14 @@ template <typename T_Fragment>
 auto FCk_Registry::Remove(EntityType InEntity) -> void
 {
     CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to Add Fragment/Tag."), InEntity)
-    { return {}; }
+    { return; }
 
     CK_ENSURE_IF_NOT(Has<T_Fragment>(InEntity),
                      TEXT("Unable to Remove Fragment/Tag. Fragment/Tag [{}] does NOT exist in Entity [{}]."),
                      ctti::nameof<T_Fragment>(), InEntity)
-    { return {}; }
+    { return; }
 
-    _InternalRegistry->remove<T_Fragment>(InEntity);
+    _InternalRegistry->remove<T_Fragment>(InEntity.Get_ID());
 }
 
 template <typename T_Fragment>
@@ -155,16 +233,22 @@ auto FCk_Registry::Try_Remove(EntityType InEntity) -> void
     _InternalRegistry->remove<T_Fragment>(InEntity);
 }
 
-template <typename... T_Fragment>
-auto FCk_Registry::View(EntityType InEntity)
+template <typename ... T_Fragments>
+auto FCk_Registry::Clear() -> void
 {
-    return _InternalRegistry->view<T_Fragment...>(InEntity.Get_ID());
+    _InternalRegistry->clear<T_Fragments...>();
 }
 
-template <typename... T_Fragment>
-auto FCk_Registry::View(EntityType InEntity) const
+template <typename... T_Fragments>
+auto FCk_Registry::View() -> TView<InternalRegistryType, T_Fragments...>
 {
-    return _InternalRegistry->view<T_Fragment...>(InEntity.Get_ID());
+    return TView<InternalRegistryType, T_Fragments...>{*_InternalRegistry};
+}
+
+template <typename... T_Fragments>
+auto FCk_Registry::View() const -> TView<const InternalRegistryType, T_Fragments...>
+{
+    return TView<const InternalRegistryType, T_Fragments...>{*_InternalRegistry};
 }
 
 template <typename T_Fragment, typename T_Compare>
