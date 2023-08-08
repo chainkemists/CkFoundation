@@ -58,12 +58,26 @@ public:
     auto Has_All() -> bool;
 
 public:
-    auto IsValid() -> bool;
+    // FCk_Handle is a core concept of this architecture, we are taking some liberties
+    // with the operator overloading for the sake of improving readability. Overloading
+    // operators like this for non-core types is generally forbidden.
+    auto operator*() -> TOptional<FCk_Registry>;
+    auto operator*() const -> TOptional<FCk_Registry>;
+
+public:
+    auto IsValid() const -> bool;
 
 private:
     FEntityType _Entity;
     TOptional<FCk_Registry> _Registry;
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_DEFINE_CUSTOM_IS_VALID(FCk_Handle, ck::IsValid_Policy_Default, [&](const FCk_Handle& InHandle)
+{
+    return InHandle.IsValid();
+});
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -110,11 +124,11 @@ auto FCk_Handle::Remove() -> void
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to Remove Fragment [{}]. Handle [{}] does NOT have a valid Registry."),
         ctti::nameof_v<T_Fragment>, *this)
-    { return {}; }
+    { return; }
 
     CK_ENSURE_IF_NOT(IsValid(),
         TEXT("Unable to Remove Fragment [{}]. Handle [{}] does NOT have a valid Entity."), *this)
-    { return {}; }
+    { return; }
 
     return _Registry->Remove<T_Fragment>(_Entity);
 }
