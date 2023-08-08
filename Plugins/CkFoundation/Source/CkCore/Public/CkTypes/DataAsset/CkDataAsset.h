@@ -2,6 +2,7 @@
 
 #include "CkMacros/CkMacros.h"
 
+#include <Engine/DataAsset.h>
 #include <CoreMinimal.h>
 
 #include "CkDataAsset.generated.h"
