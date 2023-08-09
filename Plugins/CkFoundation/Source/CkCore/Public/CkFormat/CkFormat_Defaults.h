@@ -202,3 +202,38 @@ CK_DEFINE_CUSTOM_FORMATTER(ctti::detail::cstring, [&]()
 {
     return FString(InObj.size(), InObj.begin());
 });
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    // a simple class to standardize the way we print context
+    template <typename T>
+    struct FContext
+    {
+    public:
+        CK_ENABLE_CUSTOM_FORMATTER(FContext<T>);
+
+    public:
+        explicit FContext(T InContext)
+            : _Context(InContext)
+        {
+        }
+
+    private:
+        T _Context;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T>
+    auto Context(T InContext) -> FContext<T>
+    {
+        return FContext<T>{InContext};
+    }
+}
+
+CK_DEFINE_CUSTOM_FORMATTER_T(ck::FContext<T>, [&]()
+{
+    return ck::Format(TEXT("\nContext: [{}]"), InObj._Context);
+});
