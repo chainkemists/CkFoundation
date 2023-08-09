@@ -14,9 +14,11 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Entity_UE);
 
 private:
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Entity",
+        meta = (NativeBreakFunc))
     static void
-    Break_Entity(
-        FCk_Entity InEntity,
+    Break_Entity(FCk_Entity InEntity,
         int32& OutEntityID,
         int32& OutEntityNumber,
         int32& OutEntityVersion);
