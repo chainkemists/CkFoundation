@@ -98,4 +98,6 @@ namespace ck::policy
 {
     struct All {};
     struct Any {};
+
+    struct TransientPackage {};
 }
