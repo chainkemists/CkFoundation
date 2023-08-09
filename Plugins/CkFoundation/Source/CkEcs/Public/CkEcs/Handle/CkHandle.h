@@ -30,10 +30,10 @@ public:
 
 public:
     template <typename T_FragmentType, typename... T_Args>
-    auto Add(T_Args&&... InArgs) -> TOptional<std::reference_wrapper<T_FragmentType>>;
+    auto Add(T_Args&&... InArgs) -> T_FragmentType&;
 
     template <typename T_FragmentType, typename... T_Args>
-    auto Replace(T_Args&&... InArgs) -> TOptional<std::reference_wrapper<T_FragmentType>>;
+    auto Replace(T_Args&&... InArgs) -> T_FragmentType&;
 
     template <typename T_Fragment>
     auto Remove() -> void;
@@ -89,31 +89,43 @@ CK_DEFINE_CUSTOM_FORMATTER(FCk_Handle, [&]()
 // --------------------------------------------------------------------------------------------------------------------
 
 template <typename T_FragmentType, typename ... T_Args>
-auto FCk_Handle::Add(T_Args&&... InArgs) -> TOptional<std::reference_wrapper<T_FragmentType>>
+auto FCk_Handle::Add(T_Args&&... InArgs) -> T_FragmentType&
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to Add Fragment [{}]. Handle [{}] does NOT have a valid Registry."),
         ctti::nameof_v<T_FragmentType>, *this)
-    { return {}; }
+    {
+        static T_FragmentType INVALID_Fragment;
+        return INVALID_Fragment;
+    }
 
     CK_ENSURE_IF_NOT(IsValid(),
         TEXT("Unable to Add Fragment [{}]. Handle [{}] does NOT have a valid Entity."), *this)
-    { return {}; }
+    {
+        static T_FragmentType INVALID_Fragment;
+        return INVALID_Fragment;
+    }
 
     return _Registry->Add<T_FragmentType>(_Entity, std::forward<T_Args>(InArgs)...);
 }
 
 template <typename T_FragmentType, typename ... T_Args>
-auto FCk_Handle::Replace(T_Args&&... InArgs) -> TOptional<std::reference_wrapper<T_FragmentType>>
+auto FCk_Handle::Replace(T_Args&&... InArgs) -> T_FragmentType&
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to Replace Fragment [{}]. Handle [{}] does NOT have a valid Registry."),
         ctti::nameof_v<T_FragmentType>, *this)
-    { return {}; }
+    {
+        static T_FragmentType INVALID_Fragment;
+        return INVALID_Fragment;
+    }
 
     CK_ENSURE_IF_NOT(IsValid(),
         TEXT("Unable to Replace Fragment [{}]. Handle [{}] does NOT have a valid Entity."), *this)
-    { return {}; }
+    {
+        static T_FragmentType INVALID_Fragment;
+        return INVALID_Fragment;
+    }
 
     return _Registry->Replace<T_FragmentType>(_Entity, std::forward<T_Args>(InArgs)...);
 }

@@ -4,6 +4,7 @@
 
 void foo()
 {
+    // TODO: transfer to spec file and flesh out the tests
     FCk_Registry r;
     FCk_Entity e;
     r.Add<int>(e);
@@ -12,9 +13,9 @@ void foo()
     struct Struct {int32 i;};
 
     using FViewType = decltype(r.View<Struct , EmptyStruct, ck::TExclude<Struct>>());
-    using FComponentsAndTags = FViewType::FComponentsAndTags;
-    using FOnlyComponents = FViewType::FOnlyComponents;
-    using ExcludesOnly = FViewType::TComponentsOnly<Struct, EmptyStruct>;
+    using FComponentsAndTags = FViewType::FFragmentsAndTags;
+    using FOnlyComponents = FViewType::FOnlyFragments;
+    using ExcludesOnly = FViewType::TFragmentsOnly<Struct, EmptyStruct>;
 
     r.View<int32, float>().Each([&](FCk_Entity, int32, float)
     {
