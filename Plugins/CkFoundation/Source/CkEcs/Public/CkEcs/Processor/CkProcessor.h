@@ -47,7 +47,7 @@ namespace ck
     auto TProcessor<T_DerivedProcessor, T_Fragments...>::Tick(FTimeType InDeltaT) -> void
     {
         using FViewType = decltype(_Registry.View<T_Fragments...>());
-        using FComponentsOnly = typename FViewType::template TComponentsOnly<T_Fragments...>;
+        using FComponentsOnly = typename FViewType::template TFragmentsOnly<T_Fragments...>;
 
         DoTick(InDeltaT, FComponentsOnly{});
     }
