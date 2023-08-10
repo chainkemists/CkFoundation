@@ -4,6 +4,8 @@
 
 #include "CkMacros/CkMacros.h"
 
+#include "CkUnreal/Entity/CkUnrealEntity_Fragment_Params.h"
+
 #include "CkUnrealEntity_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
