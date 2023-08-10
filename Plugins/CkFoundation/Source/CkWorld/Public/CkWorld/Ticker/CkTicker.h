@@ -74,7 +74,7 @@ namespace ck
         _ProcessorsRegistry.Sort<T_Tickable>(
         [](const FEntityType InA, const FEntityType InB)
         {
-            InA < InB;
+            return InA < InB;
         });
     }
 

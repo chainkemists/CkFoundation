@@ -15,7 +15,7 @@ public:
     CK_GENERATED_BODY(ACk_World_Actor_UE);
 
 public:
-    friend class UCk_World_GameInstance_Subsystem_UE;
+    friend class UCk_EcsWorld_Subsystem_UE;
 
 public:
     using FEcsWorldType = ck::FEcsWorld;
