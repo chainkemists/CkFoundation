@@ -41,7 +41,8 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 template <typename T>
-auto UCk_Utils_Object_UE::Request_CloneObject(UObject* Outer, const T* InObjectToClone) -> T*
+auto UCk_Utils_Object_UE::
+Request_CloneObject(UObject* Outer, const T* InObjectToClone) -> T*
 {
     static_assert(NOT std::is_base_of_v<AActor, T>, "Request_CloneObject cannot be used on an AActor. Use Request_CloneActor instead");
 
@@ -60,7 +61,8 @@ auto UCk_Utils_Object_UE::Request_CloneObject(UObject* Outer, const T* InObjectT
 }
 
 template <typename T, typename T_Func>
-auto UCk_Utils_Object_UE::Request_CloneObject(UObject* Outer, const T* InObjectToClone,
+auto UCk_Utils_Object_UE::
+Request_CloneObject(UObject* Outer, const T* InObjectToClone,
     T_Func InPostClone) -> T*
 {
     auto NewObj = Request_CloneObject(Outer, InObjectToClone, [](T*){});
@@ -70,13 +72,15 @@ auto UCk_Utils_Object_UE::Request_CloneObject(UObject* Outer, const T* InObjectT
 }
 
 template <typename T>
-auto UCk_Utils_Object_UE::Request_CloneObject(const T* InObjectToClone) -> T*
+auto UCk_Utils_Object_UE::
+Request_CloneObject(const T* InObjectToClone, ck::policy::TransientPackage) -> T*
 {
     return Request_CloneObject(GetTransientPackage(), InObjectToClone);
 }
 
 template <typename T, typename T_Func>
-auto UCk_Utils_Object_UE::Request_CloneObject(const T* InObjectToClone, T_Func InPostClone) -> T*
+auto UCk_Utils_Object_UE::
+Request_CloneObject(const T* InObjectToClone, T_Func InPostClone, ck::policy::TransientPackage) -> T*
 {
     return Request_CloneObject(GetTransientPackage(), InObjectToClone, InPostClone);
 }
