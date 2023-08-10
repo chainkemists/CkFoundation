@@ -12,6 +12,11 @@ namespace ck
     {
     }
 
+    auto FCk_Processor_EntityLifetime_EntityJustCreated::Tick(FTimeType) -> void
+    {
+        _Registry.Clear<FCk_Tag_EntityJustCreated>();
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     auto FCk_Processor_EntityLifetime_TriggerDestroyEntity::Tick(FTimeType InDeltaT) -> void

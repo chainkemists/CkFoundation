@@ -11,11 +11,14 @@ namespace ck
     class CKLIFETIME_API FCk_Processor_EntityLifetime_EntityJustCreated
     {
     public:
-        using FTimeType = float;
+        using FTimeType = FCk_Time;
         using FRegistryType = FCk_Registry;
 
     public:
         explicit FCk_Processor_EntityLifetime_EntityJustCreated(const FRegistryType& InRegistry);
+
+    public:
+        auto Tick(FTimeType) -> void;
 
     private:
         FCk_Registry _Registry;
