@@ -8,9 +8,10 @@ namespace ck
     template <typename T_ComplexPtrType>
     class TPtrWrapper
     {
+        CK_GENERATED_BODY(TPtrWrapper<T_ComplexPtrType>);
+
     public:
         using ValueType = T_ComplexPtrType;
-        using ThisType = TPtrWrapper<ValueType>;
         using StoredValueType = typename type_traits::extract_value_type<T_ComplexPtrType>::type;
 
     public:
