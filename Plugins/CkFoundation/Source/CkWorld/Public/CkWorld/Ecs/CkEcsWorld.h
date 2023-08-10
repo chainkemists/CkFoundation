@@ -13,15 +13,16 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    class World : public ck::FTicker
+    class FEcsWorld : public ck::FTicker
     {
-        CK_GENERATED_BODY(World);
+        CK_GENERATED_BODY(FEcsWorld);
 
     private:
         FRegistryType _Registry;
 
     public:
         CK_PROPERTY_GET(_Registry);
+        CK_PROPERTY_GET_NON_CONST(_Registry);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
