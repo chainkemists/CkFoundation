@@ -1,4 +1,6 @@
 #pragma once
+#include "CkCore/Time/CkTime.h"
+
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Registry/CkRegistry.h"
 
@@ -12,7 +14,7 @@ namespace ck
 
     public:
         using FEntitType = FCk_Entity;
-        using FTimeType = float;
+        using FTimeType = FCk_Time;
         using FHandleType = FCk_Handle;
         using FRegistryType = FCk_Registry;
         using FDerivedType = T_DerivedProcessor;

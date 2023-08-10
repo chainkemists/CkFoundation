@@ -36,7 +36,6 @@ public:
     friend class UCk_Utils_EntityLifetime_UE;
 
 public:
-    using ThisType = FCk_Registry;
     using InternalRegistryType = entt::registry;
     using InternalRegistryPtrType = TSharedPtr<InternalRegistryType>;
     using EntityType = FCk_Entity;
