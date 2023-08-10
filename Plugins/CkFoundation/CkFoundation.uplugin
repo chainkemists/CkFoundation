@@ -13,10 +13,11 @@
 	"CanContainContent": true,
 	"IsBetaVersion": false,
 	"IsExperimentalVersion": false,
+	"EnabledByDefault": true,
 	"Installed": false,
 	"Modules": [
 		{
-			"Name": "CkThirdParty",
+			"Name": "CkCore",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
@@ -26,7 +27,17 @@
 			]
 		},
 		{
-			"Name": "CkCore",
+			"Name": "CkEcs",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
+			"Name": "CkLifetime",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
@@ -46,7 +57,7 @@
 			]
 		},
 		{
-			"Name": "CkEcs",
+			"Name": "CkSignal",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
@@ -54,6 +65,46 @@
 				"Mac",
 				"Linux"
 			]
-		}
+		},
+		{
+			"Name": "CkTemplate",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
+			"Name": "CkThirdParty",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
+			"Name": "CkUnreal",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
+			"Name": "CkWorld",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
 	]
 }
