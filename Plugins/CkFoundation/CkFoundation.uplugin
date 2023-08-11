@@ -17,6 +17,16 @@
 	"Installed": false,
 	"Modules": [
 		{
+			"Name": "CkActor",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
 			"Name": "CkCore",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
