@@ -19,7 +19,8 @@ public class CkWorld : CkModuleRules
             "CkEcs",
             "CkLog",
             "CkLifetime",
-            "CkUnreal"
+            "CkUnreal",
+            "CkActor"
         });
     }
 }
