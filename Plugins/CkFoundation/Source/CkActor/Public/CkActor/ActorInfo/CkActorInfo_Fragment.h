@@ -14,7 +14,7 @@ namespace ck
         CK_GENERATED_BODY(FCk_Fragment_ActorInfo_Params);
 
     public:
-        using ParamsType = FCk_Component_ActorInfo_ParamsData;
+        using ParamsType = FCk_Fragment_ActorInfo_ParamsData;
 
     public:
         FCk_Fragment_ActorInfo_Params() = default;
