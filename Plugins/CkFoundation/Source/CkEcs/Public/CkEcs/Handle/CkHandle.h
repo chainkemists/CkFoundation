@@ -57,6 +57,12 @@ public:
     template <typename... T_Fragment>
     auto Has_All() -> bool;
 
+    template <typename T_Fragment>
+    auto Get() -> T_Fragment&;
+
+    template <typename T_Fragment>
+    auto Get() const -> const T_Fragment&;
+
 public:
     // FCk_Handle is a core concept of this architecture, we are taking some liberties
     // with the operator overloading for the sake of improving readability. Overloading
@@ -198,7 +204,7 @@ auto FCk_Handle::Has_Any() -> bool
         TEXT("Unable to perform Has_Any query. Handle [{}] does NOT have a valid Registry."), *this)
     { return {}; }
 
-    return _Registry->Has<T_Fragment>(_Entity);
+    return _Registry->Has_Any<T_Fragment...>(_Entity);
 }
 
 template <typename ... T_Fragment>
@@ -208,7 +214,33 @@ auto FCk_Handle::Has_All() -> bool
         TEXT("Unable to perform Has_All query. Handle [{}] does NOT have a valid Registry."), *this)
     { return {}; }
 
-    return _Registry->Has<T_Fragment>(_Entity);
+    return _Registry->Has_All<T_Fragment...>(_Entity);
+}
+
+template <typename T_Fragment>
+auto FCk_Handle::Get() -> T_Fragment&
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
+        TEXT("Unable to Get fragment. Handle [{}] does NOT have a valid Registry."), *this)
+    {
+        static T_Fragment INVALID_Fragment;
+        return INVALID_Fragment;
+    }
+
+    return _Registry->Get<T_Fragment>(_Entity);
+}
+
+template <typename T_Fragment>
+auto FCk_Handle::Get() const -> const T_Fragment&
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
+        TEXT("Unable to Get fragment. Handle [{}] does NOT have a valid Registry."), *this)
+    {
+        static T_Fragment INVALID_Fragment;
+        return INVALID_Fragment;
+    }
+
+    return _Registry->Get<T_Fragment>(_Entity);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
