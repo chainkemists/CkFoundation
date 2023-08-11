@@ -144,6 +144,12 @@ public:
     template <typename... T_Fragment>
     auto Has_All(EntityType InEntity) -> bool;
 
+    template <typename T_Fragment>
+    auto Get(EntityType InEntity) -> T_Fragment&;
+
+    template <typename T_Fragment>
+    auto Get(EntityType InEntity) const -> const T_Fragment&;
+
 private:
     auto CreateEntity() -> EntityType;
     auto CreateEntity(EntityType InEntityHint) -> EntityType;
@@ -285,4 +291,32 @@ template <typename ... T_Fragment>
 auto FCk_Registry::Has_All(EntityType InEntity) -> bool
 {
     return _InternalRegistry->all_of<T_Fragment...>(InEntity.Get_ID());
+}
+
+template <typename T_Fragment>
+auto FCk_Registry::Get(EntityType InEntity) -> T_Fragment&
+{
+    CK_ENSURE_IF_NOT(Has<T_Fragment>(InEntity),
+                     TEXT("Unable to Get Fragment. Fragment [{}] does NOT exist in Entity [{}]."),
+                     ctti::nameof<T_Fragment>(), InEntity)
+    {
+        static T_Fragment INVALID_Fragment;
+        return INVALID_Fragment;
+    }
+
+    return _InternalRegistry->get<T_Fragment>(InEntity.Get_ID());
+}
+
+template <typename T_Fragment>
+auto FCk_Registry::Get(EntityType InEntity) const -> const T_Fragment&
+{
+    CK_ENSURE_IF_NOT(Has<T_Fragment>(InEntity),
+                     TEXT("Unable to Get Fragment. Fragment [{}] does NOT exist in Entity [{}]."),
+                     ctti::nameof<T_Fragment>(), InEntity)
+    {
+        static T_Fragment INVALID_Fragment;
+        return INVALID_Fragment;
+    }
+
+    return _InternalRegistry->get<T_Fragment>(InEntity.Get_ID());
 }
