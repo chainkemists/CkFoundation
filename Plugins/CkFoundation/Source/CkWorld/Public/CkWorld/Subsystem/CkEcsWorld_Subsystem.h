@@ -37,12 +37,12 @@ private:
     UPROPERTY(EditDefaultsOnly, meta = (AllowPrivateAccess = true))
     TEnumAsByte<ETickingGroup> _TickingGroup = TG_PrePhysics;
 
+    UPROPERTY(BlueprintReadOnly, Transient, meta = (AllowPrivateAccess = true))
+    FCk_Handle _TransientEntity;
+
     UPROPERTY(Transient)
     TObjectPtr<class ACk_World_Actor_UE> _WorldActor = nullptr;
 
-private:
-    static FCk_Handle _TransientEntity;
-
 public:
-    CK_PROPERTY_GET_STATIC(_TransientEntity);
+    CK_PROPERTY_GET(_TransientEntity);
 };
