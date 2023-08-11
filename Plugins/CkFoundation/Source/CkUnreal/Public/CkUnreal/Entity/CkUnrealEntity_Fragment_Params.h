@@ -78,6 +78,11 @@ private:
               meta = (AllowPrivateAccess = true))
     const UCk_UnrealEntity_Base_PDA* _UnrealEntity = nullptr;
 
+    // TODO:
+    // - add an owner
+    // - then, in the construction script, have an enum REMOTE, LOCAL, ALL
+    // - call the construction script for ALL and then for REMOTE and LOCAL
+
 private:
     PostSpawnFunc _PostSpawnFunc = [](const FCk_Handle&){};
 

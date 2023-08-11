@@ -12,6 +12,7 @@
 ACk_UnrealEntity_ActorProxy_UE::
 ACk_UnrealEntity_ActorProxy_UE()
 {
+    bReplicates = true;
 #if WITH_EDITORONLY_DATA
     _ChildActorComponent = CreateEditorOnlyDefaultSubobject<UChildActorComponent>(TEXT("Proxy Actor Comp"));
 #endif
@@ -82,6 +83,7 @@ BeginPlay() -> void
     { return; }
 
     UnrealEntityWithActor->_EntityInitialTransform = GetActorTransform();
+    UnrealEntityWithActor->_Owner = this;
 
     const auto& PostSpawnFunc = [this](const FCk_Handle& InCreatedEntity)
     {
