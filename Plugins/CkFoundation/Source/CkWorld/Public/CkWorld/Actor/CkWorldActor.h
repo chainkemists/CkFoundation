@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkWorld/Public/CkWorld/CkWorld.h"
+#include "CkWorld/Public/CkWorld/Ecs/CkEcsWorld.h"
 
 #include "CkWorldActor.generated.h"
 
