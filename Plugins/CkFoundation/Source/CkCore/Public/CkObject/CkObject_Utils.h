@@ -7,6 +7,46 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_Utils_Object_CopyAllProperties_Result : uint8
+{
+    Failed   ,
+    Succeeded,
+    AllPropertiesIdentical
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Utils_Object_CopyAllProperties_Result);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct FCk_Utils_Object_CopyAllProperties_Params
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Utils_Object_CopyAllProperties_Params);
+
+public:
+    FCk_Utils_Object_CopyAllProperties_Params() = default;
+    FCk_Utils_Object_CopyAllProperties_Params(
+        TObjectPtr<UObject> InDestination,
+        TObjectPtr<UObject> InSource);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    TObjectPtr<UObject>        _Destination  = nullptr;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    TObjectPtr<UObject>        _Source = nullptr;
+
+public:
+    CK_PROPERTY_GET(_Destination);
+    CK_PROPERTY_GET(_Source);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable)
 class CKCORE_API UCk_Utils_Object_UE : public UBlueprintFunctionLibrary
 {
@@ -35,6 +75,21 @@ public:
     static auto
     Request_CloneObject(const T* InObjectToClone,
         T_Func InPostClone, ck::policy::TransientPackage) -> T*;
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Object")
+    static ECk_Utils_Object_CopyAllProperties_Result
+    Request_CopyAllProperties(
+        const FCk_Utils_Object_CopyAllProperties_Params& InParams);
+
+public:
+    // Unreal prefixes some classes with REINST_. This is because REINST_ is a newer version of a static class.
+    // This function gets the most up to date default class.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Object")
+    static UClass*
+    Get_DefaultClass_UpToDate(
+        UClass* InClass);
 
 };
 
