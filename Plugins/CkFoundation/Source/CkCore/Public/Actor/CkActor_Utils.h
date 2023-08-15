@@ -5,6 +5,7 @@
 
 #include <CoreMinimal.h>
 #include <Kismet/BlueprintFunctionLibrary.h>
+#include <Kismet/GameplayStatics.h>
 
 #include "CkActor.h"
 
@@ -35,18 +36,10 @@ public:
 
 public:
     FCk_Utils_Actor_SpawnActor_Params() = default;
-    FCk_Utils_Actor_SpawnActor_Params(
-        AActor* InOwner,
-        TSubclassOf<AActor> InActorClass,
-        AActor* InArchetype,
-        FTransform InSpawnTransform,
-        ESpawnActorCollisionHandlingMethod InCollisionHandlingOverride,
-        ECk_Actor_NetworkingType InNetworkingType,
-        ECk_Utils_Actor_SpawnActorPolicy InSpawnPolicy);
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    TWeakObjectPtr<AActor>                               _Owner;
+    TWeakObjectPtr<UObject>                              _OwnerOrWorld;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     TSubclassOf<AActor>                                  _ActorClass;
@@ -67,13 +60,13 @@ protected:
     ECk_Utils_Actor_SpawnActorPolicy                     _SpawnPolicy               = ECk_Utils_Actor_SpawnActorPolicy::Default;
 
 public:
-    CK_PROPERTY_GET(_Owner);
-    CK_PROPERTY_GET(_ActorClass);
-    CK_PROPERTY_GET(_Archetype);
-    CK_PROPERTY_GET(_SpawnTransform);
-    CK_PROPERTY_GET(_CollisionHandlingOverride);
-    CK_PROPERTY_GET(_NetworkingType);
-    CK_PROPERTY_GET(_SpawnPolicy);
+    CK_PROPERTY(_OwnerOrWorld);
+    CK_PROPERTY(_ActorClass);
+    CK_PROPERTY(_Archetype);
+    CK_PROPERTY(_SpawnTransform);
+    CK_PROPERTY(_CollisionHandlingOverride);
+    CK_PROPERTY(_NetworkingType);
+    CK_PROPERTY(_SpawnPolicy);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -128,21 +121,21 @@ private:
             TObjectPtr<AActor> InArchetype,
             const FTransform& InSpawnTransform,
             ESpawnActorCollisionHandlingMethod InCollisionHandlingOverride,
-            TObjectPtr<AActor> InOwner);
+            TObjectPtr<UObject> InOwnerOrWorld);
 
     private:
         TSubclassOf<AActor>                _ActorClass;
         TObjectPtr<AActor>                 _Archetype = nullptr;
         FTransform                         _SpawnTransform;
         ESpawnActorCollisionHandlingMethod _CollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::Undefined;
-        TObjectPtr<AActor>                 _Owner = nullptr;
+        TObjectPtr<UObject>                 _OwnerOrWorld = nullptr;
 
     public:
         CK_PROPERTY_GET(_ActorClass);
         CK_PROPERTY_GET(_Archetype);
         CK_PROPERTY_GET(_SpawnTransform);
         CK_PROPERTY_GET(_CollisionHandlingOverride);
-        CK_PROPERTY_GET(_Owner);
+        CK_PROPERTY_GET(_OwnerOrWorld);
     };
 
 public:
@@ -163,22 +156,63 @@ public:
         ECk_Utils_Actor_SpawnActorPolicy InSpawnPolicy);
 
 public:
-    // TODO: Improve this function to 1) take a templated Actor type, 2) Optionally work without an Owner (but also NOT require a level script actor)
-    static auto Request_SpawnActor(const SpawnActorParamsType& InSpawnActorParams, const TFunction<void (AActor*)>& InPreFinishSpawningFunc = nullptr) -> AActor*;
+    static auto Request_SpawnActor(
+        const SpawnActorParamsType& InSpawnActorParams,
+        const TFunction<void (AActor*)>& InPreFinishSpawningFunc = nullptr) -> AActor*;
+
+    template <typename T_ActorType>
+    static auto Request_SpawnActor(
+        SpawnActorParamsType InSpawnActorParams,
+        const TFunction<void (T_ActorType*)>& InPreFinishSpawningFunc = nullptr) -> T_ActorType*;
 
 public:
     template <typename T_CompType>
-    static auto Request_AddNewActorComponent(const AddNewActorComponent_Params<T_CompType>& InParams, TFunction<void (T_CompType*)> InInitializerFunc = nullptr) -> T_CompType*;
+    static auto Request_AddNewActorComponent(
+        const AddNewActorComponent_Params<T_CompType>& InParams,
+        TFunction<void (T_CompType*)> InInitializerFunc = nullptr) -> T_CompType*;
 
 private:
-    static auto DoRequest_BeginDeferredSpawnActor(const DeferredSpawnActor_Params& InDeferredSpawnActorParams) -> AActor*;
-    static auto DoRequest_SpawnActor_Begin(const SpawnActorParamsType& InSpawnActorParams) -> AActor*;
-    static auto DoRequest_SpawnActor_Finish(const SpawnActorParamsType& InSpawnActorParams, AActor* InNewlySpawnedActor) -> AActor*;
-    static auto DoRequest_CopyAllActorComponentProperties(AActor* InSourceActor, AActor* InDestinationActor) -> void;
+    static auto DoRequest_BeginDeferredSpawnActor(
+        const DeferredSpawnActor_Params& InDeferredSpawnActorParams) -> AActor*;
+
+    static auto DoRequest_SpawnActor_Begin(
+        const SpawnActorParamsType& InSpawnActorParams) -> AActor*;
+
+    static auto DoRequest_SpawnActor_Finish(
+        const SpawnActorParamsType& InSpawnActorParams,
+        AActor* InNewlySpawnedActor) -> AActor*;
+
+    static auto DoRequest_CopyAllActorComponentProperties(
+        AActor* InSourceActor,
+        AActor* InDestinationActor) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 // Definitions
+
+template <typename T_ActorType>
+auto
+    UCk_Utils_Actor_UE::
+    Request_SpawnActor(
+        SpawnActorParamsType InSpawnActorParams,
+        const TFunction<void(T_ActorType*)>& InPreFinishSpawningFunc) -> T_ActorType*
+{
+    auto InValue = T_ActorType::StaticClass();
+    const auto& spawnedActor = Cast<T_ActorType>(DoRequest_SpawnActor_Begin(InSpawnActorParams.Set_ActorClass(InValue)));
+
+    if (ck::Is_NOT_Valid(spawnedActor))
+    { return {}; }
+
+    if (InPreFinishSpawningFunc)
+    {
+        InPreFinishSpawningFunc(spawnedActor);
+    }
+
+    return Cast<T_ActorType>(DoRequest_SpawnActor_Finish(InSpawnActorParams, spawnedActor));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 
 template <typename T_CompType>
 UCk_Utils_Actor_UE::AddNewActorComponent_Params<T_CompType>::

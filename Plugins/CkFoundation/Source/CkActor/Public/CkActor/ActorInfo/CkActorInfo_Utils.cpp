@@ -47,16 +47,13 @@ auto
         );
     };
 
-    const auto& spawnActorParams = FCk_Utils_Actor_SpawnActor_Params
-    {
-        InParams.Get_Owner(),
-        actorToSpawn,
-        nullptr,
-        actorSpawnTransform,
-        ESpawnActorCollisionHandlingMethod::AlwaysSpawn,
-        InParams.Get_NetworkingType(),
-        ECk_Utils_Actor_SpawnActorPolicy::Default,
-    };
+    const auto& spawnActorParams = FCk_Utils_Actor_SpawnActor_Params{}
+        .Set_OwnerOrWorld(InParams.Get_Owner())
+        .Set_ActorClass(InParams.Get_ActorClass())
+        .Set_SpawnTransform(actorSpawnTransform)
+        .Set_CollisionHandlingOverride(ESpawnActorCollisionHandlingMethod::AlwaysSpawn)
+        .Set_NetworkingType(InParams.Get_NetworkingType())
+        .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::Default);
 
     UCk_Utils_ActorModifier_UE::Request_SpawnActor
     (
