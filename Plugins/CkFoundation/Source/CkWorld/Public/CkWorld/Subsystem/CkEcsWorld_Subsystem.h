@@ -4,6 +4,8 @@
 
 #include "CkWorld/Public/CkWorld/Ecs/CkEcsWorld.h"
 
+#include <Subsystems/WorldSubsystem.h>
+
 #include "CkEcsWorld_Subsystem.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
