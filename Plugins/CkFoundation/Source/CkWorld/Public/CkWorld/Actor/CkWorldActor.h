@@ -2,6 +2,8 @@
 
 #include "CkWorld/Public/CkWorld/Ecs/CkEcsWorld.h"
 
+#include <GameFramework/Info.h>
+
 #include "CkWorldActor.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
