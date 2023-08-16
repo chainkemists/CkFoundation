@@ -20,10 +20,9 @@ namespace ck
         using FDerivedType = T_DerivedProcessor;
 
     public:
-        explicit TProcessor(const FRegistryType& InRegistry);
+        explicit TProcessor(FRegistryType InRegistry);
 
     public:
-        // TODO: replace InDeltaT with type-safe Time once ready
         auto Tick(FTimeType InDeltaT) -> void;
 
     private:
@@ -40,7 +39,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename ... T_Fragments>
-    TProcessor<T_DerivedProcessor, T_Fragments...>::TProcessor(const FRegistryType& InRegistry)
+    TProcessor<T_DerivedProcessor, T_Fragments...>::TProcessor(FRegistryType InRegistry)
         : _Registry(InRegistry)
     {
     }
