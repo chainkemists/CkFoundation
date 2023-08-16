@@ -47,9 +47,7 @@ auto
         );
     };
 
-    const auto& spawnActorParams = FCk_Utils_Actor_SpawnActor_Params{}
-        .Set_OwnerOrWorld(InParams.Get_Owner())
-        .Set_ActorClass(InParams.Get_ActorClass())
+    const auto& spawnActorParams = FCk_Utils_Actor_SpawnActor_Params{InParams.Get_Owner(), InParams.Get_ActorClass()}
         .Set_SpawnTransform(actorSpawnTransform)
         .Set_CollisionHandlingOverride(ESpawnActorCollisionHandlingMethod::AlwaysSpawn)
         .Set_NetworkingType(InParams.Get_NetworkingType())

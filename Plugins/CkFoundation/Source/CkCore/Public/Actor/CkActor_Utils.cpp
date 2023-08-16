@@ -14,13 +14,24 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+FCk_Utils_Actor_SpawnActor_Params::
+FCk_Utils_Actor_SpawnActor_Params(
+    TWeakObjectPtr<UObject> InOwnerOrWorld,
+    TSubclassOf<AActor> InActorClass)
+    :_OwnerOrWorld(std::move(InOwnerOrWorld))
+    , _ActorClass(InActorClass)
+{
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCk_Utils_Actor_UE::DeferredSpawnActor_Params::
-    DeferredSpawnActor_Params(
-        const TSubclassOf<AActor> InActorClass,
-        const TObjectPtr<AActor> InArchetype,
-        const FTransform& InSpawnTransform,
-        const ESpawnActorCollisionHandlingMethod InCollisionHandlingOverride,
-        TObjectPtr<UObject> InOwnerOrWorld)
+DeferredSpawnActor_Params(
+    const TSubclassOf<AActor> InActorClass,
+    const TObjectPtr<AActor> InArchetype,
+    const FTransform& InSpawnTransform,
+    const ESpawnActorCollisionHandlingMethod InCollisionHandlingOverride,
+    TObjectPtr<UObject> InOwnerOrWorld)
     : _ActorClass(InActorClass)
     , _Archetype(InArchetype)
     , _SpawnTransform(InSpawnTransform)
@@ -74,9 +85,7 @@ auto
 
     return Request_SpawnActor
     (
-        SpawnActorParamsType{}
-        .Set_ActorClass(InActorToClone->GetClass())
-        .Set_OwnerOrWorld(InOwner)
+        SpawnActorParamsType{InOwner, InActorToClone->GetClass()}
         .Set_Archetype(InActorToClone)
         .Set_SpawnTransform(FTransform::Identity)
         .Set_CollisionHandlingOverride(InCollisionHandlingOverride)
