@@ -35,8 +35,7 @@ DoSpawnWorldActor() -> void
 {
     _WorldActor = UCk_Utils_Actor_UE::Request_SpawnActor<ACk_World_Actor_UE>
     (
-        FCk_Utils_Actor_SpawnActor_Params{}
-        .Set_OwnerOrWorld(GetWorld())
+        FCk_Utils_Actor_SpawnActor_Params{GetWorld(), ACk_World_Actor_UE::StaticClass()}
         .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel),
         [&](ACk_World_Actor_UE* InActor)
         {

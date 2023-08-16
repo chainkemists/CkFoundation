@@ -36,6 +36,7 @@ public:
 
 public:
     FCk_Utils_Actor_SpawnActor_Params() = default;
+    explicit FCk_Utils_Actor_SpawnActor_Params(TWeakObjectPtr<UObject> InOwnerOrWorld, TSubclassOf<AActor> InActorClass);
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -60,8 +61,9 @@ protected:
     ECk_Utils_Actor_SpawnActorPolicy                     _SpawnPolicy               = ECk_Utils_Actor_SpawnActorPolicy::Default;
 
 public:
-    CK_PROPERTY(_OwnerOrWorld);
-    CK_PROPERTY(_ActorClass);
+    CK_PROPERTY_GET(_OwnerOrWorld);
+    CK_PROPERTY_GET(_ActorClass);
+
     CK_PROPERTY(_Archetype);
     CK_PROPERTY(_SpawnTransform);
     CK_PROPERTY(_CollisionHandlingOverride);
@@ -198,17 +200,17 @@ auto
         const TFunction<void(T_ActorType*)>& InPreFinishSpawningFunc) -> T_ActorType*
 {
     auto InValue = T_ActorType::StaticClass();
-    const auto& spawnedActor = Cast<T_ActorType>(DoRequest_SpawnActor_Begin(InSpawnActorParams.Set_ActorClass(InValue)));
+    const auto& SpawnedActor = Cast<T_ActorType>(DoRequest_SpawnActor_Begin(InSpawnActorParams));
 
-    if (ck::Is_NOT_Valid(spawnedActor))
+    if (ck::Is_NOT_Valid(SpawnedActor))
     { return {}; }
 
     if (InPreFinishSpawningFunc)
     {
-        InPreFinishSpawningFunc(spawnedActor);
+        InPreFinishSpawningFunc(SpawnedActor);
     }
 
-    return Cast<T_ActorType>(DoRequest_SpawnActor_Finish(InSpawnActorParams, spawnedActor));
+    return Cast<T_ActorType>(DoRequest_SpawnActor_Finish(InSpawnActorParams, SpawnedActor));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
