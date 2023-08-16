@@ -136,13 +136,13 @@ public:
 
 public:
     template <typename T_Fragment>
-    auto Has(EntityType InEntity) -> bool;
+    auto Has(EntityType InEntity) const -> bool;
 
     template <typename... T_Fragment>
-    auto Has_Any(EntityType InEntity) -> bool;
+    auto Has_Any(EntityType InEntity) const -> bool;
 
     template <typename... T_Fragment>
-    auto Has_All(EntityType InEntity) -> bool;
+    auto Has_All(EntityType InEntity) const -> bool;
 
     template <typename T_Fragment>
     auto Get(EntityType InEntity) -> T_Fragment&;
@@ -276,19 +276,19 @@ auto FCk_Registry::Sort(T_Compare InCompare) -> void
 }
 
 template <typename T_Fragment>
-auto FCk_Registry::Has(EntityType InEntity) -> bool
+auto FCk_Registry::Has(EntityType InEntity) const -> bool
 {
     return _InternalRegistry->any_of<T_Fragment>(InEntity.Get_ID());
 }
 
 template <typename ... T_Fragment>
-auto FCk_Registry::Has_Any(EntityType InEntity) -> bool
+auto FCk_Registry::Has_Any(EntityType InEntity) const -> bool
 {
     return _InternalRegistry->any_of<T_Fragment...>(InEntity.Get_ID());
 }
 
 template <typename ... T_Fragment>
-auto FCk_Registry::Has_All(EntityType InEntity) -> bool
+auto FCk_Registry::Has_All(EntityType InEntity) const -> bool
 {
     return _InternalRegistry->all_of<T_Fragment...>(InEntity.Get_ID());
 }

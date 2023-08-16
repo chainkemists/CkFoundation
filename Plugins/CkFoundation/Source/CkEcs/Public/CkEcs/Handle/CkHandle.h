@@ -49,13 +49,13 @@ public:
 
 public:
     template <typename T_Fragment>
-    auto Has() -> bool;
+    auto Has() const -> bool;
 
     template <typename... T_Fragment>
-    auto Has_Any() -> bool;
+    auto Has_Any() const -> bool;
 
     template <typename... T_Fragment>
-    auto Has_All() -> bool;
+    auto Has_All() const -> bool;
 
     template <typename T_Fragment>
     auto Get() -> T_Fragment&;
@@ -187,7 +187,7 @@ auto FCk_Handle::View() const
 }
 
 template <typename T_Fragment>
-auto FCk_Handle::Has() -> bool
+auto FCk_Handle::Has() const -> bool
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to perform Has query with Fragment [{}]. Handle [{}] does NOT have a valid Registry."),
@@ -198,7 +198,7 @@ auto FCk_Handle::Has() -> bool
 }
 
 template <typename ... T_Fragment>
-auto FCk_Handle::Has_Any() -> bool
+auto FCk_Handle::Has_Any() const -> bool
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to perform Has_Any query. Handle [{}] does NOT have a valid Registry."), *this)
@@ -208,7 +208,7 @@ auto FCk_Handle::Has_Any() -> bool
 }
 
 template <typename ... T_Fragment>
-auto FCk_Handle::Has_All() -> bool
+auto FCk_Handle::Has_All() const -> bool
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to perform Has_All query. Handle [{}] does NOT have a valid Registry."), *this)
