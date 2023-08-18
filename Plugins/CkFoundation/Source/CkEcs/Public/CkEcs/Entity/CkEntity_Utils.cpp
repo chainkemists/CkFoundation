@@ -4,7 +4,7 @@
 
 auto
 UCk_Utils_Entity_UE::
-Break_Entity(FCk_Entity InEntity,
+Break_Entity(const FCk_Entity& InEntity,
     int32& OutEntityID,
     int32& OutEntityNumber,
     int32& OutEntityVersion)

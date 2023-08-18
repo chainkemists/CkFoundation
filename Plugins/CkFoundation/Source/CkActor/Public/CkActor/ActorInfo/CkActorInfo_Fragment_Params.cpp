@@ -1,5 +1,7 @@
 #include "CkActorInfo_Fragment_Params.h"
 
+#include "Net/UnrealNetwork.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 FCk_Fragment_ActorInfo_ParamsData::
@@ -13,6 +15,31 @@ FCk_Fragment_ActorInfo_ParamsData::
     , _Owner(InOwner)
     , _NetworkingType(InNetworkingType)
 {
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCk_ActorInfo_ActorComponent_UE::UCk_ActorInfo_ActorComponent_UE()
+{
+    SetIsReplicated(true);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto UCk_EcsBootstrapper_Base_UE::
+    OnRep_AssociatedActor(AActor* InActor)
+    -> void
+{
+}
+
+auto UCk_EcsBootstrapper_Base_UE::
+    GetLifetimeReplicatedProps(
+        TArray<FLifetimeProperty>& OutLifetimeProps) const
+    -> void
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME_CONDITION_NOTIFY(ThisType, _AssociatedActor, COND_None, REPNOTIFY_Always);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -35,3 +35,9 @@ Request_CreateEntity(RegistryType& InRegistry,
 
     return HandleType{ NewEntity, InRegistry };
 }
+
+auto UCk_Utils_EntityLifetime_UE::
+Get_TransientEntity(RegistryType& InRegistry) -> HandleType
+{
+    return HandleType{InRegistry._TransientEntity, InRegistry};
+}

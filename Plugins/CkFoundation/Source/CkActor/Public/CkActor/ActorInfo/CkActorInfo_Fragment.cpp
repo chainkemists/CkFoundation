@@ -19,6 +19,15 @@ namespace ck
         : _EntityActor(InEntityActor)
     {
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+
+    FCk_Fragment_OwningActor::FCk_Fragment_OwningActor(AActor* InOwningActor, UCk_EcsBootstrapper_Base_UE* InBootstrapper)
+        : _OwningActor(InOwningActor)
+        , _Bootstrapper(InBootstrapper)
+    {
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

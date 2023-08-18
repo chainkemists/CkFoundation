@@ -2,6 +2,8 @@
 
 #include "Actor/CkActor.h"
 
+#include "CkCore/ObjectReplication/CkReplicatedObject.h"
+
 #include "CkEcs/Handle/CkHandle.h"
 
 #include "CkMacros/CkMacros.h"
@@ -95,16 +97,48 @@ class CKACTOR_API UCk_ActorInfo_ActorComponent_UE
     GENERATED_BODY()
 
 public:
+    UCk_ActorInfo_ActorComponent_UE();
+
+public:
     CK_GENERATED_BODY(UCk_ActorInfo_ActorComponent_UE);
 
 public:
     friend class UCk_Utils_ActorInfo_UE;
+    friend class ACk_UnrealEntity_ActorProxy_UE;
 
 private:
     FCk_Handle _EntityHandle;
 
 public:
     CK_PROPERTY_GET(_EntityHandle);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintType, NotBlueprintable)
+class CKACTOR_API UCk_EcsBootstrapper_Base_UE
+    : public UCk_ReplicatedObject
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_EcsBootstrapper_Base_UE);
+
+public:
+    friend class UCk_Utils_ActorInfo_UE;
+
+public:
+    UFUNCTION()
+    virtual void OnRep_AssociatedActor(AActor* InActor);
+
+    virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
+
+private:
+    UPROPERTY(ReplicatedUsing = OnRep_AssociatedActor)
+    AActor* _AssociatedActor = nullptr;
+
+public:
+    CK_PROPERTY_GET(_AssociatedActor);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

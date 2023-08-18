@@ -94,7 +94,8 @@ public:
         using CompClassType = TSubclassOf<T_CompType>;
 
     public:
-        AddNewActorComponent_Params(AActor* InTargetActor, CompClassType InCompClass, bool InIsUnique = true);
+        AddNewActorComponent_Params(AActor* InTargetActor, bool InIsUnique = true);
+        AddNewActorComponent_Params(AActor* InTargetActor, bool InIsUnique, USceneComponent* InParent, FName InSocket);
         AddNewActorComponent_Params(AActor* InTargetActor, CompClassType InCompClass, bool InIsUnique, USceneComponent* InParent, FName InSocket);
 
     private:
@@ -220,9 +221,8 @@ template <typename T_CompType>
 UCk_Utils_Actor_UE::AddNewActorComponent_Params<T_CompType>::
     AddNewActorComponent_Params(
         AActor* InTargetActor,
-        CompClassType InCompClass,
         bool InIsUnique)
-    : ThisType(InTargetActor, InCompClass, InIsUnique, ck::IsValid(InTargetActor) ? InTargetActor->GetRootComponent() : nullptr, NAME_None)
+    : ThisType(InTargetActor, InIsUnique, ck::IsValid(InTargetActor) ? InTargetActor->GetRootComponent() : nullptr, NAME_None)
 {
 }
 
@@ -230,10 +230,16 @@ template <typename T_CompType>
 UCk_Utils_Actor_UE::AddNewActorComponent_Params<T_CompType>::
     AddNewActorComponent_Params(
         AActor* InTargetActor,
-        CompClassType InCompClass,
         bool InIsUnique,
         USceneComponent* InParent,
         FName InSocket)
+    : ThisType(InTargetActor, T_CompType::StaticClass(), InIsUnique, InParent, InSocket)
+{
+}
+
+template <typename T_CompType>
+UCk_Utils_Actor_UE::AddNewActorComponent_Params<T_CompType>::AddNewActorComponent_Params(AActor* InTargetActor,
+    CompClassType InCompClass, bool InIsUnique, USceneComponent* InParent, FName InSocket)
     : _Owner(InTargetActor)
     , _ParentComp(InParent)
     , _CompClass(InCompClass)
@@ -266,7 +272,7 @@ auto
         { return nullptr; }
     }
 
-    auto* Comp = NewObject<T_CompType>(InParams.Get_Owner(), InParams.Get_CompClass());
+    auto* Comp = NewObject<T_CompType>(InParams.Get_Owner(), InParams.Get_CompClass(), MakeUniqueObjectName(Owner, T_CompType::StaticClass()));
 
     if (ck::Is_NOT_Valid(Comp))
     { return Comp; }
