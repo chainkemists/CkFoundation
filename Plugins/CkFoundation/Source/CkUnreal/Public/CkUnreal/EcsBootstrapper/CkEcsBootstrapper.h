@@ -64,9 +64,6 @@ private:
     virtual void OnRep_AssociatedActor(AActor* InActor) override;
 
 private:
-    UPROPERTY(Transient)
-    FCk_Handle _AssociatedEntity;
-
     UPROPERTY(ReplicatedUsing = OnRep_ConstructionParams)
     FCk_Bootstrapper_Construction_Params _ConstructionParams;
 

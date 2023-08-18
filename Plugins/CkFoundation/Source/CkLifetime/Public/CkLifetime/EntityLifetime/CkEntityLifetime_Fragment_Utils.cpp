@@ -11,6 +11,9 @@ Request_DestroyEntity(FCk_Handle InHandle) -> void
 auto UCk_Utils_EntityLifetime_UE::
 Request_CreateEntity(FCk_Handle InHandle) -> FCk_Handle
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Cannot create Entity with Invalid Handle"))
+    { return {}; }
+
     const auto& NewEntity = (*InHandle)->CreateEntity();
     InHandle.Add<ck::FCk_Tag_EntityJustCreated>(NewEntity);
 
