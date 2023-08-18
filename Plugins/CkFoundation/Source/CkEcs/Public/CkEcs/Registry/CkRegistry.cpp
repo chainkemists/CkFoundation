@@ -24,6 +24,11 @@ void foo()
 
 // --------------------------------------------------------------------------------------------------------------------
 
+FCk_Registry::FCk_Registry()
+{
+    CreateEntity();
+}
+
 auto FCk_Registry::CreateEntity() -> EntityType
 {
     return _InternalRegistry->create();

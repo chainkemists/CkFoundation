@@ -15,7 +15,7 @@
 auto
     UCk_Utils_ActorInfo_UE::
     Add(
-        FCk_Handle                                InHandle,
+        FCk_Handle                               InHandle,
         const FCk_Fragment_ActorInfo_ParamsData& InParams)
     -> void
 {
@@ -37,7 +37,6 @@ auto
             UCk_Utils_Actor_UE::AddNewActorComponent_Params<UCk_ActorInfo_ActorComponent_UE>
             {
                 InActor,
-                UCk_ActorInfo_ActorComponent_UE::StaticClass(),
                 true
             },
             [&](UCk_ActorInfo_ActorComponent_UE* InComp)
@@ -45,6 +44,8 @@ auto
                 InComp->_EntityHandle = InHandle;
             }
         );
+
+        InHandle.Get<ck::FCk_Fragment_OwningActor>().Get_Bootstrapper()->_AssociatedActor = InActor;
     };
 
     const auto& spawnActorParams = FCk_Utils_Actor_SpawnActor_Params{InParams.Get_Owner(), InParams.Get_ActorClass()}
@@ -59,6 +60,29 @@ auto
         FCk_Request_ActorModifier_SpawnActor{spawnActorParams, FCk_SpawnActor_PostSpawn_Params{}, AddUnrealActorInfoCompFunc},
         {}
     );
+}
+
+auto
+    UCk_Utils_ActorInfo_UE::
+    Link(AActor* InActor, FCk_Handle InHandle) -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Unable to link Actor [{}] to Entity [{}]. Actor is INVALID."), InActor, InHandle)
+    { return; }
+
+    CK_ENSURE_IF_NOT(NOT Has(InHandle), TEXT("Unable to link Actor [{}] to Entity [{}]. Entity is already linked."), InActor, InHandle)
+    { return; }
+
+    InHandle.Add<ck::FCk_Fragment_ActorInfo_Params>(FCk_Fragment_ActorInfo_ParamsData
+    {
+        InActor->GetClass(),
+        InActor->GetActorTransform(),
+        InActor->GetOwner(),
+        InActor->GetIsReplicated() ? ECk_Actor_NetworkingType::Replicated : ECk_Actor_NetworkingType::Local
+    });
+
+    InHandle.Add<ck::FCk_Fragment_ActorInfo_Current>(InActor);
+
+    InActor->GetComponentByClass<UCk_ActorInfo_ActorComponent_UE>()->_EntityHandle = InHandle;
 }
 
 auto
@@ -139,6 +163,45 @@ auto
     const auto& unrealEntityConstructionScriptComp = InActor->FindComponentByClass<UCk_ActorInfo_ActorComponent_UE>();
 
     return ck::IsValid(unrealEntityConstructionScriptComp);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_OwningActor_UE::
+    Add(FCk_Handle InHandle, AActor* InOwningActor, UCk_EcsBootstrapper_Base_UE* InBootstrapper)
+    -> void
+{
+    InHandle.Add<ck::FCk_Fragment_OwningActor>(InOwningActor, InBootstrapper);
+}
+
+auto
+    UCk_Utils_OwningActor_UE::
+    Has(FCk_Handle InHandle)
+    -> bool
+{
+    return InHandle.Has<ck::FCk_Fragment_OwningActor>();
+}
+
+auto
+    UCk_Utils_OwningActor_UE::
+    Ensure(FCk_Handle InHandle)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Entity [{}] does NOT have OwningActor!"), InHandle)
+    { return false; }
+
+    return true;
+}
+
+auto
+    UCk_Utils_OwningActor_UE::
+    Get_OwningActor(FCk_Handle InHandle) -> AActor*
+{
+    if (NOT Ensure(InHandle))
+    { return {}; }
+
+    return InHandle.Get<ck::FCk_Fragment_OwningActor>().Get_OwningActor().Get();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

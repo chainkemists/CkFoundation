@@ -49,6 +49,30 @@ namespace ck
     public:
         CK_PROPERTY_GET(_EntityActor);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKACTOR_API FCk_Fragment_OwningActor
+    {
+    public:
+        CK_GENERATED_BODY(FCk_Fragment_OwningActor);
+
+    public:
+        friend class UCk_Utils_ActorInfo_UE;
+
+    public:
+        FCk_Fragment_OwningActor() = default;
+        explicit FCk_Fragment_OwningActor(
+            AActor* InOwningActor, UCk_EcsBootstrapper_Base_UE* _Bootstrapper);
+
+    private:
+        TWeakObjectPtr<AActor> _OwningActor;
+        TWeakObjectPtr<UCk_EcsBootstrapper_Base_UE> _Bootstrapper;
+
+    public:
+        CK_PROPERTY_GET(_OwningActor);
+        CK_PROPERTY_GET(_Bootstrapper);
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
