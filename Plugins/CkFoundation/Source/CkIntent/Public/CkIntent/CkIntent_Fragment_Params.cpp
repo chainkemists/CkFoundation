@@ -1,10 +1,13 @@
 #include "CkIntent_Fragment_Params.h"
 
 #include "CkIntent_Fragment.h"
+#include "CkIntent/CkIntent_Log.h"
 
 #include "CkActor/ActorInfo/CkActorInfo_Utils.h"
 
 #include "CkCore/ObjectReplication/CkObjectReplicatorComponent.h"
+
+#include "Net/UnrealNetwork.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -28,15 +31,21 @@ auto UCk_Intent_ReplicatedObject_UE::Create(AActor* InOwningActor, FCk_Handle In
     return Obj;
 }
 
-void UCk_Intent_ReplicatedObject_UE::OnRep_AssociatedActor(AActor* InActor)
+void UCk_Intent_ReplicatedObject_UE::OnRep_IntentReady(bool InReady)
 {
-    Super::OnRep_AssociatedActor(InActor);
-
     const auto& BasicDetails = UCk_Utils_ActorInfo_UE::Get_ActorInfoBasicDetails_FromActor(GetOwningActor());
     _AssociatedEntity = BasicDetails.Get_Handle();
     _AssociatedEntity.Add<ck::FCk_Fragment_Intent_Params>(this);
 }
 
-void UCk_Intent_ReplicatedObject_UE::Request_AddIntent_Implementation(FGameplayTag InIntent)
+void UCk_Intent_ReplicatedObject_UE::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME_CONDITION_NOTIFY(ThisType, _Ready, COND_None, REPNOTIFY_Always);
+}
+
+void UCk_Intent_ReplicatedObject_UE::AddIntent_Implementation(FGameplayTag InIntent)
+{
+    ck::intent::Warning(TEXT("Syncing intent to CLIENT: [{}]"), InIntent);
 }

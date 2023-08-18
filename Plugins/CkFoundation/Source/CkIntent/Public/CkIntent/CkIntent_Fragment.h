@@ -8,7 +8,10 @@
 
 namespace ck
 {
-    struct FTag_Intent_Setup {};
+    struct FTag_Intent_Setup
+    {
+        bool MakeTagNotBeATag = false;
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 

@@ -24,6 +24,7 @@ namespace ck_world_actor
         InWorld.Add<ck::FCk_Processor_ActorInfo_LinkUp>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_ActorModifier_AddActorComponent_HandleRequests>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_Intent_Setup>(InWorld.Get_Registry());
+        InWorld.Add<ck::FCk_Processor_Intent_HandleRequests>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FCk_Processor_ActorModifier_Location_HandleRequests>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_ActorModifier_Scale_HandleRequests>(InWorld.Get_Registry());
