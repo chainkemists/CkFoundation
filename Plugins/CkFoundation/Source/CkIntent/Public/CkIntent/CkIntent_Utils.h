@@ -17,12 +17,18 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Intent_UE);
 
 public:
-    static auto
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Intent",
+              DisplayName = "Add Intent Fragment")
+    static void
     Request_Add(
-        FCk_Handle   InHandle) -> void;
+        FCk_Handle   InHandle);
 
-    static auto
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Intent",
+              DisplayName = "Add New Intent")
+    static void
     Request_AddNewIntent(
         FCk_Handle   InHandle,
-        FGameplayTag InIntent) -> void;
+        FGameplayTag InIntent);
 };

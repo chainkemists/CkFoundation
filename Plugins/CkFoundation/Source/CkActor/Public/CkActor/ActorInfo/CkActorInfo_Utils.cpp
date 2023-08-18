@@ -10,6 +10,8 @@
 
 #include "CkActor/ActorModifier/CkActorModifier_Utils.h"
 
+#include "CkCore/ObjectReplication/CkObjectReplicatorComponent.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -46,6 +48,18 @@ auto
         );
 
         InHandle.Get<ck::FCk_Fragment_OwningActor>().Get_Bootstrapper()->_AssociatedActor = InActor;
+
+        UCk_Utils_Actor_UE::Request_AddNewActorComponent<UCk_ObjectReplicator_Component>
+        (
+            UCk_Utils_Actor_UE::AddNewActorComponent_Params<UCk_ObjectReplicator_Component>
+            {
+                InActor,
+                true
+            },
+            [&](UCk_ObjectReplicator_Component* InComp)
+            {
+            }
+        );
     };
 
     const auto& spawnActorParams = FCk_Utils_Actor_SpawnActor_Params{InParams.Get_Owner(), InParams.Get_ActorClass()}

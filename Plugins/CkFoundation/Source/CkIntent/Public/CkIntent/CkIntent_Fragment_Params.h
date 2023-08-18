@@ -42,14 +42,24 @@ class CKINTENT_API UCk_Intent_ReplicatedObject_UE : public UCk_Ecs_ReplicatedObj
     GENERATED_BODY()
 
 public:
+    CK_GENERATED_BODY(UCk_Intent_ReplicatedObject_UE);
+
+public:
     // TODO: introduce a Params struct for this
     static auto Create(AActor* InOwningActor, FCk_Handle InAssociatedEntity) -> UCk_Intent_ReplicatedObject_UE*;
 
 protected:
-    virtual auto OnRep_AssociatedActor(AActor*) -> void override;
+    UFUNCTION()
+    virtual void OnRep_IntentReady(bool InReady);
+
+    virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
 
 public:
-    UFUNCTION(Server, Reliable)
-    void Request_AddIntent(FGameplayTag InIntent);
+    UPROPERTY(ReplicatedUsing = OnRep_IntentReady)
+    bool _Ready = false;
+
+public:
+    UFUNCTION(Client, Reliable)
+    void AddIntent(FGameplayTag InIntent);
 };
 
