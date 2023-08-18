@@ -19,20 +19,13 @@ FCk_Fragment_ActorInfo_ParamsData::
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCk_ActorInfo_ActorComponent_UE::UCk_ActorInfo_ActorComponent_UE()
-{
-    SetIsReplicated(true);
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto UCk_EcsBootstrapper_Base_UE::
+auto UCk_Ecs_ReplicatedObject::
     OnRep_AssociatedActor(AActor* InActor)
     -> void
 {
 }
 
-auto UCk_EcsBootstrapper_Base_UE::
+auto UCk_Ecs_ReplicatedObject::
     GetLifetimeReplicatedProps(
         TArray<FLifetimeProperty>& OutLifetimeProps) const
     -> void

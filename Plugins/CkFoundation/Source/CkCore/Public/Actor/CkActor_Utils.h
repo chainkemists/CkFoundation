@@ -272,7 +272,7 @@ auto
         { return nullptr; }
     }
 
-    auto* Comp = NewObject<T_CompType>(InParams.Get_Owner(), InParams.Get_CompClass(), MakeUniqueObjectName(Owner, T_CompType::StaticClass()));
+    auto* Comp = NewObject<T_CompType>(InParams.Get_Owner(), InParams.Get_CompClass());
 
     if (ck::Is_NOT_Valid(Comp))
     { return Comp; }

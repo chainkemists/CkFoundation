@@ -12,6 +12,11 @@
 
 #include "CkActorInfo_Fragment_Params.generated.h"
 
+namespace ck
+{
+    class FCk_Processor_ActorInfo_LinkUp;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -97,14 +102,12 @@ class CKACTOR_API UCk_ActorInfo_ActorComponent_UE
     GENERATED_BODY()
 
 public:
-    UCk_ActorInfo_ActorComponent_UE();
-
-public:
     CK_GENERATED_BODY(UCk_ActorInfo_ActorComponent_UE);
 
 public:
     friend class UCk_Utils_ActorInfo_UE;
     friend class ACk_UnrealEntity_ActorProxy_UE;
+    friend class ck::FCk_Processor_ActorInfo_LinkUp;
 
 private:
     FCk_Handle _EntityHandle;
@@ -115,14 +118,15 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// TODO: Move this to its own file
 UCLASS(NotBlueprintType, NotBlueprintable)
-class CKACTOR_API UCk_EcsBootstrapper_Base_UE
+class CKACTOR_API UCk_Ecs_ReplicatedObject
     : public UCk_ReplicatedObject
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_EcsBootstrapper_Base_UE);
+    CK_GENERATED_BODY(UCk_Ecs_ReplicatedObject);
 
 public:
     friend class UCk_Utils_ActorInfo_UE;
@@ -133,12 +137,31 @@ public:
 
     virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
 
-private:
+protected:
+    UPROPERTY(Transient)
+    FCk_Handle _AssociatedEntity;
+
     UPROPERTY(ReplicatedUsing = OnRep_AssociatedActor)
     AActor* _AssociatedActor = nullptr;
 
 public:
+    CK_PROPERTY_GET(_AssociatedEntity);
     CK_PROPERTY_GET(_AssociatedActor);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintType, NotBlueprintable)
+class CKACTOR_API UCk_EcsBootstrapper_Base_UE
+    : public UCk_Ecs_ReplicatedObject
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_EcsBootstrapper_Base_UE);
+
+public:
+    friend class UCk_Utils_ActorInfo_UE;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
