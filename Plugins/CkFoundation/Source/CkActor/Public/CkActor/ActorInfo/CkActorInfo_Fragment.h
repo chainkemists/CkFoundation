@@ -8,6 +8,13 @@
 
 namespace ck
 {
+    struct FTag_ActorInfo_LinkUp
+    {
+        bool ForcingTagToNotBeATag = false;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKACTOR_API FCk_Fragment_ActorInfo_Params
     {
     public:

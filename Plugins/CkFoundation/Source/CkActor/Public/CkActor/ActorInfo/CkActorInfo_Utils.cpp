@@ -81,8 +81,23 @@ auto
     });
 
     InHandle.Add<ck::FCk_Fragment_ActorInfo_Current>(InActor);
+    InHandle.Add<ck::FTag_ActorInfo_LinkUp>();
 
-    InActor->GetComponentByClass<UCk_ActorInfo_ActorComponent_UE>()->_EntityHandle = InHandle;
+    if (InActor->GetComponentByClass<UCk_ActorInfo_ActorComponent_UE>())
+    { return; }
+
+    UCk_Utils_Actor_UE::Request_AddNewActorComponent<UCk_ActorInfo_ActorComponent_UE>
+    (
+        UCk_Utils_Actor_UE::AddNewActorComponent_Params<UCk_ActorInfo_ActorComponent_UE>
+        {
+            InActor,
+            true
+        },
+        [&](UCk_ActorInfo_ActorComponent_UE* InComp)
+        {
+            InComp->_EntityHandle = InHandle;
+        }
+    );
 }
 
 auto
