@@ -31,7 +31,7 @@ Get_IsInGame(const UObject* InWorldContextObject, bool InEnsureWorldIsValid) -> 
 
     if (ck::Is_NOT_Valid(World, ck::IsValid_Policy_NullptrOnly{}))
     {
-        CK_ENSURE_FALSE_IF(InEnsureWorldIsValid, TEXT("Invalid world for WorldContextObject"));
+        CK_TRIGGER_ENSURE_IF(InEnsureWorldIsValid, TEXT("Invalid world for WorldContextObject"));
         return false;
     }
 
@@ -54,7 +54,7 @@ Get_IsPIE(const UObject* InWorldContextObject, bool InEnsureWorldIsValid) -> boo
 
     if (ck::Is_NOT_Valid(InWorldContextObject))
     {
-        CK_ENSURE_FALSE_IF(InEnsureWorldIsValid, TEXT("Invalid world for WorldContextObject"));
+        CK_TRIGGER_ENSURE_IF(InEnsureWorldIsValid, TEXT("Invalid world for WorldContextObject"));
         return false;
     }
 

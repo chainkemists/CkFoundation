@@ -1,5 +1,7 @@
 #include "CkUnrealEntity_Processor.h"
 
+#include "CkLifetime/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+
 #include "CkUnreal/CkUnreal_Log.h"
 
 namespace ck
@@ -15,10 +17,15 @@ namespace ck
                 TEXT("UnrealEntityPDA is INVALID. Unable to handle Request for [{}]"), InHandle)
             { return; }
 
-            const auto& NewEntity = UnrealEntityPDA->Build(**InHandle);
+            const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(**InHandle);
 
-            const auto& PostSpawnFunc = Request.Get_PostSpawnFunc();
-            PostSpawnFunc(NewEntity);
+            if (Request.Get_PreBuildFunc())
+            { Request.Get_PreBuildFunc() (NewEntity); }
+
+            std::ignore = UnrealEntityPDA->Build(NewEntity);
+
+            if (Request.Get_PostSpawnFunc())
+            { Request.Get_PostSpawnFunc()(NewEntity); }
 
             unreal::VeryVerbose(TEXT("[UnrealEntity] Built new Unreal Entity [{}] from Unreal Entity PDA [{}] by Request from [{}]"),
                 NewEntity, UnrealEntityPDA, InHandle);

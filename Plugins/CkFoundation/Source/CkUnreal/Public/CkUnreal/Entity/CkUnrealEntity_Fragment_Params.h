@@ -20,11 +20,16 @@ public:
     CK_GENERATED_BODY(UCk_UnrealEntity_Base_PDA);
 
 public:
-    auto Build(FCk_Registry& InRegistry) const -> FCk_Handle;
+    [[nodiscard]]
+    auto Build(FCk_Handle InEntity) const -> FCk_Handle;
+
+    [[nodiscard]]
     auto Get_EntityConstructionScript() const -> class UCk_UnrealEntity_ConstructionScript_PDA*;
 
 protected:
     virtual auto DoBuild(FCk_Handle InHandle) const -> void;
+
+    [[nodiscard]]
     virtual auto DoGet_EntityConstructionScript() const -> UCk_UnrealEntity_ConstructionScript_PDA*;
 };
 
@@ -61,6 +66,7 @@ public:
     CK_GENERATED_BODY(FCk_Request_UnrealEntity_Spawn);
 
 public:
+    using PreBuildFunc = TFunction<void(const FCk_Handle&)>;
     using PostSpawnFunc = TFunction<void(const FCk_Handle&)>;
 
 public:
@@ -71,6 +77,7 @@ public:
 
     FCk_Request_UnrealEntity_Spawn(
         const UCk_UnrealEntity_Base_PDA* InEntity,
+        PreBuildFunc InPreBuildFunc,
         PostSpawnFunc InPostSpawnFunc);
 
 private:
@@ -84,10 +91,12 @@ private:
     // - call the construction script for ALL and then for REMOTE and LOCAL
 
 private:
+    PreBuildFunc _PreBuildFunc = [](const FCk_Handle&){};
     PostSpawnFunc _PostSpawnFunc = [](const FCk_Handle&){};
 
 public:
     CK_PROPERTY_GET(_UnrealEntity);
+    CK_PROPERTY_GET(_PreBuildFunc);
     CK_PROPERTY_GET(_PostSpawnFunc);
 };
 

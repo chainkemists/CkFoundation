@@ -26,12 +26,10 @@ DoGet_EntityConstructionScript() const -> UCk_UnrealEntity_ConstructionScript_PD
 }
 
 auto UCk_UnrealEntity_Base_PDA::
-Build(FCk_Registry& InRegistry) const -> FCk_Handle
+Build(FCk_Handle InEntity) const -> FCk_Handle
 {
-    const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InRegistry);
-    DoBuild(NewEntity);
-
-    return NewEntity;
+    DoBuild(InEntity);
+    return InEntity;
 }
 
 auto UCk_UnrealEntity_Base_PDA::
@@ -48,14 +46,17 @@ DoBuild(FCk_Handle InHandle) const -> void
 
 FCk_Request_UnrealEntity_Spawn::
 FCk_Request_UnrealEntity_Spawn(const UCk_UnrealEntity_Base_PDA* InUnrealEntity)
-    : ThisType{InUnrealEntity, [](auto InHandle){}}
+    : ThisType{InUnrealEntity, [](auto InHandle){}, [](auto InHandle){}}
 {
 }
 
 FCk_Request_UnrealEntity_Spawn::
-FCk_Request_UnrealEntity_Spawn(const UCk_UnrealEntity_Base_PDA* InUnrealEntity,
+FCk_Request_UnrealEntity_Spawn(
+    const UCk_UnrealEntity_Base_PDA* InUnrealEntity,
+    PreBuildFunc InPreBuildFunc,
     PostSpawnFunc InPostSpawnFunc)
     : _UnrealEntity(InUnrealEntity)
+    , _PreBuildFunc(InPreBuildFunc)
     , _PostSpawnFunc(InPostSpawnFunc)
 {
 }

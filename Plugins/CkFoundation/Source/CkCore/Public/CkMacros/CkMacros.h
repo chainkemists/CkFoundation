@@ -89,3 +89,8 @@ namespace ck
     }
 
 #define CK_INTENTIONALLY_EMPTY()
+
+// Useful to scope other macros that may make certain assumptions about return type
+// and make the nested macro callable in functions such as the constructor
+#define CK_SCOPE_CALL(_NestedCall_)\
+    [&]() -> bool { _NestedCall_; return {}; }();

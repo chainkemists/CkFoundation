@@ -39,6 +39,9 @@ public:
     static auto Request_CreateEntity(RegistryType& InRegistry) -> HandleType;
     static auto Request_CreateEntity(RegistryType& InRegistry,
         const EntityIdHint& InEntityHint) -> HandleType;
+
+public:
+    static auto Get_TransientEntity(RegistryType& InRegistry) -> HandleType;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

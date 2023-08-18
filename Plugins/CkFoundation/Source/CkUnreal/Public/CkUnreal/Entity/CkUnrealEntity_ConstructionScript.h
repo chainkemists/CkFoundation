@@ -45,12 +45,8 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ExposeOnSpawn, AllowPrivateAccess = true))
     FTransform _EntityInitialTransform;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ExposeOnSpawn, AllowPrivateAccess = true))
-    TObjectPtr<AActor>  _Owner;
-
 public:
     CK_PROPERTY_GET(_EntityInitialTransform);
-    CK_PROPERTY_GET(_Owner);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

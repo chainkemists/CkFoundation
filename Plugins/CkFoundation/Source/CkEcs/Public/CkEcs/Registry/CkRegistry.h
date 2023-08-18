@@ -110,6 +110,9 @@ public:
     };
 
 public:
+    FCk_Registry();
+
+public:
     template <typename T_FragmentType, typename... T_Args>
     auto Add(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentType&;
 
@@ -160,6 +163,7 @@ public:
 
 private:
     ck::TPtrWrapper<InternalRegistryPtrType> _InternalRegistry;
+    EntityType _TransientEntity;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
