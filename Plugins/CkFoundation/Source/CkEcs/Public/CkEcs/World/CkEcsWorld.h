@@ -4,8 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Registry/CkRegistry.h"
-
-#include "CkWorld/Ticker/CkTicker.h"
+#include "CkEcs/Ticker/CkTicker.h"
 
 #include "CkMacros/CkMacros.h"
 
@@ -13,7 +12,7 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    class FEcsWorld : public ck::FTicker
+    class CKECS_API FEcsWorld : public ck::FTicker
     {
         CK_GENERATED_BODY(FEcsWorld);
 

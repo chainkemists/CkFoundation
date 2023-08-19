@@ -1,6 +1,6 @@
 #include "CkEntityLifetime_Fragment_Utils.h"
 
-#include "CkLifetime/EntityLifetime/CkEntityLifetime_Fragment.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 
 auto UCk_Utils_EntityLifetime_UE::
 Request_DestroyEntity(FCk_Handle InHandle) -> void

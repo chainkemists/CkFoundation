@@ -2,7 +2,7 @@
 
 #include "CkMacros/CkMacros.h"
 
-#include "CkWorld/Public/CkWorld/Ecs/CkEcsWorld.h"
+#include "CkEcs/World/CkEcsWorld.h"
 
 #include <Subsystems/WorldSubsystem.h>
 
@@ -10,8 +10,38 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
-class CKWORLD_API UCk_EcsWorld_Subsystem_UE : public UWorldSubsystem
+UCLASS(NotBlueprintable, NotBlueprintType)
+class CKECS_API ACk_World_Actor_Base_UE : public AInfo
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(ACk_World_Actor_Base_UE);
+
+public:
+    friend class UCk_EcsWorld_Subsystem_UE;
+
+public:
+    using FEcsWorldType = ck::FEcsWorld;
+
+public:
+    ACk_World_Actor_Base_UE();
+
+protected:
+    virtual auto Tick(float DeltaSeconds) -> void override;
+
+public:
+    virtual auto Initialize(ETickingGroup InTickingGroup) -> void;
+
+protected:
+    TOptional<FEcsWorldType> _EcsWorld;
+};
+
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(Abstract, Blueprintable, BlueprintType)
+class CKECS_API UCk_EcsWorld_Subsystem_UE : public UWorldSubsystem
 {
     GENERATED_BODY()
 
@@ -42,8 +72,11 @@ private:
     UPROPERTY(BlueprintReadOnly, Transient, meta = (AllowPrivateAccess = true))
     FCk_Handle _TransientEntity;
 
+    UPROPERTY(EditDefaultsOnly)
+    TSubclassOf<ACk_World_Actor_Base_UE> _WorldActorClass;
+
     UPROPERTY(Transient)
-    TObjectPtr<class ACk_World_Actor_UE> _WorldActor = nullptr;
+    TObjectPtr<ACk_World_Actor_Base_UE> _WorldActor = nullptr;
 
 public:
     CK_PROPERTY_GET(_TransientEntity);

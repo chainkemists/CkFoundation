@@ -1,6 +1,6 @@
 #include "CkUnrealEntity_Processor.h"
 
-#include "CkLifetime/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 
 #include "CkUnreal/CkUnreal_Log.h"
 

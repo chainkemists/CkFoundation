@@ -6,7 +6,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Registry/CkRegistry.h"
 
-#include "CkLifetime/Public/CkLifetime/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 
 #include "CkMacros/CkMacros.h"
 
@@ -14,7 +14,7 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKWORLD_API FTicker
+    class CKECS_API FTicker
     {
         CK_GENERATED_BODY(FTicker);
 

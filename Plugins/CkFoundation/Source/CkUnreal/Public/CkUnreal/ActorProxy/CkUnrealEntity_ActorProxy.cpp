@@ -6,7 +6,7 @@
 
 #include "CkCore/ObjectReplication/CkObjectReplicatorComponent.h"
 
-#include "CkLifetime/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 
 #include "CkObject/CkObject_Utils.h"
 

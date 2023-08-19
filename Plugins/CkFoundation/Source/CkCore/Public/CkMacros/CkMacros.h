@@ -35,7 +35,7 @@ namespace ck
     static const auto& Get##_InVar_() { return _InVar_; }
 
 #define CK_PROPERTY_SET(_InVar_)\
-    auto Set##_InVar_(const decltype(_InVar_)& InValue) { _InVar_ = InValue; return *this; }
+    auto Set##_InVar_(const decltype(_InVar_)& InValue) -> decltype(*this)& { _InVar_ = InValue; return *this; }
 
 #define CK_PROPERTY(_InVar_)\
     CK_PROPERTY_GET(_InVar_);\
