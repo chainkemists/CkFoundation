@@ -2,7 +2,7 @@
 
 #include "CkUnreal/Entity/CkUnrealEntity_ConstructionScript.h"
 
-#include "CkLifetime/Public/CkLifetime/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

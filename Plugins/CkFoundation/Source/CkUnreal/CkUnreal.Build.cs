@@ -18,8 +18,8 @@ public class CkUnreal : CkModuleRules
             "CkCore",
             "CkEcs",
             "CkLog",
-            "CkLifetime",
-            "CkActor"
+            "CkActor",
+            "CkIntent"
         });
     }
 }

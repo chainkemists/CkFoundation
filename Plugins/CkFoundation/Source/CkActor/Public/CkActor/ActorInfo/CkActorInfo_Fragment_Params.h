@@ -151,6 +151,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// TODO: see if this redundant base class can be removed (this was added due to circular dependency)
 UCLASS(NotBlueprintType, NotBlueprintable)
 class CKACTOR_API UCk_EcsBootstrapper_Base_UE
     : public UCk_Ecs_ReplicatedObject

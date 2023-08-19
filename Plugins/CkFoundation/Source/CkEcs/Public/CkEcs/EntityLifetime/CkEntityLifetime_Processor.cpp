@@ -1,6 +1,6 @@
 #include "CkEntityLifetime_Processor.h"
 
-#include "CkLifetime/CkLifetime_Log.h"
+#include "CkEcs/CkEcsLog.h"
 
 namespace ck
 {
@@ -28,7 +28,7 @@ namespace ck
     auto FCk_Processor_EntityLifetime_TriggerDestroyEntity::ForEachEntity(FTimeType InDeltaT,
                                                                           FHandleType InHandle) const -> void
     {
-        lifetime::VeryVerbose(TEXT("Entity [{}] set to 'Pending Destroy'"), InHandle);
+        ecs::VeryVerbose(TEXT("Entity [{}] set to 'Pending Destroy'"), InHandle);
         InHandle.Add<FCk_Tag_PendingDestroyEntity>(InHandle);
 
         // TODO: Invoke Signal when Signals are ready
@@ -39,7 +39,7 @@ namespace ck
     auto FCk_Processor_EntityLifetime_PendingDestroyEntity::ForEachEntity(FTimeType InDeltaT,
         FHandleType InHandle) const -> void
     {
-        lifetime::VeryVerbose(TEXT("Destroying Entity [{}]"), InHandle);
+        ecs::VeryVerbose(TEXT("Destroying Entity [{}]"), InHandle);
 
         InHandle.Remove<FCk_Tag_PendingDestroyEntity>();
     }

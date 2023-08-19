@@ -5,7 +5,7 @@
 
 #include "CkIntent/CkIntent_Processor.h"
 
-#include "CkLifetime/EntityLifetime/CkEntityLifetime_Processor.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Processor.h"
 
 #include "CkUnreal/Entity/CkUnrealEntity_Processor.h"
 
@@ -38,28 +38,9 @@ namespace ck_world_actor
 
 // --------------------------------------------------------------------------------------------------------------------
 
-ACk_World_Actor_UE::
-ACk_World_Actor_UE()
-{
-    PrimaryActorTick.bCanEverTick = true;
-    PrimaryActorTick.bTickEvenWhenPaused = false;
-}
-
-auto ACk_World_Actor_UE::Tick(float DeltaSeconds) -> void
-{
-    Super::Tick(DeltaSeconds);
-
-    CK_ENSURE_IF_NOT(ck::IsValid(_EcsWorld), TEXT("ECS World is NOT set in the World Actor [{}]. Was Initialize() called?"), this)
-    { return; }
-
-    _EcsWorld->Tick(FCk_Time{DeltaSeconds});
-}
-
 auto ACk_World_Actor_UE::
 Initialize(ETickingGroup InTickingGroup) -> void
 {
-    SetTickGroup(InTickingGroup);
-
-    _EcsWorld = FEcsWorldType{};
+    Super::Initialize(InTickingGroup);
     ck_world_actor::InjectAllEcsSystemsIntoWorld(*_EcsWorld);
 }

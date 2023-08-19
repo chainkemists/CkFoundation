@@ -8,6 +8,7 @@ namespace ck
         FCk_Processor_Intent_Setup::
         Tick(FTimeType InDeltaT) -> void
     {
+        // TODO: Hacking time... we need a Future
         _Delay += InDeltaT;
 
         if (_Delay.Get_Seconds() < 15.0f)
@@ -30,6 +31,7 @@ namespace ck
         if (NOT ck::IsValid(BasicDetails.Get_Actor()))
         { return; }
 
+        // TODO: we need to have better patterns so that this kind of code has a standard pattern
         if (NOT BasicDetails.Get_Actor()->HasAuthority())
         {
             InHandle.Remove<FTag_Intent_Setup>();
@@ -51,6 +53,7 @@ namespace ck
             FCk_Fragment_Intent_Params& InParams,
             FCk_Fragment_Intent_Requests& InRequests)
     {
+        // TODO: this should be handled better with Warning OR ensure OR 
         if (NOT ck::IsValid(InParams.Get_Intent_RO()))
         { return; }
 
