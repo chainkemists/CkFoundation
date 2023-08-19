@@ -1,4 +1,4 @@
-#include "CkConstructionScript_ActorComponent.h"
+#include "CkEcsConstructionScript_ActorComponent.h"
 
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 

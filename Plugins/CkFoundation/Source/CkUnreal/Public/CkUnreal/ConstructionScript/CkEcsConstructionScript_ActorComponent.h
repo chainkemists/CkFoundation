@@ -6,7 +6,7 @@
 
 #include "Component/CkActorComponent.h"
 
-#include "CkConstructionScript_ActorComponent.generated.h"
+#include "CkEcsConstructionScript_ActorComponent.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
