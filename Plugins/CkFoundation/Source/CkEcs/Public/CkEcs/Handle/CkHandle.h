@@ -76,6 +76,18 @@ public:
 private:
     FEntityType _Entity;
     TOptional<FCk_Registry> _Registry;
+
+#if WITH_EDITORONLY_DATA
+private:
+    UPROPERTY(VisibleAnywhere)
+    int32 _EntityID;
+
+    UPROPERTY(VisibleAnywhere)
+    int32 _EntityNumber;
+
+    UPROPERTY(VisibleAnywhere)
+    int32 _EntityVersion;
+#endif
 };
 
 // --------------------------------------------------------------------------------------------------------------------

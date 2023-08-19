@@ -31,7 +31,7 @@ public:
     UPROPERTY(EditDefaultsOnly, Instanced)
     TObjectPtr<UCk_UnrealEntity_Base_PDA> _UnrealEntity;
 
-    UPROPERTY(Transient)
+    UPROPERTY(VisibleAnywhere, Transient)
     FCk_Handle _Entity;
 
 public:

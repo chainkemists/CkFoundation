@@ -26,10 +26,9 @@ DoGet_EntityConstructionScript() const -> UCk_UnrealEntity_ConstructionScript_PD
 }
 
 auto UCk_UnrealEntity_Base_PDA::
-Build(FCk_Handle InEntity) const -> FCk_Handle
+Build(FCk_Handle InEntity) const -> void
 {
     DoBuild(InEntity);
-    return InEntity;
 }
 
 auto UCk_UnrealEntity_Base_PDA::

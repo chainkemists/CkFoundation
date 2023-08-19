@@ -70,7 +70,8 @@ public:
         AActor* InActor);
 
 public:
-    static auto Link(AActor* InActor, FCk_Handle InHandle) -> void;
+    static auto
+    Link(AActor* InActor, FCk_Handle InHandle) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
