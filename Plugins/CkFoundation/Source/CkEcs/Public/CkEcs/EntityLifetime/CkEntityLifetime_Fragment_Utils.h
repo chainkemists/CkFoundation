@@ -11,7 +11,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKLIFETIME_API UCk_Utils_EntityLifetime_UE : public UBlueprintFunctionLibrary
+class CKECS_API UCk_Utils_EntityLifetime_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

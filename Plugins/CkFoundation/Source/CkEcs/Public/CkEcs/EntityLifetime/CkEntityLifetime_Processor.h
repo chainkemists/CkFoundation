@@ -8,7 +8,7 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKLIFETIME_API FCk_Processor_EntityLifetime_EntityJustCreated
+    class CKECS_API FCk_Processor_EntityLifetime_EntityJustCreated
     {
     public:
         using FTimeType = FCk_Time;
@@ -26,7 +26,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKLIFETIME_API FCk_Processor_EntityLifetime_TriggerDestroyEntity
+    class CKECS_API FCk_Processor_EntityLifetime_TriggerDestroyEntity
         : public TProcessor<FCk_Processor_EntityLifetime_TriggerDestroyEntity, FCk_Tag_TriggerDestroyEntity>
     {
     public:
@@ -43,7 +43,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKLIFETIME_API FCk_Processor_EntityLifetime_PendingDestroyEntity
+    class CKECS_API FCk_Processor_EntityLifetime_PendingDestroyEntity
         : public TProcessor<FCk_Processor_EntityLifetime_PendingDestroyEntity, FCk_Tag_PendingDestroyEntity>
     {
     public:

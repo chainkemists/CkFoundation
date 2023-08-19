@@ -8,6 +8,7 @@
 
 namespace ck
 {
+    // TODO: See if empty Tags were really the issue
     struct FTag_Intent_Setup
     {
         bool MakeTagNotBeATag = false;
@@ -28,6 +29,7 @@ namespace ck
         explicit FCk_Fragment_Intent_Params(TObjectPtr<UCk_Intent_ReplicatedObject_UE> InIntent_RO);
 
     private:
+        float SomeOtherStaticFloat = 5.0f;
         TObjectPtr<UCk_Intent_ReplicatedObject_UE> _Intent_RO;
 
     public:

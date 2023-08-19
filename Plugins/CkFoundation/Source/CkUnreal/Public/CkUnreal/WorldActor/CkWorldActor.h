@@ -1,15 +1,17 @@
 #pragma once
 
-#include "CkWorld/Public/CkWorld/Ecs/CkEcsWorld.h"
+#include "CkEcs/World/CkEcsWorld.h"
 
 #include <GameFramework/Info.h>
+
+#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "CkWorldActor.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKWORLD_API ACk_World_Actor_UE : public AInfo
+class CKUNREAL_API ACk_World_Actor_UE : public ACk_World_Actor_Base_UE
 {
     GENERATED_BODY()
 
@@ -23,15 +25,6 @@ public:
     using FEcsWorldType = ck::FEcsWorld;
 
 public:
-    ACk_World_Actor_UE();
-
-protected:
-    virtual auto Tick(float DeltaSeconds) -> void override;
-
-public:
     auto Initialize(ETickingGroup InTickingGroup) -> void;
-
-private:
-    TOptional<FEcsWorldType> _EcsWorld;
 };
 
