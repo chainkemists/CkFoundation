@@ -1,8 +1,7 @@
 #include "CkEcsWorld_Subsystem.h"
 
-#include "Actor/CkActor_Utils.h"
+#include "CkCore/Actor/CkActor_Utils.h"
 
-#include <Engine/LevelScriptActor.h>
 #include <Engine/World.h>
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"

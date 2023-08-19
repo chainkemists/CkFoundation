@@ -25,7 +25,8 @@ BuildEntity(
     { return {}; }
 
     const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(**InHandle);
-    return InUnrealEntity->Build(NewEntity);
+    InUnrealEntity->Build(NewEntity);
+    return NewEntity;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

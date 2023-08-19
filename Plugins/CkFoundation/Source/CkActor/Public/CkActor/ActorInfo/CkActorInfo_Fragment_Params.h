@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Actor/CkActor.h"
-
+#include "CkCore/Actor/CkActor.h"
 #include "CkCore/ObjectReplication/CkReplicatedObject.h"
 
 #include "CkEcs/Handle/CkHandle.h"
@@ -107,6 +106,7 @@ public:
 public:
     friend class UCk_Utils_ActorInfo_UE;
     friend class ACk_UnrealEntity_ActorProxy_UE;
+    friend class UCk_EcsConstructionScript_ActorComponent;
     friend class ck::FCk_Processor_ActorInfo_LinkUp;
 
 private:

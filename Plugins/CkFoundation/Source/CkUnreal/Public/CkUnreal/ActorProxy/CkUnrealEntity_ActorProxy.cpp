@@ -1,21 +1,16 @@
 #include "CkUnrealEntity_ActorProxy.h"
 
-#include "Actor/CkActor_Utils.h"
-
 #include "CkActor/ActorInfo/CkActorInfo_Utils.h"
 
+#include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/ObjectReplication/CkObjectReplicatorComponent.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
-
-#include "CkObject/CkObject_Utils.h"
 
 #include "CkUnreal/CkUnreal_Log.h"
 #include "CkUnreal/EcsBootstrapper/CkEcsBootstrapper.h"
 #include "CkUnreal/Entity/CkUnrealEntity_ConstructionScript.h"
 #include "CkUnreal/Entity/CkUnrealEntity_Utils.h"
-
-#include "Misc/TypeContainer.h"
 
 #include "Net/UnrealNetwork.h"
 

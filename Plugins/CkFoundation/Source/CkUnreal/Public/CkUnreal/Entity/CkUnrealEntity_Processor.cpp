@@ -22,7 +22,7 @@ namespace ck
             if (Request.Get_PreBuildFunc())
             { Request.Get_PreBuildFunc() (NewEntity); }
 
-            std::ignore = UnrealEntityPDA->Build(NewEntity);
+            UnrealEntityPDA->Build(NewEntity);
 
             if (Request.Get_PostSpawnFunc())
             { Request.Get_PostSpawnFunc()(NewEntity); }
