@@ -1,8 +1,7 @@
 #pragma once
 
-#include "Actor/CkActor.h"
-#include "Actor/CkActor_Utils.h"
-
+#include "CkCore/Actor/CkActor.h"
+#include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Time/CkTime.h"
 
 #include "CkEcs/Handle/CkHandle.h"

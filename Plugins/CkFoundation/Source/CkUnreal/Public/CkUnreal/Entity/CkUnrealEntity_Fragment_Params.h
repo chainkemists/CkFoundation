@@ -20,8 +20,7 @@ public:
     CK_GENERATED_BODY(UCk_UnrealEntity_Base_PDA);
 
 public:
-    [[nodiscard]]
-    auto Build(FCk_Handle InEntity) const -> FCk_Handle;
+    auto Build(FCk_Handle InEntity) const -> void;
 
     [[nodiscard]]
     auto Get_EntityConstructionScript() const -> class UCk_UnrealEntity_ConstructionScript_PDA*;

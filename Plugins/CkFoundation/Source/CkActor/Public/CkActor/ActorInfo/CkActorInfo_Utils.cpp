@@ -2,15 +2,13 @@
 
 #include "CkActorInfo_Utils.h"
 
-#include "CkEcs/Handle/CkHandle.h"
-
-#include "CkActorInfo_Fragment.h"
-
-#include "Actor/CkActor_Utils.h"
-
+#include "CkActor/ActorInfo/CkActorInfo_Fragment.h"
 #include "CkActor/ActorModifier/CkActorModifier_Utils.h"
 
+#include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/ObjectReplication/CkObjectReplicatorComponent.h"
+
+#include "CkEcs/Handle/CkHandle.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
