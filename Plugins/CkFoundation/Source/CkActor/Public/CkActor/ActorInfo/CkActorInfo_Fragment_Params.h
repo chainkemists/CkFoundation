@@ -133,7 +133,7 @@ public:
 
 public:
     UFUNCTION()
-    virtual void OnRep_AssociatedActor(AActor* InActor);
+    virtual void OnRep_ReplicatedActor(AActor* InActor);
 
     virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
 
@@ -141,12 +141,16 @@ protected:
     UPROPERTY(Transient)
     FCk_Handle _AssociatedEntity;
 
-    UPROPERTY(ReplicatedUsing = OnRep_AssociatedActor)
-    AActor* _AssociatedActor = nullptr;
+    UPROPERTY(Transient)
+    FCk_Handle _RemoteEntity;
+
+    UPROPERTY(ReplicatedUsing = OnRep_ReplicatedActor)
+    AActor* _ReplicatedActor = nullptr;
 
 public:
     CK_PROPERTY_GET(_AssociatedEntity);
-    CK_PROPERTY_GET(_AssociatedActor);
+    CK_PROPERTY_GET(_ReplicatedActor);
+    CK_PROPERTY_GET(_RemoteEntity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
