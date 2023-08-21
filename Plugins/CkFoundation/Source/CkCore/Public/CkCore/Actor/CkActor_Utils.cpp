@@ -67,6 +67,85 @@ auto UCk_Utils_Actor_UE::Get_PersistentLevelScriptActor(const UObject* InWorldCo
 
 auto
     UCk_Utils_Actor_UE::
+    Get_OutermostActor(UObject* InObject)
+    -> AActor*
+{
+    auto OuterObject = InObject;
+
+    while (ck::IsValid(OuterObject))
+    {
+        auto MaybeActor = Cast<AActor>(OuterObject);
+
+        if (ck::IsValid(MaybeActor))
+        { return MaybeActor; }
+
+        OuterObject = OuterObject->GetOuter();
+    }
+
+    return nullptr;
+}
+
+auto
+    UCk_Utils_Actor_UE::
+    Get_OutermostActor_Replicated(UObject* InObject)
+    -> AActor*
+{
+    auto OuterObject = InObject;
+
+    while (ck::IsValid(OuterObject))
+    {
+        auto MaybeActor = Cast<AActor>(OuterObject);
+
+        if (ck::IsValid(MaybeActor))
+        {
+            if (MaybeActor->GetIsReplicated())
+            { return MaybeActor; }
+        }
+
+        OuterObject = OuterObject->GetOuter();
+    }
+
+    return nullptr;
+}
+
+auto
+    UCk_Utils_Actor_UE::
+    Get_OutermostActor_RemoteAuthority(UObject* InObject)
+    -> AActor*
+{
+    auto OuterObject = InObject;
+
+    while (ck::IsValid(OuterObject))
+    {
+        auto MaybeActor = Cast<AActor>(OuterObject);
+
+        if (ck::IsValid(MaybeActor))
+        {
+            switch(MaybeActor->GetRemoteRole())
+            {
+            case ROLE_Authority:
+            case ROLE_AutonomousProxy:
+                return MaybeActor;
+            case ROLE_None:
+            case ROLE_SimulatedProxy:
+            case ROLE_MAX:
+            default:
+                break;
+            }
+
+            OuterObject = MaybeActor->GetOwner();
+        }
+        else
+        {
+            OuterObject = OuterObject->GetOuter();
+        }
+    }
+
+    return nullptr;
+}
+
+auto
+    UCk_Utils_Actor_UE::
     Request_CloneActor(
         AActor* InWorldContextActor,
         AActor* InOwner,

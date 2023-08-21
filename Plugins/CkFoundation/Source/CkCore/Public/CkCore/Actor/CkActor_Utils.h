@@ -147,6 +147,22 @@ public:
     static ALevelScriptActor*
     Get_PersistentLevelScriptActor(const UObject* InWorldContextObject);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Actor")
+    static AActor*
+    Get_OutermostActor(UObject* InObject);
+
+    // TODO: consolidate the Get_Outermost functions with an enum
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Actor")
+    static AActor*
+    Get_OutermostActor_Replicated(UObject* InObject);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Actor")
+    static AActor*
+    Get_OutermostActor_RemoteAuthority(UObject* InObject);
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Actor",
               meta = (DefaultToSelf = "InOwner"))
