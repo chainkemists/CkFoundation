@@ -22,7 +22,7 @@ auto UCk_Intent_ReplicatedObject_UE::Create(AActor* InOwningActor, FCk_Handle In
 {
     auto* Obj = NewObject<UCk_Intent_ReplicatedObject_UE>(InOwningActor);
     Obj->_AssociatedEntity = InAssociatedEntity;
-    Obj->_AssociatedActor = InOwningActor;
+    Obj->_ReplicatedActor = InOwningActor;
 
     // TODO: this should be hidden in the base class
     auto* ObjectReplicator = InOwningActor->GetComponentByClass<UCk_ObjectReplicator_Component>();

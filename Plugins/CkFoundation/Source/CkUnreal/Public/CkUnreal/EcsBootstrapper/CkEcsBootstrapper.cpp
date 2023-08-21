@@ -77,8 +77,8 @@ auto UCk_EcsBootstrapper_UE::DoInvoke_ConstructionScript(
         UCk_Utils_OwningActor_UE::Add(InCreatedEntity, InParams.Get_Outer(), this);
         _AssociatedEntity = InCreatedEntity;
 
-        if (ck::IsValid(this->Get_AssociatedActor()))
-        { UCk_Utils_ActorInfo_UE::Link(this->Get_AssociatedActor(), _AssociatedEntity); }
+        if (ck::IsValid(this->Get_ReplicatedActor()))
+        { UCk_Utils_ActorInfo_UE::Link(this->Get_ReplicatedActor(), _AssociatedEntity); }
     };
 
     const auto ActorInfo = UCk_Utils_ActorInfo_UE::Get_ActorInfoBasicDetails_FromActor(InParams.Get_Outer());
@@ -99,13 +99,13 @@ OnRep_ConstructionParams(const FCk_Bootstrapper_Construction_Params& InConstruct
     CK_ENSURE_IF_NOT(ck::IsValid(_ConstructionParams.Get_Outer()), TEXT("INVALID"))
     { return; }
 
-    if (ck::Is_NOT_Valid(Get_AssociatedActor()))
+    if (ck::Is_NOT_Valid(Get_ReplicatedActor()))
     { return; }
 
     DoInvoke_ConstructionScript(_ConstructionParams);
 }
 
-void UCk_EcsBootstrapper_UE::OnRep_AssociatedActor(AActor* InActor)
+void UCk_EcsBootstrapper_UE::OnRep_ReplicatedActor(AActor* InActor)
 {
     if (ck::Is_NOT_Valid(_ConstructionParams.Get_Outer()))
     { return; }
