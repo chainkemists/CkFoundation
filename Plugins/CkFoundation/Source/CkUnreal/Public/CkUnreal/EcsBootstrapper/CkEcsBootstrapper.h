@@ -61,7 +61,7 @@ private:
     UFUNCTION()
     void OnRep_ConstructionParams(const FCk_Bootstrapper_Construction_Params& InConstructionScript);
 
-    virtual void OnRep_AssociatedActor(AActor* InActor) override;
+    virtual void OnRep_ReplicatedActor(AActor* InActor) override;
 
 private:
     UPROPERTY(ReplicatedUsing = OnRep_ConstructionParams)

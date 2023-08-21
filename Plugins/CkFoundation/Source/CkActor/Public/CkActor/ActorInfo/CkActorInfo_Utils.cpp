@@ -45,7 +45,7 @@ auto
             }
         );
 
-        InHandle.Get<ck::FCk_Fragment_OwningActor>().Get_Bootstrapper()->_AssociatedActor = InActor;
+        InHandle.Get<ck::FCk_Fragment_OwningActor>().Get_Bootstrapper()->_ReplicatedActor = InActor;
 
         UCk_Utils_Actor_UE::Request_AddNewActorComponent<UCk_ObjectReplicator_Component>
         (

@@ -20,7 +20,7 @@ FCk_Fragment_ActorInfo_ParamsData::
 // --------------------------------------------------------------------------------------------------------------------
 
 auto UCk_Ecs_ReplicatedObject::
-    OnRep_AssociatedActor(AActor* InActor)
+    OnRep_ReplicatedActor(AActor* InActor)
     -> void
 {
 }
@@ -32,7 +32,7 @@ auto UCk_Ecs_ReplicatedObject::
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    DOREPLIFETIME_CONDITION_NOTIFY(ThisType, _AssociatedActor, COND_None, REPNOTIFY_Always);
+    DOREPLIFETIME_CONDITION_NOTIFY(ThisType, _ReplicatedActor, COND_None, REPNOTIFY_Always);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
