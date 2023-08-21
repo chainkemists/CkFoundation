@@ -105,7 +105,8 @@ CK_DEFINE_CUSTOM_FORMATTER(FGameplayTag, [&]()
 
 CK_DEFINE_CUSTOM_FORMATTER(UObject, [&]()
 {
-    return UCk_Utils_Debug_UE::Get_DebugName(&InObj);
+    //  TODO: drive the verbosity through an Editor setting
+    return UCk_Utils_Debug_UE::Get_DebugName(&InObj, ECk_DebugName_Verbosity::ShortName);
 });
 
 CK_DEFINE_CUSTOM_FORMATTER_PTR_FORWARDER(UObject, []() -> const UObject&
