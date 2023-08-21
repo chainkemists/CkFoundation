@@ -121,7 +121,7 @@ auto
 
         if (ck::IsValid(MaybeActor))
         {
-            switch(MaybeActor->GetRemoteRole())
+            switch(MaybeActor->GetLocalRole())
             {
             case ROLE_Authority:
             case ROLE_AutonomousProxy:
