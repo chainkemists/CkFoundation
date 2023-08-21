@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkCore/Enums/CkEnums.h"
+
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "CkUnreal/Entity/CkUnrealEntity_Fragment_Params.h"
@@ -10,13 +12,53 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Blueprintable, BlueprintType)
+USTRUCT(BlueprintType)
+struct CKUNREAL_API FCk_EcsConstructionScript_ConstructionInfo
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_EcsConstructionScript_ConstructionInfo);
+
+private:
+    UPROPERTY(meta=(AllowPrivateAccess))
+    AActor* _OutermostActor = nullptr;
+
+    UPROPERTY(meta=(AllowPrivateAccess))
+    TSubclassOf<AActor> _ActorToReplicate = nullptr;
+
+    UPROPERTY(meta=(AllowPrivateAccess))
+    APlayerController* _OwningPlayerController = nullptr;
+
+public:
+    CK_PROPERTY(_OutermostActor);
+    CK_PROPERTY(_ActorToReplicate);
+    CK_PROPERTY(_OwningPlayerController);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(Abstract, Blueprintable, BlueprintType)
 class CKUNREAL_API UCk_EcsConstructionScript_ActorComponent : public UCk_ActorComponent_UE
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(UCk_EcsConstructionScript_ActorComponent);
+
+public:
+    UCk_EcsConstructionScript_ActorComponent();
+
+public:
+    UFUNCTION(Server, Reliable)
+    void
+    Request_ReplicateActor_OnServer(
+        const FCk_EcsConstructionScript_ConstructionInfo& InRequest);
+
+    UFUNCTION(NetMulticast, Reliable)
+    void
+    Request_ReplicateActor_OnClients(
+        const FCk_EcsConstructionScript_ConstructionInfo& InRequest);
 
 public:
     virtual auto BeginDestroy() -> void override;
@@ -27,6 +69,9 @@ protected:
 public:
     UPROPERTY(EditDefaultsOnly)
     TSubclassOf<UCk_EcsWorld_Subsystem_UE> _EcsWorldSubsystem;
+
+    UPROPERTY(EditDefaultsOnly)
+    ECk_Replication _Replication = ECk_Replication::Replicates;
 
     UPROPERTY(EditDefaultsOnly, Instanced)
     TObjectPtr<UCk_UnrealEntity_Base_PDA> _UnrealEntity;
