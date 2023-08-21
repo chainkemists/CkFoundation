@@ -137,6 +137,16 @@
 			]
 		},
 		{
+			"Name": "CkPerception",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
 			"Name": "CkProjectile",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
@@ -198,6 +208,16 @@
 		},
 		{
 			"Name": "CkThirdParty",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
+			"Name": "CkUI",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
