@@ -1,5 +1,7 @@
 #include "CkAcceleration_Processor.h"
 
+#include "CkEcs/Fragments/Transform/CkTransform_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -19,9 +21,8 @@ namespace ck
         {
             case ECk_LocalWorld::Local:
             {
-                // TODO: Uncomment once we have the Transform fragment/utils
-                /*const auto rotation = UCk_Utils_Transform_UE::Get_EntityCurrentRotation(InHandle)();
-                InCurrent._CurrentAcceleration = rotation.RotateVector(params.Get_StartingAcceleration());*/
+                const auto& rotation = UCk_Utils_Transform_UE::Get_EntityCurrentRotation(InHandle);
+                InCurrent._CurrentAcceleration = rotation.RotateVector(params.Get_StartingAcceleration());
                 break;
             }
             case ECk_LocalWorld::World:
