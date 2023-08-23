@@ -69,7 +69,7 @@ auto
     { return; }
 
     // TODO: Fix this so that we don't need this check
-    if (OutermostActor->GetWorld()->IsNetMode(NM_DedicatedServer))
+    if (OutermostActor->IsNetMode(NM_DedicatedServer))
     { return; }
 
     CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)
@@ -125,7 +125,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InReplicatedOwner), TEXT("Invalid Replicated Owner Actor.[{}]"), ck::Context(this))
     { return; }
 
-    if (InReplicatedOwner->GetWorld()->IsNetMode(NM_DedicatedServer))
+    if (InReplicatedOwner->IsNetMode(NM_DedicatedServer))
     { return; }
 
     // TODO: Sending garbage entity handle until we manage to link it up properly
