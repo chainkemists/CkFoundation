@@ -2,6 +2,7 @@
 
 #include "CkCore/Actor/CkActor.h"
 #include "CkCore/Actor/CkActor_Utils.h"
+#include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Time/CkTime.h"
 
 #include "CkEcs/Handle/CkHandle.h"
@@ -20,24 +21,6 @@ enum class ECk_SpawnActor_PostSpawnPolicy : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SpawnActor_PostSpawnPolicy);
-
-UENUM(BlueprintType)
-enum class ECk_RelativeAbsolute : uint8
-{
-    Relative,
-    Absolute
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_RelativeAbsolute);
-
-UENUM(BlueprintType)
-enum class ECk_LocalWorld : uint8
-{
-    Local,
-    World
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_LocalWorld);
 
 // --------------------------------------------------------------------------------------------------------------------
 
