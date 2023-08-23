@@ -57,6 +57,28 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ValidInvalid);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_RelativeAbsolute : uint8
+{
+    Relative,
+    Absolute
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_RelativeAbsolute);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_LocalWorld : uint8
+{
+    Local,
+    World
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_LocalWorld);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_Edges : uint8
 {
     Left,
