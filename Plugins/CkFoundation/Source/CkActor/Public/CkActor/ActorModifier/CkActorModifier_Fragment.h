@@ -146,7 +146,7 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(Abstract, Blueprintable)
 class CKACTOR_API UCk_Fragment_ActorModifier_Rep : public UCk_Ecs_ReplicatedObject
 {
     GENERATED_BODY()

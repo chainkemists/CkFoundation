@@ -111,4 +111,12 @@ IsSupportedForNetworking() const -> bool
     return true;
 }
 
+auto
+    UCk_ReplicatedObject::
+    IsNameStableForNetworking() const
+    -> bool
+{
+    return true;
+}
+
 #undef CK_ENSURE_OUTER_IS_VALID_OR_RETURN

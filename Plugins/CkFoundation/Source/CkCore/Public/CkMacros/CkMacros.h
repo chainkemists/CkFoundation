@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 namespace ck
 {
     template <typename T, typename T_Policy, typename>
@@ -37,9 +39,17 @@ namespace ck
 #define CK_PROPERTY_SET(_InVar_)\
     auto Set##_InVar_(const decltype(_InVar_)& InValue) -> decltype(*this)& { _InVar_ = InValue; return *this; }
 
+#define CK_PROPERTY_UPDATE(_InVar_)\
+    auto Update##_InVar_(std::function<void(decltype(_InVar_)&)> InFunc) -> ThisType&\
+    {\
+        InFunc(_InVar_);\
+        return *this;\
+    }
+
 #define CK_PROPERTY(_InVar_)\
     CK_PROPERTY_GET(_InVar_);\
-    CK_PROPERTY_SET(_InVar_)
+    CK_PROPERTY_SET(_InVar_);\
+    CK_PROPERTY_UPDATE(_InVar_)
 
 #define CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(_InObject_)\
     bool operator !=(_InObject_ const& InOther) const { return NOT (operator==(InOther)); }

@@ -18,6 +18,15 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ActorModifier|Requests",
+      DisplayName = "Add Actor Modifier",
+        meta = (AutoCreateRefTerm = "InDelegate"))
+    static void
+    Add(
+        FCk_Handle InHandle, 
+        TSubclassOf<UCk_Fragment_ActorModifier_Rep> InFragmentClass);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|ActorModifier|Requests",
         meta = (AutoCreateRefTerm = "InDelegate"))
     static void
     Request_SetLocation(

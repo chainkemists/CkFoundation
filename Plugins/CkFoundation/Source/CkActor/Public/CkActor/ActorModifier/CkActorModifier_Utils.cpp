@@ -7,7 +7,45 @@
 #include "CkActor/ActorInfo/CkActorInfo_Fragment.h"
 #include "CkActor/ActorInfo/CkActorInfo_Utils.h"
 
+#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment.h"
+#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ActorModifier_UE::
+    Add(
+        FCk_Handle InHandle,
+        TSubclassOf<UCk_Fragment_ActorModifier_Rep> InFragmentClass)
+    -> void
+{
+    // TODO: once this is solidified, the boilerplate will be reduced
+    const auto& BasicDetails = UCk_Utils_ActorInfo_UE::Get_ActorInfoBasicDetails(InHandle);
+
+    if (BasicDetails.Get_Actor()->GetWorld()->IsNetMode(NM_Client))
+    { return; }
+
+    const auto OwningActor = BasicDetails.Get_Actor().Get();
+    const auto OutermostActor =  UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(OwningActor);
+
+    // TODO: ensure here that we do not have an outermost that is Replicated
+
+    auto ReplicatedObject = Cast<UCk_Fragment_ActorModifier_Rep>(UCk_Ecs_ReplicatedObject::Create
+    (
+        InFragmentClass,
+        OutermostActor,
+        NAME_None,
+        InHandle
+    ));
+
+    // HACK: This will be fixed when our Replicated Objects are NEVER created on Clients
+    if (ck::Is_NOT_Valid(ReplicatedObject))
+    { return; }
+
+    InHandle.Add<TObjectPtr<UCk_Fragment_ActorModifier_Rep>>(ReplicatedObject);
+
+    UCk_Utils_ReplicatedObjects_UE::Request_AddReplicatedObject(InHandle, ReplicatedObject);
+}
 
 auto
     UCk_Utils_ActorModifier_UE::
@@ -17,10 +55,18 @@ auto
         const FCk_Delegate_Transform_OnUpdate& InDelegate)
     -> void
 {
+    // TODO: once this is solidified, the boilerplate will be reduced
+    const auto& BasicDetails = UCk_Utils_ActorInfo_UE::Get_ActorInfoBasicDetails(InHandle);
+
+    if (BasicDetails.Get_Actor()->GetWorld()->IsNetMode(NM_DedicatedServer))
+    {
+        InHandle.Get<TObjectPtr<UCk_Fragment_ActorModifier_Rep>>()->Request_SetLocation(InRequest);
+    }
+
     if (NOT UCk_Utils_ActorInfo_UE::Ensure(InHandle))
     { return; }
 
-    auto& requestsComp = InHandle.Add<ck::FCk_Fragment_ActorModifier_LocationRequests>();
+    auto& requestsComp = InHandle.AddOrGet<ck::FCk_Fragment_ActorModifier_LocationRequests>();
     requestsComp._Requests.Emplace(InRequest);
 
     if (NOT InDelegate.IsBound())
@@ -37,10 +83,18 @@ auto
         const FCk_Delegate_Transform_OnUpdate& InDelegate)
     -> void
 {
+    // TODO: once this is solidified, the boilerplate will be reduced
+    const auto& BasicDetails = UCk_Utils_ActorInfo_UE::Get_ActorInfoBasicDetails(InHandle);
+
+    if (BasicDetails.Get_Actor()->GetWorld()->IsNetMode(NM_DedicatedServer))
+    {
+        InHandle.Get<TObjectPtr<UCk_Fragment_ActorModifier_Rep>>()->Request_AddLocationOffset(InRequest);
+    }
+
     if (NOT UCk_Utils_ActorInfo_UE::Ensure(InHandle))
     { return; }
 
-    auto& requestsComp = InHandle.Add<ck::FCk_Fragment_ActorModifier_LocationRequests>();
+    auto& requestsComp = InHandle.AddOrGet<ck::FCk_Fragment_ActorModifier_LocationRequests>();
     requestsComp._Requests.Emplace(InRequest);
 
     if (NOT InDelegate.IsBound())
@@ -61,7 +115,7 @@ auto
     if (NOT UCk_Utils_ActorInfo_UE::Ensure(InHandle))
     { return; }
 
-    auto& requestsComp = InHandle.Add<ck::FCk_Fragment_ActorModifier_ScaleRequests>();
+    auto& requestsComp = InHandle.AddOrGet<ck::FCk_Fragment_ActorModifier_ScaleRequests>();
     requestsComp._Requests.Add(InRequest);
 
     if (NOT InDelegate.IsBound())
@@ -83,7 +137,7 @@ auto
     if (NOT UCk_Utils_ActorInfo_UE::Ensure(InHandle))
     { return; }
 
-    auto& requestsComp = InHandle.Add<ck::FCk_Fragment_ActorModifier_RotationRequests>();
+    auto& requestsComp = InHandle.AddOrGet<ck::FCk_Fragment_ActorModifier_RotationRequests>();
     requestsComp._Requests.Add(InRequest);
 
     if (NOT InDelegate.IsBound())
@@ -105,7 +159,7 @@ auto
     if (NOT UCk_Utils_ActorInfo_UE::Ensure(InHandle))
     { return; }
 
-    auto& requestsComp = InHandle.Add<ck::FCk_Fragment_ActorModifier_RotationRequests>();
+    auto& requestsComp = InHandle.AddOrGet<ck::FCk_Fragment_ActorModifier_RotationRequests>();
     requestsComp._Requests.Emplace(InRequest);
 
     if (NOT InDelegate.IsBound())
@@ -127,7 +181,7 @@ auto
     if (NOT UCk_Utils_ActorInfo_UE::Ensure(InHandle))
     { return; }
 
-    auto& requestsComp = InHandle.Add<ck::FCk_Fragment_ActorModifier_TransformRequests>();
+    auto& requestsComp = InHandle.AddOrGet<ck::FCk_Fragment_ActorModifier_TransformRequests>();
     requestsComp._Requests.Add(InRequest);
 
     if (NOT InDelegate.IsBound())
@@ -149,7 +203,7 @@ auto
     if (NOT UCk_Utils_ActorInfo_UE::Ensure(InHandle))
     { return; }
 
-    auto& requestsComp = InHandle.Add<ck::FCk_Fragment_ActorModifier_SpawnActorRequests>();
+    auto& requestsComp = InHandle.AddOrGet<ck::FCk_Fragment_ActorModifier_SpawnActorRequests>();
     requestsComp._Requests.Add(InRequest);
 
     if (NOT InDelegate.IsBound())
@@ -171,7 +225,7 @@ auto
     if (NOT UCk_Utils_ActorInfo_UE::Ensure(InHandle))
     { return; }
 
-    auto& requestsComp = InHandle.Add<ck::FCk_Fragment_ActorModifier_AddActorComponentRequests>();
+    auto& requestsComp = InHandle.AddOrGet<ck::FCk_Fragment_ActorModifier_AddActorComponentRequests>();
     requestsComp._Requests.Add(InRequest);
 
     if (NOT InDelegate.IsBound())

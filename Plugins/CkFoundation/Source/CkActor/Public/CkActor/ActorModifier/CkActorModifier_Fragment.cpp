@@ -10,6 +10,9 @@ auto
         const FCk_Request_ActorModifier_SetLocation& InRequest)
     -> void
 {
+    if (GetWorld()->IsNetMode(NM_DedicatedServer))
+    { return; }
+
     UCk_Utils_ActorModifier_UE::Request_SetLocation(Get_AssociatedEntity(), InRequest, {});
 }
 
@@ -19,6 +22,9 @@ auto
         const FCk_Request_ActorModifier_AddLocationOffset& InRequest)
     -> void
 {
+    if (GetWorld()->IsNetMode(NM_DedicatedServer))
+    { return; }
+
     UCk_Utils_ActorModifier_UE::Request_AddLocationOffset(Get_AssociatedEntity(), InRequest, {});
 }
 

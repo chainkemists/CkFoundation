@@ -117,6 +117,9 @@ public:
     auto Add(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentType&;
 
     template <typename T_FragmentType, typename... T_Args>
+    auto AddOrGet(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentType&;
+
+    template <typename T_FragmentType, typename... T_Args>
     auto Replace(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentType&;
 
     template <typename T_Fragment>
@@ -160,6 +163,7 @@ private:
 
 public:
     auto IsValid(EntityType InEntity) const -> bool;
+    auto Get_ValidEntity(EntityType::IdType InEntity) const -> EntityType;
 
 private:
     ck::TPtrWrapper<InternalRegistryPtrType> _InternalRegistry;
@@ -204,6 +208,17 @@ auto FCk_Registry::Add(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentTyp
         auto& Fragment = _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID(), std::forward<T_Args>(InArgs)...);
         return Fragment;
     }
+}
+
+template <typename T_FragmentType, typename ... T_Args>
+auto
+    FCk_Registry::AddOrGet(EntityType InEntity,
+        T_Args&&... InArgs) -> T_FragmentType&
+{
+    if (Has<T_FragmentType>(InEntity))
+    { return Get<T_FragmentType>(InEntity); }
+
+    return Add<T_FragmentType>(InEntity, std::forward<T_Args>(InArgs)...);
 }
 
 template <typename T_FragmentType, typename ... T_Args>

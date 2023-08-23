@@ -3,11 +3,13 @@
 #include "CkCore/Actor/CkActor_Utils.h"
 
 #include "CkActor/ActorInfo/CkActorInfo_Fragment.h"
+#include "CkActor/ActorInfo/CkActorInfo_Utils.h"
 
 #include "CkCore/ObjectReplication/CkObjectReplicatorComponent.h"
 
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
 
 #include "CkUnreal/CkUnreal_Log.h"
 
@@ -29,10 +31,22 @@ auto
         const FCk_EcsConstructionScript_ConstructionInfo& InRequest)
     -> void
 {
-    UCk_Utils_Actor_UE::Request_SpawnActor(
+    const auto NewActor = UCk_Utils_Actor_UE::Request_SpawnActor(
         UCk_Utils_Actor_UE::SpawnActorParamsType{InRequest.Get_OutermostActor(), InRequest.Get_ActorToReplicate()});
 
-    Request_ReplicateActor_OnClients(InRequest);
+    // TODO: Validate NewActor
+
+    const auto& NewActorBasicInfo = UCk_Utils_ActorInfo_UE::Get_ActorInfoBasicDetails_FromActor(NewActor);
+    const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(NewActorBasicInfo.Get_Handle());
+
+    for (auto ReplicatedObject : ReplicatedObjects.Get_ReplicatedObjects())
+    {
+        Request_ReplicateObject(InRequest.Get_OutermostActor(), ReplicatedObject->GetClass(), FName{ReplicatedObject->GetName()});
+    }
+
+    auto RequestToForward = InRequest;
+    RequestToForward.Set_ReplicatedObjects(ReplicatedObjects);
+    Request_ReplicateActor_OnClients(RequestToForward);
 
     ck::unreal::Verbose(TEXT("Replicating [{}] with outermost [{}] on SERVER"), InRequest.Get_OutermostActor(), InRequest.Get_ActorToReplicate());
 }
@@ -43,6 +57,10 @@ auto
         const FCk_EcsConstructionScript_ConstructionInfo& InRequest)
     -> void
 {
+    // TODO: Fix this so that we don't need this check
+    if (InRequest.Get_OutermostActor()->GetWorld()->IsNetMode(NM_DedicatedServer))
+    { return; }
+
     for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
     {
         auto PlayerController = It->Get();
@@ -53,8 +71,40 @@ auto
 
             UCk_Utils_Actor_UE::Request_SpawnActor(
                 UCk_Utils_Actor_UE::SpawnActorParamsType{InRequest.Get_OutermostActor(), InRequest.Get_ActorToReplicate()});
+            // TODO: link up the ReplicatedObjects
+        }
+        else
+        {
+            const auto WorldSubsystem = Cast<UCk_EcsWorld_Subsystem_UE>(GetWorld()->GetSubsystemBase(_EcsWorldSubsystem));
+
+            // TODO: this hits at least once because the BP Subsystem is not loaded. Fix this.
+            CK_ENSURE_IF_NOT(ck::IsValid(WorldSubsystem),
+                TEXT("WorldSubsystem is [{}]. Did you forget to set the default value in the component?.[{}]"),
+                _EcsWorldSubsystem, ck::Context(this))
+            { return; }
+
+            const auto OriginalOwnerHandle = WorldSubsystem->Get_TransientEntity().Get_ValidHandle
+            (
+                static_cast<FCk_Entity::IdType>(InRequest.Get_OriginalOwnerEntity())
+            );
+
+            UCk_Utils_ReplicatedObjects_UE::Add(OriginalOwnerHandle, InRequest.Get_ReplicatedObjects());
         }
     }
+}
+
+auto
+    UCk_EcsConstructionScript_ActorComponent::
+    Request_ReplicateObject_Implementation(
+        AActor* InReplicatedOwner,
+        TSubclassOf<UCk_Ecs_ReplicatedObject> InObject,
+        FName InReplicatedName)
+    -> void
+{
+    if (InReplicatedOwner->GetWorld()->IsNetMode(NM_DedicatedServer))
+    { return; }
+
+    UCk_Ecs_ReplicatedObject::Create(InObject, InReplicatedOwner, InReplicatedName, FCk_Handle{});
 }
 
 void UCk_EcsConstructionScript_ActorComponent::BeginDestroy()
@@ -82,58 +132,58 @@ auto
     { return; }
 
     _Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(WorldSubsystem->Get_TransientEntity());
-    _UnrealEntity->Build(_Entity);
+    auto OwningActor = GetOwner();
+
+    _Entity.Add<ck::FCk_Fragment_ActorInfo_Params>(FCk_Fragment_ActorInfo_ParamsData
+    {
+        OwningActor->GetClass(),
+        OwningActor->GetActorTransform(),
+        OwningActor->GetOwner(),
+        OwningActor->GetIsReplicated() ? ECk_Actor_NetworkingType::Replicated : ECk_Actor_NetworkingType::Local
+    });
+    _Entity.Add<ck::FCk_Fragment_ActorInfo_Current>(OwningActor);
 
     // --------------------------------------------------------------------------------------------------------------------
     // LINK TO ACTOR
     // EcsConstructionScript is a bit special in that it readies everything immediately instead of deferring the operation
 
-    auto InHandle = _Entity;
-    auto InActor = GetOwner();
-
-    InHandle.Add<ck::FCk_Fragment_ActorInfo_Params>(FCk_Fragment_ActorInfo_ParamsData
-    {
-        InActor->GetClass(),
-        InActor->GetActorTransform(),
-        InActor->GetOwner(),
-        InActor->GetIsReplicated() ? ECk_Actor_NetworkingType::Replicated : ECk_Actor_NetworkingType::Local
-    });
-
+    // We need the ActorInfo ActorComponent to exist before building the Unreal Entity
     UCk_Utils_Actor_UE::Request_AddNewActorComponent<UCk_ActorInfo_ActorComponent_UE>
     (
         UCk_Utils_Actor_UE::AddNewActorComponent_Params<UCk_ActorInfo_ActorComponent_UE>
         {
-            InActor,
+            OwningActor,
             true
         },
         [&](UCk_ActorInfo_ActorComponent_UE* InComp)
         {
-            InComp->_EntityHandle = InHandle;
+            InComp->_EntityHandle = _Entity;
         }
     );
 
-    if (InActor->HasAuthority())
+    if (OwningActor->HasAuthority())
     {
         UCk_Utils_Actor_UE::Request_AddNewActorComponent<UCk_ObjectReplicator_Component>
         (
             UCk_Utils_Actor_UE::AddNewActorComponent_Params<UCk_ObjectReplicator_Component>
             {
-                InActor,
+                OwningActor,
                 true
             },
             [&](UCk_ObjectReplicator_Component* InComp) { }
         );
     }
 
-    InHandle.Add<ck::FCk_Fragment_ActorInfo_Current>(InActor);
+    // --------------------------------------------------------------------------------------------------------------------
+    // Build Entity
+
+    _UnrealEntity->Build(_Entity);
 
     // --------------------------------------------------------------------------------------------------------------------
-    // Call RPC if Replicated
+    // Call RPC if EcsConstructionScript is Replicated
 
     if (_Replication == ECk_Replication::DoesNotReplicate)
     { return; }
-
-    auto OwningActor = this->GetOwner();
 
     // Replicated Actors will run this construction script automatically
     if (OwningActor->GetIsReplicated())
@@ -157,23 +207,32 @@ auto
 
     const auto ConstructionScript = OutermostActor->GetComponentByClass<ThisType>();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(OutermostActor),
+    CK_ENSURE_IF_NOT(ck::IsValid(ConstructionScript),
         TEXT("Found a REPLICATED with AUTHORITY Actor [{}] BUT it does NOT have [{}]. Are you sure this Actor's construction involved a Replicated Actor?"),
         this, ctti::nameof_v<ThisType>)
     { return; }
 
     if (NOT GetWorld()->IsNetMode(NM_Client) && OutermostActor->GetRemoteRole() != ROLE_AutonomousProxy)
     {
-        ConstructionScript->Request_ReplicateActor_OnClients(FCk_EcsConstructionScript_ConstructionInfo{}
+        ConstructionScript->Request_ReplicateActor_OnClients
+        (
+            FCk_EcsConstructionScript_ConstructionInfo{}
             .Set_OutermostActor(OutermostActor)
-            .Set_ActorToReplicate(OwningActor->GetClass()));
+            .Set_ActorToReplicate(OwningActor->GetClass())
+            .Set_ReplicatedObjects(UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(_Entity))
+        );
     }
 
     if (GetWorld()->IsNetMode(NM_Client))
     {
-        ConstructionScript->Request_ReplicateActor_OnServer(FCk_EcsConstructionScript_ConstructionInfo{}
+        ConstructionScript->Request_ReplicateActor_OnServer
+        (
+            FCk_EcsConstructionScript_ConstructionInfo{}
             .Set_OutermostActor(OutermostActor)
             .Set_ActorToReplicate(OwningActor->GetClass())
-            .Set_OwningPlayerController(GetWorld()->GetFirstPlayerController()));
+            .Set_OwningPlayerController(GetWorld()->GetFirstPlayerController())
+            .Set_OriginalOwnerEntity(static_cast<int32>(_Entity.Get_Entity().Get_ID()))
+            .Set_Transform(OwningActor->GetActorTransform()) // maybe only send Location and Rotation to reduce bandwidth requirements
+        );
     }
 }

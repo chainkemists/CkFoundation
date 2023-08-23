@@ -121,16 +121,10 @@ auto
 
         if (ck::IsValid(MaybeActor))
         {
-            switch(MaybeActor->GetLocalRole())
+            if (MaybeActor->GetRemoteRole() != ROLE_None)
             {
-            case ROLE_Authority:
-            case ROLE_AutonomousProxy:
-                return MaybeActor;
-            case ROLE_None:
-            case ROLE_SimulatedProxy:
-            case ROLE_MAX:
-            default:
-                break;
+                if (MaybeActor->GetLocalRole() == ROLE_Authority || MaybeActor->GetLocalRole() == ROLE_AutonomousProxy)
+                { return MaybeActor; }
             }
 
             OuterObject = MaybeActor->GetOwner();
