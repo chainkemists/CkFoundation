@@ -7,6 +7,9 @@ namespace ck::type_traits
     struct as_array {};
     struct as_string {};
 
+    struct Const{};
+    struct NonConst{};
+
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T>
@@ -26,6 +29,7 @@ namespace ck::type_traits
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // TODO: rename make_new_ptr to TMakeNewPtr
     template <typename T>
     struct make_new_ptr;
 
@@ -94,10 +98,35 @@ namespace ck::type_traits
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// TODO: move this to its own file
 namespace ck::policy
 {
     struct All {};
     struct Any {};
 
     struct TransientPackage {};
+
+    struct ReturnOptional {};
+    struct DontResetContainer {};
+
+    template <typename T>
+    struct TMutability
+    {
+        static_assert
+        (
+            std::is_same<type_traits::Const, T>() || std::is_same<type_traits::NonConst, T>(),
+            "Mutability can only accept `Const` or `NonConst` as policy params"
+        );
+    };
+
+    template<>
+    struct TMutability<type_traits::Const>{};
+
+    template<>
+    struct TMutability<type_traits::NonConst>{};
+
+    using Mutability_Const = TMutability<type_traits::Const>;
+    using Mutability_NonConst = TMutability<type_traits::NonConst>;
 }
+
+// --------------------------------------------------------------------------------------------------------------------
