@@ -21,6 +21,14 @@ FCk_Fragment_ActorInfo_ParamsData::
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UCk_ActorInfo_ActorComponent_UE::
+    UCk_ActorInfo_ActorComponent_UE()
+{
+    SetIsReplicated(false);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 //auto
 //    UCk_Ecs_ReplicatedObject::
 //    Create(
