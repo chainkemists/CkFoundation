@@ -13,8 +13,9 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(FTimeType,
-            FCk_Handle InHandle,
+        auto ForEachEntity(
+            TimeType,
+            HandleType InHandle,
             FCk_Fragment_UnrealEntity_Requests& InRequests) const -> void;
     };
 }

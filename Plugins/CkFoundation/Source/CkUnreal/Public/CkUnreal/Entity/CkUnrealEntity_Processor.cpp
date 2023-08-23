@@ -6,7 +6,7 @@
 
 namespace ck
 {
-    auto FCk_Processor_UnrealEntity_HandleRequests::ForEachEntity(FTimeType, FCk_Handle InHandle,
+    auto FCk_Processor_UnrealEntity_HandleRequests::ForEachEntity(TimeType, HandleType InHandle,
         FCk_Fragment_UnrealEntity_Requests& InRequests) const -> void
     {
         for (const auto& Request : InRequests._Requests)

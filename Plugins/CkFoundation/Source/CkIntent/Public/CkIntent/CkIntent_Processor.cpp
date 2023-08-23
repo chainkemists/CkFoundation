@@ -6,7 +6,7 @@ namespace ck
 {
     auto
         FCk_Processor_Intent_Setup::
-        Tick(FTimeType InDeltaT) -> void
+        Tick(TimeType InDeltaT) -> void
     {
         // TODO: Hacking time... we need a Future
         _Delay += InDeltaT;
@@ -20,8 +20,8 @@ namespace ck
     auto
         FCk_Processor_Intent_Setup::
         ForEachEntity(
-            FTimeType InDeltaT,
-            FHandleType InHandle,
+            TimeType InDeltaT,
+            HandleType InHandle,
             FTag_Intent_Setup&)
     {
         auto& InIntentParams = InHandle.Get<FCk_Fragment_Intent_Params>();
@@ -48,8 +48,8 @@ namespace ck
     auto
         FCk_Processor_Intent_HandleRequests::
         ForEachEntity(
-            FTimeType InDeltaT,
-            FHandleType InHandle,
+            TimeType InDeltaT,
+            HandleType InHandle,
             FCk_Fragment_Intent_Params& InParams,
             FCk_Fragment_Intent_Requests& InRequests)
     {
