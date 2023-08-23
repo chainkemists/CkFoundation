@@ -9,12 +9,12 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKPHYSICS_API UCk_Physics_Utils_UE : public UBlueprintFunctionLibrary
+class CKPHYSICS_API UCk_Utils_Physics_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Physics_Utils_UE);
+    CK_GENERATED_BODY(UCk_Utils_Physics_UE);
 
 public:
     UFUNCTION(BlueprintCallable,
