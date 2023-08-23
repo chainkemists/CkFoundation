@@ -12,6 +12,7 @@
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
 
 #include "CkUnreal/CkUnreal_Log.h"
+#include "Engine/World.h"
 
 #include "Net/UnrealNetwork.h"
 
