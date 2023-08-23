@@ -202,6 +202,19 @@ if constexpr(false)
 if (NOT CK_ENSURE(InExpression, InFormat, ##__VA_ARGS__))
 #endif
 
+#define CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(InWorldContextObject)\
+if(\
+NOT [InWorldContextObject]()\
+{\
+    CK_ENSURE_IF_NOT(ck::IsValid(InWorldContextObject), TEXT("Invalid World Context object used to validate UWorld"))\
+    { return false; }\
+\
+    CK_ENSURE_IF_NOT(ck::IsValid(InWorldContextObject->GetWorld()), TEXT("Invalid UWorld"))\
+    { return false; }\
+\
+    return true;\
+}())
+
 #define CK_ENSURE_FALSE(InString, ...)\
 CK_ENSURE(false, InString, ##__VA_ARGS__)
 
