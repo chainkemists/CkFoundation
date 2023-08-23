@@ -58,6 +58,9 @@ auto
     // TODO: once this is solidified, the boilerplate will be reduced
     const auto& BasicDetails = UCk_Utils_ActorInfo_UE::Get_ActorInfoBasicDetails(InHandle);
 
+    if (ck::Is_NOT_Valid(BasicDetails))
+    { return; }
+
     if (BasicDetails.Get_Actor()->GetWorld()->IsNetMode(NM_DedicatedServer))
     {
         InHandle.Get<TObjectPtr<UCk_Fragment_ActorModifier_Rep>>()->Request_SetLocation(InRequest);
@@ -85,6 +88,9 @@ auto
 {
     // TODO: once this is solidified, the boilerplate will be reduced
     const auto& BasicDetails = UCk_Utils_ActorInfo_UE::Get_ActorInfoBasicDetails(InHandle);
+
+    if (ck::Is_NOT_Valid(BasicDetails))
+    { return; }
 
     if (BasicDetails.Get_Actor()->GetWorld()->IsNetMode(NM_DedicatedServer))
     {

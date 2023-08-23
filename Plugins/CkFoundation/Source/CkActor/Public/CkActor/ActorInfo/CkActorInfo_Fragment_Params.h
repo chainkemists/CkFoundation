@@ -104,6 +104,9 @@ public:
     CK_GENERATED_BODY(UCk_ActorInfo_ActorComponent_UE);
 
 public:
+    UCk_ActorInfo_ActorComponent_UE();
+
+public:
     friend class UCk_Utils_ActorInfo_UE;
     friend class ACk_UnrealEntity_ActorProxy_UE;
     friend class UCk_EcsConstructionScript_ActorComponent;
