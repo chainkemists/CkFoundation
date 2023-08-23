@@ -31,24 +31,31 @@ auto
         const FCk_EcsConstructionScript_ConstructionInfo& InRequest)
     -> void
 {
-    const auto NewActor = UCk_Utils_Actor_UE::Request_SpawnActor(
-        UCk_Utils_Actor_UE::SpawnActorParamsType{InRequest.Get_OutermostActor(), InRequest.Get_ActorToReplicate()});
+    const auto& OutermostActor = InRequest.Get_OutermostActor();
+    const auto& ActorToReplicate = InRequest.Get_ActorToReplicate();
 
-    // TODO: Validate NewActor
+    const auto NewActor = UCk_Utils_Actor_UE::Request_SpawnActor(UCk_Utils_Actor_UE::SpawnActorParamsType{OutermostActor, ActorToReplicate});
 
-    const auto& NewActorBasicInfo = UCk_Utils_ActorInfo_UE::Get_ActorInfoBasicDetails_FromActor(NewActor);
-    const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(NewActorBasicInfo.Get_Handle());
+    CK_ENSURE_IF_NOT(ck::IsValid(NewActor), TEXT("Failed to spawn Actor to Replicate [{}] on SERVER.[{}]"), ActorToReplicate, ck::Context(this))
+    { return; }
 
-    for (auto ReplicatedObject : ReplicatedObjects.Get_ReplicatedObjects())
+    const auto& NewActorBasicDetails = UCk_Utils_ActorInfo_UE::Get_ActorInfoBasicDetails_FromActor(NewActor);
+    const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(NewActorBasicDetails.Get_Handle());
+
+    for (const auto& ReplicatedObject : ReplicatedObjects.Get_ReplicatedObjects())
     {
-        Request_ReplicateObject(InRequest.Get_OutermostActor(), ReplicatedObject->GetClass(), FName{ReplicatedObject->GetName()});
+        CK_ENSURE_IF_NOT(ck::IsValid(ReplicatedObject), TEXT("Invalid Replicated Object encountered for Actor [{}] on the SERVER.[{}]"), NewActorBasicDetails, ck::Context(this))
+        { continue; }
+
+        Request_ReplicateObject(OutermostActor, ReplicatedObject->GetClass(), ReplicatedObject->GetFName());
     }
 
     auto RequestToForward = InRequest;
     RequestToForward.Set_ReplicatedObjects(ReplicatedObjects);
+
     Request_ReplicateActor_OnClients(RequestToForward);
 
-    ck::unreal::Verbose(TEXT("Replicating [{}] with outermost [{}] on SERVER"), InRequest.Get_OutermostActor(), InRequest.Get_ActorToReplicate());
+    ck::unreal::Verbose(TEXT("Replicating [{}] with outermost [{}] on SERVER"), OutermostActor, ActorToReplicate);
 }
 
 auto
@@ -57,20 +64,34 @@ auto
         const FCk_EcsConstructionScript_ConstructionInfo& InRequest)
     -> void
 {
-    // TODO: Fix this so that we don't need this check
-    if (InRequest.Get_OutermostActor()->GetWorld()->IsNetMode(NM_DedicatedServer))
+    const auto& OutermostActor = InRequest.Get_OutermostActor();
+    CK_ENSURE_IF_NOT(ck::IsValid(OutermostActor), TEXT("Invalid Outermose Actor on CLIENT.[{}]"), ck::Context(this))
     { return; }
 
-    for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+    // TODO: Fix this so that we don't need this check
+    if (OutermostActor->GetWorld()->IsNetMode(NM_DedicatedServer))
+    { return; }
+
+    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)
+    { return; }
+
+    for (auto It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
     {
-        auto PlayerController = It->Get();
+        const auto& PlayerController = It->Get();
+
         if (ck::IsValid(PlayerController) && PlayerController != InRequest.Get_OwningPlayerController())
         {
-            ck::unreal::Verbose(TEXT("Replicating [{}] with outermost [{}] on CLIENT with PC [{}]"),
-                InRequest.Get_OutermostActor(), InRequest.Get_ActorToReplicate(), PlayerController);
+            ck::unreal::Verbose
+            (
+                TEXT("Replicating [{}] with outermost [{}] on CLIENT with PC [{}].[{}]"),
+                OutermostActor,
+                InRequest.Get_ActorToReplicate(),
+                PlayerController,
+                ck::Context(this)
+            );
 
             UCk_Utils_Actor_UE::Request_SpawnActor(
-                UCk_Utils_Actor_UE::SpawnActorParamsType{InRequest.Get_OutermostActor(), InRequest.Get_ActorToReplicate()});
+                UCk_Utils_Actor_UE::SpawnActorParamsType{OutermostActor, InRequest.Get_ActorToReplicate()});
             // TODO: link up the ReplicatedObjects
         }
         else
@@ -101,13 +122,20 @@ auto
         FName InReplicatedName)
     -> void
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InReplicatedOwner), TEXT("Invalid Replicated Owner Actor.[{}]"), ck::Context(this))
+    { return; }
+
     if (InReplicatedOwner->GetWorld()->IsNetMode(NM_DedicatedServer))
     { return; }
 
+    // TODO: Sending garbage entity handle until we manage to link it up properly
     UCk_Ecs_ReplicatedObject::Create(InObject, InReplicatedOwner, InReplicatedName, FCk_Handle{});
 }
 
-void UCk_EcsConstructionScript_ActorComponent::BeginDestroy()
+auto
+    UCk_EcsConstructionScript_ActorComponent::
+    BeginDestroy()
+    -> void
 {
     Super::BeginDestroy();
 }
@@ -124,6 +152,9 @@ auto
         TEXT("UnrealEntity is [{}]. Did you forget to set the default value in the component?.[{}]"), _UnrealEntity, ck::Context(this))
     { return; }
 
+    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)
+    { return; }
+
     const auto WorldSubsystem = Cast<UCk_EcsWorld_Subsystem_UE>(GetWorld()->GetSubsystemBase(_EcsWorldSubsystem));
 
     // TODO: this hits at least once because the BP Subsystem is not loaded. Fix this.
@@ -132,7 +163,7 @@ auto
     { return; }
 
     _Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(WorldSubsystem->Get_TransientEntity());
-    auto OwningActor = GetOwner();
+    const auto& OwningActor = GetOwner();
 
     _Entity.Add<ck::FCk_Fragment_ActorInfo_Params>(FCk_Fragment_ActorInfo_ParamsData
     {
@@ -205,23 +236,12 @@ auto
     //    this)
     //{ return; }
 
-    const auto ConstructionScript = OutermostActor->GetComponentByClass<ThisType>();
+    const auto& ConstructionScript = OutermostActor->GetComponentByClass<ThisType>();
 
     CK_ENSURE_IF_NOT(ck::IsValid(ConstructionScript),
         TEXT("Found a REPLICATED with AUTHORITY Actor [{}] BUT it does NOT have [{}]. Are you sure this Actor's construction involved a Replicated Actor?"),
         this, ctti::nameof_v<ThisType>)
     { return; }
-
-    if (NOT GetWorld()->IsNetMode(NM_Client) && OutermostActor->GetRemoteRole() != ROLE_AutonomousProxy)
-    {
-        ConstructionScript->Request_ReplicateActor_OnClients
-        (
-            FCk_EcsConstructionScript_ConstructionInfo{}
-            .Set_OutermostActor(OutermostActor)
-            .Set_ActorToReplicate(OwningActor->GetClass())
-            .Set_ReplicatedObjects(UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(_Entity))
-        );
-    }
 
     if (GetWorld()->IsNetMode(NM_Client))
     {
@@ -235,4 +255,16 @@ auto
             .Set_Transform(OwningActor->GetActorTransform()) // maybe only send Location and Rotation to reduce bandwidth requirements
         );
     }
+    else if (OutermostActor->GetRemoteRole() != ROLE_AutonomousProxy)
+    {
+        ConstructionScript->Request_ReplicateActor_OnClients
+        (
+            FCk_EcsConstructionScript_ConstructionInfo{}
+            .Set_OutermostActor(OutermostActor)
+            .Set_ActorToReplicate(OwningActor->GetClass())
+            .Set_ReplicatedObjects(UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(_Entity))
+        );
+    }
 }
+
+// --------------------------------------------------------------------------------------------------------------------
