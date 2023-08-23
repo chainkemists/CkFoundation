@@ -10,7 +10,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Physics_Utils_UE::
+    UCk_Utils_Physics_UE::
     Request_SetGenerateOverlapEvents(
         UPrimitiveComponent* InComp,
         ECk_EnableDisable InEnableDisable,
@@ -18,7 +18,7 @@ auto
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InComp),
-        TEXT("Cannot set Generate Overlap Events on component because it is invalid!\nContext [{}]"), InContext)
+        TEXT("Cannot set Generate Overlap Events on component because it is invalid![{}]"), ck::Context(InContext))
     { return; }
 
     switch(InEnableDisable)
@@ -44,7 +44,7 @@ auto
 }
 
 auto
-    UCk_Physics_Utils_UE::
+    UCk_Utils_Physics_UE::
     Request_SetCollisionDetectionType(
         UPrimitiveComponent* InComp,
         ECk_CollisionDetectionType InCollisionType,
@@ -52,7 +52,7 @@ auto
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InComp),
-        TEXT("Cannot set Collision Detection Type on component because it is invalid!\nContext [{}]"), InContext)
+        TEXT("Cannot set Collision Detection Type on component because it is invalid![{}]"), ck::Context(InContext))
     { return; }
 
     switch(InCollisionType)
@@ -87,7 +87,7 @@ auto
 }
 
 auto
-    UCk_Physics_Utils_UE::
+    UCk_Utils_Physics_UE::
     Request_SetNavigationEffects(
         UPrimitiveComponent* InComp,
         ECk_NavigationEffect InNavigationEffect,
@@ -95,7 +95,7 @@ auto
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InComp),
-        TEXT("Cannot set Navigation Effect on component because it is invalid!\nContext [{}]"), InContext)
+        TEXT("Cannot set Navigation Effect on component because it is invalid![{}]"), ck::Context(InContext))
     { return; }
 
     switch(InNavigationEffect)
@@ -120,7 +120,7 @@ auto
 }
 
 auto
-    UCk_Physics_Utils_UE::
+    UCk_Utils_Physics_UE::
     Request_SetOverlapBehavior(
         UPrimitiveComponent* InComp,
         ECk_ComponentOverlapBehavior InOverlapBehavior,
@@ -128,7 +128,7 @@ auto
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InComp),
-        TEXT("Cannot set Overlap Behavior on component because it is invalid!\nContext [{}]"), InContext)
+        TEXT("Cannot set Overlap Behavior on component because it is invalid![{}]"), ck::Context(InContext))
     { return; }
 
     switch(InOverlapBehavior)
@@ -151,7 +151,7 @@ auto
 }
 
 auto
-    UCk_Physics_Utils_UE::
+    UCk_Utils_Physics_UE::
     Request_SetCollisionProfileName(
         UPrimitiveComponent* InComp,
         FName                InCollisionProfileName,
@@ -159,21 +159,21 @@ auto
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InComp),
-        TEXT("Cannot set Collision Profile Name on component because it is invalid!\nContext [{}]"), InContext)
+        TEXT("Cannot set Collision Profile Name on component because it is invalid![{}]"), ck::Context(InContext))
     { return; }
 
     CK_ENSURE_IF_NOT(Get_IsValidCollisionProfileName(InCollisionProfileName),
-        TEXT("Trying to set Collision Profile Name [{}] on component [{}] that does NOT exist in the list of collision profiles.\nContext [{}]"),
+        TEXT("Trying to set Collision Profile Name [{}] on component [{}] that does NOT exist in the list of collision profiles.[{}]"),
         InCollisionProfileName,
         InComp,
-        InContext)
+        ck::Context(InContext))
     { return; }
 
     InComp->SetCollisionProfileName(InCollisionProfileName);
 }
 
 auto
-    UCk_Physics_Utils_UE::
+    UCk_Utils_Physics_UE::
     Get_IsValidCollisionProfileName(
         FName          InCollisionProfileName,
         const UObject* InContext)
@@ -190,21 +190,21 @@ auto
 }
 
 auto
-    UCk_Physics_Utils_UE::
+    UCk_Utils_Physics_UE::
     Get_CollisionProfileName(
         const UPrimitiveComponent* InComp,
         const UObject*             InContext)
     -> FName
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InComp),
-        TEXT("Cannot get Collision Profile Name of component because it is invalid!\nContext [{}]"), InContext)
+        TEXT("Cannot get Collision Profile Name of component because it is invalid![{}]"), ck::Context(InContext))
     { return {}; }
 
     return InComp->GetCollisionProfileName();
 }
 
 auto
-    UCk_Physics_Utils_UE::
+    UCk_Utils_Physics_UE::
     Request_SetCollisionEnabled(
         UPrimitiveComponent*                 InComp,
         TEnumAsByte<ECollisionEnabled::Type> InCollisionEnabled,
@@ -212,14 +212,14 @@ auto
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InComp),
-        TEXT("Cannot set Collision Enabled on component because it is invalid!\nContext [{}]"), InContext)
+        TEXT("Cannot set Collision Enabled on component because it is invalid![{}]"), ck::Context(InContext))
     { return; }
 
     InComp->SetCollisionEnabled(InCollisionEnabled);
 }
 
 auto
-    UCk_Physics_Utils_UE::
+    UCk_Utils_Physics_UE::
     Make_BoxShapeDimensions(
         const FCk_BoxExtents& InBoxExtents)
     -> FCk_ShapeDimensions
@@ -228,7 +228,7 @@ auto
 }
 
 auto
-    UCk_Physics_Utils_UE::
+    UCk_Utils_Physics_UE::
     Make_SphereShapeDimensions(
         const FCk_SphereRadius& InSphereRadius)
     -> FCk_ShapeDimensions
@@ -237,7 +237,7 @@ auto
 }
 
 auto
-    UCk_Physics_Utils_UE::
+    UCk_Utils_Physics_UE::
     Make_CapsuleShapeDimensions(
         const FCk_CapsuleSize& InCapsuleSize)
     -> FCk_ShapeDimensions
