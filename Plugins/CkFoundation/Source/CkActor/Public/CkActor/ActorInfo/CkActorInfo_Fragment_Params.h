@@ -1,8 +1,8 @@
 #pragma once
 
 #include "CkCore/Actor/CkActor.h"
-#include "CkCore/ObjectReplication/CkReplicatedObject.h"
 
+#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 #include "CkEcs/Handle/CkHandle.h"
 
 #include "CkMacros/CkMacros.h"
@@ -118,40 +118,80 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// TODO: Move this to its own file
-UCLASS(NotBlueprintType, NotBlueprintable)
-class CKACTOR_API UCk_Ecs_ReplicatedObject
-    : public UCk_ReplicatedObject
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_Ecs_ReplicatedObject);
-
-public:
-    friend class UCk_Utils_ActorInfo_UE;
-
-public:
-    UFUNCTION()
-    virtual void OnRep_ReplicatedActor(AActor* InActor);
-
-    virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
-
-protected:
-    UPROPERTY(Transient)
-    FCk_Handle _AssociatedEntity;
-
-    UPROPERTY(Transient)
-    FCk_Handle _RemoteEntity;
-
-    UPROPERTY(ReplicatedUsing = OnRep_ReplicatedActor)
-    AActor* _ReplicatedActor = nullptr;
-
-public:
-    CK_PROPERTY_GET(_AssociatedEntity);
-    CK_PROPERTY_GET(_ReplicatedActor);
-    CK_PROPERTY_GET(_RemoteEntity);
-};
+//// TODO: Move this to its own file
+//UCLASS(NotBlueprintType, NotBlueprintable)
+//class CKACTOR_API UCk_Ecs_ReplicatedObject
+//    : public UCk_ReplicatedObject
+//{
+//    GENERATED_BODY()
+//
+//public:
+//    CK_GENERATED_BODY(UCk_Ecs_ReplicatedObject);
+//
+//public:
+//    // TODO: Remove as ActorInfo is no longer required to know about ReplicatedObject
+//    friend class UCk_Utils_ActorInfo_UE;
+//    friend class ACk_World_Actor_Replicated_UE;
+//
+//public:
+//    template <typename T_ReplicatedObject>
+//    static auto Create(AActor* InTopmostOwningActor, FCk_Handle InAssociatedEntity) -> TOptional<T_ReplicatedObject*>;
+//
+//    static auto Create(
+//        TSubclassOf<UCk_Ecs_ReplicatedObject> InReplicatedObject,
+//        AActor* InTopmostOwningActor,
+//        FCk_Handle InAssociatedEntity) -> TOptional<UCk_Ecs_ReplicatedObject*>;
+//
+//public:
+//    UFUNCTION()
+//    virtual void OnRep_ReplicatedActor(AActor* InActor);
+//
+//    virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
+//
+//protected:
+//    UPROPERTY(Transient)
+//    FCk_Handle _AssociatedEntity;
+//
+//    UPROPERTY(Transient)
+//    FCk_Handle _RemoteEntity;
+//
+//    UPROPERTY(ReplicatedUsing = OnRep_ReplicatedActor)
+//    AActor* _ReplicatedActor = nullptr;
+//
+//public:
+//    CK_PROPERTY_GET(_AssociatedEntity);
+//    CK_PROPERTY_GET(_ReplicatedActor);
+//    CK_PROPERTY_GET(_RemoteEntity);
+//};
+//
+//template <typename T_ReplicatedObject>
+//auto
+//    UCk_Ecs_ReplicatedObject::
+//    Create(
+//        AActor* InTopmostOwningActor,
+//        FCk_Handle InAssociatedEntity)
+//    -> TOptional<T_ReplicatedObject*>
+//{
+//    if (NOT InTopmostOwningActor->GetWorld()->IsNetMode(NM_Client))
+//    {
+//    }
+//
+//    // TODO: this should be hidden in the base class
+//    auto* ObjectReplicator = InTopmostOwningActor->GetComponentByClass<UCk_ObjectReplicator_Component>();
+//
+//    CK_ENSURE_IF_NOT(ck::IsValid(ObjectReplicator),
+//        TEXT("Expected ObjectReplicator to exist on [{}]. This component is automatically added on Replicated Actors that are ECS ready. Are you sure you added the EcsConstructionScript to the aforementioned Actor?"),
+//        InTopmostOwningActor)
+//    { return {}; }
+//
+//    auto* Obj = NewObject<T_ReplicatedObject>(InTopmostOwningActor);
+//    Obj->_AssociatedEntity = InAssociatedEntity;
+//    Obj->_ReplicatedActor = InTopmostOwningActor;
+//
+//    ObjectReplicator->Request_RegisterObjectForReplication(Obj);
+//
+//    return Obj;
+//}
 
 // --------------------------------------------------------------------------------------------------------------------
 

@@ -28,4 +28,12 @@ auto FCk_Handle::IsValid() const -> bool
     return ck::IsValid(_Registry) && _Registry->IsValid(_Entity);
 }
 
+auto
+    FCk_Handle::
+    Get_ValidHandle(FEntityType::IdType InEntity) const
+    -> ThisType
+{
+    return ThisType{_Registry->Get_ValidEntity(InEntity), *_Registry};
+}
+
 // --------------------------------------------------------------------------------------------------------------------

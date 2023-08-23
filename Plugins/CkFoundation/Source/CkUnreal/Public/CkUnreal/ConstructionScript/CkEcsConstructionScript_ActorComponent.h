@@ -2,6 +2,7 @@
 
 #include "CkCore/Enums/CkEnums.h"
 
+#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "CkUnreal/Entity/CkUnrealEntity_Fragment_Params.h"
@@ -30,10 +31,22 @@ private:
     UPROPERTY(meta=(AllowPrivateAccess))
     APlayerController* _OwningPlayerController = nullptr;
 
+    UPROPERTY(meta=(AllowPrivateAccess))
+    FCk_ReplicatedObjects _ReplicatedObjects;
+
+    UPROPERTY(meta=(AllowPrivateAccess))
+    int32                 _OriginalOwnerEntity;
+
+    UPROPERTY(meta=(AllowPrivateAccess))
+    FTransform            _Transform;
+
 public:
     CK_PROPERTY(_OutermostActor);
     CK_PROPERTY(_ActorToReplicate);
     CK_PROPERTY(_OwningPlayerController);
+    CK_PROPERTY(_ReplicatedObjects);
+    CK_PROPERTY(_OriginalOwnerEntity);
+    CK_PROPERTY(_Transform);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -60,11 +73,20 @@ public:
     Request_ReplicateActor_OnClients(
         const FCk_EcsConstructionScript_ConstructionInfo& InRequest);
 
+    UFUNCTION(NetMulticast, Reliable)
+    void
+    Request_ReplicateObject(
+        AActor* InReplicatedOwner,
+        TSubclassOf<UCk_Ecs_ReplicatedObject> InObject,
+        FName InReplicatedName);
+
 public:
-    virtual auto BeginDestroy() -> void override;
+    virtual auto
+    BeginDestroy() -> void override;
 
 protected:
-    virtual auto Do_Construct_Implementation(const FCk_ActorComponent_DoConstruct_Params& InParams) -> void override;
+    virtual auto
+    Do_Construct_Implementation(const FCk_ActorComponent_DoConstruct_Params& InParams) -> void override;
 
 public:
     UPROPERTY(EditDefaultsOnly)
