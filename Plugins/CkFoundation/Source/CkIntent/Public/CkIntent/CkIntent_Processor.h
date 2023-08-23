@@ -13,15 +13,15 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto Tick(FTimeType InDeltaT) -> void;
+        auto Tick(TimeType InDeltaT) -> void;
 
         auto ForEachEntity(
-            FTimeType InDeltaT,
-            FHandleType InHandle,
+            TimeType InDeltaT,
+            HandleType InHandle,
             FTag_Intent_Setup&);
 
     private:
-        FTimeType _Delay = FTimeType{5.0f};
+        TimeType _Delay = TimeType{5.0f};
     };
 
     class CKINTENT_API FCk_Processor_Intent_HandleRequests
@@ -32,8 +32,8 @@ namespace ck
 
     public:
         auto ForEachEntity(
-            FTimeType InDeltaT,
-            FHandleType InHandle,
+            TimeType InDeltaT,
+            HandleType InHandle,
             FCk_Fragment_Intent_Params&,
             FCk_Fragment_Intent_Requests&);
     };

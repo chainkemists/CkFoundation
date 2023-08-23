@@ -13,39 +13,39 @@ namespace ck
         CK_GENERATED_BODY(TProcessor<T_DerivedProcessor COMMA T_Fragments...>);
 
     public:
-        using FEntitType = FCk_Entity;
-        using FTimeType = FCk_Time;
-        using FHandleType = FCk_Handle;
-        using FRegistryType = FCk_Registry;
-        using FDerivedType = T_DerivedProcessor;
+        using EntityType = FCk_Entity;
+        using TimeType = FCk_Time;
+        using HandleType = FCk_Handle;
+        using RegistryType = FCk_Registry;
+        using DerivedType = T_DerivedProcessor;
 
     public:
-        explicit TProcessor(FRegistryType InRegistry);
+        explicit TProcessor(RegistryType InRegistry);
 
     public:
-        auto Tick(FTimeType InDeltaT) -> void;
+        auto Tick(TimeType InDeltaT) -> void;
 
     private:
         template <typename... T_ComponentsOnly>
-        auto DoTick(FTimeType InDeltaT, entt::type_list<T_ComponentsOnly...>) -> void;
+        auto DoTick(TimeType InDeltaT, entt::type_list<T_ComponentsOnly...>) -> void;
 
     private:
-        CK_ENABLE_SFINAE_THIS(FDerivedType);
+        CK_ENABLE_SFINAE_THIS(DerivedType);
 
     protected:
-        FRegistryType _Registry;
+        RegistryType _Registry;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename ... T_Fragments>
-    TProcessor<T_DerivedProcessor, T_Fragments...>::TProcessor(FRegistryType InRegistry)
+    TProcessor<T_DerivedProcessor, T_Fragments...>::TProcessor(RegistryType InRegistry)
         : _Registry(InRegistry)
     {
     }
 
     template <typename T_DerivedProcessor, typename ... T_Fragments>
-    auto TProcessor<T_DerivedProcessor, T_Fragments...>::Tick(FTimeType InDeltaT) -> void
+    auto TProcessor<T_DerivedProcessor, T_Fragments...>::Tick(TimeType InDeltaT) -> void
     {
         using FViewType = decltype(_Registry.View<T_Fragments...>());
         using FComponentsOnly = typename FViewType::template TFragmentsOnly<T_Fragments...>;
@@ -55,12 +55,12 @@ namespace ck
 
     template <typename T_DerivedProcessor, typename ... T_Fragments>
     template <typename ... T_ComponentsOnly>
-    auto TProcessor<T_DerivedProcessor, T_Fragments...>::DoTick(FTimeType InDeltaT,
+    auto TProcessor<T_DerivedProcessor, T_Fragments...>::DoTick(TimeType InDeltaT,
         entt::type_list<T_ComponentsOnly...>) -> void
     {
-        _Registry.View<T_Fragments...>().Each([&](FEntitType InEntity, T_ComponentsOnly&... InComponents)
+        _Registry.View<T_Fragments...>().Each([&](EntityType InEntity, T_ComponentsOnly&... InComponents)
         {
-            auto Handle = FHandleType{InEntity, _Registry};
+            auto Handle = HandleType{InEntity, _Registry};
             This()->ForEachEntity(InDeltaT, Handle, InComponents...);
         });
     }

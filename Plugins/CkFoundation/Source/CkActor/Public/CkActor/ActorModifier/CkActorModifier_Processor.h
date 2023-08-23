@@ -18,17 +18,17 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(const FTimeType& InDeltaT,
-            FHandleType InHandle,
+        auto ForEachEntity(const TimeType& InDeltaT,
+            HandleType InHandle,
             const FCk_Fragment_ActorInfo_Current& InActorInfoComp,
             FCk_Fragment_ActorModifier_LocationRequests& InRequestsComp) const -> void;
 
     private:
-        auto DoHandleRequest(FHandleType InHandle,
+        auto DoHandleRequest(HandleType InHandle,
             AActor* InActor,
             const FCk_Request_ActorModifier_SetLocation& InRequest) const -> void;
 
-        auto DoHandleRequest(FHandleType InHandle,
+        auto DoHandleRequest(HandleType InHandle,
             AActor* InActor,
             const FCk_Request_ActorModifier_AddLocationOffset& InRequest) const -> void;
     };
@@ -45,8 +45,8 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(const FTimeType& InDeltaT,
-            FHandleType InHandle,
+        auto ForEachEntity(const TimeType& InDeltaT,
+            HandleType InHandle,
             const FCk_Fragment_ActorInfo_Current& InActorInfoComp,
             FCk_Fragment_ActorModifier_ScaleRequests& InRequestsComp) const -> void;
     };
@@ -63,17 +63,17 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(const FTimeType& InDeltaT,
-            FHandleType InHandle,
+        auto ForEachEntity(const TimeType& InDeltaT,
+            HandleType InHandle,
             const FCk_Fragment_ActorInfo_Current& InActorInfoComp,
             FCk_Fragment_ActorModifier_RotationRequests& InRequestsComp) const -> void;
 
     private:
-        auto DoHandleRequest(FHandleType InHandle,
+        auto DoHandleRequest(HandleType InHandle,
             AActor* InActor,
             const FCk_Request_ActorModifier_SetRotation& InRequest) const -> void;
 
-        auto DoHandleRequest(FHandleType InHandle,
+        auto DoHandleRequest(HandleType InHandle,
             AActor* InActor,
             const FCk_Request_ActorModifier_AddRotationOffset& InRequest) const -> void;
     };
@@ -90,8 +90,8 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(const FTimeType& InDeltaT,
-            FHandleType InHandle,
+        auto ForEachEntity(const TimeType& InDeltaT,
+            HandleType InHandle,
             const FCk_Fragment_ActorInfo_Current& InActorInfoComp,
             FCk_Fragment_ActorModifier_TransformRequests& InRequestsComp) const -> void;
     };
@@ -108,8 +108,8 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(const FTimeType& InDeltaT,
-            FHandleType InHandle,
+        auto ForEachEntity(const TimeType& InDeltaT,
+            HandleType InHandle,
             FCk_Fragment_ActorModifier_SpawnActorRequests& InRequests) const -> void;
     };
 
@@ -126,8 +126,8 @@ namespace ck
 
     public:
         auto ForEachEntity(
-            const FTimeType& InDeltaT,
-            FHandleType InHandle,
+            const TimeType& InDeltaT,
+            HandleType InHandle,
             const FCk_Fragment_ActorInfo_Current& InActorInfoComp,
             FCk_Fragment_ActorModifier_AddActorComponentRequests& InRequests) const -> void;
     };
