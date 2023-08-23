@@ -76,35 +76,29 @@ auto
     CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)
     { return; }
 
+    const auto WorldSubsystem = Cast<UCk_EcsWorld_Subsystem_UE>(GetWorld()->GetSubsystemBase(_EcsWorldSubsystem));
+
+    // TODO: this hits at least once because the BP Subsystem is not loaded. Fix this.
+    CK_ENSURE_IF_NOT(ck::IsValid(WorldSubsystem),
+        TEXT("WorldSubsystem is [{}]. Did you forget to set the default value in the component?.[{}]"),
+        _EcsWorldSubsystem, ck::Context(this))
+    { return; }
+
     for (auto It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
     {
         const auto& PlayerController = It->Get();
 
         if (ck::IsValid(PlayerController) && PlayerController != InRequest.Get_OwningPlayerController())
         {
-            ck::unreal::Verbose
-            (
-                TEXT("Replicating [{}] with outermost [{}] on CLIENT with PC [{}].[{}]"),
-                OutermostActor,
-                InRequest.Get_ActorToReplicate(),
-                PlayerController,
-                ck::Context(this)
-            );
+            const auto NewActor = UCk_Utils_Actor_UE::Request_SpawnActor(
+                UCk_Utils_Actor_UE::SpawnActorParamsType{InRequest.Get_OutermostActor(), InRequest.Get_ActorToReplicate()});
 
-            UCk_Utils_Actor_UE::Request_SpawnActor(
-                UCk_Utils_Actor_UE::SpawnActorParamsType{OutermostActor, InRequest.Get_ActorToReplicate()});
-            // TODO: link up the ReplicatedObjects
+            const auto& NewActorBasicInfo = UCk_Utils_ActorInfo_UE::Get_ActorInfoBasicDetails_FromActor(NewActor);
+
+            UCk_Utils_ReplicatedObjects_UE::Add(NewActorBasicInfo.Get_Handle(), InRequest.Get_ReplicatedObjects());
         }
         else
         {
-            const auto WorldSubsystem = Cast<UCk_EcsWorld_Subsystem_UE>(GetWorld()->GetSubsystemBase(_EcsWorldSubsystem));
-
-            // TODO: this hits at least once because the BP Subsystem is not loaded. Fix this.
-            CK_ENSURE_IF_NOT(ck::IsValid(WorldSubsystem),
-                TEXT("WorldSubsystem is [{}]. Did you forget to set the default value in the component?.[{}]"),
-                _EcsWorldSubsystem, ck::Context(this))
-            { return; }
-
             const auto OriginalOwnerHandle = WorldSubsystem->Get_TransientEntity().Get_ValidHandle
             (
                 static_cast<FCk_Entity::IdType>(InRequest.Get_OriginalOwnerEntity())
@@ -112,6 +106,9 @@ auto
 
             UCk_Utils_ReplicatedObjects_UE::Add(OriginalOwnerHandle, InRequest.Get_ReplicatedObjects());
         }
+
+        ck::unreal::Verbose(TEXT("Replicating [{}] with outermost [{}] on CLIENT with PC [{}]"),
+            InRequest.Get_OutermostActor(), InRequest.Get_ActorToReplicate(), PlayerController);
     }
 }
 
