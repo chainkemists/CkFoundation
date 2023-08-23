@@ -12,8 +12,8 @@ namespace ck
     auto
         FCk_Processor_ActorModifier_Location_HandleRequests::
         ForEachEntity(
-            const FTimeType&                              InDeltaT,
-            FHandleType                                   InHandle,
+            const TimeType&                              InDeltaT,
+            HandleType                                   InHandle,
             const FCk_Fragment_ActorInfo_Current&        InActorInfoComp,
             FCk_Fragment_ActorModifier_LocationRequests& InRequestsComp) const
         -> void
@@ -49,7 +49,7 @@ namespace ck
     auto
         FCk_Processor_ActorModifier_Location_HandleRequests::
         DoHandleRequest(
-            FHandleType                                  InHandle,
+            HandleType                                  InHandle,
             AActor*                                      InActor,
             const FCk_Request_ActorModifier_SetLocation& InRequest) const
         -> void
@@ -81,7 +81,7 @@ namespace ck
     auto
         FCk_Processor_ActorModifier_Location_HandleRequests::
         DoHandleRequest(
-            FHandleType                                       InHandle,
+            HandleType                                       InHandle,
             AActor*                                           InActor,
             const FCk_Request_ActorModifier_AddLocationOffset& InRequest) const
         -> void
@@ -115,8 +115,8 @@ namespace ck
     auto
         FCk_Processor_ActorModifier_Scale_HandleRequests::
         ForEachEntity(
-            const FTimeType&                           InDeltaT,
-            FHandleType                                InHandle,
+            const TimeType&                           InDeltaT,
+            HandleType                                InHandle,
             const FCk_Fragment_ActorInfo_Current&     InActorInfoComp,
             FCk_Fragment_ActorModifier_ScaleRequests& InRequestsComp) const
         -> void
@@ -167,8 +167,8 @@ namespace ck
     auto
         FCk_Processor_ActorModifier_Rotation_HandleRequests::
         ForEachEntity(
-            const FTimeType&                              InDeltaT,
-            FHandleType                                   InHandle,
+            const TimeType&                              InDeltaT,
+            HandleType                                   InHandle,
             const FCk_Fragment_ActorInfo_Current&        InActorInfoComp,
             FCk_Fragment_ActorModifier_RotationRequests& InRequestsComp) const
         -> void
@@ -204,7 +204,7 @@ namespace ck
     auto
         FCk_Processor_ActorModifier_Rotation_HandleRequests::
         DoHandleRequest(
-            FHandleType InHandle,
+            HandleType InHandle,
             AActor* InActor,
             const FCk_Request_ActorModifier_SetRotation& InRequest) const -> void
     {
@@ -235,7 +235,7 @@ namespace ck
     auto
         FCk_Processor_ActorModifier_Rotation_HandleRequests::
         DoHandleRequest(
-            FHandleType InHandle,
+            HandleType InHandle,
             AActor* InActor,
             const FCk_Request_ActorModifier_AddRotationOffset& InRequest) const
         -> void
@@ -269,8 +269,8 @@ namespace ck
     auto
         FCk_Processor_ActorModifier_Transform_HandleRequests::
         ForEachEntity(
-            const FTimeType&                               InDeltaT,
-            FHandleType                                    InHandle,
+            const TimeType&                               InDeltaT,
+            HandleType                                    InHandle,
             const FCk_Fragment_ActorInfo_Current&         InActorInfoComp,
             FCk_Fragment_ActorModifier_TransformRequests& InRequestsComp) const
         -> void
@@ -321,8 +321,8 @@ namespace ck
     auto
         FCk_Processor_ActorModifier_SpawnActor_HandleRequests::
         ForEachEntity(
-            const FTimeType&                                InDeltaT,
-            FHandleType                                     InHandle,
+            const TimeType&                                InDeltaT,
+            HandleType                                     InHandle,
             FCk_Fragment_ActorModifier_SpawnActorRequests& InRequests) const
         -> void
     {
@@ -363,8 +363,8 @@ namespace ck
     auto
         FCk_Processor_ActorModifier_AddActorComponent_HandleRequests::
         ForEachEntity(
-            const FTimeType&                                       InDeltaT,
-            FHandleType                                            InHandle,
+            const TimeType&                                       InDeltaT,
+            HandleType                                            InHandle,
             const FCk_Fragment_ActorInfo_Current&                 InActorInfoComp,
             FCk_Fragment_ActorModifier_AddActorComponentRequests& InRequests) const
         -> void

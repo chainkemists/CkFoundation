@@ -13,8 +13,8 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(FTimeType InDeltaT,
-            FHandleType InHandle,
+        auto ForEachEntity(TimeType InDeltaT,
+            HandleType InHandle,
             FTag_ActorInfo_LinkUp& InTag);
     };
 }

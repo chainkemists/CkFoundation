@@ -9,8 +9,8 @@ namespace ck
     auto
         FCk_Processor_ActorInfo_LinkUp::
         ForEachEntity(
-            FTimeType InDeltaT,
-            FHandleType InHandle,
+            TimeType InDeltaT,
+            HandleType InHandle,
             FTag_ActorInfo_LinkUp& InTag)
     {
         const auto& ActorInfo = InHandle.Get<FCk_Fragment_ActorInfo_Current>();

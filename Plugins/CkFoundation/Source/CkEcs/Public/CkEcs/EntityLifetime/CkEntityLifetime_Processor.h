@@ -36,8 +36,8 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto Tick(FTimeType InDeltaT) -> void;
-        auto ForEachEntity(FTimeType InDeltaT, FHandleType InHandle) const -> void;
+        auto Tick(TimeType InDeltaT) -> void;
+        auto ForEachEntity(TimeType InDeltaT, HandleType InHandle) const -> void;
 
     };
 
@@ -50,7 +50,7 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(FTimeType InDeltaT, FHandleType InHandle) const -> void;
+        auto ForEachEntity(TimeType InDeltaT, HandleType InHandle) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
