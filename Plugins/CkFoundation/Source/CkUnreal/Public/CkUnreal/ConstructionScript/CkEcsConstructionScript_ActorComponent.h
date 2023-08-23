@@ -23,13 +23,13 @@ public:
 
 private:
     UPROPERTY(meta=(AllowPrivateAccess))
-    AActor* _OutermostActor = nullptr;
+    TObjectPtr<AActor> _OutermostActor;
 
     UPROPERTY(meta=(AllowPrivateAccess))
-    TSubclassOf<AActor> _ActorToReplicate = nullptr;
+    TSubclassOf<AActor> _ActorToReplicate;
 
     UPROPERTY(meta=(AllowPrivateAccess))
-    APlayerController* _OwningPlayerController = nullptr;
+    TObjectPtr<APlayerController> _OwningPlayerController;
 
     UPROPERTY(meta=(AllowPrivateAccess))
     FCk_ReplicatedObjects _ReplicatedObjects;
