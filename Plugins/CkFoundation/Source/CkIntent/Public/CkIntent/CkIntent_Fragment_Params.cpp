@@ -3,9 +3,8 @@
 #include "CkIntent_Fragment.h"
 #include "CkIntent/CkIntent_Log.h"
 
-#include "CkActor/ActorInfo/CkActorInfo_Utils.h"
-
 #include "CkCore/ObjectReplication/CkObjectReplicatorComponent.h"
+#include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
 #include "Net/UnrealNetwork.h"
 
@@ -33,7 +32,7 @@ auto UCk_Intent_ReplicatedObject_UE::Create(AActor* InOwningActor, FCk_Handle In
 
 void UCk_Intent_ReplicatedObject_UE::OnRep_IntentReady(bool InReady)
 {
-    const auto& BasicDetails = UCk_Utils_ActorInfo_UE::Get_ActorInfoBasicDetails_FromActor(GetOwningActor());
+    const auto& BasicDetails = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(GetOwningActor());
     _AssociatedEntity = BasicDetails.Get_Handle();
     _AssociatedEntity.Add<ck::FCk_Fragment_Intent_Params>(this);
 }
@@ -49,3 +48,5 @@ void UCk_Intent_ReplicatedObject_UE::AddIntent_Implementation(FGameplayTag InInt
 {
     ck::intent::Warning(TEXT("Syncing intent to CLIENT: [{}]"), InIntent);
 }
+
+// --------------------------------------------------------------------------------------------------------------------

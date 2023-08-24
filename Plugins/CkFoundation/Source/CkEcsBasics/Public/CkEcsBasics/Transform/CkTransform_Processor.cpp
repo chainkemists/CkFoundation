@@ -134,17 +134,17 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_ActorInfo_Current& InActorInfo,
+            const FCk_Fragment_OwningActor_Current& InOwningActor,
             const FCk_Fragment_Transform_Current& InComp,
             const FCk_Fragment_Transform_Requests&) const
         -> void
     {
-        const auto Actor = InActorInfo.Get_EntityActor();
+        const auto EntityOwningActor = InOwningActor.Get_EntityOwningActor();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(Actor), TEXT("Entity [{}] does NOT have a valid Actor. Was it destroyed?"), InHandle)
+        CK_ENSURE_IF_NOT(ck::IsValid(EntityOwningActor), TEXT("Entity [{}] does NOT have a valid Owning Actor. Was it destroyed?"), InHandle)
         { return; }
 
-        Actor->SetActorTransform(InComp.Get_Transform());
+        EntityOwningActor->SetActorTransform(InComp.Get_Transform());
     }
 }
 
