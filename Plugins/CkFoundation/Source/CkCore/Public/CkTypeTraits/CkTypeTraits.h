@@ -1,6 +1,7 @@
 #pragma once
 
 #include <CoreMinimal.h>
+#include <variant>
 
 namespace ck::type_traits
 {
@@ -130,3 +131,34 @@ namespace ck::policy
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    template <typename T_Func>
+    struct TVisitor
+    {
+        TVisitor(T_Func InFunc)
+            : _Func(InFunc)
+        {
+        }
+
+        template <typename T_TypeToVisit>
+        void operator()(T_TypeToVisit& InVariant)
+        {
+            std::visit([&](auto& InRequest)
+            {
+                _Func(InRequest);
+            }, InVariant);
+        }
+
+        T_Func _Func;
+    };
+
+    template <typename T_Func>
+    auto
+    Visitor(T_Func InFunc) -> TVisitor<T_Func>
+    {
+        auto V = TVisitor<T_Func>{InFunc};
+        return V;
+    }
+}
