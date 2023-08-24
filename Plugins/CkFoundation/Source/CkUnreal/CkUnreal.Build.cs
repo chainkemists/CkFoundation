@@ -20,6 +20,7 @@ public class CkUnreal : CkModuleRules
             "CkEcs",
             "CkEcsBasics",
             "CkIntent",
+            "CkNet",
             "CkLog",
             "CkPhysics"
         });

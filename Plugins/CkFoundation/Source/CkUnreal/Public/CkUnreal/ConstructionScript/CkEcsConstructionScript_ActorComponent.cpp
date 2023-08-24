@@ -11,6 +11,7 @@
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
+#include "CkNet/CkNet_Utils.h"
 
 #include "CkUnreal/CkUnreal_Log.h"
 #include "Engine/World.h"
@@ -174,7 +175,9 @@ auto
     _Entity.Add<ck::FCk_Fragment_ActorInfo_Current>(OwningActor);
 
     if (OwningActor->IsNetMode(NM_DedicatedServer))
-    { _Entity.Add<ck::FCk_Tag_NetMode_DedicatedServer>(); }
+    {
+        UCk_Utils_Net_UE::Request_MarkEntityAs_DedicatedServer(_Entity);
+    }
 
     // --------------------------------------------------------------------------------------------------------------------
     // LINK TO ACTOR
