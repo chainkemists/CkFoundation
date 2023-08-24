@@ -20,29 +20,17 @@ namespace ck
     {
         const auto PreviousTransform = InComp.Get_Transform();
 
-        algo::ForEachRequest(InRequestsComp._LocationRequests,
-        [&](const FCk_Fragment_Transform_Requests::LocationRequestType& InRequest)
+        algo::ForEachRequest(InRequestsComp._LocationRequests, ck::Visitor(
+        [&](const auto& InRequestVariant)
         {
-            std::visit
-            (
-                [&](const auto& InRequestVariant)
-                {
-                    DoHandleRequest(InHandle, InComp, InRequestVariant);
-                }, InRequest
-            );
-        });
+            DoHandleRequest(InHandle, InComp, InRequestVariant);
+        }));
 
-        algo::ForEachRequest(InRequestsComp._RotationRequests,
-        [&](const FCk_Fragment_Transform_Requests::RotationRequestType& InRequest)
+        algo::ForEachRequest(InRequestsComp._RotationRequests, ck::Visitor(
+        [&](const auto& InRequestVariant)
         {
-            std::visit
-            (
-                [&](const auto& InRequestVariant)
-                {
-                    DoHandleRequest(InHandle, InComp, InRequestVariant);
-                }, InRequest
-            );
-        });
+            DoHandleRequest(InHandle, InComp, InRequestVariant);
+        }));
 
         algo::ForEachRequest(InRequestsComp._ScaleRequests,
         [&](const FCk_Fragment_Transform_Requests::ScaleRequestType& InRequest)
