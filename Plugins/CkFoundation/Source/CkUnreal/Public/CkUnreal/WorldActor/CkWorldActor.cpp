@@ -37,6 +37,7 @@ namespace ck_world_actor
 
         InWorld.Add<ck::FCk_Processor_Transform_HandleRequests>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_Transform_Actor>(InWorld.Get_Registry());
+        InWorld.Add<ck::FCk_Processor_Transform_Replicate>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FCk_Processor_ActorModifier_Location_HandleRequests>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_ActorModifier_Scale_HandleRequests>(InWorld.Get_Registry());

@@ -126,22 +126,28 @@ namespace ck
         EntityOwningActor->SetActorTransform(InComp.Get_Transform());
     }
 
+    // --------------------------------------------------------------------------------------------------------------------
+
     auto
-        FCk_Processor_Transform_Actor::
+        FCk_Processor_Transform_Replicate::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_OwningActor_Current& InOwningActor,
-            const FCk_Fragment_Transform_Current& InComp,
-            const FCk_Fragment_Transform_Requests&) const
+            const FCk_Fragment_Transform_Current& InCurrent,
+            const TObjectPtr<UCk_Fragment_Transform_Rep>& InComp) const
         -> void
     {
-        const auto EntityOwningActor = InOwningActor.Get_EntityOwningActor();
+        UCk_Utils_Ecs_Net_UE::UpdateReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle, [&](UCk_Fragment_Transform_Rep* InRepComp)
+        {
+            if ((InCurrent.Get_ComponentsModified() & ECk_TransformComponents::Location) == ECk_TransformComponents::Location)
+            { InRepComp->_Location = InCurrent.Get_Transform().GetLocation(); }
 
-        CK_ENSURE_IF_NOT(ck::IsValid(EntityOwningActor), TEXT("Entity [{}] does NOT have a valid Owning Actor. Was it destroyed?"), InHandle)
-        { return; }
+            if ((InCurrent.Get_ComponentsModified() & ECk_TransformComponents::Rotation) == ECk_TransformComponents::Rotation)
+            { InRepComp->_Rotation = InCurrent.Get_Transform().GetRotation(); }
 
-        EntityOwningActor->SetActorTransform(InComp.Get_Transform());
+            if ((InCurrent.Get_ComponentsModified() & ECk_TransformComponents::Scale) == ECk_TransformComponents::Scale)
+            { InRepComp->_Scale = InCurrent.Get_Transform().GetScale3D(); }
+        });
     }
 }
 

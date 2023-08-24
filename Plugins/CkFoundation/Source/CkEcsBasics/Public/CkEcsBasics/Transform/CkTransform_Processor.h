@@ -69,6 +69,24 @@ namespace ck
             const FCk_Fragment_OwningActor_Current& InOwningActor,
             const FCk_Fragment_Transform_Current& InComp) const -> void;
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKECSBASICS_API FCk_Processor_Transform_Replicate
+        : public TProcessor<FCk_Processor_Transform_Replicate, FCk_Fragment_Transform_Current, TObjectPtr<UCk_Fragment_Transform_Rep>, FTag_Transform_Updated>
+    {
+    public:
+        using MarkedDirtyBy = FTag_Transform_Updated;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FCk_Fragment_Transform_Current& InCurrent,
+            const TObjectPtr<UCk_Fragment_Transform_Rep>& InComp) const -> void;
     };
 }
 
