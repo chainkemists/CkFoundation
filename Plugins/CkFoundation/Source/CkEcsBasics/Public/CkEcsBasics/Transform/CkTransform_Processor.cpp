@@ -11,6 +11,17 @@ namespace ck
 {
     auto
         FCk_Processor_Transform_HandleRequests::
+        Tick(TimeType InDeltaT) -> void
+    {
+        _Registry.Clear<FTag_Transform_Updated>();
+
+        TProcessor::Tick(InDeltaT);
+
+        _Registry.Clear<MarkedDirtyBy>();
+    }
+
+    auto
+        FCk_Processor_Transform_HandleRequests::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -24,38 +35,30 @@ namespace ck
         [&](const auto& InRequestVariant)
         {
             DoHandleRequest(InHandle, InComp, InRequestVariant);
+            InComp.Set_ComponentsModified(InComp.Get_ComponentsModified() | ECk_TransformComponents::Location);
         }));
 
         algo::ForEachRequest(InRequestsComp._RotationRequests, ck::Visitor(
         [&](const auto& InRequestVariant)
         {
             DoHandleRequest(InHandle, InComp, InRequestVariant);
+            InComp.Set_ComponentsModified(InComp.Get_ComponentsModified() | ECk_TransformComponents::Rotation);
         }));
 
         algo::ForEachRequest(InRequestsComp._ScaleRequests,
         [&](const FCk_Fragment_Transform_Requests::ScaleRequestType& InRequest)
         {
             InComp._Transform.SetScale3D(InRequest.Get_NewScale());
+            InComp.Set_ComponentsModified(InComp.Get_ComponentsModified() | ECk_TransformComponents::Scale);
         });
 
         const auto& NewTransform = InComp.Get_Transform();
 
         if (NOT PreviousTransform.Equals(NewTransform))
         {
-            UCk_Utils_Ecs_Net_UE::UpdateReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle, [&](UCk_Fragment_Transform_Rep* InRepComp)
-            {
-                if (NOT NewTransform.GetLocation().Equals(PreviousTransform.GetLocation()))
-                { InRepComp->_Location = NewTransform.GetLocation(); }
-
-                if (NOT NewTransform.GetRotation().Equals(PreviousTransform.GetRotation()))
-                { InRepComp->_Rotation = NewTransform.GetRotation(); }
-
-                if (NOT NewTransform.GetScale3D().Equals(PreviousTransform.GetScale3D()))
-                { InRepComp->_Scale = NewTransform.GetScale3D(); }
-            });
-
             ecs_basics::VeryVerbose(TEXT("Updated Transform [Old: {} | New: {}] of Entity [{}]"), PreviousTransform, NewTransform, InHandle);
             InComp._Transform = NewTransform;
+            InHandle.Add<ck::FTag_Transform_Updated>();
         }
     }
 
@@ -108,13 +111,19 @@ namespace ck
 
     auto
         FCk_Processor_Transform_Actor::
-        Tick(
-            TimeType InDeltaT)
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FCk_Fragment_OwningActor_Current& InOwningActor,
+            const FCk_Fragment_Transform_Current& InComp) const
         -> void
     {
-        TProcessor::Tick(InDeltaT);
+        const auto EntityOwningActor = InOwningActor.Get_EntityOwningActor();
 
-        _Registry.Clear<FCk_Processor_Transform_HandleRequests::MarkedDirtyBy>();
+        CK_ENSURE_IF_NOT(ck::IsValid(EntityOwningActor), TEXT("Entity [{}] does NOT have a valid Owning Actor. Was it destroyed?"), InHandle)
+        { return; }
+
+        EntityOwningActor->SetActorTransform(InComp.Get_Transform());
     }
 
     auto
