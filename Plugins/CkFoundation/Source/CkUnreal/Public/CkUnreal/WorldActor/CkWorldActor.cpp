@@ -12,6 +12,7 @@
 
 #include "CkPhysics/Acceleration/CkAcceleration_Processor.h"
 #include "CkPhysics/Integrator/CkIntegrator_Processor.h"
+#include "CkProjectile/CkProjectile_Processor.h"
 
 #include "CkUnreal/Entity/CkUnrealEntity_Processor.h"
 
@@ -35,14 +36,16 @@ namespace ck_world_actor
         InWorld.Add<ck::FCk_Processor_Acceleration_Setup>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_Integrator_Update>(InWorld.Get_Registry());
 
+        InWorld.Add<ck::FCk_Processor_Projectile_Update>(InWorld.Get_Registry());
+
         InWorld.Add<ck::FCk_Processor_Transform_HandleRequests>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_Transform_Actor>(InWorld.Get_Registry());
-        InWorld.Add<ck::FCk_Processor_Transform_Replicate>(InWorld.Get_Registry());
 
-        InWorld.Add<ck::FCk_Processor_ActorModifier_Location_HandleRequests>(InWorld.Get_Registry());
-        InWorld.Add<ck::FCk_Processor_ActorModifier_Scale_HandleRequests>(InWorld.Get_Registry());
-        InWorld.Add<ck::FCk_Processor_ActorModifier_Rotation_HandleRequests>(InWorld.Get_Registry());
-        InWorld.Add<ck::FCk_Processor_ActorModifier_Transform_HandleRequests>(InWorld.Get_Registry());
+        // Processors for Replication
+        {
+            InWorld.Add<ck::FCk_Processor_Velocity_Replicate>(InWorld.Get_Registry());
+            InWorld.Add<ck::FCk_Processor_Transform_Replicate>(InWorld.Get_Registry());
+        }
 
         InWorld.Add<ck::FCk_Processor_EntityLifetime_EntityJustCreated>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_EntityLifetime_PendingDestroyEntity>(InWorld.Get_Registry());
