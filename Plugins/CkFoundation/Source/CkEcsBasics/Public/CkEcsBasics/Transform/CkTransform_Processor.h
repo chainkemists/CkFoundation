@@ -2,6 +2,8 @@
 
 #include "CkTransform_Fragment.h"
 
+#include "CkActor/ActorInfo/CkActorInfo_Fragment.h"
+
 #include "CkEcs/Processor/CkProcessor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -44,6 +46,29 @@ namespace ck
             HandleType InHandle,
             FCk_Fragment_Transform_Current& InComp,
             const FCk_Request_Transform_AddRotationOffset& InRequest) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKECSBASICS_API FCk_Processor_Transform_Actor
+        : public TProcessor<FCk_Processor_Transform_Actor, FCk_Fragment_ActorInfo_Current, FCk_Fragment_Transform_Current, FCk_Fragment_Transform_Requests>
+    {
+    public:
+        using MarkedDirtyBy = FCk_Fragment_Transform_Requests;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto Tick(
+            TimeType InDeltaT) -> void;
+
+        auto ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FCk_Fragment_ActorInfo_Current& InActorInfo,
+            const FCk_Fragment_Transform_Current& InComp,
+            const FCk_Fragment_Transform_Requests&) const -> void;
     };
 }
 
