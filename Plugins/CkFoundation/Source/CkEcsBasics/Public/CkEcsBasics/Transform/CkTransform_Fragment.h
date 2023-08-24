@@ -66,10 +66,10 @@ namespace ck
 
     public:
         using RotationRequestType = std::variant<FCk_Request_Transform_SetRotation, FCk_Request_Transform_AddRotationOffset>;
-        using RotationRequestList = TOptional<RotationRequestType>;
+        using RotationRequestList = TArray<RotationRequestType>;
 
         using LocationRequestType = std::variant<FCk_Request_Transform_SetLocation, FCk_Request_Transform_AddLocationOffset>;
-        using LocationRequestList = TOptional<LocationRequestType>;
+        using LocationRequestList = TArray<LocationRequestType>;
 
         using ScaleRequestType    = FCk_Request_Transform_SetScale;
         using ScaleRequestList    = TOptional<ScaleRequestType>;

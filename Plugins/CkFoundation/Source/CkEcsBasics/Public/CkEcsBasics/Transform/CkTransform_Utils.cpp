@@ -40,7 +40,7 @@ auto
     if (NOT Ensure<ck::type_traits::NonConst>(InHandle))
     { return; }
 
-    InHandle.AddOrGet<ck::FCk_Fragment_Transform_Requests>()._RotationRequests = InRequest;
+    InHandle.AddOrGet<ck::FCk_Fragment_Transform_Requests>()._RotationRequests.Emplace(InRequest);
 }
 
 auto
