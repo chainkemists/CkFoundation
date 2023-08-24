@@ -8,7 +8,7 @@ CKPHYSICS_API DECLARE_LOG_CATEGORY_EXTERN(CkPhysics, Log, All);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck::Physics
+namespace ck::physics
 {
     CK_DEFINE_LOG_FUNCTIONS(CkPhysics);
 }
