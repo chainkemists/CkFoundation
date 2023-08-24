@@ -29,6 +29,10 @@ public:
     FCk_Handle(FEntityType InEntity, const FRegistryType& InRegistry);
 
 public:
+    auto operator==(const ThisType& InOther) const -> bool;
+    CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
+
+public:
     template <typename T_FragmentType, typename... T_Args>
     auto Add(T_Args&&... InArgs) -> T_FragmentType&;
 
@@ -101,6 +105,8 @@ private:
     int32 _EntityVersion;
 #endif
 };
+
+auto CKECS_API GetTypeHash(FCk_Handle InHandle) -> uint32;
 
 // --------------------------------------------------------------------------------------------------------------------
 
