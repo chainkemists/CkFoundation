@@ -3,7 +3,6 @@
 #include "CkActorModifier_Utils.h"
 
 #include "CkActor/CkActor_Log.h"
-#include "CkActor/ActorInfo/CkActorInfo_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -14,13 +13,13 @@ namespace ck
         ForEachEntity(
             const TimeType&                              InDeltaT,
             HandleType                                   InHandle,
-            const FCk_Fragment_ActorInfo_Current&        InActorInfoComp,
+            const FCk_Fragment_OwningActor_Current&      InOwningActorComp,
             FCk_Fragment_ActorModifier_LocationRequests& InRequestsComp) const
         -> void
     {
         for (const auto& InRequest : InRequestsComp._Requests)
         {
-            const auto& targetActor = InActorInfoComp.Get_EntityActor().Get();
+            const auto& targetActor = InOwningActorComp.Get_EntityOwningActor().Get();
 
             CK_ENSURE_IF_NOT(ck::IsValid(targetActor), TEXT("Actor Location Request on Entity [{}] that has NO Actor!"), InHandle)
             { return; }
@@ -117,7 +116,7 @@ namespace ck
         ForEachEntity(
             const TimeType&                           InDeltaT,
             HandleType                                InHandle,
-            const FCk_Fragment_ActorInfo_Current&     InActorInfoComp,
+            const FCk_Fragment_OwningActor_Current&     InOwningActorComp,
             FCk_Fragment_ActorModifier_ScaleRequests& InRequestsComp) const
         -> void
     {
@@ -125,7 +124,7 @@ namespace ck
         {
             actor::VeryVerbose(TEXT("Handling SetScale Request for Entity [{}]"), InHandle);
 
-            const auto& targetActor = InActorInfoComp.Get_EntityActor().Get();
+            const auto& targetActor = InOwningActorComp.Get_EntityOwningActor().Get();
 
             CK_ENSURE_IF_NOT(ck::IsValid(targetActor), TEXT("Actor Scale Request on Entity [{}] that has NO Actor!"), InHandle)
             { return; }
@@ -169,13 +168,13 @@ namespace ck
         ForEachEntity(
             const TimeType&                              InDeltaT,
             HandleType                                   InHandle,
-            const FCk_Fragment_ActorInfo_Current&        InActorInfoComp,
+            const FCk_Fragment_OwningActor_Current&        InOwningActorComp,
             FCk_Fragment_ActorModifier_RotationRequests& InRequestsComp) const
         -> void
     {
         for (const auto& InRequest : InRequestsComp._Requests)
         {
-            const auto& targetActor = InActorInfoComp.Get_EntityActor().Get();
+            const auto& targetActor = InOwningActorComp.Get_EntityOwningActor().Get();
 
             CK_ENSURE_IF_NOT(ck::IsValid(targetActor), TEXT("Actor Rotation Request on Entity [{}] that has NO Actor!"), InHandle)
             { return; }
@@ -271,7 +270,7 @@ namespace ck
         ForEachEntity(
             const TimeType&                               InDeltaT,
             HandleType                                    InHandle,
-            const FCk_Fragment_ActorInfo_Current&         InActorInfoComp,
+            const FCk_Fragment_OwningActor_Current&         InOwningActorComp,
             FCk_Fragment_ActorModifier_TransformRequests& InRequestsComp) const
         -> void
     {
@@ -279,7 +278,7 @@ namespace ck
         {
             actor::VeryVerbose(TEXT("Handling SetTransform Request for Entity [{}]"), InHandle);
 
-            const auto& targetActor = InActorInfoComp.Get_EntityActor().Get();
+            const auto& targetActor = InOwningActorComp.Get_EntityOwningActor().Get();
 
             CK_ENSURE_IF_NOT(ck::IsValid(targetActor), TEXT("Actor Transform Request on Entity [{}] that has NO Actor!"), InHandle)
             { return; }
@@ -365,7 +364,7 @@ namespace ck
         ForEachEntity(
             const TimeType&                                       InDeltaT,
             HandleType                                            InHandle,
-            const FCk_Fragment_ActorInfo_Current&                 InActorInfoComp,
+            const FCk_Fragment_OwningActor_Current&                 InOwningActorComp,
             FCk_Fragment_ActorModifier_AddActorComponentRequests& InRequests) const
         -> void
     {
@@ -373,7 +372,7 @@ namespace ck
         {
             actor::VeryVerbose(TEXT("Handling AddActorComponent Request for Entity [{}]"), InHandle);
 
-            const auto& entityActor = InActorInfoComp.Get_EntityActor().Get();
+            const auto& entityActor = InOwningActorComp.Get_EntityOwningActor().Get();
 
             CK_ENSURE_IF_NOT(ck::IsValid(entityActor), TEXT("AddActorComponent Request on Entity [{}] that has NO Actor!"), InHandle)
             { return; }

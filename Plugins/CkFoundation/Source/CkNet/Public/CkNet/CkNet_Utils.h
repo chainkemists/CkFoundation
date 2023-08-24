@@ -17,7 +17,7 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Net_UE);
 
 public:
-    friend class UCk_EcsConstructionScript_ActorComponent;
+    friend class UCk_EcsConstructionScript_ActorComponent_UE;
 
 public:
     UFUNCTION(BlueprintPure)

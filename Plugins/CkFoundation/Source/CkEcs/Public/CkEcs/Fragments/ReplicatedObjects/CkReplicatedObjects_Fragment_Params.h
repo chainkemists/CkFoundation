@@ -22,7 +22,7 @@ public:
 
 public:
     // TODO: Remove as ActorInfo is no longer required to know about ReplicatedObject
-    friend class UCk_Utils_ActorInfo_UE;
+    friend class UCk_Utils_OwningActor_UE;
     friend class ACk_World_Actor_Replicated_UE;
     friend struct FCk_ReplicatedObjects;
 

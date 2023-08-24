@@ -1,7 +1,6 @@
 #include "CkWorldActor.h"
 
 #include "CkActor/ActorModifier/CkActorModifier_Processor.h"
-#include "CkActor/ActorInfo/CkActorInfo_Processors.h"
 
 #include "CkIntent/CkIntent_Processor.h"
 
@@ -28,7 +27,6 @@ namespace ck_world_actor
         InWorld.Add<ck::FCk_Processor_UnrealEntity_HandleRequests>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FCk_Processor_ActorModifier_SpawnActor_HandleRequests>(InWorld.Get_Registry());
-        InWorld.Add<ck::FCk_Processor_ActorInfo_LinkUp>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_ActorModifier_AddActorComponent_HandleRequests>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_Intent_Setup>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_Intent_HandleRequests>(InWorld.Get_Registry());
@@ -58,3 +56,5 @@ Initialize(ETickingGroup InTickingGroup) -> void
     Super::Initialize(InTickingGroup);
     ck_world_actor::InjectAllEcsSystemsIntoWorld(*_EcsWorld);
 }
+
+// --------------------------------------------------------------------------------------------------------------------

@@ -2,7 +2,7 @@
 
 #include "CkActor/ActorModifier/CkActorModifier_Utils.h"
 
-#include "CkCore/ObjectReplication/CkObjectReplicatorComponent.h"
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Fragment_ActorModifier_Rep::
@@ -63,3 +63,5 @@ auto
 {
     UCk_Utils_ActorModifier_UE::Request_SetTransform(Get_AssociatedEntity(), InRequest, {});
 }
+
+// --------------------------------------------------------------------------------------------------------------------

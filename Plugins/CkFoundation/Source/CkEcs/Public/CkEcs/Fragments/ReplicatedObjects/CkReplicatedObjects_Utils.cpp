@@ -3,6 +3,7 @@
 #include "CkReplicatedObjects_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_ReplicatedObjects_UE::
     Add(
@@ -22,6 +23,9 @@ auto
         UCk_ReplicatedObject* InReplicatedObject)
     -> void
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InReplicatedObject), TEXT("Invalid Replicated Object request to add to Entity [{}]"), InHandle)
+    { return; }
+
     InHandle.AddOrGet<ck::FCk_Fragment_ReplicatedObjects_Params>()
     .Update_ReplicatedObjects([&](FCk_ReplicatedObjects& InReplicatedObjects)
     {
@@ -40,3 +44,5 @@ auto
 {
     return InHandle.Get<ck::FCk_Fragment_ReplicatedObjects_Params>().Get_ReplicatedObjects();
 }
+
+// --------------------------------------------------------------------------------------------------------------------

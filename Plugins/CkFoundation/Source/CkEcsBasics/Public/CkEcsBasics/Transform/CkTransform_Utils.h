@@ -9,12 +9,11 @@
 
 #include <CkTypeTraits/CkTypeTraits.h>
 
-#include "CkActor/Public/CkActor/ActorInfo/CkActorInfo_Utils.h"
-
 #include "CkCore/Actor/CkActor_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
+#include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkNet/CkNet_Utils.h"
 
 #include "CkTransform_Utils.generated.h"
@@ -161,10 +160,10 @@ auto
     { return; }
 
     // TODO: once this is solidified, the boilerplate will be reduced
-    const auto& BasicDetails = UCk_Utils_ActorInfo_UE::Get_ActorInfoBasicDetails(InHandle);
+    const auto& BasicDetails = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(InHandle);
 
     const auto OwningActor = BasicDetails.Get_Actor().Get();
-    const auto OutermostActor =  UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(OwningActor);
+    const auto OutermostActor = UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(OwningActor);
 
     // TODO: ensure here that we do not have an outermost that is Replicated
 

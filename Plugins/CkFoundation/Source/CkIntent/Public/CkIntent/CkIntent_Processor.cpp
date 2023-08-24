@@ -1,6 +1,8 @@
 #include "CkIntent_Processor.h"
 
-#include "CkActor/ActorInfo/CkActorInfo_Utils.h"
+#include "CkEcs/OwningActor/CkOwningActor_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
@@ -26,7 +28,7 @@ namespace ck
     {
         auto& InIntentParams = InHandle.Get<FCk_Fragment_Intent_Params>();
 
-        const auto& BasicDetails =  UCk_Utils_ActorInfo_UE::Get_ActorInfoBasicDetails(InHandle);
+        const auto& BasicDetails =  UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(InHandle);
 
         if (NOT ck::IsValid(BasicDetails.Get_Actor()))
         { return; }
@@ -53,7 +55,7 @@ namespace ck
             FCk_Fragment_Intent_Params& InParams,
             FCk_Fragment_Intent_Requests& InRequests)
     {
-        // TODO: this should be handled better with Warning OR ensure OR 
+        // TODO: this should be handled better with Warning OR ensure OR
         if (NOT ck::IsValid(InParams.Get_Intent_RO()))
         { return; }
 
@@ -65,3 +67,5 @@ namespace ck
         InHandle.Remove<FCk_Fragment_Intent_Requests>();
     }
 }
+
+// --------------------------------------------------------------------------------------------------------------------
