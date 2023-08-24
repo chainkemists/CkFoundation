@@ -62,7 +62,7 @@ namespace ck
         auto Handle = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_ProcessorsRegistry);
 
         Handle.Add<FTickableType>(T_Tickable{std::forward<T_Args>(InArgs)...});
-        DoSortTickable<T_Tickable>();
+        DoSortTickable<FTickableType>();
 
         return Handle;
     }
