@@ -15,11 +15,14 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_Transform_UE;
+class UCk_Fragment_Transform_Rep;
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
+    struct FTag_Transform_Updated {};
+
     template <typename T_ConstOrNonConst>
     struct TFragment_Transform
     {
@@ -38,9 +41,11 @@ namespace ck
 
     private:
         FTransform _Transform;
+        ECk_TransformComponents _ComponentsModified = ECk_TransformComponents::None;
 
     public:
         CK_PROPERTY(_Transform);
+        CK_PROPERTY(_ComponentsModified);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -97,6 +102,8 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck { class FCk_Processor_Transform_Replicate; }
+
 UCLASS(Blueprintable)
 class CKECSBASICS_API UCk_Fragment_Transform_Rep : public UCk_Ecs_ReplicatedObject_UE
 {
@@ -106,7 +113,7 @@ public:
     CK_GENERATED_BODY(UCk_Fragment_Transform_Rep);
 
 public:
-    friend class ck::FCk_Processor_Transform_HandleRequests;
+    friend class ck::FCk_Processor_Transform_Replicate;
 
 public:
     virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;

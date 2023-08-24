@@ -19,6 +19,10 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
+        auto Tick(
+            TimeType InDeltaT) -> void;
+
+    public:
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -50,24 +54,21 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKECSBASICS_API FCk_Processor_Transform_Actor
-        : public TProcessor<FCk_Processor_Transform_Actor, FCk_Fragment_OwningActor_Current, FCk_Fragment_Transform_Current, FCk_Fragment_Transform_Requests>
+        : public TProcessor<FCk_Processor_Transform_Actor, FCk_Fragment_OwningActor_Current, FCk_Fragment_Transform_Current, FTag_Transform_Updated>
     {
     public:
-        using MarkedDirtyBy = FCk_Fragment_Transform_Requests;
+        using MarkedDirtyBy = FTag_Transform_Updated;
 
     public:
         using TProcessor::TProcessor;
 
     public:
-        auto Tick(
-            TimeType InDeltaT) -> void;
-
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FCk_Fragment_OwningActor_Current& InOwningActor,
-            const FCk_Fragment_Transform_Current& InComp,
-            const FCk_Fragment_Transform_Requests&) const -> void;
+            const FCk_Fragment_Transform_Current& InComp) const -> void;
+    };
     };
 }
 

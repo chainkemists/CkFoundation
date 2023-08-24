@@ -4,7 +4,23 @@
 
 #include "CkMacros/CkMacros.h"
 
+#include "CkThirdParty/bitwise-enum/bitwise_enum.hpp"
+
 #include "CkTransform_Fragment_Params.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_TransformComponents : uint8
+{
+    None = 0,
+    Location = 1 << 0,
+    Rotation = 1 << 1,
+    Scale = 1 << 2
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_TransformComponents);
+ENABLE_ENUM_BITWISE_OPERATORS(ECk_TransformComponents);
 
 // --------------------------------------------------------------------------------------------------------------------
 
