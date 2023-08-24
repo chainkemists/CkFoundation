@@ -6,7 +6,7 @@
 
 auto
     UCk_Utils_Net_UE::
-    Get_IsEntityNetMode_Server(
+    Get_IsEntityNetMode_DedicatedServer(
         FCk_Handle InHandle)
     -> bool
 {
