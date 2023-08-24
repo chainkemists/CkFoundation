@@ -25,6 +25,7 @@ public:
     using FEcsWorldType = ck::FEcsWorld;
 
 public:
-    auto Initialize(ETickingGroup InTickingGroup) -> void;
+    virtual auto Initialize(ETickingGroup InTickingGroup) -> void override;
 };
 
+// --------------------------------------------------------------------------------------------------------------------

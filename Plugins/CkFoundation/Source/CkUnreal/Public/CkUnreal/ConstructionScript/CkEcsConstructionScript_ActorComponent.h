@@ -52,15 +52,15 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, Blueprintable, BlueprintType)
-class CKUNREAL_API UCk_EcsConstructionScript_ActorComponent : public UCk_ActorComponent_UE
+class CKUNREAL_API UCk_EcsConstructionScript_ActorComponent_UE : public UCk_ActorComponent_UE
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_EcsConstructionScript_ActorComponent);
+    CK_GENERATED_BODY(UCk_EcsConstructionScript_ActorComponent_UE);
 
 public:
-    UCk_EcsConstructionScript_ActorComponent();
+    UCk_EcsConstructionScript_ActorComponent_UE();
 
 public:
     UFUNCTION(Server, Reliable)

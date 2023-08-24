@@ -3,7 +3,7 @@
 #include "CkActorModifier_Fragment.h"
 #include "CkActorModifier_Fragment_Params.h"
 
-#include "CkActor/ActorInfo/CkActorInfo_Fragment.h"
+#include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
 
@@ -12,7 +12,7 @@
 namespace ck
 {
     class CKACTOR_API FCk_Processor_ActorModifier_Location_HandleRequests
-        : public TProcessor<FCk_Processor_ActorModifier_Location_HandleRequests, FCk_Fragment_ActorInfo_Current, FCk_Fragment_ActorModifier_LocationRequests>
+        : public TProcessor<FCk_Processor_ActorModifier_Location_HandleRequests, FCk_Fragment_OwningActor_Current, FCk_Fragment_ActorModifier_LocationRequests>
     {
     public:
         using TProcessor::TProcessor;
@@ -20,7 +20,7 @@ namespace ck
     public:
         auto ForEachEntity(const TimeType& InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_ActorInfo_Current& InActorInfoComp,
+            const FCk_Fragment_OwningActor_Current& InOwningActorComp,
             FCk_Fragment_ActorModifier_LocationRequests& InRequestsComp) const -> void;
 
     private:
@@ -36,7 +36,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKACTOR_API FCk_Processor_ActorModifier_Scale_HandleRequests
-        : public TProcessor<FCk_Processor_ActorModifier_Scale_HandleRequests, FCk_Fragment_ActorInfo_Current, FCk_Fragment_ActorModifier_ScaleRequests>
+        : public TProcessor<FCk_Processor_ActorModifier_Scale_HandleRequests, FCk_Fragment_OwningActor_Current, FCk_Fragment_ActorModifier_ScaleRequests>
     {
     public:
         using MarkedDirtyBy = FCk_Fragment_ActorModifier_ScaleRequests;
@@ -47,14 +47,14 @@ namespace ck
     public:
         auto ForEachEntity(const TimeType& InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_ActorInfo_Current& InActorInfoComp,
+            const FCk_Fragment_OwningActor_Current& InOwningActorComp,
             FCk_Fragment_ActorModifier_ScaleRequests& InRequestsComp) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKACTOR_API FCk_Processor_ActorModifier_Rotation_HandleRequests
-        : public TProcessor<FCk_Processor_ActorModifier_Rotation_HandleRequests, FCk_Fragment_ActorInfo_Current, FCk_Fragment_ActorModifier_RotationRequests>
+        : public TProcessor<FCk_Processor_ActorModifier_Rotation_HandleRequests, FCk_Fragment_OwningActor_Current, FCk_Fragment_ActorModifier_RotationRequests>
     {
     public:
         using MarkedDirtyBy = FCk_Fragment_ActorModifier_RotationRequests;
@@ -65,7 +65,7 @@ namespace ck
     public:
         auto ForEachEntity(const TimeType& InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_ActorInfo_Current& InActorInfoComp,
+            const FCk_Fragment_OwningActor_Current& InOwningActorComp,
             FCk_Fragment_ActorModifier_RotationRequests& InRequestsComp) const -> void;
 
     private:
@@ -81,7 +81,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKACTOR_API FCk_Processor_ActorModifier_Transform_HandleRequests
-        : public TProcessor<FCk_Processor_ActorModifier_Transform_HandleRequests, FCk_Fragment_ActorInfo_Current, FCk_Fragment_ActorModifier_TransformRequests>
+        : public TProcessor<FCk_Processor_ActorModifier_Transform_HandleRequests, FCk_Fragment_OwningActor_Current, FCk_Fragment_ActorModifier_TransformRequests>
     {
     public:
         using MarkedDirtyBy = FCk_Fragment_ActorModifier_TransformRequests;
@@ -92,7 +92,7 @@ namespace ck
     public:
         auto ForEachEntity(const TimeType& InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_ActorInfo_Current& InActorInfoComp,
+            const FCk_Fragment_OwningActor_Current& InOwningActorComp,
             FCk_Fragment_ActorModifier_TransformRequests& InRequestsComp) const -> void;
     };
 
@@ -116,7 +116,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKACTOR_API FCk_Processor_ActorModifier_AddActorComponent_HandleRequests
-        : public TProcessor<FCk_Processor_ActorModifier_AddActorComponent_HandleRequests, FCk_Fragment_ActorInfo_Current, FCk_Fragment_ActorModifier_AddActorComponentRequests>
+        : public TProcessor<FCk_Processor_ActorModifier_AddActorComponent_HandleRequests, FCk_Fragment_OwningActor_Current, FCk_Fragment_ActorModifier_AddActorComponentRequests>
     {
     public:
         using MarkedDirtyBy = FCk_Fragment_ActorModifier_AddActorComponentRequests;
@@ -128,11 +128,9 @@ namespace ck
         auto ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_ActorInfo_Current& InActorInfoComp,
+            const FCk_Fragment_OwningActor_Current& InOwningActorComp,
             FCk_Fragment_ActorModifier_AddActorComponentRequests& InRequests) const -> void;
     };
-
-    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------

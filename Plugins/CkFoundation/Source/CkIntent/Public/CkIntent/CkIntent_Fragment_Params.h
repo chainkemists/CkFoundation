@@ -1,8 +1,8 @@
 #pragma once
 
 #include "GameplayTagContainer.h"
-
-#include "CkActor/ActorInfo/CkActorInfo_Fragment_Params.h"
+#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
+#include "CkEcs/Handle/CkHandle.h"
 
 #include "CkMacros/CkMacros.h"
 
@@ -62,4 +62,6 @@ public:
     UFUNCTION(Client, Reliable)
     void AddIntent(FGameplayTag InIntent);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
 

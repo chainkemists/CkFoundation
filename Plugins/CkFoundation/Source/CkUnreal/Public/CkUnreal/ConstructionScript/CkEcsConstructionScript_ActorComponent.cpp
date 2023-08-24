@@ -2,15 +2,14 @@
 
 #include "CkCore/Actor/CkActor_Utils.h"
 
-#include "CkActor/ActorInfo/CkActorInfo_Fragment.h"
-#include "CkActor/ActorInfo/CkActorInfo_Utils.h"
-
 #include "CkCore/ObjectReplication/CkObjectReplicatorComponent.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
+#include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
+#include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkNet/CkNet_Utils.h"
 
 #include "CkUnreal/CkUnreal_Log.h"
@@ -20,8 +19,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCk_EcsConstructionScript_ActorComponent::
-    UCk_EcsConstructionScript_ActorComponent()
+UCk_EcsConstructionScript_ActorComponent_UE::
+    UCk_EcsConstructionScript_ActorComponent_UE()
 {
     PrimaryComponentTick.bCanEverTick = false;
     bReplicateUsingRegisteredSubObjectList = true;
@@ -29,7 +28,7 @@ UCk_EcsConstructionScript_ActorComponent::
 }
 
 auto
-    UCk_EcsConstructionScript_ActorComponent::
+    UCk_EcsConstructionScript_ActorComponent_UE::
     Request_ReplicateActor_OnServer_Implementation(
         const FCk_EcsConstructionScript_ConstructionInfo& InRequest)
     -> void
@@ -42,7 +41,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(NewActor), TEXT("Failed to spawn Actor to Replicate [{}] on SERVER.[{}]"), ActorToReplicate, ck::Context(this))
     { return; }
 
-    const auto& NewActorBasicDetails = UCk_Utils_ActorInfo_UE::Get_ActorInfoBasicDetails_FromActor(NewActor);
+    const auto& NewActorBasicDetails = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(NewActor);
     const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(NewActorBasicDetails.Get_Handle());
 
     for (const auto& ReplicatedObject : ReplicatedObjects.Get_ReplicatedObjects())
@@ -62,7 +61,7 @@ auto
 }
 
 auto
-    UCk_EcsConstructionScript_ActorComponent::
+    UCk_EcsConstructionScript_ActorComponent_UE::
     Request_ReplicateActor_OnClients_Implementation(
         const FCk_EcsConstructionScript_ConstructionInfo& InRequest)
     -> void
@@ -95,7 +94,7 @@ auto
             const auto NewActor = UCk_Utils_Actor_UE::Request_SpawnActor(
                 UCk_Utils_Actor_UE::SpawnActorParamsType{InRequest.Get_OutermostActor(), InRequest.Get_ActorToReplicate()});
 
-            const auto& NewActorBasicInfo = UCk_Utils_ActorInfo_UE::Get_ActorInfoBasicDetails_FromActor(NewActor);
+            const auto& NewActorBasicInfo = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(NewActor);
 
             UCk_Utils_ReplicatedObjects_UE::Add(NewActorBasicInfo.Get_Handle(), InRequest.Get_ReplicatedObjects());
         }
@@ -115,7 +114,7 @@ auto
 }
 
 auto
-    UCk_EcsConstructionScript_ActorComponent::
+    UCk_EcsConstructionScript_ActorComponent_UE::
     Request_ReplicateObject_Implementation(
         AActor* InReplicatedOwner,
         TSubclassOf<UCk_Ecs_ReplicatedObject> InObject,
@@ -133,7 +132,7 @@ auto
 }
 
 auto
-    UCk_EcsConstructionScript_ActorComponent::
+    UCk_EcsConstructionScript_ActorComponent_UE::
     BeginDestroy()
     -> void
 {
@@ -141,7 +140,7 @@ auto
 }
 
 auto
-    UCk_EcsConstructionScript_ActorComponent::
+    UCk_EcsConstructionScript_ActorComponent_UE::
     Do_Construct_Implementation(
         const FCk_ActorComponent_DoConstruct_Params& InParams)
     -> void
@@ -165,14 +164,7 @@ auto
     _Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(WorldSubsystem->Get_TransientEntity());
     const auto& OwningActor = GetOwner();
 
-    _Entity.Add<ck::FCk_Fragment_ActorInfo_Params>(FCk_Fragment_ActorInfo_ParamsData
-    {
-        OwningActor->GetClass(),
-        OwningActor->GetActorTransform(),
-        OwningActor->GetOwner(),
-        OwningActor->GetIsReplicated() ? ECk_Actor_NetworkingType::Replicated : ECk_Actor_NetworkingType::Local
-    });
-    _Entity.Add<ck::FCk_Fragment_ActorInfo_Current>(OwningActor);
+    _Entity.Add<ck::FCk_Fragment_OwningActor_Current>(OwningActor);
 
     if (OwningActor->IsNetMode(NM_DedicatedServer))
     {
@@ -183,15 +175,15 @@ auto
     // LINK TO ACTOR
     // EcsConstructionScript is a bit special in that it readies everything immediately instead of deferring the operation
 
-    // We need the ActorInfo ActorComponent to exist before building the Unreal Entity
-    UCk_Utils_Actor_UE::Request_AddNewActorComponent<UCk_ActorInfo_ActorComponent_UE>
+    // We need the EntityOwningActor ActorComponent to exist before building the Unreal Entity
+    UCk_Utils_Actor_UE::Request_AddNewActorComponent<UCk_EntityOwningActor_ActorComponent_UE>
     (
-        UCk_Utils_Actor_UE::AddNewActorComponent_Params<UCk_ActorInfo_ActorComponent_UE>
+        UCk_Utils_Actor_UE::AddNewActorComponent_Params<UCk_EntityOwningActor_ActorComponent_UE>
         {
             OwningActor,
             true
         },
-        [&](UCk_ActorInfo_ActorComponent_UE* InComp)
+        [&](UCk_EntityOwningActor_ActorComponent_UE* InComp)
         {
             InComp->_EntityHandle = _Entity;
         }
@@ -226,11 +218,11 @@ auto
     { return; }
 
     CK_ENSURE_IF_NOT(OwningActor->IsSupportedForNetworking(),
-        TEXT("The Owning Actor [{}] of [{}] is NOT stably named. Cannot proceed with replication. Did you create this Actor/ConstructionScript at runtime?"),
-        OwningActor, this)
+        TEXT("The Owning Actor [{}] of [{}] is NOT stably named. Cannot proceed with replication. Did you create this Actor/ConstructionScript at runtime?[{}]"),
+        OwningActor, this, ck::Context(this))
     { return; }
 
-    const auto OutermostActor =  UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(OwningActor);
+    const auto OutermostActor = UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(OwningActor);
 
     // In this case, we are one of the clients and we do NOT need to replicate further
     if (ck::Is_NOT_Valid(OutermostActor))
@@ -244,8 +236,8 @@ auto
     const auto& ConstructionScript = OutermostActor->GetComponentByClass<ThisType>();
 
     CK_ENSURE_IF_NOT(ck::IsValid(ConstructionScript),
-        TEXT("Found a REPLICATED with AUTHORITY Actor [{}] BUT it does NOT have [{}]. Are you sure this Actor's construction involved a Replicated Actor?"),
-        this, ctti::nameof_v<ThisType>)
+        TEXT("Found a REPLICATED with AUTHORITY Actor [{}] BUT it does NOT have [{}]. Are you sure this Actor's construction involved a Replicated Actor?[{}]"),
+        this, ctti::nameof_v<ThisType>, ck::Context(this))
     { return; }
 
     if (GetWorld()->IsNetMode(NM_Client))

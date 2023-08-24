@@ -4,7 +4,7 @@
 
 #include "CkActorModifier_Fragment_Params.h"
 
-#include "CkActor/ActorInfo/CkActorInfo_Fragment_Params.h"
+#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 
 #include "CkMacros/CkMacros.h"
 
