@@ -14,10 +14,7 @@ Request_CreateEntity(FCk_Handle InHandle) -> FCk_Handle
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Cannot create Entity with Invalid Handle"))
     { return {}; }
 
-    const auto& NewEntity = (*InHandle)->CreateEntity();
-    InHandle.Add<ck::FCk_Tag_EntityJustCreated>(NewEntity);
-
-    return HandleType{ NewEntity, **InHandle };
+    return Request_CreateEntity(**InHandle);
 }
 
 auto UCk_Utils_EntityLifetime_UE::
