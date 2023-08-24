@@ -18,6 +18,7 @@ public class CkEcsBasics : CkModuleRules
             "CkActor",
             "CkCore",
             "CkEcs",
+            "CkNet",
             "CkLog"
         });
     }
