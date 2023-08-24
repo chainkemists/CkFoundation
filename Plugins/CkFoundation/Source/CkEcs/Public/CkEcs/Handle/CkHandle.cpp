@@ -13,6 +13,15 @@ FCk_Handle::FCk_Handle(FEntityType InEntity, const FRegistryType& InRegistry)
 {
 }
 
+auto
+    FCk_Handle::
+    operator==(
+        const ThisType& InOther) const
+    -> bool
+{
+    return Get_Entity() == InOther.Get_Entity() && &*_Registry == &*InOther._Registry;
+}
+
 auto FCk_Handle::operator*() -> TOptional<FCk_Registry>
 {
     return _Registry;
@@ -34,6 +43,13 @@ auto
     -> ThisType
 {
     return ThisType{_Registry->Get_ValidEntity(InEntity), *_Registry};
+}
+
+auto
+    GetTypeHash(
+        FCk_Handle InHandle) -> uint32
+{
+    return GetTypeHash(InHandle.Get_Entity());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
