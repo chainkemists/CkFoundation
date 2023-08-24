@@ -9,7 +9,7 @@ namespace ck
     struct FCk_Tag_EntityJustCreated    { };
 
     struct FCk_Tag_HasAuthority    { };
-    struct FCk_Tag_IsServer        { };
+    struct FCk_Tag_NetMode_DedicatedServer        { };
 }
 
 // --------------------------------------------------------------------------------------------------------------------

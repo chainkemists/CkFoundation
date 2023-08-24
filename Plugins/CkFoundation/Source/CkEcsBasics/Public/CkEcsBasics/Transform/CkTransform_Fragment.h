@@ -1,12 +1,16 @@
 #pragma once
 
+#include <CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h>
+
+#include <CkEcsBasics/Transform/CkTransform_Fragment_Params.h>
+
+#include <CkMacros/CkMacros.h>
+
+#include <CkTypeTraits/CkTypeTraits.h>
+
 #include <variant>
 
-#include "CkTransform_Fragment_Params.h"
-
-#include "CkMacros/CkMacros.h"
-
-#include "CkTypeTraits/CkTypeTraits.h"
+#include "CkTransform_Fragment.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -25,6 +29,7 @@ namespace ck
 
     public:
         friend class FCk_Processor_Transform_HandleRequests;
+        friend class UCk_Fragment_Transform_Rep;
         friend UCk_Utils_Transform_UE;
 
     public:
@@ -35,7 +40,7 @@ namespace ck
         FTransform _Transform;
 
     public:
-        CK_PROPERTY_GET(_Transform);
+        CK_PROPERTY(_Transform);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -46,7 +51,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKECS_API FCk_Fragment_Transform_Requests
+    struct CKECSBASICS_API FCk_Fragment_Transform_Requests
     {
         CK_GENERATED_BODY(FCk_Fragment_Transform_Requests);
 
@@ -85,10 +90,46 @@ namespace ck
     TFragment_Transform<T_ConstOrNonConst>::
         TFragment_Transform(
             FTransform InTransform)
-        : _Transform(InTransform)
+        : _Transform(std::move(InTransform))
     {
     }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UCLASS(Blueprintable)
+class CKECSBASICS_API UCk_Fragment_Transform_Rep : public UCk_Ecs_ReplicatedObject
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Fragment_Transform_Rep);
+
+public:
+    friend class ck::FCk_Processor_Transform_HandleRequests;
+
+public:
+    virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
+
+public:
+    UFUNCTION()
+    void OnRep_Transform();
+
+    UFUNCTION()
+    void OnRep_Rotation();
+
+    UFUNCTION()
+    void OnRep_Scale();
+
+private:
+    UPROPERTY(ReplicatedUsing = OnRep_Transform)
+    FVector _Location;
+
+    UPROPERTY(ReplicatedUsing = OnRep_Rotation)
+    FQuat _Rotation;
+
+    UPROPERTY(ReplicatedUsing = OnRep_Scale)
+    FVector _Scale;
+};
+
+// --------------------------------------------------------------------------------------------------------------------

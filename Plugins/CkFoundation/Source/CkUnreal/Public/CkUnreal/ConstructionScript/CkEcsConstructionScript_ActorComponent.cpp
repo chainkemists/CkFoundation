@@ -7,6 +7,7 @@
 
 #include "CkCore/ObjectReplication/CkObjectReplicatorComponent.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
@@ -171,6 +172,9 @@ auto
         OwningActor->GetIsReplicated() ? ECk_Actor_NetworkingType::Replicated : ECk_Actor_NetworkingType::Local
     });
     _Entity.Add<ck::FCk_Fragment_ActorInfo_Current>(OwningActor);
+
+    if (OwningActor->IsNetMode(NM_DedicatedServer))
+    { _Entity.Add<ck::FCk_Tag_NetMode_DedicatedServer>(); }
 
     // --------------------------------------------------------------------------------------------------------------------
     // LINK TO ACTOR
