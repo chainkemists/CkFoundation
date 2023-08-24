@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkMacros/CkMacros.h"
+#include "Component/CkActorComponent.h"
 
 #include <CoreMinimal.h>
 
@@ -14,7 +15,7 @@ class UCk_ReplicatedObject;
 
 
 UCLASS()
-class CKCORE_API UCk_ObjectReplicator_Component : public UActorComponent
+class CKCORE_API UCk_ObjectReplicator_Component : public UCk_ActorComponent_UE
 {
     GENERATED_BODY()
 
