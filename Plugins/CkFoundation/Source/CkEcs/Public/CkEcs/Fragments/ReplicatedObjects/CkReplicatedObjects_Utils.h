@@ -28,7 +28,7 @@ public:
     static auto
     Request_AddReplicatedObject(
         FCk_Handle InHandle,
-        class UCk_ReplicatedObject* InReplicatedObject) -> void;
+        class UCk_ReplicatedObject_UE* InReplicatedObject) -> void;
 
 public:
     static auto

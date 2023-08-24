@@ -20,7 +20,7 @@ auto
     UCk_Utils_ReplicatedObjects_UE::
     Request_AddReplicatedObject(
         FCk_Handle InHandle,
-        UCk_ReplicatedObject* InReplicatedObject)
+        UCk_ReplicatedObject_UE* InReplicatedObject)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InReplicatedObject), TEXT("Invalid Replicated Object request to add to Entity [{}]"), InHandle)
@@ -29,7 +29,7 @@ auto
     InHandle.AddOrGet<ck::FCk_Fragment_ReplicatedObjects_Params>()
     .Update_ReplicatedObjects([&](FCk_ReplicatedObjects& InReplicatedObjects)
     {
-        InReplicatedObjects.Update_ReplicatedObjects([&](TArray<UCk_ReplicatedObject*>& InArray)
+        InReplicatedObjects.Update_ReplicatedObjects([&](TArray<UCk_ReplicatedObject_UE*>& InArray)
         {
             InArray.Add(InReplicatedObject);
         });

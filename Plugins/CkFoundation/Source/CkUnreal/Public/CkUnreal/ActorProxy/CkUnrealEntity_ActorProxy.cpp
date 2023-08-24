@@ -28,7 +28,7 @@
 //    if (IsTemplate())
 //    { return; }
 //
-//    _ObjectReplicator = CreateDefaultSubobject<UCk_ObjectReplicator_Component>(TEXT("Object Replicator"));
+//    _ObjectReplicator = CreateDefaultSubobject<UCk_ObjectReplicator_ActorComponent_UE>(TEXT("Object Replicator"));
 //}
 //
 //auto ACk_UnrealEntity_ActorProxy_UE::
@@ -109,7 +109,7 @@
 //}
 //
 //auto ACk_UnrealEntity_ActorProxy_UE::
-//OnRep_ObjectReplicator(UCk_ObjectReplicator_Component* InObjectReplicator) -> void
+//OnRep_ObjectReplicator(UCk_ObjectReplicator_ActorComponent_UE* InObjectReplicator) -> void
 //{
 //    ck::unreal::Log(TEXT("ObjectReplicator replicated"));
 //

@@ -77,7 +77,7 @@ public:
     void
     Request_ReplicateObject(
         AActor* InReplicatedOwner,
-        TSubclassOf<UCk_Ecs_ReplicatedObject> InObject,
+        TSubclassOf<UCk_Ecs_ReplicatedObject_UE> InObject,
         FName InReplicatedName);
 
 public:

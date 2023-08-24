@@ -29,7 +29,7 @@
 //    FCk_Bootstrapper_Construction_Params InParams)
 //-> UCk_EcsBootstrapper_UE*
 //{
-//    auto* ObjectReplicator = InParams.Get_Outer()->GetComponentByClass<UCk_ObjectReplicator_Component>();
+//    auto* ObjectReplicator = InParams.Get_Outer()->GetComponentByClass<UCk_ObjectReplicator_ActorComponent_UE>();
 //
 //    CK_ENSURE_IF_NOT(ck::IsValid(ObjectReplicator),
 //        TEXT("DOESNT EXIST"))

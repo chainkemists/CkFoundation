@@ -24,7 +24,7 @@ auto UCk_Intent_ReplicatedObject_UE::Create(AActor* InOwningActor, FCk_Handle In
     Obj->_ReplicatedActor = InOwningActor;
 
     // TODO: this should be hidden in the base class
-    auto* ObjectReplicator = InOwningActor->GetComponentByClass<UCk_ObjectReplicator_Component>();
+    auto* ObjectReplicator = InOwningActor->GetComponentByClass<UCk_ObjectReplicator_ActorComponent_UE>();
     ObjectReplicator->Request_RegisterObjectForReplication(Obj);
 
     return Obj;
