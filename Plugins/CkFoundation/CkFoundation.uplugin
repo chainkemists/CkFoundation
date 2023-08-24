@@ -47,6 +47,16 @@
 			]
 		},
 		{
+			"Name": "CkEcsBasics",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
 			"Name": "CkIntent",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
@@ -58,6 +68,16 @@
 		},
 		{
 			"Name": "CkLog",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
+			"Name": "CkNet",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [
