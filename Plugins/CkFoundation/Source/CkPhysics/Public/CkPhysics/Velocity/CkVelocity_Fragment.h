@@ -1,9 +1,16 @@
 #pragma once
 
 #include "CkCore/Enums/CkEnums.h"
+#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 #include "CkMacros/CkMacros.h"
 
 #include "CkPhysics/Velocity/CkVelocity_Fragment_Params.h"
+
+#include "CkVelocity_Fragment.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class UCk_Utils_Velocity_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -41,6 +48,7 @@ namespace ck
 
     public:
         friend class FCk_Processor_Velocity_Setup;
+        friend class UCk_Utils_Velocity_UE;
 
     public:
         FCk_Fragment_Velocity_Current() = default;
@@ -54,5 +62,27 @@ namespace ck
         CK_PROPERTY_GET(_CurrentVelocity);
     };
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(Blueprintable)
+class CKPHYSICS_API UCk_Fragment_Velocity_Rep : public UCk_Ecs_ReplicatedObject_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Fragment_Velocity_Rep);
+
+public:
+    virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
+
+public:
+    UFUNCTION()
+    void OnRep_Velocity();
+
+private:
+    UPROPERTY(ReplicatedUsing = OnRep_Velocity)
+    FVector _Velocity = FVector::ZeroVector;
+};
 
 // --------------------------------------------------------------------------------------------------------------------

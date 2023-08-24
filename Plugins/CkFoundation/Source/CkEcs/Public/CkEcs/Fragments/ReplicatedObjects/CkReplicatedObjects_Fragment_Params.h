@@ -12,13 +12,13 @@
 
 // TODO: Move this to its own file
 UCLASS(NotBlueprintType, NotBlueprintable)
-class CKECS_API UCk_Ecs_ReplicatedObject
-    : public UCk_ReplicatedObject
+class CKECS_API UCk_Ecs_ReplicatedObject_UE
+    : public UCk_ReplicatedObject_UE
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Ecs_ReplicatedObject);
+    CK_GENERATED_BODY(UCk_Ecs_ReplicatedObject_UE);
 
 public:
     // TODO: Remove as ActorInfo is no longer required to know about ReplicatedObject
@@ -28,10 +28,10 @@ public:
 
 public:
     static auto Create(
-        TSubclassOf<UCk_Ecs_ReplicatedObject> InReplicatedObject,
+        TSubclassOf<UCk_Ecs_ReplicatedObject_UE> InReplicatedObject,
         AActor* InTopmostOwningActor,
         FName InName,
-        FCk_Handle InAssociatedEntity) -> UCk_Ecs_ReplicatedObject*;
+        FCk_Handle InAssociatedEntity) -> UCk_Ecs_ReplicatedObject_UE*;
 
 public:
     UFUNCTION()
@@ -67,7 +67,7 @@ public:
 
 private:
     UPROPERTY()
-    TArray<UCk_ReplicatedObject*> _ReplicatedObjects;
+    TArray<UCk_ReplicatedObject_UE*> _ReplicatedObjects;
 
 private:
     auto DoRequest_LinkAssociatedEntity(FCk_Handle InEntity) -> void;

@@ -37,7 +37,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKINTENT_API UCk_Intent_ReplicatedObject_UE : public UCk_Ecs_ReplicatedObject
+class CKINTENT_API UCk_Intent_ReplicatedObject_UE : public UCk_Ecs_ReplicatedObject_UE
 {
     GENERATED_BODY()
 

@@ -9,15 +9,15 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKCORE_API UCk_ReplicatedObject : public UObject
+class CKCORE_API UCk_ReplicatedObject_UE : public UObject
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_ReplicatedObject);
+    CK_GENERATED_BODY(UCk_ReplicatedObject_UE);
 
 public:
-    UCk_ReplicatedObject();
+    UCk_ReplicatedObject_UE();
 
 public:
     auto GetOwningActor() const -> AActor*;

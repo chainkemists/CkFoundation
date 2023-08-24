@@ -42,7 +42,7 @@ namespace ck
 
         if (NOT PreviousTransform.Equals(NewTransform))
         {
-            UCk_Utils_Net_UE::UpdateReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle, [&](UCk_Fragment_Transform_Rep* InRepComp)
+            UCk_Utils_Ecs_Net_UE::UpdateReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle, [&](UCk_Fragment_Transform_Rep* InRepComp)
             {
                 if (NOT NewTransform.GetLocation().Equals(PreviousTransform.GetLocation()))
                 { InRepComp->_Location = NewTransform.GetLocation(); }

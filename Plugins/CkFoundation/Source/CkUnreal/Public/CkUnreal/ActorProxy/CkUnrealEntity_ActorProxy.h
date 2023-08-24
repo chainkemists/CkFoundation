@@ -46,11 +46,11 @@
 //
 //public:
 //    UFUNCTION()
-//    void OnRep_ObjectReplicator(UCk_ObjectReplicator_Component* InObjectReplicator);
+//    void OnRep_ObjectReplicator(UCk_ObjectReplicator_ActorComponent_UE* InObjectReplicator);
 //
 //public:
 //    UPROPERTY(ReplicatedUsing = OnRep_ObjectReplicator, meta = (AllowPrivateAccess = true))
-//    class UCk_ObjectReplicator_Component* _ObjectReplicator;
+//    class UCk_ObjectReplicator_ActorComponent_UE* _ObjectReplicator;
 //
 //    UPROPERTY(EditInstanceOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
 //    TObjectPtr<UCk_UnrealEntity_Base_PDA> _UnrealEntity;

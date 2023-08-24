@@ -47,6 +47,12 @@ public:
     static FVector
     Get_CurrentVelocity(
         FCk_Handle InHandle);
+
+public:
+    static auto
+    Request_OverrideVelocity(
+        FCk_Handle     InHandle,
+        const FVector& InNewVelocity) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
