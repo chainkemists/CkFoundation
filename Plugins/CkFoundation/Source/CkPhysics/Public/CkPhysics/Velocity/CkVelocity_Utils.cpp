@@ -49,4 +49,17 @@ auto
     return InHandle.Get<ck::FCk_Fragment_Velocity_Current>().Get_CurrentVelocity();
 }
 
+auto
+    UCk_Utils_Velocity_UE::
+    Request_OverrideVelocity(
+        FCk_Handle InHandle,
+        const FVector& InNewVelocity)
+    -> void
+{
+    if (NOT Ensure(InHandle))
+    { return; }
+
+    InHandle.Get<ck::FCk_Fragment_Velocity_Current>()._CurrentVelocity = InNewVelocity;
+}
+
 // --------------------------------------------------------------------------------------------------------------------

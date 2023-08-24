@@ -21,7 +21,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKECSBASICS_API UCk_Utils_Transform_UE : public UBlueprintFunctionLibrary
+class CKECSBASICS_API UCk_Utils_Transform_UE : public UCk_Utils_Ecs_Net_UE
 {
     GENERATED_BODY()
 
@@ -156,28 +156,7 @@ auto
 {
     InHandle.Add<ck::TFragment_Transform<T_ConstOrNonConst>>(InInitialTransform);
 
-    if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle))
-    { return; }
-
-    // TODO: once this is solidified, the boilerplate will be reduced
-    const auto& BasicDetails = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(InHandle);
-
-    const auto OwningActor = BasicDetails.Get_Actor().Get();
-    const auto OutermostActor = UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(OwningActor);
-
-    // TODO: ensure here that we do not have an outermost that is Replicated
-
-    auto ReplicatedObject = Cast<UCk_Fragment_Transform_Rep>(UCk_Ecs_ReplicatedObject::Create
-    (
-        UCk_Fragment_Transform_Rep::StaticClass(),
-        OutermostActor,
-        NAME_None,
-        InHandle
-    ));
-
-    InHandle.Add<TObjectPtr<UCk_Fragment_Transform_Rep>>(ReplicatedObject);
-
-    UCk_Utils_ReplicatedObjects_UE::Request_AddReplicatedObject(InHandle, ReplicatedObject);
+    TryAddReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle);
 }
 
 template <typename T_ConstOrNonConst>

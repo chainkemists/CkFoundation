@@ -98,7 +98,7 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Blueprintable)
-class CKECSBASICS_API UCk_Fragment_Transform_Rep : public UCk_Ecs_ReplicatedObject
+class CKECSBASICS_API UCk_Fragment_Transform_Rep : public UCk_Ecs_ReplicatedObject_UE
 {
     GENERATED_BODY()
 

@@ -117,7 +117,7 @@ auto
     UCk_EcsConstructionScript_ActorComponent_UE::
     Request_ReplicateObject_Implementation(
         AActor* InReplicatedOwner,
-        TSubclassOf<UCk_Ecs_ReplicatedObject> InObject,
+        TSubclassOf<UCk_Ecs_ReplicatedObject_UE> InObject,
         FName InReplicatedName)
     -> void
 {
@@ -128,7 +128,7 @@ auto
     { return; }
 
     // TODO: Sending garbage entity handle until we manage to link it up properly
-    UCk_Ecs_ReplicatedObject::Create(InObject, InReplicatedOwner, InReplicatedName, FCk_Handle{});
+    UCk_Ecs_ReplicatedObject_UE::Create(InObject, InReplicatedOwner, InReplicatedName, FCk_Handle{});
 }
 
 auto
@@ -191,14 +191,14 @@ auto
 
     if (OwningActor->HasAuthority())
     {
-        UCk_Utils_Actor_UE::Request_AddNewActorComponent<UCk_ObjectReplicator_Component>
+        UCk_Utils_Actor_UE::Request_AddNewActorComponent<UCk_ObjectReplicator_ActorComponent_UE>
         (
-            UCk_Utils_Actor_UE::AddNewActorComponent_Params<UCk_ObjectReplicator_Component>
+            UCk_Utils_Actor_UE::AddNewActorComponent_Params<UCk_ObjectReplicator_ActorComponent_UE>
             {
                 OwningActor,
                 true
             },
-            [&](UCk_ObjectReplicator_Component* InComp) { }
+            [&](UCk_ObjectReplicator_ActorComponent_UE* InComp) { }
         );
     }
 

@@ -7,6 +7,8 @@
 
 #include "Net/UnrealNetwork.h"
 
+// --------------------------------------------------------------------------------------------------------------------
+
 #define CK_ENSURE_OUTER_IS_VALID_OR_RETURN()\
     CK_ENSURE_IF_NOT(ck::IsValid(GetOwningActor()), TEXT("Outer is [{}]. A ReplicatedObject MUST have an owner that is an Actor."),\
         GetOwningActor(), ck::Context(this))\
@@ -14,8 +16,8 @@
         return {};\
     }
 
-UCk_ReplicatedObject::
-UCk_ReplicatedObject()
+UCk_ReplicatedObject_UE::
+UCk_ReplicatedObject_UE()
 {
     if (IsTemplate())
     { return; }
@@ -23,20 +25,20 @@ UCk_ReplicatedObject()
     CK_SCOPE_CALL(CK_ENSURE_OUTER_IS_VALID_OR_RETURN());
 }
 
-auto UCk_ReplicatedObject::
+auto UCk_ReplicatedObject_UE::
 GetOwningActor() const -> AActor*
 {
     return GetTypedOuter<AActor>();
 }
 
-auto UCk_ReplicatedObject::
+auto UCk_ReplicatedObject_UE::
 GetWorld() const -> UWorld*
 {
     CK_ENSURE_OUTER_IS_VALID_OR_RETURN();
     return GetOwningActor()->GetWorld();
 }
 
-auto UCk_ReplicatedObject::
+auto UCk_ReplicatedObject_UE::
 CallRemoteFunction(UFunction* Function,
     void* Parms,
     FOutParmRec* OutParms,
@@ -62,25 +64,25 @@ CallRemoteFunction(UFunction* Function,
     return false;
 }
 
-auto UCk_ReplicatedObject::
+auto UCk_ReplicatedObject_UE::
 GetFunctionCallspace(
     UFunction* Function,
     FFrame* Stack) -> int32
 {
     CK_ENSURE_OUTER_IS_VALID_OR_RETURN();
 
-	if ((Function->FunctionFlags & FUNC_Static))
-	{
-		// Try to use the same logic as function libraries for static functions,
-		// will try to use the global context to check authority only/cosmetic
-		return GEngine->GetGlobalFunctionCallspace(Function, this, Stack);
-	}
+    if ((Function->FunctionFlags & FUNC_Static))
+    {
+        // Try to use the same logic as function libraries for static functions,
+        // will try to use the global context to check authority only/cosmetic
+        return GEngine->GetGlobalFunctionCallspace(Function, this, Stack);
+    }
 
     auto* MyOwner = GetOwningActor();
     return MyOwner->GetFunctionCallspace(Function, Stack);
 }
 
-auto UCk_ReplicatedObject::
+auto UCk_ReplicatedObject_UE::
 GetLifetimeReplicatedProps(
     TArray<FLifetimeProperty>& OutLifetimeProps) const -> void
 {
@@ -102,7 +104,7 @@ GetLifetimeReplicatedProps(
     BpClass->GetLifetimeBlueprintReplicationList(OutLifetimeProps);
 }
 
-auto UCk_ReplicatedObject::
+auto UCk_ReplicatedObject_UE::
 IsSupportedForNetworking() const -> bool
 {
     CK_ENSURE_OUTER_IS_VALID_OR_RETURN();
@@ -112,7 +114,7 @@ IsSupportedForNetworking() const -> bool
 }
 
 auto
-    UCk_ReplicatedObject::
+    UCk_ReplicatedObject_UE::
     IsNameStableForNetworking() const
     -> bool
 {
@@ -120,3 +122,5 @@ auto
 }
 
 #undef CK_ENSURE_OUTER_IS_VALID_OR_RETURN
+
+// --------------------------------------------------------------------------------------------------------------------
