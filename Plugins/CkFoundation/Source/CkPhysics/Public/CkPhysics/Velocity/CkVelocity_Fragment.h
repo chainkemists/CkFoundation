@@ -65,6 +65,8 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck { class FCk_Processor_Velocity_Replicate; }
+
 UCLASS(Blueprintable)
 class CKPHYSICS_API UCk_Fragment_Velocity_Rep : public UCk_Ecs_ReplicatedObject_UE
 {
@@ -72,6 +74,9 @@ class CKPHYSICS_API UCk_Fragment_Velocity_Rep : public UCk_Ecs_ReplicatedObject_
 
 public:
     CK_GENERATED_BODY(UCk_Fragment_Velocity_Rep);
+
+public:
+    friend class ck::FCk_Processor_Velocity_Replicate;
 
 public:
     virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;

@@ -39,6 +39,22 @@ namespace ck
 
         InHandle.Remove<MarkedDirtyBy>();
     }
+
+    auto
+        FCk_Processor_Velocity_Replicate::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FCk_Fragment_Velocity_Current& InCurrent,
+            const TObjectPtr<UCk_Fragment_Velocity_Rep>& InRepComp) const
+        -> void
+    {
+        // TODO: Remove usage of UpdateReplicatedFragment once the processor is tagged to only run on Server
+        UCk_Utils_Ecs_Net_UE::UpdateReplicatedFragment<UCk_Fragment_Velocity_Rep>(InHandle, [&](UCk_Fragment_Velocity_Rep* InRepComp)
+        {
+            InRepComp->_Velocity = InCurrent.Get_CurrentVelocity();
+        });
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

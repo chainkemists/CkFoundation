@@ -5,14 +5,15 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkMacros/CkMacros.h"
 
-#include <Kismet/BlueprintFunctionLibrary.h>
+
+#include "CkNet/CkNet_Utils.h"
 
 #include "CkVelocity_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKPHYSICS_API UCk_Utils_Velocity_UE : public UBlueprintFunctionLibrary
+class CKPHYSICS_API UCk_Utils_Velocity_UE : public UCk_Utils_Ecs_Net_UE
 {
     GENERATED_BODY()
 

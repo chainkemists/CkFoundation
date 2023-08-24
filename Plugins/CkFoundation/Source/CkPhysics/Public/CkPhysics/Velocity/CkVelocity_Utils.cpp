@@ -14,6 +14,8 @@ auto
     InHandle.Add<ck::FCk_Fragment_Velocity_Params>(InParams);
     InHandle.Add<ck::FCk_Fragment_Velocity_Current>(InParams.Get_StartingVelocity());
     InHandle.Add<ck::FCk_Tag_Velocity_Setup>();
+
+    TryAddReplicatedFragment<UCk_Fragment_Velocity_Rep>(InHandle);
 }
 
 auto
