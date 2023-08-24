@@ -15,6 +15,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
+#include "CkNet/CkNet_Utils.h"
 
 #include "CkTransform_Utils.generated.h"
 
@@ -156,14 +157,11 @@ auto
 {
     InHandle.Add<ck::TFragment_Transform<T_ConstOrNonConst>>(InInitialTransform);
 
-    if (NOT InHandle.Has<ck::FCk_Tag_NetMode_DedicatedServer>())
+    if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle))
     { return; }
 
     // TODO: once this is solidified, the boilerplate will be reduced
     const auto& BasicDetails = UCk_Utils_ActorInfo_UE::Get_ActorInfoBasicDetails(InHandle);
-
-    if (BasicDetails.Get_Actor()->GetWorld()->IsNetMode(NM_Client))
-    { return; }
 
     const auto OwningActor = BasicDetails.Get_Actor().Get();
     const auto OutermostActor =  UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(OwningActor);
