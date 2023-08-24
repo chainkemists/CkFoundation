@@ -3,6 +3,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEcsBasics/CkEcsBasics_Log.h"
+#include "CkNet/CkNet_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -53,8 +54,7 @@ namespace ck
 
         if (NOT PreviousTransform.Equals(NewTransform))
         {
-            // Don't do this on client
-            InHandle.Try_Transform<TObjectPtr<UCk_Fragment_Transform_Rep>>([&](TObjectPtr<UCk_Fragment_Transform_Rep>& InRepComp)
+            UCk_Utils_Net_UE::UpdateReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle, [&](UCk_Fragment_Transform_Rep* InRepComp)
             {
                 if (NOT NewTransform.GetLocation().Equals(PreviousTransform.GetLocation()))
                 { InRepComp->_Location = NewTransform.GetLocation(); }
