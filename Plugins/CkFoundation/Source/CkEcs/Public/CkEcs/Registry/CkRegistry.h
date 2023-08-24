@@ -119,6 +119,9 @@ public:
     template <typename T_FragmentType, typename... T_Args>
     auto AddOrGet(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentType&;
 
+    template <typename T_FragmentType, typename T_Func>
+    auto Try_Transform(EntityType InEntity, T_Func InFunc) -> void;
+
     template <typename T_FragmentType, typename... T_Args>
     auto Replace(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentType&;
 
@@ -200,6 +203,7 @@ auto FCk_Registry::Add(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentTyp
 
     if constexpr (std::is_empty_v<T_FragmentType>)
     {
+        _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID());
         static T_FragmentType EMPTY_Tag;
         return EMPTY_Tag;
     }
@@ -219,6 +223,20 @@ auto
     { return Get<T_FragmentType>(InEntity); }
 
     return Add<T_FragmentType>(InEntity, std::forward<T_Args>(InArgs)...);
+}
+
+template <typename T_FragmentType, typename T_Func>
+auto
+    FCk_Registry::
+    Try_Transform(
+        EntityType InEntity,
+        T_Func InFunc)
+    -> void
+{
+    if (NOT Has<T_FragmentType>(InEntity))
+    { return; }
+
+    InFunc(Get<T_FragmentType>(InEntity));
 }
 
 template <typename T_FragmentType, typename ... T_Args>
