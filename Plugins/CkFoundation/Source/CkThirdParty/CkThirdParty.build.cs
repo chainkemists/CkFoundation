@@ -12,7 +12,6 @@ public class CkThirdParty : ModuleRules
 				// ... add public include paths required here ...
 				Path.Combine(ModuleDirectory, "Public/CkThirdParty/entt-3.12.2/single_include"),
 				Path.Combine(ModuleDirectory, "Public/CkThirdParty/ctti/include"),
-				Path.Combine(ModuleDirectory, "Public/CkThirdParty/enum-flags/include/")
 			}
 			);
 
