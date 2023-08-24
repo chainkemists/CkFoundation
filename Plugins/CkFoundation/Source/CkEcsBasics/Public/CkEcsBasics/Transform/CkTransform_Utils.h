@@ -1,19 +1,27 @@
 #pragma once
 
-#include <CkEcs/Fragments/Transform/CkTransform_Fragment.h>
-#include <CkEcs/Fragments/Transform/CkTransform_Fragment_Params.h>
 #include <CkEcs/Handle/CkHandle.h>
+
+#include <CkEcsBasics/Transform/CkTransform_Fragment.h>
+#include <CkEcsBasics/Transform/CkTransform_Fragment_Params.h>
 
 #include <CkMacros/CkMacros.h>
 
 #include <CkTypeTraits/CkTypeTraits.h>
+
+#include "CkActor/Public/CkActor/ActorInfo/CkActorInfo_Utils.h"
+
+#include "CkCore/Actor/CkActor_Utils.h"
+
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
+#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
 
 #include "CkTransform_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKECS_API UCk_Utils_Transform_UE : public UBlueprintFunctionLibrary
+class CKECSBASICS_API UCk_Utils_Transform_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
@@ -147,6 +155,32 @@ auto
     -> void
 {
     InHandle.Add<ck::TFragment_Transform<T_ConstOrNonConst>>(InInitialTransform);
+
+    if (NOT InHandle.Has<ck::FCk_Tag_NetMode_DedicatedServer>())
+    { return; }
+
+    // TODO: once this is solidified, the boilerplate will be reduced
+    const auto& BasicDetails = UCk_Utils_ActorInfo_UE::Get_ActorInfoBasicDetails(InHandle);
+
+    if (BasicDetails.Get_Actor()->GetWorld()->IsNetMode(NM_Client))
+    { return; }
+
+    const auto OwningActor = BasicDetails.Get_Actor().Get();
+    const auto OutermostActor =  UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(OwningActor);
+
+    // TODO: ensure here that we do not have an outermost that is Replicated
+
+    auto ReplicatedObject = Cast<UCk_Fragment_Transform_Rep>(UCk_Ecs_ReplicatedObject::Create
+    (
+        UCk_Fragment_Transform_Rep::StaticClass(),
+        OutermostActor,
+        NAME_None,
+        InHandle
+    ));
+
+    InHandle.Add<TObjectPtr<UCk_Fragment_Transform_Rep>>(ReplicatedObject);
+
+    UCk_Utils_ReplicatedObjects_UE::Request_AddReplicatedObject(InHandle, ReplicatedObject);
 }
 
 template <typename T_ConstOrNonConst>

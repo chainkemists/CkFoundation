@@ -1,8 +1,8 @@
 #pragma once
 
-#include "CkMacros/CkMacros.h"
+#include <CkMacros/CkMacros.h>
 
-#include "CkActor/ActorInfo/CkActorInfo_Fragment_Params.h"
+#include <CkActor/ActorInfo/CkActorInfo_Fragment_Params.h>
 
 #include <CoreMinimal.h>
 #include <Kismet/BlueprintFunctionLibrary.h>

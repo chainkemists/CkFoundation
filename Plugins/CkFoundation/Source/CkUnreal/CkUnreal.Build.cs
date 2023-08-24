@@ -15,11 +15,13 @@ public class CkUnreal : CkModuleRules
             "CoreUObject",
             "Engine",
 
+            "CkActor",
             "CkCore",
             "CkEcs",
+            "CkEcsBasics",
+            "CkIntent",
             "CkLog",
-            "CkActor",
-            "CkIntent"
+            "CkPhysics"
         });
     }
 }

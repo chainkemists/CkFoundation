@@ -2,7 +2,7 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
-#include "CkEcs/CkEcsLog.h"
+#include "CkEcsBasics/CkEcsBasics_Log.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -17,7 +17,7 @@ namespace ck
             FCk_Fragment_Transform_Requests& InRequestsComp) const
         -> void
     {
-        const auto previousTransform = InComp.Get_Transform();
+        const auto PreviousTransform = InComp.Get_Transform();
 
         algo::ForEachRequest(InRequestsComp._LocationRequests,
         [&](const FCk_Fragment_Transform_Requests::LocationRequestType& InRequest)
@@ -49,13 +49,25 @@ namespace ck
             InComp._Transform.SetScale3D(InRequest.Get_NewScale());
         });
 
-        const auto& newTransform = InComp.Get_Transform();
+        const auto& NewTransform = InComp.Get_Transform();
 
-        if (NOT previousTransform.Equals(newTransform))
+        if (NOT PreviousTransform.Equals(NewTransform))
         {
-            ecs::VeryVerbose(TEXT("Updated Transform [Old: {} | New: {}] of Entity [{}]"), previousTransform, newTransform, InHandle);
+            // Don't do this on client
+            InHandle.Try_Transform<TObjectPtr<UCk_Fragment_Transform_Rep>>([&](TObjectPtr<UCk_Fragment_Transform_Rep>& InRepComp)
+            {
+                if (NOT NewTransform.GetLocation().Equals(PreviousTransform.GetLocation()))
+                { InRepComp->_Location = NewTransform.GetLocation(); }
 
-            InComp._Transform = newTransform;
+                if (NOT NewTransform.GetRotation().Equals(PreviousTransform.GetRotation()))
+                { InRepComp->_Rotation = NewTransform.GetRotation(); }
+
+                if (NOT NewTransform.GetScale3D().Equals(PreviousTransform.GetScale3D()))
+                { InRepComp->_Scale = NewTransform.GetScale3D(); }
+            });
+
+            ecs_basics::VeryVerbose(TEXT("Updated Transform [Old: {} | New: {}] of Entity [{}]"), PreviousTransform, NewTransform, InHandle);
+            InComp._Transform = NewTransform;
         }
 
         InHandle.Remove<MarkedDirtyBy>();

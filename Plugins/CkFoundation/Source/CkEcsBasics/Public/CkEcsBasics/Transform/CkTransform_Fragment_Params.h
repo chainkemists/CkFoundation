@@ -9,7 +9,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECS_API FCk_Request_Transform_SetLocation
+struct CKECSBASICS_API FCk_Request_Transform_SetLocation
 {
     GENERATED_BODY()
 
@@ -39,7 +39,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECS_API FCk_Request_Transform_AddLocationOffset
+struct CKECSBASICS_API FCk_Request_Transform_AddLocationOffset
 {
     GENERATED_BODY()
 
@@ -69,7 +69,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECS_API FCk_Request_Transform_SetRotation
+struct CKECSBASICS_API FCk_Request_Transform_SetRotation
 {
     GENERATED_BODY()
 
@@ -97,7 +97,7 @@ public:
 };
 
 USTRUCT(BlueprintType)
-struct CKECS_API FCk_Request_Transform_AddRotationOffset
+struct CKECSBASICS_API FCk_Request_Transform_AddRotationOffset
 {
     GENERATED_BODY()
 
@@ -127,7 +127,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECS_API FCk_Request_Transform_SetScale
+struct CKECSBASICS_API FCk_Request_Transform_SetScale
 {
     GENERATED_BODY()
 
@@ -157,7 +157,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECS_API FCk_Request_Transform_SetTransform
+struct CKECSBASICS_API FCk_Request_Transform_SetTransform
 {
     GENERATED_BODY()
 
