@@ -35,6 +35,9 @@ public:
     template <typename T_FragmentType, typename... T_Args>
     auto AddOrGet(T_Args&&... InArgs) -> T_FragmentType&;
 
+    template <typename T_FragmentType, typename T_Func>
+    auto Try_Transform(T_Func InFunc) -> void;
+
     template <typename T_FragmentType, typename... T_Args>
     auto Replace(T_Args&&... InArgs) -> T_FragmentType&;
 
@@ -160,6 +163,25 @@ auto
     }
 
     return _Registry->AddOrGet<T_FragmentType>(_Entity, std::forward<T_Args>(InArgs)...);
+}
+
+template <typename T_FragmentType, typename T_Func>
+auto
+    FCk_Handle::
+    Try_Transform(T_Func InFunc)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
+        TEXT("Unable to Try_Transform Fragment [{}]. Handle [{}] does NOT have a valid Registry."),
+        ctti::nameof_v<T_FragmentType>, *this)
+    { return; }
+
+    CK_ENSURE_IF_NOT(IsValid(),
+        TEXT("Unable to Try_Transform Fragment [{}]. Handle [{}] does NOT have a valid Entity."),
+        ctti::nameof_v<T_FragmentType>, *this)
+    { return; }
+
+    _Registry->Try_Transform<T_FragmentType>(_Entity, InFunc);
 }
 
 template <typename T_FragmentType, typename ... T_Args>
