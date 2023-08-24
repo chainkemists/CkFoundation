@@ -137,6 +137,7 @@ namespace ck
             const TObjectPtr<UCk_Fragment_Transform_Rep>& InComp) const
         -> void
     {
+        // TODO: Remove usage of UpdateReplicatedFragment once the processor is tagged to only run on Server
         UCk_Utils_Ecs_Net_UE::UpdateReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle, [&](UCk_Fragment_Transform_Rep* InRepComp)
         {
             if ((InCurrent.Get_ComponentsModified() & ECk_TransformComponents::Location) == ECk_TransformComponents::Location)
