@@ -69,8 +69,6 @@ namespace ck
             ecs_basics::VeryVerbose(TEXT("Updated Transform [Old: {} | New: {}] of Entity [{}]"), PreviousTransform, NewTransform, InHandle);
             InComp._Transform = NewTransform;
         }
-
-        InHandle.Remove<MarkedDirtyBy>();
     }
 
     auto
@@ -116,6 +114,37 @@ namespace ck
     {
         const auto& deltaRotation = InRequest.Get_DeltaRotation();
         InComp._Transform.Rotator().Add(deltaRotation.Pitch, deltaRotation.Yaw, deltaRotation.Roll);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FCk_Processor_Transform_Actor::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        TProcessor::Tick(InDeltaT);
+
+        _Registry.Clear<FCk_Processor_Transform_HandleRequests::MarkedDirtyBy>();
+    }
+
+    auto
+        FCk_Processor_Transform_Actor::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FCk_Fragment_ActorInfo_Current& InActorInfo,
+            const FCk_Fragment_Transform_Current& InComp,
+            const FCk_Fragment_Transform_Requests&) const
+        -> void
+    {
+        const auto Actor = InActorInfo.Get_EntityActor();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(Actor), TEXT("Entity [{}] does NOT have a valid Actor. Was it destroyed?"), InHandle)
+        { return; }
+
+        Actor->SetActorTransform(InComp.Get_Transform());
     }
 }
 
