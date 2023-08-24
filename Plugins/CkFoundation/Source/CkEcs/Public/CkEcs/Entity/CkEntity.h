@@ -67,6 +67,8 @@ private:
 #endif
 };
 
+auto CKECS_API GetTypeHash(FCk_Entity InEntity) -> uint32;
+
 // --------------------------------------------------------------------------------------------------------------------
 
 #if NOT WITH_EDITORONLY_DATA

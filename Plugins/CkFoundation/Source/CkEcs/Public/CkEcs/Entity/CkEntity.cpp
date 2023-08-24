@@ -72,3 +72,13 @@ Tombstone() -> FCk_Entity
 {
     return _Tombstone;
 }
+
+auto
+    GetTypeHash(
+        FCk_Entity InEntity)
+    -> uint32
+{
+    return GetTypeHash(InEntity.Get_ID());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
