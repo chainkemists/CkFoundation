@@ -28,6 +28,8 @@ namespace ck
             const FCk_Fragment_Acceleration_Params& InParams,
             FCk_Fragment_Acceleration_Current& InCurrent) const -> void;
     };
+
+    // TODO: Add FCk_Processor_Acceleration_Replicate once we need to replicate acceleration
 }
 
 // --------------------------------------------------------------------------------------------------------------------

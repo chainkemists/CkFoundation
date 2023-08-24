@@ -14,6 +14,8 @@ auto
     InHandle.Add<ck::FCk_Fragment_Acceleration_Params>(InParams);
     InHandle.Add<ck::FCk_Fragment_Acceleration_Current>(InParams.Get_StartingAcceleration());
     InHandle.Add<ck::FCk_Tag_Acceleration_Setup>();
+
+    TryAddReplicatedFragment<UCk_Fragment_Acceleration_Rep>(InHandle);
 }
 
 auto
@@ -47,6 +49,19 @@ auto
     { return {}; }
 
     return InHandle.Get<ck::FCk_Fragment_Acceleration_Current>().Get_CurrentAcceleration();
+}
+
+auto
+    UCk_Utils_Acceleration_UE::
+    Request_OverrideAcceleration(
+        FCk_Handle InHandle,
+        const FVector& InNewAcceleration)
+    -> void
+{
+    if (NOT Ensure(InHandle))
+    { return; }
+
+    InHandle.Get<ck::FCk_Fragment_Acceleration_Current>()._CurrentAcceleration = InNewAcceleration;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
