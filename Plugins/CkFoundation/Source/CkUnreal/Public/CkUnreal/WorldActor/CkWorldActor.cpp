@@ -7,6 +7,7 @@
 #include "CkPhysics/Velocity/CkVelocity_Processor.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Processor.h"
+#include "CkEcs/OwningActor/CkOwningActor_Processors.h"
 
 #include "CkEcsBasics/Transform/CkTransform_Processor.h"
 
@@ -21,7 +22,9 @@
 namespace ck_world_actor
 {
     auto
-    InjectAllEcsSystemsIntoWorld(ACk_World_Actor_UE::FEcsWorldType& InWorld) -> void
+        InjectAllEcsSystemsIntoWorld(
+            ACk_World_Actor_UE::FEcsWorldType& InWorld)
+        -> void
     {
         InWorld.Add<ck::FCk_Processor_EntityLifetime_TriggerDestroyEntity>(InWorld.Get_Registry());
 
@@ -48,6 +51,7 @@ namespace ck_world_actor
             InWorld.Add<ck::FCk_Processor_Transform_Replicate>(InWorld.Get_Registry());
         }
 
+        InWorld.Add<ck::FCk_Processor_OwningActor_Destroy>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_EntityLifetime_EntityJustCreated>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_EntityLifetime_PendingDestroyEntity>(InWorld.Get_Registry());
     }
