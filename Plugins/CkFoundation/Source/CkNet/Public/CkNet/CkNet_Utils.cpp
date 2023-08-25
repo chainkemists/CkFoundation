@@ -16,28 +16,37 @@ auto
     if (NOT InActor->GetIsReplicated())
     { return true; }
 
-    const auto& world = InActor->GetWorld();
+    const auto& World = InActor->GetWorld();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(world), TEXT("Invalid World for Actor [{}]"), InActor)
+    CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("Invalid World for Actor [{}]"), InActor)
     { return {}; }
 
     CK_ENSURE
     (
-        world->IsNetMode(NM_DedicatedServer) || InActor->bExchangedRoles,
+        World->IsNetMode(NM_DedicatedServer) || InActor->bExchangedRoles,
         TEXT("Get_IsActorLocallyOwned called on Replicated Actor [{}] as a CLIENT before it has exchanged roles! This may return the wrong result"),
         InActor
     );
 
-    const auto& netConnection = InActor->GetNetConnection();
-    const auto& owningActor = ck::IsValid(netConnection) ? netConnection->OwningActor : InActor->GetOwner();
-    const auto& owningController = Cast<APlayerController>(owningActor);
-
-    if (InActor->HasAuthority())
+    switch (InActor->GetLocalRole())
     {
-        return NOT ck::IsValid(owningController) || owningController->IsLocalController();
+        case ROLE_SimulatedProxy:
+        {
+            return false;
+        }
+        case ROLE_None:
+        case ROLE_Authority:
+        case ROLE_AutonomousProxy:
+        {
+            return true;
+        }
+        case ROLE_MAX:
+        default:
+        {
+            CK_ENSURE_FALSE(TEXT("Unsupported Local Net Role for Actor [{}]"), InActor);
+            return true;
+        }
     }
-
-    return ck::IsValid(owningController) && owningController->IsLocalController();
 }
 
 auto
