@@ -38,7 +38,11 @@ auto
     const auto& OutermostActor = InRequest.Get_OutermostActor();
     const auto& ActorToReplicate = InRequest.Get_ActorToReplicate();
 
-    const auto NewActor = UCk_Utils_Actor_UE::Request_SpawnActor(UCk_Utils_Actor_UE::SpawnActorParamsType{OutermostActor, ActorToReplicate});
+    const auto NewActor = UCk_Utils_Actor_UE::Request_SpawnActor
+    (
+        UCk_Utils_Actor_UE::SpawnActorParamsType{OutermostActor, ActorToReplicate}
+            .Set_SpawnTransform(InRequest.Get_Transform())
+    );
 
     CK_ENSURE_IF_NOT(ck::IsValid(NewActor), TEXT("Failed to spawn Actor to Replicate [{}] on SERVER.[{}]"), ActorToReplicate, ck::Context(this))
     { return; }
@@ -93,8 +97,11 @@ auto
 
         if (ck::IsValid(PlayerController) && PlayerController != InRequest.Get_OwningPlayerController())
         {
-            const auto NewActor = UCk_Utils_Actor_UE::Request_SpawnActor(
-                UCk_Utils_Actor_UE::SpawnActorParamsType{InRequest.Get_OutermostActor(), InRequest.Get_ActorToReplicate()});
+            const auto NewActor = UCk_Utils_Actor_UE::Request_SpawnActor
+            (
+                UCk_Utils_Actor_UE::SpawnActorParamsType{InRequest.Get_OutermostActor(), InRequest.Get_ActorToReplicate()}
+                    .Set_SpawnTransform(InRequest.Get_Transform())
+            );
 
             const auto& NewActorBasicInfo = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(NewActor);
 
@@ -260,7 +267,7 @@ auto
             .Set_ActorToReplicate(OwningActor->GetClass())
             .Set_OwningPlayerController(GetWorld()->GetFirstPlayerController())
             .Set_OriginalOwnerEntity(static_cast<int32>(_Entity.Get_Entity().Get_ID()))
-            .Set_Transform(OwningActor->GetActorTransform()) // maybe only send Location and Rotation to reduce bandwidth requirements
+            .Set_Transform(OwningActor->GetActorTransform()) // TODO: maybe only send Location and Rotation to reduce bandwidth requirements
         );
     }
     else if (OutermostActor->GetRemoteRole() != ROLE_AutonomousProxy)
@@ -271,6 +278,7 @@ auto
             .Set_OutermostActor(OutermostActor)
             .Set_ActorToReplicate(OwningActor->GetClass())
             .Set_ReplicatedObjects(UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(_Entity))
+            .Set_Transform(OwningActor->GetActorTransform())
         );
     }
 }
