@@ -25,7 +25,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Net")
+              Category = "Ck|Utils|Net", meta = (DefaultToSelf = InActor))
     static bool Get_IsActorLocallyOwned(AActor* InActor);
 
     UFUNCTION(BlueprintPure,
