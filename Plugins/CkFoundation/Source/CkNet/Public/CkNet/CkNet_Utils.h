@@ -24,10 +24,16 @@ public:
     friend class UCk_EcsConstructionScript_ActorComponent_UE;
 
 public:
-    UFUNCTION(BlueprintPure)
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net")
+    static bool Get_IsActorLocallyOwned(AActor* InActor);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net")
     static bool Get_IsEntityNetMode_DedicatedServer(FCk_Handle InHandle);
 
-    UFUNCTION(BlueprintPure)
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net")
     static bool Get_IsEntityNetMode_Client(FCk_Handle InHandle);
 
 private:
@@ -42,7 +48,7 @@ class CKNET_API UCk_Utils_Ecs_Net_UE : public UCk_Utils_Ecs_Base_UE
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Utils_Net_UE);
+    CK_GENERATED_BODY(UCk_Utils_Ecs_Net_UE);
 
 public:
     template <typename T_ReplicatedFragment, typename T_UnaryUpdateFunc>
