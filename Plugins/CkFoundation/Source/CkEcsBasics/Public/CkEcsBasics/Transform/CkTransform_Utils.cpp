@@ -90,6 +90,17 @@ auto
 
 auto
     UCk_Utils_Transform_UE::
+    Request_SetInterpolationGoal_Location(
+        FCk_Handle InHandle,
+        const FCk_Fragment_Transform_NewGoal_Location& InNewGoal)
+    -> void
+{
+    auto& NewGoal = InHandle.AddOrGet<FCk_Fragment_Transform_NewGoal_Location>();
+    NewGoal = InNewGoal;
+}
+
+auto
+    UCk_Utils_Transform_UE::
     Get_EntityCurrentTransform(
         FCk_Handle InHandle)
     -> FTransform
@@ -175,11 +186,12 @@ auto
 auto
     UCk_Utils_Transform_UE::
     DoAdd(
-        FCk_Handle        InHandle,
-        const FTransform& InInitialTransform)
+        FCk_Handle InHandle,
+        FTransform InInitialTransform,
+        FCk_Fragment_Interpolation_Params InParams)
     -> void
 {
-    Add<ck::type_traits::NonConst>(InHandle, InInitialTransform);
+    Add<ck::type_traits::NonConst>(InHandle, InInitialTransform, InParams);
 }
 
 auto

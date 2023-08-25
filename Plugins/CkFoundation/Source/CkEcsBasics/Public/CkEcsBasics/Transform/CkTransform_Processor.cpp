@@ -1,8 +1,12 @@
 #include "CkTransform_Processor.h"
 
+#include "CkTransform_Utils.h"
+
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEcsBasics/CkEcsBasics_Log.h"
+
+#include "CkNet/CkNet_Fragment.h"
 #include "CkNet/CkNet_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -149,6 +153,55 @@ namespace ck
             if ((InCurrent.Get_ComponentsModified() & ECk_TransformComponents::Scale) == ECk_TransformComponents::Scale)
             { InRepComp->_Scale = InCurrent.Get_Transform().GetScale3D(); }
         });
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FCk_Processor_Transform_InterpolateToGoal::
+        ForEachEntity(TimeType InDeltaT,
+            HandleType InHandle,
+            const FCk_Fragment_Interpolation_Params& InParams,
+            FCk_Fragment_Transform_Current& InCurrent,
+            FCk_Fragment_Transform_NewGoal_Location& InGoal) const
+        -> void
+    {
+        // TODO: pre-calculate when creating FCk_Fragment_Transform_NewGoal to avoid this expensive operation
+        const auto GoalDistance = InGoal.Get_InterpolationOffset().Length();
+        InGoal.Set_DeltaT(InGoal.Get_DeltaT() + InDeltaT);
+
+        if (GoalDistance > InParams.Get_MaxSmoothUpdateDistance())
+        {
+            UCk_Utils_Transform_UE::Request_AddLocationOffset
+            (
+                InHandle,
+                FCk_Request_Transform_AddLocationOffset{}.Set_DeltaLocation(InGoal.Get_InterpolationOffset())
+            );
+
+            InHandle.Remove<FCk_Fragment_Transform_NewGoal_Location>();
+            return;
+        }
+
+        // algorithm:
+        // - calculate the fraction of the goal we need to interpolate this frame
+        // - add the fraction of the goal to the current location
+
+        const auto SmoothTime = InParams.Get_SmoothLocationTime();
+
+        if (InGoal.Get_DeltaT() > SmoothTime)
+        {
+            InHandle.Remove<FCk_Fragment_Transform_NewGoal_Location>();
+            return;
+        }
+
+        const auto Fraction =  FMath::Clamp((InDeltaT / SmoothTime).Get_Seconds(), 0.0f, 1.0f);
+        const auto GoalFraction = InGoal.Get_InterpolationOffset() * Fraction;
+
+        UCk_Utils_Transform_UE::Request_SetLocation
+        (
+            InHandle,
+            FCk_Request_Transform_SetLocation{}.Set_NewLocation(InCurrent.Get_Transform().GetLocation() + GoalFraction)
+        );
     }
 }
 
