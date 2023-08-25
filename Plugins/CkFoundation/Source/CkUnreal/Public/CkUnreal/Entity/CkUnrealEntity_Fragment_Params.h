@@ -56,6 +56,28 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UCLASS(Abstract, BlueprintType, Blueprintable, EditInlineNew)
+class CKUNREAL_API UCk_UnrealEntity_WithActor_PDA : public UCk_UnrealEntity_Base_PDA
+{
+    GENERATED_BODY()
+
+    friend class ACk_UnrealEntity_ActorProxy_UE;
+
+public:
+    CK_GENERATED_BODY(UCk_UnrealEntity_WithActor_PDA);
+
+private:
+    auto
+    DoGet_EntityConstructionScript() const ->  UCk_UnrealEntity_ConstructionScript_PDA* override;
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
+              meta = (AllowPrivateAccess = true, ExposeOnSpawn = true))
+    TObjectPtr<class UCk_UnrealEntity_ConstructionScript_WithTransform_PDA> _EntityConstructionScript;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKUNREAL_API FCk_Request_UnrealEntity_Spawn
 {
