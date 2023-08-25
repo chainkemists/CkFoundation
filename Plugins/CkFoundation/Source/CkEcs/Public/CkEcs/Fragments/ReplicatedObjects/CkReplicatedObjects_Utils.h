@@ -23,12 +23,24 @@ public:
         FCk_Handle InHandle,
         const FCk_ReplicatedObjects& InReplicatedObjects) -> void;
 
+    static bool
+    Has(
+        FCk_Handle InHandle);
+
+    static bool
+    Ensure(
+        FCk_Handle InHandle);
+
+public:
     // TODO: see if InReplicatedObject can be `const` and then in Add(...) we const-cast because 'ideally'
     // TODO: the replicated objects should never be modified. The reason we ARE modifying them is for link-up with Server
     static auto
     Request_AddReplicatedObject(
         FCk_Handle InHandle,
         class UCk_ReplicatedObject_UE* InReplicatedObject) -> void;
+
+    static auto
+    Get_NetRole(FCk_Handle InHandle) -> ENetRole;
 
 public:
     static auto
