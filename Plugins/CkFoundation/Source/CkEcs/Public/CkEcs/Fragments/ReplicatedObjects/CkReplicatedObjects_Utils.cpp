@@ -14,6 +14,28 @@ auto
     auto ReplicatedObjects = InReplicatedObjects;
     ReplicatedObjects.DoRequest_LinkAssociatedEntity(InHandle);
     InHandle.Add<ck::FCk_Fragment_ReplicatedObjects_Params>(ReplicatedObjects);
+    InHandle.Add<ck::FCk_Tag_Replicated>();
+}
+
+auto
+    UCk_Utils_ReplicatedObjects_UE::
+    Has(
+        FCk_Handle InHandle)
+    -> bool
+{
+    return InHandle.Has<ck::FCk_Fragment_ReplicatedObjects_Params>();
+}
+
+auto
+    UCk_Utils_ReplicatedObjects_UE::
+    Ensure(
+        FCk_Handle InHandle)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Entity [{}] does NOT have ReplicatedObjects Fragment!"), InHandle)
+    { return false; }
+
+    return true;
 }
 
 auto
@@ -26,6 +48,12 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InReplicatedObject), TEXT("Invalid Replicated Object request to add to Entity [{}]"), InHandle)
     { return; }
 
+    // TODO: Cleanup this
+    if (NOT InHandle.Has<ck::FCk_Tag_Replicated>())
+    {
+        InHandle.Add<ck::FCk_Tag_Replicated>();
+    }
+
     InHandle.AddOrGet<ck::FCk_Fragment_ReplicatedObjects_Params>()
     .Update_ReplicatedObjects([&](FCk_ReplicatedObjects& InReplicatedObjects)
     {
@@ -34,6 +62,37 @@ auto
             InArray.Add(InReplicatedObject);
         });
     });
+}
+
+auto
+    UCk_Utils_ReplicatedObjects_UE::
+    Get_NetRole(
+        FCk_Handle InHandle)
+    -> ENetRole
+{
+    if (NOT Ensure(InHandle))
+    { return ROLE_None; }
+
+    const auto& ReplicatedObjectComp = InHandle.Get<ck::FCk_Fragment_ReplicatedObjects_Params>();
+
+    const auto& ReplicatedObjectList = ReplicatedObjectComp.Get_ReplicatedObjects().Get_ReplicatedObjects();
+
+    if (ReplicatedObjectList.IsEmpty())
+    { return ROLE_None; }
+
+    const auto& ReplicatedObjectToUse = ReplicatedObjectList[0];
+
+    CK_ENSURE_IF_NOT(ck::IsValid(ReplicatedObjectToUse, ck::IsValid_Policy_NullptrOnly{}),
+        TEXT("Invalid Replicated Object for Entity [{}]"), InHandle)
+    { return ROLE_None; }
+
+    const auto& ReplicatedObjectAsActor = Cast<AActor>(ReplicatedObjectToUse->GetOuter());
+
+    CK_ENSURE_IF_NOT(ck::IsValid(ReplicatedObjectAsActor, ck::IsValid_Policy_NullptrOnly{}),
+        TEXT("Outer of Replicated Object [{}] for Entity [{}] is NOT an Actor when expected it to be"), ReplicatedObjectToUse, InHandle)
+    { return ROLE_None; }
+
+    return ReplicatedObjectAsActor->GetLocalRole();
 }
 
 auto

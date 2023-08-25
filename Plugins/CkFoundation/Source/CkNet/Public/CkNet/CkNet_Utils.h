@@ -36,6 +36,10 @@ public:
               Category = "Ck|Utils|Net")
     static bool Get_IsEntityNetMode_Client(FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net")
+    static bool Get_IsEntityReplicated(FCk_Handle InHandle);
+
 private:
     static auto Request_MarkEntityAs_DedicatedServer(FCk_Handle InHandle) -> void;
 };

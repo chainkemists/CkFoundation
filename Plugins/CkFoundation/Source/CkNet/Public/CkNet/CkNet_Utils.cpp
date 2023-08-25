@@ -1,6 +1,7 @@
 #include "CkNet_Utils.h"
 
 #include "CkNet_Fragment.h"
+#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -55,7 +56,7 @@ auto
         FCk_Handle InHandle)
     -> bool
 {
-    return InHandle.Has_Any<ck::FCk_Tag_NetMode_DedicatedServer>();
+    return InHandle.Has<ck::FCk_Tag_NetMode_DedicatedServer>();
 }
 
 auto
@@ -64,7 +65,16 @@ auto
         FCk_Handle InHandle)
     -> bool
 {
-    return NOT InHandle.Has_Any<ck::FCk_Tag_NetMode_DedicatedServer>();
+    return NOT InHandle.Has<ck::FCk_Tag_NetMode_DedicatedServer>();
+}
+
+auto
+    UCk_Utils_Net_UE::
+    Get_IsEntityReplicated(
+        FCk_Handle InHandle)
+    -> bool
+{
+    return InHandle.Has<ck::FCk_Tag_Replicated>();
 }
 
 auto
