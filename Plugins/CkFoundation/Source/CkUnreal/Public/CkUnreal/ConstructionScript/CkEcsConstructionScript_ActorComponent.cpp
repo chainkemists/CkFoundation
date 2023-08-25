@@ -13,6 +13,8 @@
 #include "CkNet/CkNet_Utils.h"
 
 #include "CkUnreal/CkUnreal_Log.h"
+#include "CkUnreal/Entity/CkUnrealEntity_ConstructionScript.h"
+
 #include "Engine/World.h"
 
 #include "Net/UnrealNetwork.h"
@@ -204,6 +206,15 @@ auto
 
     // --------------------------------------------------------------------------------------------------------------------
     // Build Entity
+
+    const auto CsWithTransform = Cast<UCk_UnrealEntity_ConstructionScript_WithTransform_PDA>(_UnrealEntity->Get_EntityConstructionScript());
+
+    CK_ENSURE_IF_NOT(ck::IsValid(CsWithTransform), TEXT("Entity Construction Script [{}] for Actor [{}] is NOT one with Transform. "
+        "Entity Construction Scripts that have an Actor attached MUST use [{}]."), _UnrealEntity->Get_EntityConstructionScript(), OwningActor,
+        ctti::nameof_v<UCk_UnrealEntity_ConstructionScript_WithTransform_PDA>)
+    { return; }
+
+    CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
 
     _UnrealEntity->Build(_Entity);
 
