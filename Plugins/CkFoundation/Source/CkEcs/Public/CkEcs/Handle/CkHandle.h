@@ -80,6 +80,9 @@ public:
     auto operator*() -> TOptional<FCk_Registry>;
     auto operator*() const -> TOptional<FCk_Registry>;
 
+    auto operator->() -> TOptional<FCk_Registry>;
+    auto operator->() const -> TOptional<FCk_Registry>;
+
 public:
     auto IsValid() const -> bool;
     auto Get_ValidHandle(FEntityType::IdType InEntity) const -> ThisType;
