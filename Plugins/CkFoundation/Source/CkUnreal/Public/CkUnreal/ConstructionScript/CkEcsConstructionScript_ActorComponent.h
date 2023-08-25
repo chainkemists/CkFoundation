@@ -96,7 +96,7 @@ public:
     ECk_Replication _Replication = ECk_Replication::Replicates;
 
     UPROPERTY(EditDefaultsOnly, Instanced)
-    TObjectPtr<UCk_UnrealEntity_Base_PDA> _UnrealEntity;
+    TObjectPtr<UCk_UnrealEntity_WithActor_PDA> _UnrealEntity;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Transient)
     FCk_Handle _Entity;
