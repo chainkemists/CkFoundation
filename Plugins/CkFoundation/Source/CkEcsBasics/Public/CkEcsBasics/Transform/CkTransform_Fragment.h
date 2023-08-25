@@ -46,6 +46,7 @@ private:
     FCk_Time _SmoothRotationTime = FCk_Time{0.05f};
 
 public:
+    CK_PROPERTY(_Strategy);
     CK_PROPERTY(_MaxSmoothUpdateDistance);
     CK_PROPERTY(_NoSmoothUpdateDistance);
     CK_PROPERTY(_SmoothLocationTime);
