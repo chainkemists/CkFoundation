@@ -131,7 +131,7 @@ private:
         TObjectPtr<AActor>                 _Archetype = nullptr;
         FTransform                         _SpawnTransform;
         ESpawnActorCollisionHandlingMethod _CollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::Undefined;
-        TObjectPtr<UObject>                 _OwnerOrWorld = nullptr;
+        TObjectPtr<UObject>                _OwnerOrWorld = nullptr;
 
     public:
         CK_PROPERTY_GET(_ActorClass);
@@ -148,18 +148,18 @@ public:
     Get_PersistentLevelScriptActor(const UObject* InWorldContextObject);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Actor")
+              Category = "Ck|Utils|Actor", meta = (DefaultToSelf = "InObject"))
     static AActor*
     Get_OutermostActor(UObject* InObject);
 
     // TODO: consolidate the Get_Outermost functions with an enum
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Actor")
+              Category = "Ck|Utils|Actor", meta = (DefaultToSelf = "InObject"))
     static AActor*
     Get_OutermostActor_Replicated(UObject* InObject);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Actor")
+              Category = "Ck|Utils|Actor", meta = (DefaultToSelf = "InObject"))
     static AActor*
     Get_OutermostActor_RemoteAuthority(UObject* InObject);
 
