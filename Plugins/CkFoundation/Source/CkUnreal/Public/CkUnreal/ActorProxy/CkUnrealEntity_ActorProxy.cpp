@@ -18,35 +18,29 @@
 //ACk_UnrealEntity_ActorProxy_UE::
 //ACk_UnrealEntity_ActorProxy_UE()
 //{
-//    bReplicates = true;
-//    bAlwaysRelevant = true;
+//    bReplicates = false;
+//    bAlwaysRelevant = false;
 //
 //#if WITH_EDITORONLY_DATA
 //    _ChildActorComponent = CreateEditorOnlyDefaultSubobject<UChildActorComponent>(TEXT("Proxy Actor Comp"));
 //#endif
-//
-//    if (IsTemplate())
-//    { return; }
-//
-//    _ObjectReplicator = CreateDefaultSubobject<UCk_ObjectReplicator_ActorComponent_UE>(TEXT("Object Replicator"));
 //}
 //
-//auto ACk_UnrealEntity_ActorProxy_UE::
-//DoInvokeOnEntityCreated(const FCk_Handle& InCreatedEntity) -> void
+//auto
+//    ACk_UnrealEntity_ActorProxy_UE::
+//    DoInvokeOnEntityCreated(
+//        const FCk_Handle& InCreatedEntity)
+//    -> void
 //{
 //    OnEntityCreated(InCreatedEntity);
 //}
 //
-//void ACk_UnrealEntity_ActorProxy_UE::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-//{
-//    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-//
-//    DOREPLIFETIME_CONDITION_NOTIFY(ThisType, _ObjectReplicator, COND_None, REPNOTIFY_Always);
-//}
-//
 //#if WITH_EDITOR
-//auto ACk_UnrealEntity_ActorProxy_UE::
-//PostEditChangeProperty(FPropertyChangedEvent& InPropertyChangedEvent) -> void
+//auto
+//    ACk_UnrealEntity_ActorProxy_UE::
+//    PostEditChangeProperty(
+//        FPropertyChangedEvent& InPropertyChangedEvent)
+//    -> void
 //{
 //    Super::PostEditChangeProperty(InPropertyChangedEvent);
 //
@@ -56,40 +50,20 @@
 //        return;
 //    }
 //
-//    if (InPropertyChangedEvent.Property->GetFName() != GET_MEMBER_NAME_CHECKED(ACk_UnrealEntity_ActorProxy_UE, _UnrealEntity))
+//    if (InPropertyChangedEvent.Property->GetFName() != GET_MEMBER_NAME_CHECKED(ACk_UnrealEntity_ActorProxy_UE, _ActorToSpawn))
 //    { return; }
 //
 //    _ChildActorComponent->DestroyChildActor();
-//
-//    if (ck::Is_NOT_Valid(_UnrealEntity))
-//    {
-//        // TODO: veryverbose logging?
-//        return;
-//    }
-//
-//    const auto UnrealEntityWithActor = Cast<UCk_UnrealEntity_ConstructionScript_WithActor_PDA>(
-//        _UnrealEntity->Get_EntityConstructionScript());
-//
-//    CK_ENSURE_IF_NOT(ck::IsValid(UnrealEntityWithActor),
-//        TEXT("UnrealEntity_ActorProxy REQUIRES the Entity Construction Script to be of type "
-//            "UnrealEntity_ConstructionScript_WithActor.[{}]"), ck::Context(this))
-//    {
-//        _UnrealEntity = nullptr;
-//        return;
-//    }
-//
-//    if (const auto& ActorClass = UnrealEntityWithActor->Get_EntityActor(); ck::IsValid(ActorClass))
-//    {
-//        _ChildActorComponent->SetChildActorClass(ActorClass);
-//    }
+//    _ChildActorComponent->SetChildActorClass(_ActorToSpawn);
 //}
 //
-//auto ACk_UnrealEntity_ActorProxy_UE::
-//BeginPlay() -> void
+//auto
+//    ACk_UnrealEntity_ActorProxy_UE::
+//    BeginPlay() -> void
 //{
 //    Super::BeginPlay();
 //
-//    if (ck::Is_NOT_Valid(_UnrealEntity))
+//    if (ck::Is_NOT_Valid(_ActorToSpawn))
 //    { return; }
 //
 //    if (HasAuthority())
@@ -108,16 +82,6 @@
 //#endif
 //}
 //
-//auto ACk_UnrealEntity_ActorProxy_UE::
-//OnRep_ObjectReplicator(UCk_ObjectReplicator_ActorComponent_UE* InObjectReplicator) -> void
-//{
-//    ck::unreal::Log(TEXT("ObjectReplicator replicated"));
-//
-//    const auto NewHandle = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(Get_TransientHandle());
-//    GetComponentByClass<UCk_ActorInfo_ActorComponent_UE>()->_EntityHandle = NewHandle;
-//    UCk_Utils_OwningActor_UE::Link(this, NewHandle);
-//    UCk_Utils_OwningActor_UE::Add(NewHandle, this->GetOwner(), nullptr);
-//}
 //#endif
 //
 //// --------------------------------------------------------------------------------------------------------------------
