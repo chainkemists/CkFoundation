@@ -1,15 +1,29 @@
 #include "CkEntityLifetime_Fragment_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
+#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment.h"
+#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
 
-auto UCk_Utils_EntityLifetime_UE::
-Request_DestroyEntity(FCk_Handle InHandle) -> void
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_EntityLifetime_UE::
+    Request_DestroyEntity(
+        FCk_Handle InHandle)
+    -> void
 {
+    // TODO: Fix for singleplayer
+    if (UCk_Utils_ReplicatedObjects_UE::Get_NetRole(InHandle) != ROLE_Authority)
+    { return; }
+
     InHandle.Add<ck::FCk_Tag_TriggerDestroyEntity>();
 }
 
-auto UCk_Utils_EntityLifetime_UE::
-Request_CreateEntity(FCk_Handle InHandle) -> FCk_Handle
+auto
+    UCk_Utils_EntityLifetime_UE::
+    Request_CreateEntity(
+        FCk_Handle InHandle)
+    -> FCk_Handle
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Cannot create Entity with Invalid Handle"))
     { return {}; }
@@ -17,8 +31,11 @@ Request_CreateEntity(FCk_Handle InHandle) -> FCk_Handle
     return Request_CreateEntity(**InHandle);
 }
 
-auto UCk_Utils_EntityLifetime_UE::
-Request_CreateEntity(RegistryType& InRegistry) -> HandleType
+auto
+    UCk_Utils_EntityLifetime_UE::
+    Request_CreateEntity(
+        RegistryType& InRegistry)
+    -> HandleType
 {
     const auto& NewEntity = InRegistry.CreateEntity();
     InRegistry.Add<ck::FCk_Tag_EntityJustCreated>(NewEntity);
@@ -26,9 +43,12 @@ Request_CreateEntity(RegistryType& InRegistry) -> HandleType
     return HandleType{ NewEntity, InRegistry };
 }
 
-auto UCk_Utils_EntityLifetime_UE::
-Request_CreateEntity(RegistryType& InRegistry,
-    const EntityIdHint& InEntityHint) -> HandleType
+auto
+    UCk_Utils_EntityLifetime_UE::
+    Request_CreateEntity(
+        RegistryType& InRegistry,
+        const EntityIdHint& InEntityHint)
+    -> HandleType
 {
     const auto& NewEntity = InRegistry.CreateEntity(InEntityHint.Entity);
     InRegistry.Add<ck::FCk_Tag_EntityJustCreated>(NewEntity);
@@ -36,8 +56,13 @@ Request_CreateEntity(RegistryType& InRegistry,
     return HandleType{ NewEntity, InRegistry };
 }
 
-auto UCk_Utils_EntityLifetime_UE::
-Get_TransientEntity(RegistryType& InRegistry) -> HandleType
+auto
+    UCk_Utils_EntityLifetime_UE::
+    Get_TransientEntity(
+        RegistryType& InRegistry)
+    -> HandleType
 {
     return HandleType{InRegistry._TransientEntity, InRegistry};
 }
+
+// --------------------------------------------------------------------------------------------------------------------
