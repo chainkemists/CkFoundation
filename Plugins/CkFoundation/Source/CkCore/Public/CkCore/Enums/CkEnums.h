@@ -2,6 +2,8 @@
 
 #include "CkFormat/CkFormat.h"
 
+#include "CkThirdParty/bitwise-enum/bitwise_enum.hpp"
+
 #include "CkEnums.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -186,5 +188,30 @@ enum class ECk_Plane_Axis : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Plane_Axis);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType, meta = (Bitflags, UseEnumValuesAsMaskValuesInEditor = true))
+enum class ECk_TransformComponents : uint8
+{
+    None = 0,
+    Location = 1 << 0,
+    Rotation = 1 << 1,
+    Scale = 1 << 2
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_TransformComponents);
+ENABLE_ENUM_BITWISE_OPERATORS(ECk_TransformComponents);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Interpolation_Strategy : uint8
+{
+    Linear,
+    Exponential
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Interpolation_Strategy);
 
 // --------------------------------------------------------------------------------------------------------------------
