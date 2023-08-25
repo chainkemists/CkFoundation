@@ -38,6 +38,7 @@ namespace ck_world_actor
 
         InWorld.Add<ck::FCk_Processor_Projectile_Update>(InWorld.Get_Registry());
 
+        InWorld.Add<ck::FCk_Processor_Transform_InterpolateToGoal>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_Transform_HandleRequests>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_Transform_Actor>(InWorld.Get_Registry());
 

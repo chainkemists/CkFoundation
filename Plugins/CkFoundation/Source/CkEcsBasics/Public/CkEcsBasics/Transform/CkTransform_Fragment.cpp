@@ -2,6 +2,8 @@
 
 #include "CkTransform_Utils.h"
 
+#include "CkEcsBasics/CkEcsBasics_Log.h"
+
 
 #include "Net/UnrealNetwork.h"
 
@@ -30,10 +32,14 @@ auto
     if (GetWorld()->IsNetMode(NM_DedicatedServer))
     { return; }
 
-    UCk_Utils_Transform_UE::Request_SetLocation
+    const auto& CurrentLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(Get_AssociatedEntity());
+
+    ck::ecs_basics::Log(TEXT("[UPDATE] Just got a new Goal Value [{}]. Delta Goal is [{}]"), _Location, _Location - CurrentLocation);
+
+    UCk_Utils_Transform_UE::Request_SetInterpolationGoal_Location
     (
         Get_AssociatedEntity(),
-        FCk_Request_Transform_SetLocation{_Location, ECk_RelativeAbsolute::Absolute}
+        FCk_Fragment_Transform_NewGoal_Location{}.Set_InterpolationOffset(_Location - CurrentLocation)
     );
 }
 

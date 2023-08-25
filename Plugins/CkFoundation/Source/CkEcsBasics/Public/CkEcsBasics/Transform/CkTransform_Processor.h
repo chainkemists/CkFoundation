@@ -10,7 +10,8 @@
 namespace ck
 {
     class CKECSBASICS_API FCk_Processor_Transform_HandleRequests
-        : public TProcessor<FCk_Processor_Transform_HandleRequests, FCk_Fragment_Transform_Current, FCk_Fragment_Transform_Requests>
+        : public TProcessor<FCk_Processor_Transform_HandleRequests,
+            FCk_Fragment_Transform_Current, FCk_Fragment_Transform_Requests>
     {
     public:
         using MarkedDirtyBy = FCk_Fragment_Transform_Requests;
@@ -54,7 +55,8 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKECSBASICS_API FCk_Processor_Transform_Actor
-        : public TProcessor<FCk_Processor_Transform_Actor, FCk_Fragment_OwningActor_Current, FCk_Fragment_Transform_Current, FTag_Transform_Updated>
+        : public TProcessor<FCk_Processor_Transform_Actor,
+            FCk_Fragment_OwningActor_Current, FCk_Fragment_Transform_Current, FTag_Transform_Updated>
     {
     public:
         using MarkedDirtyBy = FTag_Transform_Updated;
@@ -73,7 +75,8 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKECSBASICS_API FCk_Processor_Transform_Replicate
-        : public TProcessor<FCk_Processor_Transform_Replicate, FCk_Fragment_Transform_Current, TObjectPtr<UCk_Fragment_Transform_Rep>, FTag_Transform_Updated>
+        : public TProcessor<FCk_Processor_Transform_Replicate,
+            FCk_Fragment_Transform_Current, TObjectPtr<UCk_Fragment_Transform_Rep>, FTag_Transform_Updated>
     {
     public:
         using MarkedDirtyBy = FTag_Transform_Updated;
@@ -87,6 +90,27 @@ namespace ck
             HandleType InHandle,
             const FCk_Fragment_Transform_Current& InCurrent,
             const TObjectPtr<UCk_Fragment_Transform_Rep>& InComp) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKECSBASICS_API FCk_Processor_Transform_InterpolateToGoal
+        : public TProcessor<FCk_Processor_Transform_InterpolateToGoal,
+            FCk_Fragment_Interpolation_Params, FCk_Fragment_Transform_Current, FCk_Fragment_Transform_NewGoal_Location>
+    {
+    public:
+        using MarkedDirtyBy = FCk_Fragment_Transform_NewGoal_Location;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FCk_Fragment_Interpolation_Params& InParams,
+            FCk_Fragment_Transform_Current& InCurrent,
+            FCk_Fragment_Transform_NewGoal_Location& InGoal) const -> void;
     };
 }
 
