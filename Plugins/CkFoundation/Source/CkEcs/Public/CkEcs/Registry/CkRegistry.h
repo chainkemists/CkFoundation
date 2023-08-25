@@ -15,6 +15,11 @@
 
 namespace ck
 {
+    class FCk_Processor_EntityLifetime_PendingDestroyEntity;
+}
+
+namespace ck
+{
     // this is equivalent to entt::exclude for use with FRegistry::TView<...>
     // usage: Registry.View<CompA, CompB, TExclude<CompC>>().Each(...)
     template <typename... T>
@@ -34,6 +39,7 @@ public:
 
 public:
     friend class UCk_Utils_EntityLifetime_UE;
+    friend class ck::FCk_Processor_EntityLifetime_PendingDestroyEntity;
 
 public:
     using InternalRegistryType = entt::registry;
