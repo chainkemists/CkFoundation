@@ -8,6 +8,10 @@
 
 namespace ck
 {
+    struct FCk_Tag_Replicated {};
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKECS_API FCk_Fragment_ReplicatedObjects_Params
     {
     public:
