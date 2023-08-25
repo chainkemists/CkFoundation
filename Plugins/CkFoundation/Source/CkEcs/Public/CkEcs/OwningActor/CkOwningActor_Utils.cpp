@@ -24,7 +24,7 @@ auto
         FCk_Handle InHandle)
     -> bool
 {
-    return InHandle.Has_All<ck::FCk_Fragment_OwningActor_Current>();
+    return InHandle.Has<ck::FCk_Fragment_OwningActor_Current>();
 }
 
 auto
