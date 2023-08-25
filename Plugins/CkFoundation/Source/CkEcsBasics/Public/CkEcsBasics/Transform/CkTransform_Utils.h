@@ -32,8 +32,9 @@ public:
     template <typename T_ConstOrNonConst = ck::type_traits::NonConst>
     static auto
     Add(
-        FCk_Handle        InHandle,
-        const FTransform& InInitialTransform) -> void;
+        FCk_Handle InHandle,
+        FTransform InInitialTransform,
+        FCk_Fragment_Interpolation_Params InParams) -> void;
 
     template <typename T_ConstOrNonConst = void>
     static auto
@@ -94,6 +95,14 @@ public:
         FCk_Handle                                InHandle,
         const FCk_Request_Transform_SetTransform& InRequest);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Transform|Requests",
+              DisplayName = "Request Set Interpolation Goal [LOCATION]")
+    static void
+    Request_SetInterpolationGoal_Location(
+        FCk_Handle                                     InHandle,
+        const FCk_Fragment_Transform_NewGoal_Location& InNewGoal);
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Transform")
@@ -125,8 +134,9 @@ private:
               DisplayName="Add Transform")
     static void
     DoAdd(
-        FCk_Handle        InHandle,
-        const FTransform& InInitialTransform);
+        FCk_Handle InHandle,
+        FTransform InInitialTransform,
+        FCk_Fragment_Interpolation_Params InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Transform",
@@ -150,11 +160,13 @@ template <typename T_ConstOrNonConst>
 auto
     UCk_Utils_Transform_UE::
     Add(
-        FCk_Handle        InHandle,
-        const FTransform& InInitialTransform)
+        FCk_Handle InHandle,
+        FTransform InInitialTransform,
+        FCk_Fragment_Interpolation_Params InParams)
     -> void
 {
     InHandle.Add<ck::TFragment_Transform<T_ConstOrNonConst>>(InInitialTransform);
+    InHandle.Add<FCk_Fragment_Interpolation_Params>(std::move(InParams));
 
     TryAddReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle);
 }
