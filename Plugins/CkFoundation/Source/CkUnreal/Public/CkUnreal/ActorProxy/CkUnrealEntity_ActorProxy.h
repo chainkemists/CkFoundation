@@ -24,9 +24,6 @@
 //private:
 //    auto DoInvokeOnEntityCreated(const FCk_Handle& InCreatedEntity) -> void;
 //
-//public:
-//    virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
-//
 //protected:
 //    UFUNCTION(BlueprintImplementableEvent)
 //    FCk_Handle
@@ -45,15 +42,8 @@
 //    virtual auto BeginPlay() -> void override;
 //
 //public:
-//    UFUNCTION()
-//    void OnRep_ObjectReplicator(UCk_ObjectReplicator_ActorComponent_UE* InObjectReplicator);
-//
-//public:
-//    UPROPERTY(ReplicatedUsing = OnRep_ObjectReplicator, meta = (AllowPrivateAccess = true))
-//    class UCk_ObjectReplicator_ActorComponent_UE* _ObjectReplicator;
-//
 //    UPROPERTY(EditInstanceOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-//    TObjectPtr<UCk_UnrealEntity_Base_PDA> _UnrealEntity;
+//    TSubclassOf<AActor> _ActorToSpawn;
 //
 //#if WITH_EDITORONLY_DATA
 //    UPROPERTY(Transient)
