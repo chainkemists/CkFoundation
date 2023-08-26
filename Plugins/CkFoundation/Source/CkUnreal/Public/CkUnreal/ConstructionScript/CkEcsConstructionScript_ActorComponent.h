@@ -80,9 +80,8 @@ public:
         TSubclassOf<UCk_Ecs_ReplicatedObject_UE> InObject,
         FName InReplicatedName);
 
-public:
-    virtual auto
-    BeginDestroy() -> void override;
+protected:
+    virtual auto OnUnregister() -> void override;
 
 protected:
     virtual auto

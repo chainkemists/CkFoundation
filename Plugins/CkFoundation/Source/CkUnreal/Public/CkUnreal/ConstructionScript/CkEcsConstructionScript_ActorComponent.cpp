@@ -1,6 +1,7 @@
 #include "CkEcsConstructionScript_ActorComponent.h"
 
 #include "CkCore/Actor/CkActor_Utils.h"
+#include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkCore/ObjectReplication/CkObjectReplicatorComponent.h"
 
@@ -142,10 +143,33 @@ auto
 
 auto
     UCk_EcsConstructionScript_ActorComponent_UE::
-    BeginDestroy()
+    OnUnregister()
     -> void
 {
-    Super::BeginDestroy();
+    [this]()
+    {
+        if (IsTemplate())
+        { return; }
+
+        if (_Replication != ECk_Replication::Replicates)
+        { return; }
+
+        if (ck::Is_NOT_Valid(_Entity))
+        { return; }
+
+        if (NOT UCk_Utils_ReplicatedObjects_UE::Has(_Entity))
+        { return; }
+
+        const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(_Entity);
+
+        ck::algo::ForEachIsValid(ReplicatedObjects.Get_ReplicatedObjects(), [&](auto& InRO)
+        {
+            auto EcsRO = Cast<UCk_Ecs_ReplicatedObject_UE>(InRO);
+            UCk_Ecs_ReplicatedObject_UE::Destroy(EcsRO);
+        });
+    }();
+
+    Super::OnUnregister();
 }
 
 auto
