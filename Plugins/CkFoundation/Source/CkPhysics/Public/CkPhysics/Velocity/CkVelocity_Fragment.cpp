@@ -41,6 +41,9 @@ auto
     UCk_Fragment_Velocity_Rep::
     OnRep_Velocity() -> void
 {
+    if (NOT Get_AssociatedEntity().IsValid())
+    { return; }
+
     CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)
     { return; }
 
