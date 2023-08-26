@@ -1,5 +1,8 @@
 #include "CkReplicatedObjects_Fragment_Params.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+
 #include "Net/UnrealNetwork.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -30,6 +33,18 @@ auto
     return Obj;
 }
 
+auto
+    UCk_Ecs_ReplicatedObject_UE::
+    Destroy(UCk_Ecs_ReplicatedObject_UE* InRo)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InRo), TEXT("ReplicatedObject is [{}]. Unable to Destroy."), InRo)
+    { return; }
+
+    auto* ObjectReplicator = InRo->_ReplicatedActor->GetComponentByClass<UCk_ObjectReplicator_ActorComponent_UE>();
+    ObjectReplicator->Request_UnregisterObjectForReplication(InRo);
+}
+
 auto UCk_Ecs_ReplicatedObject_UE::
     OnRep_ReplicatedActor(AActor* InActor)
     -> void
@@ -56,6 +71,46 @@ auto UCk_Ecs_ReplicatedObject_UE::
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
     DOREPLIFETIME_CONDITION_NOTIFY(ThisType, _ReplicatedActor, COND_None, REPNOTIFY_Always);
+}
+
+void
+    UCk_Ecs_ReplicatedObject_UE::BeginDestroy()
+{
+    if (ck::IsValid(Get_ReplicatedActor()) && ck::IsValid(Get_ReplicatedActor()->GetWorld()))
+    {
+        if (NOT Get_ReplicatedActor()->GetWorld()->IsNetMode(NM_Client))
+        {
+            Destroy(this);
+        }
+    }
+
+    Super::BeginDestroy();
+}
+
+void
+    UCk_Ecs_ReplicatedObject_UE::PreDestroyFromReplication()
+{
+    Super::PreDestroyFromReplication();
+
+    if (NOT ck::IsValid(Get_AssociatedEntity()))
+    { return; }
+
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(Get_AssociatedEntity());
+}
+
+auto
+    UCk_Ecs_ReplicatedObject_UE::
+    Request_TriggerDestroyAssociatedEntity_Implementation()
+    -> void
+{
+    if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
+    { return; }
+
+    if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(Get_AssociatedEntity()))
+    { return; }
+
+    _AssociatedEntity.Add<ck::FCk_Tag_TriggerDestroyEntity>();
+    _AssociatedEntity = {};
 }
 
 auto
