@@ -70,29 +70,47 @@ auto
         FCk_Handle InHandle)
     -> ENetRole
 {
+    if (NOT Has(InHandle))
+    { return ROLE_Authority; }
+
+    auto RoleToReturn = ENetRole::ROLE_None;
+
+    OnFirstValidReplicatedObject(InHandle, [&](UCk_ReplicatedObject_UE* InRO)
+    {
+        const auto& ReplicatedObjectAsActor = Cast<AActor>(InRO->GetOuter());
+
+        CK_ENSURE_IF_NOT(ck::IsValid(ReplicatedObjectAsActor, ck::IsValid_Policy_NullptrOnly{}),
+            TEXT("Outer of Replicated Object [{}] for Entity [{}] is NOT an Actor when expected it to be"), InRO, InHandle)
+        { return; }
+
+        RoleToReturn = ReplicatedObjectAsActor->GetLocalRole();
+    });
+
+    return RoleToReturn;
+}
+
+auto
+    UCk_Utils_ReplicatedObjects_UE::
+    OnFirstValidReplicatedObject(
+        FCk_Handle InHandle,
+        const std::function<void(UCk_ReplicatedObject_UE* InRO)>& InFunc)
+    -> void
+{
     if (NOT Ensure(InHandle))
-    { return ROLE_None; }
+    { return; }
 
-    const auto& ReplicatedObjectComp = InHandle.Get<ck::FCk_Fragment_ReplicatedObjects_Params>();
+    const auto ReplicatedObjects = Get_ReplicatedObjects(InHandle).Get_ReplicatedObjects();
 
-    const auto& ReplicatedObjectList = ReplicatedObjectComp.Get_ReplicatedObjects().Get_ReplicatedObjects();
-
-    if (ReplicatedObjectList.IsEmpty())
-    { return ROLE_None; }
-
-    const auto& ReplicatedObjectToUse = ReplicatedObjectList[0];
+    const auto& ReplicatedObjectToUse = ReplicatedObjects.FindByPredicate([&](UCk_ReplicatedObject_UE* InRO)
+    {
+        return ck::IsValid(InRO, ck::IsValid_Policy_NullptrOnly{});
+    });
 
     CK_ENSURE_IF_NOT(ck::IsValid(ReplicatedObjectToUse, ck::IsValid_Policy_NullptrOnly{}),
-        TEXT("Invalid Replicated Object for Entity [{}]"), InHandle)
-    { return ROLE_None; }
+        TEXT("No valid Replicated Object found for Entity [{}]"), InHandle)
+    { return; }
 
-    const auto& ReplicatedObjectAsActor = Cast<AActor>(ReplicatedObjectToUse->GetOuter());
-
-    CK_ENSURE_IF_NOT(ck::IsValid(ReplicatedObjectAsActor, ck::IsValid_Policy_NullptrOnly{}),
-        TEXT("Outer of Replicated Object [{}] for Entity [{}] is NOT an Actor when expected it to be"), ReplicatedObjectToUse, InHandle)
-    { return ROLE_None; }
-
-    return ReplicatedObjectAsActor->GetLocalRole();
+    InFunc(*ReplicatedObjectToUse);
 }
 
 auto
