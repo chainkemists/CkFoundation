@@ -33,11 +33,21 @@ public:
         FName InName,
         FCk_Handle InAssociatedEntity) -> UCk_Ecs_ReplicatedObject_UE*;
 
+    static auto Destroy(
+        UCk_Ecs_ReplicatedObject_UE* InRo) -> void;
+
 public:
     UFUNCTION()
     virtual void OnRep_ReplicatedActor(AActor* InActor);
 
     virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
+
+    virtual auto BeginDestroy() -> void override;
+    virtual auto PreDestroyFromReplication() -> void override;
+
+public:
+    UFUNCTION(NetMulticast, Reliable)
+    void Request_TriggerDestroyAssociatedEntity();
 
 protected:
     UPROPERTY(Transient)
