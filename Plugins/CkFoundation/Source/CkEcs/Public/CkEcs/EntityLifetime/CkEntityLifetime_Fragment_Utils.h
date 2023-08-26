@@ -27,13 +27,18 @@ public:
     struct EntityIdHint { EntityType Entity; };
 
 public:
-    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|EntityLifetime|Requests")
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|EntityLifetime")
     static void
     Request_DestroyEntity(FCk_Handle InHandle);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|EntityLifetime|Requests")
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|EntityLifetime")
     static FCk_Handle
     Request_CreateEntity(FCk_Handle InHandle);
+
+public:
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|EntityLifetime")
+    static bool
+    Get_IsPendingDestroy(FCk_Handle InHandle);
 
 public:
     static auto Request_CreateEntity(RegistryType& InRegistry) -> HandleType;
