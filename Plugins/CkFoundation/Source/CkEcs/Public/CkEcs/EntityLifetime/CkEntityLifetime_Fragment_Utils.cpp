@@ -33,6 +33,14 @@ auto
 
 auto
     UCk_Utils_EntityLifetime_UE::
+    Get_IsPendingDestroy(FCk_Handle InHandle)
+    -> bool
+{
+    return InHandle.Has_Any<ck::FCk_Tag_TriggerDestroyEntity, ck::FCk_Tag_PendingDestroyEntity>();
+}
+
+auto
+    UCk_Utils_EntityLifetime_UE::
     Request_CreateEntity(
         RegistryType& InRegistry)
     -> HandleType
