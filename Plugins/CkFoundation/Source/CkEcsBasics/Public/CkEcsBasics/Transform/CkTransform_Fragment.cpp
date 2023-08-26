@@ -26,6 +26,9 @@ auto
     UCk_Fragment_Transform_Rep::
     OnRep_Transform() -> void
 {
+    if (NOT Get_AssociatedEntity().IsValid())
+    { return; }
+
     CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)
     { return; }
 
@@ -47,6 +50,9 @@ auto
     UCk_Fragment_Transform_Rep::
     OnRep_Rotation() -> void
 {
+    if (NOT Get_AssociatedEntity().IsValid())
+    { return; }
+
     CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)
     { return; }
 
@@ -64,6 +70,9 @@ auto
     UCk_Fragment_Transform_Rep::
     OnRep_Scale() -> void
 {
+    if (NOT Get_AssociatedEntity().IsValid())
+    { return; }
+
     CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)
     { return; }
 
