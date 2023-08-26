@@ -23,13 +23,13 @@ public:
         FCk_Handle InHandle,
         const FCk_ReplicatedObjects& InReplicatedObjects) -> void;
 
-    static bool
+    static auto
     Has(
-        FCk_Handle InHandle);
+        FCk_Handle InHandle) -> bool;
 
-    static bool
+    static auto
     Ensure(
-        FCk_Handle InHandle);
+        FCk_Handle InHandle) -> bool;
 
 public:
     // TODO: see if InReplicatedObject can be `const` and then in Add(...) we const-cast because 'ideally'
@@ -41,6 +41,11 @@ public:
 
     static auto
     Get_NetRole(FCk_Handle InHandle) -> ENetRole;
+
+    static auto
+    OnFirstValidReplicatedObject(
+        FCk_Handle InHandle,
+        const std::function<void(UCk_ReplicatedObject_UE* InRO)>& InFunc) -> void;
 
 public:
     static auto
