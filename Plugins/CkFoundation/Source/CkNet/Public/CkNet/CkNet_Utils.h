@@ -103,6 +103,11 @@ auto
     const auto& OwningActor    = BasicDetails.Get_Actor().Get();
     const auto& OutermostActor = UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(OwningActor);
 
+    CK_ENSURE_IF_NOT(ck::IsValid(OutermostActor),
+        TEXT("OutermostActor for Actor [{}] with Entity [{}] is [{}]. Does this Entity require replication?"),
+        OwningActor, InHandle, OutermostActor)
+    { return; }
+
     auto ReplicatedFragment_Object = Cast<T_ReplicatedFragment>(UCk_Ecs_ReplicatedObject_UE::Create
     (
         T_ReplicatedFragment::StaticClass(),
