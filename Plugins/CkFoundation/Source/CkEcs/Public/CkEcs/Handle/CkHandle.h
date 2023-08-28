@@ -87,6 +87,9 @@ public:
     auto IsValid() const -> bool;
     auto Get_ValidHandle(FEntityType::IdType InEntity) const -> ThisType;
 
+    auto Get_Registry() -> FCk_Registry&;
+    auto Get_Registry() const -> const FCk_Registry&;
+
 private:
     UPROPERTY()
     FCk_Entity _Entity;
