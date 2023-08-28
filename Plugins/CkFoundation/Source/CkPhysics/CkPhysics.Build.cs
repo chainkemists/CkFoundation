@@ -19,8 +19,9 @@ public class CkPhysics : CkModuleRules
             "CkCore",
             "CkEcs",
             "CkEcsBasics",
+            "CkLabel",
             "CkLog",
-            "CkNet"
+            "CkNet",
         });
     }
 }

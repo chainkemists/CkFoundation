@@ -1,6 +1,7 @@
 #include "CkVelocity_Processor.h"
 
 #include "CkEcsBasics/Transform/CkTransform_Utils.h"
+#include "CkPhysics/Velocity/CkVelocity_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -39,6 +40,44 @@ namespace ck
 
         InHandle.Remove<MarkedDirtyBy>();
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FCk_Processor_VelocityModifier_SingleTarget_Setup::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FCk_Fragment_Velocity_Current& InVelocity,
+            const FCk_Fragment_Velocity_Target& InTarget) const
+        -> void
+    {
+        auto targetEntity  = InTarget.Get_Entity();
+        auto& targetVelocity = targetEntity.Get<FCk_Fragment_Velocity_Current>();
+
+        targetVelocity._CurrentVelocity += InVelocity.Get_CurrentVelocity();
+
+        InHandle.Remove<MarkedDirtyBy>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FCk_Processor_VelocityModifier_SingleTarget_Teardown::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FCk_Fragment_Velocity_Current& InVelocity,
+            const FCk_Fragment_Velocity_Target& InTarget) const
+        -> void
+    {
+        auto targetEntity  = UCk_Utils_Velocity_UE::VelocityTarget_Utils::Get_StoredEntity(InHandle);
+        auto& targetVelocity = targetEntity.Get<FCk_Fragment_Velocity_Current>();
+
+        targetVelocity._CurrentVelocity -= InVelocity._CurrentVelocity;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     auto
         FCk_Processor_Velocity_Replicate::
