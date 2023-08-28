@@ -2,6 +2,8 @@
 
 #include "CkCore/Enums/CkEnums.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
+#include "CkEcsBasics/EntityHolder/CkEntityHolder_Fragment.h"
+#include "CkLabel/CkLabel_Fragment.h"
 #include "CkMacros/CkMacros.h"
 
 #include "CkPhysics/Velocity/CkVelocity_Fragment_Params.h"
@@ -17,6 +19,8 @@ class UCk_Utils_Velocity_UE;
 namespace ck
 {
     struct FCk_Tag_Velocity_Setup {};
+    struct FCk_Tag_VelocityModifier_SingleTarget {};
+    struct FCk_Tag_VelocityModifier_SingleTarget_Setup {};
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -47,8 +51,10 @@ namespace ck
         CK_GENERATED_BODY(FCk_Fragment_Velocity_Current);
 
     public:
-        friend class FCk_Processor_Velocity_Setup;
         friend class UCk_Utils_Velocity_UE;
+        friend class FCk_Processor_Velocity_Setup;
+        friend class FCk_Processor_VelocityModifier_SingleTarget_Setup;
+        friend class FCk_Processor_VelocityModifier_SingleTarget_Teardown;
 
     public:
         FCk_Fragment_Velocity_Current() = default;
@@ -61,6 +67,24 @@ namespace ck
     public:
         CK_PROPERTY_GET(_CurrentVelocity);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct FCk_Fragment_Velocity_Target : public FCk_Fragment_EntityHolder
+    {
+        using FCk_Fragment_EntityHolder::FCk_Fragment_EntityHolder;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct FCk_Fragment_Velocity_Channel : public FCk_Fragment_GameplayLabel
+    {
+        using FCk_Fragment_GameplayLabel::FCk_Fragment_GameplayLabel;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // TODO: Add RecordOfVelocityModifiers
 }
 
 // --------------------------------------------------------------------------------------------------------------------
