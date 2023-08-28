@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkEcs/Entity/CkEntity.h"
+#include "CkEcs/Handle/CkHandle.h"
 #include "CkMacros/CkMacros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -17,7 +17,7 @@ namespace ck
         friend class TUtils_EntityHolder;
 
     public:
-        using EntityType = FCk_Entity;
+        using EntityType = FCk_Handle;
 
     public:
         FCk_Fragment_EntityHolder() = default;

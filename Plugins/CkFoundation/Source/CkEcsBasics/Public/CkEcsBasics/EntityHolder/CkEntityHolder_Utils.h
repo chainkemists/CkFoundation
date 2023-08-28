@@ -1,4 +1,5 @@
 #pragma once
+
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcsBasics/EntityHolder/CkEntityHolder_Fragment.h"
 
@@ -82,7 +83,7 @@ namespace ck
         const auto& entityHolderComp = InHandle.Get<CompType>();
         const auto& storedEntity     = entityHolderComp.Get_Entity();
 
-        return HandleType{storedEntity, InHandle.Get_Registry()};
+        return storedEntity;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
