@@ -58,6 +58,22 @@ auto
 }
 
 auto
+    FCk_Handle::
+    Get_Registry()
+    -> FCk_Registry&
+{
+    return *_Registry;
+}
+
+auto
+    FCk_Handle::
+    Get_Registry() const
+    -> const FCk_Registry&
+{
+    return *_Registry;
+}
+
+auto
     GetTypeHash(
         FCk_Handle InHandle) -> uint32
 {
