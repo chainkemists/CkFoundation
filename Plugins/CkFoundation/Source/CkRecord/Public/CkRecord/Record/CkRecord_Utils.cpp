@@ -6,12 +6,17 @@
 #include "CkRecord/RecordEntry/CkRecordEntry_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UCk_Utils_Record_UE::InternalUtils_Type UCk_Utils_Record_UE::_Utils;
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_Record_UE::
     Add(FCk_Handle InHandle)
     -> void
 {
-    InHandle.Add<ck::FCk_Fragment_Record>();
+    _Utils.Add(InHandle);
 }
 
 auto
@@ -19,7 +24,7 @@ auto
     Has(FCk_Handle InHandle)
     -> bool
 {
-    return InHandle.Has<ck::FCk_Fragment_Record>();
+    return _Utils.Has(InHandle);
 }
 
 auto
@@ -27,11 +32,7 @@ auto
     Ensure(FCk_Handle InHandle)
     -> bool
 {
-    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have [{}]"),
-        InHandle, ctti::nameof_v<ck::FCk_Fragment_Record>)
-    { return false; }
-
-    return true;
+    return _Utils.Ensure(InHandle);
 }
 
 auto
@@ -39,15 +40,7 @@ auto
     Get_AllRecordEntries(FCk_Handle InRecordHandle)
     -> TArray<FCk_Handle>
 {
-    const auto& Fragment = InRecordHandle.Get<ck::FCk_Fragment_Record>();
-
-    auto RecordEntries = TArray<FCk_Handle>{};
-
-    for(const auto& RecordEntry : Fragment.Get_RecordEntries())
-    {
-        RecordEntries.Emplace(ck::MakeHandle(RecordEntry, InRecordHandle));
-    }
-    return RecordEntries;
+    return _Utils.Get_AllRecordEntries(InRecordHandle);
 }
 
 auto
@@ -57,18 +50,13 @@ auto
         FCk_Predicate_InHandle_OutResult InPredicate)
     -> bool
 {
-    const auto& Fragment = InRecordHandle.Get<ck::FCk_Fragment_Record>();
-
-    for(const auto& RecordEntry : Fragment.Get_RecordEntries())
+    return _Utils.Get_HasRecordEntry(InRecordHandle, [&](FCk_Handle InHandle) -> bool
     {
         FCk_SharedBool OutResult;
-        InPredicate.Execute(ck::MakeHandle(RecordEntry, InRecordHandle), OutResult);
+        InPredicate.Execute(InHandle, OutResult);
 
-        if (*OutResult)
-        { return true; }
-    }
-
-    return false;
+        return *OutResult;
+    });
 }
 
 auto
@@ -78,20 +66,13 @@ auto
         FCk_Predicate_InHandle_OutResult InPredicate)
     -> FCk_Handle
 {
-    const auto& Fragment = InRecordHandle.Get<ck::FCk_Fragment_Record>();
-
-    for(const auto& RecordEntry : Fragment.Get_RecordEntries())
+    return _Utils.Get_RecordEntryIf(InRecordHandle, [&](FCk_Handle InHandle) -> bool
     {
-        const auto RecordEntryHandle = ck::MakeHandle(RecordEntry, InRecordHandle);
-
         FCk_SharedBool OutResult;
-        InPredicate.Execute(RecordEntryHandle, OutResult);
+        InPredicate.Execute(InHandle, OutResult);
 
-        if (*OutResult)
-        { return RecordEntryHandle; }
-    }
-
-    return {};
+        return *OutResult;
+    });
 }
 
 auto
@@ -101,13 +82,10 @@ auto
         FCk_Lambda_InHandle InFunc)
     -> void
 {
-    const auto& Fragment = InRecordHandle.Get<ck::FCk_Fragment_Record>();
-
-    for(const auto& RecordEntry : Fragment.Get_RecordEntries())
+    return _Utils.ForEachEntry(InRecordHandle, [&](FCk_Handle InHandle)
     {
-        const auto RecordEntryHandle = ck::MakeHandle(RecordEntry, InRecordHandle);
-        InFunc.Execute(RecordEntryHandle);
-    }
+        InFunc.Execute(InHandle);
+    });
 }
 
 auto
@@ -118,18 +96,18 @@ auto
         FCk_Predicate_InHandle_OutResult InPredicate)
     -> void
 {
-    const auto& Fragment = InRecordHandle.Get<ck::FCk_Fragment_Record>();
-
-    for(const auto& RecordEntry : Fragment.Get_RecordEntries())
+    return _Utils.ForEachEntryIf(InRecordHandle,
+    [&](FCk_Handle RecordEntryHandle)
     {
-        const auto RecordEntryHandle = ck::MakeHandle(RecordEntry, InRecordHandle);
+        InFunc.Execute(RecordEntryHandle);
+    },
+    [&](FCk_Handle InRecordEntryHandle)
+    {
+        const FCk_SharedBool OutResult;
+        InPredicate.Execute(InRecordEntryHandle, OutResult);
 
-        FCk_SharedBool OutResult;
-        InPredicate.Execute(RecordEntryHandle, OutResult);
-
-        if (*OutResult)
-        { InFunc.Execute(RecordEntryHandle); }
-    }
+        return *OutResult;
+    });
 }
 
 auto
@@ -139,22 +117,7 @@ auto
         FCk_Handle InRecordEntry)
     -> void
 {
-    if (NOT Ensure(InRecordHandle))
-    { return; }
-
-    auto& RecordFragment = InRecordHandle.Get<ck::FCk_Fragment_Record>();
-
-    CK_ENSURE_IF_NOT(NOT RecordFragment.Get_RecordEntries().Contains(InRecordEntry.Get_Entity()),
-        TEXT("The Record [{}] ALREADY contains the RecordEntry [{}]"), InRecordHandle, InRecordEntry)
-    { return; }
-
-    RecordFragment._RecordEntries.Emplace(InRecordEntry.Get_Entity());
-
-    if (NOT UCk_Utils_RecordEntry_UE::Has(InRecordEntry))
-    { UCk_Utils_RecordEntry_UE::Add(InRecordEntry); }
-
-    auto& RecordEntryFragment = InRecordHandle.Get<ck::FCk_Fragment_RecordEntry>();
-    RecordEntryFragment._Records.Emplace(InRecordHandle.Get_Entity());
+    _Utils.Request_Connect(InRecordHandle, InRecordEntry);
 }
 
 auto
@@ -164,32 +127,5 @@ auto
         FCk_Handle InRecordEntry)
     -> void
 {
-    if (NOT Ensure(InRecordHandle))
-    { return; }
-
-    if (NOT UCk_Utils_RecordEntry_UE::Ensure(InRecordEntry))
-    { return; }
-
-    {
-        auto& RecordFragment = InRecordHandle.Get<ck::FCk_Fragment_Record>();
-        const auto& RemovalSuccess = RecordFragment._RecordEntries.Remove(InRecordEntry.Get_Entity());
-
-        CK_ENSURE_IF_NOT(RemovalSuccess,
-            TEXT("The Record [{}] couldn't remove the RecordEntry [{}]. Does the RecordEntry exist in the Record?"),
-            InRecordHandle,
-            InRecordEntry)
-        { return; }
-    }
-
-    {
-        auto& RecordEntryFragment = InRecordHandle.Get<ck::FCk_Fragment_RecordEntry>();
-        const auto& RemovalSuccess = RecordEntryFragment._Records.Remove(InRecordHandle.Get_Entity());
-
-        CK_ENSURE_IF_NOT(RemovalSuccess,
-            TEXT("The RecordEntry [{}] does NOT have the Record [{}] even though the Record had the RecordEntry. "
-                "Somehow the RecordEntry was out of sync with the Record."),
-            InRecordEntry,
-            InRecordHandle)
-        { return; }
-    }
+    _Utils.Request_Disconnect(InRecordHandle, InRecordEntry);
 }
