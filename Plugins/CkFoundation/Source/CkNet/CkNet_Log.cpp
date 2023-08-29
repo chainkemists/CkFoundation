@@ -4,7 +4,7 @@
 
 DEFINE_LOG_CATEGORY(CkNet);
 
-namespace ck::log
+namespace ck::net
 {
 	CK_REGISTER_LOG_FUNCTIONS(CkNet);
 }

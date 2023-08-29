@@ -8,7 +8,7 @@ CKNET_API DECLARE_LOG_CATEGORY_EXTERN(CkNet, Log, All);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck::Net
+namespace ck::net
 {
     CK_DEFINE_LOG_FUNCTIONS(CkNet);
 }
