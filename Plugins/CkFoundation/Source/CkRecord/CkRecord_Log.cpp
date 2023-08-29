@@ -4,7 +4,7 @@
 
 DEFINE_LOG_CATEGORY(CkRecord);
 
-namespace ck::log
+namespace ck::record
 {
 	CK_REGISTER_LOG_FUNCTIONS(CkRecord);
 }
