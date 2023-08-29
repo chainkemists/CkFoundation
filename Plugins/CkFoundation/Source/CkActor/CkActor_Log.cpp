@@ -4,7 +4,7 @@
 
 DEFINE_LOG_CATEGORY(CkActor);
 
-namespace ck::log
+namespace ck::actor
 {
 	CK_REGISTER_LOG_FUNCTIONS(CkActor);
 }
