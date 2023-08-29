@@ -14,10 +14,12 @@ namespace ck
             const FCk_Fragment_Record& InRecord)
         -> void
     {
-        for (auto RecordEntryEntity : InRecord.Get_RecordEntries())
+        for (const auto RecordEntryEntity : InRecord.Get_RecordEntries())
         {
-            const auto RecordEntryHandle = MakeHandle(RecordEntryEntity, InHandle);
-            UCk_Utils_Record_UE::Request_Disconnect(InHandle, RecordEntryHandle);
+            auto RecordEntryHandle = MakeHandle(RecordEntryEntity, InHandle);
+
+            auto& RecordEntryFragment = RecordEntryHandle.Get<FCk_Fragment_Record>();
+            RecordEntryFragment._RecordEntries.Remove(InHandle.Get_Entity());
         }
     }
 }

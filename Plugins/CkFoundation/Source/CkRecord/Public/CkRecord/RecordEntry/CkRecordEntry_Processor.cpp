@@ -18,8 +18,10 @@ namespace ck
     {
         for (const auto RecordEntity : InRecordEntry.Get_Records())
         {
-            const auto RecordHandle = MakeHandle(RecordEntity, InHandle);
-            UCk_Utils_Record_UE::Request_Disconnect(RecordHandle, InHandle);
+            auto RecordHandle = MakeHandle(RecordEntity, InHandle);
+
+            auto& RecordFragment = RecordHandle.Get<FCk_Fragment_Record>();
+            RecordFragment._RecordEntries.Remove(InHandle.Get_Entity());
         }
     }
 }

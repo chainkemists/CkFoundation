@@ -15,6 +15,7 @@ namespace ck
     {
         friend class UCk_Utils_Record_UE;
         friend class FCk_Processor_Record_Destructor;
+        friend class FCk_Processor_RecordEntry_Destructor;
 
     public:
         CK_GENERATED_BODY(FCk_Fragment_Record);
