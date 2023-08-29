@@ -4,7 +4,7 @@
 
 DEFINE_LOG_CATEGORY(CkPhysics);
 
-namespace ck::log
+namespace ck::physics
 {
 	CK_REGISTER_LOG_FUNCTIONS(CkPhysics);
 }
