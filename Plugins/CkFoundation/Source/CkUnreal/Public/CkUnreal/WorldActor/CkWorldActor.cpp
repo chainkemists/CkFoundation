@@ -15,6 +15,9 @@
 #include "CkPhysics/Integrator/CkIntegrator_Processor.h"
 #include "CkProjectile/CkProjectile_Processor.h"
 
+#include "CkRecord/Record/CkRecord_Processor.h"
+#include "CkRecord/RecordEntry/CkRecordEntry_Processor.h"
+
 #include "CkUnreal/Entity/CkUnrealEntity_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -50,6 +53,9 @@ namespace ck_world_actor
             InWorld.Add<ck::FCk_Processor_Velocity_Replicate>(InWorld.Get_Registry());
             InWorld.Add<ck::FCk_Processor_Transform_Replicate>(InWorld.Get_Registry());
         }
+
+        InWorld.Add<ck::FCk_Processor_RecordEntry_Destructor>(InWorld.Get_Registry());
+        InWorld.Add<ck::FCk_Processor_Record_Destructor>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FCk_Processor_OwningActor_Destroy>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_EntityLifetime_EntityJustCreated>(InWorld.Get_Registry());
