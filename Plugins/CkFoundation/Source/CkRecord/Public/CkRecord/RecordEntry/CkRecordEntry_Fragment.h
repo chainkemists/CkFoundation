@@ -26,6 +26,9 @@ namespace ck
         friend UCk_Utils_Record_UE;
         friend class FCk_Processor_RecordEntry_Destructor;
 
+        template <typename T_DerivedRecord>
+        friend class TCk_Utils_Record;
+
     public:
         using EntityType = FCk_Entity;
         using RecordsListType = TSet<EntityType>;
