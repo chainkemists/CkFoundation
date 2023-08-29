@@ -1,0 +1,41 @@
+#pragma once
+#include "CkEcs/Entity/CkEntity.h"
+
+#include "CkMacros/CkMacros.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class UCk_Utils_RecordEntry_UE;
+class UCk_Utils_Record_UE;
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    /*
+     * RecordEntry's ONLY purpose is to allow us to remove an entry from a Record of an Entity that is Pending Destroy.
+*    * RecordEntry should NOT be used to link back back to the Record (and as such, a function like Get_Record does
+*    * NOT exist)
+     */
+    struct FCk_Fragment_RecordEntry
+    {
+    public:
+        CK_GENERATED_BODY(FCk_Fragment_RecordEntry);
+
+        friend UCk_Utils_RecordEntry_UE;
+        friend UCk_Utils_Record_UE;
+        friend class FCk_Processor_RecordEntry_Destructor;
+
+    public:
+        using EntityType = FCk_Entity;
+        using RecordsListType = TSet<EntityType>;
+
+    private:
+        RecordsListType _Records;
+
+    private:
+        CK_PROPERTY(_Records);
+    };
+}
+
+// --------------------------------------------------------------------------------------------------------------------
