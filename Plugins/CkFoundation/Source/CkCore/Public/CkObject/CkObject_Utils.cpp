@@ -2,14 +2,21 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Utils_Object_CopyAllProperties_Params::FCk_Utils_Object_CopyAllProperties_Params(TObjectPtr<UObject> InDestination,
-    TObjectPtr<UObject> InSource)
-        : _Destination(InDestination)
-        , _Source(InSource)
+FCk_Utils_Object_CopyAllProperties_Params::
+    FCk_Utils_Object_CopyAllProperties_Params(
+        UObject* InDestination,
+        UObject* InSource)
+    : _Destination(InDestination)
+    , _Source(InSource)
 { }
 
-auto UCk_Utils_Object_UE::
-Request_CopyAllProperties(const FCk_Utils_Object_CopyAllProperties_Params& InParams) -> ECk_Utils_Object_CopyAllProperties_Result
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Object_UE::
+    Request_CopyAllProperties(
+        const FCk_Utils_Object_CopyAllProperties_Params& InParams)
+    -> ECk_Utils_Object_CopyAllProperties_Result
 {
     using result_type = ECk_Utils_Object_CopyAllProperties_Result;
 
@@ -44,7 +51,11 @@ Request_CopyAllProperties(const FCk_Utils_Object_CopyAllProperties_Params& InPar
     return Result;
 }
 
-UClass* UCk_Utils_Object_UE::Get_DefaultClass_UpToDate(UClass* InClass)
+auto
+    UCk_Utils_Object_UE::
+    Get_DefaultClass_UpToDate(
+        UClass* InClass)
+    -> UClass*
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InClass), TEXT("InClass is INVALID."))
     { return {}; }
@@ -60,6 +71,30 @@ UClass* UCk_Utils_Object_UE::Get_DefaultClass_UpToDate(UClass* InClass)
     { return InClass; }
 
     return AuthoritativeClass;
+}
+
+auto
+    UCk_Utils_Object_UE::
+    Get_IsDefaultObject(
+        UObject* InObject)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Invalid Object supplied to Get_IsDefaultObject"))
+    { return {}; }
+
+    return InObject == InObject->GetClass()->GetDefaultObject();
+}
+
+auto
+    UCk_Utils_Object_UE::
+    Get_ClassDefaultObject(
+        TSubclassOf<UObject> InObject)
+    -> UObject*
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Invalid Class supplied to Get_ClassDefaultObject"))
+    { return {}; }
+
+    return InObject->GetDefaultObject();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
