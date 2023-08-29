@@ -23,7 +23,8 @@ public class CkUnreal : CkModuleRules
             "CkNet",
             "CkLog",
             "CkPhysics",
-            "CkProjectile"
+            "CkProjectile",
+            "CkRecord"
         });
     }
 }
