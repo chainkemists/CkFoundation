@@ -16,7 +16,7 @@ public:
 
 public:
     using Value_Type = bool;
-    using Ptr_Type = TSharedPtr<Value_Type>;
+    using Ptr_Type = TSharedPtr<Value_Type, ESPMode::NotThreadSafe>;
 
 public:
     FCk_SharedBool();
@@ -41,7 +41,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Core|Utils|SharedBool",
+              Category = "Ck|Utils|SharedBool",
               meta     = (CompactNodeTitle = "Get"))
     static bool
     Get(
@@ -49,7 +49,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Core|Utils|SharedBool",
+              Category = "Ck|Utils|SharedBool",
               meta     = (CompactNodeTitle = "Set"))
     static void
     Set(
@@ -58,7 +58,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Core|Utils|SharedBool",
+              Category = "Ck|Utils|SharedBool",
               meta     = (CompactNodeTitle = "Make"))
     static FCk_SharedBool
     Make(
@@ -77,7 +77,7 @@ public:
 
 public:
     using Value_Type = int32;
-    using Ptr_Type = TSharedPtr<Value_Type>;
+    using Ptr_Type = TSharedPtr<Value_Type, ESPMode::NotThreadSafe>;
 
 public:
     FCk_SharedInt();
@@ -102,7 +102,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Core|Utils|SharedInt",
+              Category = "Ck|Utils|SharedInt",
               meta     = (CompactNodeTitle = "Get"))
     static int32
     Get(
@@ -110,7 +110,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Core|Utils|SharedInt",
+              Category = "Ck|Utils|SharedInt",
               meta     = (CompactNodeTitle = "Set"))
     static void
     Set(
@@ -119,7 +119,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Core|Utils|SharedInt",
+              Category = "Ck|Utils|SharedInt",
               meta     = (CompactNodeTitle = "Make"))
     static FCk_SharedInt
     Make(
@@ -138,7 +138,7 @@ public:
 
 public:
     using Value_Type = float;
-    using Ptr_Type = TSharedPtr<Value_Type>;
+    using Ptr_Type = TSharedPtr<Value_Type, ESPMode::NotThreadSafe>;
 
 public:
     FCk_SharedFloat();
@@ -163,7 +163,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Core|Utils|SharedFloat",
+              Category = "Ck|Utils|SharedFloat",
               meta     = (CompactNodeTitle = "Get"))
     static float
     Get(
@@ -171,7 +171,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Core|Utils|SharedFloat",
+              Category = "Ck|Utils|SharedFloat",
               meta     = (CompactNodeTitle = "Set"))
     static void
     Set(
@@ -180,7 +180,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Core|Utils|SharedFloat",
+              Category = "Ck|Utils|SharedFloat",
               meta     = (CompactNodeTitle = "Make"))
     static FCk_SharedFloat
     Make(
@@ -199,7 +199,7 @@ public:
 
 public:
     using Value_Type = FVector;
-    using Ptr_Type = TSharedPtr<Value_Type>;
+    using Ptr_Type = TSharedPtr<Value_Type, ESPMode::NotThreadSafe>;
 
 public:
     FCk_SharedVector();
@@ -224,7 +224,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Core|Utils|SharedVector",
+              Category = "Ck|Utils|SharedVector",
               meta     = (CompactNodeTitle = "Get"))
     static FVector
     Get(
@@ -232,7 +232,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Core|Utils|SharedVector",
+              Category = "Ck|Utils|SharedVector",
               meta     = (CompactNodeTitle = "Set"))
     static void
     Set(
@@ -241,7 +241,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Core|Utils|SharedVector",
+              Category = "Ck|Utils|SharedVector",
               meta     = (CompactNodeTitle = "Make"))
     static FCk_SharedVector
     Make(
@@ -260,7 +260,7 @@ public:
 
 public:
     using Value_Type = FString;
-    using Ptr_Type = TSharedPtr<Value_Type>;
+    using Ptr_Type = TSharedPtr<Value_Type, ESPMode::NotThreadSafe>;
 
 public:
     FCk_SharedString();
@@ -285,7 +285,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Core|Utils|SharedString",
+              Category = "Ck|Utils|SharedString",
               meta     = (CompactNodeTitle = "Get"))
     static FString
     Get(
@@ -293,7 +293,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Core|Utils|SharedString",
+              Category = "Ck|Utils|SharedString",
               meta     = (CompactNodeTitle = "Set"))
     static void
     Set(
@@ -302,7 +302,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Core|Utils|SharedString",
+              Category = "Ck|Utils|SharedString",
               meta     = (CompactNodeTitle = "Make"))
     static FCk_SharedString
     Make(
@@ -321,7 +321,7 @@ public:
 
 public:
     using Value_Type = FRotator;
-    using Ptr_Type = TSharedPtr<Value_Type>;
+    using Ptr_Type = TSharedPtr<Value_Type, ESPMode::NotThreadSafe>;
 
 public:
     FCk_SharedRotator();
@@ -346,7 +346,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Core|Utils|SharedRotator",
+              Category = "Ck|Utils|SharedRotator",
               meta     = (CompactNodeTitle = "Get"))
     static FRotator
     Get(
@@ -354,7 +354,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Core|Utils|SharedRotator",
+              Category = "Ck|Utils|SharedRotator",
               meta     = (CompactNodeTitle = "Set"))
     static void
     Set(
@@ -362,7 +362,7 @@ public:
         FRotator                            InValue);
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Core|Utils|SharedRotator",
+              Category = "Ck|Utils|SharedRotator",
               meta     = (CompactNodeTitle = "Make"))
     static FCk_SharedRotator
     Make(
