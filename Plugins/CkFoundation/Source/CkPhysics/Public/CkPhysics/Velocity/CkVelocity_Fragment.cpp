@@ -41,16 +41,10 @@ auto
     UCk_Fragment_Velocity_Rep::
     OnRep_Velocity() -> void
 {
-    if (NOT Get_AssociatedEntity().IsValid())
-    { return; }
-
-    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)
-    { return; }
-
-    if (GetWorld()->IsNetMode(NM_DedicatedServer))
-    { return; }
-
-    UCk_Utils_Velocity_UE::Request_OverrideVelocity(Get_AssociatedEntity(), _Velocity);
+    CK_REP_OBJ_EXECUTE_IF_VALID([&]()
+    {
+        UCk_Utils_Velocity_UE::Request_OverrideVelocity(Get_AssociatedEntity(), _Velocity);
+    });
 }
 
 // --------------------------------------------------------------------------------------------------------------------
