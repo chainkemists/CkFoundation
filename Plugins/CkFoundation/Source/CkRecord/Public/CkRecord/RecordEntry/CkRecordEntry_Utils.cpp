@@ -1,0 +1,38 @@
+#include "CkRecordEntry_Utils.h"
+
+#include "CkRecordEntry_Fragment.h"
+
+#include "CkRecord/Record/CkRecord_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_RecordEntry_UE::
+    Add(FCk_Handle InHandle)
+    -> void
+{
+    InHandle.Add<ck::FCk_Fragment_RecordEntry>();
+}
+
+auto
+    UCk_Utils_RecordEntry_UE::
+    Has(FCk_Handle InHandle)
+    -> bool
+{
+    return InHandle.Has<ck::FCk_Fragment_RecordEntry>();
+}
+
+auto
+    UCk_Utils_RecordEntry_UE::
+    Ensure(FCk_Handle InHandle)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have a [{}]"),
+        InHandle, ctti::nameof_v<ck::FCk_Fragment_RecordEntry>)
+    { return false; }
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
