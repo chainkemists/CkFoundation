@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkCore/SharedValues/CkSharedValues.h"
+
 #include "CkEcs/Handle/CkHandle.h"
 
 #include "CkRecord_Fragment_Params.generated.h"
@@ -18,7 +20,7 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Predicate_InHandle_OutResult,
     FCk_Handle, InHandle,
-    UPARAM(Ref) bool&, OutResult);
+    FCk_SharedBool, OutResult);
 
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -61,10 +61,10 @@ auto
 
     for(const auto& RecordEntry : Fragment.Get_RecordEntries())
     {
-        bool OutResult;
+        FCk_SharedBool OutResult;
         InPredicate.Execute(ck::MakeHandle(RecordEntry, InRecordHandle), OutResult);
 
-        if (OutResult)
+        if (*OutResult)
         { return true; }
     }
 
@@ -84,10 +84,10 @@ auto
     {
         const auto RecordEntryHandle = ck::MakeHandle(RecordEntry, InRecordHandle);
 
-        bool OutResult;
+        FCk_SharedBool OutResult;
         InPredicate.Execute(RecordEntryHandle, OutResult);
 
-        if (OutResult)
+        if (*OutResult)
         { return RecordEntryHandle; }
     }
 
@@ -124,10 +124,10 @@ auto
     {
         const auto RecordEntryHandle = ck::MakeHandle(RecordEntry, InRecordHandle);
 
-        bool OutResult;
+        FCk_SharedBool OutResult;
         InPredicate.Execute(RecordEntryHandle, OutResult);
 
-        if (OutResult)
+        if (*OutResult)
         { InFunc.Execute(RecordEntryHandle); }
     }
 }
