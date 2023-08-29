@@ -4,7 +4,7 @@
 
 DEFINE_LOG_CATEGORY(CkProjectile);
 
-namespace ck::log
+namespace ck::projectile
 {
 	CK_REGISTER_LOG_FUNCTIONS(CkProjectile);
 }
