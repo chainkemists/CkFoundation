@@ -8,8 +8,6 @@
 
 #include "CkMacros/CkMacros.h"
 
-#include "CkActorModifier_Fragment.generated.h"
-
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_ActorModifier_UE;
@@ -143,49 +141,5 @@ namespace ck
     };
 
 }
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(Abstract, Blueprintable)
-class CKACTOR_API UCk_Fragment_ActorModifier_Rep : public UCk_Ecs_ReplicatedObject_UE
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_Fragment_ActorModifier_Rep);
-
-public:
-    UFUNCTION(NetMulticast, Reliable)
-    void
-    Request_SetLocation(
-        const FCk_Request_ActorModifier_SetLocation& InRequest);
-
-    UFUNCTION(NetMulticast, Reliable)
-    void
-    Request_AddLocationOffset(
-        const FCk_Request_ActorModifier_AddLocationOffset& InRequest);
-
-public:
-    UFUNCTION(NetMulticast, Reliable)
-    void
-    Request_SetRotation(
-        const FCk_Request_ActorModifier_SetRotation& InRequest);
-
-    UFUNCTION(NetMulticast, Reliable)
-    void
-    Request_AddRotationOffset(
-        const FCk_Request_ActorModifier_AddRotationOffset& InRequest);
-
-public:
-    UFUNCTION(NetMulticast, Reliable)
-    void
-    Request_SetScale(
-        const FCk_Request_ActorModifier_SetScale& InRequest);
-
-    UFUNCTION(NetMulticast, Reliable)
-    void
-    Request_SetTransform(
-        const FCk_Request_ActorModifier_SetTransform& InRequest);
-};
 
 // --------------------------------------------------------------------------------------------------------------------
