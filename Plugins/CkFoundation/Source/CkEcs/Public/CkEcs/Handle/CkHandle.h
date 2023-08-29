@@ -114,6 +114,11 @@ private:
 
 auto CKECS_API GetTypeHash(FCk_Handle InHandle) -> uint32;
 
+namespace ck
+{
+    auto CKECS_API MakeHandle(FCk_Entity InEntity, FCk_Handle InValidHandle) -> FCk_Handle;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_CUSTOM_IS_VALID(FCk_Handle, ck::IsValid_Policy_Default, [&](const FCk_Handle& InHandle)

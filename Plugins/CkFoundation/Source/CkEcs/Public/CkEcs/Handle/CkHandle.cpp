@@ -80,4 +80,20 @@ auto
     return GetTypeHash(InHandle.Get_Entity());
 }
 
+namespace ck
+{
+    auto
+        MakeHandle(
+            FCk_Entity InEntity,
+            FCk_Handle InValidHandle)
+        -> FCk_Handle
+    {
+        CK_ENSURE_IF_NOT(ck::IsValid(InValidHandle),
+            TEXT("Unable to create handle for Entity [{}] because Handle [{}] is INVALID."), InEntity, InValidHandle)
+        { return {}; }
+
+        return FCk_Handle{InEntity, **InValidHandle};
+    }
+}
+
 // --------------------------------------------------------------------------------------------------------------------
