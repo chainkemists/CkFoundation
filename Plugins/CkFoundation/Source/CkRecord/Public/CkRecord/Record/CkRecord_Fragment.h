@@ -17,6 +17,9 @@ namespace ck
         friend class FCk_Processor_Record_Destructor;
         friend class FCk_Processor_RecordEntry_Destructor;
 
+        template <typename T_DerivedRecord>
+        friend class TCk_Utils_Record;
+
     public:
         CK_GENERATED_BODY(FCk_Fragment_Record);
 
