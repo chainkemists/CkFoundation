@@ -10,6 +10,17 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#define CK_REP_OBJ_EXECUTE_IF_VALID(_Func_)\
+    if (NOT Get_AssociatedEntity().IsValid())\
+    { return; }\
+\
+    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)\
+    { return; }\
+\
+    if (GetWorld()->IsNetMode(NM_DedicatedServer))\
+    { return; }\
+    _Func_()
+
 // TODO: Move this to its own file
 UCLASS(NotBlueprintType, NotBlueprintable)
 class CKECS_API UCk_Ecs_ReplicatedObject_UE
