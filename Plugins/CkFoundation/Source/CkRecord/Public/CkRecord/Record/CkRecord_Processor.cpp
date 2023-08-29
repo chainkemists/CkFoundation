@@ -18,8 +18,8 @@ namespace ck
         {
             auto RecordEntryHandle = MakeHandle(RecordEntryEntity, InHandle);
 
-            auto& RecordEntryFragment = RecordEntryHandle.Get<FCk_Fragment_Record>();
-            RecordEntryFragment._RecordEntries.Remove(InHandle.Get_Entity());
+            auto& RecordEntryFragment = RecordEntryHandle.Get<FCk_Fragment_RecordEntry>();
+            RecordEntryFragment._Records.Remove(InHandle.Get_Entity());
         }
     }
 }

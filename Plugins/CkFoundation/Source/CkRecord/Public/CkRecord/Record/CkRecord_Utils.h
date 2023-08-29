@@ -243,7 +243,7 @@ namespace ck
         if (NOT UCk_Utils_RecordEntry_UE::Has(InRecordEntry))
         { UCk_Utils_RecordEntry_UE::Add(InRecordEntry); }
 
-        auto& RecordEntryFragment = InRecordHandle.Get<ck::FCk_Fragment_RecordEntry>();
+        auto& RecordEntryFragment = InRecordEntry.Get<ck::FCk_Fragment_RecordEntry>();
         RecordEntryFragment._Records.Emplace(InRecordHandle.Get_Entity());
     }
 
