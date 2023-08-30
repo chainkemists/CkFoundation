@@ -130,7 +130,7 @@ private:
         const FCk_Request_Marker_EnableDisable& InRequest);
 
 public:
-    // TODO: Add functions to Bind/Unbind
+    // TODO: Add functions to Bind/Unbind OnEnableDisable
 
 public:
     template <ECk_FragmentQuery_Policy T_FragmentQueryPolicy = ECk_FragmentQuery_Policy::EntityInRecord>
