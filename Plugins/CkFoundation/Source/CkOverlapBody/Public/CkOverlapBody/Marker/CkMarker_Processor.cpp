@@ -246,12 +246,6 @@ namespace ck
         if (NOT UCk_Utils_OverlapBody_UserSettings_UE::Get_DebugPreviewAllMarkers())
         { return; }
 
-        // TODO: Fix this
-        const auto& gameInstance = UCk_Utils_Game_UE::Get_GameInstance(nullptr);
-
-        if (ck::Is_NOT_Valid(gameInstance))
-        { return; }
-
         _Registry.View<FCk_Fragment_Marker_Current, FCk_Fragment_Marker_Params>().ForEach(
         [&](FCk_Entity InMarkerEntity, const FCk_Fragment_Marker_Current& InMarkerCurrent, const FCk_Fragment_Marker_Params& InMarkerParams)
         {
@@ -259,8 +253,9 @@ namespace ck
             { return; }
 
             const auto& markerName = InMarkerParams.Get_Params().Get_MarkerName();
+            const auto& outerForDebugDraw = InMarkerCurrent.Get_AttachedEntityAndActor().Get_Actor().Get();
 
-            UCk_Utils_Marker_UE::PreviewSingleMarker<ECk_FragmentQuery_Policy::CurrentEntity>(gameInstance, FCk_Handle{ InMarkerEntity, _Registry }, markerName);
+            UCk_Utils_Marker_UE::PreviewSingleMarker<ECk_FragmentQuery_Policy::CurrentEntity>(outerForDebugDraw, FCk_Handle{ InMarkerEntity, _Registry }, markerName);
         });
     }
 }
