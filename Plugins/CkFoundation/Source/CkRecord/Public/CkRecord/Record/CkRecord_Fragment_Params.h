@@ -8,7 +8,14 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType) struct FCk_Record_Fragment_Params_ForceGen_Generated_File { GENERATED_BODY() };
+UENUM(BlueprintType)
+enum class ECk_FragmentQuery_Policy : uint8
+{
+    CurrentEntity,
+    EntityInRecord
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_FragmentQuery_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
