@@ -347,6 +347,10 @@ namespace ck
                         (OutermostActor->GetLocalRole() == ROLE_Authority && OutermostActor->GetRemoteRole() != ROLE_AutonomousProxy))
                     { break; }
 
+                    ck::actor::VeryVerbose(TEXT("Skipped Spawning [{}] from Entity [{}] because spawn poliy is [{}] and our role is "
+                        "neither ROLE_AutomousProxy NOR (if we are a client) do we have ROLE_Authority"),
+                        InRequest.Get_SpawnParams().Get_ActorClass(), InHandle, InRequest.Get_SpawnPolicy());
+
                     continue;
                 }
                 case ECk_SpawnActor_SpawnPolicy::SpawnOnServer:
@@ -356,9 +360,15 @@ namespace ck
                     if (NOT OwnerOrWorld->GetWorld()->IsNetMode(NM_Client))
                     { break; }
 
+                    ck::actor::VeryVerbose(TEXT("Skipped Spawning [{}] from Entity [{}] because spawn poliy is [{}] and we are a client"),
+                        InRequest.Get_SpawnParams().Get_ActorClass(), InHandle, InRequest.Get_SpawnPolicy());
+
                     continue;
                 }
-                default: ;
+                default:
+                {
+                    CK_INVALID_ENUM(InRequest.Get_SpawnPolicy());
+                }
             }
 
             const auto& SpawnedActor = UCk_Utils_Actor_UE::Request_SpawnActor(InRequest.Get_SpawnParams(), InRequest.Get_PreFinishSpawnFunc());
