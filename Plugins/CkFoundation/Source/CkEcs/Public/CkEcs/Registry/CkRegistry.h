@@ -21,7 +21,7 @@ namespace ck
 namespace ck
 {
     // this is equivalent to entt::exclude for use with FRegistry::TView<...>
-    // usage: Registry.View<CompA, CompB, TExclude<CompC>>().Each(...)
+    // usage: Registry.View<CompA, CompB, TExclude<CompC>>().ForEach(...)
     template <typename... T>
     struct TExclude { using FValueType = entt::type_list<T...>; };
 }
@@ -94,14 +94,14 @@ public:
         }
 
         template <typename T_Func>
-        auto Each(T_Func InFunc)
+        auto ForEach(T_Func InFunc)
         {
-            DoEach(InFunc, FFragmentsAndTags{}, FOnlyExcludes{}, FOnlyFragments{});
+            DoForEach(InFunc, FFragmentsAndTags{}, FOnlyExcludes{}, FOnlyFragments{});
         }
 
     private:
         template <typename T_Func, typename... T_FragmentsAndTags, typename... T_OnlyExcludes, typename... T_OnlyFragments>
-        auto DoEach(T_Func InFunc, entt::type_list<T_FragmentsAndTags...>, entt::type_list<T_OnlyExcludes...>, entt::type_list<T_OnlyFragments...>)
+        auto DoForEach(T_Func InFunc, entt::type_list<T_FragmentsAndTags...>, entt::type_list<T_OnlyExcludes...>, entt::type_list<T_OnlyFragments...>)
         {
             _Registry.template view<T_FragmentsAndTags...>(entt::exclude<T_OnlyExcludes...>).each(
             [InFunc](const EntityType::IdType InEntityId, T_OnlyFragments&... InFragments)
