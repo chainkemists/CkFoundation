@@ -17,7 +17,7 @@
 namespace ck
 {
     template <typename T_DerivedRecord>
-    class CKRECORD_API TCk_Utils_Record
+    class TCk_Utils_Record
     {
     public:
         CK_GENERATED_BODY(TCk_Utils_Record<T_DerivedRecord>);
