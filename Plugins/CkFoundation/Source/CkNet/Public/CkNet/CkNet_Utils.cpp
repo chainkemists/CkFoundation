@@ -52,6 +52,98 @@ auto
 
 auto
     UCk_Utils_Net_UE::
+    Get_IsRoleMatching(
+        AActor*                 InActor,
+        ECk_Net_ReplicationType InReplicationType)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor!"))
+    { return {}; }
+
+    const auto isLocallyOwned = Get_IsActorLocallyOwned(InActor);
+    const auto netRole        = Get_NetRole(InActor);
+
+    switch(InReplicationType)
+    {
+        case ECk_Net_ReplicationType::LocalOnly:
+        {
+            if (isLocallyOwned)
+            { return true; }
+
+            break;
+        }
+        case ECk_Net_ReplicationType::LocalAndHost:
+        {
+            if (isLocallyOwned || netRole == ECk_Net_NetRoleType::Server || netRole == ECk_Net_NetRoleType::Host)
+            { return true; }
+
+            break;
+        }
+        case ECk_Net_ReplicationType::HostOnly:
+        {
+            if (netRole == ECk_Net_NetRoleType::Host || netRole == ECk_Net_NetRoleType::Server)
+            { return true; }
+
+            break;
+        }
+        case ECk_Net_ReplicationType::ClientsOnly:
+        {
+            if (netRole != ECk_Net_NetRoleType::Server)
+            { return true; }
+
+            break;
+        }
+        case ECk_Net_ReplicationType::ServerOnly:
+        {
+            if (netRole == ECk_Net_NetRoleType::Server)
+            { return true; }
+
+            break;
+        }
+        case ECk_Net_ReplicationType::All:
+        {
+            return true;
+        }
+        default: break;
+    }
+
+    return false;
+}
+
+auto
+    UCk_Utils_Net_UE::
+    Get_NetRole(
+        const UObject* InContext)
+    -> ECk_Net_NetRoleType
+{
+    if (IsRunningDedicatedServer())
+    {
+        return ECk_Net_NetRoleType::Server;
+    }
+
+    const auto& isServer = [InContext]() -> bool
+    {
+        if (ck::Is_NOT_Valid(InContext))
+        { return true; }
+
+        const auto* world = InContext->GetWorld();
+
+        if (ck::Is_NOT_Valid(world))
+        { return true; }
+
+        return world->IsServer();
+    }();
+
+    if (isServer)
+    {
+        return ECk_Net_NetRoleType::Host;
+    }
+
+    return ECk_Net_NetRoleType::Client;
+}
+
+auto
+    UCk_Utils_Net_UE::
     Get_IsEntityNetMode_DedicatedServer(
         FCk_Handle InHandle)
     -> bool
