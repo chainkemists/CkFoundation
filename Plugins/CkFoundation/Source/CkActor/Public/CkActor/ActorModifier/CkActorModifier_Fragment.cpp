@@ -1,5 +1,5 @@
 #include "CkActorModifier_Fragment.h"
 
-#include "CkActor/ActorModifier/CkActorModifier_Utils.h"
-
 // --------------------------------------------------------------------------------------------------------------------
+
+CK_INTENTIONALLY_EMPTY()
