@@ -19,12 +19,12 @@ enum class ECk_GameStatus
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKCORE_API UCk_Game_Utils_UE : public UBlueprintFunctionLibrary
+class CKCORE_API UCk_Utils_Game_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Game_Utils_UE);
+    CK_GENERATED_BODY(UCk_Utils_Game_UE);
 
 public:
     UFUNCTION(BlueprintPure,
