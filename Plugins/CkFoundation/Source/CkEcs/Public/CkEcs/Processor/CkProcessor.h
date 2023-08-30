@@ -4,6 +4,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Registry/CkRegistry.h"
 
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
@@ -35,36 +36,49 @@ namespace ck
     protected:
         RegistryType _Registry;
     };
+}
 
-    // --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
+// Definitions
 
+namespace ck
+{
     template <typename T_DerivedProcessor, typename ... T_Fragments>
-    TProcessor<T_DerivedProcessor, T_Fragments...>::TProcessor(RegistryType InRegistry)
+    TProcessor<T_DerivedProcessor, T_Fragments...>::
+        TProcessor(
+            RegistryType InRegistry)
         : _Registry(InRegistry)
     {
     }
 
     template <typename T_DerivedProcessor, typename ... T_Fragments>
-    auto TProcessor<T_DerivedProcessor, T_Fragments...>::Tick(TimeType InDeltaT) -> void
+    auto
+        TProcessor<T_DerivedProcessor, T_Fragments...>::
+        Tick(
+            TimeType InDeltaT)
+        -> void
     {
-        using FViewType = decltype(_Registry.View<T_Fragments...>());
-        using FComponentsOnly = typename FViewType::template TFragmentsOnly<T_Fragments...>;
+        using ViewType = decltype(_Registry.View<T_Fragments...>());
+        using ComponentsOnly = typename ViewType::template TFragmentsOnly<T_Fragments...>;
 
-        DoTick(InDeltaT, FComponentsOnly{});
+        DoTick(InDeltaT, ComponentsOnly{});
     }
 
     template <typename T_DerivedProcessor, typename ... T_Fragments>
     template <typename ... T_ComponentsOnly>
-    auto TProcessor<T_DerivedProcessor, T_Fragments...>::DoTick(TimeType InDeltaT,
-        entt::type_list<T_ComponentsOnly...>) -> void
+    auto
+        TProcessor<T_DerivedProcessor, T_Fragments...>::
+        DoTick(
+            TimeType InDeltaT,
+            entt::type_list<T_ComponentsOnly...>)
+        -> void
     {
-        _Registry.View<T_Fragments...>().Each([&](EntityType InEntity, T_ComponentsOnly&... InComponents)
+        _Registry.View<T_Fragments...>().ForEach([&](EntityType InEntity, T_ComponentsOnly&... InComponents)
         {
             auto Handle = HandleType{InEntity, _Registry};
             This()->ForEachEntity(InDeltaT, Handle, InComponents...);
         });
     }
-
-    // --------------------------------------------------------------------------------------------------------------------
 }
 
+// --------------------------------------------------------------------------------------------------------------------

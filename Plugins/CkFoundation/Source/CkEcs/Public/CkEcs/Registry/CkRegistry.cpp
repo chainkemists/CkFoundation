@@ -17,7 +17,7 @@ void foo()
     using FOnlyComponents = FViewType::FOnlyFragments;
     using ExcludesOnly = FViewType::TFragmentsOnly<Struct, EmptyStruct>;
 
-    r.View<int32, float>().Each([&](FCk_Entity, int32, float)
+    r.View<int32, float>().ForEach([&](FCk_Entity, int32, float)
     {
     });
 }
