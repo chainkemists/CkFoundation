@@ -19,7 +19,7 @@ auto
         const ThisType& InOther) const
     -> bool
 {
-    return Get_Entity() == InOther.Get_Entity() && &*_Registry == &*InOther._Registry;
+    return Get_Entity() == InOther.Get_Entity() && GetTypeHash(*_Registry) == GetTypeHash(*InOther._Registry);
 }
 
 auto FCk_Handle::operator*() -> TOptional<FCk_Registry>
@@ -77,7 +77,7 @@ auto
     GetTypeHash(
         FCk_Handle InHandle) -> uint32
 {
-    return GetTypeHash(InHandle.Get_Entity());
+    return GetTypeHash(InHandle.Get_Entity()) + GetTypeHash(InHandle.Get_Registry());
 }
 
 namespace ck
