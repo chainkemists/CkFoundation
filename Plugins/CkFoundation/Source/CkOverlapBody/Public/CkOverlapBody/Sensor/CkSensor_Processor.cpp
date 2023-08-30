@@ -141,14 +141,15 @@ namespace ck
                 UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(InSensorAttachedActor)
             };
 
-            for (const auto& overlap : InCurrentComp.Get_CurrentMarkerOverlaps().Get_Overlaps())
+            for (const auto& overlapKvp : InCurrentComp.Get_CurrentMarkerOverlaps().Get_Overlaps())
             {
-                const auto& overlapDetails = overlap.Get_OverlapDetails();
+                const auto& markerDetails = overlapKvp.Key;
+                const auto& overlapDetails = overlapKvp.Value.Get_OverlapDetails();
 
                 const auto& onEndOverlapPayload = FCk_Sensor_Payload_OnEndOverlap
                 {
                     sensorBasicDetails,
-                    overlap.Get_MarkerDetails(),
+                    markerDetails,
                     FCk_Sensor_EndOverlap_UnrealDetails
                     {
                         overlapDetails.Get_OverlappedComponent().Get(),
@@ -501,12 +502,6 @@ namespace ck
         if (NOT UCk_Utils_OverlapBody_UserSettings_UE::Get_DebugPreviewAllSensors())
         { return; }
 
-        // TODO: Fix this
-        const auto& gameInstance = UCk_Utils_Game_UE::Get_GameInstance(nullptr);
-
-        if (ck::Is_NOT_Valid(gameInstance))
-        { return; }
-
         _Registry.View<FCk_Fragment_Sensor_Current, FCk_Fragment_Sensor_Params>().ForEach(
         [&](FCk_Entity InSensorEntity, const FCk_Fragment_Sensor_Current& InSensorCurrent, const FCk_Fragment_Sensor_Params& InSensorParams)
         {
@@ -514,8 +509,9 @@ namespace ck
             { return; }
 
             const auto& sensorName = InSensorParams.Get_Params().Get_SensorName();
+            const auto& outerForDebugDraw = InSensorCurrent.Get_AttachedEntityAndActor().Get_Actor().Get();
 
-            UCk_Utils_Sensor_UE::PreviewSingleSensor<ECk_FragmentQuery_Policy::CurrentEntity>(gameInstance, FCk_Handle{ InSensorEntity, _Registry } ,sensorName);
+            UCk_Utils_Sensor_UE::PreviewSingleSensor<ECk_FragmentQuery_Policy::CurrentEntity>(outerForDebugDraw, FCk_Handle{ InSensorEntity, _Registry } ,sensorName);
         });
     }
 }

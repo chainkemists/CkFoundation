@@ -422,7 +422,7 @@ auto
         const SensorOverlapInfoType& InOverlap)
     -> ThisType&
 {
-    _Overlaps.Add(InOverlap);
+    _Overlaps.Add(InOverlap.Get_MarkerDetails(), InOverlap);
 
     return *this;
 }
@@ -433,7 +433,7 @@ auto
         const SensorOverlapInfoType& InOverlap)
     -> ThisType&
 {
-    _Overlaps.Remove(InOverlap);
+    _Overlaps.Remove(InOverlap.Get_MarkerDetails());
 
     return *this;
 }
@@ -444,7 +444,7 @@ auto
         const FCk_Marker_BasicDetails& InMarkerDetails)
     -> ThisType&
 {
-    _Overlaps.Remove(SensorOverlapInfoType{ InMarkerDetails, {} });
+    _Overlaps.Remove(InMarkerDetails);
 
     return *this;
 }
@@ -455,7 +455,9 @@ auto
         const FCk_Marker_BasicDetails& InMarkerDetails) const
     -> bool
 {
-    return _Overlaps.Contains(SensorOverlapInfoType{ InMarkerDetails, {} });
+    const auto& x = _Overlaps.Find(InMarkerDetails);
+
+    return _Overlaps.Contains(InMarkerDetails);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
