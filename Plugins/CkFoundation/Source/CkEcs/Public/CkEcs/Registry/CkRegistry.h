@@ -174,10 +174,17 @@ public:
     auto IsValid(EntityType InEntity) const -> bool;
     auto Get_ValidEntity(EntityType::IdType InEntity) const -> EntityType;
 
+public:
+    friend auto CKECS_API GetTypeHash(const ThisType& InRegistry) -> uint32;
+
 private:
     ck::TPtrWrapper<InternalRegistryPtrType> _InternalRegistry;
     EntityType _TransientEntity;
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto CKECS_API GetTypeHash(const FCk_Registry& InRegistry) -> uint32;
 
 // --------------------------------------------------------------------------------------------------------------------
 
