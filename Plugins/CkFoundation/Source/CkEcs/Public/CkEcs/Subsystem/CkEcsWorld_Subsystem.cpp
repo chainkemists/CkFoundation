@@ -57,7 +57,7 @@ auto
 {
     Super::Initialize(Collection);
 
-    if (NOT UCk_Game_Utils_UE::Get_IsInGame(this))
+    if (NOT UCk_Utils_Game_UE::Get_IsInGame(this))
     { return; }
 
     DoSpawnWorldActor();

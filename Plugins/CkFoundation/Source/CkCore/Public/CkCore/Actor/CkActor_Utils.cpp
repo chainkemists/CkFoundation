@@ -48,15 +48,15 @@ auto UCk_Utils_Actor_UE::Get_PersistentLevelScriptActor(const UObject* InWorldCo
     {
         if (ck::IsValid(InWorldContextObject))
         {
-            return UCk_Game_Utils_UE::Get_WorldForObject(InWorldContextObject);
+            return UCk_Utils_Game_UE::Get_WorldForObject(InWorldContextObject);
         }
 
-        const auto& gameInstance = UCk_Game_Utils_UE::Get_GameInstance(nullptr);
+        const auto& gameInstance = UCk_Utils_Game_UE::Get_GameInstance(nullptr);
 
         if (ck::Is_NOT_Valid(gameInstance))
         { return {}; }
 
-        return UCk_Game_Utils_UE::Get_WorldForObject(gameInstance);
+        return UCk_Utils_Game_UE::Get_WorldForObject(gameInstance);
     }();
 
     if (ck::Is_NOT_Valid(World))
