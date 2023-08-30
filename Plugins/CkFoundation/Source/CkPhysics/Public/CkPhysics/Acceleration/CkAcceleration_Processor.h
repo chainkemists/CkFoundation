@@ -10,9 +10,9 @@ namespace ck
 {
     class CKPHYSICS_API FCk_Processor_Acceleration_Setup : public TProcessor<
             FCk_Processor_Acceleration_Setup,
-            FCk_Tag_Acceleration_Setup,
             FCk_Fragment_Acceleration_Params,
-            FCk_Fragment_Acceleration_Current>
+            FCk_Fragment_Acceleration_Current,
+            FCk_Tag_Acceleration_Setup>
     {
     public:
         using MarkedDirtyBy = FCk_Tag_Acceleration_Setup;

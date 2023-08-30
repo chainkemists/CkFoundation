@@ -109,7 +109,6 @@ auto
         {
             InComp->SetCanEverAffectNavigation(true);
             break;
-
         }
         default:
         {
@@ -185,7 +184,7 @@ auto
 
     return outExistingProfileNames.ContainsByPredicate([&](TSharedPtr<FName> InProfileName) -> bool
     {
-        return ck::IsValid(InProfileName) && InProfileName.Get()->IsEqual(InCollisionProfileName);
+        return ck::IsValid(InProfileName) && InProfileName->IsEqual(InCollisionProfileName);
     });
 }
 
