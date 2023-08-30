@@ -7,7 +7,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_Game_Utils_UE::
+auto UCk_Utils_Game_UE::
 Get_GameStatus(const UObject* InWorldContextObject, bool InEnsureWorldIsValid) -> ECk_GameStatus
 {
     if (Get_IsPIE(InWorldContextObject, InEnsureWorldIsValid))
@@ -19,7 +19,7 @@ Get_GameStatus(const UObject* InWorldContextObject, bool InEnsureWorldIsValid) -
     return ECk_GameStatus::NotInGame;
 }
 
-auto UCk_Game_Utils_UE::
+auto UCk_Utils_Game_UE::
 Get_IsInGame(const UObject* InWorldContextObject, bool InEnsureWorldIsValid) -> bool
 {
     if (ck::Is_NOT_Valid(InWorldContextObject, ck::IsValid_Policy_NullptrOnly{}))
@@ -44,7 +44,7 @@ Get_IsInGame(const UObject* InWorldContextObject, bool InEnsureWorldIsValid) -> 
     return false;
 }
 
-auto UCk_Game_Utils_UE::
+auto UCk_Utils_Game_UE::
 Get_IsPIE(const UObject* InWorldContextObject, bool InEnsureWorldIsValid) -> bool
 {
 #if WITH_EDITOR
@@ -70,7 +70,7 @@ Get_IsPIE(const UObject* InWorldContextObject, bool InEnsureWorldIsValid) -> boo
     return false;
 }
 
-auto UCk_Game_Utils_UE::
+auto UCk_Utils_Game_UE::
 Get_WorldForObject(const UObject* InContextObject) -> UWorld*
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InContextObject, ck::IsValid_Policy_NullptrOnly{}),
@@ -89,7 +89,7 @@ Get_WorldForObject(const UObject* InContextObject) -> UWorld*
     return {};
 }
 
-auto UCk_Game_Utils_UE::
+auto UCk_Utils_Game_UE::
 Get_GameInstance(const UObject* InWorldContextObject) -> UGameInstance*
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InWorldContextObject, ck::IsValid_Policy_NullptrOnly{}),
