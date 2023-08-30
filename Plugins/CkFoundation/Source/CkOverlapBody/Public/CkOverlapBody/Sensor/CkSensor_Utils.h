@@ -150,7 +150,7 @@ private:
         FCk_Handle InHandle,
         FGameplayTag InSensorName);
 
-public:
+private:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
               DisplayName = "Request Enable Disable Sensor")
@@ -159,6 +159,13 @@ public:
         FCk_Handle InHandle,
         FGameplayTag InSensorName,
         const FCk_Request_Sensor_EnableDisable& InRequest);
+
+private:
+    // TODO: Add functions to Bind/Unbind OnEnableDisable
+    // TODO: Add functions to Bind/Unbind OnBeginOverlap
+    // TODO: Add functions to Bind/Unbind OnBeginOverlap_NonMarker
+    // TODO: Add functions to Bind/Unbind OnEndOverlap
+    // TODO: Add functions to Bind/Unbind OnEndOverlap_NonMarker
 
 public:
     static auto
@@ -180,10 +187,6 @@ public:
     Request_OnEndOverlap_NonMarker(
         FCk_Handle InSensorHandle,
         const FCk_Request_Sensor_OnEndOverlap_NonMarker& InRequest) -> void;
-
-
-private:
-    // TODO: Bind functions
 
 public:
     template <ECk_FragmentQuery_Policy T_FragmentQueryPolicy = ECk_FragmentQuery_Policy::EntityInRecord>

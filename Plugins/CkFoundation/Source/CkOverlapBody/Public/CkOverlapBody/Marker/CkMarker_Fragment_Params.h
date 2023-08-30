@@ -265,6 +265,7 @@ private:
 public:
     CK_PROPERTY_GET(_EnableDisable)
 };
+
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
