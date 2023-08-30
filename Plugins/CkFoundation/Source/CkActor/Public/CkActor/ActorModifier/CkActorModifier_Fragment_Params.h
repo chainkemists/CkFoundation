@@ -25,6 +25,18 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SpawnActor_PostSpawnPolicy);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_SpawnActor_SpawnPolicy : uint8
+{
+    SpawnOnInstanceWithOwership,
+    SpawnOnServer,
+    SpawnOnAll
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SpawnActor_SpawnPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_ActorComponent_AttachmentPolicy : uint8
 {
     /* Attach to owner/parent and transform with them */
@@ -322,6 +334,10 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_SpawnActor_PostSpawn_Params _PostSpawnParams;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_SpawnActor_SpawnPolicy _SpawnPolicy = ECk_SpawnActor_SpawnPolicy::SpawnOnInstanceWithOwership;
+
 private:
     PreFinishSpawnFuncType _PreFinishSpawnFunc = nullptr;
 
@@ -329,6 +345,7 @@ public:
     CK_PROPERTY_GET(_SpawnParams);
     CK_PROPERTY_GET(_PostSpawnParams);
     CK_PROPERTY_GET(_PreFinishSpawnFunc);
+    CK_PROPERTY_GET(_SpawnPolicy);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
