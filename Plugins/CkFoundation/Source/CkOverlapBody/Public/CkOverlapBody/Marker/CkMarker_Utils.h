@@ -43,7 +43,6 @@ public:
     static void
     Add(
         FCk_Handle InHandle,
-        FGameplayTag InMarkerName,
         const FCk_Fragment_Marker_ParamsData& InParams);
 
     UFUNCTION(BlueprintCallable,
@@ -244,7 +243,7 @@ auto
         FGameplayTag InMarkerName)
     -> bool
 {
-    CK_ENSURE_IF_NOT(Has(InHandle ,InMarkerName), TEXT("Handle [{}] does NOT have a Marker with Name [{}]"), InHandle, InMarkerName)
+    CK_ENSURE_IF_NOT(Has<T_FragmentQueryPolicy>(InHandle ,InMarkerName), TEXT("Handle [{}] does NOT have a Marker with Name [{}]"), InHandle, InMarkerName)
     { return false; }
 
     return true;
@@ -258,7 +257,7 @@ auto
         FGameplayTag InMarkerName)
     -> FCk_Marker_PhysicsInfo
 {
-    if (NOT Ensure(InHandle, InMarkerName))
+    if (NOT Ensure<T_FragmentQueryPolicy>(InHandle, InMarkerName))
     { return {}; }
 
     return DoPerformCommonMarkerUtilFunc<T_FragmentQueryPolicy>(InHandle, InMarkerName, [&](FCk_Handle InMarkerEntity, FGameplayTag)
@@ -275,7 +274,7 @@ auto
         FGameplayTag InMarkerName)
     -> FCk_Marker_ShapeInfo
 {
-    if (NOT Ensure(InHandle, InMarkerName))
+    if (NOT Ensure<T_FragmentQueryPolicy>(InHandle, InMarkerName))
     { return {}; }
 
     return DoPerformCommonMarkerUtilFunc<T_FragmentQueryPolicy>(InHandle, InMarkerName, [&](FCk_Handle InMarkerEntity, FGameplayTag)
@@ -292,7 +291,7 @@ auto
         FGameplayTag InMarkerName)
     -> FCk_Marker_DebugInfo
 {
-    if (NOT Ensure(InHandle, InMarkerName))
+    if (NOT Ensure<T_FragmentQueryPolicy>(InHandle, InMarkerName))
     { return {}; }
 
     return DoPerformCommonMarkerUtilFunc<T_FragmentQueryPolicy>(InHandle, InMarkerName, [&](FCk_Handle InMarkerEntity, FGameplayTag)
@@ -309,7 +308,7 @@ auto
         FGameplayTag InMarkerName)
     -> ECk_EnableDisable
 {
-    if (NOT Ensure(InHandle, InMarkerName))
+    if (NOT Ensure<T_FragmentQueryPolicy>(InHandle, InMarkerName))
     { return {}; }
 
     return DoPerformCommonMarkerUtilFunc<T_FragmentQueryPolicy>(InHandle, InMarkerName, [&](FCk_Handle InMarkerEntity, FGameplayTag)
@@ -326,7 +325,7 @@ auto
         FGameplayTag InMarkerName)
     -> UShapeComponent*
 {
-    if (NOT Ensure(InHandle, InMarkerName))
+    if (NOT Ensure<T_FragmentQueryPolicy>(InHandle, InMarkerName))
     { return {}; }
 
     return DoPerformCommonMarkerUtilFunc<T_FragmentQueryPolicy>(InHandle, InMarkerName, [&](FCk_Handle InMarkerEntity, FGameplayTag)
@@ -344,7 +343,7 @@ auto
         FGameplayTag InMarkerName)
     -> void
 {
-    if (NOT Ensure(InHandle, InMarkerName))
+    if (NOT Ensure<T_FragmentQueryPolicy>(InHandle, InMarkerName))
     { return; }
 
     DoPerformCommonMarkerUtilVoidFunc<T_FragmentQueryPolicy>(InHandle, InMarkerName, [&](FCk_Handle InMarkerEntity, FGameplayTag)
@@ -364,7 +363,7 @@ auto
         FGameplayTag InMarkerName)
     -> FCk_EntityOwningActor_BasicDetails
 {
-    if (NOT Ensure(InHandle, InMarkerName))
+    if (NOT Ensure<T_FragmentQueryPolicy>(InHandle, InMarkerName))
     { return {}; }
 
     return DoPerformCommonMarkerUtilFunc<T_FragmentQueryPolicy>(InHandle, InMarkerName, [&](FCk_Handle InMarkerEntity, FGameplayTag)
@@ -382,7 +381,7 @@ auto
         const FCk_Request_Marker_EnableDisable& InRequest)
     -> void
 {
-    if (NOT Ensure(InHandle, InMarkerName))
+    if (NOT Ensure<T_FragmentQueryPolicy>(InHandle, InMarkerName))
     { return; }
 
     DoPerformCommonMarkerUtilVoidFunc<T_FragmentQueryPolicy>(InHandle, InMarkerName, [&](FCk_Handle InMarkerEntity, FGameplayTag)
