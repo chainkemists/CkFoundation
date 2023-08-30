@@ -7,6 +7,7 @@
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
 #include "CkMacros/CkMacros.h"
+#include "CkNet/CkNet_Common.h"
 
 #include "CkNet_Utils.generated.h"
 
@@ -26,19 +27,33 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Net", meta = (DefaultToSelf = InActor))
-    static bool Get_IsActorLocallyOwned(AActor* InActor);
+    static bool
+    Get_IsActorLocallyOwned(AActor* InActor);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net", meta = (DefaultToSelf = InActor))
+    static bool
+    Get_IsRoleMatching(AActor* InActor, ECk_Net_ReplicationType InReplicationType);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
+    static ECk_Net_NetRoleType
+    Get_NetRole(const UObject* InContext = nullptr);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Net")
-    static bool Get_IsEntityNetMode_DedicatedServer(FCk_Handle InHandle);
+    static bool
+    Get_IsEntityNetMode_DedicatedServer(FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Net")
-    static bool Get_IsEntityNetMode_Client(FCk_Handle InHandle);
+    static bool
+    Get_IsEntityNetMode_Client(FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Net")
-    static bool Get_IsEntityReplicated(FCk_Handle InHandle);
+    static bool
+    Get_IsEntityReplicated(FCk_Handle InHandle);
 
 private:
     static auto Request_MarkEntityAs_DedicatedServer(FCk_Handle InHandle) -> void;
