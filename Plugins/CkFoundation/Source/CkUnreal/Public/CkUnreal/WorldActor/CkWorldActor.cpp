@@ -10,6 +10,8 @@
 #include "CkEcs/OwningActor/CkOwningActor_Processors.h"
 
 #include "CkEcsBasics/Transform/CkTransform_Processor.h"
+#include "CkOverlapBody/Marker/CkMarker_Processor.h"
+#include "CkOverlapBody/Sensor/CkSensor_Processor.h"
 
 #include "CkPhysics/Acceleration/CkAcceleration_Processor.h"
 #include "CkPhysics/Integrator/CkIntegrator_Processor.h"
@@ -35,8 +37,15 @@ namespace ck_world_actor
 
         InWorld.Add<ck::FCk_Processor_ActorModifier_SpawnActor_HandleRequests>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_ActorModifier_AddActorComponent_HandleRequests>(InWorld.Get_Registry());
+
         InWorld.Add<ck::FCk_Processor_Intent_Setup>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_Intent_HandleRequests>(InWorld.Get_Registry());
+
+        InWorld.Add<ck::FCk_Processor_Marker_Setup>(InWorld.Get_Registry());
+        InWorld.Add<ck::FCk_Processor_Sensor_Setup>(InWorld.Get_Registry());
+
+        InWorld.Add<ck::FCk_Processor_Marker_HandleRequests>(InWorld.Get_Registry());
+        InWorld.Add<ck::FCk_Processor_Sensor_HandleRequests>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FCk_Processor_Velocity_Setup>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_Acceleration_Setup>(InWorld.Get_Registry());
@@ -56,6 +65,12 @@ namespace ck_world_actor
 
         InWorld.Add<ck::FCk_Processor_RecordEntry_Destructor>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_Record_Destructor>(InWorld.Get_Registry());
+
+        InWorld.Add<ck::FCk_Processor_Marker_UpdateTransform>(InWorld.Get_Registry());
+        InWorld.Add<ck::FCk_Processor_Sensor_UpdateTransform>(InWorld.Get_Registry());
+
+        InWorld.Add<ck::FCk_Processor_Marker_DebugPreviewAll>(InWorld.Get_Registry());
+        InWorld.Add<ck::FCk_Processor_Sensor_DebugPreviewAll>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FCk_Processor_OwningActor_Destroy>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_EntityLifetime_EntityJustCreated>(InWorld.Get_Registry());
