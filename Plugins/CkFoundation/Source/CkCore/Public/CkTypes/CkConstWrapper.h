@@ -40,6 +40,11 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_ComplexPtrType>
+    auto GetTypeHash(const TPtrWrapper<T_ComplexPtrType>& InPtrWrapper) -> uint32;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_ComplexPtrType>
     TPtrWrapper<T_ComplexPtrType>::TPtrWrapper()
         :  _Ptr(std::move(type_traits::make_new_ptr<ValueType>{}()))
     {
@@ -87,6 +92,15 @@ namespace ck
     auto TPtrWrapper<T_ComplexPtrType>::operator*() const -> const StoredValueType&
     {
         return *_Ptr;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_ComplexPtrType>
+    auto
+    GetTypeHash(const TPtrWrapper<T_ComplexPtrType>& InPtrWrapper) -> uint32
+    {
+        return PointerHash(&*InPtrWrapper);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
