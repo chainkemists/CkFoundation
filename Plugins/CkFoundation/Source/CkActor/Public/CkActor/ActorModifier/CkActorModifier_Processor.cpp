@@ -329,7 +329,39 @@ namespace ck
         {
             actor::VeryVerbose(TEXT("Handling SpawnActor Request for Entity [{}]"), InHandle);
 
-            const auto& spawnedActor = UCk_Utils_Actor_UE::Request_SpawnActor(InRequest.Get_SpawnParams(), InRequest.Get_PreFinishSpawnFunc());
+            switch(InRequest.Get_SpawnPolicy())
+            {
+                case ECk_SpawnActor_SpawnPolicy::SpawnOnInstanceWithOwership:
+                {
+                    auto OwningActor = Cast<AActor>(InRequest.Get_SpawnParams().Get_OwnerOrWorld().Get());
+
+                    CK_ENSURE_IF_NOT(ck::IsValid(OwningActor),
+                        TEXT("SpawnPolicy [{}] REQUIRES the Owner to be an Actor. Unable to Spawn [{}]"),
+                        InRequest.Get_SpawnPolicy(),
+                        InRequest.Get_SpawnParams().Get_ActorClass())
+                    { continue; }
+
+                    const auto OutermostActor = UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(OwningActor);
+
+                    if (OutermostActor->GetLocalRole() == ROLE_AutonomousProxy ||
+                        (OutermostActor->GetLocalRole() == ROLE_Authority && OutermostActor->GetRemoteRole() != ROLE_AutonomousProxy))
+                    { break; }
+
+                    continue;
+                }
+                case ECk_SpawnActor_SpawnPolicy::SpawnOnServer:
+                {
+                    const auto OwnerOrWorld = Cast<AActor>(InRequest.Get_SpawnParams().Get_OwnerOrWorld());
+
+                    if (NOT OwnerOrWorld->GetWorld()->IsNetMode(NM_Client))
+                    { break; }
+
+                    continue;
+                }
+                default: ;
+            }
+
+            const auto& SpawnedActor = UCk_Utils_Actor_UE::Request_SpawnActor(InRequest.Get_SpawnParams(), InRequest.Get_PreFinishSpawnFunc());
 
             const auto& postSpawnParams = InRequest.Get_PostSpawnParams();
 
