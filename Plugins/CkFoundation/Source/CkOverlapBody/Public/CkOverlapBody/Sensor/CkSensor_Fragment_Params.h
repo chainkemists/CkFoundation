@@ -251,7 +251,7 @@ public:
 
 public:
     using SensorOverlapInfoType = FCk_Sensor_MarkerOverlapInfo;
-    using SensorOverlapInfoList = TSet<SensorOverlapInfoType>;
+    using SensorOverlapInfoList = TMap<FCk_Marker_BasicDetails, SensorOverlapInfoType>;
 
 public:
     FCk_Sensor_MarkerOverlaps() = default;
@@ -274,7 +274,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TSet<FCk_Sensor_MarkerOverlapInfo> _Overlaps;
+    TMap<FCk_Marker_BasicDetails, FCk_Sensor_MarkerOverlapInfo> _Overlaps;
 
 public:
     CK_PROPERTY_GET(_Overlaps);
