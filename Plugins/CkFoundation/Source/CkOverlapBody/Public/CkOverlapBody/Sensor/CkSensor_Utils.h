@@ -40,7 +40,6 @@ public:
     static void
     Add(
         FCk_Handle InHandle,
-        FGameplayTag InSensorName,
         const FCk_Fragment_Sensor_ParamsData& InParams);
 
     UFUNCTION(BlueprintCallable,
@@ -321,7 +320,7 @@ auto
         FGameplayTag InSensorName)
     -> bool
 {
-    CK_ENSURE_IF_NOT(Has(InHandle ,InSensorName), TEXT("Handle [{}] does NOT have a Marker with Name [{}]"), InHandle, InSensorName)
+    CK_ENSURE_IF_NOT(Has<T_FragmentQueryPolicy>(InHandle ,InSensorName), TEXT("Handle [{}] does NOT have a Marker with Name [{}]"), InHandle, InSensorName)
     { return false; }
 
     return true;
@@ -335,7 +334,7 @@ auto
         FGameplayTag InSensorName)
     -> FCk_Sensor_PhysicsInfo
 {
-    if (NOT Ensure(InHandle, InSensorName))
+    if (NOT Ensure<T_FragmentQueryPolicy>(InHandle, InSensorName))
     { return {}; }
 
     return DoPerformCommonSensorUtilFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
@@ -352,7 +351,7 @@ auto
         FGameplayTag InSensorName)
     -> FCk_Sensor_ShapeInfo
 {
-    if (NOT Ensure(InHandle, InSensorName))
+    if (NOT Ensure<T_FragmentQueryPolicy>(InHandle, InSensorName))
     { return {}; }
 
     return DoPerformCommonSensorUtilFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
@@ -369,7 +368,7 @@ auto
         FGameplayTag InSensorName)
     -> FCk_Sensor_DebugInfo
 {
-    if (NOT Ensure(InHandle, InSensorName))
+    if (NOT Ensure<T_FragmentQueryPolicy>(InHandle, InSensorName))
     { return {}; }
 
     return DoPerformCommonSensorUtilFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
@@ -386,7 +385,7 @@ auto
         FGameplayTag InSensorName)
     -> ECk_EnableDisable
 {
-    if (NOT Ensure(InHandle, InSensorName))
+    if (NOT Ensure<T_FragmentQueryPolicy>(InHandle, InSensorName))
     { return {}; }
 
     return DoPerformCommonSensorUtilFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
@@ -403,7 +402,7 @@ auto
         FGameplayTag InSensorName)
     -> UShapeComponent*
 {
-    if (NOT Ensure(InHandle, InSensorName))
+    if (NOT Ensure<T_FragmentQueryPolicy>(InHandle, InSensorName))
     { return {}; }
 
     return DoPerformCommonSensorUtilFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
@@ -421,7 +420,7 @@ auto
         FGameplayTag InSensorName)
     -> void
 {
-    if (NOT Ensure(InHandle, InSensorName))
+    if (NOT Ensure<T_FragmentQueryPolicy>(InHandle, InSensorName))
     { return; }
 
     DoPerformCommonSensorUtilVoidFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
@@ -441,7 +440,7 @@ auto
         FGameplayTag InSensorName)
     -> FCk_EntityOwningActor_BasicDetails
 {
-    if (NOT Ensure(InHandle, InSensorName))
+    if (NOT Ensure<T_FragmentQueryPolicy>(InHandle, InSensorName))
     { return {}; }
 
     return DoPerformCommonSensorUtilFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
@@ -458,7 +457,7 @@ auto
         FGameplayTag InSensorName)
     -> bool
 {
-    if (NOT Ensure(InHandle, InSensorName))
+    if (NOT Ensure<T_FragmentQueryPolicy>(InHandle, InSensorName))
     { return {}; }
 
     return DoPerformCommonSensorUtilFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
@@ -475,7 +474,7 @@ auto
         FGameplayTag InSensorName)
     -> FCk_Sensor_MarkerOverlaps
 {
-    if (NOT Ensure(InHandle, InSensorName))
+    if (NOT Ensure<T_FragmentQueryPolicy>(InHandle, InSensorName))
     { return {}; }
 
     return DoPerformCommonSensorUtilFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
@@ -492,7 +491,7 @@ auto
         FGameplayTag InSensorName)
     -> bool
 {
-    if (NOT Ensure(InHandle, InSensorName))
+    if (NOT Ensure<T_FragmentQueryPolicy>(InHandle, InSensorName))
     { return {}; }
 
     return DoPerformCommonSensorUtilFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
@@ -509,7 +508,7 @@ auto
         FGameplayTag InSensorName)
     -> FCk_Sensor_NonMarkerOverlaps
 {
-    if (NOT Ensure(InHandle, InSensorName))
+    if (NOT Ensure<T_FragmentQueryPolicy>(InHandle, InSensorName))
     { return {}; }
 
     return DoPerformCommonSensorUtilFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
@@ -527,7 +526,7 @@ auto
         const FCk_Request_Sensor_EnableDisable& InRequest)
     -> void
 {
-    if (NOT Ensure(InHandle, InSensorName))
+    if (NOT Ensure<T_FragmentQueryPolicy>(InHandle, InSensorName))
     { return; }
 
     DoPerformCommonSensorUtilVoidFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)

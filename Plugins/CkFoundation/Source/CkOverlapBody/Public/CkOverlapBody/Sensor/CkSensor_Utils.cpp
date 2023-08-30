@@ -8,7 +8,6 @@ auto
     UCk_Utils_Sensor_UE::
     Add(
         FCk_Handle InHandle,
-        FGameplayTag InSensorName,
         const FCk_Fragment_Sensor_ParamsData& InParams)
     -> void
 {
@@ -20,11 +19,11 @@ auto
     auto sensorParams = InParams;
     sensorParams.Set_EntityAttachedTo(InHandle);
 
-    sensorEntity.AddOrGet<ck::FCk_Fragment_Sensor_Params>(InParams);
-    sensorEntity.AddOrGet<ck::FCk_Fragment_Sensor_Current>(InParams.Get_StartingState());
+    sensorEntity.AddOrGet<ck::FCk_Fragment_Sensor_Params>(sensorParams);
+    sensorEntity.AddOrGet<ck::FCk_Fragment_Sensor_Current>(sensorParams.Get_StartingState());
     sensorEntity.Add<ck::FCk_Tag_Sensor_Setup>();
 
-    UCk_Utils_GameplayLabel_UE::Add(sensorEntity, InSensorName);
+    UCk_Utils_GameplayLabel_UE::Add(sensorEntity, sensorParams.Get_SensorName());
 
     if (NOT RecordOfSensors_Utils::Has(InHandle))
     {

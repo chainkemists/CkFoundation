@@ -12,7 +12,6 @@ auto
     UCk_Utils_Marker_UE::
     Add(
         FCk_Handle InHandle,
-        FGameplayTag InMarkerName,
         const FCk_Fragment_Marker_ParamsData& InParams)
     -> void
 {
@@ -24,11 +23,11 @@ auto
     auto markerParams = InParams;
     markerParams.Set_EntityAttachedTo(InHandle);
 
-    markerEntity.AddOrGet<ck::FCk_Fragment_Marker_Params>(InParams);
-    markerEntity.AddOrGet<ck::FCk_Fragment_Marker_Current>(InParams.Get_StartingState());
+    markerEntity.AddOrGet<ck::FCk_Fragment_Marker_Params>(markerParams);
+    markerEntity.AddOrGet<ck::FCk_Fragment_Marker_Current>(markerParams.Get_StartingState());
     markerEntity.Add<ck::FCk_Tag_Marker_Setup>();
 
-    UCk_Utils_GameplayLabel_UE::Add(markerEntity, InMarkerName);
+    UCk_Utils_GameplayLabel_UE::Add(markerEntity, markerParams.Get_MarkerName());
 
     if (NOT RecordOfMarkers_Utils::Has(InHandle))
     {
