@@ -1,0 +1,34 @@
+#include "CkNetTimeSync_Fragment.h"
+
+#include "CkNetTimeSync_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+UCk_Fragment_TimeSync_Rep::
+    Broadcast_TimeSync_Implementation(
+        APlayerController* InPlayerController,
+        float InRoundTripTime)
+    -> void
+{
+    CK_REP_OBJ_EXECUTE_IF_VALID([&]()
+    {
+        UCk_Utils_NetTimeSync_UE::Request_NewTimeSync
+        (
+            Get_AssociatedEntity(),
+            FCk_Request_NetTimeSync_NewSync{}.Set_PlayerController(InPlayerController).Set_RoundTripTime(InRoundTripTime)
+        );
+    });
+}
+
+auto
+    UCk_Fragment_TimeSync_Rep::
+    DoBroadcast_TimeSync(
+        float InRoundTripTime)
+    -> void
+{
+    CK_REP_OBJ_EXECUTE_IF_VALID([&]()
+    {
+        Broadcast_TimeSync_Implementation(GetWorld()->GetFirstPlayerController(), InRoundTripTime);
+    });
+}
