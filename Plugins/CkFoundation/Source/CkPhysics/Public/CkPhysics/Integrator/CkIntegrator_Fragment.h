@@ -9,6 +9,7 @@
 
 namespace ck
 {
+    struct FCk_Tag_Integrator_Setup {};
     struct FCk_Tag_Integrator_Update {};
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -19,6 +20,7 @@ namespace ck
         CK_GENERATED_BODY(FCk_Fragment_Integrator_Current);
 
     public:
+        friend class FCk_Processor_Integrator_Setup;
         friend class FCk_Processor_Integrator_Update;
 
     private:
