@@ -48,13 +48,13 @@ public:
         UCk_Ecs_ReplicatedObject_UE* InRo) -> void;
 
 public:
-    UFUNCTION()
-    virtual void OnRep_ReplicatedActor(AActor* InActor);
-
     virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
 
     virtual auto BeginDestroy() -> void override;
     virtual auto PreDestroyFromReplication() -> void override;
+
+protected:
+    virtual auto OnLink() -> void;
 
 public:
     UFUNCTION(NetMulticast, Reliable)
@@ -64,7 +64,7 @@ protected:
     UPROPERTY(Transient)
     FCk_Handle _AssociatedEntity;
 
-    UPROPERTY(ReplicatedUsing = OnRep_ReplicatedActor)
+    UPROPERTY(Replicated)
     AActor* _ReplicatedActor = nullptr;
 
 public:
@@ -90,7 +90,7 @@ private:
     UPROPERTY()
     TArray<UCk_ReplicatedObject_UE*> _ReplicatedObjects;
 
-private:
+protected:
     auto DoRequest_LinkAssociatedEntity(FCk_Handle InEntity) -> void;
 
 public:
