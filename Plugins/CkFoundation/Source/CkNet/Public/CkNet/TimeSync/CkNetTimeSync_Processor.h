@@ -60,6 +60,22 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
+
+    class CKNET_API FCk_Processor_TimeSync_FirstSync
+        : public TProcessor<FCk_Processor_TimeSync_FirstSync, FFragment_TimeSync, TObjectPtr<UCk_Fragment_TimeSync_Rep>>
+    {
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_TimeSync& InTimeToSyncFrom,
+            const TObjectPtr<UCk_Fragment_TimeSync_Rep>&);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------
