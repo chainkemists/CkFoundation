@@ -23,6 +23,15 @@ UCk_Fragment_TimeSync_Rep::
 
 auto
     UCk_Fragment_TimeSync_Rep::
+    OnLink()
+    -> void
+{
+    Super::OnLink();
+    _AssociatedEntity.Add<TObjectPtr<ThisType>>() = this;
+}
+
+auto
+    UCk_Fragment_TimeSync_Rep::
     DoBroadcast_TimeSync(
         float InRoundTripTime)
     -> void
