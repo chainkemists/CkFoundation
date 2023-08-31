@@ -65,3 +65,46 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Acceleration_SingleTarget_UE::
+    Add(
+        FCk_Handle InHandle,
+        const FCk_Fragment_AccelerationModifier_SingleTarget_ParamsData& InParams) -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_Target()),
+        TEXT("Target Entity [{}] is NOT a valid Entity when adding Single Target Acceleration Modifier to Handle [{}]"),
+        InParams.Get_Target(),
+        InHandle)
+    { return; }
+
+    InHandle.Add<ck::FCk_Tag_AccelerationModifier_SingleTarget>();
+    InHandle.Add<ck::FCk_Tag_AccelerationModifier_SingleTarget_Setup>();
+
+    UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Add(InHandle, InParams.Get_Target());
+    UCk_Utils_Acceleration_UE::Add(InHandle, InParams.Get_AccelerationParams());
+}
+
+auto
+    UCk_Utils_Acceleration_SingleTarget_UE::
+    Has(
+        FCk_Handle InHandle)
+    -> bool
+{
+    return InHandle->Has<ck::FCk_Tag_AccelerationModifier_SingleTarget>(InHandle.Get_Entity()) &&
+           UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Has(InHandle);
+}
+
+auto
+    UCk_Utils_Acceleration_SingleTarget_UE::
+    Ensure(
+        FCk_Handle InHandle)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have Single Target Acceleration Modifier"), InHandle)
+    { return false; }
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------

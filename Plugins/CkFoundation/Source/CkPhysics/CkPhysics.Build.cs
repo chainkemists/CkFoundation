@@ -22,6 +22,7 @@ public class CkPhysics : CkModuleRules
             "CkLabel",
             "CkLog",
             "CkNet",
+            "CkRecord",
         });
     }
 }

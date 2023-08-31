@@ -91,7 +91,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FCk_Fragment_Velocity_Current& InCurrent,
-            const TObjectPtr<UCk_Fragment_Velocity_Rep>& InRepComp) const -> void;
+            const TObjectPtr<UCk_Fragment_Velocity_Rep>& InVelRepComp) const -> void;
     };
 }
 
