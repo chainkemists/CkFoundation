@@ -14,6 +14,7 @@
 #include <GameplayTagContainer.h>
 #include <Components/ShapeComponent.h>
 
+#include "CkNet/CkNet_Common.h"
 #include "CkMarker_Fragment_Params.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -299,6 +300,7 @@ public:
         FCk_Marker_AttachmentInfo InAttachmentParams,
         FTransform                InRelativeTransform,
         ECk_EnableDisable         InStartingState,
+        ECk_Net_ReplicationType   InReplicationType,
         bool                      InShowDebug,
         FCk_Marker_DebugInfo      InDebugParams);
 
@@ -328,6 +330,10 @@ private:
     ECk_EnableDisable _StartingState = ECk_EnableDisable::Enable;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Net_ReplicationType _ReplicationType = ECk_Net_ReplicationType::All;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta=(AllowPrivateAccess = true, InlineEditConditionToggle))
     bool _ShowDebug = true;
 
@@ -348,6 +354,7 @@ public:
     CK_PROPERTY_GET(_ShowDebug);
     CK_PROPERTY_GET(_DebugParams);
     CK_PROPERTY_GET(_StartingState);
+    CK_PROPERTY_GET(_ReplicationType);
     CK_PROPERTY(_EntityAttachedTo);
 };
 

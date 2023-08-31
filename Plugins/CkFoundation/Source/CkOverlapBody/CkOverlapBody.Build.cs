@@ -24,6 +24,7 @@ public class CkOverlapBody : CkModuleRules
             "CkGraphics",
             "CkLabel",
             "CkLog",
+            "CkNet",
             "CkPhysics",
             "CkRecord",
         });
