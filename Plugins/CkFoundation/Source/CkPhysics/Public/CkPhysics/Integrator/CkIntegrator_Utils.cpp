@@ -12,6 +12,7 @@ auto
 {
     InHandle.Add<ck::FCk_Fragment_Integrator_Current>();
     InHandle.Add<ck::FCk_Tag_Integrator_Update>();
+    InHandle.Add<ck::FCk_Tag_Integrator_Setup>();
 }
 
 auto
