@@ -15,6 +15,8 @@ public class CkUnreal : CkModuleRules
             "CoreUObject",
             "Engine",
 
+            "NetworkTimeSync",
+
             "CkActor",
             "CkCore",
             "CkEcs",

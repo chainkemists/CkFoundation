@@ -20,6 +20,13 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|NetTimeSync",
+              DisplayName = "Add Network Time Sync Replicated Fragment (INTERNAL USE ONLY)")
+    static void
+    Add_TimeSync_Rep(
+        FCk_Handle InHandle);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|NetTimeSync",
               DisplayName = "Add Network Time Sync Fragment")
     static void
     Add(
@@ -71,11 +78,6 @@ public:
     Get_PlayerLatency(
         APlayerController* InPlayerController,
         FCk_Handle InHandle);
-
-private:
-    static auto
-    DoAdd_TimeSync_Rep(
-        FCk_Handle InHandle) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

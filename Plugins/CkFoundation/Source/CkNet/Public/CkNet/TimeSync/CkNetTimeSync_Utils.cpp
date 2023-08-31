@@ -6,6 +6,16 @@
 
 auto
     UCk_Utils_NetTimeSync_UE::
+    Add_TimeSync_Rep(FCk_Handle InHandle)
+    -> void
+{
+    TryAddReplicatedFragment<UCk_Fragment_TimeSync_Rep>(InHandle);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_NetTimeSync_UE::
     Add(
         FCk_Handle InHandle)
     -> void
@@ -91,16 +101,6 @@ auto
     -> float
 {
     return Get_PlayerRoundTripTime(InPlayerController, InHandle) / 2.0f;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_NetTimeSync_UE::
-    DoAdd_TimeSync_Rep(FCk_Handle InHandle)
-    -> void
-{
-    TryAddReplicatedFragment<UCk_Fragment_TimeSync_Rep>(InHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

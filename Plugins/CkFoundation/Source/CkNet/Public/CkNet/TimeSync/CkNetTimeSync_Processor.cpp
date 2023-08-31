@@ -4,8 +4,6 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
-// --------------------------------------------------------------------------------------------------------------------
-
 namespace ck
 {
 
@@ -35,6 +33,9 @@ FCk_Processor_TimeSync_OnNetworkClockSynchronized::
     ~FCk_Processor_TimeSync_OnNetworkClockSynchronized()
 {
     if (NOT _DelegateHandle.IsValid())
+    { return; }
+
+    if (ck::Is_NOT_Valid(_NetworkTimeSubsystem))
     { return; }
 
     _NetworkTimeSubsystem->OnNetworkClockSynchronized_Cpp.Remove(_DelegateHandle);
@@ -81,6 +82,7 @@ auto
     {
         _Registry.View<FFragment_TimeSync>().ForEach([&](EntityType InEntity, FFragment_TimeSync& InTimeSync)
         {
+            InTimeSync._RoundTripTime = InNewSync.Get_RoundTripTime();
             InTimeSync._PlayerRoundTripTimes.FindOrAdd(InNewSync.Get_PlayerController(), InNewSync.Get_RoundTripTime());
         });
     });
@@ -90,5 +92,3 @@ auto
 
 
 }
-
-// --------------------------------------------------------------------------------------------------------------------
