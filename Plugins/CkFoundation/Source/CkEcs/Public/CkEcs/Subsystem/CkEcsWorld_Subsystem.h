@@ -10,7 +10,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable, NotBlueprintType)
+UCLASS(Abstract, NotBlueprintable, NotBlueprintType)
 class CKECS_API ACk_World_Actor_Base_UE : public AInfo
 {
     GENERATED_BODY()
