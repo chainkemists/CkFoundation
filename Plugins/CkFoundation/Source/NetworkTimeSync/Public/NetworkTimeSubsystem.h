@@ -53,7 +53,7 @@ public:
 
 	/** Returns the shortest round trip time recorded upon synchronization. Clientside only. */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Network Time Subsystem")
-	FORCEINLINE float GetShortestRoundTripTime() const { return ShortestRoundTripTime; }
+	FORCEINLINE float GetShortestRoundTripTime() const { return RoundTripTime; }
 
 	/** Returns the delta time between the server's world time seconds and the client's. Clientside only. */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Network Time Subsystem")
@@ -79,7 +79,7 @@ protected:
 	 * The shortest round trip time recorded upon synchronization.
 	 * Clientside only.
 	 */
-	float ShortestRoundTripTime = TNumericLimits<float>::Max();
+	float RoundTripTime = TNumericLimits<float>::Max();
 
 	/**
 	 * The delta time between the server's world time seconds and the client's.

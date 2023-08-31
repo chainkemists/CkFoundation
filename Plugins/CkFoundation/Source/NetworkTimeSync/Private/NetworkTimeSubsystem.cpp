@@ -49,18 +49,14 @@ float UNetworkTimeSubsystem::GetServerWorldTime() const
 
 void UNetworkTimeSubsystem::OnServerWorldTimeReceived(const float ClientTime, const float ServerTime)
 {
-	const float RoundTripTime = GetWorld()->GetTimeSeconds() - ClientTime;
-	if (RoundTripTime < ShortestRoundTripTime)
-	{
-		ShortestRoundTripTime = RoundTripTime;
-		// Obviously, RTT / 2 isn't representative of all networking conditions since it assumes that RTT is perfectly split 50/50.
-		// Better than nothing.
-		const float OldDelta = ServerWorldTimeDelta;
-		ServerWorldTimeDelta = ServerTime - ClientTime - (ShortestRoundTripTime / 2.0f);
-		UE_LOG(LogNetworkTimeSync, Log, TEXT("Received new server world time: %f | ClientTimestamp: %f, ServerTimestamp: %f, RTT: %f, WorldTimeDelta: %f"),
-			GetServerWorldTime(), ClientTime, ServerTime, RoundTripTime, ServerWorldTimeDelta);
+	RoundTripTime = GetWorld()->GetTimeSeconds() - ClientTime;
+    // Obviously, RTT / 2 isn't representative of all networking conditions since it assumes that RTT is perfectly split 50/50.
+    // Better than nothing.
+    const float OldDelta = ServerWorldTimeDelta;
+    ServerWorldTimeDelta = ServerTime - ClientTime - (RoundTripTime / 2.0f);
+    UE_LOG(LogNetworkTimeSync, Log, TEXT("Received new server world time: %f | ClientTimestamp: %f, ServerTimestamp: %f, RTT: %f, WorldTimeDelta: %f"),
+        GetServerWorldTime(), ClientTime, ServerTime, RoundTripTime, ServerWorldTimeDelta);
 
-		OnNetworkClockSynchronized.Broadcast(OldDelta, ServerWorldTimeDelta, RoundTripTime);
-		OnNetworkClockSynchronized_Cpp.Broadcast(OldDelta, ServerWorldTimeDelta, RoundTripTime);
-	}
+    OnNetworkClockSynchronized.Broadcast(OldDelta, ServerWorldTimeDelta, RoundTripTime);
+    OnNetworkClockSynchronized_Cpp.Broadcast(OldDelta, ServerWorldTimeDelta, RoundTripTime);
 }
