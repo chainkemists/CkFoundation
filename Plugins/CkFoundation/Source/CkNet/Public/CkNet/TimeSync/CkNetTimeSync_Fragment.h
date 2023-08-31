@@ -10,6 +10,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class UCk_Utils_NetTimeSync_UE;
+
 namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
@@ -42,7 +44,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_TimeSync);
 
         friend class FCk_Processor_TimeSync_HandleRequests;
-        friend class UCk_Utils_NetTimeSync_UE;
+        friend  UCk_Utils_NetTimeSync_UE;
 
     public:
         using TimeSyncRequestType = FCk_Request_NetTimeSync_NewSync;
@@ -57,7 +59,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class FCk_Processor_TimeSync_Replicate;
     class FCk_Processor_TimeSync_HandleRequests;
     class FCk_Processor_TimeSync_OnNetworkClockSynchronized;
 }
@@ -81,6 +82,10 @@ public:
     Broadcast_TimeSync(
         APlayerController* InPlayerController,
         float InRoundTripTime);
+
+protected:
+    virtual auto
+    OnLink() -> void override;
 
 private:
     auto
