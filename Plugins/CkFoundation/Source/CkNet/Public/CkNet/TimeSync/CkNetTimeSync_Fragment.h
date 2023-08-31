@@ -77,7 +77,7 @@ public:
     friend class ck::FCk_Processor_TimeSync_OnNetworkClockSynchronized;
 
 public:
-    UFUNCTION(NetMulticast, Unreliable)
+    UFUNCTION(Server, Unreliable)
     void
     Broadcast_TimeSync(
         APlayerController* InPlayerController,
