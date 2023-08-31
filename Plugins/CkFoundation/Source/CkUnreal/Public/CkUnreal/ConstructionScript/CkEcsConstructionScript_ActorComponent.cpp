@@ -39,16 +39,27 @@ auto
     const auto& OutermostActor = InRequest.Get_OutermostActor();
     const auto& ActorToReplicate = InRequest.Get_ActorToReplicate();
 
-    const auto NewActor = UCk_Utils_Actor_UE::Request_SpawnActor
-    (
-        UCk_Utils_Actor_UE::SpawnActorParamsType{OutermostActor, ActorToReplicate}
-            .Set_SpawnTransform(InRequest.Get_Transform())
-    );
+    const auto NewOrExistingActor = [&]() -> TObjectPtr<AActor>
+    {
+        // if Outermost and ActorToReplicate are the same, the Actor is already replicated. No need
+        // to spawn another one. Simply return the Outermost.
+        if (InRequest.Get_OutermostActor()->GetClass() == InRequest.Get_ActorToReplicate())
+        {
+            return InRequest.Get_OutermostActor();
+        }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(NewActor), TEXT("Failed to spawn Actor to Replicate [{}] on SERVER.[{}]"), ActorToReplicate, ck::Context(this))
+        return UCk_Utils_Actor_UE::Request_SpawnActor
+        (
+            UCk_Utils_Actor_UE::SpawnActorParamsType{OutermostActor, ActorToReplicate}
+                .Set_SpawnTransform(InRequest.Get_Transform())
+        );
+    }();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(NewOrExistingActor),
+        TEXT("Failed to spawn Actor to Replicate [{}] on SERVER.[{}]"), ActorToReplicate, ck::Context(this))
     { return; }
 
-    const auto& NewActorBasicDetails = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(NewActor);
+    const auto& NewActorBasicDetails = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(NewOrExistingActor);
     const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(NewActorBasicDetails.Get_Handle());
 
     for (const auto& ReplicatedObject : ReplicatedObjects.Get_ReplicatedObjects())
@@ -98,13 +109,23 @@ auto
 
         if (ck::IsValid(PlayerController) && PlayerController != InRequest.Get_OwningPlayerController())
         {
-            const auto NewActor = UCk_Utils_Actor_UE::Request_SpawnActor
-            (
-                UCk_Utils_Actor_UE::SpawnActorParamsType{InRequest.Get_OutermostActor(), InRequest.Get_ActorToReplicate()}
-                    .Set_SpawnTransform(InRequest.Get_Transform())
-            );
+            const auto NewOrExistingActor = [&]() -> TObjectPtr<AActor>
+            {
+                // if Outermost and ActorToReplicate are the same, the Actor is already replicated. No need
+                // to spawn another one. Simply return the Outermost.
+                if (InRequest.Get_OutermostActor()->GetClass() == InRequest.Get_ActorToReplicate())
+                {
+                    return InRequest.Get_OutermostActor();
+                }
 
-            const auto& NewActorBasicInfo = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(NewActor);
+                return UCk_Utils_Actor_UE::Request_SpawnActor
+                (
+                    UCk_Utils_Actor_UE::SpawnActorParamsType{OutermostActor, InRequest.Get_ActorToReplicate()}
+                        .Set_SpawnTransform(InRequest.Get_Transform())
+                );
+            }();
+
+            const auto& NewActorBasicInfo = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(NewOrExistingActor);
 
             UCk_Utils_ReplicatedObjects_UE::Add(NewActorBasicInfo.Get_Handle(), InRequest.Get_ReplicatedObjects());
         }
@@ -255,10 +276,6 @@ auto
     if (_Replication == ECk_Replication::DoesNotReplicate)
     { return; }
 
-    // Replicated Actors will run this construction script automatically
-    if (OwningActor->GetIsReplicated())
-    { return; }
-
     CK_ENSURE_IF_NOT(OwningActor->IsSupportedForNetworking(),
         TEXT("The Owning Actor [{}] of [{}] is NOT stably named. Cannot proceed with replication. Did you create this Actor/ConstructionScript at runtime?[{}]"),
         OwningActor, this, ck::Context(this))
@@ -269,11 +286,6 @@ auto
     // In this case, we are one of the clients and we do NOT need to replicate further
     if (ck::Is_NOT_Valid(OutermostActor))
     { return; }
-
-    //CK_ENSURE_IF_NOT(ck::IsValid(OutermostActor),
-    //    TEXT("Could not find a REPLICATED with AUTHORITY Outermost Actor for [{}]. Are you sure you want this ConstructionScript/Entity to be Replicated?"),
-    //    this)
-    //{ return; }
 
     const auto& ConstructionScript = OutermostActor->GetComponentByClass<ThisType>();
 
