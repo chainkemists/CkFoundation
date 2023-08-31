@@ -11,6 +11,8 @@
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
+
+#include "CkNet/CkNet_Fragment.h"
 #include "CkNet/CkNet_Utils.h"
 
 #include "CkUnreal/CkUnreal_Log.h"
@@ -296,6 +298,8 @@ auto
 
     if (GetWorld()->IsNetMode(NM_Client))
     {
+        _Entity.Add<ck::FCk_Tag_HasAuthority>(OwningActor);
+
         ConstructionScript->Request_ReplicateActor_OnServer
         (
             FCk_EcsConstructionScript_ConstructionInfo{}
@@ -308,6 +312,8 @@ auto
     }
     else if (OutermostActor->GetRemoteRole() != ROLE_AutonomousProxy)
     {
+        _Entity.Add<ck::FCk_Tag_HasAuthority>(OwningActor);
+
         ConstructionScript->Request_ReplicateActor_OnClients
         (
             FCk_EcsConstructionScript_ConstructionInfo{}
