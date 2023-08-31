@@ -39,13 +39,14 @@ namespace ck_world_actor
     {
         InWorld.Add<ck::FCk_Processor_EntityLifetime_TriggerDestroyEntity>(InWorld.Get_Registry());
 
-        InWorld.Add<ck::FCk_Processor_TimeSync_HandleRequests>(InWorld.Get_Registry());
-        InWorld.Add<ck::FCk_Processor_TimeSync_OnNetworkClockSynchronized>(InWorld.Get_Registry());
-
         InWorld.Add<ck::FCk_Processor_UnrealEntity_HandleRequests>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FCk_Processor_ActorModifier_SpawnActor_HandleRequests>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_ActorModifier_AddActorComponent_HandleRequests>(InWorld.Get_Registry());
+
+        InWorld.Add<ck::FCk_Processor_TimeSync_HandleRequests>(InWorld.Get_Registry());
+        InWorld.Add<ck::FCk_Processor_TimeSync_OnNetworkClockSynchronized>(InWorld.Get_Registry());
+        InWorld.Add<ck::FCk_Processor_TimeSync_FirstSync>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FCk_Processor_Intent_Setup>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_Intent_HandleRequests>(InWorld.Get_Registry());
@@ -65,6 +66,7 @@ namespace ck_world_actor
         InWorld.Add<ck::FCk_Processor_AccelerationModifier_SingleTarget_Teardown>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FCk_Processor_Integrator_Update>(InWorld.Get_Registry());
+        InWorld.Add<ck::FCk_Processor_Integrator_Setup>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FCk_Processor_Projectile_Update>(InWorld.Get_Registry());
 
