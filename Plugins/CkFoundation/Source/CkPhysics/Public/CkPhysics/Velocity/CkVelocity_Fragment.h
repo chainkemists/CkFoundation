@@ -7,6 +7,7 @@
 #include "CkMacros/CkMacros.h"
 
 #include "CkPhysics/Velocity/CkVelocity_Fragment_Params.h"
+#include "CkRecord/Record/CkRecord_Fragment.h"
 
 #include "CkVelocity_Fragment.generated.h"
 
@@ -84,7 +85,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // TODO: Add RecordOfVelocityModifiers
+    struct FCk_Fragment_RecordOfVelocityModifiers : public FCk_Fragment_Record {};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
