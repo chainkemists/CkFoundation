@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Enums/CkEnums.h"
+#include "CkEcs/Handle/CkHandle.h"
 
 #include "CkAcceleration_Fragment_Params.generated.h"
 
@@ -32,6 +33,36 @@ private:
 public:
     CK_PROPERTY_GET(_Coordinates);
     CK_PROPERTY_GET(_StartingAcceleration);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKPHYSICS_API FCk_Fragment_AccelerationModifier_SingleTarget_ParamsData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Fragment_AccelerationModifier_SingleTarget_ParamsData);
+
+public:
+    FCk_Fragment_AccelerationModifier_SingleTarget_ParamsData() = default;
+    FCk_Fragment_AccelerationModifier_SingleTarget_ParamsData(
+        FCk_Fragment_Acceleration_ParamsData InAccelerationParams,
+        FCk_Handle InTarget);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Fragment_Acceleration_ParamsData _AccelerationParams;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _Target;
+
+public:
+    CK_PROPERTY_GET(_AccelerationParams);
+    CK_PROPERTY_GET(_Target);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

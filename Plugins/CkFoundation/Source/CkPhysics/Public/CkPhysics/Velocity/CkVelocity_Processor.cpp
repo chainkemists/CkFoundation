@@ -71,7 +71,7 @@ namespace ck
             const FCk_Fragment_Velocity_Target& InTarget) const
         -> void
     {
-        auto targetEntity  = UCk_Utils_Velocity_UE::VelocityTarget_Utils::Get_StoredEntity(InHandle);
+        auto targetEntity = InTarget.Get_Entity();
         auto& targetVelocity = targetEntity.Get<FCk_Fragment_Velocity_Current>();
 
         targetVelocity._CurrentVelocity -= InVelocity._CurrentVelocity;
@@ -85,7 +85,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FCk_Fragment_Velocity_Current& InCurrent,
-            const TObjectPtr<UCk_Fragment_Velocity_Rep>& InRepComp) const
+            const TObjectPtr<UCk_Fragment_Velocity_Rep>& InVelRepComp) const
         -> void
     {
         // TODO: Remove usage of UpdateReplicatedFragment once the processor is tagged to only run on Server
