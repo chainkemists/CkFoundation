@@ -87,7 +87,8 @@ auto
     const auto ValueFound = InHandle.Get<ck::FFragment_TimeSync>().Get_PlayerRoundTripTimes().Find(InPlayerController);
 
     CK_ENSURE_IF_NOT(ck::IsValid(ValueFound, ck::IsValid_Policy_NullptrOnly{}),
-        TEXT("Could not find PlayerController [{}] using Entity [{}]. Possible syncing error OR Player disconnected"))
+        TEXT("Could not find PlayerController [{}] using Entity [{}]. Possible syncing error OR Player disconnected"),
+        InPlayerController, InHandle)
     { return {}; }
 
     return *ValueFound;
