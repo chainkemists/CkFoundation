@@ -104,7 +104,11 @@ auto
         {
             return true;
         }
-        default: break;
+        default:
+        {
+            CK_INVALID_ENUM(InReplicationType);
+            break;
+        }
     }
 
     return false;
