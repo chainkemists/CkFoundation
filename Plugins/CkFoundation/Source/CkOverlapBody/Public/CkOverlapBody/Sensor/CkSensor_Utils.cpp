@@ -1,6 +1,7 @@
 #include "CkSensor_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkOverlapBody/CkOverlapBody_Log.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -14,6 +15,23 @@ auto
     CK_ENSURE_IF_NOT(UCk_Utils_OwningActor_UE::Has(InHandle), TEXT("Cannot Add a Sensor to Entity [{}] because it does NOT have an Owning Actor"), InHandle)
     { return; }
 
+    const auto& owningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(InHandle).Get_Actor().Get();
+    const auto& sensorName = InParams.Get_SensorName();
+    const auto& sensorReplicationType = InParams.Get_ReplicationType();
+
+    if (NOT UCk_Utils_Net_UE::Get_IsRoleMatching(owningActor, sensorReplicationType))
+    {
+        ck::overlap_body::VeryVerbose
+        (
+            TEXT("Skipping creation of Sensor [{}] on Actor [{}] because it's Replication Type [{}] does NOT match the Actor's"),
+            sensorName,
+            owningActor,
+            sensorReplicationType
+        );
+
+        return;
+    }
+
     auto sensorEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
 
     auto sensorParams = InParams;
@@ -23,7 +41,7 @@ auto
     sensorEntity.AddOrGet<ck::FCk_Fragment_Sensor_Current>(sensorParams.Get_StartingState());
     sensorEntity.Add<ck::FCk_Tag_Sensor_Setup>();
 
-    UCk_Utils_GameplayLabel_UE::Add(sensorEntity, sensorParams.Get_SensorName());
+    UCk_Utils_GameplayLabel_UE::Add(sensorEntity, sensorName);
 
     if (NOT RecordOfSensors_Utils::Has(InHandle))
     {
