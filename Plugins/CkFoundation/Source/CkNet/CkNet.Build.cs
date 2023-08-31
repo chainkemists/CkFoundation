@@ -15,9 +15,11 @@ public class CkNet : CkModuleRules
             "CoreUObject",
             "Engine",
 
+            "NetworkTimeSync",
+
             "CkCore",
             "CkEcs",
-            "CkLog"
+            "CkLog",
         });
     }
 }
