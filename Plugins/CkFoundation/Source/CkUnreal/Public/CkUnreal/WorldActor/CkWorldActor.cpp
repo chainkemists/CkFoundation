@@ -1,5 +1,7 @@
 #include "CkWorldActor.h"
 
+#include "NetworkTimeSyncComponent.h"
+
 #include "CkActor/ActorModifier/CkActorModifier_Processor.h"
 
 #include "CkIntent/CkIntent_Processor.h"
@@ -10,6 +12,10 @@
 #include "CkEcs/OwningActor/CkOwningActor_Processors.h"
 
 #include "CkEcsBasics/Transform/CkTransform_Processor.h"
+
+#include "CkNet/TimeSync/CkNetTimeSync_Processor.h"
+#include "CkNet/TimeSync/CkNetTimeSync_Utils.h"
+
 #include "CkOverlapBody/Marker/CkMarker_Processor.h"
 #include "CkOverlapBody/Sensor/CkSensor_Processor.h"
 
@@ -32,6 +38,9 @@ namespace ck_world_actor
         -> void
     {
         InWorld.Add<ck::FCk_Processor_EntityLifetime_TriggerDestroyEntity>(InWorld.Get_Registry());
+
+        InWorld.Add<ck::FCk_Processor_TimeSync_HandleRequests>(InWorld.Get_Registry());
+        InWorld.Add<ck::FCk_Processor_TimeSync_OnNetworkClockSynchronized>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FCk_Processor_UnrealEntity_HandleRequests>(InWorld.Get_Registry());
 
