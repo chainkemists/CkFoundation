@@ -38,6 +38,6 @@ auto
 {
     CK_REP_OBJ_EXECUTE_IF_VALID([&]()
     {
-        Broadcast_TimeSync_Implementation(GetWorld()->GetFirstPlayerController(), InRoundTripTime);
+        Broadcast_TimeSync(GetWorld()->GetFirstPlayerController(), InRoundTripTime);
     });
 }
