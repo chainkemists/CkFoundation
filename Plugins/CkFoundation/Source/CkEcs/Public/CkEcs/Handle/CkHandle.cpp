@@ -54,6 +54,10 @@ auto
     Get_ValidHandle(FEntityType::IdType InEntity) const
     -> ThisType
 {
+    CK_ENSURE_IF_NOT(IsValid(),
+        TEXT("Unable to Validate Entity [{}]. Handle [{}] does NOT have a valid Registry."), FCk_Entity{InEntity}, *this)
+    { return {}; }
+
     return ThisType{_Registry->Get_ValidEntity(InEntity), *_Registry};
 }
 
