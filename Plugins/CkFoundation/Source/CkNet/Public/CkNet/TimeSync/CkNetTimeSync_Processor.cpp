@@ -90,5 +90,27 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    FCk_Processor_TimeSync_FirstSync::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_TimeSync& InTimeToSyncFrom,
+            const TObjectPtr<UCk_Fragment_TimeSync_Rep>&)
+{
+    /*
+     * FirstSync always runs on the Entities that have the fragments this Processor requires. It will consume
+     * almost no resources if there are no Entities that have not at least synced once
+     */
+
+    _Registry.View<FFragment_TimeSync, ck::TExclude<FTag_TimeSync_SyncedAtleastOnce>>().ForEach(
+    [&](EntityType InEntity, FFragment_TimeSync& InTimeSync)
+    {
+        _Registry.Add<ck::FTag_TimeSync_SyncedAtleastOnce>(InEntity);
+        InTimeSync = InTimeToSyncFrom;
+    });
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 }
