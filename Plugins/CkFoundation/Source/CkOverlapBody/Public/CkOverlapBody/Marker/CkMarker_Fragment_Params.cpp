@@ -104,6 +104,7 @@ FCk_Fragment_Marker_ParamsData::
         FCk_Marker_AttachmentInfo InAttachmentParams,
         FTransform                InRelativeTransform,
         ECk_EnableDisable         InStartingState,
+        ECk_Net_ReplicationType   InReplicationType,
         bool                      InShowDebug,
         FCk_Marker_DebugInfo      InDebugParams)
     : _MarkerName(InMarkerName)
@@ -112,6 +113,7 @@ FCk_Fragment_Marker_ParamsData::
     , _AttachmentParams(InAttachmentParams)
     , _RelativeTransform(InRelativeTransform)
     , _StartingState(InStartingState)
+    , _ReplicationType(InReplicationType)
     , _ShowDebug(InShowDebug)
     , _DebugParams(InDebugParams)
 {

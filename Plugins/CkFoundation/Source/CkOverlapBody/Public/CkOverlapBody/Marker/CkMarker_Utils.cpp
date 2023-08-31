@@ -3,6 +3,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkLabel/CkLabel_Utils.h"
+#include "CkOverlapBody/CkOverlapBody_Log.h"
 #include "CkOverlapBody/Marker/CkMarker_Fragment.h"
 #include "CkOverlapBody/MarkerAndSensor/CkMarkerAndSensor_Utils.h"
 
@@ -18,6 +19,23 @@ auto
     CK_ENSURE_IF_NOT(UCk_Utils_OwningActor_UE::Has(InHandle), TEXT("Cannot Add a Marker to Entity [{}] because it does NOT have an Owning Actor"), InHandle)
     { return; }
 
+    const auto& owningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(InHandle).Get_Actor().Get();
+    const auto& markerName = InParams.Get_MarkerName();
+    const auto& markerReplicationType = InParams.Get_ReplicationType();
+
+    if (NOT UCk_Utils_Net_UE::Get_IsRoleMatching(owningActor, markerReplicationType))
+    {
+        ck::overlap_body::VeryVerbose
+        (
+            TEXT("Skipping creation of Marker [{}] on Actor [{}] because it's Replication Type [{}] does NOT match the Actor's"),
+            markerName,
+            owningActor,
+            markerReplicationType
+        );
+
+        return;
+    }
+
     auto markerEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
 
     auto markerParams = InParams;
@@ -27,7 +45,7 @@ auto
     markerEntity.AddOrGet<ck::FCk_Fragment_Marker_Current>(markerParams.Get_StartingState());
     markerEntity.Add<ck::FCk_Tag_Marker_Setup>();
 
-    UCk_Utils_GameplayLabel_UE::Add(markerEntity, markerParams.Get_MarkerName());
+    UCk_Utils_GameplayLabel_UE::Add(markerEntity, markerName);
 
     if (NOT RecordOfMarkers_Utils::Has(InHandle))
     {
