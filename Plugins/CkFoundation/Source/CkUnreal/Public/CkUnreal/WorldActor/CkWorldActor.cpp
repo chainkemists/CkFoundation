@@ -57,16 +57,16 @@ namespace ck_world_actor
         InWorld.Add<ck::FProcessor_Marker_HandleRequests>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_Sensor_HandleRequests>(InWorld.Get_Registry());
 
-        InWorld.Add<ck::FCk_Processor_Velocity_Setup>(InWorld.Get_Registry());
-        InWorld.Add<ck::FCk_Processor_VelocityModifier_SingleTarget_Setup>(InWorld.Get_Registry());
-        InWorld.Add<ck::FCk_Processor_VelocityModifier_SingleTarget_Teardown>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_Velocity_Setup>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_VelocityModifier_SingleTarget_Setup>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_VelocityModifier_SingleTarget_Teardown>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FProcessor_Acceleration_Setup>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_AccelerationModifier_SingleTarget_Setup>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_AccelerationModifier_SingleTarget_Teardown>(InWorld.Get_Registry());
 
-        InWorld.Add<ck::FCk_Processor_EulerIntegrator_Update>(InWorld.Get_Registry());
-        InWorld.Add<ck::FCk_Processor_EulerIntegrator_DoOnePredictiveUpdate>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_EulerIntegrator_Update>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_EulerIntegrator_DoOnePredictiveUpdate>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FCk_Processor_Projectile_Update>(InWorld.Get_Registry());
 
@@ -76,7 +76,7 @@ namespace ck_world_actor
 
         // Processors for Replication
         {
-            InWorld.Add<ck::FCk_Processor_Velocity_Replicate>(InWorld.Get_Registry());
+            InWorld.Add<ck::FProcessor_Velocity_Replicate>(InWorld.Get_Registry());
             InWorld.Add<ck::FProcessor_Acceleration_Replicate>(InWorld.Get_Registry());
             InWorld.Add<ck::FProcessor_Transform_Replicate>(InWorld.Get_Registry());
         }
