@@ -3,6 +3,7 @@
 #include "NetworkTimeSubsystem.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkNet/TimeSync/CkNetTimeSync_Settings.h"
 
 namespace ck
 {
@@ -15,6 +16,7 @@ auto
         TimeType InDeltaT,
         HandleType InHandle,
         const TObjectPtr<UCk_Fragment_TimeSync_Rep>& InTimeSync_Rep)
+    -> void
 {
     if (_DelegateHandle.IsValid())
     { return; }
@@ -76,14 +78,19 @@ auto
         TimeType InDeltaT,
         HandleType InHandle,
         FFragment_TimeSync_Requests& InRequests)
+    -> void
 {
     ck::algo::ForEachRequest(InRequests._TimeSyncRequests,
     [&](const FCk_Request_NetTimeSync_NewSync& InNewSync)
     {
+        const auto& roundTripTime = UCk_Utils_NetTimeSync_UserSettings_UE::Get_EnableNetTimeSynchronization() ? InNewSync.Get_RoundTripTime() : 0.0f;
+
         _Registry.View<FFragment_TimeSync>().ForEach([&](EntityType InEntity, FFragment_TimeSync& InTimeSync)
         {
-            InTimeSync._RoundTripTime = InNewSync.Get_RoundTripTime();
-            InTimeSync._PlayerRoundTripTimes.FindOrAdd(InNewSync.Get_PlayerController(), InNewSync.Get_RoundTripTime());
+            if (NOT UCk_Utils_NetTimeSync_UserSettings_UE::Get_EnableNetTimeSynchronization())
+
+            InTimeSync._RoundTripTime = roundTripTime;
+            InTimeSync._PlayerRoundTripTimes.FindOrAdd(InNewSync.Get_PlayerController(), roundTripTime);
         });
     });
 }
@@ -92,11 +99,12 @@ auto
 
 auto
     FCk_Processor_TimeSync_FirstSync::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_TimeSync& InTimeToSyncFrom,
-            const TObjectPtr<UCk_Fragment_TimeSync_Rep>&)
+    ForEachEntity(
+        TimeType InDeltaT,
+        HandleType InHandle,
+        const FFragment_TimeSync& InTimeToSyncFrom,
+        const TObjectPtr<UCk_Fragment_TimeSync_Rep>&)
+    -> void
 {
     /*
      * FirstSync always runs on the Entities that have the fragments this Processor requires. It will consume

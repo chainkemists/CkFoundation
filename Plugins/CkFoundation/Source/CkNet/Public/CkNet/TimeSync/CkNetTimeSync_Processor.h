@@ -26,7 +26,7 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const TObjectPtr<UCk_Fragment_TimeSync_Rep>& InTimeSync_Rep);
+            const TObjectPtr<UCk_Fragment_TimeSync_Rep>& InTimeSync_Rep) -> void;
 
     private:
         auto OnNetworkClockSynchronized(
@@ -56,7 +56,7 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_TimeSync_Requests& InRequests);
+            FFragment_TimeSync_Requests& InRequests) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -72,7 +72,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_TimeSync& InTimeToSyncFrom,
-            const TObjectPtr<UCk_Fragment_TimeSync_Rep>&);
+            const TObjectPtr<UCk_Fragment_TimeSync_Rep>&) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
