@@ -16,17 +16,17 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKINTENT_API FCk_Fragment_Intent_Params
+    struct CKINTENT_API FFragment_Intent_Params
     {
     public:
-        CK_GENERATED_BODY(FCk_Fragment_Intent_Params);
+        CK_GENERATED_BODY(FFragment_Intent_Params);
 
     public:
-        friend class FCk_Processor_Intent_Setup;
+        friend class FProcessor_Intent_Setup;
 
     public:
-        FCk_Fragment_Intent_Params() = default;
-        explicit FCk_Fragment_Intent_Params(TObjectPtr<UCk_Intent_ReplicatedObject_UE> InIntent_RO);
+        FFragment_Intent_Params() = default;
+        explicit FFragment_Intent_Params(TObjectPtr<UCk_Intent_ReplicatedObject_UE> InIntent_RO);
 
     private:
         float SomeOtherStaticFloat = 5.0f;
@@ -38,13 +38,13 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKINTENT_API FCk_Fragment_Intent_Requests
+    struct CKINTENT_API FFragment_Intent_Requests
     {
     public:
-        CK_GENERATED_BODY(FCk_Fragment_Intent_Requests);
+        CK_GENERATED_BODY(FFragment_Intent_Requests);
 
     public:
-        friend class FCk_Processor_Intent_HandleRequests;
+        friend class FProcessor_Intent_HandleRequests;
         friend class UCk_Utils_Intent_UE;
 
     public:

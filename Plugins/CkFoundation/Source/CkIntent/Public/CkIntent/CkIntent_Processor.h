@@ -6,8 +6,8 @@
 
 namespace ck
 {
-    class CKINTENT_API FCk_Processor_Intent_Setup
-        : public TProcessor<FCk_Processor_Intent_Setup, FTag_Intent_Setup>
+    class CKINTENT_API FProcessor_Intent_Setup
+        : public TProcessor<FProcessor_Intent_Setup, FTag_Intent_Setup>
     {
     public:
         using TProcessor::TProcessor;
@@ -24,8 +24,8 @@ namespace ck
         TimeType _Delay = TimeType{5.0f};
     };
 
-    class CKINTENT_API FCk_Processor_Intent_HandleRequests
-        : public TProcessor<FCk_Processor_Intent_HandleRequests, FCk_Fragment_Intent_Params, FCk_Fragment_Intent_Requests>
+    class CKINTENT_API FProcessor_Intent_HandleRequests
+        : public TProcessor<FProcessor_Intent_HandleRequests, FFragment_Intent_Params, FFragment_Intent_Requests>
     {
     public:
         using TProcessor::TProcessor;
@@ -34,7 +34,7 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FCk_Fragment_Intent_Params&,
-            FCk_Fragment_Intent_Requests&);
+            FFragment_Intent_Params&,
+            FFragment_Intent_Requests&);
     };
 }

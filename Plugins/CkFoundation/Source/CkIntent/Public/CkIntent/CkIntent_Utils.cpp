@@ -14,7 +14,7 @@ auto
     //const auto& BasicDetails = UCk_Utils_OwningActor_UE::Get_ActorInfoBasicDetails(InHandle);
 
     //const auto Intent_RO = UCk_Intent_ReplicatedObject_UE::Create(BasicDetails.Get_Actor().Get(), InHandle);
-    InHandle.Add<ck::FCk_Fragment_Intent_Params>();
+    InHandle.Add<ck::FFragment_Intent_Params>();
     InHandle.Add<ck::FTag_Intent_Setup>();
 }
 
