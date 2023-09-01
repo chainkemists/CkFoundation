@@ -34,7 +34,7 @@ void UCk_Intent_ReplicatedObject_UE::OnRep_IntentReady(bool InReady)
 {
     const auto& BasicDetails = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(GetOwningActor());
     _AssociatedEntity = BasicDetails.Get_Handle();
-    _AssociatedEntity.Add<ck::FCk_Fragment_Intent_Params>(this);
+    _AssociatedEntity.Add<ck::FFragment_Intent_Params>(this);
 }
 
 void UCk_Intent_ReplicatedObject_UE::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
