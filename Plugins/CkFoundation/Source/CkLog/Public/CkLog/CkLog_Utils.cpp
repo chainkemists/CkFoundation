@@ -78,7 +78,7 @@ Get_LoggerOrDefault(FName InLogger)
         return InLogger;
     }
 
-    return *UCk_LogSettings_Utils::Get_DefaultLoggerName();
+    return *UCk_Utils_Log_Settings_UE::Get_DefaultLoggerName();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -231,18 +231,20 @@ DoInvokeLog(TMap<FName, TFunction<void(const FString&)>>& InMap, FName InLogger,
 {
     const auto& loggerToUse = Get_LoggerOrDefault(InLogger);
 
-    if (NOT CK_ENSURE(InMap.Contains(loggerToUse),
-        TEXT("Could not find the Logger [{}]. Are you sure you have defined it? See Ck_Log.h for an example."),
-        loggerToUse))
+    CK_ENSURE_IF_NOT(InMap.Contains(loggerToUse),
+        TEXT("Could not find the Logger [{}]. Are you sure you have defined it? See CkLog.h for an example."),
+        loggerToUse)
     { return; }
 
     // logging the context can be expensive and can optionally be turned off
-#if !CK_LOG_NO_CONTEXT
+#if CK_LOG_NO_CONTEXT
+    const auto& formatted = ck::Format_UE(TEXT("{}"), InMsg);
+#else
     const auto& bpContext = UCk_Utils_Debug_StackTrace_UE::Get_BlueprintContext();
     const auto& formatted = ck::Format_UE(TEXT("{}\n== CONTEXT:[{}] =="), InMsg, bpContext);
-#else
-    const auto& formatted = ck::Format_UE(TEXT("{}"), InMsg);
 #endif
 
     InMap[loggerToUse](formatted);
 }
+
+// --------------------------------------------------------------------------------------------------------------------

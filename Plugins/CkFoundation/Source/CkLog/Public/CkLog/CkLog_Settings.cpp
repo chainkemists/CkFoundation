@@ -6,8 +6,8 @@ const FString _DefaultEngineIni = FPaths::ProjectConfigDir() / TEXT("DefaultEngi
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCk_LogSettings_UE::
-    UCk_LogSettings_UE()
+UCk_Log_Settings_UE::
+    UCk_Log_Settings_UE()
 {
     if (GConfig->GetString(TEXT("Ck_LoggerSettings"), TEXT("DefaultLoggerName"), _DefaultLoggerName, GEngineIni) == false)
     {
@@ -17,7 +17,7 @@ UCk_LogSettings_UE::
 
 #if WITH_EDITOR
 auto
-    UCk_LogSettings_UE::
+    UCk_Log_Settings_UE::
     PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
     -> void
 {
@@ -27,7 +27,7 @@ auto
 }
 
 auto
-    UCk_LogSettings_UE::
+    UCk_Log_Settings_UE::
     GetCategoryName() const
     -> FName
 {
@@ -35,7 +35,7 @@ auto
 }
 
 auto
-    UCk_LogSettings_UE::
+    UCk_Log_Settings_UE::
     SaveToIni()
     -> void
 {
@@ -49,7 +49,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_LogSettings_Utils::
+    UCk_Utils_Log_Settings_UE::
     Get_DefaultLoggerName()
     -> FString
 {
