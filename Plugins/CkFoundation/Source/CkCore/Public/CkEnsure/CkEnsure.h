@@ -31,7 +31,7 @@ public:
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	FName _FileName;
+    FName _FileName;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     int32 _LineNumber = 0;
@@ -159,7 +159,7 @@ private:
                                                                                                                               \
     const auto& message = ck::Format_UE(InString, ##__VA_ARGS__);                                                             \
     const auto& stackTraceWith2Skips = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace(2);                                      \
-    const auto& bpStackTrace = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::as_string{});         \
+    const auto& bpStackTrace = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::AsString{});         \
     const auto& callstackPlusMessage = ck::Format_UE(                                                                         \
         TEXT("[{}]\nExpression: '{}'\nMessage: '{}'\n\n == BP CallStack ==\n{}\n == CallStack ==\n{}\n"),                     \
         GFrameCounter,                                                                                                        \

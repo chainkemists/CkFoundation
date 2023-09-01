@@ -7,8 +7,8 @@
 
 namespace ck::type_traits
 {
-    struct as_array {};
-    struct as_string {};
+    struct AsArray {};
+    struct AsString {};
 
     struct Const{};
     struct NonConst{};
@@ -16,28 +16,28 @@ namespace ck::type_traits
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T>
-    struct extract_value_type;
+    struct ExtractValueType;
 
     template <typename T>
-    struct extract_value_type<T*> { using type = T; };
+    struct ExtractValueType<T*> { using type = T; };
 
     template <typename T>
-    struct extract_value_type<TUniquePtr<T>> { using type = T; };
+    struct ExtractValueType<TUniquePtr<T>> { using type = T; };
 
     template <typename T>
-    struct extract_value_type<TSharedPtr<T>> { using type = T; };
+    struct ExtractValueType<TSharedPtr<T>> { using type = T; };
 
     template <typename T>
-    struct extract_value_type<TSharedPtr<T, ESPMode::NotThreadSafe>> { using type = T; };
+    struct ExtractValueType<TSharedPtr<T, ESPMode::NotThreadSafe>> { using type = T; };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // TODO: rename make_new_ptr to TMakeNewPtr
+    // TODO: rename MakeNewPtr to TMakeNewPtr
     template <typename T>
-    struct make_new_ptr;
+    struct MakeNewPtr;
 
     template <typename T>
-    struct make_new_ptr<TSharedPtr<T>>
+    struct MakeNewPtr<TSharedPtr<T>>
     {
         template <typename... T_Args>
         auto operator()(T_Args&&... InArgs)
@@ -47,7 +47,7 @@ namespace ck::type_traits
     };
 
     template <typename T>
-    struct make_new_ptr<TSharedPtr<T, ESPMode::NotThreadSafe>>
+    struct MakeNewPtr<TSharedPtr<T, ESPMode::NotThreadSafe>>
     {
         template <typename... T_Args>
         auto operator()(T_Args&&... InArgs)
@@ -57,7 +57,7 @@ namespace ck::type_traits
     };
 
     template <typename T>
-    struct make_new_ptr<TUniquePtr<T>>
+    struct MakeNewPtr<TUniquePtr<T>>
     {
         template <typename... T_Args>
         auto operator()(T_Args&&... InArgs)
@@ -69,10 +69,10 @@ namespace ck::type_traits
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T>
-    struct move_or_copy_ptr;
+    struct MoveOrCopyPtr;
 
     template <typename T>
-    struct move_or_copy_ptr<TSharedPtr<T>>
+    struct MoveOrCopyPtr<TSharedPtr<T>>
     {
         auto operator()(const TSharedPtr<T>& InPtr) -> TSharedPtr<T>
         {
@@ -81,7 +81,7 @@ namespace ck::type_traits
     };
 
     template <typename T>
-    struct move_or_copy_ptr<TSharedPtr<T, ESPMode::NotThreadSafe>>
+    struct MoveOrCopyPtr<TSharedPtr<T, ESPMode::NotThreadSafe>>
     {
         auto operator()(const TSharedPtr<T, ESPMode::NotThreadSafe>& InPtr) -> TSharedPtr<T, ESPMode::NotThreadSafe>
         {
@@ -90,7 +90,7 @@ namespace ck::type_traits
     };
 
     template <typename T>
-    struct move_or_copy_ptr<TUniquePtr<T>>
+    struct MoveOrCopyPtr<TUniquePtr<T>>
     {
         auto operator()(const TUniquePtr<T>& InOther) -> TUniquePtr<T>
         {
