@@ -18,7 +18,7 @@ namespace ck
             FCk_Tag_EulerIntegrator_DoOnePredictiveUpdate,
             FCk_Fragment_EulerIntegrator_Current,
             FCk_Fragment_Velocity_Current,
-            FCk_Fragment_Acceleration_Current>
+            FFragment_Acceleration_Current>
     {
     public:
         using TProcessor::TProcessor;
@@ -32,7 +32,7 @@ namespace ck
             HandleType InHandle,
             FCk_Fragment_EulerIntegrator_Current& InIntegrator,
             FCk_Fragment_Velocity_Current& InVelocity,
-            const FCk_Fragment_Acceleration_Current& InAcceleration) const -> void;
+            const FFragment_Acceleration_Current& InAcceleration) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -43,7 +43,7 @@ namespace ck
             FCk_Tag_EulerIntegrator_Update,
             FCk_Fragment_EulerIntegrator_Current,
             FCk_Fragment_Velocity_Current,
-            FCk_Fragment_Acceleration_Current>
+            FFragment_Acceleration_Current>
     {
     public:
         using TProcessor::TProcessor;
@@ -55,7 +55,7 @@ namespace ck
             HandleType InHandle,
             FCk_Fragment_EulerIntegrator_Current& InIntegrator,
             FCk_Fragment_Velocity_Current& InVelocity,
-            const FCk_Fragment_Acceleration_Current& InAcceleration) const -> void;
+            const FFragment_Acceleration_Current& InAcceleration) const -> void;
     };
 }
 
