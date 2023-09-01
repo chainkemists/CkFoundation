@@ -87,8 +87,6 @@ auto
 
         _Registry.View<FFragment_NetTimeSync>().ForEach([&](EntityType InEntity, FFragment_NetTimeSync& InTimeSync)
         {
-            if (NOT UCk_Utils_NetTimeSync_UserSettings_UE::Get_EnableNetTimeSynchronization())
-
             InTimeSync._RoundTripTime = roundTripTime;
             InTimeSync._PlayerRoundTripTimes.FindOrAdd(InNewSync.Get_PlayerController(), roundTripTime);
         });
