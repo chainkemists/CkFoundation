@@ -13,14 +13,14 @@ namespace ck
         ForEachEntity(
             TimeType,
             HandleType InHandle,
-            const FCk_Fragment_RecordEntry& InRecordEntry)
+            const FFragment_RecordEntry& InRecordEntry)
         -> void
     {
         for (const auto RecordEntity : InRecordEntry.Get_Records())
         {
             auto RecordHandle = MakeHandle(RecordEntity, InHandle);
 
-            auto& RecordFragment = RecordHandle.Get<FCk_Fragment_Record>();
+            auto& RecordFragment = RecordHandle.Get<FFragment_Record>();
             RecordFragment._RecordEntries.Remove(InHandle.Get_Entity());
         }
     }

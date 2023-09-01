@@ -11,7 +11,7 @@ auto
     Add(FCk_Handle InHandle)
     -> void
 {
-    InHandle.Add<ck::FCk_Fragment_RecordEntry>();
+    InHandle.Add<ck::FFragment_RecordEntry>();
 }
 
 auto
@@ -19,7 +19,7 @@ auto
     Has(FCk_Handle InHandle)
     -> bool
 {
-    return InHandle.Has<ck::FCk_Fragment_RecordEntry>();
+    return InHandle.Has<ck::FFragment_RecordEntry>();
 }
 
 auto
@@ -28,7 +28,7 @@ auto
     -> bool
 {
     CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have a [{}]"),
-        InHandle, ctti::nameof_v<ck::FCk_Fragment_RecordEntry>)
+        InHandle, ctti::nameof_v<ck::FFragment_RecordEntry>)
     { return false; }
 
     return true;

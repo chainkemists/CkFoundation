@@ -243,7 +243,7 @@ namespace ck
         if (NOT UCk_Utils_RecordEntry_UE::Has(InRecordEntry))
         { UCk_Utils_RecordEntry_UE::Add(InRecordEntry); }
 
-        auto& RecordEntryFragment = InRecordEntry.Get<ck::FCk_Fragment_RecordEntry>();
+        auto& RecordEntryFragment = InRecordEntry.Get<ck::FFragment_RecordEntry>();
         RecordEntryFragment._Records.Emplace(InRecordHandle.Get_Entity());
     }
 
@@ -273,7 +273,7 @@ namespace ck
         }
 
         {
-            auto& RecordEntryFragment = InRecordHandle.Get<ck::FCk_Fragment_RecordEntry>();
+            auto& RecordEntryFragment = InRecordHandle.Get<ck::FFragment_RecordEntry>();
             const auto& RemovalSuccess = RecordEntryFragment._Records.Remove(InRecordHandle.Get_Entity());
 
             CK_ENSURE_IF_NOT(RemovalSuccess,
@@ -299,7 +299,7 @@ public:
     friend class UCk_Utils_RecordEntry_UE;
 
 public:
-    using InternalUtils_Type = ck::TCk_Utils_Record<ck::FCk_Fragment_Record>;
+    using InternalUtils_Type = ck::TCk_Utils_Record<ck::FFragment_Record>;
 
 public:
     UFUNCTION(BlueprintCallable,

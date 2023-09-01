@@ -95,7 +95,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FFragment_RecordOfMarkers : public FCk_Fragment_Record {};
+    struct FFragment_RecordOfMarkers : public FFragment_Record {};
 }
 
 
