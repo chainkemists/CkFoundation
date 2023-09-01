@@ -7,7 +7,7 @@
 namespace ck
 {
     auto
-        FCk_Processor_Intent_Setup::
+        FProcessor_Intent_Setup::
         Tick(TimeType InDeltaT) -> void
     {
         // TODO: Hacking time... we need a Future
@@ -20,13 +20,13 @@ namespace ck
     }
 
     auto
-        FCk_Processor_Intent_Setup::
+        FProcessor_Intent_Setup::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             FTag_Intent_Setup&)
     {
-        auto& InIntentParams = InHandle.Get<FCk_Fragment_Intent_Params>();
+        auto& InIntentParams = InHandle.Get<FFragment_Intent_Params>();
 
         const auto& BasicDetails =  UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(InHandle);
 
@@ -48,12 +48,12 @@ namespace ck
     }
 
     auto
-        FCk_Processor_Intent_HandleRequests::
+        FProcessor_Intent_HandleRequests::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FCk_Fragment_Intent_Params& InParams,
-            FCk_Fragment_Intent_Requests& InRequests)
+            FFragment_Intent_Params& InParams,
+            FFragment_Intent_Requests& InRequests)
     {
         // TODO: this should be handled better with Warning OR ensure OR
         if (NOT ck::IsValid(InParams.Get_Intent_RO()))
@@ -64,7 +64,7 @@ namespace ck
             InParams.Get_Intent_RO()->AddIntent(Request.Get_Intent());
         }
 
-        InHandle.Remove<FCk_Fragment_Intent_Requests>();
+        InHandle.Remove<FFragment_Intent_Requests>();
     }
 }
 
