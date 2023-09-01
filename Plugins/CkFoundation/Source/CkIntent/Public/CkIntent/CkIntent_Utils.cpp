@@ -23,13 +23,15 @@ auto
     Request_AddNewIntent(FCk_Handle InHandle, FGameplayTag InIntent)
     -> void
 {
-    auto& IntentComp = [&]() -> ck::FCk_Fragment_Intent_Requests&
+    auto& IntentComp = [&]() -> ck::FFragment_Intent_Requests&
     {
-        if (InHandle.Has<ck::FCk_Fragment_Intent_Requests>())
-        { return InHandle.Get<ck::FCk_Fragment_Intent_Requests>(); }
+        if (InHandle.Has<ck::FFragment_Intent_Requests>())
+        { return InHandle.Get<ck::FFragment_Intent_Requests>(); }
 
-        return InHandle.Add<ck::FCk_Fragment_Intent_Requests>();
+        return InHandle.Add<ck::FFragment_Intent_Requests>();
     }();
 
     IntentComp._Requests.Add(FCk_Request_Intent_NewIntent{InIntent});
 }
+
+// --------------------------------------------------------------------------------------------------------------------

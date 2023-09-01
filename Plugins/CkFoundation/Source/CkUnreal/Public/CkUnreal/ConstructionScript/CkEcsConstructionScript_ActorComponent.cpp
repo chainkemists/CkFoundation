@@ -220,7 +220,7 @@ auto
     _Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(WorldSubsystem->Get_TransientEntity());
     const auto& OwningActor = GetOwner();
 
-    _Entity.Add<ck::FCk_Fragment_OwningActor_Current>(OwningActor);
+    _Entity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
 
     if (OwningActor->IsNetMode(NM_DedicatedServer))
     {
@@ -298,7 +298,7 @@ auto
 
     if (GetWorld()->IsNetMode(NM_Client))
     {
-        _Entity.Add<ck::FCk_Tag_HasAuthority>(OwningActor);
+        _Entity.Add<ck::FTag_HasAuthority>(OwningActor);
 
         ConstructionScript->Request_ReplicateActor_OnServer
         (
@@ -312,7 +312,7 @@ auto
     }
     else if (OutermostActor->GetRemoteRole() != ROLE_AutonomousProxy)
     {
-        _Entity.Add<ck::FCk_Tag_HasAuthority>(OwningActor);
+        _Entity.Add<ck::FTag_HasAuthority>(OwningActor);
 
         ConstructionScript->Request_ReplicateActor_OnClients
         (

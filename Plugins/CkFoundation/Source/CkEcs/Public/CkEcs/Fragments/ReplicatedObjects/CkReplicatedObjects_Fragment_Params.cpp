@@ -100,7 +100,7 @@ auto
     if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(Get_AssociatedEntity()))
     { return; }
 
-    _AssociatedEntity.Add<ck::FCk_Tag_TriggerDestroyEntity>();
+    _AssociatedEntity.Add<ck::FTag_TriggerDestroyEntity>();
     _AssociatedEntity = {};
 }
 
