@@ -17,22 +17,22 @@ class UCk_Utils_MarkerAndSensor_UE;
 
 namespace ck
 {
-    struct FCk_Tag_Marker_Setup {};
-    struct FCk_Tag_Marker_UpdateTransform {};
+    struct FTag_Marker_Setup {};
+    struct FTag_Marker_UpdateTransform {};
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKOVERLAPBODY_API FCk_Fragment_Marker_Params
+    struct CKOVERLAPBODY_API FFragment_Marker_Params
     {
     public:
-        CK_GENERATED_BODY(FCk_Fragment_Marker_Params);
+        CK_GENERATED_BODY(FFragment_Marker_Params);
 
     public:
         using ParamsType = FCk_Fragment_Marker_ParamsData;
 
     public:
-        FCk_Fragment_Marker_Params() = default;
-        explicit FCk_Fragment_Marker_Params(
+        FFragment_Marker_Params() = default;
+        explicit FFragment_Marker_Params(
             ParamsType InParams);
 
     private:
@@ -44,20 +44,20 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKOVERLAPBODY_API FCk_Fragment_Marker_Current
+    struct CKOVERLAPBODY_API FFragment_Marker_Current
     {
     public:
-        CK_GENERATED_BODY(FCk_Fragment_Marker_Current);
+        CK_GENERATED_BODY(FFragment_Marker_Current);
 
     public:
-        friend class FCk_Processor_Marker_Setup;
-        friend class FCk_Processor_Marker_HandleRequests;
+        friend class FProcessor_Marker_Setup;
+        friend class FProcessor_Marker_HandleRequests;
         friend class UCk_Utils_Marker_UE;
         friend class UCk_Utils_MarkerAndSensor_UE;
 
     public:
-        FCk_Fragment_Marker_Current() = default;
-        explicit FCk_Fragment_Marker_Current(
+        FFragment_Marker_Current() = default;
+        explicit FFragment_Marker_Current(
             ECk_EnableDisable InEnableDisable);
 
     private:
@@ -73,13 +73,13 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKOVERLAPBODY_API FCk_Fragment_Marker_Requests
+    struct CKOVERLAPBODY_API FFragment_Marker_Requests
     {
     public:
-        CK_GENERATED_BODY(FCk_Fragment_Marker_Requests);
+        CK_GENERATED_BODY(FFragment_Marker_Requests);
 
     public:
-        friend class FCk_Processor_Marker_HandleRequests;
+        friend class FProcessor_Marker_HandleRequests;
         friend class UCk_Utils_Marker_UE;
 
     public:
@@ -95,7 +95,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FCk_Fragment_RecordOfMarkers : public FCk_Fragment_Record {};
+    struct FFragment_RecordOfMarkers : public FCk_Fragment_Record {};
 }
 
 

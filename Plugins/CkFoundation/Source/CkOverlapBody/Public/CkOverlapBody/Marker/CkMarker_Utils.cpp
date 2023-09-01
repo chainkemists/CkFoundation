@@ -43,9 +43,9 @@ auto
     auto markerParams = InParams;
     markerParams.Set_EntityAttachedTo(InHandle);
 
-    markerEntity.AddOrGet<ck::FCk_Fragment_Marker_Params>(markerParams);
-    markerEntity.AddOrGet<ck::FCk_Fragment_Marker_Current>(markerParams.Get_StartingState());
-    markerEntity.Add<ck::FCk_Tag_Marker_Setup>();
+    markerEntity.AddOrGet<ck::FFragment_Marker_Params>(markerParams);
+    markerEntity.AddOrGet<ck::FFragment_Marker_Current>(markerParams.Get_StartingState());
+    markerEntity.Add<ck::FTag_Marker_Setup>();
 
     UCk_Utils_GameplayLabel_UE::Add(markerEntity, markerName);
 
@@ -90,7 +90,7 @@ auto
 
     RecordOfMarkers_Utils::ForEachEntry(InHandle, [&](FCk_Handle InMarkerEntity)
     {
-        const auto& markerName = InMarkerEntity.Get<ck::FCk_Fragment_Marker_Params>().Get_Params().Get_MarkerName();
+        const auto& markerName = InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_Params().Get_MarkerName();
         PreviewSingleMarker<ECk_FragmentQuery_Policy::CurrentEntity>(InOuter, InMarkerEntity, markerName);
     });
 }
@@ -172,7 +172,7 @@ auto
         FCk_Handle InMarkerHandle)
     -> void
 {
-    InMarkerHandle.Add<ck::FCk_Tag_Marker_UpdateTransform>();
+    InMarkerHandle.Add<ck::FTag_Marker_UpdateTransform>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

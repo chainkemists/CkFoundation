@@ -14,7 +14,7 @@
 
 namespace ck
 {
-    class FCk_Processor_Sensor_Setup;
+    class FProcessor_Sensor_Setup;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -28,10 +28,10 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Sensor_UE);
 
 private:
-    struct RecordOfSensors_Utils : public ck::TCk_Utils_Record<ck::FCk_Fragment_RecordOfSensors> {};
+    struct RecordOfSensors_Utils : public ck::TCk_Utils_Record<ck::FFragment_RecordOfSensors> {};
 
 public:
-    friend class ck::FCk_Processor_Sensor_Setup;
+    friend class ck::FProcessor_Sensor_Setup;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -309,7 +309,7 @@ auto
 {
     return DoPerformCommonSensorUtilFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag InSensorNameToUse)
     {
-        return InSensorEntity.Has_All<ck::FCk_Fragment_Sensor_Params, ck::FCk_Fragment_Sensor_Current>() &&
+        return InSensorEntity.Has_All<ck::FFragment_Sensor_Params, ck::FFragment_Sensor_Current>() &&
                UCk_Utils_GameplayLabel_UE::Has(InSensorEntity) &&
                UCk_Utils_GameplayLabel_UE::Get_Label(InSensorEntity) == InSensorNameToUse;
     });
@@ -342,7 +342,7 @@ auto
 
     return DoPerformCommonSensorUtilFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
     {
-        return InSensorEntity.Get<ck::FCk_Fragment_Sensor_Params>().Get_Params().Get_PhysicsParams();
+        return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_PhysicsParams();
     });
 }
 
@@ -359,7 +359,7 @@ auto
 
     return DoPerformCommonSensorUtilFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
     {
-        return InSensorEntity.Get<ck::FCk_Fragment_Sensor_Params>().Get_Params().Get_ShapeParams();
+        return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_ShapeParams();
     });
 }
 
@@ -376,7 +376,7 @@ auto
 
     return DoPerformCommonSensorUtilFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
     {
-        return InSensorEntity.Get<ck::FCk_Fragment_Sensor_Params>().Get_Params().Get_DebugParams();
+        return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_DebugParams();
     });
 }
 
@@ -393,7 +393,7 @@ auto
 
     return DoPerformCommonSensorUtilFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
     {
-        return InSensorEntity.Get<ck::FCk_Fragment_Sensor_Current>().Get_EnableDisable();
+        return InSensorEntity.Get<ck::FFragment_Sensor_Current>().Get_EnableDisable();
     });
 }
 
@@ -410,7 +410,7 @@ auto
 
     return DoPerformCommonSensorUtilFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
     {
-        return InSensorEntity.Get<ck::FCk_Fragment_Sensor_Current>().Get_Sensor().Get();
+        return InSensorEntity.Get<ck::FFragment_Sensor_Current>().Get_Sensor().Get();
     });
 }
 
@@ -428,8 +428,8 @@ auto
 
     DoPerformCommonSensorUtilVoidFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
     {
-        const auto& sensorParams = InSensorEntity.Get<ck::FCk_Fragment_Sensor_Params>().Get_Params();
-        const auto& sensorCurrent = InSensorEntity.Get<ck::FCk_Fragment_Sensor_Current>();
+        const auto& sensorParams = InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params();
+        const auto& sensorCurrent = InSensorEntity.Get<ck::FFragment_Sensor_Current>();
 
         UCk_Utils_MarkerAndSensor_UE::Draw_Sensor_DebugLines(InOuter, sensorCurrent, sensorParams);
     });
@@ -448,7 +448,7 @@ auto
 
     return DoPerformCommonSensorUtilFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
     {
-        return InSensorEntity.Get<ck::FCk_Fragment_Sensor_Current>().Get_AttachedEntityAndActor();
+        return InSensorEntity.Get<ck::FFragment_Sensor_Current>().Get_AttachedEntityAndActor();
     });
 }
 
@@ -465,7 +465,7 @@ auto
 
     return DoPerformCommonSensorUtilFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
     {
-        return NOT InSensorEntity.Get<ck::FCk_Fragment_Sensor_Current>().Get_CurrentMarkerOverlaps().Get_Overlaps().IsEmpty();
+        return NOT InSensorEntity.Get<ck::FFragment_Sensor_Current>().Get_CurrentMarkerOverlaps().Get_Overlaps().IsEmpty();
     });
 }
 
@@ -482,7 +482,7 @@ auto
 
     return DoPerformCommonSensorUtilFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
     {
-        return InSensorEntity.Get<ck::FCk_Fragment_Sensor_Current>().Get_CurrentMarkerOverlaps();
+        return InSensorEntity.Get<ck::FFragment_Sensor_Current>().Get_CurrentMarkerOverlaps();
     });
 }
 
@@ -499,7 +499,7 @@ auto
 
     return DoPerformCommonSensorUtilFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
     {
-        return NOT InSensorEntity.Get<ck::FCk_Fragment_Sensor_Current>().Get_CurrentNonMarkerOverlaps().Get_Overlaps().IsEmpty();
+        return NOT InSensorEntity.Get<ck::FFragment_Sensor_Current>().Get_CurrentNonMarkerOverlaps().Get_Overlaps().IsEmpty();
     });
 }
 
@@ -516,7 +516,7 @@ auto
 
     return DoPerformCommonSensorUtilFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
     {
-        return InSensorEntity.Get<ck::FCk_Fragment_Sensor_Current>().Get_CurrentNonMarkerOverlaps();
+        return InSensorEntity.Get<ck::FFragment_Sensor_Current>().Get_CurrentNonMarkerOverlaps();
     });
 }
 
@@ -534,7 +534,7 @@ auto
 
     DoPerformCommonSensorUtilVoidFunc<T_FragmentQueryPolicy>(InHandle, InSensorName, [&](FCk_Handle InSensorEntity, FGameplayTag)
     {
-        InSensorEntity.AddOrGet<ck::FCk_Fragment_Sensor_Requests>()._EnableDisableRequest = InRequest;
+        InSensorEntity.AddOrGet<ck::FFragment_Sensor_Requests>()._EnableDisableRequest = InRequest;
     });
 }
 

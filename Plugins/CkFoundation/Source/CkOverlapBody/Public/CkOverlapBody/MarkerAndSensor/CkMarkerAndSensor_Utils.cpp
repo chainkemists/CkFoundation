@@ -6,7 +6,7 @@ auto
     UCk_Utils_MarkerAndSensor_UE::
     Draw_Marker_DebugLines(
         UObject* InOuter,
-        const ck::FCk_Fragment_Marker_Current& InMarkerCurrent,
+        const ck::FFragment_Marker_Current& InMarkerCurrent,
         const FCk_Fragment_Marker_ParamsData& InMarkerParams)
     -> void
 {
@@ -17,7 +17,7 @@ auto
     UCk_Utils_MarkerAndSensor_UE::
     Draw_Sensor_DebugLines(
         UObject* InOuter,
-        const ck::FCk_Fragment_Sensor_Current& InSensorCurrent,
+        const ck::FFragment_Sensor_Current& InSensorCurrent,
         const FCk_Fragment_Sensor_ParamsData& InSensorParams)
     -> void
 {
