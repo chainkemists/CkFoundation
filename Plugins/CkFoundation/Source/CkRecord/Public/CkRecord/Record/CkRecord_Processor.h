@@ -8,8 +8,8 @@
 
 namespace ck
 {
-    class CKRECORD_API FCk_Processor_Record_Destructor
-        : public TProcessor<FCk_Processor_Record_Destructor, FFragment_Record, FCk_Tag_PendingDestroyEntity>
+    class CKRECORD_API FProcessor_Record_Destructor
+        : public TProcessor<FProcessor_Record_Destructor, FFragment_Record, FTag_PendingDestroyEntity>
     {
     public:
         using TProcessor::TProcessor;
