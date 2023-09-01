@@ -5,7 +5,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-UCk_Fragment_TimeSync_Rep::
+    UCk_Fragment_TimeSync_Rep::
     Broadcast_TimeSync_Implementation(
         APlayerController* InPlayerController,
         float InRoundTripTime)
@@ -45,3 +45,5 @@ auto
         Broadcast_TimeSync(GetWorld()->GetFirstPlayerController(), InRoundTripTime);
     });
 }
+
+// --------------------------------------------------------------------------------------------------------------------

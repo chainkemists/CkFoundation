@@ -14,6 +14,7 @@ public class CkNet : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
+            "DeveloperSettings",
 
             "NetworkTimeSync",
 

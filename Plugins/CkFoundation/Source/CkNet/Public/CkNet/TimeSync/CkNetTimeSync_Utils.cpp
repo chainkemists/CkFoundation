@@ -44,7 +44,7 @@ auto
 }
 
 auto
-UCk_Utils_NetTimeSync_UE::
+    UCk_Utils_NetTimeSync_UE::
     Request_NewTimeSync(
         FCk_Handle InHandle,
         FCk_Request_NetTimeSync_NewSync InRequest) -> void
