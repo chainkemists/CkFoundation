@@ -25,7 +25,7 @@ namespace ck
     public:
         CK_GENERATED_BODY(FFragment_NetTimeSync);
 
-        friend class FCk_Processor_NetTimeSync_HandleRequests;
+        friend class FProcessor_NetTimeSync_HandleRequests;
 
     private:
         FCk_Time _RoundTripTime;
@@ -43,7 +43,7 @@ namespace ck
     public:
         CK_GENERATED_BODY(FFragment_NetTimeSync);
 
-        friend class FCk_Processor_NetTimeSync_HandleRequests;
+        friend class FProcessor_NetTimeSync_HandleRequests;
         friend class UCk_Utils_NetTimeSync_UE;
 
     public:
@@ -59,8 +59,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class FCk_Processor_NetTimeSync_HandleRequests;
-    class FCk_Processor_NetTimeSync_OnNetworkClockSynchronized;
+    class FProcessor_NetTimeSync_HandleRequests;
+    class FProcessor_NetTimeSync_OnNetworkClockSynchronized;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -74,7 +74,7 @@ public:
     CK_GENERATED_BODY(UCk_Fragment_NetTimeSync_Rep);
 
 public:
-    friend class ck::FCk_Processor_NetTimeSync_OnNetworkClockSynchronized;
+    friend class ck::FProcessor_NetTimeSync_OnNetworkClockSynchronized;
 
 public:
     UFUNCTION(Server, Unreliable)
