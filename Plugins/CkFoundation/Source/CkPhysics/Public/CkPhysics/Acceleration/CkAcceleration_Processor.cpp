@@ -73,7 +73,6 @@ namespace ck
             const FCk_Fragment_Acceleration_Target& InTarget) const
         -> void
     {
-
         auto targetEntity = InTarget.Get_Entity();
         auto& targetAcceleration = targetEntity.Get<FCk_Fragment_Acceleration_Current>();
 

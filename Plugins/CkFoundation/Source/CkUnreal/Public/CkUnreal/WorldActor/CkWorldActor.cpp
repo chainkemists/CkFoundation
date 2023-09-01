@@ -20,7 +20,7 @@
 #include "CkOverlapBody/Sensor/CkSensor_Processor.h"
 
 #include "CkPhysics/Acceleration/CkAcceleration_Processor.h"
-#include "CkPhysics/Integrator/CkIntegrator_Processor.h"
+#include "CkPhysics/EulerIntegrator/CkEulerIntegrator_Processor.h"
 #include "CkProjectile/CkProjectile_Processor.h"
 
 #include "CkRecord/Record/CkRecord_Processor.h"
@@ -65,8 +65,8 @@ namespace ck_world_actor
         InWorld.Add<ck::FCk_Processor_AccelerationModifier_SingleTarget_Setup>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_AccelerationModifier_SingleTarget_Teardown>(InWorld.Get_Registry());
 
-        InWorld.Add<ck::FCk_Processor_Integrator_Update>(InWorld.Get_Registry());
-        InWorld.Add<ck::FCk_Processor_Integrator_Setup>(InWorld.Get_Registry());
+        InWorld.Add<ck::FCk_Processor_EulerIntegrator_Update>(InWorld.Get_Registry());
+        InWorld.Add<ck::FCk_Processor_EulerIntegrator_Setup>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FCk_Processor_Projectile_Update>(InWorld.Get_Registry());
 
