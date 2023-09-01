@@ -5,6 +5,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEcsBasics/CkEcsBasics_Log.h"
+#include "CkEcsBasics/Transform/CkTransform_Settings.h"
 
 #include "CkNet/CkNet_Fragment.h"
 #include "CkNet/CkNet_Utils.h"
@@ -166,6 +167,9 @@ namespace ck
             FFragment_Transform_NewGoal_Location& InGoal) const
         -> void
     {
+        if (NOT UCk_Utils_Transform_UserSettings_UE::Get_EnableTransformSmoothing())
+        { return; }
+
         // TODO: pre-calculate when creating FCk_Fragment_Transform_NewGoal to avoid this expensive operation
         const auto GoalDistance = InGoal.Get_InterpolationOffset().Length();
         InGoal.Set_DeltaT(InGoal.Get_DeltaT() + InDeltaT);

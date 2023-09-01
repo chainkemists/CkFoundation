@@ -14,6 +14,7 @@ public class CkEcsBasics : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
+            "DeveloperSettings",
 
             "CkActor",
             "CkCore",
