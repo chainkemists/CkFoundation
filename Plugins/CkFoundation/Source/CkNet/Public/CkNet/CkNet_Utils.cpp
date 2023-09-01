@@ -152,7 +152,7 @@ auto
         FCk_Handle InHandle)
     -> bool
 {
-    return InHandle.Has<ck::FCk_Tag_NetMode_DedicatedServer>();
+    return InHandle.Has<ck::FTag_NetMode_DedicatedServer>();
 }
 
 auto
@@ -161,7 +161,7 @@ auto
         FCk_Handle InHandle)
     -> bool
 {
-    return NOT InHandle.Has<ck::FCk_Tag_NetMode_DedicatedServer>();
+    return NOT InHandle.Has<ck::FTag_NetMode_DedicatedServer>();
 }
 
 auto
@@ -170,7 +170,7 @@ auto
         FCk_Handle InHandle)
     -> bool
 {
-    return InHandle.Has<ck::FCk_Tag_Replicated>();
+    return InHandle.Has<ck::FTag_Replicated>();
 }
 
 auto
@@ -179,7 +179,7 @@ auto
         FCk_Handle InHandle)
     -> void
 {
-    InHandle.Add<ck::FCk_Tag_NetMode_DedicatedServer>();
+    InHandle.Add<ck::FTag_NetMode_DedicatedServer>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
