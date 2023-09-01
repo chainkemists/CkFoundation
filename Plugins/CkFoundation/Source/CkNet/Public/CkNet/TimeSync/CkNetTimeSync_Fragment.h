@@ -16,16 +16,16 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FTag_TimeSync_SyncedAtleastOnce {};
+    struct FTag_NetTimeSync_SyncedAtleastOnce {};
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKNET_API FFragment_TimeSync
+    struct CKNET_API FFragment_NetTimeSync
     {
     public:
-        CK_GENERATED_BODY(FFragment_TimeSync);
+        CK_GENERATED_BODY(FFragment_NetTimeSync);
 
-        friend class FCk_Processor_TimeSync_HandleRequests;
+        friend class FCk_Processor_NetTimeSync_HandleRequests;
 
     private:
         FCk_Time _RoundTripTime = FCk_Time::Zero;
@@ -38,12 +38,12 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKNET_API FFragment_TimeSync_Requests
+    struct CKNET_API FFragment_NetTimeSync_Requests
     {
     public:
-        CK_GENERATED_BODY(FFragment_TimeSync);
+        CK_GENERATED_BODY(FFragment_NetTimeSync);
 
-        friend class FCk_Processor_TimeSync_HandleRequests;
+        friend class FCk_Processor_NetTimeSync_HandleRequests;
         friend class UCk_Utils_NetTimeSync_UE;
 
     public:
@@ -51,35 +51,35 @@ namespace ck
         using TimeSyncRequestList = TArray<TimeSyncRequestType>;
 
     private:
-        TimeSyncRequestList _TimeSyncRequests;
+        TimeSyncRequestList _NetTimeSyncRequests;
 
     public:
-        CK_PROPERTY_GET(_TimeSyncRequests);
+        CK_PROPERTY_GET(_NetTimeSyncRequests);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class FCk_Processor_TimeSync_HandleRequests;
-    class FCk_Processor_TimeSync_OnNetworkClockSynchronized;
+    class FCk_Processor_NetTimeSync_HandleRequests;
+    class FCk_Processor_NetTimeSync_OnNetworkClockSynchronized;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Blueprintable)
-class CKNET_API UCk_Fragment_TimeSync_Rep : public UCk_Ecs_ReplicatedObject_UE
+class CKNET_API UCk_Fragment_NetTimeSync_Rep : public UCk_Ecs_ReplicatedObject_UE
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Fragment_TimeSync_Rep);
+    CK_GENERATED_BODY(UCk_Fragment_NetTimeSync_Rep);
 
 public:
-    friend class ck::FCk_Processor_TimeSync_OnNetworkClockSynchronized;
+    friend class ck::FCk_Processor_NetTimeSync_OnNetworkClockSynchronized;
 
 public:
     UFUNCTION(Server, Unreliable)
     void
-    Broadcast_TimeSync(
+    Broadcast_NetTimeSync(
         APlayerController* InPlayerController,
         FCk_Time InRoundTripTime);
 
@@ -89,7 +89,7 @@ protected:
 
 private:
     auto
-    DoBroadcast_TimeSync(
+    DoBroadcast_NetTimeSync(
         FCk_Time InRoundTripTime) -> void;
 };
 

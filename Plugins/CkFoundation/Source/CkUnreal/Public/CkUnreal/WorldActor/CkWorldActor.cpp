@@ -44,9 +44,9 @@ namespace ck_world_actor
         InWorld.Add<ck::FCk_Processor_ActorModifier_SpawnActor_HandleRequests>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_ActorModifier_AddActorComponent_HandleRequests>(InWorld.Get_Registry());
 
-        InWorld.Add<ck::FCk_Processor_TimeSync_HandleRequests>(InWorld.Get_Registry());
-        InWorld.Add<ck::FCk_Processor_TimeSync_OnNetworkClockSynchronized>(InWorld.Get_Registry());
-        InWorld.Add<ck::FCk_Processor_TimeSync_FirstSync>(InWorld.Get_Registry());
+        InWorld.Add<ck::FCk_Processor_NetTimeSync_HandleRequests>(InWorld.Get_Registry());
+        InWorld.Add<ck::FCk_Processor_NetTimeSync_OnNetworkClockSynchronized>(InWorld.Get_Registry());
+        InWorld.Add<ck::FCk_Processor_NetTimeSync_FirstSync>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FCk_Processor_Intent_Setup>(InWorld.Get_Registry());
         InWorld.Add<ck::FCk_Processor_Intent_HandleRequests>(InWorld.Get_Registry());
