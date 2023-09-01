@@ -12,10 +12,10 @@
 
 namespace ck
 {
-    class CKPHYSICS_API FCk_Processor_EulerIntegrator_Setup : public TProcessor<
-            FCk_Processor_EulerIntegrator_Setup,
+    class CKPHYSICS_API FCk_Processor_EulerIntegrator_DoOnePredictiveUpdate : public TProcessor<
+            FCk_Processor_EulerIntegrator_DoOnePredictiveUpdate,
             TExclude<FCk_Tag_HasAuthority>,
-            FCk_Tag_EulerIntegrator_Setup,
+            FCk_Tag_EulerIntegrator_DoOnePredictiveUpdate,
             FCk_Fragment_EulerIntegrator_Current,
             FCk_Fragment_Velocity_Current,
             FCk_Fragment_Acceleration_Current>
@@ -39,7 +39,7 @@ namespace ck
 
     class CKPHYSICS_API FCk_Processor_EulerIntegrator_Update : public TProcessor<
             FCk_Processor_EulerIntegrator_Update,
-            TExclude<FCk_Tag_EulerIntegrator_Setup>,
+            TExclude<FCk_Tag_EulerIntegrator_DoOnePredictiveUpdate>,
             FCk_Tag_EulerIntegrator_Update,
             FCk_Fragment_EulerIntegrator_Current,
             FCk_Fragment_Velocity_Current,

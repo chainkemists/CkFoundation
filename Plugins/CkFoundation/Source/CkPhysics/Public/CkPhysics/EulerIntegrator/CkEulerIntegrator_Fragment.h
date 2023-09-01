@@ -9,7 +9,7 @@
 
 namespace ck
 {
-    struct FCk_Tag_EulerIntegrator_Setup {};
+    struct FCk_Tag_EulerIntegrator_DoOnePredictiveUpdate {};
     struct FCk_Tag_EulerIntegrator_Update {};
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -20,7 +20,7 @@ namespace ck
         CK_GENERATED_BODY(FCk_Fragment_EulerIntegrator_Current);
 
     public:
-        friend class FCk_Processor_EulerIntegrator_Setup;
+        friend class FCk_Processor_EulerIntegrator_DoOnePredictiveUpdate;
         friend class FCk_Processor_EulerIntegrator_Update;
 
     private:
