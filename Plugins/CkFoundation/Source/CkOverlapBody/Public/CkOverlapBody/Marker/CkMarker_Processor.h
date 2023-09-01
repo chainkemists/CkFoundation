@@ -7,11 +7,11 @@
 
 namespace ck
 {
-    class CKOVERLAPBODY_API FCk_Processor_Marker_Setup
-        : public TProcessor<FCk_Processor_Marker_Setup, FCk_Fragment_Marker_Current, FCk_Fragment_Marker_Params, FCk_Tag_Marker_Setup>
+    class CKOVERLAPBODY_API FProcessor_Marker_Setup
+        : public TProcessor<FProcessor_Marker_Setup, FFragment_Marker_Current, FFragment_Marker_Params, FTag_Marker_Setup>
     {
     public:
-        using MarkedDirtyBy = FCk_Tag_Marker_Setup;
+        using MarkedDirtyBy = FTag_Marker_Setup;
 
     public:
         using TProcessor::TProcessor;
@@ -20,17 +20,17 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FCk_Fragment_Marker_Current& InCurrentComp,
-            const FCk_Fragment_Marker_Params& InParamsComp) const -> void;
+            FFragment_Marker_Current& InCurrentComp,
+            const FFragment_Marker_Params& InParamsComp) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKOVERLAPBODY_API FCk_Processor_Marker_HandleRequests
-        : public TProcessor<FCk_Processor_Marker_HandleRequests, FCk_Fragment_Marker_Current, FCk_Fragment_Marker_Params, FCk_Fragment_Marker_Requests>
+    class CKOVERLAPBODY_API FProcessor_Marker_HandleRequests
+        : public TProcessor<FProcessor_Marker_HandleRequests, FFragment_Marker_Current, FFragment_Marker_Params, FFragment_Marker_Requests>
     {
     public:
-        using MarkedDirtyBy = FCk_Fragment_Marker_Requests;
+        using MarkedDirtyBy = FFragment_Marker_Requests;
 
     public:
         using TProcessor::TProcessor;
@@ -39,15 +39,15 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InMarkerEntity,
-            FCk_Fragment_Marker_Current& InCurrentComp,
-            const FCk_Fragment_Marker_Params& InParamsComp,
-            FCk_Fragment_Marker_Requests& InRequestsComp) const -> void;
+            FFragment_Marker_Current& InCurrentComp,
+            const FFragment_Marker_Params& InParamsComp,
+            FFragment_Marker_Requests& InRequestsComp) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKOVERLAPBODY_API FCk_Processor_Marker_UpdateTransform
-        : public TProcessor<FCk_Processor_Marker_UpdateTransform, FCk_Fragment_Marker_Current, FCk_Fragment_Marker_Params, FCk_Tag_Marker_UpdateTransform>
+    class CKOVERLAPBODY_API FProcessor_Marker_UpdateTransform
+        : public TProcessor<FProcessor_Marker_UpdateTransform, FFragment_Marker_Current, FFragment_Marker_Params, FTag_Marker_UpdateTransform>
     {
     public:
         using TProcessor::TProcessor;
@@ -56,16 +56,16 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InMarkerEntity,
-            FCk_Fragment_Marker_Current& InCurrentComp,
-            const FCk_Fragment_Marker_Params& InParamsComp) const -> void;
+            FFragment_Marker_Current& InCurrentComp,
+            const FFragment_Marker_Params& InParamsComp) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKOVERLAPBODY_API FCk_Processor_Marker_DebugPreviewAll
+    class CKOVERLAPBODY_API FProcessor_Marker_DebugPreviewAll
     {
     public:
-        explicit FCk_Processor_Marker_DebugPreviewAll(
+        explicit FProcessor_Marker_DebugPreviewAll(
             FCk_Registry& InRegistry);
 
     public:

@@ -36,13 +36,13 @@ public:
     static auto
     Draw_Marker_DebugLines(
         UObject* InOuter,
-        const ck::FCk_Fragment_Marker_Current& InMarkerCurrent,
+        const ck::FFragment_Marker_Current& InMarkerCurrent,
         const FCk_Fragment_Marker_ParamsData& InMarkerParams) -> void;
 
     static auto
     Draw_Sensor_DebugLines(
         UObject* InOuter,
-        const ck::FCk_Fragment_Sensor_Current& InSensorCurrent,
+        const ck::FFragment_Sensor_Current& InSensorCurrent,
         const FCk_Fragment_Sensor_ParamsData& InSensorParams) -> void;
 
 public:
@@ -134,16 +134,16 @@ auto
 
     const auto& [shapeComp, enableDisable] = [&]() -> TTuple<UShapeComponent*, ECk_EnableDisable>
     {
-        if constexpr (std::is_same_v<T_MarkerOrSensorCurrent, ck::FCk_Fragment_Marker_Current>)
+        if constexpr (std::is_same_v<T_MarkerOrSensorCurrent, ck::FFragment_Marker_Current>)
         {
-            const ck::FCk_Fragment_Marker_Current& markerCurrent = InMarkerOrSensorCurrent;
+            const ck::FFragment_Marker_Current& markerCurrent = InMarkerOrSensorCurrent;
             const auto& marker = markerCurrent.Get_Marker().Get();
 
             return MakeTuple(marker, markerCurrent.Get_EnableDisable());
         }
-        else if constexpr (std::is_same_v<T_MarkerOrSensorCurrent, ck::FCk_Fragment_Sensor_Current>)
+        else if constexpr (std::is_same_v<T_MarkerOrSensorCurrent, ck::FFragment_Sensor_Current>)
         {
-            const ck::FCk_Fragment_Sensor_Current& sensorCurrent = InMarkerOrSensorCurrent;
+            const ck::FFragment_Sensor_Current& sensorCurrent = InMarkerOrSensorCurrent;
             const auto& sensor = sensorCurrent.Get_Sensor().Get();
 
             return MakeTuple(sensor, sensorCurrent.Get_EnableDisable());
@@ -383,12 +383,12 @@ auto
         {
             case ECk_OverlapBody_Type::Marker:
             {
-                InMarkerOrSensorEntity.Get<ck::FCk_Fragment_Marker_Current>()._Marker = Cast<UShapeComponent>(InActorComp);
+                InMarkerOrSensorEntity.Get<ck::FFragment_Marker_Current>()._Marker = Cast<UShapeComponent>(InActorComp);
                 break;
             }
             case ECk_OverlapBody_Type::Sensor:
             {
-                InMarkerOrSensorEntity.Get<ck::FCk_Fragment_Sensor_Current>()._Sensor = Cast<UShapeComponent>(InActorComp);
+                InMarkerOrSensorEntity.Get<ck::FFragment_Sensor_Current>()._Sensor = Cast<UShapeComponent>(InActorComp);
                 break;
             }
             case ECk_OverlapBody_Type::Other:
@@ -458,12 +458,12 @@ auto
         {
             case ECk_OverlapBody_Type::Marker:
             {
-                InMarkerOrSensorEntity.Get<ck::FCk_Fragment_Marker_Current>()._Marker = Cast<UShapeComponent>(InActorComp);
+                InMarkerOrSensorEntity.Get<ck::FFragment_Marker_Current>()._Marker = Cast<UShapeComponent>(InActorComp);
                 break;
             }
             case ECk_OverlapBody_Type::Sensor:
             {
-                InMarkerOrSensorEntity.Get<ck::FCk_Fragment_Sensor_Current>()._Sensor = Cast<UShapeComponent>(InActorComp);
+                InMarkerOrSensorEntity.Get<ck::FFragment_Sensor_Current>()._Sensor = Cast<UShapeComponent>(InActorComp);
                 break;
             }
             case ECk_OverlapBody_Type::Other:
@@ -533,12 +533,12 @@ auto
         {
             case ECk_OverlapBody_Type::Marker:
             {
-                InMarkerOrSensorEntity.Get<ck::FCk_Fragment_Marker_Current>()._Marker = Cast<UShapeComponent>(InActorComp);
+                InMarkerOrSensorEntity.Get<ck::FFragment_Marker_Current>()._Marker = Cast<UShapeComponent>(InActorComp);
                 break;
             }
             case ECk_OverlapBody_Type::Sensor:
             {
-                InMarkerOrSensorEntity.Get<ck::FCk_Fragment_Sensor_Current>()._Sensor = Cast<UShapeComponent>(InActorComp);
+                InMarkerOrSensorEntity.Get<ck::FFragment_Sensor_Current>()._Sensor = Cast<UShapeComponent>(InActorComp);
                 break;
             }
             case ECk_OverlapBody_Type::Other:

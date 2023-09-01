@@ -39,9 +39,9 @@ auto
     auto sensorParams = InParams;
     sensorParams.Set_EntityAttachedTo(InHandle);
 
-    sensorEntity.AddOrGet<ck::FCk_Fragment_Sensor_Params>(sensorParams);
-    sensorEntity.AddOrGet<ck::FCk_Fragment_Sensor_Current>(sensorParams.Get_StartingState());
-    sensorEntity.Add<ck::FCk_Tag_Sensor_Setup>();
+    sensorEntity.AddOrGet<ck::FFragment_Sensor_Params>(sensorParams);
+    sensorEntity.AddOrGet<ck::FFragment_Sensor_Current>(sensorParams.Get_StartingState());
+    sensorEntity.Add<ck::FTag_Sensor_Setup>();
 
     UCk_Utils_GameplayLabel_UE::Add(sensorEntity, sensorName);
 
@@ -86,7 +86,7 @@ auto
 
     RecordOfSensors_Utils::ForEachEntry(InHandle, [&](FCk_Handle InSensorEntity)
     {
-        const auto& sensorName = InSensorEntity.Get<ck::FCk_Fragment_Marker_Params>().Get_Params().Get_MarkerName();
+        const auto& sensorName = InSensorEntity.Get<ck::FFragment_Marker_Params>().Get_Params().Get_MarkerName();
         PreviewSingleSensor<ECk_FragmentQuery_Policy::CurrentEntity>(InOuter, InSensorEntity, sensorName);
     });
 }
@@ -212,7 +212,7 @@ auto
     if (NOT Ensure<ECk_FragmentQuery_Policy::CurrentEntity>(InSensorHandle, UCk_Utils_GameplayLabel_UE::Get_Label(InSensorHandle)))
     { return; }
 
-    auto& requestsComp = InSensorHandle.AddOrGet<ck::FCk_Fragment_Sensor_Requests>();
+    auto& requestsComp = InSensorHandle.AddOrGet<ck::FFragment_Sensor_Requests>();
     requestsComp._BeginOrEndOverlapRequests.Emplace(InRequest);
 }
 
@@ -226,7 +226,7 @@ auto
     if (NOT Ensure<ECk_FragmentQuery_Policy::CurrentEntity>(InSensorHandle, UCk_Utils_GameplayLabel_UE::Get_Label(InSensorHandle)))
     { return; }
 
-    auto& requestsComp = InSensorHandle.AddOrGet<ck::FCk_Fragment_Sensor_Requests>();
+    auto& requestsComp = InSensorHandle.AddOrGet<ck::FFragment_Sensor_Requests>();
     requestsComp._BeginOrEndOverlapRequests.Emplace(InRequest);
 }
 
@@ -240,7 +240,7 @@ auto
     if (NOT Ensure<ECk_FragmentQuery_Policy::CurrentEntity>(InSensorHandle, UCk_Utils_GameplayLabel_UE::Get_Label(InSensorHandle)))
     { return; }
 
-    auto& requestsComp = InSensorHandle.AddOrGet<ck::FCk_Fragment_Sensor_Requests>();
+    auto& requestsComp = InSensorHandle.AddOrGet<ck::FFragment_Sensor_Requests>();
     requestsComp._BeginOrEndOverlapRequests.Emplace(InRequest);
 }
 
@@ -254,7 +254,7 @@ auto
     if (NOT Ensure<ECk_FragmentQuery_Policy::CurrentEntity>(InSensorHandle, UCk_Utils_GameplayLabel_UE::Get_Label(InSensorHandle)))
     { return; }
 
-    auto& requestsComp = InSensorHandle.AddOrGet<ck::FCk_Fragment_Sensor_Requests>();
+    auto& requestsComp = InSensorHandle.AddOrGet<ck::FFragment_Sensor_Requests>();
     requestsComp._BeginOrEndOverlapRequests.Emplace(InRequest);
 }
 
@@ -267,7 +267,7 @@ auto
     if (NOT Ensure<ECk_FragmentQuery_Policy::CurrentEntity>(InSensorHandle, UCk_Utils_GameplayLabel_UE::Get_Label(InSensorHandle)))
     { return; }
 
-    InSensorHandle.Add<ck::FCk_Tag_Sensor_UpdateTransform>();
+    InSensorHandle.Add<ck::FTag_Sensor_UpdateTransform>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

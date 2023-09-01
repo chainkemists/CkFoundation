@@ -15,12 +15,12 @@
 namespace ck
 {
     auto
-        FCk_Processor_Marker_Setup::
+        FProcessor_Marker_Setup::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InMarkerEntity,
-            FCk_Fragment_Marker_Current& InCurrentComp,
-            const FCk_Fragment_Marker_Params& InParamsComp) const
+            FFragment_Marker_Current& InCurrentComp,
+            const FFragment_Marker_Params& InParamsComp) const
         -> void
     {
         InMarkerEntity.Remove<MarkedDirtyBy>();
@@ -101,17 +101,17 @@ namespace ck
     // --------------------------------------------------------
 
     auto
-        FCk_Processor_Marker_HandleRequests::
+        FProcessor_Marker_HandleRequests::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InMarkerEntity,
-            FCk_Fragment_Marker_Current& InCurrentComp,
-            const FCk_Fragment_Marker_Params& InParamsComp,
-            FCk_Fragment_Marker_Requests& InRequestsComp) const
+            FFragment_Marker_Current& InCurrentComp,
+            const FFragment_Marker_Params& InParamsComp,
+            FFragment_Marker_Requests& InRequestsComp) const
         -> void
     {
         ck::algo::ForEachRequest(InRequestsComp._Requests,
-        [&](const FCk_Fragment_Marker_Requests::RequestType& InRequest) -> void
+        [&](const FFragment_Marker_Requests::RequestType& InRequest) -> void
         {
             const auto& currentEnableDisable = InCurrentComp.Get_EnableDisable();
             const auto& newEnableDisable = InRequest.Get_EnableDisable();
@@ -140,12 +140,12 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FCk_Processor_Marker_UpdateTransform::
+        FProcessor_Marker_UpdateTransform::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InMarkerEntity,
-            FCk_Fragment_Marker_Current& InCurrentComp,
-            const FCk_Fragment_Marker_Params& InParamsComp) const
+            FFragment_Marker_Current& InCurrentComp,
+            const FFragment_Marker_Params& InParamsComp) const
         -> void
     {
         // TODO: Extract this in a common function to avoid code duplication between similar system for Sensor
@@ -230,15 +230,15 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    FCk_Processor_Marker_DebugPreviewAll::
-        FCk_Processor_Marker_DebugPreviewAll(
+    FProcessor_Marker_DebugPreviewAll::
+        FProcessor_Marker_DebugPreviewAll(
             FCk_Registry& InRegistry)
         : _Registry(InRegistry)
     {
     }
 
     auto
-        FCk_Processor_Marker_DebugPreviewAll::
+        FProcessor_Marker_DebugPreviewAll::
         Tick(
             FCk_Time)
         -> void
@@ -246,8 +246,8 @@ namespace ck
         if (NOT UCk_Utils_OverlapBody_UserSettings_UE::Get_DebugPreviewAllMarkers())
         { return; }
 
-        _Registry.View<FCk_Fragment_Marker_Current, FCk_Fragment_Marker_Params>().ForEach(
-        [&](FCk_Entity InMarkerEntity, const FCk_Fragment_Marker_Current& InMarkerCurrent, const FCk_Fragment_Marker_Params& InMarkerParams)
+        _Registry.View<FFragment_Marker_Current, FFragment_Marker_Params>().ForEach(
+        [&](FCk_Entity InMarkerEntity, const FFragment_Marker_Current& InMarkerCurrent, const FFragment_Marker_Params& InMarkerParams)
         {
             if (ck::Is_NOT_Valid(InMarkerCurrent.Get_Marker()))
             { return; }

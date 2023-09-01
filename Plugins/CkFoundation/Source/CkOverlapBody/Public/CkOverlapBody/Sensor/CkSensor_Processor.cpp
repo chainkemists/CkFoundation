@@ -13,12 +13,12 @@
 namespace ck
 {
     auto
-        FCk_Processor_Sensor_Setup::
+        FProcessor_Sensor_Setup::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InSensorEntity,
-            FCk_Fragment_Sensor_Current& InCurrentComp,
-            const FCk_Fragment_Sensor_Params& InParamsComp) const
+            FFragment_Sensor_Current& InCurrentComp,
+            const FFragment_Sensor_Params& InParamsComp) const
         -> void
     {
         InSensorEntity.Remove<MarkedDirtyBy>();
@@ -99,17 +99,17 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FCk_Processor_Sensor_HandleRequests::
+        FProcessor_Sensor_HandleRequests::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FCk_Fragment_Sensor_Current& InCurrentComp,
-            const FCk_Fragment_Sensor_Params& InParamsComp,
-            FCk_Fragment_Sensor_Requests& InRequestsComp) const
+            FFragment_Sensor_Current& InCurrentComp,
+            const FFragment_Sensor_Params& InParamsComp,
+            FFragment_Sensor_Requests& InRequestsComp) const
         -> void
     {
         algo::ForEachRequest(InRequestsComp._EnableDisableRequest,
-        [&](const FCk_Fragment_Sensor_Requests::EnableDisableRequestType& InRequest) -> void
+        [&](const FFragment_Sensor_Requests::EnableDisableRequestType& InRequest) -> void
         {
             DoHandleRequest(InHandle, InCurrentComp, InParamsComp, InRequest);
         });
@@ -124,11 +124,11 @@ namespace ck
     }
 
     auto
-        FCk_Processor_Sensor_HandleRequests::
+        FProcessor_Sensor_HandleRequests::
         DoHandleRequest(
             HandleType InSensorEntity,
-            FCk_Fragment_Sensor_Current& InCurrentComp,
-            const FCk_Fragment_Sensor_Params& InParamsComp,
+            FFragment_Sensor_Current& InCurrentComp,
+            const FFragment_Sensor_Params& InParamsComp,
             const FCk_Request_Sensor_EnableDisable& InRequest) const
         -> void
     {
@@ -194,11 +194,11 @@ namespace ck
     }
 
     auto
-        FCk_Processor_Sensor_HandleRequests::
+        FProcessor_Sensor_HandleRequests::
         DoHandleRequest(
             HandleType InSensorEntity,
-            FCk_Fragment_Sensor_Current& InCurrentComp,
-            const FCk_Fragment_Sensor_Params& InParamsComp,
+            FFragment_Sensor_Current& InCurrentComp,
+            const FFragment_Sensor_Params& InParamsComp,
             const FCk_Request_Sensor_OnBeginOverlap& InRequest) const
         -> void
     {
@@ -256,11 +256,11 @@ namespace ck
     }
 
     auto
-        FCk_Processor_Sensor_HandleRequests::
+        FProcessor_Sensor_HandleRequests::
         DoHandleRequest(
             HandleType InSensorEntity,
-            FCk_Fragment_Sensor_Current& InCurrentComp,
-            const FCk_Fragment_Sensor_Params& InParamsComp,
+            FFragment_Sensor_Current& InCurrentComp,
+            const FFragment_Sensor_Params& InParamsComp,
             const FCk_Request_Sensor_OnEndOverlap& InRequest) const
         -> void
     {
@@ -318,11 +318,11 @@ namespace ck
     }
 
     auto
-        FCk_Processor_Sensor_HandleRequests::
+        FProcessor_Sensor_HandleRequests::
         DoHandleRequest(
             HandleType InSensorEntity,
-            FCk_Fragment_Sensor_Current& InCurrentComp,
-            const FCk_Fragment_Sensor_Params& InParamsComp,
+            FFragment_Sensor_Current& InCurrentComp,
+            const FFragment_Sensor_Params& InParamsComp,
             const FCk_Request_Sensor_OnBeginOverlap_NonMarker& InRequest) const
         -> void
     {
@@ -352,11 +352,11 @@ namespace ck
     }
 
     auto
-        FCk_Processor_Sensor_HandleRequests::
+        FProcessor_Sensor_HandleRequests::
         DoHandleRequest(
             HandleType InSensorEntity,
-            FCk_Fragment_Sensor_Current& InCurrentComp,
-            const FCk_Fragment_Sensor_Params& InParamsComp,
+            FFragment_Sensor_Current& InCurrentComp,
+            const FFragment_Sensor_Params& InParamsComp,
             const FCk_Request_Sensor_OnEndOverlap_NonMarker& InRequest) const
         -> void
     {
@@ -396,12 +396,12 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FCk_Processor_Sensor_UpdateTransform::
+        FProcessor_Sensor_UpdateTransform::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InSensorEntity,
-            FCk_Fragment_Sensor_Current& InCurrentComp,
-            const FCk_Fragment_Sensor_Params& InParamsComp) const
+            FFragment_Sensor_Current& InCurrentComp,
+            const FFragment_Sensor_Params& InParamsComp) const
         -> void
     {
         // TODO: Extract this in a common function to avoid code duplication between similar system for Marker
@@ -486,15 +486,15 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    FCk_Processor_Sensor_DebugPreviewAll::
-        FCk_Processor_Sensor_DebugPreviewAll(
+    FProcessor_Sensor_DebugPreviewAll::
+        FProcessor_Sensor_DebugPreviewAll(
             FCk_Registry& InRegistry)
         : _Registry(InRegistry)
     {
     }
 
     auto
-        FCk_Processor_Sensor_DebugPreviewAll::
+        FProcessor_Sensor_DebugPreviewAll::
         Tick(
             FCk_Time)
         -> void
@@ -502,8 +502,8 @@ namespace ck
         if (NOT UCk_Utils_OverlapBody_UserSettings_UE::Get_DebugPreviewAllSensors())
         { return; }
 
-        _Registry.View<FCk_Fragment_Sensor_Current, FCk_Fragment_Sensor_Params>().ForEach(
-        [&](FCk_Entity InSensorEntity, const FCk_Fragment_Sensor_Current& InSensorCurrent, const FCk_Fragment_Sensor_Params& InSensorParams)
+        _Registry.View<FFragment_Sensor_Current, FFragment_Sensor_Params>().ForEach(
+        [&](FCk_Entity InSensorEntity, const FFragment_Sensor_Current& InSensorCurrent, const FFragment_Sensor_Params& InSensorParams)
         {
             if (ck::Is_NOT_Valid(InSensorCurrent.Get_Sensor()))
             { return; }
