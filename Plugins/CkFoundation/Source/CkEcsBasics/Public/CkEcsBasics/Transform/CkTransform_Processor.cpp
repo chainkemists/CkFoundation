@@ -14,7 +14,7 @@
 namespace ck
 {
     auto
-        FCk_Processor_Transform_HandleRequests::
+        FProcessor_Transform_HandleRequests::
         Tick(TimeType InDeltaT) -> void
     {
         _Registry.Clear<FTag_Transform_Updated>();
@@ -25,12 +25,12 @@ namespace ck
     }
 
     auto
-        FCk_Processor_Transform_HandleRequests::
+        FProcessor_Transform_HandleRequests::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FCk_Fragment_Transform_Current& InComp,
-            FCk_Fragment_Transform_Requests& InRequestsComp) const
+            FFragment_Transform_Current& InComp,
+            FFragment_Transform_Requests& InRequestsComp) const
         -> void
     {
         const auto PreviousTransform = InComp.Get_Transform();
@@ -50,7 +50,7 @@ namespace ck
         }));
 
         algo::ForEachRequest(InRequestsComp._ScaleRequests,
-        [&](const FCk_Fragment_Transform_Requests::ScaleRequestType& InRequest)
+        [&](const FFragment_Transform_Requests::ScaleRequestType& InRequest)
         {
             InComp._Transform.SetScale3D(InRequest.Get_NewScale());
             InComp.Set_ComponentsModified(InComp.Get_ComponentsModified() | ECk_TransformComponents::Scale);
@@ -67,10 +67,10 @@ namespace ck
     }
 
     auto
-        FCk_Processor_Transform_HandleRequests::
+        FProcessor_Transform_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FCk_Fragment_Transform_Current& InComp,
+            FFragment_Transform_Current& InComp,
             const FCk_Request_Transform_SetLocation& InRequest) const
         -> void
     {
@@ -78,10 +78,10 @@ namespace ck
     }
 
     auto
-        FCk_Processor_Transform_HandleRequests::
+        FProcessor_Transform_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FCk_Fragment_Transform_Current& InComp,
+            FFragment_Transform_Current& InComp,
             const FCk_Request_Transform_AddLocationOffset& InRequest) const
         -> void
     {
@@ -89,10 +89,10 @@ namespace ck
     }
 
     auto
-        FCk_Processor_Transform_HandleRequests::
+        FProcessor_Transform_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FCk_Fragment_Transform_Current& InComp,
+            FFragment_Transform_Current& InComp,
             const FCk_Request_Transform_SetRotation& InRequest) const
         -> void
     {
@@ -100,10 +100,10 @@ namespace ck
     }
 
     auto
-        FCk_Processor_Transform_HandleRequests::
+        FProcessor_Transform_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FCk_Fragment_Transform_Current& InComp,
+            FFragment_Transform_Current& InComp,
             const FCk_Request_Transform_AddRotationOffset& InRequest) const
         -> void
     {
@@ -114,12 +114,12 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FCk_Processor_Transform_Actor::
+        FProcessor_Transform_Actor::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FCk_Fragment_OwningActor_Current& InOwningActor,
-            const FCk_Fragment_Transform_Current& InComp) const
+            const FFragment_Transform_Current& InComp) const
         -> void
     {
         const auto EntityOwningActor = InOwningActor.Get_EntityOwningActor();
@@ -133,11 +133,11 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FCk_Processor_Transform_Replicate::
+        FProcessor_Transform_Replicate::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_Transform_Current& InCurrent,
+            const FFragment_Transform_Current& InCurrent,
             const TObjectPtr<UCk_Fragment_Transform_Rep>& InComp) const
         -> void
     {
@@ -158,19 +158,21 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FCk_Processor_Transform_InterpolateToGoal::
+        FProcessor_Transform_InterpolateToGoal::
         ForEachEntity(TimeType InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_Interpolation_Params& InParams,
-            FCk_Fragment_Transform_Current& InCurrent,
-            FCk_Fragment_Transform_NewGoal_Location& InGoal) const
+            const FFragment_Transform_Params& InParams,
+            FFragment_Transform_Current& InCurrent,
+            FFragment_Transform_NewGoal_Location& InGoal) const
         -> void
     {
         // TODO: pre-calculate when creating FCk_Fragment_Transform_NewGoal to avoid this expensive operation
         const auto GoalDistance = InGoal.Get_InterpolationOffset().Length();
         InGoal.Set_DeltaT(InGoal.Get_DeltaT() + InDeltaT);
 
-        if (GoalDistance > InParams.Get_MaxSmoothUpdateDistance())
+        const auto& InterpSettings = InParams.Get_InterpolationSettings();
+
+        if (GoalDistance > InterpSettings.Get_MaxSmoothUpdateDistance())
         {
             UCk_Utils_Transform_UE::Request_AddLocationOffset
             (
@@ -178,7 +180,7 @@ namespace ck
                 FCk_Request_Transform_AddLocationOffset{}.Set_DeltaLocation(InGoal.Get_InterpolationOffset())
             );
 
-            InHandle.Remove<FCk_Fragment_Transform_NewGoal_Location>();
+            InHandle.Remove<FFragment_Transform_NewGoal_Location>();
             return;
         }
 
@@ -186,11 +188,11 @@ namespace ck
         // - calculate the fraction of the goal we need to interpolate this frame
         // - add the fraction of the goal to the current location
 
-        const auto SmoothTime = InParams.Get_SmoothLocationTime();
+        const auto SmoothTime = InterpSettings.Get_SmoothLocationTime();
 
         if (InGoal.Get_DeltaT() > SmoothTime)
         {
-            InHandle.Remove<FCk_Fragment_Transform_NewGoal_Location>();
+            InHandle.Remove<FFragment_Transform_NewGoal_Location>();
             return;
         }
 

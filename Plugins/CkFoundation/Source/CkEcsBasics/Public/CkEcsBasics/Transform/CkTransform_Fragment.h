@@ -21,69 +21,52 @@ class UCk_Fragment_Transform_Rep;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
-struct CKECSBASICS_API FCk_Fragment_Interpolation_Params
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Fragment_Interpolation_Params);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess, ValidEnumValues="Linear"))
-    ECk_Interpolation_Strategy _Strategy = ECk_Interpolation_Strategy::Linear;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
-    float _MaxSmoothUpdateDistance = 256.0f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
-    float _NoSmoothUpdateDistance = 384.0f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
-    FCk_Time _SmoothLocationTime = FCk_Time{0.1f};
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
-    FCk_Time _SmoothRotationTime = FCk_Time{0.05f};
-
-public:
-    CK_PROPERTY(_Strategy);
-    CK_PROPERTY(_MaxSmoothUpdateDistance);
-    CK_PROPERTY(_NoSmoothUpdateDistance);
-    CK_PROPERTY(_SmoothLocationTime);
-    CK_PROPERTY(_SmoothRotationTime);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKECSBASICS_API FCk_Fragment_Transform_NewGoal_Location
-{
-    GENERATED_BODY()
-
-    friend class FCk_Processor_Transform_InterpolateToGoal;
-
-public:
-    CK_GENERATED_BODY(FCk_Fragment_Transform_NewGoal_Location);
-
-private:
-    UPROPERTY()
-    FVector _InterpolationOffset;
-
-    UPROPERTY()
-    FCk_Time _DeltaT;
-
-public:
-    CK_PROPERTY(_InterpolationOffset);
-    CK_PROPERTY(_DeltaT);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
 namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
     struct FTag_Transform_Updated {};
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKECSBASICS_API FFragment_Transform_Params
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Transform_Params);
+
+    public:
+        using SettingsType = FCk_Transform_Interpolation_Settings;
+
+    public:
+        FFragment_Transform_Params() = default;
+        FFragment_Transform_Params(SettingsType InSettings)
+            : _InterpolationSettings(std::move(InSettings))
+        { }
+
+    private:
+        FCk_Transform_Interpolation_Settings _InterpolationSettings;
+
+    public:
+        CK_PROPERTY(_InterpolationSettings);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct FFragment_Transform_NewGoal_Location
+    {
+        friend class FProcessor_Transform_InterpolateToGoal;
+
+    public:
+        CK_GENERATED_BODY(FFragment_Transform_NewGoal_Location);
+
+    private:
+        FVector _InterpolationOffset;
+        FCk_Time _DeltaT;
+
+    public:
+        CK_PROPERTY(_InterpolationOffset);
+        CK_PROPERTY(_DeltaT);
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -95,7 +78,7 @@ namespace ck
         using MutabilityPolicy = policy::TMutability<T_ConstOrNonConst>;
 
     public:
-        friend class FCk_Processor_Transform_HandleRequests;
+        friend class FProcessor_Transform_HandleRequests;
         friend class UCk_Fragment_Transform_Rep;
         friend UCk_Utils_Transform_UE;
 
@@ -114,18 +97,18 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FCk_Fragment_Transform_Current = TFragment_Transform<type_traits::NonConst>;
+    using FFragment_Transform_Current = TFragment_Transform<type_traits::NonConst>;
 
     using FCk_Fragment_ImmutableTransform_Current = TFragment_Transform<type_traits::Const>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKECSBASICS_API FCk_Fragment_Transform_Requests
+    struct CKECSBASICS_API FFragment_Transform_Requests
     {
-        CK_GENERATED_BODY(FCk_Fragment_Transform_Requests);
+        CK_GENERATED_BODY(FFragment_Transform_Requests);
 
     public:
-        friend class FCk_Processor_Transform_HandleRequests;
+        friend class FProcessor_Transform_HandleRequests;
         friend class UCk_Utils_Transform_UE;
 
     public:
@@ -148,13 +131,10 @@ namespace ck
         CK_PROPERTY_GET(_LocationRequests);
         CK_PROPERTY_GET(_ScaleRequests);
     };
-}
 
-// --------------------------------------------------------------------------------------------------------------------
-// Definitions
+    // --------------------------------------------------------------------------------------------------------------------
+    // Definitions
 
-namespace ck
-{
     template <typename T_ConstOrNonConst>
     TFragment_Transform<T_ConstOrNonConst>::
         TFragment_Transform(
@@ -162,11 +142,13 @@ namespace ck
         : _Transform(std::move(InTransform))
     {
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class FProcessor_Transform_Replicate;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-
-namespace ck { class FCk_Processor_Transform_Replicate; }
 
 UCLASS(Blueprintable)
 class CKECSBASICS_API UCk_Fragment_Transform_Rep : public UCk_Ecs_ReplicatedObject_UE
@@ -177,7 +159,7 @@ public:
     CK_GENERATED_BODY(UCk_Fragment_Transform_Rep);
 
 public:
-    friend class ck::FCk_Processor_Transform_Replicate;
+    friend class ck::FProcessor_Transform_Replicate;
 
 public:
     virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
