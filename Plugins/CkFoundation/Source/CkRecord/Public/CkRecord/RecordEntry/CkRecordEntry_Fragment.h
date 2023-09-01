@@ -17,10 +17,10 @@ namespace ck
 *    * RecordEntry should NOT be used to link back back to the Record (and as such, a function like Get_Record does
 *    * NOT exist)
      */
-    struct FCk_Fragment_RecordEntry
+    struct FFragment_RecordEntry
     {
     public:
-        CK_GENERATED_BODY(FCk_Fragment_RecordEntry);
+        CK_GENERATED_BODY(FFragment_RecordEntry);
 
         friend UCk_Utils_RecordEntry_UE;
         friend UCk_Utils_Record_UE;

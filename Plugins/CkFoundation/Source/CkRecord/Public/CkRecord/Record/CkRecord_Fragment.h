@@ -11,7 +11,7 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FCk_Fragment_Record
+    struct FFragment_Record
     {
         friend class UCk_Utils_Record_UE;
         friend class FCk_Processor_Record_Destructor;
@@ -21,7 +21,7 @@ namespace ck
         friend class TCk_Utils_Record;
 
     public:
-        CK_GENERATED_BODY(FCk_Fragment_Record);
+        CK_GENERATED_BODY(FFragment_Record);
 
         using EntityType = FCk_Entity;
         using RecordEntriesType = TSet<EntityType>;

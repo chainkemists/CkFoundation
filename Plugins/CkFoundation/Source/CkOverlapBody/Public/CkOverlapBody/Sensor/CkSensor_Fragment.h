@@ -111,7 +111,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FFragment_RecordOfSensors : public FCk_Fragment_Record {};
+    struct FFragment_RecordOfSensors : public FFragment_Record {};
 }
 
 
