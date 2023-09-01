@@ -10,13 +10,13 @@
 
 namespace ck
 {
-    struct FCk_Fragment_GameplayLabel
+    struct FFragment_GameplayLabel
     {
-        CK_GENERATED_BODY(FCk_Fragment_GameplayLabel);
+        CK_GENERATED_BODY(FFragment_GameplayLabel);
 
     public:
-        FCk_Fragment_GameplayLabel() = default;
-        explicit FCk_Fragment_GameplayLabel(FGameplayTag InLabel);
+        FFragment_GameplayLabel() = default;
+        explicit FFragment_GameplayLabel(FGameplayTag InLabel);
 
     public:
         auto operator==(const ThisType& InOther) const -> bool;
