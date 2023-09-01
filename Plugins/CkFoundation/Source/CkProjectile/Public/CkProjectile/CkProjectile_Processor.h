@@ -10,8 +10,8 @@ namespace ck
 {
     class CKPROJECTILE_API FCk_Processor_Projectile_Update : public TProcessor<
             FCk_Processor_Projectile_Update,
-            FCk_Fragment_EulerIntegrator_Current,
-            FCk_Tag_EulerIntegrator_Update>
+            FFragment_EulerIntegrator_Current,
+            FTag_EulerIntegrator_Update>
     {
     public:
         using TProcessor::TProcessor;
@@ -21,7 +21,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_EulerIntegrator_Current& InIntegratorComp) const -> void;
+            const FFragment_EulerIntegrator_Current& InIntegratorComp) const -> void;
     };
 }
 

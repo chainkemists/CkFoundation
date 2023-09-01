@@ -9,14 +9,14 @@
 
 namespace ck
 {
-    class CKPHYSICS_API FCk_Processor_Velocity_Setup : public TProcessor<
-            FCk_Processor_Velocity_Setup,
-            FCk_Fragment_Velocity_Params,
-            FCk_Fragment_Velocity_Current,
-            FCk_Tag_Velocity_Setup>
+    class CKPHYSICS_API FProcessor_Velocity_Setup : public TProcessor<
+            FProcessor_Velocity_Setup,
+            FFragment_Velocity_Params,
+            FFragment_Velocity_Current,
+            FTag_Velocity_Setup>
     {
     public:
-        using MarkedDirtyBy = FCk_Tag_Velocity_Setup;
+        using MarkedDirtyBy = FTag_Velocity_Setup;
 
     public:
         using TProcessor::TProcessor;
@@ -26,21 +26,21 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_Velocity_Params& InParams,
-            FCk_Fragment_Velocity_Current& InCurrent) const -> void;
+            const FFragment_Velocity_Params& InParams,
+            FFragment_Velocity_Current& InCurrent) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKPHYSICS_API FCk_Processor_VelocityModifier_SingleTarget_Setup : public TProcessor<
-            FCk_Processor_VelocityModifier_SingleTarget_Setup,
-            FCk_Fragment_Velocity_Current,
+    class CKPHYSICS_API FProcessor_VelocityModifier_SingleTarget_Setup : public TProcessor<
+            FProcessor_VelocityModifier_SingleTarget_Setup,
+            FFragment_Velocity_Current,
             FCk_Fragment_Velocity_Target,
-            FCk_Tag_VelocityModifier_SingleTarget,
-            FCk_Tag_VelocityModifier_SingleTarget_Setup>
+            FTag_VelocityModifier_SingleTarget,
+            FTag_VelocityModifier_SingleTarget_Setup>
     {
     public:
-        using MarkedDirtyBy = FCk_Tag_VelocityModifier_SingleTarget_Setup;
+        using MarkedDirtyBy = FTag_VelocityModifier_SingleTarget_Setup;
 
     public:
         using TProcessor::TProcessor;
@@ -50,17 +50,17 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_Velocity_Current& InVelocity,
+            const FFragment_Velocity_Current& InVelocity,
             const FCk_Fragment_Velocity_Target& InTarget) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKPHYSICS_API FCk_Processor_VelocityModifier_SingleTarget_Teardown : public TProcessor<
-            FCk_Processor_VelocityModifier_SingleTarget_Teardown,
-            FCk_Fragment_Velocity_Current,
+    class CKPHYSICS_API FProcessor_VelocityModifier_SingleTarget_Teardown : public TProcessor<
+            FProcessor_VelocityModifier_SingleTarget_Teardown,
+            FFragment_Velocity_Current,
             FCk_Fragment_Velocity_Target,
-            FCk_Tag_VelocityModifier_SingleTarget,
+            FTag_VelocityModifier_SingleTarget,
             FCk_Tag_PendingDestroyEntity>
     {
     public:
@@ -74,14 +74,14 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_Velocity_Current& InVelocity,
+            const FFragment_Velocity_Current& InVelocity,
             const FCk_Fragment_Velocity_Target& InTarget) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKPHYSICS_API FCk_Processor_Velocity_Replicate
-        : public TProcessor<FCk_Processor_Velocity_Replicate, FCk_Fragment_Velocity_Current, TObjectPtr<UCk_Fragment_Velocity_Rep>>
+    class CKPHYSICS_API FProcessor_Velocity_Replicate
+        : public TProcessor<FProcessor_Velocity_Replicate, FFragment_Velocity_Current, TObjectPtr<UCk_Fragment_Velocity_Rep>>
     {
     public:
         using TProcessor::TProcessor;
@@ -90,7 +90,7 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_Velocity_Current& InCurrent,
+            const FFragment_Velocity_Current& InCurrent,
             const TObjectPtr<UCk_Fragment_Velocity_Rep>& InVelRepComp) const -> void;
     };
 }

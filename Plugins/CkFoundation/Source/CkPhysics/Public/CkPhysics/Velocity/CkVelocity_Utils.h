@@ -16,7 +16,7 @@
 
 namespace ck
 {
-    class FCk_Processor_VelocityModifier_SingleTarget_Teardown;
+    class FProcessor_VelocityModifier_SingleTarget_Teardown;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -33,7 +33,7 @@ public:
     friend class UCk_Utils_Velocity_SingleTarget_UE;
     friend class UCk_Utils_Velocity_MultipleTargets_UE;
 
-    friend class ck::FCk_Processor_VelocityModifier_SingleTarget_Teardown;
+    friend class ck::FProcessor_VelocityModifier_SingleTarget_Teardown;
 
 private:
     struct VelocityTarget_Utils : public ck::TUtils_EntityHolder<ck::FCk_Fragment_Velocity_Target> {};

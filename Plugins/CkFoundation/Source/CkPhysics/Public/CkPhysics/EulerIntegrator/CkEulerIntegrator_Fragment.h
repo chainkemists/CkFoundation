@@ -9,19 +9,19 @@
 
 namespace ck
 {
-    struct FCk_Tag_EulerIntegrator_DoOnePredictiveUpdate {};
-    struct FCk_Tag_EulerIntegrator_Update {};
+    struct FTag_EulerIntegrator_DoOnePredictiveUpdate {};
+    struct FTag_EulerIntegrator_Update {};
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPHYSICS_API FCk_Fragment_EulerIntegrator_Current
+    struct CKPHYSICS_API FFragment_EulerIntegrator_Current
     {
     public:
-        CK_GENERATED_BODY(FCk_Fragment_EulerIntegrator_Current);
+        CK_GENERATED_BODY(FFragment_EulerIntegrator_Current);
 
     public:
-        friend class FCk_Processor_EulerIntegrator_DoOnePredictiveUpdate;
-        friend class FCk_Processor_EulerIntegrator_Update;
+        friend class FProcessor_EulerIntegrator_DoOnePredictiveUpdate;
+        friend class FProcessor_EulerIntegrator_Update;
 
     private:
         FVector _DistanceOffset = FVector::ZeroVector;

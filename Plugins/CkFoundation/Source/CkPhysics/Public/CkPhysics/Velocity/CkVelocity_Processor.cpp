@@ -8,12 +8,12 @@
 namespace ck
 {
     auto
-        FCk_Processor_Velocity_Setup::
+        FProcessor_Velocity_Setup::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_Velocity_Params& InParams,
-            FCk_Fragment_Velocity_Current& InCurrent) const
+            const FFragment_Velocity_Params& InParams,
+            FFragment_Velocity_Current& InCurrent) const
         -> void
     {
         const auto& params = InParams.Get_Params();
@@ -44,16 +44,16 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FCk_Processor_VelocityModifier_SingleTarget_Setup::
+        FProcessor_VelocityModifier_SingleTarget_Setup::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_Velocity_Current& InVelocity,
+            const FFragment_Velocity_Current& InVelocity,
             const FCk_Fragment_Velocity_Target& InTarget) const
         -> void
     {
         auto targetEntity  = InTarget.Get_Entity();
-        auto& targetVelocity = targetEntity.Get<FCk_Fragment_Velocity_Current>();
+        auto& targetVelocity = targetEntity.Get<FFragment_Velocity_Current>();
 
         targetVelocity._CurrentVelocity += InVelocity.Get_CurrentVelocity();
 
@@ -63,16 +63,16 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FCk_Processor_VelocityModifier_SingleTarget_Teardown::
+        FProcessor_VelocityModifier_SingleTarget_Teardown::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_Velocity_Current& InVelocity,
+            const FFragment_Velocity_Current& InVelocity,
             const FCk_Fragment_Velocity_Target& InTarget) const
         -> void
     {
         auto targetEntity = InTarget.Get_Entity();
-        auto& targetVelocity = targetEntity.Get<FCk_Fragment_Velocity_Current>();
+        auto& targetVelocity = targetEntity.Get<FFragment_Velocity_Current>();
 
         targetVelocity._CurrentVelocity -= InVelocity._CurrentVelocity;
     }
@@ -80,11 +80,11 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FCk_Processor_Velocity_Replicate::
+        FProcessor_Velocity_Replicate::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_Velocity_Current& InCurrent,
+            const FFragment_Velocity_Current& InCurrent,
             const TObjectPtr<UCk_Fragment_Velocity_Rep>& InVelRepComp) const
         -> void
     {

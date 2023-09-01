@@ -9,22 +9,22 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FCk_Processor_EulerIntegrator_DoOnePredictiveUpdate::
+        FProcessor_EulerIntegrator_DoOnePredictiveUpdate::
         Tick(TimeType InDeltaT)
         -> void
     {
         TProcessor::Tick(InDeltaT);
 
-        _Registry.Clear<FCk_Tag_EulerIntegrator_DoOnePredictiveUpdate>();
+        _Registry.Clear<FTag_EulerIntegrator_DoOnePredictiveUpdate>();
     }
 
     auto
-        FCk_Processor_EulerIntegrator_DoOnePredictiveUpdate::
+        FProcessor_EulerIntegrator_DoOnePredictiveUpdate::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FCk_Fragment_EulerIntegrator_Current& InIntegrator,
-            FCk_Fragment_Velocity_Current& InVelocity,
+            FFragment_EulerIntegrator_Current& InIntegrator,
+            FFragment_Velocity_Current& InVelocity,
             const FFragment_Acceleration_Current& InAcceleration) const
         -> void
     {
@@ -48,7 +48,7 @@ namespace ck
         const auto& Acceleration = InAcceleration.Get_CurrentAcceleration();
         const auto& NewVelocity = OldVelocity + Acceleration * InDeltaT.Get_Seconds();
 
-        InVelocity = FCk_Fragment_Velocity_Current{NewVelocity};
+        InVelocity = FFragment_Velocity_Current{NewVelocity};
 
         const auto [VelDir, VelLength] = [&]()
         {
@@ -70,12 +70,12 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FCk_Processor_EulerIntegrator_Update::
+        FProcessor_EulerIntegrator_Update::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FCk_Fragment_EulerIntegrator_Current& InIntegrator,
-            FCk_Fragment_Velocity_Current& InVelocity,
+            FFragment_EulerIntegrator_Current& InIntegrator,
+            FFragment_Velocity_Current& InVelocity,
             const FFragment_Acceleration_Current& InAcceleration) const
         -> void
     {
@@ -83,7 +83,7 @@ namespace ck
         const auto& Acceleration = InAcceleration.Get_CurrentAcceleration();
         const auto& NewVelocity = OldVelocity + Acceleration * InDeltaT.Get_Seconds();
 
-        InVelocity = FCk_Fragment_Velocity_Current{NewVelocity};
+        InVelocity = FFragment_Velocity_Current{NewVelocity};
 
         const auto [VelDir, VelLength] = [&]()
         {
