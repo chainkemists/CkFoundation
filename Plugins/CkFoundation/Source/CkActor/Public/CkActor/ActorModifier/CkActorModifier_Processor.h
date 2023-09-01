@@ -13,11 +13,11 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKACTOR_API FCk_Processor_ActorModifier_SpawnActor_HandleRequests
-        : public TProcessor<FCk_Processor_ActorModifier_SpawnActor_HandleRequests, FCk_Fragment_ActorModifier_SpawnActorRequests>
+    class CKACTOR_API FProcessor_ActorModifier_SpawnActor_HandleRequests
+        : public TProcessor<FProcessor_ActorModifier_SpawnActor_HandleRequests, FFragment_ActorModifier_SpawnActorRequests>
     {
     public:
-        using MarkedDirtyBy = FCk_Fragment_ActorModifier_SpawnActorRequests;
+        using MarkedDirtyBy = FFragment_ActorModifier_SpawnActorRequests;
 
     public:
         using TProcessor::TProcessor;
@@ -25,16 +25,16 @@ namespace ck
     public:
         auto ForEachEntity(const TimeType& InDeltaT,
             HandleType InHandle,
-            FCk_Fragment_ActorModifier_SpawnActorRequests& InRequests) const -> void;
+            FFragment_ActorModifier_SpawnActorRequests& InRequests) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKACTOR_API FCk_Processor_ActorModifier_AddActorComponent_HandleRequests
-        : public TProcessor<FCk_Processor_ActorModifier_AddActorComponent_HandleRequests, FCk_Fragment_OwningActor_Current, FCk_Fragment_ActorModifier_AddActorComponentRequests>
+    class CKACTOR_API FProcessor_ActorModifier_AddActorComponent_HandleRequests
+        : public TProcessor<FProcessor_ActorModifier_AddActorComponent_HandleRequests, FFragment_OwningActor_Current, FFragment_ActorModifier_AddActorComponentRequests>
     {
     public:
-        using MarkedDirtyBy = FCk_Fragment_ActorModifier_AddActorComponentRequests;
+        using MarkedDirtyBy = FFragment_ActorModifier_AddActorComponentRequests;
 
     public:
         using TProcessor::TProcessor;
@@ -43,8 +43,8 @@ namespace ck
         auto ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_OwningActor_Current& InOwningActorComp,
-            FCk_Fragment_ActorModifier_AddActorComponentRequests& InRequests) const -> void;
+            const FFragment_OwningActor_Current& InOwningActorComp,
+            FFragment_ActorModifier_AddActorComponentRequests& InRequests) const -> void;
     };
 }
 

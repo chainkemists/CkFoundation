@@ -20,7 +20,7 @@ auto
     if (NOT UCk_Utils_OwningActor_UE::Ensure(InHandle))
     { return; }
 
-    auto& requestsComp = InHandle.AddOrGet<ck::FCk_Fragment_ActorModifier_SpawnActorRequests>();
+    auto& requestsComp = InHandle.AddOrGet<ck::FFragment_ActorModifier_SpawnActorRequests>();
     requestsComp._Requests.Add(InRequest);
 
     if (NOT InDelegate.IsBound())
@@ -42,7 +42,7 @@ auto
     if (NOT UCk_Utils_OwningActor_UE::Ensure(InHandle))
     { return; }
 
-    auto& requestsComp = InHandle.AddOrGet<ck::FCk_Fragment_ActorModifier_AddActorComponentRequests>();
+    auto& requestsComp = InHandle.AddOrGet<ck::FFragment_ActorModifier_AddActorComponentRequests>();
     requestsComp._Requests.Add(InRequest);
 
     if (NOT InDelegate.IsBound())
