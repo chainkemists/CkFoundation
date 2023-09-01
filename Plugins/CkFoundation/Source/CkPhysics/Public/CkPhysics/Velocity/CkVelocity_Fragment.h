@@ -19,23 +19,25 @@ class UCk_Utils_Velocity_UE;
 
 namespace ck
 {
-    struct FCk_Tag_Velocity_Setup {};
-    struct FCk_Tag_VelocityModifier_SingleTarget {};
-    struct FCk_Tag_VelocityModifier_SingleTarget_Setup {};
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct FTag_Velocity_Setup {};
+    struct FTag_VelocityModifier_SingleTarget {};
+    struct FTag_VelocityModifier_SingleTarget_Setup {};
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPHYSICS_API FCk_Fragment_Velocity_Params
+    struct CKPHYSICS_API FFragment_Velocity_Params
     {
     public:
-        CK_GENERATED_BODY(FCk_Fragment_Velocity_Params);
+        CK_GENERATED_BODY(FFragment_Velocity_Params);
 
     public:
         using ParamsType = FCk_Fragment_Velocity_ParamsData;
 
     public:
-        FCk_Fragment_Velocity_Params() = default;
-        explicit FCk_Fragment_Velocity_Params(ParamsType InParams);
+        FFragment_Velocity_Params() = default;
+        explicit FFragment_Velocity_Params(ParamsType InParams);
 
     private:
         ParamsType _Params;
@@ -46,20 +48,20 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPHYSICS_API FCk_Fragment_Velocity_Current
+    struct CKPHYSICS_API FFragment_Velocity_Current
     {
     public:
-        CK_GENERATED_BODY(FCk_Fragment_Velocity_Current);
+        CK_GENERATED_BODY(FFragment_Velocity_Current);
 
     public:
         friend class UCk_Utils_Velocity_UE;
-        friend class FCk_Processor_Velocity_Setup;
-        friend class FCk_Processor_VelocityModifier_SingleTarget_Setup;
-        friend class FCk_Processor_VelocityModifier_SingleTarget_Teardown;
+        friend class FProcessor_Velocity_Setup;
+        friend class FProcessor_VelocityModifier_SingleTarget_Setup;
+        friend class FProcessor_VelocityModifier_SingleTarget_Teardown;
 
     public:
-        FCk_Fragment_Velocity_Current() = default;
-        explicit FCk_Fragment_Velocity_Current(
+        FFragment_Velocity_Current() = default;
+        explicit FFragment_Velocity_Current(
             FVector InVelocity);
 
     private:
@@ -90,7 +92,7 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck { class FCk_Processor_Velocity_Replicate; }
+namespace ck { class FProcessor_Velocity_Replicate; }
 
 UCLASS(Blueprintable)
 class CKPHYSICS_API UCk_Fragment_Velocity_Rep : public UCk_Ecs_ReplicatedObject_UE
@@ -101,7 +103,7 @@ public:
     CK_GENERATED_BODY(UCk_Fragment_Velocity_Rep);
 
 public:
-    friend class ck::FCk_Processor_Velocity_Replicate;
+    friend class ck::FProcessor_Velocity_Replicate;
 
 public:
     virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;

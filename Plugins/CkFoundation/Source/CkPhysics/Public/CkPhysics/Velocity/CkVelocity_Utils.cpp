@@ -11,9 +11,9 @@ auto
         const FCk_Fragment_Velocity_ParamsData& InParams)
     -> void
 {
-    InHandle.Add<ck::FCk_Fragment_Velocity_Params>(InParams);
-    InHandle.Add<ck::FCk_Fragment_Velocity_Current>(InParams.Get_StartingVelocity());
-    InHandle.Add<ck::FCk_Tag_Velocity_Setup>();
+    InHandle.Add<ck::FFragment_Velocity_Params>(InParams);
+    InHandle.Add<ck::FFragment_Velocity_Current>(InParams.Get_StartingVelocity());
+    InHandle.Add<ck::FTag_Velocity_Setup>();
 
     TryAddReplicatedFragment<UCk_Fragment_Velocity_Rep>(InHandle);
 }
@@ -24,7 +24,7 @@ auto
         FCk_Handle InHandle)
     -> bool
 {
-    return InHandle.Has_All<ck::FCk_Fragment_Velocity_Current, ck::FCk_Fragment_Velocity_Params>();
+    return InHandle.Has_All<ck::FFragment_Velocity_Current, ck::FFragment_Velocity_Params>();
 }
 
 auto
@@ -48,7 +48,7 @@ auto
     if (NOT Ensure(InHandle))
     { return {}; }
 
-    return InHandle.Get<ck::FCk_Fragment_Velocity_Current>().Get_CurrentVelocity();
+    return InHandle.Get<ck::FFragment_Velocity_Current>().Get_CurrentVelocity();
 }
 
 auto
@@ -61,7 +61,7 @@ auto
     if (NOT Ensure(InHandle))
     { return; }
 
-    InHandle.Get<ck::FCk_Fragment_Velocity_Current>()._CurrentVelocity = InNewVelocity;
+    InHandle.Get<ck::FFragment_Velocity_Current>()._CurrentVelocity = InNewVelocity;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -78,8 +78,8 @@ auto
         InHandle)
     { return; }
 
-    InHandle.Add<ck::FCk_Tag_VelocityModifier_SingleTarget>();
-    InHandle.Add<ck::FCk_Tag_VelocityModifier_SingleTarget_Setup>();
+    InHandle.Add<ck::FTag_VelocityModifier_SingleTarget>();
+    InHandle.Add<ck::FTag_VelocityModifier_SingleTarget_Setup>();
 
     UCk_Utils_Velocity_UE::VelocityTarget_Utils::Add(InHandle, InParams.Get_Target());
     UCk_Utils_Velocity_UE::Add(InHandle, InParams.Get_VelocityParams());
@@ -91,7 +91,7 @@ auto
         FCk_Handle InHandle)
     -> bool
 {
-    return InHandle->Has<ck::FCk_Tag_VelocityModifier_SingleTarget>(InHandle.Get_Entity()) &&
+    return InHandle->Has<ck::FTag_VelocityModifier_SingleTarget>(InHandle.Get_Entity()) &&
            UCk_Utils_Velocity_UE::VelocityTarget_Utils::Has(InHandle);
 }
 

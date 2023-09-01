@@ -10,9 +10,9 @@ auto
         FCk_Handle InHandle)
     -> void
 {
-    InHandle.Add<ck::FCk_Fragment_EulerIntegrator_Current>();
-    InHandle.Add<ck::FCk_Tag_EulerIntegrator_Update>();
-    InHandle.Add<ck::FCk_Tag_EulerIntegrator_DoOnePredictiveUpdate>();
+    InHandle.Add<ck::FFragment_EulerIntegrator_Current>();
+    InHandle.Add<ck::FTag_EulerIntegrator_Update>();
+    InHandle.Add<ck::FTag_EulerIntegrator_DoOnePredictiveUpdate>();
 }
 
 auto
@@ -21,8 +21,8 @@ auto
         FCk_Handle InHandle)
     -> void
 {
-    InHandle.Remove<ck::FCk_Fragment_EulerIntegrator_Current>();
-    InHandle.Remove<ck::FCk_Tag_EulerIntegrator_Update>();
+    InHandle.Remove<ck::FFragment_EulerIntegrator_Current>();
+    InHandle.Remove<ck::FTag_EulerIntegrator_Update>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
