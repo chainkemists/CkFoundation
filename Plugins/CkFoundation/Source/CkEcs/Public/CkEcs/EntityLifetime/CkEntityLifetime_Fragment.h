@@ -4,9 +4,9 @@
 
 namespace ck
 {
-    struct FCk_Tag_PendingDestroyEntity { };
-    struct FCk_Tag_TriggerDestroyEntity { };
-    struct FCk_Tag_EntityJustCreated    { };
+    struct FTag_PendingDestroyEntity { };
+    struct FTag_TriggerDestroyEntity { };
+    struct FTag_EntityJustCreated    { };
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -12,46 +12,46 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    FCk_Processor_EntityLifetime_EntityJustCreated::
-        FCk_Processor_EntityLifetime_EntityJustCreated(
+    FProcessor_EntityLifetime_EntityJustCreated::
+        FProcessor_EntityLifetime_EntityJustCreated(
             const FRegistryType& InRegistry)
         : _Registry(InRegistry)
     {
     }
 
     auto
-        FCk_Processor_EntityLifetime_EntityJustCreated::
+        FProcessor_EntityLifetime_EntityJustCreated::
         Tick(
             FTimeType)
         -> void
     {
-        _Registry.Clear<FCk_Tag_EntityJustCreated>();
+        _Registry.Clear<FTag_EntityJustCreated>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FCk_Processor_EntityLifetime_TriggerDestroyEntity::
+        FProcessor_EntityLifetime_TriggerDestroyEntity::
         Tick(
             TimeType InDeltaT)
         -> void
     {
         Super::Tick(InDeltaT);
 
-        _Registry.Clear<FCk_Tag_TriggerDestroyEntity>();
+        _Registry.Clear<FTag_TriggerDestroyEntity>();
     }
 
     auto
-        FCk_Processor_EntityLifetime_TriggerDestroyEntity::
+        FProcessor_EntityLifetime_TriggerDestroyEntity::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle) const
         -> void
     {
         ecs::VeryVerbose(TEXT("Entity [{}] set to 'Pending Destroy'"), InHandle);
-        InHandle.Add<FCk_Tag_PendingDestroyEntity>(InHandle);
+        InHandle.Add<FTag_PendingDestroyEntity>(InHandle);
 
-        if (InHandle.Has<FCk_Tag_Replicated>())
+        if (InHandle.Has<FTag_Replicated>())
         {
             ck::algo::ForEachIsValid(UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(InHandle).Get_ReplicatedObjects(),
                 [&](UCk_ReplicatedObject_UE* InRO)
@@ -74,7 +74,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FCk_Processor_EntityLifetime_PendingDestroyEntity::
+        FProcessor_EntityLifetime_PendingDestroyEntity::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle) const
@@ -82,7 +82,7 @@ namespace ck
     {
         ecs::VeryVerbose(TEXT("Destroying Entity [{}]"), InHandle);
 
-        InHandle.Remove<FCk_Tag_PendingDestroyEntity>();
+        InHandle.Remove<FTag_PendingDestroyEntity>();
 
         InHandle->DestroyEntity(InHandle.Get_Entity());
     }
