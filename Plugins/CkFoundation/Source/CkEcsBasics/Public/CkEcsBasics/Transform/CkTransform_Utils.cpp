@@ -113,7 +113,7 @@ auto
 
     if (Has<ck::type_traits::Const>(InHandle))
     {
-        return InHandle.Get<ck::FCk_Fragment_ImmutableTransform_Current>().Get_Transform();
+        return InHandle.Get<ck::FFragment_ImmutableTransform_Current>().Get_Transform();
     }
 
     CK_ENSURE_FALSE(TEXT("Cannot get the Current Transform of Entity [{}] because it has no Transform component"), InHandle);
@@ -134,7 +134,7 @@ auto
 
     if (Has<ck::type_traits::Const>(InHandle))
     {
-        return InHandle.Get<ck::FCk_Fragment_ImmutableTransform_Current>().Get_Transform().GetLocation();
+        return InHandle.Get<ck::FFragment_ImmutableTransform_Current>().Get_Transform().GetLocation();
     }
 
     CK_ENSURE_FALSE(TEXT("Cannot get the Current Location of Entity [{}] because it has no Transform component"), InHandle);
@@ -155,7 +155,7 @@ auto
 
     if (Has<ck::type_traits::Const>(InHandle))
     {
-        return InHandle.Get<ck::FCk_Fragment_ImmutableTransform_Current>().Get_Transform().GetRotation().Rotator();
+        return InHandle.Get<ck::FFragment_ImmutableTransform_Current>().Get_Transform().GetRotation().Rotator();
     }
 
     CK_ENSURE_FALSE(TEXT("Cannot get the Current Rotation of Entity [{}] because it has no Transform component"), InHandle);
@@ -176,7 +176,7 @@ auto
 
     if (Has<ck::type_traits::Const>(InHandle))
     {
-        return InHandle.Get<ck::FCk_Fragment_ImmutableTransform_Current>().Get_Transform().GetScale3D();
+        return InHandle.Get<ck::FFragment_ImmutableTransform_Current>().Get_Transform().GetScale3D();
     }
 
     CK_ENSURE_FALSE(TEXT("Cannot get the Current Scale of Entity [{}] because it has no Transform component"), InHandle);

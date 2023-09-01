@@ -99,7 +99,7 @@ namespace ck
 
     using FFragment_Transform_Current = TFragment_Transform<type_traits::NonConst>;
 
-    using FCk_Fragment_ImmutableTransform_Current = TFragment_Transform<type_traits::Const>;
+    using FFragment_ImmutableTransform_Current = TFragment_Transform<type_traits::Const>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
