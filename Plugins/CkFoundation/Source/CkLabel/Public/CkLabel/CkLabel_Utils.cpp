@@ -11,7 +11,7 @@ auto
         const FGameplayTag& InLabel)
     -> void
 {
-    InHandle.Add<ck::FCk_Fragment_GameplayLabel>(InLabel);
+    InHandle.Add<ck::FFragment_GameplayLabel>(InLabel);
 }
 
 auto
@@ -20,7 +20,7 @@ auto
         FCk_Handle InHandle)
     -> bool
 {
-    return InHandle.Has<ck::FCk_Fragment_GameplayLabel>();
+    return InHandle.Has<ck::FFragment_GameplayLabel>();
 }
 
 auto
@@ -44,7 +44,7 @@ auto
     if (NOT Ensure(InHandle))
     { return {}; }
 
-    return InHandle.Get<ck::FCk_Fragment_GameplayLabel>().Get_Label();
+    return InHandle.Get<ck::FFragment_GameplayLabel>().Get_Label();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
