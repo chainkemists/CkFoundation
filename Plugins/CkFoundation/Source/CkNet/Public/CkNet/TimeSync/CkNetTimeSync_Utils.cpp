@@ -6,10 +6,10 @@
 
 auto
     UCk_Utils_NetTimeSync_UE::
-    Add_TimeSync_Rep(FCk_Handle InHandle)
+    Add_NetTimeSync_Rep(FCk_Handle InHandle)
     -> void
 {
-    TryAddReplicatedFragment<UCk_Fragment_TimeSync_Rep>(InHandle);
+    TryAddReplicatedFragment<UCk_Fragment_NetTimeSync_Rep>(InHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -20,7 +20,7 @@ auto
         FCk_Handle InHandle)
     -> void
 {
-    InHandle.Add<ck::FFragment_TimeSync>();
+    InHandle.Add<ck::FFragment_NetTimeSync>();
 }
 
 auto
@@ -29,7 +29,7 @@ auto
         FCk_Handle InHandle)
     -> bool
 {
-    return InHandle.Has<ck::FFragment_TimeSync>();
+    return InHandle.Has<ck::FFragment_NetTimeSync>();
 }
 
 auto
@@ -37,7 +37,7 @@ auto
     Ensure(FCk_Handle InHandle)
     -> bool
 {
-    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have [{}]"), InHandle, ctti::nameof_v<ck::FFragment_TimeSync>)
+    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have [{}]"), InHandle, ctti::nameof_v<ck::FFragment_NetTimeSync>)
     { return false; }
 
     return true;
@@ -49,8 +49,8 @@ auto
         FCk_Handle InHandle,
         FCk_Request_NetTimeSync_NewSync InRequest) -> void
 {
-    auto& RequestsFragment = InHandle.AddOrGet<ck::FFragment_TimeSync_Requests>();
-    RequestsFragment._TimeSyncRequests.Emplace(InRequest);
+    auto& RequestsFragment = InHandle.AddOrGet<ck::FFragment_NetTimeSync_Requests>();
+    RequestsFragment._NetTimeSyncRequests.Emplace(InRequest);
 }
 
 auto
@@ -62,7 +62,7 @@ auto
     if (NOT Ensure(InHandle))
     { return {}; }
 
-    return InHandle.Get<ck::FFragment_TimeSync>().Get_RoundTripTime();
+    return InHandle.Get<ck::FFragment_NetTimeSync>().Get_RoundTripTime();
 }
 
 auto
@@ -84,7 +84,7 @@ auto
     if (NOT Ensure(InHandle))
     { return {}; }
 
-    const auto ValueFound = InHandle.Get<ck::FFragment_TimeSync>().Get_PlayerRoundTripTimes().Find(InPlayerController);
+    const auto ValueFound = InHandle.Get<ck::FFragment_NetTimeSync>().Get_PlayerRoundTripTimes().Find(InPlayerController);
 
     CK_ENSURE_IF_NOT(ck::IsValid(ValueFound, ck::IsValid_Policy_NullptrOnly{}),
         TEXT("Could not find PlayerController [{}] using Entity [{}]. Possible syncing error OR Player disconnected"),
