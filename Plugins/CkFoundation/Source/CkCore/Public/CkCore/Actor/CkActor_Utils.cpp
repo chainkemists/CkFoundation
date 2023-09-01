@@ -67,6 +67,26 @@ auto UCk_Utils_Actor_UE::Get_PersistentLevelScriptActor(const UObject* InWorldCo
 
 auto
     UCk_Utils_Actor_UE::
+    Get_OutermostPawn(UObject* InObject)
+    -> APawn*
+{
+    auto OuterObject = InObject;
+
+    while (ck::IsValid(OuterObject))
+    {
+        auto MaybePawn = Cast<APawn>(OuterObject);
+
+        if (ck::IsValid(MaybePawn))
+        { return MaybePawn; }
+
+        OuterObject = OuterObject->GetOuter();
+    }
+
+    return nullptr;
+}
+
+auto
+    UCk_Utils_Actor_UE::
     Get_OutermostActor(UObject* InObject)
     -> AActor*
 {

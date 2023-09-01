@@ -149,6 +149,11 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Actor", meta = (DefaultToSelf = "InObject"))
+    static APawn*
+    Get_OutermostPawn(UObject* InObject);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Actor", meta = (DefaultToSelf = "InObject"))
     static AActor*
     Get_OutermostActor(UObject* InObject);
 
