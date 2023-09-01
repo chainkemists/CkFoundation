@@ -18,13 +18,13 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKACTOR_API FCk_Fragment_ActorModifier_SpawnActorRequests
+    struct CKACTOR_API FFragment_ActorModifier_SpawnActorRequests
     {
     public:
-        CK_GENERATED_BODY(FCk_Fragment_ActorModifier_SpawnActorRequests);
+        CK_GENERATED_BODY(FFragment_ActorModifier_SpawnActorRequests);
 
     public:
-        friend class FCk_Processor_ActorModifier_SpawnActor_HandleRequests;
+        friend class FProcessor_ActorModifier_SpawnActor_HandleRequests;
         friend class UCk_Utils_ActorModifier_UE;
 
     public:
@@ -40,13 +40,13 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKACTOR_API FCk_Fragment_ActorModifier_AddActorComponentRequests
+    struct CKACTOR_API FFragment_ActorModifier_AddActorComponentRequests
     {
     public:
-        CK_GENERATED_BODY(FCk_Fragment_ActorModifier_AddActorComponentRequests);
+        CK_GENERATED_BODY(FFragment_ActorModifier_AddActorComponentRequests);
 
     public:
-        friend class FCk_Processor_ActorModifier_AddActorComponent_HandleRequests;
+        friend class FProcessor_ActorModifier_AddActorComponent_HandleRequests;
         friend class UCk_Utils_ActorModifier_UE;
 
     public:

@@ -11,11 +11,11 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FCk_Processor_ActorModifier_SpawnActor_HandleRequests::
+        FProcessor_ActorModifier_SpawnActor_HandleRequests::
         ForEachEntity(
             const TimeType&                                InDeltaT,
             HandleType                                     InHandle,
-            FCk_Fragment_ActorModifier_SpawnActorRequests& InRequests) const
+            FFragment_ActorModifier_SpawnActorRequests& InRequests) const
         -> void
     {
         for (const auto& InRequest : InRequests._Requests)
@@ -96,18 +96,18 @@ namespace ck
             // TODO: fire ActorSpawned signal
         }
 
-        InHandle.Remove<FCk_Fragment_ActorModifier_SpawnActorRequests>();
+        InHandle.Remove<FFragment_ActorModifier_SpawnActorRequests>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FCk_Processor_ActorModifier_AddActorComponent_HandleRequests::
+        FProcessor_ActorModifier_AddActorComponent_HandleRequests::
         ForEachEntity(
             const TimeType&                                       InDeltaT,
             HandleType                                            InHandle,
-            const FCk_Fragment_OwningActor_Current&                 InOwningActorComp,
-            FCk_Fragment_ActorModifier_AddActorComponentRequests& InRequests) const
+            const FFragment_OwningActor_Current&                 InOwningActorComp,
+            FFragment_ActorModifier_AddActorComponentRequests& InRequests) const
         -> void
     {
         for (const auto& InRequest : InRequests._Requests)
@@ -175,7 +175,7 @@ namespace ck
             // TODO: fire signal when component added
         }
 
-        InHandle.Remove<FCk_Fragment_ActorModifier_AddActorComponentRequests>();
+        InHandle.Remove<FFragment_ActorModifier_AddActorComponentRequests>();
     }
 }
 
