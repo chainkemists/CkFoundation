@@ -7,7 +7,7 @@
 
 namespace ck
 {
-    template <typename T_DerivedCompType = FCk_Fragment_EntityHolder>
+    template <typename T_DerivedCompType = FFragment_EntityHolder>
     class TUtils_EntityHolder
     {
     public:
@@ -88,11 +88,11 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct UCk_Utils_ParentEntity : public TUtils_EntityHolder<FCk_Fragment_ParentEntity> {};
+    struct UCk_Utils_ParentEntity : public TUtils_EntityHolder<FFragment_ParentEntity> {};
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct UCk_Utils_TargetEntity : public TUtils_EntityHolder<FCk_Fragment_TargetEntity> {};
+    struct UCk_Utils_TargetEntity : public TUtils_EntityHolder<FFragment_TargetEntity> {};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
