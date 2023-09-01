@@ -28,7 +28,7 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Sensor_UE);
 
 private:
-    struct RecordOfSensors_Utils : public ck::TCk_Utils_Record<ck::FFragment_RecordOfSensors> {};
+    struct RecordOfSensors_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfSensors> {};
 
 public:
     friend class ck::FProcessor_Sensor_Setup;

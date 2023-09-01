@@ -8,8 +8,8 @@
 
 namespace ck
 {
-    class CKRECORD_API FProcessor_Record_Destructor
-        : public TProcessor<FProcessor_Record_Destructor, FFragment_Record, FTag_PendingDestroyEntity>
+    class CKRECORD_API FProcessor_RecordOfEntities_Destructor
+        : public TProcessor<FProcessor_RecordOfEntities_Destructor, FFragment_RecordOfEntities, FTag_PendingDestroyEntity>
     {
     public:
         using TProcessor::TProcessor;
@@ -18,6 +18,6 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Record& InRecord) -> void;
+            const FFragment_RecordOfEntities& InRecord) -> void;
     };
 }
