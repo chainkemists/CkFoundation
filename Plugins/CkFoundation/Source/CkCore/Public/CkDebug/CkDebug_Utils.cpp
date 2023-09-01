@@ -52,7 +52,7 @@ auto UCk_Utils_Debug_StackTrace_UE::
 Get_BlueprintContext()
 -> TOptional<FString>
 {
-    const auto& trace = Get_StackTrace_Blueprint(ck::type_traits::as_array{});
+    const auto& trace = Get_StackTrace_Blueprint(ck::type_traits::AsArray{});
 
     return trace.Num() > 0 ? trace.Last() : TOptional<FString>{};
 }
@@ -80,18 +80,18 @@ auto UCk_Utils_Debug_StackTrace_UE::
 Get_StackTrace_Blueprint_AsArray()
 -> TArray<FString>
 {
-    return Get_StackTrace_Blueprint(ck::type_traits::as_array{});
+    return Get_StackTrace_Blueprint(ck::type_traits::AsArray{});
 }
 
 auto UCk_Utils_Debug_StackTrace_UE::
 Get_StackTrace_Blueprint_AsString()
 -> FString
 {
-    return Get_StackTrace_Blueprint(ck::type_traits::as_string{});
+    return Get_StackTrace_Blueprint(ck::type_traits::AsString{});
 }
 
 auto UCk_Utils_Debug_StackTrace_UE::
-Get_StackTrace_Blueprint(ck::type_traits::as_array)
+Get_StackTrace_Blueprint(ck::type_traits::AsArray)
 -> TArray<FString>
 {
     auto stackTrace = TArray<FString>{};
@@ -115,7 +115,7 @@ Get_StackTrace_Blueprint(ck::type_traits::as_array)
 }
 
 auto UCk_Utils_Debug_StackTrace_UE::
-Get_StackTrace_Blueprint(ck::type_traits::as_string)
+Get_StackTrace_Blueprint(ck::type_traits::AsString)
 -> FString
 {
     FString stackTrace;

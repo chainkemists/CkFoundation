@@ -78,8 +78,8 @@ public:
 public:
     static auto Get_BlueprintContext() -> TOptional<FString>;
 
-    static auto Get_StackTrace_Blueprint(ck::type_traits::as_array) -> TArray<FString>;
-    static auto Get_StackTrace_Blueprint(ck::type_traits::as_string) -> FString;
+    static auto Get_StackTrace_Blueprint(ck::type_traits::AsArray) -> TArray<FString>;
+    static auto Get_StackTrace_Blueprint(ck::type_traits::AsString) -> FString;
 
     static auto Try_BreakInScript(const UObject* InContext) -> void;
 };
