@@ -17,22 +17,22 @@ class UCk_Utils_MarkerAndSensor_UE;
 
 namespace ck
 {
-    struct FCk_Tag_Sensor_Setup {};
-    struct FCk_Tag_Sensor_UpdateTransform {};
+    struct FTag_Sensor_Setup {};
+    struct FTag_Sensor_UpdateTransform {};
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKOVERLAPBODY_API FCk_Fragment_Sensor_Params
+    struct CKOVERLAPBODY_API FFragment_Sensor_Params
     {
     public:
-        CK_GENERATED_BODY(FCk_Fragment_Sensor_Params);
+        CK_GENERATED_BODY(FFragment_Sensor_Params);
 
     public:
         using ParamsType = FCk_Fragment_Sensor_ParamsData;
 
     public:
-        FCk_Fragment_Sensor_Params() = default;
-        explicit FCk_Fragment_Sensor_Params(
+        FFragment_Sensor_Params() = default;
+        explicit FFragment_Sensor_Params(
             ParamsType InParams);
 
     private:
@@ -44,20 +44,20 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKOVERLAPBODY_API FCk_Fragment_Sensor_Current
+    struct CKOVERLAPBODY_API FFragment_Sensor_Current
     {
     public:
-        CK_GENERATED_BODY(FCk_Fragment_Sensor_Current);
+        CK_GENERATED_BODY(FFragment_Sensor_Current);
 
     public:
-        friend class FCk_Processor_Sensor_HandleRequests;
-        friend class FCk_Processor_Sensor_Setup;
+        friend class FProcessor_Sensor_HandleRequests;
+        friend class FProcessor_Sensor_Setup;
         friend class UCk_Utils_Sensor_UE;
         friend class UCk_Utils_MarkerAndSensor_UE;
 
     public:
-        FCk_Fragment_Sensor_Current() = default;
-        explicit FCk_Fragment_Sensor_Current(
+        FFragment_Sensor_Current() = default;
+        explicit FFragment_Sensor_Current(
             ECk_EnableDisable InEnableDisable);
 
     private:
@@ -78,13 +78,13 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKOVERLAPBODY_API FCk_Fragment_Sensor_Requests
+    struct CKOVERLAPBODY_API FFragment_Sensor_Requests
     {
     public:
-        CK_GENERATED_BODY(FCk_Fragment_Sensor_Requests);
+        CK_GENERATED_BODY(FFragment_Sensor_Requests);
 
     public:
-        friend class FCk_Processor_Sensor_HandleRequests;
+        friend class FProcessor_Sensor_HandleRequests;
         friend class UCk_Utils_Sensor_UE;
 
     public:
@@ -111,7 +111,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FCk_Fragment_RecordOfSensors : public FCk_Fragment_Record {};
+    struct FFragment_RecordOfSensors : public FCk_Fragment_Record {};
 }
 
 

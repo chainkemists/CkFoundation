@@ -17,7 +17,7 @@
 
 namespace ck
 {
-    class FCk_Processor_Marker_Setup;
+    class FProcessor_Marker_Setup;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -31,10 +31,10 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Marker_UE);
 
 private:
-    struct RecordOfMarkers_Utils : public ck::TCk_Utils_Record<ck::FCk_Fragment_RecordOfMarkers> {};
+    struct RecordOfMarkers_Utils : public ck::TCk_Utils_Record<ck::FFragment_RecordOfMarkers> {};
 
 public:
-    friend class ck::FCk_Processor_Marker_Setup;
+    friend class ck::FProcessor_Marker_Setup;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -229,7 +229,7 @@ auto
 {
     return DoPerformCommonMarkerUtilFunc<T_FragmentQueryPolicy>(InHandle, InMarkerName, [&](FCk_Handle InMarkerEntity, FGameplayTag InMarkerNameToUse)
     {
-        return InMarkerEntity.Has_All<ck::FCk_Fragment_Marker_Params, ck::FCk_Fragment_Marker_Current>() &&
+        return InMarkerEntity.Has_All<ck::FFragment_Marker_Params, ck::FFragment_Marker_Current>() &&
                UCk_Utils_GameplayLabel_UE::Has(InMarkerEntity) &&
                UCk_Utils_GameplayLabel_UE::Get_Label(InMarkerEntity) == InMarkerNameToUse;
     });
@@ -262,7 +262,7 @@ auto
 
     return DoPerformCommonMarkerUtilFunc<T_FragmentQueryPolicy>(InHandle, InMarkerName, [&](FCk_Handle InMarkerEntity, FGameplayTag)
     {
-        return InMarkerEntity.Get<ck::FCk_Fragment_Marker_Params>().Get_Params().Get_PhysicsParams();
+        return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_Params().Get_PhysicsParams();
     });
 }
 
@@ -279,7 +279,7 @@ auto
 
     return DoPerformCommonMarkerUtilFunc<T_FragmentQueryPolicy>(InHandle, InMarkerName, [&](FCk_Handle InMarkerEntity, FGameplayTag)
     {
-        return InMarkerEntity.Get<ck::FCk_Fragment_Marker_Params>().Get_Params().Get_ShapeParams();
+        return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_Params().Get_ShapeParams();
     });
 }
 
@@ -296,7 +296,7 @@ auto
 
     return DoPerformCommonMarkerUtilFunc<T_FragmentQueryPolicy>(InHandle, InMarkerName, [&](FCk_Handle InMarkerEntity, FGameplayTag)
     {
-        return InMarkerEntity.Get<ck::FCk_Fragment_Marker_Params>().Get_Params().Get_DebugParams();
+        return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_Params().Get_DebugParams();
     });
 }
 
@@ -313,7 +313,7 @@ auto
 
     return DoPerformCommonMarkerUtilFunc<T_FragmentQueryPolicy>(InHandle, InMarkerName, [&](FCk_Handle InMarkerEntity, FGameplayTag)
     {
-        return InMarkerEntity.Get<ck::FCk_Fragment_Marker_Current>().Get_EnableDisable();
+        return InMarkerEntity.Get<ck::FFragment_Marker_Current>().Get_EnableDisable();
     });
 }
 
@@ -330,7 +330,7 @@ auto
 
     return DoPerformCommonMarkerUtilFunc<T_FragmentQueryPolicy>(InHandle, InMarkerName, [&](FCk_Handle InMarkerEntity, FGameplayTag)
     {
-        return InMarkerEntity.Get<ck::FCk_Fragment_Marker_Current>().Get_Marker().Get();
+        return InMarkerEntity.Get<ck::FFragment_Marker_Current>().Get_Marker().Get();
     });
 }
 
@@ -348,8 +348,8 @@ auto
 
     DoPerformCommonMarkerUtilVoidFunc<T_FragmentQueryPolicy>(InHandle, InMarkerName, [&](FCk_Handle InMarkerEntity, FGameplayTag)
     {
-        const auto& markerParams = InMarkerEntity.Get<ck::FCk_Fragment_Marker_Params>().Get_Params();
-        const auto& markerCurrent = InMarkerEntity.Get<ck::FCk_Fragment_Marker_Current>();
+        const auto& markerParams = InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_Params();
+        const auto& markerCurrent = InMarkerEntity.Get<ck::FFragment_Marker_Current>();
 
         UCk_Utils_MarkerAndSensor_UE::Draw_Marker_DebugLines(InOuter, markerCurrent, markerParams);
     });
@@ -368,7 +368,7 @@ auto
 
     return DoPerformCommonMarkerUtilFunc<T_FragmentQueryPolicy>(InHandle, InMarkerName, [&](FCk_Handle InMarkerEntity, FGameplayTag)
     {
-        return InMarkerEntity.Get<ck::FCk_Fragment_Marker_Current>().Get_AttachedEntityAndActor();
+        return InMarkerEntity.Get<ck::FFragment_Marker_Current>().Get_AttachedEntityAndActor();
     });
 }
 
@@ -386,7 +386,7 @@ auto
 
     DoPerformCommonMarkerUtilVoidFunc<T_FragmentQueryPolicy>(InHandle, InMarkerName, [&](FCk_Handle InMarkerEntity, FGameplayTag)
     {
-        InMarkerEntity.AddOrGet<ck::FCk_Fragment_Marker_Requests>()._Requests = InRequest;
+        InMarkerEntity.AddOrGet<ck::FFragment_Marker_Requests>()._Requests = InRequest;
     });
 }
 

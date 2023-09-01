@@ -4,8 +4,8 @@
 
 namespace ck
 {
-    FCk_Fragment_Sensor_Current::
-        FCk_Fragment_Sensor_Current(
+    FFragment_Sensor_Current::
+        FFragment_Sensor_Current(
             ECk_EnableDisable InEnableDisable)
         : _AttachedEntityAndActor(),
         _EnableDisable(InEnableDisable)
@@ -14,8 +14,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    FCk_Fragment_Sensor_Params::
-        FCk_Fragment_Sensor_Params(
+    FFragment_Sensor_Params::
+        FFragment_Sensor_Params(
             ParamsType InParams)
         : _Params(InParams)
     {

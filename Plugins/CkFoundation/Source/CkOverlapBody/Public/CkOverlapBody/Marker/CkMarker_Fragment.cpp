@@ -4,8 +4,8 @@
 
 namespace ck
 {
-    FCk_Fragment_Marker_Current::
-        FCk_Fragment_Marker_Current(
+    FFragment_Marker_Current::
+        FFragment_Marker_Current(
             ECk_EnableDisable InEnableDisable)
         : _AttachedEntityAndActor()
         , _EnableDisable(InEnableDisable)
@@ -14,8 +14,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    FCk_Fragment_Marker_Params::
-        FCk_Fragment_Marker_Params(
+    FFragment_Marker_Params::
+        FFragment_Marker_Params(
             ParamsType InParams)
         : _Params(InParams)
     {
