@@ -12,7 +12,7 @@ auto
 {
     InHandle.Add<ck::FCk_Fragment_EulerIntegrator_Current>();
     InHandle.Add<ck::FCk_Tag_EulerIntegrator_Update>();
-    InHandle.Add<ck::FCk_Tag_EulerIntegrator_Setup>();
+    InHandle.Add<ck::FCk_Tag_EulerIntegrator_DoOnePredictiveUpdate>();
 }
 
 auto

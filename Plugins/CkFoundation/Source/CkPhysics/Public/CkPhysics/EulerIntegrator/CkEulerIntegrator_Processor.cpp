@@ -9,17 +9,17 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FCk_Processor_EulerIntegrator_Setup::
+        FCk_Processor_EulerIntegrator_DoOnePredictiveUpdate::
         Tick(TimeType InDeltaT)
         -> void
     {
         TProcessor::Tick(InDeltaT);
 
-        _Registry.Clear<FCk_Tag_EulerIntegrator_Setup>();
+        _Registry.Clear<FCk_Tag_EulerIntegrator_DoOnePredictiveUpdate>();
     }
 
     auto
-        FCk_Processor_EulerIntegrator_Setup::
+        FCk_Processor_EulerIntegrator_DoOnePredictiveUpdate::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
