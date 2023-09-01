@@ -7,8 +7,8 @@
 
 namespace ck
 {
-    FCk_Fragment_Acceleration_Params::
-        FCk_Fragment_Acceleration_Params(
+    FFragment_Acceleration_Params::
+        FFragment_Acceleration_Params(
             ParamsType InParams)
         : _Params(InParams)
     {
@@ -16,8 +16,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    FCk_Fragment_Acceleration_Current::
-        FCk_Fragment_Acceleration_Current(
+    FFragment_Acceleration_Current::
+        FFragment_Acceleration_Current(
             FVector InAcceleration)
         : _CurrentAcceleration(InAcceleration)
     {

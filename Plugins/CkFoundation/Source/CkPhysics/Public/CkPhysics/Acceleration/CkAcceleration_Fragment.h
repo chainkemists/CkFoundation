@@ -19,23 +19,23 @@ class UCk_Utils_Acceleration_UE;
 
 namespace ck
 {
-    struct FCk_Tag_Acceleration_Setup {};
-    struct FCk_Tag_AccelerationModifier_SingleTarget {};
-    struct FCk_Tag_AccelerationModifier_SingleTarget_Setup {};
+    struct FTag_Acceleration_Setup {};
+    struct FTag_AccelerationModifier_SingleTarget {};
+    struct FTag_AccelerationModifier_SingleTarget_Setup {};
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPHYSICS_API FCk_Fragment_Acceleration_Params
+    struct CKPHYSICS_API FFragment_Acceleration_Params
     {
     public:
-        CK_GENERATED_BODY(FCk_Fragment_Acceleration_Params);
+        CK_GENERATED_BODY(FFragment_Acceleration_Params);
 
     public:
         using ParamsType = FCk_Fragment_Acceleration_ParamsData;
 
     public:
-        FCk_Fragment_Acceleration_Params() = default;
-        explicit FCk_Fragment_Acceleration_Params(ParamsType InParams);
+        FFragment_Acceleration_Params() = default;
+        explicit FFragment_Acceleration_Params(ParamsType InParams);
 
     private:
         ParamsType _Params;
@@ -46,20 +46,20 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPHYSICS_API FCk_Fragment_Acceleration_Current
+    struct CKPHYSICS_API FFragment_Acceleration_Current
     {
     public:
-        CK_GENERATED_BODY(FCk_Fragment_Acceleration_Current);
+        CK_GENERATED_BODY(FFragment_Acceleration_Current);
 
     public:
-        friend class FCk_Processor_Acceleration_Setup;
+        friend class FProcessor_Acceleration_Setup;
         friend class UCk_Utils_Acceleration_UE;
-        friend class FCk_Processor_AccelerationModifier_SingleTarget_Setup;
-        friend class FCk_Processor_AccelerationModifier_SingleTarget_Teardown;
+        friend class FProcessor_AccelerationModifier_SingleTarget_Setup;
+        friend class FProcessor_AccelerationModifier_SingleTarget_Teardown;
 
     public:
-        FCk_Fragment_Acceleration_Current() = default;
-        explicit FCk_Fragment_Acceleration_Current(
+        FFragment_Acceleration_Current() = default;
+        explicit FFragment_Acceleration_Current(
             FVector InAcceleration);
 
     private:
@@ -71,27 +71,28 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FCk_Fragment_Acceleration_Target : public FCk_Fragment_EntityHolder
+    struct FFragment_Acceleration_Target : public FCk_Fragment_EntityHolder
     {
         using FCk_Fragment_EntityHolder::FCk_Fragment_EntityHolder;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FCk_Fragment_Acceleration_Channel : public FCk_Fragment_GameplayLabel
+    struct FFragment_Acceleration_Channel : public FCk_Fragment_GameplayLabel
     {
         using FCk_Fragment_GameplayLabel::FCk_Fragment_GameplayLabel;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FCk_Fragment_RecordOfAccelerationModifiers : public FCk_Fragment_Record {};
+    struct FFragment_RecordOfAccelerationModifiers : public FCk_Fragment_Record {};
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class FProcessor_Acceleration_Replicate;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-
-namespace ck { class FCk_Processor_Acceleration_Replicate; }
-
 
 UCLASS(Blueprintable)
 class CKPHYSICS_API UCk_Fragment_Acceleration_Rep : public UCk_Ecs_ReplicatedObject_UE
@@ -102,7 +103,7 @@ public:
     CK_GENERATED_BODY(UCk_Fragment_Acceleration_Rep);
 
 public:
-    friend class ck::FCk_Processor_Acceleration_Replicate;
+    friend class ck::FProcessor_Acceleration_Replicate;
 
 public:
     virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
