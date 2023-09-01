@@ -48,7 +48,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Transform|Requests",
+              Category = "Ck|Utils|Transform",
               DisplayName = "Request Set Entity Location")
     static void
     Request_SetLocation(
@@ -56,7 +56,7 @@ public:
         const FCk_Request_Transform_SetLocation& InRequest);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Transform|Requests",
+              Category = "Ck|Utils|Transform",
               DisplayName = "Request Add Entity Location Offset")
     static void
     Request_AddLocationOffset(
@@ -64,7 +64,7 @@ public:
         const FCk_Request_Transform_AddLocationOffset& InRequest);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Transform|Requests",
+              Category = "Ck|Utils|Transform",
               DisplayName = "Request Set Entity Rotation")
     static void
     Request_SetRotation(
@@ -72,7 +72,7 @@ public:
         const FCk_Request_Transform_SetRotation& InRequest);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Transform|Requests",
+              Category = "Ck|Utils|Transform",
               DisplayName = "Request Add Entity Rotation Offset")
     static void
     Request_AddRotationOffset(
@@ -80,7 +80,7 @@ public:
         const FCk_Request_Transform_AddRotationOffset& InRequest);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Transform|Requests",
+              Category = "Ck|Utils|Transform",
               DisplayName = "Request Set Entity Scale")
     static void
     Request_SetScale(
@@ -88,7 +88,7 @@ public:
         const FCk_Request_Transform_SetScale&  InRequest);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Transform|Requests",
+              Category = "Ck|Utils|Transform",
               DisplayName = "Request Set Entity Transform")
     static void
     Request_SetTransform(
@@ -96,7 +96,7 @@ public:
         const FCk_Request_Transform_SetTransform& InRequest);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Transform|Requests",
+              Category = "Ck|Utils|Transform",
               DisplayName = "Request Set Interpolation Goal [LOCATION]")
     static void
     Request_SetInterpolationGoal_Offset(

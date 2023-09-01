@@ -7,11 +7,11 @@
 namespace ck
 {
     auto
-        FProcessor_Record_Destructor::
+        FProcessor_RecordOfEntities_Destructor::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Record& InRecord)
+            const FFragment_RecordOfEntities& InRecord)
         -> void
     {
         for (const auto RecordEntryEntity : InRecord.Get_RecordEntries())
@@ -23,3 +23,5 @@ namespace ck
         }
     }
 }
+
+// --------------------------------------------------------------------------------------------------------------------

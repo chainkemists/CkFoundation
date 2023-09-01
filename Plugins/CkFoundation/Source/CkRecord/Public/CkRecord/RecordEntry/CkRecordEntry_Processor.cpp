@@ -20,7 +20,7 @@ namespace ck
         {
             auto RecordHandle = MakeHandle(RecordEntity, InHandle);
 
-            auto& RecordFragment = RecordHandle.Get<FFragment_Record>();
+            auto& RecordFragment = RecordHandle.Get<FFragment_RecordOfEntities>();
             RecordFragment._RecordEntries.Remove(InHandle.Get_Entity());
         }
     }

@@ -7,12 +7,12 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCk_Utils_Record_UE::InternalUtils_Type UCk_Utils_Record_UE::_Utils;
+UCk_Utils_RecordOfEntities_UE::InternalUtils_Type UCk_Utils_RecordOfEntities_UE::_Utils;
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_Record_UE::
+    UCk_Utils_RecordOfEntities_UE::
     Add(FCk_Handle InHandle)
     -> void
 {
@@ -20,7 +20,7 @@ auto
 }
 
 auto
-    UCk_Utils_Record_UE::
+    UCk_Utils_RecordOfEntities_UE::
     Has(FCk_Handle InHandle)
     -> bool
 {
@@ -28,7 +28,7 @@ auto
 }
 
 auto
-    UCk_Utils_Record_UE::
+    UCk_Utils_RecordOfEntities_UE::
     Ensure(FCk_Handle InHandle)
     -> bool
 {
@@ -36,7 +36,7 @@ auto
 }
 
 auto
-    UCk_Utils_Record_UE::
+    UCk_Utils_RecordOfEntities_UE::
     Get_AllRecordEntries(FCk_Handle InRecordHandle)
     -> TArray<FCk_Handle>
 {
@@ -44,7 +44,7 @@ auto
 }
 
 auto
-    UCk_Utils_Record_UE::
+    UCk_Utils_RecordOfEntities_UE::
     Get_HasRecordEntry(
         FCk_Handle InRecordHandle,
         FCk_Predicate_InHandle_OutResult InPredicate)
@@ -60,7 +60,7 @@ auto
 }
 
 auto
-    UCk_Utils_Record_UE::
+    UCk_Utils_RecordOfEntities_UE::
     Get_RecordEntryIf(
         FCk_Handle InRecordHandle,
         FCk_Predicate_InHandle_OutResult InPredicate)
@@ -76,7 +76,7 @@ auto
 }
 
 auto
-    UCk_Utils_Record_UE::
+    UCk_Utils_RecordOfEntities_UE::
     ForEachEntry(
         FCk_Handle InRecordHandle,
         FCk_Lambda_InHandle InFunc)
@@ -89,7 +89,7 @@ auto
 }
 
 auto
-    UCk_Utils_Record_UE::
+    UCk_Utils_RecordOfEntities_UE::
     ForEachEntryIf(
         FCk_Handle InRecordHandle,
         FCk_Lambda_InHandle InFunc,
@@ -111,7 +111,7 @@ auto
 }
 
 auto
-    UCk_Utils_Record_UE::
+    UCk_Utils_RecordOfEntities_UE::
     Request_Connect(
         FCk_Handle InRecordHandle,
         FCk_Handle InRecordEntry)
@@ -121,7 +121,7 @@ auto
 }
 
 auto
-    UCk_Utils_Record_UE::
+    UCk_Utils_RecordOfEntities_UE::
     Request_Disconnect(
         FCk_Handle InRecordHandle,
         FCk_Handle InRecordEntry)

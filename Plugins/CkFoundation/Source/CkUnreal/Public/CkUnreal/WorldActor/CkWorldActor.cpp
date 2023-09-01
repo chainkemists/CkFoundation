@@ -82,7 +82,7 @@ namespace ck_world_actor
         }
 
         InWorld.Add<ck::FProcessor_RecordEntry_Destructor>(InWorld.Get_Registry());
-        InWorld.Add<ck::FProcessor_Record_Destructor>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_RecordOfEntities_Destructor>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FProcessor_Marker_UpdateTransform>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_Sensor_UpdateTransform>(InWorld.Get_Registry());
