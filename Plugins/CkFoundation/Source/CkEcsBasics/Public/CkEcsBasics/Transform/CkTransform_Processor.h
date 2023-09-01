@@ -56,7 +56,7 @@ namespace ck
 
     class CKECSBASICS_API FProcessor_Transform_Actor
         : public TProcessor<FProcessor_Transform_Actor,
-            FCk_Fragment_OwningActor_Current, FFragment_Transform_Current, FTag_Transform_Updated>
+            FFragment_OwningActor_Current, FFragment_Transform_Current, FTag_Transform_Updated>
     {
     public:
         using MarkedDirtyBy = FTag_Transform_Updated;
@@ -68,7 +68,7 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_OwningActor_Current& InOwningActor,
+            const FFragment_OwningActor_Current& InOwningActor,
             const FFragment_Transform_Current& InComp) const -> void;
     };
 

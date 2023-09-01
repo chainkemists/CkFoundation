@@ -15,7 +15,7 @@ auto
         AActor* InOwningActor)
     -> void
 {
-    InHandle.Add<ck::FCk_Fragment_OwningActor_Current>(InOwningActor);
+    InHandle.Add<ck::FFragment_OwningActor_Current>(InOwningActor);
 }
 
 auto
@@ -24,7 +24,7 @@ auto
         FCk_Handle InHandle)
     -> bool
 {
-    return InHandle.Has<ck::FCk_Fragment_OwningActor_Current>();
+    return InHandle.Has<ck::FFragment_OwningActor_Current>();
 }
 
 auto
@@ -48,7 +48,7 @@ auto
     if (NOT Ensure(InHandle))
     { return {}; }
 
-    return FCk_EntityOwningActor_BasicDetails{ InHandle.Get<ck::FCk_Fragment_OwningActor_Current>().Get_EntityOwningActor().Get(), InHandle };
+    return FCk_EntityOwningActor_BasicDetails{ InHandle.Get<ck::FFragment_OwningActor_Current>().Get_EntityOwningActor().Get(), InHandle };
 }
 
 auto
