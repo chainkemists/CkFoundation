@@ -17,10 +17,10 @@
 namespace ck
 {
     template <typename T_DerivedRecord>
-    class TCk_Utils_Record
+    class TUtils_RecordOfEntities
     {
     public:
-        CK_GENERATED_BODY(TCk_Utils_Record<T_DerivedRecord>);
+        CK_GENERATED_BODY(TUtils_RecordOfEntities<T_DerivedRecord>);
 
         friend class UCk_Utils_RecordEntry_UE;
 
@@ -91,7 +91,7 @@ namespace ck
 
     template <typename T_DerivedRecord>
     auto
-    TCk_Utils_Record<T_DerivedRecord>::
+    TUtils_RecordOfEntities<T_DerivedRecord>::
         Add(FCk_Handle InHandle)
         -> void
     {
@@ -100,7 +100,7 @@ namespace ck
 
     template <typename T_DerivedRecord>
     auto
-    TCk_Utils_Record<T_DerivedRecord>::
+    TUtils_RecordOfEntities<T_DerivedRecord>::
         Has(FCk_Handle InHandle)
         -> bool
     {
@@ -109,7 +109,7 @@ namespace ck
 
     template <typename T_DerivedRecord>
     auto
-    TCk_Utils_Record<T_DerivedRecord>::
+    TUtils_RecordOfEntities<T_DerivedRecord>::
         Ensure(FCk_Handle InHandle)
         -> bool
     {
@@ -121,7 +121,7 @@ namespace ck
 
     template <typename T_DerivedRecord>
     auto
-    TCk_Utils_Record<T_DerivedRecord>::
+    TUtils_RecordOfEntities<T_DerivedRecord>::
         Get_AllRecordEntries(
             FCk_Handle InRecordHandle)
         -> TArray<FCk_Handle>
@@ -141,7 +141,7 @@ namespace ck
     template <typename T_DerivedRecord>
     template <typename T_Predicate>
     auto
-    TCk_Utils_Record<T_DerivedRecord>::
+    TUtils_RecordOfEntities<T_DerivedRecord>::
         Get_HasRecordEntry(
             FCk_Handle InRecordHandle,
             T_Predicate InPredicate)
@@ -163,7 +163,7 @@ namespace ck
     template <typename T_DerivedRecord>
     template <typename T_Predicate>
     auto
-    TCk_Utils_Record<T_DerivedRecord>::
+    TUtils_RecordOfEntities<T_DerivedRecord>::
         Get_RecordEntryIf(
             FCk_Handle InRecordHandle,
             T_Predicate InPredicate)
@@ -185,7 +185,7 @@ namespace ck
     template <typename T_DerivedRecord>
     template <typename T_Unary>
     auto
-    TCk_Utils_Record<T_DerivedRecord>::
+    TUtils_RecordOfEntities<T_DerivedRecord>::
         ForEachEntry(
             FCk_Handle InRecordHandle,
             T_Unary InUnaryFunc)
@@ -203,7 +203,7 @@ namespace ck
     template <typename T_DerivedRecord>
     template <typename T_Unary, typename T_Predicate>
     auto
-    TCk_Utils_Record<T_DerivedRecord>::
+    TUtils_RecordOfEntities<T_DerivedRecord>::
         ForEachEntryIf(
             FCk_Handle InRecordHandle,
             T_Unary InFunc,
@@ -223,7 +223,7 @@ namespace ck
 
     template <typename T_DerivedRecord>
     auto
-    TCk_Utils_Record<T_DerivedRecord>::
+    TUtils_RecordOfEntities<T_DerivedRecord>::
         Request_Connect(
             FCk_Handle InRecordHandle,
             FCk_Handle InRecordEntry)
@@ -249,7 +249,7 @@ namespace ck
 
     template <typename T_DerivedRecord>
     auto
-    TCk_Utils_Record<T_DerivedRecord>::
+    TUtils_RecordOfEntities<T_DerivedRecord>::
         Request_Disconnect(
             FCk_Handle InRecordHandle,
             FCk_Handle InRecordEntry)
@@ -289,17 +289,17 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKRECORD_API UCk_Utils_Record_UE : public UCk_Utils_Ecs_Base_UE
+class CKRECORD_API UCk_Utils_RecordOfEntities_UE : public UCk_Utils_Ecs_Base_UE
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Utils_Record_UE);
+    CK_GENERATED_BODY(UCk_Utils_RecordOfEntities_UE);
 
     friend class UCk_Utils_RecordEntry_UE;
 
 public:
-    using InternalUtils_Type = ck::TCk_Utils_Record<ck::FFragment_Record>;
+    using InternalUtils_Type = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfEntities>;
 
 public:
     UFUNCTION(BlueprintCallable,

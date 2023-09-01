@@ -31,7 +31,7 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Marker_UE);
 
 private:
-    struct RecordOfMarkers_Utils : public ck::TCk_Utils_Record<ck::FFragment_RecordOfMarkers> {};
+    struct RecordOfMarkers_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfMarkers> {};
 
 public:
     friend class ck::FProcessor_Marker_Setup;

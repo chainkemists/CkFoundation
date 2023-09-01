@@ -5,23 +5,23 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class UCk_Utils_Record_UE;
+class UCk_Utils_RecordOfEntities_UE;
 
 namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FFragment_Record
+    struct FFragment_RecordOfEntities
     {
-        friend class UCk_Utils_Record_UE;
-        friend class FProcessor_Record_Destructor;
+        friend class UCk_Utils_RecordOfEntities_UE;
+        friend class FProcessor_RecordOfEntities_Destructor;
         friend class FProcessor_RecordEntry_Destructor;
 
         template <typename T_DerivedRecord>
-        friend class TCk_Utils_Record;
+        friend class TUtils_RecordOfEntities;
 
     public:
-        CK_GENERATED_BODY(FFragment_Record);
+        CK_GENERATED_BODY(FFragment_RecordOfEntities);
 
         using EntityType = FCk_Entity;
         using RecordEntriesType = TSet<EntityType>;

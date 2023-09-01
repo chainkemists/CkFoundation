@@ -6,7 +6,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_RecordEntry_UE;
-class UCk_Utils_Record_UE;
+class UCk_Utils_RecordOfEntities_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -23,13 +23,13 @@ namespace ck
         CK_GENERATED_BODY(FFragment_RecordEntry);
 
         friend UCk_Utils_RecordEntry_UE;
-        friend UCk_Utils_Record_UE;
+        friend UCk_Utils_RecordOfEntities_UE;
 
         friend class FProcessor_RecordEntry_Destructor;
-        friend class FProcessor_Record_Destructor;
+        friend class FProcessor_RecordOfEntities_Destructor;
 
         template <typename T_DerivedRecord>
-        friend class TCk_Utils_Record;
+        friend class TUtils_RecordOfEntities;
 
     public:
         using EntityType = FCk_Entity;
