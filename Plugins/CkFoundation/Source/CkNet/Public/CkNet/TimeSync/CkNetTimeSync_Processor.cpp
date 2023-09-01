@@ -11,7 +11,7 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_Processor_NetTimeSync_OnNetworkClockSynchronized::
+    FProcessor_NetTimeSync_OnNetworkClockSynchronized::
     ForEachEntity(
         TimeType InDeltaT,
         HandleType InHandle,
@@ -28,11 +28,11 @@ auto
     { return; }
 
     _DelegateHandle = _NetworkTimeSubsystem->OnNetworkClockSynchronized_Cpp.AddRaw(
-        this, &FCk_Processor_NetTimeSync_OnNetworkClockSynchronized::OnNetworkClockSynchronized);
+        this, &FProcessor_NetTimeSync_OnNetworkClockSynchronized::OnNetworkClockSynchronized);
 }
 
-FCk_Processor_NetTimeSync_OnNetworkClockSynchronized::
-    ~FCk_Processor_NetTimeSync_OnNetworkClockSynchronized()
+FProcessor_NetTimeSync_OnNetworkClockSynchronized::
+    ~FProcessor_NetTimeSync_OnNetworkClockSynchronized()
 {
     if (NOT _DelegateHandle.IsValid())
     { return; }
@@ -44,7 +44,7 @@ FCk_Processor_NetTimeSync_OnNetworkClockSynchronized::
 }
 
 auto
-    FCk_Processor_NetTimeSync_OnNetworkClockSynchronized::
+    FProcessor_NetTimeSync_OnNetworkClockSynchronized::
     OnNetworkClockSynchronized(
         float OldServerDelta,
         float NewServerDelta,
@@ -61,7 +61,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_Processor_NetTimeSync_HandleRequests::
+    FProcessor_NetTimeSync_HandleRequests::
     Tick(
         TimeType InDeltaT)
     -> void
@@ -72,7 +72,7 @@ auto
 }
 
 auto
-    FCk_Processor_NetTimeSync_HandleRequests::
+    FProcessor_NetTimeSync_HandleRequests::
     ForEachEntity(
         TimeType InDeltaT,
         HandleType InHandle,
@@ -96,7 +96,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_Processor_NetTimeSync_FirstSync::
+    FProcessor_NetTimeSync_FirstSync::
     ForEachEntity(
         TimeType InDeltaT,
         HandleType InHandle,
