@@ -7,7 +7,7 @@
 namespace ck
 {
     auto
-        FCk_Processor_Projectile_Update::
+        FProcessor_Projectile_Update::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
