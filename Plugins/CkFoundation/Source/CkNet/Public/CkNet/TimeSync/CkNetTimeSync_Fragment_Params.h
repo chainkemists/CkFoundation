@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Enums/CkEnums.h"
+#include "CkCore/Time/CkTime.h"
 
 #include "CkNetTimeSync_Fragment_Params.generated.h"
 
@@ -21,7 +22,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    float _RoundTripTime;
+    FCk_Time _RoundTripTime;
 
 public:
     CK_PROPERTY(_PlayerController)
