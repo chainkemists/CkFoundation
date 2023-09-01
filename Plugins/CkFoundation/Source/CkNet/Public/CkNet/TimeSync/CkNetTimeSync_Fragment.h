@@ -83,6 +83,12 @@ public:
         APlayerController* InPlayerController,
         FCk_Time InRoundTripTime);
 
+    UFUNCTION(NetMulticast, Unreliable)
+    void
+    Broadcast_TimeSync_Clients(
+        APlayerController* InPlayerController,
+        FCk_Time InRoundTripTime);
+
 protected:
     virtual auto
     OnLink() -> void override;
