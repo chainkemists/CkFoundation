@@ -7,7 +7,7 @@
 namespace ck
 {
     auto
-        FCk_Processor_Record_Destructor::
+        FProcessor_Record_Destructor::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,

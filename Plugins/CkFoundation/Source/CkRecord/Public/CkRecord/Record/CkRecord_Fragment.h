@@ -14,8 +14,8 @@ namespace ck
     struct FFragment_Record
     {
         friend class UCk_Utils_Record_UE;
-        friend class FCk_Processor_Record_Destructor;
-        friend class FCk_Processor_RecordEntry_Destructor;
+        friend class FProcessor_Record_Destructor;
+        friend class FProcessor_RecordEntry_Destructor;
 
         template <typename T_DerivedRecord>
         friend class TCk_Utils_Record;
