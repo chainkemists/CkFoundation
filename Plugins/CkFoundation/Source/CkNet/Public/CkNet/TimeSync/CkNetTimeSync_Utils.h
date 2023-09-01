@@ -55,26 +55,26 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|NetTimeSync")
-    static float
+    static FCk_Time
     Get_RoundTripTime(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|NetTimeSync")
-    static float
+    static FCk_Time
     Get_Latency(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|NetTimeSync")
-    static float
+    static FCk_Time
     Get_PlayerRoundTripTime(
         APlayerController* InPlayerController,
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|NetTimeSync")
-    static float
+    static FCk_Time
     Get_PlayerLatency(
         APlayerController* InPlayerController,
         FCk_Handle InHandle);

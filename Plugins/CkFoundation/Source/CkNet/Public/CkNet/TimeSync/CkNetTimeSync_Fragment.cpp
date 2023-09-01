@@ -8,7 +8,7 @@ auto
     UCk_Fragment_TimeSync_Rep::
     Broadcast_TimeSync_Implementation(
         APlayerController* InPlayerController,
-        float InRoundTripTime)
+        FCk_Time InRoundTripTime)
     -> void
 {
     if (NOT Get_AssociatedEntity().IsValid()) { return; }
@@ -37,7 +37,7 @@ auto
 auto
     UCk_Fragment_TimeSync_Rep::
     DoBroadcast_TimeSync(
-        float InRoundTripTime)
+        FCk_Time InRoundTripTime)
     -> void
 {
     CK_REP_OBJ_EXECUTE_IF_VALID([&]()

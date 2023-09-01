@@ -57,7 +57,7 @@ auto
     UCk_Utils_NetTimeSync_UE::
     Get_RoundTripTime(
         FCk_Handle InHandle)
-    -> float
+    -> FCk_Time
 {
     if (NOT Ensure(InHandle))
     { return {}; }
@@ -69,9 +69,9 @@ auto
     UCk_Utils_NetTimeSync_UE::
     Get_Latency(
         FCk_Handle InHandle)
-    -> float
+    -> FCk_Time
 {
-    return Get_RoundTripTime(InHandle) / 2.0f;
+    return FCk_Time{ Get_RoundTripTime(InHandle).Get_Seconds() / 2.0f };
 }
 
 auto
@@ -79,7 +79,7 @@ auto
     Get_PlayerRoundTripTime(
         APlayerController* InPlayerController,
         FCk_Handle InHandle)
-    -> float
+    -> FCk_Time
 {
     if (NOT Ensure(InHandle))
     { return {}; }
@@ -99,9 +99,9 @@ auto
     Get_PlayerLatency(
         APlayerController* InPlayerController,
         FCk_Handle InHandle)
-    -> float
+    -> FCk_Time
 {
-    return Get_PlayerRoundTripTime(InPlayerController, InHandle) / 2.0f;
+    return FCk_Time{ Get_PlayerRoundTripTime(InPlayerController, InHandle).Get_Seconds() / 2.0f };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
