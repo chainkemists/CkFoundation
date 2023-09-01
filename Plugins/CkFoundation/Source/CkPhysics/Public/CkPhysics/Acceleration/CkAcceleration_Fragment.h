@@ -71,9 +71,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FFragment_Acceleration_Target : public FCk_Fragment_EntityHolder
+    struct FFragment_Acceleration_Target : public FFragment_EntityHolder
     {
-        using FCk_Fragment_EntityHolder::FCk_Fragment_EntityHolder;
+        using FFragment_EntityHolder::FFragment_EntityHolder;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
