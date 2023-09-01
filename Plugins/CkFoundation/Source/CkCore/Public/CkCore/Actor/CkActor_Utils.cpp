@@ -107,29 +107,6 @@ auto
 
 auto
     UCk_Utils_Actor_UE::
-    Get_OutermostActor_Replicated(UObject* InObject)
-    -> AActor*
-{
-    auto OuterObject = InObject;
-
-    while (ck::IsValid(OuterObject))
-    {
-        auto MaybeActor = Cast<AActor>(OuterObject);
-
-        if (ck::IsValid(MaybeActor))
-        {
-            if (MaybeActor->GetIsReplicated())
-            { return MaybeActor; }
-        }
-
-        OuterObject = OuterObject->GetOuter();
-    }
-
-    return nullptr;
-}
-
-auto
-    UCk_Utils_Actor_UE::
     Get_OutermostActor_RemoteAuthority(UObject* InObject)
     -> AActor*
 {
