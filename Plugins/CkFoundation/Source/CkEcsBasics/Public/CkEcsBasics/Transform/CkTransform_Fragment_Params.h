@@ -1,10 +1,45 @@
 #pragma once
 
 #include "CkCore/Enums/CkEnums.h"
+#include "CkCore/Time/CkTime.h"
 
 #include "CkMacros/CkMacros.h"
 
 #include "CkTransform_Fragment_Params.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKECSBASICS_API FCk_Transform_Interpolation_Settings
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Transform_Interpolation_Settings);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess, ValidEnumValues="Linear"))
+    ECk_Interpolation_Strategy _Strategy = ECk_Interpolation_Strategy::Linear;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
+    float _MaxSmoothUpdateDistance = 256.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
+    float _NoSmoothUpdateDistance = 384.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
+    FCk_Time _SmoothLocationTime = FCk_Time{0.1f};
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
+    FCk_Time _SmoothRotationTime = FCk_Time{0.05f};
+
+public:
+    CK_PROPERTY(_Strategy);
+    CK_PROPERTY(_MaxSmoothUpdateDistance);
+    CK_PROPERTY(_NoSmoothUpdateDistance);
+    CK_PROPERTY(_SmoothLocationTime);
+    CK_PROPERTY(_SmoothRotationTime);
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 

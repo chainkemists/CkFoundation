@@ -32,10 +32,10 @@ auto
 
         ck::ecs_basics::Log(TEXT("[UPDATE] Just got a new Goal Value [{}]. Delta Goal is [{}]"), _Location, _Location - CurrentLocation);
 
-        UCk_Utils_Transform_UE::Request_SetInterpolationGoal_Location
-        (
+        UCk_Utils_Transform_UE::Request_SetInterpolationGoal_Offset
+    (
             Get_AssociatedEntity(),
-            FCk_Fragment_Transform_NewGoal_Location{}.Set_InterpolationOffset(_Location - CurrentLocation)
+            _Location - CurrentLocation
         );
     });
 }

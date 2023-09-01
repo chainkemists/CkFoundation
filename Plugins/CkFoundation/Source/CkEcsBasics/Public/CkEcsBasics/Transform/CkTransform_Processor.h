@@ -9,12 +9,12 @@
 
 namespace ck
 {
-    class CKECSBASICS_API FCk_Processor_Transform_HandleRequests
-        : public TProcessor<FCk_Processor_Transform_HandleRequests,
-            FCk_Fragment_Transform_Current, FCk_Fragment_Transform_Requests>
+    class CKECSBASICS_API FProcessor_Transform_HandleRequests
+        : public TProcessor<FProcessor_Transform_HandleRequests,
+            FFragment_Transform_Current, FFragment_Transform_Requests>
     {
     public:
-        using MarkedDirtyBy = FCk_Fragment_Transform_Requests;
+        using MarkedDirtyBy = FFragment_Transform_Requests;
 
     public:
         using TProcessor::TProcessor;
@@ -27,36 +27,36 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FCk_Fragment_Transform_Current& InComp,
-            FCk_Fragment_Transform_Requests& InRequestsComp) const -> void;
+            FFragment_Transform_Current& InComp,
+            FFragment_Transform_Requests& InRequestsComp) const -> void;
 
     private:
         auto DoHandleRequest(
             HandleType InHandle,
-            FCk_Fragment_Transform_Current& InComp,
+            FFragment_Transform_Current& InComp,
             const FCk_Request_Transform_SetLocation& InRequest) const -> void;
 
         auto DoHandleRequest(
             HandleType InHandle,
-            FCk_Fragment_Transform_Current& InComp,
+            FFragment_Transform_Current& InComp,
             const FCk_Request_Transform_AddLocationOffset& InRequest) const -> void;
 
         auto DoHandleRequest(
             HandleType InHandle,
-            FCk_Fragment_Transform_Current& InComp,
+            FFragment_Transform_Current& InComp,
             const FCk_Request_Transform_SetRotation& InRequest) const -> void;
 
         auto DoHandleRequest(
             HandleType InHandle,
-            FCk_Fragment_Transform_Current& InComp,
+            FFragment_Transform_Current& InComp,
             const FCk_Request_Transform_AddRotationOffset& InRequest) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSBASICS_API FCk_Processor_Transform_Actor
-        : public TProcessor<FCk_Processor_Transform_Actor,
-            FCk_Fragment_OwningActor_Current, FCk_Fragment_Transform_Current, FTag_Transform_Updated>
+    class CKECSBASICS_API FProcessor_Transform_Actor
+        : public TProcessor<FProcessor_Transform_Actor,
+            FCk_Fragment_OwningActor_Current, FFragment_Transform_Current, FTag_Transform_Updated>
     {
     public:
         using MarkedDirtyBy = FTag_Transform_Updated;
@@ -69,14 +69,14 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FCk_Fragment_OwningActor_Current& InOwningActor,
-            const FCk_Fragment_Transform_Current& InComp) const -> void;
+            const FFragment_Transform_Current& InComp) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSBASICS_API FCk_Processor_Transform_Replicate
-        : public TProcessor<FCk_Processor_Transform_Replicate,
-            FCk_Fragment_Transform_Current, TObjectPtr<UCk_Fragment_Transform_Rep>, FTag_Transform_Updated>
+    class CKECSBASICS_API FProcessor_Transform_Replicate
+        : public TProcessor<FProcessor_Transform_Replicate,
+            FFragment_Transform_Current, TObjectPtr<UCk_Fragment_Transform_Rep>, FTag_Transform_Updated>
     {
     public:
         using MarkedDirtyBy = FTag_Transform_Updated;
@@ -88,18 +88,18 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_Transform_Current& InCurrent,
+            const FFragment_Transform_Current& InCurrent,
             const TObjectPtr<UCk_Fragment_Transform_Rep>& InComp) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSBASICS_API FCk_Processor_Transform_InterpolateToGoal
-        : public TProcessor<FCk_Processor_Transform_InterpolateToGoal,
-            FCk_Fragment_Interpolation_Params, FCk_Fragment_Transform_Current, FCk_Fragment_Transform_NewGoal_Location>
+    class CKECSBASICS_API FProcessor_Transform_InterpolateToGoal
+        : public TProcessor<FProcessor_Transform_InterpolateToGoal,
+            FFragment_Transform_Params, FFragment_Transform_Current, FFragment_Transform_NewGoal_Location>
     {
     public:
-        using MarkedDirtyBy = FCk_Fragment_Transform_NewGoal_Location;
+        using MarkedDirtyBy = FFragment_Transform_NewGoal_Location;
 
     public:
         using TProcessor::TProcessor;
@@ -108,9 +108,9 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_Interpolation_Params& InParams,
-            FCk_Fragment_Transform_Current& InCurrent,
-            FCk_Fragment_Transform_NewGoal_Location& InGoal) const -> void;
+            const FFragment_Transform_Params& InParams,
+            FFragment_Transform_Current& InCurrent,
+            FFragment_Transform_NewGoal_Location& InGoal) const -> void;
     };
 }
 
