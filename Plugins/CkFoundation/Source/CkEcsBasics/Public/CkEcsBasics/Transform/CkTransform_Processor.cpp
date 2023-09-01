@@ -168,7 +168,18 @@ namespace ck
         -> void
     {
         if (NOT UCk_Utils_Transform_UserSettings_UE::Get_EnableTransformSmoothing())
-        { return; }
+        {
+            UCk_Utils_Transform_UE::Request_SetLocation
+            (
+                InHandle,
+                FCk_Request_Transform_SetLocation{}.Set_NewLocation
+                (
+                    InCurrent.Get_Transform().GetLocation() + InGoal.Get_InterpolationOffset()
+                )
+            );
+            InHandle.Remove<FFragment_Transform_NewGoal_Location>();
+            return;
+        }
 
         // TODO: pre-calculate when creating FCk_Fragment_Transform_NewGoal to avoid this expensive operation
         const auto GoalDistance = InGoal.Get_InterpolationOffset().Length();
