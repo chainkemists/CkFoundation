@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GameplayTagContainer.h"
+#include "CkEcs/Handle/CkHandle.h"
 
 #include "CkMacros/CkMacros.h"
 
@@ -32,3 +33,5 @@ public:
         FCk_Handle   InHandle,
         FGameplayTag InIntent);
 };
+
+// --------------------------------------------------------------------------------------------------------------------

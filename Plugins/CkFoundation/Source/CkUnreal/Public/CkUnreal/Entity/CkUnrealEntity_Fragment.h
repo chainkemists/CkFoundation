@@ -14,7 +14,7 @@ namespace ck
 
     public:
         friend class UCk_Utils_UnrealEntity_UE;
-        friend class FCk_Processor_UnrealEntity_HandleRequests;
+        friend class FProcessor_UnrealEntity_HandleRequests;
 
     public:
         using FRequestType = FCk_Request_UnrealEntity_Spawn;

@@ -61,10 +61,10 @@ namespace ck
             FFragment_Acceleration_Current,
             FFragment_Acceleration_Target,
             FTag_AccelerationModifier_SingleTarget,
-            FCk_Tag_PendingDestroyEntity>
+            FTag_PendingDestroyEntity>
     {
     public:
-        using MarkedDirtyBy = FCk_Tag_PendingDestroyEntity;
+        using MarkedDirtyBy = FTag_PendingDestroyEntity;
 
     public:
         using TProcessor::TProcessor;

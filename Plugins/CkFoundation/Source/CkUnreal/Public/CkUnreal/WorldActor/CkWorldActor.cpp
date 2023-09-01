@@ -37,19 +37,19 @@ namespace ck_world_actor
             ACk_World_Actor_UE::FEcsWorldType& InWorld)
         -> void
     {
-        InWorld.Add<ck::FCk_Processor_EntityLifetime_TriggerDestroyEntity>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_EntityLifetime_TriggerDestroyEntity>(InWorld.Get_Registry());
 
-        InWorld.Add<ck::FCk_Processor_UnrealEntity_HandleRequests>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_UnrealEntity_HandleRequests>(InWorld.Get_Registry());
 
-        InWorld.Add<ck::FCk_Processor_ActorModifier_SpawnActor_HandleRequests>(InWorld.Get_Registry());
-        InWorld.Add<ck::FCk_Processor_ActorModifier_AddActorComponent_HandleRequests>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_ActorModifier_SpawnActor_HandleRequests>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_ActorModifier_AddActorComponent_HandleRequests>(InWorld.Get_Registry());
 
-        InWorld.Add<ck::FCk_Processor_NetTimeSync_HandleRequests>(InWorld.Get_Registry());
-        InWorld.Add<ck::FCk_Processor_NetTimeSync_OnNetworkClockSynchronized>(InWorld.Get_Registry());
-        InWorld.Add<ck::FCk_Processor_NetTimeSync_FirstSync>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_NetTimeSync_HandleRequests>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_NetTimeSync_OnNetworkClockSynchronized>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_NetTimeSync_FirstSync>(InWorld.Get_Registry());
 
-        InWorld.Add<ck::FCk_Processor_Intent_Setup>(InWorld.Get_Registry());
-        InWorld.Add<ck::FCk_Processor_Intent_HandleRequests>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_Intent_Setup>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_Intent_HandleRequests>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FProcessor_Marker_Setup>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_Sensor_Setup>(InWorld.Get_Registry());
@@ -68,7 +68,7 @@ namespace ck_world_actor
         InWorld.Add<ck::FProcessor_EulerIntegrator_Update>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_EulerIntegrator_DoOnePredictiveUpdate>(InWorld.Get_Registry());
 
-        InWorld.Add<ck::FCk_Processor_Projectile_Update>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_Projectile_Update>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FProcessor_Transform_InterpolateToGoal>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_Transform_HandleRequests>(InWorld.Get_Registry());
@@ -81,8 +81,8 @@ namespace ck_world_actor
             InWorld.Add<ck::FProcessor_Transform_Replicate>(InWorld.Get_Registry());
         }
 
-        InWorld.Add<ck::FCk_Processor_RecordEntry_Destructor>(InWorld.Get_Registry());
-        InWorld.Add<ck::FCk_Processor_Record_Destructor>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_RecordEntry_Destructor>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_Record_Destructor>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FProcessor_Marker_UpdateTransform>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_Sensor_UpdateTransform>(InWorld.Get_Registry());
@@ -90,9 +90,9 @@ namespace ck_world_actor
         InWorld.Add<ck::FProcessor_Marker_DebugPreviewAll>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_Sensor_DebugPreviewAll>(InWorld.Get_Registry());
 
-        InWorld.Add<ck::FCk_Processor_OwningActor_Destroy>(InWorld.Get_Registry());
-        InWorld.Add<ck::FCk_Processor_EntityLifetime_EntityJustCreated>(InWorld.Get_Registry());
-        InWorld.Add<ck::FCk_Processor_EntityLifetime_PendingDestroyEntity>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_OwningActor_Destroy>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_EntityLifetime_EntityJustCreated>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_EntityLifetime_PendingDestroyEntity>(InWorld.Get_Registry());
     }
 }
 

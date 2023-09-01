@@ -6,8 +6,8 @@
 
 namespace ck
 {
-    class CKUNREAL_API FCk_Processor_UnrealEntity_HandleRequests
-        : public TProcessor<FCk_Processor_UnrealEntity_HandleRequests, FCk_Fragment_UnrealEntity_Requests>
+    class CKUNREAL_API FProcessor_UnrealEntity_HandleRequests
+        : public TProcessor<FProcessor_UnrealEntity_HandleRequests, FCk_Fragment_UnrealEntity_Requests>
     {
     public:
         using TProcessor::TProcessor;

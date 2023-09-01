@@ -14,7 +14,7 @@ namespace ck
 {
     class CKPHYSICS_API FProcessor_EulerIntegrator_DoOnePredictiveUpdate : public TProcessor<
             FProcessor_EulerIntegrator_DoOnePredictiveUpdate,
-            TExclude<FCk_Tag_HasAuthority>,
+            TExclude<FTag_HasAuthority>,
             FTag_EulerIntegrator_DoOnePredictiveUpdate,
             FFragment_EulerIntegrator_Current,
             FFragment_Velocity_Current,
