@@ -9,7 +9,7 @@
 namespace ck
 {
     auto
-        FCk_Processor_RecordEntry_Destructor::
+        FProcessor_RecordEntry_Destructor::
         ForEachEntity(
             TimeType,
             HandleType InHandle,
