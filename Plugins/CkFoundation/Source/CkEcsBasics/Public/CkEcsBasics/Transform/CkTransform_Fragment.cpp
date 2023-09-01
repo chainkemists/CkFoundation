@@ -29,11 +29,8 @@ auto
     CK_REP_OBJ_EXECUTE_IF_VALID([&]()
     {
         const auto& CurrentLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(Get_AssociatedEntity());
-
-        ck::ecs_basics::Log(TEXT("[UPDATE] Just got a new Goal Value [{}]. Delta Goal is [{}]"), _Location, _Location - CurrentLocation);
-
         UCk_Utils_Transform_UE::Request_SetInterpolationGoal_Offset
-    (
+        (
             Get_AssociatedEntity(),
             _Location - CurrentLocation
         );
