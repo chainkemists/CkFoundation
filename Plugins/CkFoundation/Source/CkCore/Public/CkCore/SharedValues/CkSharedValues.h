@@ -15,20 +15,20 @@ public:
     CK_GENERATED_BODY(FCk_SharedBool);
 
 public:
-    using Value_Type = bool;
-    using Ptr_Type = TSharedPtr<Value_Type, ESPMode::NotThreadSafe>;
+    using ValueType = bool;
+    using PtrType = TSharedPtr<ValueType, ESPMode::NotThreadSafe>;
 
 public:
     FCk_SharedBool();
     explicit
-    FCk_SharedBool(Value_Type InValue);
+    FCk_SharedBool(ValueType InValue);
 
 public:
-    auto operator*() const -> Value_Type&;
-    auto operator->() const -> Value_Type*;
+    auto operator*() const -> ValueType&;
+    auto operator->() const -> ValueType*;
 
 private:
-    Ptr_Type _Ptr;
+    PtrType _Ptr;
 };
 
 UCLASS(NotBlueprintable)
@@ -76,20 +76,20 @@ public:
     CK_GENERATED_BODY(FCk_SharedInt);
 
 public:
-    using Value_Type = int32;
-    using Ptr_Type = TSharedPtr<Value_Type, ESPMode::NotThreadSafe>;
+    using ValueType = int32;
+    using PtrType = TSharedPtr<ValueType, ESPMode::NotThreadSafe>;
 
 public:
     FCk_SharedInt();
     explicit
-    FCk_SharedInt(Value_Type InValue);
+    FCk_SharedInt(ValueType InValue);
 
 public:
-    auto operator*() const -> Value_Type&;
-    auto operator->() const -> Value_Type*;
+    auto operator*() const -> ValueType&;
+    auto operator->() const -> ValueType*;
 
 private:
-    Ptr_Type _Ptr;
+    PtrType _Ptr;
 };
 
 UCLASS(NotBlueprintable)
@@ -137,20 +137,20 @@ public:
     CK_GENERATED_BODY(FCk_SharedFloat);
 
 public:
-    using Value_Type = float;
-    using Ptr_Type = TSharedPtr<Value_Type, ESPMode::NotThreadSafe>;
+    using ValueType = float;
+    using PtrType = TSharedPtr<ValueType, ESPMode::NotThreadSafe>;
 
 public:
     FCk_SharedFloat();
     explicit
-    FCk_SharedFloat(Value_Type InValue);
+    FCk_SharedFloat(ValueType InValue);
 
 public:
-    auto operator*() const -> Value_Type&;
-    auto operator->() const -> Value_Type*;
+    auto operator*() const -> ValueType&;
+    auto operator->() const -> ValueType*;
 
 private:
-    Ptr_Type _Ptr;
+    PtrType _Ptr;
 };
 
 UCLASS(NotBlueprintable)
@@ -176,7 +176,7 @@ public:
     static void
     Set(
         UPARAM(ref) FCk_SharedFloat& InShared,
-        float                             InValue);
+        float InValue);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -198,20 +198,20 @@ public:
     CK_GENERATED_BODY(FCk_SharedVector);
 
 public:
-    using Value_Type = FVector;
-    using Ptr_Type = TSharedPtr<Value_Type, ESPMode::NotThreadSafe>;
+    using ValueType = FVector;
+    using PtrType = TSharedPtr<ValueType, ESPMode::NotThreadSafe>;
 
 public:
     FCk_SharedVector();
     explicit
-    FCk_SharedVector(Value_Type InValue);
+    FCk_SharedVector(ValueType InValue);
 
 public:
-    auto operator*() const -> Value_Type&;
-    auto operator->() const -> Value_Type*;
+    auto operator*() const -> ValueType&;
+    auto operator->() const -> ValueType*;
 
 private:
-    Ptr_Type _Ptr;
+    PtrType _Ptr;
 };
 
 UCLASS(NotBlueprintable)
@@ -237,7 +237,7 @@ public:
     static void
     Set(
         UPARAM(ref) FCk_SharedVector& InShared,
-        FVector                            InValue);
+        FVector InValue);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -259,20 +259,20 @@ public:
     CK_GENERATED_BODY(FCk_SharedString);
 
 public:
-    using Value_Type = FString;
-    using Ptr_Type = TSharedPtr<Value_Type, ESPMode::NotThreadSafe>;
+    using ValueType = FString;
+    using PtrType = TSharedPtr<ValueType, ESPMode::NotThreadSafe>;
 
 public:
     FCk_SharedString();
     explicit
-    FCk_SharedString(Value_Type InValue);
+    FCk_SharedString(ValueType InValue);
 
 public:
-    auto operator*() const -> Value_Type&;
-    auto operator->() const -> Value_Type*;
+    auto operator*() const -> ValueType&;
+    auto operator->() const -> ValueType*;
 
 private:
-    Ptr_Type _Ptr;
+    PtrType _Ptr;
 };
 
 UCLASS(NotBlueprintable)
@@ -298,7 +298,7 @@ public:
     static void
     Set(
         UPARAM(ref) FCk_SharedString& InShared,
-        FString                            InValue);
+        FString InValue);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -320,20 +320,20 @@ public:
     CK_GENERATED_BODY(FCk_SharedRotator);
 
 public:
-    using Value_Type = FRotator;
-    using Ptr_Type = TSharedPtr<Value_Type, ESPMode::NotThreadSafe>;
+    using ValueType = FRotator;
+    using PtrType = TSharedPtr<ValueType, ESPMode::NotThreadSafe>;
 
 public:
     FCk_SharedRotator();
     explicit
-    FCk_SharedRotator(Value_Type InValue);
+    FCk_SharedRotator(ValueType InValue);
 
 public:
-    auto operator*() const -> Value_Type&;
-    auto operator->() const -> Value_Type*;
+    auto operator*() const -> ValueType&;
+    auto operator->() const -> ValueType*;
 
 private:
-    Ptr_Type _Ptr;
+    PtrType _Ptr;
 };
 
 UCLASS(NotBlueprintable)
@@ -359,7 +359,7 @@ public:
     static void
     Set(
         UPARAM(ref) FCk_SharedRotator& InShared,
-        FRotator                            InValue);
+        FRotator InValue);
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|SharedRotator",
@@ -368,3 +368,5 @@ public:
     Make(
         FRotator InValue);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
