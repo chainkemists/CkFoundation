@@ -166,7 +166,7 @@ public:
 
 public:
     UFUNCTION()
-    void OnRep_Transform();
+    void OnRep_Location();
 
     UFUNCTION()
     void OnRep_Rotation();
@@ -175,7 +175,7 @@ public:
     void OnRep_Scale();
 
 private:
-    UPROPERTY(ReplicatedUsing = OnRep_Transform)
+    UPROPERTY(ReplicatedUsing = OnRep_Location)
     FVector _Location;
 
     UPROPERTY(ReplicatedUsing = OnRep_Rotation)

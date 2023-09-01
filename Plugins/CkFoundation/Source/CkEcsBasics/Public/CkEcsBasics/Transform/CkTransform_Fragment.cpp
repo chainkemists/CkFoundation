@@ -24,7 +24,7 @@ auto
 
 auto
     UCk_Fragment_Transform_Rep::
-    OnRep_Transform() -> void
+    OnRep_Location() -> void
 {
     CK_REP_OBJ_EXECUTE_IF_VALID([&]()
     {
