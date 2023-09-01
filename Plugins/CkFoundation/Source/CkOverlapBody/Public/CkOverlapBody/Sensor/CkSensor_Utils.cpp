@@ -18,15 +18,17 @@ auto
     const auto& owningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(InHandle).Get_Actor().Get();
     const auto& sensorName = InParams.Get_SensorName();
     const auto& sensorReplicationType = InParams.Get_ReplicationType();
+    const auto& outermostRemoteAuthority = UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(owningActor);
 
-    if (NOT UCk_Utils_Net_UE::Get_IsRoleMatching(owningActor, sensorReplicationType))
+    if (NOT UCk_Utils_Net_UE::Get_IsRoleMatching(outermostRemoteAuthority, sensorReplicationType))
     {
         ck::overlap_body::VeryVerbose
         (
-            TEXT("Skipping creation of Sensor [{}] on Actor [{}] because it's Replication Type [{}] does NOT match the Actor's"),
+            TEXT("Skipping creation of Sensor [{}] on Actor [{}] because it's Replication Type [{}] does NOT match the Outermost Remote Autority [{}]"),
             sensorName,
             owningActor,
-            sensorReplicationType
+            sensorReplicationType,
+            outermostRemoteAuthority
         );
 
         return;
