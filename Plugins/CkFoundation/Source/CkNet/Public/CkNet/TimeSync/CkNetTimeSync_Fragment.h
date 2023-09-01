@@ -28,8 +28,8 @@ namespace ck
         friend class FCk_Processor_TimeSync_HandleRequests;
 
     private:
-        float _RoundTripTime = 0.0f;
-        TMap<TObjectPtr<APlayerController>, float> _PlayerRoundTripTimes;
+        FCk_Time _RoundTripTime = FCk_Time::Zero;
+        TMap<TObjectPtr<APlayerController>, FCk_Time> _PlayerRoundTripTimes;
 
     public:
         CK_PROPERTY_GET(_RoundTripTime);
@@ -81,7 +81,7 @@ public:
     void
     Broadcast_TimeSync(
         APlayerController* InPlayerController,
-        float InRoundTripTime);
+        FCk_Time InRoundTripTime);
 
 protected:
     virtual auto
@@ -90,7 +90,7 @@ protected:
 private:
     auto
     DoBroadcast_TimeSync(
-        float InRoundTripTime) -> void;
+        FCk_Time InRoundTripTime) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

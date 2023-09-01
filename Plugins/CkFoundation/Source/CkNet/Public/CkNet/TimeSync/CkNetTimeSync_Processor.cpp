@@ -54,8 +54,7 @@ auto
     _Registry.View<TObjectPtr<UCk_Fragment_TimeSync_Rep>>().ForEach(
     [&](EntityType InEntity, TObjectPtr<UCk_Fragment_TimeSync_Rep> InRep)
     {
-        auto Handle = HandleType{InEntity, _Registry};
-        InRep->DoBroadcast_TimeSync(RoundTripTime);
+        InRep->DoBroadcast_TimeSync(FCk_Time{RoundTripTime});
     });
 }
 
@@ -83,7 +82,8 @@ auto
     ck::algo::ForEachRequest(InRequests._TimeSyncRequests,
     [&](const FCk_Request_NetTimeSync_NewSync& InNewSync)
     {
-        const auto& roundTripTime = UCk_Utils_NetTimeSync_UserSettings_UE::Get_EnableNetTimeSynchronization() ? InNewSync.Get_RoundTripTime() : 0.0f;
+        const auto& isNetTimeSyncEnabled = UCk_Utils_NetTimeSync_UserSettings_UE::Get_EnableNetTimeSynchronization();
+        const auto& roundTripTime = isNetTimeSyncEnabled ? InNewSync.Get_RoundTripTime() : FCk_Time::Zero;
 
         _Registry.View<FFragment_TimeSync>().ForEach([&](EntityType InEntity, FFragment_TimeSync& InTimeSync)
         {
