@@ -1,4 +1,4 @@
-#include "CkIntegrator_Processor.h"
+#include "CkEulerIntegrator_Processor.h"
 
 #include "CkNet/TimeSync/CkNetTimeSync_Utils.h"
 
@@ -9,21 +9,21 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FCk_Processor_Integrator_Setup::
+        FCk_Processor_EulerIntegrator_Setup::
         Tick(TimeType InDeltaT)
         -> void
     {
         TProcessor::Tick(InDeltaT);
 
-        _Registry.Clear<FCk_Tag_Integrator_Setup>();
+        _Registry.Clear<FCk_Tag_EulerIntegrator_Setup>();
     }
 
     auto
-        FCk_Processor_Integrator_Setup::
+        FCk_Processor_EulerIntegrator_Setup::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FCk_Fragment_Integrator_Current& InIntegrator,
+            FCk_Fragment_EulerIntegrator_Current& InIntegrator,
             FCk_Fragment_Velocity_Current& InVelocity,
             const FCk_Fragment_Acceleration_Current& InAcceleration) const
         -> void
@@ -64,11 +64,11 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FCk_Processor_Integrator_Update::
+        FCk_Processor_EulerIntegrator_Update::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FCk_Fragment_Integrator_Current& InIntegrator,
+            FCk_Fragment_EulerIntegrator_Current& InIntegrator,
             FCk_Fragment_Velocity_Current& InVelocity,
             const FCk_Fragment_Acceleration_Current& InAcceleration) const
         -> void
