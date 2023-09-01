@@ -30,10 +30,16 @@ namespace ck
     {
         const auto& VelocityRO = InHandle.Get<TObjectPtr<UCk_Fragment_Velocity_Rep>>();
 
-        // TODO: this was hacked together quickly, improve this code
-        const auto PlayerController =
-            Cast<APlayerController>(Cast<APawn>(VelocityRO->GetOwningActor())->Controller.Get());
+        CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(VelocityRO)
+        { return; }
 
+        const auto OutermostPawn = UCk_Utils_Actor_UE::Get_OutermostPawn(VelocityRO);
+
+        CK_ENSURE_IF_NOT(OutermostPawn, TEXT("Expected ReplicatedObject [{}] to have an owning Pawn in the parent chain. "
+            "Unable to perform predictive integration."), VelocityRO)
+        { return; }
+
+        const auto PlayerController = Cast<APlayerController>(OutermostPawn->Controller.Get());
         const auto& Latency = UCk_Utils_NetTimeSync_UE::Get_PlayerRoundTripTime(PlayerController, InHandle);
 
         InDeltaT = FCk_Time{Latency};
