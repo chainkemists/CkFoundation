@@ -44,7 +44,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_TimeSync);
 
         friend class FCk_Processor_TimeSync_HandleRequests;
-        friend  UCk_Utils_NetTimeSync_UE;
+        friend class UCk_Utils_NetTimeSync_UE;
 
     public:
         using TimeSyncRequestType = FCk_Request_NetTimeSync_NewSync;
@@ -92,3 +92,5 @@ private:
     DoBroadcast_TimeSync(
         float InRoundTripTime) -> void;
 };
+
+// --------------------------------------------------------------------------------------------------------------------
