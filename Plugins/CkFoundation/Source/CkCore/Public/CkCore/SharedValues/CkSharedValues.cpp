@@ -12,7 +12,7 @@ FCk_SharedBool::
 FCk_SharedBool::
     FCk_SharedBool(
         ValueType InValue)
-    : _Ptr(ck::type_traits::make_new_ptr<PtrType>{}((InValue)))
+    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}((InValue)))
 { }
 
 auto
@@ -69,7 +69,7 @@ FCk_SharedInt::
 FCk_SharedInt::
     FCk_SharedInt(
         ValueType InValue)
-    : _Ptr(ck::type_traits::make_new_ptr<PtrType>{}((InValue)))
+    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}((InValue)))
 { }
 
 auto
@@ -126,7 +126,7 @@ FCk_SharedFloat::
 FCk_SharedFloat::
     FCk_SharedFloat(
         ValueType InValue)
-    : _Ptr(ck::type_traits::make_new_ptr<PtrType>{}((InValue)))
+    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}((InValue)))
 { }
 
 auto
@@ -184,7 +184,7 @@ FCk_SharedVector::
 FCk_SharedVector::
     FCk_SharedVector(
         ValueType InValue)
-    : _Ptr(ck::type_traits::make_new_ptr<PtrType>{}((InValue)))
+    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}((InValue)))
 { }
 
 auto
@@ -241,7 +241,7 @@ FCk_SharedString::
 FCk_SharedString::
     FCk_SharedString(
         ValueType InValue)
-    : _Ptr(ck::type_traits::make_new_ptr<PtrType>{}((InValue)))
+    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}((InValue)))
 { }
 
 auto
@@ -298,7 +298,7 @@ FCk_SharedRotator::
 FCk_SharedRotator::
     FCk_SharedRotator(
         ValueType InValue)
-    : _Ptr(ck::type_traits::make_new_ptr<PtrType>{}((InValue)))
+    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}((InValue)))
 { }
 
 auto

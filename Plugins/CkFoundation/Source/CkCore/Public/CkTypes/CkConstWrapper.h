@@ -12,7 +12,7 @@ namespace ck
 
     public:
         using ValueType = T_ComplexPtrType;
-        using StoredValueType = typename type_traits::extract_value_type<T_ComplexPtrType>::type;
+        using StoredValueType = typename type_traits::ExtractValueType<T_ComplexPtrType>::type;
 
     public:
         TPtrWrapper();
@@ -46,27 +46,27 @@ namespace ck
 
     template <typename T_ComplexPtrType>
     TPtrWrapper<T_ComplexPtrType>::TPtrWrapper()
-        :  _Ptr(std::move(type_traits::make_new_ptr<ValueType>{}()))
+        :  _Ptr(std::move(type_traits::MakeNewPtr<ValueType>{}()))
     {
     }
 
     template <typename T_ComplexPtrType>
     TPtrWrapper<T_ComplexPtrType>::TPtrWrapper(const ThisType& InOther)
-        : _Ptr(ck::type_traits::move_or_copy_ptr<ValueType>{}(InOther._Ptr))
+        : _Ptr(ck::type_traits::MoveOrCopyPtr<ValueType>{}(InOther._Ptr))
     {
     }
 
     template <typename T_ComplexPtrType>
     template <typename ... T_Args>
     TPtrWrapper<T_ComplexPtrType>::TPtrWrapper(T_Args&&... InArgs)
-        :  _Ptr(std::move(type_traits::make_new_ptr<ValueType>{}(std::forward<T_Args>(InArgs)...)))
+        :  _Ptr(std::move(type_traits::MakeNewPtr<ValueType>{}(std::forward<T_Args>(InArgs)...)))
     {
     }
 
     template <typename T_ComplexPtrType>
     auto TPtrWrapper<T_ComplexPtrType>::operator=(const ThisType& InOther) -> ThisType&
     {
-        _Ptr = ck::type_traits::move_or_copy_ptr<ValueType>{}(InOther._Ptr);
+        _Ptr = ck::type_traits::MoveOrCopyPtr<ValueType>{}(InOther._Ptr);
         return *this;
     }
 

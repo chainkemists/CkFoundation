@@ -19,7 +19,7 @@
     const auto& callStack = ck::Format_UE                                                                                                      \
     (                                                                                                                                          \
         TEXT("== BP CallStack ==\n{}\n"),                                                                                                      \
-        UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::as_string{})                                                             \
+        UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::AsString{})                                                             \
     );                                                                                                                                         \
     const auto& callstackPlusMessage = ck::Format_UE                                                                                           \
     (                                                                                                                                          \
@@ -108,7 +108,7 @@ EnsureMsgf(bool InExpression,
     if (CK_ENSURE_BP(InExpression,
         TEXT("{}\n\n== BP Callstack ==\n{}"),
         InMsg.ToString(),
-        UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::as_string{})))
+        UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::AsString{})))
     {
         OutHitStatus = ECk_Ensure_HitStatus::NotHit;
     }
