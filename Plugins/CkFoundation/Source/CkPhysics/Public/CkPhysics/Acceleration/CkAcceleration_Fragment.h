@@ -78,9 +78,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FFragment_Acceleration_Channel : public FCk_Fragment_GameplayLabel
+    struct FFragment_Acceleration_Channel : public FFragment_GameplayLabel
     {
-        using FCk_Fragment_GameplayLabel::FCk_Fragment_GameplayLabel;
+        using FFragment_GameplayLabel::FFragment_GameplayLabel;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

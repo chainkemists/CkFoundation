@@ -7,15 +7,15 @@
 
 namespace ck
 {
-    FCk_Fragment_GameplayLabel::
-        FCk_Fragment_GameplayLabel(
+    FFragment_GameplayLabel::
+        FFragment_GameplayLabel(
             FGameplayTag InLabel)
         : _Label(InLabel)
     {
     }
 
     auto
-        FCk_Fragment_GameplayLabel::
+        FFragment_GameplayLabel::
         operator==(
             const ThisType& InOther) const
         -> bool
@@ -24,7 +24,7 @@ namespace ck
     }
 
     auto
-        FCk_Fragment_GameplayLabel::
+        FFragment_GameplayLabel::
         operator==(
             const FGameplayTag& InOther) const
         -> bool
