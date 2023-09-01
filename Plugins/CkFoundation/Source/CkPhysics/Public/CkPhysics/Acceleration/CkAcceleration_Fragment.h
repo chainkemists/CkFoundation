@@ -85,7 +85,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FFragment_RecordOfAccelerationModifiers : public FCk_Fragment_Record {};
+    struct FFragment_RecordOfAccelerationModifiers : public FFragment_Record {};
 
     // --------------------------------------------------------------------------------------------------------------------
 
