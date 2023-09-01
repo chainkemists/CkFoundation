@@ -7,11 +7,11 @@
 namespace ck
 {
     auto
-        FCk_Processor_OwningActor_Destroy::
+        FProcessor_OwningActor_Destroy::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FCk_Fragment_OwningActor_Current& InOwningActorComp) const
+            FFragment_OwningActor_Current& InOwningActorComp) const
         -> void
     {
         const auto& entityOwningActor = InOwningActorComp.Get_EntityOwningActor().Get();

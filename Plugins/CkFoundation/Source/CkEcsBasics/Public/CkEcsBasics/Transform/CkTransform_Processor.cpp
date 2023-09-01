@@ -119,7 +119,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_OwningActor_Current& InOwningActor,
+            const FFragment_OwningActor_Current& InOwningActor,
             const FFragment_Transform_Current& InComp) const
         -> void
     {
