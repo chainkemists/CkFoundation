@@ -22,7 +22,13 @@ auto
     const auto& owningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(InHandle).Get_Actor().Get();
     const auto& markerName = InParams.Get_MarkerName();
     const auto& markerReplicationType = InParams.Get_ReplicationType();
-    const auto& outermostRemoteAuthority = UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(owningActor);
+    const auto& outermostRemoteAuthority = [&]()
+    {
+        if (owningActor->GetIsReplicated())
+        { return owningActor; }
+
+        return UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(owningActor);
+    }();
 
     if (NOT UCk_Utils_Net_UE::Get_IsRoleMatching(outermostRemoteAuthority, markerReplicationType))
     {
