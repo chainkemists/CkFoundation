@@ -8,14 +8,14 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECS_API FCk_Processor_EntityLifetime_EntityJustCreated
+    class CKECS_API FProcessor_EntityLifetime_EntityJustCreated
     {
     public:
         using FTimeType = FCk_Time;
         using FRegistryType = FCk_Registry;
 
     public:
-        explicit FCk_Processor_EntityLifetime_EntityJustCreated(const FRegistryType& InRegistry);
+        explicit FProcessor_EntityLifetime_EntityJustCreated(const FRegistryType& InRegistry);
 
     public:
         auto Tick(FTimeType) -> void;
@@ -26,8 +26,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECS_API FCk_Processor_EntityLifetime_TriggerDestroyEntity
-        : public TProcessor<FCk_Processor_EntityLifetime_TriggerDestroyEntity, FCk_Tag_TriggerDestroyEntity>
+    class CKECS_API FProcessor_EntityLifetime_TriggerDestroyEntity
+        : public TProcessor<FProcessor_EntityLifetime_TriggerDestroyEntity, FTag_TriggerDestroyEntity>
     {
     public:
         using Super = TProcessor;
@@ -43,8 +43,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECS_API FCk_Processor_EntityLifetime_PendingDestroyEntity
-        : public TProcessor<FCk_Processor_EntityLifetime_PendingDestroyEntity, FCk_Tag_PendingDestroyEntity>
+    class CKECS_API FProcessor_EntityLifetime_PendingDestroyEntity
+        : public TProcessor<FProcessor_EntityLifetime_PendingDestroyEntity, FTag_PendingDestroyEntity>
     {
     public:
         using TProcessor::TProcessor;

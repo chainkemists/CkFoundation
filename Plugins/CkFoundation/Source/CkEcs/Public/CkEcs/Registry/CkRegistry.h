@@ -15,7 +15,7 @@
 
 namespace ck
 {
-    class FCk_Processor_EntityLifetime_PendingDestroyEntity;
+    class FProcessor_EntityLifetime_PendingDestroyEntity;
 }
 
 namespace ck
@@ -39,7 +39,7 @@ public:
 
 public:
     friend class UCk_Utils_EntityLifetime_UE;
-    friend class ck::FCk_Processor_EntityLifetime_PendingDestroyEntity;
+    friend class ck::FProcessor_EntityLifetime_PendingDestroyEntity;
 
 public:
     using InternalRegistryType = entt::registry;

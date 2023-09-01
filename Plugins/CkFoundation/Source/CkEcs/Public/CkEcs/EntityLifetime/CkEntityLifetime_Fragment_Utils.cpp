@@ -16,7 +16,7 @@ auto
     if (UCk_Utils_ReplicatedObjects_UE::Get_NetRole(InHandle) != ROLE_Authority)
     { return; }
 
-    InHandle.Add<ck::FCk_Tag_TriggerDestroyEntity>();
+    InHandle.Add<ck::FTag_TriggerDestroyEntity>();
 }
 
 auto
@@ -36,7 +36,7 @@ auto
     Get_IsPendingDestroy(FCk_Handle InHandle)
     -> bool
 {
-    return InHandle.Has_Any<ck::FCk_Tag_TriggerDestroyEntity, ck::FCk_Tag_PendingDestroyEntity>();
+    return InHandle.Has_Any<ck::FTag_TriggerDestroyEntity, ck::FTag_PendingDestroyEntity>();
 }
 
 auto
@@ -46,7 +46,7 @@ auto
     -> HandleType
 {
     const auto& NewEntity = InRegistry.CreateEntity();
-    InRegistry.Add<ck::FCk_Tag_EntityJustCreated>(NewEntity);
+    InRegistry.Add<ck::FTag_EntityJustCreated>(NewEntity);
 
     return HandleType{ NewEntity, InRegistry };
 }
@@ -59,7 +59,7 @@ auto
     -> HandleType
 {
     const auto& NewEntity = InRegistry.CreateEntity(InEntityHint.Entity);
-    InRegistry.Add<ck::FCk_Tag_EntityJustCreated>(NewEntity);
+    InRegistry.Add<ck::FTag_EntityJustCreated>(NewEntity);
 
     return HandleType{ NewEntity, InRegistry };
 }
