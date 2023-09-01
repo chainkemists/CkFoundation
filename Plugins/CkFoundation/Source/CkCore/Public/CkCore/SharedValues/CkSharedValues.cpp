@@ -11,14 +11,14 @@ FCk_SharedBool::
 
 FCk_SharedBool::
     FCk_SharedBool(
-        Value_Type InValue)
-    : _Ptr(ck::type_traits::make_new_ptr<Ptr_Type>{}((InValue)))
+        ValueType InValue)
+    : _Ptr(ck::type_traits::make_new_ptr<PtrType>{}((InValue)))
 { }
 
 auto
     FCk_SharedBool::
     operator*() const
-    -> Value_Type&
+    -> ValueType&
 {
     return *_Ptr;
 }
@@ -26,7 +26,7 @@ auto
 auto
     FCk_SharedBool::
     operator->() const
-    -> Value_Type*
+    -> ValueType*
 {
     return _Ptr.Get();
 }
@@ -44,7 +44,7 @@ auto
     UCk_Utils_SharedBool_UE::
     Set(
         FCk_SharedBool& InShared,
-        bool                 InValue)
+        bool InValue)
     -> void
 {
     *InShared = InValue;
@@ -67,17 +67,15 @@ FCk_SharedInt::
 { }
 
 FCk_SharedInt::
-    FCk_SharedInt
-    (
-        Value_Type InValue
-    )
-    : _Ptr(ck::type_traits::make_new_ptr<Ptr_Type>{}((InValue)))
+    FCk_SharedInt(
+        ValueType InValue)
+    : _Ptr(ck::type_traits::make_new_ptr<PtrType>{}((InValue)))
 { }
 
 auto
     FCk_SharedInt::
     operator*() const
-    -> Value_Type&
+    -> ValueType&
 {
     return *_Ptr;
 }
@@ -85,7 +83,7 @@ auto
 auto
     FCk_SharedInt::
     operator->() const
-    -> Value_Type*
+    -> ValueType*
 {
     return _Ptr.Get();
 }
@@ -103,7 +101,7 @@ auto
     UCk_Utils_SharedInt_UE::
     Set(
         FCk_SharedInt& InShared,
-        int32          InValue)
+        int32 InValue)
     -> void
 {
     *InShared = InValue;
@@ -127,14 +125,14 @@ FCk_SharedFloat::
 
 FCk_SharedFloat::
     FCk_SharedFloat(
-        Value_Type InValue)
-    : _Ptr(ck::type_traits::make_new_ptr<Ptr_Type>{}((InValue)))
+        ValueType InValue)
+    : _Ptr(ck::type_traits::make_new_ptr<PtrType>{}((InValue)))
 { }
 
 auto
     FCk_SharedFloat::
     operator*() const
-    -> Value_Type&
+    -> ValueType&
 {
     return *_Ptr;
 }
@@ -142,7 +140,7 @@ auto
 auto
     FCk_SharedFloat::
     operator->() const
-    -> Value_Type*
+    -> ValueType*
 {
     return _Ptr.Get();
 }
@@ -160,7 +158,7 @@ auto
     UCk_Utils_SharedFloat_UE::
     Set(
         FCk_SharedFloat& InShared,
-        float            InValue)
+        float InValue)
     -> void
 {
     *InShared = InValue;
@@ -180,19 +178,19 @@ auto
 
 FCk_SharedVector::
     FCk_SharedVector()
-    : FCk_SharedVector(Value_Type{})
+    : FCk_SharedVector(ValueType{})
 { }
 
 FCk_SharedVector::
     FCk_SharedVector(
-        Value_Type InValue)
-    : _Ptr(ck::type_traits::make_new_ptr<Ptr_Type>{}((InValue)))
+        ValueType InValue)
+    : _Ptr(ck::type_traits::make_new_ptr<PtrType>{}((InValue)))
 { }
 
 auto
     FCk_SharedVector::
     operator*() const
-    -> Value_Type&
+    -> ValueType&
 {
     return *_Ptr;
 }
@@ -200,7 +198,7 @@ auto
 auto
     FCk_SharedVector::
     operator->() const
-    -> Value_Type*
+    -> ValueType*
 {
     return _Ptr.Get();
 }
@@ -218,7 +216,7 @@ auto
     UCk_Utils_SharedVector_UE::
     Set(
         FCk_SharedVector& InShared,
-        FVector           InValue)
+        FVector InValue)
     -> void
 {
     *InShared = InValue;
@@ -237,19 +235,19 @@ auto
 
 FCk_SharedString::
     FCk_SharedString()
-    : FCk_SharedString(Value_Type{})
+    : FCk_SharedString(ValueType{})
 { }
 
 FCk_SharedString::
     FCk_SharedString(
-        Value_Type InValue)
-    : _Ptr(ck::type_traits::make_new_ptr<Ptr_Type>{}((InValue)))
+        ValueType InValue)
+    : _Ptr(ck::type_traits::make_new_ptr<PtrType>{}((InValue)))
 { }
 
 auto
     FCk_SharedString::
     operator*() const
-    -> Value_Type&
+    -> ValueType&
 {
     return *_Ptr;
 }
@@ -257,7 +255,7 @@ auto
 auto
     FCk_SharedString::
     operator->() const
-    -> Value_Type*
+    -> ValueType*
 {
     return _Ptr.Get();
 }
@@ -275,7 +273,7 @@ auto
     UCk_Utils_SharedString_UE::
     Set(
         FCk_SharedString& InShared,
-        FString           InValue)
+        FString InValue)
     -> void
 {
     *InShared = InValue;
@@ -294,19 +292,19 @@ auto
 
 FCk_SharedRotator::
     FCk_SharedRotator()
-    : FCk_SharedRotator(Value_Type{})
+    : FCk_SharedRotator(ValueType{})
 { }
 
 FCk_SharedRotator::
     FCk_SharedRotator(
-        Value_Type InValue)
-    : _Ptr(ck::type_traits::make_new_ptr<Ptr_Type>{}((InValue)))
+        ValueType InValue)
+    : _Ptr(ck::type_traits::make_new_ptr<PtrType>{}((InValue)))
 { }
 
 auto
     FCk_SharedRotator::
     operator*() const
-    -> Value_Type&
+    -> ValueType&
 {
     return *_Ptr;
 }
@@ -314,7 +312,7 @@ auto
 auto
     FCk_SharedRotator::
     operator->() const
-    -> Value_Type*
+    -> ValueType*
 {
     return _Ptr.Get();
 }
@@ -332,7 +330,7 @@ auto
     UCk_Utils_SharedRotator_UE::
     Set(
         FCk_SharedRotator& InShared,
-        FRotator           InValue)
+        FRotator InValue)
     -> void
 {
     *InShared = InValue;
