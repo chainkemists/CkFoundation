@@ -9,15 +9,15 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(meta = (DisplayName = "Ck Log"))
-class CKLOG_API UCk_LogSettings_UE : public UDeveloperSettings
+class CKLOG_API UCk_Log_Settings_UE : public UDeveloperSettings
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_LogSettings_UE);
+    CK_GENERATED_BODY(UCk_Log_Settings_UE);
 
 public:
-    UCk_LogSettings_UE();
+    UCk_Log_Settings_UE();
 
 protected:
     /**
@@ -40,12 +40,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKLOG_API UCk_LogSettings_Utils : public UBlueprintFunctionLibrary
+class CKLOG_API UCk_Utils_Log_Settings_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_LogSettings_Utils);
+    CK_GENERATED_BODY(UCk_Utils_Log_Settings_UE);
 
 public:
     UFUNCTION(BlueprintPure,
