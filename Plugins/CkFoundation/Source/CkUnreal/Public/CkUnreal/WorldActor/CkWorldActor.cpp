@@ -70,15 +70,15 @@ namespace ck_world_actor
 
         InWorld.Add<ck::FCk_Processor_Projectile_Update>(InWorld.Get_Registry());
 
-        InWorld.Add<ck::FCk_Processor_Transform_InterpolateToGoal>(InWorld.Get_Registry());
-        InWorld.Add<ck::FCk_Processor_Transform_HandleRequests>(InWorld.Get_Registry());
-        InWorld.Add<ck::FCk_Processor_Transform_Actor>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_Transform_InterpolateToGoal>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_Transform_HandleRequests>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_Transform_Actor>(InWorld.Get_Registry());
 
         // Processors for Replication
         {
             InWorld.Add<ck::FCk_Processor_Velocity_Replicate>(InWorld.Get_Registry());
             InWorld.Add<ck::FCk_Processor_Acceleration_Replicate>(InWorld.Get_Registry());
-            InWorld.Add<ck::FCk_Processor_Transform_Replicate>(InWorld.Get_Registry());
+            InWorld.Add<ck::FProcessor_Transform_Replicate>(InWorld.Get_Registry());
         }
 
         InWorld.Add<ck::FCk_Processor_RecordEntry_Destructor>(InWorld.Get_Registry());

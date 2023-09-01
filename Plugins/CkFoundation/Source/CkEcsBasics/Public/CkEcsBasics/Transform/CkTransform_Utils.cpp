@@ -14,7 +14,7 @@ auto
     if (NOT Ensure<ck::type_traits::NonConst>(InHandle))
     { return; }
 
-    InHandle.AddOrGet<ck::FCk_Fragment_Transform_Requests>()._LocationRequests.Emplace(InRequest);
+    InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._LocationRequests.Emplace(InRequest);
 }
 
 auto
@@ -27,7 +27,7 @@ auto
     if (NOT Ensure<ck::type_traits::NonConst>(InHandle))
     { return; }
 
-    InHandle.AddOrGet<ck::FCk_Fragment_Transform_Requests>()._LocationRequests.Emplace(InRequest);
+    InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._LocationRequests.Emplace(InRequest);
 }
 
 auto
@@ -40,7 +40,7 @@ auto
     if (NOT Ensure<ck::type_traits::NonConst>(InHandle))
     { return; }
 
-    InHandle.AddOrGet<ck::FCk_Fragment_Transform_Requests>()._RotationRequests.Emplace(InRequest);
+    InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._RotationRequests.Emplace(InRequest);
 }
 
 auto
@@ -53,7 +53,7 @@ auto
     if (NOT Ensure<ck::type_traits::NonConst>(InHandle))
     { return; }
 
-    InHandle.AddOrGet<ck::FCk_Fragment_Transform_Requests>()._RotationRequests.Emplace(InRequest);
+    InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._RotationRequests.Emplace(InRequest);
 }
 
 auto
@@ -66,7 +66,7 @@ auto
     if (NOT Ensure<ck::type_traits::NonConst>(InHandle))
     { return; }
 
-    InHandle.AddOrGet<ck::FCk_Fragment_Transform_Requests>()._ScaleRequests = InRequest;
+    InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._ScaleRequests = InRequest;
 }
 
 auto
@@ -81,22 +81,23 @@ auto
     if (NOT Ensure<ck::type_traits::NonConst>(InHandle))
     { return; }
 
-    auto& requestsComp = InHandle.AddOrGet<ck::FCk_Fragment_Transform_Requests>();
+    auto& RequestsFragment = InHandle.AddOrGet<ck::FFragment_Transform_Requests>();
 
-    requestsComp._LocationRequests.Emplace(FCk_Request_Transform_SetLocation{ newTransform.GetLocation(), ECk_RelativeAbsolute::Absolute });
-    requestsComp._RotationRequests.Emplace(FCk_Request_Transform_SetRotation{ newTransform.GetRotation().Rotator(), ECk_RelativeAbsolute::Absolute });
-    requestsComp._ScaleRequests = FCk_Request_Transform_SetScale{ newTransform.GetScale3D(), ECk_RelativeAbsolute::Absolute};
+    RequestsFragment._LocationRequests.Emplace(FCk_Request_Transform_SetLocation{ newTransform.GetLocation(), ECk_RelativeAbsolute::Absolute });
+    RequestsFragment._RotationRequests.Emplace(FCk_Request_Transform_SetRotation{ newTransform.GetRotation().Rotator(), ECk_RelativeAbsolute::Absolute });
+    RequestsFragment._ScaleRequests = FCk_Request_Transform_SetScale{ newTransform.GetScale3D(), ECk_RelativeAbsolute::Absolute};
 }
 
 auto
     UCk_Utils_Transform_UE::
-    Request_SetInterpolationGoal_Location(
+    Request_SetInterpolationGoal_Offset(
         FCk_Handle InHandle,
-        const FCk_Fragment_Transform_NewGoal_Location& InNewGoal)
+        FVector    InOffset)
     -> void
 {
-    auto& NewGoal = InHandle.AddOrGet<FCk_Fragment_Transform_NewGoal_Location>();
-    NewGoal = InNewGoal;
+    auto& NewGoal = InHandle.AddOrGet<ck::FFragment_Transform_NewGoal_Location>();
+    NewGoal = ck::FFragment_Transform_NewGoal_Location{};
+    NewGoal.Set_InterpolationOffset(InOffset);
 }
 
 auto
@@ -107,7 +108,7 @@ auto
 {
     if (Has<ck::type_traits::NonConst>(InHandle))
     {
-        return InHandle.Get<ck::FCk_Fragment_Transform_Current>().Get_Transform();
+        return InHandle.Get<ck::FFragment_Transform_Current>().Get_Transform();
     }
 
     if (Has<ck::type_traits::Const>(InHandle))
@@ -128,7 +129,7 @@ auto
 {
     if (Has<ck::type_traits::NonConst>(InHandle))
     {
-        return InHandle.Get<ck::FCk_Fragment_Transform_Current>().Get_Transform().GetLocation();
+        return InHandle.Get<ck::FFragment_Transform_Current>().Get_Transform().GetLocation();
     }
 
     if (Has<ck::type_traits::Const>(InHandle))
@@ -149,7 +150,7 @@ auto
 {
     if (Has<ck::type_traits::NonConst>(InHandle))
     {
-        return InHandle.Get<ck::FCk_Fragment_Transform_Current>().Get_Transform().GetRotation().Rotator();
+        return InHandle.Get<ck::FFragment_Transform_Current>().Get_Transform().GetRotation().Rotator();
     }
 
     if (Has<ck::type_traits::Const>(InHandle))
@@ -170,7 +171,7 @@ auto
 {
     if (Has<ck::type_traits::NonConst>(InHandle))
     {
-        return InHandle.Get<ck::FCk_Fragment_Transform_Current>().Get_Transform().GetScale3D();
+        return InHandle.Get<ck::FFragment_Transform_Current>().Get_Transform().GetScale3D();
     }
 
     if (Has<ck::type_traits::Const>(InHandle))
@@ -188,7 +189,7 @@ auto
     DoAdd(
         FCk_Handle InHandle,
         FTransform InInitialTransform,
-        FCk_Fragment_Interpolation_Params InParams)
+        FCk_Transform_Interpolation_Settings InParams)
     -> void
 {
     Add<ck::type_traits::NonConst>(InHandle, InInitialTransform, InParams);
