@@ -11,9 +11,9 @@ auto
         const FCk_Fragment_Acceleration_ParamsData& InParams)
     -> void
 {
-    InHandle.Add<ck::FCk_Fragment_Acceleration_Params>(InParams);
-    InHandle.Add<ck::FCk_Fragment_Acceleration_Current>(InParams.Get_StartingAcceleration());
-    InHandle.Add<ck::FCk_Tag_Acceleration_Setup>();
+    InHandle.Add<ck::FFragment_Acceleration_Params>(InParams);
+    InHandle.Add<ck::FFragment_Acceleration_Current>(InParams.Get_StartingAcceleration());
+    InHandle.Add<ck::FTag_Acceleration_Setup>();
 
     TryAddReplicatedFragment<UCk_Fragment_Acceleration_Rep>(InHandle);
 }
@@ -24,7 +24,7 @@ auto
         FCk_Handle InHandle)
     -> bool
 {
-    return InHandle.Has_All<ck::FCk_Fragment_Acceleration_Current, ck::FCk_Fragment_Acceleration_Params>();
+    return InHandle.Has_All<ck::FFragment_Acceleration_Current, ck::FFragment_Acceleration_Params>();
 }
 
 auto
@@ -48,7 +48,7 @@ auto
     if (NOT Ensure(InHandle))
     { return {}; }
 
-    return InHandle.Get<ck::FCk_Fragment_Acceleration_Current>().Get_CurrentAcceleration();
+    return InHandle.Get<ck::FFragment_Acceleration_Current>().Get_CurrentAcceleration();
 }
 
 auto
@@ -61,7 +61,7 @@ auto
     if (NOT Ensure(InHandle))
     { return; }
 
-    InHandle.Get<ck::FCk_Fragment_Acceleration_Current>()._CurrentAcceleration = InNewAcceleration;
+    InHandle.Get<ck::FFragment_Acceleration_Current>()._CurrentAcceleration = InNewAcceleration;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -78,8 +78,8 @@ auto
         InHandle)
     { return; }
 
-    InHandle.Add<ck::FCk_Tag_AccelerationModifier_SingleTarget>();
-    InHandle.Add<ck::FCk_Tag_AccelerationModifier_SingleTarget_Setup>();
+    InHandle.Add<ck::FTag_AccelerationModifier_SingleTarget>();
+    InHandle.Add<ck::FTag_AccelerationModifier_SingleTarget_Setup>();
 
     UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Add(InHandle, InParams.Get_Target());
     UCk_Utils_Acceleration_UE::Add(InHandle, InParams.Get_AccelerationParams());
@@ -91,7 +91,7 @@ auto
         FCk_Handle InHandle)
     -> bool
 {
-    return InHandle->Has<ck::FCk_Tag_AccelerationModifier_SingleTarget>(InHandle.Get_Entity()) &&
+    return InHandle->Has<ck::FTag_AccelerationModifier_SingleTarget>(InHandle.Get_Entity()) &&
            UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Has(InHandle);
 }
 

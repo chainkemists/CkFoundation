@@ -16,7 +16,7 @@
 
 namespace ck
 {
-    class FCk_Processor_AccelerationModifier_SingleTarget_Teardown;
+    class FProcessor_AccelerationModifier_SingleTarget_Teardown;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -33,10 +33,10 @@ public:
     friend class UCk_Utils_Acceleration_SingleTarget_UE;
     friend class UCk_Utils_Acceleration_MultipleTargets_UE;
 
-    friend class ck::FCk_Processor_AccelerationModifier_SingleTarget_Teardown;
+    friend class ck::FProcessor_AccelerationModifier_SingleTarget_Teardown;
 
 private:
-    struct AccelerationTarget_Utils : public ck::TUtils_EntityHolder<ck::FCk_Fragment_Acceleration_Target> {};
+    struct AccelerationTarget_Utils : public ck::TUtils_EntityHolder<ck::FFragment_Acceleration_Target> {};
 
 public:
     UFUNCTION(BlueprintCallable,

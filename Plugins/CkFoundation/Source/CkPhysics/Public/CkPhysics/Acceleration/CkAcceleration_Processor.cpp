@@ -10,12 +10,12 @@
 namespace ck
 {
     auto
-        FCk_Processor_Acceleration_Setup::
+        FProcessor_Acceleration_Setup::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_Acceleration_Params& InParams,
-            FCk_Fragment_Acceleration_Current& InCurrent) const
+            const FFragment_Acceleration_Params& InParams,
+            FFragment_Acceleration_Current& InCurrent) const
         -> void
     {
         const auto& params = InParams.Get_Params();
@@ -46,16 +46,16 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FCk_Processor_AccelerationModifier_SingleTarget_Setup::
+        FProcessor_AccelerationModifier_SingleTarget_Setup::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_Acceleration_Current& InAcceleration,
-            const FCk_Fragment_Acceleration_Target& InTarget) const
+            const FFragment_Acceleration_Current& InAcceleration,
+            const FFragment_Acceleration_Target& InTarget) const
         -> void
     {
         auto targetEntity  = InTarget.Get_Entity();
-        auto& targetAcceleration = targetEntity.Get<FCk_Fragment_Acceleration_Current>();
+        auto& targetAcceleration = targetEntity.Get<FFragment_Acceleration_Current>();
 
         targetAcceleration._CurrentAcceleration += InAcceleration.Get_CurrentAcceleration();
 
@@ -65,16 +65,16 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FCk_Processor_AccelerationModifier_SingleTarget_Teardown::
+        FProcessor_AccelerationModifier_SingleTarget_Teardown::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_Acceleration_Current& InAcceleration,
-            const FCk_Fragment_Acceleration_Target& InTarget) const
+            const FFragment_Acceleration_Current& InAcceleration,
+            const FFragment_Acceleration_Target& InTarget) const
         -> void
     {
         auto targetEntity = InTarget.Get_Entity();
-        auto& targetAcceleration = targetEntity.Get<FCk_Fragment_Acceleration_Current>();
+        auto& targetAcceleration = targetEntity.Get<FFragment_Acceleration_Current>();
 
         targetAcceleration._CurrentAcceleration -= InAcceleration._CurrentAcceleration;
     }
@@ -82,11 +82,11 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FCk_Processor_Acceleration_Replicate::
+        FProcessor_Acceleration_Replicate::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FCk_Fragment_Acceleration_Current& InCurrent,
+            const FFragment_Acceleration_Current& InCurrent,
             const TObjectPtr<UCk_Fragment_Acceleration_Rep>& InAccelRepComp) const
         -> void
     {

@@ -25,7 +25,7 @@ namespace ck
             HandleType InHandle,
             FCk_Fragment_EulerIntegrator_Current& InIntegrator,
             FCk_Fragment_Velocity_Current& InVelocity,
-            const FCk_Fragment_Acceleration_Current& InAcceleration) const
+            const FFragment_Acceleration_Current& InAcceleration) const
         -> void
     {
         const auto& VelocityRO = InHandle.Get<TObjectPtr<UCk_Fragment_Velocity_Rep>>();
@@ -70,7 +70,7 @@ namespace ck
             HandleType InHandle,
             FCk_Fragment_EulerIntegrator_Current& InIntegrator,
             FCk_Fragment_Velocity_Current& InVelocity,
-            const FCk_Fragment_Acceleration_Current& InAcceleration) const
+            const FFragment_Acceleration_Current& InAcceleration) const
         -> void
     {
         const auto& OldVelocity = InVelocity.Get_CurrentVelocity();
