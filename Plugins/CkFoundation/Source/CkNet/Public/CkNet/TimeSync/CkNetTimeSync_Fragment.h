@@ -28,7 +28,7 @@ namespace ck
         friend class FCk_Processor_NetTimeSync_HandleRequests;
 
     private:
-        FCk_Time _RoundTripTime = FCk_Time::Zero;
+        FCk_Time _RoundTripTime;
         TMap<TObjectPtr<APlayerController>, FCk_Time> _PlayerRoundTripTimes;
 
     public:
