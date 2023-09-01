@@ -4,9 +4,9 @@
 
 namespace ck
 {
-    struct FCk_Tag_HasAuthority {};
+    struct FTag_HasAuthority {};
 
-    struct FCk_Tag_NetMode_DedicatedServer{};
+    struct FTag_NetMode_DedicatedServer{};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
