@@ -8,8 +8,8 @@
 
 namespace ck
 {
-    class CKRECORD_API FCk_Processor_RecordEntry_Destructor
-        : public TProcessor<FCk_Processor_RecordEntry_Destructor, FFragment_RecordEntry, FCk_Tag_PendingDestroyEntity>
+    class CKRECORD_API FProcessor_RecordEntry_Destructor
+        : public TProcessor<FProcessor_RecordEntry_Destructor, FFragment_RecordEntry, FTag_PendingDestroyEntity>
     {
     public:
         using TProcessor::TProcessor;
@@ -21,3 +21,5 @@ namespace ck
             const FFragment_RecordEntry& InRecordEntry) -> void;
     };
 }
+
+// --------------------------------------------------------------------------------------------------------------------
