@@ -22,7 +22,7 @@ public:
               Category = "Ck|Utils|NetTimeSync",
               DisplayName = "Add Network Time Sync Replicated Fragment (INTERNAL USE ONLY)")
     static void
-    Add_TimeSync_Rep(
+    Add_NetTimeSync_Rep(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintCallable,

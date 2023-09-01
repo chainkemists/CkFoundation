@@ -11,11 +11,11 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_Processor_TimeSync_OnNetworkClockSynchronized::
+    FCk_Processor_NetTimeSync_OnNetworkClockSynchronized::
     ForEachEntity(
         TimeType InDeltaT,
         HandleType InHandle,
-        const TObjectPtr<UCk_Fragment_TimeSync_Rep>& InTimeSync_Rep)
+        const TObjectPtr<UCk_Fragment_NetTimeSync_Rep>& InTimeSync_Rep)
     -> void
 {
     if (_DelegateHandle.IsValid())
@@ -28,11 +28,11 @@ auto
     { return; }
 
     _DelegateHandle = _NetworkTimeSubsystem->OnNetworkClockSynchronized_Cpp.AddRaw(
-        this, &FCk_Processor_TimeSync_OnNetworkClockSynchronized::OnNetworkClockSynchronized);
+        this, &FCk_Processor_NetTimeSync_OnNetworkClockSynchronized::OnNetworkClockSynchronized);
 }
 
-FCk_Processor_TimeSync_OnNetworkClockSynchronized::
-    ~FCk_Processor_TimeSync_OnNetworkClockSynchronized()
+FCk_Processor_NetTimeSync_OnNetworkClockSynchronized::
+    ~FCk_Processor_NetTimeSync_OnNetworkClockSynchronized()
 {
     if (NOT _DelegateHandle.IsValid())
     { return; }
@@ -44,24 +44,24 @@ FCk_Processor_TimeSync_OnNetworkClockSynchronized::
 }
 
 auto
-    FCk_Processor_TimeSync_OnNetworkClockSynchronized::
+    FCk_Processor_NetTimeSync_OnNetworkClockSynchronized::
     OnNetworkClockSynchronized(
         float OldServerDelta,
         float NewServerDelta,
         float RoundTripTime)
     -> void
 {
-    _Registry.View<TObjectPtr<UCk_Fragment_TimeSync_Rep>>().ForEach(
-    [&](EntityType InEntity, TObjectPtr<UCk_Fragment_TimeSync_Rep> InRep)
+    _Registry.View<TObjectPtr<UCk_Fragment_NetTimeSync_Rep>>().ForEach(
+    [&](EntityType InEntity, TObjectPtr<UCk_Fragment_NetTimeSync_Rep> InRep)
     {
-        InRep->DoBroadcast_TimeSync(FCk_Time{RoundTripTime});
+        InRep->DoBroadcast_NetTimeSync(FCk_Time{RoundTripTime});
     });
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_Processor_TimeSync_HandleRequests::
+    FCk_Processor_NetTimeSync_HandleRequests::
     Tick(
         TimeType InDeltaT)
     -> void
@@ -72,20 +72,20 @@ auto
 }
 
 auto
-    FCk_Processor_TimeSync_HandleRequests::
+    FCk_Processor_NetTimeSync_HandleRequests::
     ForEachEntity(
         TimeType InDeltaT,
         HandleType InHandle,
-        FFragment_TimeSync_Requests& InRequests)
+        FFragment_NetTimeSync_Requests& InRequests)
     -> void
 {
-    ck::algo::ForEachRequest(InRequests._TimeSyncRequests,
+    ck::algo::ForEachRequest(InRequests._NetTimeSyncRequests,
     [&](const FCk_Request_NetTimeSync_NewSync& InNewSync)
     {
         const auto& isNetTimeSyncEnabled = UCk_Utils_NetTimeSync_UserSettings_UE::Get_EnableNetTimeSynchronization();
         const auto& roundTripTime = isNetTimeSyncEnabled ? InNewSync.Get_RoundTripTime() : FCk_Time::Zero;
 
-        _Registry.View<FFragment_TimeSync>().ForEach([&](EntityType InEntity, FFragment_TimeSync& InTimeSync)
+        _Registry.View<FFragment_NetTimeSync>().ForEach([&](EntityType InEntity, FFragment_NetTimeSync& InTimeSync)
         {
             if (NOT UCk_Utils_NetTimeSync_UserSettings_UE::Get_EnableNetTimeSynchronization())
 
@@ -98,12 +98,12 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_Processor_TimeSync_FirstSync::
+    FCk_Processor_NetTimeSync_FirstSync::
     ForEachEntity(
         TimeType InDeltaT,
         HandleType InHandle,
-        const FFragment_TimeSync& InTimeToSyncFrom,
-        const TObjectPtr<UCk_Fragment_TimeSync_Rep>&)
+        const FFragment_NetTimeSync& InTimeToSyncFrom,
+        const TObjectPtr<UCk_Fragment_NetTimeSync_Rep>&)
     -> void
 {
     /*
@@ -111,10 +111,10 @@ auto
      * almost no resources if there are no Entities that have not at least synced once
      */
 
-    _Registry.View<FFragment_TimeSync, ck::TExclude<FTag_TimeSync_SyncedAtleastOnce>>().ForEach(
-    [&](EntityType InEntity, FFragment_TimeSync& InTimeSync)
+    _Registry.View<FFragment_NetTimeSync, ck::TExclude<FTag_NetTimeSync_SyncedAtleastOnce>>().ForEach(
+    [&](EntityType InEntity, FFragment_NetTimeSync& InTimeSync)
     {
-        _Registry.Add<ck::FTag_TimeSync_SyncedAtleastOnce>(InEntity);
+        _Registry.Add<ck::FTag_NetTimeSync_SyncedAtleastOnce>(InEntity);
         InTimeSync = InTimeToSyncFrom;
     });
 }

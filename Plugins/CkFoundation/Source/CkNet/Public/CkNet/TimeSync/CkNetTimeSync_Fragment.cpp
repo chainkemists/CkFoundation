@@ -5,8 +5,8 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Fragment_TimeSync_Rep::
-    Broadcast_TimeSync_Implementation(
+    UCk_Fragment_NetTimeSync_Rep::
+    Broadcast_NetTimeSync_Implementation(
         APlayerController* InPlayerController,
         FCk_Time InRoundTripTime)
     -> void
@@ -26,7 +26,7 @@ auto
 }
 
 auto
-    UCk_Fragment_TimeSync_Rep::
+    UCk_Fragment_NetTimeSync_Rep::
     OnLink()
     -> void
 {
@@ -35,14 +35,14 @@ auto
 }
 
 auto
-    UCk_Fragment_TimeSync_Rep::
-    DoBroadcast_TimeSync(
+    UCk_Fragment_NetTimeSync_Rep::
+    DoBroadcast_NetTimeSync(
         FCk_Time InRoundTripTime)
     -> void
 {
     CK_REP_OBJ_EXECUTE_IF_VALID([&]()
     {
-        Broadcast_TimeSync(GetWorld()->GetFirstPlayerController(), InRoundTripTime);
+        Broadcast_NetTimeSync(GetWorld()->GetFirstPlayerController(), InRoundTripTime);
     });
 }
 

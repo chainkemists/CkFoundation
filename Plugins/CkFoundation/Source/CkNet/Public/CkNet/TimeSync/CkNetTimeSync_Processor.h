@@ -15,18 +15,18 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // TODO: improve this system to avoid Ticking after getting the first TimeSync_Rep Fragment
-    class CKNET_API FCk_Processor_TimeSync_OnNetworkClockSynchronized
-        : public TProcessor<FCk_Processor_TimeSync_OnNetworkClockSynchronized, TObjectPtr<UCk_Fragment_TimeSync_Rep>>
+    class CKNET_API FCk_Processor_NetTimeSync_OnNetworkClockSynchronized
+        : public TProcessor<FCk_Processor_NetTimeSync_OnNetworkClockSynchronized, TObjectPtr<UCk_Fragment_NetTimeSync_Rep>>
     {
     public:
         using TProcessor::TProcessor;
-        ~FCk_Processor_TimeSync_OnNetworkClockSynchronized();
+        ~FCk_Processor_NetTimeSync_OnNetworkClockSynchronized();
 
     public:
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const TObjectPtr<UCk_Fragment_TimeSync_Rep>& InTimeSync_Rep) -> void;
+            const TObjectPtr<UCk_Fragment_NetTimeSync_Rep>& InTimeSync_Rep) -> void;
 
     private:
         auto OnNetworkClockSynchronized(
@@ -41,11 +41,11 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKNET_API FCk_Processor_TimeSync_HandleRequests
-        : public TProcessor<FCk_Processor_TimeSync_HandleRequests, FFragment_TimeSync_Requests>
+    class CKNET_API FCk_Processor_NetTimeSync_HandleRequests
+        : public TProcessor<FCk_Processor_NetTimeSync_HandleRequests, FFragment_NetTimeSync_Requests>
     {
     public:
-        using MarkedDirtyBy = FFragment_TimeSync_Requests;
+        using MarkedDirtyBy = FFragment_NetTimeSync_Requests;
 
     public:
         using TProcessor::TProcessor;
@@ -56,13 +56,13 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_TimeSync_Requests& InRequests) -> void;
+            FFragment_NetTimeSync_Requests& InRequests) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKNET_API FCk_Processor_TimeSync_FirstSync
-        : public TProcessor<FCk_Processor_TimeSync_FirstSync, FFragment_TimeSync, TObjectPtr<UCk_Fragment_TimeSync_Rep>>
+    class CKNET_API FCk_Processor_NetTimeSync_FirstSync
+        : public TProcessor<FCk_Processor_NetTimeSync_FirstSync, FFragment_NetTimeSync, TObjectPtr<UCk_Fragment_NetTimeSync_Rep>>
     {
     public:
         using TProcessor::TProcessor;
@@ -71,8 +71,8 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_TimeSync& InTimeToSyncFrom,
-            const TObjectPtr<UCk_Fragment_TimeSync_Rep>&) -> void;
+            const FFragment_NetTimeSync& InTimeToSyncFrom,
+            const TObjectPtr<UCk_Fragment_NetTimeSync_Rep>&) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
