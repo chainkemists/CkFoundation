@@ -7,10 +7,10 @@
 
 namespace ck
 {
-    struct CKECSBASICS_API FCk_Fragment_EntityHolder
+    struct CKECSBASICS_API FFragment_EntityHolder
     {
     public:
-        CK_GENERATED_BODY(FCk_Fragment_EntityHolder);
+        CK_GENERATED_BODY(FFragment_EntityHolder);
 
     public:
         template <typename>
@@ -20,8 +20,8 @@ namespace ck
         using EntityType = FCk_Handle;
 
     public:
-        FCk_Fragment_EntityHolder() = default;
-        explicit FCk_Fragment_EntityHolder(EntityType InEntity);
+        FFragment_EntityHolder() = default;
+        explicit FFragment_EntityHolder(EntityType InEntity);
 
     private:
         EntityType _Entity;
@@ -35,16 +35,16 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FCk_Fragment_ParentEntity : public FCk_Fragment_EntityHolder
+    struct FFragment_ParentEntity : public FFragment_EntityHolder
     {
-        using FCk_Fragment_EntityHolder::FCk_Fragment_EntityHolder;
+        using FFragment_EntityHolder::FFragment_EntityHolder;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FCk_Fragment_TargetEntity : public FCk_Fragment_EntityHolder
+    struct FFragment_TargetEntity : public FFragment_EntityHolder
     {
-        using FCk_Fragment_EntityHolder::FCk_Fragment_EntityHolder;
+        using FFragment_EntityHolder::FFragment_EntityHolder;
     };
 }
 
