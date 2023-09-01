@@ -14,7 +14,7 @@ auto
     auto ReplicatedObjects = InReplicatedObjects;
     ReplicatedObjects.DoRequest_LinkAssociatedEntity(InHandle);
     InHandle.Add<ck::FCk_Fragment_ReplicatedObjects_Params>(ReplicatedObjects);
-    InHandle.Add<ck::FCk_Tag_Replicated>();
+    InHandle.Add<ck::FTag_Replicated>();
 }
 
 auto
@@ -49,9 +49,9 @@ auto
     { return; }
 
     // TODO: Cleanup this
-    if (NOT InHandle.Has<ck::FCk_Tag_Replicated>())
+    if (NOT InHandle.Has<ck::FTag_Replicated>())
     {
-        InHandle.Add<ck::FCk_Tag_Replicated>();
+        InHandle.Add<ck::FTag_Replicated>();
     }
 
     InHandle.AddOrGet<ck::FCk_Fragment_ReplicatedObjects_Params>()
