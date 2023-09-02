@@ -114,6 +114,11 @@ auto
     for (const auto RO : _ReplicatedObjects)
     {
         const auto EcsReplicatedObject = Cast<UCk_Ecs_ReplicatedObject_UE>(RO);
+
+        CK_ENSURE_IF_NOT(ck::IsValid(EcsReplicatedObject), TEXT("ReplicatedObject is not valid. Unable to Link with Entity [{}]"),
+            InEntity)
+        { continue; }
+
         EcsReplicatedObject->_AssociatedEntity = InEntity;
         EcsReplicatedObject->OnLink();
     }
