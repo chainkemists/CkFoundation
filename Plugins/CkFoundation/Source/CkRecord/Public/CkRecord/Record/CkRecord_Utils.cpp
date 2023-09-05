@@ -16,7 +16,7 @@ auto
     Add(FCk_Handle InHandle)
     -> void
 {
-    _Utils.Add(InHandle);
+    _Utils.AddIfMissing(InHandle);
 }
 
 auto
