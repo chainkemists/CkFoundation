@@ -49,7 +49,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Velocity_Current& InVelocity,
-            const FCk_Fragment_Velocity_Target& InTarget) const
+            const FFragment_Velocity_Target& InTarget) const
         -> void
     {
         auto targetEntity  = InTarget.Get_Entity();
@@ -68,7 +68,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Velocity_Current& InVelocity,
-            const FCk_Fragment_Velocity_Target& InTarget) const
+            const FFragment_Velocity_Target& InTarget) const
         -> void
     {
         auto targetEntity = InTarget.Get_Entity();
