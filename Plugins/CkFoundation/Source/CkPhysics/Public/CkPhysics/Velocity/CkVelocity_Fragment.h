@@ -73,21 +73,21 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FCk_Fragment_Velocity_Target : public FFragment_EntityHolder
+    struct FFragment_Velocity_Target : public FFragment_EntityHolder
     {
         using FFragment_EntityHolder::FFragment_EntityHolder;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FCk_Fragment_Velocity_Channel : public FFragment_GameplayLabel
+    struct FFragment_Velocity_Channel : public FFragment_GameplayLabel
     {
         using FFragment_GameplayLabel::FFragment_GameplayLabel;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FCk_Fragment_RecordOfVelocityModifiers : public FFragment_RecordOfEntities {};
+    struct FFragment_RecordOfVelocityModifiers : public FFragment_RecordOfEntities {};
 }
 
 // --------------------------------------------------------------------------------------------------------------------

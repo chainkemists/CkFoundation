@@ -36,7 +36,7 @@ public:
     friend class ck::FProcessor_VelocityModifier_SingleTarget_Teardown;
 
 private:
-    struct VelocityTarget_Utils : public ck::TUtils_EntityHolder<ck::FCk_Fragment_Velocity_Target> {};
+    struct VelocityTarget_Utils : public ck::TUtils_EntityHolder<ck::FFragment_Velocity_Target> {};
 
 public:
     UFUNCTION(BlueprintCallable,
