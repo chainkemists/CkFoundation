@@ -44,18 +44,29 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKECSBASICS_API FCk_Transform_ParamsData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Transform_ParamsData);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess, ValidEnumValues="Linear"))
+    FCk_Transform_Interpolation_Settings _InterpolationSettings;
+public:
+    CK_PROPERTY(_InterpolationSettings);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKECSBASICS_API FCk_Request_Transform_SetLocation
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_Transform_SetLocation);
-
-public:
-    FCk_Request_Transform_SetLocation() = default;
-    FCk_Request_Transform_SetLocation(
-        FVector              InNewLocation,
-        ECk_RelativeAbsolute InRelativeAbsolute);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -67,8 +78,11 @@ private:
     ECk_RelativeAbsolute _RelativeAbsolute = ECk_RelativeAbsolute::Absolute;
 
 public:
-    CK_PROPERTY(_NewLocation)
+    CK_PROPERTY_GET(_NewLocation)
     CK_PROPERTY(_RelativeAbsolute)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Transform_SetLocation, _NewLocation);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -81,12 +95,6 @@ struct CKECSBASICS_API FCk_Request_Transform_AddLocationOffset
 public:
     CK_GENERATED_BODY(FCk_Request_Transform_AddLocationOffset);
 
-public:
-    FCk_Request_Transform_AddLocationOffset() = default;
-    FCk_Request_Transform_AddLocationOffset(
-        FVector        InDeltaLocation,
-        ECk_LocalWorld InLocalWorld);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -97,8 +105,11 @@ private:
     ECk_LocalWorld _LocalWorld = ECk_LocalWorld::World;
 
 public:
-    CK_PROPERTY(_DeltaLocation)
-    CK_PROPERTY_GET(_LocalWorld)
+    CK_PROPERTY_GET(_DeltaLocation)
+    CK_PROPERTY(_LocalWorld)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Transform_AddLocationOffset, _DeltaLocation);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -111,12 +122,6 @@ struct CKECSBASICS_API FCk_Request_Transform_SetRotation
 public:
     CK_GENERATED_BODY(FCk_Request_Transform_SetRotation);
 
-public:
-    FCk_Request_Transform_SetRotation() = default;
-    FCk_Request_Transform_SetRotation(
-        FRotator InNewLocation,
-        ECk_RelativeAbsolute InRelativeAbsolute);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -128,7 +133,10 @@ private:
 
 public:
     CK_PROPERTY_GET(_NewRotation)
-    CK_PROPERTY_GET(_RelativeAbsolute)
+    CK_PROPERTY(_RelativeAbsolute)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Transform_SetRotation, _NewRotation);
 };
 
 USTRUCT(BlueprintType)
@@ -138,12 +146,6 @@ struct CKECSBASICS_API FCk_Request_Transform_AddRotationOffset
 
 public:
     CK_GENERATED_BODY(FCk_Request_Transform_AddRotationOffset);
-
-public:
-    FCk_Request_Transform_AddRotationOffset() = default;
-    FCk_Request_Transform_AddRotationOffset(
-        FRotator       InDeltaRotation,
-        ECk_LocalWorld InLocalWorld);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -156,7 +158,10 @@ private:
 
 public:
     CK_PROPERTY_GET(_DeltaRotation)
-    CK_PROPERTY_GET(_LocalWorld)
+    CK_PROPERTY(_LocalWorld)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Transform_AddRotationOffset, _DeltaRotation);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -169,12 +174,6 @@ struct CKECSBASICS_API FCk_Request_Transform_SetScale
 public:
     CK_GENERATED_BODY(FCk_Request_Transform_SetScale);
 
-public:
-    FCk_Request_Transform_SetScale() = default;
-    FCk_Request_Transform_SetScale(
-        FVector              InNewScale,
-        ECk_RelativeAbsolute InRelativeAbsolute);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -186,7 +185,10 @@ private:
 
 public:
     CK_PROPERTY_GET(_NewScale)
-    CK_PROPERTY_GET(_RelativeAbsolute)
+    CK_PROPERTY(_RelativeAbsolute)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Transform_SetScale, _NewScale);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -199,12 +201,6 @@ struct CKECSBASICS_API FCk_Request_Transform_SetTransform
 public:
     CK_GENERATED_BODY(FCk_Request_Transform_SetTransform);
 
-public:
-    FCk_Request_Transform_SetTransform() = default;
-    FCk_Request_Transform_SetTransform(
-        FTransform           InNewTransform,
-        ECk_RelativeAbsolute InRelativeAbsolute);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -216,7 +212,10 @@ private:
 
 public:
     CK_PROPERTY_GET(_NewTransform)
-    CK_PROPERTY_GET(_RelativeAbsolute)
+    CK_PROPERTY(_RelativeAbsolute)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Transform_SetTransform, _NewTransform);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
