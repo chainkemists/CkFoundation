@@ -45,17 +45,14 @@ auto
     auto sensorParams = InParams;
     sensorParams.Set_EntityAttachedTo(InHandle);
 
-    sensorEntity.AddOrGet<ck::FFragment_Sensor_Params>(sensorParams);
-    sensorEntity.AddOrGet<ck::FFragment_Sensor_Current>(sensorParams.Get_StartingState());
+    sensorEntity.Add<ck::FFragment_Sensor_Params>(sensorParams);
+    sensorEntity.Add<ck::FFragment_Sensor_Current>(sensorParams.Get_StartingState());
     sensorEntity.Add<ck::FTag_Sensor_Setup>();
 
     UCk_Utils_GameplayLabel_UE::Add(sensorEntity, sensorName);
 
-    if (NOT RecordOfSensors_Utils::Has(InHandle))
-    {
-        // TODO: Select Record policy that disallow duplicate based on Gameplay Label
-        RecordOfSensors_Utils::Add(InHandle);
-    }
+    // TODO: Select Record policy that disallow duplicate based on Gameplay Label
+    RecordOfSensors_Utils::AddIfMissing(InHandle);
 
     RecordOfSensors_Utils::Request_Connect(InHandle, sensorEntity);
 }
