@@ -76,16 +76,16 @@ auto
         const FCk_Request_Transform_SetTransform& InRequest)
     -> void
 {
-    const auto& newTransform = InRequest.Get_NewTransform();
+    const auto& NewTransform = InRequest.Get_NewTransform();
 
     if (NOT Ensure<ck::type_traits::NonConst>(InHandle))
     { return; }
 
     auto& RequestsFragment = InHandle.AddOrGet<ck::FFragment_Transform_Requests>();
 
-    RequestsFragment._LocationRequests.Emplace(FCk_Request_Transform_SetLocation{ newTransform.GetLocation(), ECk_RelativeAbsolute::Absolute });
-    RequestsFragment._RotationRequests.Emplace(FCk_Request_Transform_SetRotation{ newTransform.GetRotation().Rotator(), ECk_RelativeAbsolute::Absolute });
-    RequestsFragment._ScaleRequests = FCk_Request_Transform_SetScale{ newTransform.GetScale3D(), ECk_RelativeAbsolute::Absolute};
+    RequestsFragment._LocationRequests.Emplace(FCk_Request_Transform_SetLocation{NewTransform.GetLocation()}.Set_RelativeAbsolute(ECk_RelativeAbsolute::Absolute));
+    RequestsFragment._RotationRequests.Emplace(FCk_Request_Transform_SetRotation{NewTransform.GetRotation().Rotator()}.Set_RelativeAbsolute(ECk_RelativeAbsolute::Absolute));
+    RequestsFragment._ScaleRequests = FCk_Request_Transform_SetScale{NewTransform.GetScale3D()}.Set_RelativeAbsolute(ECk_RelativeAbsolute::Absolute);
 }
 
 auto
@@ -96,8 +96,7 @@ auto
     -> void
 {
     auto& NewGoal = InHandle.AddOrGet<ck::FFragment_Transform_NewGoal_Location>();
-    NewGoal = ck::FFragment_Transform_NewGoal_Location{};
-    NewGoal.Set_InterpolationOffset(InOffset);
+    NewGoal = ck::FFragment_Transform_NewGoal_Location{InOffset};
 }
 
 auto
@@ -189,10 +188,10 @@ auto
     DoAdd(
         FCk_Handle InHandle,
         FTransform InInitialTransform,
-        FCk_Transform_Interpolation_Settings InParams)
+        FCk_Transform_Interpolation_Settings InSettings)
     -> void
 {
-    Add<ck::type_traits::NonConst>(InHandle, InInitialTransform, InParams);
+    Add<ck::type_traits::NonConst>(InHandle, InInitialTransform, InSettings);
 }
 
 auto

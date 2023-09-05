@@ -46,7 +46,7 @@ auto
         UCk_Utils_Transform_UE::Request_SetRotation
         (
             Get_AssociatedEntity(),
-            FCk_Request_Transform_SetRotation{FRotator{_Rotation}, ECk_RelativeAbsolute::Absolute}
+            FCk_Request_Transform_SetRotation{FRotator{_Rotation}}.Set_RelativeAbsolute(ECk_RelativeAbsolute::Absolute)
         );
     });
 }
@@ -60,7 +60,7 @@ auto
         UCk_Utils_Transform_UE::Request_SetScale
         (
             Get_AssociatedEntity(),
-            FCk_Request_Transform_SetScale{_Scale, ECk_RelativeAbsolute::Absolute}
+            FCk_Request_Transform_SetScale{_Scale}.Set_RelativeAbsolute(ECk_RelativeAbsolute::Absolute)
         );
     });
 }
