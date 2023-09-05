@@ -35,7 +35,7 @@ namespace ck
     class CKPHYSICS_API FProcessor_VelocityModifier_SingleTarget_Setup : public TProcessor<
             FProcessor_VelocityModifier_SingleTarget_Setup,
             FFragment_Velocity_Current,
-            FCk_Fragment_Velocity_Target,
+            FFragment_Velocity_Target,
             FTag_VelocityModifier_SingleTarget,
             FTag_VelocityModifier_SingleTarget_Setup>
     {
@@ -51,7 +51,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Velocity_Current& InVelocity,
-            const FCk_Fragment_Velocity_Target& InTarget) const -> void;
+            const FFragment_Velocity_Target& InTarget) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -59,7 +59,7 @@ namespace ck
     class CKPHYSICS_API FProcessor_VelocityModifier_SingleTarget_Teardown : public TProcessor<
             FProcessor_VelocityModifier_SingleTarget_Teardown,
             FFragment_Velocity_Current,
-            FCk_Fragment_Velocity_Target,
+            FFragment_Velocity_Target,
             FTag_VelocityModifier_SingleTarget,
             FTag_PendingDestroyEntity>
     {
@@ -75,7 +75,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Velocity_Current& InVelocity,
-            const FCk_Fragment_Velocity_Target& InTarget) const -> void;
+            const FFragment_Velocity_Target& InTarget) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
