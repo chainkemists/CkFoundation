@@ -20,7 +20,7 @@ namespace ck
         UCk_Utils_Transform_UE::Request_AddLocationOffset
         (
             InHandle,
-            FCk_Request_Transform_AddLocationOffset{ InIntegratorComp.Get_DistanceOffset(), ECk_LocalWorld::World }
+            FCk_Request_Transform_AddLocationOffset{InIntegratorComp.Get_DistanceOffset()}.Set_LocalWorld(ECk_LocalWorld::World)
         );
     }
 }

@@ -37,17 +37,14 @@ namespace ck
     public:
         using SettingsType = FCk_Transform_Interpolation_Settings;
 
-    public:
-        FFragment_Transform_Params() = default;
-        FFragment_Transform_Params(SettingsType InSettings)
-            : _InterpolationSettings(std::move(InSettings))
-        { }
-
     private:
-        FCk_Transform_Interpolation_Settings _InterpolationSettings;
+        FCk_Transform_ParamsData _Data;
 
     public:
-        CK_PROPERTY(_InterpolationSettings);
+        CK_PROPERTY(_Data);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Transform_Params, _Data);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -64,8 +61,11 @@ namespace ck
         FCk_Time _DeltaT;
 
     public:
-        CK_PROPERTY(_InterpolationOffset);
+        CK_PROPERTY_GET(_InterpolationOffset);
         CK_PROPERTY(_DeltaT);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Transform_NewGoal_Location, _InterpolationOffset);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -82,17 +82,16 @@ namespace ck
         friend class UCk_Fragment_Transform_Rep;
         friend UCk_Utils_Transform_UE;
 
-    public:
-        TFragment_Transform() = default;
-        explicit TFragment_Transform(FTransform InTransform);
-
     private:
         FTransform _Transform;
         ECk_TransformComponents _ComponentsModified = ECk_TransformComponents::None;
 
     public:
-        CK_PROPERTY(_Transform);
+        CK_PROPERTY_GET(_Transform);
         CK_PROPERTY(_ComponentsModified);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(TFragment_Transform<T_ConstOrNonConst>, _Transform);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -131,17 +130,6 @@ namespace ck
         CK_PROPERTY_GET(_LocationRequests);
         CK_PROPERTY_GET(_ScaleRequests);
     };
-
-    // --------------------------------------------------------------------------------------------------------------------
-    // Definitions
-
-    template <typename T_ConstOrNonConst>
-    TFragment_Transform<T_ConstOrNonConst>::
-        TFragment_Transform(
-            FTransform InTransform)
-        : _Transform(std::move(InTransform))
-    {
-    }
 
     // --------------------------------------------------------------------------------------------------------------------
 

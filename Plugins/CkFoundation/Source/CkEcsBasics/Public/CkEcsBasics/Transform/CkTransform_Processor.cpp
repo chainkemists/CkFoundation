@@ -172,10 +172,7 @@ namespace ck
             UCk_Utils_Transform_UE::Request_SetLocation
             (
                 InHandle,
-                FCk_Request_Transform_SetLocation{}.Set_NewLocation
-                (
-                    InCurrent.Get_Transform().GetLocation() + InGoal.Get_InterpolationOffset()
-                )
+                FCk_Request_Transform_SetLocation{InCurrent.Get_Transform().GetLocation() + InGoal.Get_InterpolationOffset()}
             );
             InHandle.Remove<FFragment_Transform_NewGoal_Location>();
             return;
@@ -185,14 +182,14 @@ namespace ck
         const auto GoalDistance = InGoal.Get_InterpolationOffset().Length();
         InGoal.Set_DeltaT(InGoal.Get_DeltaT() + InDeltaT);
 
-        const auto& InterpSettings = InParams.Get_InterpolationSettings();
+        const auto& InterpSettings = InParams.Get_Data().Get_InterpolationSettings();
 
         if (GoalDistance > InterpSettings.Get_MaxSmoothUpdateDistance())
         {
             UCk_Utils_Transform_UE::Request_AddLocationOffset
             (
                 InHandle,
-                FCk_Request_Transform_AddLocationOffset{}.Set_DeltaLocation(InGoal.Get_InterpolationOffset())
+                FCk_Request_Transform_AddLocationOffset{InGoal.Get_InterpolationOffset()}
             );
 
             InHandle.Remove<FFragment_Transform_NewGoal_Location>();
@@ -217,7 +214,7 @@ namespace ck
         UCk_Utils_Transform_UE::Request_SetLocation
         (
             InHandle,
-            FCk_Request_Transform_SetLocation{}.Set_NewLocation(InCurrent.Get_Transform().GetLocation() + GoalFraction)
+            FCk_Request_Transform_SetLocation{InCurrent.Get_Transform().GetLocation() + GoalFraction}
         );
     }
 }
