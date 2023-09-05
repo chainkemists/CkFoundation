@@ -25,16 +25,16 @@ namespace ck
         friend class UCk_Utils_RecordEntry_UE;
 
     public:
-        using HandleType                   = FCk_Handle;
-        using RecordType                   = T_DerivedRecord;
-        using RecordEntityType             = typename T_DerivedRecord::EntityType;
-        using RecordEntryEntityType        = typename T_DerivedRecord::EntityType;
-        using RecordEntryHandleType        = HandleType;
-        using RecordEntryListType          = typename RecordType::RecordEntriesType;
+        using HandleType            = FCk_Handle;
+        using RecordType            = T_DerivedRecord;
+        using RecordEntityType      = typename T_DerivedRecord::EntityType;
+        using RecordEntryEntityType = typename T_DerivedRecord::EntityType;
+        using RecordEntryHandleType = HandleType;
+        using RecordEntryListType   = typename RecordType::RecordEntriesType;
 
     public:
         static auto
-        Add(
+        AddIfMissing(
             FCk_Handle InHandle) -> void;
 
         static auto
@@ -92,10 +92,10 @@ namespace ck
     template <typename T_DerivedRecord>
     auto
     TUtils_RecordOfEntities<T_DerivedRecord>::
-        Add(FCk_Handle InHandle)
+        AddIfMissing(FCk_Handle InHandle)
         -> void
     {
-        InHandle.Add<RecordType>();
+        InHandle.AddOrGet<RecordType>();
     }
 
     template <typename T_DerivedRecord>

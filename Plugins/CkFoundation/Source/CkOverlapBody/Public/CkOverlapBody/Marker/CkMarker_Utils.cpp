@@ -49,17 +49,14 @@ auto
     auto markerParams = InParams;
     markerParams.Set_EntityAttachedTo(InHandle);
 
-    markerEntity.AddOrGet<ck::FFragment_Marker_Params>(markerParams);
-    markerEntity.AddOrGet<ck::FFragment_Marker_Current>(markerParams.Get_StartingState());
+    markerEntity.Add<ck::FFragment_Marker_Params>(markerParams);
+    markerEntity.Add<ck::FFragment_Marker_Current>(markerParams.Get_StartingState());
     markerEntity.Add<ck::FTag_Marker_Setup>();
 
     UCk_Utils_GameplayLabel_UE::Add(markerEntity, markerName);
 
-    if (NOT RecordOfMarkers_Utils::Has(InHandle))
-    {
-        // TODO: Select Record policy that disallow duplicate based on Gameplay Label
-        RecordOfMarkers_Utils::Add(InHandle);
-    }
+    // TODO: Select Record policy that disallow duplicate based on Gameplay Label
+    RecordOfMarkers_Utils::AddIfMissing(InHandle);
 
     RecordOfMarkers_Utils::Request_Connect(InHandle, markerEntity);
 }
