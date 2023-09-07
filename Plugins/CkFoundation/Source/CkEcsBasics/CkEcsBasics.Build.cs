@@ -24,6 +24,7 @@ public class CkEcsBasics : CkModuleRules
             "CkLog",
             "CkNet",
             "CkRecord",
+            "CkSignal",
         });
     }
 }

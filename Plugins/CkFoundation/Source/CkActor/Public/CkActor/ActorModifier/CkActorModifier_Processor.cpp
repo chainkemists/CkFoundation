@@ -104,9 +104,9 @@ namespace ck
     auto
         FProcessor_ActorModifier_AddActorComponent_HandleRequests::
         ForEachEntity(
-            const TimeType&                                       InDeltaT,
-            HandleType                                            InHandle,
-            const FFragment_OwningActor_Current&                 InOwningActorComp,
+            const TimeType&                                    InDeltaT,
+            HandleType                                         InHandle,
+            const FFragment_OwningActor_Current&               InOwningActorComp,
             FFragment_ActorModifier_AddActorComponentRequests& InRequests) const
         -> void
     {
@@ -114,61 +114,60 @@ namespace ck
         {
             actor::VeryVerbose(TEXT("Handling AddActorComponent Request for Entity [{}]"), InHandle);
 
-            const auto& entityActor = InOwningActorComp.Get_EntityOwningActor().Get();
+            const auto& EntityActor = InOwningActorComp.Get_EntityOwningActor().Get();
 
-            CK_ENSURE_IF_NOT(ck::IsValid(entityActor), TEXT("AddActorComponent Request on Entity [{}] that has NO Actor!"), InHandle)
+            CK_ENSURE_IF_NOT(ck::IsValid(EntityActor), TEXT("AddActorComponent Request on Entity [{}] that has NO Actor!"), InHandle)
             { return; }
 
-            const auto& componentParams = InRequest.Get_ComponentParams();
-            const auto& attachmentType  = componentParams.Get_AttachmentType();
+            const auto& ComponentParams = InRequest.Get_ComponentParams();
+            const auto& AttachmentType  = ComponentParams.Get_AttachmentType();
 
-            const auto& parent = [&]() -> USceneComponent*
+            const auto& Parent = [&]() -> USceneComponent*
             {
-                const auto& componentParent = componentParams.Get_Parent();
+                const auto& ComponentParent = ComponentParams.Get_Parent();
 
-                if (attachmentType == ECk_ActorComponent_AttachmentPolicy::DoNotAttach)
+                if (AttachmentType == ECk_ActorComponent_AttachmentPolicy::DoNotAttach)
                 { return nullptr; }
 
-                return ck::IsValid(componentParent) ? componentParent : entityActor->GetRootComponent();
+                return ck::IsValid(ComponentParent) ? ComponentParent.Get() : EntityActor->GetRootComponent();
             }();
 
 
-            auto* addedActorComponent = UCk_Utils_Actor_UE::Request_AddNewActorComponent
+            auto* AddedActorComponent = UCk_Utils_Actor_UE::Request_AddNewActorComponent
             (
                 UCk_Utils_Actor_UE::AddNewActorComponent_Params
                 {
-                    entityActor,
+                    EntityActor,
                     InRequest.Get_ComponentToAdd(),
                     InRequest.Get_IsUnique(),
-                    parent,
-                    componentParams.Get_AttachmentSocket()
+                    Parent,
+                    ComponentParams.Get_AttachmentSocket()
                 }
             );
 
-            CK_ENSURE_IF_NOT(ck::IsValid(addedActorComponent), TEXT("Failed to Add new Actor Component [{}] to Entity [{}]"), InRequest.Get_ComponentToAdd(), InHandle)
+            CK_ENSURE_IF_NOT(ck::IsValid(AddedActorComponent), TEXT("Failed to Add new Actor Component [{}] to Entity [{}]"), InRequest.Get_ComponentToAdd(), InHandle)
             { return; }
 
-            addedActorComponent->SetComponentTickEnabled(componentParams.Get_IsTickEnabled());
-            addedActorComponent->SetComponentTickInterval(componentParams.Get_TickInterval().Get_Seconds());
+            AddedActorComponent->SetComponentTickEnabled(ComponentParams.Get_IsTickEnabled());
+            AddedActorComponent->SetComponentTickInterval(ComponentParams.Get_TickInterval().Get_Seconds());
 
-            if (const auto& initializerFunc = InRequest.Get_InitializerFunc())
+            if (const auto& InitializerFunc = InRequest.Get_InitializerFunc())
             {
-                initializerFunc(addedActorComponent);
+                InitializerFunc(AddedActorComponent);
             }
 
-            if (attachmentType == ECk_ActorComponent_AttachmentPolicy::DoNotAttach)
+            if (AttachmentType == ECk_ActorComponent_AttachmentPolicy::DoNotAttach)
             {
-                auto* sceneComponent = Cast<USceneComponent>(addedActorComponent);
-
-                if (CK_ENSURE(ck::IsValid(sceneComponent),
-                           TEXT("The created Component [{}] on Entity [{}] is specified to be [{}] "
-                                "however it is NOT a SceneComponent and cannot be transformed to the "
-                                "Actor's starting location"),
-                            addedActorComponent,
-                            InHandle,
-                            componentParams.Get_AttachmentType()))
+                if (auto* SceneComponent = Cast<USceneComponent>(AddedActorComponent);
+                    CK_ENSURE(ck::IsValid(SceneComponent),
+                        TEXT("The created Component [{}] on Entity [{}] is specified to be [{}] "
+                            "however it is NOT a SceneComponent and cannot be transformed to the "
+                            "Actor's starting location"),
+                        AddedActorComponent,
+                        InHandle,
+                        ComponentParams.Get_AttachmentType())                )
                 {
-                    sceneComponent->SetWorldTransform(entityActor->GetTransform());
+                    SceneComponent->SetWorldTransform(EntityActor->GetTransform());
                 }
             }
 

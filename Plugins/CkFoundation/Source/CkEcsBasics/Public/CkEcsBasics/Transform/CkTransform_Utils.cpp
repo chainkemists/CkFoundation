@@ -185,6 +185,20 @@ auto
 
 auto
     UCk_Utils_Transform_UE::
+    BindTo_OnUpdate(
+        FCk_Handle InHandle,
+        ECk_Signal_PayloadInFlight InBehavior,
+        const FCk_Delegate_Transform_OnUpdate& InDelegate)
+    -> void
+{
+    if (NOT Ensure(InHandle))
+    { return; }
+
+    ck::UUtils_Signal_UnrealMulticastTransformUpdate::Bind(InHandle, InDelegate, InBehavior);
+}
+
+auto
+    UCk_Utils_Transform_UE::
     DoAdd(
         FCk_Handle InHandle,
         FTransform InInitialTransform,
