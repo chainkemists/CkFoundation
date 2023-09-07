@@ -3,6 +3,8 @@
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Time/CkTime.h"
 
+#include "CkEcs/Handle/CkHandle.h"
+
 #include "CkMacros/CkMacros.h"
 
 #include "CkTransform_Fragment_Params.generated.h"
@@ -217,6 +219,18 @@ public:
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Transform_SetTransform, _NewTransform);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_Transform_OnUpdate,
+    FCk_Handle, InHandle,
+    FTransform, InTransform);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FCk_Delegate_Transform_OnUpdate_MC,
+    FCk_Handle, InHandle,
+    FTransform, InTransform);
 
 // --------------------------------------------------------------------------------------------------------------------
 

@@ -126,6 +126,16 @@ public:
     Get_EntityCurrentScale(
         FCk_Handle InHandle);
 
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Transform",
+              DisplayName = "Bind To OnUpdate")
+    static void
+    BindTo_OnUpdate(
+        FCk_Handle InHandle,
+        ECk_Signal_PayloadInFlight InBehavior,
+        const FCk_Delegate_Transform_OnUpdate& InDelegate);
+
 private:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
