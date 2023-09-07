@@ -42,7 +42,7 @@ class CKINTENT_API UCk_Intent_ReplicatedObject_UE : public UCk_Ecs_ReplicatedObj
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Intent_ReplicatedObject_UE);
+    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Intent_ReplicatedObject_UE);
 
 public:
     // TODO: introduce a Params struct for this

@@ -43,15 +43,6 @@ auto
 
 auto
     UCk_Fragment_NetTimeSync_Rep::
-    OnLink()
-    -> void
-{
-    Super::OnLink();
-    _AssociatedEntity.Add<TObjectPtr<ThisType>>() = this;
-}
-
-auto
-    UCk_Fragment_NetTimeSync_Rep::
     DoBroadcast_NetTimeSync(
         FCk_Time InRoundTripTime)
     -> void

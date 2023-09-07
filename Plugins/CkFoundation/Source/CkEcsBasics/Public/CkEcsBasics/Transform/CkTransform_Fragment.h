@@ -41,7 +41,7 @@ namespace ck
         FCk_Transform_ParamsData _Data;
 
     public:
-        CK_PROPERTY(_Data);
+        CK_PROPERTY_GET(_Data);
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_Transform_Params, _Data);
@@ -144,7 +144,7 @@ class CKECSBASICS_API UCk_Fragment_Transform_Rep : public UCk_Ecs_ReplicatedObje
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Fragment_Transform_Rep);
+    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_Transform_Rep);
 
 public:
     friend class ck::FProcessor_Transform_Replicate;
