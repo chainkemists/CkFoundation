@@ -3,7 +3,6 @@
 #include "CkCore/Enums/CkEnums.h"
 
 #include "CkEcs/Handle/CkHandle.h"
-#include "CkEcs/CkEcs_Utils.h"
 
 #include "CkRecordEntry_Utils.generated.h"
 
@@ -13,7 +12,7 @@
  * RecordEntry is NOT exposed to Blueprints by design. See the RecordEntry Fragment for a more detailed reasoning.
  */
 UCLASS(NotBlueprintable)
-class CKRECORD_API UCk_Utils_RecordEntry_UE : public UCk_Utils_Ecs_Base_UE
+class CKRECORD_API UCk_Utils_RecordEntry_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
