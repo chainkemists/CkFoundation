@@ -80,6 +80,7 @@ namespace ck_world_actor
         InWorld.Add<ck::FProcessor_Transform_InterpolateToGoal>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_Transform_HandleRequests>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_Transform_Actor>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_Transform_FireSignals>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FProcessor_FloatAttribute_RecomputeAll>(InWorld.Get_Registry());
 
