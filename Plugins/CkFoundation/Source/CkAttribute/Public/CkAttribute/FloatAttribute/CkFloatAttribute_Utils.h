@@ -1,0 +1,123 @@
+#pragma once
+
+#include <GameplayTagContainer.h>
+
+#include "CkAttribute/CkAttribute_Utils.h"
+#include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment.h"
+#include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment_Data.h"
+#include "CkEcsBasics/CkEcsBasics_Utils.h"
+
+#include "CkFloatAttribute_Utils.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable)
+class CKATTRIBUTE_API UTT_Utils_FloatAttribute_UE : public UCk_Utils_Ecs_Base_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UTT_Utils_FloatAttribute_UE);
+
+public:
+    friend class UTT_Utils_FloatAttributeModifier_UE;
+
+private:
+    class FloatAttribute_Utils : public ck::TUtils_Attribute<ck::FFragment_FloatAttribute> {};
+    class RecordOfFloatAttributes_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfFloatAttributes> {};
+
+public:
+    friend class UTT_Utils_FloatAttributes_UE;
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName="Add Float Attributes")
+    static void
+    Add(
+        FCk_Handle InHandle,
+        const FCk_Provider_FloatAttributes_ParamsData& InParams);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName="Has Float Attribute")
+    static bool
+    Has(
+        FGameplayTag InAttributeName,
+        FCk_Handle InHandle);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName="Ensure Has Float Attribute")
+    static bool
+    Ensure(
+        FGameplayTag InAttributeName,
+        FCk_Handle InHandle);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName="Get Float Attribute Base Value")
+    static float
+    Get_BaseValue(
+        FGameplayTag InAttributeName,
+        FCk_Handle InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName="Get Float Attribute Bonus Value")
+    static float
+    Get_BonusValue(
+        FGameplayTag InAttributeName,
+        FCk_Handle InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName="Get Float Attribute Final Value")
+    static float
+    Get_FinalValue(
+        FGameplayTag InAttributeName,
+        FCk_Handle InHandle);
+
+public:
+    // TODO: Add Bind/Unbind functions
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable)
+class CKATTRIBUTE_API UTT_Utils_FloatAttributeModifier_UE : public UCk_Utils_Ecs_Base_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UTT_Utils_FloatAttributeModifier_UE);
+
+private:
+    class FloatAttributeModifier_Utils : public ck::TUtils_AttributeModifier<ck::FFragment_FloatAttributeModifier> {};
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AttributeModifier|Float",
+              DisplayName="Add Float Attribute Modifier")
+    static void
+    Add(
+        FCk_Handle InHandle,
+        const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|AttributeModifier|Float",
+              DisplayName="Has Float Attribute Modifier")
+    static bool
+    Has(
+        FCk_Handle InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|AttributeModifier|Float",
+              DisplayName="Ensure Has Float Attribute Modifier")
+    static bool
+    Ensure(
+        FCk_Handle InHandle);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
