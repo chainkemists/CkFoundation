@@ -8,8 +8,6 @@
 
 #include "CkCore/Enums/CkEnums.h"
 
-#include "CkEcs/CkEcs_Utils.h"
-
 #include "CkRecord_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -289,7 +287,7 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKRECORD_API UCk_Utils_RecordOfEntities_UE : public UCk_Utils_Ecs_Base_UE
+class CKRECORD_API UCk_Utils_RecordOfEntities_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
