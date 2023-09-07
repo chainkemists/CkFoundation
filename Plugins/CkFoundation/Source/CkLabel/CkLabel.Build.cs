@@ -19,7 +19,6 @@ public class CkLabel : CkModuleRules
             "CkCore",
             "CkEcs",
             "CkLog",
-            "CkNet"
         });
     }
 }

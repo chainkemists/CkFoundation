@@ -4,14 +4,12 @@
 
 #include <CkMacros/CkMacros.h>
 
-#include "CkNet/CkNet_Utils.h"
-
 #include "CkLabel_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKLABEL_API UCk_Utils_GameplayLabel_UE : public UCk_Utils_Ecs_Net_UE
+class CKLABEL_API UCk_Utils_GameplayLabel_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
