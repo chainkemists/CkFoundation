@@ -215,3 +215,42 @@ enum class ECk_Interpolation_Strategy : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Interpolation_Strategy);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_ArithmeticOperations_Basic : uint8
+{
+    Addition,
+    Subtraction,
+    Multiplication,
+    Division
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ArithmeticOperations_Basic);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_ArithmeticOperations_Complete : uint8
+{
+    Addition,
+    Subtraction,
+    Multiplication,
+    Division,
+    Exponentiation,
+    Modulus
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ArithmeticOperations_Complete);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_ModifierOperation : uint8
+{
+    Additive,
+    Multiplicative
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ModifierOperation);
+
+// --------------------------------------------------------------------------------------------------------------------
