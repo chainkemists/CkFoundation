@@ -2,11 +2,48 @@
 
 #include "CkAttribute_Processor.h"
 #include "CkAttribute/CkAttribute_Log.h"
+#include "CkAttribute/CkAttribute_Utils.h"
+#include "CkCore/Payload/CkPayload.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
+    template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_MulticastType>
+    auto
+        TProcessor_Attribute_FireSignals<T_DerivedProcessor, T_DerivedAttribute, T_MulticastType>::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            AttributeFragmentType& InAttribute) const
+        -> void
+    {
+        InHandle.template Remove<MarkedDirtyBy>();
+
+        attribute::VeryVerbose
+        (
+            TEXT("Dispatching Attribute Delegates of Entity [{}]"),
+            InHandle
+        );
+
+        TUtils_Signal_UnrealMulticast_OnAttributeValueChanged<T_DerivedAttribute, T_MulticastType>::Broadcast
+        (
+            InHandle,
+            ck::MakePayload
+            (
+                InHandle,
+                TPayload_Attribute_OnValueChanged<T_DerivedAttribute>
+                {
+                    InHandle,
+                    InAttribute._Base,
+                    InAttribute._Final
+                }
+            )
+        );
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
     auto
         TProcessor_Attribute_RecomputeAll<T_DerivedProcessor, T_AttributeModifierFragment>::
@@ -35,7 +72,7 @@ namespace ck
             }
         );
 
-        TUtils_Attribute<AttributeFragmentType>::Request_DispatchDelegates(InHandle);
+        TUtils_Attribute<AttributeFragmentType>::Request_FireSignals(InHandle);
     }
 
     // --------------------------------------------------------------------------------------------------------------------

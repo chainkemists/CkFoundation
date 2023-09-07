@@ -6,6 +6,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcsBasics/EntityHolder/CkEntityHolder_Utils.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
+#include "CkSignal/CkSignal_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -60,7 +61,7 @@ namespace ck
             HandleType InHandle) -> void;
 
         static auto
-        Request_DispatchDelegates(
+        Request_FireSignals(
             HandleType InHandle) -> void;
     };
 
@@ -114,6 +115,13 @@ namespace ck
         Request_ComputeResult(
             HandleType InHandle) -> void;
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template<typename T_DerivedAttribute, typename T_Multicast>
+    class TUtils_Signal_UnrealMulticast_OnAttributeValueChanged : public TUtils_Signal_UnrealMulticast<
+        TFragment_Signal_OnAttributeValueChanged<T_DerivedAttribute>,
+        TFragment_Signal_UnrealMulticast_OnAttributeValueChanged<T_DerivedAttribute, T_Multicast>> {};
 }
 
 // --------------------------------------------------------------------------------------------------------------------

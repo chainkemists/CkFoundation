@@ -4,6 +4,7 @@
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment_Data.h"
 
 #include "CkCore/TypeConverter/CkTypeConverter.h"
+#include "CkSignal/CkSignal_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -44,11 +45,11 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <>
-    struct TTypeConverter<TPayload_Attribute_OnFinalValueChanged<FFragment_FloatAttribute>, TypeConverterPolicy::TypeToUnreal>
+    struct TTypeConverter<TPayload_Attribute_OnValueChanged<FFragment_FloatAttribute>, TypeConverterPolicy::TypeToUnreal>
     {
-        auto operator()(const TPayload_Attribute_OnFinalValueChanged<FFragment_FloatAttribute>& InPayload) const
+        auto operator()(const TPayload_Attribute_OnValueChanged<FFragment_FloatAttribute>& InPayload) const
         {
-            return FCk_Payload_FloatAttribute_OnFinalValueChanged
+            return FCk_Payload_FloatAttribute_OnValueChanged
             {
                 InPayload.Get_Handle(),
                 InPayload.Get_BaseValue(),
@@ -56,6 +57,13 @@ namespace ck
             };
         }
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_SIGNAL(CKATTRIBUTE_API, OnFloatAttributeValueChanged, FCk_Handle, FCk_Payload_FloatAttribute_OnValueChanged);
+    CK_DEFINE_SIGNAL_UTILS(CKATTRIBUTE_API, OnFloatAttributeValueChanged);
+    CK_DEFINE_SIGNAL_WITH_DELEGATE(CKATTRIBUTE_API, OnFloatAttributeValueChanged, FCk_Delegate_FloatAttribute_OnValueChanged_MC, FCk_Handle, FCk_Payload_FloatAttribute_OnValueChanged);
+    CK_DEFINE_SIGNAL_WITH_DELEGATE_UTILS(CKATTRIBUTE_API, OnFloatAttributeValueChanged);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

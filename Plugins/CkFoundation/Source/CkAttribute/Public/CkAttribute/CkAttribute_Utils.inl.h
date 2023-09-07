@@ -82,14 +82,14 @@ namespace ck
     template <typename T_DerivedAttribute>
     auto
         TUtils_Attribute<T_DerivedAttribute>::
-        Request_DispatchDelegates(
+        Request_FireSignals(
             HandleType InHandle)
         -> void
     {
         if (NOT Ensure(InHandle))
         { return; }
 
-        InHandle.Add<typename AttributeFragmentType::Tag_DispatchDelegates>();
+        InHandle.Add<typename AttributeFragmentType::Tag_FireSignals>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------

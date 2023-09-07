@@ -28,8 +28,8 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedAttribute>
-    TPayload_Attribute_OnFinalValueChanged<T_DerivedAttribute>::
-        TPayload_Attribute_OnFinalValueChanged(
+    TPayload_Attribute_OnValueChanged<T_DerivedAttribute>::
+        TPayload_Attribute_OnValueChanged(
             HandleType InHandle,
             AttributeDataType InBaseValue,
             AttributeDataType InFinalValue)
