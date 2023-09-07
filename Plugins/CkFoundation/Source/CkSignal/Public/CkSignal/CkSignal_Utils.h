@@ -83,7 +83,7 @@ namespace ck
     {
         const auto BroadcastIfPayloadInFlight = [&]<typename... T_Args>(std::tuple<T_Args...> InPayload)
         {
-            if (InPayloadInFlightBehavior == ECk_Signal_PayloadInFlight::Ignore)
+            if (InPayloadInFlightBehavior == ECk_Signal_PayloadInFlight::IgnorePayloadInFlight)
             { return; }
 
             auto TempDelegate = SignalType::template DelegateType{};
@@ -103,7 +103,7 @@ namespace ck
     {
         const auto BroadcastIfPayloadInFlight = [&]<typename... T_Args>(std::tuple<T_Args...> InPayload)
         {
-            if (InPayloadInFlightBehavior == ECk_Signal_PayloadInFlight::Ignore)
+            if (InPayloadInFlightBehavior == ECk_Signal_PayloadInFlight::IgnorePayloadInFlight)
             { return; }
 
             auto TempDelegate = SignalType::template DelegateType{};
@@ -124,10 +124,10 @@ namespace ck
     {
         switch(InPayloadInFlightBehavior)
         {
-        case ECk_Signal_PayloadInFlight::Fire:
-            return Bind<T_Candidate, ECk_Signal_PayloadInFlight::Fire>(InHandle);
-        case ECk_Signal_PayloadInFlight::Ignore:
-            return Bind<T_Candidate, ECk_Signal_PayloadInFlight::Ignore>(InHandle);
+        case ECk_Signal_PayloadInFlight::FireIfPayloadInFlight:
+            return Bind<T_Candidate, ECk_Signal_PayloadInFlight::FireIfPayloadInFlight>(InHandle);
+        case ECk_Signal_PayloadInFlight::IgnorePayloadInFlight:
+            return Bind<T_Candidate, ECk_Signal_PayloadInFlight::IgnorePayloadInFlight>(InHandle);
         default:
             // CK_INVALID_ENUM(InPayloadInFlightBehavior);
             break;
@@ -140,14 +140,14 @@ namespace ck
     TUtils_Signal<T_DerivedSignal>::Bind(T_Instance&& InInstance, FCk_Handle InHandle,
         ECk_Signal_PayloadInFlight InPayloadInFlightBehavior)
     {
-        using ReturnType = decltype(Bind<T_Candidate, ECk_Signal_PayloadInFlight::Fire>(std::forward<T_Instance>(InInstance), InHandle));
+        using ReturnType = decltype(Bind<T_Candidate, ECk_Signal_PayloadInFlight::FireIfPayloadInFlight>(std::forward<T_Instance>(InInstance), InHandle));
 
         switch(InPayloadInFlightBehavior)
         {
-        case ECk_Signal_PayloadInFlight::Fire:
-            return Bind<T_Candidate, ECk_Signal_PayloadInFlight::Fire>(std::forward<T_Instance>(InInstance), InHandle);
-        case ECk_Signal_PayloadInFlight::Ignore:
-            return Bind<T_Candidate, ECk_Signal_PayloadInFlight::Ignore>(std::forward<T_Instance>(InInstance), InHandle);
+        case ECk_Signal_PayloadInFlight::FireIfPayloadInFlight:
+            return Bind<T_Candidate, ECk_Signal_PayloadInFlight::FireIfPayloadInFlight>(std::forward<T_Instance>(InInstance), InHandle);
+        case ECk_Signal_PayloadInFlight::IgnorePayloadInFlight:
+            return Bind<T_Candidate, ECk_Signal_PayloadInFlight::IgnorePayloadInFlight>(std::forward<T_Instance>(InInstance), InHandle);
         default:
             // CK_INVALID_ENUM(InPayloadInFlightBehavior);
             break;
@@ -223,7 +223,7 @@ namespace ck
         {
             //SignalType s;
             //s._Invoke_Sink.connect<&T_DerivedSignal_Unreal::DoBroadcast>(UnrealMulticast);
-            auto Connection = Super::Bind<&T_DerivedSignal_Unreal::DoBroadcast>(UnrealMulticast, InHandle, ECk_Signal_PayloadInFlight::Fire);
+            auto Connection = Super::Bind<&T_DerivedSignal_Unreal::DoBroadcast>(UnrealMulticast, InHandle, ECk_Signal_PayloadInFlight::FireIfPayloadInFlight);
         }
     }
 
@@ -235,11 +235,11 @@ namespace ck
     {
         switch(InPayloadInFlightBehavior)
         {
-        case ECk_Signal_PayloadInFlight::Fire:
-            Bind<ECk_Signal_PayloadInFlight::Fire>(InHandle, InDelegate);
+        case ECk_Signal_PayloadInFlight::FireIfPayloadInFlight:
+            Bind<ECk_Signal_PayloadInFlight::FireIfPayloadInFlight>(InHandle, InDelegate);
             break;
-        case ECk_Signal_PayloadInFlight::Ignore:
-            Bind<ECk_Signal_PayloadInFlight::Ignore>(InHandle, InDelegate);
+        case ECk_Signal_PayloadInFlight::IgnorePayloadInFlight:
+            Bind<ECk_Signal_PayloadInFlight::IgnorePayloadInFlight>(InHandle, InDelegate);
             break;
         default:
             // CK_INVALID_ENUM(InPayloadInFlightBehavior);
@@ -267,15 +267,3 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 }
-
-#define CK_DEFINE_SIGNAL(_API_, _SignalName_, ...)\
-    _API_ struct FFragment_Signal_##_SignalName_ : public ck::TFragment_Signal<FFragment_Signal_##_SignalName_, __VA_ARGS__> {}
-
-#define CK_DEFINE_SIGNAL_UTILS(_API_, _SignalName_)\
-    _API_ class UUtilsSignal_##_SignalName_ : public ck::TUtils_Signal<FFragment_Signal_##_SignalName_> {}
-
-#define CK_DEFINE_SIGNAL_WITH_DELEGATE(_API_, _SignalName_, _MulticastName_, ...)\
-    _API_ struct FFragment_Signal_UnrealMulticast##_SignalName_ : public ck::TFragment_Signal_UnrealMulticast<FFragment_Signal_##_SignalName_, _MulticastName_, __VA_ARGS__> {}
-
-#define CK_DEFINE_SIGNAL_WITH_DELEGATE_UTILS(_API_, _SignalName_)\
-    _API_ class UUtils_Signal_UnrealMulticast##_SignalName_ : public ck::TUtils_Signal_UnrealMulticast<FFragment_Signal_##_SignalName_, FFragment_Signal_UnrealMulticast##_SignalName_> {}
