@@ -65,6 +65,9 @@ namespace ck
             FCk_Handle InHandle,
             TPayload<T_Args...>&& InPayload)
     {
+        if (NOT InHandle.Has<SignalType>())
+        { return; }
+
         auto& Signal = InHandle.Get<SignalType>();
         const auto Invoker = [&Signal](auto&&... InArgs)
         {
@@ -94,7 +97,7 @@ namespace ck
             std::apply(TempDelegate, InPayload);
         };
 
-        auto& Signal = InHandle.Get<SignalType>();
+        auto& Signal = InHandle.AddOrGet<SignalType>();
         BroadcastIfPayloadInFlight(Signal._Payload);
         return Signal._Invoke_Sink.template connect<T_Candidate>();
     }
@@ -115,7 +118,7 @@ namespace ck
             std::apply(TempDelegate, InPayload);
         };
 
-        auto& Signal = InHandle.Get<SignalType>();
+        auto& Signal = InHandle.AddOrGet<SignalType>();
 
         if (ck::IsValid(Signal._Payload))
         { BroadcastIfPayloadInFlight(*Signal._Payload); }
