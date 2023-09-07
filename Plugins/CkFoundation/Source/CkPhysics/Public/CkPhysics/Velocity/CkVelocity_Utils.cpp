@@ -67,7 +67,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_Velocity_SingleTarget_UE::
+    UCk_Utils_VelocityModifier_SingleTarget_UE::
     Add(
         FCk_Handle InHandle,
         const FCk_Fragment_VelocityModifier_SingleTarget_ParamsData& InParams) -> void
@@ -86,7 +86,7 @@ auto
 }
 
 auto
-    UCk_Utils_Velocity_SingleTarget_UE::
+    UCk_Utils_VelocityModifier_SingleTarget_UE::
     Has(
         FCk_Handle InHandle)
     -> bool
@@ -96,7 +96,7 @@ auto
 }
 
 auto
-    UCk_Utils_Velocity_SingleTarget_UE::
+    UCk_Utils_VelocityModifier_SingleTarget_UE::
     Ensure(
         FCk_Handle InHandle)
     -> bool
