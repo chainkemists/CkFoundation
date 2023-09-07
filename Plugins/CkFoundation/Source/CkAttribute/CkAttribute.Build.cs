@@ -23,6 +23,7 @@ public class CkAttribute : CkModuleRules
             "CkLog",
             "CkProvider",
             "CkRecord",
+            "CkSignal",
         });
     }
 }

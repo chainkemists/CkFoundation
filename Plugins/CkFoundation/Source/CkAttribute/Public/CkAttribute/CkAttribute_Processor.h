@@ -7,7 +7,35 @@
 
 namespace ck
 {
-    // TODO: Add processor responsible for dispatching the delegates
+    template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_MulticastType>
+    class TProcessor_Attribute_FireSignals : public TProcessor<
+            TProcessor_Attribute_FireSignals<T_DerivedProcessor, T_DerivedAttribute, T_MulticastType>,
+            T_DerivedAttribute,
+            typename T_DerivedAttribute::Tag_FireSignals>
+    {
+    public:
+        using MarkedDirtyBy = typename T_DerivedAttribute::Tag_FireSignals;
+
+    public:
+        using AttributeFragmentType = T_DerivedAttribute;
+        using AttributeDataType     = typename AttributeFragmentType::AttributeDataType;
+        using ThisType              = TProcessor_Attribute_FireSignals<T_DerivedProcessor, AttributeFragmentType, T_MulticastType>;
+        using Super                 = TProcessor<ThisType, AttributeFragmentType, MarkedDirtyBy>;
+        using HandleType            = typename Super::HandleType;
+        using TimeType              = typename Super::TimeType;
+
+    public:
+        using Super::TProcessor;
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            AttributeFragmentType& InAttribute) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
 
     // --------------------------------------------------------
 

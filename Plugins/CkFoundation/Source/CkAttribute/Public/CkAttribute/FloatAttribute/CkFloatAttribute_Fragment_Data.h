@@ -121,12 +121,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKATTRIBUTE_API FCk_Payload_FloatAttribute_OnFinalValueChanged
+struct CKATTRIBUTE_API FCk_Payload_FloatAttribute_OnValueChanged
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Payload_FloatAttribute_OnFinalValueChanged);
+    CK_GENERATED_BODY(FCk_Payload_FloatAttribute_OnValueChanged);
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
@@ -144,19 +144,19 @@ public:
     CK_PROPERTY_GET(_FinalValue);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Payload_FloatAttribute_OnFinalValueChanged, _Handle, _BaseValue, _FinalValue);
+    CK_DEFINE_CONSTRUCTORS(FCk_Payload_FloatAttribute_OnValueChanged, _Handle, _BaseValue, _FinalValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
-    FCk_Delegate_FloatAttribute_OnFinalValueChanged,
+    FCk_Delegate_FloatAttribute_OnValueChanged,
     FCk_Handle, InHandle,
-    FCk_Payload_FloatAttribute_OnFinalValueChanged, InPayload);
+    FCk_Payload_FloatAttribute_OnValueChanged, InPayload);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_FloatAttribute_OnFinalValueChanged_MC,
+    FCk_Delegate_FloatAttribute_OnValueChanged_MC,
     FCk_Handle, InHandle,
-    FCk_Payload_FloatAttribute_OnFinalValueChanged, InPayload);
+    FCk_Payload_FloatAttribute_OnValueChanged, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
