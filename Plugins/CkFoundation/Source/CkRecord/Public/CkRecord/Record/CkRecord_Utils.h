@@ -271,7 +271,7 @@ namespace ck
         }
 
         {
-            auto& RecordEntryFragment = InRecordHandle.Get<ck::FFragment_RecordEntry>();
+            auto& RecordEntryFragment = InRecordEntry.Get<ck::FFragment_RecordEntry>();
             const auto& RemovalSuccess = RecordEntryFragment._Records.Remove(InRecordHandle.Get_Entity());
 
             CK_ENSURE_IF_NOT(RemovalSuccess,
