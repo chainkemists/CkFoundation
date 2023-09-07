@@ -5,6 +5,7 @@
 #include "CkEcsBasics/EntityHolder/CkEntityHolder_Fragment.h"
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
+#include "CkSignal/CkSignal_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -15,6 +16,9 @@ namespace ck
 
     template <typename T_DerivedAttributeModifier>
     class TUtils_AttributeModifier;
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_MulticastType>
+    class TProcessor_Attribute_FireSignals;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_Attribute_RecomputeAll;
@@ -52,6 +56,9 @@ namespace ck
         template <typename>
         friend class TUtils_Attribute;
 
+        template <typename, typename, typename>
+        friend class TProcessor_Attribute_FireSignals;
+
         template <typename, typename>
         friend class TProcessor_Attribute_RecomputeAll;
 
@@ -63,11 +70,10 @@ namespace ck
 
     public:
         struct Tag_RecomputeFinalValue {};
-        struct Tag_DispatchDelegates {};
+        struct Tag_FireSignals {};
 
     public:
-        using ValueType         = T_AttributeType;
-        using AttributeDataType = ValueType;
+        using AttributeDataType = T_AttributeType;
         using ThisType          = TFragment_Attribute<AttributeDataType>;
         using HandleType        = FCk_Handle;
 
@@ -106,8 +112,7 @@ namespace ck
         struct Tag_ComputeResult{};
 
     public:
-        using ValueType             = T_DerivedAttribute;
-        using AttributeFragmentType = ValueType;
+        using AttributeFragmentType = T_DerivedAttribute;
         using ThisType              = TFragment_AttributeModifier<AttributeFragmentType>;
         using AttributeDataType     = typename AttributeFragmentType::AttributeDataType;
         using HandleType            = FCk_Handle;
@@ -138,17 +143,16 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedAttribute>
-    struct TPayload_Attribute_OnFinalValueChanged
+    struct TPayload_Attribute_OnValueChanged
     {
-        using ValueType               = T_DerivedAttribute;
-        using AttributeFragmentType   = ValueType;
-        using ThisType                = TPayload_Attribute_OnFinalValueChanged<AttributeFragmentType>;
+        using AttributeFragmentType   = T_DerivedAttribute;
+        using ThisType                = TPayload_Attribute_OnValueChanged<AttributeFragmentType>;
         using AttributeDataType       = typename AttributeFragmentType::AttributeDataType;
         using HandleType              = FCk_Handle;
 
     public:
-        TPayload_Attribute_OnFinalValueChanged(
-            HandleType         InHandle,
+        TPayload_Attribute_OnValueChanged(
+            HandleType        InHandle,
             AttributeDataType InBaseValue,
             AttributeDataType InFinalValue);
 
@@ -162,6 +166,23 @@ namespace ck
         CK_PROPERTY_GET(_BaseValue);
         CK_PROPERTY_GET(_FinalValue);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template<typename T_DerivedAttribute>
+    struct TFragment_Signal_OnAttributeValueChanged : public TFragment_Signal<
+        TFragment_Signal_OnAttributeValueChanged<T_DerivedAttribute>,
+        FCk_Handle,
+        TPayload_Attribute_OnValueChanged<T_DerivedAttribute>> {};
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template<typename T_DerivedAttribute, typename T_Multicast>
+    struct TFragment_Signal_UnrealMulticast_OnAttributeValueChanged : public TFragment_Signal_UnrealMulticast<
+        TFragment_Signal_OnAttributeValueChanged<T_DerivedAttribute>,
+        T_Multicast,
+        FCk_Handle,
+        TPayload_Attribute_OnValueChanged<T_DerivedAttribute>> {};
 }
 
 // --------------------------------------------------------------------------------------------------------------------

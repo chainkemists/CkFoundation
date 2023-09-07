@@ -45,10 +45,10 @@ auto
     UTT_Utils_FloatAttribute_UE::
     Has(
         FGameplayTag InAttributeName,
-        FCk_Handle InHandle)
+        FCk_Handle InAttributeOwnerEntity)
     -> bool
 {
-    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InHandle, InAttributeName);
+    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
     return ck::IsValid(attributeEntity);
 }
 
@@ -56,10 +56,10 @@ auto
     UTT_Utils_FloatAttribute_UE::
     Ensure(
         FGameplayTag InAttributeName,
-        FCk_Handle InHandle)
+        FCk_Handle InAttributeOwnerEntity)
     -> bool
 {
-    CK_ENSURE_IF_NOT(Has(InAttributeName, InHandle), TEXT("Handle [{}] does NOT have a Float Attribute"), InHandle)
+    CK_ENSURE_IF_NOT(Has(InAttributeName, InAttributeOwnerEntity), TEXT("Handle [{}] does NOT have a Float Attribute"), InAttributeOwnerEntity)
     { return false; }
 
     return true;
@@ -69,10 +69,10 @@ auto
     UTT_Utils_FloatAttribute_UE::
     Get_BaseValue(
         FGameplayTag InAttributeName,
-        FCk_Handle InHandle)
+        FCk_Handle InAttributeOwnerEntity)
     -> float
 {
-    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InHandle, InAttributeName);
+    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
     return FloatAttribute_Utils::Get_BaseValue(attributeEntity);
 }
 
@@ -80,10 +80,10 @@ auto
     UTT_Utils_FloatAttribute_UE::
     Get_BonusValue(
         FGameplayTag InAttributeName,
-        FCk_Handle InHandle)
+        FCk_Handle InAttributeOwnerEntity)
     -> float
 {
-    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InHandle, InAttributeName);
+    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
     return FloatAttribute_Utils::Get_FinalValue(attributeEntity) - FloatAttribute_Utils::Get_BaseValue(attributeEntity);
 }
 
@@ -91,11 +91,38 @@ auto
     UTT_Utils_FloatAttribute_UE::
     Get_FinalValue(
         FGameplayTag InAttributeName,
-        FCk_Handle InHandle)
+        FCk_Handle InAttributeOwnerEntity)
     -> float
 {
-    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InHandle, InAttributeName);
+    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
     return FloatAttribute_Utils::Get_FinalValue(attributeEntity);
+}
+
+auto
+    UTT_Utils_FloatAttribute_UE::
+    BindTo_OnValueChanged(
+        FGameplayTag InAttributeName,
+        FCk_Handle InAttributeOwnerEntity,
+        ECk_Signal_PayloadInFlight InBehavior,
+        const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate)
+    -> void
+{
+    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+
+    ck::UUtils_Signal_UnrealMulticast_OnFloatAttributeValueChanged::Bind(attributeEntity, InDelegate, InBehavior);
+}
+
+auto
+    UTT_Utils_FloatAttribute_UE::
+    UnbindFrom_OnValueChanged(
+        FGameplayTag InAttributeName,
+        FCk_Handle InAttributeOwnerEntity,
+        const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate)
+    -> void
+{
+    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+
+    ck::UUtils_Signal_UnrealMulticast_OnFloatAttributeValueChanged::Unbind(attributeEntity, InDelegate);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

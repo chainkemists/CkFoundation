@@ -8,7 +8,11 @@
 
 namespace ck
 {
-    // TODO: Declare + Define Dispatch Processor
+    class CKATTRIBUTE_API FProcessor_FloatAttribute_FireSignals : public TProcessor_Attribute_FireSignals<FProcessor_FloatAttribute_FireSignals, FFragment_FloatAttribute, FCk_Delegate_FloatAttribute_OnValueChanged_MC>
+    {
+    public:
+        using TProcessor_Attribute_FireSignals::TProcessor_Attribute_FireSignals;
+    };
 
     // --------------------------------------------------------
 
