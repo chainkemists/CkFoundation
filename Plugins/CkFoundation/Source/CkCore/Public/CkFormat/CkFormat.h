@@ -37,10 +37,10 @@ namespace ck
 
     template <typename T, typename... TArgs>
     auto
-    Format(fmt::wformat_string<T...> InString, TArgs&&... InArgs)
+    Format(const T& InString, TArgs&&... InArgs)
         -> std::basic_string<TCHAR>
     {
-        return fmt::format(InString, ck_format_detail::ArgsForward(InArgs)...);
+        return fmt::format(TEXT("{}"), InString, ck_format_detail::ArgsForward(InArgs)...);
         //return fmt::format(TEXT("{}"), std::forward<TArgs>(InArgs)...);
     }
 
