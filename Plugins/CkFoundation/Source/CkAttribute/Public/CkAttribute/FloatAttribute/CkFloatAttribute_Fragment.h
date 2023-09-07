@@ -1,10 +1,10 @@
 #pragma once
 
 #include "CkAttribute/CkAttribute_Fragment.h"
+#include "CkAttribute/CkAttribute_Utils.h"
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment_Data.h"
 
 #include "CkCore/TypeConverter/CkTypeConverter.h"
-#include "CkSignal/CkSignal_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -58,12 +58,8 @@ namespace ck
         }
     };
 
-    // --------------------------------------------------------------------------------------------------------------------
-
-    CK_DEFINE_SIGNAL(CKATTRIBUTE_API, OnFloatAttributeValueChanged, FCk_Handle, FCk_Payload_FloatAttribute_OnValueChanged);
-    CK_DEFINE_SIGNAL_UTILS(CKATTRIBUTE_API, OnFloatAttributeValueChanged);
-    CK_DEFINE_SIGNAL_WITH_DELEGATE(CKATTRIBUTE_API, OnFloatAttributeValueChanged, FCk_Delegate_FloatAttribute_OnValueChanged_MC, FCk_Handle, FCk_Payload_FloatAttribute_OnValueChanged);
-    CK_DEFINE_SIGNAL_WITH_DELEGATE_UTILS(CKATTRIBUTE_API, OnFloatAttributeValueChanged);
+    using UUtils_Signal_UnrealMulticast_OnFloatAttributeValueChanged =
+        TUtils_Signal_UnrealMulticast_OnAttributeValueChanged<ck::FFragment_FloatAttribute, FCk_Delegate_FloatAttribute_OnValueChanged_MC>;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
