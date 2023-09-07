@@ -1,0 +1,58 @@
+#pragma once
+
+#include "CkAttribute/CkAttribute_Processor.h"
+
+#include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    // TODO: Declare + Define Dispatch Processor
+
+    // --------------------------------------------------------
+
+    class CKATTRIBUTE_API FProcessor_FloatAttribute_RecomputeAll : public TProcessor_Attribute_RecomputeAll<FProcessor_FloatAttribute_RecomputeAll, FFragment_FloatAttributeModifier>
+    {
+    public:
+        using TProcessor_Attribute_RecomputeAll::TProcessor_Attribute_RecomputeAll;
+    };
+
+    // --------------------------------------------------------
+
+    class CKATTRIBUTE_API FProcessor_FloatAttributeModifier_Additive_Compute
+        : public TProcessor_AttributeModifier_Additive_Compute<FProcessor_FloatAttributeModifier_Additive_Compute, FFragment_FloatAttributeModifier>
+    {
+    public:
+        using TProcessor_AttributeModifier_Additive_Compute::TProcessor_AttributeModifier_Additive_Compute;
+    };
+
+    // --------------------------------------------------------
+
+    class CKATTRIBUTE_API FProcessor_FloatAttributeModifier_Additive_Teardown
+        : public TProcessor_AttributeModifier_Additive_Teardown<FProcessor_FloatAttributeModifier_Additive_Teardown, FFragment_FloatAttributeModifier>
+    {
+    public:
+        using TProcessor_AttributeModifier_Additive_Teardown::TProcessor_AttributeModifier_Additive_Teardown;
+    };
+
+    // --------------------------------------------------------
+
+    class CKATTRIBUTE_API FProcessor_FloatAttributeModifier_Multiplicative_Compute
+        : public TProcessor_AttributeModifier_Multiplicative_Compute<FProcessor_FloatAttributeModifier_Multiplicative_Compute, FFragment_FloatAttributeModifier>
+    {
+    public:
+        using TProcessor_AttributeModifier_Multiplicative_Compute::TProcessor_AttributeModifier_Multiplicative_Compute;
+    };
+
+    // --------------------------------------------------------
+
+    class CKATTRIBUTE_API FProcessor_FloatAttributeModifier_Multiplicative_Teardown
+        : public TProcessor_AttributeModifier_Multiplicative_Teardown<FProcessor_FloatAttributeModifier_Multiplicative_Teardown, FFragment_FloatAttributeModifier>
+    {
+    public:
+        using TProcessor_AttributeModifier_Multiplicative_Teardown::TProcessor_AttributeModifier_Multiplicative_Teardown;
+    };
+}
+
+// --------------------------------------------------------------------------------------------------------------------

@@ -3,6 +3,7 @@
 #include "NetworkTimeSyncComponent.h"
 
 #include "CkActor/ActorModifier/CkActorModifier_Processor.h"
+#include "CkAttribute/FloatAttribute/CkFloatAttribute_Processor.h"
 
 #include "CkIntent/CkIntent_Processor.h"
 
@@ -37,7 +38,13 @@ namespace ck_world_actor
             ACk_World_Actor_UE::FEcsWorldType& InWorld)
         -> void
     {
-        InWorld.Add<ck::FProcessor_EntityLifetime_TriggerDestroyEntity>(InWorld.Get_Registry());
+        // Always first systems
+        {
+            InWorld.Add<ck::FProcessor_EntityLifetime_TriggerDestroyEntity>(InWorld.Get_Registry());
+        }
+
+        InWorld.Add<ck::FProcessor_FloatAttributeModifier_Additive_Teardown>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_FloatAttributeModifier_Multiplicative_Teardown>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FProcessor_UnrealEntity_HandleRequests>(InWorld.Get_Registry());
 
@@ -74,6 +81,13 @@ namespace ck_world_actor
         InWorld.Add<ck::FProcessor_Transform_HandleRequests>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_Transform_Actor>(InWorld.Get_Registry());
 
+        InWorld.Add<ck::FProcessor_FloatAttribute_RecomputeAll>(InWorld.Get_Registry());
+
+        InWorld.Add<ck::FProcessor_FloatAttributeModifier_Additive_Compute>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_FloatAttributeModifier_Multiplicative_Compute>(InWorld.Get_Registry());
+
+        // TODO: Add FloatAttribute_DispatchDelegates processor
+
         // Processors for Replication
         {
             InWorld.Add<ck::FProcessor_Velocity_Replicate>(InWorld.Get_Registry());
@@ -90,9 +104,12 @@ namespace ck_world_actor
         InWorld.Add<ck::FProcessor_Marker_DebugPreviewAll>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_Sensor_DebugPreviewAll>(InWorld.Get_Registry());
 
-        InWorld.Add<ck::FProcessor_OwningActor_Destroy>(InWorld.Get_Registry());
-        InWorld.Add<ck::FProcessor_EntityLifetime_EntityJustCreated>(InWorld.Get_Registry());
-        InWorld.Add<ck::FProcessor_EntityLifetime_PendingDestroyEntity>(InWorld.Get_Registry());
+        // Always last systems
+        {
+            InWorld.Add<ck::FProcessor_OwningActor_Destroy>(InWorld.Get_Registry());
+            InWorld.Add<ck::FProcessor_EntityLifetime_EntityJustCreated>(InWorld.Get_Registry());
+            InWorld.Add<ck::FProcessor_EntityLifetime_PendingDestroyEntity>(InWorld.Get_Registry());
+        }
     }
 }
 
