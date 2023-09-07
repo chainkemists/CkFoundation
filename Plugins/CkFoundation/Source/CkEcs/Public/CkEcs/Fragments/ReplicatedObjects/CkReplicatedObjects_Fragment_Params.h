@@ -10,27 +10,36 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#define CK_REP_OBJ_EXECUTE_IF_VALID(_Func_)\
-    if (NOT Get_AssociatedEntity().IsValid())\
-    { return; }\
-\
-    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)\
-    { return; }\
-\
+#define CK_REP_OBJ_EXECUTE_IF_VALID(_Func_)              \
+    if (NOT Get_AssociatedEntity().IsValid())            \
+    { return; }                                          \
+                                                         \
+    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)            \
+    { return; }                                          \
+                                                         \
     _Func_()
 
 #define CK_REP_OBJ_EXECUTE_IF_VALID_IGNORE_SERVER(_Func_)\
-    if (NOT Get_AssociatedEntity().IsValid())\
-    { return; }\
-\
-    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)\
-    { return; }\
-\
-    if (GetWorld()->IsNetMode(NM_DedicatedServer))\
-    { return; }\
+    if (NOT Get_AssociatedEntity().IsValid())            \
+    { return; }                                          \
+                                                         \
+    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)            \
+    { return; }                                          \
+                                                         \
+    if (GetWorld()->IsNetMode(NM_DedicatedServer))       \
+    { return; }                                          \
     _Func_()
 
-// TODO: Move this to its own file
+#define CK_GENERATED_BODY_FRAGMENT_REP(_ClassType_)          \
+    CK_GENERATED_BODY(_ClassType_);                          \
+    protected:                                               \
+    auto OnLink() -> void                                    \
+    {                                                        \
+        _AssociatedEntity.Add<TObjectPtr<ThisType>>() = this;\
+    }
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintType, NotBlueprintable)
 class CKECS_API UCk_Ecs_ReplicatedObject_UE
     : public UCk_ReplicatedObject_UE
@@ -41,9 +50,6 @@ public:
     CK_GENERATED_BODY(UCk_Ecs_ReplicatedObject_UE);
 
 public:
-    // TODO: Remove as ActorInfo is no longer required to know about ReplicatedObject
-    friend class UCk_Utils_OwningActor_UE;
-    friend class ACk_World_Actor_Replicated_UE;
     friend struct FCk_ReplicatedObjects;
 
 public:
@@ -58,12 +64,11 @@ public:
 
 public:
     virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
-
     virtual auto BeginDestroy() -> void override;
     virtual auto PreDestroyFromReplication() -> void override;
 
 protected:
-    virtual auto OnLink() -> void;
+    virtual auto OnLink() -> void PURE_VIRTUAL(UCk_Ecs_ReplicateObject_UE::OnLink,);
 
 public:
     UFUNCTION(NetMulticast, Reliable)
@@ -77,7 +82,7 @@ protected:
     AActor* _ReplicatedActor = nullptr;
 
 public:
-    CK_PROPERTY(_AssociatedEntity);
+    CK_PROPERTY_GET(_AssociatedEntity);
     CK_PROPERTY_GET(_ReplicatedActor);
 };
 
