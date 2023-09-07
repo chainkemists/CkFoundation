@@ -1,16 +1,18 @@
 #pragma once
 
-#include <CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h>
+#include "CkCore/Time/CkTime.h"
 
-#include <CkEcsBasics/Transform/CkTransform_Fragment_Params.h>
+#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 
-#include <CkMacros/CkMacros.h>
+#include "CkEcsBasics/Transform/CkTransform_Fragment_Params.h"
 
-#include <CkTypeTraits/CkTypeTraits.h>
+#include "CkMacros/CkMacros.h"
+
+#include "CkSignal/Public/CkSignal/CkSignal_Utils.h"
+
+#include "CkTypeTraits/CkTypeTraits.h"
 
 #include <variant>
-
-#include "CkCore/Time/CkTime.h"
 
 #include "CkTransform_Fragment.generated.h"
 
@@ -134,6 +136,13 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     class FProcessor_Transform_Replicate;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_SIGNAL(CKECSBASICS_API, TransformUpdate, FCk_Handle, FTransform);
+    CK_DEFINE_SIGNAL_UTILS(CKECSBASICS_API, TransformUpdate);
+    CK_DEFINE_SIGNAL_WITH_DELEGATE(CKECSBASICS_API, TransformUpdate, FCk_Delegate_Transform_OnUpdate_MC, FCk_Handle, FTransform);
+    CK_DEFINE_SIGNAL_WITH_DELEGATE_UTILS(CKECSBASICS_API, TransformUpdate);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
