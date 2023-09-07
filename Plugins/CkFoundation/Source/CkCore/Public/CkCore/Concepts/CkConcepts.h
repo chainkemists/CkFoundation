@@ -4,7 +4,7 @@
 
 #include "entt/entt.hpp"
 
-namespace ck::concept
+namespace ck::concepts
 {
     struct FTickable_Concept : entt::type_list<void(FCk_Time)>
     {

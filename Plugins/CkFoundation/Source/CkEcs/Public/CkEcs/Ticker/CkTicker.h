@@ -22,7 +22,7 @@ namespace ck
         using FRegistryType = FCk_Registry;
         using FTimeType = FCk_Time;
         using FHandleType = FCk_Handle;
-        using FTickableType = concept::FTickableType;
+        using FTickableType = concepts::FTickableType;
         using FEntityType = FCk_Entity;
 
     public:
