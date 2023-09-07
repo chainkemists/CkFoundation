@@ -20,12 +20,12 @@ namespace ck
         struct FTag_PayloadInFlight {};
 
     public:
-        using ArgsType = std::tuple<FCk_Handle, T_Args...>;
+        using ArgsType = std::tuple<T_Args...>;
         using PayloadType = TOptional<ArgsType>;
 
-        using SignalType = entt::sigh<void(FCk_Handle, T_Args...)>;
+        using SignalType = entt::sigh<void(T_Args...)>;
         using SinkType = entt::sink<SignalType>;
-        using DelegateType = entt::delegate<void(FCk_Handle, T_Args...)>;
+        using DelegateType = entt::delegate<void(T_Args...)>;
 
     public:
         TFragment_Signal()
