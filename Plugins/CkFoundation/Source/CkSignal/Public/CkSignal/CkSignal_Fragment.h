@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkCore/TypeConverter/CkTypeConverter.h"
+
 #include "CkEcs/Handle/CkHandle.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -60,7 +62,7 @@ namespace ck
     public:
         auto DoBroadcast(T_Args&&... InArgs)
         {
-            _Multicast.Broadcast(std::forward<T_Args>(InArgs)...);
+            _Multicast.Broadcast(TTypeConverter<T_Args, ck::TypeConverterPolicy::TypeToUnreal>{}(std::forward<T_Args>(InArgs))...);
         }
 
     private:
