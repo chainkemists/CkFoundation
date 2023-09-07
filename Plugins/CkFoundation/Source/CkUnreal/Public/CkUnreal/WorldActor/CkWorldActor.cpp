@@ -87,7 +87,9 @@ namespace ck_world_actor
         InWorld.Add<ck::FProcessor_FloatAttributeModifier_Additive_Compute>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_FloatAttributeModifier_Multiplicative_Compute>(InWorld.Get_Registry());
 
-        // TODO: Add FloatAttribute_DispatchDelegates processor
+        InWorld.Add<ck::FProcessor_FloatAttribute_FireSignals>(InWorld.Get_Registry());
+
+        // TODO: Add FloatAttribute_FireSignals processor
 
         // Processors for Replication
         {
