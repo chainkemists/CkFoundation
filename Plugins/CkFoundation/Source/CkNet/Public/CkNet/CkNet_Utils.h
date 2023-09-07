@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CkCore/Actor/CkActor_Utils.h"
-#include "CkEcs/CkEcs_Utils.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
@@ -62,7 +61,7 @@ private:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKNET_API UCk_Utils_Ecs_Net_UE : public UCk_Utils_Ecs_Base_UE
+class CKNET_API UCk_Utils_Ecs_Net_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
