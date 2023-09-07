@@ -19,7 +19,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, ForceInlineRow))
     TMap<FGameplayTag, float> _AttributeBaseValues;
 
 public:
