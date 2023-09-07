@@ -32,25 +32,12 @@ namespace ck
     namespace ck_format_detail
     {
         template <typename T>
-        auto&& ArgsForward(T&& InType)
-        {
-            using decayed_t = std::decay_t<T>;
-            using original_t = std::remove_const_t<decayed_t>;
-
-            if constexpr (std::is_pointer_v<decayed_t> && NOT std::is_void_v<std::remove_pointer_t<std::remove_cv_t<original_t>>> && NOT std::is_same_v<decayed_t, const wchar_t*>)
-            {
-                return ForwarderForPointers(InType);
-            }
-            else
-            {
-                return InType;
-            }
-        }
+        auto&& ArgsForward(T&& InType);
     }
 
     template <typename T, typename... TArgs>
     auto
-    Format(const T& InString, TArgs&&... InArgs)
+    Format(fmt::wformat_string<T...> InString, TArgs&&... InArgs)
         -> std::basic_string<TCHAR>
     {
         return fmt::format(InString, ck_format_detail::ArgsForward(InArgs)...);
@@ -149,4 +136,30 @@ struct FEnumToString<_Type_>                                                    
 };                                                                                  \
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
 #include "CkFormat_Defaults.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    namespace ck_format_detail
+    {
+        template <typename T>
+        auto&& ArgsForward(T&& InType)
+        {
+            using decayed_t = std::decay_t<T>;
+            using original_t = std::remove_const_t<decayed_t>;
+
+            if constexpr (std::is_pointer_v<decayed_t> && NOT std::is_void_v<std::remove_pointer_t<std::remove_cv_t<original_t>>> && NOT std::is_same_v<decayed_t, const wchar_t*>)
+            {
+                return ForwarderForPointers(InType);
+            }
+            else
+            {
+                return InType;
+            }
+        }
+    }
+}
