@@ -46,7 +46,7 @@ public:
         FGameplayTag InAttributeName,
         FCk_Handle InHandle);
 
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
               DisplayName="Ensure Has Float Attribute")
     static bool
@@ -102,7 +102,7 @@ public:
               DisplayName="Add Float Attribute Modifier")
     static void
     Add(
-        FCk_Handle InHandle,
+        FGameplayTag InModifierName,
         const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
@@ -110,14 +110,27 @@ public:
               DisplayName="Has Float Attribute Modifier")
     static bool
     Has(
-        FCk_Handle InHandle);
+        FGameplayTag InModifierName,
+        FGameplayTag InAttributeName,
+        FCk_Handle InAttributeOwnerEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AttributeModifier|Float",
               DisplayName="Ensure Has Float Attribute Modifier")
     static bool
     Ensure(
-        FCk_Handle InHandle);
+        FGameplayTag InModifierName,
+        FGameplayTag InAttributeName,
+        FCk_Handle InAttributeOwnerEntity);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AttributeModifier|Float",
+              DisplayName="Remove Float Attribute Modifier")
+    static void
+    Remove(
+        FGameplayTag InModifierName,
+        FGameplayTag InAttributeName,
+        FCk_Handle InAttributeOwnerEntity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -85,7 +85,7 @@ namespace ck
         template <typename, typename>
         friend class TProcessor_AttributeModifier_Multiplicative_Teardown;
 
-    private:
+    public:
         struct AttributeModifierTarget_Utils : TUtils_EntityHolder<FFragment_AttributeModifierTarget> {};
         struct RecordOfAttributeModifiers_Utils : TUtils_RecordOfEntities<FFragment_RecordOfAttributeModifiers>{};
 
