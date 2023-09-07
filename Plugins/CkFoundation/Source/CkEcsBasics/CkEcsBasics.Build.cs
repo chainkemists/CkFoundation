@@ -15,12 +15,15 @@ public class CkEcsBasics : CkModuleRules
             "CoreUObject",
             "Engine",
             "DeveloperSettings",
+            "GameplayTags",
 
             "CkActor",
             "CkCore",
             "CkEcs",
+            "CkLabel",
+            "CkLog",
             "CkNet",
-            "CkLog"
+            "CkRecord",
         });
     }
 }
