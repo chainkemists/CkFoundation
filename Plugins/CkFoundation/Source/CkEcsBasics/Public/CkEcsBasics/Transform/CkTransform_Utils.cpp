@@ -194,7 +194,7 @@ auto
     if (NOT Ensure(InHandle))
     { return; }
 
-    ck::UUtils_Signal_UnrealMulticastTransformUpdate::Bind(InHandle, InDelegate, InBehavior);
+    ck::UUtils_Signal_UnrealMulticast_TransformUpdate::Bind(InHandle, InDelegate, InBehavior);
 }
 
 auto

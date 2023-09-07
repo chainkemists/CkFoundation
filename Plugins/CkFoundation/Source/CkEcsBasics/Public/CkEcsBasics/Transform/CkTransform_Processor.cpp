@@ -134,6 +134,20 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
+        FProcessor_Transform_FireSignals::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_Signal_TransformUpdate& InSignal,
+            const FFragment_Transform_Current& InCurrent) const
+        -> void
+    {
+        UUtilsSignal_TransformUpdate::Broadcast(InHandle, MakePayload(InHandle, InCurrent.Get_Transform()));
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_Transform_Replicate::
         ForEachEntity(
             TimeType InDeltaT,
