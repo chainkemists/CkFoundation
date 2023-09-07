@@ -30,8 +30,7 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Acceleration_UE);
 
 public:
-    friend class UCk_Utils_Acceleration_SingleTarget_UE;
-    friend class UCk_Utils_Acceleration_MultipleTargets_UE;
+    friend class UCk_Utils_AccelerationModifier_SingleTarget_UE;
 
     friend class ck::FProcessor_AccelerationModifier_SingleTarget_Teardown;
 
@@ -77,12 +76,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKPHYSICS_API UCk_Utils_Acceleration_SingleTarget_UE : public UCk_Utils_Ecs_Net_UE
+class CKPHYSICS_API UCk_Utils_AccelerationModifier_SingleTarget_UE : public UCk_Utils_Ecs_Net_UE
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Utils_Acceleration_SingleTarget_UE);
+    CK_GENERATED_BODY(UCk_Utils_AccelerationModifier_SingleTarget_UE);
 
 public:
     UFUNCTION(BlueprintCallable,
