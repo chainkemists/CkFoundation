@@ -74,6 +74,26 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class CKECSBASICS_API FProcessor_Transform_FireSignals
+        : public TProcessor<FProcessor_Transform_FireSignals, FFragment_Signal_TransformUpdate,
+                            FFragment_Transform_Current, FTag_Transform_Updated>
+    {
+    public:
+        using MarkedDirtyBy = FTag_Transform_Updated;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_Signal_TransformUpdate& InSignal,
+            const FFragment_Transform_Current& InCurrent) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKECSBASICS_API FProcessor_Transform_Replicate
         : public TProcessor<FProcessor_Transform_Replicate,
             FFragment_Transform_Current, TObjectPtr<UCk_Fragment_Transform_Rep>, FTag_Transform_Updated>
