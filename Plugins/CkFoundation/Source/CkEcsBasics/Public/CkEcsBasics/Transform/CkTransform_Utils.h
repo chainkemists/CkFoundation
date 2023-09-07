@@ -164,10 +164,7 @@ auto
     -> void
 {
     InHandle.Add<ck::TFragment_Transform<T_ConstOrNonConst>>(InInitialTransform);
-    InHandle.Add<ck::FFragment_Transform_Params>().Set_Data
-    (
-        FCk_Transform_ParamsData{}.Set_InterpolationSettings(std::move(InSettings))
-    );
+    InHandle.Add<ck::FFragment_Transform_Params>(FCk_Transform_ParamsData{}.Set_InterpolationSettings(std::move(InSettings)));
 
     TryAddReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle);
 }
