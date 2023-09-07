@@ -5,30 +5,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#define CK_EXECUTE_FUNC_ON_FLOAT_ATTRIBUTE_WITH_NAME(_AttributeName_, _Entity_, _Func_)\
-    const auto& Pred = [_AttributeName_](FCk_Handle InEntity)\
-    {\
-        return UTT_Utils_FloatAttribute_UE::FloatAttribute_Utils::Has(InEntity) && UCk_Utils_GameplayLabel_UE::Has(InEntity) && UCk_Utils_GameplayLabel_UE::Get_Label(InEntity) == _AttributeName_;\
-    };\
-\
-    const auto attributeEntity = Pred(_Entity_) ? _Entity_ : UTT_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils::Get_RecordEntryIf(_Entity_, Pred);\
-\
-    return _Func_(attributeEntity)
-
-// --------------------------------------------------------------------------------------------------------------------
-
-#define CK_EXECUTE_VOID_FUNC_ON_FLOAT_ATTRIBUTE_WITH_NAME(_AttributeName_, _Entity_, _Func_)\
-    const auto& Pred = [_AttributeName_](FCk_Handle InEntity)\
-    {\
-        return UTT_Utils_FloatAttribute_UE::FloatAttribute_Utils::Has(InEntity) && UCk_Utils_GameplayLabel_UE::Has(InEntity) && UCk_Utils_GameplayLabel_UE::Get_Label(InEntity) == _AttributeName_;\
-    };\
-\
-    const auto attributeEntity = Pred(_Entity_) ? _Entity_ : UTT_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils::Get_RecordEntryIf(_Entity_, Pred);\
-\
-     _Func_(attributeEntity)
-
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     UTT_Utils_FloatAttribute_UE::
     Add(
@@ -127,18 +103,21 @@ auto
 auto
     UTT_Utils_FloatAttributeModifier_UE::
     Add(
-        FCk_Handle InHandle,
+        FGameplayTag InModifierName,
         const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams)
     -> void
 {
     const auto& attributeName = InParams.Get_TargetAttributeName();
     const auto& attributeOwner = InParams.Get_Target();
 
+    const auto newModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(attributeOwner);
+    UCk_Utils_GameplayLabel_UE::Add(newModifierEntity, InModifierName);
+
     const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<UTT_Utils_FloatAttribute_UE::FloatAttribute_Utils, UTT_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils>(attributeOwner, attributeName);
 
     FloatAttributeModifier_Utils::Add
     (
-        InHandle,
+        newModifierEntity,
         InParams.Get_ModifierDelta(),
         attributeEntity,
         InParams.Get_ModifierOperation()
@@ -148,19 +127,43 @@ auto
 auto
     UTT_Utils_FloatAttributeModifier_UE::
     Has(
-        FCk_Handle InHandle)
+        FGameplayTag InModifierName,
+        FGameplayTag InAttributeName,
+        FCk_Handle InAttributeOwnerEntity)
     -> bool
 {
-    return FloatAttributeModifier_Utils::Has(InHandle);
+    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<UTT_Utils_FloatAttribute_UE::FloatAttribute_Utils, UTT_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+    const auto& attributeModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttributeModifier_Utils, FloatAttributeModifier_Utils::RecordOfAttributeModifiers_Utils>(attributeEntity, InModifierName);
+
+    return ck::IsValid(attributeModifierEntity);
 }
 
 auto
     UTT_Utils_FloatAttributeModifier_UE::
     Ensure(
-        FCk_Handle InHandle)
+        FGameplayTag InModifierName,
+        FGameplayTag InAttributeName,
+        FCk_Handle InAttributeOwnerEntity)
     -> bool
 {
-    return FloatAttributeModifier_Utils::Ensure(InHandle);
+    CK_ENSURE_IF_NOT(Has(InModifierName, InAttributeName, InAttributeOwnerEntity), TEXT("Handle [{}] does NOT have a Float Attribute Modifier with name [{}]"), InAttributeOwnerEntity, InModifierName)
+    { return false; }
+
+    return true;
+}
+
+auto
+    UTT_Utils_FloatAttributeModifier_UE::
+    Remove(
+        FGameplayTag InModifierName,
+        FGameplayTag InAttributeName,
+        FCk_Handle   InAttributeOwnerEntity)
+    -> void
+{
+    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<UTT_Utils_FloatAttribute_UE::FloatAttribute_Utils, UTT_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+    const auto& attributeModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttributeModifier_Utils, FloatAttributeModifier_Utils::RecordOfAttributeModifiers_Utils>(attributeEntity, InModifierName);
+
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(attributeModifierEntity);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
