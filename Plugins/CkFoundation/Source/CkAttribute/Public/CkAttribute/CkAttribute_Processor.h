@@ -1,0 +1,194 @@
+#pragma once
+#include "CkAttribute/CkAttribute_Fragment.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
+#include "CkEcs/Processor/CkProcessor.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    // TODO: Add processor responsible for dispatching the delegates
+
+    // --------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_Attribute_RecomputeAll : public TProcessor<
+            TProcessor_Attribute_RecomputeAll<T_DerivedProcessor, T_DerivedAttributeModifier>,
+            typename T_DerivedAttributeModifier::AttributeFragmentType,
+            typename T_DerivedAttributeModifier::AttributeFragmentType::Tag_RecomputeFinalValue>
+    {
+    public:
+        using MarkedDirtyBy = typename T_DerivedAttributeModifier::AttributeFragmentType::Tag_RecomputeFinalValue;
+
+    public:
+        using AttributeModifierFragmentType = T_DerivedAttributeModifier;
+        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
+        using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
+        using ThisType                      = TProcessor_Attribute_RecomputeAll<T_DerivedProcessor, AttributeModifierFragmentType>;
+        using Super                         = TProcessor<ThisType, AttributeFragmentType, MarkedDirtyBy>;
+        using HandleType                    = typename Super::HandleType;
+        using TimeType                      = typename Super::TimeType;
+
+    public:
+        using Super::TProcessor;
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            AttributeFragmentType& InAttribute) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+
+    // --------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_Additive_Compute : public TProcessor<
+        TProcessor_AttributeModifier_Additive_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
+        T_DerivedAttributeModifier,
+        FFragment_AttributeModifierTarget,
+        typename T_DerivedAttributeModifier::Tag_AdditiveModification,
+        typename T_DerivedAttributeModifier::Tag_ComputeResult>
+    {
+    public:
+        using MarkedDirtyBy = typename T_DerivedAttributeModifier::Tag_ComputeResult;
+
+    public:
+        using AttributeModifierFragmentType = T_DerivedAttributeModifier;
+        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
+        using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
+        using AttributeModifierTargetType   = FFragment_AttributeModifierTarget;
+        using ModificationType              = typename AttributeModifierFragmentType::Tag_AdditiveModification;
+        using ThisType                      = TProcessor_AttributeModifier_Additive_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
+        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, AttributeModifierTargetType, ModificationType, MarkedDirtyBy>;
+        using HandleType                    = typename Super::HandleType;
+        using TimeType                      = typename Super::TimeType;
+
+    public:
+        using Super::TProcessor;
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const AttributeModifierFragmentType& InAttributeModifier,
+            const AttributeModifierTargetType& InAttributeTarget) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+
+    // --------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_Additive_Teardown : public TProcessor<
+        TProcessor_AttributeModifier_Additive_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>,
+        T_DerivedAttributeModifier,
+        FFragment_AttributeModifierTarget,
+        typename T_DerivedAttributeModifier::Tag_AdditiveModification,
+        FTag_PendingDestroyEntity>
+    {
+    public:
+        using AttributeModifierFragmentType = T_DerivedAttributeModifier;
+        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
+        using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
+        using AttributeModifierTargetType   = FFragment_AttributeModifierTarget;
+        using ModificationType              = typename AttributeModifierFragmentType::Tag_AdditiveModification;
+        using ThisType                      = TProcessor_AttributeModifier_Additive_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>;
+        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, AttributeModifierTargetType, ModificationType, FTag_PendingDestroyEntity>;
+        using HandleType                    = typename Super::HandleType;
+        using TimeType                      = typename Super::TimeType;
+
+    public:
+        using Super::TProcessor;
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const AttributeModifierFragmentType& InAttributeModifier,
+            const AttributeModifierTargetType& InAttributeTarget) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+
+    // --------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_Multiplicative_Compute : public TProcessor<
+        TProcessor_AttributeModifier_Multiplicative_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
+        T_DerivedAttributeModifier,
+        FFragment_AttributeModifierTarget,
+        typename T_DerivedAttributeModifier::Tag_MultiplicativeModification,
+        typename T_DerivedAttributeModifier::Tag_ComputeResult>
+    {
+    public:
+        using MarkedDirtyBy = typename T_DerivedAttributeModifier::Tag_ComputeResult;
+
+    public:
+        using AttributeModifierFragmentType = T_DerivedAttributeModifier;
+        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
+        using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
+        using AttributeModifierTargetType   = FFragment_AttributeModifierTarget;
+        using ModificationType              = typename AttributeModifierFragmentType::Tag_MultiplicativeModification;
+        using ThisType                      = TProcessor_AttributeModifier_Multiplicative_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
+        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, AttributeModifierTargetType, ModificationType, MarkedDirtyBy>;
+        using HandleType                    = typename Super::HandleType;
+        using TimeType                      = typename Super::TimeType;
+
+    public:
+        using Super::TProcessor;
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const AttributeModifierFragmentType& InAttributeModifier,
+            const AttributeModifierTargetType& InAttributeTarget) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+
+    // --------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_Multiplicative_Teardown : public TProcessor<
+        TProcessor_AttributeModifier_Multiplicative_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>,
+        T_DerivedAttributeModifier,
+        FFragment_AttributeModifierTarget,
+        typename T_DerivedAttributeModifier::Tag_MultiplicativeModification,
+        FTag_PendingDestroyEntity>
+    {
+    public:
+        using AttributeModifierFragmentType = T_DerivedAttributeModifier;
+        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
+        using AttributeModifierTargetType   = FFragment_AttributeModifierTarget;
+        using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
+        using ModificationType              = typename AttributeModifierFragmentType::Tag_MultiplicativeModification;
+        using ThisType                      = TProcessor_AttributeModifier_Multiplicative_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>;
+        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, AttributeModifierTargetType, ModificationType, FTag_PendingDestroyEntity>;
+        using HandleType                    = typename Super::HandleType;
+        using TimeType                      = typename Super::TimeType;
+
+    public:
+        using Super::TProcessor;
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const AttributeModifierFragmentType& InAttributeModifier,
+            const AttributeModifierTargetType&   InAttributeTarget) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+#include "CkAttribute_Processor.inl.h"
