@@ -3,7 +3,10 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 
-#include "Net/UnrealNetwork.h"
+#include "CkFormat/CkFormat_Defaults.h"
+
+#include <Engine/World.h>
+#include <Net/UnrealNetwork.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -20,7 +23,8 @@ auto
     auto* ObjectReplicator = InTopmostOwningActor->GetComponentByClass<UCk_ObjectReplicator_ActorComponent_UE>();
 
     CK_ENSURE_IF_NOT(ck::IsValid(ObjectReplicator),
-        TEXT("Expected ObjectReplicator to exist on [{}]. This component is automatically added on Replicated Actors that are ECS ready. Are you sure you added the EcsConstructionScript to the aforementioned Actor?"),
+        TEXT("Expected ObjectReplicator to exist on [{}]. This component is automatically added on Replicated Actors that are ECS ready. "
+            "Are you sure you added the EcsConstructionScript to the aforementioned Actor?"),
         InTopmostOwningActor)
     { return {}; }
 
@@ -81,12 +85,6 @@ void
     { return; }
 
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(Get_AssociatedEntity());
-}
-
-auto
-    UCk_Ecs_ReplicatedObject_UE::
-    OnLink() -> void
-{
 }
 
 auto

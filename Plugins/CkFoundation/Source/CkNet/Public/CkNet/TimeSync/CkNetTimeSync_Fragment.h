@@ -71,7 +71,7 @@ class CKNET_API UCk_Fragment_NetTimeSync_Rep : public UCk_Ecs_ReplicatedObject_U
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Fragment_NetTimeSync_Rep);
+    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_NetTimeSync_Rep);
 
 public:
     friend class ck::FProcessor_NetTimeSync_OnNetworkClockSynchronized;
@@ -88,10 +88,6 @@ public:
     Broadcast_TimeSync_Clients(
         APlayerController* InPlayerController,
         FCk_Time InRoundTripTime);
-
-protected:
-    virtual auto
-    OnLink() -> void override;
 
 private:
     auto

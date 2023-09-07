@@ -100,7 +100,7 @@ class CKPHYSICS_API UCk_Fragment_Velocity_Rep : public UCk_Ecs_ReplicatedObject_
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Fragment_Velocity_Rep);
+    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_Velocity_Rep);
 
 public:
     friend class ck::FProcessor_Velocity_Replicate;
