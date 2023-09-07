@@ -66,13 +66,13 @@ namespace ck
             TPayload<T_Args...>&& InPayload)
     {
         auto& Signal = InHandle.Get<SignalType>();
-        const auto Invoker = [Signal](T_Args&&... InArgs)
+        const auto Invoker = [&Signal](auto&&... InArgs)
         {
-            Signal._Invoke_Signal.publish(std::forward<T_Args>(InArgs)...);
-            Signal._Payload = SignalType::template ArgsType{std::forward<T_Args>(InArgs)...};
+            Signal._Invoke_Signal.publish(InArgs...);
+            Signal._Payload.Emplace(std::make_tuple(std::forward<T_Args>(InArgs)...));
         };
 
-        Invoker(Signal.Get_Payload());
+        std::apply(Invoker, InPayload.Payload);
         InHandle.Add<typename SignalType::FTag_PayloadInFlight>();
     }
 
@@ -81,9 +81,12 @@ namespace ck
     auto
     TUtils_Signal<T_DerivedSignal>::Bind(FCk_Handle InHandle)
     {
-        const auto BroadcastIfPayloadInFlight = [&]<typename... T_Args>(std::tuple<T_Args...> InPayload)
+        const auto BroadcastIfPayloadInFlight = [&]<typename... T_Args>(TOptional<std::tuple<T_Args...>> InPayload)
         {
-            if (InPayloadInFlightBehavior == ECk_Signal_PayloadInFlight::IgnorePayloadInFlight)
+            if constexpr (InPayloadInFlightBehavior == ECk_Signal_PayloadInFlight::IgnorePayloadInFlight)
+            { return; }
+
+            if (ck::Is_NOT_Valid(InPayload))
             { return; }
 
             auto TempDelegate = SignalType::template DelegateType{};
@@ -106,13 +109,17 @@ namespace ck
             if (InPayloadInFlightBehavior == ECk_Signal_PayloadInFlight::IgnorePayloadInFlight)
             { return; }
 
+
             auto TempDelegate = SignalType::template DelegateType{};
             TempDelegate.template connect<T_Candidate>(InInstance);
             std::apply(TempDelegate, InPayload);
         };
 
         auto& Signal = InHandle.Get<SignalType>();
-        BroadcastIfPayloadInFlight(*Signal._Payload);
+
+        if (ck::IsValid(Signal._Payload))
+        { BroadcastIfPayloadInFlight(*Signal._Payload); }
+
         return Signal._Invoke_Sink.template connect<T_Candidate>(InInstance);
     }
 
@@ -210,7 +217,7 @@ namespace ck
     TUtils_Signal_UnrealMulticast<T_DerivedSignal, T_DerivedSignal_Unreal>::Bind(FCk_Handle InHandle,
         UnrealDynamicDelegateType InDelegate)
     {
-        auto& Signal = InHandle.Get<SignalType>();
+        auto& Signal = InHandle.AddOrGet<SignalType>();
         auto& UnrealMulticast = InHandle.AddOrGet<T_DerivedSignal_Unreal>();
 
         CK_ENSURE_IF_NOT(NOT UnrealMulticast._Multicast.Contains(InDelegate),
@@ -258,10 +265,10 @@ namespace ck
         auto& UnrealMulticast = InHandle.AddOrGet<T_DerivedSignal_Unreal>();
         UnrealMulticast._Multicast.Remove(InDelegate);
 
-        if (UnrealMulticast._MultiCast.IsBound())
+        if (UnrealMulticast._Multicast.IsBound())
         { return; }
 
-        UnrealMulticast.Connection.release();
+        UnrealMulticast._Connection.release();
         InHandle.Remove<T_DerivedSignal_Unreal>();
     }
 
