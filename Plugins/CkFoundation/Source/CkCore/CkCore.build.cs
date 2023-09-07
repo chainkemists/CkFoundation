@@ -66,7 +66,7 @@ public class CkModuleRules : ModuleRules
 
 	public CkModuleRules(ReadOnlyTargetRules Target) : base(Target)
 	{
-        CppStandard = CppStandardVersion.Cpp17;
+        CppStandard = CppStandardVersion.Cpp20;
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
 		SetBuildConfiguration();
