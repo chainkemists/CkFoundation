@@ -95,6 +95,7 @@ public class CkCore : CkModuleRules
 			new string[]
 			{
 				"Core",
+				"CkThirdParty",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
