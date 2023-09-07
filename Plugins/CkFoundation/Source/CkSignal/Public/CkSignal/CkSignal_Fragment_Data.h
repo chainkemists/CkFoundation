@@ -8,8 +8,8 @@
 UENUM(BlueprintType)
 enum class ECk_Signal_PayloadInFlight : uint8
 {
-    Fire,
-    Ignore
+    FireIfPayloadInFlight,
+    IgnorePayloadInFlight
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Signal_PayloadInFlight);

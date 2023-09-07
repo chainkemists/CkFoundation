@@ -8,7 +8,7 @@
 
 #include "CkMacros/CkMacros.h"
 
-#include "CkSignal/Public/CkSignal/CkSignal_Utils.h"
+#include "CkSignal/CkSignal_Macros.h"
 
 #include "CkTypeTraits/CkTypeTraits.h"
 
