@@ -115,13 +115,6 @@ namespace ck
         Request_ComputeResult(
             HandleType InHandle) -> void;
     };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template<typename T_DerivedAttribute, typename T_Multicast>
-    class TUtils_Signal_UnrealMulticast_OnAttributeValueChanged : public TUtils_Signal_UnrealMulticast<
-        TFragment_Signal_OnAttributeValueChanged<T_DerivedAttribute>,
-        TFragment_Signal_UnrealMulticast_OnAttributeValueChanged<T_DerivedAttribute, T_Multicast>> {};
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -26,7 +26,7 @@ namespace ck
             InHandle
         );
 
-        TUtils_Signal_UnrealMulticast_OnAttributeValueChanged<T_DerivedAttribute, T_MulticastType>::Broadcast
+        TUtils_Signal_OnAttributeValueChanged<T_DerivedAttribute, T_MulticastType>::Broadcast
         (
             InHandle,
             ck::MakePayload
