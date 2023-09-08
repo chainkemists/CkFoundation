@@ -58,8 +58,10 @@ namespace ck
         }
     };
 
-    using UUtils_Signal_UnrealMulticast_OnFloatAttributeValueChanged =
-        TUtils_Signal_UnrealMulticast_OnAttributeValueChanged<ck::FFragment_FloatAttribute, FCk_Delegate_FloatAttribute_OnValueChanged_MC>;
+    // --------------------------------------------------------------------------------------------------------------------
+
+    using UUtils_Signal_OnFloatAttributeValueChanged = TUtils_Signal_OnAttributeValueChanged<
+        FFragment_FloatAttribute, FCk_Delegate_FloatAttribute_OnValueChanged_MC>;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

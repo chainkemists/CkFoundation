@@ -168,21 +168,37 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
+    // Signals
 
     template<typename T_DerivedAttribute>
-    struct TFragment_Signal_OnAttributeValueChanged : public TFragment_Signal<
+    struct TFragment_Signal_OnAttributeValueChanged : public TFragment_Signal
+    <
         TFragment_Signal_OnAttributeValueChanged<T_DerivedAttribute>,
         FCk_Handle,
-        TPayload_Attribute_OnValueChanged<T_DerivedAttribute>> {};
+        TPayload_Attribute_OnValueChanged<T_DerivedAttribute>
+    > {};
 
     // --------------------------------------------------------------------------------------------------------------------
 
     template<typename T_DerivedAttribute, typename T_Multicast>
-    struct TFragment_Signal_UnrealMulticast_OnAttributeValueChanged : public TFragment_Signal_UnrealMulticast<
+    struct TFragment_Signal_UnrealMulticast_OnAttributeValueChanged : public TFragment_Signal_UnrealMulticast
+    <
         TFragment_Signal_OnAttributeValueChanged<T_DerivedAttribute>,
         T_Multicast,
         FCk_Handle,
-        TPayload_Attribute_OnValueChanged<T_DerivedAttribute>> {};
+        TPayload_Attribute_OnValueChanged<T_DerivedAttribute>
+    > {};
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template<typename T_DerivedAttribute, typename T_Multicast>
+    class TUtils_Signal_OnAttributeValueChanged : public TUtils_Signal_UnrealMulticast
+    <
+        TFragment_Signal_OnAttributeValueChanged<T_DerivedAttribute>,
+        TFragment_Signal_UnrealMulticast_OnAttributeValueChanged<T_DerivedAttribute, T_Multicast>
+    > {};
+
+    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------

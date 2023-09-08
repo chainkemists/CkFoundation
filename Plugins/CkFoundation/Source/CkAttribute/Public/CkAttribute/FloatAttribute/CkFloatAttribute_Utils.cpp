@@ -109,7 +109,7 @@ auto
 {
     const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
 
-    ck::UUtils_Signal_UnrealMulticast_OnFloatAttributeValueChanged::Bind(attributeEntity, InDelegate, InBehavior);
+    ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind(attributeEntity, InDelegate, InBehavior);
 }
 
 auto
@@ -122,7 +122,7 @@ auto
 {
     const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
 
-    ck::UUtils_Signal_UnrealMulticast_OnFloatAttributeValueChanged::Unbind(attributeEntity, InDelegate);
+    ck::UUtils_Signal_OnFloatAttributeValueChanged::Unbind(attributeEntity, InDelegate);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
