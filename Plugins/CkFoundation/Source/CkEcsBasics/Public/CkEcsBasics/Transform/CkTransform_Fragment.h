@@ -139,10 +139,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_SIGNAL(CKECSBASICS_API, TransformUpdate, FCk_Handle, FTransform);
-    CK_DEFINE_SIGNAL_UTILS(CKECSBASICS_API, TransformUpdate);
-    CK_DEFINE_SIGNAL_WITH_DELEGATE(CKECSBASICS_API, TransformUpdate, FCk_Delegate_Transform_OnUpdate_MC, FCk_Handle, FTransform);
-    CK_DEFINE_SIGNAL_WITH_DELEGATE_UTILS(CKECSBASICS_API, TransformUpdate);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKECSBASICS_API, TransformUpdate, FCk_Delegate_Transform_OnUpdate_MC, FCk_Handle, FTransform);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
