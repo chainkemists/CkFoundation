@@ -30,9 +30,7 @@ namespace ck
         using DelegateType = entt::delegate<void(T_Args...)>;
 
     public:
-        TFragment_Signal()
-            : _Invoke_Sink(_Invoke_Signal)
-        { }
+        TFragment_Signal();
 
     private:
         PayloadType _Payload;
@@ -60,10 +58,7 @@ namespace ck
         using MulticastType = T_UnrealMulticast;
 
     public:
-        auto DoBroadcast(T_Args&&... InArgs)
-        {
-            _Multicast.Broadcast(TTypeConverter<T_Args, ck::TypeConverterPolicy::TypeToUnreal>{}(std::forward<T_Args>(InArgs))...);
-        }
+        auto DoBroadcast(T_Args&&... InArgs);
 
     private:
         MulticastType _Multicast;
@@ -74,3 +69,10 @@ namespace ck
         CK_PROPERTY(_Connection);
     };
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+#include "CkSignal_Fragment.inl.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
