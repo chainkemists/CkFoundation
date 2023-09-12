@@ -129,7 +129,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "Bind To OnUpdate")
+              DisplayName = "Bind To OnTransformUpdate")
     static void
     BindTo_OnUpdate(
         FCk_Handle InHandle,
@@ -138,7 +138,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "Bind To OnUpdate")
+              DisplayName = "Bind To OnTransformUpdate")
     static void
     UnbindFrom_OnUpdate(
         FCk_Handle InHandle,
