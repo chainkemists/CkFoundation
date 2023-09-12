@@ -254,3 +254,15 @@ enum class ECk_ModifierOperation : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ModifierOperation);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_NormalizationPolicy : uint8
+{
+    None,
+    ZeroToOne UMETA(DisplayName = "Normalize [0, 1]"),
+    MinusOneToOne UMETA(DisplayName = "Normalize [-1, 1]")
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_NormalizationPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
