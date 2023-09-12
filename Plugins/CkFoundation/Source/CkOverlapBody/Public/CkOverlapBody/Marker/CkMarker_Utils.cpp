@@ -64,22 +64,30 @@ auto
 
 auto
     UCk_Utils_Marker_UE::
-    DoHas(
+    Has(
         FCk_Handle InHandle,
         FGameplayTag InMarkerName)
     -> bool
 {
-    return Has(InHandle, InMarkerName);
+    const auto& MarkerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Marker_UE,
+        RecordOfMarkers_Utils>(InHandle, InMarkerName);
+
+    return ck::IsValid(MarkerEntity);
 }
 
 auto
     UCk_Utils_Marker_UE::
-    DoEnsure(
+    Ensure(
         FCk_Handle InHandle,
         FGameplayTag InMarkerName)
     -> bool
 {
-    return Ensure(InHandle, InMarkerName);
+    CK_ENSURE_IF_NOT(Has(InHandle, InMarkerName),
+        TEXT("Handle [{}] does NOT have a Marker with Name [{}]"), InHandle, InMarkerName)
+    { return false; }
+
+    return true;
 }
 
 auto
@@ -94,80 +102,178 @@ auto
 
     RecordOfMarkers_Utils::ForEachEntry(InHandle, [&](FCk_Handle InMarkerEntity)
     {
-        const auto& markerName = InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_Params().Get_MarkerName();
-        PreviewSingleMarker<ECk_FragmentQuery_Policy::CurrentEntity>(InOuter, InMarkerEntity, markerName);
+        DoPreviewMarker(InOuter, InMarkerEntity);
     });
 }
 
 auto
     UCk_Utils_Marker_UE::
-    DoGet_PhysicsInfo(
+    PreviewMarker(
+        UObject*     InOuter,
+        FCk_Handle   InHandle,
+        FGameplayTag InMarkerName)
+    -> void
+{
+    if (NOT Ensure(InHandle, InMarkerName))
+    { return; }
+
+    const auto& MarkerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Marker_UE,
+        RecordOfMarkers_Utils>(InHandle, InMarkerName);
+
+    DoPreviewMarker(InOuter, MarkerEntity);
+}
+
+auto
+    UCk_Utils_Marker_UE::
+    DoPreviewMarker(
+        UObject* InOuter,
+        FCk_Handle InHandle)
+    -> void
+{
+    const auto& Params = InHandle.Get<ck::FFragment_Marker_Params>();
+    const auto& Current = InHandle.Get<ck::FFragment_Marker_Current>();
+
+    UCk_Utils_MarkerAndSensor_UE::Draw_Marker_DebugLines(InOuter, Current, Params.Get_Params());
+}
+
+auto
+    UCk_Utils_Marker_UE::
+    Get_PhysicsInfo(
         FCk_Handle InHandle,
         FGameplayTag InMarkerName)
     -> FCk_Marker_PhysicsInfo
 {
-    return Get_PhysicsInfo(InHandle, InMarkerName);
+    const auto& MarkerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Marker_UE,
+        RecordOfMarkers_Utils>(InHandle, InMarkerName);
+
+    return MarkerEntity.Get<ck::FFragment_Marker_Params>().Get_Params().Get_PhysicsParams();
 }
 
 auto
     UCk_Utils_Marker_UE::
-    DoGet_ShapeInfo(
+    Get_ShapeInfo(
         FCk_Handle InHandle,
         FGameplayTag InMarkerName)
     -> FCk_Marker_ShapeInfo
 {
-    return Get_ShapeInfo(InHandle, InMarkerName);
+    const auto& MarkerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Marker_UE,
+        RecordOfMarkers_Utils>(InHandle, InMarkerName);
+
+    return MarkerEntity.Get<ck::FFragment_Marker_Params>().Get_Params().Get_ShapeParams();
 }
 
 auto
     UCk_Utils_Marker_UE::
-    DoGet_DebugInfo(
+    Get_DebugInfo(
         FCk_Handle InHandle,
         FGameplayTag InMarkerName)
     -> FCk_Marker_DebugInfo
 {
-    return Get_DebugInfo(InHandle, InMarkerName);
+    const auto& MarkerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Marker_UE,
+        RecordOfMarkers_Utils>(InHandle, InMarkerName);
+
+    return MarkerEntity.Get<ck::FFragment_Marker_Params>().Get_Params().Get_DebugParams();
 }
 
 auto
     UCk_Utils_Marker_UE::
-    DoGet_EnableDisable(
+    Get_EnableDisable(
         FCk_Handle InHandle,
         FGameplayTag InMarkerName)
     -> ECk_EnableDisable
 {
-    return Get_EnableDisable(InHandle, InMarkerName);
+    const auto& MarkerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Marker_UE,
+        RecordOfMarkers_Utils>(InHandle, InMarkerName);
+
+    return MarkerEntity.Get<ck::FFragment_Marker_Current>().Get_EnableDisable();
 }
 
 auto
     UCk_Utils_Marker_UE::
-    DoGet_ShapeComponent(
+    Get_ShapeComponent(
         FCk_Handle InHandle,
         FGameplayTag InMarkerName)
     -> UShapeComponent*
 {
-    return Get_ShapeComponent(InHandle, InMarkerName);
+    const auto& MarkerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Marker_UE,
+        RecordOfMarkers_Utils>(InHandle, InMarkerName);
+
+    return MarkerEntity.Get<ck::FFragment_Marker_Current>().Get_Marker().Get();
 }
 
 auto
     UCk_Utils_Marker_UE::
-    DoGet_AttachedEntityAndActor(
+    Get_AttachedEntityAndActor(
         FCk_Handle InHandle,
         FGameplayTag InMarkerName)
     -> FCk_EntityOwningActor_BasicDetails
 {
-    return Get_AttachedEntityAndActor(InHandle, InMarkerName);
+    const auto& MarkerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Marker_UE,
+        RecordOfMarkers_Utils>(InHandle, InMarkerName);
+
+    return MarkerEntity.Get<ck::FFragment_Marker_Current>().Get_AttachedEntityAndActor();
 }
 
 auto
     UCk_Utils_Marker_UE::
-    DoRequest_EnableDisable(
+    Request_EnableDisable(
         FCk_Handle InHandle,
         FGameplayTag InMarkerName,
         const FCk_Request_Marker_EnableDisable& InRequest)
     -> void
 {
-    Request_EnableDisable(InHandle, InMarkerName, InRequest);
+    auto MarkerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Marker_UE,
+        RecordOfMarkers_Utils>(InHandle, InMarkerName);
+
+    MarkerEntity.AddOrGet<ck::FFragment_Marker_Requests>()._Requests = InRequest;
+}
+
+auto
+    UCk_Utils_Marker_UE::
+    BindTo_OnEnableDisable(
+        FCk_Handle                                 InMarkerHandle,
+        FGameplayTag                               InMarkerName,
+        ECk_Signal_PayloadInFlight                 InBindingPolicy,
+        const FCk_Delegate_Marker_OnEnableDisable& InDelegate)
+    -> void
+{
+    const auto& MarkerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Marker_UE,
+        RecordOfMarkers_Utils>(InMarkerHandle, InMarkerName);
+
+    ck::UUtils_Signal_OnMarkerEnableDisable::Bind(MarkerEntity, InDelegate, InBindingPolicy);
+}
+
+auto
+    UCk_Utils_Marker_UE::
+    UnbindFrom_OnEnableDisable(
+        FCk_Handle                                 InMarkerHandle,
+        FGameplayTag                               InMarkerName,
+        const FCk_Delegate_Marker_OnEnableDisable& InDelegate)
+    -> void
+{
+    const auto& MarkerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Marker_UE,
+        RecordOfMarkers_Utils>(InMarkerHandle, InMarkerName);
+
+    ck::UUtils_Signal_OnMarkerEnableDisable::Unbind(MarkerEntity, InDelegate);
+}
+
+auto
+    UCk_Utils_Marker_UE::
+    Has(
+        FCk_Handle InHandle)
+    -> bool
+{
+    return InHandle.Has_All<ck::FFragment_Marker_Params, ck::FFragment_Marker_Current>();
 }
 
 auto

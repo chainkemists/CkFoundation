@@ -255,7 +255,7 @@ namespace ck
             const auto& markerName = InMarkerParams.Get_Params().Get_MarkerName();
             const auto& outerForDebugDraw = InMarkerCurrent.Get_AttachedEntityAndActor().Get_Actor().Get();
 
-            UCk_Utils_Marker_UE::PreviewSingleMarker<ECk_FragmentQuery_Policy::CurrentEntity>(outerForDebugDraw, FCk_Handle{ InMarkerEntity, _Registry }, markerName);
+            UCk_Utils_Marker_UE::PreviewMarker(outerForDebugDraw, FCk_Handle{ InMarkerEntity, _Registry }, markerName);
         });
     }
 }

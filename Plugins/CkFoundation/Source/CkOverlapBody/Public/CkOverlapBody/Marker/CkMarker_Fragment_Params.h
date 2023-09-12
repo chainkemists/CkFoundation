@@ -270,13 +270,13 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
-    FCK_Delegate_Marker_OnEnableDisable,
+    FCk_Delegate_Marker_OnEnableDisable,
     FCk_Handle, InHandle,
     FGameplayTag, InMarkerName,
     ECk_EnableDisable, InEnableDisable);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
-    FCK_Delegate_Marker_OnEnableDisable_MC,
+    FCk_Delegate_Marker_OnEnableDisable_MC,
     FCk_Handle, InHandle,
     FGameplayTag, InMarkerName,
     ECk_EnableDisable, InEnableDisable);

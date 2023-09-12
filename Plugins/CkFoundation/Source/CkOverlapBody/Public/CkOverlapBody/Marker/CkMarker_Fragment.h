@@ -8,6 +8,8 @@
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
 
+#include "CkSignal/CkSignal_Macros.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_Marker_UE;
@@ -96,6 +98,16 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     struct FFragment_RecordOfMarkers : public FFragment_RecordOfEntities {};
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKOVERLAPBODY_API,
+        OnMarkerEnableDisable,
+        FCk_Delegate_Marker_OnEnableDisable_MC,
+        FCk_Handle,
+        FGameplayTag,
+        ECk_EnableDisable);
 }
 
 
