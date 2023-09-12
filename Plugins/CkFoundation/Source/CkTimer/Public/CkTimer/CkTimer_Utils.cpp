@@ -13,6 +13,13 @@ auto
 {
     InHandle.Add<ck::FFragment_Timer_Params>(InData);
     InHandle.Add<ck::FFragment_Timer_Current>(FCk_Chrono{InData.Get_Duration()});
+
+    TryAddReplicatedFragment<UCk_Fragment_Timer_Rep>(InHandle);
+
+    if (InData.Get_StartingState() == ECk_Timer_State::Running)
+    {
+        InHandle.Add<ck::FTag_Timer_NeedsUpdate>();
+    }
 }
 
 auto
@@ -138,7 +145,7 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
-    UnbindTo_OnTimerReset(
+    UnbindFrom_OnTimerReset(
         FCk_Handle                InHandle,
         const FCk_Delegate_Timer& InDelegate)
     -> void
@@ -147,7 +154,7 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
-    UnbindTo_OnTimerStop(
+    UnbindFrom_OnTimerStop(
         FCk_Handle                InHandle,
         const FCk_Delegate_Timer& InDelegate)
     -> void
@@ -156,7 +163,7 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
-    UnbindTo_OnTimerPause(
+    UnbindFrom_OnTimerPause(
         FCk_Handle                InHandle,
         const FCk_Delegate_Timer& InDelegate)
     -> void
@@ -165,7 +172,7 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
-    UnbindTo_OnTimerResume(
+    UnbindFrom_OnTimerResume(
         FCk_Handle                InHandle,
         const FCk_Delegate_Timer& InDelegate)
     -> void
@@ -174,7 +181,7 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
-    UnbindTo_OnTimerDone(
+    UnbindFrom_OnTimerDone(
         FCk_Handle                InHandle,
         const FCk_Delegate_Timer& InDelegate)
     -> void
@@ -183,9 +190,23 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
-    UnbindTo_OnTimerUpdate(
+    UnbindFrom_OnTimerUpdate(
         FCk_Handle                InHandle,
         const FCk_Delegate_Timer& InDelegate)
     -> void
 {
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Timer_UE::
+    Request_OverrideTimer(
+        FCk_Handle InHandle,
+        const FCk_Chrono& InNewTimer)
+    -> void
+{
+    InHandle.Get<ck::FFragment_Timer_Current>() = ck::FFragment_Timer_Current{InNewTimer};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
