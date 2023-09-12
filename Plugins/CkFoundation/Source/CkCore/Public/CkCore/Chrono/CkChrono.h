@@ -72,7 +72,7 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Time _GoalValue;
 
-private:
+    UPROPERTY(Transient)
     FCk_Time _CurrentValue;
 
 public:
