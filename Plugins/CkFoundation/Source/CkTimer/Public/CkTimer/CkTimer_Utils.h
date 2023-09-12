@@ -43,29 +43,33 @@ public:
         FCk_Handle InHandle);
 
 public:
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Timer")
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Timer",
+              DisplayName="Request Reset Timer")
     static void
     Request_Reset(
         FCk_Handle InHandle,
         const FCk_Delegate_Timer& InDelegate);
 
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Timer")
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Timer",
+              DisplayName="Request Stop Timer")
     static void
     Request_Stop(
         FCk_Handle InHandle,
         const FCk_Delegate_Timer& InDelegate);
 
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Timer")
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Timer",
+              DisplayName="Request Pause Timer")
     static void
     Request_Pause(
         FCk_Handle InHandle,
         const FCk_Delegate_Timer& InDelegate);
 
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Timer")
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Timer",
+              DisplayName="Request Resume Timer")
     static void
     Request_Resume(
         FCk_Handle InHandle,
@@ -73,8 +77,8 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Marker",
-              DisplayName = "Bind To Marker Enable Disable")
+              Category = "Ck|Utils|Timer",
+              DisplayName = "Bind To Timer Reset")
     static void
     BindTo_OnTimerReset(
         FCk_Handle InHandle,
@@ -82,8 +86,8 @@ public:
         const FCk_Delegate_Timer& InDelegate);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Marker",
-              DisplayName = "Bind To Marker Enable Disable")
+              Category = "Ck|Utils|Timer",
+              DisplayName = "Bind To Timer Stop")
     static void
     BindTo_OnTimerStop(
         FCk_Handle InHandle,
@@ -92,8 +96,8 @@ public:
 
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Marker",
-              DisplayName = "Bind To Marker Enable Disable")
+              Category = "Ck|Utils|Timer",
+              DisplayName = "Bind To Timer Pause")
     static void
     BindTo_OnTimerPause(
         FCk_Handle InHandle,
@@ -101,8 +105,8 @@ public:
         const FCk_Delegate_Timer& InDelegate);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Marker",
-              DisplayName = "Bind To Marker Enable Disable")
+              Category = "Ck|Utils|Timer",
+              DisplayName = "Bind To Timer Resume")
     static void
     BindTo_OnTimerResume(
         FCk_Handle InHandle,
@@ -110,8 +114,8 @@ public:
         const FCk_Delegate_Timer& InDelegate);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Marker",
-              DisplayName = "Bind To Marker Enable Disable")
+              Category = "Ck|Utils|Timer",
+              DisplayName = "Bind To Timer Done")
     static void
     BindTo_OnTimerDone(
         FCk_Handle InHandle,
@@ -119,8 +123,8 @@ public:
         const FCk_Delegate_Timer& InDelegate);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Marker",
-              DisplayName = "Bind To Marker Enable Disable")
+              Category = "Ck|Utils|Timer",
+              DisplayName = "Bind To Timer Update")
     static void
     BindTo_OnTimerUpdate(
         FCk_Handle InHandle,
@@ -129,51 +133,60 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Marker",
-              DisplayName = "Bind To Marker Enable Disable")
+              Category = "Ck|Utils|Timer",
+              DisplayName = "Unbind From Timer Reset")
     static void
-    UnbindTo_OnTimerReset(
+    UnbindFrom_OnTimerReset(
         FCk_Handle InHandle,
         const FCk_Delegate_Timer& InDelegate);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Marker",
-              DisplayName = "Bind To Marker Enable Disable")
+              Category = "Ck|Utils|Timer",
+              DisplayName = "Unbind From Timer Stop")
     static void
-    UnbindTo_OnTimerStop(
+    UnbindFrom_OnTimerStop(
         FCk_Handle InHandle,
         const FCk_Delegate_Timer& InDelegate);
 
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Marker",
-              DisplayName = "Bind To Marker Enable Disable")
+              Category = "Ck|Utils|Timer",
+              DisplayName = "Unbind From Timer Pause")
     static void
-    UnbindTo_OnTimerPause(
+    UnbindFrom_OnTimerPause(
         FCk_Handle InHandle,
         const FCk_Delegate_Timer& InDelegate);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Marker",
-              DisplayName = "Bind To Marker Enable Disable")
+              Category = "Ck|Utils|Timer",
+              DisplayName = "Unbind From Timer Resume")
     static void
-    UnbindTo_OnTimerResume(
+    UnbindFrom_OnTimerResume(
         FCk_Handle InHandle,
         const FCk_Delegate_Timer& InDelegate);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Marker",
-              DisplayName = "Bind To Marker Enable Disable")
+              Category = "Ck|Utils|Timer",
+              DisplayName = "Unbind From Timer Done")
     static void
-    UnbindTo_OnTimerDone(
+    UnbindFrom_OnTimerDone(
         FCk_Handle InHandle,
         const FCk_Delegate_Timer& InDelegate);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Marker",
-              DisplayName = "Bind To Marker Enable Disable")
+              Category = "Ck|Utils|Timer",
+              DisplayName = "Unbind From Timer Update")
     static void
-    UnbindTo_OnTimerUpdate(
+    UnbindFrom_OnTimerUpdate(
         FCk_Handle InHandle,
         const FCk_Delegate_Timer& InDelegate);
+
+public:
+    static auto
+    Request_OverrideTimer(
+        FCk_Handle InHandle,
+        const FCk_Chrono& InNewTimer) -> void;
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+

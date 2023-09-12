@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 #include "CkMacros/CkMacros.h"
 
 #include "CkSignal/Public/CkSignal/CkSignal_Macros.h"
@@ -8,11 +9,14 @@
 
 #include "CkTimer/CkTimer_Fragment_Data.h"
 
+#include "CkTimer_Fragment.generated.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
-    struct FTag_Timer_Update {};
+    struct FTag_Timer_NeedsUpdate {};
+    struct FTag_Timer_Updated {};
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -41,6 +45,11 @@ namespace ck
     public:
         CK_GENERATED_BODY(FFragment_Timer_Current);
 
+    public:
+        friend class FProcessor_Timer_HandleRequests;
+        friend class FProcessor_Timer_Update;
+        friend class FProcessor_Timer_Replicate;
+
     private:
         FCk_Chrono _Chrono;
 
@@ -57,6 +66,9 @@ namespace ck
     {
     public:
         CK_GENERATED_BODY(FFragment_Timer_Requests);
+
+    public:
+        friend class FProcessor_Timer_HandleRequests;
 
     public:
         using RequestType = FCk_Request_Timer_Manipulate;
@@ -78,3 +90,30 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKTIMER_API, OnTimerDone, FCk_Delegate_Timer_MC, FCk_Handle, FCk_Chrono);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKTIMER_API, OnTimerUpdate, FCk_Delegate_Timer_MC, FCk_Handle, FCk_Chrono);
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(Blueprintable)
+class CKTIMER_API UCk_Fragment_Timer_Rep : public UCk_Ecs_ReplicatedObject_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_Timer_Rep);
+
+public:
+    friend class ck::FProcessor_Timer_Replicate;
+
+public:
+    virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
+
+public:
+    UFUNCTION()
+    void OnRep_Chrono();
+
+private:
+    UPROPERTY(ReplicatedUsing = OnRep_Chrono)
+    FCk_Chrono _Chrono;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
