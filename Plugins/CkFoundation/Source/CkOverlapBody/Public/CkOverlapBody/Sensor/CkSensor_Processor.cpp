@@ -129,68 +129,69 @@ namespace ck
             HandleType InSensorEntity,
             FFragment_Sensor_Current& InCurrentComp,
             const FFragment_Sensor_Params& InParamsComp,
-            const FCk_Request_Sensor_EnableDisable& InRequest) const
-        -> void
+            const FCk_Request_Sensor_EnableDisable& InRequest)
+            -> void
     {
-        const auto& DoManuallyTriggerAllEndOverlaps = [&](const AActor* InSensorAttachedActor) -> void
+        const auto& Sensor     = InCurrentComp.Get_Sensor().Get();
+        const auto SensorBasicDetails =  FCk_Sensor_BasicDetails
         {
-            const auto sensorBasicDetails =  FCk_Sensor_BasicDetails
-            {
-                InParamsComp.Get_Params().Get_SensorName(),
-                InSensorEntity,
-                UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(InSensorAttachedActor)
-            };
+            InParamsComp.Get_Params().Get_SensorName(),
+            InSensorEntity,
+            UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(Sensor->GetOwner())
+        };
+        const auto EntityAttachedTo = InParamsComp.Get_Params().Get_EntityAttachedTo();
 
-            for (const auto& overlapKvp : InCurrentComp.Get_CurrentMarkerOverlaps().Get_Overlaps())
+        const auto& DoManuallyTriggerAllEndOverlaps = [&]() -> void
+        {
+            for (const auto& OverlapKvp : InCurrentComp.Get_CurrentMarkerOverlaps().Get_Overlaps())
             {
-                const auto& markerDetails = overlapKvp.Key;
-                const auto& overlapDetails = overlapKvp.Value.Get_OverlapDetails();
+                const auto& MarkerDetails = OverlapKvp.Key;
+                const auto& OverlapDetails = OverlapKvp.Value.Get_OverlapDetails();
 
-                const auto& onEndOverlapPayload = FCk_Sensor_Payload_OnEndOverlap
+                const auto& OnEndOverlapPayload = FCk_Sensor_Payload_OnEndOverlap
                 {
-                    sensorBasicDetails,
-                    markerDetails,
+                    SensorBasicDetails,
+                    MarkerDetails,
                     FCk_Sensor_EndOverlap_UnrealDetails
                     {
-                        overlapDetails.Get_OverlappedComponent().Get(),
-                        overlapDetails.Get_OtherActor().Get(),
-                        overlapDetails.Get_OtherComp().Get()
+                        OverlapDetails.Get_OverlappedComponent().Get(),
+                        OverlapDetails.Get_OtherActor().Get(),
+                        OverlapDetails.Get_OtherComp().Get()
                     }
                 };
 
-                // TODO: Fire Sensor OnEndOverlap signal
+                UUtils_Signal_OnSensorEndOverlap::Broadcast(InSensorEntity, MakePayload(EntityAttachedTo, OnEndOverlapPayload));
             }
         };
 
-        const auto& currentEnableDisable = InCurrentComp.Get_EnableDisable();
-        const auto& newEnableDisable     = InRequest.Get_EnableDisable();
+        const auto& CurrentEnableDisable = InCurrentComp.Get_EnableDisable();
+        const auto& NewEnableDisable     = InRequest.Get_EnableDisable();
 
-        if (currentEnableDisable == newEnableDisable)
+        if (CurrentEnableDisable == NewEnableDisable)
         { return; }
 
-        InCurrentComp._EnableDisable = newEnableDisable;
+        InCurrentComp._EnableDisable = NewEnableDisable;
 
-        const auto& collisionEnabled = newEnableDisable == ECk_EnableDisable::Enable
+        const auto& CollisionEnabled = NewEnableDisable == ECk_EnableDisable::Enable
                                          ? ECollisionEnabled::QueryOnly
                                          : ECollisionEnabled::NoCollision;
 
-        const auto& params     = InParamsComp.Get_Params();
-        const auto& sensorName = params.Get_SensorName();
-        const auto& sensor     = InCurrentComp.Get_Sensor().Get();
+        const auto& Params     = InParamsComp.Get_Params();
+        const auto& SensorName = Params.Get_SensorName();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(sensor), TEXT("Entity [{}] has an Invalid Sensor stored!"), InSensorEntity)
+        CK_ENSURE_IF_NOT(ck::IsValid(Sensor), TEXT("Entity [{}] has an Invalid Sensor stored!"), InSensorEntity)
         { return; }
 
-        if (newEnableDisable == ECk_EnableDisable::Disable)
+        if (NewEnableDisable == ECk_EnableDisable::Disable)
         {
-            DoManuallyTriggerAllEndOverlaps(sensor->GetOwner());
+            DoManuallyTriggerAllEndOverlaps();
             InCurrentComp._CurrentMarkerOverlaps = {};
         }
 
-        UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(sensor, newEnableDisable);
-        UCk_Utils_Physics_UE::Request_SetCollisionEnabled(sensor, collisionEnabled);
+        UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(Sensor, NewEnableDisable);
+        UCk_Utils_Physics_UE::Request_SetCollisionEnabled(Sensor, CollisionEnabled);
 
-        // TODO: Fire Sensor EnableDisable signal
+        UUtils_Signal_OnSensorEnableDisable::Broadcast(InSensorEntity, MakePayload(EntityAttachedTo, SensorName, NewEnableDisable));
     }
 
     auto
@@ -199,60 +200,62 @@ namespace ck
             HandleType InSensorEntity,
             FFragment_Sensor_Current& InCurrentComp,
             const FFragment_Sensor_Params& InParamsComp,
-            const FCk_Request_Sensor_OnBeginOverlap& InRequest) const
-        -> void
+            const FCk_Request_Sensor_OnBeginOverlap& InRequest)
+            -> void
     {
-        const auto& overlappedMarkerDetails = InRequest.Get_MarkerDetails();
-        const auto& overlappedMarkerName    = overlappedMarkerDetails.Get_MarkerName();
-        const auto& overlappedMarkerEntity  = overlappedMarkerDetails.Get_MarkerEntity();
+        const auto& OverlappedMarkerDetails = InRequest.Get_MarkerDetails();
+        const auto& OverlappedMarkerName    = OverlappedMarkerDetails.Get_MarkerName();
+        const auto& OverlappedMarkerEntity  = OverlappedMarkerDetails.Get_MarkerEntity();
 
-        const auto& sensorName           = InRequest.Get_SensorDetails().Get_SensorName();
-        const auto& sensorFilteringInfo  = InParamsComp.Get_Params().Get_FilteringParams().Get_MarkerNames();
+        const auto& SensorName           = InRequest.Get_SensorDetails().Get_SensorName();
+        const auto& SensorFilteringInfo  = InParamsComp.Get_Params().Get_FilteringParams().Get_MarkerNames();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(overlappedMarkerEntity),
+        CK_ENSURE_IF_NOT(ck::IsValid(OverlappedMarkerEntity),
             TEXT("Sensor [Name: {} | Entity: {}] received EndOverlap with Marker [{}] that has an INVALID Entity"),
-            sensorName,
+            SensorName,
             InSensorEntity,
-            overlappedMarkerName)
+            OverlappedMarkerName)
         { return; }
 
-        if (NOT sensorFilteringInfo.Contains(overlappedMarkerName))
+        if (NOT SensorFilteringInfo.Contains(OverlappedMarkerName))
         { return; }
 
-        if (InCurrentComp._CurrentMarkerOverlaps.Get_HasOverlapWithMarker(overlappedMarkerDetails))
+        if (InCurrentComp._CurrentMarkerOverlaps.Get_HasOverlapWithMarker(OverlappedMarkerDetails))
         { return; }
 
-        const auto& overlappedMarkerEnableDisable = UCk_Utils_Marker_UE::Get_EnableDisable<ECk_FragmentQuery_Policy::CurrentEntity>(overlappedMarkerEntity, overlappedMarkerName);
+        const auto& OverlappedMarkerEnableDisable = UCk_Utils_Marker_UE::
+            Get_EnableDisable<ECk_FragmentQuery_Policy::CurrentEntity>(OverlappedMarkerEntity, OverlappedMarkerName);
 
-        CK_ENSURE_IF_NOT(overlappedMarkerEnableDisable == ECk_EnableDisable::Enable,
+        CK_ENSURE_IF_NOT(OverlappedMarkerEnableDisable == ECk_EnableDisable::Enable,
             TEXT("Sensor [Name: {} | Entity: {}] received BeginOverlap with Marker [Name: {} | Entity: {}] that is DISABLED"),
-            sensorName,
+            SensorName,
             InSensorEntity,
-            overlappedMarkerName,
-            overlappedMarkerEntity)
+            OverlappedMarkerName,
+            OverlappedMarkerEntity)
         { return; }
 
         overlap_body::VeryVerbose
         (
             TEXT("Sensor [Name: {} | Entity: {}] BeginOverlap with Marker [Name: {} | Entity: {}]"),
-            sensorName,
+            SensorName,
             InSensorEntity,
-            overlappedMarkerName,
-            overlappedMarkerEntity
+            OverlappedMarkerName,
+            OverlappedMarkerEntity
         );
 
-        const auto& overlapDetails = InRequest.Get_OverlapDetails();
+        const auto& OverlapDetails = InRequest.Get_OverlapDetails();
 
-        InCurrentComp._CurrentMarkerOverlaps.Process_Add(FCk_Sensor_MarkerOverlapInfo{ overlappedMarkerDetails, overlapDetails });
+        InCurrentComp._CurrentMarkerOverlaps.Process_Add(FCk_Sensor_MarkerOverlapInfo{ OverlappedMarkerDetails, OverlapDetails });
 
-        const auto& onBeginOverlapPayload = FCk_Sensor_Payload_OnBeginOverlap
+        const auto& OnBeginOverlapPayload = FCk_Sensor_Payload_OnBeginOverlap
         {
             InRequest.Get_SensorDetails(),
-            overlappedMarkerDetails,
-            overlapDetails
+            OverlappedMarkerDetails,
+            OverlapDetails
         };
 
-        // TODO: Fire Sensor OnBeginOverlap signal
+        UUtils_Signal_OnSensorBeginOverlap::Broadcast(InSensorEntity, MakePayload(
+            InParamsComp.Get_Params().Get_EntityAttachedTo(), OnBeginOverlapPayload));
     }
 
     auto
@@ -261,60 +264,61 @@ namespace ck
             HandleType InSensorEntity,
             FFragment_Sensor_Current& InCurrentComp,
             const FFragment_Sensor_Params& InParamsComp,
-            const FCk_Request_Sensor_OnEndOverlap& InRequest) const
-        -> void
+            const FCk_Request_Sensor_OnEndOverlap& InRequest)
+            -> void
     {
-        const auto& overlappedMarkerDetails = InRequest.Get_MarkerDetails();
-        const auto& overlappedMarkerName    = overlappedMarkerDetails.Get_MarkerName();
-        const auto& overlappedMarkerEntity  = overlappedMarkerDetails.Get_MarkerEntity();
+        const auto& OverlappedMarkerDetails = InRequest.Get_MarkerDetails();
+        const auto& OverlappedMarkerName    = OverlappedMarkerDetails.Get_MarkerName();
+        const auto& OverlappedMarkerEntity  = OverlappedMarkerDetails.Get_MarkerEntity();
 
-        const auto& sensorName           = InRequest.Get_SensorDetails().Get_SensorName();
-        const auto& sensorFilteringInfo  = InParamsComp.Get_Params().Get_FilteringParams().Get_MarkerNames();
+        const auto& SensorName           = InRequest.Get_SensorDetails().Get_SensorName();
+        const auto& SensorFilteringInfo  = InParamsComp.Get_Params().Get_FilteringParams().Get_MarkerNames();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(overlappedMarkerEntity),
+        CK_ENSURE_IF_NOT(ck::IsValid(OverlappedMarkerEntity),
             TEXT("Sensor [Name: {} | Entity: {}] received EndOverlap with Marker [{}] that has an INVALID Entity"),
-            sensorName,
+            SensorName,
             InSensorEntity,
-            overlappedMarkerName)
+            OverlappedMarkerName)
         { return; }
 
-        if (NOT sensorFilteringInfo.Contains(overlappedMarkerName))
+        if (NOT SensorFilteringInfo.Contains(OverlappedMarkerName))
         { return; }
 
-        if (NOT InCurrentComp._CurrentMarkerOverlaps.Get_HasOverlapWithMarker(overlappedMarkerDetails))
+        if (NOT InCurrentComp._CurrentMarkerOverlaps.Get_HasOverlapWithMarker(OverlappedMarkerDetails))
         { return; }
 
-        const auto& overlappedMarkerEnableDisable = UCk_Utils_Marker_UE::Get_EnableDisable<ECk_FragmentQuery_Policy::CurrentEntity>(overlappedMarkerEntity, overlappedMarkerName);
+        const auto& OverlappedMarkerEnableDisable = UCk_Utils_Marker_UE::Get_EnableDisable<ECk_FragmentQuery_Policy::CurrentEntity>(OverlappedMarkerEntity, OverlappedMarkerName);
 
-        CK_ENSURE_IF_NOT(overlappedMarkerEnableDisable == ECk_EnableDisable::Enable,
+        CK_ENSURE_IF_NOT(OverlappedMarkerEnableDisable == ECk_EnableDisable::Enable,
             TEXT("Sensor [Name: {} | Entity: {}] received EndOverlap with Marker [Name: {} | Entity: {}] that is DISABLED"),
-            sensorName,
+            SensorName,
             InSensorEntity,
-            overlappedMarkerName,
-            overlappedMarkerEntity)
+            OverlappedMarkerName,
+            OverlappedMarkerEntity)
         { return; }
 
         overlap_body::VeryVerbose
         (
             TEXT("Sensor [Name: {} | Entity: {}] EndOverlap with Marker [Name: {} | Entity: {}]"),
-            sensorName,
+            SensorName,
             InSensorEntity,
-            overlappedMarkerName,
-            overlappedMarkerEntity
+            OverlappedMarkerName,
+            OverlappedMarkerEntity
         );
 
-        const auto& overlapDetails = InRequest.Get_OverlapDetails();
+        const auto& OverlapDetails = InRequest.Get_OverlapDetails();
 
-        InCurrentComp._CurrentMarkerOverlaps.Process_RemoveOverlapWithMarker(overlappedMarkerDetails);
+        InCurrentComp._CurrentMarkerOverlaps.Process_RemoveOverlapWithMarker(OverlappedMarkerDetails);
 
-        const auto& onEndOverlapPayload = FCk_Sensor_Payload_OnEndOverlap
+        const auto& OnEndOverlapPayload = FCk_Sensor_Payload_OnEndOverlap
         {
             InRequest.Get_SensorDetails(),
-            overlappedMarkerDetails,
-            overlapDetails
+            OverlappedMarkerDetails,
+            OverlapDetails
         };
 
-        // TODO: Fire Sensor OnEndOverlap signal
+        UUtils_Signal_OnSensorEndOverlap::Broadcast(InSensorEntity, MakePayload(
+            InParamsComp.Get_Params().Get_EntityAttachedTo(), OnEndOverlapPayload));
     }
 
     auto
@@ -323,13 +327,13 @@ namespace ck
             HandleType InSensorEntity,
             FFragment_Sensor_Current& InCurrentComp,
             const FFragment_Sensor_Params& InParamsComp,
-            const FCk_Request_Sensor_OnBeginOverlap_NonMarker& InRequest) const
-        -> void
+            const FCk_Request_Sensor_OnBeginOverlap_NonMarker& InRequest)
+            -> void
     {
-        const auto& overlapDetails = InRequest.Get_OverlapDetails();
-        const auto& nonMarkerOverlapInfo = FCk_Sensor_NonMarkerOverlapInfo{overlapDetails};
+        const auto& OverlapDetails = InRequest.Get_OverlapDetails();
+        const auto& NonMarkerOverlapInfo = FCk_Sensor_NonMarkerOverlapInfo{OverlapDetails};
 
-        if (InCurrentComp._CurrentNonMarkerOverlaps.Get_Overlaps().Contains(nonMarkerOverlapInfo))
+        if (InCurrentComp._CurrentNonMarkerOverlaps.Get_Overlaps().Contains(NonMarkerOverlapInfo))
         { return; }
 
         overlap_body::VeryVerbose
@@ -337,18 +341,19 @@ namespace ck
             TEXT("Sensor [Name: {} | Entity: {}] BeginOverlap with Non-Marker [{}]"),
             InRequest.Get_SensorDetails().Get_SensorName(),
             InSensorEntity,
-            overlapDetails
+            OverlapDetails
         );
 
-        InCurrentComp._CurrentNonMarkerOverlaps.Process_Add(nonMarkerOverlapInfo);
+        InCurrentComp._CurrentNonMarkerOverlaps.Process_Add(NonMarkerOverlapInfo);
 
-        const auto& onBeginOverlapPayload = FCk_Sensor_Payload_OnBeginOverlap_NonMarker
+        const auto& OnBeginOverlapPayload = FCk_Sensor_Payload_OnBeginOverlap_NonMarker
         {
             InRequest.Get_SensorDetails(),
-            overlapDetails
+            OverlapDetails
         };
 
-        // TODO: Fire Sensor OnBeginOverlap_NonMarker signal
+        UUtils_Signal_OnSensorBeginOverlap_NonMarker::Broadcast(InSensorEntity,
+            MakePayload(InParamsComp.Get_Params().Get_EntityAttachedTo(), OnBeginOverlapPayload));
     }
 
     auto
@@ -357,21 +362,21 @@ namespace ck
             HandleType InSensorEntity,
             FFragment_Sensor_Current& InCurrentComp,
             const FFragment_Sensor_Params& InParamsComp,
-            const FCk_Request_Sensor_OnEndOverlap_NonMarker& InRequest) const
-        -> void
+            const FCk_Request_Sensor_OnEndOverlap_NonMarker& InRequest)
+            -> void
     {
-        const auto& overlapDetails = InRequest.Get_OverlapDetails();
-        const auto& nonMarkerOverlapInfo = FCk_Sensor_NonMarkerOverlapInfo
+        const auto& OverlapDetails = InRequest.Get_OverlapDetails();
+        const auto& NonMarkerOverlapInfo = FCk_Sensor_NonMarkerOverlapInfo
         {
             FCk_Sensor_BeginOverlap_UnrealDetails
             {
-                overlapDetails.Get_OverlappedComponent().Get(),
-                overlapDetails.Get_OtherActor().Get(),
-                overlapDetails.Get_OtherComp().Get()
+                OverlapDetails.Get_OverlappedComponent().Get(),
+                OverlapDetails.Get_OtherActor().Get(),
+                OverlapDetails.Get_OtherComp().Get()
             }
         };
 
-        if (NOT InCurrentComp._CurrentNonMarkerOverlaps.Get_Overlaps().Contains(nonMarkerOverlapInfo))
+        if (NOT InCurrentComp._CurrentNonMarkerOverlaps.Get_Overlaps().Contains(NonMarkerOverlapInfo))
         { return; }
 
         overlap_body::VeryVerbose
@@ -379,18 +384,19 @@ namespace ck
             TEXT("Sensor [Name: {} | Entity: {}] EndOverlap with Non-Marker [{}]"),
             InRequest.Get_SensorDetails().Get_SensorName(),
             InSensorEntity,
-            overlapDetails
+            OverlapDetails
         );
 
-        InCurrentComp._CurrentNonMarkerOverlaps.Process_Remove(nonMarkerOverlapInfo);
+        InCurrentComp._CurrentNonMarkerOverlaps.Process_Remove(NonMarkerOverlapInfo);
 
-        const auto& onEndOverlapPayload = FCk_Sensor_Payload_OnEndOverlap_NonMarker
+        const auto& OnEndOverlapPayload = FCk_Sensor_Payload_OnEndOverlap_NonMarker
         {
             InRequest.Get_SensorDetails(),
-            overlapDetails
+            OverlapDetails
         };
 
-        // TODO: Fire Sensor OnEndOverlap_NonMarker signal
+        UUtils_Signal_OnSensorEndOverlap_NonMarker::Broadcast(
+            InSensorEntity, MakePayload(InParamsComp.Get_Params().Get_EntityAttachedTo(), OnEndOverlapPayload));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -398,17 +404,17 @@ namespace ck
     auto
         FProcessor_Sensor_UpdateTransform::
         ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InSensorEntity,
-            FFragment_Sensor_Current& InCurrentComp,
-            const FFragment_Sensor_Params& InParamsComp) const
-        -> void
+            TimeType,
+            HandleType                      InSensorEntity,
+            const FFragment_Sensor_Current& InCurrentComp,
+            const FFragment_Sensor_Params&  InParamsComp)
+            -> void
     {
         // TODO: Extract this in a common function to avoid code duplication between similar system for Marker
-        const auto& sensorAttachedEntityAndActor = InCurrentComp.Get_AttachedEntityAndActor();
-        const auto& sensorAttachedActor          = sensorAttachedEntityAndActor.Get_Actor();
+        const auto& SensorAttachedEntityAndActor = InCurrentComp.Get_AttachedEntityAndActor();
+        const auto& SensorAttachedActor          = SensorAttachedEntityAndActor.Get_Actor();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(sensorAttachedActor),
+        CK_ENSURE_IF_NOT(ck::IsValid(SensorAttachedActor),
             TEXT("Cannot update Sensor [{}] Transform because its Attached Actor is INVALID"),
             InSensorEntity)
         { return; }
@@ -417,32 +423,32 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(sensor), TEXT("Invalid Sensor Actor Component stored for Sensor Entity [{}]"), InSensorEntity)
         { return; }
 
-        const auto& boneTransform = [&]() -> TOptional<FTransform>
+        const auto& BoneTransform = [&]() -> TOptional<FTransform>
         {
-            const auto& params           = InParamsComp.Get_Params();
-            const auto& attachmentParams = params.Get_AttachmentParams();
-            const auto& boneName         = attachmentParams.Get_BoneName();
+            const auto& Params           = InParamsComp.Get_Params();
+            const auto& AttachmentParams = Params.Get_AttachmentParams();
+            const auto& BoneName         = AttachmentParams.Get_BoneName();
 
-            const auto& attachedActorSkeletalMeshComponent = sensorAttachedActor->FindComponentByClass<USkeletalMeshComponent>();
+            const auto& AttachedActorSkeletalMeshComponent = SensorAttachedActor->FindComponentByClass<USkeletalMeshComponent>();
 
-            const auto& socketBoneName = attachedActorSkeletalMeshComponent->GetSocketBoneName(boneName);
-            const auto& boneIndex      = attachedActorSkeletalMeshComponent->GetBoneIndex(socketBoneName);
+            const auto& SocketBoneName = AttachedActorSkeletalMeshComponent->GetSocketBoneName(BoneName);
+            const auto& BoneIndex      = AttachedActorSkeletalMeshComponent->GetBoneIndex(SocketBoneName);
 
-            CK_ENSURE_IF_NOT(boneIndex != INDEX_NONE,
+            CK_ENSURE_IF_NOT(BoneIndex != INDEX_NONE,
                 TEXT("Sensor Entity [{}] cannot update its Transform according to Bone [{}] because its Attached Actor [{}] does NOT have it in its Skeletal Mesh"),
                 InSensorEntity,
-                boneName,
-                sensorAttachedEntityAndActor)
+                BoneName,
+                SensorAttachedEntityAndActor)
             { return {}; }
 
-            const auto attachedActorTransform  = sensorAttachedActor->GetTransform();
-            auto skeletonTransform = attachedActorSkeletalMeshComponent->GetBoneTransform(boneIndex);
+            const auto AttachedActorTransform  = SensorAttachedActor->GetTransform();
+            auto SkeletonTransform = AttachedActorSkeletalMeshComponent->GetBoneTransform(BoneIndex);
 
-            switch(const auto& useBoneRotation  = attachmentParams.Get_UseBoneRotation())
+            switch(const auto& UseBoneRotation  = AttachmentParams.Get_UseBoneRotation())
             {
                 case ECk_Sensor_BoneTransform_RotationPolicy::None:
                 {
-                    skeletonTransform.CopyRotation(attachedActorTransform);
+                    SkeletonTransform.CopyRotation(AttachedActorTransform);
                     break;
                 }
                 case ECk_Sensor_BoneTransform_RotationPolicy::UseBoneRotation:
@@ -451,16 +457,16 @@ namespace ck
                 }
                 default:
                 {
-                    CK_INVALID_ENUM(useBoneRotation);
+                    CK_INVALID_ENUM(UseBoneRotation);
                     break;
                 }
             }
 
-            switch(const auto& useBonePosition  = attachmentParams.Get_UseBonePosition())
+            switch(const auto& UseBonePosition  = AttachmentParams.Get_UseBonePosition())
             {
                 case ECk_Sensor_BoneTransform_PositionPolicy::None:
                 {
-                    skeletonTransform.CopyTranslation(attachedActorTransform);
+                    SkeletonTransform.CopyTranslation(AttachedActorTransform);
                     break;
                 }
                 case ECk_Sensor_BoneTransform_PositionPolicy::UseBonePosition:
@@ -469,18 +475,18 @@ namespace ck
                 }
                 default:
                 {
-                    CK_INVALID_ENUM(useBonePosition);
+                    CK_INVALID_ENUM(UseBonePosition);
                     break;
                 }
             }
 
-            return skeletonTransform;
+            return SkeletonTransform;
         }();
 
-        if (ck::Is_NOT_Valid(boneTransform))
+        if (ck::Is_NOT_Valid(BoneTransform))
         { return; }
 
-        sensor->SetWorldTransform(*boneTransform);
+        sensor->SetWorldTransform(*BoneTransform);
         sensor->AddLocalTransform(InParamsComp.Get_Params().Get_RelativeTransform());
     }
 
@@ -488,7 +494,7 @@ namespace ck
 
     FProcessor_Sensor_DebugPreviewAll::
         FProcessor_Sensor_DebugPreviewAll(
-            FCk_Registry& InRegistry)
+        const FCk_Registry& InRegistry)
         : _Registry(InRegistry)
     {
     }
@@ -508,10 +514,10 @@ namespace ck
             if (ck::Is_NOT_Valid(InSensorCurrent.Get_Sensor()))
             { return; }
 
-            const auto& sensorName = InSensorParams.Get_Params().Get_SensorName();
-            const auto& outerForDebugDraw = InSensorCurrent.Get_AttachedEntityAndActor().Get_Actor().Get();
+            const auto& SensorName = InSensorParams.Get_Params().Get_SensorName();
+            const auto& OuterForDebugDraw = InSensorCurrent.Get_AttachedEntityAndActor().Get_Actor().Get();
 
-            UCk_Utils_Sensor_UE::PreviewSingleSensor<ECk_FragmentQuery_Policy::CurrentEntity>(outerForDebugDraw, FCk_Handle{ InSensorEntity, _Registry } ,sensorName);
+            UCk_Utils_Sensor_UE::PreviewSensor(OuterForDebugDraw, FCk_Handle{ InSensorEntity, _Registry } ,SensorName);
         });
     }
 }

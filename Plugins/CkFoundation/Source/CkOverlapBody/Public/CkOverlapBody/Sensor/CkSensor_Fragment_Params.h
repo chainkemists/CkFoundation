@@ -156,8 +156,7 @@ private:
               meta = (AllowPrivateAccess = true))
     FGameplayTag _SensorName;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-              meta = (AllowPrivateAccess = true))
+    UPROPERTY(Transient, meta = (AllowPrivateAccess = true))
     FCk_Handle _SensorEntity;
 
     // Represents the Entity/Actor that the Sensor ActorComp is attached to. Different from the Sensor Entity itself
