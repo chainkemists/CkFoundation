@@ -8,6 +8,8 @@
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
 
+#include "CkSignal/CkSignal_Macros.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_Sensor_UE;
@@ -112,6 +114,44 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     struct FFragment_RecordOfSensors : public FFragment_RecordOfEntities {};
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKOVERLAPBODY_API,
+        OnSensorEnableDisable,
+        FCk_Delegate_Sensor_OnEnableDisable_MC,
+        FCk_Handle,
+        FGameplayTag,
+        ECk_EnableDisable);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKOVERLAPBODY_API,
+        OnSensorBeginOverlap,
+        FCk_Delegate_Sensor_OnBeginOverlap_MC,
+        FCk_Handle,
+        FCk_Sensor_Payload_OnBeginOverlap);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKOVERLAPBODY_API,
+        OnSensorEndOverlap,
+        FCk_Delegate_Sensor_OnEndOverlap_MC,
+        FCk_Handle,
+        FCk_Sensor_Payload_OnEndOverlap);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKOVERLAPBODY_API,
+        OnSensorBeginOverlap_NonMarker,
+        FCk_Delegate_Sensor_OnBeginOverlap_NonMarker_MC,
+        FCk_Handle,
+        FCk_Sensor_Payload_OnBeginOverlap_NonMarker);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKOVERLAPBODY_API,
+        OnSensorEndOverlap_NonMarker,
+        FCk_Delegate_Sensor_OnEndOverlap_NonMarker_MC,
+        FCk_Handle,
+        FCk_Sensor_Payload_OnEndOverlap_NonMarker);
 }
 
 
