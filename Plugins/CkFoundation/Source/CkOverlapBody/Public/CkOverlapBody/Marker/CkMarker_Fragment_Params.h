@@ -83,8 +83,7 @@ private:
               meta = (AllowPrivateAccess = true))
     FGameplayTag _MarkerName;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-              meta = (AllowPrivateAccess = true))
+    UPROPERTY(Transient, meta = (AllowPrivateAccess = true))
     FCk_Handle _MarkerEntity;
 
     // Represents the Entity/Actor that the Marker ActorComp is attached to. Different from the Marker Entity itself
