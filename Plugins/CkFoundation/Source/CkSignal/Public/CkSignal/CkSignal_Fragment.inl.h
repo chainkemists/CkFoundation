@@ -8,8 +8,8 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedSignal, typename ... T_Args>
-    TFragment_Signal<T_DerivedSignal, T_Args...>::
+    template <typename ... T_Args>
+    TFragment_Signal<T_Args...>::
         TFragment_Signal()
         : _Invoke_Sink(_Invoke_Signal)
     { }
@@ -21,9 +21,9 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedSignal, typename T_UnrealMulticast, typename ... T_Args>
+    template <typename T_UnrealMulticast, typename ... T_Args>
     auto
-        TFragment_Signal_UnrealMulticast<T_DerivedSignal, T_UnrealMulticast, T_Args...>::
+        TFragment_Signal_UnrealMulticast<T_UnrealMulticast, T_Args...>::
         DoBroadcast(
             T_Args&&... InArgs)
     {
