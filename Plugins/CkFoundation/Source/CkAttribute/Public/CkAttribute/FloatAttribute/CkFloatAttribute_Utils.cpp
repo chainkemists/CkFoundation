@@ -103,7 +103,7 @@ auto
     BindTo_OnValueChanged(
         FGameplayTag InAttributeName,
         FCk_Handle InAttributeOwnerEntity,
-        ECk_Signal_PayloadInFlight InBehavior,
+        ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate)
     -> void
 {

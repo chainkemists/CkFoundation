@@ -189,7 +189,7 @@ private:
     BindTo_OnEnableDisable(
         FCk_Handle                                 InHandle,
         FGameplayTag                               InSensorName,
-        ECk_Signal_PayloadInFlight                 InBindingPolicy,
+        ECk_Signal_BindingPolicy                 InBindingPolicy,
         const FCk_Delegate_Sensor_OnEnableDisable& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -208,7 +208,7 @@ private:
     BindTo_OnBeginOverlap(
         FCk_Handle                                InSensorHandle,
         FGameplayTag                              InSensorName,
-        ECk_Signal_PayloadInFlight                InBindingPolicy,
+        ECk_Signal_BindingPolicy                InBindingPolicy,
         const FCk_Delegate_Sensor_OnBeginOverlap& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -227,7 +227,7 @@ private:
     BindTo_OnEndOverlap(
         FCk_Handle                              InSensorHandle,
         FGameplayTag                            InSensorName,
-        ECk_Signal_PayloadInFlight              InBindingPolicy,
+        ECk_Signal_BindingPolicy              InBindingPolicy,
         const FCk_Delegate_Sensor_OnEndOverlap& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -246,7 +246,7 @@ private:
     BindTo_OnBeginOverlap_NonMarker(
         FCk_Handle                                          InSensorHandle,
         FGameplayTag                                        InSensorName,
-        ECk_Signal_PayloadInFlight                          InBindingPolicy,
+        ECk_Signal_BindingPolicy                          InBindingPolicy,
         const FCk_Delegate_Sensor_OnBeginOverlap_NonMarker& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -265,7 +265,7 @@ private:
     BindTo_OnEndOverlap_NonMarker(
         FCk_Handle                                        InSensorHandle,
         FGameplayTag                                      InSensorName,
-        ECk_Signal_PayloadInFlight                        InBindingPolicy,
+        ECk_Signal_BindingPolicy                        InBindingPolicy,
         const FCk_Delegate_Sensor_OnEndOverlap_NonMarker& InDelegate);
 
     UFUNCTION(BlueprintCallable,
