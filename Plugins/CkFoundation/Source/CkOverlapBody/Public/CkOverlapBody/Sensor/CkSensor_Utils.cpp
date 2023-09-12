@@ -311,7 +311,7 @@ auto
     BindTo_OnEnableDisable(
         FCk_Handle                 InHandle,
         FGameplayTag               InSensorName,
-        ECk_Signal_PayloadInFlight InBindingPolicy,
+        ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Sensor_OnEnableDisable& InDelegate)
     -> void
 {
@@ -342,7 +342,7 @@ auto
     BindTo_OnBeginOverlap(
         FCk_Handle                                InHandle,
         FGameplayTag               InSensorName,
-        ECk_Signal_PayloadInFlight                InBindingPolicy,
+        ECk_Signal_BindingPolicy                InBindingPolicy,
         const FCk_Delegate_Sensor_OnBeginOverlap& InDelegate)
     -> void
 {
@@ -373,7 +373,7 @@ auto
     BindTo_OnEndOverlap(
         FCk_Handle                              InHandle,
         FGameplayTag                            InSensorName,
-        ECk_Signal_PayloadInFlight              InBindingPolicy,
+        ECk_Signal_BindingPolicy              InBindingPolicy,
         const FCk_Delegate_Sensor_OnEndOverlap& InDelegate)
     -> void
 {
@@ -404,7 +404,7 @@ auto
     BindTo_OnBeginOverlap_NonMarker(
         FCk_Handle                                          InHandle,
         FGameplayTag               InSensorName,
-        ECk_Signal_PayloadInFlight                          InBindingPolicy,
+        ECk_Signal_BindingPolicy                          InBindingPolicy,
         const FCk_Delegate_Sensor_OnBeginOverlap_NonMarker& InDelegate)
     -> void
 {
@@ -435,7 +435,7 @@ auto
     BindTo_OnEndOverlap_NonMarker(
         FCk_Handle                                        InHandle,
         FGameplayTag               InSensorName,
-        ECk_Signal_PayloadInFlight                        InBindingPolicy,
+        ECk_Signal_BindingPolicy                        InBindingPolicy,
         const FCk_Delegate_Sensor_OnEndOverlap_NonMarker& InDelegate)
     -> void
 {

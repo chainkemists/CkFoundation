@@ -41,7 +41,7 @@ namespace ck
     }
 
     template <typename T_DerivedSignal>
-    template <auto T_Candidate, ECk_Signal_PayloadInFlight InPayloadInFlightBehavior>
+    template <auto T_Candidate, ECk_Signal_BindingPolicy InPayloadInFlightBehavior>
     auto
         TUtils_Signal<T_DerivedSignal>::
         Bind(
@@ -49,7 +49,7 @@ namespace ck
     {
         const auto BroadcastIfPayloadInFlight = [&]<typename... T_Args>(TOptional<std::tuple<T_Args...>> InPayload)
         {
-            if constexpr (InPayloadInFlightBehavior == ECk_Signal_PayloadInFlight::IgnorePayloadInFlight)
+            if constexpr (InPayloadInFlightBehavior == ECk_Signal_BindingPolicy::IgnorePayloadInFlight)
             { return; }
 
             if (ck::Is_NOT_Valid(InPayload))
@@ -66,7 +66,7 @@ namespace ck
     }
 
     template <typename T_DerivedSignal>
-    template <auto T_Candidate, ECk_Signal_PayloadInFlight InPayloadInFlightBehavior, typename T_Instance>
+    template <auto T_Candidate, ECk_Signal_BindingPolicy InPayloadInFlightBehavior, typename T_Instance>
     auto
         TUtils_Signal<T_DerivedSignal>::
         Bind(
@@ -75,7 +75,7 @@ namespace ck
     {
         const auto BroadcastIfPayloadInFlight = [&]<typename... T_Args>(std::tuple<T_Args...> InPayload)
         {
-            if (InPayloadInFlightBehavior == ECk_Signal_PayloadInFlight::IgnorePayloadInFlight)
+            if (InPayloadInFlightBehavior == ECk_Signal_BindingPolicy::IgnorePayloadInFlight)
             { return; }
 
 
@@ -98,14 +98,14 @@ namespace ck
         TUtils_Signal<T_DerivedSignal>::
         Bind(
             FCk_Handle InHandle,
-            ECk_Signal_PayloadInFlight InPayloadInFlightBehavior)
+            ECk_Signal_BindingPolicy InPayloadInFlightBehavior)
     {
         switch(InPayloadInFlightBehavior)
         {
-        case ECk_Signal_PayloadInFlight::FireIfPayloadInFlight:
-            return Bind<T_Candidate, ECk_Signal_PayloadInFlight::FireIfPayloadInFlight>(InHandle);
-        case ECk_Signal_PayloadInFlight::IgnorePayloadInFlight:
-            return Bind<T_Candidate, ECk_Signal_PayloadInFlight::IgnorePayloadInFlight>(InHandle);
+        case ECk_Signal_BindingPolicy::FireIfPayloadInFlight:
+            return Bind<T_Candidate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight>(InHandle);
+        case ECk_Signal_BindingPolicy::IgnorePayloadInFlight:
+            return Bind<T_Candidate, ECk_Signal_BindingPolicy::IgnorePayloadInFlight>(InHandle);
         default:
              CK_INVALID_ENUM(InPayloadInFlightBehavior);
             break;
@@ -119,16 +119,16 @@ namespace ck
         Bind(
             T_Instance&& InInstance,
             FCk_Handle InHandle,
-            ECk_Signal_PayloadInFlight InPayloadInFlightBehavior)
+            ECk_Signal_BindingPolicy InPayloadInFlightBehavior)
     {
-        using ReturnType = decltype(Bind<T_Candidate, ECk_Signal_PayloadInFlight::FireIfPayloadInFlight>(std::forward<T_Instance>(InInstance), InHandle));
+        using ReturnType = decltype(Bind<T_Candidate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight>(std::forward<T_Instance>(InInstance), InHandle));
 
         switch(InPayloadInFlightBehavior)
         {
-        case ECk_Signal_PayloadInFlight::FireIfPayloadInFlight:
-            return Bind<T_Candidate, ECk_Signal_PayloadInFlight::FireIfPayloadInFlight>(std::forward<T_Instance>(InInstance), InHandle);
-        case ECk_Signal_PayloadInFlight::IgnorePayloadInFlight:
-            return Bind<T_Candidate, ECk_Signal_PayloadInFlight::IgnorePayloadInFlight>(std::forward<T_Instance>(InInstance), InHandle);
+        case ECk_Signal_BindingPolicy::FireIfPayloadInFlight:
+            return Bind<T_Candidate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight>(std::forward<T_Instance>(InInstance), InHandle);
+        case ECk_Signal_BindingPolicy::IgnorePayloadInFlight:
+            return Bind<T_Candidate, ECk_Signal_BindingPolicy::IgnorePayloadInFlight>(std::forward<T_Instance>(InInstance), InHandle);
         default:
              CK_INVALID_ENUM(InPayloadInFlightBehavior);
             break;
@@ -168,7 +168,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedSignal, typename T_DerivedSignal_Unreal>
-    template <ECk_Signal_PayloadInFlight T_PayloadInFlightBehavior>
+    template <ECk_Signal_BindingPolicy T_PayloadInFlightBehavior>
     auto
         TUtils_Signal_UnrealMulticast<T_DerivedSignal, T_DerivedSignal_Unreal>::
         Bind(
@@ -188,7 +188,7 @@ namespace ck
         {
             //SignalType s;
             //s._Invoke_Sink.connect<&T_DerivedSignal_Unreal::DoBroadcast>(UnrealMulticast);
-            auto Connection = Super::Bind<&T_DerivedSignal_Unreal::DoBroadcast>(UnrealMulticast, InHandle, ECk_Signal_PayloadInFlight::FireIfPayloadInFlight);
+            auto Connection = Super::Bind<&T_DerivedSignal_Unreal::DoBroadcast>(UnrealMulticast, InHandle, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
         }
     }
 
@@ -198,15 +198,15 @@ namespace ck
         Bind(
             FCk_Handle InHandle,
             UnrealDynamicDelegateType InDelegate,
-            ECk_Signal_PayloadInFlight InPayloadInFlightBehavior)
+            ECk_Signal_BindingPolicy InPayloadInFlightBehavior)
     {
         switch(InPayloadInFlightBehavior)
         {
-        case ECk_Signal_PayloadInFlight::FireIfPayloadInFlight:
-            Bind<ECk_Signal_PayloadInFlight::FireIfPayloadInFlight>(InHandle, InDelegate);
+        case ECk_Signal_BindingPolicy::FireIfPayloadInFlight:
+            Bind<ECk_Signal_BindingPolicy::FireIfPayloadInFlight>(InHandle, InDelegate);
             break;
-        case ECk_Signal_PayloadInFlight::IgnorePayloadInFlight:
-            Bind<ECk_Signal_PayloadInFlight::IgnorePayloadInFlight>(InHandle, InDelegate);
+        case ECk_Signal_BindingPolicy::IgnorePayloadInFlight:
+            Bind<ECk_Signal_BindingPolicy::IgnorePayloadInFlight>(InHandle, InDelegate);
             break;
         default:
             // CK_INVALID_ENUM(InPayloadInFlightBehavior);

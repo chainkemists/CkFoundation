@@ -241,7 +241,7 @@ auto
     BindTo_OnEnableDisable(
         FCk_Handle                                 InMarkerHandle,
         FGameplayTag                               InMarkerName,
-        ECk_Signal_PayloadInFlight                 InBindingPolicy,
+        ECk_Signal_BindingPolicy                 InBindingPolicy,
         const FCk_Delegate_Marker_OnEnableDisable& InDelegate)
     -> void
 {

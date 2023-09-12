@@ -133,7 +133,7 @@ public:
     static void
     BindTo_OnUpdate(
         FCk_Handle InHandle,
-        ECk_Signal_PayloadInFlight InBehavior,
+        ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_Transform_OnUpdate& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -142,7 +142,7 @@ public:
     static void
     UnbindFrom_OnUpdate(
         FCk_Handle InHandle,
-        ECk_Signal_PayloadInFlight InBehavior,
+        ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_Transform_OnUpdate& InDelegate);
 
 private:
