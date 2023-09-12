@@ -44,35 +44,35 @@ namespace ck
             FFragment_Sensor_Requests& InRequestsComp) const -> void;
 
     private:
-        auto DoHandleRequest(
+        static auto DoHandleRequest(
             HandleType InSensorEntity,
             FFragment_Sensor_Current& InCurrentComp,
             const FFragment_Sensor_Params& InParamsComp,
-            const FCk_Request_Sensor_EnableDisable& InRequest) const -> void;
+            const FCk_Request_Sensor_EnableDisable& InRequest) -> void;
 
-        auto DoHandleRequest(
+        static auto DoHandleRequest(
             HandleType InSensorEntity,
             FFragment_Sensor_Current& InCurrentComp,
             const FFragment_Sensor_Params& InParamsComp,
-            const FCk_Request_Sensor_OnBeginOverlap& InRequest) const -> void;
+            const FCk_Request_Sensor_OnBeginOverlap& InRequest) -> void;
 
-        auto DoHandleRequest(
+        static auto DoHandleRequest(
             HandleType InSensorEntity,
             FFragment_Sensor_Current& InCurrentComp,
             const FFragment_Sensor_Params& InParamsComp,
-            const FCk_Request_Sensor_OnEndOverlap& InRequest) const -> void;
+            const FCk_Request_Sensor_OnEndOverlap& InRequest) -> void;
 
-        auto DoHandleRequest(
+        static auto DoHandleRequest(
             HandleType InSensorEntity,
             FFragment_Sensor_Current& InCurrentComp,
             const FFragment_Sensor_Params& InParamsComp,
-            const FCk_Request_Sensor_OnBeginOverlap_NonMarker& InRequest) const -> void;
+            const FCk_Request_Sensor_OnBeginOverlap_NonMarker& InRequest) -> void;
 
-        auto DoHandleRequest(
+        static auto DoHandleRequest(
             HandleType InSensorEntity,
             FFragment_Sensor_Current& InCurrentComp,
             const FFragment_Sensor_Params& InParamsComp,
-            const FCk_Request_Sensor_OnEndOverlap_NonMarker& InRequest) const -> void;
+            const FCk_Request_Sensor_OnEndOverlap_NonMarker& InRequest) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -84,11 +84,11 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InSensorEntity,
-            FFragment_Sensor_Current& InCurrentComp,
-            const FFragment_Sensor_Params& InParamsComp) const -> void;
+        static auto ForEachEntity(
+            TimeType                        InDeltaT,
+            HandleType                      InSensorEntity,
+            const FFragment_Sensor_Current& InCurrentComp,
+            const FFragment_Sensor_Params&  InParamsComp) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -97,7 +97,7 @@ namespace ck
     {
     public:
         explicit FProcessor_Sensor_DebugPreviewAll(
-            FCk_Registry& InRegistry);
+            const FCk_Registry& InRegistry);
 
     public:
         auto Tick(FCk_Time) -> void;
