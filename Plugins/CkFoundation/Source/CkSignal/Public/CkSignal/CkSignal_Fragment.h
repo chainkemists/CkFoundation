@@ -8,7 +8,7 @@
 
 namespace ck
 {
-    template <typename T_DerivedSignal, typename... T_Args>
+    template <typename... T_Args>
     struct TFragment_Signal
     {
         template <typename>
@@ -16,7 +16,7 @@ namespace ck
         template <typename, typename>
         friend class TUtils_Signal_UnrealMulticast;
 
-        CK_GENERATED_BODY(TFragment_Signal<T_DerivedSignal COMMA T_Args...>);
+        CK_GENERATED_BODY(TFragment_Signal<T_Args...>);
 
     public:
         struct FTag_PayloadInFlight {};
@@ -45,13 +45,13 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedSignal, typename T_UnrealMulticast, typename... T_Args>
+    template <typename T_UnrealMulticast, typename... T_Args>
     struct TFragment_Signal_UnrealMulticast
     {
         template <typename, typename>
         friend class TUtils_Signal_UnrealMulticast;
 
-        CK_GENERATED_BODY(TFragment_Signal_UnrealMulticast<T_DerivedSignal COMMA T_UnrealMulticast COMMA T_Args...>);
+        CK_GENERATED_BODY(TFragment_Signal_UnrealMulticast<T_UnrealMulticast COMMA T_Args...>);
 
     public:
         using ConnectionType = entt::connection;
