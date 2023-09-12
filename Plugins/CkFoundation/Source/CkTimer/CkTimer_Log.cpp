@@ -4,7 +4,7 @@
 
 DEFINE_LOG_CATEGORY(CkTimer);
 
-namespace ck::log
+namespace ck::timer
 {
 	CK_REGISTER_LOG_FUNCTIONS(CkTimer);
 }
