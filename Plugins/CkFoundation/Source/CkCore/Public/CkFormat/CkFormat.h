@@ -32,16 +32,40 @@ namespace ck
     namespace ck_format_detail
     {
         template <typename T>
-        auto&& ArgsForward(T&& InType);
+        constexpr auto&& ArgsForward(T&& InType);
+
+        template <typename... TArgs>
+        auto
+            DoFormat(fmt::wformat_string<TArgs...> fmt, TArgs&&... InArgs)
+            -> std::basic_string<TCHAR>
+        {
+            using namespace ck_format_detail;
+
+            return fmt::format(fmt, std::forward<TArgs>(InArgs)...);
+        }
     }
 
-    template <typename T, typename... TArgs>
+    template <typename TString, typename... TArgs>
     auto
-    Format(const T& InString, TArgs&&... InArgs)
+    Format(TString InStr, TArgs&&... InArgs)
         -> std::basic_string<TCHAR>
     {
-        return fmt::format(TEXT("{}"), InString, ck_format_detail::ArgsForward(InArgs)...);
-        //return fmt::format(TEXT("{}"), std::forward<TArgs>(InArgs)...);
+        using namespace ck_format_detail;
+
+        // Notes:
+        // - with C++20, fmt has support for compile time strings and verification of the formatting
+        // - we cannot directly pass a string literal to fmt::format with the C++20 interface
+        // - fmt::format takes a fmt::wformat_string which takes the same arg types as the args we are
+        //   attempting to format
+        // - we cannot pass the args directly because they have to go through our forwarded which resolves pointers
+        // - we feed the converted args to a manually constructed fmt::wformat_string, making sure the
+        //   arg types match the ones returned by ArgsForward
+        // - this results in a complex looking expression below, although most of it is forwarding and
+        //   figuring out the new return types
+
+        return ck_format_detail::DoFormat(
+            fmt::wformat_string<decltype(ArgsForward(InArgs))...>(fmt::runtime_format_string<TCHAR>{InStr}),
+            std::forward<decltype(ArgsForward(InArgs))>(ArgsForward(std::forward<TArgs>(InArgs)))...);
     }
 
     template <typename T>
@@ -52,12 +76,12 @@ namespace ck
         return FString{ Format(InString).c_str() };
     }
 
-    template <typename T, typename... TArgs>
+    template <typename... TArgs>
     auto
-    Format_UE(const T& InString, TArgs&&... InArgs)
+    Format_UE(TArgs&&... InArgs)
         -> FString
     {
-        return FString{ Format(InString, std::forward<TArgs>(InArgs)...).c_str() };
+        return FString{ Format(std::forward<TArgs>(InArgs)...).c_str() };
     }
 
 }
@@ -147,7 +171,7 @@ namespace ck
     namespace ck_format_detail
     {
         template <typename T>
-        auto&& ArgsForward(T&& InType)
+        constexpr auto&& ArgsForward(T&& InType)
         {
             using decayed_t = std::decay_t<T>;
             using original_t = std::remove_const_t<decayed_t>;
