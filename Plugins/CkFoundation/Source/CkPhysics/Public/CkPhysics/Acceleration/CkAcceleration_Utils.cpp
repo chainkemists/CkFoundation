@@ -1,5 +1,6 @@
 #include "CkAcceleration_Utils.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkPhysics/Acceleration/CkAcceleration_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -69,20 +70,69 @@ auto
 auto
     UCk_Utils_AccelerationModifier_SingleTarget_UE::
     Add(
-        FCk_Handle InHandle,
-        const FCk_Fragment_AccelerationModifier_SingleTarget_ParamsData& InParams) -> void
+        FCk_Handle InAccelerationOwnerEntity,
+        FGameplayTag InModifierName,
+        const FCk_Fragment_AccelerationModifier_SingleTarget_ParamsData& InParams)
+    -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_Target()),
-        TEXT("Target Entity [{}] is NOT a valid Entity when adding Single Target Acceleration Modifier to Handle [{}]"),
-        InParams.Get_Target(),
-        InHandle)
+    CK_ENSURE_IF_NOT(UCk_Utils_Acceleration_UE::Has(InAccelerationOwnerEntity),
+        TEXT("Cannot add Single Target Acceleration Modifier to Entity [{}] because it does NOT have a Acceleration Fragment"),
+        InAccelerationOwnerEntity)
     { return; }
 
-    InHandle.Add<ck::FTag_AccelerationModifier_SingleTarget>();
-    InHandle.Add<ck::FTag_AccelerationModifier_SingleTarget_Setup>();
+    auto newModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAccelerationOwnerEntity);
 
-    UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Add(InHandle, InParams.Get_Target());
-    UCk_Utils_Acceleration_UE::Add(InHandle, InParams.Get_AccelerationParams());
+    newModifierEntity.Add<ck::FTag_AccelerationModifier_SingleTarget>();
+    newModifierEntity.Add<ck::FTag_AccelerationModifier_SingleTarget_Setup>();
+
+    UCk_Utils_GameplayLabel_UE::Add(newModifierEntity, InModifierName);
+
+    RecordOfAccelerationModifiers_Utils::AddIfMissing(InAccelerationOwnerEntity);
+    RecordOfAccelerationModifiers_Utils::Request_Connect(InAccelerationOwnerEntity, newModifierEntity);
+
+    UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Add(newModifierEntity, InAccelerationOwnerEntity);
+    UCk_Utils_Acceleration_UE::Add(newModifierEntity, InParams.Get_AccelerationParams());
+}
+
+auto
+    UCk_Utils_AccelerationModifier_SingleTarget_UE::
+    Has(
+        FCk_Handle InHandle,
+        FGameplayTag InModifierName)
+    -> bool
+{
+    const auto& AccelerationModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_AccelerationModifier_SingleTarget_UE,
+        RecordOfAccelerationModifiers_Utils>(InHandle, InModifierName);
+
+    return ck::IsValid(AccelerationModifierEntity);
+}
+
+auto
+    UCk_Utils_AccelerationModifier_SingleTarget_UE::
+    Ensure(
+        FCk_Handle InHandle,
+        FGameplayTag InModifierName)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(Has(InHandle, InModifierName), TEXT("Handle [{}] does NOT have Single Target Acceleration Modifier"), InHandle)
+    { return false; }
+
+    return true;
+}
+
+auto
+    UCk_Utils_AccelerationModifier_SingleTarget_UE::
+    Remove(
+        FCk_Handle   InHandle,
+        FGameplayTag InModifierName)
+    -> void
+{
+    const auto& AccelerationModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_AccelerationModifier_SingleTarget_UE,
+        RecordOfAccelerationModifiers_Utils>(InHandle, InModifierName);
+
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(AccelerationModifierEntity);
 }
 
 auto
@@ -92,19 +142,8 @@ auto
     -> bool
 {
     return InHandle->Has<ck::FTag_AccelerationModifier_SingleTarget>(InHandle.Get_Entity()) &&
-           UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Has(InHandle);
-}
-
-auto
-    UCk_Utils_AccelerationModifier_SingleTarget_UE::
-    Ensure(
-        FCk_Handle InHandle)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have Single Target Acceleration Modifier"), InHandle)
-    { return false; }
-
-    return true;
+        UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Has(InHandle) &&
+        UCk_Utils_Acceleration_UE::Has(InHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
