@@ -32,7 +32,9 @@ public:
 
 public:
     FCk_HearingPerception_Noise_DebugInfo() = default;
-    FCk_HearingPerception_Noise_DebugInfo(float InLineThickness, FColor InDebugLineColor);
+    FCk_HearingPerception_Noise_DebugInfo(
+        float InLineThickness,
+        FColor InDebugLineColor);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -61,31 +63,20 @@ public:
 public:
     FCk_HearingPerception_NoiseReceiver_Params() = default;
     FCk_HearingPerception_NoiseReceiver_Params(
-        float InHearingMaxRange,
-        ECk_HearingPerception_NoiseFiltering_Policy InNoiseFilteringPolicy,
-        bool InShowDebug,
-        FCk_HearingPerception_Noise_DebugInfo InDebugParams);
+        float InHearingModifier,
+        ECk_HearingPerception_NoiseFiltering_Policy InNoiseFilteringPolicy);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, UIMin = 0.0, ClampMin = 0.0, Units = "cm"))
-    float _HearingMaxRange = 100.0f;
+    // Modifier applied to noises' emitted travel distance.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, UIMin = 0.0, ClampMin = 0.0))
+    float _HearingModifier = 1.0;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     ECk_HearingPerception_NoiseFiltering_Policy _NoiseFilteringPolicy = ECk_HearingPerception_NoiseFiltering_Policy::OnlyPerceiveOtherActorNoises;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta=(AllowPrivateAccess = true, InlineEditConditionToggle))
-    bool _ShowDebug = false;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, EditCondition = "_ShowDebug"))
-    FCk_HearingPerception_Noise_DebugInfo _DebugParams;
-
 public:
-    CK_PROPERTY_GET(_HearingMaxRange);
+    CK_PROPERTY_GET(_HearingModifier);
     CK_PROPERTY_GET(_NoiseFilteringPolicy);
-    CK_PROPERTY_GET(_ShowDebug);
-    CK_PROPERTY_GET(_DebugParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -100,14 +91,27 @@ public:
 
 public:
     FCk_HearingPerception_NoiseEmitter_Params() = default;
-    explicit FCk_HearingPerception_NoiseEmitter_Params(float InLoudnessModifier);
+    FCk_HearingPerception_NoiseEmitter_Params(
+        float InLoudnessModifier,
+        bool InShowDebug,
+        FCk_HearingPerception_Noise_DebugInfo InDebugParams);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, UIMin = 0.0, ClampMin = 0.0))
     float _LoudnessModifier = 1.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta=(AllowPrivateAccess = true, InlineEditConditionToggle))
+    bool _ShowDebug = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditCondition = "_ShowDebug"))
+    FCk_HearingPerception_Noise_DebugInfo _DebugParams;
+
 public:
     CK_PROPERTY_GET(_LoudnessModifier);
+    CK_PROPERTY_GET(_ShowDebug);
+    CK_PROPERTY_GET(_DebugParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
