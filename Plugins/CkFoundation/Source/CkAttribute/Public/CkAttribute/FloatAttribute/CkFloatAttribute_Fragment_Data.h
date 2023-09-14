@@ -46,10 +46,6 @@ private:
 
     UPROPERTY(BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Handle _Target;
-
-    UPROPERTY(BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
     FGameplayTag _TargetAttributeName;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -58,12 +54,11 @@ private:
 
 public:
     CK_PROPERTY_GET(_ModifierDelta)
-    CK_PROPERTY_GET(_Target)
     CK_PROPERTY_GET(_TargetAttributeName)
     CK_PROPERTY_GET(_ModifierOperation)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttributeModifier_ParamsData, _ModifierDelta, _Target, _TargetAttributeName, _ModifierOperation);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttributeModifier_ParamsData, _ModifierDelta, _TargetAttributeName, _ModifierOperation);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
