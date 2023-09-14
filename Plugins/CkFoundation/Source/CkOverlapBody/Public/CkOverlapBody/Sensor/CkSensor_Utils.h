@@ -187,9 +187,9 @@ private:
               DisplayName = "Bind To Sensor Enable Disable")
     static void
     BindTo_OnEnableDisable(
-        FCk_Handle                                 InHandle,
-        FGameplayTag                               InSensorName,
-        ECk_Signal_BindingPolicy                 InBindingPolicy,
+        FCk_Handle InHandle,
+        FGameplayTag InSensorName,
+        ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Sensor_OnEnableDisable& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -197,8 +197,8 @@ private:
               DisplayName = "Unbind From Sensor Enable Disable")
     static void
     UnbindFrom_OnEnableDisable(
-        FCk_Handle                                 InSensorHandle,
-        FGameplayTag                               InSensorName,
+        FCk_Handle InHandle,
+        FGameplayTag InSensorName,
         const FCk_Delegate_Sensor_OnEnableDisable& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -206,9 +206,9 @@ private:
               DisplayName = "Bind To Sensor Begin Overlap")
     static void
     BindTo_OnBeginOverlap(
-        FCk_Handle                                InSensorHandle,
-        FGameplayTag                              InSensorName,
-        ECk_Signal_BindingPolicy                InBindingPolicy,
+        FCk_Handle InHandle,
+        FGameplayTag InSensorName,
+        ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Sensor_OnBeginOverlap& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -216,8 +216,8 @@ private:
               DisplayName = "Unbind From Sensor Begin Overlap")
     static void
     UnbindFrom_OnBeginOverlap(
-        FCk_Handle                                InSensorHandle,
-        FGameplayTag                              InSensorName,
+        FCk_Handle InHandle,
+        FGameplayTag InSensorName,
         const FCk_Delegate_Sensor_OnBeginOverlap& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -225,9 +225,9 @@ private:
               DisplayName = "Bind To Sensor End Overlap")
     static void
     BindTo_OnEndOverlap(
-        FCk_Handle                              InSensorHandle,
-        FGameplayTag                            InSensorName,
-        ECk_Signal_BindingPolicy              InBindingPolicy,
+        FCk_Handle InHandle,
+        FGameplayTag InSensorName,
+        ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Sensor_OnEndOverlap& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -235,8 +235,8 @@ private:
               DisplayName = "Unbind From Sensor End Overlap")
     static void
     UnbindFrom_OnEndOverlap(
-        FCk_Handle                              InSensorHandle,
-        FGameplayTag                            InSensorName,
+        FCk_Handle InHandle,
+        FGameplayTag InSensorName,
         const FCk_Delegate_Sensor_OnEndOverlap& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -244,9 +244,9 @@ private:
               DisplayName = "Bind To Sensor Begin Overlap Non-Marker")
     static void
     BindTo_OnBeginOverlap_NonMarker(
-        FCk_Handle                                          InSensorHandle,
-        FGameplayTag                                        InSensorName,
-        ECk_Signal_BindingPolicy                          InBindingPolicy,
+        FCk_Handle InHandle,
+        FGameplayTag InSensorName,
+        ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Sensor_OnBeginOverlap_NonMarker& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -254,8 +254,8 @@ private:
               DisplayName = "Unbind From Sensor Begin Overlap Non-Marker")
     static void
     UnbindFrom_OnBeginOverlap_NonMarker(
-        FCk_Handle                                          InSensorHandle,
-        FGameplayTag                                        InSensorName,
+        FCk_Handle InHandle,
+        FGameplayTag InSensorName,
         const FCk_Delegate_Sensor_OnBeginOverlap_NonMarker& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -263,9 +263,9 @@ private:
               DisplayName = "Bind To Sensor End Overlap Non-Marker")
     static void
     BindTo_OnEndOverlap_NonMarker(
-        FCk_Handle                                        InSensorHandle,
-        FGameplayTag                                      InSensorName,
-        ECk_Signal_BindingPolicy                        InBindingPolicy,
+        FCk_Handle InHandle,
+        FGameplayTag InSensorName,
+        ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Sensor_OnEndOverlap_NonMarker& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -273,8 +273,8 @@ private:
               DisplayName = "Unbind From Sensor End Overlap Non-Marker")
     static void
     UnbindFrom_OnEndOverlap_NonMarker(
-        FCk_Handle                                        InSensorHandle,
-        FGameplayTag                                      InSensorName,
+        FCk_Handle InHandle,
+        FGameplayTag InSensorName,
         const FCk_Delegate_Sensor_OnEndOverlap_NonMarker& InDelegate);
 
 public:
@@ -301,7 +301,7 @@ public:
 private:
     static auto
     Has(
-        FCk_Handle InHandle) -> bool;
+        FCk_Handle InSensorHandle) -> bool;
 
 private:
     static auto

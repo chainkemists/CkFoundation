@@ -155,9 +155,9 @@ public:
               DisplayName = "Bind To Marker Enable Disable")
     static void
     BindTo_OnEnableDisable(
-        FCk_Handle                                 InMarkerHandle,
-        FGameplayTag                               InMarkerName,
-        ECk_Signal_BindingPolicy                 InBindingPolicy,
+        FCk_Handle InHandle,
+        FGameplayTag InMarkerName,
+        ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Marker_OnEnableDisable& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -165,8 +165,8 @@ public:
               DisplayName = "Unbind From Marker Enable Disable")
     static void
     UnbindFrom_OnEnableDisable(
-        FCk_Handle                                 InMarkerHandle,
-        FGameplayTag                               InMarkerName,
+        FCk_Handle InHandle,
+        FGameplayTag InMarkerName,
         const FCk_Delegate_Marker_OnEnableDisable& InDelegate);
 
 private:
