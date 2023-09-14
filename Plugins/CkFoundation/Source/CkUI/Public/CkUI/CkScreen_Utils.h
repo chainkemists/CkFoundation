@@ -39,6 +39,11 @@ public:
         FVector2D& OutScreenPosition,
         float& OutRotationAngleDegrees,
         bool &OutIsOnScreen);
+
+private:
+    static auto DoGet_PlayerControllerViewportSize(
+        UObject* InWorldContextObject,
+        APlayerController* InPlayerController) -> FVector2D;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

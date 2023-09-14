@@ -26,7 +26,7 @@ protected:
 
 public:
     UFUNCTION(Client, Reliable /*, WithValidation*/)
-    void Client_HandleReportedNoise(const FCk_HearingPerception_NoiseEvent& InNoise);
+    void Client_HandleReportedNoiseEvent(const FCk_HearingPerception_NoiseEvent& InNoise);
 
 private:
     auto DoRegisterListenerToNoiseDispatcher() -> void;
@@ -40,6 +40,9 @@ private:
     TMap<FCk_HearingPerception_NoiseEvent, float> _PerceivedNoisesToLifetimeMap;
 
 private:
+    UPROPERTY(BlueprintAssignable, meta = (AllowPrivateAccess = true))
+    FCk_Delegate_HearingPerception_OnExistingPerceivedNoiseUpdated_MC _OnExistingPerceivedNoiseUpdated;
+
     UPROPERTY(BlueprintAssignable, meta = (AllowPrivateAccess = true))
     FCk_Delegate_HearingPerception_OnPerceivedNoiseAdded_MC _OnPerceivedNoiseAdded;
 
@@ -62,11 +65,11 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable, BlueprintPure = false)
-    void TryEmitNoise(const FGameplayTag& InNoiseTag) const;
+    void TryEmitNoiseAtLocation(const FGameplayTag& InNoiseTag, const FVector& InNoiseLocation) const;
 
 private:
     UFUNCTION(Server, Reliable, BlueprintCallable /*, WithValidation*/)
-    void Server_ReportNoise(const FCk_HearingPerception_NoiseEvent& InNoise) const;
+    void Server_ReportNoiseEvent(const FCk_HearingPerception_NoiseEvent& InNoise) const;
 
 private:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = true))

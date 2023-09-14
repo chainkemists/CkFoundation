@@ -17,7 +17,7 @@ UCk_HearingPerception_NoiseReceiver_ActorComponent_UE()
 }
 
 auto UCk_HearingPerception_NoiseReceiver_ActorComponent_UE::
-Client_HandleReportedNoise_Implementation(const FCk_HearingPerception_NoiseEvent& InNoise)
+Client_HandleReportedNoiseEvent_Implementation(const FCk_HearingPerception_NoiseEvent& InNoise)
 -> void
 {
     if (ck::Is_NOT_Valid(InNoise))
@@ -29,8 +29,11 @@ Client_HandleReportedNoise_Implementation(const FCk_HearingPerception_NoiseEvent
 
     this->SetComponentTickEnabled(true);
 
-
-    if (NOT isNoiseAlreadyPerceived)
+    if (isNoiseAlreadyPerceived)
+    {
+        _OnExistingPerceivedNoiseUpdated.Broadcast(InNoise);
+    }
+    else
     {
         _OnPerceivedNoiseAdded.Broadcast(InNoise);
     }
@@ -56,9 +59,9 @@ OnUnregister()
 
 auto UCk_HearingPerception_NoiseReceiver_ActorComponent_UE::
 TickComponent(
-        float                        DeltaTime,
-        ELevelTick                   TickType,
-        FActorComponentTickFunction* ThisTickFunction)
+    float                        DeltaTime,
+    ELevelTick                   TickType,
+    FActorComponentTickFunction* ThisTickFunction)
 -> void
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -128,16 +131,18 @@ DoUnregisterListenerFromNoiseDispatcher()
 }
 
 auto UCk_HearingPerception_NoiseEmitter_ActorComponent_UE::
-TryEmitNoise(const FGameplayTag& InNoiseTag) const
+TryEmitNoiseAtLocation(
+    const FGameplayTag& InNoiseTag,
+    const FVector& InNoiseLocation) const
 -> void
 {
-    _OnEmitNoiseRequested.Broadcast(InNoiseTag);
+    _OnEmitNoiseRequested.Broadcast(InNoiseTag, InNoiseLocation);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto UCk_HearingPerception_NoiseEmitter_ActorComponent_UE::
-Server_ReportNoise_Implementation(const FCk_HearingPerception_NoiseEvent& InNoise) const
+Server_ReportNoiseEvent_Implementation(const FCk_HearingPerception_NoiseEvent& InNoise) const
 -> void
 {
     const auto& world = GetWorld();
@@ -221,7 +226,7 @@ DispatchNoiseToListeners(const FCk_HearingPerception_NoiseEvent& InNoise)
             {
                 CK_INVALID_ENUM(InPolicy);
                 return false;
-            };
+            }
         }
     };
 
@@ -244,7 +249,7 @@ DispatchNoiseToListeners(const FCk_HearingPerception_NoiseEvent& InNoise)
         if (NOT IsNoisePerceivedByListener(listenerLocation, listenerHearingRange, noiseLocation, noiseTravelDistance))
         { continue; }
 
-        noiseReceiverComp->Client_HandleReportedNoise(InNoise);
+        noiseReceiverComp->Client_HandleReportedNoiseEvent(InNoise);
     }
 }
 

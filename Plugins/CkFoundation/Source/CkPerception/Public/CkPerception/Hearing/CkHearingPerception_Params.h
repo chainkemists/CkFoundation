@@ -191,6 +191,8 @@ CK_DEFINE_CUSTOM_IS_VALID(FCk_HearingPerception_NoiseInfo, ck::IsValid_Policy_De
     return ck::IsValid(InNoiseInfo.Get_NoiseTag()) && InNoiseInfo.Get_Lifetime() > 0.0f && InNoiseInfo.Get_TravelDistance() > 0.0f/* && ck::IsValid(InNoiseInfo.Get_NoiseSound())*/;
 });
 
+auto CKPERCEPTION_API GetTypeHash(const FCk_HearingPerception_NoiseInfo& InObj) -> uint32;
+
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -234,13 +236,15 @@ auto CKPERCEPTION_API GetTypeHash(const FCk_HearingPerception_NoiseEvent& InObj)
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_HearingPerception_OnEmitNoiseRequested,
-    FGameplayTag, InNoiseEventTag);
+    FGameplayTag, InNoiseEventTag,
+    FVector, InNoiseLocation);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_HearingPerception_OnEmitNoiseRequested_MC,
-    FGameplayTag, InNoiseEventTag);
+    FGameplayTag, InNoiseEventTag,
+    FVector, InNoiseLocation);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -250,6 +254,16 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
     FCk_Delegate_HearingPerception_OnPerceivedNoiseAdded_MC,
+    FCk_HearingPerception_NoiseEvent, InNoiseEvent);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(
+    FCk_Delegate_HearingPerception_OnExistingPerceivedNoiseUpdated,
+    FCk_HearingPerception_NoiseEvent, InNoiseEvent);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+    FCk_Delegate_HearingPerception_OnExistingPerceivedNoiseUpdated_MC,
     FCk_HearingPerception_NoiseEvent, InNoiseEvent);
 
 // --------------------------------------------------------------------------------------------------------------------
