@@ -130,17 +130,17 @@ auto
 auto
     UTT_Utils_FloatAttributeModifier_UE::
     Add(
+        FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InModifierName,
         const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams)
     -> void
 {
     const auto& attributeName = InParams.Get_TargetAttributeName();
-    const auto& attributeOwner = InParams.Get_Target();
 
-    const auto newModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(attributeOwner);
+    const auto newModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwnerEntity);
     UCk_Utils_GameplayLabel_UE::Add(newModifierEntity, InModifierName);
 
-    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<UTT_Utils_FloatAttribute_UE::FloatAttribute_Utils, UTT_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils>(attributeOwner, attributeName);
+    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<UTT_Utils_FloatAttribute_UE::FloatAttribute_Utils, UTT_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, attributeName);
 
     FloatAttributeModifier_Utils::Add
     (
