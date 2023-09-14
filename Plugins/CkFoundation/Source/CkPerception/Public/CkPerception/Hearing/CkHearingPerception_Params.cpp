@@ -19,23 +19,24 @@ FCk_HearingPerception_Noise_DebugInfo(
 // --------------------------------------------------------------------------------------------------------------------
 
 FCk_HearingPerception_NoiseReceiver_Params::
-FCk_HearingPerception_NoiseReceiver_Params(
-        float InHearingMaxRange,
-        ECk_HearingPerception_NoiseFiltering_Policy InNoiseFilteringPolicy,
-        bool InShowDebug,
-        FCk_HearingPerception_Noise_DebugInfo InDebugParams)
-    : _HearingMaxRange(InHearingMaxRange)
+    FCk_HearingPerception_NoiseReceiver_Params(
+        float InHearingModifier,
+        ECk_HearingPerception_NoiseFiltering_Policy InNoiseFilteringPolicy)
+    : _HearingModifier(InHearingModifier)
     , _NoiseFilteringPolicy(InNoiseFilteringPolicy)
-    , _ShowDebug(InShowDebug)
-    , _DebugParams(InDebugParams)
 {
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
 FCk_HearingPerception_NoiseEmitter_Params::
-FCk_HearingPerception_NoiseEmitter_Params(float InLoudnessModifier)
+    FCk_HearingPerception_NoiseEmitter_Params(
+        float InLoudnessModifier,
+        bool InShowDebug,
+        FCk_HearingPerception_Noise_DebugInfo InDebugParams)
     : _LoudnessModifier(InLoudnessModifier)
+    , _ShowDebug(InShowDebug)
+    , _DebugParams(InDebugParams)
 {
 }
 

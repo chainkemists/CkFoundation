@@ -198,12 +198,13 @@ DispatchNoiseToListeners(const FCk_HearingPerception_NoiseEvent& InNoise)
     CK_ENSURE_IF_NOT(ck::IsValid(InNoise), TEXT("Invalid NoiseEvent reported to NoiseDispatcher"))
     { return; }
 
-    const auto& IsNoisePerceivedByListener = [](const FVector& InListenerLoc, float InListenerHearingRange, const FVector& InNoiseLoc, float InNoiseTravelDistance) -> bool
+    const auto& IsNoisePerceivedByListener = [](const FVector& InListenerLoc, float InListenerHearingModifier, const FVector& InNoiseLoc, float InNoiseTravelDistance) -> bool
     {
-        const auto& distance = FVector::Dist(InListenerLoc, InNoiseLoc);
-        const auto& sumOfRadii = FMath::Max(0.0f, InListenerHearingRange) + FMath::Max(0.0f, InNoiseTravelDistance);
+        const auto& noiseToListenerDistance = FVector::Dist(InListenerLoc, InNoiseLoc);
 
-        return distance <= sumOfRadii;
+        const auto& modifiedNoiseTravelDistance = InNoiseTravelDistance * InListenerHearingModifier;
+
+        return noiseToListenerDistance <= modifiedNoiseTravelDistance;
     };
 
     const auto& IsListenerInterestedByNoise = [](ECk_HearingPerception_NoiseFiltering_Policy InPolicy, const AActor* InListener, const AActor* InNoiseInstigator) -> bool
@@ -244,9 +245,9 @@ DispatchNoiseToListeners(const FCk_HearingPerception_NoiseEvent& InNoise)
         { continue; }
 
         const auto& listenerLocation = listenerOwningActor->GetActorLocation();
-        const auto& listenerHearingRange = noiseReceiverParams.Get_HearingMaxRange();
+        const auto& listenerHearingModifier = noiseReceiverParams.Get_HearingModifier();
 
-        if (NOT IsNoisePerceivedByListener(listenerLocation, listenerHearingRange, noiseLocation, noiseTravelDistance))
+        if (NOT IsNoisePerceivedByListener(listenerLocation, listenerHearingModifier, noiseLocation, noiseTravelDistance))
         { continue; }
 
         noiseReceiverComp->Client_HandleReportedNoiseEvent(InNoise);
