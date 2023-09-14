@@ -47,22 +47,16 @@ public:
 
 public:
     FCk_Fragment_VelocityModifier_SingleTarget_ParamsData() = default;
-    FCk_Fragment_VelocityModifier_SingleTarget_ParamsData(
-        FCk_Fragment_Velocity_ParamsData InVelocityParams,
-        FCk_Handle InTarget);
+    explicit FCk_Fragment_VelocityModifier_SingleTarget_ParamsData(
+        FCk_Fragment_Velocity_ParamsData InVelocityParams);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Fragment_Velocity_ParamsData _VelocityParams;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Handle _Target;
-
 public:
     CK_PROPERTY_GET(_VelocityParams);
-    CK_PROPERTY_GET(_Target);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

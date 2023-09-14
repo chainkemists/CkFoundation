@@ -15,10 +15,8 @@ FCk_Fragment_Velocity_ParamsData::
 
 FCk_Fragment_VelocityModifier_SingleTarget_ParamsData::
     FCk_Fragment_VelocityModifier_SingleTarget_ParamsData(
-        FCk_Fragment_Velocity_ParamsData InVelocityParams,
-        FCk_Handle InTarget)
+        FCk_Fragment_Velocity_ParamsData InVelocityParams)
     : _VelocityParams(InVelocityParams)
-    , _Target(InTarget)
 {
 }
 

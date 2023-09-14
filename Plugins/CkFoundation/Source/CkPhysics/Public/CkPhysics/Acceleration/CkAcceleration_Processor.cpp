@@ -24,7 +24,24 @@ namespace ck
         {
             case ECk_LocalWorld::Local:
             {
-                const auto& rotation = UCk_Utils_Transform_UE::Get_EntityCurrentRotation(InHandle);
+                const auto DoGetRotationFromEntityOrTargetEntity = [&]() -> FRotator
+                {
+                    if (UCk_Utils_Transform_UE::Has(InHandle))
+                    {
+                        return UCk_Utils_Transform_UE::Get_EntityCurrentRotation(InHandle);
+                    }
+
+                    CK_ENSURE_IF_NOT(UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Has(InHandle),
+                        TEXT("Handle [{}] does NOT have Transform info nor does it have an AccelerationTarget. "
+                             "Unable to convert Acceleration to LOCAL coordinates"), InHandle)
+                    { return {}; }
+
+                    const auto accelerationTarget = UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Get_StoredEntity(InHandle);
+
+                    return UCk_Utils_Transform_UE::Get_EntityCurrentRotation(accelerationTarget);
+                };
+
+                const auto& rotation = DoGetRotationFromEntityOrTargetEntity();
                 InCurrent._CurrentAcceleration = rotation.RotateVector(params.Get_StartingAcceleration());
                 break;
             }

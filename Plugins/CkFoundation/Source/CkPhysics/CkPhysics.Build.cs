@@ -14,6 +14,7 @@ public class CkPhysics : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
+            "GameplayTags",
 
             "CkActor",
             "CkCore",
