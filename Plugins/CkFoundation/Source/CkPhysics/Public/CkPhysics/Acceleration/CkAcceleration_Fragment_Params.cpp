@@ -15,10 +15,8 @@ FCk_Fragment_Acceleration_ParamsData::
 
 FCk_Fragment_AccelerationModifier_SingleTarget_ParamsData::
     FCk_Fragment_AccelerationModifier_SingleTarget_ParamsData(
-        FCk_Fragment_Acceleration_ParamsData InAccelerationParams,
-        FCk_Handle InTarget)
+        FCk_Fragment_Acceleration_ParamsData InAccelerationParams)
     : _AccelerationParams(InAccelerationParams)
-    , _Target(InTarget)
 {
 }
 

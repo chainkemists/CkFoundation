@@ -47,22 +47,16 @@ public:
 
 public:
     FCk_Fragment_AccelerationModifier_SingleTarget_ParamsData() = default;
-    FCk_Fragment_AccelerationModifier_SingleTarget_ParamsData(
-        FCk_Fragment_Acceleration_ParamsData InAccelerationParams,
-        FCk_Handle InTarget);
+    explicit FCk_Fragment_AccelerationModifier_SingleTarget_ParamsData(
+        FCk_Fragment_Acceleration_ParamsData InAccelerationParams);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Fragment_Acceleration_ParamsData _AccelerationParams;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Handle _Target;
-
 public:
     CK_PROPERTY_GET(_AccelerationParams);
-    CK_PROPERTY_GET(_Target);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
