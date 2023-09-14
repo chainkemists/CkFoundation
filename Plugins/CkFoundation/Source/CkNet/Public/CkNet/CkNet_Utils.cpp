@@ -125,7 +125,7 @@ auto
         return ECk_Net_NetRoleType::Server;
     }
 
-    const auto& isServer = [InContext]() -> bool
+    const auto GetIsServer = [InContext]() -> bool
     {
         if (ck::Is_NOT_Valid(InContext))
         { return true; }
@@ -135,13 +135,11 @@ auto
         if (ck::Is_NOT_Valid(world))
         { return true; }
 
-        return world->IsServer();
-    }();
+        return world->IsNetMode(NM_DedicatedServer) || world->IsNetMode(NM_ListenServer);
+    };
 
-    if (isServer)
-    {
-        return ECk_Net_NetRoleType::Host;
-    }
+    if (GetIsServer())
+    { return ECk_Net_NetRoleType::Host; }
 
     return ECk_Net_NetRoleType::Client;
 }
