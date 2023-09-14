@@ -79,7 +79,7 @@ auto
         FGameplayTag InSensorName)
     -> bool
 {
-    CK_ENSURE_IF_NOT(Has(InHandle ,InSensorName), TEXT("Handle [{}] does NOT have a Marker with Name [{}]"), InHandle, InSensorName)
+    CK_ENSURE_IF_NOT(Has(InHandle ,InSensorName), TEXT("Handle [{}] does NOT have a Sensor with Name [{}]"), InHandle, InSensorName)
     { return false; }
 
     return true;
@@ -309,12 +309,15 @@ auto
 auto
     UCk_Utils_Sensor_UE::
     BindTo_OnEnableDisable(
-        FCk_Handle                 InHandle,
-        FGameplayTag               InSensorName,
+        FCk_Handle InHandle,
+        FGameplayTag InSensorName,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Sensor_OnEnableDisable& InDelegate)
     -> void
 {
+    if (NOT Ensure(InHandle, InSensorName))
+    { return; }
+
     const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Sensor_UE,
         RecordOfSensors_Utils>(InHandle, InSensorName);
@@ -326,10 +329,13 @@ auto
     UCk_Utils_Sensor_UE::
     UnbindFrom_OnEnableDisable(
         FCk_Handle InHandle,
-        FGameplayTag               InSensorName,
+        FGameplayTag InSensorName,
         const FCk_Delegate_Sensor_OnEnableDisable& InDelegate)
     -> void
 {
+    if (NOT Ensure(InHandle, InSensorName))
+    { return; }
+
     const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Sensor_UE,
         RecordOfSensors_Utils>(InHandle, InSensorName);
@@ -340,12 +346,15 @@ auto
 auto
     UCk_Utils_Sensor_UE::
     BindTo_OnBeginOverlap(
-        FCk_Handle                                InHandle,
-        FGameplayTag               InSensorName,
-        ECk_Signal_BindingPolicy                InBindingPolicy,
+        FCk_Handle InHandle,
+        FGameplayTag InSensorName,
+        ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Sensor_OnBeginOverlap& InDelegate)
     -> void
 {
+    if (NOT Ensure(InHandle, InSensorName))
+    { return; }
+
     const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Sensor_UE,
         RecordOfSensors_Utils>(InHandle, InSensorName);
@@ -356,11 +365,14 @@ auto
 auto
     UCk_Utils_Sensor_UE::
     UnbindFrom_OnBeginOverlap(
-        FCk_Handle                 InHandle,
-        FGameplayTag               InSensorName,
+        FCk_Handle InHandle,
+        FGameplayTag InSensorName,
         const FCk_Delegate_Sensor_OnBeginOverlap& InDelegate)
     -> void
 {
+    if (NOT Ensure(InHandle, InSensorName))
+    { return; }
+
     const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Sensor_UE,
         RecordOfSensors_Utils>(InHandle, InSensorName);
@@ -371,12 +383,15 @@ auto
 auto
     UCk_Utils_Sensor_UE::
     BindTo_OnEndOverlap(
-        FCk_Handle                              InHandle,
-        FGameplayTag                            InSensorName,
-        ECk_Signal_BindingPolicy              InBindingPolicy,
+        FCk_Handle InHandle,
+        FGameplayTag InSensorName,
+        ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Sensor_OnEndOverlap& InDelegate)
     -> void
 {
+    if (NOT Ensure(InHandle, InSensorName))
+    { return; }
+
     const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Sensor_UE,
         RecordOfSensors_Utils>(InHandle, InSensorName);
@@ -387,11 +402,14 @@ auto
 auto
     UCk_Utils_Sensor_UE::
     UnbindFrom_OnEndOverlap(
-        FCk_Handle                 InHandle,
-        FGameplayTag               InSensorName,
+        FCk_Handle InHandle,
+        FGameplayTag InSensorName,
         const FCk_Delegate_Sensor_OnEndOverlap& InDelegate)
     -> void
 {
+    if (NOT Ensure(InHandle, InSensorName))
+    { return; }
+
     const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Sensor_UE,
         RecordOfSensors_Utils>(InHandle, InSensorName);
@@ -402,12 +420,15 @@ auto
 auto
     UCk_Utils_Sensor_UE::
     BindTo_OnBeginOverlap_NonMarker(
-        FCk_Handle                                          InHandle,
-        FGameplayTag               InSensorName,
-        ECk_Signal_BindingPolicy                          InBindingPolicy,
+        FCk_Handle InHandle,
+        FGameplayTag InSensorName,
+        ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Sensor_OnBeginOverlap_NonMarker& InDelegate)
     -> void
 {
+    if (NOT Ensure(InHandle, InSensorName))
+    { return; }
+
     const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Sensor_UE,
         RecordOfSensors_Utils>(InHandle, InSensorName);
@@ -418,11 +439,14 @@ auto
 auto
     UCk_Utils_Sensor_UE::
     UnbindFrom_OnBeginOverlap_NonMarker(
-        FCk_Handle                                          InHandle,
-        FGameplayTag               InSensorName,
+        FCk_Handle InHandle,
+        FGameplayTag InSensorName,
         const FCk_Delegate_Sensor_OnBeginOverlap_NonMarker& InDelegate)
     -> void
 {
+    if (NOT Ensure(InHandle, InSensorName))
+    { return; }
+
     const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Sensor_UE,
         RecordOfSensors_Utils>(InHandle, InSensorName);
@@ -433,12 +457,15 @@ auto
 auto
     UCk_Utils_Sensor_UE::
     BindTo_OnEndOverlap_NonMarker(
-        FCk_Handle                                        InHandle,
-        FGameplayTag               InSensorName,
-        ECk_Signal_BindingPolicy                        InBindingPolicy,
+        FCk_Handle InHandle,
+        FGameplayTag InSensorName,
+        ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Sensor_OnEndOverlap_NonMarker& InDelegate)
     -> void
 {
+    if (NOT Ensure(InHandle, InSensorName))
+    { return; }
+
     const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Sensor_UE,
         RecordOfSensors_Utils>(InHandle, InSensorName);
@@ -449,11 +476,14 @@ auto
 auto
     UCk_Utils_Sensor_UE::
     UnbindFrom_OnEndOverlap_NonMarker(
-        FCk_Handle                                        InHandle,
-        FGameplayTag               InSensorName,
+        FCk_Handle InHandle,
+        FGameplayTag InSensorName,
         const FCk_Delegate_Sensor_OnEndOverlap_NonMarker& InDelegate)
     -> void
 {
+    if (NOT Ensure(InHandle, InSensorName))
+    { return; }
+
     const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Sensor_UE,
         RecordOfSensors_Utils>(InHandle, InSensorName);

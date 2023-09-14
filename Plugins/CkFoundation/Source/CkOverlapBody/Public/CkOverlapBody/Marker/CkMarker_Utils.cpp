@@ -144,6 +144,9 @@ auto
         FGameplayTag InMarkerName)
     -> FCk_Marker_PhysicsInfo
 {
+    if (NOT Ensure(InHandle, InMarkerName))
+    { return {}; }
+
     const auto& MarkerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Marker_UE,
         RecordOfMarkers_Utils>(InHandle, InMarkerName);
@@ -158,6 +161,9 @@ auto
         FGameplayTag InMarkerName)
     -> FCk_Marker_ShapeInfo
 {
+    if (NOT Ensure(InHandle, InMarkerName))
+    { return {}; }
+
     const auto& MarkerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Marker_UE,
         RecordOfMarkers_Utils>(InHandle, InMarkerName);
@@ -172,6 +178,9 @@ auto
         FGameplayTag InMarkerName)
     -> FCk_Marker_DebugInfo
 {
+    if (NOT Ensure(InHandle, InMarkerName))
+    { return {}; }
+
     const auto& MarkerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Marker_UE,
         RecordOfMarkers_Utils>(InHandle, InMarkerName);
@@ -186,6 +195,9 @@ auto
         FGameplayTag InMarkerName)
     -> ECk_EnableDisable
 {
+    if (NOT Ensure(InHandle, InMarkerName))
+    { return {}; }
+
     const auto& MarkerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Marker_UE,
         RecordOfMarkers_Utils>(InHandle, InMarkerName);
@@ -200,6 +212,9 @@ auto
         FGameplayTag InMarkerName)
     -> UShapeComponent*
 {
+    if (NOT Ensure(InHandle, InMarkerName))
+    { return {}; }
+
     const auto& MarkerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Marker_UE,
         RecordOfMarkers_Utils>(InHandle, InMarkerName);
@@ -214,6 +229,9 @@ auto
         FGameplayTag InMarkerName)
     -> FCk_EntityOwningActor_BasicDetails
 {
+    if (NOT Ensure(InHandle, InMarkerName))
+    { return {}; }
+
     const auto& MarkerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Marker_UE,
         RecordOfMarkers_Utils>(InHandle, InMarkerName);
@@ -229,6 +247,9 @@ auto
         const FCk_Request_Marker_EnableDisable& InRequest)
     -> void
 {
+    if (NOT Ensure(InHandle, InMarkerName))
+    { return; }
+
     auto MarkerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Marker_UE,
         RecordOfMarkers_Utils>(InHandle, InMarkerName);
@@ -239,15 +260,18 @@ auto
 auto
     UCk_Utils_Marker_UE::
     BindTo_OnEnableDisable(
-        FCk_Handle                                 InMarkerHandle,
-        FGameplayTag                               InMarkerName,
-        ECk_Signal_BindingPolicy                 InBindingPolicy,
+        FCk_Handle InHandle,
+        FGameplayTag InMarkerName,
+        ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Marker_OnEnableDisable& InDelegate)
     -> void
 {
+    if (NOT Ensure(InHandle, InMarkerName))
+    { return; }
+
     const auto& MarkerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Marker_UE,
-        RecordOfMarkers_Utils>(InMarkerHandle, InMarkerName);
+        RecordOfMarkers_Utils>(InHandle, InMarkerName);
 
     ck::UUtils_Signal_OnMarkerEnableDisable::Bind(MarkerEntity, InDelegate, InBindingPolicy);
 }
@@ -255,14 +279,17 @@ auto
 auto
     UCk_Utils_Marker_UE::
     UnbindFrom_OnEnableDisable(
-        FCk_Handle                                 InMarkerHandle,
-        FGameplayTag                               InMarkerName,
+        FCk_Handle InHandle,
+        FGameplayTag InMarkerName,
         const FCk_Delegate_Marker_OnEnableDisable& InDelegate)
     -> void
 {
+    if (NOT Ensure(InHandle, InMarkerName))
+    { return; }
+
     const auto& MarkerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Marker_UE,
-        RecordOfMarkers_Utils>(InMarkerHandle, InMarkerName);
+        RecordOfMarkers_Utils>(InHandle, InMarkerName);
 
     ck::UUtils_Signal_OnMarkerEnableDisable::Unbind(MarkerEntity, InDelegate);
 }
