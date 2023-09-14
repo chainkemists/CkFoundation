@@ -120,6 +120,7 @@ public:
               DisplayName="Add Float Attribute Modifier")
     static void
     Add(
+        FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InModifierName,
         const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams);
 
