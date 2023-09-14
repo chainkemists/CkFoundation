@@ -68,24 +68,7 @@ FindScreenEdgeLocationForWorldLocation(
     if(ck::Is_NOT_Valid(playerController))
     { return; }
 
-    const auto& screenViewportSize = [playerController]()
-    {
-        int32 outScreenSizeX;
-        int32 outScreenSizeY;
-
-        playerController->GetViewportSize(outScreenSizeX, outScreenSizeY);
-
-        return FVector2D(outScreenSizeX, outScreenSizeY);
-    }();
-
-    const auto& viewportSize = [&]()
-    {
-        FVector2D outViewportSize;
-        USlateBlueprintLibrary::ScreenToViewport(InWorldContextObject, screenViewportSize, outViewportSize);
-
-        return outViewportSize;
-    }();
-
+    const auto& viewportSize = DoGet_PlayerControllerViewportSize(InWorldContextObject, playerController);
     const auto& viewportCenter = FVector2D(viewportSize.X * InViewportCenterLoc.X, viewportSize.Y * InViewportCenterLoc.Y);
 
     FVector outCameraLoc;
@@ -162,6 +145,36 @@ FindScreenEdgeLocationForWorldLocation(
     outTempScreenPosition += viewportCenter;
 
     OutScreenPosition = outTempScreenPosition;
+}
+
+auto UCk_Utils_Screen_UE::
+DoGet_PlayerControllerViewportSize(
+    UObject* InWorldContextObject,
+    APlayerController* InPlayerController)
+-> FVector2D
+{
+    if(ck::Is_NOT_Valid(InPlayerController))
+    { return {}; }
+
+    const auto& screenViewportSize = [InPlayerController]()
+    {
+        int32 outScreenSizeX;
+        int32 outScreenSizeY;
+
+        InPlayerController->GetViewportSize(outScreenSizeX, outScreenSizeY);
+
+        return FVector2D(outScreenSizeX, outScreenSizeY);
+    }();
+
+    const auto& viewportSize = [InWorldContextObject, screenViewportSize]()
+    {
+        FVector2D outViewportSize;
+        USlateBlueprintLibrary::ScreenToViewport(InWorldContextObject, screenViewportSize, outViewportSize);
+
+        return outViewportSize;
+    }();
+
+    return viewportSize;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
