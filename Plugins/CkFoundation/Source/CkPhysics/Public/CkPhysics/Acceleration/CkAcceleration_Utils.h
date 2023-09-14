@@ -87,7 +87,7 @@ class CKPHYSICS_API UCk_Utils_AccelerationModifier_SingleTarget_UE : public UCk_
 public:
     CK_GENERATED_BODY(UCk_Utils_AccelerationModifier_SingleTarget_UE);
 
-public:
+private:
     class RecordOfAccelerationModifiers_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfAccelerationModifiers> {};
 
 public:
