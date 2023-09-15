@@ -26,15 +26,17 @@ namespace ck
             InHandle
         );
 
+        const auto& AttributeOwningEntity = UCk_Utils_OwningEntity::Get_StoredEntity(InHandle);
+
         TUtils_Signal_OnAttributeValueChanged<T_DerivedAttribute, T_MulticastType>::Broadcast
         (
             InHandle,
             ck::MakePayload
             (
-                InHandle,
+                AttributeOwningEntity,
                 TPayload_Attribute_OnValueChanged<T_DerivedAttribute>
                 {
-                    InHandle,
+                    AttributeOwningEntity,
                     InAttribute._Base,
                     InAttribute._Final
                 }

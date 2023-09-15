@@ -20,9 +20,11 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(paramsProvider), TEXT("Invalid Float Attributes Provider"))
     { return; }
 
-    const auto& AddNewFloatAttributeToEntity = [](FCk_Handle InAttributeOwner, const FGameplayTag& InAttributeName, float InAttributeBaseValue)
+    const auto& AddNewFloatAttributeToEntity = [&](FCk_Handle InAttributeOwner, const FGameplayTag& InAttributeName, float InAttributeBaseValue)
     {
         const auto newAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwner);
+
+        ck::UCk_Utils_OwningEntity::Add(newAttributeEntity, InHandle);
 
         FloatAttribute_Utils::Add(newAttributeEntity, InAttributeBaseValue);
         UCk_Utils_GameplayLabel_UE::Add(newAttributeEntity, InAttributeName);
