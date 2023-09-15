@@ -44,7 +44,7 @@ namespace ck
             EntityType InEntityToStore)
         -> void
     {
-        InHandle.AddOrGet<CompType>(InEntityToStore);
+        InHandle.Add<CompType>(InEntityToStore);
     }
 
     template <typename T_DerivedCompType>
@@ -64,7 +64,7 @@ namespace ck
             HandleType InHandle)
         -> bool
     {
-        CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have an EntityHolder"))
+        CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have an EntityHolder"), InHandle)
         { return false; }
 
         return true;
