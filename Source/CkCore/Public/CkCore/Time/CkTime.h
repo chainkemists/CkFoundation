@@ -49,6 +49,10 @@ public:
 
 public:
     static const FCk_Time Zero;
+    static const FCk_Time OneMillisecond;
+    static const FCk_Time TenMilliseconds;
+    static const FCk_Time HundredMilliseconds;
+    static const FCk_Time OneSecond;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
