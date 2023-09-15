@@ -131,7 +131,7 @@ namespace ck
             UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(marker, newEnableDisable);
             UCk_Utils_Physics_UE::Request_SetCollisionEnabled(marker, collisionEnabled);
 
-            // TODO: Fire Marker EnableDisable signal
+            UUtils_Signal_OnMarkerEnableDisable::Broadcast(InMarkerEntity, MakePayload(params.Get_EntityAttachedTo(), markerName, newEnableDisable));
         });
 
         InMarkerEntity.Remove<MarkedDirtyBy>();
