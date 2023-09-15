@@ -96,7 +96,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AccelerationModifier",
-              DisplayName="Add Single Target Acceleration Modifier")
+              DisplayName="Add New Single Target Acceleration Modifier")
     static void
     Add(
         FCk_Handle InAccelerationOwnerEntity,
