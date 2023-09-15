@@ -26,6 +26,7 @@
 
 #include "CkRecord/Record/CkRecord_Processor.h"
 #include "CkRecord/RecordEntry/CkRecordEntry_Processor.h"
+#include "CkTimer/CkTimer_Processor.h"
 
 #include "CkUnreal/Entity/CkUnrealEntity_Processor.h"
 
@@ -64,6 +65,9 @@ namespace ck_world_actor
         InWorld.Add<ck::FProcessor_Marker_HandleRequests>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_Sensor_HandleRequests>(InWorld.Get_Registry());
 
+        InWorld.Add<ck::FProcessor_Timer_HandleRequests>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_Timer_Update>(InWorld.Get_Registry());
+
         InWorld.Add<ck::FProcessor_Velocity_Setup>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_VelocityModifier_SingleTarget_Setup>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_VelocityModifier_SingleTarget_Teardown>(InWorld.Get_Registry());
@@ -93,6 +97,7 @@ namespace ck_world_actor
 
         // Processors for Replication
         {
+            InWorld.Add<ck::FProcessor_Timer_Replicate>(InWorld.Get_Registry());
             InWorld.Add<ck::FProcessor_Velocity_Replicate>(InWorld.Get_Registry());
             InWorld.Add<ck::FProcessor_Acceleration_Replicate>(InWorld.Get_Registry());
             InWorld.Add<ck::FProcessor_Transform_Replicate>(InWorld.Get_Registry());
