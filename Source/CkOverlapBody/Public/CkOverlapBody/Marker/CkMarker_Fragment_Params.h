@@ -340,10 +340,6 @@ private:
               meta = (AllowPrivateAccess = true, EditCondition = "_ShowDebug"))
     FCk_Marker_DebugInfo _DebugParams;
 
-private:
-    // Represents the Entity with the RecordOfMarkers fragment that "holds" this marker
-    FCk_Handle _EntityAttachedTo;
-
 public:
     CK_PROPERTY_GET(_MarkerName);
     CK_PROPERTY_GET(_ShapeParams);
@@ -354,7 +350,6 @@ public:
     CK_PROPERTY_GET(_DebugParams);
     CK_PROPERTY_GET(_StartingState);
     CK_PROPERTY_GET(_ReplicationType);
-    CK_PROPERTY(_EntityAttachedTo);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

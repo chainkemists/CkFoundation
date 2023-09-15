@@ -3,6 +3,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
+#include "CkEcsBasics/EntityHolder/CkEntityHolder_Utils.h"
 #include "CkOverlapBody/Marker/CkMarker_Utils.h"
 
 #include "CkOverlapBody/MarkerAndSensor/CkMarkerAndSensor_Utils.h"
@@ -25,8 +26,10 @@ namespace ck
     {
         InMarkerEntity.Remove<MarkedDirtyBy>();
 
-        const auto& markerAttachedEntity = InParamsComp.Get_Params().Get_EntityAttachedTo();
-        const auto& markerAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(markerAttachedEntity);
+        const auto& markerOwningEntity = UCk_Utils_OwningEntity::Get_StoredEntity(InMarkerEntity);
+        const auto& markerAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(markerOwningEntity);
+        const auto& markerAttachedEntity = markerAttachedEntityAndActor.Get_Handle();
+
 
         CK_ENSURE_IF_NOT(ck::IsValid(markerAttachedEntityAndActor.Get_Actor()),
             TEXT("Marker Entity [{}] is Attached to Entity [{}] that does NOT have a valid Actor"),
@@ -131,7 +134,7 @@ namespace ck
             UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(marker, newEnableDisable);
             UCk_Utils_Physics_UE::Request_SetCollisionEnabled(marker, collisionEnabled);
 
-            UUtils_Signal_OnMarkerEnableDisable::Broadcast(InMarkerEntity, MakePayload(params.Get_EntityAttachedTo(), markerName, newEnableDisable));
+            UUtils_Signal_OnMarkerEnableDisable::Broadcast(InMarkerEntity, MakePayload(InCurrentComp.Get_AttachedEntityAndActor().Get_Handle(), markerName, newEnableDisable));
         });
 
         InMarkerEntity.Remove<MarkedDirtyBy>();
