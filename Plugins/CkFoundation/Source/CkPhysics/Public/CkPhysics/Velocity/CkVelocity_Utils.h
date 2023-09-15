@@ -96,7 +96,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|VelocityModifier",
-              DisplayName="Add Single Target Velocity Modifier")
+              DisplayName="Add New Single Target Velocity Modifier")
     static void
     Add(
         FCk_Handle InVelocityOwnerEntity,
