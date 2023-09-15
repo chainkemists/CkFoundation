@@ -28,7 +28,8 @@ public class CkUnreal : CkModuleRules
             "CkOverlapBody",
             "CkPhysics",
             "CkProjectile",
-            "CkRecord"
+            "CkRecord",
+            "CkTimer"
         });
     }
 }

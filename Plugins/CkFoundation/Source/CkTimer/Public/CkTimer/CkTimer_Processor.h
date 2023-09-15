@@ -45,6 +45,8 @@ namespace ck
             FFragment_Timer_Current& InCurrentComp) const -> void;
     };
 
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKTIMER_API FProcessor_Timer_Replicate
         : public TProcessor<FProcessor_Timer_Replicate,
             FFragment_Timer_Current, TObjectPtr<UCk_Fragment_Timer_Rep>, FTag_Timer_Updated>
