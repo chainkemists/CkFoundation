@@ -2,6 +2,7 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
+#include "CkEcsBasics/EntityHolder/CkEntityHolder_Utils.h"
 #include "CkOverlapBody/CkOverlapBody_Log.h"
 #include "CkOverlapBody/Marker/CkMarker_Utils.h"
 #include "CkOverlapBody/MarkerAndSensor/CkMarkerAndSensor_Utils.h"
@@ -23,8 +24,9 @@ namespace ck
     {
         InSensorEntity.Remove<MarkedDirtyBy>();
 
-        const auto& sensorAttachedEntity = InParamsComp.Get_Params().Get_EntityAttachedTo();
-        const auto& sensorAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(sensorAttachedEntity);
+        const auto& owningEntity = UCk_Utils_OwningEntity::Get_StoredEntity(InSensorEntity);
+        const auto& sensorAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(owningEntity);
+        const auto& sensorAttachedEntity = sensorAttachedEntityAndActor.Get_Handle();
 
         CK_ENSURE_IF_NOT(ck::IsValid(sensorAttachedEntityAndActor.Get_Actor()),
             TEXT("Sensor Entity [{}] is attached to Entity [{}] that does NOT have a valid Actor"),
@@ -132,14 +134,14 @@ namespace ck
             const FCk_Request_Sensor_EnableDisable& InRequest)
             -> void
     {
-        const auto& Sensor     = InCurrentComp.Get_Sensor().Get();
+        const auto& Sensor = InCurrentComp.Get_Sensor().Get();
+
         const auto SensorBasicDetails =  FCk_Sensor_BasicDetails
         {
             InParamsComp.Get_Params().Get_SensorName(),
             InSensorEntity,
             UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(Sensor->GetOwner())
         };
-        const auto EntityAttachedTo = InParamsComp.Get_Params().Get_EntityAttachedTo();
 
         const auto& DoManuallyTriggerAllEndOverlaps = [&]() -> void
         {
@@ -160,7 +162,8 @@ namespace ck
                     }
                 };
 
-                UUtils_Signal_OnSensorEndOverlap::Broadcast(InSensorEntity, MakePayload(EntityAttachedTo, OnEndOverlapPayload));
+                UUtils_Signal_OnSensorEndOverlap::Broadcast(InSensorEntity, MakePayload(
+                    InCurrentComp.Get_AttachedEntityAndActor().Get_Handle(), OnEndOverlapPayload));
             }
         };
 
@@ -191,7 +194,8 @@ namespace ck
         UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(Sensor, NewEnableDisable);
         UCk_Utils_Physics_UE::Request_SetCollisionEnabled(Sensor, CollisionEnabled);
 
-        UUtils_Signal_OnSensorEnableDisable::Broadcast(InSensorEntity, MakePayload(EntityAttachedTo, SensorName, NewEnableDisable));
+        UUtils_Signal_OnSensorEnableDisable::Broadcast(InSensorEntity, MakePayload(
+            InCurrentComp.Get_AttachedEntityAndActor().Get_Handle(), SensorName, NewEnableDisable));
     }
 
     auto
@@ -255,7 +259,7 @@ namespace ck
         };
 
         UUtils_Signal_OnSensorBeginOverlap::Broadcast(InSensorEntity, MakePayload(
-            InParamsComp.Get_Params().Get_EntityAttachedTo(), OnBeginOverlapPayload));
+            InCurrentComp.Get_AttachedEntityAndActor().Get_Handle(), OnBeginOverlapPayload));
     }
 
     auto
@@ -317,8 +321,10 @@ namespace ck
             OverlapDetails
         };
 
+        const auto& sensorOwningEntity = UCk_Utils_OwningEntity::Get_StoredEntity(InSensorEntity);
+
         UUtils_Signal_OnSensorEndOverlap::Broadcast(InSensorEntity, MakePayload(
-            InParamsComp.Get_Params().Get_EntityAttachedTo(), OnEndOverlapPayload));
+            sensorOwningEntity, OnEndOverlapPayload));
     }
 
     auto
@@ -352,8 +358,8 @@ namespace ck
             OverlapDetails
         };
 
-        UUtils_Signal_OnSensorBeginOverlap_NonMarker::Broadcast(InSensorEntity,
-            MakePayload(InParamsComp.Get_Params().Get_EntityAttachedTo(), OnBeginOverlapPayload));
+        UUtils_Signal_OnSensorBeginOverlap_NonMarker::Broadcast(InSensorEntity, MakePayload(
+            InCurrentComp.Get_AttachedEntityAndActor().Get_Handle(), OnBeginOverlapPayload));
     }
 
     auto
@@ -395,8 +401,8 @@ namespace ck
             OverlapDetails
         };
 
-        UUtils_Signal_OnSensorEndOverlap_NonMarker::Broadcast(
-            InSensorEntity, MakePayload(InParamsComp.Get_Params().Get_EntityAttachedTo(), OnEndOverlapPayload));
+        UUtils_Signal_OnSensorEndOverlap_NonMarker::Broadcast(InSensorEntity, MakePayload(
+            InCurrentComp.Get_AttachedEntityAndActor().Get_Handle(), OnEndOverlapPayload));
     }
 
     // --------------------------------------------------------------------------------------------------------------------

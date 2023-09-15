@@ -1,6 +1,7 @@
 #include "CkSensor_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkEcsBasics/EntityHolder/CkEntityHolder_Utils.h"
 #include "CkNet/CkNet_Utils.h"
 #include "CkOverlapBody/CkOverlapBody_Log.h"
 
@@ -43,11 +44,10 @@ auto
 
     auto sensorEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
 
-    auto sensorParams = InParams;
-    sensorParams.Set_EntityAttachedTo(InHandle);
+    ck::UCk_Utils_OwningEntity::Add(sensorEntity, InHandle);
 
-    sensorEntity.Add<ck::FFragment_Sensor_Params>(sensorParams);
-    sensorEntity.Add<ck::FFragment_Sensor_Current>(sensorParams.Get_StartingState());
+    sensorEntity.Add<ck::FFragment_Sensor_Params>(InParams);
+    sensorEntity.Add<ck::FFragment_Sensor_Current>(InParams.Get_StartingState());
     sensorEntity.Add<ck::FTag_Sensor_Setup>();
 
     UCk_Utils_GameplayLabel_UE::Add(sensorEntity, sensorName);
