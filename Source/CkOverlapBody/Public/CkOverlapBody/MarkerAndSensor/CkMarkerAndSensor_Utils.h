@@ -304,7 +304,7 @@ auto
     );
 
     CK_ENSURE_IF_NOT(ck::IsValid(shapeHolderComponent),
-        TEXT("Failed to add the shape holder SceneComponent to Marker's Owning Actor [{}]"),
+        TEXT("Failed to add the shape holder SceneComponent to Marker/Sensor Owning Actor [{}]"),
         markerOrSensorAttachedActor)
     { return; }
 
@@ -314,7 +314,7 @@ auto
     const auto& actorScaleZNearlyZero = FMath::IsNearlyZero(actorScale.Z);
 
     CK_ENSURE_IF_NOT(NOT actorScaleXNearlyZero && NOT actorScaleYNearlyZero && NOT actorScaleZNearlyZero,
-        TEXT("Marker's Owning Actor [{}] has a scale that is too small! Scale: [{}]"),
+        TEXT("Marker/Sensor Owning Actor [{}] has a scale that is too small! Scale: [{}]"),
         markerOrSensorAttachedActor,
         actorScale)
     {
