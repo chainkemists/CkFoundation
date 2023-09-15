@@ -18,7 +18,7 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FTag_Intent_Setup&);
+            FTag_Intent_Setup&) -> void;
 
     private:
         TimeType _Delay = TimeType{5.0f};
@@ -35,6 +35,6 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Intent_Params&,
-            FFragment_Intent_Requests&);
+            FFragment_Intent_Requests&) -> void;
     };
 }
