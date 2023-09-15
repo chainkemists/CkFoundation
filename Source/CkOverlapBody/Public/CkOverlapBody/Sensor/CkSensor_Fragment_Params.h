@@ -869,10 +869,6 @@ private:
               meta = (AllowPrivateAccess = true, EditCondition = "_ShowDebug"))
     FCk_Sensor_DebugInfo _DebugParams;
 
-private:
-    // Represents the Entity with the RecordOfSensor fragment that "holds" this sensor
-    FCk_Handle _EntityAttachedTo;
-
 public:
     CK_PROPERTY_GET(_SensorName);
     CK_PROPERTY_GET(_FilteringParams);
@@ -884,7 +880,6 @@ public:
     CK_PROPERTY_GET(_ReplicationType);
     CK_PROPERTY_GET(_ShowDebug);
     CK_PROPERTY_GET(_DebugParams);
-    CK_PROPERTY(_EntityAttachedTo);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
