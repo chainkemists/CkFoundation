@@ -2,6 +2,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
+#include "CkEcsBasics/EntityHolder/CkEntityHolder_Utils.h"
 #include "CkLabel/CkLabel_Utils.h"
 #include "CkNet/CkNet_Utils.h"
 #include "CkOverlapBody/CkOverlapBody_Log.h"
@@ -47,11 +48,10 @@ auto
 
     auto markerEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
 
-    auto markerParams = InParams;
-    markerParams.Set_EntityAttachedTo(InHandle);
+    ck::UCk_Utils_OwningEntity::Add(markerEntity, InHandle);
 
-    markerEntity.Add<ck::FFragment_Marker_Params>(markerParams);
-    markerEntity.Add<ck::FFragment_Marker_Current>(markerParams.Get_StartingState());
+    markerEntity.Add<ck::FFragment_Marker_Params>(InParams);
+    markerEntity.Add<ck::FFragment_Marker_Current>(InParams.Get_StartingState());
     markerEntity.Add<ck::FTag_Marker_Setup>();
 
     UCk_Utils_GameplayLabel_UE::Add(markerEntity, markerName);
