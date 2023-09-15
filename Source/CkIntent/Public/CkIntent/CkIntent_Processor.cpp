@@ -25,6 +25,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FTag_Intent_Setup&)
+        -> void
     {
         auto& InIntentParams = InHandle.Get<FFragment_Intent_Params>();
 
@@ -54,6 +55,7 @@ namespace ck
             HandleType InHandle,
             FFragment_Intent_Params& InParams,
             FFragment_Intent_Requests& InRequests)
+        -> void
     {
         // TODO: this should be handled better with Warning OR ensure OR
         if (NOT ck::IsValid(InParams.Get_Intent_RO()))
