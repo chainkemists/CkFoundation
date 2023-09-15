@@ -14,12 +14,16 @@ public class CkTimer : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
+            "GameplayTags",
 
             "CkCore",
             "CkEcs",
+            "CkEcsBasics",
+            "CkLabel",
             "CkLog",
             "CkNet",
-            "CkSignal"
+            "CkSignal",
+            "CkRecord",
         });
     }
 }

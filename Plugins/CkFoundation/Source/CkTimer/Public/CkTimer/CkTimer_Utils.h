@@ -1,9 +1,12 @@
 #pragma once
+#include "CkEcsBasics/CkEcsBasics_Utils.h"
 #include "CkMacros/CkMacros.h"
 
 #include "CkNet/CkNet_Utils.h"
+#include "CkRecord/Record/CkRecord_Utils.h"
 
 #include "CkSignal/CkSignal_Fragment_Data.h"
+#include "CkTimer/CkTimer_Fragment.h"
 
 #include "CkTimer/CkTimer_Fragment_Data.h"
 
@@ -12,17 +15,23 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKTIMER_API UCk_Utils_Timer_UE : public UCk_Utils_Ecs_Net_UE
+class CKTIMER_API UCk_Utils_Timer_UE : public UCk_Utils_Ecs_Base_UE
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(UCk_Utils_Timer_UE);
 
+private:
+    struct RecordOfTimers_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfTimers> {};
+
+public:
+    friend class UCk_Utils_Ecs_Base_UE;
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="Add Timer")
+              DisplayName="Add New Timer")
     static void
     Add(
         FCk_Handle InHandle,
@@ -33,14 +42,41 @@ public:
               DisplayName="Has Timer")
     static bool
     Has(
-        FCk_Handle InHandle);
+        FCk_Handle InHandle,
+        FGameplayTag InTimerName);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Timer",
               DisplayName="Ensure Has Timer")
     static bool
     Ensure(
-        FCk_Handle InHandle);
+        FCk_Handle InHandle,
+        FGameplayTag InTimerName);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Timer",
+              DisplayName="Get Timer Current State")
+    static ECk_Timer_State
+    Get_CurrentState(
+        FCk_Handle InHandle,
+        FGameplayTag InTimerName);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Timer",
+              DisplayName="Get Timer Behavior")
+    static ECk_Timer_Behavior
+    Get_Behavior(
+        FCk_Handle InHandle,
+        FGameplayTag InTimerName);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Timer",
+              DisplayName="Get Timer Current Value")
+    static FCk_Chrono
+    Get_CurrentTimerValue(
+        FCk_Handle InHandle,
+        FGameplayTag InTimerName);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -49,7 +85,7 @@ public:
     static void
     Request_Reset(
         FCk_Handle InHandle,
-        const FCk_Delegate_Timer& InDelegate);
+        FGameplayTag InTimerName);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
@@ -57,7 +93,7 @@ public:
     static void
     Request_Stop(
         FCk_Handle InHandle,
-        const FCk_Delegate_Timer& InDelegate);
+        FGameplayTag InTimerName);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
@@ -65,7 +101,7 @@ public:
     static void
     Request_Pause(
         FCk_Handle InHandle,
-        const FCk_Delegate_Timer& InDelegate);
+        FGameplayTag InTimerName);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
@@ -73,7 +109,7 @@ public:
     static void
     Request_Resume(
         FCk_Handle InHandle,
-        const FCk_Delegate_Timer& InDelegate);
+        FGameplayTag InTimerName);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -82,6 +118,7 @@ public:
     static void
     BindTo_OnTimerReset(
         FCk_Handle InHandle,
+        FGameplayTag InTimerName,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate);
 
@@ -91,6 +128,7 @@ public:
     static void
     BindTo_OnTimerStop(
         FCk_Handle InHandle,
+        FGameplayTag InTimerName,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate);
 
@@ -101,6 +139,7 @@ public:
     static void
     BindTo_OnTimerPause(
         FCk_Handle InHandle,
+        FGameplayTag InTimerName,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate);
 
@@ -110,6 +149,7 @@ public:
     static void
     BindTo_OnTimerResume(
         FCk_Handle InHandle,
+        FGameplayTag InTimerName,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate);
 
@@ -119,6 +159,7 @@ public:
     static void
     BindTo_OnTimerDone(
         FCk_Handle InHandle,
+        FGameplayTag InTimerName,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate);
 
@@ -128,6 +169,7 @@ public:
     static void
     BindTo_OnTimerUpdate(
         FCk_Handle InHandle,
+        FGameplayTag InTimerName,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate);
 
@@ -138,6 +180,7 @@ public:
     static void
     UnbindFrom_OnTimerReset(
         FCk_Handle InHandle,
+        FGameplayTag InTimerName,
         const FCk_Delegate_Timer& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -146,6 +189,7 @@ public:
     static void
     UnbindFrom_OnTimerStop(
         FCk_Handle InHandle,
+        FGameplayTag InTimerName,
         const FCk_Delegate_Timer& InDelegate);
 
 
@@ -155,6 +199,7 @@ public:
     static void
     UnbindFrom_OnTimerPause(
         FCk_Handle InHandle,
+        FGameplayTag InTimerName,
         const FCk_Delegate_Timer& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -163,6 +208,7 @@ public:
     static void
     UnbindFrom_OnTimerResume(
         FCk_Handle InHandle,
+        FGameplayTag InTimerName,
         const FCk_Delegate_Timer& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -171,6 +217,7 @@ public:
     static void
     UnbindFrom_OnTimerDone(
         FCk_Handle InHandle,
+        FGameplayTag InTimerName,
         const FCk_Delegate_Timer& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -179,6 +226,7 @@ public:
     static void
     UnbindFrom_OnTimerUpdate(
         FCk_Handle InHandle,
+        FGameplayTag InTimerName,
         const FCk_Delegate_Timer& InDelegate);
 
 public:
@@ -186,6 +234,11 @@ public:
     Request_OverrideTimer(
         FCk_Handle InHandle,
         const FCk_Chrono& InNewTimer) -> void;
+
+private:
+    static auto
+    Has(
+        FCk_Handle InHandle) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

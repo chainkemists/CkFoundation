@@ -25,8 +25,8 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Timer_Manipulate);
 UENUM(BlueprintType)
 enum class ECk_Timer_Behavior : uint8
 {
-    StopOnDone UMETA(DisplayName = "ResetAndPauseOnDone"),
-    ResetOnDone UMETA(DisplayName = "ResetAndResumeOnDone"),
+    StopOnDone UMETA(DisplayName = "Reset And Pause On Done"),
+    ResetOnDone UMETA(DisplayName = "Reset And Resume On Done"),
     PauseOnDone
 };
 
@@ -56,6 +56,10 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
+    FGameplayTag _TimerName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
     FCk_Time   _Duration;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -67,6 +71,7 @@ private:
     ECk_Timer_State _StartingState = ECk_Timer_State::Paused;
 
 public:
+    CK_PROPERTY(_TimerName);
     CK_PROPERTY_GET(_Duration);
     CK_PROPERTY(_Behavior);
     CK_PROPERTY(_StartingState);

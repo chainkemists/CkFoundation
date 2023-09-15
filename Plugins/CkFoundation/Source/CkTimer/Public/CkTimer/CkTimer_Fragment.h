@@ -2,6 +2,7 @@
 
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 #include "CkMacros/CkMacros.h"
+#include "CkRecord/Record/CkRecord_Fragment.h"
 
 #include "CkSignal/Public/CkSignal/CkSignal_Macros.h"
 #include "CkSignal/Public/CkSignal/CkSignal_Utils.h"
@@ -10,6 +11,10 @@
 #include "CkTimer/CkTimer_Fragment_Data.h"
 
 #include "CkTimer_Fragment.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class UCk_Utils_Timer_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -69,6 +74,7 @@ namespace ck
 
     public:
         friend class FProcessor_Timer_HandleRequests;
+        friend class UCk_Utils_Timer_UE;
 
     public:
         using RequestType = FCk_Request_Timer_Manipulate;
@@ -80,6 +86,10 @@ namespace ck
     public:
         CK_PROPERTY_GET(_ManipulateRequests);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct FFragment_RecordOfTimers : public FFragment_RecordOfEntities {};
 
     // --------------------------------------------------------------------------------------------------------------------
 
