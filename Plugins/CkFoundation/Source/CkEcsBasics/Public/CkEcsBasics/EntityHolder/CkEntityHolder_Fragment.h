@@ -46,6 +46,13 @@ namespace ck
     {
         using FFragment_EntityHolder::FFragment_EntityHolder;
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct FFragment_OwningEntity : public FFragment_EntityHolder
+    {
+        using FFragment_EntityHolder::FFragment_EntityHolder;
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
