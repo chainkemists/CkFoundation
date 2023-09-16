@@ -35,6 +35,7 @@ auto
     );
     _TransientActor->bIsEditorOnlyActor = true;
 }
+#endif
 
 auto
     ACk_UnrealEntity_ActorProxy_UE::
@@ -50,7 +51,5 @@ auto
         UCk_Utils_Actor_UE::SpawnActorParamsType{this, _ActorToSpawn}.Set_SpawnTransform(GetActorTransform())
     );
 }
-
-#endif
 
 // --------------------------------------------------------------------------------------------------------------------
