@@ -13,22 +13,22 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKATTRIBUTE_API UTT_Utils_FloatAttribute_UE : public UCk_Utils_Ecs_Base_UE
+class CKATTRIBUTE_API UCk_Utils_FloatAttribute_UE : public UCk_Utils_Ecs_Base_UE
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UTT_Utils_FloatAttribute_UE);
+    CK_GENERATED_BODY(UCk_Utils_FloatAttribute_UE);
 
 public:
-    friend class UTT_Utils_FloatAttributeModifier_UE;
+    friend class UCk_Utils_FloatAttributeModifier_UE;
 
 private:
     class FloatAttribute_Utils : public ck::TUtils_Attribute<ck::FFragment_FloatAttribute> {};
     class RecordOfFloatAttributes_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfFloatAttributes> {};
 
 public:
-    friend class UTT_Utils_FloatAttributes_UE;
+    friend class UCk_Utils_FloatAttributes_UE;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -104,12 +104,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKATTRIBUTE_API UTT_Utils_FloatAttributeModifier_UE : public UCk_Utils_Ecs_Base_UE
+class CKATTRIBUTE_API UCk_Utils_FloatAttributeModifier_UE : public UCk_Utils_Ecs_Base_UE
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UTT_Utils_FloatAttributeModifier_UE);
+    CK_GENERATED_BODY(UCk_Utils_FloatAttributeModifier_UE);
 
 private:
     class FloatAttributeModifier_Utils : public ck::TUtils_AttributeModifier<ck::FFragment_FloatAttributeModifier> {};

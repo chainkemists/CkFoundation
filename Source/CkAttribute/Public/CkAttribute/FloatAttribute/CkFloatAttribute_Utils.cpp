@@ -6,7 +6,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UTT_Utils_FloatAttribute_UE::
+    UCk_Utils_FloatAttribute_UE::
     Add(
         FCk_Handle InHandle,
         const FCk_Provider_FloatAttributes_ParamsData& InParams)
@@ -44,7 +44,7 @@ auto
 }
 
 auto
-    UTT_Utils_FloatAttribute_UE::
+    UCk_Utils_FloatAttribute_UE::
     Has(
         FGameplayTag InAttributeName,
         FCk_Handle InAttributeOwnerEntity)
@@ -55,7 +55,7 @@ auto
 }
 
 auto
-    UTT_Utils_FloatAttribute_UE::
+    UCk_Utils_FloatAttribute_UE::
     Ensure(
         FGameplayTag InAttributeName,
         FCk_Handle InAttributeOwnerEntity)
@@ -68,7 +68,7 @@ auto
 }
 
 auto
-    UTT_Utils_FloatAttribute_UE::
+    UCk_Utils_FloatAttribute_UE::
     Get_BaseValue(
         FGameplayTag InAttributeName,
         FCk_Handle InAttributeOwnerEntity)
@@ -79,7 +79,7 @@ auto
 }
 
 auto
-    UTT_Utils_FloatAttribute_UE::
+    UCk_Utils_FloatAttribute_UE::
     Get_BonusValue(
         FGameplayTag InAttributeName,
         FCk_Handle InAttributeOwnerEntity)
@@ -90,7 +90,7 @@ auto
 }
 
 auto
-    UTT_Utils_FloatAttribute_UE::
+    UCk_Utils_FloatAttribute_UE::
     Get_FinalValue(
         FGameplayTag InAttributeName,
         FCk_Handle InAttributeOwnerEntity)
@@ -101,7 +101,7 @@ auto
 }
 
 auto
-    UTT_Utils_FloatAttribute_UE::
+    UCk_Utils_FloatAttribute_UE::
     BindTo_OnValueChanged(
         FGameplayTag InAttributeName,
         FCk_Handle InAttributeOwnerEntity,
@@ -115,7 +115,7 @@ auto
 }
 
 auto
-    UTT_Utils_FloatAttribute_UE::
+    UCk_Utils_FloatAttribute_UE::
     UnbindFrom_OnValueChanged(
         FGameplayTag InAttributeName,
         FCk_Handle InAttributeOwnerEntity,
@@ -130,7 +130,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UTT_Utils_FloatAttributeModifier_UE::
+    UCk_Utils_FloatAttributeModifier_UE::
     Add(
         FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InModifierName,
@@ -142,7 +142,7 @@ auto
     const auto newModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwnerEntity);
     UCk_Utils_GameplayLabel_UE::Add(newModifierEntity, InModifierName);
 
-    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<UTT_Utils_FloatAttribute_UE::FloatAttribute_Utils, UTT_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, attributeName);
+    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<UCk_Utils_FloatAttribute_UE::FloatAttribute_Utils, UCk_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, attributeName);
 
     FloatAttributeModifier_Utils::Add
     (
@@ -154,21 +154,21 @@ auto
 }
 
 auto
-    UTT_Utils_FloatAttributeModifier_UE::
+    UCk_Utils_FloatAttributeModifier_UE::
     Has(
         FGameplayTag InModifierName,
         FGameplayTag InAttributeName,
         FCk_Handle InAttributeOwnerEntity)
     -> bool
 {
-    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<UTT_Utils_FloatAttribute_UE::FloatAttribute_Utils, UTT_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<UCk_Utils_FloatAttribute_UE::FloatAttribute_Utils, UCk_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
     const auto& attributeModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttributeModifier_Utils, FloatAttributeModifier_Utils::RecordOfAttributeModifiers_Utils>(attributeEntity, InModifierName);
 
     return ck::IsValid(attributeModifierEntity);
 }
 
 auto
-    UTT_Utils_FloatAttributeModifier_UE::
+    UCk_Utils_FloatAttributeModifier_UE::
     Ensure(
         FGameplayTag InModifierName,
         FGameplayTag InAttributeName,
@@ -182,14 +182,14 @@ auto
 }
 
 auto
-    UTT_Utils_FloatAttributeModifier_UE::
+    UCk_Utils_FloatAttributeModifier_UE::
     Remove(
         FGameplayTag InModifierName,
         FGameplayTag InAttributeName,
         FCk_Handle   InAttributeOwnerEntity)
     -> void
 {
-    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<UTT_Utils_FloatAttribute_UE::FloatAttribute_Utils, UTT_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<UCk_Utils_FloatAttribute_UE::FloatAttribute_Utils, UCk_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
     const auto& attributeModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttributeModifier_Utils, FloatAttributeModifier_Utils::RecordOfAttributeModifiers_Utils>(attributeEntity, InModifierName);
 
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(attributeModifierEntity);
