@@ -4,7 +4,7 @@
 
 #include "CkLabel/CkLabel_Utils.h"
 
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 
 #include "CkOverlapBody/MarkerAndSensor/CkMarkerAndSensor_Utils.h"
 #include "CkOverlapBody/Sensor/CkSensor_Fragment.h"

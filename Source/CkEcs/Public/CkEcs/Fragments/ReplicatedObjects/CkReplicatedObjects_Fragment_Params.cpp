@@ -3,7 +3,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 
-#include "CkFormat/CkFormat_Defaults.h"
+#include "CkCore/Format/CkFormat_Defaults.h"
 
 #include <Engine/World.h>
 #include <Net/UnrealNetwork.h>

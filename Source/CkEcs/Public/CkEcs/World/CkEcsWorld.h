@@ -6,7 +6,7 @@
 #include "CkEcs/Registry/CkRegistry.h"
 #include "CkEcs/Ticker/CkTicker.h"
 
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 
 namespace ck
 {

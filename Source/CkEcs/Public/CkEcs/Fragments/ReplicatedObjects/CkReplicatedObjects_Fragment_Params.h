@@ -4,7 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 
 #include "CkReplicatedObjects_Fragment_Params.generated.h"
 

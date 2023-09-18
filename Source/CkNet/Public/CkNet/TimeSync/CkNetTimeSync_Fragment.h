@@ -2,7 +2,7 @@
 
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 
 #include "CkNet/TimeSync/CkNetTimeSync_Fragment_Params.h"
 

@@ -1,7 +1,7 @@
 #pragma once
 #include "CkEcs/Entity/CkEntity.h"
 
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

@@ -2,11 +2,13 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
-#include "CkTypes/DataAsset/CkDataAsset.h"
+#include "CkCore/Types/DataAsset/CkDataAsset.h"
 
 #include "CkUnreal/Entity/CkUnrealEntity_Fragment_Params.h"
 
 #include "CkUnrealEntity_ConstructionScript.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, BlueprintType, Blueprintable, EditInlineNew)
 class CKUNREAL_API UCk_UnrealEntity_ConstructionScript_PDA : public UCk_DataAsset_PDA

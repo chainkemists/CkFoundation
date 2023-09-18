@@ -5,7 +5,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 #include "CkNet/CkNet_Common.h"
 
 #include "CkNet_Utils.generated.h"

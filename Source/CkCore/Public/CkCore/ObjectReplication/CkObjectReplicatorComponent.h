@@ -1,7 +1,7 @@
 #pragma once
 
-#include "CkMacros/CkMacros.h"
-#include "Component/CkActorComponent.h"
+#include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Component/CkActorComponent.h"
 
 #include <CoreMinimal.h>
 

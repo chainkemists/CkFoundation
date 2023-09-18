@@ -2,7 +2,7 @@
 
 #include <CkEcs/Handle/CkHandle.h>
 
-#include <CkMacros/CkMacros.h>
+#include <CkCore/Macros/CkMacros.h>
 
 #include "CkLabel_Utils.generated.h"
 

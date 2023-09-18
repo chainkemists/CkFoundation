@@ -1,7 +1,7 @@
 #pragma once
 
-#include "CkFormat/CkFormat.h"
-#include "CkEnsure/CkEnsure.h"
+#include "CkCore/Format/CkFormat.h"
+#include "CkCore/Ensure/CkEnsure.h"
 
 #include <CoreMinimal.h>
 #include <Kismet/BlueprintFunctionLibrary.h>
@@ -9,7 +9,7 @@
 
 #include "CkActor.h"
 
-#include "CkGame/CkGame_Utils.h"
+#include "CkCore/Game/CkGame_Utils.h"
 
 #include "CkActor_Utils.generated.h"
 

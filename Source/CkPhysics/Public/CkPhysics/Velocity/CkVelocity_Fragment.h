@@ -4,7 +4,7 @@
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 #include "CkEcsBasics/EntityHolder/CkEntityHolder_Fragment.h"
 #include "CkLabel/CkLabel_Fragment.h"
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 
 #include "CkPhysics/Velocity/CkVelocity_Fragment_Params.h"
 #include "CkRecord/Record/CkRecord_Fragment.h"

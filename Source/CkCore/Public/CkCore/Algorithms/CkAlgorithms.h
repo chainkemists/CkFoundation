@@ -1,10 +1,10 @@
 #pragma once
 
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 
-#include "CkTypeTraits/CkTypeTraits.h"
+#include "CkCore/TypeTraits/CkTypeTraits.h"
 
-#include "CkValidation/CkIsValid.h"
+#include "CkCore/Validation/CkIsValid.h"
 
 #include <algorithm>
 

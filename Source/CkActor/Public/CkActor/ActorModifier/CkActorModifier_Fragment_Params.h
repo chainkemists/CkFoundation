@@ -7,7 +7,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
-#include "CkFormat/CkFormat.h"
+#include "CkCore/Format/CkFormat.h"
 
 #include "CkActorModifier_Fragment_Params.generated.h"
 
