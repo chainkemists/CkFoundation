@@ -1,0 +1,96 @@
+#include "CkArithmetic_Utils.h"
+
+#include "CkCore/Ensure/CkEnsure.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Arithmetic_UE::
+    Get_LerpFloatWithEasing(
+        float InA,
+        float InB,
+        float InAlpha,
+        float InPower,
+        ECk_EasingMethod InEasingMethod)
+    -> float
+{
+    switch (InEasingMethod)
+    {
+        case ECk_EasingMethod::EaseIn:
+        {
+            return FMath::InterpEaseIn(InA, InB, InAlpha, InPower);
+        }
+        case ECk_EasingMethod::EaseOut:
+        {
+            return FMath::InterpEaseOut(InA, InB, InAlpha, InPower);
+        }
+        case ECk_EasingMethod::EaseInAndOut:
+        {
+            return FMath::InterpEaseInOut(InA, InB, InAlpha, InPower);
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InEasingMethod);
+            return {};
+        }
+    }
+}
+
+auto
+    UCk_Utils_Arithmetic_UE::
+    Get_RoundFloatToFloat(
+        ECk_RoundingMethod InRoundingMethod,
+        float InValue)
+    -> float
+{
+    switch(InRoundingMethod)
+    {
+        case ECk_RoundingMethod::Ceiling:
+        {
+            return FMath::CeilToFloat(InValue);
+        }
+        case ECk_RoundingMethod::Floor:
+        {
+            return FMath::FloorToFloat(InValue);
+        }
+        case ECk_RoundingMethod::Closest:
+        {
+            return FMath::RoundToFloat(InValue);
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InRoundingMethod);
+            return InValue;
+        }
+    }
+}
+
+auto
+    UCk_Utils_Arithmetic_UE::
+    Get_RoundFloatToInt(
+        ECk_RoundingMethod InRoundingMethod,
+        float InValue)
+    -> int32
+{
+    return Get_RoundFloatToFloat(InRoundingMethod, InValue);
+}
+
+auto
+    UCk_Utils_Arithmetic_UE::
+    Get_WrapAroundModulo(
+        int32 InA,
+        int32 InB)
+    -> int32
+{
+    CK_ENSURE_IF_NOT(InB != 0, TEXT("Cannot do a WrapAroundModulo with a divisor of 0"))
+    { return 0; }
+
+    const auto& result = InA % InB;
+
+    if (result >= 0)
+    { return result; }
+
+    return result + InB;
+}
+
+// --------------------------------------------------------------------------------------------------------------------

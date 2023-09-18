@@ -266,3 +266,53 @@ enum class ECk_NormalizationPolicy : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_NormalizationPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_EasingMethod : uint8
+{
+    EaseIn,
+    EaseOut,
+    EaseInAndOut
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EasingMethod);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_RoundingMethod : uint8
+{
+    Ceiling,
+    Floor,
+    Closest UMETA(Description=">= 0.5 is ceiling and < 0.5 is floor")
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_RoundingMethod);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Inclusiveness : uint8
+{
+    Inclusive,
+    Exclusive
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Inclusiveness);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_ComparisonOperators : uint8
+{
+    EqualTo              UMETA(DisplayName = "=="),
+    NotEqualTo           UMETA(DisplayName = "!="),
+    GreaterThan          UMETA(DisplayName = ">"),
+    GreaterThanOrEqualTo UMETA(DisplayName = ">="),
+    LessThan             UMETA(DisplayName = "<"),
+    LessThanOrEqualTo    UMETA(DisplayName = "<="),
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ComparisonOperators);
+
+// --------------------------------------------------------------------------------------------------------------------
