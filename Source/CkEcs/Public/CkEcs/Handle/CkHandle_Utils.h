@@ -39,7 +39,7 @@ private:
         const FCk_Handle& InHandleA,
         const FCk_Handle& InHandleB);
 
-public:
+private:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Handle",
               meta = (DisplayName = "Handle To Text", CompactNodeTitle = "->", BlueprintAutocast))
