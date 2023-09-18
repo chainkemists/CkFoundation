@@ -7,7 +7,7 @@
 
 #include "CkUnreal/Entity/CkUnrealEntity_Fragment_Params.h"
 
-#include "Component/CkActorComponent.h"
+#include "CkCore/Component/CkActorComponent.h"
 
 #include "CkEcsConstructionScript_ActorComponent.generated.h"
 

@@ -1,11 +1,11 @@
 #pragma once
 
-#include "CkMacros/CkMacros.h"
-#include "CkTypes/CkConstWrapper.h"
+#include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Types/CkConstWrapper.h"
 
 #include "CkEcs/Entity/CkEntity.h"
 
-#include "CkEnsure/CkEnsure.h"
+#include "CkCore/Ensure/CkEnsure.h"
 
 #include "entt/entt.hpp"
 

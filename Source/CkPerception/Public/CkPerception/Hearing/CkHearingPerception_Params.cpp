@@ -2,7 +2,7 @@
 
 #include "CkHearingPerception_Params.h"
 
-#include "CkEnsure/CkEnsure.h"
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkPerception/Hearing/CkHearingPerception_Component.h"
 
 // --------------------------------------------------------------------------------------------------------------------

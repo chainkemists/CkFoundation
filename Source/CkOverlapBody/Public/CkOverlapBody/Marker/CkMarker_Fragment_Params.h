@@ -7,7 +7,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/OwningActor/CkOwningActor_Fragment_Params.h"
 
-#include "CkFormat/CkFormat.h"
+#include "CkCore/Format/CkFormat.h"
 
 #include "CkPhysics/CkPhysics_Common.h"
 

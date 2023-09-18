@@ -6,7 +6,7 @@
 #include "CkEcsBasics/CkEcsBasics_Utils.h"
 #include "CkEcsBasics/EntityHolder/CkEntityHolder_Utils.h"
 
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 
 #include "CkNet/CkNet_Utils.h"
 #include "CkPhysics/Acceleration/CkAcceleration_Fragment.h"

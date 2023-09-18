@@ -2,7 +2,7 @@
 
 #include <Kismet/BlueprintFunctionLibrary.h>
 
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 #include "CkPerception/Hearing/CkHearingPerception_Params.h"
 
 #include "CkHearingPerception_Utils.generated.h"

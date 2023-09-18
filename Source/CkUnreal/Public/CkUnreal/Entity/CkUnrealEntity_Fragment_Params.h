@@ -2,7 +2,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
-#include "CkTypes/DataAsset/CkDataAsset.h"
+#include "CkCore/Types/DataAsset/CkDataAsset.h"
 #include "CkEcs/Registry/CkRegistry.h"
 
 #include "CkUnrealEntity_Fragment_Params.generated.h"

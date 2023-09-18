@@ -2,7 +2,7 @@
 
 #include "CkCore/Enums/CkEnums.h"
 #include "CkEcs/Handle/CkHandle.h"
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 #include "CkProvider/CkProvider_Data.h"
 
 #include "CkFloatAttribute_Fragment_Data.generated.h"

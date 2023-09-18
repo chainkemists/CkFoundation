@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkFormat/CkFormat.h"
+#include "CkCore/Format/CkFormat.h"
 
 #include <CoreMinimal.h>
 #include <Kismet/BlueprintFunctionLibrary.h>

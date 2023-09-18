@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 #include "CkRecord/Record/CkRecord_Fragment.h"
 
 #include "CkSignal/Public/CkSignal/CkSignal_Macros.h"

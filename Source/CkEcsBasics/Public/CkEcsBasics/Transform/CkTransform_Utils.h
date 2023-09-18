@@ -5,9 +5,9 @@
 #include <CkEcsBasics/Transform/CkTransform_Fragment.h>
 #include <CkEcsBasics/Transform/CkTransform_Fragment_Params.h>
 
-#include <CkMacros/CkMacros.h>
+#include <CkCore/Macros/CkMacros.h>
 
-#include <CkTypeTraits/CkTypeTraits.h>
+#include <CkCore/TypeTraits/CkTypeTraits.h>
 
 #include "CkCore/Actor/CkActor_Utils.h"
 

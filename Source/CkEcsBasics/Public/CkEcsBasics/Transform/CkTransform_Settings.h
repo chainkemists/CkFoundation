@@ -3,7 +3,7 @@
 #include <CoreMinimal.h>
 #include <Engine/DeveloperSettings.h>
 
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 #include "CkTransform_Settings.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------

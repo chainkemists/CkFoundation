@@ -3,7 +3,7 @@
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkLabel/CkLabel_Utils.h"
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 #include "CkNet/CkNet_Utils.h"
 
 #include "CkEcsBasics_Utils.generated.h"

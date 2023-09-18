@@ -3,7 +3,7 @@
 #include "GameplayTagContainer.h"
 #include "CkEcs/Handle/CkHandle.h"
 
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 
 #include "CkIntent_Utils.generated.h"
 

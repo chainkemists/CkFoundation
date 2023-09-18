@@ -6,11 +6,11 @@
 #include <Components/SkeletalMeshComponent.h>
 #include <Components/StaticMeshComponent.h>
 
-#include "CkEnsure/CkEnsure.h"
+#include "CkCore/Ensure/CkEnsure.h"
 
-#include "CkGame/CkGame_Utils.h"
+#include "CkCore/Game/CkGame_Utils.h"
 
-#include "CkObject/CkObject_Utils.h"
+#include "CkCore/Object/CkObject_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

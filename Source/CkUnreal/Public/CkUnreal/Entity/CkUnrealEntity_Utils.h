@@ -2,7 +2,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 
 #include "CkUnreal/Entity/CkUnrealEntity_Fragment_Params.h"
 

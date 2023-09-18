@@ -5,7 +5,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 
 #include "CkTransform_Fragment_Params.generated.h"
 

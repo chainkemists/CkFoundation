@@ -1,6 +1,6 @@
 #include "CkSharedValues.h"
 
-#include "CkTypeTraits/CkTypeTraits.h"
+#include "CkCore/TypeTraits/CkTypeTraits.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

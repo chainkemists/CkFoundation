@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkTypes/DataAsset/CkDataAsset.h"
+#include "CkCore/Types/DataAsset/CkDataAsset.h"
 
 #include <GameplayTagContainer.h>
 

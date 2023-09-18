@@ -2,7 +2,7 @@
 
 #include "CkPhysics_Utils.h"
 
-#include "CkEnsure/CkEnsure.h"
+#include "CkCore/Ensure/CkEnsure.h"
 
 #include <Components/PrimitiveComponent.h>
 #include <Engine/CollisionProfile.h>

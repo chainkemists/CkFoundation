@@ -1,6 +1,6 @@
 #include "CkReplicatedObject.h"
 
-#include "CkEnsure/CkEnsure.h"
+#include "CkCore/Ensure/CkEnsure.h"
 
 #include <EngineMinimal.h>
 #include <Engine/NetDriver.h>

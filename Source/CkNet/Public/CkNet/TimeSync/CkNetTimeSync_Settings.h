@@ -3,7 +3,7 @@
 #include <CoreMinimal.h>
 #include <Engine/DeveloperSettings.h>
 
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 
 #include "CkNetTimeSync_Settings.generated.h"
 

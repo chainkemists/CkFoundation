@@ -4,7 +4,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkNet/CkNet_Common.h"
 
-#include "CkFormat/CkFormat.h"
+#include "CkCore/Format/CkFormat.h"
 
 #include "CkTimer_Fragment_Data.generated.h"
 

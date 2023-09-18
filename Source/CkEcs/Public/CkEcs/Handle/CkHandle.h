@@ -3,7 +3,7 @@
 #include "CkEcs/Entity/CkEntity.h"
 #include "CkEcs/Registry/CkRegistry.h"
 
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 
 #include "CkHandle.generated.h"
 
