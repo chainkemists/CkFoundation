@@ -4,7 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 
 #include "CkOverlapBody/Marker/CkMarker_Fragment_Params.h"
 

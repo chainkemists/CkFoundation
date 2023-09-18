@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CkCore/Enums/CkEnums.h"
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 
 #include "CkPhysics/EulerIntegrator/CkEulerIntegrator_Fragment_Params.h"
 

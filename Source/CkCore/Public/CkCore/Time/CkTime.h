@@ -1,7 +1,7 @@
 #pragma once
-#include "CkFormat/CkFormat.h"
+#include "CkCore/Format/CkFormat.h"
 
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 
 #include "CkTime.generated.h"
 

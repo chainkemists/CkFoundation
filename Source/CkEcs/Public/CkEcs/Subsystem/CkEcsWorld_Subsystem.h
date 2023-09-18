@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/World/CkEcsWorld.h"
 

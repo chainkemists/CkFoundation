@@ -6,11 +6,11 @@
 
 #include "CkEcsBasics/Transform/CkTransform_Fragment_Params.h"
 
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 
 #include "CkSignal/CkSignal_Macros.h"
 
-#include "CkTypeTraits/CkTypeTraits.h"
+#include "CkCore/TypeTraits/CkTypeTraits.h"
 
 #include <variant>
 

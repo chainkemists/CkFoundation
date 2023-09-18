@@ -1,6 +1,6 @@
 #include "CkChrono.h"
 
-#include "CkEnsure/CkEnsure.h"
+#include "CkCore/Ensure/CkEnsure.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

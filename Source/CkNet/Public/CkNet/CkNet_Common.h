@@ -1,5 +1,5 @@
 #pragma once
-#include "CkFormat/CkFormat.h"
+#include "CkCore/Format/CkFormat.h"
 
 #include "CkNet_Common.generated.h"
 

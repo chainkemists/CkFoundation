@@ -1,7 +1,7 @@
 #pragma once
 
-#include "CkMacros/CkMacros.h"
-#include "CkFormat/CkFormat.h"
+#include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Format/CkFormat.h"
 
 #include "CkThirdParty/entt-3.12.2/src/entt/entity/entity.hpp"
 

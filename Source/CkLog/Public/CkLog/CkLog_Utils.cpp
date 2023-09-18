@@ -1,7 +1,7 @@
 #include "CkLog_Utils.h"
 
 #include "CkLog_Settings.h"
-#include "CkEnsure/CkEnsure.h"
+#include "CkCore/Ensure/CkEnsure.h"
 
 #include <functional>
 

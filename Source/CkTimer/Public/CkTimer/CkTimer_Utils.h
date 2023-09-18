@@ -1,6 +1,6 @@
 #pragma once
 #include "CkEcsBasics/CkEcsBasics_Utils.h"
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 
 #include "CkNet/CkNet_Utils.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
@@ -35,7 +35,7 @@ public:
     static void
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_Timer_ParamsData& InData);
+        const FCk_Fragment_Timer_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Timer",

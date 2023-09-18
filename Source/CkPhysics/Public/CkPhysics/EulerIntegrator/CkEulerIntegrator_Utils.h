@@ -3,7 +3,7 @@
 #include "CkEulerIntegrator_Fragment_Params.h"
 
 #include "CkEcs/Handle/CkHandle.h"
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 
 #include <Kismet/BlueprintFunctionLibrary.h>
 

@@ -2,7 +2,7 @@
 
 #include "CkHearingPerception_Component.h"
 
-#include "CkEnsure/CkEnsure.h"
+#include "CkCore/Ensure/CkEnsure.h"
 
 #include <Engine/World.h>
 #include <GameFramework/GameStateBase.h>

@@ -2,7 +2,7 @@
 
 #include "CkAlgorithms.h"
 
-#include "CkValidation/CkIsValid.h"
+#include "CkCore/Validation/CkIsValid.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

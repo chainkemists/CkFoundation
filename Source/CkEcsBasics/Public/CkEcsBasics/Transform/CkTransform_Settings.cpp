@@ -2,7 +2,7 @@
 
 #include "CkTransform_Settings.h"
 
-#include "CkObject/CkObject_Utils.h"
+#include "CkCore/Object/CkObject_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

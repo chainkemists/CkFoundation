@@ -1,0 +1,191 @@
+#pragma once
+
+#pragma warning(push)
+#pragma warning(disable:4583)
+#pragma warning(disable:4582)
+
+#define FMT_HEADER_ONLY
+#include "CkThirdParty/fmt/include/fmt/xchar.h"
+#include "CkThirdParty/fmt/include/fmt/format.h"
+#pragma warning(pop)
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// may appear unused but they are required when building Format Defaults
+#include "CkCore/Validation/CkIsValid.h"
+#include "CkCore/Debug/CkDebug_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+
+template <typename T_Enum>
+struct FEnumToString;
+
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    namespace ck_format_detail
+    {
+        template <typename T>
+        constexpr auto&& ArgsForward(T&& InType);
+
+        template <typename... TArgs>
+        auto
+            DoFormat(fmt::wformat_string<TArgs...> fmt, TArgs&&... InArgs)
+            -> std::basic_string<TCHAR>
+        {
+            using namespace ck_format_detail;
+
+            return fmt::format(fmt, std::forward<TArgs>(InArgs)...);
+        }
+    }
+
+    template <typename TString, typename... TArgs>
+    auto
+    Format(TString InStr, TArgs&&... InArgs)
+        -> std::basic_string<TCHAR>
+    {
+        using namespace ck_format_detail;
+
+        // Notes:
+        // - with C++20, fmt has support for compile time strings and verification of the formatting
+        // - we cannot directly pass a string literal to fmt::format with the C++20 interface
+        // - fmt::format takes a fmt::wformat_string which takes the same arg types as the args we are
+        //   attempting to format
+        // - we cannot pass the args directly because they have to go through our forwarded which resolves pointers
+        // - we feed the converted args to a manually constructed fmt::wformat_string, making sure the
+        //   arg types match the ones returned by ArgsForward
+        // - this results in a complex looking expression below, although most of it is forwarding and
+        //   figuring out the new return types
+
+        return ck_format_detail::DoFormat(
+            fmt::wformat_string<decltype(ArgsForward(InArgs))...>(fmt::runtime_format_string<TCHAR>{InStr}),
+            std::forward<decltype(ArgsForward(InArgs))>(ArgsForward(std::forward<TArgs>(InArgs)))...);
+    }
+
+    template <typename T>
+    auto
+    Format_UE(const T& InString)
+        -> FString
+    {
+        return FString{ Format(InString).c_str() };
+    }
+
+    template <typename... TArgs>
+    auto
+    Format_UE(TArgs&&... InArgs)
+        -> FString
+    {
+        return FString{ Format(std::forward<TArgs>(InArgs)...).c_str() };
+    }
+
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// convenience macro to enable the formatter to access private members of a class/struct
+#define CK_ENABLE_CUSTOM_FORMATTER(_Class_)                  \
+    friend struct fmt::formatter<_Class_, TCHAR>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+#define CK_DEFINE_CUSTOM_FORMATTER_PTR_FORWARDER(_Type_, _LambdaToReturnInvalidObj_)\
+namespace ck { namespace ck_format_detail {                                         \
+    inline auto&                                                                    \
+    ForwarderForPointers(const _Type_* InObj)                                       \
+    {                                                                               \
+        if (ck::IsValid(InObj))                                                     \
+        { return *InObj; }                                                          \
+                                                                                    \
+        return _LambdaToReturnInvalidObj_();                                        \
+    }                                                                               \
+}}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+#define CK_DEFINE_CUSTOM_FORMATTER_T(_Type_, _Lambda_)                              \
+namespace fmt {                                                                     \
+                                                                                    \
+template<typename T>                                                                \
+struct formatter<_Type_, TCHAR>                                                     \
+{                                                                                   \
+    template <typename ParseContext>                                                \
+    constexpr auto parse(ParseContext& ctx)                                         \
+    { return ctx.begin(); }                                                         \
+                                                                                    \
+    template<typename FormatContext>                                                \
+    auto format(const _Type_& InObj, FormatContext& ctx)                            \
+    {                                                                               \
+        return fmt::format_to(ctx.out(), TEXT("{}"), _Lambda_());                   \
+    }                                                                               \
+};                                                                                  \
+}
+
+#define CK_DEFINE_CUSTOM_FORMATTER(_Type_, _Lambda_)                                \
+namespace fmt {                                                                     \
+                                                                                    \
+template<>                                                                          \
+struct formatter<_Type_, TCHAR>                                                     \
+{                                                                                   \
+    template <typename ParseContext>                                                \
+    constexpr auto parse(ParseContext& ctx)                                         \
+    { return ctx.begin(); }                                                         \
+                                                                                    \
+    template<typename FormatContext>                                                \
+    auto format(const _Type_& InObj, FormatContext& ctx)                            \
+    {                                                                               \
+        return fmt::format_to(ctx.out(), TEXT("{}"), _Lambda_());                   \
+    }                                                                               \
+};                                                                                  \
+}
+
+#define CK_DEFINE_CUSTOM_FORMATTER_ENUM(_Type_)                                     \
+CK_DEFINE_CUSTOM_FORMATTER(_Type_, [&]()                                            \
+{                                                                                   \
+    return UEnum::GetDisplayValueAsText(InObj).ToString();                          \
+});                                                                                 \
+namespace ck                                                                        \
+{                                                                                   \
+                                                                                    \
+template <>                                                                         \
+struct FEnumToString<_Type_>                                                        \
+{                                                                                   \
+    static FName Get() { return TEXT(#_Type_); }                                    \
+    static const TCHAR* Get_AsTChar() { return TEXT(#_Type_); }                     \
+};                                                                                  \
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+#include "CkFormat_Defaults.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    namespace ck_format_detail
+    {
+        template <typename T>
+        constexpr auto&& ArgsForward(T&& InType)
+        {
+            using decayed_t = std::decay_t<T>;
+            using original_t = std::remove_const_t<decayed_t>;
+
+            if constexpr (std::is_pointer_v<decayed_t> && NOT std::is_void_v<std::remove_pointer_t<std::remove_cv_t<original_t>>> && NOT std::is_same_v<decayed_t, const wchar_t*>)
+            {
+                return ForwarderForPointers(InType);
+            }
+            else
+            {
+                return InType;
+            }
+        }
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------

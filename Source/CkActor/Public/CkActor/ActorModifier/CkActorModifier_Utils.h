@@ -1,7 +1,7 @@
 #pragma once
 #include "CkActorModifier_Fragment_Params.h"
 
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 
 #include "CkActorModifier_Utils.generated.h"
 

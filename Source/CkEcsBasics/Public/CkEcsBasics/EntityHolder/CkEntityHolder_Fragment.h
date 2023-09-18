@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CkEcs/Handle/CkHandle.h"
-#include "CkMacros/CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

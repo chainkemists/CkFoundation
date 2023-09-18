@@ -1,8 +1,8 @@
 #pragma once
 
-#include "CkFormat/CkFormat.h"
-#include "CkMacros/CkMacros.h"
-#include "CkValidation/CkIsValid.h"
+#include "CkCore/Format/CkFormat.h"
+#include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Validation/CkIsValid.h"
 
 #include <Engine/DataTable.h>
 

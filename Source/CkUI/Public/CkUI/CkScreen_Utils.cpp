@@ -6,7 +6,7 @@
 #include "Engine/Engine.h"
 #include <Components/Viewport.h>
 
-#include "CkEnsure/CkEnsure.h"
+#include "CkCore/Ensure/CkEnsure.h"
 #include "Kismet/GameplayStatics.h"
 
 // --------------------------------------------------------------------------------------------------------------------
