@@ -296,6 +296,12 @@ auto
         this, ctti::nameof_v<ThisType>, ck::Context(this))
     { return; }
 
+    if (GetWorld()->IsNetMode(NM_Standalone))
+    {
+        _Entity.Add<ck::FTag_HasAuthority>(OwningActor);
+        return;
+    }
+
     if (GetWorld()->IsNetMode(NM_Client))
     {
         _Entity.Add<ck::FTag_HasAuthority>(OwningActor);
