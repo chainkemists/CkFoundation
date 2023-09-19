@@ -51,7 +51,11 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract, Blueprintable, BlueprintType)
+UCLASS(Abstract,
+       Blueprintable,
+       BlueprintType,
+       HideCategories("Replication", "ComponentTick", "Rendering", "Activation", "Tags", "ComponentReplication", "Mobile", "RayTracing",
+                      "Collision", "AssetUserData", "Cooking", "Sockets", "Variable", "Navigation", "HLOD", "Physics"))
 class CKUNREAL_API UCk_EcsConstructionScript_ActorComponent_UE : public UCk_ActorComponent_UE
 {
     GENERATED_BODY()
@@ -97,7 +101,7 @@ public:
     UPROPERTY(EditDefaultsOnly, Instanced)
     TObjectPtr<UCk_UnrealEntity_WithActor_PDA> _UnrealEntity;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Transient)
+    UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Transient)
     FCk_Handle _Entity;
 
 public:
