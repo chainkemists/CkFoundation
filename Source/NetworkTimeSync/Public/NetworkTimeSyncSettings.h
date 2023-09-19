@@ -40,12 +40,12 @@ public:
 
 	/** Whether or not to use unreliable RPCs to synchronize time. Enable if you set the interval to update frequently. */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Settings")
-	bool bUseUnreliableRPCs = false;
+	bool bUseUnreliableRPCs = true;
 
 	/**
 	 * Time between each synchronization attempt in seconds.
 	 * For very frequent updates, enable bUseUnreliableRPCs to avoid saturating the bandwidth and killing your game.
 	 */
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Settings", Meta = (ClampMin = "1.0", ValueMin = "1.0"))
-	float NetworkSyncIntervalSeconds = 10.0f;
+	float NetworkSyncIntervalSeconds = 1.0f;
 };
