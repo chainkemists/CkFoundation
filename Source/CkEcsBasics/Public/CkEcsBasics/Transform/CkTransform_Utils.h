@@ -97,9 +97,17 @@ public:
               Category = "Ck|Utils|Transform",
               DisplayName = "Request Set Interpolation Goal [LOCATION]")
     static void
-    Request_SetInterpolationGoal_Offset(
+    Request_SetInterpolationGoal_LocationOffset(
         FCk_Handle InHandle,
         FVector    InOffset);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Transform",
+              DisplayName = "Request Set Interpolation Goal [ROTATION]")
+    static void
+    Request_SetInterpolationGoal_RotationOffset(
+        FCk_Handle InHandle,
+        FRotator   InOffset);
 
 public:
     UFUNCTION(BlueprintPure,
