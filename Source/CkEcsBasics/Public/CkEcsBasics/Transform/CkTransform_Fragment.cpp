@@ -29,7 +29,7 @@ auto
     CK_REP_OBJ_EXECUTE_IF_VALID([&]()
     {
         const auto& CurrentLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(Get_AssociatedEntity());
-        UCk_Utils_Transform_UE::Request_SetInterpolationGoal_Offset
+        UCk_Utils_Transform_UE::Request_SetInterpolationGoal_LocationOffset
         (
             Get_AssociatedEntity(),
             _Location - CurrentLocation
@@ -43,10 +43,11 @@ auto
 {
     CK_REP_OBJ_EXECUTE_IF_VALID([&]()
     {
-        UCk_Utils_Transform_UE::Request_SetRotation
+        const auto& CurrentRotation = UCk_Utils_Transform_UE::Get_EntityCurrentRotation(Get_AssociatedEntity());
+        UCk_Utils_Transform_UE::Request_SetInterpolationGoal_RotationOffset
         (
             Get_AssociatedEntity(),
-            FCk_Request_Transform_SetRotation{FRotator{_Rotation}}.Set_RelativeAbsolute(ECk_RelativeAbsolute::Absolute)
+            _Rotation.Rotator() - CurrentRotation
         );
     });
 }

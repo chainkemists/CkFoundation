@@ -53,7 +53,7 @@ namespace ck
 
     struct FFragment_Transform_NewGoal_Location
     {
-        friend class FProcessor_Transform_InterpolateToGoal;
+        friend class FProcessor_Transform_InterpolateToGoal_Location;
 
     public:
         CK_GENERATED_BODY(FFragment_Transform_NewGoal_Location);
@@ -68,6 +68,27 @@ namespace ck
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_Transform_NewGoal_Location, _InterpolationOffset);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct FFragment_Transform_NewGoal_Rotation
+    {
+        friend class FProcessor_Transform_InterpolateToGoal_Rotation;
+
+    public:
+        CK_GENERATED_BODY(FFragment_Transform_NewGoal_Rotation);
+
+    private:
+        FRotator _InterpolationOffset;
+        FCk_Time _DeltaT;
+
+    public:
+        CK_PROPERTY_GET(_InterpolationOffset);
+        CK_PROPERTY(_DeltaT);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Transform_NewGoal_Rotation, _InterpolationOffset);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
