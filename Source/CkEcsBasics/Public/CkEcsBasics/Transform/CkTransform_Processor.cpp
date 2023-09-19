@@ -171,7 +171,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_Transform_InterpolateToGoal::
+        FProcessor_Transform_InterpolateToGoal_Location::
         ForEachEntity(TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform_Params& InParams,
@@ -186,11 +186,13 @@ namespace ck
                 InHandle,
                 FCk_Request_Transform_SetLocation{InCurrent.Get_Transform().GetLocation() + InGoal.Get_InterpolationOffset()}
             );
-            InHandle.Remove<FFragment_Transform_NewGoal_Location>();
+
+            InHandle.Remove<MarkedDirtyBy>();
+
             return;
         }
 
-        // TODO: pre-calculate when creating FCk_Fragment_Transform_NewGoal to avoid this expensive operation
+        // TODO: pre-calculate when creating FFragment_Transform_NewGoal_Location to avoid this expensive operation
         const auto GoalDistance = InGoal.Get_InterpolationOffset().Length();
         InGoal.Set_DeltaT(InGoal.Get_DeltaT() + InDeltaT);
 
@@ -204,7 +206,8 @@ namespace ck
                 FCk_Request_Transform_AddLocationOffset{InGoal.Get_InterpolationOffset()}
             );
 
-            InHandle.Remove<FFragment_Transform_NewGoal_Location>();
+            InHandle.Remove<MarkedDirtyBy>();
+
             return;
         }
 
@@ -212,11 +215,11 @@ namespace ck
         // - calculate the fraction of the goal we need to interpolate this frame
         // - add the fraction of the goal to the current location
 
-        const auto SmoothTime = InterpSettings.Get_SmoothLocationTime();
+        const auto& SmoothTime = InterpSettings.Get_SmoothLocationTime();
 
         if (InGoal.Get_DeltaT() > SmoothTime)
         {
-            InHandle.Remove<FFragment_Transform_NewGoal_Location>();
+            InHandle.Remove<MarkedDirtyBy>();
             return;
         }
 
@@ -227,6 +230,52 @@ namespace ck
         (
             InHandle,
             FCk_Request_Transform_SetLocation{InCurrent.Get_Transform().GetLocation() + GoalFraction}
+        );
+    }
+
+    auto
+        FProcessor_Transform_InterpolateToGoal_Rotation::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Transform_Params& InParams,
+            FFragment_Transform_Current& InCurrent,
+            FFragment_Transform_NewGoal_Rotation& InGoal) const
+        -> void
+    {
+        InHandle.Remove<MarkedDirtyBy>();
+
+        if (NOT UCk_Utils_Transform_UserSettings_UE::Get_EnableTransformSmoothing())
+        {
+            UCk_Utils_Transform_UE::Request_SetRotation
+            (
+                InHandle,
+                FCk_Request_Transform_SetRotation{InCurrent.Get_Transform().GetRotation().Rotator() + InGoal.Get_InterpolationOffset()}
+            );
+
+            InHandle.Remove<MarkedDirtyBy>();
+
+            return;
+        }
+
+        InGoal.Set_DeltaT(InGoal.Get_DeltaT() + InDeltaT);
+
+        const auto& InterpSettings = InParams.Get_Data().Get_InterpolationSettings();
+        const auto& SmoothTime = InterpSettings.Get_SmoothRotationTime();
+
+        if (InGoal.Get_DeltaT() > SmoothTime)
+        {
+            InHandle.Remove<MarkedDirtyBy>();
+            return;
+        }
+
+        const auto Fraction =  FMath::Clamp((InDeltaT / SmoothTime).Get_Seconds(), 0.0f, 1.0f);
+        const auto GoalFraction = InGoal.Get_InterpolationOffset() * Fraction;
+
+        UCk_Utils_Transform_UE::Request_SetRotation
+        (
+            InHandle,
+            FCk_Request_Transform_SetRotation{InCurrent.Get_Transform().GetRotation().Rotator() + GoalFraction}
         );
     }
 }

@@ -114,8 +114,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSBASICS_API FProcessor_Transform_InterpolateToGoal
-        : public TProcessor<FProcessor_Transform_InterpolateToGoal,
+    class CKECSBASICS_API FProcessor_Transform_InterpolateToGoal_Location
+        : public TProcessor<FProcessor_Transform_InterpolateToGoal_Location,
             FFragment_Transform_Params, FFragment_Transform_Current, FFragment_Transform_NewGoal_Location>
     {
     public:
@@ -131,6 +131,27 @@ namespace ck
             const FFragment_Transform_Params& InParams,
             FFragment_Transform_Current& InCurrent,
             FFragment_Transform_NewGoal_Location& InGoal) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKECSBASICS_API FProcessor_Transform_InterpolateToGoal_Rotation
+        : public TProcessor<FProcessor_Transform_InterpolateToGoal_Rotation,
+            FFragment_Transform_Params, FFragment_Transform_Current, FFragment_Transform_NewGoal_Rotation>
+    {
+    public:
+        using MarkedDirtyBy = FFragment_Transform_NewGoal_Rotation;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Transform_Params& InParams,
+            FFragment_Transform_Current& InCurrent,
+            FFragment_Transform_NewGoal_Rotation& InGoal) const -> void;
     };
 }
 

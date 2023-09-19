@@ -90,13 +90,24 @@ auto
 
 auto
     UCk_Utils_Transform_UE::
-    Request_SetInterpolationGoal_Offset(
+    Request_SetInterpolationGoal_LocationOffset(
         FCk_Handle InHandle,
         FVector    InOffset)
     -> void
 {
     auto& NewGoal = InHandle.AddOrGet<ck::FFragment_Transform_NewGoal_Location>();
     NewGoal = ck::FFragment_Transform_NewGoal_Location{InOffset};
+}
+
+auto
+    UCk_Utils_Transform_UE::
+    Request_SetInterpolationGoal_RotationOffset(
+        FCk_Handle InHandle,
+        FRotator   InOffset)
+    -> void
+{
+    auto& NewGoal = InHandle.AddOrGet<ck::FFragment_Transform_NewGoal_Rotation>();
+    NewGoal = ck::FFragment_Transform_NewGoal_Rotation{InOffset};
 }
 
 auto
