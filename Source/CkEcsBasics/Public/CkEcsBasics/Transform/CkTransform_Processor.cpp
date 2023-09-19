@@ -1,6 +1,7 @@
 #include "CkTransform_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
 #include "CkEcsBasics/CkEcsBasics_Log.h"
 #include "CkEcsBasics/Transform/CkTransform_Settings.h"
@@ -73,7 +74,19 @@ namespace ck
             const FCk_Request_Transform_SetLocation& InRequest) const
         -> void
     {
-        InComp._Transform.SetLocation(InRequest.Get_NewLocation());
+        const auto& newLocation = InRequest.Get_NewLocation();
+
+        if (InRequest.Get_RelativeAbsolute() == ECk_RelativeAbsolute::Relative && UCk_Utils_OwningActor_UE::Has(InHandle))
+        {
+            const auto& basicDetails = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(InHandle);
+            basicDetails.Get_Actor()->SetActorRelativeLocation(newLocation);
+
+            InComp._Transform.SetLocation(basicDetails.Get_Actor()->GetActorLocation());
+
+            return;
+        }
+
+        InComp._Transform.SetLocation(newLocation);
     }
 
     auto
@@ -84,7 +97,22 @@ namespace ck
             const FCk_Request_Transform_AddLocationOffset& InRequest) const
         -> void
     {
-        InComp._Transform.AddToTranslation(InRequest.Get_DeltaLocation());
+        const auto& deltaLocation = InRequest.Get_DeltaLocation();
+
+        if (deltaLocation.IsZero())
+        { return; }
+
+        if (InRequest.Get_LocalWorld() == ECk_LocalWorld::Local && UCk_Utils_OwningActor_UE::Has(InHandle))
+        {
+            const auto& basicDetails = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(InHandle);
+            basicDetails.Get_Actor()->AddActorLocalOffset(deltaLocation);
+
+            InComp._Transform.SetLocation(basicDetails.Get_Actor()->GetActorLocation());
+
+            return;
+        }
+
+        InComp._Transform.AddToTranslation(deltaLocation);
     }
 
     auto
@@ -95,7 +123,19 @@ namespace ck
             const FCk_Request_Transform_SetRotation& InRequest) const
         -> void
     {
-        InComp._Transform.SetRotation(InRequest.Get_NewRotation().Quaternion());
+        const auto& newRotation = InRequest.Get_NewRotation();
+
+        if (InRequest.Get_RelativeAbsolute() == ECk_RelativeAbsolute::Relative && UCk_Utils_OwningActor_UE::Has(InHandle))
+        {
+            const auto& basicDetails = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(InHandle);
+            basicDetails.Get_Actor()->SetActorRelativeRotation(newRotation);
+
+            InComp._Transform.SetRotation(basicDetails.Get_Actor()->GetActorRotation().Quaternion());
+
+            return;
+        }
+
+        InComp._Transform.SetRotation(newRotation.Quaternion());
     }
 
     auto
@@ -107,7 +147,21 @@ namespace ck
         -> void
     {
         const auto& deltaRotation = InRequest.Get_DeltaRotation();
-        InComp._Transform.Rotator().Add(deltaRotation.Pitch, deltaRotation.Yaw, deltaRotation.Roll);
+
+        if (deltaRotation.IsZero())
+        { return; }
+
+        if (InRequest.Get_LocalWorld() == ECk_LocalWorld::Local && UCk_Utils_OwningActor_UE::Has(InHandle))
+        {
+            const auto& basicDetails = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(InHandle);
+            basicDetails.Get_Actor()->AddActorLocalRotation(deltaRotation);
+
+            InComp._Transform.SetRotation(basicDetails.Get_Actor()->GetActorRotation().Quaternion());
+
+            return;
+        }
+
+        InComp._Transform.ConcatenateRotation(deltaRotation.Quaternion());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -157,13 +211,13 @@ namespace ck
         // TODO: Remove usage of UpdateReplicatedFragment once the processor is tagged to only run on Server
         UCk_Utils_Ecs_Net_UE::UpdateReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle, [&](UCk_Fragment_Transform_Rep* InRepComp)
         {
-            if ((InCurrent.Get_ComponentsModified() & ECk_TransformComponents::Location) == ECk_TransformComponents::Location)
+            if (EnumHasAnyFlags(InCurrent.Get_ComponentsModified(), ECk_TransformComponents::Location))
             { InRepComp->_Location = InCurrent.Get_Transform().GetLocation(); }
 
-            if ((InCurrent.Get_ComponentsModified() & ECk_TransformComponents::Rotation) == ECk_TransformComponents::Rotation)
+            if (EnumHasAnyFlags(InCurrent.Get_ComponentsModified(), ECk_TransformComponents::Rotation))
             { InRepComp->_Rotation = InCurrent.Get_Transform().GetRotation(); }
 
-            if ((InCurrent.Get_ComponentsModified() & ECk_TransformComponents::Scale) == ECk_TransformComponents::Scale)
+            if (EnumHasAnyFlags(InCurrent.Get_ComponentsModified(), ECk_TransformComponents::Scale))
             { InRepComp->_Scale = InCurrent.Get_Transform().GetScale3D(); }
         });
     }
@@ -171,7 +225,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_Transform_InterpolateToGoal::
+        FProcessor_Transform_InterpolateToGoal_Location::
         ForEachEntity(TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform_Params& InParams,
@@ -186,11 +240,13 @@ namespace ck
                 InHandle,
                 FCk_Request_Transform_SetLocation{InCurrent.Get_Transform().GetLocation() + InGoal.Get_InterpolationOffset()}
             );
-            InHandle.Remove<FFragment_Transform_NewGoal_Location>();
+
+            InHandle.Remove<MarkedDirtyBy>();
+
             return;
         }
 
-        // TODO: pre-calculate when creating FCk_Fragment_Transform_NewGoal to avoid this expensive operation
+        // TODO: pre-calculate when creating FFragment_Transform_NewGoal_Location to avoid this expensive operation
         const auto GoalDistance = InGoal.Get_InterpolationOffset().Length();
         InGoal.Set_DeltaT(InGoal.Get_DeltaT() + InDeltaT);
 
@@ -204,7 +260,8 @@ namespace ck
                 FCk_Request_Transform_AddLocationOffset{InGoal.Get_InterpolationOffset()}
             );
 
-            InHandle.Remove<FFragment_Transform_NewGoal_Location>();
+            InHandle.Remove<MarkedDirtyBy>();
+
             return;
         }
 
@@ -212,11 +269,11 @@ namespace ck
         // - calculate the fraction of the goal we need to interpolate this frame
         // - add the fraction of the goal to the current location
 
-        const auto SmoothTime = InterpSettings.Get_SmoothLocationTime();
+        const auto& SmoothTime = InterpSettings.Get_SmoothLocationTime();
 
         if (InGoal.Get_DeltaT() > SmoothTime)
         {
-            InHandle.Remove<FFragment_Transform_NewGoal_Location>();
+            InHandle.Remove<MarkedDirtyBy>();
             return;
         }
 
@@ -227,6 +284,50 @@ namespace ck
         (
             InHandle,
             FCk_Request_Transform_SetLocation{InCurrent.Get_Transform().GetLocation() + GoalFraction}
+        );
+    }
+
+    auto
+        FProcessor_Transform_InterpolateToGoal_Rotation::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Transform_Params& InParams,
+            FFragment_Transform_Current& InCurrent,
+            FFragment_Transform_NewGoal_Rotation& InGoal) const
+        -> void
+    {
+        if (NOT UCk_Utils_Transform_UserSettings_UE::Get_EnableTransformSmoothing())
+        {
+            UCk_Utils_Transform_UE::Request_SetRotation
+            (
+                InHandle,
+                FCk_Request_Transform_SetRotation{InCurrent.Get_Transform().GetRotation().Rotator() + InGoal.Get_InterpolationOffset()}
+            );
+
+            InHandle.Remove<MarkedDirtyBy>();
+
+            return;
+        }
+
+        InGoal.Set_DeltaT(InGoal.Get_DeltaT() + InDeltaT);
+
+        const auto& InterpSettings = InParams.Get_Data().Get_InterpolationSettings();
+        const auto& SmoothTime = InterpSettings.Get_SmoothRotationTime();
+
+        if (InGoal.Get_DeltaT() > SmoothTime)
+        {
+            InHandle.Remove<MarkedDirtyBy>();
+            return;
+        }
+
+        const auto Fraction =  FMath::Clamp((InDeltaT / SmoothTime).Get_Seconds(), 0.0f, 1.0f);
+        const auto GoalFraction = InGoal.Get_InterpolationOffset() * Fraction;
+
+        UCk_Utils_Transform_UE::Request_SetRotation
+        (
+            InHandle,
+            FCk_Request_Transform_SetRotation{InCurrent.Get_Transform().GetRotation().Rotator() + GoalFraction}
         );
     }
 }

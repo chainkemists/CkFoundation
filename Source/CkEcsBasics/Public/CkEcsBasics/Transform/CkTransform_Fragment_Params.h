@@ -54,8 +54,9 @@ public:
     CK_GENERATED_BODY(FCk_Transform_ParamsData);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess, ValidEnumValues="Linear"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
     FCk_Transform_Interpolation_Settings _InterpolationSettings;
+
 public:
     CK_PROPERTY(_InterpolationSettings);
 };
