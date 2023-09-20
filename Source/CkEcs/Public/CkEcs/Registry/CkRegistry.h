@@ -1,11 +1,10 @@
 #pragma once
 
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Macros/CkMacros.h"
-#include "CkCore/Types/CkConstWrapper.h"
+#include "CkCore/Types/CkPtrWrapper.h"
 
 #include "CkEcs/Entity/CkEntity.h"
-
-#include "CkCore/Ensure/CkEnsure.h"
 
 #include "entt/entt.hpp"
 
@@ -23,7 +22,7 @@ namespace ck
     // this is equivalent to entt::exclude for use with FRegistry::TView<...>
     // usage: Registry.View<CompA, CompB, TExclude<CompC>>().ForEach(...)
     template <typename... T>
-    struct TExclude { using FValueType = entt::type_list<T...>; };
+    struct TExclude { using ValueType = entt::type_list<T...>; };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -58,13 +57,13 @@ public:
         struct TIsEmpty<ck::TExclude<T>>{ static constexpr auto value = std::is_empty_v<T>; };
 
         template <typename... T_Args>
-        struct TTypeOnly { using FTypeList = entt::type_list<T_Args...>; };
+        struct TTypeOnly { using TypeList = entt::type_list<T_Args...>; };
 
         template <typename... T_Args>
-        struct TTypeOnly<ck::TExclude<T_Args>...> { using FTypeList = entt::type_list<T_Args...>; };
+        struct TTypeOnly<ck::TExclude<T_Args>...> { using TypeList = entt::type_list<T_Args...>; };
 
         template <typename... T_Args>
-        using TTypeOnly_T = entt::type_list_cat_t<typename TTypeOnly<T_Args>::FTypeList...>;
+        using TypeOnly_T = entt::type_list_cat_t<typename TTypeOnly<T_Args>::FTypeList...>;
 
         template <typename T>
         struct TIsExcluded : std::false_type { };
@@ -73,22 +72,22 @@ public:
         struct TIsExcluded<ck::TExclude<T>> : std::true_type { };
 
         template <typename... T_Args>
-        using TExcludesStripped = entt::type_list_cat_t<std::conditional_t<TIsExcluded<T_Args>::value, entt::type_list<>, TTypeOnly_T<T_Args>>...>;
+        using ExcludesStripped = entt::type_list_cat_t<std::conditional_t<TIsExcluded<T_Args>::value, entt::type_list<>, TypeOnly_T<T_Args>>...>;
 
         template <typename... T_Args>
-        using TExcludesOnly = entt::type_list_cat_t<std::conditional_t<TIsExcluded<T_Args>::value, TTypeOnly_T<T_Args>, entt::type_list<>>...>;
+        using ExcludesOnly = entt::type_list_cat_t<std::conditional_t<TIsExcluded<T_Args>::value, TypeOnly_T<T_Args>, entt::type_list<>>...>;
 
         template <typename... T_Args>
-        using TFragmentsOnly = entt::type_list_cat_t<std::conditional_t<TIsExcluded<T_Args>::value || TIsEmpty<T_Args>::value, entt::type_list<>, TTypeOnly_T<T_Args>>...>;
+        using FragmentsOnly = entt::type_list_cat_t<std::conditional_t<TIsExcluded<T_Args>::value || TIsEmpty<T_Args>::value, entt::type_list<>, TypeOnly_T<T_Args>>...>;
 
     public:
-        using FRegistryType = T_RegistryType;
-        using FFragmentsAndTags = TExcludesStripped<T_Fragments...>;
-        using FOnlyExcludes = TExcludesOnly<T_Fragments...>;
-        using FOnlyFragments = TFragmentsOnly<T_Fragments...>;
+        using RegistryType = T_RegistryType;
+        using FragmentsAndTags = ExcludesStripped<T_Fragments...>;
+        using OnlyExcludes = ExcludesOnly<T_Fragments...>;
+        using OnlyFragments = FragmentsOnly<T_Fragments...>;
 
     public:
-        explicit TView(FRegistryType& InRegistry)
+        explicit TView(RegistryType& InRegistry)
             : _Registry(InRegistry)
         {
         }
@@ -96,7 +95,7 @@ public:
         template <typename T_Func>
         auto ForEach(T_Func InFunc)
         {
-            DoForEach(InFunc, FFragmentsAndTags{}, FOnlyExcludes{}, FOnlyFragments{});
+            DoForEach(InFunc, FragmentsAndTags{}, OnlyExcludes{}, OnlyFragments{});
         }
 
     private:
@@ -112,7 +111,7 @@ public:
         }
 
     private:
-        FRegistryType& _Registry;
+        RegistryType& _Registry;
     };
 
 public:
@@ -204,22 +203,22 @@ auto FCk_Registry::Add(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentTyp
 {
     CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to Add Fragment/Tag."), InEntity)
     {
-        static T_FragmentType INVALID_Fragment;
-        return INVALID_Fragment;
+        static T_FragmentType Invalid_Fragment;
+        return Invalid_Fragment;
     }
 
     if constexpr (std::is_empty_v<T_FragmentType>)
     {
         _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID());
-        static T_FragmentType EMPTY_Tag;
-        return EMPTY_Tag;
+        static T_FragmentType Empty_Tag;
+        return Empty_Tag;
     }
     else
     {
         CK_ENSURE_IF_NOT(Has<T_FragmentType>(InEntity) == false, TEXT("Fragment [{}] already exists in Entity [{}]."), ctti::nameof<T_FragmentType>(), InEntity)
         {
-            static T_FragmentType INVALID_Fragment;
-            return INVALID_Fragment;
+            static T_FragmentType Invalid_Fragment;
+            return Invalid_Fragment;
         }
 
         auto& Fragment = _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID(), std::forward<T_Args>(InArgs)...);
@@ -260,16 +259,16 @@ auto FCk_Registry::Replace(EntityType InEntity,
 
     CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to Replace Fragment"), InEntity)
     {
-        static T_FragmentType INVALID_Fragment;
-        return INVALID_Fragment;
+        static T_FragmentType Invalid_Fragment;
+        return Invalid_Fragment;
     }
 
     CK_ENSURE_IF_NOT(Has<T_FragmentType>(InEntity),
                      TEXT("Unable to Replace Fragment. Fragment/Tag [{}] does NOT exist in Entity [{}]."),
                      ctti::nameof<T_FragmentType>(), InEntity)
     {
-        static T_FragmentType INVALID_Fragment;
-        return INVALID_Fragment;
+        static T_FragmentType Invalid_Fragment;
+        return Invalid_Fragment;
     }
 
     auto& Fragment = _InternalRegistry->get<T_FragmentType>(InEntity.Get_ID());
@@ -350,8 +349,8 @@ auto FCk_Registry::Get(EntityType InEntity) -> T_Fragment&
                      TEXT("Unable to Get Fragment. Fragment [{}] does NOT exist in Entity [{}]."),
                      ctti::nameof<T_Fragment>(), InEntity)
     {
-        static T_Fragment INVALID_Fragment;
-        return INVALID_Fragment;
+        static T_Fragment Invalid_Fragment;
+        return Invalid_Fragment;
     }
 
     return _InternalRegistry->get<T_Fragment>(InEntity.Get_ID());
@@ -364,8 +363,8 @@ auto FCk_Registry::Get(EntityType InEntity) const -> const T_Fragment&
                      TEXT("Unable to Get Fragment. Fragment [{}] does NOT exist in Entity [{}]."),
                      ctti::nameof<T_Fragment>(), InEntity)
     {
-        static T_Fragment INVALID_Fragment;
-        return INVALID_Fragment;
+        static T_Fragment Invalid_Fragment;
+        return Invalid_Fragment;
     }
 
     return _InternalRegistry->get<T_Fragment>(InEntity.Get_ID());
