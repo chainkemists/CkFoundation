@@ -6,6 +6,25 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_overlap_body_settings
+{
+    namespace cvar
+    {
+        static bool ShouldPreviewAllSensors = false;
+        static FAutoConsoleVariableRef CVar_ShouldPreviewAllSensors(TEXT("ck.OverlapBody.ShouldPreviewAllSensors"),
+            ShouldPreviewAllSensors,
+            TEXT("Should draw the debug information of all existing Sensor Fragments"));
+
+        static bool ShouldPreviewAllMarkers = false;
+        static FAutoConsoleVariableRef CVar_ShouldPreviewAllMarkers(TEXT("ck.OverlapBody.ShouldPreviewAllMarkers"),
+            ShouldPreviewAllMarkers,
+            TEXT("Should draw the debug information of all existing Marker Fragments"));
+    }
+
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCk_OverlapBody_UserSettings_UE::
     UCk_OverlapBody_UserSettings_UE(
         const FObjectInitializer& InObjectInitializer)
@@ -21,7 +40,7 @@ auto
     Get_DebugPreviewAllSensors()
     -> bool
 {
-    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_OverlapBody_UserSettings_UE>()->Get_DebugPreviewAllSensors();
+    return ck_overlap_body_settings::cvar::ShouldPreviewAllSensors;
 }
 
 auto
@@ -29,7 +48,7 @@ auto
     Get_DebugPreviewAllMarkers()
     -> bool
 {
-    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_OverlapBody_UserSettings_UE>()->Get_DebugPreviewAllMarkers();
+    return ck_overlap_body_settings::cvar::ShouldPreviewAllMarkers;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
