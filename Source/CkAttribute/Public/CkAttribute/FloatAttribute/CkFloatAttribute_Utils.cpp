@@ -15,9 +15,9 @@ auto
     // TODO: Select Record policy that disallow duplicate based on Gameplay Label
     RecordOfFloatAttributes_Utils::AddIfMissing(InHandle);
 
-    const auto& paramsProvider = InParams.Get_Provider();
+    const auto& ParamsProvider = InParams.Get_Provider();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(paramsProvider), TEXT("Invalid Float Attributes Provider"))
+    CK_ENSURE_IF_NOT(ck::IsValid(ParamsProvider), TEXT("Invalid Float Attributes Provider"))
     { return; }
 
     const auto& AddNewFloatAttributeToEntity = [&](FCk_Handle InAttributeOwner, const FGameplayTag& InAttributeName, float InAttributeBaseValue)
@@ -32,12 +32,11 @@ auto
         RecordOfFloatAttributes_Utils::Request_Connect(InAttributeOwner, newAttributeEntity);
     };
 
-    const auto& floatAttributesParams = paramsProvider->Get_Value();
-
-    for (auto kvp : floatAttributesParams.Get_AttributeBaseValues())
+    for (const auto& FloatAttributesParams = ParamsProvider->Get_Value();
+        auto Kvp : FloatAttributesParams.Get_AttributeBaseValues())
     {
-        const auto& attributeName = kvp.Key;
-        const auto& attributeBaseValue = kvp.Value;
+        const auto& attributeName = Kvp.Key;
+        const auto& attributeBaseValue = Kvp.Value;
 
         AddNewFloatAttributeToEntity(InHandle, attributeName, attributeBaseValue);
     }
@@ -50,8 +49,9 @@ auto
         FCk_Handle InAttributeOwnerEntity)
     -> bool
 {
-    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
-    return ck::IsValid(attributeEntity);
+    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
+        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+    return ck::IsValid(AttributeEntity);
 }
 
 auto
@@ -74,8 +74,9 @@ auto
         FCk_Handle InAttributeOwnerEntity)
     -> float
 {
-    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
-    return FloatAttribute_Utils::Get_BaseValue(attributeEntity);
+    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
+        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+    return FloatAttribute_Utils::Get_BaseValue(AttributeEntity);
 }
 
 auto
@@ -85,8 +86,9 @@ auto
         FCk_Handle InAttributeOwnerEntity)
     -> float
 {
-    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
-    return FloatAttribute_Utils::Get_FinalValue(attributeEntity) - FloatAttribute_Utils::Get_BaseValue(attributeEntity);
+    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
+        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+    return FloatAttribute_Utils::Get_FinalValue(AttributeEntity) - FloatAttribute_Utils::Get_BaseValue(AttributeEntity);
 }
 
 auto
@@ -96,8 +98,9 @@ auto
         FCk_Handle InAttributeOwnerEntity)
     -> float
 {
-    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
-    return FloatAttribute_Utils::Get_FinalValue(attributeEntity);
+    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
+        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+    return FloatAttribute_Utils::Get_FinalValue(AttributeEntity);
 }
 
 auto
@@ -109,9 +112,10 @@ auto
         const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate)
     -> void
 {
-    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
+        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
 
-    ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind(attributeEntity, InDelegate, InBehavior);
+    ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind(AttributeEntity, InDelegate, InBehavior);
 }
 
 auto
@@ -122,9 +126,10 @@ auto
         const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate)
     -> void
 {
-    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
+        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
 
-    ck::UUtils_Signal_OnFloatAttributeValueChanged::Unbind(attributeEntity, InDelegate);
+    ck::UUtils_Signal_OnFloatAttributeValueChanged::Unbind(AttributeEntity, InDelegate);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -137,18 +142,20 @@ auto
         const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams)
     -> void
 {
-    const auto& attributeName = InParams.Get_TargetAttributeName();
+    const auto& AttributeName = InParams.Get_TargetAttributeName();
 
     const auto newModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwnerEntity);
     UCk_Utils_GameplayLabel_UE::Add(newModifierEntity, InModifierName);
 
-    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<UCk_Utils_FloatAttribute_UE::FloatAttribute_Utils, UCk_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, attributeName);
+    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
+        <UCk_Utils_FloatAttribute_UE::FloatAttribute_Utils, UCk_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils>(
+            InAttributeOwnerEntity, AttributeName);
 
     FloatAttributeModifier_Utils::Add
     (
         newModifierEntity,
         InParams.Get_ModifierDelta(),
-        attributeEntity,
+        AttributeEntity,
         InParams.Get_ModifierOperation()
     );
 }
@@ -161,10 +168,14 @@ auto
         FCk_Handle InAttributeOwnerEntity)
     -> bool
 {
-    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<UCk_Utils_FloatAttribute_UE::FloatAttribute_Utils, UCk_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
-    const auto& attributeModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttributeModifier_Utils, FloatAttributeModifier_Utils::RecordOfAttributeModifiers_Utils>(attributeEntity, InModifierName);
+    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
+        <UCk_Utils_FloatAttribute_UE::FloatAttribute_Utils, UCk_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils>(
+            InAttributeOwnerEntity, InAttributeName);
+    const auto& AttributeModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
+        <FloatAttributeModifier_Utils, FloatAttributeModifier_Utils::RecordOfAttributeModifiers_Utils>(
+            AttributeEntity, InModifierName);
 
-    return ck::IsValid(attributeModifierEntity);
+    return ck::IsValid(AttributeModifierEntity);
 }
 
 auto
@@ -189,10 +200,14 @@ auto
         FCk_Handle   InAttributeOwnerEntity)
     -> void
 {
-    const auto& attributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<UCk_Utils_FloatAttribute_UE::FloatAttribute_Utils, UCk_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
-    const auto& attributeModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttributeModifier_Utils, FloatAttributeModifier_Utils::RecordOfAttributeModifiers_Utils>(attributeEntity, InModifierName);
+    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
+        <UCk_Utils_FloatAttribute_UE::FloatAttribute_Utils, UCk_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils>(
+            InAttributeOwnerEntity, InAttributeName);
+    const auto& AttributeModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
+        <FloatAttributeModifier_Utils, FloatAttributeModifier_Utils::RecordOfAttributeModifiers_Utils>(
+            AttributeEntity, InModifierName);
 
-    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(attributeModifierEntity);
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(AttributeModifierEntity);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
