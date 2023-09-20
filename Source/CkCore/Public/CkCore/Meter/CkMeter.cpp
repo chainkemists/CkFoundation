@@ -24,6 +24,98 @@ auto
 
 auto
     FCk_Meter::
+    operator+(
+        const ThisType& InOther) const
+    -> ThisType
+{
+    const auto& ParamsA = Get_Params();
+    const auto& ParamsB = InOther.Get_Params();
+
+    const auto& CapacityA = ParamsA.Get_Capacity();
+    const auto& CapacityB = ParamsB.Get_Capacity();
+
+    const auto NewCapacity =
+        FCk_Meter_Capacity{CapacityA.Get_MaxCapacity() + CapacityB.Get_MaxCapacity()}
+        .Set_MinCapacity(CapacityA.Get_MinCapacity() + CapacityB.Get_MinCapacity());
+
+    return FCk_Meter
+    {
+        FCk_Meter_Params{NewCapacity}
+        .Set_StartingValue(FCk_FloatRange_0to1{Get_Used().Get_AmountUsed() + InOther.Get_Used().Get_AmountUsed()})
+    };
+}
+
+auto
+    FCk_Meter::
+    operator-(
+        const ThisType& InOther) const
+    -> ThisType
+{
+    const auto& ParamsA = Get_Params();
+    const auto& ParamsB = InOther.Get_Params();
+
+    const auto& CapacityA = ParamsA.Get_Capacity();
+    const auto& CapacityB = ParamsB.Get_Capacity();
+
+    const auto NewCapacity =
+        FCk_Meter_Capacity{CapacityA.Get_MaxCapacity() - CapacityB.Get_MaxCapacity()}
+        .Set_MinCapacity(CapacityA.Get_MinCapacity() - CapacityB.Get_MinCapacity());
+
+    return FCk_Meter
+    {
+        FCk_Meter_Params{NewCapacity}
+        .Set_StartingValue(FCk_FloatRange_0to1{Get_Used().Get_AmountUsed() - InOther.Get_Used().Get_AmountUsed()})
+    };
+}
+
+auto
+    FCk_Meter::
+    operator*(
+        const ThisType& InOther) const
+    -> ThisType
+{
+    const auto& ParamsA = Get_Params();
+    const auto& ParamsB = InOther.Get_Params();
+
+    const auto& CapacityA = ParamsA.Get_Capacity();
+    const auto& CapacityB = ParamsB.Get_Capacity();
+
+    const auto NewCapacity =
+        FCk_Meter_Capacity{CapacityA.Get_MaxCapacity() * CapacityB.Get_MaxCapacity()}
+        .Set_MinCapacity(CapacityA.Get_MinCapacity() * CapacityB.Get_MinCapacity());
+
+    return FCk_Meter
+    {
+        FCk_Meter_Params{NewCapacity}
+        .Set_StartingValue(FCk_FloatRange_0to1{Get_Used().Get_AmountUsed() * InOther.Get_Used().Get_AmountUsed()})
+    };
+}
+
+auto
+    FCk_Meter::
+    operator/(
+        const ThisType& InOther) const
+    -> ThisType
+{
+    const auto& ParamsA = Get_Params();
+    const auto& ParamsB = InOther.Get_Params();
+
+    const auto& CapacityA = ParamsA.Get_Capacity();
+    const auto& CapacityB = ParamsB.Get_Capacity();
+
+    const auto NewCapacity =
+        FCk_Meter_Capacity{CapacityA.Get_MaxCapacity() / CapacityB.Get_MaxCapacity()}
+        .Set_MinCapacity(CapacityA.Get_MinCapacity() / CapacityB.Get_MinCapacity());
+
+    return FCk_Meter
+    {
+        FCk_Meter_Params{NewCapacity}
+        .Set_StartingValue(FCk_FloatRange_0to1{Get_Used().Get_AmountUsed() / InOther.Get_Used().Get_AmountUsed()})
+    };
+}
+
+auto
+    FCk_Meter::
     Consume(
         const FCk_Meter_Consume& InConsume)
     -> ThisType&
