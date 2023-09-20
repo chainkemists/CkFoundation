@@ -89,6 +89,7 @@ CK_DEFINE_CUSTOM_FORMATTER(FCk_IntRange, [&]()
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+// ReSharper disable once CppInconsistentNaming
 struct CKCORE_API FCk_FloatRange_0to1
 {
     GENERATED_BODY()
@@ -129,6 +130,7 @@ CK_DEFINE_CUSTOM_FORMATTER(FCk_FloatRange_0to1, [&]()
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+// ReSharper disable once CppInconsistentNaming
 struct CKCORE_API FCk_FloatRange_Minus1to1
 {
     GENERATED_BODY()
