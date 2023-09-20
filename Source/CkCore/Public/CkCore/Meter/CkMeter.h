@@ -150,11 +150,11 @@ private:
     float _MaxCapacity = 0.0f;
 
 public:
-    CK_PROPERTY_GET(_MinCapacity);
+    CK_PROPERTY(_MinCapacity);
     CK_PROPERTY_GET(_MaxCapacity);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Meter_Capacity, _MinCapacity, _MaxCapacity);
+    CK_DEFINE_CONSTRUCTORS(FCk_Meter_Capacity, _MaxCapacity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -176,10 +176,10 @@ private:
 
 public:
     CK_PROPERTY_GET(_Capacity);
-    CK_PROPERTY_GET(_StartingValue);
+    CK_PROPERTY(_StartingValue);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Meter_Params, _Capacity, _StartingValue);
+    CK_DEFINE_CONSTRUCTORS(FCk_Meter_Params, _Capacity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -202,6 +202,14 @@ public:
 public:
     auto operator==(const ThisType& InOther) const -> bool;
     CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
+
+    auto operator+(const ThisType& InOther) const -> ThisType;
+    auto operator-(const ThisType& InOther) const -> ThisType;
+    CK_DECL_AND_DEF_ADD_SUBTRACT_ASSIGNMENT_OPERATORS(ThisType);
+
+    auto operator*(const ThisType& InOther) const -> ThisType;
+    auto operator/(const ThisType& InOther) const -> ThisType;
+    CK_DECL_AND_DEF_MULTIPLY_DIVIDE_ASSIGNMENT_OPERATORS(ThisType);
 
 public:
     auto Consume(const FCk_Meter_Consume& InConsume) -> ThisType&;
