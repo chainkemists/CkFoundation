@@ -5,14 +5,14 @@
 FCk_Meter::
     FCk_Meter(
         FCk_Meter_Params InParams)
-    : _Params(InParams)
+    : _Params(std::move(InParams))
     , _InternalChrono(ChronoType{ ChronoType::TimeType{ InParams.Get_Capacity().Get_MaxCapacity() } })
 {
-    const auto& startingValue = InParams.Get_StartingValue().Get_Value();
-    const auto& meterCapacity = InParams.Get_Capacity();
-    const auto& meterMax      = meterCapacity.Get_MaxCapacity();
+    const auto& StartingValue = InParams.Get_StartingPercentage().Get_Value();
+    const auto& MeterCapacity = InParams.Get_Capacity();
+    const auto& MeterMax      = MeterCapacity.Get_MaxCapacity();
 
-    _InternalChrono.Tick(ChronoType::TimeType{ startingValue * meterMax });
+    _InternalChrono.Tick(ChronoType::TimeType{ StartingValue * MeterMax });
 }
 
 auto
@@ -41,7 +41,7 @@ auto
     return FCk_Meter
     {
         FCk_Meter_Params{NewCapacity}
-        .Set_StartingValue(FCk_FloatRange_0to1{Get_Used().Get_AmountUsed() + InOther.Get_Used().Get_AmountUsed()})
+        .Set_StartingPercentage(FCk_FloatRange_0to1{Get_Used().Get_AmountUsed() + InOther.Get_Used().Get_AmountUsed()})
     };
 }
 
@@ -64,7 +64,7 @@ auto
     return FCk_Meter
     {
         FCk_Meter_Params{NewCapacity}
-        .Set_StartingValue(FCk_FloatRange_0to1{Get_Used().Get_AmountUsed() - InOther.Get_Used().Get_AmountUsed()})
+        .Set_StartingPercentage(FCk_FloatRange_0to1{Get_Used().Get_AmountUsed() - InOther.Get_Used().Get_AmountUsed()})
     };
 }
 
@@ -87,7 +87,7 @@ auto
     return FCk_Meter
     {
         FCk_Meter_Params{NewCapacity}
-        .Set_StartingValue(FCk_FloatRange_0to1{Get_Used().Get_AmountUsed() * InOther.Get_Used().Get_AmountUsed()})
+        .Set_StartingPercentage(FCk_FloatRange_0to1{Get_Used().Get_AmountUsed() * InOther.Get_Used().Get_AmountUsed()})
     };
 }
 
@@ -110,7 +110,7 @@ auto
     return FCk_Meter
     {
         FCk_Meter_Params{NewCapacity}
-        .Set_StartingValue(FCk_FloatRange_0to1{Get_Used().Get_AmountUsed() / InOther.Get_Used().Get_AmountUsed()})
+        .Set_StartingPercentage(FCk_FloatRange_0to1{Get_Used().Get_AmountUsed() / InOther.Get_Used().Get_AmountUsed()})
     };
 }
 
@@ -157,9 +157,9 @@ auto
     Get_Remaining() const
     -> FCk_Meter_Remaining
 {
-    const auto& meterSize = Get_Size().Get_Size();
+    const auto& MeterSize = Get_Size().Get_Size();
 
-    return FCk_Meter_Remaining{ meterSize - Get_Used().Get_AmountUsed() };
+    return FCk_Meter_Remaining{ MeterSize - Get_Used().Get_AmountUsed() };
 }
 
 auto
@@ -167,10 +167,10 @@ auto
     Get_Used() const
     -> FCk_Meter_Used
 {
-    const auto& percentageUsed = Get_PercentageUsed().Get_Value();
-    const auto& meterSize      = Get_Size().Get_Size();
+    const auto& PercentageUsed = Get_PercentageUsed().Get_Value();
+    const auto& MeterSize      = Get_Size().Get_Size();
 
-    return FCk_Meter_Used{ (meterSize * percentageUsed) };
+    return FCk_Meter_Used{ (MeterSize * PercentageUsed) };
 }
 
 auto
@@ -178,10 +178,10 @@ auto
     Get_Value() const
     -> FCk_Meter_Current
 {
-    const auto& meterCapacity  = Get_Params().Get_Capacity();
-    const auto& meterMin       = meterCapacity.Get_MinCapacity();
+    const auto& MeterCapacity  = Get_Params().Get_Capacity();
+    const auto& MeterMin       = MeterCapacity.Get_MinCapacity();
 
-    return FCk_Meter_Current{ meterMin + Get_Used().Get_AmountUsed() };
+    return FCk_Meter_Current{ MeterMin + Get_Used().Get_AmountUsed() };
 }
 
 auto
@@ -211,11 +211,11 @@ auto
     Get_Size() const
     -> FCk_Meter_Size
 {
-    const auto& meterCapacity = Get_Params().Get_Capacity();
-    const auto& meterMin      = meterCapacity.Get_MinCapacity();
-    const auto& meterMax      = meterCapacity.Get_MaxCapacity();
+    const auto& MeterCapacity = Get_Params().Get_Capacity();
+    const auto& MeterMin      = MeterCapacity.Get_MinCapacity();
+    const auto& MeterMax      = MeterCapacity.Get_MaxCapacity();
 
-    return FCk_Meter_Size{ meterMax - meterMin };
+    return FCk_Meter_Size{ MeterMax - MeterMin };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
