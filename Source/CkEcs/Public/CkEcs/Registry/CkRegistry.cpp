@@ -13,9 +13,9 @@ void foo()
     struct Struct {int32 i;};
 
     using FViewType = decltype(r.View<Struct , EmptyStruct, ck::TExclude<Struct>>());
-    using FComponentsAndTags = FViewType::FFragmentsAndTags;
-    using FOnlyComponents = FViewType::FOnlyFragments;
-    using ExcludesOnly = FViewType::TFragmentsOnly<Struct, EmptyStruct>;
+    using FComponentsAndTags = FViewType::FragmentsAndTags;
+    using FOnlyComponents = FViewType::OnlyFragments;
+    using ExcludesOnly = FViewType::FragmentsOnly<Struct, EmptyStruct>;
 
     r.View<int32, float>().ForEach([&](FCk_Entity, int32, float)
     {
