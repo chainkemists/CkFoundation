@@ -63,7 +63,7 @@ public:
         struct TTypeOnly<ck::TExclude<T_Args>...> { using TypeList = entt::type_list<T_Args...>; };
 
         template <typename... T_Args>
-        using TypeOnly_T = entt::type_list_cat_t<typename TTypeOnly<T_Args>::FTypeList...>;
+        using TypeOnly_T = entt::type_list_cat_t<typename TTypeOnly<T_Args>::TypeList...>;
 
         template <typename T>
         struct TIsExcluded : std::false_type { };
