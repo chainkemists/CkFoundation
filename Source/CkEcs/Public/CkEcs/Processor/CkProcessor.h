@@ -59,7 +59,7 @@ namespace ck
         -> void
     {
         using ViewType = decltype(_Registry.View<T_Fragments...>());
-        using ComponentsOnly = typename ViewType::template TFragmentsOnly<T_Fragments...>;
+        using ComponentsOnly = typename ViewType::template FragmentsOnly<T_Fragments...>;
 
         DoTick(InDeltaT, ComponentsOnly{});
     }
