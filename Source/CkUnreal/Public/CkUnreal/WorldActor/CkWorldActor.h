@@ -22,7 +22,7 @@ public:
     friend class UCk_EcsWorld_Subsystem_UE;
 
 public:
-    using FEcsWorldType = ck::FEcsWorld;
+    using EcsWorldType = ck::FEcsWorld;
 
 public:
     virtual auto Initialize(ETickingGroup InTickingGroup) -> void override;
