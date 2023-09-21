@@ -22,7 +22,7 @@ public:
     friend class UCk_EcsWorld_Subsystem_UE;
 
 public:
-    using FEcsWorldType = ck::FEcsWorld;
+    using EcsWorldType = ck::FEcsWorld;
 
 public:
     ACk_World_Actor_Base_UE();
@@ -34,7 +34,7 @@ public:
     virtual auto Initialize(ETickingGroup InTickingGroup) -> void;
 
 protected:
-    TOptional<FEcsWorldType> _EcsWorld;
+    TOptional<EcsWorldType> _EcsWorld;
 };
 
 
@@ -49,18 +49,33 @@ public:
     CK_GENERATED_BODY(UCk_EcsWorld_Subsystem_UE);
 
 public:
-    using FEcsWorldType = ck::FEcsWorld;
+    using EcsWorldType = ck::FEcsWorld;
 
 public:
     virtual auto Deinitialize() -> void override;
     virtual auto Initialize(FSubsystemCollectionBase& Collection) -> void override;
+
+    /** Called once all UWorldSubsystems have been initialized */
+    virtual auto PostInitialize() -> void override;
+
+    /** Called when world is ready to start gameplay before the game mode transitions to the correct state and call BeginPlay on all actors */
+    virtual auto OnWorldBeginPlay(UWorld& InWorld) -> void override;
+
+    virtual auto ShouldCreateSubsystem(UObject* Outer) const -> bool override;
+
+protected:
+    // Called when determining whether to create this Subsystem
+    virtual auto DoesSupportWorldType(const EWorldType::Type WorldType) const -> bool override;
 
 public:
     UFUNCTION(BlueprintImplementableEvent)
     void OnInitialize();
 
     UFUNCTION(BlueprintImplementableEvent)
-    void OnDeInitialize();
+    void OnAllWorldSubsystemsInitialized();
+
+    UFUNCTION(BlueprintImplementableEvent)
+    void OnDeinitialize();
 
 private:
     auto DoSpawnWorldActor() -> void;
@@ -76,8 +91,10 @@ private:
     TSubclassOf<ACk_World_Actor_Base_UE> _WorldActorClass;
 
     UPROPERTY(Transient)
-    TObjectPtr<ACk_World_Actor_Base_UE> _WorldActor = nullptr;
+    TObjectPtr<ACk_World_Actor_Base_UE> _WorldActor;
 
 public:
     CK_PROPERTY_GET(_TransientEntity);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
