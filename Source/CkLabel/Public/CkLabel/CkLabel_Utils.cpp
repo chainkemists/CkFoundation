@@ -11,7 +11,7 @@ namespace ck_label
     struct FGameplayLabel_Tags final : public FGameplayTagNativeAdder
     {
     public:
-        ~FGameplayLabel_Tags() override = default;
+        virtual ~FGameplayLabel_Tags() = default;
 
     protected:
         auto AddTags() -> void override
