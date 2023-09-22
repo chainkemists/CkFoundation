@@ -14,16 +14,18 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_Velocity_UE;
+class UCk_Utils_BulkVelocityModifier_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
-    // --------------------------------------------------------------------------------------------------------------------
-
     struct FTag_Velocity_Setup {};
-    struct FTag_VelocityModifier_SingleTarget {};
-    struct FTag_VelocityModifier_SingleTarget_Setup {};
+    struct FTag_VelocityChannel {};
+    struct FTag_VelocityModifier {};
+    struct FTag_VelocityModifier_Setup {};
+    struct FTag_BulkVelocityModifier_Setup {};
+    struct FTag_BulkVelocityModifier_GlobalScope {};
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -35,15 +37,14 @@ namespace ck
     public:
         using ParamsType = FCk_Fragment_Velocity_ParamsData;
 
-    public:
-        FFragment_Velocity_Params() = default;
-        explicit FFragment_Velocity_Params(ParamsType InParams);
-
     private:
         ParamsType _Params;
 
     public:
         CK_PROPERTY_GET(_Params);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Velocity_Params, _Params);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -56,19 +57,62 @@ namespace ck
     public:
         friend class UCk_Utils_Velocity_UE;
         friend class FProcessor_Velocity_Setup;
-        friend class FProcessor_VelocityModifier_SingleTarget_Setup;
-        friend class FProcessor_VelocityModifier_SingleTarget_Teardown;
-
-    public:
-        FFragment_Velocity_Current() = default;
-        explicit FFragment_Velocity_Current(
-            FVector InVelocity);
+        friend class FProcessor_VelocityModifier_Setup;
+        friend class FProcessor_VelocityModifier_Teardown;
 
     private:
         FVector _CurrentVelocity = FVector::ZeroVector;
 
     public:
         CK_PROPERTY_GET(_CurrentVelocity);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Velocity_Current, _CurrentVelocity);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKPHYSICS_API FFragment_BulkVelocityModifier_Params
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_BulkVelocityModifier_Params);
+
+    public:
+        using ParamsType = FCk_Fragment_BulkVelocityModifier_ParamsData;
+
+    private:
+        ParamsType _Params;
+
+    public:
+        CK_PROPERTY_GET(_Params);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_BulkVelocityModifier_Params, _Params);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKPHYSICS_API FFragment_BulkVelocityModifier_Requests
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_BulkVelocityModifier_Requests);
+
+    public:
+        friend class FProcessor_BulkVelocityModifier_HandleRequests;
+        friend class UCk_Utils_BulkVelocityModifier_UE;
+
+    public:
+        using RequestStartAffectingEntityType = FCk_Request_BulkVelocityModifier_AddTarget;
+        using RequestStopAffectingEntityType = FCk_Request_BulkVelocityModifier_RemoveTarget;
+
+        using RequestType = std::variant<RequestStartAffectingEntityType, RequestStopAffectingEntityType>;
+        using RequestList = TArray<RequestType>;
+
+    private:
+        RequestList _Requests;
+
+    public:
+        CK_PROPERTY_GET(_Requests);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -80,14 +124,15 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FFragment_Velocity_Channel : public FFragment_GameplayLabel
-    {
-        using FFragment_GameplayLabel::FFragment_GameplayLabel;
-    };
+    struct FFragment_RecordOfVelocityModifiers : public FFragment_RecordOfEntities {};
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FFragment_RecordOfVelocityModifiers : public FFragment_RecordOfEntities {};
+    struct FFragment_RecordOfBulkVelocityModifiers : public FFragment_RecordOfEntities {};
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct FFragment_RecordOfVelocityChannels : public FFragment_RecordOfEntities {};
 }
 
 // --------------------------------------------------------------------------------------------------------------------

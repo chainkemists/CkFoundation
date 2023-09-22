@@ -14,14 +14,18 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_Acceleration_UE;
+class UCk_Utils_BulkAccelerationModifier_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
     struct FTag_Acceleration_Setup {};
-    struct FTag_AccelerationModifier_SingleTarget {};
-    struct FTag_AccelerationModifier_SingleTarget_Setup {};
+    struct FTag_AccelerationChannel {};
+    struct FTag_AccelerationModifier {};
+    struct FTag_AccelerationModifier_Setup {};
+    struct FTag_BulkAccelerationModifier_Setup {};
+    struct FTag_BulkAccelerationModifier_GlobalScope {};
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -33,15 +37,14 @@ namespace ck
     public:
         using ParamsType = FCk_Fragment_Acceleration_ParamsData;
 
-    public:
-        FFragment_Acceleration_Params() = default;
-        explicit FFragment_Acceleration_Params(ParamsType InParams);
-
     private:
         ParamsType _Params;
 
     public:
         CK_PROPERTY_GET(_Params);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Acceleration_Params, _Params);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -52,21 +55,64 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Acceleration_Current);
 
     public:
-        friend class FProcessor_Acceleration_Setup;
         friend class UCk_Utils_Acceleration_UE;
-        friend class FProcessor_AccelerationModifier_SingleTarget_Setup;
-        friend class FProcessor_AccelerationModifier_SingleTarget_Teardown;
-
-    public:
-        FFragment_Acceleration_Current() = default;
-        explicit FFragment_Acceleration_Current(
-            FVector InAcceleration);
+        friend class FProcessor_Acceleration_Setup;
+        friend class FProcessor_AccelerationModifier_Setup;
+        friend class FProcessor_AccelerationModifier_Teardown;
 
     private:
         FVector _CurrentAcceleration = FVector::ZeroVector;
 
     public:
         CK_PROPERTY_GET(_CurrentAcceleration);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Acceleration_Current, _CurrentAcceleration);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKPHYSICS_API FFragment_BulkAccelerationModifier_Params
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_BulkAccelerationModifier_Params);
+
+    public:
+        using ParamsType = FCk_Fragment_BulkAccelerationModifier_ParamsData;
+
+    private:
+        ParamsType _Params;
+
+    public:
+        CK_PROPERTY_GET(_Params);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_BulkAccelerationModifier_Params, _Params);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKPHYSICS_API FFragment_BulkAccelerationModifier_Requests
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_BulkAccelerationModifier_Requests);
+
+    public:
+        friend class FProcessor_BulkAccelerationModifier_HandleRequests;
+        friend class UCk_Utils_BulkAccelerationModifier_UE;
+
+    public:
+        using RequestStartAffectingEntityType = FCk_Request_BulkAccelerationModifier_AddTarget;
+        using RequestStopAffectingEntityType = FCk_Request_BulkAccelerationModifier_RemoveTarget;
+
+        using RequestType = std::variant<RequestStartAffectingEntityType, RequestStopAffectingEntityType>;
+        using RequestList = TArray<RequestType>;
+
+    private:
+        RequestList _Requests;
+
+    public:
+        CK_PROPERTY_GET(_Requests);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -78,21 +124,20 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FFragment_Acceleration_Channel : public FFragment_GameplayLabel
-    {
-        using FFragment_GameplayLabel::FFragment_GameplayLabel;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     struct FFragment_RecordOfAccelerationModifiers : public FFragment_RecordOfEntities {};
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class FProcessor_Acceleration_Replicate;
+    struct FFragment_RecordOfBulkAccelerationModifiers : public FFragment_RecordOfEntities {};
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct FFragment_RecordOfAccelerationChannels : public FFragment_RecordOfEntities {};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+namespace ck { class FProcessor_Acceleration_Replicate; }
 
 UCLASS(Blueprintable)
 class CKPHYSICS_API UCk_Fragment_Acceleration_Rep : public UCk_Ecs_ReplicatedObject_UE
