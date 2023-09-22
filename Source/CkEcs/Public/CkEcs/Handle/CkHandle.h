@@ -52,10 +52,10 @@ public:
     auto Try_Remove() -> void;
 
     template <typename... T_Fragment>
-    auto View();
+    auto View() -> FCk_Registry::RegistryViewType<T_Fragment...>;
 
     template <typename... T_Fragment>
-    auto View() const;
+    auto View() const -> FCk_Registry::ConstRegistryViewType<T_Fragment...>;
 
 public:
     template <typename T_Fragment>
@@ -136,22 +136,26 @@ CK_DEFINE_CUSTOM_FORMATTER(FCk_Handle, [&]()
 // --------------------------------------------------------------------------------------------------------------------
 
 template <typename T_FragmentType, typename ... T_Args>
-auto FCk_Handle::Add(T_Args&&... InArgs) -> T_FragmentType&
+auto
+    FCk_Handle::
+    Add(
+        T_Args&&... InArgs)
+    -> T_FragmentType&
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to Add Fragment [{}]. Handle [{}] does NOT have a valid Registry."),
         ctti::nameof_v<T_FragmentType>, *this)
     {
-        static T_FragmentType INVALID_Fragment;
-        return INVALID_Fragment;
+        static T_FragmentType Invalid_Fragment;
+        return Invalid_Fragment;
     }
 
     CK_ENSURE_IF_NOT(IsValid(),
         TEXT("Unable to Add Fragment [{}]. Handle [{}] does NOT have a valid Entity."),
         ctti::nameof_v<T_FragmentType>, *this)
     {
-        static T_FragmentType INVALID_Fragment;
-        return INVALID_Fragment;
+        static T_FragmentType Invalid_Fragment;
+        return Invalid_Fragment;
     }
 
     return _Registry->Add<T_FragmentType>(_Entity, std::forward<T_Args>(InArgs)...);
@@ -160,23 +164,24 @@ auto FCk_Handle::Add(T_Args&&... InArgs) -> T_FragmentType&
 template <typename T_FragmentType, typename ... T_Args>
 auto
     FCk_Handle::
-    AddOrGet(T_Args&&... InArgs)
+    AddOrGet(
+        T_Args&&... InArgs)
     -> T_FragmentType&
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to Add Fragment [{}]. Handle [{}] does NOT have a valid Registry."),
         ctti::nameof_v<T_FragmentType>, *this)
     {
-        static T_FragmentType INVALID_Fragment;
-        return INVALID_Fragment;
+        static T_FragmentType Invalid_Fragment;
+        return Invalid_Fragment;
     }
 
     CK_ENSURE_IF_NOT(IsValid(),
         TEXT("Unable to Add Fragment [{}]. Handle [{}] does NOT have a valid Entity."),
         ctti::nameof_v<T_FragmentType>, *this)
     {
-        static T_FragmentType INVALID_Fragment;
-        return INVALID_Fragment;
+        static T_FragmentType Invalid_Fragment;
+        return Invalid_Fragment;
     }
 
     return _Registry->AddOrGet<T_FragmentType>(_Entity, std::forward<T_Args>(InArgs)...);
@@ -185,7 +190,8 @@ auto
 template <typename T_FragmentType, typename T_Func>
 auto
     FCk_Handle::
-    Try_Transform(T_Func InFunc)
+    Try_Transform(
+        T_Func InFunc)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
@@ -202,29 +208,36 @@ auto
 }
 
 template <typename T_FragmentType, typename ... T_Args>
-auto FCk_Handle::Replace(T_Args&&... InArgs) -> T_FragmentType&
+auto
+    FCk_Handle::
+    Replace(
+        T_Args&&... InArgs)
+    -> T_FragmentType&
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to Replace Fragment [{}]. Handle [{}] does NOT have a valid Registry."),
         ctti::nameof_v<T_FragmentType>, *this)
     {
-        static T_FragmentType INVALID_Fragment;
-        return INVALID_Fragment;
+        static T_FragmentType Invalid_Fragment;
+        return Invalid_Fragment;
     }
 
     CK_ENSURE_IF_NOT(IsValid(),
         TEXT("Unable to Replace Fragment [{}]. Handle [{}] does NOT have a valid Entity."),
         ctti::nameof_v<T_FragmentType>, *this)
     {
-        static T_FragmentType INVALID_Fragment;
-        return INVALID_Fragment;
+        static T_FragmentType Invalid_Fragment;
+        return Invalid_Fragment;
     }
 
     return _Registry->Replace<T_FragmentType>(_Entity, std::forward<T_Args>(InArgs)...);
 }
 
 template <typename T_Fragment>
-auto FCk_Handle::Remove() -> void
+auto
+    FCk_Handle::
+    Remove()
+    -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to Remove Fragment [{}]. Handle [{}] does NOT have a valid Registry."),
@@ -240,7 +253,10 @@ auto FCk_Handle::Remove() -> void
 }
 
 template <typename T_Fragment>
-auto FCk_Handle::Try_Remove() -> void
+auto
+    FCk_Handle::
+    Try_Remove()
+    -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to Try_Remove Fragment [{}]. Handle [{}] does NOT have a valid Registry."),
@@ -256,27 +272,42 @@ auto FCk_Handle::Try_Remove() -> void
 }
 
 template <typename ... T_Fragment>
-auto FCk_Handle::View()
+auto
+    FCk_Handle::
+    View()
+    -> FCk_Registry::RegistryViewType<T_Fragment...>
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to prepare a View. Handle [{}] does NOT have a valid Registry."), *this)
-    { return {}; }
+    {
+        static FRegistryType Invalid_Registry;
+        return Invalid_Registry.View<T_Fragment...>();
+    }
 
-    return _Registry->View<T_Fragment...>(_Entity);
+    return _Registry->View<T_Fragment...>();
 }
 
 template <typename ... T_Fragment>
-auto FCk_Handle::View() const
+auto
+    FCk_Handle::
+    View() const
+    -> FCk_Registry::ConstRegistryViewType<T_Fragment...>
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to prepare a View. Handle [{}] does NOT have a valid Registry."), *this)
-    { return {}; }
+    {
+        static FRegistryType Invalid_Registry;
+        return Invalid_Registry.View<T_Fragment...>();
+    }
 
-    return _Registry->View<T_Fragment...>(_Entity);
+    return _Registry->View<T_Fragment...>();
 }
 
 template <typename T_Fragment>
-auto FCk_Handle::Has() const -> bool
+auto
+    FCk_Handle::
+    Has() const
+    -> bool
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to perform Has query with Fragment [{}]. Handle [{}] does NOT have a valid Registry."),
@@ -287,7 +318,10 @@ auto FCk_Handle::Has() const -> bool
 }
 
 template <typename ... T_Fragment>
-auto FCk_Handle::Has_Any() const -> bool
+auto
+    FCk_Handle::
+    Has_Any() const
+    -> bool
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to perform Has_Any query. Handle [{}] does NOT have a valid Registry."), *this)
@@ -297,7 +331,10 @@ auto FCk_Handle::Has_Any() const -> bool
 }
 
 template <typename ... T_Fragment>
-auto FCk_Handle::Has_All() const -> bool
+auto
+    FCk_Handle::
+    Has_All() const
+    -> bool
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to perform Has_All query. Handle [{}] does NOT have a valid Registry."), *this)
@@ -307,26 +344,32 @@ auto FCk_Handle::Has_All() const -> bool
 }
 
 template <typename T_Fragment>
-auto FCk_Handle::Get() -> T_Fragment&
+auto
+    FCk_Handle::
+    Get()
+    -> T_Fragment&
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to Get fragment. Handle [{}] does NOT have a valid Registry."), *this)
     {
-        static T_Fragment INVALID_Fragment;
-        return INVALID_Fragment;
+        static T_Fragment Invalid_Fragment;
+        return Invalid_Fragment;
     }
 
     return _Registry->Get<T_Fragment>(_Entity);
 }
 
 template <typename T_Fragment>
-auto FCk_Handle::Get() const -> const T_Fragment&
+auto
+    FCk_Handle::
+    Get() const
+    -> const T_Fragment&
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to Get fragment. Handle [{}] does NOT have a valid Registry."), *this)
     {
-        static T_Fragment INVALID_Fragment;
-        return INVALID_Fragment;
+        static T_Fragment Invalid_Fragment;
+        return Invalid_Fragment;
     }
 
     return _Registry->Get<T_Fragment>(_Entity);
