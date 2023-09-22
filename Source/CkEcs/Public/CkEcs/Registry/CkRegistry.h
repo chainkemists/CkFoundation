@@ -21,8 +21,8 @@ namespace ck
 {
     // this is equivalent to entt::exclude for use with FRegistry::TView<...>
     // usage: Registry.View<CompA, CompB, TExclude<CompC>>().ForEach(...)
-    template <typename... T>
-    struct TExclude { using ValueType = entt::type_list<T...>; };
+    template <typename... T_Args>
+    struct TExclude { using ValueType = entt::type_list<T_Args...>; };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -51,9 +51,11 @@ public:
     {
     public:
         template <typename T>
+        // ReSharper disable once CppInconsistentNaming
         struct TIsEmpty { static constexpr auto value = std::is_empty_v<T>; };
 
         template <typename T>
+        // ReSharper disable once CppInconsistentNaming
         struct TIsEmpty<ck::TExclude<T>>{ static constexpr auto value = std::is_empty_v<T>; };
 
         template <typename... T_Args>

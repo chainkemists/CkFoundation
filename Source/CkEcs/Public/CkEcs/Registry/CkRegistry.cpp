@@ -2,28 +2,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-void foo()
-{
-    // TODO: transfer to spec file and flesh out the tests
-    FCk_Registry r;
-    FCk_Entity e;
-    r.Add<int>(e);
-
-    struct EmptyStruct {};
-    struct Struct {int32 i;};
-
-    using FViewType = decltype(r.View<Struct , EmptyStruct, ck::TExclude<Struct>>());
-    using FComponentsAndTags = FViewType::FragmentsAndTags;
-    using FOnlyComponents = FViewType::OnlyFragments;
-    using ExcludesOnly = FViewType::FragmentsOnly<Struct, EmptyStruct>;
-
-    r.View<int32, float>().ForEach([&](FCk_Entity, int32, float)
-    {
-    });
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 FCk_Registry::
     FCk_Registry()
 {
