@@ -3,12 +3,42 @@
 #include <GameplayTagContainer.h>
 
 #include "CkAttribute/CkAttribute_Utils.h"
+#include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment.h"
 #include "CkAttribute/MeterAttribute/CkMeterAttribute_Fragment.h"
 #include "CkAttribute/MeterAttribute/CkMeterAttribute_Fragment_Data.h"
 #include "CkEcsBasics/CkEcsBasics_Utils.h"
 #include "CkSignal/CkSignal_Fragment_Data.h"
 
 #include "CkMeterAttribute_Utils.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+
+struct CKATTRIBUTE_API FMeterAttribute_Tags final : public FGameplayTagNativeAdder
+{
+public:
+    CK_GENERATED_BODY(FMeterAttribute_Tags);
+
+protected:
+    //Called to register and assign the native tags
+    auto AddTags() -> void override;
+
+private:
+    FGameplayTag _MinCapacity;
+    FGameplayTag _MaxCapacity;
+    FGameplayTag _Current;
+
+    static FMeterAttribute_Tags _Tags;
+
+public:
+    static auto Get_MinCapacity() -> FGameplayTag;
+    static auto Get_MaxCapacity() -> FGameplayTag;
+    static auto Get_Current() -> FGameplayTag;
+};
+
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -23,9 +53,11 @@ public:
 public:
     friend class UCk_Utils_MeterAttributeModifier_UE;
 
-private:
-    class MeterAttribute_Utils : public ck::TUtils_Attribute<ck::FFragment_MeterAttribute> {};
+public:
     class RecordOfMeterAttributes_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfMeterAttributes> {};
+
+    class FloatAttribute_Utils : public ck::TUtils_Attribute<ck::FFragment_FloatAttribute> {};
+    class RecordOfFloatAttributes_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfFloatAttributes> {};
 
 public:
     friend class UCk_Utils_MeterAttributes_UE;
@@ -99,6 +131,29 @@ public:
         FGameplayTag InAttributeName,
         FCk_Handle InAttributeOwnerEntity,
         const FCk_Delegate_MeterAttribute_OnValueChanged& InDelegate);
+
+public:
+    static auto
+    Get_MinMaxAndCurrentAttributeEntities(
+        FGameplayTag InAttributeName,
+        FCk_Handle InOwnerEntity)
+    -> std::tuple<FCk_Handle, FCk_Handle, FCk_Handle>;
+
+private:
+    static auto
+    OnMinCapacityChanged(
+        FCk_Handle InFloatAttributeEntity,
+        ck::TPayload_Attribute_OnValueChanged<ck::FFragment_FloatAttribute> InValueChanged) -> void;
+
+    static auto
+    OnMaxCapacityChanged(
+        FCk_Handle InFloatAttributeEntity,
+        ck::TPayload_Attribute_OnValueChanged<ck::FFragment_FloatAttribute> InValueChanged) -> void;
+
+    static auto
+    OnCurrentValueCanged(
+        FCk_Handle InFloatAttributeEntity,
+        ck::TPayload_Attribute_OnValueChanged<ck::FFragment_FloatAttribute> InValueChanged) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -53,7 +53,6 @@ namespace ck
         {
             return FCk_Payload_MeterAttribute_OnValueChanged
             {
-                InPayload.Get_Handle(),
                 InPayload.Get_BaseValue(),
                 InPayload.Get_FinalValue()
             };
