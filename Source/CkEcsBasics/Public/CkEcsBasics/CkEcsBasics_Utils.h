@@ -37,7 +37,9 @@ auto
 {
     const auto& Pred = [&InLabelName](FCk_Handle InEntity)
     {
-        return T_FragmentUtils::Has(InEntity) && UCk_Utils_GameplayLabel_UE::Has(InEntity) && UCk_Utils_GameplayLabel_UE::Get_Label(InEntity).MatchesTagExact(InLabelName);
+        return T_FragmentUtils::Has(InEntity)
+            && UCk_Utils_GameplayLabel_UE::Has(InEntity)
+            && UCk_Utils_GameplayLabel_UE::MatchesExact(InEntity, InLabelName);
     };
 
     if (Pred(InHandle))
