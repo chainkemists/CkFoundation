@@ -11,7 +11,7 @@ namespace ck_label
     struct FGameplayLabel_Tags final : public FGameplayTagNativeAdder
     {
     public:
-        virtual ~FGameplayLabel_Tags() = default;
+        ~FGameplayLabel_Tags() override = default;
 
     protected:
         auto AddTags() -> void override
@@ -45,14 +45,7 @@ auto
         const FGameplayTag& InLabel)
     -> void
 {
-    if (ck::IsValid(InLabel))
-    {
-        InHandle.Add<ck::FFragment_GameplayLabel>(InLabel);
-    }
-    else
-    {
-        InHandle.Add<ck::FFragment_GameplayLabel>(ck_label::FGameplayLabel_Tags::Get_None());
-    }
+    InHandle.Add<ck::FFragment_GameplayLabel>(DoGet_LabelOrNone(InLabel));
 }
 
 auto
@@ -86,6 +79,66 @@ auto
     { return {}; }
 
     return InHandle.Get<ck::FFragment_GameplayLabel>().Get_Label();
+}
+
+auto
+    UCk_Utils_GameplayLabel_UE::
+    DoGet_LabelOrNone(
+        FGameplayTag InTag)
+    -> FGameplayTag
+{
+    if (ck::Is_NOT_Valid(InTag))
+    { return ck_label::FGameplayLabel_Tags::Get_None(); }
+
+    return InTag;
+}
+
+auto
+    UCk_Utils_GameplayLabel_UE::
+    Matches(
+        FCk_Handle         InHandle,
+        const FGameplayTag InTagToMatch)
+    -> bool
+{
+    const auto Label = Get_Label(InHandle);
+
+    return Label.MatchesTag(DoGet_LabelOrNone(InTagToMatch));
+}
+
+auto
+    UCk_Utils_GameplayLabel_UE::
+    MatchesExact(
+        FCk_Handle         InHandle,
+        const FGameplayTag InTagToMatch)
+    -> bool
+{
+    const auto Label = Get_Label(InHandle);
+
+    return Label.MatchesTagExact(DoGet_LabelOrNone(InTagToMatch));
+}
+
+auto
+    UCk_Utils_GameplayLabel_UE::
+    MatchesAny(
+        FCk_Handle                   InHandle,
+        const FGameplayTagContainer& InTagsToMatch)
+    -> bool
+{
+    const auto Label = Get_Label(InHandle);
+
+    return Label.MatchesAny(InTagsToMatch);
+}
+
+auto
+    UCk_Utils_GameplayLabel_UE::
+    MatchesAnyExact(
+        FCk_Handle                   InHandle,
+        const FGameplayTagContainer& InTagsToMatch)
+    -> bool
+{
+    const auto Label = Get_Label(InHandle);
+
+    return Label.MatchesAnyExact(InTagsToMatch);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
