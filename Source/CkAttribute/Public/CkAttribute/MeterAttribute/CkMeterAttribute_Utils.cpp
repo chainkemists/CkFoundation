@@ -58,8 +58,6 @@ auto
         const FCk_Provider_MeterAttributes_ParamsData& InParams)
     -> void
 {
-    FGameplayTag MyTag = FGameplayTag::RequestGameplayTag(FName("MyNewTag"));
-
     // TODO: Select Record policy that disallow duplicate based on Gameplay Label
     RecordOfMeterAttributes_Utils::AddIfMissing(InHandle);
 
@@ -201,7 +199,7 @@ auto
         return UCk_Utils_GameplayLabel_UE::Get_Label(InHandle) == InAttributeName;
     });
 
-    const auto [MinCapacity, MaxCapacity, Current] = Get_MinMaxAndCurrentAttributeEntities(InAttributeName, FoundEntity);
+    const auto [MinCapacity, MaxCapacity, Current] = Get_MinMaxAndCurrentAttributeEntities(InAttributeName, InAttributeOwnerEntity);
 
     switch(InBehavior)
     {
@@ -283,13 +281,13 @@ auto
         ck::TPayload_Attribute_OnValueChanged<ck::FFragment_FloatAttribute> InValueChanged)
     -> void
 {
-    const auto MeterAttributeEntity = ck::UCk_Utils_OwningEntity::Get_StoredEntity(InFloatAttributeEntity);
+    const auto MeterAttributeEntity = InFloatAttributeEntity;
     const auto MeterAttributeLabel = UCk_Utils_GameplayLabel_UE::Get_Label(MeterAttributeEntity);
     const auto MeterAttributeOwnerEntity = ck::UCk_Utils_OwningEntity::Get_StoredEntity(MeterAttributeEntity);
 
     ck::UUtils_Signal_OnMeterAttributeValueChanged::Broadcast
     (
-        MeterAttributeOwnerEntity,
+        MeterAttributeEntity,
         ck::MakePayload
         (
             MeterAttributeOwnerEntity,
@@ -310,13 +308,13 @@ auto
         ck::TPayload_Attribute_OnValueChanged<ck::FFragment_FloatAttribute> InValueChanged)
     -> void
 {
-    const auto MeterAttributeEntity = ck::UCk_Utils_OwningEntity::Get_StoredEntity(InFloatAttributeEntity);
+    const auto MeterAttributeEntity = InFloatAttributeEntity;
     const auto MeterAttributeLabel = UCk_Utils_GameplayLabel_UE::Get_Label(MeterAttributeEntity);
     const auto MeterAttributeOwnerEntity = ck::UCk_Utils_OwningEntity::Get_StoredEntity(MeterAttributeEntity);
 
     ck::UUtils_Signal_OnMeterAttributeValueChanged::Broadcast
     (
-        MeterAttributeOwnerEntity,
+        MeterAttributeEntity,
         ck::MakePayload
         (
             MeterAttributeOwnerEntity,
@@ -337,13 +335,13 @@ auto
         ck::TPayload_Attribute_OnValueChanged<ck::FFragment_FloatAttribute> InValueChanged)
     -> void
 {
-    const auto MeterAttributeEntity = ck::UCk_Utils_OwningEntity::Get_StoredEntity(InFloatAttributeEntity);
+    const auto MeterAttributeEntity = InFloatAttributeEntity;
     const auto MeterAttributeLabel = UCk_Utils_GameplayLabel_UE::Get_Label(MeterAttributeEntity);
     const auto MeterAttributeOwnerEntity = ck::UCk_Utils_OwningEntity::Get_StoredEntity(MeterAttributeEntity);
 
     ck::UUtils_Signal_OnMeterAttributeValueChanged::Broadcast
     (
-        MeterAttributeOwnerEntity,
+        MeterAttributeEntity,
         ck::MakePayload
         (
             MeterAttributeOwnerEntity,
