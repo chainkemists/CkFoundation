@@ -15,12 +15,6 @@ struct CKPHYSICS_API FCk_Fragment_Acceleration_ParamsData
 public:
     CK_GENERATED_BODY(FCk_Fragment_Acceleration_ParamsData);
 
-public:
-    FCk_Fragment_Acceleration_ParamsData() = default;
-    FCk_Fragment_Acceleration_ParamsData(
-        ECk_LocalWorld InCoordinates,
-        FVector InStartingAcceleration);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -33,22 +27,20 @@ private:
 public:
     CK_PROPERTY_GET(_Coordinates);
     CK_PROPERTY_GET(_StartingAcceleration);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Acceleration_ParamsData, _Coordinates, _StartingAcceleration);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPHYSICS_API FCk_Fragment_AccelerationModifier_SingleTarget_ParamsData
+struct CKPHYSICS_API FCk_Fragment_AccelerationModifier_ParamsData
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_AccelerationModifier_SingleTarget_ParamsData);
-
-public:
-    FCk_Fragment_AccelerationModifier_SingleTarget_ParamsData() = default;
-    explicit FCk_Fragment_AccelerationModifier_SingleTarget_ParamsData(
-        FCk_Fragment_Acceleration_ParamsData InAccelerationParams);
+    CK_GENERATED_BODY(FCk_Fragment_AccelerationModifier_ParamsData);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -57,6 +49,85 @@ private:
 
 public:
     CK_PROPERTY_GET(_AccelerationParams);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_AccelerationModifier_ParamsData, _AccelerationParams);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKPHYSICS_API FCk_Fragment_BulkAccelerationModifier_ParamsData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Fragment_AccelerationModifier_ParamsData);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Fragment_Acceleration_ParamsData _AccelerationParams;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTagContainer _TargetChannels;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_ExtentScope _ModifierScope = ECk_ExtentScope::Bounded;
+
+public:
+    CK_PROPERTY_GET(_AccelerationParams);
+    CK_PROPERTY_GET(_TargetChannels);
+    CK_PROPERTY_GET(_ModifierScope);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_BulkAccelerationModifier_ParamsData, _AccelerationParams, _TargetChannels, _ModifierScope);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKPHYSICS_API FCk_Request_BulkAccelerationModifier_AddTarget
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_BulkAccelerationModifier_AddTarget);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _TargetEntity;
+
+public:
+    CK_PROPERTY_GET(_TargetEntity)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_BulkAccelerationModifier_AddTarget, _TargetEntity);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKPHYSICS_API FCk_Request_BulkAccelerationModifier_RemoveTarget
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_BulkAccelerationModifier_RemoveTarget);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _TargetEntity;
+
+public:
+    CK_PROPERTY_GET(_TargetEntity)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_BulkAccelerationModifier_RemoveTarget, _TargetEntity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -32,15 +32,15 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKPHYSICS_API FProcessor_VelocityModifier_SingleTarget_Setup : public TProcessor<
-            FProcessor_VelocityModifier_SingleTarget_Setup,
+    class CKPHYSICS_API FProcessor_VelocityModifier_Setup : public TProcessor<
+            FProcessor_VelocityModifier_Setup,
             FFragment_Velocity_Current,
             FFragment_Velocity_Target,
-            FTag_VelocityModifier_SingleTarget,
-            FTag_VelocityModifier_SingleTarget_Setup>
+            FTag_VelocityModifier,
+            FTag_VelocityModifier_Setup>
     {
     public:
-        using MarkedDirtyBy = FTag_VelocityModifier_SingleTarget_Setup;
+        using MarkedDirtyBy = FTag_VelocityModifier_Setup;
 
     public:
         using TProcessor::TProcessor;
@@ -56,11 +56,11 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKPHYSICS_API FProcessor_VelocityModifier_SingleTarget_Teardown : public TProcessor<
-            FProcessor_VelocityModifier_SingleTarget_Teardown,
+    class CKPHYSICS_API FProcessor_VelocityModifier_Teardown : public TProcessor<
+            FProcessor_VelocityModifier_Teardown,
             FFragment_Velocity_Current,
             FFragment_Velocity_Target,
-            FTag_VelocityModifier_SingleTarget,
+            FTag_VelocityModifier,
             FTag_PendingDestroyEntity>
     {
     public:
@@ -76,6 +76,84 @@ namespace ck
             HandleType InHandle,
             const FFragment_Velocity_Current& InVelocity,
             const FFragment_Velocity_Target& InTarget) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKPHYSICS_API FProcessor_BulkVelocityModifier_Setup : public TProcessor<
+            FProcessor_BulkVelocityModifier_Setup,
+            FFragment_BulkVelocityModifier_Params,
+            FTag_BulkVelocityModifier_GlobalScope,
+            FTag_BulkVelocityModifier_Setup>
+    {
+    public:
+        using MarkedDirtyBy = FTag_BulkVelocityModifier_Setup;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_BulkVelocityModifier_Params& InParams) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKPHYSICS_API FProcessor_BulkVelocityModifier_AddNewTargets : public TProcessor<
+            FProcessor_BulkVelocityModifier_AddNewTargets,
+            FFragment_Velocity_Params,
+            FFragment_RecordOfVelocityChannels,
+            FTag_EntityJustCreated>
+    {
+    public:
+        using MarkedDirtyBy = FTag_EntityJustCreated;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Velocity_Params& InParams,
+            const FFragment_RecordOfVelocityChannels& InVelocityChannels) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKPHYSICS_API FProcessor_BulkVelocityModifier_HandleRequests : public TProcessor<
+            FProcessor_BulkVelocityModifier_HandleRequests,
+            FFragment_BulkVelocityModifier_Params,
+            FFragment_BulkVelocityModifier_Requests>
+    {
+    public:
+        using MarkedDirtyBy = FFragment_BulkVelocityModifier_Requests;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_BulkVelocityModifier_Params& InParams,
+            FFragment_BulkVelocityModifier_Requests& InRequests) const -> void;
+
+    private:
+        static auto DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_BulkVelocityModifier_Params& InParams,
+            const FCk_Request_BulkVelocityModifier_AddTarget& InRequest) -> void;
+
+        static auto DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_BulkVelocityModifier_Params& InParams,
+            const FCk_Request_BulkVelocityModifier_RemoveTarget& InRequest) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

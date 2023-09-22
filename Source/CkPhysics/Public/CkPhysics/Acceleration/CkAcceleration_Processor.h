@@ -32,15 +32,15 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKPHYSICS_API FProcessor_AccelerationModifier_SingleTarget_Setup : public TProcessor<
-            FProcessor_AccelerationModifier_SingleTarget_Setup,
+    class CKPHYSICS_API FProcessor_AccelerationModifier_Setup : public TProcessor<
+            FProcessor_AccelerationModifier_Setup,
             FFragment_Acceleration_Current,
             FFragment_Acceleration_Target,
-            FTag_AccelerationModifier_SingleTarget,
-            FTag_AccelerationModifier_SingleTarget_Setup>
+            FTag_AccelerationModifier,
+            FTag_AccelerationModifier_Setup>
     {
     public:
-        using MarkedDirtyBy = FTag_AccelerationModifier_SingleTarget_Setup;
+        using MarkedDirtyBy = FTag_AccelerationModifier_Setup;
 
     public:
         using TProcessor::TProcessor;
@@ -56,11 +56,11 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKPHYSICS_API FProcessor_AccelerationModifier_SingleTarget_Teardown : public TProcessor<
-            FProcessor_AccelerationModifier_SingleTarget_Teardown,
+    class CKPHYSICS_API FProcessor_AccelerationModifier_Teardown : public TProcessor<
+            FProcessor_AccelerationModifier_Teardown,
             FFragment_Acceleration_Current,
             FFragment_Acceleration_Target,
-            FTag_AccelerationModifier_SingleTarget,
+            FTag_AccelerationModifier,
             FTag_PendingDestroyEntity>
     {
     public:
@@ -80,6 +80,84 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class CKPHYSICS_API FProcessor_BulkAccelerationModifier_Setup : public TProcessor<
+            FProcessor_BulkAccelerationModifier_Setup,
+            FFragment_BulkAccelerationModifier_Params,
+            FTag_BulkAccelerationModifier_GlobalScope,
+            FTag_BulkAccelerationModifier_Setup>
+    {
+    public:
+        using MarkedDirtyBy = FTag_BulkAccelerationModifier_Setup;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_BulkAccelerationModifier_Params& InParams) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKPHYSICS_API FProcessor_BulkAccelerationModifier_AddNewTargets : public TProcessor<
+            FProcessor_BulkAccelerationModifier_AddNewTargets,
+            FFragment_Acceleration_Params,
+            FFragment_RecordOfAccelerationChannels,
+            FTag_EntityJustCreated>
+    {
+    public:
+        using MarkedDirtyBy = FTag_EntityJustCreated;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Acceleration_Params& InParams,
+            const FFragment_RecordOfAccelerationChannels& InAccelerationChannels) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKPHYSICS_API FProcessor_BulkAccelerationModifier_HandleRequests : public TProcessor<
+            FProcessor_BulkAccelerationModifier_HandleRequests,
+            FFragment_BulkAccelerationModifier_Params,
+            FFragment_BulkAccelerationModifier_Requests>
+    {
+    public:
+        using MarkedDirtyBy = FFragment_BulkAccelerationModifier_Requests;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_BulkAccelerationModifier_Params& InParams,
+            FFragment_BulkAccelerationModifier_Requests& InRequests) const -> void;
+
+    private:
+        static auto DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_BulkAccelerationModifier_Params& InParams,
+            const FCk_Request_BulkAccelerationModifier_AddTarget& InRequest) -> void;
+
+        static auto DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_BulkAccelerationModifier_Params& InParams,
+            const FCk_Request_BulkAccelerationModifier_RemoveTarget& InRequest) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKPHYSICS_API FProcessor_Acceleration_Replicate
         : public TProcessor<FProcessor_Acceleration_Replicate, FFragment_Acceleration_Current, TObjectPtr<UCk_Fragment_Acceleration_Rep>>
     {
@@ -91,7 +169,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Acceleration_Current& InCurrent,
-            const TObjectPtr<UCk_Fragment_Acceleration_Rep>& InAccelRepComp) const -> void;
+            const TObjectPtr<UCk_Fragment_Acceleration_Rep>& InVelRepComp) const -> void;
     };
 }
 

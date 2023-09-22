@@ -1,5 +1,6 @@
 #include "CkVelocity_Processor.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcsBasics/Transform/CkTransform_Utils.h"
 #include "CkPhysics/Velocity/CkVelocity_Utils.h"
 
@@ -30,8 +31,9 @@ namespace ck
                     }
 
                     CK_ENSURE_IF_NOT(UCk_Utils_Velocity_UE::VelocityTarget_Utils::Has(InHandle),
-                        TEXT("Handle [{}] does NOT have Transform info nor does it have an VelocityTarget. "
-                             "Unable to convert Velocity to LOCAL coordinates"), InHandle)
+                        TEXT("Entity [{}] does NOT have Transform info nor does it have an VelocityTarget. "
+                             "Unable to convert Velocity to LOCAL coordinates"),
+                        InHandle)
                     { return {}; }
 
                     const auto accelerationTarget = UCk_Utils_Velocity_UE::VelocityTarget_Utils::Get_StoredEntity(InHandle);
@@ -61,7 +63,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_VelocityModifier_SingleTarget_Setup::
+        FProcessor_VelocityModifier_Setup::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -80,7 +82,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_VelocityModifier_SingleTarget_Teardown::
+        FProcessor_VelocityModifier_Teardown::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -92,6 +94,130 @@ namespace ck
         auto& targetVelocity = targetEntity.Get<FFragment_Velocity_Current>();
 
         targetVelocity._CurrentVelocity -= InVelocity._CurrentVelocity;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_BulkVelocityModifier_Setup::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_BulkVelocityModifier_Params& InParams) const
+        -> void
+    {
+        const auto& targetVelocityChannels = InParams.Get_Params().Get_TargetChannels();
+
+        InHandle.View<FFragment_RecordOfVelocityChannels>().ForEach(
+        [&](FCk_Entity InEntity, const FFragment_RecordOfVelocityChannels& InVelocityChannels)
+        {
+            const auto& targetEntity = MakeHandle(InEntity, InHandle);
+
+            if (NOT UCk_Utils_VelocityChannel_UE::Get_IsAffectedByAnyOtherChannel(targetEntity, targetVelocityChannels))
+            { return; }
+
+            UCk_Utils_BulkVelocityModifier_UE::DoRequest_AddTarget
+            (
+                InHandle,
+                FCk_Request_BulkVelocityModifier_AddTarget{targetEntity}
+            );
+        });
+
+        InHandle.Remove<MarkedDirtyBy>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_BulkVelocityModifier_AddNewTargets::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Velocity_Params& InParams,
+            const FFragment_RecordOfVelocityChannels& InVelocityChannels) const
+        -> void
+    {
+        InHandle.Get_Registry().View<FFragment_BulkVelocityModifier_Params, FTag_BulkVelocityModifier_GlobalScope>().ForEach(
+        [&](FCk_Entity InModifierEntity, const FFragment_BulkVelocityModifier_Params& InMultiTargetVelocityModifierParams)
+        {
+            if (NOT UCk_Utils_VelocityChannel_UE::Get_IsAffectedByAnyOtherChannel(InHandle, InMultiTargetVelocityModifierParams.Get_Params().Get_TargetChannels()))
+            { return; }
+
+            UCk_Utils_BulkVelocityModifier_UE::DoRequest_AddTarget
+            (
+                MakeHandle(InModifierEntity, InHandle),
+                FCk_Request_BulkVelocityModifier_AddTarget{InHandle}
+            );
+        });
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_BulkVelocityModifier_HandleRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_BulkVelocityModifier_Params& InParams,
+            FFragment_BulkVelocityModifier_Requests& InRequests) const
+        -> void
+    {
+        const auto& targetVelocityChannels = InParams.Get_Params().Get_TargetChannels();
+
+        algo::ForEachRequest(InRequests._Requests, ck::Visitor(
+        [&](const auto& InRequestVariant)
+        {
+            const auto& targetEntity = InRequestVariant.Get_TargetEntity();
+
+            // Entity may have been destroyed before we got a chance to process it
+            if (ck::Is_NOT_Valid(targetEntity))
+            { return; }
+
+            if (NOT UCk_Utils_VelocityChannel_UE::Get_IsAffectedByAnyOtherChannel(targetEntity, targetVelocityChannels))
+            { return; }
+
+            DoHandleRequest(InHandle, InParams, InRequestVariant);
+        }));
+
+        InHandle.Remove<MarkedDirtyBy>();
+    }
+
+    auto
+        FProcessor_BulkVelocityModifier_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_BulkVelocityModifier_Params& InParams,
+            const FCk_Request_BulkVelocityModifier_AddTarget& InRequest)
+        -> void
+    {
+        const auto& targetEntity = InRequest.Get_TargetEntity();
+
+        UCk_Utils_VelocityModifier_UE::Add
+        (
+            targetEntity,
+            UCk_Utils_GameplayLabel_UE::Get_Label(InHandle),
+            FCk_Fragment_VelocityModifier_ParamsData
+            {
+                InParams.Get_Params().Get_VelocityParams()
+            }
+        );
+    }
+
+    auto
+        FProcessor_BulkVelocityModifier_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_BulkVelocityModifier_Params& InParams,
+            const FCk_Request_BulkVelocityModifier_RemoveTarget& InRequest)
+        -> void
+    {
+        const auto& targetEntity = InRequest.Get_TargetEntity();
+
+        UCk_Utils_VelocityModifier_UE::Remove
+        (
+            targetEntity,
+            UCk_Utils_GameplayLabel_UE::Get_Label(InHandle)
+        );
     }
 
     // --------------------------------------------------------------------------------------------------------------------
