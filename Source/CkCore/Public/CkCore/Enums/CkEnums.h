@@ -316,3 +316,17 @@ enum class ECk_ComparisonOperators : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ComparisonOperators);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_ExtentScope : uint8
+{
+    // Applies globally or with infinite extents
+    Global,
+
+    // Applies within defined bounds
+    Bounded
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ExtentScope);
+
+// --------------------------------------------------------------------------------------------------------------------
