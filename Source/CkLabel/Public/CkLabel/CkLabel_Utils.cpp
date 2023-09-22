@@ -2,6 +2,40 @@
 
 #include "CkLabel/CkLabel_Fragment.h"
 
+#include <GameplayTagsManager.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_label
+{
+    struct FGameplayLabel_Tags final : public FGameplayTagNativeAdder
+    {
+    public:
+        virtual ~FGameplayLabel_Tags() = default;
+
+    protected:
+        auto AddTags() -> void override
+        {
+            auto& Manager = UGameplayTagsManager::Get();
+
+            _None = Manager.AddNativeGameplayTag(TEXT("Ck.Label.None"));
+        }
+
+    private:
+        FGameplayTag _None;
+
+        static FGameplayLabel_Tags _Tags;
+
+    public:
+        static auto Get_None() -> FGameplayTag
+        {
+            return _Tags._None;
+        }
+    };
+
+    FGameplayLabel_Tags FGameplayLabel_Tags::_Tags;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -11,7 +45,14 @@ auto
         const FGameplayTag& InLabel)
     -> void
 {
-    InHandle.Add<ck::FFragment_GameplayLabel>(InLabel);
+    if (ck::IsValid(InLabel))
+    {
+        InHandle.Add<ck::FFragment_GameplayLabel>(InLabel);
+    }
+    else
+    {
+        InHandle.Add<ck::FFragment_GameplayLabel>(ck_label::FGameplayLabel_Tags::Get_None());
+    }
 }
 
 auto
