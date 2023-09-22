@@ -114,6 +114,12 @@ public:
         RegistryType& _Registry;
     };
 
+    template <typename... T_Fragments>
+    using RegistryViewType = TView<InternalRegistryType, T_Fragments...>;
+
+    template <typename... T_Fragments>
+    using ConstRegistryViewType = TView<const InternalRegistryType, T_Fragments...>;
+
 public:
     FCk_Registry();
 
@@ -140,10 +146,10 @@ public:
     auto Clear() -> void;
 
     template <typename... T_Fragments>
-    auto View() -> TView<InternalRegistryType, T_Fragments...>;
+    auto View() -> RegistryViewType<T_Fragments...>;
 
     template <typename... T_Fragments>
-    auto View() const -> TView<const InternalRegistryType, T_Fragments...>;
+    auto View() const -> ConstRegistryViewType<T_Fragments...>;
 
     template <typename T_Fragment, typename T_Compare>
     auto Sort(T_Compare InCompare) -> void;
@@ -307,13 +313,13 @@ auto FCk_Registry::Clear() -> void
 }
 
 template <typename... T_Fragments>
-auto FCk_Registry::View() -> TView<InternalRegistryType, T_Fragments...>
+auto FCk_Registry::View() -> RegistryViewType<T_Fragments...>
 {
     return TView<InternalRegistryType, T_Fragments...>{*_InternalRegistry};
 }
 
 template <typename... T_Fragments>
-auto FCk_Registry::View() const -> TView<const InternalRegistryType, T_Fragments...>
+auto FCk_Registry::View() const -> ConstRegistryViewType<T_Fragments...>
 {
     return TView<const InternalRegistryType, T_Fragments...>{*_InternalRegistry};
 }
