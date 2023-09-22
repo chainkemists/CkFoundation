@@ -19,7 +19,7 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Ecs_Base_UE);
 
 protected:
-    template <typename T_Fragment, typename T_Record>
+    template <typename T_FragmentUtils, typename T_RecordUtils>
     static auto Get_EntityOrRecordEntry_WithFragmentAndLabel(
         FCk_Handle InHandle,
         FGameplayTag InLabelName) -> FCk_Handle;
@@ -37,7 +37,7 @@ auto
 {
     const auto& Pred = [&InLabelName](FCk_Handle InEntity)
     {
-        return T_FragmentUtils::Has(InEntity) && UCk_Utils_GameplayLabel_UE::Has(InEntity) && UCk_Utils_GameplayLabel_UE::Get_Label(InEntity) == InLabelName;
+        return T_FragmentUtils::Has(InEntity) && UCk_Utils_GameplayLabel_UE::Has(InEntity) && UCk_Utils_GameplayLabel_UE::Get_Label(InEntity).MatchesTagExact(InLabelName);
     };
 
     if (Pred(InHandle))
