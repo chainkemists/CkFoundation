@@ -15,10 +15,6 @@ namespace ck
         CK_GENERATED_BODY(FFragment_GameplayLabel);
 
     public:
-        FFragment_GameplayLabel() = default;
-        explicit FFragment_GameplayLabel(FGameplayTag InLabel);
-
-    public:
         auto operator==(const ThisType& InOther) const -> bool;
         CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
 
@@ -30,8 +26,10 @@ namespace ck
 
     public:
         CK_PROPERTY_GET(_Label);
-    };
 
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_GameplayLabel, _Label)
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -39,26 +37,58 @@ namespace ck
 
 namespace ck::algo
 {
-    struct CKLABEL_API MatchesGameplayLabel
+    struct CKLABEL_API MatchesGameplayLabelExact
     {
-        explicit MatchesGameplayLabel(FGameplayTag InName);
-
     public:
         auto operator()(const FCk_Handle& InHandle) const -> bool;
 
     private:
         FGameplayTag _Name;
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(MatchesGameplayLabelExact, _Name)
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKLABEL_API MatchesGameplayLabel
+    {
+    public:
+        auto operator()(const FCk_Handle& InHandle) const -> bool;
+
+    private:
+        FGameplayTag _Name;
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(MatchesGameplayLabel, _Name)
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     struct CKLABEL_API MatchesAnyGameplayLabel
     {
-        explicit MatchesAnyGameplayLabel(FGameplayTagContainer InNames);
-
     public:
         auto operator()(const FCk_Handle& InHandle) const -> bool;
 
     private:
         FGameplayTagContainer _Names;
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(MatchesAnyGameplayLabel, _Names)
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKLABEL_API MatchesAnyGameplayLabelExact
+    {
+    public:
+        auto operator()(const FCk_Handle& InHandle) const -> bool;
+
+    private:
+        FGameplayTagContainer _Names;
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(MatchesAnyGameplayLabelExact, _Names)
     };
 }
 
