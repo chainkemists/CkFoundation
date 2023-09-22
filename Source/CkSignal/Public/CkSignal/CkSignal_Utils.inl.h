@@ -41,18 +41,15 @@ namespace ck
     }
 
     template <typename T_DerivedSignal>
-    template <auto T_Candidate, ECk_Signal_BindingPolicy InPayloadInFlightBehavior>
+    template <auto T_Candidate, ECk_Signal_BindingPolicy T_PayloadInFlightBehavior>
     auto
         TUtils_Signal<T_DerivedSignal>::
         Bind(
             FCk_Handle InHandle)
     {
-        const auto BroadcastIfPayloadInFlight = [&]<typename... T_Args>(TOptional<std::tuple<T_Args...>> InPayload)
+        const auto BroadcastIfPayloadInFlight = [&]<typename... T_Args>(std::tuple<T_Args...> InPayload)
         {
-            if constexpr (InPayloadInFlightBehavior == ECk_Signal_BindingPolicy::IgnorePayloadInFlight)
-            { return; }
-
-            if (ck::Is_NOT_Valid(InPayload))
+            if constexpr (T_PayloadInFlightBehavior == ECk_Signal_BindingPolicy::IgnorePayloadInFlight)
             { return; }
 
             auto TempDelegate = SignalType::template DelegateType{};
@@ -61,12 +58,15 @@ namespace ck
         };
 
         auto& Signal = InHandle.AddOrGet<SignalType>();
-        BroadcastIfPayloadInFlight(Signal._Payload);
+
+        if (ck::IsValid(Signal._Payload))
+        { BroadcastIfPayloadInFlight(*Signal._Payload); }
+
         return Signal._Invoke_Sink.template connect<T_Candidate>();
     }
 
     template <typename T_DerivedSignal>
-    template <auto T_Candidate, ECk_Signal_BindingPolicy InPayloadInFlightBehavior, typename T_Instance>
+    template <auto T_Candidate, ECk_Signal_BindingPolicy T_PayloadInFlightBehavior, typename T_Instance>
     auto
         TUtils_Signal<T_DerivedSignal>::
         Bind(
@@ -75,7 +75,7 @@ namespace ck
     {
         const auto BroadcastIfPayloadInFlight = [&]<typename... T_Args>(std::tuple<T_Args...> InPayload)
         {
-            if (InPayloadInFlightBehavior == ECk_Signal_BindingPolicy::IgnorePayloadInFlight)
+            if (T_PayloadInFlightBehavior == ECk_Signal_BindingPolicy::IgnorePayloadInFlight)
             { return; }
 
 
