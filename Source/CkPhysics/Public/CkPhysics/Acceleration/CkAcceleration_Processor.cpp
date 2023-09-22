@@ -1,8 +1,7 @@
 #include "CkAcceleration_Processor.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcsBasics/Transform/CkTransform_Utils.h"
-
-#include "CkNet/CkNet_Fragment.h"
 #include "CkPhysics/Acceleration/CkAcceleration_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -32,8 +31,9 @@ namespace ck
                     }
 
                     CK_ENSURE_IF_NOT(UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Has(InHandle),
-                        TEXT("Handle [{}] does NOT have Transform info nor does it have an AccelerationTarget. "
-                             "Unable to convert Acceleration to LOCAL coordinates"), InHandle)
+                        TEXT("Entity [{}] does NOT have Transform info nor does it have an AccelerationTarget. "
+                             "Unable to convert Acceleration to LOCAL coordinates"),
+                        InHandle)
                     { return {}; }
 
                     const auto accelerationTarget = UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Get_StoredEntity(InHandle);
@@ -63,7 +63,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_AccelerationModifier_SingleTarget_Setup::
+        FProcessor_AccelerationModifier_Setup::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -82,7 +82,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_AccelerationModifier_SingleTarget_Teardown::
+        FProcessor_AccelerationModifier_Teardown::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -99,12 +99,136 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
+        FProcessor_BulkAccelerationModifier_Setup::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_BulkAccelerationModifier_Params& InParams) const
+        -> void
+    {
+        const auto& targetAccelerationChannels = InParams.Get_Params().Get_TargetChannels();
+
+        InHandle.View<FFragment_RecordOfAccelerationChannels>().ForEach(
+        [&](FCk_Entity InEntity, const FFragment_RecordOfAccelerationChannels& InAccelerationChannels)
+        {
+            const auto& targetEntity = MakeHandle(InEntity, InHandle);
+
+            if (NOT UCk_Utils_AccelerationChannel_UE::Get_IsAffectedByAnyOtherChannel(targetEntity, targetAccelerationChannels))
+            { return; }
+
+            UCk_Utils_BulkAccelerationModifier_UE::DoRequest_AddTarget
+            (
+                InHandle,
+                FCk_Request_BulkAccelerationModifier_AddTarget{targetEntity}
+            );
+        });
+
+        InHandle.Remove<MarkedDirtyBy>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_BulkAccelerationModifier_AddNewTargets::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Acceleration_Params& InParams,
+            const FFragment_RecordOfAccelerationChannels& InAccelerationChannels) const
+        -> void
+    {
+        InHandle.Get_Registry().View<FFragment_BulkAccelerationModifier_Params, FTag_BulkAccelerationModifier_GlobalScope>().ForEach(
+        [&](FCk_Entity InModifierEntity, const FFragment_BulkAccelerationModifier_Params& InMultiTargetAccelerationModifierParams)
+        {
+            if (NOT UCk_Utils_AccelerationChannel_UE::Get_IsAffectedByAnyOtherChannel(InHandle, InMultiTargetAccelerationModifierParams.Get_Params().Get_TargetChannels()))
+            { return; }
+
+            UCk_Utils_BulkAccelerationModifier_UE::DoRequest_AddTarget
+            (
+                MakeHandle(InModifierEntity, InHandle),
+                FCk_Request_BulkAccelerationModifier_AddTarget{InHandle}
+            );
+        });
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_BulkAccelerationModifier_HandleRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_BulkAccelerationModifier_Params& InParams,
+            FFragment_BulkAccelerationModifier_Requests& InRequests) const
+        -> void
+    {
+        const auto& targetAccelerationChannels = InParams.Get_Params().Get_TargetChannels();
+
+        algo::ForEachRequest(InRequests._Requests, ck::Visitor(
+        [&](const auto& InRequestVariant)
+        {
+            const auto& targetEntity = InRequestVariant.Get_TargetEntity();
+
+            // Entity may have been destroyed before we got a chance to process it
+            if (ck::Is_NOT_Valid(targetEntity))
+            { return; }
+
+            if (NOT UCk_Utils_AccelerationChannel_UE::Get_IsAffectedByAnyOtherChannel(targetEntity, targetAccelerationChannels))
+            { return; }
+
+            DoHandleRequest(InHandle, InParams, InRequestVariant);
+        }));
+
+        InHandle.Remove<MarkedDirtyBy>();
+    }
+
+    auto
+        FProcessor_BulkAccelerationModifier_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_BulkAccelerationModifier_Params& InParams,
+            const FCk_Request_BulkAccelerationModifier_AddTarget& InRequest)
+        -> void
+    {
+        const auto& targetEntity = InRequest.Get_TargetEntity();
+
+        UCk_Utils_AccelerationModifier_UE::Add
+        (
+            targetEntity,
+            UCk_Utils_GameplayLabel_UE::Get_Label(InHandle),
+            FCk_Fragment_AccelerationModifier_ParamsData
+            {
+                InParams.Get_Params().Get_AccelerationParams()
+            }
+        );
+    }
+
+    auto
+        FProcessor_BulkAccelerationModifier_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_BulkAccelerationModifier_Params& InParams,
+            const FCk_Request_BulkAccelerationModifier_RemoveTarget& InRequest)
+        -> void
+    {
+        const auto& targetEntity = InRequest.Get_TargetEntity();
+
+        UCk_Utils_AccelerationModifier_UE::Remove
+        (
+            targetEntity,
+            UCk_Utils_GameplayLabel_UE::Get_Label(InHandle)
+        );
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_Acceleration_Replicate::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Acceleration_Current& InCurrent,
-            const TObjectPtr<UCk_Fragment_Acceleration_Rep>& InAccelRepComp) const
+            const TObjectPtr<UCk_Fragment_Acceleration_Rep>& InVelRepComp) const
         -> void
     {
         // TODO: Remove usage of UpdateReplicatedFragment once the processor is tagged to only run on Server
@@ -113,6 +237,6 @@ namespace ck
             InRepComp->_Acceleration = InCurrent.Get_CurrentAcceleration();
         });
     }
-
 }
+
 // --------------------------------------------------------------------------------------------------------------------

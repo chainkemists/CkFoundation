@@ -5,27 +5,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck
-{
-    FFragment_Acceleration_Params::
-        FFragment_Acceleration_Params(
-            ParamsType InParams)
-        : _Params(InParams)
-    {
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    FFragment_Acceleration_Current::
-        FFragment_Acceleration_Current(
-            FVector InAcceleration)
-        : _CurrentAcceleration(InAcceleration)
-    {
-    }
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     UCk_Fragment_Acceleration_Rep::
     GetLifetimeReplicatedProps(
