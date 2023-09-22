@@ -39,7 +39,7 @@ namespace ck::algo
         if (NOT UCk_Utils_GameplayLabel_UE::Has(InHandle))
         { return false; }
 
-        return UCk_Utils_GameplayLabel_UE::Get_Label(InHandle).MatchesTagExact(_Name);
+        return UCk_Utils_GameplayLabel_UE::MatchesExact(InHandle, _Name);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -53,7 +53,7 @@ namespace ck::algo
         if (NOT UCk_Utils_GameplayLabel_UE::Has(InHandle))
         { return false; }
 
-        return UCk_Utils_GameplayLabel_UE::Get_Label(InHandle).MatchesTag(_Name);
+        return UCk_Utils_GameplayLabel_UE::Matches(InHandle, _Name);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -67,7 +67,7 @@ namespace ck::algo
         if (NOT UCk_Utils_GameplayLabel_UE::Has(InHandle))
         { return false; }
 
-        return _Names.HasTag(UCk_Utils_GameplayLabel_UE::Get_Label(InHandle));
+        return UCk_Utils_GameplayLabel_UE::MatchesAny(InHandle, _Names);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -81,7 +81,7 @@ namespace ck::algo
         if (NOT UCk_Utils_GameplayLabel_UE::Has(InHandle))
         { return false; }
 
-        return _Names.HasTagExact(UCk_Utils_GameplayLabel_UE::Get_Label(InHandle));
+        return UCk_Utils_GameplayLabel_UE::MatchesAnyExact(InHandle, _Names);
     }
 }
 
