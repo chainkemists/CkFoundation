@@ -12,34 +12,12 @@ auto
         const FCk_Provider_FloatAttributes_ParamsData& InParams)
     -> void
 {
-    // TODO: Select Record policy that disallow duplicate based on Gameplay Label
-    RecordOfFloatAttributes_Utils::AddIfMissing(InHandle);
-
     const auto& ParamsProvider = InParams.Get_Provider();
 
     CK_ENSURE_IF_NOT(ck::IsValid(ParamsProvider), TEXT("Invalid Float Attributes Provider"))
     { return; }
 
-    const auto& AddNewFloatAttributeToEntity = [&](FCk_Handle InAttributeOwner, const FGameplayTag& InAttributeName, float InAttributeBaseValue)
-    {
-        const auto newAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwner);
-
-        ck::UCk_Utils_OwningEntity::Add(newAttributeEntity, InHandle);
-
-        FloatAttribute_Utils::Add(newAttributeEntity, InAttributeBaseValue);
-        UCk_Utils_GameplayLabel_UE::Add(newAttributeEntity, InAttributeName);
-
-        RecordOfFloatAttributes_Utils::Request_Connect(InAttributeOwner, newAttributeEntity);
-    };
-
-    for (const auto& FloatAttributesParams = ParamsProvider->Get_Value();
-        auto Kvp : FloatAttributesParams.Get_AttributeBaseValues())
-    {
-        const auto& attributeName = Kvp.Key;
-        const auto& attributeBaseValue = Kvp.Value;
-
-        AddNewFloatAttributeToEntity(InHandle, attributeName, attributeBaseValue);
-    }
+    Add(InHandle, ParamsProvider->Get_Value().Get_AttributeBaseValues());
 }
 
 auto
@@ -132,6 +110,37 @@ auto
     ck::UUtils_Signal_OnFloatAttributeValueChanged::Unbind(AttributeEntity, InDelegate);
 }
 
+auto
+    UCk_Utils_FloatAttribute_UE::
+    Add(
+        FCk_Handle                InHandle,
+        TMap<FGameplayTag, float> InAttributeBaseValues)
+    -> void
+{
+    // TODO: Select Record policy that disallow duplicate based on Gameplay Label
+    RecordOfFloatAttributes_Utils::AddIfMissing(InHandle);
+
+    const auto& AddNewFloatAttributeToEntity = [&](FCk_Handle InAttributeOwner, const FGameplayTag& InAttributeName, float InAttributeBaseValue)
+    {
+        const auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwner);
+
+        ck::UCk_Utils_OwningEntity::Add(NewAttributeEntity, InHandle);
+
+        FloatAttribute_Utils::Add(NewAttributeEntity, InAttributeBaseValue);
+        UCk_Utils_GameplayLabel_UE::Add(NewAttributeEntity, InAttributeName);
+
+        RecordOfFloatAttributes_Utils::Request_Connect(InAttributeOwner, NewAttributeEntity);
+    };
+
+    for (auto Kvp : InAttributeBaseValues)
+    {
+        const auto& AttributeName = Kvp.Key;
+        const auto& AttributeBaseValue = Kvp.Value;
+
+        AddNewFloatAttributeToEntity(InHandle, AttributeName, AttributeBaseValue);
+    }
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -144,8 +153,8 @@ auto
 {
     const auto& AttributeName = InParams.Get_TargetAttributeName();
 
-    const auto newModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwnerEntity);
-    UCk_Utils_GameplayLabel_UE::Add(newModifierEntity, InModifierName);
+    const auto NewModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwnerEntity);
+    UCk_Utils_GameplayLabel_UE::Add(NewModifierEntity, InModifierName);
 
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
         <UCk_Utils_FloatAttribute_UE::FloatAttribute_Utils, UCk_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils>(
@@ -153,7 +162,7 @@ auto
 
     FloatAttributeModifier_Utils::Add
     (
-        newModifierEntity,
+        NewModifierEntity,
         InParams.Get_ModifierDelta(),
         AttributeEntity,
         InParams.Get_ModifierOperation()
