@@ -44,7 +44,60 @@ public:
               DisplayName="Get GameplayTag Label")
     static FGameplayTag
     Get_Label(
-            FCk_Handle InHandle);
+        FCk_Handle InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+struct CKLABEL_API MatchesGameplayLabelExact
+    {
+    public:
+        auto operator()(const FCk_Handle& InHandle) const -> bool;
+
+    private:
+        FGameplayTag _Name;
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(MatchesGameplayLabelExact, _Name)
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKLABEL_API MatchesGameplayLabel
+    {
+    public:
+        auto operator()(const FCk_Handle& InHandle) const -> bool;
+
+    private:
+        FGameplayTag _Name;
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(MatchesGameplayLabel, _Name)
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKLABEL_API MatchesAnyGameplayLabel
+    {
+    public:
+        auto operator()(const FCk_Handle& InHandle) const -> bool;
+
+    private:
+        FGameplayTagContainer _Names;
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(MatchesAnyGameplayLabel, _Names)
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKLABEL_API MatchesAnyGameplayLabelExact
+    {
+    public:
+        auto operator()(const FCk_Handle& InHandle) const -> bool;
+
+    private:
+        FGameplayTagContainer _Names;
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(MatchesAnyGameplayLabelExact, _Names)
+    };
