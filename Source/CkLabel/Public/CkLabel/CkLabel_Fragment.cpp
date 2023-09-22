@@ -7,13 +7,6 @@
 
 namespace ck
 {
-    FFragment_GameplayLabel::
-        FFragment_GameplayLabel(
-            FGameplayTag InLabel)
-        : _Label(InLabel)
-    {
-    }
-
     auto
         FFragment_GameplayLabel::
         operator==(
@@ -37,15 +30,8 @@ namespace ck
 
 namespace ck::algo
 {
-    MatchesGameplayLabel::
-        MatchesGameplayLabel(
-            FGameplayTag InName)
-        : _Name(InName)
-    {
-    }
-
     auto
-        MatchesGameplayLabel::
+        MatchesGameplayLabelExact::
         operator()(
             const FCk_Handle& InHandle) const
         -> bool
@@ -58,15 +44,36 @@ namespace ck::algo
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    MatchesAnyGameplayLabel::
-        MatchesAnyGameplayLabel(
-            FGameplayTagContainer InNames)
-        : _Names(InNames)
+    auto
+        MatchesGameplayLabel::
+        operator()(
+            const FCk_Handle& InHandle) const
+        -> bool
     {
+        if (NOT UCk_Utils_GameplayLabel_UE::Has(InHandle))
+        { return false; }
+
+        return UCk_Utils_GameplayLabel_UE::Get_Label(InHandle).MatchesTag(_Name);
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     auto
         MatchesAnyGameplayLabel::
+        operator()(
+            const FCk_Handle& InHandle) const
+        -> bool
+    {
+        if (NOT UCk_Utils_GameplayLabel_UE::Has(InHandle))
+        { return false; }
+
+        return _Names.HasTag(UCk_Utils_GameplayLabel_UE::Get_Label(InHandle));
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        MatchesAnyGameplayLabelExact::
         operator()(
             const FCk_Handle& InHandle) const
         -> bool
