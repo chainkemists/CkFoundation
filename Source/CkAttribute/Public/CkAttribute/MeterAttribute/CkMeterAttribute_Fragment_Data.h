@@ -127,21 +127,17 @@ public:
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-    FCk_Handle  _Handle;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     FCk_Meter  _BaseValue;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     FCk_Meter  _FinalValue;
 
 public:
-    CK_PROPERTY_GET(_Handle);
     CK_PROPERTY_GET(_BaseValue);
     CK_PROPERTY_GET(_FinalValue);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Payload_MeterAttribute_OnValueChanged, _Handle, _BaseValue, _FinalValue);
+    CK_DEFINE_CONSTRUCTORS(FCk_Payload_MeterAttribute_OnValueChanged, _BaseValue, _FinalValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
