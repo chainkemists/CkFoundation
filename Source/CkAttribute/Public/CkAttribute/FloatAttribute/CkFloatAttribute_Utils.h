@@ -99,6 +99,12 @@ public:
         FGameplayTag InAttributeName,
         FCk_Handle InAttributeOwnerEntity,
         const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate);
+
+public:
+    static auto
+    Add(
+        FCk_Handle                InHandle,
+        TMap<FGameplayTag, float> InAttributeBaseValues) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
