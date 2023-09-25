@@ -64,25 +64,33 @@ auto
     const auto& NewActorBasicDetails = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(NewOrExistingActor);
     const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(NewActorBasicDetails.Get_Handle());
 
+    auto ReplicatedObjectsData = FCk_EcsConstructionScript_ReplicateObjects_Data{OutermostActor};
+
     for (const auto& ReplicatedObject : ReplicatedObjects.Get_ReplicatedObjects())
     {
         CK_ENSURE_IF_NOT(ck::IsValid(ReplicatedObject), TEXT("Invalid Replicated Object encountered for Actor [{}] on the SERVER.[{}]"), NewActorBasicDetails, ck::Context(this))
         { continue; }
 
-        Request_ReplicateObject(OutermostActor, ReplicatedObject->GetClass(), ReplicatedObject->GetFName());
+        ReplicatedObjectsData.Get_Objects().Emplace(ReplicatedObject->GetClass());
+        ReplicatedObjectsData.Get_NetStableNames().Emplace(ReplicatedObject->GetFName());
     }
+
 
     auto RequestToForward = InRequest;
     RequestToForward.Set_ReplicatedObjects(ReplicatedObjects);
 
-    Request_ReplicateActor_OnClients(RequestToForward);
+    _ReplicationData = FCk_EcsConstructionScript_Replication_Data
+    {
+        RequestToForward,
+        ReplicatedObjectsData
+    };
 
     ck::unreal::Verbose(TEXT("Replicating [{}] with outermost [{}] on SERVER"), OutermostActor, ActorToReplicate);
 }
 
 auto
     UCk_EcsConstructionScript_ActorComponent_UE::
-    Request_ReplicateActor_OnClients_Implementation(
+    Request_ReplicateActor_OnClients(
         const FCk_EcsConstructionScript_ConstructionInfo& InRequest)
     -> void
 {
@@ -148,20 +156,32 @@ auto
 
 auto
     UCk_EcsConstructionScript_ActorComponent_UE::
-    Request_ReplicateObject_Implementation(
-        AActor* InReplicatedOwner,
-        TSubclassOf<UCk_Ecs_ReplicatedObject_UE> InObject,
-        FName InReplicatedName)
+    Request_ReplicateObjects(
+        const FCk_EcsConstructionScript_ReplicateObjects_Data& InData)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InReplicatedOwner), TEXT("Invalid Replicated Owner Actor.[{}]"), ck::Context(this))
+    CK_ENSURE_IF_NOT(InData.Get_Objects().Num() == InData.Get_NetStableNames().Num(),
+        TEXT("Expected Objects Array to be the same size as the associated Names Array. "
+            "Unable to proceed with construction of Replicated Objects.[{}]"), ck::Context(this))
     { return; }
 
-    if (InReplicatedOwner->IsNetMode(NM_DedicatedServer))
+    CK_ENSURE_IF_NOT(ck::IsValid(InData.Get_Owner()),
+        TEXT("The ReplicatedOwner is [{}]. Unable to proceed with construction of Replicated Objects.[{}]"), ck::Context(this))
     { return; }
 
-    // TODO: Sending garbage entity handle until we manage to link it up properly
-    UCk_Ecs_ReplicatedObject_UE::Create(InObject, InReplicatedOwner, InReplicatedName, FCk_Handle{});
+    if (InData.Get_Owner()->IsNetMode(NM_DedicatedServer))
+    { return; }
+
+    ck::algo::ForEachView(InData.Get_Objects(), InData.Get_NetStableNames(),
+    [&](TSubclassOf<UCk_Ecs_ReplicatedObject_UE> InRepObjectClass, FName InNetStableName)
+    {
+        CK_ENSURE_IF_NOT(ck::IsValid(InData.Get_Owner()),
+            TEXT("Invalid Replicated Owner Actor.[{}]"), ck::Context(this))
+        { return; }
+
+        // TODO: Sending garbage entity handle until we manage to link it up properly
+        UCk_Ecs_ReplicatedObject_UE::Create(InRepObjectClass, InData.Get_Owner(), InNetStableName, FCk_Handle{});
+    });
 }
 
 auto
@@ -201,6 +221,8 @@ auto
         const FCk_ActorComponent_DoConstruct_Params& InParams)
     -> void
 {
+    _DoConstructCalled = true;
+
     Super::Do_Construct_Implementation(InParams);
 
     CK_ENSURE_IF_NOT(ck::IsValid(_UnrealEntity),
@@ -256,6 +278,12 @@ auto
             },
             [&](UCk_ObjectReplicator_ActorComponent_UE* InComp) { }
         );
+    }
+
+    if (_ReplicationDataReplicated)
+    {
+        Request_ReplicateObjects(_ReplicationData.Get_ReplicatedObjects());
+        Request_ReplicateActor_OnClients(_ReplicationData.Get_ConstructionInfo());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -320,15 +348,54 @@ auto
     {
         _Entity.Add<ck::FTag_HasAuthority>(OwningActor);
 
-        ConstructionScript->Request_ReplicateActor_OnClients
-        (
+        const auto& NewActorBasicDetails = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(OwningActor);
+        const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(NewActorBasicDetails.Get_Handle());
+
+        auto ReplicatedObjectsData = FCk_EcsConstructionScript_ReplicateObjects_Data{OutermostActor};
+
+        for (const auto& ReplicatedObject : ReplicatedObjects.Get_ReplicatedObjects())
+        {
+            CK_ENSURE_IF_NOT(ck::IsValid(ReplicatedObject), TEXT("Invalid Replicated Object encountered for Actor [{}] on the SERVER.[{}]"), NewActorBasicDetails, ck::Context(this))
+            { continue; }
+
+            ReplicatedObjectsData.Get_Objects().Emplace(ReplicatedObject->GetClass());
+            ReplicatedObjectsData.Get_NetStableNames().Emplace(ReplicatedObject->GetFName());
+        }
+
+        _ReplicationData = FCk_EcsConstructionScript_Replication_Data
+        {
             FCk_EcsConstructionScript_ConstructionInfo{}
             .Set_OutermostActor(OutermostActor)
             .Set_ActorToReplicate(OwningActor->GetClass())
             .Set_ReplicatedObjects(UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(_Entity))
-            .Set_Transform(OwningActor->GetActorTransform())
-        );
+            .Set_Transform(OwningActor->GetActorTransform()),
+            ReplicatedObjectsData
+        };
     }
+}
+
+auto
+    UCk_EcsConstructionScript_ActorComponent_UE::
+    OnRep_ReplicationData()
+    -> void
+{
+    _ReplicationDataReplicated = true;
+
+    if (NOT _DoConstructCalled)
+    { return; }
+
+    ck::unreal::Log(TEXT("Starting to replicate [{}]"), _ReplicationData.Get_ConstructionInfo().Get_ActorToReplicate());
+    Request_ReplicateObjects(_ReplicationData.Get_ReplicatedObjects());
+    Request_ReplicateActor_OnClients(_ReplicationData.Get_ConstructionInfo());
+}
+
+void
+    UCk_EcsConstructionScript_ActorComponent_UE::GetLifetimeReplicatedProps(
+        TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME(ThisType, _ReplicationData);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

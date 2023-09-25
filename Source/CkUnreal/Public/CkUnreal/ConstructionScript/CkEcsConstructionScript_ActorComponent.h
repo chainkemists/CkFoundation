@@ -51,6 +51,62 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKUNREAL_API FCk_EcsConstructionScript_ReplicateObjects_Data
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_EcsConstructionScript_ReplicateObjects_Data);
+
+private:
+    UPROPERTY()
+    TObjectPtr<AActor> _Owner;
+
+    UPROPERTY()
+    TArray<TSubclassOf<UCk_Ecs_ReplicatedObject_UE>> _Objects;
+
+    UPROPERTY()
+    TArray<FName> _NetStableNames;
+
+public:
+    CK_PROPERTY_GET(_Owner);
+    CK_PROPERTY(_Objects);
+    CK_PROPERTY(_NetStableNames);
+
+    CK_PROPERTY_GET_NON_CONST(_Objects);
+    CK_PROPERTY_GET_NON_CONST(_NetStableNames);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_EcsConstructionScript_ReplicateObjects_Data, _Owner);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKUNREAL_API FCk_EcsConstructionScript_Replication_Data
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_EcsConstructionScript_Replication_Data);
+
+private:
+    UPROPERTY()
+    FCk_EcsConstructionScript_ConstructionInfo _ConstructionInfo;
+
+    UPROPERTY()
+    FCk_EcsConstructionScript_ReplicateObjects_Data _ReplicatedObjects;
+
+public:
+    CK_PROPERTY_GET(_ConstructionInfo);
+    CK_PROPERTY_GET(_ReplicatedObjects);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_EcsConstructionScript_Replication_Data, _ConstructionInfo, _ReplicatedObjects);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(Abstract,
        Blueprintable,
        BlueprintType,
@@ -72,24 +128,19 @@ public:
     Request_ReplicateActor_OnServer(
         const FCk_EcsConstructionScript_ConstructionInfo& InRequest);
 
-    UFUNCTION(NetMulticast, Reliable)
-    void
-    Request_ReplicateActor_OnClients(
-        const FCk_EcsConstructionScript_ConstructionInfo& InRequest);
+private:
+    auto Request_ReplicateActor_OnClients(
+        const FCk_EcsConstructionScript_ConstructionInfo& InRequest) -> void;
 
-    UFUNCTION(NetMulticast, Reliable)
-    void
-    Request_ReplicateObject(
-        AActor* InReplicatedOwner,
-        TSubclassOf<UCk_Ecs_ReplicatedObject_UE> InObject,
-        FName InReplicatedName);
+    auto Request_ReplicateObjects(
+        const FCk_EcsConstructionScript_ReplicateObjects_Data& InData) -> void;
 
 protected:
-    virtual auto OnUnregister() -> void override;
+    auto OnUnregister() -> void override;
 
 protected:
-    virtual auto
-    Do_Construct_Implementation(const FCk_ActorComponent_DoConstruct_Params& InParams) -> void override;
+    auto Do_Construct_Implementation(
+        const FCk_ActorComponent_DoConstruct_Params& InParams) -> void override;
 
 public:
     UPROPERTY(EditDefaultsOnly)
@@ -103,6 +154,17 @@ public:
 
     UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Transient)
     FCk_Handle _Entity;
+
+    UPROPERTY(ReplicatedUsing = OnRep_ReplicationData)
+    FCk_EcsConstructionScript_Replication_Data _ReplicationData;
+
+    UFUNCTION()
+    void OnRep_ReplicationData();
+
+    auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
+
+    bool _DoConstructCalled = false;
+    bool _ReplicationDataReplicated = false;
 
 public:
     CK_PROPERTY(_UnrealEntity);
