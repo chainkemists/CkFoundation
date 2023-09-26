@@ -1,21 +1,18 @@
 #pragma once
 
 #include <CoreMinimal.h>
-#include <Engine/DeveloperSettings.h>
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkSettings/Public/CkSettings/UserSettings/CkUserSettings.h"
 
 #include "CkNetTimeSync_Settings.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(config = EditorPerProjectUserSettings, meta = (DisplayName = "NetTimeSync"))
-class CKNET_API UCk_NetTimeSync_UserSettings_UE : public UDeveloperSettings
+UCLASS(meta = (DisplayName = "NetTimeSync"))
+class CKNET_API UCk_NetTimeSync_UserSettings_UE : public UCk_EditorPerProject_UserSettings_UE
 {
     GENERATED_BODY()
-
-public:
-    explicit UCk_NetTimeSync_UserSettings_UE(const FObjectInitializer& ObjectInitializer);
 
 private:
     UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "General", meta = (AllowPrivateAccess = true))
