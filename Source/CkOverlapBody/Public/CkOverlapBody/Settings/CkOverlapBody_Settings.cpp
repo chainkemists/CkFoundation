@@ -20,17 +20,6 @@ namespace ck_overlap_body_settings
             ShouldPreviewAllMarkers,
             TEXT("Should draw the debug information of all existing Marker Fragments"));
     }
-
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCk_OverlapBody_UserSettings_UE::
-    UCk_OverlapBody_UserSettings_UE(
-        const FObjectInitializer& InObjectInitializer)
-    : Super(InObjectInitializer)
-{
-    CategoryName = FName{TEXT("ChainKemists")};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
