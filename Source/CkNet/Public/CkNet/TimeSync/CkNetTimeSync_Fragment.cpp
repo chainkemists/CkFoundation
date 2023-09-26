@@ -1,6 +1,6 @@
 #include "CkNetTimeSync_Fragment.h"
 
-#include "CkNetTimeSync_Utils.h"
+#include "CkNet/TimeSync/CkNetTimeSync_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
