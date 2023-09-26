@@ -102,7 +102,7 @@ public:
         ECk_ScaledUnscaled InScaledUnscaled);
 
 private:
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Units = "cm"))
     float _Radius = 0.0f;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
@@ -131,10 +131,10 @@ public:
         ECk_ScaledUnscaled InScaledUnscaled);
 
 private:
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Units = "cm"))
     float _Radius = 0.0f;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Units = "cm"))
     float _HalfHeight = 0.0f;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
