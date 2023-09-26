@@ -1,0 +1,44 @@
+#pragma once
+
+#include "CkCore/Format/CkFormat.h"
+#include "CkCore/Macros/CkMacros.h"
+
+#include <Engine/Font.h>
+#include <Kismet/BlueprintFunctionLibrary.h>
+#include <Internationalization/Internationalization.h>
+
+#include "CkIO_Utils.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Engine_TextFontSize : uint8
+{
+    Subtitle,
+    Tiny,
+    Small,
+    Medium,
+    Large
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Engine_TextFontSize);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(BlueprintType)
+class CKCORE_API UCk_Utils_IO_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_IO_UE);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IO")
+    static UFont*
+    Get_Engine_DefaultTextFont(
+        ECk_Engine_TextFontSize InFontSize);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
