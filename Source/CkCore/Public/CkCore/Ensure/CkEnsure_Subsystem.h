@@ -2,6 +2,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include <Subsystems/GameInstanceSubsystem.h>
+
 #include "CkEnsure_Subsystem.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
