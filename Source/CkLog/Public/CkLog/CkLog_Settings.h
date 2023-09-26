@@ -2,6 +2,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include <Kismet/BlueprintFunctionLibrary.h>
 #include <Engine/DeveloperSettings.h>
 
 #include "CkLog_Settings.generated.h"
