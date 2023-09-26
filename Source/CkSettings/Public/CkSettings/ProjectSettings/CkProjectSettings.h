@@ -8,7 +8,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(config = Engine)
+UCLASS(Abstract, Config = Engine)
 class CKSETTINGS_API UCk_Engine_ProjectSettings_UE : public UDeveloperSettingsBackedByCVars
 {
     GENERATED_BODY()
@@ -22,7 +22,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(config = Game)
+UCLASS(Abstract, Config = Game)
 class CKSETTINGS_API UCk_Game_ProjectSettings_UE : public UDeveloperSettingsBackedByCVars
 {
     GENERATED_BODY()
