@@ -8,7 +8,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(config = EditorPerProjectUserSettings)
+UCLASS(Abstract, Config = EditorPerProjectUserSettings)
 class CKSETTINGS_API UCk_EditorPerProject_UserSettings_UE : public UDeveloperSettingsBackedByCVars
 {
     GENERATED_BODY()
