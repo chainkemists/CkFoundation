@@ -6,16 +6,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCk_NetTimeSync_UserSettings_UE::
-    UCk_NetTimeSync_UserSettings_UE(
-        const FObjectInitializer& InObjectInitializer)
-    : Super(InObjectInitializer)
-{
-    CategoryName = FName{TEXT("ChainKemists")};
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     UCk_Utils_NetTimeSync_UserSettings_UE::
     Get_EnableNetTimeSynchronization()
