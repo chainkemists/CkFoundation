@@ -45,6 +45,9 @@ auto
     if (Pred(InHandle))
     { return InHandle; }
 
+    if (NOT T_RecordUtils::Has(InHandle))
+    { return {}; }
+
     return T_RecordUtils::Get_RecordEntryIf(InHandle, Pred);
 }
 
