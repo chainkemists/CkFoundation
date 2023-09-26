@@ -8,6 +8,75 @@
 
 auto
     UCk_Utils_Net_UE::
+    Add(
+        FCk_Handle InEntity,
+        FCk_Net_ConnectionSettings InConnectionSettings)
+    -> void
+{
+    auto& Params = InEntity.Add<ck::FFragment_Net_Params>(InConnectionSettings);
+
+    if (InConnectionSettings.Get_NetRole() == ECk_Net_EntityNetRole::Authority)
+    {
+        InEntity.Add<ck::FTag_HasAuthority>();
+    }
+}
+
+auto
+    UCk_Utils_Net_UE::
+    Has(
+        FCk_Handle InHandle)
+    -> bool
+{
+    return InHandle.Has<ck::FFragment_Net_Params>();
+}
+
+auto
+    UCk_Utils_Net_UE::
+    Ensure(
+        FCk_Handle InHandle)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have Network Info"), InHandle)
+    { return false; }
+
+    return true;
+}
+
+auto
+    UCk_Utils_Net_UE::
+    Get_EntityNetRole(
+        FCk_Handle InEntity)
+    -> ECk_Net_EntityNetRole
+{
+    if (NOT Has(InEntity))
+    { return {}; }
+
+    return InEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings().Get_NetRole();
+}
+
+auto
+    UCk_Utils_Net_UE::
+    Get_EntityNetMode(
+        FCk_Handle InEntity)
+    -> ECk_Net_NetRoleType
+{
+    if (NOT Has(InEntity))
+    { return {}; }
+
+    return InEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings().Get_NetMode();
+}
+
+auto
+    UCk_Utils_Net_UE::
+    Get_HasAuthority(
+        FCk_Handle InEntity)
+    -> bool
+{
+    return InEntity.Has<ck::FTag_HasAuthority>();
+}
+
+auto
+    UCk_Utils_Net_UE::
     Get_IsActorLocallyOwned(
         AActor* InActor)
     -> bool

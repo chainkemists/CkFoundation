@@ -7,6 +7,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 #include "CkNet/CkNet_Common.h"
+#include "CkNet/CkNet_Fragment_Data.h"
 
 #include "CkNet_Utils.generated.h"
 
@@ -22,6 +23,45 @@ public:
 
 public:
     friend class UCk_EcsConstructionScript_ActorComponent_UE;
+
+public:
+    static auto Add(
+        FCk_Handle InEntity,
+        FCk_Net_ConnectionSettings InConnectionSettings) -> void;
+
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net",
+              DisplayName="Has Network Info")
+    static bool
+    Has(
+        FCk_Handle InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net",
+              DisplayName="Ensure Has Network Info")
+    static bool
+    Ensure(
+        FCk_Handle InHandle);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net")
+    static ECk_Net_EntityNetRole
+    Get_EntityNetRole(
+        FCk_Handle InEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net")
+    static ECk_Net_NetRoleType
+    Get_EntityNetMode(
+        FCk_Handle InEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net")
+    static bool
+    Get_HasAuthority(
+        FCk_Handle InEntity);
 
 public:
     UFUNCTION(BlueprintPure,
