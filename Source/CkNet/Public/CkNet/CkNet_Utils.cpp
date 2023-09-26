@@ -2,6 +2,7 @@
 
 #include "CkNet_Fragment.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment.h"
+#include "Engine/World.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -21,6 +22,9 @@ auto
 
     CK_ENSURE_IF_NOT(ck::IsValid(World), TEXT("Invalid World for Actor [{}]"), InActor)
     { return {}; }
+
+    if (World->IsNetMode(NM_Standalone))
+    { return true; }
 
     CK_ENSURE
     (
