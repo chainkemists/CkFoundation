@@ -14,8 +14,8 @@ public class CkEcsBasics : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
-            "DeveloperSettings",
             "GameplayTags",
+            "DeveloperSettings",
 
             "CkActor",
             "CkCore",
@@ -25,6 +25,7 @@ public class CkEcsBasics : CkModuleRules
             "CkNet",
             "CkRecord",
             "CkSignal",
+            "CkSettings",
         });
     }
 }
