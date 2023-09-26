@@ -7,6 +7,7 @@
 #include <GameFramework/Actor.h>
 #include <GameplayTagContainer.h>
 #include <CoreMinimal.h>
+#include <InputCoreTypes.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -19,6 +20,7 @@ CK_DEFINE_CUSTOM_FORMATTER(FString, [InObj]() { return *InObj; });
 CK_DEFINE_CUSTOM_FORMATTER(FName,   [&]() { return InObj.ToString(); });
 CK_DEFINE_CUSTOM_FORMATTER(FText,   [&]() { return InObj.ToString(); });
 CK_DEFINE_CUSTOM_FORMATTER(FGuid,   [&]() { return InObj.ToString(); });
+CK_DEFINE_CUSTOM_FORMATTER(FKey,   [&]() { return InObj.ToString(); });
 CK_DEFINE_CUSTOM_FORMATTER(FSoftObjectPath,   [&]() { return InObj.GetAssetName(); });
 
 CK_DEFINE_CUSTOM_FORMATTER(FRandomStream, [&]()
