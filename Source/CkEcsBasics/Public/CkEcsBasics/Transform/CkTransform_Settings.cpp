@@ -6,16 +6,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCk_Transform_UserSettings_UE::
-    UCk_Transform_UserSettings_UE(
-        const FObjectInitializer& InObjectInitializer)
-    : Super(InObjectInitializer)
-{
-    CategoryName = FName{TEXT("ChainKemists")};
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     UCk_Utils_Transform_UserSettings_UE::
     Get_EnableTransformSmoothing()
