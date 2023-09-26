@@ -5,6 +5,7 @@
 #include <CoreMinimal.h>
 #include <UObject/WeakInterfacePtr.h>
 #include <GameplayTagContainer.h>
+#include <InputCoreTypes.h>
 
 #include <type_traits>
 
@@ -63,6 +64,11 @@ CK_DEFINE_CUSTOM_IS_VALID(FName, ck::IsValid_Policy_Default, [=](FName InName)
 CK_DEFINE_CUSTOM_IS_VALID(FSoftObjectPath, ck::IsValid_Policy_Default, [=](const FSoftObjectPath& InSoftObject)
 {
     return InSoftObject.IsValid();
+});
+
+CK_DEFINE_CUSTOM_IS_VALID(FKey, ck::IsValid_Policy_Default, [=](const FKey& Inkey)
+{
+    return Inkey.IsValid();
 });
 
 CK_DEFINE_CUSTOM_IS_VALID(FGuid, ck::IsValid_Policy_Default, [=](FGuid InGuid)
