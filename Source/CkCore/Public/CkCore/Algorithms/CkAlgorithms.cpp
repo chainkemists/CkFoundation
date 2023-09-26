@@ -12,24 +12,24 @@ namespace ck_algo_tests
         DoTest_ForEachIsValid()
     {
         {
-            TArray<UObject*> objects;
-            ck::algo::ForEachIsValid(objects.begin(), objects.end(), [](auto InObj)
+            TArray<UObject*> Objects;
+            ck::algo::ForEachIsValid(Objects.begin(), Objects.end(), [](auto InObj)
             {
                 // work with a valid object here
             });
         }
 
         {
-            TArray<AActor*> actors;
-            ck::algo::ForEachIsValid(actors.begin(), actors.end(), [](auto InActor)
+            TArray<AActor*> Actors;
+            ck::algo::ForEachIsValid(Actors.begin(), Actors.end(), [](auto InActor)
             {
                 // work with a valid actor here
             });
         }
 
         {
-            TArray<UObject**> objectPointers;
-            ck::algo::ForEachIsValid(objectPointers.begin(), objectPointers.end(), [](auto InObj)
+            TArray<UObject**> ObjectPointers;
+            ck::algo::ForEachIsValid(ObjectPointers.begin(), ObjectPointers.end(), [](auto InObj)
             {
                 // work with a valid object here
             }, [](auto InObjPtr) { return ck::IsValid(*InObjPtr); });
@@ -38,14 +38,14 @@ namespace ck_algo_tests
         {
             struct ContainsAnObject
             {
-                UObject* myObj;
+                UObject* _MyObj;
             };
 
-            TArray<ContainsAnObject> objStrcuts;
-            ck::algo::ForEachIsValid(objStrcuts.begin(), objStrcuts.end(), [](auto InStruct)
+            TArray<ContainsAnObject> ObjStructs;
+            ck::algo::ForEachIsValid(ObjStructs.begin(), ObjStructs.end(), [](auto InStruct)
             {
                 // work with a valid object here
-            }, [](auto InStruct) { return ck::IsValid(InStruct.myObj); });
+            }, [](auto InStruct) { return ck::IsValid(InStruct._MyObj); });
         }
     }
 }
