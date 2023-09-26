@@ -56,7 +56,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
-        meta = (AllowPrivateAccess = true, Units = "Seconds"))
+        meta = (AllowPrivateAccess = true, Units = "Seconds", UIMin = "0.0", ClampMin = "0.0"))
     float _Seconds = 0.0f;
 
 public:
