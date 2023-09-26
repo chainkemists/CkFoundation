@@ -21,6 +21,7 @@ public class CkNet : CkModuleRules
             "CkCore",
             "CkEcs",
             "CkLog",
+            "CkSettings",
         });
     }
 }
