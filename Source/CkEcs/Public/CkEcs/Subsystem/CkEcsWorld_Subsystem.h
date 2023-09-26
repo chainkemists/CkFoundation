@@ -5,6 +5,7 @@
 #include "CkEcs/World/CkEcsWorld.h"
 
 #include <Subsystems/WorldSubsystem.h>
+#include <GameFramework/Info.h>
 
 #include "CkEcsWorld_Subsystem.generated.h"
 
@@ -36,7 +37,6 @@ public:
 protected:
     TOptional<EcsWorldType> _EcsWorld;
 };
-
 
 // --------------------------------------------------------------------------------------------------------------------
 
