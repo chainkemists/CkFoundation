@@ -32,9 +32,6 @@ private:
     TObjectPtr<APlayerController> _OwningPlayerController;
 
     UPROPERTY(meta=(AllowPrivateAccess))
-    FCk_ReplicatedObjects _ReplicatedObjects;
-
-    UPROPERTY(meta=(AllowPrivateAccess))
     int32                 _OriginalOwnerEntity;
 
     UPROPERTY(meta=(AllowPrivateAccess))
@@ -44,7 +41,6 @@ public:
     CK_PROPERTY(_OutermostActor);
     CK_PROPERTY(_ActorToReplicate);
     CK_PROPERTY(_OwningPlayerController);
-    CK_PROPERTY(_ReplicatedObjects);
     CK_PROPERTY(_OriginalOwnerEntity);
     CK_PROPERTY(_Transform);
 };
@@ -130,10 +126,8 @@ public:
 
 private:
     auto Request_ReplicateActor_OnClients(
+        const FCk_EcsConstructionScript_ReplicateObjects_Data& InData,
         const FCk_EcsConstructionScript_ConstructionInfo& InRequest) -> void;
-
-    auto Request_ReplicateObjects(
-        const FCk_EcsConstructionScript_ReplicateObjects_Data& InData) -> void;
 
 protected:
     auto OnUnregister() -> void override;

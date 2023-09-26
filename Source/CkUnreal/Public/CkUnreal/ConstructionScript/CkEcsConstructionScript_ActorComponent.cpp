@@ -75,13 +75,9 @@ auto
         ReplicatedObjectsData.Get_NetStableNames().Emplace(ReplicatedObject->GetFName());
     }
 
-
-    auto RequestToForward = InRequest;
-    RequestToForward.Set_ReplicatedObjects(ReplicatedObjects);
-
     _ReplicationData = FCk_EcsConstructionScript_Replication_Data
     {
-        RequestToForward,
+        InRequest,
         ReplicatedObjectsData
     };
 
@@ -91,9 +87,42 @@ auto
 auto
     UCk_EcsConstructionScript_ActorComponent_UE::
     Request_ReplicateActor_OnClients(
+        const FCk_EcsConstructionScript_ReplicateObjects_Data& InData,
         const FCk_EcsConstructionScript_ConstructionInfo& InRequest)
     -> void
 {
+    // --------------------------------------------------------------------------------------------------------------------
+
+    FCk_ReplicatedObjects ROs;
+
+    CK_ENSURE_IF_NOT(InData.Get_Objects().Num() == InData.Get_NetStableNames().Num(),
+        TEXT("Expected Objects Array to be the same size as the associated Names Array. "
+            "Unable to proceed with construction of Replicated Objects.[{}]"), ck::Context(this))
+    { return; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InData.Get_Owner()),
+        TEXT("The ReplicatedOwner is [{}]. Unable to proceed with construction of Replicated Objects.[{}]"), ck::Context(this))
+    { return; }
+
+    if (InData.Get_Owner()->IsNetMode(NM_DedicatedServer))
+    { return; }
+
+    ck::algo::ForEachView(InData.Get_Objects(), InData.Get_NetStableNames(),
+    [&](TSubclassOf<UCk_Ecs_ReplicatedObject_UE> InRepObjectClass, FName InNetStableName)
+    {
+        CK_ENSURE_IF_NOT(ck::IsValid(InData.Get_Owner()),
+            TEXT("Invalid Replicated Owner Actor.[{}]"), ck::Context(this))
+        { return; }
+
+        // TODO: Sending garbage entity handle until we manage to link it up properly
+        ROs.Update_ReplicatedObjects([&](TArray<UCk_ReplicatedObject_UE*>& InROs)
+        {
+            InROs.Emplace(UCk_Ecs_ReplicatedObject_UE::Create(InRepObjectClass, InData.Get_Owner(), InNetStableName, FCk_Handle{}));
+        });
+    });
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     const auto& OutermostActor = InRequest.Get_OutermostActor();
     CK_ENSURE_IF_NOT(ck::IsValid(OutermostActor), TEXT("Invalid Outermose Actor on CLIENT.[{}]"), ck::Context(this))
     { return; }
@@ -137,7 +166,7 @@ auto
 
             const auto& NewActorBasicInfo = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(NewOrExistingActor);
 
-            UCk_Utils_ReplicatedObjects_UE::Add(NewActorBasicInfo.Get_Handle(), InRequest.Get_ReplicatedObjects());
+            UCk_Utils_ReplicatedObjects_UE::Add(NewActorBasicInfo.Get_Handle(), ROs);
         }
         else
         {
@@ -146,42 +175,12 @@ auto
                 static_cast<FCk_Entity::IdType>(InRequest.Get_OriginalOwnerEntity())
             );
 
-            UCk_Utils_ReplicatedObjects_UE::Add(OriginalOwnerHandle, InRequest.Get_ReplicatedObjects());
+            UCk_Utils_ReplicatedObjects_UE::Add(OriginalOwnerHandle, ROs);
         }
 
         ck::unreal::Verbose(TEXT("Replicating [{}] with outermost [{}] on CLIENT with PC [{}]"),
             InRequest.Get_OutermostActor(), InRequest.Get_ActorToReplicate(), PlayerController);
     }
-}
-
-auto
-    UCk_EcsConstructionScript_ActorComponent_UE::
-    Request_ReplicateObjects(
-        const FCk_EcsConstructionScript_ReplicateObjects_Data& InData)
-    -> void
-{
-    CK_ENSURE_IF_NOT(InData.Get_Objects().Num() == InData.Get_NetStableNames().Num(),
-        TEXT("Expected Objects Array to be the same size as the associated Names Array. "
-            "Unable to proceed with construction of Replicated Objects.[{}]"), ck::Context(this))
-    { return; }
-
-    CK_ENSURE_IF_NOT(ck::IsValid(InData.Get_Owner()),
-        TEXT("The ReplicatedOwner is [{}]. Unable to proceed with construction of Replicated Objects.[{}]"), ck::Context(this))
-    { return; }
-
-    if (InData.Get_Owner()->IsNetMode(NM_DedicatedServer))
-    { return; }
-
-    ck::algo::ForEachView(InData.Get_Objects(), InData.Get_NetStableNames(),
-    [&](TSubclassOf<UCk_Ecs_ReplicatedObject_UE> InRepObjectClass, FName InNetStableName)
-    {
-        CK_ENSURE_IF_NOT(ck::IsValid(InData.Get_Owner()),
-            TEXT("Invalid Replicated Owner Actor.[{}]"), ck::Context(this))
-        { return; }
-
-        // TODO: Sending garbage entity handle until we manage to link it up properly
-        UCk_Ecs_ReplicatedObject_UE::Create(InRepObjectClass, InData.Get_Owner(), InNetStableName, FCk_Handle{});
-    });
 }
 
 auto
@@ -282,8 +281,7 @@ auto
 
     if (_ReplicationDataReplicated)
     {
-        Request_ReplicateObjects(_ReplicationData.Get_ReplicatedObjects());
-        Request_ReplicateActor_OnClients(_ReplicationData.Get_ConstructionInfo());
+        Request_ReplicateActor_OnClients(_ReplicationData.Get_ReplicatedObjects(), _ReplicationData.Get_ConstructionInfo());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -367,7 +365,6 @@ auto
             FCk_EcsConstructionScript_ConstructionInfo{}
             .Set_OutermostActor(OutermostActor)
             .Set_ActorToReplicate(OwningActor->GetClass())
-            .Set_ReplicatedObjects(UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(_Entity))
             .Set_Transform(OwningActor->GetActorTransform()),
             ReplicatedObjectsData
         };
@@ -385,8 +382,7 @@ auto
     { return; }
 
     ck::unreal::Log(TEXT("Starting to replicate [{}]"), _ReplicationData.Get_ConstructionInfo().Get_ActorToReplicate());
-    Request_ReplicateObjects(_ReplicationData.Get_ReplicatedObjects());
-    Request_ReplicateActor_OnClients(_ReplicationData.Get_ConstructionInfo());
+    Request_ReplicateActor_OnClients(_ReplicationData.Get_ReplicatedObjects(), _ReplicationData.Get_ConstructionInfo());
 }
 
 void
