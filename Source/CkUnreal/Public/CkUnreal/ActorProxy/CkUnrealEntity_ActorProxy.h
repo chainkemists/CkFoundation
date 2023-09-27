@@ -39,12 +39,18 @@ public:
     virtual auto BeginPlay() -> void override;
 
 public:
+    auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
+
+public:
     UPROPERTY(EditInstanceOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     TSubclassOf<AActor> _ActorToSpawn;
 
+    UPROPERTY(Transient, BlueprintReadOnly, meta = (AllowPrivateAccess = true), Replicated)
+    TObjectPtr<AActor> _SpawnedActor;
+
 #if WITH_EDITORONLY_DATA
     UPROPERTY(Transient)
-    TObjectPtr<AActor> _TransientActor;
+    TObjectPtr<UChildActorComponent> _ChildActorComponent;
 #endif
 };
 
