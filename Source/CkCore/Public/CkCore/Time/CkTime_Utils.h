@@ -69,6 +69,21 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Time",
+              meta = (DisplayName = "Time To Text", CompactNodeTitle = "->", BlueprintAutocast))
+    static FText
+    Conv_TimeToText(
+        const FCk_Time& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Chrono",
+              meta = (DisplayName = "Time To String", CompactNodeTitle = "->", BlueprintAutocast))
+    static FString
+    Conv_TimeToString(
+        const FCk_Time& InHandle);
+
+public:
+    UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Time")
     static FCk_Time
     Make_FromSeconds(float InSeconds);
