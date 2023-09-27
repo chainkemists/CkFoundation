@@ -2,8 +2,6 @@
 
 #include "CkEcsBasics/CkEcsBasics_Utils.h"
 
-#include "CkLabel/CkLabel_Utils.h"
-
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkOverlapBody/MarkerAndSensor/CkMarkerAndSensor_Utils.h"
@@ -62,39 +60,55 @@ public:
     static void
     PreviewSensor(
         UObject* InOuter,
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName);
 
-private:
-    static auto
-    DoPreviewSensor(
-        UObject* InOuter,
-        FCk_Handle InHandle) -> void;
-
-private:
+public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
               DisplayName="Has Sensor")
     static bool
     Has(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Sensor",
+              DisplayName="Has Any Sensor")
+    static bool
+    Has_Any(
+        FCk_Handle InSensorOwnerEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
               DisplayName="Ensure Has Sensor")
     static bool
     Ensure(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName);
 
-private:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Sensor",
+              DisplayName="Ensure Has Any Sensor")
+    static bool
+    Ensure_Any(
+        FCk_Handle InSensorOwnerEntity);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Sensor",
+              DisplayName="Get All Sensors")
+    static TArray<FGameplayTag>
+    Get_All(
+        FCk_Handle InSensorOwnerEntity);
+
+public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
               DisplayName = "Get Sensor Physics Info")
     static FCk_Sensor_PhysicsInfo
     Get_PhysicsInfo(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName);
 
     UFUNCTION(BlueprintPure,
@@ -102,7 +116,7 @@ private:
               DisplayName = "Get Sensor Shape Info")
     static FCk_Sensor_ShapeInfo
     Get_ShapeInfo(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName);
 
     UFUNCTION(BlueprintPure,
@@ -110,7 +124,7 @@ private:
               DisplayName = "Get Sensor Debug Info")
     static FCk_Sensor_DebugInfo
     Get_DebugInfo(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName);
 
     UFUNCTION(BlueprintPure,
@@ -118,7 +132,7 @@ private:
               DisplayName = "Get Sensor Enable Disable")
     static ECk_EnableDisable
     Get_EnableDisable(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName);
 
     UFUNCTION(BlueprintPure,
@@ -126,7 +140,7 @@ private:
               DisplayName = "Get Sensor Shape Component")
     static UShapeComponent*
     Get_ShapeComponent(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName);
 
     UFUNCTION(BlueprintPure,
@@ -134,7 +148,7 @@ private:
               DisplayName = "Get Sensor Attached Entity And Actor")
     static FCk_EntityOwningActor_BasicDetails
     Get_AttachedEntityAndActor(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName);
 
     UFUNCTION(BlueprintPure,
@@ -142,7 +156,7 @@ private:
               DisplayName = "Get Has Sensor Any Marker Overlaps")
     static bool
     Get_HasMarkerOverlaps(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName);
 
     UFUNCTION(BlueprintPure,
@@ -151,7 +165,7 @@ private:
               meta = (AutoCreateRefTerm = "FCk_Handle"))
     static FCk_Sensor_MarkerOverlaps
     Get_AllMarkerOverlaps(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName);
 
     UFUNCTION(BlueprintPure,
@@ -159,7 +173,7 @@ private:
               DisplayName = "Get Has Sensor Any Non-Marker Overlaps")
     static bool
     Get_HasNonMarkerOverlaps(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName);
 
     UFUNCTION(BlueprintPure,
@@ -168,26 +182,26 @@ private:
               meta = (AutoCreateRefTerm = "FCk_Handle"))
     static FCk_Sensor_NonMarkerOverlaps
     Get_AllNonMarkerOverlaps(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName);
 
-private:
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
               DisplayName = "Request Enable Disable Sensor")
     static void
     Request_EnableDisable(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName,
         const FCk_Request_Sensor_EnableDisable& InRequest);
 
-private:
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
               DisplayName = "Bind To Sensor Enable Disable")
     static void
     BindTo_OnEnableDisable(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Sensor_OnEnableDisable& InDelegate);
@@ -197,7 +211,7 @@ private:
               DisplayName = "Unbind From Sensor Enable Disable")
     static void
     UnbindFrom_OnEnableDisable(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName,
         const FCk_Delegate_Sensor_OnEnableDisable& InDelegate);
 
@@ -206,7 +220,7 @@ private:
               DisplayName = "Bind To Sensor Begin Overlap")
     static void
     BindTo_OnBeginOverlap(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Sensor_OnBeginOverlap& InDelegate);
@@ -216,7 +230,7 @@ private:
               DisplayName = "Unbind From Sensor Begin Overlap")
     static void
     UnbindFrom_OnBeginOverlap(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName,
         const FCk_Delegate_Sensor_OnBeginOverlap& InDelegate);
 
@@ -225,7 +239,7 @@ private:
               DisplayName = "Bind To Sensor End Overlap")
     static void
     BindTo_OnEndOverlap(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Sensor_OnEndOverlap& InDelegate);
@@ -235,7 +249,7 @@ private:
               DisplayName = "Unbind From Sensor End Overlap")
     static void
     UnbindFrom_OnEndOverlap(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName,
         const FCk_Delegate_Sensor_OnEndOverlap& InDelegate);
 
@@ -244,7 +258,7 @@ private:
               DisplayName = "Bind To Sensor Begin Overlap Non-Marker")
     static void
     BindTo_OnBeginOverlap_NonMarker(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Sensor_OnBeginOverlap_NonMarker& InDelegate);
@@ -254,7 +268,7 @@ private:
               DisplayName = "Unbind From Sensor Begin Overlap Non-Marker")
     static void
     UnbindFrom_OnBeginOverlap_NonMarker(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName,
         const FCk_Delegate_Sensor_OnBeginOverlap_NonMarker& InDelegate);
 
@@ -263,7 +277,7 @@ private:
               DisplayName = "Bind To Sensor End Overlap Non-Marker")
     static void
     BindTo_OnEndOverlap_NonMarker(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Sensor_OnEndOverlap_NonMarker& InDelegate);
@@ -273,7 +287,7 @@ private:
               DisplayName = "Unbind From Sensor End Overlap Non-Marker")
     static void
     UnbindFrom_OnEndOverlap_NonMarker(
-        FCk_Handle InHandle,
+        FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName,
         const FCk_Delegate_Sensor_OnEndOverlap_NonMarker& InDelegate);
 
@@ -302,8 +316,11 @@ private:
     static auto
     Has(
         FCk_Handle InSensorHandle) -> bool;
+    static auto
+    DoPreviewSensor(
+        UObject* InOuter,
+        FCk_Handle InHandle) -> void;
 
-private:
     static auto
     Request_MarkSensor_AsNeedToUpdateTransform(
         FCk_Handle InSensorHandle) -> void;
