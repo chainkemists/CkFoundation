@@ -4,6 +4,24 @@
 
 auto
     UCk_Utils_Chrono_UE::
+    Conv_ChronoToText(
+        const FCk_Chrono& InHandle)
+    -> FText
+{
+    return FText::FromString(Conv_ChronoToString(InHandle));
+}
+
+auto
+    UCk_Utils_Chrono_UE::
+    Conv_ChronoToString(
+        const FCk_Chrono& InHandle)
+    -> FString
+{
+    return ck::Format_UE(TEXT("{}"), InHandle);
+}
+
+auto
+    UCk_Utils_Chrono_UE::
     Break_Chrono(
         const FCk_Chrono& InChrono,
         FCk_Time&         OutGoal,
