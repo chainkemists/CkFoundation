@@ -16,6 +16,21 @@ class CKCORE_API UCk_Utils_Chrono_UE : public UBlueprintFunctionLibrary
 public:
     CK_GENERATED_BODY(UCk_Utils_Chrono_UE);
 
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Chrono",
+              meta = (DisplayName = "Chrono To Text", CompactNodeTitle = "->", BlueprintAutocast))
+    static FText
+    Conv_ChronoToText(
+        const FCk_Chrono& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Chrono",
+              meta = (DisplayName = "Chrono To String", CompactNodeTitle = "->", BlueprintAutocast))
+    static FString
+    Conv_ChronoToString(
+        const FCk_Chrono& InHandle);
+
 private:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Chrono",
