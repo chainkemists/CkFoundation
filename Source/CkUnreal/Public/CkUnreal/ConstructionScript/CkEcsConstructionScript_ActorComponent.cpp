@@ -324,13 +324,13 @@ auto
 
     if (GetWorld()->IsNetMode(NM_Standalone))
     {
-        _Entity.Add<ck::FTag_HasAuthority>(OwningActor);
+        UCk_Utils_Net_UE::Add(_Entity, FCk_Net_ConnectionSettings{ECk_Net_NetRoleType::Host, ECk_Net_EntityNetRole::Authority});
         return;
     }
 
     if (GetWorld()->IsNetMode(NM_Client))
     {
-        _Entity.Add<ck::FTag_HasAuthority>(OwningActor);
+        UCk_Utils_Net_UE::Add(_Entity, FCk_Net_ConnectionSettings{ECk_Net_NetRoleType::Client, ECk_Net_EntityNetRole::Authority});
 
         ConstructionScript->Request_ReplicateActor_OnServer
         (
@@ -344,7 +344,7 @@ auto
     }
     else if (OutermostActor->GetRemoteRole() != ROLE_AutonomousProxy)
     {
-        _Entity.Add<ck::FTag_HasAuthority>(OwningActor);
+        UCk_Utils_Net_UE::Add(_Entity, FCk_Net_ConnectionSettings{ECk_Net_NetRoleType::Host, ECk_Net_EntityNetRole::Authority});
 
         const auto& NewActorBasicDetails = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(OwningActor);
         const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(NewActorBasicDetails.Get_Handle());
