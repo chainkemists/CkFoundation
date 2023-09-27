@@ -63,4 +63,15 @@ public:
     CK_PROPERTY_GET(_Params);
 };
 
+CK_DEFINE_CUSTOM_FORMATTER(FCk_Meter, [&]()
+{
+    return ck::Format
+    (
+        TEXT("Min: {}, Max: {}, Remaining: {}"),
+        InObj.Get_Params().Get_Capacity().Get_MinCapacity(),
+        InObj.Get_Params().Get_Capacity().Get_MaxCapacity(),
+        InObj.Get_Remaining().Get_AmountRemaining()
+    );
+});
+
 // --------------------------------------------------------------------------------------------------------------------
