@@ -4,6 +4,24 @@
 
 auto
     UCk_Utils_Meter_UE::
+    Conv_MeterToText(
+        const FCk_Meter& InHandle)
+    -> FText
+{
+    return FText::FromString(Conv_MeterToString(InHandle));
+}
+
+auto
+    UCk_Utils_Meter_UE::
+    Conv_MeterToString(
+        const FCk_Meter& InHandle)
+    -> FString
+{
+    return ck::Format_UE(TEXT("{}"), InHandle);
+}
+
+auto
+    UCk_Utils_Meter_UE::
     Make_Meter(
         const FCk_Meter_Params& InMeterParams)
     -> FCk_Meter
