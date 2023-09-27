@@ -2,6 +2,9 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+
+#include "CkEcsBasics/Transform/CkTransform_Fragment.h"
+
 #include "CkLabel/CkLabel_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -19,6 +22,8 @@ auto
     { return; }
 
     Add(InHandle, ParamsProvider->Get_Value().Get_AttributeBaseValues());
+
+    UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_FloatAttribute_Rep>(InHandle);
 }
 
 auto
@@ -206,6 +211,11 @@ auto
         AttributeEntity,
         InParams.Get_ModifierOperation()
     );
+
+    if (NOT InAttributeOwnerEntity.Has<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>())
+    { return; }
+
+    InAttributeOwnerEntity.Get<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>()->Broadcast_AddModifier(InModifierName, InParams);
 }
 
 auto
@@ -256,6 +266,11 @@ auto
             AttributeEntity, InModifierName);
 
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(AttributeModifierEntity);
+
+    if (NOT InAttributeOwnerEntity.Has<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>())
+    { return; }
+
+    InAttributeOwnerEntity.Get<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>()->Broadcast_RemoveModifier(InModifierName, InAttributeName);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

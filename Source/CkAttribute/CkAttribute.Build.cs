@@ -21,6 +21,7 @@ public class CkAttribute : CkModuleRules
             "CkEcsBasics",
             "CkLabel",
             "CkLog",
+            "CkNet",
             "CkProvider",
             "CkRecord",
             "CkSignal",
