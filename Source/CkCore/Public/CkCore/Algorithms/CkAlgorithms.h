@@ -66,6 +66,9 @@ namespace ck::algo
     template <class T_ReturnContainer, class T_TransformFunc, class T_Container>
     auto Transform(T_Container& InContainer, T_TransformFunc InFunc) -> T_ReturnContainer;
 
+    template <class T_ReturnContainer, class T_TransformFunc, class T_Container>
+    auto Transform(T_Container& InContainer, TToTransform<T_ReturnContainer> InReturnContainer, T_TransformFunc InFunc) -> void;
+
     template <typename T_Container, typename T_PredicateFunction>
     auto Filter(T_Container& InContainer, T_PredicateFunction InFunc) -> T_Container;
 }
@@ -207,6 +210,19 @@ namespace ck::algo
         auto ToRet = T_ReturnContainer{};
         Transform(InContainer, ToTransform(ToRet), InFunc);
         return ToRet;
+    }
+
+    template <class T_ReturnContainer, class T_TransformFunc, class T_Container>
+    auto
+        Transform(
+            T_Container& InContainer,
+            TToTransform<T_ReturnContainer> InReturnContainer,
+            T_TransformFunc InFunc) -> void
+    {
+        for (int i = 0; i < InContainer.Num(); ++i)
+        {
+            InReturnContainer.Container.Add(InFunc(InContainer[i]));
+        }
     }
 
     template <typename T_Container, typename T_PredicateFunction>
