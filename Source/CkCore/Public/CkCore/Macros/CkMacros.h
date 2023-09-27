@@ -96,7 +96,7 @@ namespace ck
 // Constructor definition
 
 #define CK_DEFINE_CONSTRUCTOR_1(_ClassType_, _1)\
-    _ClassType_(decltype(_1) _1) : _1(std::move(_1)) {}
+    explicit _ClassType_(decltype(_1) _1) : _1(std::move(_1)) {}
 
 #define CK_DEFINE_CONSTRUCTOR_2(_ClassType_, _1, _2)\
     _ClassType_(decltype(_1) _1, decltype(_2) _2)\
