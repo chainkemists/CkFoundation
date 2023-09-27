@@ -6,6 +6,24 @@
 
 auto
     UCk_Utils_Time_UE::
+    Conv_TimeToText(
+        const FCk_Time& InHandle)
+    -> FText
+{
+    return FText::FromString(Conv_TimeToString(InHandle));
+}
+
+auto
+    UCk_Utils_Time_UE::
+    Conv_TimeToString(
+        const FCk_Time& InHandle)
+    -> FString
+{
+    return ck::Format_UE(TEXT("{}"), InHandle);
+}
+
+auto
+    UCk_Utils_Time_UE::
     Make_FromSeconds(float InSeconds)
     -> FCk_Time
 {
