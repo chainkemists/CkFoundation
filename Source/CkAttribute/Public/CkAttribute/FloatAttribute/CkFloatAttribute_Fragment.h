@@ -6,6 +6,10 @@
 
 #include "CkCore/TypeConverter/CkTypeConverter.h"
 
+#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
+
+#include "CkFloatAttribute_Fragment.generated.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -62,6 +66,52 @@ namespace ck
 
     using UUtils_Signal_OnFloatAttributeValueChanged = TUtils_Signal_OnAttributeValueChanged<
         FFragment_FloatAttribute, FCk_Delegate_FloatAttribute_OnValueChanged_MC>;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class FProcessor_FloatAttribute_Replicate;
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(Blueprintable)
+class CKATTRIBUTE_API UCk_Fragment_FloatAttribute_Rep : public UCk_Ecs_ReplicatedObject_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_FloatAttribute_Rep);
+
+public:
+    friend class ck::FProcessor_FloatAttribute_Replicate;
+
+public:
+    UFUNCTION(Server, Reliable)
+    void
+    Broadcast_AddModifier(
+        FGameplayTag InModifierName,
+        const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams);
+
+    UFUNCTION(NetMulticast, Reliable)
+    void
+    Broadcast_AddModifier_Clients(
+        FGameplayTag                                   InModifierName,
+        FCk_Fragment_FloatAttributeModifier_ParamsData InParams);
+
+    UFUNCTION(Server, Reliable)
+    void
+    Broadcast_RemoveModifier(
+        FGameplayTag InModifierName,
+        FGameplayTag InAttributeName);
+
+    UFUNCTION(NetMulticast, Reliable)
+    void
+    Broadcast_RemoveModifier_Clients(
+        FGameplayTag InModifierName,
+        FGameplayTag InAttributeName);
+
+private:
+    bool _AlreadyConsumed = false;
+};
 
 // --------------------------------------------------------------------------------------------------------------------
