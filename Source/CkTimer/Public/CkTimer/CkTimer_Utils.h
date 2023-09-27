@@ -42,16 +42,38 @@ public:
               DisplayName="Has Timer")
     static bool
     Has(
-        FCk_Handle InHandle,
+        FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Timer",
+              DisplayName="Has Any Timer")
+    static bool
+    Has_Any(
+        FCk_Handle InTimerOwnerEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Timer",
               DisplayName="Ensure Has Timer")
     static bool
     Ensure(
-        FCk_Handle InHandle,
+        FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Timer",
+              DisplayName="Ensure HasAny  Timer")
+    static bool
+    Ensure_Any(
+        FCk_Handle InTimerOwnerEntity);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Timer",
+              DisplayName="Get All Timers")
+    static TArray<FGameplayTag>
+    Get_All(
+        FCk_Handle InTimerOwnerEntity);
 
 public:
     UFUNCTION(BlueprintPure,
@@ -59,7 +81,7 @@ public:
               DisplayName="Get Timer Current State")
     static ECk_Timer_State
     Get_CurrentState(
-        FCk_Handle InHandle,
+        FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName);
 
     UFUNCTION(BlueprintPure,
@@ -67,7 +89,7 @@ public:
               DisplayName="Get Timer Behavior")
     static ECk_Timer_Behavior
     Get_Behavior(
-        FCk_Handle InHandle,
+        FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName);
 
     UFUNCTION(BlueprintPure,
@@ -75,7 +97,7 @@ public:
               DisplayName="Get Timer Current Value")
     static FCk_Chrono
     Get_CurrentTimerValue(
-        FCk_Handle InHandle,
+        FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName);
 
 public:
@@ -84,7 +106,7 @@ public:
               DisplayName="Request Reset Timer")
     static void
     Request_Reset(
-        FCk_Handle InHandle,
+        FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName);
 
     UFUNCTION(BlueprintCallable,
@@ -92,7 +114,7 @@ public:
               DisplayName="Request Stop Timer")
     static void
     Request_Stop(
-        FCk_Handle InHandle,
+        FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName);
 
     UFUNCTION(BlueprintCallable,
@@ -100,7 +122,7 @@ public:
               DisplayName="Request Pause Timer")
     static void
     Request_Pause(
-        FCk_Handle InHandle,
+        FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName);
 
     UFUNCTION(BlueprintCallable,
@@ -108,7 +130,7 @@ public:
               DisplayName="Request Resume Timer")
     static void
     Request_Resume(
-        FCk_Handle InHandle,
+        FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName);
 
 public:
@@ -117,7 +139,7 @@ public:
               DisplayName = "Bind To Timer Reset")
     static void
     BindTo_OnTimerReset(
-        FCk_Handle InHandle,
+        FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate);
@@ -127,7 +149,7 @@ public:
               DisplayName = "Bind To Timer Stop")
     static void
     BindTo_OnTimerStop(
-        FCk_Handle InHandle,
+        FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate);
@@ -138,7 +160,7 @@ public:
               DisplayName = "Bind To Timer Pause")
     static void
     BindTo_OnTimerPause(
-        FCk_Handle InHandle,
+        FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate);
@@ -148,7 +170,7 @@ public:
               DisplayName = "Bind To Timer Resume")
     static void
     BindTo_OnTimerResume(
-        FCk_Handle InHandle,
+        FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate);
@@ -158,7 +180,7 @@ public:
               DisplayName = "Bind To Timer Done")
     static void
     BindTo_OnTimerDone(
-        FCk_Handle InHandle,
+        FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate);
@@ -168,7 +190,7 @@ public:
               DisplayName = "Bind To Timer Update")
     static void
     BindTo_OnTimerUpdate(
-        FCk_Handle InHandle,
+        FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate);
@@ -179,7 +201,7 @@ public:
               DisplayName = "Unbind From Timer Reset")
     static void
     UnbindFrom_OnTimerReset(
-        FCk_Handle InHandle,
+        FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName,
         const FCk_Delegate_Timer& InDelegate);
 
@@ -188,7 +210,7 @@ public:
               DisplayName = "Unbind From Timer Stop")
     static void
     UnbindFrom_OnTimerStop(
-        FCk_Handle InHandle,
+        FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName,
         const FCk_Delegate_Timer& InDelegate);
 
@@ -198,7 +220,7 @@ public:
               DisplayName = "Unbind From Timer Pause")
     static void
     UnbindFrom_OnTimerPause(
-        FCk_Handle InHandle,
+        FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName,
         const FCk_Delegate_Timer& InDelegate);
 
@@ -207,7 +229,7 @@ public:
               DisplayName = "Unbind From Timer Resume")
     static void
     UnbindFrom_OnTimerResume(
-        FCk_Handle InHandle,
+        FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName,
         const FCk_Delegate_Timer& InDelegate);
 
@@ -216,7 +238,7 @@ public:
               DisplayName = "Unbind From Timer Done")
     static void
     UnbindFrom_OnTimerDone(
-        FCk_Handle InHandle,
+        FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName,
         const FCk_Delegate_Timer& InDelegate);
 
@@ -225,7 +247,7 @@ public:
               DisplayName = "Unbind From Timer Update")
     static void
     UnbindFrom_OnTimerUpdate(
-        FCk_Handle InHandle,
+        FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName,
         const FCk_Delegate_Timer& InDelegate);
 
