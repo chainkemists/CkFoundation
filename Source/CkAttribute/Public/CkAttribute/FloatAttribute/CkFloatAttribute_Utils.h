@@ -49,10 +49,32 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
+              DisplayName="Has Any Float Attribute")
+    static bool
+    Has_Any(
+        FCk_Handle InAttributeOwnerEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Float",
               DisplayName="Ensure Has Float Attribute")
     static bool
     Ensure(
         FGameplayTag InAttributeName,
+        FCk_Handle InAttributeOwnerEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName="Ensure Has Any Float Attribute")
+    static bool
+    Ensure_Any(
+        FCk_Handle InAttributeOwnerEntity);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName="Get All Float Attributes")
+    static TArray<FGameplayTag>
+    Get_All(
         FCk_Handle InAttributeOwnerEntity);
 
 public:
