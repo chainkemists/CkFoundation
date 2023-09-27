@@ -1,5 +1,6 @@
 #include "CkFloatAttribute_Utils.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkLabel/CkLabel_Utils.h"
 
@@ -34,15 +35,53 @@ auto
 
 auto
     UCk_Utils_FloatAttribute_UE::
+    Has_Any(
+        FCk_Handle InAttributeOwnerEntity)
+    -> bool
+{
+    return RecordOfFloatAttributes_Utils::Has(InAttributeOwnerEntity);
+}
+
+auto
+    UCk_Utils_FloatAttribute_UE::
     Ensure(
         FGameplayTag InAttributeName,
         FCk_Handle InAttributeOwnerEntity)
     -> bool
 {
-    CK_ENSURE_IF_NOT(Has(InAttributeName, InAttributeOwnerEntity), TEXT("Handle [{}] does NOT have a Float Attribute"), InAttributeOwnerEntity)
+    CK_ENSURE_IF_NOT(Has(InAttributeName, InAttributeOwnerEntity), TEXT("Handle [{}] does NOT have a Float Attribute [{}]"), InAttributeOwnerEntity, InAttributeName)
     { return false; }
 
     return true;
+}
+
+auto
+    UCk_Utils_FloatAttribute_UE::
+    Ensure_Any(
+        FCk_Handle InAttributeOwnerEntity)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(Has_Any(InAttributeOwnerEntity), TEXT("Handle [{}] does NOT have any Float Attribute"), InAttributeOwnerEntity)
+    { return false; }
+
+    return true;
+}
+
+auto
+    UCk_Utils_FloatAttribute_UE::
+    Get_All(
+        FCk_Handle InAttributeOwnerEntity)
+    -> TArray<FGameplayTag>
+{
+    if (NOT RecordOfFloatAttributes_Utils::Has(InAttributeOwnerEntity))
+    { return {}; }
+
+    const auto& floatAttributeEntities = RecordOfFloatAttributes_Utils::Get_AllRecordEntries(InAttributeOwnerEntity);
+
+    return ck::algo::Transform<TArray<FGameplayTag>>(floatAttributeEntities, [&](FCk_Handle InFloatAttributeEntity)
+    {
+        return UCk_Utils_GameplayLabel_UE::Get_Label(InFloatAttributeEntity);
+    });
 }
 
 auto
