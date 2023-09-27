@@ -81,10 +81,32 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Meter",
+              DisplayName="Has Any Meter Attribute")
+    static bool
+    Has_Any(
+        FCk_Handle InAttributeOwnerEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Meter",
               DisplayName="Ensure Has Meter Attribute")
     static bool
     Ensure(
         FGameplayTag InAttributeName,
+        FCk_Handle InAttributeOwnerEntity);
+
+        UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Meter",
+              DisplayName="Ensure Has Any Meter Attribute")
+    static bool
+    Ensure_Any(
+        FCk_Handle InAttributeOwnerEntity);
+
+public:
+UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Meter",
+              DisplayName="Get All Meter Attributes")
+    static TArray<FGameplayTag>
+    Get_All(
         FCk_Handle InAttributeOwnerEntity);
 
 public:

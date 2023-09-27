@@ -2,6 +2,7 @@
 
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment.h"
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
+#include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkLabel/CkLabel_Utils.h"
@@ -123,15 +124,53 @@ auto
 
 auto
     UCk_Utils_MeterAttribute_UE::
+    Has_Any(
+        FCk_Handle InAttributeOwnerEntity)
+    -> bool
+{
+    return RecordOfMeterAttributes_Utils::Has(InAttributeOwnerEntity);
+}
+
+auto
+    UCk_Utils_MeterAttribute_UE::
     Ensure(
         FGameplayTag InAttributeName,
         FCk_Handle InAttributeOwnerEntity)
     -> bool
 {
-    CK_ENSURE_IF_NOT(Has(InAttributeName, InAttributeOwnerEntity), TEXT("Handle [{}] does NOT have a Meter Attribute"), InAttributeOwnerEntity)
+    CK_ENSURE_IF_NOT(Has(InAttributeName, InAttributeOwnerEntity), TEXT("Handle [{}] does NOT have a Meter Attribute [{}]"), InAttributeOwnerEntity, InAttributeName)
     { return false; }
 
     return true;
+}
+
+auto
+    UCk_Utils_MeterAttribute_UE::
+    Ensure_Any(
+        FCk_Handle InAttributeOwnerEntity)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(Has_Any(InAttributeOwnerEntity), TEXT("Handle [{}] does NOT have any Meter Attribute [{}]"), InAttributeOwnerEntity)
+    { return false; }
+
+    return true;
+}
+
+auto
+    UCk_Utils_MeterAttribute_UE::
+    Get_All(
+        FCk_Handle InAttributeOwnerEntity)
+    -> TArray<FGameplayTag>
+{
+    if (NOT RecordOfMeterAttributes_Utils::Has(InAttributeOwnerEntity))
+    { return {}; }
+
+    const auto& meterAttributeEntities = RecordOfMeterAttributes_Utils::Get_AllRecordEntries(InAttributeOwnerEntity);
+
+    return ck::algo::Transform<TArray<FGameplayTag>>(meterAttributeEntities, [&](FCk_Handle InMeterAttributeEntity)
+    {
+        return UCk_Utils_GameplayLabel_UE::Get_Label(InMeterAttributeEntity);
+    });
 }
 
 auto
