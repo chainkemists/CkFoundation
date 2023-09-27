@@ -24,7 +24,17 @@ public:
     using HandleType   = FCk_Handle;
 
 public:
-    struct EntityIdHint { EntityType Entity; };
+    struct EntityIdHint
+    {
+        CK_GENERATED_BODY(EntityIdHint);
+
+    private:
+        EntityType _Entity;
+
+    public:
+        CK_PROPERTY_GET(_Entity);
+        explicit CK_DEFINE_CONSTRUCTORS(EntityIdHint, _Entity);
+    };
 
 public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|EntityLifetime")
@@ -46,7 +56,7 @@ public:
         const EntityIdHint& InEntityHint) -> HandleType;
 
 public:
-    static auto Get_TransientEntity(RegistryType& InRegistry) -> HandleType;
+    static auto Get_TransientEntity(const RegistryType& InRegistry) -> HandleType;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
