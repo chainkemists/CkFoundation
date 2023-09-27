@@ -169,17 +169,17 @@ auto UCk_Utils_Actor_UE::
         const SpawnActorParamsType& InSpawnActorParams,
         const TFunction<void(AActor*)>& InPreFinishSpawningFunc) -> AActor*
 {
-    const auto& spawnedActor = DoRequest_SpawnActor_Begin(InSpawnActorParams);
+    const auto& SpawnedActor = DoRequest_SpawnActor_Begin(InSpawnActorParams);
 
-    if (ck::Is_NOT_Valid(spawnedActor))
+    if (ck::Is_NOT_Valid(SpawnedActor))
     { return {}; }
 
     if (InPreFinishSpawningFunc)
     {
-        InPreFinishSpawningFunc(spawnedActor);
+        InPreFinishSpawningFunc(SpawnedActor);
     }
 
-    return DoRequest_SpawnActor_Finish(InSpawnActorParams, spawnedActor);
+    return DoRequest_SpawnActor_Finish(InSpawnActorParams, SpawnedActor);
 }
 
 auto
@@ -274,7 +274,9 @@ auto
     const auto& Replication  = InSpawnActorParams.Get_NetworkingType();
     const auto& IsReplicated = Replication == ECk_Actor_NetworkingType::Replicated;
 
-    if (IsReplicated)
+    const auto IgnoreCertainChecksIfNotInGame = UCk_Utils_Game_UE::Get_GameStatus(World) == ECk_GameStatus::NotInGame;
+
+    if (IsReplicated && NOT IgnoreCertainChecksIfNotInGame)
     {
         CK_ENSURE_IF_NOT(World->GetNetMode() != ENetMode::NM_Client, TEXT("Clients are not allowed to call SpawnActors"))
         { return {}; }
@@ -301,13 +303,16 @@ auto
     const auto& ReplicationMatches = (IsReplicated && SpawningActor->GetIsReplicated()) ||
         (NOT IsReplicated && NOT SpawningActor->GetIsReplicated());
 
-    CK_ENSURE_IF_NOT(ReplicationMatches,
-        TEXT("Requested NetworkingType [{}] does not match the spawningActor [{}] replication settings"),
-        Replication,
-        SpawningActor)
+    if (NOT IgnoreCertainChecksIfNotInGame)
     {
-        SpawningActor->Destroy();
-        return {};
+        CK_ENSURE_IF_NOT(ReplicationMatches,
+            TEXT("Requested NetworkingType [{}] does not match the spawningActor [{}] replication settings"),
+            Replication,
+            SpawningActor)
+        {
+            SpawningActor->Destroy();
+            return {};
+        }
     }
 
     return SpawningActor;
