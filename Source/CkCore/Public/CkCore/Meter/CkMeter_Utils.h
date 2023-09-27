@@ -14,6 +14,21 @@ class CKCORE_API UCk_Utils_Meter_UE : public UBlueprintFunctionLibrary
 public:
     CK_GENERATED_BODY(UCk_Utils_Meter_UE);
 
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Meter",
+              meta = (DisplayName = "Meter To Text", CompactNodeTitle = "->", BlueprintAutocast))
+    static FText
+    Conv_MeterToText(
+        const FCk_Meter& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Meter",
+              meta = (DisplayName = "Meter To String", CompactNodeTitle = "->", BlueprintAutocast))
+    static FString
+    Conv_MeterToString(
+        const FCk_Meter& InHandle);
+
 private:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Meter",
