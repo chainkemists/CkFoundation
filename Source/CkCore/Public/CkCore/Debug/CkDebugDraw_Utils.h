@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Math/ValueRange/CkValueRange.h"
@@ -6,6 +6,18 @@
 #include <Kismet/BlueprintFunctionLibrary.h>
 
 #include "CkDebugDraw_Utils.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_ASCII_ProgressBar_Style : uint8
+{
+    Equal_Symbol UMETA(DisplayName = "Equal Symbol: ="),
+    HashTag_Symbol UMETA(DisplayName = "HashTag Symbol: #"),
+    FilledBlock_Symbol UMETA(DisplayName = "Filled Block Symbol: █"),
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ASCII_ProgressBar_Style);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -23,7 +35,8 @@ public:
     static FString
     Create_ASCII_ProgressBar(
         const FCk_FloatRange_0to1& InProgressValue,
-        int32 InProgressBarCharacterLength);
+        int32 InProgressBarCharacterLength,
+        ECk_ASCII_ProgressBar_Style InStyle = ECk_ASCII_ProgressBar_Style::FilledBlock_Symbol);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
