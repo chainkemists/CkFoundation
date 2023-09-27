@@ -220,6 +220,15 @@ auto
         const FCk_ActorComponent_DoConstruct_Params& InParams)
     -> void
 {
+    // --------------------------------------------------------------------------------------------------------------------
+
+    const auto& OwningActor = GetOwner();
+
+    if (OwningActor->bIsEditorOnlyActor)
+    { return; }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     _DoConstructCalled = true;
 
     Super::Do_Construct_Implementation(InParams);
@@ -239,7 +248,6 @@ auto
     { return; }
 
     _Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(WorldSubsystem->Get_TransientEntity());
-    const auto& OwningActor = GetOwner();
 
     _Entity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
 
