@@ -14,16 +14,22 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_DebugName_Verbosity);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_Utils_Debug_UE::
-Get_DebugName(const UObject* InObject, ECk_DebugName_Verbosity InNameVerbosity)
--> FName
+auto
+    UCk_Utils_Debug_UE::
+    Get_DebugName(
+        const UObject*          InObject,
+        ECk_DebugName_Verbosity InNameVerbosity)
+    -> FName
 {
     return FName{Get_DebugName_AsString(InObject, InNameVerbosity)};
 }
 
-auto UCk_Utils_Debug_UE::
-Get_DebugName_AsString(const UObject* InObject, ECk_DebugName_Verbosity InNameVerbosity)
--> FString
+auto
+    UCk_Utils_Debug_UE::
+    Get_DebugName_AsString(
+        const UObject*          InObject,
+        ECk_DebugName_Verbosity InNameVerbosity)
+    -> FString
 {
     static const FString invalidName = TEXT("INVALID UObject");
 
@@ -42,16 +48,19 @@ Get_DebugName_AsString(const UObject* InObject, ECk_DebugName_Verbosity InNameVe
     }
 }
 
-auto UCk_Utils_Debug_UE::
-Get_DebugName_AsText(const UObject* InObject, ECk_DebugName_Verbosity InNameVerbosity)
--> FText
+auto
+    UCk_Utils_Debug_UE::Get_DebugName_AsText(
+        const UObject*          InObject,
+        ECk_DebugName_Verbosity InNameVerbosity)
+    -> FText
 {
     return FText::FromString(Get_DebugName_AsString(InObject, InNameVerbosity));
 }
 
-auto UCk_Utils_Debug_StackTrace_UE::
-Get_BlueprintContext()
--> TOptional<FString>
+auto
+    UCk_Utils_Debug_StackTrace_UE::
+    Get_BlueprintContext()
+    -> TOptional<FString>
 {
     const auto& trace = Get_StackTrace_Blueprint(ck::type_traits::AsArray{});
 
@@ -60,9 +69,11 @@ Get_BlueprintContext()
 
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_Utils_Debug_StackTrace_UE::
-Get_StackTrace(int32 InSkipFrames)
--> FString
+auto
+    UCk_Utils_Debug_StackTrace_UE::
+    Get_StackTrace(
+        int32 InSkipFrames)
+    -> FString
 {
     constexpr auto stackTraceSize = std::numeric_limits<int16>::max();
 
@@ -77,23 +88,27 @@ Get_StackTrace(int32 InSkipFrames)
     return FString{stackTrace};
 }
 
-auto UCk_Utils_Debug_StackTrace_UE::
-Get_StackTrace_Blueprint_AsArray()
--> TArray<FString>
+auto
+    UCk_Utils_Debug_StackTrace_UE::
+    Get_StackTrace_Blueprint_AsArray()
+    -> TArray<FString>
 {
     return Get_StackTrace_Blueprint(ck::type_traits::AsArray{});
 }
 
-auto UCk_Utils_Debug_StackTrace_UE::
-Get_StackTrace_Blueprint_AsString()
--> FString
+auto
+    UCk_Utils_Debug_StackTrace_UE::
+    Get_StackTrace_Blueprint_AsString()
+    -> FString
 {
     return Get_StackTrace_Blueprint(ck::type_traits::AsString{});
 }
 
-auto UCk_Utils_Debug_StackTrace_UE::
-Get_StackTrace_Blueprint(ck::type_traits::AsArray)
--> TArray<FString>
+auto
+    UCk_Utils_Debug_StackTrace_UE::
+    Get_StackTrace_Blueprint(
+        ck::type_traits::AsArray)
+    -> TArray<FString>
 {
     auto stackTrace = TArray<FString>{};
 
@@ -115,9 +130,11 @@ Get_StackTrace_Blueprint(ck::type_traits::AsArray)
     return stackTrace;
 }
 
-auto UCk_Utils_Debug_StackTrace_UE::
-Get_StackTrace_Blueprint(ck::type_traits::AsString)
--> FString
+auto
+    UCk_Utils_Debug_StackTrace_UE::
+    Get_StackTrace_Blueprint(
+        ck::type_traits::AsString)
+    -> FString
 {
     FString stackTrace;
 
@@ -142,9 +159,11 @@ Get_StackTrace_Blueprint(ck::type_traits::AsString)
     return stackTrace;
 }
 
-auto UCk_Utils_Debug_StackTrace_UE::
-Try_BreakInScript(const UObject* InContext)
--> void
+auto
+    UCk_Utils_Debug_StackTrace_UE::
+    Try_BreakInScript(
+        const UObject* InContext)
+    -> void
 {
 #if !CK_DISABLE_STACK_TRACE
     if (ck::Is_NOT_Valid(InContext))
