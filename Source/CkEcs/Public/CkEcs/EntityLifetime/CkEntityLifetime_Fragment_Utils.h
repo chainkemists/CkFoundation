@@ -33,7 +33,7 @@ public:
 
     public:
         CK_PROPERTY_GET(_Entity);
-        explicit CK_DEFINE_CONSTRUCTORS(EntityIdHint, _Entity);
+        CK_DEFINE_CONSTRUCTORS(EntityIdHint, _Entity);
     };
 
 public:
