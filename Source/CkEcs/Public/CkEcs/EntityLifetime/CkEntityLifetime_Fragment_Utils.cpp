@@ -58,7 +58,7 @@ auto
         const EntityIdHint& InEntityHint)
     -> HandleType
 {
-    const auto& NewEntity = InRegistry.CreateEntity(InEntityHint.Entity);
+    const auto& NewEntity = InRegistry.CreateEntity(InEntityHint.Get_Entity());
     InRegistry.Add<ck::FTag_EntityJustCreated>(NewEntity);
 
     return HandleType{ NewEntity, InRegistry };
@@ -67,10 +67,10 @@ auto
 auto
     UCk_Utils_EntityLifetime_UE::
     Get_TransientEntity(
-        RegistryType& InRegistry)
+        const RegistryType& InRegistry)
     -> HandleType
 {
-    return HandleType{InRegistry._TransientEntity, InRegistry};
+    return HandleType{InRegistry.Get_TransientEntity(), InRegistry};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
