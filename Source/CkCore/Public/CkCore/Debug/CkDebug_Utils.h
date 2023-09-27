@@ -32,19 +32,22 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Debug")
     static FName
-    Get_DebugName(const UObject* InObject,
+    Get_DebugName(
+        const UObject* InObject,
         ECk_DebugName_Verbosity InNameVerbosity = ECk_DebugName_Verbosity::FullName);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Debug")
     static FString
-    Get_DebugName_AsString(const UObject* InObject,
+    Get_DebugName_AsString(
+        const UObject* InObject,
         ECk_DebugName_Verbosity InNameVerbosity = ECk_DebugName_Verbosity::FullName);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Debug")
     static FText
-    Get_DebugName_AsText(const UObject* InObject,
+    Get_DebugName_AsText(
+        const UObject* InObject,
         ECk_DebugName_Verbosity InNameVerbosity = ECk_DebugName_Verbosity::FullName
     );
 };
