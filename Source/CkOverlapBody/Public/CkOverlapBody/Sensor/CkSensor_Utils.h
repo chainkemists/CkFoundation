@@ -105,6 +105,14 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
+              DisplayName = "Get Sensor Replication Type")
+    static ECk_Net_ReplicationType
+    Get_ReplicationType(
+        FCk_Handle InSensorOwnerEntity,
+        FGameplayTag InSensorName);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Sensor",
               DisplayName = "Get Sensor Physics Info")
     static FCk_Sensor_PhysicsInfo
     Get_PhysicsInfo(
