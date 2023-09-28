@@ -86,82 +86,82 @@ auto                                                                            
 {                                                                                                  \
     UE_LOG(_LogCategory_, VeryVerbose, TEXT("%s"), *ck::Format_UE(InString, InArgs...));           \
 }                                                                                                  \
-                                                                                                   \
-template <typename T, typename ... TArgs>                                                          \
-auto                                                                                               \
-    Fatal(bool      InExpression,                                                                  \
-          const T&  InString,                                                                      \
-          TArgs&&...InArgs)                                                                        \
-    -> void                                                                                        \
-{                                                                                                  \
-    if (InExpression)                                                                              \
-    { Fatal(InString, InArgs...); }                                                                \
-}                                                                                                  \
-                                                                                                   \
-template <typename T, typename ... TArgs>                                                          \
-auto                                                                                               \
-    Error(bool      InExpression,                                                                  \
-          const T&  InString,                                                                      \
-          TArgs&&...InArgs)                                                                        \
-    -> void                                                                                        \
-{                                                                                                  \
-    if (InExpression)                                                                              \
-    { Error(InString, InArgs...); }                                                                \
-}                                                                                                  \
-                                                                                                   \
-template <typename T, typename ... TArgs>                                                          \
-auto                                                                                               \
-    Warning(bool      InExpression,                                                                \
-            const T&  InString,                                                                    \
-            TArgs&&...InArgs)                                                                      \
-    -> void                                                                                        \
-{                                                                                                  \
-    if (InExpression)                                                                              \
-    { Warning(InString, InArgs...); }                                                              \
-}                                                                                                  \
-                                                                                                   \
-template <typename T, typename ... TArgs>                                                          \
-auto                                                                                               \
-    Display(bool      InExpression,                                                                \
-            const T&  InString,                                                                    \
-            TArgs&&...InArgs)                                                                      \
-    -> void                                                                                        \
-{                                                                                                  \
-    if (InExpression)                                                                              \
-    { Display(InString, InArgs...); }                                                              \
-}                                                                                                  \
-                                                                                                   \
-template <typename T, typename ... TArgs>                                                          \
-auto                                                                                               \
-    Log(bool      InExpression,                                                                    \
-        const T&  InString,                                                                        \
-        TArgs&&...InArgs)                                                                          \
-    -> void                                                                                        \
-{                                                                                                  \
-    if (InExpression)                                                                              \
-    { Log(InString, InArgs...); }                                                                  \
-}                                                                                                  \
-                                                                                                   \
-template <typename T, typename ... TArgs>                                                          \
-auto                                                                                               \
-    Verbose(bool      InExpression,                                                                \
-            const T&  InString,                                                                    \
-            TArgs&&...InArgs)                                                                      \
-    -> void                                                                                        \
-{                                                                                                  \
-    if (InExpression)                                                                              \
-    { Verbose(InString, InArgs...); }                                                              \
-}                                                                                                  \
-                                                                                                   \
-template <typename T, typename ... TArgs>                                                          \
-auto                                                                                               \
-    VeryVerbose(bool      InExpression,                                                            \
-                const T&  InString,                                                                \
-                TArgs&&...InArgs)                                                                  \
-    -> void                                                                                        \
-{                                                                                                  \
-    if (InExpression)                                                                              \
-    { VeryVerbose(InString, InArgs...); }                                                          \
+                                                                                                                          \
+template <typename T, typename ... TArgs>                                                                                 \
+auto                                                                                                                      \
+    FatalIf(bool      InExpression,                                                                                       \
+          const T&  InString,                                                                                             \
+          TArgs&&...InArgs)                                                                                               \
+    -> void                                                                                                               \
+{                                                                                                                         \
+    if (InExpression)                                                                                                     \
+    { Fatal(InString, InArgs...); }                                                                                       \
+}                                                                                                                         \
+                                                                                                                          \
+template <typename T, typename ... TArgs>                                                                                 \
+auto                                                                                                                      \
+    ErrorIf(bool      InExpression,                                                                                       \
+          const T&  InString,                                                                                             \
+          TArgs&&...InArgs)                                                                                               \
+    -> void                                                                                                               \
+{                                                                                                                         \
+    if (InExpression)                                                                                                     \
+    { Error(InString, InArgs...); }                                                                                       \
+}                                                                                                                         \
+                                                                                                                          \
+template <typename T, typename ... TArgs>                                                                                 \
+auto                                                                                                                      \
+    WarningIf(bool      InExpression,                                                                                     \
+            const T&  InString,                                                                                           \
+            TArgs&&...InArgs)                                                                                             \
+    -> void                                                                                                               \
+{                                                                                                                         \
+    if (InExpression)                                                                                                     \
+    { Warning(InString, InArgs...); }                                                                                     \
+}                                                                                                                         \
+                                                                                                                          \
+template <typename T, typename ... TArgs>                                                                                 \
+auto                                                                                                                      \
+    DisplayIf(bool      InExpression,                                                                                     \
+            const T&  InString,                                                                                           \
+            TArgs&&...InArgs)                                                                                             \
+    -> void                                                                                                               \
+{                                                                                                                         \
+    if (InExpression)                                                                                                     \
+    { Display(InString, InArgs...); }                                                                                     \
+}                                                                                                                         \
+                                                                                                                          \
+template <typename T, typename ... TArgs>                                                                                 \
+auto                                                                                                                      \
+    LogIf(bool      InExpression,                                                                                         \
+        const T&  InString,                                                                                               \
+        TArgs&&...InArgs)                                                                                                 \
+    -> void                                                                                                               \
+{                                                                                                                         \
+    if (InExpression)                                                                                                     \
+    { Log(InString, InArgs...); }                                                                                         \
+}                                                                                                                         \
+                                                                                                                          \
+template <typename T, typename ... TArgs>                                                                                 \
+auto                                                                                                                      \
+    VerboseIf(bool      InExpression,                                                                                     \
+            const T&  InString,                                                                                           \
+            TArgs&&...InArgs)                                                                                             \
+    -> void                                                                                                               \
+{                                                                                                                         \
+    if (InExpression)                                                                                                     \
+    { Verbose(InString, InArgs...); }                                                                                     \
+}                                                                                                                         \
+                                                                                                                          \
+template <typename T, typename ... TArgs>                                                                                 \
+auto                                                                                                                      \
+    VeryVerboseIf(bool      InExpression,                                                                                 \
+                const T&  InString,                                                                                       \
+                TArgs&&...InArgs)                                                                                         \
+    -> void                                                                                                               \
+{                                                                                                                         \
+    if (InExpression)                                                                                                     \
+    { VeryVerbose(InString, InArgs...); }                                                                                 \
 }
 
 // --------------------------------------------------------------------------------------------------------------------
