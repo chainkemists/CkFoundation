@@ -89,6 +89,13 @@ public:
     Make_FromSeconds(float InSeconds);
 
     UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Time",
+              meta = (NativeMakeFunc, DefaultToSelf = "InWorldContextObject"))
+    static FCk_WorldTime
+    Make_WorldTime(
+        const UObject* InWorldContextObject);
+
+    UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Time")
     static int64
     Get_FrameNumber();

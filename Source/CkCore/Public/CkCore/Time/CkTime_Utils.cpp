@@ -32,6 +32,15 @@ auto
 
 auto
     UCk_Utils_Time_UE::
+    Make_WorldTime(
+        const UObject* InWorldContextObject)
+    -> FCk_WorldTime
+{
+    return FCk_WorldTime{InWorldContextObject};
+}
+
+auto
+    UCk_Utils_Time_UE::
     Get_FrameNumber()
     -> int64
 {
