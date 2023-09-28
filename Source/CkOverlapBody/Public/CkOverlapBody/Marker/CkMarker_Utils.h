@@ -130,6 +130,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Marker",
+              DisplayName = "Get Marker Replication Type")
+    static ECk_Net_ReplicationType
+    Get_ReplicationType(
+        FCk_Handle InMarkerOwnerEntity,
+        FGameplayTag InMarkerName);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Marker",
               DisplayName = "Get Marker Enable Disable")
     static ECk_EnableDisable
     Get_EnableDisable(
