@@ -11,7 +11,7 @@ CKLOG_API DECLARE_LOG_CATEGORY_EXTERN(CkLogger, Log, All);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck
+namespace ck::log
 {
     CK_DEFINE_LOG_FUNCTIONS(CkLogger);
     CK_REGISTER_LOG_FUNCTIONS(CkLogger);
