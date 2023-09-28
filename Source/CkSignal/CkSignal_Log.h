@@ -8,7 +8,7 @@ CKSIGNAL_API DECLARE_LOG_CATEGORY_EXTERN(CkSignal, Log, All);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck::log
+namespace ck::signal
 {
     CK_DEFINE_LOG_FUNCTIONS(CkSignal);
 }
