@@ -30,10 +30,6 @@ public:
     CK_GENERATED_BODY(FCk_Time);
 
 public:
-    FCk_Time() = default;
-    explicit FCk_Time(float InSeconds);
-
-public:
     auto operator==(const ThisType& InOther) const -> bool;
     auto operator<(const ThisType& InOther) const -> bool;
     CK_DECL_AND_DEF_OPERATORS(ThisType);
@@ -61,6 +57,49 @@ private:
 
 public:
     CK_PROPERTY_GET(_Seconds);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Time, _Seconds);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType, meta = (HasNativeMake = "CkCore.Ck_Utils_Time_UE.Make_WorldTime"))
+struct CKCORE_API FCk_WorldTime
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_WorldTime);
+
+public:
+    using TimeType = FCk_Time;
+
+public:
+    FCk_WorldTime() = default;
+    explicit FCk_WorldTime(const UObject* InWorldContextObject);
+
+private:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _Time;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _RealTime;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _DeltaT;
+
+private:
+    uint64 _FrameNumber = 0;
+
+public:
+    CK_PROPERTY_GET(_Time);
+    CK_PROPERTY_GET(_RealTime);
+    CK_PROPERTY_GET(_DeltaT);
+    CK_PROPERTY_GET(_FrameNumber);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -82,16 +121,8 @@ public:
 
     friend class UCk_Utils_Time_UE;
 
-    using TimeType       = FCk_Time;
+    using TimeType      = FCk_Time;
     using WorldTimeType = ECk_Time_WorldTimeType;
-
-public:
-    FCk_Time_Unreal() = default;
-
-private:
-    FCk_Time_Unreal(
-        const TimeType& InTime,
-        WorldTimeType  InTimeType);
 
 public:
     auto operator==(const ThisType& InOther) const -> bool;
@@ -116,6 +147,9 @@ private:
 public:
     CK_PROPERTY_GET(_Time)
     CK_PROPERTY_GET(_TimeType)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Time_Unreal, _Time, _TimeType);
 };
 
 CK_DEFINE_CUSTOM_FORMATTER(FCk_Time_Unreal, [&]()
