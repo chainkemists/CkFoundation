@@ -228,6 +228,23 @@ auto
 
 auto
     UCk_Utils_Marker_UE::
+    Get_ReplicationType(
+        FCk_Handle   InMarkerOwnerEntity,
+        FGameplayTag InMarkerName)
+    -> ECk_Net_ReplicationType
+{
+    if (NOT Ensure(InMarkerOwnerEntity, InMarkerName))
+    { return {}; }
+
+    const auto& MarkerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Marker_UE,
+        RecordOfMarkers_Utils>(InMarkerOwnerEntity, InMarkerName);
+
+    return MarkerEntity.Get<ck::FFragment_Marker_Params>().Get_Params().Get_ReplicationType();
+}
+
+auto
+    UCk_Utils_Marker_UE::
     Get_EnableDisable(
         FCk_Handle InMarkerOwnerEntity,
         FGameplayTag InMarkerName)
