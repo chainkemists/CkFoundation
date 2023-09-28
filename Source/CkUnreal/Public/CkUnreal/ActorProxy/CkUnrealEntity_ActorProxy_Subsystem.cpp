@@ -1,5 +1,6 @@
 #include "CkUnrealEntity_ActorProxy_Subsystem.h"
 
+#include "CkUnreal/CkUnreal_Log.h"
 #include "CkUnreal/ActorProxy/CkUnrealEntity_ActorProxy.h"
 
 #include <Kismet/GameplayStatics.h>
@@ -35,6 +36,10 @@ auto
     {
         const auto ActorProxy = Cast<ACk_UnrealEntity_ActorProxy_UE>(Actor);
         ActorProxy->_ChildActorComponent->DestroyChildActor();
+        ActorProxy->_ChildActorComponent->SetChildActorClass(nullptr);
+
+        ck::unreal::VeryVerbose(TEXT("Destroying ChildActorComponent [{}] of ActorProxy [{}].[{}]"),
+            ActorProxy->_ChildActorComponent->GetChildActor(), ActorProxy, ck::Context(this));
     }
 #endif
 }
