@@ -141,12 +141,24 @@ namespace ck::algo
     auto
         Transform(
             T_Container& InContainer,
+            T_TransformFunc InFunc)
+        -> T_ReturnContainer
+    {
+        auto ToRet = T_ReturnContainer{};
+        Transform(InContainer, ToTransform(ToRet), InFunc);
+        return ToRet;
+    }
+
+    template <typename T_ReturnContainer, typename T_TransformFunc, typename T_Container>
+    auto
+        Transform(
+            T_Container& InContainer,
             TToTransform<T_ReturnContainer> InReturnContainer,
             T_TransformFunc InFunc) -> void
     {
-        for (int i = 0; i < InContainer.Num(); ++i)
+        for (int Index = 0; Index < InContainer.Num(); ++Index)
         {
-            InReturnContainer.Container.Add(InFunc(InContainer[i]));
+            InReturnContainer._Container.Add(InFunc(InContainer[Index]));
         }
     }
 
