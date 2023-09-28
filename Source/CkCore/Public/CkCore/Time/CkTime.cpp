@@ -1,6 +1,9 @@
 #include "CkTime.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Game/CkGame_Utils.h"
+
+#include <Engine/World.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -12,64 +15,94 @@ const FCk_Time FCk_Time::OneSecond           = FCk_Time{ 1.0f };
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Time::
-FCk_Time(float InSeconds)
-    : _Seconds(InSeconds)
-{
-}
-
-auto FCk_Time::
-operator==(const ThisType& InOther) const -> bool
+auto
+    FCk_Time::
+    operator==(
+        const ThisType& InOther) const
+    -> bool
 {
     return _Seconds == InOther._Seconds;
 }
 
-auto FCk_Time::
-operator<(const ThisType& InOther) const -> bool
+auto
+    FCk_Time::
+    operator<(
+        const ThisType& InOther) const
+    -> bool
 {
     return _Seconds < InOther._Seconds;
 }
 
-auto FCk_Time::
-operator+(ThisType InOther) const -> ThisType
+auto
+    FCk_Time::
+    operator+(
+        ThisType InOther) const
+    -> ThisType
 {
     return ThisType{_Seconds + InOther._Seconds};
 }
 
-auto FCk_Time::
-operator-(ThisType InOther) const -> ThisType
+auto
+    FCk_Time::
+    operator-(
+        ThisType InOther) const
+    -> ThisType
 {
     return ThisType{_Seconds - InOther._Seconds};
 }
 
-auto FCk_Time::
-operator*(ThisType InOther) const -> ThisType
+auto
+    FCk_Time::
+    operator*(
+        ThisType InOther) const
+    -> ThisType
 {
     return ThisType{_Seconds * InOther._Seconds};
 }
 
-auto FCk_Time::
-operator/(ThisType InOther) const -> ThisType
+auto
+    FCk_Time::
+    operator/(
+        ThisType InOther) const
+    -> ThisType
 {
     return ThisType{_Seconds / InOther._Seconds};
 }
 
-auto FCk_Time::
-Get_Milliseconds() const -> float
+auto
+    FCk_Time::
+    Get_Milliseconds() const
+    -> float
 {
     return _Seconds * 1000.0f;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Time_Unreal::
-    FCk_Time_Unreal(
-        const TimeType& InTime,
-        WorldTimeType  InTimeType)
-    : _Time(InTime)
-    , _TimeType(InTimeType)
+FCk_WorldTime::
+    FCk_WorldTime(
+        const UObject* InWorldContextObject)
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InWorldContextObject), TEXT("Invalid World Context Object when trying to construct FCk_WorldTime!"))
+    { return; }
+
+    const auto& gameInstance = UCk_Utils_Game_UE::Get_GameInstance(InWorldContextObject);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(gameInstance), TEXT("Could not get a valid GameInstance when trying to construct FCk_WorldTime!"))
+    { return; }
+
+    const auto& currentWorld = gameInstance->GetWorld();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(currentWorld), TEXT("Could not get a valid World when trying to construct FCk_WorldTime!"))
+    { return; }
+
+    _Time        = TimeType{static_cast<float>(currentWorld->TimeSeconds)};
+    _RealTime    = TimeType{static_cast<float>(currentWorld->RealTimeSeconds)};
+    _DeltaT      = TimeType{(currentWorld->GetDeltaSeconds())};
+    _FrameNumber = GFrameCounter;
 }
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCk_Time_Unreal::
@@ -78,13 +111,11 @@ auto
 {
     const auto& IsSameWorldTimeType = Get_TimeType() == InOther.Get_TimeType();
 
-    if (NOT CK_ENSURE(IsSameWorldTimeType,
+    CK_ENSURE_IF_NOT(IsSameWorldTimeType,
         TEXT("WorldTimeTypes [{}] and [{}] do not match"),
         Get_TimeType(),
-        InOther.Get_TimeType()))
-    {
-        return false;
-    }
+        InOther.Get_TimeType())
+    { return false; }
 
     return Get_Time() == InOther.Get_Time();
 }
@@ -96,13 +127,11 @@ auto
 {
     const auto& IsSameWorldTimeType = Get_TimeType() == InOther.Get_TimeType();
 
-    if (NOT CK_ENSURE(IsSameWorldTimeType,
+    CK_ENSURE_IF_NOT(IsSameWorldTimeType,
         TEXT("WorldTimeTypes [{}] and [{}] do not match"),
         Get_TimeType(),
-        InOther.Get_TimeType()))
-    {
-        return false;
-    }
+        InOther.Get_TimeType())
+    {return false; }
 
     return Get_Time() < InOther.Get_Time();
 }
