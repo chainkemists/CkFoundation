@@ -173,6 +173,23 @@ auto
 
 auto
     UCk_Utils_Sensor_UE::
+    Get_ReplicationType(
+        FCk_Handle   InSensorOwnerEntity,
+        FGameplayTag InSensorName)
+    -> ECk_Net_ReplicationType
+{
+    if (NOT Ensure(InSensorOwnerEntity, InSensorName))
+    { return {}; }
+
+    const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Sensor_UE,
+        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
+
+    return SensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_ReplicationType();
+}
+
+auto
+    UCk_Utils_Sensor_UE::
     Get_PhysicsInfo(
         FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName)
