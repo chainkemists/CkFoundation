@@ -3,6 +3,10 @@
 #include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
 
+#include "CkUnreal/CkUnreal_Log.h"
+
+#include <Engine/World.h>
+
 #include "Net/UnrealNetwork.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -42,7 +46,6 @@ auto
             if (ck::IsValid(_ActorToSpawn))
             {
                 _ChildActorComponent->SetChildActorClass(_ActorToSpawn);
-                _ChildActorComponent->GetChildActor()->bIsEditorOnlyActor = true;
             }
         }();
     }
@@ -51,7 +54,8 @@ auto
 
 auto
     ACk_UnrealEntity_ActorProxy_UE::
-    BeginPlay() -> void
+    BeginPlay()
+    -> void
 {
     Super::BeginPlay();
 
@@ -76,11 +80,16 @@ auto
             : ECk_Actor_NetworkingType::Local)
         .Set_SpawnTransform(GetActorTransform())
     );
+
+    ck::unreal::VeryVerboseIf(ck::IsValid(_SpawnedActor), TEXT("Successfully Spawned Actor [{}].[{}]"), _SpawnedActor, ck::Context(this));
+    ck::unreal::VeryVerboseIf(ck::Is_NOT_Valid(_SpawnedActor), TEXT("Could NOT Spawn Actor of Class [{}].[{}]"), _ActorToSpawn, ck::Context(this));
 }
 
-void
-    ACk_UnrealEntity_ActorProxy_UE::GetLifetimeReplicatedProps(
+auto
+    ACk_UnrealEntity_ActorProxy_UE::
+    GetLifetimeReplicatedProps(
         TArray<FLifetimeProperty>& OutLifetimeProps) const
+    -> void
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 

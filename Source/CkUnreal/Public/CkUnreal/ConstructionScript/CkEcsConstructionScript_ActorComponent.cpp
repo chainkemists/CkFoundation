@@ -81,7 +81,7 @@ auto
         ReplicatedObjectsData
     };
 
-    ck::unreal::Verbose(TEXT("Replicating [{}] with outermost [{}] on SERVER"), OutermostActor, ActorToReplicate);
+    ck::unreal::Verbose(TEXT("Replicating [{}] with outermost [{}]"), OutermostActor, ActorToReplicate);
 }
 
 auto
@@ -178,7 +178,7 @@ auto
             UCk_Utils_ReplicatedObjects_UE::Add(OriginalOwnerHandle, ROs);
         }
 
-        ck::unreal::Verbose(TEXT("Replicating [{}] with outermost [{}] on CLIENT with PC [{}]"),
+        ck::unreal::Verbose(TEXT("Replicating [{}] with outermost [{}]"),
             InRequest.Get_OutermostActor(), InRequest.Get_ActorToReplicate(), PlayerController);
     }
 }
