@@ -9,6 +9,19 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_Utils_Object_RenameFlags : uint8
+{
+    None                  = 0,
+    ForceNoResetLoaders   = 1,
+    DoNotDirty            = 2,
+    DontCreateRedirectors = 3,
+    ForceGlobalUnique     = 4,
+    SkipGeneratedClass    = 5
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_Utils_Object_CopyAllProperties_Result : uint8
 {
     Failed   ,
@@ -48,6 +61,39 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKCORE_API FCk_Utils_Object_SetOuter_Params
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Utils_Object_SetOuter_Params);
+
+public:
+    FCk_Utils_Object_SetOuter_Params() = default;
+    FCk_Utils_Object_SetOuter_Params(
+        UObject* InObject,
+        UObject* InOuter,
+        ECk_Utils_Object_RenameFlags InFlag);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    TObjectPtr<UObject> _Object;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    TObjectPtr<UObject> _Outer;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    ECk_Utils_Object_RenameFlags _RenameFlags = ECk_Utils_Object_RenameFlags::None;
+
+public:
+    CK_PROPERTY_GET(_Object);
+    CK_PROPERTY_GET(_Outer);
+    CK_PROPERTY_GET(_RenameFlags);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable)
 class CKCORE_API UCk_Utils_Object_UE : public UBlueprintFunctionLibrary
 {
@@ -83,6 +129,12 @@ public:
         T_Func InPostClone, ck::policy::TransientPackage) -> T*;
 
 public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Object")
+    static bool
+    Request_TrySetOuter(
+        const FCk_Utils_Object_SetOuter_Params& InParams);
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Object")
     static ECk_Utils_Object_CopyAllProperties_Result
