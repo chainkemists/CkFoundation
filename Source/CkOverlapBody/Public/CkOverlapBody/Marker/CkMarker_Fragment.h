@@ -32,16 +32,14 @@ namespace ck
     public:
         using ParamsType = FCk_Fragment_Marker_ParamsData;
 
-    public:
-        FFragment_Marker_Params() = default;
-        explicit FFragment_Marker_Params(
-            ParamsType InParams);
-
     private:
         ParamsType _Params;
 
     public:
         CK_PROPERTY_GET(_Params);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Marker_Params, _Params);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -57,11 +55,6 @@ namespace ck
         friend class UCk_Utils_Marker_UE;
         friend class UCk_Utils_MarkerAndSensor_UE;
 
-    public:
-        FFragment_Marker_Current() = default;
-        explicit FFragment_Marker_Current(
-            ECk_EnableDisable InEnableDisable);
-
     private:
         TWeakObjectPtr<UShapeComponent> _Marker;
         FCk_EntityOwningActor_BasicDetails _AttachedEntityAndActor;
@@ -71,6 +64,9 @@ namespace ck
         CK_PROPERTY_GET(_EnableDisable);
         CK_PROPERTY_GET(_AttachedEntityAndActor);
         CK_PROPERTY_GET(_Marker);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Marker_Current, _EnableDisable);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -109,6 +105,5 @@ namespace ck
         FGameplayTag,
         ECk_EnableDisable);
 }
-
 
 // --------------------------------------------------------------------------------------------------------------------
