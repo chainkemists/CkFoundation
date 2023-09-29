@@ -33,11 +33,19 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
-              DisplayName="Add Float Attributes")
+              DisplayName="Add New Float Attribute")
     static void
     Add(
         FCk_Handle InHandle,
-        const FCk_Provider_FloatAttributes_ParamsData& InParams);
+        const FCk_Fragment_FloatAttribute_ParamsData& InParams);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName="Add Multiple New Float Attributes")
+    static void
+    AddMultiple(
+        FCk_Handle InHandle,
+        const TArray<FCk_Fragment_FloatAttribute_ParamsData>& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
@@ -121,12 +129,6 @@ public:
         FGameplayTag InAttributeName,
         FCk_Handle InAttributeOwnerEntity,
         const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate);
-
-public:
-    static auto
-    Add(
-        FCk_Handle                InHandle,
-        TMap<FGameplayTag, float> InAttributeBaseValues) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

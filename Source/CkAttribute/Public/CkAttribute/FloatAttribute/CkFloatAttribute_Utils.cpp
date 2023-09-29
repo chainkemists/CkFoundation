@@ -13,15 +13,40 @@ auto
     UCk_Utils_FloatAttribute_UE::
     Add(
         FCk_Handle InHandle,
-        const FCk_Provider_FloatAttributes_ParamsData& InParams)
+        const FCk_Fragment_FloatAttribute_ParamsData& InParams)
     -> void
 {
-    const auto& ParamsProvider = InParams.Get_Provider();
+    // TODO: Select Record policy that disallow duplicate based on Gameplay Label
+    RecordOfFloatAttributes_Utils::AddIfMissing(InHandle);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(ParamsProvider), TEXT("Invalid Float Attributes Provider"))
-    { return; }
+    const auto& AddNewFloatAttributeToEntity = [&](FCk_Handle InAttributeOwner, const FGameplayTag& InAttributeName, float InAttributeBaseValue)
+    {
+        const auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwner);
 
-    Add(InHandle, ParamsProvider->Get_Value().Get_AttributeBaseValues());
+        ck::UCk_Utils_OwningEntity::Add(NewAttributeEntity, InHandle);
+
+        FloatAttribute_Utils::Add(NewAttributeEntity, InAttributeBaseValue);
+        UCk_Utils_GameplayLabel_UE::Add(NewAttributeEntity, InAttributeName);
+
+        RecordOfFloatAttributes_Utils::Request_Connect(InAttributeOwner, NewAttributeEntity);
+    };
+
+    AddNewFloatAttributeToEntity(InHandle, InParams.Get_AttributeName(), InParams.Get_AttributeBaseValue());
+
+    UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_FloatAttribute_Rep>(InHandle);
+}
+
+auto
+    UCk_Utils_FloatAttribute_UE::
+    AddMultiple(
+        FCk_Handle                                            InHandle,
+        const TArray<FCk_Fragment_FloatAttribute_ParamsData>& InParams)
+    -> void
+{
+    for (const auto& param : InParams)
+    {
+        Add(InHandle, param);
+    }
 }
 
 auto
@@ -150,39 +175,6 @@ auto
         <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
 
     ck::UUtils_Signal_OnFloatAttributeValueChanged::Unbind(AttributeEntity, InDelegate);
-}
-
-auto
-    UCk_Utils_FloatAttribute_UE::
-    Add(
-        FCk_Handle                InHandle,
-        TMap<FGameplayTag, float> InAttributeBaseValues)
-    -> void
-{
-    // TODO: Select Record policy that disallow duplicate based on Gameplay Label
-    RecordOfFloatAttributes_Utils::AddIfMissing(InHandle);
-
-    const auto& AddNewFloatAttributeToEntity = [&](FCk_Handle InAttributeOwner, const FGameplayTag& InAttributeName, float InAttributeBaseValue)
-    {
-        const auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwner);
-
-        ck::UCk_Utils_OwningEntity::Add(NewAttributeEntity, InHandle);
-
-        FloatAttribute_Utils::Add(NewAttributeEntity, InAttributeBaseValue);
-        UCk_Utils_GameplayLabel_UE::Add(NewAttributeEntity, InAttributeName);
-
-        RecordOfFloatAttributes_Utils::Request_Connect(InAttributeOwner, NewAttributeEntity);
-    };
-
-    for (auto Kvp : InAttributeBaseValues)
-    {
-        const auto& AttributeName = Kvp.Key;
-        const auto& AttributeBaseValue = Kvp.Value;
-
-        AddNewFloatAttributeToEntity(InHandle, AttributeName, AttributeBaseValue);
-    }
-
-    UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_FloatAttribute_Rep>(InHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
