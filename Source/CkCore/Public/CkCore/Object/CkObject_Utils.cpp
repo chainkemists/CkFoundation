@@ -12,6 +12,54 @@ FCk_Utils_Object_CopyAllProperties_Params::
 
 // --------------------------------------------------------------------------------------------------------------------
 
+FCk_Utils_Object_SetOuter_Params::
+    FCk_Utils_Object_SetOuter_Params(
+        UObject* InObject,
+        UObject* InOuter,
+        ECk_Utils_Object_RenameFlags InFlag)
+    : _Object(InObject)
+    , _Outer(InOuter)
+    , _RenameFlags(InFlag)
+{
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Object_UE::
+    Request_TrySetOuter(
+        const FCk_Utils_Object_SetOuter_Params& InParams)
+    -> bool
+{
+    const auto& Object = InParams.Get_Object();
+    CK_ENSURE_IF_NOT(ck::IsValid(Object), TEXT("Object is not valid!"))
+    { return false; }
+
+    const auto& Outer = InParams.Get_Outer();
+    CK_ENSURE_IF_NOT(ck::IsValid(Outer), TEXT("Outer is not valid!"))
+    { return false; }
+
+    const auto& RenameFlag = [&]()
+    {
+        switch (InParams.Get_RenameFlags())
+        {
+            case ECk_Utils_Object_RenameFlags::None:                  return REN_None;
+            case ECk_Utils_Object_RenameFlags::ForceNoResetLoaders:   return REN_ForceNoResetLoaders;
+            case ECk_Utils_Object_RenameFlags::DoNotDirty:            return REN_DoNotDirty;
+            case ECk_Utils_Object_RenameFlags::DontCreateRedirectors: return REN_DontCreateRedirectors;
+            case ECk_Utils_Object_RenameFlags::ForceGlobalUnique:     return REN_ForceGlobalUnique;
+            case ECk_Utils_Object_RenameFlags::SkipGeneratedClass:    return REN_SkipGeneratedClasses;
+            default:                                                  return REN_None;
+        }
+    }();
+
+    if (const auto& Result = Object->Rename(nullptr, Outer, RenameFlag);
+        NOT Result)
+    { return false; }
+
+    return true;
+}
+
 auto
     UCk_Utils_Object_UE::
     Request_CopyAllProperties(
