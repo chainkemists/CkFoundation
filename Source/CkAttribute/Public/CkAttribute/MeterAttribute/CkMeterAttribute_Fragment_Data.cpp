@@ -3,9 +3,9 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Provider_MeterAttributes_ParamsData_PDA::
+    UCk_Provider_Multiple_MeterAttribute_ParamsData_PDA::
     Get_Value_Implementation() const
-    -> FCk_Fragment_MeterAttributes_ParamsData
+    -> TArray<FCk_Fragment_MeterAttribute_ParamsData>
 {
     return {};
 }
@@ -13,9 +13,9 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Provider_MeterAttributes_ParamsData_Literal_PDA::
+    UCk_Provider_Multiple_MeterAttribute_ParamsData_Literal_PDA::
     Get_Value_Implementation() const
-    -> FCk_Fragment_MeterAttributes_ParamsData
+    -> TArray<FCk_Fragment_MeterAttribute_ParamsData>
 {
     return _Value;
 }
