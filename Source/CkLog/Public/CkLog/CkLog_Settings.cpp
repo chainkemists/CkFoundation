@@ -1,5 +1,7 @@
 #include "CkLog_Settings.h"
 
+#include <Misc/ConfigCacheIni.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 const FString _DefaultEngineIni = FPaths::ProjectConfigDir() / TEXT("DefaultEngine.ini");
