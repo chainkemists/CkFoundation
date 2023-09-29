@@ -24,7 +24,7 @@ BuildEntity(
         TEXT("Handle is INVALID. Unable to build entity for [{}]"), InUnrealEntity)
     { return {}; }
 
-    const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(**InHandle);
+    const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
     InUnrealEntity->Build(NewEntity);
     return NewEntity;
 }
