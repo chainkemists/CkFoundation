@@ -28,7 +28,23 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Cannot create Entity with Invalid Handle"))
     { return {}; }
 
-    return Request_CreateEntity(**InHandle);
+    auto NewEntity = Request_CreateEntity(**InHandle);
+    NewEntity.Add<ck::FFragment_LifetimeOwner>(InHandle.Get_Entity());
+    return NewEntity;
+}
+
+auto
+    UCk_Utils_EntityLifetime_UE::
+    Get_LifetimeOwner(
+        FCk_Handle InHandle)
+    -> FCk_Handle
+{
+    CK_ENSURE_IF_NOT(InHandle.Has<ck::FFragment_LifetimeOwner>(),
+        TEXT("The Entity [{}] does NOT have a LifetimeOwner. Was this Entity created by Request_CreateEntity(RegistryType)?"),
+        InHandle)
+    { return {}; }
+
+    return ck::MakeHandle(InHandle.Get<ck::FFragment_LifetimeOwner>().Get_Entity(), InHandle);
 }
 
 auto
@@ -37,6 +53,14 @@ auto
     -> bool
 {
     return InHandle.Has_Any<ck::FTag_TriggerDestroyEntity, ck::FTag_PendingDestroyEntity>();
+}
+
+auto
+    UCk_Utils_EntityLifetime_UE::
+    Get_TransientEntity( FCk_Handle InHandle)
+    -> FCk_Handle
+{
+    return Get_TransientEntity(**InHandle);
 }
 
 auto
