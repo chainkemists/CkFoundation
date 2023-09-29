@@ -1,6 +1,8 @@
 #include "CkNet_Utils.h"
 
 #include "CkNet_Fragment.h"
+
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment.h"
 #include "Engine/World.h"
 
@@ -19,6 +21,23 @@ auto
     {
         InEntity.Add<ck::FTag_HasAuthority>();
     }
+    if (InConnectionSettings.Get_NetMode() == ECk_Net_NetRoleType::Host)
+    {
+        InEntity.Add<ck::FTag_NetMode_IsHost>();
+    }
+}
+
+auto
+    UCk_Utils_Net_UE::
+    Copy(
+        FCk_Handle InFrom,
+        FCk_Handle InTo)
+    -> void
+{
+    if (NOT Has(InFrom))
+    { return; }
+
+    Add(InTo, InFrom.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings());
 }
 
 auto
@@ -219,11 +238,16 @@ auto
 
 auto
     UCk_Utils_Net_UE::
-    Get_IsEntityNetMode_DedicatedServer(
+    Get_IsEntityNetMode_Host(
         FCk_Handle InHandle)
     -> bool
 {
-    return InHandle.Has<ck::FTag_NetMode_DedicatedServer>();
+    const auto FoundHandle = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwnerIf(InHandle, [](FCk_Handle Handle)
+    {
+        return Handle.Has<ck::FTag_NetMode_IsHost>();
+    });
+
+    return ck::IsValid(FoundHandle);
 }
 
 auto
@@ -232,7 +256,7 @@ auto
         FCk_Handle InHandle)
     -> bool
 {
-    return NOT InHandle.Has<ck::FTag_NetMode_DedicatedServer>();
+    return NOT Get_IsEntityNetMode_Host(InHandle);
 }
 
 auto
@@ -250,7 +274,7 @@ auto
         FCk_Handle InHandle)
     -> void
 {
-    InHandle.Add<ck::FTag_NetMode_DedicatedServer>();
+    InHandle.Add<ck::FTag_NetMode_IsHost>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
