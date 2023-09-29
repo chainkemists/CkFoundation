@@ -36,6 +36,19 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
+    AddMultiple(
+        FCk_Handle                                   InHandle,
+        const TArray<FCk_Fragment_Timer_ParamsData>& InParams)
+    -> void
+{
+    for (const auto& params : InParams)
+    {
+        Add(InHandle, params);
+    }
+}
+
+auto
+    UCk_Utils_Timer_UE::
     Has(
         FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName)

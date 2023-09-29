@@ -37,6 +37,14 @@ public:
         FCk_Handle InHandle,
         const FCk_Fragment_Timer_ParamsData& InParams);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Timer",
+              DisplayName="Add Multiple New Timers")
+    static void
+    AddMultiple(
+        FCk_Handle InHandle,
+        const TArray<FCk_Fragment_Timer_ParamsData>& InParams);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Timer",
               DisplayName="Has Timer")
@@ -62,7 +70,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Timer",
-              DisplayName="Ensure HasAny  Timer")
+              DisplayName="Ensure Has Any Timer")
     static bool
     Ensure_Any(
         FCk_Handle InTimerOwnerEntity);
