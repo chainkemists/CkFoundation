@@ -52,8 +52,8 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     Has(
-        FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity)
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName)
     -> bool
 {
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
@@ -73,11 +73,11 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     Ensure(
-        FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity)
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName)
     -> bool
 {
-    CK_ENSURE_IF_NOT(Has(InAttributeName, InAttributeOwnerEntity), TEXT("Handle [{}] does NOT have a Float Attribute [{}]"), InAttributeOwnerEntity, InAttributeName)
+    CK_ENSURE_IF_NOT(Has(InAttributeOwnerEntity, InAttributeName), TEXT("Handle [{}] does NOT have a Float Attribute [{}]"), InAttributeOwnerEntity, InAttributeName)
     { return false; }
 
     return true;
@@ -115,8 +115,8 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     Get_BaseValue(
-        FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity)
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName)
     -> float
 {
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
@@ -127,8 +127,8 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     Get_BonusValue(
-        FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity)
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName)
     -> float
 {
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
@@ -139,8 +139,8 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     Get_FinalValue(
-        FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity)
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName)
     -> float
 {
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
@@ -151,8 +151,8 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     BindTo_OnValueChanged(
-        FGameplayTag InAttributeName,
         FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
         ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate)
     -> void
@@ -166,8 +166,8 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     UnbindFrom_OnValueChanged(
-        FGameplayTag InAttributeName,
         FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
         const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate)
     -> void
 {
@@ -213,9 +213,9 @@ auto
 auto
     UCk_Utils_FloatAttributeModifier_UE::
     Has(
-        FGameplayTag InModifierName,
+        FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity)
+        FGameplayTag InModifierName)
     -> bool
 {
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
@@ -231,12 +231,12 @@ auto
 auto
     UCk_Utils_FloatAttributeModifier_UE::
     Ensure(
-        FGameplayTag InModifierName,
+        FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity)
+        FGameplayTag InModifierName)
     -> bool
 {
-    CK_ENSURE_IF_NOT(Has(InModifierName, InAttributeName, InAttributeOwnerEntity), TEXT("Handle [{}] does NOT have a Float Attribute Modifier with name [{}]"), InAttributeOwnerEntity, InModifierName)
+    CK_ENSURE_IF_NOT(Has(InAttributeOwnerEntity, InAttributeName, InModifierName), TEXT("Handle [{}] does NOT have a Float Attribute Modifier with name [{}]"), InAttributeOwnerEntity, InModifierName)
     { return false; }
 
     return true;
@@ -245,9 +245,9 @@ auto
 auto
     UCk_Utils_FloatAttributeModifier_UE::
     Remove(
-        FGameplayTag InModifierName,
+        FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
-        FCk_Handle   InAttributeOwnerEntity)
+        FGameplayTag InModifierName)
     -> void
 {
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel

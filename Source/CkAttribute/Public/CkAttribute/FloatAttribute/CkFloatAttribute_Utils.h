@@ -52,8 +52,8 @@ public:
               DisplayName="Has Float Attribute")
     static bool
     Has(
-        FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity);
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
@@ -67,8 +67,8 @@ public:
               DisplayName="Ensure Has Float Attribute")
     static bool
     Ensure(
-        FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity);
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
@@ -91,24 +91,24 @@ public:
               DisplayName="Get Float Attribute Base Value")
     static float
     Get_BaseValue(
-        FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity);
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
               DisplayName="Get Float Attribute Bonus Value")
     static float
     Get_BonusValue(
-        FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity);
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
               DisplayName="Get Float Attribute Final Value")
     static float
     Get_FinalValue(
-        FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity);
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -116,8 +116,8 @@ public:
               DisplayName = "Bind To On Float Attribute Value Changed")
     static void
     BindTo_OnValueChanged(
-        FGameplayTag InAttributeName,
         FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
         ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate);
 
@@ -126,8 +126,8 @@ public:
               DisplayName = "unbind From On Float Attribute Value Changed")
     static void
     UnbindFrom_OnValueChanged(
-        FGameplayTag InAttributeName,
         FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
         const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate);
 };
 
@@ -159,27 +159,27 @@ public:
               DisplayName="Has Float Attribute Modifier")
     static bool
     Has(
-        FGameplayTag InModifierName,
+        FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity);
+        FGameplayTag InModifierName);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AttributeModifier|Float",
               DisplayName="Ensure Has Float Attribute Modifier")
     static bool
     Ensure(
-        FGameplayTag InModifierName,
+        FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity);
+        FGameplayTag InModifierName);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Float",
               DisplayName="Remove Float Attribute Modifier")
     static void
     Remove(
-        FGameplayTag InModifierName,
+        FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity);
+        FGameplayTag InModifierName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
