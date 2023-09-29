@@ -7,7 +7,7 @@ namespace ck
 {
     struct FTag_HasAuthority {};
 
-    struct FTag_NetMode_DedicatedServer{};
+    struct FTag_NetMode_IsHost{};
 }
 
 namespace ck

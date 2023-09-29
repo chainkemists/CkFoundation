@@ -6,6 +6,9 @@
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
 #include "CkCore/Macros/CkMacros.h"
+
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+
 #include "CkNet/CkNet_Common.h"
 #include "CkNet/CkNet_Fragment_Data.h"
 
@@ -29,6 +32,14 @@ public:
         FCk_Handle InEntity,
         FCk_Net_ConnectionSettings InConnectionSettings) -> void;
 
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Net",
+              DisplayName="Copy Network Info")
+    static void
+    Copy(
+        FCk_Handle InFrom,
+        FCk_Handle InTo);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Net",
@@ -82,7 +93,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Net")
     static bool
-    Get_IsEntityNetMode_DedicatedServer(FCk_Handle InHandle);
+    Get_IsEntityNetMode_Host(FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Net")
@@ -153,13 +164,21 @@ auto
     if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle))
     { return; }
 
-    const auto& BasicDetails   = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(InHandle);
+    const auto EntityWithActor = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwnerIf(InHandle, [](FCk_Handle Handle)
+    {
+        return UCk_Utils_OwningActor_UE::Has(Handle);
+    });
+
+    if (ck::Is_NOT_Valid(EntityWithActor))
+    { return; }
+
+    const auto& BasicDetails   = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(EntityWithActor);
     const auto& OwningActor    = BasicDetails.Get_Actor().Get();
     const auto& OutermostActor = UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(OwningActor);
 
     CK_ENSURE_IF_NOT(ck::IsValid(OutermostActor),
         TEXT("OutermostActor for Actor [{}] with Entity [{}] is [{}]. Does this Entity require replication?"),
-        OwningActor, InHandle, OutermostActor)
+        OwningActor, EntityWithActor, OutermostActor)
     { return; }
 
     auto ReplicatedFragment_Object = Cast<T_ReplicatedFragment>(UCk_Ecs_ReplicatedObject_UE::Create
@@ -170,7 +189,8 @@ auto
         InHandle
     ));
 
-    CK_ENSURE_IF_NOT(ck::IsValid(ReplicatedFragment_Object), TEXT("Failed to create Replicated Fragment Object for Entity [{}]"), InHandle)
+    CK_ENSURE_IF_NOT(ck::IsValid(ReplicatedFragment_Object),
+        TEXT("Failed to create Replicated Fragment Object for Entity [{}]"), InHandle)
     { return; }
 
     InHandle.Add<TObjectPtr<T_ReplicatedFragment>>(ReplicatedFragment_Object);
