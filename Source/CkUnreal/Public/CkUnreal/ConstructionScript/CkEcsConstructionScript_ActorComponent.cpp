@@ -293,6 +293,28 @@ auto
     }
 
     // --------------------------------------------------------------------------------------------------------------------
+    // Add Net Connection Settings
+
+    if (GetWorld()->IsNetMode(NM_Standalone))
+    {
+        UCk_Utils_Net_UE::Add(_Entity, FCk_Net_ConnectionSettings{ECk_Net_NetRoleType::Host, ECk_Net_EntityNetRole::Authority});
+    }
+    else if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
+    {
+        if (OwningActor->GetLocalRole() == ROLE_Authority)
+        {
+            UCk_Utils_Net_UE::Add(_Entity, FCk_Net_ConnectionSettings{ECk_Net_NetRoleType::Host, ECk_Net_EntityNetRole::Authority});
+        }
+    }
+    else if (GetWorld()->IsNetMode(NM_Client))
+    {
+        if (OwningActor->GetLocalRole() == ROLE_Authority)
+        {
+            UCk_Utils_Net_UE::Add(_Entity, FCk_Net_ConnectionSettings{ECk_Net_NetRoleType::Client, ECk_Net_EntityNetRole::Authority});
+        }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
     // Build Entity
 
     const auto CsWithTransform = Cast<UCk_UnrealEntity_ConstructionScript_WithTransform_PDA>(_UnrealEntity->Get_EntityConstructionScript());
@@ -330,16 +352,8 @@ auto
         this, ctti::nameof_v<ThisType>, ck::Context(this))
     { return; }
 
-    if (GetWorld()->IsNetMode(NM_Standalone))
-    {
-        UCk_Utils_Net_UE::Add(_Entity, FCk_Net_ConnectionSettings{ECk_Net_NetRoleType::Host, ECk_Net_EntityNetRole::Authority});
-        return;
-    }
-
     if (GetWorld()->IsNetMode(NM_Client))
     {
-        UCk_Utils_Net_UE::Add(_Entity, FCk_Net_ConnectionSettings{ECk_Net_NetRoleType::Client, ECk_Net_EntityNetRole::Authority});
-
         ConstructionScript->Request_ReplicateActor_OnServer
         (
             FCk_EcsConstructionScript_ConstructionInfo{}
@@ -352,8 +366,6 @@ auto
     }
     else if (OutermostActor->GetRemoteRole() != ROLE_AutonomousProxy)
     {
-        UCk_Utils_Net_UE::Add(_Entity, FCk_Net_ConnectionSettings{ECk_Net_NetRoleType::Host, ECk_Net_EntityNetRole::Authority});
-
         const auto& NewActorBasicDetails = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(OwningActor);
         const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(NewActorBasicDetails.Get_Handle());
 
