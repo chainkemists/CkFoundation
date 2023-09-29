@@ -110,23 +110,64 @@ public:
 
     template <typename T>
     static auto
-    Request_CloneObject(UObject* Outer,
+    Request_CloneObject(
+        UObject* Outer,
         const T* InObjectToClone) -> T*;
-
-    template <typename T, typename T_Func>
-    static auto
-    Request_CloneObject(UObject* Outer,
-        const T* InObjectToClone,
-        T_Func InPostClone) -> T*;
 
     template <typename T>
     static auto
-    Request_CloneObject(const T* InObjectToClone, ck::policy::TransientPackage) -> T*;
+    Request_CloneObject(
+        UObject* Outer,
+        const T* InObjectToClone,
+        TFunction<void(T*)> InPostClone) -> T*;
 
-    template <typename T, typename T_Func>
+    template <typename T>
     static auto
-    Request_CloneObject(const T* InObjectToClone,
-        T_Func InPostClone, ck::policy::TransientPackage) -> T*;
+    Request_CloneObject(
+        const T* InObjectToClone,
+        ck::policy::TransientPackage) -> T*;
+
+    template <typename T>
+    static auto
+    Request_CloneObject(
+        const T* InObjectToClone,
+        TFunction<void(T*)> InPostClone,
+        ck::policy::TransientPackage) -> T*;
+
+    template<typename T>
+    static auto
+    Request_CreateNewObject(
+        UObject* Outer,
+        T* InTemplateArchetype,
+        TFunction<void(T*)> InInitFunc) -> T*;
+
+    template<typename T>
+    static auto
+    Request_CreateNewObject(
+        UObject* Outer,
+        TSubclassOf<T> InClass,
+        T* InTemplateArchetype,
+        TFunction<void(T*)> InInitFunc) -> T*;
+
+    template<typename T>
+    static auto
+    Request_CreateNewObject_TransientPackage(
+        TFunction<void(T*)> InFunc) -> T*;
+
+    template<typename T>
+    static auto
+    Request_CreateNewObject_TransientPackage() -> T*;
+
+    template<typename T>
+    static auto
+    Request_CreateNewObject_TransientPackage(
+        TSubclassOf<T> InClass) -> T*;
+
+    template<typename T, typename T_Func>
+    static auto
+    Request_CreateNewObject_TransientPackage(
+        TSubclassOf<T> InClass,
+        T_Func InFunc) -> T*;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -140,6 +181,13 @@ public:
     static ECk_Utils_Object_CopyAllProperties_Result
     Request_CopyAllProperties(
         const FCk_Utils_Object_CopyAllProperties_Params& InParams);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Object",
+              meta     = (DeterminesOutputType = "InObject", DisplayName = "Request_CreateNewObject"))
+    static UObject*
+    Request_CreateNewObject_TransientPackage_UE(
+        TSubclassOf<UObject> InObject);
 
     // Unreal prefixes some classes with REINST_. This is because REINST_ is a newer version of a static class.
     // This function gets the most up to date default class.
@@ -161,7 +209,6 @@ public:
     static UObject*
     Get_ClassDefaultObject(
         TSubclassOf<UObject> InObject);
-
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -199,17 +246,21 @@ auto
     return NewObject<T>(Outer, Class, NAME_None, RF_NoFlags, NonConstObjectToClone);
 }
 
-template <typename T, typename T_Func>
+template <typename T>
 auto
     UCk_Utils_Object_UE::
     Request_CloneObject(
         UObject* Outer,
         const T* InObjectToClone,
-        T_Func InPostClone)
+        TFunction<void(T*)> InPostClone)
     -> T*
 {
-    auto NewObj = Request_CloneObject(Outer, InObjectToClone, [](T*){});
-    InPostClone(NewObj);
+    auto NewObj = Request_CloneObject(Outer, InObjectToClone);
+
+    if (InPostClone)
+    {
+        InPostClone(NewObj);
+    }
 
     return NewObj;
 }
@@ -225,16 +276,112 @@ auto
     return Request_CloneObject(GetTransientPackage(), InObjectToClone);
 }
 
-template <typename T, typename T_Func>
+template <typename T>
 auto
     UCk_Utils_Object_UE::
     Request_CloneObject(
         const T* InObjectToClone,
-        T_Func InPostClone,
+        TFunction<void(T*)> InPostClone,
         ck::policy::TransientPackage)
     -> T*
 {
     return Request_CloneObject(GetTransientPackage(), InObjectToClone, InPostClone);
+}
+
+template <typename T>
+auto
+    UCk_Utils_Object_UE::
+    Request_CreateNewObject(
+        UObject* Outer,
+        T* InTemplateArchetype,
+        TFunction<void(T*)> InInitFunc)
+    -> T*
+{
+    auto* newObj = NewObject<T>
+    (
+        Outer,
+        T::StaticClass(),
+        NAME_None,
+        RF_NoFlags,
+        InTemplateArchetype
+    );
+
+    if (InInitFunc)
+    {
+        InInitFunc(newObj);
+    }
+
+    return newObj;
+}
+
+template <typename T>
+auto
+    UCk_Utils_Object_UE::
+    Request_CreateNewObject(
+        UObject* Outer,
+        TSubclassOf<T> InClass,
+        T* InTemplateArchetype,
+        TFunction<void(T*)> InInitFunc)
+    -> T*
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InClass), TEXT("Invalid Class supplied to Request_CreateNewObject"))
+    { return {}; }
+
+    auto* newObj = NewObject<T>
+    (
+        Outer,
+        InClass,
+        NAME_None,
+        RF_NoFlags,
+        InTemplateArchetype
+    );
+
+    if (InInitFunc)
+    {
+        InInitFunc(newObj);
+    }
+
+    return newObj;
+}
+
+template<typename T>
+auto
+    UCk_Utils_Object_UE::
+    Request_CreateNewObject_TransientPackage(
+        TFunction<void(T*)> InFunc)
+    -> T*
+{
+    return Request_CreateNewObject<T>(GetTransientPackage(), nullptr, InFunc);
+}
+
+template <typename T>
+auto
+    UCk_Utils_Object_UE::
+    Request_CreateNewObject_TransientPackage()
+    -> T*
+{
+    return Request_CreateNewObject_TransientPackage<T>(GetTransientPackage(), nullptr, nullptr);
+}
+
+template <typename T>
+auto
+    UCk_Utils_Object_UE::
+    Request_CreateNewObject_TransientPackage(
+        TSubclassOf<T> InClass)
+    -> T*
+{
+    return Request_CreateNewObject_TransientPackage(InClass, nullptr);
+}
+
+template <typename T, typename T_Func>
+auto
+    UCk_Utils_Object_UE::
+    Request_CreateNewObject_TransientPackage(
+        TSubclassOf<T> InClass,
+        T_Func InFunc)
+    -> T*
+{
+    return Request_CreateNewObject<T>(GetTransientPackage(), InClass, nullptr, InFunc);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

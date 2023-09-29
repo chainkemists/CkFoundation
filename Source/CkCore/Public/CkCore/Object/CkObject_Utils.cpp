@@ -101,6 +101,18 @@ auto
 
 auto
     UCk_Utils_Object_UE::
+    Request_CreateNewObject_TransientPackage_UE(
+        TSubclassOf<UObject> InObject)
+    -> UObject*
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Invalid Class supplied to Request_CreateNewObject_TransientPackage_UE"))
+    { return {}; }
+
+    return Request_CreateNewObject_TransientPackage<UObject>(InObject, [](auto InObj){});
+}
+
+auto
+    UCk_Utils_Object_UE::
     Get_DefaultClass_UpToDate(
         UClass* InClass)
     -> UClass*
