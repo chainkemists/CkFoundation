@@ -1,6 +1,8 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Registry/CkRegistry.h"
 #include "CkEcs/Handle/CkHandle.h"
 
@@ -46,9 +48,25 @@ public:
     Request_CreateEntity(FCk_Handle InHandle);
 
 public:
-    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|EntityLifetime")
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityLifetime")
+    static FCk_Handle
+    Get_LifetimeOwner(FCk_Handle InHandle);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityLifetime")
     static bool
     Get_IsPendingDestroy(FCk_Handle InHandle);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityLifetime")
+    static FCk_Handle
+    Get_TransientEntity(FCk_Handle InHandle);
+
+public:
+    template <typename T_Predicate>
+    static auto
+    Get_LifetimeOwnerIf(
+        FCk_Handle  InHandle,
+        T_Predicate T_Func) -> FCk_Handle
+    ;
 
 public:
     static auto Request_CreateEntity(RegistryType& InRegistry) -> HandleType;
@@ -58,5 +76,29 @@ public:
 public:
     static auto Get_TransientEntity(const RegistryType& InRegistry) -> HandleType;
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+template <typename T_Predicate>
+auto
+    UCk_Utils_EntityLifetime_UE::
+    Get_LifetimeOwnerIf(
+        FCk_Handle InHandle,
+        T_Predicate T_Func)
+    -> FCk_Handle
+{
+    auto CurrentHandle = InHandle;
+    while (CurrentHandle.Has<ck::FFragment_LifetimeOwner>())
+    {
+        if (T_Func(CurrentHandle))
+        {
+            return CurrentHandle;
+        }
+
+        CurrentHandle = Get_LifetimeOwner(CurrentHandle);
+    }
+
+    return {};
+}
 
 // --------------------------------------------------------------------------------------------------------------------
