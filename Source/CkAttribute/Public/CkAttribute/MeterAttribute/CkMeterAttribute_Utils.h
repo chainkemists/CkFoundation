@@ -13,35 +13,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck
-{
-
-struct CKATTRIBUTE_API FMeterAttribute_Tags final : public FGameplayTagNativeAdder
-{
-public:
-    CK_GENERATED_BODY(FMeterAttribute_Tags);
-
-protected:
-    //Called to register and assign the native tags
-    auto AddTags() -> void override;
-
-private:
-    FGameplayTag _MinCapacity;
-    FGameplayTag _MaxCapacity;
-    FGameplayTag _Current;
-
-    static FMeterAttribute_Tags _Tags;
-
-public:
-    static auto Get_MinCapacity() -> FGameplayTag;
-    static auto Get_MaxCapacity() -> FGameplayTag;
-    static auto Get_Current() -> FGameplayTag;
-};
-
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 UCLASS(NotBlueprintable)
 class CKATTRIBUTE_API UCk_Utils_MeterAttribute_UE : public UCk_Utils_Ecs_Base_UE
 {
@@ -65,11 +36,19 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Meter",
-              DisplayName="Add Meter Attributes")
+              DisplayName="Add New Meter Attribute")
     static void
     Add(
         FCk_Handle InHandle,
-        const FCk_Provider_MeterAttributes_ParamsData& InParams);
+        const FCk_Fragment_MeterAttribute_ParamsData& InParams);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Meter",
+              DisplayName="Add Multiple New Meter Attributes")
+    static void
+    AddMultiple(
+        FCk_Handle InHandle,
+        const TArray<FCk_Fragment_MeterAttribute_ParamsData>& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Meter",

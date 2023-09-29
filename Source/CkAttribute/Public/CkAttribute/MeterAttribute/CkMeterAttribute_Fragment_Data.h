@@ -12,23 +12,28 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKATTRIBUTE_API FCk_Fragment_MeterAttributes_ParamsData
+struct CKATTRIBUTE_API FCk_Fragment_MeterAttribute_ParamsData
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_MeterAttributes_ParamsData);
+    CK_GENERATED_BODY(FCk_Fragment_MeterAttribute_ParamsData);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ForceInlineRow))
-    TMap<FGameplayTag, FCk_Meter> _AttributeBaseValues;
+    FGameplayTag _AttributeName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ForceInlineRow))
+    FCk_Meter _AttributeBaseValue;
 
 public:
-    CK_PROPERTY_GET(_AttributeBaseValues);
+    CK_PROPERTY_GET(_AttributeName);
+    CK_PROPERTY_GET(_AttributeBaseValue);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MeterAttributes_ParamsData, _AttributeBaseValues);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MeterAttribute_ParamsData, _AttributeName, _AttributeBaseValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -66,50 +71,50 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, Blueprintable, BlueprintType, EditInlineNew)
-class CKATTRIBUTE_API UCk_Provider_MeterAttributes_ParamsData_PDA : public UCk_Provider_PDA
+class CKATTRIBUTE_API UCk_Provider_Multiple_MeterAttribute_ParamsData_PDA : public UCk_Provider_PDA
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Provider_MeterAttributes_ParamsData_PDA);
+    CK_GENERATED_BODY(UCk_Provider_Multiple_MeterAttribute_ParamsData_PDA);
 
 public:
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
-              Category = "Ck|Provider|MeterAttributes")
-    FCk_Fragment_MeterAttributes_ParamsData Get_Value() const;
+              Category = "Ck|Provider|MeterAttribute")
+    TArray<FCk_Fragment_MeterAttribute_ParamsData> Get_Value() const;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKATTRIBUTE_API UCk_Provider_MeterAttributes_ParamsData_Literal_PDA : public UCk_Provider_MeterAttributes_ParamsData_PDA
+class CKATTRIBUTE_API UCk_Provider_Multiple_MeterAttribute_ParamsData_Literal_PDA : public UCk_Provider_Multiple_MeterAttribute_ParamsData_PDA
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Provider_MeterAttributes_ParamsData_Literal_PDA);
+    CK_GENERATED_BODY(UCk_Provider_Multiple_MeterAttribute_ParamsData_Literal_PDA);
 
 private:
-    auto Get_Value_Implementation() const -> FCk_Fragment_MeterAttributes_ParamsData override;
+    auto Get_Value_Implementation() const -> TArray<FCk_Fragment_MeterAttribute_ParamsData> override;
 
 private:
     UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
-    FCk_Fragment_MeterAttributes_ParamsData _Value;
+    TArray<FCk_Fragment_MeterAttribute_ParamsData> _Value;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKATTRIBUTE_API FCk_Provider_MeterAttributes_ParamsData
+struct CKATTRIBUTE_API FCk_Provider_Multiple_MeterAttribute_ParamsData
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Provider_MeterAttributes_ParamsData);
+    CK_GENERATED_BODY(FCk_Provider_Multiple_MeterAttribute_ParamsData);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCk_Provider_MeterAttributes_ParamsData_PDA> _Provider;
+    TObjectPtr<UCk_Provider_Multiple_MeterAttribute_ParamsData_PDA> _Provider;
 
 public:
     CK_PROPERTY_GET(_Provider);
