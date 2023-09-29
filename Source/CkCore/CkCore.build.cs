@@ -111,6 +111,7 @@ public class CkCore : CkModuleRules
                 "InputCore",
                 "GameplayTags",
                 "DeveloperSettings",
+                "UnrealEd",
 
                 "CkThirdParty",
                 // ... add private dependencies that you statically link with here ...
