@@ -48,6 +48,18 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SucceededFailed);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_AddedOrNot : uint8
+{
+    Added,
+    AlreadyExists,
+    NotAdded
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AddedOrNot);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_ValidInvalid : uint8
 {
     Valid,
