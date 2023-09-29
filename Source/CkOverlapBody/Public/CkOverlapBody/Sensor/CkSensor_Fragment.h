@@ -32,16 +32,14 @@ namespace ck
     public:
         using ParamsType = FCk_Fragment_Sensor_ParamsData;
 
-    public:
-        FFragment_Sensor_Params() = default;
-        explicit FFragment_Sensor_Params(
-            ParamsType InParams);
-
     private:
         ParamsType _Params;
 
     public:
         CK_PROPERTY_GET(_Params);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Sensor_Params, _Params);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -57,11 +55,6 @@ namespace ck
         friend class UCk_Utils_Sensor_UE;
         friend class UCk_Utils_MarkerAndSensor_UE;
 
-    public:
-        FFragment_Sensor_Current() = default;
-        explicit FFragment_Sensor_Current(
-            ECk_EnableDisable InEnableDisable);
-
     private:
         TWeakObjectPtr<UShapeComponent> _Sensor;
         FCk_EntityOwningActor_BasicDetails _AttachedEntityAndActor;
@@ -76,6 +69,9 @@ namespace ck
         CK_PROPERTY_GET(_EnableDisable);
         CK_PROPERTY_GET(_CurrentMarkerOverlaps);
         CK_PROPERTY_GET(_CurrentNonMarkerOverlaps);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Sensor_Current, _EnableDisable);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
