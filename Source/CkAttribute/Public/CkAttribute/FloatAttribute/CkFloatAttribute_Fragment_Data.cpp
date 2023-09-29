@@ -3,9 +3,9 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Provider_FloatAttributes_ParamsData_PDA::
+    UCk_Provider_Multiple_FloatAttribute_ParamsData_PDA::
     Get_Value_Implementation() const
-    -> FCk_Fragment_FloatAttributes_ParamsData
+    -> TArray<FCk_Fragment_FloatAttribute_ParamsData>
 {
     return {};
 }
@@ -13,9 +13,9 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Provider_FloatAttributes_ParamsData_Literal_PDA::
+    UCk_Provider_Multiple_FloatAttribute_ParamsData_Literal_PDA::
     Get_Value_Implementation() const
-    -> FCk_Fragment_FloatAttributes_ParamsData
+    -> TArray<FCk_Fragment_FloatAttribute_ParamsData>
 {
     return _Value;
 }
