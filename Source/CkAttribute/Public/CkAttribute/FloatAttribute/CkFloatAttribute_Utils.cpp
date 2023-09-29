@@ -22,8 +22,6 @@ auto
     { return; }
 
     Add(InHandle, ParamsProvider->Get_Value().Get_AttributeBaseValues());
-
-    UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_FloatAttribute_Rep>(InHandle);
 }
 
 auto
@@ -183,6 +181,8 @@ auto
 
         AddNewFloatAttributeToEntity(InHandle, AttributeName, AttributeBaseValue);
     }
+
+    UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_FloatAttribute_Rep>(InHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
