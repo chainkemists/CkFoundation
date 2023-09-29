@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Actor/CkActor_Utils.h"
+#include "CkCore/Enums/CkEnums.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
@@ -124,7 +125,7 @@ public:
     static auto UpdateReplicatedFragment(FCk_Handle InHandle, T_UnaryUpdateFunc InUpdateFunc) -> void;
 
     template <typename T_ReplicatedFragment>
-    static auto TryAddReplicatedFragment(FCk_Handle InHandle) -> void;
+    static auto TryAddReplicatedFragment(FCk_Handle InHandle) -> ECk_AddedOrNot;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -157,12 +158,15 @@ auto
     UCk_Utils_Ecs_Net_UE::
     TryAddReplicatedFragment(
         FCk_Handle InHandle)
-    -> void
+    -> ECk_AddedOrNot
 {
     static_assert(std::is_base_of_v<class UCk_Ecs_ReplicatedObject_UE, T_ReplicatedFragment>, "Replicated Fragment MUST derive from UCk_Ecs_ReplicatedObject_UE");
 
     if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle))
-    { return; }
+    { return ECk_AddedOrNot::NotAdded; }
+
+    if (InHandle.Has<TObjectPtr<T_ReplicatedFragment>>())
+    { return ECk_AddedOrNot::AlreadyExists; }
 
     const auto EntityWithActor = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwnerIf(InHandle, [](FCk_Handle Handle)
     {
@@ -170,7 +174,7 @@ auto
     });
 
     if (ck::Is_NOT_Valid(EntityWithActor))
-    { return; }
+    { return ECk_AddedOrNot::NotAdded; }
 
     const auto& BasicDetails   = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(EntityWithActor);
     const auto& OwningActor    = BasicDetails.Get_Actor().Get();
@@ -179,7 +183,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(OutermostActor),
         TEXT("OutermostActor for Actor [{}] with Entity [{}] is [{}]. Does this Entity require replication?"),
         OwningActor, EntityWithActor, OutermostActor)
-    { return; }
+    { return ECk_AddedOrNot::NotAdded; }
 
     auto ReplicatedFragment_Object = Cast<T_ReplicatedFragment>(UCk_Ecs_ReplicatedObject_UE::Create
     (
@@ -191,11 +195,13 @@ auto
 
     CK_ENSURE_IF_NOT(ck::IsValid(ReplicatedFragment_Object),
         TEXT("Failed to create Replicated Fragment Object for Entity [{}]"), InHandle)
-    { return; }
+    { return ECk_AddedOrNot::NotAdded; }
 
     InHandle.Add<TObjectPtr<T_ReplicatedFragment>>(ReplicatedFragment_Object);
 
     UCk_Utils_ReplicatedObjects_UE::Request_AddReplicatedObject(InHandle, ReplicatedFragment_Object);
+
+    return ECk_AddedOrNot::Added;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
