@@ -17,7 +17,7 @@ namespace ck
                 TEXT("UnrealEntityPDA is INVALID. Unable to handle Request for [{}]"), InHandle)
             { return; }
 
-            const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(**InHandle);
+            const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
 
             if (Request.Get_PreBuildFunc())
             { Request.Get_PreBuildFunc() (NewEntity); }
