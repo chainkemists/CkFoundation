@@ -55,8 +55,8 @@ public:
               DisplayName="Has Meter Attribute")
     static bool
     Has(
-        FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity);
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Meter",
@@ -70,8 +70,8 @@ public:
               DisplayName="Ensure Has Meter Attribute")
     static bool
     Ensure(
-        FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity);
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName);
 
         UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Meter",
@@ -94,24 +94,24 @@ public:
               DisplayName="Get Meter Attribute Base Value")
     static FCk_Meter
     Get_BaseValue(
-        FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity);
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Meter",
               DisplayName="Get Meter Attribute Bonus Value")
     static FCk_Meter
     Get_BonusValue(
-        FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity);
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Meter",
               DisplayName="Get Meter Attribute Final Value")
     static FCk_Meter
     Get_FinalValue(
-        FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity);
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -119,8 +119,8 @@ public:
               DisplayName = "Bind To On Meter Attribute Value Changed")
     static void
     BindTo_OnValueChanged(
-        FGameplayTag InAttributeName,
         FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
         ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_MeterAttribute_OnValueChanged& InDelegate);
 
@@ -129,15 +129,15 @@ public:
               DisplayName = "unbind From On Meter Attribute Value Changed")
     static void
     UnbindFrom_OnValueChanged(
-        FGameplayTag InAttributeName,
         FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
         const FCk_Delegate_MeterAttribute_OnValueChanged& InDelegate);
 
 public:
     static auto
     Get_MinMaxAndCurrentAttributeEntities(
-        FGameplayTag InAttributeName,
-        FCk_Handle InOwnerEntity)
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName)
     -> std::tuple<FCk_Handle, FCk_Handle, FCk_Handle>;
 
 private:
@@ -185,27 +185,27 @@ public:
               DisplayName="Has Meter Attribute Modifier")
     static bool
     Has(
-        FGameplayTag InModifierName,
+        FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity);
+        FGameplayTag InModifierName);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AttributeModifier|Meter",
               DisplayName="Ensure Has Meter Attribute Modifier")
     static bool
     Ensure(
-        FGameplayTag InModifierName,
+        FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity);
+        FGameplayTag InModifierName);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Meter",
               DisplayName="Remove Meter Attribute Modifier")
     static void
     Remove(
-        FGameplayTag InModifierName,
+        FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
-        FCk_Handle InAttributeOwnerEntity);
+        FGameplayTag InModifierName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
