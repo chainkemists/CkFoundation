@@ -33,9 +33,7 @@ auto
     if (NOT Get_AssociatedEntity().IsValid()) { return; }
     CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this) { return; }
     {
-        UCk_Utils_FloatAttributeModifier_UE::Add(Get_AssociatedEntity(),
-                                                 InModifierName,
-                                                 InParams);
+        UCk_Utils_FloatAttributeModifier_UE::Add(Get_AssociatedEntity(), InModifierName, InParams);
     }
 }
 
@@ -69,6 +67,8 @@ auto
 
     CK_REP_OBJ_EXECUTE_IF_VALID([&]()
     {
-        UCk_Utils_FloatAttributeModifier_UE::Remove(InModifierName, InAttributeName, Get_AssociatedEntity());
+        UCk_Utils_FloatAttributeModifier_UE::Remove(Get_AssociatedEntity(), InAttributeName, InModifierName);
     });
 }
+
+// --------------------------------------------------------------------------------------------------------------------
