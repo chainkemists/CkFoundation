@@ -5,7 +5,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-
 namespace ck
 {
     auto
@@ -13,7 +12,7 @@ namespace ck
         ForEachEntity(
             TimeType,
             HandleType InHandle,
-            const FFragment_RecordEntry& InRecordEntry)
+            const FFragment_RecordEntry& InRecordEntry) const
         -> void
     {
         for (const auto RecordEntity : InRecordEntry.Get_Records())
@@ -25,3 +24,5 @@ namespace ck
         }
     }
 }
+
+// --------------------------------------------------------------------------------------------------------------------

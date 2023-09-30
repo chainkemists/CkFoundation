@@ -18,7 +18,7 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_RecordEntry& InRecordEntry) -> void;
+            const FFragment_RecordEntry& InRecordEntry) const -> void;
     };
 }
 

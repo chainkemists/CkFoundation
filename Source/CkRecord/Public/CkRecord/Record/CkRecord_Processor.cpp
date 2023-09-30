@@ -11,7 +11,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_RecordOfEntities& InRecord)
+            const FFragment_RecordOfEntities& InRecord) const
         -> void
     {
         for (const auto RecordEntryEntity : InRecord.Get_RecordEntries())

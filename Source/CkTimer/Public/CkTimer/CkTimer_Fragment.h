@@ -89,7 +89,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FFragment_RecordOfTimers : public FFragment_RecordOfEntities {};
+    struct FFragment_RecordOfTimers : public FFragment_RecordOfEntities
+    {
+        using FFragment_RecordOfEntities::FFragment_RecordOfEntities;
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 
