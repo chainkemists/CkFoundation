@@ -11,6 +11,21 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType, meta = (Bitflags, UseEnumValuesAsMaskValuesInEditor = "true"))
+enum class ECk_MeterAttributeModifier_Policy : uint8
+{
+    None = 0 UMETA(Hidden),
+    MinCapacity = 1 << 0,
+    CurrentValue = 1 << 1,
+    MaxCapacity = 1 << 2,
+};
+
+ENUM_CLASS_FLAGS(ECk_MeterAttributeModifier_Policy)
+ENABLE_ENUM_BITWISE_OPERATORS(ECk_MeterAttributeModifier_Policy);
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_MeterAttributeModifier_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKATTRIBUTE_API FCk_Fragment_MeterAttribute_ParamsData
 {
@@ -59,13 +74,20 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_ModifierOperation _ModifierOperation = ECk_ModifierOperation::Additive;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, Bitmask, BitmaskEnum = "ECk_MeterAttributeModifier_Policy"))
+    int32 _ModifierPolicyFlags = 0;
+
+public:
+    auto Get_ModifierPolicy() const -> ECk_MeterAttributeModifier_Policy;
+
 public:
     CK_PROPERTY_GET(_ModifierDelta)
     CK_PROPERTY_GET(_TargetAttributeName)
     CK_PROPERTY_GET(_ModifierOperation)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MeterAttributeModifier_ParamsData, _ModifierDelta, _TargetAttributeName, _ModifierOperation);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MeterAttributeModifier_ParamsData, _ModifierDelta, _TargetAttributeName, _ModifierOperation, _ModifierPolicyFlags);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
