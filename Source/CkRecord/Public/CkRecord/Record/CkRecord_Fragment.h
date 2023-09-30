@@ -15,15 +15,17 @@ namespace ck
 {
     struct FFragment_RecordOfEntities
     {
+
+    public:
+        CK_GENERATED_BODY(FFragment_RecordOfEntities);
+
+    public:
         friend class UCk_Utils_RecordOfEntities_UE;
         friend class FProcessor_RecordOfEntities_Destructor;
         friend class FProcessor_RecordEntry_Destructor;
 
         template <typename T_DerivedRecord>
         friend class TUtils_RecordOfEntities;
-
-    public:
-        CK_GENERATED_BODY(FFragment_RecordOfEntities);
 
     public:
         using EntityType = FCk_Entity;
