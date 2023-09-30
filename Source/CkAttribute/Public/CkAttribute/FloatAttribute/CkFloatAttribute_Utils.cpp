@@ -16,8 +16,7 @@ auto
         const FCk_Fragment_FloatAttribute_ParamsData& InParams)
     -> void
 {
-    // TODO: Select Record policy that disallow duplicate based on Gameplay Label
-    RecordOfFloatAttributes_Utils::AddIfMissing(InHandle);
+    RecordOfFloatAttributes_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 
     const auto& AddNewFloatAttributeToEntity = [&](FCk_Handle InAttributeOwner, const FGameplayTag& InAttributeName, float InAttributeBaseValue)
     {

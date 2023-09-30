@@ -57,8 +57,7 @@ auto
 
     UCk_Utils_GameplayLabel_UE::Add(markerEntity, markerName);
 
-    // TODO: Select Record policy that disallow duplicate based on Gameplay Label
-    RecordOfMarkers_Utils::AddIfMissing(InHandle);
+    RecordOfMarkers_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 
     RecordOfMarkers_Utils::Request_Connect(InHandle, markerEntity);
 }

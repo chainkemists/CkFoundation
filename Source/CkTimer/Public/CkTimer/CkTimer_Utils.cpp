@@ -29,8 +29,7 @@ auto
 
     UCk_Utils_GameplayLabel_UE::Add(newTimerEntity, InData.Get_TimerName());
 
-    //TODO: Select NoDuplicate Record policy
-    RecordOfTimers_Utils::AddIfMissing(InHandle);
+    RecordOfTimers_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
     RecordOfTimers_Utils::Request_Connect(InHandle, newTimerEntity);
 }
 
