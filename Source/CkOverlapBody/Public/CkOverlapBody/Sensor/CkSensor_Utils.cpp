@@ -53,8 +53,7 @@ auto
 
     UCk_Utils_GameplayLabel_UE::Add(sensorEntity, sensorName);
 
-    // TODO: Select Record policy that disallow duplicate based on Gameplay Label
-    RecordOfSensors_Utils::AddIfMissing(InHandle);
+    RecordOfSensors_Utils::AddIfMissing(InHandle ,ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 
     RecordOfSensors_Utils::Request_Connect(InHandle, sensorEntity);
 }
