@@ -116,11 +116,7 @@ auto
         FGameplayTag InAttributeName)
     -> bool
 {
-    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity,
-    [&](FCk_Handle InHandle)
-    {
-        return UCk_Utils_GameplayLabel_UE::Get_Label(InHandle) == InAttributeName;
-    });
+    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
     if (NOT ck::IsValid(FoundEntity))
     { return false; }
@@ -240,11 +236,7 @@ auto
         const FCk_Delegate_MeterAttribute_OnValueChanged& InDelegate)
     -> void
 {
-    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity,
-    [&](FCk_Handle InHandle)
-    {
-        return UCk_Utils_GameplayLabel_UE::Get_Label(InHandle) == InAttributeName;
-    });
+    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
     const auto [MinCapacity, MaxCapacity, Current] = Get_MinMaxAndCurrentAttributeEntities(InAttributeOwnerEntity, InAttributeName);
 
@@ -281,11 +273,7 @@ auto
         const FCk_Delegate_MeterAttribute_OnValueChanged& InDelegate)
     -> void
 {
-    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity,
-    [&](FCk_Handle InHandle)
-    {
-        return UCk_Utils_GameplayLabel_UE::Get_Label(InHandle) == InAttributeName;
-    });
+    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
     const auto [MinCapacity, MaxCapacity, Current] = Get_MinMaxAndCurrentAttributeEntities(FoundEntity, InAttributeName);
 
@@ -303,11 +291,7 @@ auto
         FGameplayTag InAttributeName)
     -> std::tuple<FCk_Handle, FCk_Handle, FCk_Handle>
 {
-    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity,
-    [&](FCk_Handle InHandle)
-    {
-        return UCk_Utils_GameplayLabel_UE::Get_Label(InHandle) == InAttributeName;
-    });
+    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
     const auto& MinCapacity = Get_EntityOrRecordEntry_WithFragmentAndLabel
         <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity());
@@ -414,11 +398,7 @@ auto
 {
     const auto& AttributeName = InParams.Get_TargetAttributeName();
 
-    const auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity,
-    [&](FCk_Handle InHandle)
-    {
-        return UCk_Utils_GameplayLabel_UE::Get_Label(InHandle) == AttributeName;
-    });
+    const auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{AttributeName});
 
     UCk_Utils_FloatAttributeModifier_UE::Add(FoundEntity, InModifierName,
         FCk_Fragment_FloatAttributeModifier_ParamsData{FCk_Fragment_FloatAttributeModifier_ParamsData
@@ -453,13 +433,7 @@ auto
         FGameplayTag InModifierName)
     -> bool
 {
-    const auto& AttributeName = InAttributeName;
-
-    const auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity,
-    [&](FCk_Handle InHandle)
-    {
-        return UCk_Utils_GameplayLabel_UE::Get_Label(InHandle) == AttributeName;
-    });
+    const auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
     return UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity(), InModifierName);
 }
@@ -486,11 +460,7 @@ auto
         FGameplayTag InModifierName)
     -> void
 {
-    const auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity,
-    [&](FCk_Handle InHandle)
-    {
-        return UCk_Utils_GameplayLabel_UE::Get_Label(InHandle) == InAttributeName;
-    });
+    const auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
     UCk_Utils_FloatAttributeModifier_UE::Remove(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity(), InModifierName);
     UCk_Utils_FloatAttributeModifier_UE::Remove(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MaxCapacity(), InModifierName);
