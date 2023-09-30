@@ -1,13 +1,17 @@
 #include "CkSensor_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcsBasics/EntityHolder/CkEntityHolder_Utils.h"
+
 #include "CkOverlapBody/CkOverlapBody_Log.h"
 #include "CkOverlapBody/Marker/CkMarker_Utils.h"
 #include "CkOverlapBody/MarkerAndSensor/CkMarkerAndSensor_Utils.h"
 #include "CkOverlapBody/Sensor/CkSensor_Utils.h"
 #include "CkOverlapBody/Settings/CkOverlapBody_Settings.h"
+
+#include <Components/SkeletalMeshComponent.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -63,36 +67,26 @@ namespace ck
             }
         }
 
-        const auto& attachmentParams      = params.Get_AttachmentParams();
-        const auto& useBoneTransformOrNot = attachmentParams.Get_UseBoneTransformOrNot();
-        const auto& useBoneRotation       = attachmentParams.Get_UseBoneRotation();
-        const auto& useBonePosition       = attachmentParams.Get_UseBonePosition();
+        const auto& attachmentParams = params.Get_AttachmentParams();
+        const auto& useBoneTransform = EnumHasAnyFlags(attachmentParams.Get_AttachmentPolicy(), ECk_Sensor_AttachmentPolicy::UseBonePosition | ECk_Sensor_AttachmentPolicy::UseBoneRotation);
 
-        if (useBoneTransformOrNot == ECk_Sensor_BoneTransform_UsagePolicy::IgnoreBoneTransform)
-        { return; }
-
-        CK_ENSURE_IF_NOT(useBoneRotation == ECk_Sensor_BoneTransform_RotationPolicy::UseBoneRotation ||
-                         useBonePosition == ECk_Sensor_BoneTransform_PositionPolicy::UseBonePosition,
-            TEXT("Sensor Entity [{}] is set to use a Bone Transform, but its Attachment policies are [UseBoneRotation: {} | UseBonePosition: {}]"),
-            InSensorEntity,
-            useBoneRotation,
-            useBonePosition)
+        if (NOT useBoneTransform)
         { return; }
 
         CK_ENSURE_IF_NOT(ck::IsValid(attachmentParams.Get_BoneName()),
-            TEXT("Sensor Entity [{}] uses Attachment policies [UseBoneRotation: {} | UseBonePosition: {}] but has an INVALID BoneName specified"),
+            TEXT("Sensor Entity [{}] uses Attachment Policy [UseBonePosition: {}, UseBoneRotation: {}] but has an INVALID BoneName specified"),
             InSensorEntity,
-            useBoneRotation,
-            useBonePosition)
+            EnumHasAnyFlags(attachmentParams.Get_AttachmentPolicy(), ECk_Sensor_AttachmentPolicy::UseBonePosition),
+            EnumHasAnyFlags(attachmentParams.Get_AttachmentPolicy(), ECk_Sensor_AttachmentPolicy::UseBoneRotation))
         { return; }
 
         const auto& attachedActorSkeletalMeshComponent = sensorAttachedEntityAndActor.Get_Actor()->FindComponentByClass<USkeletalMeshComponent>();
 
         CK_ENSURE_IF_NOT(ck::IsValid(attachedActorSkeletalMeshComponent),
-            TEXT("Sensor Entity [{}] cannot use Attachment policies [UseBoneRotation: {} | UseBonePosition: {}] because it is attached to an Actor that has NO SkeletalMesh"),
+            TEXT("Sensor Entity [{}] cannot use Attachment Policy [UseBonePosition: {}, UseBoneRotation: {}] because it is attached to an Actor that has NO SkeletalMesh"),
             InSensorEntity,
-            useBoneRotation,
-            useBonePosition)
+            EnumHasAnyFlags(attachmentParams.Get_AttachmentPolicy(), ECk_Sensor_AttachmentPolicy::UseBonePosition),
+            EnumHasAnyFlags(attachmentParams.Get_AttachmentPolicy(), ECk_Sensor_AttachmentPolicy::UseBoneRotation))
         { return; }
 
         UCk_Utils_Sensor_UE::Request_MarkSensor_AsNeedToUpdateTransform(InSensorEntity);
@@ -447,43 +441,19 @@ namespace ck
                 SensorAttachedEntityAndActor)
             { return {}; }
 
-            const auto AttachedActorTransform  = SensorAttachedActor->GetTransform();
+            const auto& AttachedActorTransform  = SensorAttachedActor->GetTransform();
+            const auto& AttachmentPolicy = AttachmentParams.Get_AttachmentPolicy();
+
             auto SkeletonTransform = AttachedActorSkeletalMeshComponent->GetBoneTransform(BoneIndex);
 
-            switch(const auto& UseBoneRotation  = AttachmentParams.Get_UseBoneRotation())
+            if (NOT EnumHasAnyFlags(AttachmentPolicy, ECk_Sensor_AttachmentPolicy::UseBoneRotation))
             {
-                case ECk_Sensor_BoneTransform_RotationPolicy::None:
-                {
-                    SkeletonTransform.CopyRotation(AttachedActorTransform);
-                    break;
-                }
-                case ECk_Sensor_BoneTransform_RotationPolicy::UseBoneRotation:
-                {
-                    break;
-                }
-                default:
-                {
-                    CK_INVALID_ENUM(UseBoneRotation);
-                    break;
-                }
+                SkeletonTransform.CopyRotation(AttachedActorTransform);
             }
 
-            switch(const auto& UseBonePosition  = AttachmentParams.Get_UseBonePosition())
+            if (NOT EnumHasAnyFlags(AttachmentPolicy, ECk_Sensor_AttachmentPolicy::UseBonePosition))
             {
-                case ECk_Sensor_BoneTransform_PositionPolicy::None:
-                {
-                    SkeletonTransform.CopyTranslation(AttachedActorTransform);
-                    break;
-                }
-                case ECk_Sensor_BoneTransform_PositionPolicy::UseBonePosition:
-                {
-                    break;
-                }
-                default:
-                {
-                    CK_INVALID_ENUM(UseBonePosition);
-                    break;
-                }
+                SkeletonTransform.CopyTranslation(AttachedActorTransform);
             }
 
             return SkeletonTransform;

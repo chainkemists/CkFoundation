@@ -11,6 +11,8 @@
 
 #include "CkPhysics/CkPhysics_Utils.h"
 
+#include <Components/SkeletalMeshComponent.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -66,36 +68,26 @@ namespace ck
             }
         }
 
-        const auto& attachmentParams      = params.Get_AttachmentParams();
-        const auto& useBoneTransformOrNot = attachmentParams.Get_UseBoneTransformOrNot();
-        const auto& useBoneRotation       = attachmentParams.Get_UseBoneRotation();
-        const auto& useBonePosition       = attachmentParams.Get_UseBonePosition();
+        const auto& attachmentParams = params.Get_AttachmentParams();
+        const auto& useBoneTransform = EnumHasAnyFlags(attachmentParams.Get_AttachmentPolicy(), ECk_Marker_AttachmentPolicy::UseBonePosition | ECk_Marker_AttachmentPolicy::UseBoneRotation);
 
-        if (useBoneTransformOrNot == ECk_Marker_BoneTransform_UsagePolicy::IgnoreBoneTransform)
-        { return; }
-
-        CK_ENSURE_IF_NOT(useBoneRotation == ECk_Marker_BoneTransform_RotationPolicy::UseBoneRotation ||
-                         useBonePosition == ECk_Marker_BoneTransform_PositionPolicy::UseBonePosition,
-            TEXT("Marker Entity [{}] is set to use a Bone Transform, but its Attachment policies are [UseBoneRotation: {} | UseBonePosition: {}]"),
-            InMarkerEntity,
-            useBoneRotation,
-            useBonePosition)
+        if (NOT useBoneTransform)
         { return; }
 
         CK_ENSURE_IF_NOT(ck::IsValid(attachmentParams.Get_BoneName()),
-            TEXT("Marker Entity [{}] uses Attachment policies [UseBoneRotation: {} | UseBonePosition: {}] but has an INVALID BoneName specified"),
+            TEXT("Marker Entity [{}] uses Attachment Policy [UseBonePosition: {}, UseBoneRotation: {}] but has an INVALID BoneName specified"),
             InMarkerEntity,
-            useBoneRotation,
-            useBonePosition)
+            EnumHasAnyFlags(attachmentParams.Get_AttachmentPolicy(), ECk_Marker_AttachmentPolicy::UseBonePosition),
+            EnumHasAnyFlags(attachmentParams.Get_AttachmentPolicy(), ECk_Marker_AttachmentPolicy::UseBoneRotation))
         { return; }
 
         const auto& attachedActorSkeletalMeshComponent = markerAttachedEntityAndActor.Get_Actor()->FindComponentByClass<USkeletalMeshComponent>();
 
         CK_ENSURE_IF_NOT(ck::IsValid(attachedActorSkeletalMeshComponent),
-            TEXT("Marker Entity [{}] cannot use Attachment policies [UseBoneRotation: {} | UseBonePosition: {}] because it is attached to an Actor that has NO SkeletalMesh"),
+            TEXT("Marker Entity [{}] cannot use Attachment Policy [UseBonePosition: {}, UseBoneRotation: {}] because it is attached to an Actor that has NO SkeletalMesh"),
             InMarkerEntity,
-            useBoneRotation,
-            useBonePosition)
+            EnumHasAnyFlags(attachmentParams.Get_AttachmentPolicy(), ECk_Marker_AttachmentPolicy::UseBonePosition),
+            EnumHasAnyFlags(attachmentParams.Get_AttachmentPolicy(), ECk_Marker_AttachmentPolicy::UseBoneRotation))
         { return; }
 
         UCk_Utils_Marker_UE::Request_MarkMarker_AsNeedToUpdateTransform(InMarkerEntity);
@@ -185,40 +177,16 @@ namespace ck
             const auto attachedActorTransform  = markerAttachedActor->GetTransform();
             auto skeletonTransform = attachedActorSkeletalMeshComponent->GetBoneTransform(boneIndex);
 
-            switch(const auto& useBoneRotation  = attachmentParams.Get_UseBoneRotation())
+            const auto& attachmentPolicy = attachmentParams.Get_AttachmentPolicy();
+
+            if (NOT EnumHasAnyFlags(attachmentPolicy, ECk_Marker_AttachmentPolicy::UseBoneRotation))
             {
-                case ECk_Marker_BoneTransform_RotationPolicy::None:
-                {
-                    skeletonTransform.CopyRotation(attachedActorTransform);
-                    break;
-                }
-                case ECk_Marker_BoneTransform_RotationPolicy::UseBoneRotation:
-                {
-                    break;
-                }
-                default:
-                {
-                    CK_INVALID_ENUM(useBoneRotation);
-                    break;
-                }
+                skeletonTransform.CopyRotation(attachedActorTransform);
             }
 
-            switch(const auto& useBonePosition  = attachmentParams.Get_UseBonePosition())
+            if (NOT EnumHasAnyFlags(attachmentPolicy, ECk_Marker_AttachmentPolicy::UseBonePosition))
             {
-                case ECk_Marker_BoneTransform_PositionPolicy::None:
-                {
-                    skeletonTransform.CopyTranslation(attachedActorTransform);
-                    break;
-                }
-                case ECk_Marker_BoneTransform_PositionPolicy::UseBonePosition:
-                {
-                    break;
-                }
-                default:
-                {
-                    CK_INVALID_ENUM(useBonePosition);
-                    break;
-                }
+                skeletonTransform.CopyTranslation(attachedActorTransform);
             }
 
             return skeletonTransform;

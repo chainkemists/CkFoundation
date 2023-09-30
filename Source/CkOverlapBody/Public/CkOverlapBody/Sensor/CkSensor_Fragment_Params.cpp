@@ -519,19 +519,12 @@ FCk_Sensor_PhysicsInfo::
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Sensor_AttachmentInfo::
-    FCk_Sensor_AttachmentInfo(
-        ECk_ActorComponent_AttachmentPolicy     InAttachmentType,
-        ECk_Sensor_BoneTransform_UsagePolicy    InUseBoneTransformOrNot,
-        FName                                   InBoneName,
-        ECk_Sensor_BoneTransform_PositionPolicy InUseBonePosition,
-        ECk_Sensor_BoneTransform_RotationPolicy InUseBoneRotation)
-    : _AttachmentType(InAttachmentType)
-    , _UseBoneTransformOrNot(InUseBoneTransformOrNot)
-    , _BoneName(InBoneName)
-    , _UseBonePosition(InUseBonePosition)
-    , _UseBoneRotation(InUseBoneRotation)
+auto
+    FCk_Sensor_AttachmentInfo::
+    Get_AttachmentPolicy() const
+    -> ECk_Sensor_AttachmentPolicy
 {
+    return static_cast<ECk_Sensor_AttachmentPolicy>(_AttachmentPolicyFlags);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

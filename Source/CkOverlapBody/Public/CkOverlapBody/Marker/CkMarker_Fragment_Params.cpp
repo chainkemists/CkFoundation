@@ -61,22 +61,13 @@ FCk_Marker_PhysicsInfo::
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Marker_AttachmentInfo::
-    FCk_Marker_AttachmentInfo(
-        ECk_ActorComponent_AttachmentPolicy     InAttachmentType,
-        ECk_Marker_BoneTransform_UsagePolicy    InUseBoneTransformOrNot,
-        FName                                   InBoneName,
-        ECk_Marker_BoneTransform_PositionPolicy InUseBonePosition,
-        ECk_Marker_BoneTransform_RotationPolicy InUseBoneRotation)
-    : _AttachmentType(InAttachmentType)
-    , _UseBoneTransformOrNot(InUseBoneTransformOrNot)
-    , _BoneName(InBoneName)
-    , _UseBonePosition(InUseBonePosition)
-    , _UseBoneRotation(InUseBoneRotation)
+auto
+    FCk_Marker_AttachmentInfo::
+    Get_AttachmentPolicy() const
+    -> ECk_Marker_AttachmentPolicy
 {
+    return static_cast<ECk_Marker_AttachmentPolicy>(_AttachmentPolicyFlags);
 }
-
-// --------------------------------------------------------------------------------------------------------------------
 
 FCk_Marker_ShapeInfo::
     FCk_Marker_ShapeInfo(

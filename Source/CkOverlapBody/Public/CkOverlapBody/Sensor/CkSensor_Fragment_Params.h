@@ -15,43 +15,21 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UENUM(BlueprintType)
-enum class ECk_Sensor_BoneTransform_UsagePolicy : uint8
+UENUM(BlueprintType, meta = (Bitflags, UseEnumValuesAsMaskValuesInEditor = "true"))
+enum class ECk_Sensor_AttachmentPolicy : uint8
 {
-    IgnoreBoneTransform,
-
-    UseBoneTransform,
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Sensor_BoneTransform_UsagePolicy);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UENUM(BlueprintType)
-enum class ECk_Sensor_BoneTransform_PositionPolicy : uint8
-{
-    /* The bone's position will not be used */
-    None = 0,
-
-    /* The bone's position will be used */
-    UseBonePosition,
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Sensor_BoneTransform_PositionPolicy);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UENUM(BlueprintType)
-enum class ECk_Sensor_BoneTransform_RotationPolicy : uint8
-{
-    /* The bone's rotation will not be used */
-    None = 0,
+    None = 0 UMETA(Hidden),
 
     /* The bone's rotation will be used */
-    UseBoneRotation,
+    UseBoneRotation = 1 << 0,
+
+    /* The bone's position will be used */
+    UseBonePosition = 1 << 1,
 };
 
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Sensor_BoneTransform_RotationPolicy);
+ENUM_CLASS_FLAGS(ECk_Sensor_AttachmentPolicy)
+ENABLE_ENUM_BITWISE_OPERATORS(ECk_Sensor_AttachmentPolicy);
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Sensor_AttachmentPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -396,42 +374,26 @@ struct CKOVERLAPBODY_API FCk_Sensor_AttachmentInfo
 public:
     CK_GENERATED_BODY(FCk_Sensor_AttachmentInfo);
 
-public:
-    FCk_Sensor_AttachmentInfo() = default;
-    FCk_Sensor_AttachmentInfo(
-        ECk_ActorComponent_AttachmentPolicy     InAttachmentType,
-        ECk_Sensor_BoneTransform_UsagePolicy    InUseBoneTransformOrNot,
-        FName                                   InBoneName,
-        ECk_Sensor_BoneTransform_PositionPolicy InUseBonePosition,
-        ECk_Sensor_BoneTransform_RotationPolicy InUseBoneRotation);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     ECk_ActorComponent_AttachmentPolicy _AttachmentType = ECk_ActorComponent_AttachmentPolicy::Attach;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    ECk_Sensor_BoneTransform_UsagePolicy _UseBoneTransformOrNot = ECk_Sensor_BoneTransform_UsagePolicy::IgnoreBoneTransform;
+              meta = (AllowPrivateAccess = true, Bitmask, BitmaskEnum = "ECk_Sensor_AttachmentPolicy"))
+    int32  _AttachmentPolicyFlags = 0;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_UseBoneTransformOrNot == ECk_Sensor_BoneTransform_UsagePolicy::UseBoneTransform"))
+              meta = (AllowPrivateAccess = true, EditCondition = "_AttachmentPolicyFlags != 0"))
     FName _BoneName;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_UseBoneTransformOrNot == ECk_Sensor_BoneTransform_UsagePolicy::UseBoneTransform"))
-    ECk_Sensor_BoneTransform_PositionPolicy _UseBonePosition = ECk_Sensor_BoneTransform_PositionPolicy::UseBonePosition;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_UseBoneTransformOrNot == ECk_Sensor_BoneTransform_UsagePolicy::UseBoneTransform"))
-    ECk_Sensor_BoneTransform_RotationPolicy _UseBoneRotation = ECk_Sensor_BoneTransform_RotationPolicy::UseBoneRotation;
+public:
+    auto Get_AttachmentPolicy() const -> ECk_Sensor_AttachmentPolicy;
 
 public:
-    CK_PROPERTY_GET(_AttachmentType)
-    CK_PROPERTY_GET(_UseBoneTransformOrNot);
-    CK_PROPERTY_GET(_BoneName);
-    CK_PROPERTY_GET(_UseBonePosition);
-    CK_PROPERTY_GET(_UseBoneRotation);
+    CK_PROPERTY(_AttachmentType)
+    CK_PROPERTY(_BoneName);
+    CK_PROPERTY_SET(_AttachmentPolicyFlags);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
