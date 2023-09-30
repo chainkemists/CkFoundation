@@ -13,6 +13,14 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
+    FCk_Fragment_MeterAttributeModifier_ParamsData::
+    Get_ModifierPolicy() const
+    -> ECk_MeterAttributeModifier_Policy
+{
+    return static_cast<ECk_MeterAttributeModifier_Policy>(_ModifierPolicyFlags);
+}
+
+auto
     UCk_Provider_Multiple_MeterAttribute_ParamsData_Literal_PDA::
     Get_Value_Implementation() const
     -> TArray<FCk_Fragment_MeterAttribute_ParamsData>

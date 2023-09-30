@@ -206,7 +206,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Plane_Axis);
 UENUM(BlueprintType, meta = (Bitflags, UseEnumValuesAsMaskValuesInEditor = true))
 enum class ECk_TransformComponents : uint8
 {
-    None = 0,
+    None = 0 UMETA(Hidden),
     Location = 1 << 0,
     Rotation = 1 << 1,
     Scale = 1 << 2

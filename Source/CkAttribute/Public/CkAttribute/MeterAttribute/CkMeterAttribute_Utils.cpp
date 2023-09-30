@@ -396,33 +396,65 @@ auto
         const FCk_Fragment_MeterAttributeModifier_ParamsData& InParams)
     -> void
 {
-    const auto& AttributeName = InParams.Get_TargetAttributeName();
+    const auto& ModifierPolicy     = InParams.Get_ModifierPolicy();
+    const auto& ModifyMinCapacity  = EnumHasAnyFlags(ModifierPolicy, ECk_MeterAttributeModifier_Policy::MinCapacity);
+    const auto& ModifyMaxCapacity  = EnumHasAnyFlags(ModifierPolicy, ECk_MeterAttributeModifier_Policy::MaxCapacity);
+    const auto& ModifyCurrentValue = EnumHasAnyFlags(ModifierPolicy, ECk_MeterAttributeModifier_Policy::CurrentValue);
 
-    const auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{AttributeName});
+    CK_ENSURE_IF_NOT(ModifyMinCapacity || ModifyMaxCapacity || ModifyCurrentValue,
+        TEXT("Cannot Meter Attribute Modifier [{}] to Entity [{}] because it targets NO meter component (MinCapacity, MaxCapacity or CurrentValue)"))
+    { return; }
 
-    UCk_Utils_FloatAttributeModifier_UE::Add(FoundEntity, InModifierName,
-        FCk_Fragment_FloatAttributeModifier_ParamsData{FCk_Fragment_FloatAttributeModifier_ParamsData
-        {
-            InParams.Get_ModifierDelta().Get_Params().Get_Capacity().Get_MinCapacity(),
-            ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity(),
-            InParams.Get_ModifierOperation()
-        }});
+    const auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_RecordEntryIf
+    (
+        InAttributeOwnerEntity,
+        ck::algo::MatchesGameplayLabelExact{InParams.Get_TargetAttributeName()}
+    );
 
-    UCk_Utils_FloatAttributeModifier_UE::Add(FoundEntity, InModifierName,
-        FCk_Fragment_FloatAttributeModifier_ParamsData{FCk_Fragment_FloatAttributeModifier_ParamsData
-        {
-            InParams.Get_ModifierDelta().Get_Params().Get_Capacity().Get_MaxCapacity(),
-            ck_meter_attribute::FMeterAttribute_Tags::Get_MaxCapacity(),
-            InParams.Get_ModifierOperation()
-        }});
+    if (ModifyMinCapacity)
+    {
+        UCk_Utils_FloatAttributeModifier_UE::Add
+        (
+            FoundEntity,
+            InModifierName,
+            FCk_Fragment_FloatAttributeModifier_ParamsData{FCk_Fragment_FloatAttributeModifier_ParamsData
+            {
+                InParams.Get_ModifierDelta().Get_Params().Get_Capacity().Get_MinCapacity(),
+                ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity(),
+                InParams.Get_ModifierOperation()
+            }}
+        );
+    }
 
-    UCk_Utils_FloatAttributeModifier_UE::Add(FoundEntity, InModifierName,
-        FCk_Fragment_FloatAttributeModifier_ParamsData{FCk_Fragment_FloatAttributeModifier_ParamsData
-        {
-            InParams.Get_ModifierDelta().Get_Params().Get_StartingPercentage().Get_Value(),
-            ck_meter_attribute::FMeterAttribute_Tags::Get_Current(),
-            InParams.Get_ModifierOperation()
-        }});
+    if (ModifyMaxCapacity)
+    {
+        UCk_Utils_FloatAttributeModifier_UE::Add
+        (
+            FoundEntity,
+            InModifierName,
+            FCk_Fragment_FloatAttributeModifier_ParamsData{FCk_Fragment_FloatAttributeModifier_ParamsData
+            {
+                InParams.Get_ModifierDelta().Get_Params().Get_Capacity().Get_MaxCapacity(),
+                ck_meter_attribute::FMeterAttribute_Tags::Get_MaxCapacity(),
+                InParams.Get_ModifierOperation()
+            }}
+        );
+    }
+
+    if (ModifyCurrentValue)
+    {
+        UCk_Utils_FloatAttributeModifier_UE::Add
+        (
+            FoundEntity,
+            InModifierName,
+            FCk_Fragment_FloatAttributeModifier_ParamsData{FCk_Fragment_FloatAttributeModifier_ParamsData
+            {
+                InParams.Get_ModifierDelta().Get_Params().Get_StartingPercentage().Get_Value(),
+                ck_meter_attribute::FMeterAttribute_Tags::Get_Current(),
+                InParams.Get_ModifierOperation()
+            }}
+        );
+    }
 }
 
 auto
@@ -435,7 +467,11 @@ auto
 {
     const auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
-    return UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity(), InModifierName);
+    const auto& HasMeterModifier_MinCapacity  = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity(), InModifierName);
+    const auto& HasMeterModifier_MaxCapacity  = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MaxCapacity(), InModifierName);
+    const auto& HasMeterModifier_CurrentValue = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_Current(),     InModifierName);
+
+    return HasMeterModifier_MinCapacity || HasMeterModifier_MaxCapacity || HasMeterModifier_CurrentValue;
 }
 
 auto
@@ -446,7 +482,7 @@ auto
         FGameplayTag InModifierName)
     -> bool
 {
-    CK_ENSURE_IF_NOT(Has(InAttributeOwnerEntity, InAttributeName, InModifierName), TEXT("Handle [{}] does NOT have a Meter Attribute Modifier with name [{}]"), InAttributeOwnerEntity, InModifierName)
+    CK_ENSURE_IF_NOT(Has(InAttributeOwnerEntity, InAttributeName, InModifierName), TEXT("Handle [{}] does NOT have a Meter Attribute Modifier with Name [{}]"), InAttributeOwnerEntity, InModifierName)
     { return false; }
 
     return true;
@@ -462,9 +498,24 @@ auto
 {
     const auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
-    UCk_Utils_FloatAttributeModifier_UE::Remove(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity(), InModifierName);
-    UCk_Utils_FloatAttributeModifier_UE::Remove(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MaxCapacity(), InModifierName);
-    UCk_Utils_FloatAttributeModifier_UE::Remove(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_Current(), InModifierName);
+    const auto& HasMeterModifier_MinCapacity  = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity(), InModifierName);
+    const auto& HasMeterModifier_MaxCapacity  = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MaxCapacity(), InModifierName);
+    const auto& HasMeterModifier_CurrentValue = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_Current(),     InModifierName);
+
+    if (HasMeterModifier_MinCapacity)
+    {
+        UCk_Utils_FloatAttributeModifier_UE::Remove(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity(), InModifierName);
+    }
+
+    if (HasMeterModifier_MaxCapacity)
+    {
+        UCk_Utils_FloatAttributeModifier_UE::Remove(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MaxCapacity(), InModifierName);
+    }
+
+    if (HasMeterModifier_CurrentValue)
+    {
+        UCk_Utils_FloatAttributeModifier_UE::Remove(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_Current(), InModifierName);
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
