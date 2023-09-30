@@ -15,6 +15,44 @@
 
 namespace ck::algo
 {
+    template <typename T_Container, typename T_PredicateFunction>
+    auto
+        AllOf(
+            T_Container& InContainer,
+            T_PredicateFunction InFunc) -> bool
+    {
+        return AllOf(InContainer.begin(), InContainer.end(), InFunc);
+    }
+
+    template <typename T_ItrType, typename T_PredicateFunction>
+    auto
+        AllOf(
+            T_ItrType InItrBegin,
+            T_ItrType InItrEnd,
+            T_PredicateFunction InFunc) -> bool
+    {
+        return std::all_of(InItrBegin, InItrEnd, InFunc);
+    }
+
+    template <typename T_Container, typename T_PredicateFunction>
+    auto
+        AnyOf(
+            T_Container& InContainer,
+            T_PredicateFunction InFunc) -> bool
+    {
+        return AnyOf(InContainer.begin(), InContainer.end(), InFunc);
+    }
+
+    template <typename T_ItrType, typename T_PredicateFunction>
+    auto
+        AnyOf(
+            T_ItrType InItrBegin,
+            T_ItrType InItrEnd,
+            T_PredicateFunction InFunc) -> bool
+    {
+        return std::any_of(InItrBegin, InItrEnd, InFunc);
+    }
+
     template <typename T_Container, typename T_UnaryFunction>
     auto
         ForEach(
@@ -177,200 +215,200 @@ namespace ck::algo
 
 namespace ck::algo
 {
-	template <typename T_Func, typename T_ContainerA, typename T_ContainerB>
-	auto ForEachView(T_ContainerA& InContainerA, T_ContainerB& InContainerB, T_Func InFunc) -> void
-	{
-		CK_ENSURE_IF_NOT(InContainerA.Num() == InContainerB.Num(), TEXT("Non-Matching Container sizes"))
-		{ return; }
+    template <typename T_Func, typename T_ContainerA, typename T_ContainerB>
+    auto ForEachView(T_ContainerA& InContainerA, T_ContainerB& InContainerB, T_Func InFunc) -> void
+    {
+        CK_ENSURE_IF_NOT(InContainerA.Num() == InContainerB.Num(), TEXT("Non-Matching Container sizes"))
+        { return; }
 
-		for (int Index = 0; Index < InContainerA.Num(); ++Index)
-		{
-			InFunc(InContainerA[Index], InContainerB[Index]);
-		}
-	}
+        for (int Index = 0; Index < InContainerA.Num(); ++Index)
+        {
+            InFunc(InContainerA[Index], InContainerB[Index]);
+        }
+    }
 
-	template <typename T_Func, typename T_ContainerA, typename T_ContainerB, typename T_ContainerC>
-	auto ForEachView(
-		T_ContainerA& InContainerA,
-		T_ContainerB& InContainerB,
-		T_ContainerC& InContainerC,
-		T_Func InFunc) -> void
-	{
-		CK_ENSURE_IF_NOT(
-			InContainerA.Num() == InContainerB.Num() == InContainerC.Num(), TEXT("Non-Matching Container sizes"))
-		{ return; }
+    template <typename T_Func, typename T_ContainerA, typename T_ContainerB, typename T_ContainerC>
+    auto ForEachView(
+        T_ContainerA& InContainerA,
+        T_ContainerB& InContainerB,
+        T_ContainerC& InContainerC,
+        T_Func InFunc) -> void
+    {
+        CK_ENSURE_IF_NOT(
+            InContainerA.Num() == InContainerB.Num() == InContainerC.Num(), TEXT("Non-Matching Container sizes"))
+        { return; }
 
-		for (int Index = 0; Index < InContainerA.Num(); ++Index)
-		{
-			InFunc(InContainerA[Index], InContainerB[Index], InContainerC[Index]);
-		}
-	}
+        for (int Index = 0; Index < InContainerA.Num(); ++Index)
+        {
+            InFunc(InContainerA[Index], InContainerB[Index], InContainerC[Index]);
+        }
+    }
 
-	template <typename T_Func,	typename T_ContainerA,	typename T_ContainerB,	typename T_ContainerC,	typename T_ContainerD>
-	auto ForEachView(
-		T_ContainerA& InContainerA,
-		T_ContainerB& InContainerB,
-		T_ContainerC& InContainerC,
-		T_ContainerD& InContainerD,
-		T_Func InFunc) -> void
-	{
-		CK_ENSURE_IF_NOT(
-			InContainerA.Num() == InContainerB.Num() == InContainerC.Num() == InContainerD.Num(),
-			TEXT("Non-Matching Container sizes"))
-		{ return; }
+    template <typename T_Func,	typename T_ContainerA,	typename T_ContainerB,	typename T_ContainerC,	typename T_ContainerD>
+    auto ForEachView(
+        T_ContainerA& InContainerA,
+        T_ContainerB& InContainerB,
+        T_ContainerC& InContainerC,
+        T_ContainerD& InContainerD,
+        T_Func InFunc) -> void
+    {
+        CK_ENSURE_IF_NOT(
+            InContainerA.Num() == InContainerB.Num() == InContainerC.Num() == InContainerD.Num(),
+            TEXT("Non-Matching Container sizes"))
+        { return; }
 
-		for (int Index = 0; Index < InContainerA.Num(); ++Index)
-		{
-			InFunc(InContainerA[Index], InContainerB[Index], InContainerC[Index], InContainerD[Index]);
-		}
-	}
+        for (int Index = 0; Index < InContainerA.Num(); ++Index)
+        {
+            InFunc(InContainerA[Index], InContainerB[Index], InContainerC[Index], InContainerD[Index]);
+        }
+    }
 
-	template <typename T_Func, typename T_ContainerA,	typename T_ContainerB,	typename T_ContainerC,	typename T_ContainerD,	typename T_ContainerE>
-	auto ForEachView(
-		T_ContainerA& InContainerA,
-		T_ContainerB& InContainerB,
-		T_ContainerC& InContainerC,
-		T_ContainerD& InContainerD,
-		T_ContainerE& InContainerE,
-		T_Func InFunc) -> void
-	{
-		CK_ENSURE_IF_NOT(
-			InContainerA.Num() == InContainerB.Num() == InContainerC.Num() == InContainerD.Num() == InContainerE.Num(),
-			TEXT("Non-Matching Container sizes"))
-		{ return; }
+    template <typename T_Func, typename T_ContainerA,	typename T_ContainerB,	typename T_ContainerC,	typename T_ContainerD,	typename T_ContainerE>
+    auto ForEachView(
+        T_ContainerA& InContainerA,
+        T_ContainerB& InContainerB,
+        T_ContainerC& InContainerC,
+        T_ContainerD& InContainerD,
+        T_ContainerE& InContainerE,
+        T_Func InFunc) -> void
+    {
+        CK_ENSURE_IF_NOT(
+            InContainerA.Num() == InContainerB.Num() == InContainerC.Num() == InContainerD.Num() == InContainerE.Num(),
+            TEXT("Non-Matching Container sizes"))
+        { return; }
 
-		for (int Index = 0; Index < InContainerA.Num(); ++Index)
-		{
-			InFunc(InContainerA[Index], InContainerB[Index], InContainerC[Index], InContainerD[Index], InContainerE[Index]);
-		}
-	}
+        for (int Index = 0; Index < InContainerA.Num(); ++Index)
+        {
+            InFunc(InContainerA[Index], InContainerB[Index], InContainerC[Index], InContainerD[Index], InContainerE[Index]);
+        }
+    }
 
-	template <typename T_TransformFunc, typename T_ContainerA, typename T_ContainerB, typename T_ReturnContainer>
-	auto ForEachViewTransform(
-		T_ContainerA& InContainerA,
-		T_ContainerB& InContainerB,
-		TToTransform<T_ReturnContainer> InReturnContainer,
-		T_TransformFunc InFunc) -> void
-	{
-		CK_ENSURE_IF_NOT(InContainerA.Num() == InContainerB.Num(), TEXT("Non-Matching Container sizes"))
-		{ return; }
+    template <typename T_TransformFunc, typename T_ContainerA, typename T_ContainerB, typename T_ReturnContainer>
+    auto ForEachViewTransform(
+        T_ContainerA& InContainerA,
+        T_ContainerB& InContainerB,
+        TToTransform<T_ReturnContainer> InReturnContainer,
+        T_TransformFunc InFunc) -> void
+    {
+        CK_ENSURE_IF_NOT(InContainerA.Num() == InContainerB.Num(), TEXT("Non-Matching Container sizes"))
+        { return; }
 
-		for (auto Index = 0; Index < InContainerA.Num(); ++Index)
-		{
-			InReturnContainer.Container.Add(InFunc(InContainerA[Index], InContainerB[Index]));
-		}
-	}
+        for (auto Index = 0; Index < InContainerA.Num(); ++Index)
+        {
+            InReturnContainer.Container.Add(InFunc(InContainerA[Index], InContainerB[Index]));
+        }
+    }
 
-	template <class T_ReturnContainer, class T_TransformFunc, class T_ContainerA, typename T_ContainerB>
-	auto ForEachViewTransform(
-		T_ContainerA& InContainerA,
-		T_ContainerB& InContainerB,
-		T_TransformFunc InFunc) -> T_ReturnContainer
-	{
-		auto ToRet = T_ReturnContainer{};
-		ForEachViewTransform(InContainerA, InContainerB, ToTransform(ToRet), InFunc);
-		return ToRet;
-	}
+    template <class T_ReturnContainer, class T_TransformFunc, class T_ContainerA, typename T_ContainerB>
+    auto ForEachViewTransform(
+        T_ContainerA& InContainerA,
+        T_ContainerB& InContainerB,
+        T_TransformFunc InFunc) -> T_ReturnContainer
+    {
+        auto ToRet = T_ReturnContainer{};
+        ForEachViewTransform(InContainerA, InContainerB, ToTransform(ToRet), InFunc);
+        return ToRet;
+    }
 
-	template <typename T_TransformFunc,	typename T_ContainerA,	typename T_ContainerB,	typename T_ContainerC,	typename T_ReturnContainer>
-	auto ForEachViewTransform(
-		T_ContainerA& InContainerA,
-		T_ContainerB& InContainerB,
-		T_ContainerC& InContainerC,
-		TToTransform<T_ReturnContainer> InReturnContainer,
-		T_TransformFunc InFunc) -> void
-	{
-		CK_ENSURE_IF_NOT(
-			InContainerA.Num() == InContainerB.Num() == InContainerC.Num(), TEXT("Non-Matching Container sizes"))
-		{ return; }
+    template <typename T_TransformFunc,	typename T_ContainerA,	typename T_ContainerB,	typename T_ContainerC,	typename T_ReturnContainer>
+    auto ForEachViewTransform(
+        T_ContainerA& InContainerA,
+        T_ContainerB& InContainerB,
+        T_ContainerC& InContainerC,
+        TToTransform<T_ReturnContainer> InReturnContainer,
+        T_TransformFunc InFunc) -> void
+    {
+        CK_ENSURE_IF_NOT(
+            InContainerA.Num() == InContainerB.Num() == InContainerC.Num(), TEXT("Non-Matching Container sizes"))
+        { return; }
 
-		for (int Index = 0; Index < InContainerA.Num(); ++Index)
-		{
-			InReturnContainer.Container.Add(InFunc(InContainerA[Index], InContainerB[Index], InContainerC[Index]));
-		}
-	}
+        for (int Index = 0; Index < InContainerA.Num(); ++Index)
+        {
+            InReturnContainer.Container.Add(InFunc(InContainerA[Index], InContainerB[Index], InContainerC[Index]));
+        }
+    }
 
-	template <class T_ReturnContainer, class T_TransformFunc, class T_ContainerA, typename T_ContainerB, typename T_ContainerC>
-	auto ForEachViewTransform(
-		T_ContainerA& InContainerA,
-		T_ContainerB& InContainerB,
-		T_ContainerC& InContainerC,
-		T_TransformFunc InFunc) -> T_ReturnContainer
-	{
-		auto ToRet = T_ReturnContainer{};
-		ForEachViewTransform(InContainerA, InContainerB, InContainerC, ToTransform(ToRet), InFunc);
-		return ToRet;
-	}
+    template <class T_ReturnContainer, class T_TransformFunc, class T_ContainerA, typename T_ContainerB, typename T_ContainerC>
+    auto ForEachViewTransform(
+        T_ContainerA& InContainerA,
+        T_ContainerB& InContainerB,
+        T_ContainerC& InContainerC,
+        T_TransformFunc InFunc) -> T_ReturnContainer
+    {
+        auto ToRet = T_ReturnContainer{};
+        ForEachViewTransform(InContainerA, InContainerB, InContainerC, ToTransform(ToRet), InFunc);
+        return ToRet;
+    }
 
-	template <typename T_TransformFunc,	typename T_ContainerA,	typename T_ContainerB,	typename T_ContainerC,	typename T_ContainerD,	typename T_ReturnContainer>
-	auto ForEachViewTransform(
-		T_ContainerA& InContainerA,
-		T_ContainerB& InContainerB,
-		T_ContainerC& InContainerC,
-		T_ContainerD& InContainerD,
-		TToTransform<T_ReturnContainer> InReturnContainer,
-		T_TransformFunc InFunc) -> void
-	{
-		CK_ENSURE_IF_NOT(
-			InContainerA.Num() == InContainerB.Num() == InContainerC.Num() == InContainerD.Num(),
-			TEXT("Non-Matching Container sizes"))
-		{ return; }
+    template <typename T_TransformFunc,	typename T_ContainerA,	typename T_ContainerB,	typename T_ContainerC,	typename T_ContainerD,	typename T_ReturnContainer>
+    auto ForEachViewTransform(
+        T_ContainerA& InContainerA,
+        T_ContainerB& InContainerB,
+        T_ContainerC& InContainerC,
+        T_ContainerD& InContainerD,
+        TToTransform<T_ReturnContainer> InReturnContainer,
+        T_TransformFunc InFunc) -> void
+    {
+        CK_ENSURE_IF_NOT(
+            InContainerA.Num() == InContainerB.Num() == InContainerC.Num() == InContainerD.Num(),
+            TEXT("Non-Matching Container sizes"))
+        { return; }
 
-		for (int Index = 0; Index < InContainerA.Num(); ++Index)
-		{
-			InReturnContainer.Container.Add(InFunc(InContainerA[Index], InContainerB[Index], InContainerC[Index], InContainerD[Index]));
-		}
-	}
+        for (int Index = 0; Index < InContainerA.Num(); ++Index)
+        {
+            InReturnContainer.Container.Add(InFunc(InContainerA[Index], InContainerB[Index], InContainerC[Index], InContainerD[Index]));
+        }
+    }
 
-	template <class T_ReturnContainer, class T_TransformFunc, class T_ContainerA, typename T_ContainerB, typename T_ContainerC, typename T_ContainerD>
-	auto ForEachViewTransform(
-		T_ContainerA& InContainerA,
-		T_ContainerB& InContainerB,
-		T_ContainerC& InContainerC,
-		T_ContainerD& InContainerD,
-		T_TransformFunc InFunc) -> T_ReturnContainer
-	{
-		auto ToRet = T_ReturnContainer{};
-		ForEachViewTransform(InContainerA, InContainerB, InContainerC, InContainerD, ToTransform(ToRet), InFunc);
-		return ToRet;
-	}
+    template <class T_ReturnContainer, class T_TransformFunc, class T_ContainerA, typename T_ContainerB, typename T_ContainerC, typename T_ContainerD>
+    auto ForEachViewTransform(
+        T_ContainerA& InContainerA,
+        T_ContainerB& InContainerB,
+        T_ContainerC& InContainerC,
+        T_ContainerD& InContainerD,
+        T_TransformFunc InFunc) -> T_ReturnContainer
+    {
+        auto ToRet = T_ReturnContainer{};
+        ForEachViewTransform(InContainerA, InContainerB, InContainerC, InContainerD, ToTransform(ToRet), InFunc);
+        return ToRet;
+    }
 
-	template <typename T_TransformFunc,	typename T_ContainerA,	typename T_ContainerB,	typename T_ContainerC,	typename T_ContainerD,	typename T_ContainerE,	typename T_ReturnContainer>
-	auto ForEachViewTransform(
-		T_ContainerA& InContainerA,
-		T_ContainerB& InContainerB,
-		T_ContainerC& InContainerC,
-		T_ContainerD& InContainerD,
-		T_ContainerE& InContainerE,
-		TToTransform<T_ReturnContainer> InReturnContainer,
-		T_TransformFunc InFunc) -> void
-	{
-		CK_ENSURE_IF_NOT(
-			InContainerA.Num() == InContainerB.Num() == InContainerC.Num() == InContainerD.Num() == InContainerE.Num(),
-			TEXT("Non-Matching Container sizes"))
-		{ return; }
+    template <typename T_TransformFunc,	typename T_ContainerA,	typename T_ContainerB,	typename T_ContainerC,	typename T_ContainerD,	typename T_ContainerE,	typename T_ReturnContainer>
+    auto ForEachViewTransform(
+        T_ContainerA& InContainerA,
+        T_ContainerB& InContainerB,
+        T_ContainerC& InContainerC,
+        T_ContainerD& InContainerD,
+        T_ContainerE& InContainerE,
+        TToTransform<T_ReturnContainer> InReturnContainer,
+        T_TransformFunc InFunc) -> void
+    {
+        CK_ENSURE_IF_NOT(
+            InContainerA.Num() == InContainerB.Num() == InContainerC.Num() == InContainerD.Num() == InContainerE.Num(),
+            TEXT("Non-Matching Container sizes"))
+        { return; }
 
-		for (int Index = 0; Index < InContainerA.Num(); ++Index)
-		{
-			InReturnContainer.Container.Add(InFunc(
-				InContainerA[Index], InContainerB[Index], InContainerC[Index], InContainerD[Index], InContainerE[Index]));
-		}
-	}
+        for (int Index = 0; Index < InContainerA.Num(); ++Index)
+        {
+            InReturnContainer.Container.Add(InFunc(
+                InContainerA[Index], InContainerB[Index], InContainerC[Index], InContainerD[Index], InContainerE[Index]));
+        }
+    }
 
-	template <class T_ReturnContainer, class T_TransformFunc, class T_ContainerA, typename T_ContainerB, typename T_ContainerC, typename T_ContainerD, typename T_ContainerE>
-	auto ForEachViewTransform(
-		T_ContainerA& InContainerA,
-		T_ContainerB& InContainerB,
-		T_ContainerC& InContainerC,
-		T_ContainerD& InContainerD,
-		T_ContainerE& InContainerE,
-		T_TransformFunc InFunc) -> T_ReturnContainer
-	{
-		auto ToRet = T_ReturnContainer{};
-		ForEachViewTransform(
-			InContainerA, InContainerB, InContainerC, InContainerD, InContainerE, ToTransform(ToRet), InFunc);
-		return ToRet;
-	}
+    template <class T_ReturnContainer, class T_TransformFunc, class T_ContainerA, typename T_ContainerB, typename T_ContainerC, typename T_ContainerD, typename T_ContainerE>
+    auto ForEachViewTransform(
+        T_ContainerA& InContainerA,
+        T_ContainerB& InContainerB,
+        T_ContainerC& InContainerC,
+        T_ContainerD& InContainerD,
+        T_ContainerE& InContainerE,
+        T_TransformFunc InFunc) -> T_ReturnContainer
+    {
+        auto ToRet = T_ReturnContainer{};
+        ForEachViewTransform(
+            InContainerA, InContainerB, InContainerC, InContainerD, InContainerE, ToTransform(ToRet), InFunc);
+        return ToRet;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
