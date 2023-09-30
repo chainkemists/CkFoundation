@@ -22,6 +22,7 @@ namespace ck
     public:
         CK_GENERATED_BODY(FFragment_RecordEntry);
 
+    public:
         friend UCk_Utils_RecordEntry_UE;
         friend UCk_Utils_RecordOfEntities_UE;
 
@@ -35,8 +36,13 @@ namespace ck
         using EntityType = FCk_Entity;
         using RecordsListType = TSet<EntityType>;
 
+        using DestructionCleanupFuncType = TFunction<void(FCk_Handle, FCk_Handle)>;
+        using DestructionCleanupFuncMap = TMap<EntityType, DestructionCleanupFuncType>;
+        using DestructionCleanupFuncPair = TPair<EntityType, DestructionCleanupFuncType>;
+
     private:
         RecordsListType _Records;
+        DestructionCleanupFuncMap _DisconnectionFuncs;
 
     private:
         CK_PROPERTY(_Records);
