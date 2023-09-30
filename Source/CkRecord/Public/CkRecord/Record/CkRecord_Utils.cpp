@@ -52,7 +52,7 @@ auto
 {
     return _Utils.Get_HasRecordEntry(InRecordHandle, [&](FCk_Handle InHandle) -> bool
     {
-        FCk_SharedBool OutResult;
+        const FCk_SharedBool OutResult;
         InPredicate.Execute(InHandle, OutResult);
 
         return *OutResult;
@@ -68,7 +68,7 @@ auto
 {
     return _Utils.Get_RecordEntryIf(InRecordHandle, [&](FCk_Handle InHandle) -> bool
     {
-        FCk_SharedBool OutResult;
+        const FCk_SharedBool OutResult;
         InPredicate.Execute(InHandle, OutResult);
 
         return *OutResult;
