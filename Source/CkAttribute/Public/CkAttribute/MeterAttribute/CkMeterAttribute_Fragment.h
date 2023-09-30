@@ -25,7 +25,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FFragment_RecordOfMeterAttributes : public FFragment_RecordOfEntities {};
+    struct FFragment_RecordOfMeterAttributes : public FFragment_RecordOfEntities
+    {
+        using FFragment_RecordOfEntities::FFragment_RecordOfEntities;
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 

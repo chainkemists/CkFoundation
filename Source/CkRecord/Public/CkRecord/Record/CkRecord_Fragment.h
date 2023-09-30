@@ -3,14 +3,16 @@
 #include "CkEcs/Entity/CkEntity.h"
 #include "CkEcs/Handle/CkHandle.h"
 
+#include "CkRecord/Record/CkRecord_Fragment_Params.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_RecordOfEntities_UE;
 
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
-    // --------------------------------------------------------------------------------------------------------------------
-
     struct FFragment_RecordOfEntities
     {
         friend class UCk_Utils_RecordOfEntities_UE;
@@ -23,14 +25,20 @@ namespace ck
     public:
         CK_GENERATED_BODY(FFragment_RecordOfEntities);
 
+    public:
         using EntityType = FCk_Entity;
         using RecordEntriesType = TSet<EntityType>;
 
     private:
         RecordEntriesType _RecordEntries;
+        ECk_Record_EntryHandlingPolicy _EntryHandlingPolicy = ECk_Record_EntryHandlingPolicy::Default;
 
     private:
         CK_PROPERTY(_RecordEntries);
+        CK_PROPERTY(_EntryHandlingPolicy);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_RecordOfEntities, _EntryHandlingPolicy);
     };
 }
 
