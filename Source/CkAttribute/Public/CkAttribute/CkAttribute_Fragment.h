@@ -138,7 +138,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FFragment_RecordOfAttributeModifiers : public FFragment_RecordOfEntities {};
+    struct FFragment_RecordOfAttributeModifiers : public FFragment_RecordOfEntities
+    {
+        using FFragment_RecordOfEntities::FFragment_RecordOfEntities;
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 

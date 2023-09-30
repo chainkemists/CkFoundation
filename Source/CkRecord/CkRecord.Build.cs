@@ -17,7 +17,8 @@ public class CkRecord : CkModuleRules
 
             "CkCore",
             "CkEcs",
-            "CkLog"
+            "CkLabel",
+            "CkLog",
         });
     }
 }

@@ -1,12 +1,15 @@
 #pragma once
 
 #include "CkRecord_Fragment.h"
+#include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkRecord/Record/CkRecord_Fragment_Params.h"
 #include "CkRecord/RecordEntry/CkRecordEntry_Utils.h"
 #include "CkRecord/RecordEntry/CkRecordEntry_Fragment.h"
 
 #include "CkCore/Enums/CkEnums.h"
+#include "CkLabel/Public/CkLabel/CkLabel_Fragment.h"
+#include "CkLabel/Public/CkLabel/CkLabel_Utils.h"
 
 #include "CkRecord_Utils.generated.h"
 
@@ -33,7 +36,8 @@ namespace ck
     public:
         static auto
         AddIfMissing(
-            FCk_Handle InHandle) -> void;
+            FCk_Handle InHandle,
+            ECk_Record_EntryHandlingPolicy _EntryHandlingPolicy = ECk_Record_EntryHandlingPolicy::Default) -> void;
 
         static auto
         Has(
@@ -89,17 +93,20 @@ namespace ck
 
     template <typename T_DerivedRecord>
     auto
-    TUtils_RecordOfEntities<T_DerivedRecord>::
-        AddIfMissing(FCk_Handle InHandle)
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        AddIfMissing(
+            FCk_Handle InHandle,
+            ECk_Record_EntryHandlingPolicy _EntryHandlingPolicy)
         -> void
     {
-        InHandle.AddOrGet<RecordType>();
+        InHandle.AddOrGet<RecordType>(_EntryHandlingPolicy);
     }
 
     template <typename T_DerivedRecord>
     auto
-    TUtils_RecordOfEntities<T_DerivedRecord>::
-        Has(FCk_Handle InHandle)
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        Has(
+            FCk_Handle InHandle)
         -> bool
     {
         return InHandle.Has<RecordType>();
@@ -107,8 +114,9 @@ namespace ck
 
     template <typename T_DerivedRecord>
     auto
-    TUtils_RecordOfEntities<T_DerivedRecord>::
-        Ensure(FCk_Handle InHandle)
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        Ensure(
+            FCk_Handle InHandle)
         -> bool
     {
         CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have [{}]"), InHandle, ctti::nameof_v<RecordType>)
@@ -119,7 +127,7 @@ namespace ck
 
     template <typename T_DerivedRecord>
     auto
-    TUtils_RecordOfEntities<T_DerivedRecord>::
+        TUtils_RecordOfEntities<T_DerivedRecord>::
         Get_AllRecordEntries(
             FCk_Handle InRecordHandle)
         -> TArray<FCk_Handle>
@@ -139,7 +147,7 @@ namespace ck
     template <typename T_DerivedRecord>
     template <typename T_Predicate>
     auto
-    TUtils_RecordOfEntities<T_DerivedRecord>::
+        TUtils_RecordOfEntities<T_DerivedRecord>::
         Get_HasRecordEntry(
             FCk_Handle InRecordHandle,
             T_Predicate InPredicate)
@@ -147,21 +155,17 @@ namespace ck
     {
         const auto& Fragment = InRecordHandle.Get<RecordType>();
 
-        for(const auto& RecordEntry : Fragment.Get_RecordEntries())
+        return ck::algo::AnyOf(Fragment.Get_RecordEntries(), [&](FCk_Entity InRecordEntry) -> bool
         {
-            const auto RecordEntryHandle = ck::MakeHandle(RecordEntry, InRecordHandle);
-
-            if (const auto Result = InPredicate(RecordEntryHandle))
-            { return true; }
-        }
-
-        return false;
+            const auto RecordEntryHandle = ck::MakeHandle(InRecordEntry, InRecordHandle);
+            return InPredicate(RecordEntryHandle);
+        });
     }
 
     template <typename T_DerivedRecord>
     template <typename T_Predicate>
     auto
-    TUtils_RecordOfEntities<T_DerivedRecord>::
+        TUtils_RecordOfEntities<T_DerivedRecord>::
         Get_RecordEntryIf(
             FCk_Handle InRecordHandle,
             T_Predicate InPredicate)
@@ -183,7 +187,7 @@ namespace ck
     template <typename T_DerivedRecord>
     template <typename T_Unary>
     auto
-    TUtils_RecordOfEntities<T_DerivedRecord>::
+        TUtils_RecordOfEntities<T_DerivedRecord>::
         ForEachEntry(
             FCk_Handle InRecordHandle,
             T_Unary InUnaryFunc)
@@ -201,7 +205,7 @@ namespace ck
     template <typename T_DerivedRecord>
     template <typename T_Unary, typename T_Predicate>
     auto
-    TUtils_RecordOfEntities<T_DerivedRecord>::
+        TUtils_RecordOfEntities<T_DerivedRecord>::
         ForEachEntryIf(
             FCk_Handle InRecordHandle,
             T_Unary InFunc,
@@ -221,7 +225,7 @@ namespace ck
 
     template <typename T_DerivedRecord>
     auto
-    TUtils_RecordOfEntities<T_DerivedRecord>::
+        TUtils_RecordOfEntities<T_DerivedRecord>::
         Request_Connect(
             FCk_Handle InRecordHandle,
             FCk_Handle InRecordEntry)
@@ -231,10 +235,29 @@ namespace ck
         { return; }
 
         auto& RecordFragment = InRecordHandle.Get<RecordType>();
+        const auto& CurrentRecordEntries = RecordFragment.Get_RecordEntries();
 
-        CK_ENSURE_IF_NOT(NOT RecordFragment.Get_RecordEntries().Contains(InRecordEntry.Get_Entity()),
+        CK_ENSURE_IF_NOT(NOT CurrentRecordEntries.Contains(InRecordEntry.Get_Entity()),
             TEXT("The Record [{}] ALREADY contains the RecordEntry [{}]"), InRecordHandle, InRecordEntry)
         { return; }
+
+        if (RecordFragment.Get_EntryHandlingPolicy() == ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames)
+        {
+            CK_ENSURE_IF_NOT(UCk_Utils_GameplayLabel_UE::Has(InRecordEntry),
+                TEXT("Cannot Connect RecordEntry [{}] to Record [{}] because it does NOT have a GameplayLabel!"),
+                InRecordEntry,
+                InRecordHandle)
+            { return; }
+
+            const auto& RecordEntryLabel = UCk_Utils_GameplayLabel_UE::Get_Label(InRecordEntry);
+
+            CK_ENSURE_IF_NOT(NOT Get_HasRecordEntry(InRecordHandle, ck::algo::MatchesGameplayLabelExact{RecordEntryLabel}),
+                TEXT("Cannot Connect RecordEntry [{}] to Record [{}] because there is already an entry with the GameplayLabel [{}]"),
+                InRecordEntry,
+                InRecordHandle,
+                RecordEntryLabel)
+            { return; }
+        }
 
         RecordFragment._RecordEntries.Emplace(InRecordEntry.Get_Entity());
 
@@ -247,7 +270,7 @@ namespace ck
 
     template <typename T_DerivedRecord>
     auto
-    TUtils_RecordOfEntities<T_DerivedRecord>::
+        TUtils_RecordOfEntities<T_DerivedRecord>::
         Request_Disconnect(
             FCk_Handle InRecordHandle,
             FCk_Handle InRecordEntry)
