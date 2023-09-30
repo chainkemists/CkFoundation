@@ -15,12 +15,17 @@ namespace ck
             const FFragment_RecordEntry& InRecordEntry) const
         -> void
     {
-        for (const auto RecordEntity : InRecordEntry.Get_Records())
+        for (const auto& Kvp : InRecordEntry._DisconnectionFuncs)
         {
-            auto RecordHandle = MakeHandle(RecordEntity, InHandle);
+            const auto& RecordEntity = Kvp.Key;
+            const auto& RecordEntityHandle = MakeHandle(RecordEntity, InHandle);
 
-            auto& RecordFragment = RecordHandle.Get<FFragment_RecordOfEntities>();
-            RecordFragment._RecordEntries.Remove(InHandle.Get_Entity());
+            if (ck::Is_NOT_Valid(RecordEntityHandle))
+            { continue; }
+
+            const auto& DestructionCleanupFunc = Kvp.Value;
+
+            DestructionCleanupFunc(RecordEntityHandle, InHandle);
         }
     }
 }

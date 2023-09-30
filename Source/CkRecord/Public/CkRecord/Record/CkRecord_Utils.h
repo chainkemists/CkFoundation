@@ -266,6 +266,11 @@ namespace ck
 
         auto& RecordEntryFragment = InRecordEntry.Get<ck::FFragment_RecordEntry>();
         RecordEntryFragment._Records.Emplace(InRecordHandle.Get_Entity());
+
+        RecordEntryFragment._DisconnectionFuncs.Add(InRecordHandle.Get_Entity(), [](FCk_Handle InRecordEntity, FCk_Handle InRecordEntryEntity)
+        {
+            InRecordEntity.Get<T_DerivedRecord>()._RecordEntries.Remove(InRecordEntryEntity.Get_Entity());
+        });
     }
 
     template <typename T_DerivedRecord>
@@ -296,6 +301,8 @@ namespace ck
         {
             auto& RecordEntryFragment = InRecordEntry.Get<ck::FFragment_RecordEntry>();
             const auto& RemovalSuccess = RecordEntryFragment._Records.Remove(InRecordHandle.Get_Entity());
+
+            RecordEntryFragment._DisconnectionFuncs.Remove(InRecordHandle.Get_Entity());
 
             CK_ENSURE_IF_NOT(RemovalSuccess,
                 TEXT("The RecordEntry [{}] does NOT have the Record [{}] even though the Record had the RecordEntry. "
