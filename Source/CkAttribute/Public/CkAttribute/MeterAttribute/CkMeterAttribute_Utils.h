@@ -126,7 +126,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Meter",
-              DisplayName = "unbind From On Meter Attribute Value Changed")
+              DisplayName = "Unbind From On Meter Attribute Value Changed")
     static void
     UnbindFrom_OnValueChanged(
         FCk_Handle InAttributeOwnerEntity,
