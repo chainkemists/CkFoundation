@@ -66,8 +66,7 @@ auto
 {
     // NOTES: Meter Attribute is piggy-backing on the Float Attribute (including Replication)
 
-    // TODO: Select Record policy that disallow duplicate based on Gameplay Label
-    RecordOfMeterAttributes_Utils::AddIfMissing(InHandle);
+    RecordOfMeterAttributes_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 
     const auto& AddNewMeterAttributeToEntity = [&](FCk_Handle InAttributeOwner, const FGameplayTag& InAttributeName, FCk_Meter InAttributeBaseValue)
     {
