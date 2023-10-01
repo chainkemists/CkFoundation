@@ -119,7 +119,7 @@ namespace ck
             FCk_Handle InHandle)
         -> bool
     {
-        CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have [{}]"), InHandle, ctti::nameof_v<RecordType>)
+        CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have [{}]"), InHandle, ck::TypeToString<RecordType>)
         { return false; }
 
         return true;

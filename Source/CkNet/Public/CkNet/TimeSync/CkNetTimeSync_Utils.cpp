@@ -37,7 +37,7 @@ auto
     Ensure(FCk_Handle InHandle)
     -> bool
 {
-    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have [{}]"), InHandle, ctti::nameof_v<ck::FFragment_NetTimeSync>)
+    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have [{}]"), InHandle, ck::TypeToString<ck::FFragment_NetTimeSync>)
     { return false; }
 
     return true;
