@@ -2,7 +2,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
-#include "CkCore/Types/DataAsset/CkDataAsset.h"
+#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 
 #include "CkUnreal/Entity/CkUnrealEntity_Fragment_Params.h"
 
@@ -11,30 +11,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, BlueprintType, Blueprintable, EditInlineNew)
-class CKUNREAL_API UCk_UnrealEntity_ConstructionScript_PDA : public UCk_DataAsset_PDA
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_UnrealEntity_ConstructionScript_PDA);
-
-public:
-    auto
-    Construct(
-        const FCk_Handle& InHandle) -> void;
-
-protected:
-    UFUNCTION(BlueprintImplementableEvent,
-              DisplayName = "Construct")
-    void
-    DoConstruct(
-        const FCk_Handle& InHandle);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(Abstract, BlueprintType, Blueprintable, EditInlineNew)
-class CKUNREAL_API UCk_UnrealEntity_ConstructionScript_WithTransform_PDA : public UCk_UnrealEntity_ConstructionScript_PDA
+class CKUNREAL_API UCk_UnrealEntity_ConstructionScript_WithTransform_PDA : public UCk_Entity_ConstructionScript_PDA
 {
     GENERATED_BODY()
 
