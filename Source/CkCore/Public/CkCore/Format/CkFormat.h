@@ -7,6 +7,7 @@
 #define FMT_HEADER_ONLY
 #include "CkThirdParty/fmt/include/fmt/xchar.h"
 #include "CkThirdParty/fmt/include/fmt/format.h"
+#include "CkThirdParty/ctti/include/ctti/nameof.hpp"
 #pragma warning(pop)
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -84,6 +85,10 @@ namespace ck
         return FString{ Format(std::forward<TArgs>(InArgs)...).c_str() };
     }
 
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template<typename T>
+    constexpr ctti::detail::cstring TypeToString = ctti::nameof<T>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

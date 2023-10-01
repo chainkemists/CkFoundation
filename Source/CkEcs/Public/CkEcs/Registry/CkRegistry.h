@@ -226,7 +226,8 @@ auto FCk_Registry::Add(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentTyp
     }
     else
     {
-        CK_ENSURE_IF_NOT(Has<T_FragmentType>(InEntity) == false, TEXT("Fragment [{}] already exists in Entity [{}]."), ctti::nameof<T_FragmentType>(), InEntity)
+        CK_ENSURE_IF_NOT(Has<T_FragmentType>(InEntity) == false, TEXT("Fragment [{}] already exists in Entity [{}]."),
+            ck::TypeToString<T_FragmentType>, InEntity)
         {
             static T_FragmentType Invalid_Fragment;
             return Invalid_Fragment;
@@ -276,7 +277,7 @@ auto FCk_Registry::Replace(EntityType InEntity,
 
     CK_ENSURE_IF_NOT(Has<T_FragmentType>(InEntity),
                      TEXT("Unable to Replace Fragment. Fragment/Tag [{}] does NOT exist in Entity [{}]."),
-                     ctti::nameof<T_FragmentType>(), InEntity)
+                     ck::TypeToString<T_FragmentType>, InEntity)
     {
         static T_FragmentType Invalid_Fragment;
         return Invalid_Fragment;
@@ -296,7 +297,7 @@ auto FCk_Registry::Remove(EntityType InEntity) -> void
 
     CK_ENSURE_IF_NOT(Has<T_Fragment>(InEntity),
                      TEXT("Unable to Remove Fragment/Tag. Fragment/Tag [{}] does NOT exist in Entity [{}]."),
-                     ctti::nameof<T_Fragment>(), InEntity)
+                     ck::TypeToString<T_Fragment>, InEntity)
     { return; }
 
     _InternalRegistry->remove<T_Fragment>(InEntity.Get_ID());
@@ -358,7 +359,7 @@ auto FCk_Registry::Get(EntityType InEntity) -> T_Fragment&
 {
     CK_ENSURE_IF_NOT(Has<T_Fragment>(InEntity),
                      TEXT("Unable to Get Fragment. Fragment [{}] does NOT exist in Entity [{}]."),
-                     ctti::nameof<T_Fragment>(), InEntity)
+                     ck::TypeToString<T_Fragment>, InEntity)
     {
         static T_Fragment Invalid_Fragment;
         return Invalid_Fragment;
@@ -372,7 +373,7 @@ auto FCk_Registry::Get(EntityType InEntity) const -> const T_Fragment&
 {
     CK_ENSURE_IF_NOT(Has<T_Fragment>(InEntity),
                      TEXT("Unable to Get Fragment. Fragment [{}] does NOT exist in Entity [{}]."),
-                     ctti::nameof<T_Fragment>(), InEntity)
+                     ck::TypeToString<T_Fragment>, InEntity)
     {
         static T_Fragment Invalid_Fragment;
         return Invalid_Fragment;

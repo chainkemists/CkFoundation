@@ -34,7 +34,7 @@ namespace ck
             HandleType InHandle)
         -> bool
     {
-        CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have an Attribute [{}]"), InHandle, ctti::nameof_v<T_DerivedAttribute>)
+        CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have an Attribute [{}]"), InHandle, ck::TypeToString<T_DerivedAttribute>)
         { return false; }
 
         return true;
@@ -162,7 +162,7 @@ namespace ck
             HandleType InHandle)
         -> bool
     {
-        CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have an AttributeModifier [{}]"), InHandle, ctti::nameof_v<T_DerivedAttributeModifier>)
+        CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have an AttributeModifier [{}]"), InHandle, ck::TypeToString<T_DerivedAttributeModifier>)
         { return false; }
 
         return true;

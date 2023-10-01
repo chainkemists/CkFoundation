@@ -144,7 +144,7 @@ auto
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to Add Fragment [{}]. Handle [{}] does NOT have a valid Registry."),
-        ctti::nameof_v<T_FragmentType>, *this)
+        ck::TypeToString<T_FragmentType>, *this)
     {
         static T_FragmentType Invalid_Fragment;
         return Invalid_Fragment;
@@ -152,7 +152,7 @@ auto
 
     CK_ENSURE_IF_NOT(IsValid(),
         TEXT("Unable to Add Fragment [{}]. Handle [{}] does NOT have a valid Entity."),
-        ctti::nameof_v<T_FragmentType>, *this)
+        ck::TypeToString<T_FragmentType>, *this)
     {
         static T_FragmentType Invalid_Fragment;
         return Invalid_Fragment;
@@ -170,7 +170,7 @@ auto
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to Add Fragment [{}]. Handle [{}] does NOT have a valid Registry."),
-        ctti::nameof_v<T_FragmentType>, *this)
+        ck::TypeToString<T_FragmentType>, *this)
     {
         static T_FragmentType Invalid_Fragment;
         return Invalid_Fragment;
@@ -178,7 +178,7 @@ auto
 
     CK_ENSURE_IF_NOT(IsValid(),
         TEXT("Unable to Add Fragment [{}]. Handle [{}] does NOT have a valid Entity."),
-        ctti::nameof_v<T_FragmentType>, *this)
+        ck::TypeToString<T_FragmentType>, *this)
     {
         static T_FragmentType Invalid_Fragment;
         return Invalid_Fragment;
@@ -196,12 +196,12 @@ auto
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to Try_Transform Fragment [{}]. Handle [{}] does NOT have a valid Registry."),
-        ctti::nameof_v<T_FragmentType>, *this)
+        ck::TypeToString<T_FragmentType>, *this)
     { return; }
 
     CK_ENSURE_IF_NOT(IsValid(),
         TEXT("Unable to Try_Transform Fragment [{}]. Handle [{}] does NOT have a valid Entity."),
-        ctti::nameof_v<T_FragmentType>, *this)
+        ck::TypeToString<T_FragmentType>, *this)
     { return; }
 
     _Registry->Try_Transform<T_FragmentType>(_Entity, InFunc);
@@ -216,7 +216,7 @@ auto
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to Replace Fragment [{}]. Handle [{}] does NOT have a valid Registry."),
-        ctti::nameof_v<T_FragmentType>, *this)
+        ck::TypeToString<T_FragmentType>, *this)
     {
         static T_FragmentType Invalid_Fragment;
         return Invalid_Fragment;
@@ -224,7 +224,7 @@ auto
 
     CK_ENSURE_IF_NOT(IsValid(),
         TEXT("Unable to Replace Fragment [{}]. Handle [{}] does NOT have a valid Entity."),
-        ctti::nameof_v<T_FragmentType>, *this)
+        ck::TypeToString<T_FragmentType>, *this)
     {
         static T_FragmentType Invalid_Fragment;
         return Invalid_Fragment;
@@ -241,12 +241,12 @@ auto
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to Remove Fragment [{}]. Handle [{}] does NOT have a valid Registry."),
-        ctti::nameof_v<T_Fragment>, *this)
+        ck::TypeToString<T_Fragment>, *this)
     { return; }
 
     CK_ENSURE_IF_NOT(IsValid(),
         TEXT("Unable to Remove Fragment [{}]. Handle [{}] does NOT have a valid Entity."),
-        ctti::nameof_v<T_Fragment>, *this)
+        ck::TypeToString<T_Fragment>, *this)
     { return; }
 
     return _Registry->Remove<T_Fragment>(_Entity);
@@ -260,12 +260,12 @@ auto
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to Try_Remove Fragment [{}]. Handle [{}] does NOT have a valid Registry."),
-        ctti::nameof_v<T_Fragment>, *this)
+        ck::TypeToString<T_Fragment>, *this)
     { return {}; }
 
     CK_ENSURE_IF_NOT(IsValid(),
         TEXT("Unable to Try_Remove Fragment [{}]. Handle [{}] does NOT have a valid Entity."),
-        ctti::nameof_v<T_Fragment>, *this)
+        ck::TypeToString<T_Fragment>, *this)
     { return {}; }
 
     return _Registry->Remove<T_Fragment>(_Entity);
@@ -311,7 +311,7 @@ auto
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to perform Has query with Fragment [{}]. Handle [{}] does NOT have a valid Registry."),
-        ctti::nameof_v<T_Fragment>, *this)
+        ck::TypeToString<T_Fragment>, *this)
     { return {}; }
 
     return _Registry->Has<T_Fragment>(_Entity);
