@@ -321,7 +321,7 @@ auto
 
     CK_ENSURE_IF_NOT(ck::IsValid(CsWithTransform), TEXT("Entity Construction Script [{}] for Actor [{}] is NOT one with Transform. "
         "Entity Construction Scripts that have an Actor attached MUST use [{}]."), _UnrealEntity->Get_EntityConstructionScript(), OwningActor,
-        ctti::nameof_v<UCk_UnrealEntity_ConstructionScript_WithTransform_PDA>)
+        ck::TypeToString<UCk_UnrealEntity_ConstructionScript_WithTransform_PDA>)
     { return; }
 
     CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
@@ -349,7 +349,7 @@ auto
 
     CK_ENSURE_IF_NOT(ck::IsValid(ConstructionScript),
         TEXT("Found a REPLICATED with AUTHORITY Actor [{}] BUT it does NOT have [{}]. Are you sure this Actor's construction involved a Replicated Actor?[{}]"),
-        this, ctti::nameof_v<ThisType>, ck::Context(this))
+        this, ck::TypeToString<ThisType>, ck::Context(this))
     { return; }
 
     if (GetWorld()->IsNetMode(NM_Client))

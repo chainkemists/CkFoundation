@@ -28,7 +28,7 @@ auto
     -> bool
 {
     CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have a [{}]"),
-        InHandle, ctti::nameof_v<ck::FFragment_RecordEntry>)
+        InHandle, ck::TypeToString<ck::FFragment_RecordEntry>)
     { return false; }
 
     return true;
