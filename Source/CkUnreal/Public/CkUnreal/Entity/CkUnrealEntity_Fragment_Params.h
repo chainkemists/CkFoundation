@@ -23,13 +23,13 @@ public:
     auto Build(FCk_Handle InEntity) const -> void;
 
     [[nodiscard]]
-    auto Get_EntityConstructionScript() const -> class UCk_UnrealEntity_ConstructionScript_PDA*;
+    auto Get_EntityConstructionScript() const -> class UCk_Entity_ConstructionScript_PDA*;
 
 protected:
     virtual auto DoBuild(FCk_Handle InHandle) const -> void;
 
     [[nodiscard]]
-    virtual auto DoGet_EntityConstructionScript() const -> UCk_UnrealEntity_ConstructionScript_PDA*;
+    virtual auto DoGet_EntityConstructionScript() const -> class UCk_Entity_ConstructionScript_PDA*;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -46,12 +46,12 @@ public:
 
 private:
     auto
-    DoGet_EntityConstructionScript() const -> UCk_UnrealEntity_ConstructionScript_PDA* override;
+    DoGet_EntityConstructionScript() const -> class UCk_Entity_ConstructionScript_PDA* override;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
               meta = (AllowPrivateAccess = true, ExposeOnSpawn = true))
-    TObjectPtr<class UCk_UnrealEntity_ConstructionScript_PDA> _EntityConstructionScript;
+    TObjectPtr<class UCk_Entity_ConstructionScript_PDA> _EntityConstructionScript;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -68,7 +68,7 @@ public:
 
 private:
     auto
-    DoGet_EntityConstructionScript() const ->  UCk_UnrealEntity_ConstructionScript_PDA* override;
+    DoGet_EntityConstructionScript() const ->  class UCk_Entity_ConstructionScript_PDA* override;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,

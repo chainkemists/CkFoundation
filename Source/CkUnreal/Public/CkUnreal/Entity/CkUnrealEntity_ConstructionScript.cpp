@@ -6,11 +6,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_UnrealEntity_ConstructionScript_PDA::Construct(const FCk_Handle& InHandle) -> void
-{
-    DoConstruct(InHandle);
-}
-
 auto UCKk_Utils_UnrealEntity_ConstructionScript_UE::
 BuildEntity(
     FCk_Handle InHandle,

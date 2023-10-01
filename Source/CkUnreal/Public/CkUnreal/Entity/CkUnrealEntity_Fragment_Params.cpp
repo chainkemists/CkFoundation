@@ -1,34 +1,43 @@
 #include "CkUnrealEntity_Fragment_Params.h"
 
-#include "CkUnreal/Entity/CkUnrealEntity_ConstructionScript.h"
-
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
+
+#include "CkUnreal/Entity/CkUnrealEntity_ConstructionScript.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_UnrealEntity_Base_PDA::
-Get_EntityConstructionScript() const -> UCk_UnrealEntity_ConstructionScript_PDA*
+auto
+    UCk_UnrealEntity_Base_PDA::
+    Get_EntityConstructionScript() const
+    -> UCk_Entity_ConstructionScript_PDA*
 {
     return DoGet_EntityConstructionScript();
 }
 
-auto UCk_UnrealEntity_Base_PDA::
-DoGet_EntityConstructionScript() const -> UCk_UnrealEntity_ConstructionScript_PDA*
+auto
+    UCk_UnrealEntity_Base_PDA::
+    DoGet_EntityConstructionScript() const
+    -> UCk_Entity_ConstructionScript_PDA*
 {
     CK_ENSURE_FALSE(TEXT("DoGet_EntityConstructionScript was not Overriden in [{}]"), this);
     return {};
 }
 
-auto UCk_UnrealEntity_PDA::
-DoGet_EntityConstructionScript() const -> UCk_UnrealEntity_ConstructionScript_PDA*
+auto
+    UCk_UnrealEntity_PDA::
+    DoGet_EntityConstructionScript() const
+    -> UCk_Entity_ConstructionScript_PDA*
 {
     return _EntityConstructionScript;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCk_UnrealEntity_ConstructionScript_PDA*
-    UCk_UnrealEntity_WithActor_PDA::DoGet_EntityConstructionScript() const
+auto
+    UCk_UnrealEntity_WithActor_PDA::
+    DoGet_EntityConstructionScript() const
+    -> UCk_Entity_ConstructionScript_PDA*
 {
     return _EntityConstructionScript;
 }
