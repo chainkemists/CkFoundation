@@ -37,6 +37,28 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKATTRIBUTE_API FCk_Fragment_MultipleFloatAttribute_ParamsData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Fragment_MultipleFloatAttribute_ParamsData);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<FCk_Fragment_FloatAttribute_ParamsData> _FloatAttributeParams;
+
+public:
+    CK_PROPERTY_GET(_FloatAttributeParams)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleFloatAttribute_ParamsData, _FloatAttributeParams);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKATTRIBUTE_API FCk_Fragment_FloatAttributeModifier_ParamsData
 {
     GENERATED_BODY()
@@ -69,50 +91,102 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, Blueprintable, BlueprintType, EditInlineNew)
-class CKATTRIBUTE_API UCk_Provider_Multiple_FloatAttribute_ParamsData_PDA : public UCk_Provider_PDA
+class CKATTRIBUTE_API UCk_Provider_FloatAttribute_ParamsData_PDA : public UCk_Provider_PDA
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Provider_Multiple_FloatAttribute_ParamsData_PDA);
+    CK_GENERATED_BODY(UCk_Provider_FloatAttribute_ParamsData_PDA);
 
 public:
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
               Category = "Ck|Provider|FloatAttribute")
-    TArray<FCk_Fragment_FloatAttribute_ParamsData> Get_Value() const;
+    FCk_Fragment_FloatAttribute_ParamsData Get_Value() const;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKATTRIBUTE_API UCk_Provider_Multiple_FloatAttribute_ParamsData_Literal_PDA : public UCk_Provider_Multiple_FloatAttribute_ParamsData_PDA
+class CKATTRIBUTE_API UCk_Provider_FloatAttribute_ParamsData_Literal_PDA : public UCk_Provider_FloatAttribute_ParamsData_PDA
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Provider_Multiple_FloatAttribute_ParamsData_Literal_PDA);
+    CK_GENERATED_BODY(UCk_Provider_FloatAttribute_ParamsData_Literal_PDA);
 
 private:
-    auto Get_Value_Implementation() const -> TArray<FCk_Fragment_FloatAttribute_ParamsData> override;
+    auto Get_Value_Implementation() const -> FCk_Fragment_FloatAttribute_ParamsData override;
 
 private:
     UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
-    TArray<FCk_Fragment_FloatAttribute_ParamsData> _Value;
+    FCk_Fragment_FloatAttribute_ParamsData _Value;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKATTRIBUTE_API FCk_Provider_Multiple_FloatAttribute_ParamsData
+struct CKATTRIBUTE_API FCk_Provider_FloatAttribute_ParamsData
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Provider_Multiple_FloatAttribute_ParamsData);
+    CK_GENERATED_BODY(FCk_Provider_FloatAttribute_ParamsData);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCk_Provider_Multiple_FloatAttribute_ParamsData_PDA> _Provider;
+    TObjectPtr<UCk_Provider_FloatAttribute_ParamsData_PDA> _Provider;
+
+public:
+    CK_PROPERTY_GET(_Provider);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(Abstract, Blueprintable, BlueprintType, EditInlineNew)
+class CKATTRIBUTE_API UCk_Provider_MultipleFloatAttribute_ParamsData_PDA : public UCk_Provider_PDA
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Provider_MultipleFloatAttribute_ParamsData_PDA);
+
+public:
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
+              Category = "Ck|Provider|FloatAttribute")
+    FCk_Fragment_MultipleFloatAttribute_ParamsData Get_Value() const;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable)
+class CKATTRIBUTE_API UCk_Provider_MultipleFloatAttribute_ParamsData_Literal_PDA : public UCk_Provider_MultipleFloatAttribute_ParamsData_PDA
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Provider_MultipleFloatAttribute_ParamsData_Literal_PDA);
+
+private:
+    auto Get_Value_Implementation() const -> FCk_Fragment_MultipleFloatAttribute_ParamsData override;
+
+private:
+    UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
+    FCk_Fragment_MultipleFloatAttribute_ParamsData _Value;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKATTRIBUTE_API FCk_Provider_MultipleFloatAttribute_ParamsData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Provider_MultipleFloatAttribute_ParamsData);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, meta = (AllowPrivateAccess = true))
+    TObjectPtr<UCk_Provider_MultipleFloatAttribute_ParamsData_PDA> _Provider;
 
 public:
     CK_PROPERTY_GET(_Provider);

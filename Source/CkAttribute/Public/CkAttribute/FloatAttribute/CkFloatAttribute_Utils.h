@@ -45,7 +45,7 @@ public:
     static void
     AddMultiple(
         FCk_Handle InHandle,
-        const TArray<FCk_Fragment_FloatAttribute_ParamsData>& InParams);
+        const FCk_Fragment_MultipleFloatAttribute_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
