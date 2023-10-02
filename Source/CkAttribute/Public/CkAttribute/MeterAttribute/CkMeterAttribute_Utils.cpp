@@ -81,10 +81,13 @@ auto
         UCk_Utils_FloatAttribute_UE::AddMultiple
         (
             NewAttributeEntity,
+            FCk_Fragment_MultipleFloatAttribute_ParamsData
             {
-                { ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity(), MeterCapacity.Get_MinCapacity() },
-                { ck_meter_attribute::FMeterAttribute_Tags::Get_MaxCapacity(), MeterCapacity.Get_MaxCapacity() },
-                { ck_meter_attribute::FMeterAttribute_Tags::Get_Current(), MeterStartingPercentage.Get_Value() }
+                {
+                    { ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity(), MeterCapacity.Get_MinCapacity() },
+                    { ck_meter_attribute::FMeterAttribute_Tags::Get_MaxCapacity(), MeterCapacity.Get_MaxCapacity() },
+                    { ck_meter_attribute::FMeterAttribute_Tags::Get_Current(), MeterStartingPercentage.Get_Value() }
+                }
             }
         );
 
@@ -99,11 +102,11 @@ auto
 auto
     UCk_Utils_MeterAttribute_UE::
     AddMultiple(
-        FCk_Handle                                            InHandle,
-        const TArray<FCk_Fragment_MeterAttribute_ParamsData>& InParams)
+        FCk_Handle InHandle,
+        const FCk_Fragment_MultipleMeterAttribute_ParamsData& InParams)
     -> void
 {
-    for (const auto& param : InParams)
+    for (const auto& param : InParams.Get_MeterAttributeParams())
     {
         Add(InHandle, param);
     }
@@ -402,7 +405,7 @@ auto
     const auto& ModifyCurrentValue = EnumHasAnyFlags(ModifierPolicy, ECk_MeterAttributeModifier_Policy::CurrentValue);
 
     CK_ENSURE_IF_NOT(ModifyMinCapacity || ModifyMaxCapacity || ModifyCurrentValue,
-        TEXT("Cannot Meter Attribute Modifier [{}] to Entity [{}] because it targets NO meter component (MinCapacity, MaxCapacity or CurrentValue)"))
+        TEXT("Cannot Add Meter Attribute Modifier [{}] to Entity [{}] because it targets NO meter component (MinCapacity, MaxCapacity or CurrentValue)"))
     { return; }
 
     const auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_RecordEntryIf

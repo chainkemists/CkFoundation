@@ -38,11 +38,11 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     AddMultiple(
-        FCk_Handle                                            InHandle,
-        const TArray<FCk_Fragment_FloatAttribute_ParamsData>& InParams)
+        FCk_Handle InHandle,
+        const FCk_Fragment_MultipleFloatAttribute_ParamsData& InParams)
     -> void
 {
-    for (const auto& param : InParams)
+    for (const auto& param : InParams.Get_FloatAttributeParams())
     {
         Add(InHandle, param);
     }
