@@ -4,7 +4,7 @@
 
 DEFINE_LOG_CATEGORY(CkEcsBasics);
 
-namespace ck::log
+namespace ck::ecs_basics
 {
 	CK_REGISTER_LOG_FUNCTIONS(CkEcsBasics);
 }
