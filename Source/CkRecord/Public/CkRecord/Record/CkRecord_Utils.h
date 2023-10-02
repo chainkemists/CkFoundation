@@ -99,7 +99,11 @@ namespace ck
             ECk_Record_EntryHandlingPolicy _EntryHandlingPolicy)
         -> void
     {
-        InHandle.AddOrGet<RecordType>(_EntryHandlingPolicy);
+        const auto& Record = InHandle.AddOrGet<RecordType>();
+        CK_ENSURE_IF_NOT(Record.Get_EntryHandlingPolicy() == _EntryHandlingPolicy,
+            TEXT("Trying to Add a Record with a different EntryHandlingPolicy to Entity [{}]"),
+            InHandle)
+        {}
     }
 
     template <typename T_DerivedRecord>
