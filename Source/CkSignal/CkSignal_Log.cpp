@@ -4,7 +4,7 @@
 
 DEFINE_LOG_CATEGORY(CkSignal);
 
-namespace ck::log
+namespace ck::signal
 {
 	CK_REGISTER_LOG_FUNCTIONS(CkSignal);
 }

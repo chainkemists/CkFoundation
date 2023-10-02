@@ -14,7 +14,6 @@ CKECS_API DECLARE_LOG_CATEGORY_EXTERN(CkEcs, Log, All);
 namespace ck::ecs
 {
     CK_DEFINE_LOG_FUNCTIONS(CkEcs);
-    CK_REGISTER_LOG_FUNCTIONS(CkEcs);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
