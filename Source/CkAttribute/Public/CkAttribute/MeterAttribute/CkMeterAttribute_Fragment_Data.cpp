@@ -14,7 +14,8 @@ auto
 
 auto
     UCk_Provider_MeterAttribute_ParamsData_PDA::
-    Get_Value_Implementation() const
+    Get_Value_Implementation(
+        FCk_Handle InHandle) const
     -> FCk_Fragment_MeterAttribute_ParamsData
 {
     return {};
@@ -24,7 +25,8 @@ auto
 
 auto
     UCk_Provider_MeterAttribute_ParamsData_Literal_PDA::
-    Get_Value_Implementation() const
+    Get_Value_Implementation(
+        FCk_Handle InHandle) const
     -> FCk_Fragment_MeterAttribute_ParamsData
 {
     return _Value;
@@ -34,7 +36,8 @@ auto
 
 auto
     UCk_Provider_MultipleMeterAttribute_ParamsData_PDA::
-    Get_Value_Implementation() const
+    Get_Value_Implementation(
+        FCk_Handle InHandle) const
     -> FCk_Fragment_MultipleMeterAttribute_ParamsData
 {
     return {};
@@ -44,7 +47,8 @@ auto
 
 auto
     UCk_Provider_MultipleMeterAttribute_ParamsData_Literal_PDA::
-    Get_Value_Implementation() const
+    Get_Value_Implementation(
+        FCk_Handle InHandle) const
     -> FCk_Fragment_MultipleMeterAttribute_ParamsData
 {
     return _Value;
