@@ -41,6 +41,18 @@ auto
 
 auto
     UCk_Utils_OwningActor_UE::
+    Get_EntityOwningActor(
+        FCk_Handle InHandle)
+    -> AActor*
+{
+    if (NOT Ensure(InHandle))
+    { return {}; }
+
+    return Get_EntityOwningActorBasicDetails(InHandle).Get_Actor().Get();
+}
+
+auto
+    UCk_Utils_OwningActor_UE::
     Get_EntityOwningActorBasicDetails(
         FCk_Handle InHandle)
     -> FCk_EntityOwningActor_BasicDetails

@@ -41,6 +41,12 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor")
+    static AActor*
+    Get_EntityOwningActor(
+        FCk_Handle InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|OwningActor")
     static FCk_EntityOwningActor_BasicDetails
     Get_EntityOwningActorBasicDetails(
         FCk_Handle InHandle);
