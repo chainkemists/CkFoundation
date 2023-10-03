@@ -101,7 +101,9 @@ public:
 public:
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
               Category = "Ck|Provider|FloatAttribute")
-    FCk_Fragment_FloatAttribute_ParamsData Get_Value() const;
+    FCk_Fragment_FloatAttribute_ParamsData
+    Get_Value(
+        FCk_Handle InHandle) const;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -115,7 +117,8 @@ public:
     CK_GENERATED_BODY(UCk_Provider_FloatAttribute_ParamsData_Literal_PDA);
 
 private:
-    auto Get_Value_Implementation() const -> FCk_Fragment_FloatAttribute_ParamsData override;
+    auto Get_Value_Implementation(
+        FCk_Handle InHandle) const -> FCk_Fragment_FloatAttribute_ParamsData override;
 
 private:
     UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
@@ -153,7 +156,9 @@ public:
 public:
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
               Category = "Ck|Provider|FloatAttribute")
-    FCk_Fragment_MultipleFloatAttribute_ParamsData Get_Value() const;
+    FCk_Fragment_MultipleFloatAttribute_ParamsData
+    Get_Value(
+        FCk_Handle InHandle) const;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -167,7 +172,8 @@ public:
     CK_GENERATED_BODY(UCk_Provider_MultipleFloatAttribute_ParamsData_Literal_PDA);
 
 private:
-    auto Get_Value_Implementation() const -> FCk_Fragment_MultipleFloatAttribute_ParamsData override;
+    auto Get_Value_Implementation(
+        FCk_Handle InHandle) const -> FCk_Fragment_MultipleFloatAttribute_ParamsData override;
 
 private:
     UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))

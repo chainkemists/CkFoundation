@@ -125,7 +125,9 @@ public:
 public:
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
               Category = "Ck|Provider|MeterAttribute")
-    FCk_Fragment_MeterAttribute_ParamsData Get_Value() const;
+    FCk_Fragment_MeterAttribute_ParamsData
+    Get_Value(
+        FCk_Handle InHandle) const;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -139,7 +141,8 @@ public:
     CK_GENERATED_BODY(UCk_Provider_MeterAttribute_ParamsData_Literal_PDA);
 
 private:
-    auto Get_Value_Implementation() const -> FCk_Fragment_MeterAttribute_ParamsData override;
+    auto Get_Value_Implementation(
+        FCk_Handle InHandle) const -> FCk_Fragment_MeterAttribute_ParamsData override;
 
 private:
     UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
@@ -177,7 +180,9 @@ public:
 public:
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
               Category = "Ck|Provider|MeterAttribute")
-    FCk_Fragment_MultipleMeterAttribute_ParamsData Get_Value() const;
+    FCk_Fragment_MultipleMeterAttribute_ParamsData
+    Get_Value(
+        FCk_Handle InHandle) const;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -191,7 +196,8 @@ public:
     CK_GENERATED_BODY(UCk_Provider_MultipleMeterAttribute_ParamsData_Literal_PDA);
 
 private:
-    auto Get_Value_Implementation() const -> FCk_Fragment_MultipleMeterAttribute_ParamsData override;
+    auto Get_Value_Implementation(
+        FCk_Handle InHandle) const -> FCk_Fragment_MultipleMeterAttribute_ParamsData override;
 
 private:
     UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
