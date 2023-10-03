@@ -99,7 +99,7 @@ namespace ck
             ECk_Record_EntryHandlingPolicy _EntryHandlingPolicy)
         -> void
     {
-        const auto& Record = InHandle.AddOrGet<RecordType>();
+        const auto& Record = InHandle.AddOrGet<RecordType>(_EntryHandlingPolicy);
         CK_ENSURE_IF_NOT(Record.Get_EntryHandlingPolicy() == _EntryHandlingPolicy,
             TEXT("Trying to Add a Record with a different EntryHandlingPolicy to Entity [{}]"),
             InHandle)
