@@ -238,6 +238,30 @@ auto
 
 auto
     UCk_Utils_Net_UE::
+    Get_NetMode(
+        const UObject* InContext)
+    -> ECk_Net_NetRoleType
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InContext), TEXT("Invalid Object!"))
+    { return {}; }
+
+    switch(auto NetMode = InContext->GetWorld()->GetNetMode())
+    {
+    case NM_Standalone:
+    case NM_DedicatedServer:
+    case NM_ListenServer:
+        return ECk_Net_NetRoleType::Host;
+    case NM_Client:
+        return ECk_Net_NetRoleType::Client;
+    case NM_MAX:
+    default:
+        CK_ENSURE_FALSE(TEXT("Invalid NetMode for [{}]."), InContext);
+        return ECk_Net_NetRoleType::None;
+    }
+}
+
+auto
+    UCk_Utils_Net_UE::
     Get_IsEntityNetMode_Host(
         FCk_Handle InHandle)
     -> bool
