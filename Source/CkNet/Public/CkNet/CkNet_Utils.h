@@ -92,6 +92,11 @@ public:
     Get_NetRole(const UObject* InContext = nullptr);
 
     UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
+    static ECk_Net_NetRoleType
+    Get_NetMode(const UObject* InContext = nullptr);
+
+    UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Net")
     static bool
     Get_IsEntityNetMode_Host(FCk_Handle InHandle);
