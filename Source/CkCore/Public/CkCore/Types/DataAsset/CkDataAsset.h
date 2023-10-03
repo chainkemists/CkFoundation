@@ -9,6 +9,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class UWorld;
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(BlueprintType, EditInlineNew)
 class CKCORE_API UCk_DataAsset_PDA : public UPrimaryDataAsset
 {
@@ -16,6 +20,9 @@ class CKCORE_API UCk_DataAsset_PDA : public UPrimaryDataAsset
 
 public:
     CK_GENERATED_BODY(UCk_DataAsset_PDA);
+
+public:
+    auto GetWorld() const -> UWorld* override;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
