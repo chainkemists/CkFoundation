@@ -352,7 +352,11 @@ auto
         this, ck::TypeToString<ThisType>, ck::Context(this))
     { return; }
 
-    if (GetWorld()->IsNetMode(NM_Client))
+    // We only want to go INTO this if, IF we are the Client that has a non-replicated Actor with replicated Entities
+    // (i.e. replicated construction script). So we make sure that IF we have already handled the replicated data
+    // we do not need to continue the 'chain' of replication
+    // TODO: along with everything in this file, this needs refactoring
+    if (GetWorld()->IsNetMode(NM_Client) && NOT _ReplicationDataReplicated)
     {
         ConstructionScript->Request_ReplicateActor_OnServer
         (
