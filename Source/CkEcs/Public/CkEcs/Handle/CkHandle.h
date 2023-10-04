@@ -2,14 +2,13 @@
 
 #include "CkEcs/Entity/CkEntity.h"
 #include "CkEcs/Registry/CkRegistry.h"
+#include "CkEcs/Handle/CkHandle_Debugging.h"
 
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkHandle.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-
-struct FCk_Entity;
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak="CkEcs.Ck_Utils_Handle_UE.Break_Handle"))
 struct CKECS_API FCk_Handle
@@ -27,6 +26,17 @@ public:
 public:
     FCk_Handle() = default;
     FCk_Handle(FEntityType InEntity, const FRegistryType& InRegistry);
+
+    FCk_Handle(ThisType&& InOther) noexcept;
+    FCk_Handle(const ThisType& InOther);
+
+    auto operator=(ThisType InOther) -> ThisType&;
+    // auto operator=(ThisType&& InOther) -> ThisType&; // intentionally not implemented
+
+    ~FCk_Handle();
+
+public:
+    auto Swap(ThisType& InOther) -> void;
 
 public:
     auto operator==(const ThisType& InOther) const -> bool;
@@ -91,10 +101,16 @@ public:
     auto Get_Registry() const -> const FCk_Registry&;
 
 private:
+    void DoUpdate_MapperAndFragments();
+
+private:
     UPROPERTY()
     FCk_Entity _Entity;
 
     TOptional<FCk_Registry> _Registry;
+
+    // TODO: wrap in pre-processor macro to compile this out in builds such as Shipping
+    const struct FEntity_FragmentMapper* _Mapper = nullptr;
 
 public:
     CK_PROPERTY(_Entity);
@@ -109,8 +125,13 @@ private:
 
     UPROPERTY(VisibleAnywhere)
     int32 _EntityVersion;
+
+    UPROPERTY(VisibleAnywhere)
+    TObjectPtr<class UCk_Handle_FragmentsDebug> _Fragments = nullptr;
 #endif
 };
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto CKECS_API GetTypeHash(FCk_Handle InHandle) -> uint32;
 
@@ -158,7 +179,17 @@ auto
         return Invalid_Fragment;
     }
 
-    return _Registry->Add<T_FragmentType>(_Entity, std::forward<T_Args>(InArgs)...);
+    if (NOT Has<T_FragmentType>())
+    {
+        _Mapper = &_Registry->AddOrGet<FEntity_FragmentMapper>(_Entity);
+        _Mapper->Add_FragmentGetter<T_FragmentType>();
+    }
+
+    auto& NewFragment = _Registry->Add<T_FragmentType>(_Entity, std::forward<T_Args>(InArgs)...);
+
+    DoUpdate_MapperAndFragments();
+
+    return NewFragment;
 }
 
 template <typename T_FragmentType, typename ... T_Args>
@@ -184,7 +215,17 @@ auto
         return Invalid_Fragment;
     }
 
-    return _Registry->AddOrGet<T_FragmentType>(_Entity, std::forward<T_Args>(InArgs)...);
+    if (NOT Has<T_FragmentType>())
+    {
+        _Mapper = &_Registry->AddOrGet<FEntity_FragmentMapper>(_Entity);
+        _Mapper->Add_FragmentGetter<T_FragmentType>();
+    }
+
+    auto& NewOrExistingFragment = _Registry->AddOrGet<T_FragmentType>(_Entity, std::forward<T_Args>(InArgs)...);
+
+    DoUpdate_MapperAndFragments();
+
+    return NewOrExistingFragment;
 }
 
 template <typename T_FragmentType, typename T_Func>
@@ -249,7 +290,9 @@ auto
         ck::TypeToString<T_Fragment>, *this)
     { return; }
 
-    return _Registry->Remove<T_Fragment>(_Entity);
+    _Registry->Remove<T_Fragment>(_Entity);
+
+    DoUpdate_MapperAndFragments();
 }
 
 template <typename T_Fragment>
@@ -373,6 +416,32 @@ auto
     }
 
     return _Registry->Get<T_Fragment>(_Entity);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// FEntity_FragmentMapper::ConceptImpl_GetFragment definition here instead of CkHandle_Debugging.h due to a circular
+// dependency
+template <typename T_Fragment>
+auto
+    FEntity_FragmentMapper::ConceptImpl_GetFragment<T_Fragment>::
+    Get_Fragment(
+        const FCk_Handle& InHandle) const
+    -> FCk_DebugWrapper*
+{
+    if (NOT InHandle.Has<T_Fragment>())
+    {
+        return {};
+    }
+
+    if constexpr (std::is_empty_v<T_Fragment>)
+    {
+        return new TCk_DebugWrapper<T_Fragment>{nullptr};
+    }
+    else
+    {
+        return new TCk_DebugWrapper<T_Fragment>{&InHandle.Get<T_Fragment>()};
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

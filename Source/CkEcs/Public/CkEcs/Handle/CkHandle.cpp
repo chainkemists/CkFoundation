@@ -1,8 +1,16 @@
 #include "CkHandle.h"
 
+#include "CkCore/Object/CkObject_Utils.h"
+
+#include "CkEcs/Handle/CkHandle_Debugging.h"
+#include "CkEcs/Handle/CkHandle_Debugging_Data.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Handle::FCk_Handle(FEntityType InEntity, const FRegistryType& InRegistry)
+FCk_Handle::
+    FCk_Handle(
+        FEntityType InEntity,
+        const FRegistryType& InRegistry)
     : _Entity(InEntity)
     , _Registry(InRegistry)
 #if WITH_EDITORONLY_DATA
@@ -11,6 +19,74 @@ FCk_Handle::FCk_Handle(FEntityType InEntity, const FRegistryType& InRegistry)
     , _EntityVersion(_Entity.Get_VersionNumber())
 #endif
 {
+    DoUpdate_MapperAndFragments();
+}
+
+FCk_Handle::
+    FCk_Handle(
+        ThisType&& InOther) noexcept
+    : _Entity(std::move(InOther._Entity))
+    , _Registry(std::move(InOther._Registry))
+    , _Mapper(std::move(InOther._Mapper))
+#if WITH_EDITORONLY_DATA
+    , _EntityID(std::move(InOther._EntityID))
+    , _EntityNumber(std::move(InOther._EntityNumber))
+    , _EntityVersion(std::move(InOther._EntityVersion))
+    , _Fragments(std::move(InOther._Fragments))
+#endif
+{
+}
+
+FCk_Handle::
+    FCk_Handle(
+        const ThisType& InOther)
+    : _Entity(InOther._Entity)
+    , _Registry(InOther._Registry)
+    , _Mapper(InOther._Mapper)
+#if WITH_EDITORONLY_DATA
+    , _EntityID(InOther._EntityID)
+    , _EntityNumber(InOther._EntityNumber)
+    , _EntityVersion(InOther._EntityVersion)
+    , _Fragments(InOther._Fragments)
+#endif
+{
+}
+
+auto
+    FCk_Handle::
+    operator=(
+        ThisType InOther) -> ThisType&
+{
+    Swap(InOther);
+    DoUpdate_MapperAndFragments();
+    return *this;
+}
+
+FCk_Handle::
+    ~FCk_Handle()
+{
+    if (ck::Is_NOT_Valid(_Fragments))
+    { return; }
+
+    if (NOT _Fragments->IsRooted())
+    { return; }
+
+    _Fragments->RemoveFromRoot();
+}
+
+auto
+    FCk_Handle::Swap(
+        ThisType& InOther) -> void
+{
+    ::Swap(_Entity, InOther._Entity);
+    ::Swap(_Registry, InOther._Registry);
+    ::Swap(_Mapper, InOther._Mapper);
+#if WITH_EDITORONLY_DATA
+    ::Swap(_EntityID, InOther._EntityID);
+    ::Swap(_EntityNumber, InOther._EntityNumber);
+    ::Swap(_EntityVersion, InOther._EntityVersion);
+    ::Swap(_Fragments, InOther._Fragments);
+#endif
 }
 
 auto
@@ -76,6 +152,32 @@ auto
 {
     return *_Registry;
 }
+
+auto
+    FCk_Handle::
+    DoUpdate_MapperAndFragments()
+    -> void
+{
+    if (NOT IsValid())
+    { return; }
+
+    if (Has<FEntity_FragmentMapper>())
+    {
+        _Mapper = &Get<FEntity_FragmentMapper>();
+
+        if (ck::Is_NOT_Valid(_Fragments))
+        {
+            _Fragments = UCk_Utils_Object_UE::Request_CreateNewObject_TransientPackage<UCk_Handle_FragmentsDebug>();
+
+            if (_Fragments->IsSafeForRootSet())
+            { _Fragments->AddToRoot(); }
+        }
+
+        _Fragments->_Names = _Mapper->ProcessAll(*this);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     GetTypeHash(
