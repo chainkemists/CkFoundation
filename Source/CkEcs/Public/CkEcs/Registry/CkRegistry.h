@@ -233,8 +233,7 @@ auto FCk_Registry::Add(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentTyp
             return Invalid_Fragment;
         }
 
-        auto& Fragment = _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID(), std::forward<T_Args>(InArgs)...);
-        return Fragment;
+        return _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID(), std::forward<T_Args>(InArgs)...);
     }
 }
 

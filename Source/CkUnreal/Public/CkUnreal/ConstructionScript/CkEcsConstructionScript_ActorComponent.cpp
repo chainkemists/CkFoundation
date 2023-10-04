@@ -14,6 +14,7 @@
 
 #include "CkNet/CkNet_Fragment.h"
 #include "CkNet/CkNet_Utils.h"
+#include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
 #include "CkUnreal/CkUnreal_Log.h"
 #include "CkUnreal/Entity/CkUnrealEntity_ConstructionScript.h"
@@ -166,6 +167,8 @@ auto
 
             const auto& NewActorBasicInfo = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(NewOrExistingActor);
 
+            UCk_Utils_Net_UE::Add(NewActorBasicInfo.Get_Handle(),
+                FCk_Net_ConnectionSettings{ECk_Net_NetRoleType::Client, ECk_Net_EntityNetRole::Proxy});
             UCk_Utils_ReplicatedObjects_UE::Add(NewActorBasicInfo.Get_Handle(), ROs);
         }
         else
@@ -175,6 +178,8 @@ auto
                 static_cast<FCk_Entity::IdType>(InRequest.Get_OriginalOwnerEntity())
             );
 
+            UCk_Utils_Net_UE::Add(OriginalOwnerHandle,
+                FCk_Net_ConnectionSettings{ECk_Net_NetRoleType::Client, ECk_Net_EntityNetRole::Authority});
             UCk_Utils_ReplicatedObjects_UE::Add(OriginalOwnerHandle, ROs);
         }
 
@@ -251,11 +256,6 @@ auto
 
     _Entity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
 
-    if (OwningActor->IsNetMode(NM_DedicatedServer))
-    {
-        UCk_Utils_Net_UE::Request_MarkEntityAs_DedicatedServer(_Entity);
-    }
-
     // --------------------------------------------------------------------------------------------------------------------
     // LINK TO ACTOR
     // EcsConstructionScript is a bit special in that it readies everything immediately instead of deferring the operation
@@ -286,6 +286,9 @@ auto
             [&](UCk_ObjectReplicator_ActorComponent_UE* InComp) { }
         );
     }
+
+    // Add the replication driver here
+    UCk_Utils_EntityReplicationDriver_UE::Add(_Entity);
 
     if (_ReplicationDataReplicated)
     {
