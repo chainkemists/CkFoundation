@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="FCk_Entity">
+    <DisplayString>{{ {_ID} }}</DisplayString>
+  </Type>
+  <Type Name="TCk_DebugWrapper&lt;*&gt;">
+    <DisplayString>{"$T1"}</DisplayString>
+    <Expand>
+      <Item Name="[Fragment]">
+        ($T1&amp;)(*_Fragment)
+      </Item>
+    </Expand>
+  </Type>
+  <Type Name="FCk_Handle">
+  </Type>
+  <Type Name="FCk_Handle">
+    <DisplayString>{{ ID{_Entity} Fragments{_Mapper->_AllFragments} }}</DisplayString>
+    <Expand>
+      <Item Name="[FragmentArray]">
+      (_Mapper->_AllFragments)
+      </Item>
+    </Expand>
+  </Type>
+  <Type Name="FEntity_FragmentMapper">
+    <DisplayString>{{ {_AllFragments} }}</DisplayString>
+    <Expand>
+      <Item Name="[FragmentArray]">
+      (_AllFragments)
+      </Item>
+    </Expand>
+  </Type>
+</AutoVisualizer>
