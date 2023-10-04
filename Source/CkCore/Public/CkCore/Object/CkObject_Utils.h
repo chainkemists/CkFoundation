@@ -360,7 +360,7 @@ auto
     Request_CreateNewObject_TransientPackage()
     -> T*
 {
-    return Request_CreateNewObject_TransientPackage<T>(GetTransientPackage(), nullptr, nullptr);
+    return Request_CreateNewObject<T>(GetTransientPackage(), nullptr, [](T*){});
 }
 
 template <typename T>
