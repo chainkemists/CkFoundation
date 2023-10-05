@@ -133,7 +133,7 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-auto CKECS_API GetTypeHash(FCk_Handle InHandle) -> uint32;
+auto CKECS_API GetTypeHash(const FCk_Handle& InHandle) -> uint32;
 
 namespace ck
 {
