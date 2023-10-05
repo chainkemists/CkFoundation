@@ -1,0 +1,94 @@
+#pragma once
+
+#include "CkAttribute/NumericAttribute/CkNumericAttribute_Fragment_Data.h"
+#include "CkCore/Macros/CkMacros.h"
+#include "CkEcs/Handle/CkHandle.h"
+
+#include "CkNumericAttribute_Utils.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable)
+class CKATTRIBUTE_API UCk_Utils_NumericAttribute_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_NumericAttribute_UE);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Numeric",
+              DisplayName="Add New Numeric Attribute")
+    static void
+    Add(
+        FCk_Handle InHandle,
+        const FCk_Fragment_NumericAttribute_ParamsData& InParams);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Numeric",
+              DisplayName="Add Multiple New Numeric Attributes")
+    static void
+    AddMultiple(
+        FCk_Handle InHandle,
+        const FCk_Fragment_MultipleNumericAttribute_ParamsData& InParams);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Numeric",
+              DisplayName="Has Numeric Attribute")
+    static bool
+    Has(
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Numeric",
+              DisplayName="Has Any Numeric Attribute")
+    static bool
+    Has_Any(
+        FCk_Handle InAttributeOwnerEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Numeric",
+              DisplayName="Ensure Has Numeric Attribute")
+    static bool
+    Ensure(
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName);
+
+        UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Numeric",
+              DisplayName="Ensure Has Any Numeric Attribute")
+    static bool
+    Ensure_Any(
+        FCk_Handle InAttributeOwnerEntity);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Numeric",
+              DisplayName="Get Numeric Attribute Current Value")
+    static float
+    Get_CurrentValue(
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Numeric",
+              DisplayName="Get Numeric Attribute Min Value")
+    static float
+    Get_MinValue(
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
+        bool& OutHasMinValue);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Numeric",
+              DisplayName="Get Numeric Attribute Max Value")
+    static float
+    Get_MaxValue(
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
+        bool& OutHasMaxValue);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
