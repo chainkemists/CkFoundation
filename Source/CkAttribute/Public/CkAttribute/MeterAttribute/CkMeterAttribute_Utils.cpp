@@ -134,12 +134,7 @@ auto
 
     const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
-    if (NOT ck::IsValid(FoundEntity))
-    { return false; }
-
-    const auto& FloatAttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity());
-    return ck::IsValid(FloatAttributeEntity);
+    return ck::IsValid(FoundEntity);
 }
 
 auto
