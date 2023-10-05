@@ -4,7 +4,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(BlueprintType, Blueprintable)
+UCLASS()
 class CKECS_API UCk_Handle_FragmentsDebug : public UObject
 {
     GENERATED_BODY()
@@ -12,7 +12,7 @@ class CKECS_API UCk_Handle_FragmentsDebug : public UObject
     friend struct FCk_Handle;
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(BlueprintReadOnly,
         meta=(AllowPrivateAccess))
     TArray<FName> _Names;
 };
