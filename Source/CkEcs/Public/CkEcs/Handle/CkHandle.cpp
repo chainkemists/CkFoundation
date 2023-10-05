@@ -65,6 +65,7 @@ auto
 FCk_Handle::
     ~FCk_Handle()
 {
+#if WITH_EDITORONLY_DATA
     if (ck::Is_NOT_Valid(_Fragments))
     { return; }
 
@@ -72,6 +73,7 @@ FCk_Handle::
     { return; }
 
     _Fragments->RemoveFromRoot();
+#endif
 }
 
 auto
@@ -165,6 +167,10 @@ auto
     {
         _Mapper = &Get<FEntity_FragmentMapper>();
 
+        [[maybe_unused]]
+        const auto& Names = _Mapper->ProcessAll(*this);
+
+#if WITH_EDITORONLY_DATA
         if (ck::Is_NOT_Valid(_Fragments))
         {
             _Fragments = UCk_Utils_Object_UE::Request_CreateNewObject_TransientPackage<UCk_Handle_FragmentsDebug>();
@@ -173,7 +179,8 @@ auto
             { _Fragments->AddToRoot(); }
         }
 
-        _Fragments->_Names = _Mapper->ProcessAll(*this);
+        _Fragments->_Names = Names;
+#endif
     }
 }
 
