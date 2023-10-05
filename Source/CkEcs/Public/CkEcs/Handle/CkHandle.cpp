@@ -7,6 +7,53 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_handle
+{
+#if WITH_EDITORONLY_DATA
+    // TODO: this is a poor man's SharedPtr with Rooting capabilities. We need a dedicated class for this.
+
+    TMap<FCk_Entity, TPair<TObjectPtr<UCk_Handle_FragmentsDebug>, int32>> HandleToDebug;
+
+    auto Get_FragmentsDebug(const FCk_Handle& InHandle) -> UCk_Handle_FragmentsDebug*
+    {
+        if (const auto Found = HandleToDebug.Find(InHandle.Get_Entity()))
+        {
+            ++Found->Value;
+            return Found->Key;
+        }
+
+        const auto NewObject = UCk_Utils_Object_UE::Request_CreateNewObject_TransientPackage<UCk_Handle_FragmentsDebug>();
+
+        if (NewObject->IsSafeForRootSet())
+        { NewObject->AddToRoot(); }
+
+        HandleToDebug.Add(InHandle.Get_Entity(), MakeTuple(TObjectPtr<UCk_Handle_FragmentsDebug>{NewObject}, 1));
+
+        return NewObject;
+    }
+
+    auto Remove_FragmentsDebug(const FCk_Handle& InHandle) -> void
+    {
+        const auto Found = HandleToDebug.Find(InHandle.Get_Entity());
+
+        CK_ENSURE_IF_NOT(Found,
+            TEXT("We should have a prefect Get/Remove combination from CkHandle [{}]. "
+                "Something went wrong with the logic of CkHandle or this tracker"), InHandle)
+        { return; }
+
+        --Found->Value;
+
+        if (Found->Value == 0)
+        {
+            Found->Key->RemoveFromRoot();
+            HandleToDebug.Remove(InHandle.Get_Entity());
+        }
+    }
+#endif
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 FCk_Handle::
     FCk_Handle(
         FEntityType InEntity,
@@ -35,6 +82,7 @@ FCk_Handle::
     , _Fragments(std::move(InOther._Fragments))
 #endif
 {
+    std::ignore = ck_handle::Get_FragmentsDebug(*this);
 }
 
 FCk_Handle::
@@ -50,6 +98,7 @@ FCk_Handle::
     , _Fragments(InOther._Fragments)
 #endif
 {
+    std::ignore = ck_handle::Get_FragmentsDebug(*this);
 }
 
 auto
@@ -69,10 +118,7 @@ FCk_Handle::
     if (ck::Is_NOT_Valid(_Fragments))
     { return; }
 
-    if (NOT _Fragments->IsRooted())
-    { return; }
-
-    _Fragments->RemoveFromRoot();
+    ck_handle::Remove_FragmentsDebug(*this);
 #endif
 }
 
@@ -172,12 +218,7 @@ auto
 
 #if WITH_EDITORONLY_DATA
         if (ck::Is_NOT_Valid(_Fragments))
-        {
-            _Fragments = UCk_Utils_Object_UE::Request_CreateNewObject_TransientPackage<UCk_Handle_FragmentsDebug>();
-
-            if (_Fragments->IsSafeForRootSet())
-            { _Fragments->AddToRoot(); }
-        }
+        { _Fragments = ck_handle::Get_FragmentsDebug(*this); }
 
         _Fragments->_Names = Names;
 #endif
@@ -188,7 +229,7 @@ auto
 
 auto
     GetTypeHash(
-        FCk_Handle InHandle) -> uint32
+        const FCk_Handle& InHandle) -> uint32
 {
     return GetTypeHash(InHandle.Get_Entity()) + GetTypeHash(InHandle.Get_Registry());
 }
