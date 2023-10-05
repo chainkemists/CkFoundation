@@ -21,84 +21,82 @@ auto
     -> void
 {
 #if WITH_EDITOR
-    const auto& loggerToUse     = InParams.Get_LoggerToUse();
-    const auto& messageSeverity = InParams.Get_MessageSeverity();
-    const auto& displayPolicy   = InParams.Get_DisplayPolicy();
-    const auto& forceOpenWindow = displayPolicy == ECk_EditorMessage_DisplayPolicy::ToastNotificationAndOpenMessageLogWindow;
+    const auto& LoggerToUse     = InParams.Get_LoggerToUse();
+    const auto& MessageSeverity = InParams.Get_MessageSeverity();
+    const auto& DisplayPolicy   = InParams.Get_DisplayPolicy();
+    const auto& ForceOpenWindow = DisplayPolicy == ECk_EditorMessage_DisplayPolicy::ToastNotificationAndOpenMessageLogWindow;
 
-    CK_ENSURE_IF_NOT(ck::IsValid(loggerToUse), TEXT("Cannot push a new Editor Message because the supplied Logger Name to use is Invalid!"))
+    CK_ENSURE_IF_NOT(ck::IsValid(LoggerToUse), TEXT("Cannot push a new Editor Message because the supplied Logger Name to use is Invalid!"))
     { return; }
 
-    const auto& FormatMessage = [&](TSharedPtr<FTokenizedMessage> InMessageToFormat) -> void
+    const auto& FormatMessage = [&](const TSharedPtr<FTokenizedMessage>& InMessageToFormat) -> void
     {
-        const auto& messageSegments = InParams.Get_MessageSegments();
-
-        for (const auto& segment : messageSegments.Get_MessageSegments())
+        for (const auto& MessageSegments = InParams.Get_MessageSegments(); 
+            const auto& Segment : MessageSegments.Get_MessageSegments())
         {
-            if (ck::IsValid(segment.Get_TargetObject()))
+            if (ck::IsValid(Segment.Get_TargetObject()))
             {
-                InMessageToFormat->AddToken(FUObjectToken::Create(segment.Get_TargetObject()));
+                InMessageToFormat->AddToken(FUObjectToken::Create(Segment.Get_TargetObject()));
             }
 
-            if (NOT segment.Get_DocumentationLink().IsEmpty())
+            if (NOT Segment.Get_DocumentationLink().IsEmpty())
             {
-                InMessageToFormat->AddToken(FDocumentationToken::Create(segment.Get_DocumentationLink()));
+                InMessageToFormat->AddToken(FDocumentationToken::Create(Segment.Get_DocumentationLink()));
             }
 
-            InMessageToFormat->AddToken(FTextToken::Create(FText::FromString(segment.Get_Message())));
+            InMessageToFormat->AddToken(FTextToken::Create(FText::FromString(Segment.Get_Message())));
         }
     };
 
-    auto& messageLogModule = FModuleManager::LoadModuleChecked<FMessageLogModule>(TEXT("MessageLog"));
-
-    if (NOT messageLogModule.IsRegisteredLogListing(loggerToUse))
+    if (auto& MessageLogModule = FModuleManager::LoadModuleChecked<FMessageLogModule>(TEXT("MessageLog")); 
+        NOT MessageLogModule.IsRegisteredLogListing(LoggerToUse))
     {
-        FMessageLogInitializationOptions initOptions;
-        initOptions.bShowFilters = true;
+        FMessageLogInitializationOptions InitOptions;
+        InitOptions.bShowFilters = true;
 
-        messageLogModule.RegisterLogListing(loggerToUse, FText::FromName(loggerToUse), initOptions);
+        MessageLogModule.RegisterLogListing(LoggerToUse, FText::FromName(LoggerToUse), InitOptions);
     }
 
-    FMessageLog messageLog(loggerToUse);
-    static constexpr auto forceNotify = true;
+    FMessageLog MessageLog(LoggerToUse);
+    static constexpr auto _ForceNotify = true;
 
-    switch (messageSeverity)
+    switch (MessageSeverity)
     {
         case ECk_EditorMessage_Severity::Info:
         {
-            const auto& messageToFormat = messageLog.Info();
-            FormatMessage(messageToFormat);
-            messageLog.Notify(messageToFormat->ToText(), EMessageSeverity::Info, forceNotify);
-            messageLog.Open(EMessageSeverity::Info, forceOpenWindow);
+            const auto& MessageToFormat = MessageLog.Info();
+            FormatMessage(MessageToFormat);
+            MessageLog.Notify(MessageToFormat->ToText(), EMessageSeverity::Info, _ForceNotify);
+            MessageLog.Open(EMessageSeverity::Info, ForceOpenWindow);
             break;
         }
         case ECk_EditorMessage_Severity::Error:
         {
-            const auto& messageToFormat = messageLog.Error();
-            FormatMessage(messageToFormat);
-            messageLog.Notify(messageToFormat->ToText(), EMessageSeverity::Error, forceNotify);
-            messageLog.Open(EMessageSeverity::Error, forceOpenWindow);
+            const auto& MessageToFormat = MessageLog.Error();
+            FormatMessage(MessageToFormat);
+            MessageLog.Notify(MessageToFormat->ToText(), EMessageSeverity::Error, _ForceNotify);
+            MessageLog.Open(EMessageSeverity::Error, ForceOpenWindow);
             break;
         }
         case ECk_EditorMessage_Severity::PerformanceWarning:
         {
-            const auto& messageToFormat = messageLog.PerformanceWarning();
-            FormatMessage(messageToFormat);
-            messageLog.Notify(messageToFormat->ToText(), EMessageSeverity::PerformanceWarning, forceNotify);
-            messageLog.Open(EMessageSeverity::PerformanceWarning, forceOpenWindow);
+            const auto& MessageToFormat = MessageLog.PerformanceWarning();
+            FormatMessage(MessageToFormat);
+            MessageLog.Notify(MessageToFormat->ToText(), EMessageSeverity::PerformanceWarning, _ForceNotify);
+            MessageLog.Open(EMessageSeverity::PerformanceWarning, ForceOpenWindow);
             break;
         }
         case ECk_EditorMessage_Severity::Warning:
         {
-            const auto& messageToFormat = messageLog.Warning();
-            FormatMessage(messageToFormat);
-            messageLog.Notify(messageToFormat->ToText(), EMessageSeverity::Warning, forceNotify);
-            messageLog.Open(EMessageSeverity::Warning, forceOpenWindow);
+            const auto& MessageToFormat = MessageLog.Warning();
+            FormatMessage(MessageToFormat);
+            MessageLog.Notify(MessageToFormat->ToText(), EMessageSeverity::Warning, _ForceNotify);
+            MessageLog.Open(EMessageSeverity::Warning, ForceOpenWindow);
             break;
         }
         default:
         {
-            CK_INVALID_ENUM(messageSeverity);
+            CK_INVALID_ENUM(MessageSeverity);
             break;
         }
     }
