@@ -16,6 +16,43 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck
+{
+    struct FMeterAttribute_Tags final : public FGameplayTagNativeAdder
+    {
+    public:
+        virtual ~FMeterAttribute_Tags() = default;
+
+    protected:
+        auto AddTags() -> void override;
+
+    private:
+        FGameplayTag _MinCapacity;
+        FGameplayTag _MaxCapacity;
+        FGameplayTag _Current;
+
+        static FMeterAttribute_Tags _Tags;
+
+    public:
+        static auto Get_MinCapacity() -> FGameplayTag
+        {
+            return _Tags._MinCapacity;
+        }
+
+        static auto Get_MaxCapacity() -> FGameplayTag
+        {
+            return _Tags._MaxCapacity;
+        }
+
+        static auto Get_Current() -> FGameplayTag
+        {
+            return _Tags._Current;
+        }
+    };
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS()
 class CKATTRIBUTE_API UCk_MeterAttribute_ConstructionScript_PDA final : public UCk_Entity_ConstructionScript_PDA
 {
@@ -53,9 +90,6 @@ public:
 
     class FloatAttribute_Utils : public ck::TUtils_Attribute<ck::FFragment_FloatAttribute> {};
     class RecordOfFloatAttributes_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfFloatAttributes> {};
-
-public:
-    friend class UCk_Utils_MeterAttributes_UE;
 
 public:
     UFUNCTION(BlueprintCallable,
