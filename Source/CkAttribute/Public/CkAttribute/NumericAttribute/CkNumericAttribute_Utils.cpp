@@ -164,4 +164,117 @@ auto
     return {};
 }
 
+auto
+    UCk_Utils_NumericAttribute_UE::
+    BindTo_OnValueChanged(
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
+        ECk_Signal_BindingPolicy InBehavior,
+        const FCk_Delegate_NumericAttribute_OnValueChanged& InDelegate)
+    -> void
+{
+    if (UCk_Utils_FloatAttribute_UE::Has(InAttributeOwnerEntity, InAttributeName))
+    {
+        const auto& FloatAttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+
+        ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind<&ThisType::OnFloatAttribute_ValueChanged>(FloatAttributeEntity, InBehavior);
+        ck::UUtils_Signal_NumericOnAttributeValueChanged::Bind(InAttributeOwnerEntity, InDelegate, InBehavior);
+
+        return;
+    }
+
+    if (UCk_Utils_MeterAttribute_UE::Has(InAttributeOwnerEntity, InAttributeName))
+    {
+        const auto& MeterAttributeEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
+        const auto& MeterCurrenValueFloatAttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(MeterAttributeEntity, ck::FMeterAttribute_Tags::Get_Current());
+
+        ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind<&ThisType::OnMeterAttribute_ValueChanged>(MeterCurrenValueFloatAttributeEntity, InBehavior);
+        ck::UUtils_Signal_NumericOnAttributeValueChanged::Bind(InAttributeOwnerEntity, InDelegate, InBehavior);
+
+        return;
+    }
+
+    CK_ENSURE_FALSE(TEXT("Failed to Bind to OnValueChanged. Entity [{}] does NOT have a Numeric Attribute [{}]"), InAttributeOwnerEntity, InAttributeName);
+}
+
+auto
+    UCk_Utils_NumericAttribute_UE::
+    UnbindFrom_OnValueChanged(
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
+        const FCk_Delegate_NumericAttribute_OnValueChanged& InDelegate)
+    -> void
+{
+    if (UCk_Utils_FloatAttribute_UE::Has(InAttributeOwnerEntity, InAttributeName))
+    {
+        const auto& FloatAttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+
+        ck::UUtils_Signal_OnFloatAttributeValueChanged::Unbind<&ThisType::OnFloatAttribute_ValueChanged>(FloatAttributeEntity);
+        ck::UUtils_Signal_NumericOnAttributeValueChanged::Unbind(InAttributeOwnerEntity, InDelegate);
+
+        return;
+    }
+
+    if (UCk_Utils_MeterAttribute_UE::Has(InAttributeOwnerEntity, InAttributeName))
+    {
+        const auto& MeterAttributeEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
+        const auto& MeterCurrenValueFloatAttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(MeterAttributeEntity, ck::FMeterAttribute_Tags::Get_Current());
+
+        ck::UUtils_Signal_OnFloatAttributeValueChanged::Unbind<&ThisType::OnMeterAttribute_ValueChanged>(MeterCurrenValueFloatAttributeEntity);
+        ck::UUtils_Signal_NumericOnAttributeValueChanged::Unbind(InAttributeOwnerEntity, InDelegate);
+
+        return;
+    }
+
+    CK_ENSURE_FALSE(TEXT("Failed to Unbind from OnValueChanged. Entity [{}] does NOT have a Numeric Attribute [{}]"), InAttributeOwnerEntity, InAttributeName);
+}
+
+auto
+    UCk_Utils_NumericAttribute_UE::
+    OnFloatAttribute_ValueChanged(
+        FCk_Handle FloatAttributeOwnerEntity,
+        ck::TPayload_Attribute_OnValueChanged<ck::FFragment_FloatAttribute> InValueChanged)
+    -> void
+{
+    ck::UUtils_Signal_NumericOnAttributeValueChanged::Broadcast
+    (
+        FloatAttributeOwnerEntity,
+        ck::MakePayload
+        (
+            FloatAttributeOwnerEntity,
+            FCk_Payload_NumericAttribute_OnValueChanged
+            {
+                FloatAttributeOwnerEntity,
+                InValueChanged.Get_BaseValue(),
+                InValueChanged.Get_FinalValue()
+            }
+        )
+    );
+}
+
+auto
+    UCk_Utils_NumericAttribute_UE::
+    OnMeterAttribute_ValueChanged(
+        FCk_Handle InMeterAttributeEntity,
+        ck::TPayload_Attribute_OnValueChanged<ck::FFragment_FloatAttribute> InValueChanged)
+    -> void
+{
+    auto MeterAttributeOwnerEntity =ck::UCk_Utils_OwningEntity::Get_StoredEntity(InMeterAttributeEntity);
+
+    ck::UUtils_Signal_NumericOnAttributeValueChanged::Broadcast
+    (
+        MeterAttributeOwnerEntity,
+        ck::MakePayload
+        (
+            MeterAttributeOwnerEntity,
+            FCk_Payload_NumericAttribute_OnValueChanged
+            {
+                MeterAttributeOwnerEntity,
+                InValueChanged.Get_BaseValue(),
+                InValueChanged.Get_FinalValue()
+            }
+        )
+    );
+}
+
 // --------------------------------------------------------------------------------------------------------------------
