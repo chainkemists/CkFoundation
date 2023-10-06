@@ -3,7 +3,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 
-#include "CkUnreal/Entity/CkUnrealEntity_ConstructionScript.h"
+#include "CkNet/Entity/CkUnrealEntity_ConstructionScript.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

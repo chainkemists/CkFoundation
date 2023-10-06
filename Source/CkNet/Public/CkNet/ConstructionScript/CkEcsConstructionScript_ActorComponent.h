@@ -1,20 +1,114 @@
 #pragma once
 
+#include "CkCore/Component/CkActorComponent.h"
 #include "CkCore/Enums/CkEnums.h"
 
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-#include "CkUnreal/Entity/CkUnrealEntity_Fragment_Params.h"
-
-#include "CkCore/Component/CkActorComponent.h"
+#include "CkNet/Entity/CkUnrealEntity_Fragment_Params.h"
 
 #include "CkEcsConstructionScript_ActorComponent.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
+// TODO: merging ReplicationDriver and EcsConstructionScript - to be called "EcsReplicationDriver_ActorComponent"
 
 USTRUCT(BlueprintType)
-struct CKUNREAL_API FCk_EcsConstructionScript_ConstructionInfo
+struct CKNET_API FCk_EntityReplicationDriver_ConstructionInfo
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_EntityReplicationDriver_ConstructionInfo);
+
+private:
+    UPROPERTY()
+    FCk_Entity _OriginalEntity;
+
+    UPROPERTY()
+    TObjectPtr<UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
+
+public:
+    CK_PROPERTY(_OriginalEntity);
+    CK_PROPERTY_GET(_ConstructionScript);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_ConstructionInfo, _ConstructionScript);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKNET_API FCk_EntityReplicationDriver_ReplicateObjects_Data
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_EntityReplicationDriver_ReplicateObjects_Data);
+
+private:
+    UPROPERTY()
+    TArray<TSubclassOf<UCk_Ecs_ReplicatedObject_UE>> _Objects;
+
+    UPROPERTY()
+    TArray<FName> _NetStableNames;
+
+public:
+    CK_PROPERTY(_Objects);
+    CK_PROPERTY(_NetStableNames);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKNET_API FCk_EntityReplicationDriver_ReplicationData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_EntityReplicationDriver_ReplicationData);
+
+private:
+    UPROPERTY()
+    FCk_EntityReplicationDriver_ConstructionInfo _ConstructionInfo;
+
+    UPROPERTY()
+    FCk_EntityReplicationDriver_ReplicateObjects_Data _ReplicatedObjectsData;
+
+public:
+    CK_PROPERTY_GET(_ConstructionInfo);
+    CK_PROPERTY_GET(_ReplicatedObjectsData);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_ReplicationData, _ConstructionInfo, _ReplicatedObjectsData);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKNET_API FCk_Request_ReplicationDriver_ReplicateEntity
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_Request_ReplicationDriver_ReplicateEntity);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_EntityReplicationDriver_ConstructionInfo _ConstructionInfo;
+
+public:
+    CK_PROPERTY_GET(_ConstructionInfo);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_ReplicationDriver_ReplicateEntity, _ConstructionInfo);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
+
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKNET_API FCk_EcsConstructionScript_ConstructionInfo
 {
     GENERATED_BODY()
 
@@ -48,7 +142,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUNREAL_API FCk_EcsConstructionScript_ReplicateObjects_Data
+struct CKNET_API FCk_EcsConstructionScript_ReplicateObjects_Data
 {
     GENERATED_BODY()
 
@@ -80,7 +174,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUNREAL_API FCk_EcsConstructionScript_Replication_Data
+struct CKNET_API FCk_EcsConstructionScript_Replication_Data
 {
     GENERATED_BODY()
 
@@ -108,7 +202,7 @@ UCLASS(Abstract,
        BlueprintType,
        HideCategories("Replication", "ComponentTick", "Rendering", "Activation", "Tags", "ComponentReplication", "Mobile", "RayTracing",
                       "Collision", "AssetUserData", "Cooking", "Sockets", "Variable", "Navigation", "HLOD", "Physics"))
-class CKUNREAL_API UCk_EcsConstructionScript_ActorComponent_UE : public UCk_ActorComponent_UE
+class CKNET_API UCk_EcsConstructionScript_ActorComponent_UE : public UCk_ActorComponent_UE
 {
     GENERATED_BODY()
 
@@ -162,6 +256,22 @@ public:
 
 public:
     CK_PROPERTY(_UnrealEntity);
+
+public:
+    // --------------------------------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------------------
+    // REPLICATION DRIVER STUFF - To be consolidated with the above after refactor of this ActorComponent
+
+public:
+    auto
+    Request_Replicate(
+        FCk_Handle InHandle,
+        const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo) -> void;
+
+    // --------------------------------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------------------
 };
 
 // --------------------------------------------------------------------------------------------------------------------

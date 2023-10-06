@@ -9,6 +9,8 @@
 
 #include "Net/UnrealNetwork.h"
 
+#include "UObject/ObjectSaveContext.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 ACk_UnrealEntity_ActorProxy_UE::
@@ -18,11 +20,12 @@ ACk_UnrealEntity_ActorProxy_UE()
     bAlwaysRelevant = false;
 
 #if WITH_EDITORONLY_DATA
-    _ChildActorComponent = CreateEditorOnlyDefaultSubobject<UChildActorComponent>(TEXT("Proxy Actor Comp"));
+    _ChildActorComponent = CreateEditorOnlyDefaultSubobject<UCk_ChildActorComponent>(TEXT("Proxy Actor Comp"));
 #endif
 }
 
 #if WITH_EDITOR
+
 auto
     ACk_UnrealEntity_ActorProxy_UE::
     PostEditChangeProperty(
@@ -46,11 +49,48 @@ auto
             if (ck::IsValid(_ActorToSpawn))
             {
                 _ChildActorComponent->SetChildActorClass(_ActorToSpawn);
+                _ChildActorComponent->CreateChildActor();
             }
         }();
     }
 }
+
+void
+    ACk_UnrealEntity_ActorProxy_UE::PostLoad()
+{
+    Super::PostLoad();
+}
+
+void
+    ACk_UnrealEntity_ActorProxy_UE::PreSave(
+        FObjectPreSaveContext ObjectSaveContext)
+{
+    _ChildActorComponent->DestroyChildActor();
+    _ChildActorComponent->SetChildActorClass(nullptr);
+
+    Super::PreSave(ObjectSaveContext);
+
+    if (ck::IsValid(_ActorToSpawn))
+    {
+        _ChildActorComponent->SetChildActorClass(_ActorToSpawn);
+        _ChildActorComponent->CreateChildActor();
+    }
+}
+
+void
+    ACk_UnrealEntity_ActorProxy_UE::PostSaveRoot(
+        FObjectPostSaveRootContext ObjectSaveContext)
+{
+    Super::PostSaveRoot(ObjectSaveContext);
+}
 #endif
+
+void
+    ACk_UnrealEntity_ActorProxy_UE::OnConstruction(
+        const FTransform& Transform)
+{
+    Super::OnConstruction(Transform);
+}
 
 auto
     ACk_UnrealEntity_ActorProxy_UE::

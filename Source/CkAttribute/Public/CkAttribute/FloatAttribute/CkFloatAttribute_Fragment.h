@@ -113,8 +113,7 @@ public:
         FGameplayTag InModifierName,
         FGameplayTag InAttributeName);
 
-private:
-    bool _AlreadyConsumed = false;
+    // TODO: 'permanent' modifiers
 };
 
 // --------------------------------------------------------------------------------------------------------------------

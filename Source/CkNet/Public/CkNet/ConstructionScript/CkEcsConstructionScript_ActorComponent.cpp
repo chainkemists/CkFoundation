@@ -6,17 +6,18 @@
 #include "CkCore/ObjectReplication/CkObjectReplicatorComponent.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
-#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
+#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "CkNet/CkNet_Fragment.h"
+#include "CkNet/CkNet_Log.h"
 #include "CkNet/CkNet_Utils.h"
+#include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
-#include "CkUnreal/CkUnreal_Log.h"
-#include "CkUnreal/Entity/CkUnrealEntity_ConstructionScript.h"
+#include "CkNet/Entity/CkUnrealEntity_ConstructionScript.h"
 
 #include "Engine/World.h"
 
@@ -81,7 +82,7 @@ auto
         ReplicatedObjectsData
     };
 
-    ck::unreal::Verbose(TEXT("Replicating [{}] with outermost [{}]"), OutermostActor, ActorToReplicate);
+    ck::net::Verbose(TEXT("Replicating [{}] with outermost [{}]"), OutermostActor, ActorToReplicate);
 }
 
 auto
@@ -166,6 +167,8 @@ auto
 
             const auto& NewActorBasicInfo = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(NewOrExistingActor);
 
+            UCk_Utils_Net_UE::Add(NewActorBasicInfo.Get_Handle(),
+                FCk_Net_ConnectionSettings{ECk_Net_NetRoleType::Client, ECk_Net_EntityNetRole::Proxy});
             UCk_Utils_ReplicatedObjects_UE::Add(NewActorBasicInfo.Get_Handle(), ROs);
         }
         else
@@ -175,10 +178,12 @@ auto
                 static_cast<FCk_Entity::IdType>(InRequest.Get_OriginalOwnerEntity())
             );
 
+            UCk_Utils_Net_UE::Add(OriginalOwnerHandle,
+                FCk_Net_ConnectionSettings{ECk_Net_NetRoleType::Client, ECk_Net_EntityNetRole::Authority});
             UCk_Utils_ReplicatedObjects_UE::Add(OriginalOwnerHandle, ROs);
         }
 
-        ck::unreal::Verbose(TEXT("Replicating [{}] with outermost [{}]"),
+        ck::net::Verbose(TEXT("Replicating [{}] with outermost [{}]"),
             InRequest.Get_OutermostActor(), InRequest.Get_ActorToReplicate(), PlayerController);
     }
 }
@@ -251,11 +256,6 @@ auto
 
     _Entity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
 
-    if (OwningActor->IsNetMode(NM_DedicatedServer))
-    {
-        UCk_Utils_Net_UE::Request_MarkEntityAs_DedicatedServer(_Entity);
-    }
-
     // --------------------------------------------------------------------------------------------------------------------
     // LINK TO ACTOR
     // EcsConstructionScript is a bit special in that it readies everything immediately instead of deferring the operation
@@ -287,11 +287,6 @@ auto
         );
     }
 
-    if (_ReplicationDataReplicated)
-    {
-        Request_ReplicateActor_OnClients(_ReplicationData.Get_ReplicatedObjects(), _ReplicationData.Get_ConstructionInfo());
-    }
-
     // --------------------------------------------------------------------------------------------------------------------
     // Add Net Connection Settings
 
@@ -312,6 +307,17 @@ auto
         {
             UCk_Utils_Net_UE::Add(_Entity, FCk_Net_ConnectionSettings{ECk_Net_NetRoleType::Client, ECk_Net_EntityNetRole::Authority});
         }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Add the replication driver here
+    // TODO: REPLACE WITH ANOTHER FRAGMENT
+    //UCk_Utils_EntityReplicationDriver_UE::Add(_Entity);
+
+    if (_ReplicationDataReplicated)
+    {
+        Request_ReplicateActor_OnClients(_ReplicationData.Get_ReplicatedObjects(), _ReplicationData.Get_ConstructionInfo());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -405,7 +411,7 @@ auto
     if (NOT _DoConstructCalled)
     { return; }
 
-    ck::unreal::Log(TEXT("Starting to replicate [{}]"), _ReplicationData.Get_ConstructionInfo().Get_ActorToReplicate());
+    ck::net::Log(TEXT("Starting to replicate [{}]"), _ReplicationData.Get_ConstructionInfo().Get_ActorToReplicate());
     Request_ReplicateActor_OnClients(_ReplicationData.Get_ReplicatedObjects(), _ReplicationData.Get_ConstructionInfo());
 }
 
@@ -416,6 +422,75 @@ void
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
     DOREPLIFETIME(ThisType, _ReplicationData);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_EcsConstructionScript_ActorComponent_UE::
+    Request_Replicate(
+        FCk_Handle InHandle,
+        const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo)
+    -> void
+{
+    //CK_ENSURE_IF_NOT(ck::IsValid(InConstructionInfo.Get_ConstructionScript()),
+    //    TEXT("Unable to ReplicateEntity as ConstructionScript is [{}]"),
+    //    InConstructionInfo.Get_ConstructionScript())
+    //{ return; }
+
+    //const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
+    //InConstructionInfo.Get_ConstructionScript()->Construct(NewEntity);
+
+    //switch(const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(InHandle))
+    //{
+    //case ECk_Net_NetRoleType::Client:
+    //{
+    //    InHandle.AddOrGet<ck::FFragment_ReplicationDriver_Requests>()._Requests.Emplace(
+    //        FCk_EntityReplicationDriver_ConstructionInfo{InConstructionInfo}
+    //        .Set_OriginalEntity(NewEntity.Get_Entity()));
+    //    break;
+    //}
+    //case ECk_Net_NetRoleType::Host:
+    //case ECk_Net_NetRoleType::Server:
+    //{
+    //    Add(NewEntity);
+
+    //    const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(NewEntity);
+
+    //    auto ReplicatedObjectsData = FCk_EntityReplicationDriver_ReplicateObjects_Data{};
+
+    //    for (const auto& ReplicatedObject : ReplicatedObjects.Get_ReplicatedObjects())
+    //    {
+    //        CK_ENSURE_IF_NOT(ck::IsValid(ReplicatedObject),
+    //            TEXT("Invalid Replicated Object encountered for Entity [{}] on the SERVER.[{}]"),
+    //            NewEntity,
+    //            ck::Context(InHandle))
+    //        { continue; }
+
+    //        ReplicatedObjectsData.Update_Objects([&](auto& InReplicatedObjects)
+    //            { InReplicatedObjects.Emplace(ReplicatedObject->GetClass()); });
+
+    //        ReplicatedObjectsData.Update_NetStableNames([&](auto& InNetStableNames)
+    //            { InNetStableNames.Emplace(ReplicatedObject->GetFName()); });
+    //    }
+
+    //    const auto& RepDriver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
+
+    //    RepDriver->Set_TestReplication(10);
+    //    RepDriver->Update_ReplicationData(
+    //        [&](TArray<FCk_EntityReplicationDriver_ReplicationData>& ReplicationData)
+    //        {
+    //            ReplicationData.Emplace(FCk_EntityReplicationDriver_ReplicationData{InConstructionInfo, ReplicatedObjectsData});
+    //        });
+    //    break;
+    //}
+    //case ECk_Net_NetRoleType::None:
+    //default:
+    //    CK_INVALID_ENUM(NetMode);
+    //    break;
+    //}
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -14,6 +14,7 @@
 
 #include "CkEcsBasics/Transform/CkTransform_Processor.h"
 
+#include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Processor.h"
 #include "CkNet/TimeSync/CkNetTimeSync_Processor.h"
 #include "CkNet/TimeSync/CkNetTimeSync_Utils.h"
 
@@ -29,7 +30,7 @@
 #include "CkRecord/RecordEntry/CkRecordEntry_Processor.h"
 #include "CkTimer/CkTimer_Processor.h"
 
-#include "CkUnreal/Entity/CkUnrealEntity_Processor.h"
+#include "CkNet/Entity/CkUnrealEntity_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -44,6 +45,8 @@ namespace ck_world_actor
         {
             InWorld.Add<ck::FProcessor_EntityLifetime_TriggerDestroyEntity>(InWorld.Get_Registry());
         }
+
+        //InWorld.Add<ck::FProcessor_ReplicationDriver_HandleRequests>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FProcessor_FloatAttributeModifier_Additive_Teardown>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_FloatAttributeModifier_Multiplicative_Teardown>(InWorld.Get_Registry());

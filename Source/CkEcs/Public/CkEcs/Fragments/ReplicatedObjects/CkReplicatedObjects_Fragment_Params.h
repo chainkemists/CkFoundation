@@ -33,7 +33,7 @@
 #define CK_GENERATED_BODY_FRAGMENT_REP(_ClassType_)          \
     CK_GENERATED_BODY(_ClassType_);                          \
     protected:                                               \
-    auto OnLink() -> void                                    \
+    auto OnLink() -> void override                           \
     {                                                        \
         _AssociatedEntity.Add<TObjectPtr<ThisType>>() = this;\
     }
@@ -63,9 +63,9 @@ public:
         UCk_Ecs_ReplicatedObject_UE* InRo) -> void;
 
 public:
-    virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
-    virtual auto BeginDestroy() -> void override;
-    virtual auto PreDestroyFromReplication() -> void override;
+    auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
+    auto BeginDestroy() -> void override;
+    auto PreDestroyFromReplication() -> void override;
 
 protected:
     virtual auto OnLink() -> void PURE_VIRTUAL(UCk_Ecs_ReplicateObject_UE::OnLink,);

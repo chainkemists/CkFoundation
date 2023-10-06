@@ -8,6 +8,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+struct NAME_TransientEntity {};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 ACk_World_Actor_Base_UE::
     ACk_World_Actor_Base_UE()
 {
@@ -130,6 +134,7 @@ auto
 
                 auto& Registry = WorldActor->_EcsWorld->Get_Registry();
                 _TransientEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(Registry);
+                _TransientEntity.Add<NAME_TransientEntity>();
             }
         )
     );
