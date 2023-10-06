@@ -57,7 +57,17 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InRo), TEXT("ReplicatedObject is [{}]. Unable to Destroy."), InRo)
     { return; }
 
+    if (ck::Is_NOT_Valid(InRo))
+    { return; }
+
+    if (ck::Is_NOT_Valid(InRo->_ReplicatedActor))
+    { return; }
+
     auto* ObjectReplicator = InRo->_ReplicatedActor->GetComponentByClass<UCk_ObjectReplicator_ActorComponent_UE>();
+
+    if (ck::Is_NOT_Valid(ObjectReplicator))
+    { return; }
+
     ObjectReplicator->Request_UnregisterObjectForReplication(InRo);
 }
 
