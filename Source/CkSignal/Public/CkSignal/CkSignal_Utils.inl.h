@@ -100,16 +100,20 @@ namespace ck
             FCk_Handle InHandle,
             ECk_Signal_BindingPolicy InPayloadInFlightBehavior)
     {
+        using ReturnType = decltype(Bind<T_Candidate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight>(InHandle));
+
         switch(InPayloadInFlightBehavior)
         {
-        case ECk_Signal_BindingPolicy::FireIfPayloadInFlight:
-            return Bind<T_Candidate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight>(InHandle);
-        case ECk_Signal_BindingPolicy::IgnorePayloadInFlight:
-            return Bind<T_Candidate, ECk_Signal_BindingPolicy::IgnorePayloadInFlight>(InHandle);
-        default:
-             CK_INVALID_ENUM(InPayloadInFlightBehavior);
-            break;
+            case ECk_Signal_BindingPolicy::FireIfPayloadInFlight:
+                return Bind<T_Candidate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight>(InHandle);
+            case ECk_Signal_BindingPolicy::IgnorePayloadInFlight:
+                return Bind<T_Candidate, ECk_Signal_BindingPolicy::IgnorePayloadInFlight>(InHandle);
+            default:
+                CK_INVALID_ENUM(InPayloadInFlightBehavior);
+                break;
         }
+
+        return ReturnType{};
     }
 
     template <typename T_DerivedSignal>
@@ -125,13 +129,13 @@ namespace ck
 
         switch(InPayloadInFlightBehavior)
         {
-        case ECk_Signal_BindingPolicy::FireIfPayloadInFlight:
-            return Bind<T_Candidate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight>(std::forward<T_Instance>(InInstance), InHandle);
-        case ECk_Signal_BindingPolicy::IgnorePayloadInFlight:
-            return Bind<T_Candidate, ECk_Signal_BindingPolicy::IgnorePayloadInFlight>(std::forward<T_Instance>(InInstance), InHandle);
-        default:
-             CK_INVALID_ENUM(InPayloadInFlightBehavior);
-            break;
+            case ECk_Signal_BindingPolicy::FireIfPayloadInFlight:
+                return Bind<T_Candidate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight>(std::forward<T_Instance>(InInstance), InHandle);
+            case ECk_Signal_BindingPolicy::IgnorePayloadInFlight:
+                return Bind<T_Candidate, ECk_Signal_BindingPolicy::IgnorePayloadInFlight>(std::forward<T_Instance>(InInstance), InHandle);
+            default:
+                CK_INVALID_ENUM(InPayloadInFlightBehavior);
+                break;
         }
 
         return ReturnType{};
@@ -202,15 +206,15 @@ namespace ck
     {
         switch(InPayloadInFlightBehavior)
         {
-        case ECk_Signal_BindingPolicy::FireIfPayloadInFlight:
-            Bind<ECk_Signal_BindingPolicy::FireIfPayloadInFlight>(InHandle, InDelegate);
-            break;
-        case ECk_Signal_BindingPolicy::IgnorePayloadInFlight:
-            Bind<ECk_Signal_BindingPolicy::IgnorePayloadInFlight>(InHandle, InDelegate);
-            break;
-        default:
-            // CK_INVALID_ENUM(InPayloadInFlightBehavior);
-            break;
+            case ECk_Signal_BindingPolicy::FireIfPayloadInFlight:
+                Bind<ECk_Signal_BindingPolicy::FireIfPayloadInFlight>(InHandle, InDelegate);
+                break;
+            case ECk_Signal_BindingPolicy::IgnorePayloadInFlight:
+                Bind<ECk_Signal_BindingPolicy::IgnorePayloadInFlight>(InHandle, InDelegate);
+                break;
+            default:
+                CK_INVALID_ENUM(InPayloadInFlightBehavior);
+                break;
         }
     }
 
