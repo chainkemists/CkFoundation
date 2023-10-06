@@ -4,7 +4,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
-#include "CkNet/Entity/CkUnrealEntity_Fragment_Params.h"
+#include "CkUnreal/Entity/CkUnrealEntity_Fragment_Params.h"
 
 #include "CkUnrealEntity_ActorProxy.generated.h"
 

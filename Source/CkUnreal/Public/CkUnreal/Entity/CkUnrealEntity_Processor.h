@@ -2,11 +2,11 @@
 
 #include "CkEcs/Processor/CkProcessor.h"
 
-#include "CkNet/Entity/CkUnrealEntity_Fragment.h"
+#include "CkUnreal/Entity/CkUnrealEntity_Fragment.h"
 
 namespace ck
 {
-    class CKNET_API FProcessor_UnrealEntity_HandleRequests
+    class CKUNREAL_API FProcessor_UnrealEntity_HandleRequests
         : public TProcessor<FProcessor_UnrealEntity_HandleRequests, FCk_Fragment_UnrealEntity_Requests>
     {
     public:

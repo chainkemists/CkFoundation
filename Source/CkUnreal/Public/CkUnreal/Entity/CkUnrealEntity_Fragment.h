@@ -8,7 +8,7 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKNET_API FCk_Fragment_UnrealEntity_Requests
+    struct CKUNREAL_API FCk_Fragment_UnrealEntity_Requests
     {
         CK_GENERATED_BODY(FCk_Fragment_UnrealEntity_Requests);
 

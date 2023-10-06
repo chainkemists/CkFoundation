@@ -2,7 +2,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 
-#include "CkNet/Entity/CkUnrealEntity_Fragment.h"
+#include "CkUnreal/Entity/CkUnrealEntity_Fragment.h"
 #include "CkNet/CkNet_Log.h"
 
 namespace ck

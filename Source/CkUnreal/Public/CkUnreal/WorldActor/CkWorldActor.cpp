@@ -30,7 +30,7 @@
 #include "CkRecord/RecordEntry/CkRecordEntry_Processor.h"
 #include "CkTimer/CkTimer_Processor.h"
 
-#include "CkNet/Entity/CkUnrealEntity_Processor.h"
+#include "CkUnreal/Entity/CkUnrealEntity_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

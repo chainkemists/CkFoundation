@@ -3,14 +3,14 @@
 #include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 #include "CkEcs/Handle/CkHandle.h"
 
-#include "CkNet/Entity/CkUnrealEntity_Fragment_Params.h"
+#include "CkUnreal/Entity/CkUnrealEntity_Fragment_Params.h"
 
 #include "CkUnrealEntity_ConstructionScript.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, BlueprintType, Blueprintable, EditInlineNew)
-class CKNET_API UCk_UnrealEntity_ConstructionScript_WithTransform_PDA : public UCk_Entity_ConstructionScript_PDA
+class CKUNREAL_API UCk_UnrealEntity_ConstructionScript_WithTransform_PDA : public UCk_Entity_ConstructionScript_PDA
 {
     GENERATED_BODY()
 
@@ -30,7 +30,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKNET_API UCKk_Utils_UnrealEntity_ConstructionScript_UE : public UBlueprintFunctionLibrary
+class CKUNREAL_API UCKk_Utils_UnrealEntity_ConstructionScript_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

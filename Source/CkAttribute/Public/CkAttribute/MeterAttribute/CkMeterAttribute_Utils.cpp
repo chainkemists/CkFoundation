@@ -106,7 +106,7 @@ auto
     { return;}
 
     // TODO: REPLACE WITH OTHER CALL
-    // UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(InHandle, FCk_EntityReplicationDriver_ConstructionInfo{InDataAsset});
+    UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(InHandle, FCk_EntityReplicationDriver_ConstructionInfo{InDataAsset});
 }
 
 auto
@@ -138,7 +138,7 @@ auto
     { return false; }
 
     const auto& FloatAttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity());
+        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity());
     return ck::IsValid(FloatAttributeEntity);
 }
 

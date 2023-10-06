@@ -10,7 +10,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, BlueprintType, NotBlueprintable, EditInlineNew)
-class CKNET_API UCk_UnrealEntity_Base_PDA : public UCk_DataAsset_PDA
+class CKUNREAL_API UCk_UnrealEntity_Base_PDA : public UCk_DataAsset_PDA
 {
     GENERATED_BODY()
 
@@ -35,7 +35,7 @@ protected:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, BlueprintType, Blueprintable, EditInlineNew)
-class CKNET_API UCk_UnrealEntity_PDA : public UCk_UnrealEntity_Base_PDA
+class CKUNREAL_API UCk_UnrealEntity_PDA : public UCk_UnrealEntity_Base_PDA
 {
     GENERATED_BODY()
 
@@ -57,7 +57,7 @@ private:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, BlueprintType, Blueprintable, EditInlineNew)
-class CKNET_API UCk_UnrealEntity_WithActor_PDA : public UCk_UnrealEntity_Base_PDA
+class CKUNREAL_API UCk_UnrealEntity_WithActor_PDA : public UCk_UnrealEntity_Base_PDA
 {
     GENERATED_BODY()
 
@@ -79,7 +79,7 @@ private:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKNET_API FCk_Request_UnrealEntity_Spawn
+struct CKUNREAL_API FCk_Request_UnrealEntity_Spawn
 {
     GENERATED_BODY()
 
@@ -124,7 +124,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKNET_API FCk_Payload_UnrealEntity_EntityCreated
+struct CKUNREAL_API FCk_Payload_UnrealEntity_EntityCreated
 {
     GENERATED_BODY()
 

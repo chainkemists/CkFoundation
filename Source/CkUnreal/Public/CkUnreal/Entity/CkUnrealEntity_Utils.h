@@ -4,14 +4,14 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkNet/Entity/CkUnrealEntity_Fragment_Params.h"
+#include "CkUnreal/Entity/CkUnrealEntity_Fragment_Params.h"
 
 #include "CkUnrealEntity_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKNET_API UCk_Utils_UnrealEntity_UE : public UBlueprintFunctionLibrary
+class CKUNREAL_API UCk_Utils_UnrealEntity_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
