@@ -110,9 +110,6 @@ public:
               Category = "Ck|Utils|Net")
     static bool
     Get_IsEntityReplicated(FCk_Handle InHandle);
-
-private:
-    static auto Request_MarkEntityAs_DedicatedServer(FCk_Handle InHandle) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -130,7 +127,7 @@ public:
     static auto UpdateReplicatedFragment(FCk_Handle InHandle, T_UnaryUpdateFunc InUpdateFunc) -> void;
 
     template <typename T_ReplicatedFragment>
-    static auto TryAddReplicatedFragment(FCk_Handle InHandle) -> ECk_AddedOrNot;
+    static auto TryAddReplicatedFragment(FCk_Handle InHandle, UCk_Ecs_ReplicatedObject_UE* InExistingObject = nullptr) -> ECk_AddedOrNot;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -162,7 +159,8 @@ template <typename T_ReplicatedFragment>
 auto
     UCk_Utils_Ecs_Net_UE::
     TryAddReplicatedFragment(
-        FCk_Handle InHandle)
+        FCk_Handle InHandle,
+        UCk_Ecs_ReplicatedObject_UE* InExistingObject)
     -> ECk_AddedOrNot
 {
     static_assert(std::is_base_of_v<class UCk_Ecs_ReplicatedObject_UE, T_ReplicatedFragment>, "Replicated Fragment MUST derive from UCk_Ecs_ReplicatedObject_UE");
@@ -190,16 +188,25 @@ auto
         OwningActor, EntityWithActor, OutermostActor)
     { return ECk_AddedOrNot::NotAdded; }
 
-    auto ReplicatedFragment_Object = Cast<T_ReplicatedFragment>(UCk_Ecs_ReplicatedObject_UE::Create
-    (
-        T_ReplicatedFragment::StaticClass(),
-        OutermostActor,
-        NAME_None,
-        InHandle
-    ));
+    auto ReplicatedFragment_Object = [&]()
+    {
+        if (ck::IsValid(InExistingObject))
+        {
+            UCk_Ecs_ReplicatedObject_UE::Setup(InExistingObject, OutermostActor, InHandle);
+            return Cast<T_ReplicatedFragment>(InExistingObject);
+        }
+
+        return Cast<T_ReplicatedFragment>(UCk_Ecs_ReplicatedObject_UE::Create
+        (
+            T_ReplicatedFragment::StaticClass(),
+            OutermostActor,
+            NAME_None,
+            InHandle
+        ));
+    }();
 
     CK_ENSURE_IF_NOT(ck::IsValid(ReplicatedFragment_Object),
-        TEXT("Failed to create Replicated Fragment Object for Entity [{}]"), InHandle)
+        TEXT("Failed to create (or convert from [{}]) Replicated Fragment Object for Entity [{}]"), InExistingObject, InHandle)
     { return ECk_AddedOrNot::NotAdded; }
 
     InHandle.Add<TObjectPtr<T_ReplicatedFragment>>(ReplicatedFragment_Object);

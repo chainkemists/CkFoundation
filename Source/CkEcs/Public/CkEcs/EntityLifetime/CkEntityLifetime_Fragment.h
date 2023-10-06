@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkEcs/Handle/CkHandle.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -13,7 +15,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_LifetimeOwner);
 
     private:
-        FCk_Entity _Entity;
+        FCk_Handle _Entity;
 
     public:
         CK_PROPERTY_GET(_Entity);

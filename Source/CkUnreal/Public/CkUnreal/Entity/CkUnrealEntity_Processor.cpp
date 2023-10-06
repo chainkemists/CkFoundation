@@ -2,7 +2,8 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 
-#include "CkUnreal/CkUnreal_Log.h"
+#include "CkUnreal/Entity/CkUnrealEntity_Fragment.h"
+#include "CkNet/CkNet_Log.h"
 
 namespace ck
 {
@@ -27,7 +28,7 @@ namespace ck
             if (Request.Get_PostSpawnFunc())
             { Request.Get_PostSpawnFunc()(NewEntity); }
 
-            unreal::VeryVerbose(TEXT("[UnrealEntity] Built new Unreal Entity [{}] from Unreal Entity PDA [{}] by Request from [{}]"),
+            net::VeryVerbose(TEXT("[UnrealEntity] Built new Unreal Entity [{}] from Unreal Entity PDA [{}] by Request from [{}]"),
                 NewEntity, UnrealEntityPDA, InHandle);
 
             // TODO: Fire signal for new entity created once we have signals

@@ -10,7 +10,7 @@ auto
     UCk_Utils_DebugDraw_UE::
     Create_ASCII_ProgressBar(
         const FCk_FloatRange_0to1&  InProgressValue,
-        int32                       InProgressBarCharacterLength,
+        const int32                 InProgressBarCharacterLength,
         ECk_ASCII_ProgressBar_Style InStyle)
     -> FString
 {
@@ -19,10 +19,10 @@ auto
 
     FStringBuilderBase StringBuilder;
 
-    const auto& progressValue = InProgressValue.Get_Value();
-    const auto& numberOfCharacters = FMath::RoundToInt(progressValue * static_cast<float>(InProgressBarCharacterLength));
+    const auto& ProgressValue = InProgressValue.Get_Value();
+    const auto& NumberOfCharacters = FMath::RoundToInt(ProgressValue * static_cast<float>(InProgressBarCharacterLength));
 
-    const auto& progressCharacter = [&]() -> FString
+    const auto& ProgressCharacter = [&]() -> FString
     {
         switch (InStyle)
         {
@@ -36,21 +36,21 @@ auto
             }
             case ECk_ASCII_ProgressBar_Style::FilledBlock_Symbol:
             {
-                return TEXT("█");
+                return TEXT("|");
             }
             default:
             {
                 CK_INVALID_ENUM(InStyle);
-                return TEXT("█");
+                return TEXT("|");
             }
         }
     }();
 
-    for (auto i = 0; i < InProgressBarCharacterLength; ++i)
+    for (auto Index = 0; Index < InProgressBarCharacterLength; ++Index)
     {
-        if (i < numberOfCharacters)
+        if (Index < NumberOfCharacters)
         {
-            StringBuilder.Append(progressCharacter);
+            StringBuilder.Append(ProgressCharacter);
         }
         else
         {

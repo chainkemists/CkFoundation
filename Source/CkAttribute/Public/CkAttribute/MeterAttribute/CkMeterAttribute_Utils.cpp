@@ -3,9 +3,12 @@
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment.h"
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Object/CkObject_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkLabel/CkLabel_Utils.h"
+
+#include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
 #include <GameplayTagsManager.h>
 
@@ -58,45 +61,52 @@ namespace ck_meter_attribute
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_MeterAttribute_UE::
-    Add(
-        FCk_Handle                                    InHandle,
-        const FCk_Fragment_MeterAttribute_ParamsData& InParams)
+    UCk_MeterAttribute_ConstructionScript_PDA::
+    DoConstruct_Implementation(
+        const FCk_Handle& InHandle)
     -> void
 {
-    // NOTES: Meter Attribute is piggy-backing on the Float Attribute (including Replication)
+    using RecordOfMeterAttributes_Utils = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils;
 
-    RecordOfMeterAttributes_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
+    const auto& MeterParams = Get_Params().Get_AttributeBaseValue().Get_Params();
+    const auto& MeterCapacity = MeterParams.Get_Capacity();
+    const auto& MeterStartingPercentage = MeterParams.Get_StartingPercentage();
 
-    const auto& AddNewMeterAttributeToEntity = [&](FCk_Handle InAttributeOwner, const FGameplayTag& InAttributeName, FCk_Meter InAttributeBaseValue)
-    {
-        const auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwner);
-
-        ck::UCk_Utils_OwningEntity::Add(NewAttributeEntity, InHandle);
-
-        const auto& MeterParams = InAttributeBaseValue.Get_Params();
-        const auto& MeterCapacity = MeterParams.Get_Capacity();
-        const auto& MeterStartingPercentage = MeterParams.Get_StartingPercentage();
-
-        UCk_Utils_FloatAttribute_UE::AddMultiple
-        (
-            NewAttributeEntity,
-            FCk_Fragment_MultipleFloatAttribute_ParamsData
+    UCk_Utils_FloatAttribute_UE::AddMultiple
+    (
+        InHandle,
+        FCk_Fragment_MultipleFloatAttribute_ParamsData
+        {
             {
-                {
-                    { ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity(), MeterCapacity.Get_MinCapacity() },
-                    { ck_meter_attribute::FMeterAttribute_Tags::Get_MaxCapacity(), MeterCapacity.Get_MaxCapacity() },
-                    { ck_meter_attribute::FMeterAttribute_Tags::Get_Current(), MeterStartingPercentage.Get_Value() }
-                }
+                { ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity(), MeterCapacity.Get_MinCapacity() },
+                { ck_meter_attribute::FMeterAttribute_Tags::Get_MaxCapacity(), MeterCapacity.Get_MaxCapacity() },
+                { ck_meter_attribute::FMeterAttribute_Tags::Get_Current(), MeterStartingPercentage.Get_Value() }
             }
-        );
+        }
+    );
 
-        UCk_Utils_GameplayLabel_UE::Add(NewAttributeEntity, InAttributeName);
+    UCk_Utils_GameplayLabel_UE::Add(InHandle, Get_Params().Get_AttributeName());
+    const auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
-        RecordOfMeterAttributes_Utils::Request_Connect(InAttributeOwner, NewAttributeEntity);
-    };
+    RecordOfMeterAttributes_Utils::AddIfMissing(
+        LifetimeOwner, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
+    RecordOfMeterAttributes_Utils::Request_Connect(LifetimeOwner, InHandle);
+}
 
-    AddNewMeterAttributeToEntity(InHandle, InParams.Get_AttributeName(), InParams.Get_AttributeBaseValue());
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_MeterAttribute_UE::
+    Add(
+        FCk_Handle InHandle,
+        UCk_MeterAttribute_ConstructionScript_PDA* InDataAsset)
+    -> void
+{
+    if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InHandle))
+    { return;}
+
+    // TODO: REPLACE WITH OTHER CALL
+    UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(InHandle, FCk_EntityReplicationDriver_ConstructionInfo{InDataAsset});
 }
 
 auto
@@ -106,9 +116,9 @@ auto
         const FCk_Fragment_MultipleMeterAttribute_ParamsData& InParams)
     -> void
 {
-    for (const auto& param : InParams.Get_MeterAttributeParams())
+    for (const auto& Param : InParams.Get_MeterAttributeParams())
     {
-        Add(InHandle, param);
+        Add(InHandle, Param);
     }
 }
 
@@ -119,14 +129,17 @@ auto
         FGameplayTag InAttributeName)
     -> bool
 {
+    if (NOT RecordOfMeterAttributes_Utils::Has(InAttributeOwnerEntity))
+    { return false; }
+
     const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
     if (NOT ck::IsValid(FoundEntity))
     { return false; }
 
-    const auto& FloatAttributeEntiyy = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity());
-    return ck::IsValid(FloatAttributeEntiyy);
+    const auto& FloatAttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
+        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity());
+    return ck::IsValid(FloatAttributeEntity);
 }
 
 auto
@@ -172,9 +185,9 @@ auto
     if (NOT RecordOfMeterAttributes_Utils::Has(InAttributeOwnerEntity))
     { return {}; }
 
-    const auto& meterAttributeEntities = RecordOfMeterAttributes_Utils::Get_AllRecordEntries(InAttributeOwnerEntity);
+    const auto& MeterAttributeEntities = RecordOfMeterAttributes_Utils::Get_AllRecordEntries(InAttributeOwnerEntity);
 
-    return ck::algo::Transform<TArray<FGameplayTag>>(meterAttributeEntities, [&](FCk_Handle InMeterAttributeEntity)
+    return ck::algo::Transform<TArray<FGameplayTag>>(MeterAttributeEntities, [&](FCk_Handle InMeterAttributeEntity)
     {
         return UCk_Utils_GameplayLabel_UE::Get_Label(InMeterAttributeEntity);
     });
@@ -317,7 +330,7 @@ auto
 {
     const auto MeterAttributeEntity = InFloatAttributeEntity;
     const auto MeterAttributeLabel = UCk_Utils_GameplayLabel_UE::Get_Label(MeterAttributeEntity);
-    const auto MeterAttributeOwnerEntity = ck::UCk_Utils_OwningEntity::Get_StoredEntity(MeterAttributeEntity);
+    const auto MeterAttributeOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(MeterAttributeEntity);
 
     ck::UUtils_Signal_OnMeterAttributeValueChanged::Broadcast
     (
@@ -344,7 +357,7 @@ auto
 {
     const auto MeterAttributeEntity = InFloatAttributeEntity;
     const auto MeterAttributeLabel = UCk_Utils_GameplayLabel_UE::Get_Label(MeterAttributeEntity);
-    const auto MeterAttributeOwnerEntity = ck::UCk_Utils_OwningEntity::Get_StoredEntity(MeterAttributeEntity);
+    const auto MeterAttributeOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(MeterAttributeEntity);
 
     ck::UUtils_Signal_OnMeterAttributeValueChanged::Broadcast
     (
@@ -371,7 +384,7 @@ auto
 {
     const auto MeterAttributeEntity = InFloatAttributeEntity;
     const auto MeterAttributeLabel = UCk_Utils_GameplayLabel_UE::Get_Label(MeterAttributeEntity);
-    const auto MeterAttributeOwnerEntity = ck::UCk_Utils_OwningEntity::Get_StoredEntity(MeterAttributeEntity);
+    const auto MeterAttributeOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(MeterAttributeEntity);
 
     ck::UUtils_Signal_OnMeterAttributeValueChanged::Broadcast
     (
@@ -405,7 +418,8 @@ auto
     const auto& ModifyCurrentValue = EnumHasAnyFlags(ModifierPolicy, ECk_MeterAttributeModifier_Policy::CurrentValue);
 
     CK_ENSURE_IF_NOT(ModifyMinCapacity || ModifyMaxCapacity || ModifyCurrentValue,
-        TEXT("Cannot Add Meter Attribute Modifier [{}] to Entity [{}] because it targets NO meter component (MinCapacity, MaxCapacity or CurrentValue)"))
+        TEXT("Cannot Meter Attribute Modifier [{}] to Entity [{}] because it targets NO meter component "
+            "(MinCapacity, MaxCapacity or CurrentValue)"), InModifierName, InAttributeOwnerEntity)
     { return; }
 
     const auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_RecordEntryIf

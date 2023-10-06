@@ -208,6 +208,9 @@ namespace ck
             const TObjectPtr<UCk_Fragment_Transform_Rep>& InComp) const
         -> void
     {
+        if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle))
+        { return; }
+
         // TODO: Remove usage of UpdateReplicatedFragment once the processor is tagged to only run on Server
         UCk_Utils_Ecs_Net_UE::UpdateReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle, [&](UCk_Fragment_Transform_Rep* InRepComp)
         {
@@ -220,6 +223,22 @@ namespace ck
             if (EnumHasAnyFlags(InCurrent.Get_ComponentsModified(), ECk_TransformComponents::Scale))
             { InRepComp->_Scale = InCurrent.Get_Transform().GetScale3D(); }
         });
+
+        //// TODO: REMOVE TEMP CODE
+        //const auto& RepDriver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
+
+        //if (RepDriver->Get_TestReplication() % 100 == 0)
+        //{
+        //    RepDriver->Update_ReplicationData([&](TArray<FCk_EntityReplicationDriver_ReplicationData>& InData)
+        //    {
+        //        if (InData.IsEmpty())
+        //        { return; }
+
+        //        InData.Emplace(InData[0]);
+        //    });
+        //}
+
+        //RepDriver->Set_TestReplication(RepDriver->Get_TestReplication() + 1);
     }
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -1,14 +1,21 @@
 #pragma once
 
-#include "CkEcs/Handle/CkHandle.h"
-
 #include "CkCore/Macros/CkMacros.h"
+
+#include "CkEcs/Handle/CkHandle.h"
 
 #include "CkUnreal/Entity/CkUnrealEntity_Fragment_Params.h"
 
 #include "CkUnrealEntity_ActorProxy.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UCLASS()
+class CKUNREAL_API UCk_ChildActorComponent : public UChildActorComponent
+{
+    GENERATED_BODY()
+};
+
 
 UCLASS(Abstract, Blueprintable, BlueprintType)
 class CKUNREAL_API ACk_UnrealEntity_ActorProxy_UE : public AActor
@@ -30,13 +37,25 @@ protected:
     void
     OnEntityCreated(const FCk_Handle& InCreatedEntity) const;
 
+public:
+    void OnConstruction(
+        const FTransform& Transform) override;
+
 protected:
 #if WITH_EDITOR
-    virtual auto PostEditChangeProperty(FPropertyChangedEvent& InPropertyChangedEvent) -> void override;
+    auto PostEditChangeProperty(FPropertyChangedEvent& InPropertyChangedEvent) -> void override;
+    void PostLoad() override;
+
+public:
+    void PreSave(
+        FObjectPreSaveContext ObjectSaveContext) override;
+	void PostSaveRoot(FObjectPostSaveRootContext ObjectSaveContext) override;
+
+protected:
 #endif
 
 public:
-    virtual auto BeginPlay() -> void override;
+    auto BeginPlay() -> void override;
 
 public:
     auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
@@ -51,6 +70,9 @@ public:
 #if WITH_EDITORONLY_DATA
     UPROPERTY(Transient)
     TObjectPtr<UChildActorComponent> _ChildActorComponent;
+
+    UPROPERTY(Transient)
+    TObjectPtr<AActor> _TransientActor;
 #endif
 };
 
