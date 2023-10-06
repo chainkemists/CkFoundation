@@ -7,6 +7,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkLabel/CkLabel_Utils.h"
+#include "Kismet/KismetMathLibrary.h"
 
 #include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
@@ -14,48 +15,21 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck_meter_attribute
+namespace ck
 {
-    struct FMeterAttribute_Tags final : public FGameplayTagNativeAdder
-    {
-    public:
-        virtual ~FMeterAttribute_Tags() = default;
-
-    protected:
-        auto AddTags() -> void override
-        {
-            auto& Manager = UGameplayTagsManager::Get();
-
-            _MinCapacity = Manager.AddNativeGameplayTag(TEXT("Ck.Attribute.Meter.MinCapacity"));
-            _MaxCapacity = Manager.AddNativeGameplayTag(TEXT("Ck.Attribute.Meter.MaxCapacity"));
-            _Current     = Manager.AddNativeGameplayTag(TEXT("Ck.Attribute.Meter.Current"));
-        }
-
-    private:
-        FGameplayTag _MinCapacity;
-        FGameplayTag _MaxCapacity;
-        FGameplayTag _Current;
-
-        static FMeterAttribute_Tags _Tags;
-
-    public:
-        static auto Get_MinCapacity() -> FGameplayTag
-        {
-            return _Tags._MinCapacity;
-        }
-
-        static auto Get_MaxCapacity() -> FGameplayTag
-        {
-            return _Tags._MaxCapacity;
-        }
-
-        static auto Get_Current() -> FGameplayTag
-        {
-            return _Tags._Current;
-        }
-    };
-
     FMeterAttribute_Tags FMeterAttribute_Tags::_Tags;
+
+    auto
+        FMeterAttribute_Tags::
+        AddTags()
+        -> void
+    {
+        auto& Manager = UGameplayTagsManager::Get();
+
+        _MinCapacity = Manager.AddNativeGameplayTag(TEXT("Ck.Attribute.Meter.MinCapacity"));
+        _MaxCapacity = Manager.AddNativeGameplayTag(TEXT("Ck.Attribute.Meter.MaxCapacity"));
+        _Current     = Manager.AddNativeGameplayTag(TEXT("Ck.Attribute.Meter.Current"));
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -93,7 +67,18 @@ auto
     RecordOfMeterAttributes_Utils::Request_Connect(LifetimeOwner, InHandle);
 }
 
-// --------------------------------------------------------------------------------------------------------------------
+        UCk_Utils_FloatAttribute_UE::AddMultiple
+        (
+            NewAttributeEntity,
+            FCk_Fragment_MultipleFloatAttribute_ParamsData
+            {
+                {
+                    { ck::FMeterAttribute_Tags::Get_MinCapacity(), MeterCapacity.Get_MinCapacity() },
+                    { ck::FMeterAttribute_Tags::Get_MaxCapacity(), MeterCapacity.Get_MaxCapacity() },
+                    { ck::FMeterAttribute_Tags::Get_Current(), MeterCapacity.Get_MaxCapacity() * MeterStartingPercentage.Get_Value() }
+                }
+            }
+        );
 
 auto
     UCk_Utils_MeterAttribute_UE::
@@ -231,10 +216,12 @@ auto
     const auto& MaxCapacityValue = FloatAttribute_Utils::Get_FinalValue(MaxCapacity);
     const auto& CurrentValue = FloatAttribute_Utils::Get_FinalValue(Current);
 
+    const auto& CurrentPercentage = UKismetMathLibrary::MapRangeClamped(CurrentValue, MinCapacityValue, MaxCapacityValue, 0.0f, 1.0f);
+
     return FCk_Meter
     {
         FCk_Meter_Params{FCk_Meter_Capacity{MaxCapacityValue}.Set_MinCapacity(MinCapacityValue)}
-        .Set_StartingPercentage(FCk_FloatRange_0to1{CurrentValue})
+        .Set_StartingPercentage(FCk_FloatRange_0to1{static_cast<float>(CurrentPercentage)})
     };
 }
 
@@ -251,27 +238,9 @@ auto
 
     const auto [MinCapacity, MaxCapacity, Current] = Get_MinMaxAndCurrentAttributeEntities(InAttributeOwnerEntity, InAttributeName);
 
-    switch(InBehavior)
-    {
-    case ECk_Signal_BindingPolicy::FireIfPayloadInFlight:
-        ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind
-            <&UCk_Utils_MeterAttribute_UE::OnMinCapacityChanged, ECk_Signal_BindingPolicy::FireIfPayloadInFlight>(MinCapacity);
-        ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind
-            <&UCk_Utils_MeterAttribute_UE::OnMaxCapacityChanged, ECk_Signal_BindingPolicy::FireIfPayloadInFlight>(MaxCapacity);
-        ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind
-            <&UCk_Utils_MeterAttribute_UE::OnCurrentValueCanged, ECk_Signal_BindingPolicy::FireIfPayloadInFlight>(Current);
-        break;
-    case ECk_Signal_BindingPolicy::IgnorePayloadInFlight:
-        ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind
-            <&UCk_Utils_MeterAttribute_UE::OnMinCapacityChanged, ECk_Signal_BindingPolicy::IgnorePayloadInFlight>(MinCapacity);
-        ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind
-            <&UCk_Utils_MeterAttribute_UE::OnMaxCapacityChanged, ECk_Signal_BindingPolicy::IgnorePayloadInFlight>(MaxCapacity);
-        ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind
-            <&UCk_Utils_MeterAttribute_UE::OnCurrentValueCanged, ECk_Signal_BindingPolicy::IgnorePayloadInFlight>(Current);
-        break;
-    default:
-        CK_INVALID_ENUM(InBehavior);
-    }
+    ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind<&UCk_Utils_MeterAttribute_UE::OnMinCapacityChanged>(MinCapacity, InBehavior);
+    ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind<&UCk_Utils_MeterAttribute_UE::OnMaxCapacityChanged>(MaxCapacity, InBehavior);
+    ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind<&UCk_Utils_MeterAttribute_UE::OnCurrentValueCanged>(Current, InBehavior);
 
     ck::UUtils_Signal_OnMeterAttributeValueChanged::Bind(FoundEntity, InDelegate, InBehavior);
 }
@@ -305,13 +274,13 @@ auto
     const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
     const auto& MinCapacity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity());
+        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(FoundEntity, ck::FMeterAttribute_Tags::Get_MinCapacity());
 
     const auto& MaxCapacity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MaxCapacity());
+        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(FoundEntity, ck::FMeterAttribute_Tags::Get_MaxCapacity());
 
     const auto& Current = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_Current());
+        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(FoundEntity, ck::FMeterAttribute_Tags::Get_Current());
 
     return {MinCapacity, MaxCapacity, Current};
 }
@@ -423,6 +392,8 @@ auto
         ck::algo::MatchesGameplayLabelExact{InParams.Get_TargetAttributeName()}
     );
 
+    const auto& ModifierDeltaParams = InParams.Get_ModifierDelta().Get_Params();
+
     if (ModifyMinCapacity)
     {
         UCk_Utils_FloatAttributeModifier_UE::Add
@@ -431,8 +402,8 @@ auto
             InModifierName,
             FCk_Fragment_FloatAttributeModifier_ParamsData{FCk_Fragment_FloatAttributeModifier_ParamsData
             {
-                InParams.Get_ModifierDelta().Get_Params().Get_Capacity().Get_MinCapacity(),
-                ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity(),
+                ModifierDeltaParams.Get_Capacity().Get_MinCapacity(),
+                ck::FMeterAttribute_Tags::Get_MinCapacity(),
                 InParams.Get_ModifierOperation()
             }}
         );
@@ -446,8 +417,8 @@ auto
             InModifierName,
             FCk_Fragment_FloatAttributeModifier_ParamsData{FCk_Fragment_FloatAttributeModifier_ParamsData
             {
-                InParams.Get_ModifierDelta().Get_Params().Get_Capacity().Get_MaxCapacity(),
-                ck_meter_attribute::FMeterAttribute_Tags::Get_MaxCapacity(),
+                ModifierDeltaParams.Get_Capacity().Get_MaxCapacity(),
+                ck::FMeterAttribute_Tags::Get_MaxCapacity(),
                 InParams.Get_ModifierOperation()
             }}
         );
@@ -455,14 +426,22 @@ auto
 
     if (ModifyCurrentValue)
     {
+        const auto& MeterCurrentDelta = UKismetMathLibrary::MapRangeClamped
+        (
+            ModifierDeltaParams.Get_StartingPercentage().Get_Value(),
+            0.0f,
+            1.0f,
+            ModifierDeltaParams.Get_Capacity().Get_MinCapacity(),
+            ModifierDeltaParams.Get_Capacity().Get_MaxCapacity());
+
         UCk_Utils_FloatAttributeModifier_UE::Add
         (
             FoundEntity,
             InModifierName,
             FCk_Fragment_FloatAttributeModifier_ParamsData{FCk_Fragment_FloatAttributeModifier_ParamsData
             {
-                InParams.Get_ModifierDelta().Get_Params().Get_StartingPercentage().Get_Value(),
-                ck_meter_attribute::FMeterAttribute_Tags::Get_Current(),
+                static_cast<float>(MeterCurrentDelta),
+                ck::FMeterAttribute_Tags::Get_Current(),
                 InParams.Get_ModifierOperation()
             }}
         );
@@ -479,9 +458,9 @@ auto
 {
     const auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
-    const auto& HasMeterModifier_MinCapacity  = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity(), InModifierName);
-    const auto& HasMeterModifier_MaxCapacity  = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MaxCapacity(), InModifierName);
-    const auto& HasMeterModifier_CurrentValue = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_Current(),     InModifierName);
+    const auto& HasMeterModifier_MinCapacity  = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck::FMeterAttribute_Tags::Get_MinCapacity(), InModifierName);
+    const auto& HasMeterModifier_MaxCapacity  = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck::FMeterAttribute_Tags::Get_MaxCapacity(), InModifierName);
+    const auto& HasMeterModifier_CurrentValue = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck::FMeterAttribute_Tags::Get_Current(),     InModifierName);
 
     return HasMeterModifier_MinCapacity || HasMeterModifier_MaxCapacity || HasMeterModifier_CurrentValue;
 }
@@ -510,23 +489,23 @@ auto
 {
     const auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
-    const auto& HasMeterModifier_MinCapacity  = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity(), InModifierName);
-    const auto& HasMeterModifier_MaxCapacity  = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MaxCapacity(), InModifierName);
-    const auto& HasMeterModifier_CurrentValue = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_Current(),     InModifierName);
+    const auto& HasMeterModifier_MinCapacity  = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck::FMeterAttribute_Tags::Get_MinCapacity(), InModifierName);
+    const auto& HasMeterModifier_MaxCapacity  = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck::FMeterAttribute_Tags::Get_MaxCapacity(), InModifierName);
+    const auto& HasMeterModifier_CurrentValue = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck::FMeterAttribute_Tags::Get_Current(),     InModifierName);
 
     if (HasMeterModifier_MinCapacity)
     {
-        UCk_Utils_FloatAttributeModifier_UE::Remove(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity(), InModifierName);
+        UCk_Utils_FloatAttributeModifier_UE::Remove(FoundEntity, ck::FMeterAttribute_Tags::Get_MinCapacity(), InModifierName);
     }
 
     if (HasMeterModifier_MaxCapacity)
     {
-        UCk_Utils_FloatAttributeModifier_UE::Remove(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_MaxCapacity(), InModifierName);
+        UCk_Utils_FloatAttributeModifier_UE::Remove(FoundEntity, ck::FMeterAttribute_Tags::Get_MaxCapacity(), InModifierName);
     }
 
     if (HasMeterModifier_CurrentValue)
     {
-        UCk_Utils_FloatAttributeModifier_UE::Remove(FoundEntity, ck_meter_attribute::FMeterAttribute_Tags::Get_Current(), InModifierName);
+        UCk_Utils_FloatAttributeModifier_UE::Remove(FoundEntity, ck::FMeterAttribute_Tags::Get_Current(), InModifierName);
     }
 }
 
