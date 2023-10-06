@@ -5,6 +5,8 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkProvider/CkProvider_Data.h"
+#include "CkSignal/CkSignal_Fragment.h"
+#include "CkSignal/CkSignal_Utils.h"
 
 #include "CkNumericAttribute_Fragment_Data.generated.h"
 
@@ -198,5 +200,70 @@ private:
 public:
     CK_PROPERTY_GET(_Provider);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKATTRIBUTE_API FCk_Payload_NumericAttribute_OnValueChanged
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Payload_NumericAttribute_OnValueChanged);
+
+private:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FCk_Handle  _Handle;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    float  _PreviousValue;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    float  _NewValue;
+
+public:
+    CK_PROPERTY_GET(_Handle);
+    CK_PROPERTY_GET(_PreviousValue);
+    CK_PROPERTY_GET(_NewValue);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Payload_NumericAttribute_OnValueChanged, _Handle, _PreviousValue, _NewValue);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_NumericAttribute_OnValueChanged,
+    FCk_Handle, InHandle,
+    FCk_Payload_NumericAttribute_OnValueChanged, InPayload);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FCk_Delegate_NumericAttribute_OnValueChanged_MC,
+    FCk_Handle, InHandle,
+    FCk_Payload_NumericAttribute_OnValueChanged, InPayload);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    struct FFragment_Signal_OnNumericAttributeValueChanged : public TFragment_Signal<FCk_Handle, FCk_Payload_NumericAttribute_OnValueChanged> {};
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct FFragment_Signal_UnrealMulticast_OnNumericAttributeValueChanged : public TFragment_Signal_UnrealMulticast
+    <
+        FCk_Delegate_NumericAttribute_OnValueChanged_MC,
+        FCk_Handle,
+        FCk_Payload_NumericAttribute_OnValueChanged
+    > {};
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class UUtils_Signal_NumericOnAttributeValueChanged : public TUtils_Signal_UnrealMulticast
+    <
+        FFragment_Signal_OnNumericAttributeValueChanged,
+        FFragment_Signal_UnrealMulticast_OnNumericAttributeValueChanged
+    > {};
+}
 
 // --------------------------------------------------------------------------------------------------------------------

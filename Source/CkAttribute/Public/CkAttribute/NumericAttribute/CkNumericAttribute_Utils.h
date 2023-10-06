@@ -1,20 +1,35 @@
 #pragma once
 
+#include "CkAttribute/CkAttribute_Fragment.h"
+#include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment.h"
+#include "CkAttribute/MeterAttribute/CkMeterAttribute_Fragment.h"
 #include "CkAttribute/NumericAttribute/CkNumericAttribute_Fragment_Data.h"
+
 #include "CkCore/Macros/CkMacros.h"
+
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcsBasics/CkEcsBasics_Utils.h"
+
+#include "CkSignal/CkSignal_Fragment_Data.h"
 
 #include "CkNumericAttribute_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKATTRIBUTE_API UCk_Utils_NumericAttribute_UE : public UBlueprintFunctionLibrary
+class CKATTRIBUTE_API UCk_Utils_NumericAttribute_UE : public UCk_Utils_Ecs_Base_UE
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(UCk_Utils_NumericAttribute_UE);
+
+public:
+    class FloatAttribute_Utils : public ck::TUtils_Attribute<ck::FFragment_FloatAttribute> {};
+    class RecordOfFloatAttributes_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfFloatAttributes> {};
+
+    class MeterAttribute_Utils : public ck::TUtils_Attribute<ck::FFragment_MeterAttribute> {};
+    class RecordOfMeterAttributes_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfMeterAttributes> {};
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -89,6 +104,37 @@ public:
         FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         bool& OutHasMaxValue);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Numeric",
+              DisplayName = "Bind To On Numeric Attribute Value Changed")
+    static void
+    BindTo_OnValueChanged(
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
+        ECk_Signal_BindingPolicy InBehavior,
+        const FCk_Delegate_NumericAttribute_OnValueChanged& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Numeric",
+              DisplayName = "unbind From On Numeric Attribute Value Changed")
+    static void
+    UnbindFrom_OnValueChanged(
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
+        const FCk_Delegate_NumericAttribute_OnValueChanged& InDelegate);
+
+private:
+    static auto
+    OnFloatAttribute_ValueChanged(
+        FCk_Handle InFloatAttributeOwnerEntity,
+        ck::TPayload_Attribute_OnValueChanged<ck::FFragment_FloatAttribute> InValueChanged) -> void;
+
+    static auto
+    OnMeterAttribute_ValueChanged(
+        FCk_Handle InMeterAttributeEntity,
+        ck::TPayload_Attribute_OnValueChanged<ck::FFragment_FloatAttribute> InValueChanged) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
