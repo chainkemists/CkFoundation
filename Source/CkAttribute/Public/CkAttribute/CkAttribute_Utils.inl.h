@@ -116,7 +116,7 @@ namespace ck
             InTarget)
         { return; }
 
-        RecordOfAttributeModifiers_Utils::AddIfMissing(InTarget);
+        RecordOfAttributeModifiers_Utils::AddIfMissing(InTarget, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
         RecordOfAttributeModifiers_Utils::Request_Connect(InTarget, InHandle);
 
         InHandle.Add<AttributeModifierFragmentType>(InModifierDelta);
