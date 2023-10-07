@@ -52,10 +52,10 @@ auto
 {
     return _Utils.Get_HasRecordEntry(InRecordHandle, [&](FCk_Handle InHandle) -> bool
     {
-        const FCk_SharedBool OutResult;
-        InPredicate.Execute(InHandle, OutResult);
+        const FCk_SharedBool Result;
+        InPredicate.Execute(InHandle, Result);
 
-        return *OutResult;
+        return *Result;
     });
 }
 
@@ -68,10 +68,10 @@ auto
 {
     return _Utils.Get_RecordEntryIf(InRecordHandle, [&](FCk_Handle InHandle) -> bool
     {
-        const FCk_SharedBool OutResult;
-        InPredicate.Execute(InHandle, OutResult);
+        const FCk_SharedBool Result;
+        InPredicate.Execute(InHandle, Result);
 
-        return *OutResult;
+        return *Result;
     });
 }
 
@@ -103,10 +103,10 @@ auto
     },
     [&](FCk_Handle InRecordEntryHandle)
     {
-        const FCk_SharedBool OutResult;
-        InPredicate.Execute(InRecordEntryHandle, OutResult);
+        const FCk_SharedBool Result;
+        InPredicate.Execute(InRecordEntryHandle, Result);
 
-        return *OutResult;
+        return *Result;
     });
 }
 

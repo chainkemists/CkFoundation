@@ -33,7 +33,8 @@ namespace ck
         friend class TUtils_RecordOfEntities;
 
     public:
-        using EntityType = FCk_Entity;
+        // TODO: Use FCk_DebuggableEntity when available [OBS-845]
+        using EntityType = FCk_Handle;
         using RecordsListType = TSet<EntityType>;
 
         using DestructionCleanupFuncType = TFunction<void(FCk_Handle, FCk_Handle)>;

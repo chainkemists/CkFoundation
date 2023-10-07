@@ -29,7 +29,7 @@ auto
     { return {}; }
 
     auto NewEntity = Request_CreateEntity(**InHandle);
-    NewEntity.Add<ck::FFragment_LifetimeOwner>(InHandle.Get_Entity());
+    NewEntity.Add<ck::FFragment_LifetimeOwner>(InHandle);
     return NewEntity;
 }
 
@@ -44,7 +44,7 @@ auto
         InHandle)
     { return {}; }
 
-    return ck::MakeHandle(InHandle.Get<ck::FFragment_LifetimeOwner>().Get_Entity(), InHandle);
+    return InHandle.Get<ck::FFragment_LifetimeOwner>().Get_Entity();
 }
 
 auto
