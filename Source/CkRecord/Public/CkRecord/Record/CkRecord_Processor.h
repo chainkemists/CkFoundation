@@ -16,8 +16,8 @@ namespace ck
 
     public:
         auto ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
+            TimeType                          InDeltaT,
+            const HandleType&                 InHandle,
             const FFragment_RecordOfEntities& InRecord) const -> void;
     };
 }

@@ -137,7 +137,15 @@ auto CKECS_API GetTypeHash(const FCk_Handle& InHandle) -> uint32;
 
 namespace ck
 {
+    // Having an overload with FCK_Handle helps usages where a type T that could be an Entity or Handle is used and the code
+    // does not know or care. Another case is when we use FCk_Entity in debug builds and FCk_Handle in release
+    // builds but the code that uses the handle (or entity) does not care and wants a handle back
+
     auto CKECS_API MakeHandle(FCk_Entity InEntity, FCk_Handle InValidHandle) -> FCk_Handle;
+    auto CKECS_API MakeHandle(FCk_Handle InEntity, FCk_Handle InValidHandle) -> FCk_Handle;
+
+    auto CKECS_API GetEntity(FCk_Entity InEntity) -> FCk_Entity;
+    auto CKECS_API GetEntity(FCk_Handle InEntity) -> FCk_Entity;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

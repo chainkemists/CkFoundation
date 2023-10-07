@@ -204,6 +204,35 @@ namespace ck
 
         return FCk_Handle{InEntity, **InValidHandle};
     }
+
+    auto
+        MakeHandle(
+            FCk_Handle InEntity,
+            FCk_Handle InValidHandle)
+        -> FCk_Handle
+    {
+        CK_ENSURE_IF_NOT(ck::IsValid(InValidHandle),
+            TEXT("Unable to create handle for Entity [{}] because Handle [{}] is INVALID."), InEntity, InValidHandle)
+        { return {}; }
+
+        return FCk_Handle{InEntity.Get_Entity(), **InValidHandle};
+    }
+
+    auto
+        GetEntity(
+            const FCk_Entity InEntity)
+        -> FCk_Entity
+    {
+        return InEntity;
+    }
+
+    auto
+        GetEntity(
+            FCk_Handle InEntity)
+        -> FCk_Entity
+    {
+        return InEntity.Get_Entity();
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
