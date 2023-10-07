@@ -245,10 +245,11 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InContext), TEXT("Invalid Object!"))
     { return {}; }
 
-    switch(auto NetMode = InContext->GetWorld()->GetNetMode())
+    switch(InContext->GetWorld()->GetNetMode())
     {
-    case NM_Standalone:
     case NM_DedicatedServer:
+        return ECk_Net_NetRoleType::Server;
+    case NM_Standalone:
     case NM_ListenServer:
         return ECk_Net_NetRoleType::Host;
     case NM_Client:
@@ -290,15 +291,6 @@ auto
     -> bool
 {
     return InHandle.Has<ck::FTag_Replicated>();
-}
-
-auto
-    UCk_Utils_Net_UE::
-    Request_MarkEntityAs_DedicatedServer(
-        FCk_Handle InHandle)
-    -> void
-{
-    InHandle.Add<ck::FTag_NetMode_IsHost>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
