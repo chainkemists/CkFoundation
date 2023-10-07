@@ -206,6 +206,9 @@ auto
     if (NOT InAttributeOwnerEntity.Has<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>())
     { return; }
 
+    if (NOT UCk_Utils_Net_UE::Get_HasAuthority(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttributeOwnerEntity)))
+    { return; }
+
     InAttributeOwnerEntity.Get<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>()->Broadcast_AddModifier(InModifierName, InParams);
 }
 

@@ -3,79 +3,36 @@
 #include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 
+#include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Fragment_Data.h"
+
 #include "CkEntityReplicationDriver_Fragment.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
-struct CKNET_API FCk_EntityReplicationDriver_ConstructionInfo
+class UCk_Utils_EntityReplicationDriver_UE;
+
+namespace ck
 {
-    GENERATED_BODY()
+    struct FFragment_ReplicationDriver_Requests
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_ReplicationDriver_Requests);
 
-public:
-    CK_GENERATED_BODY(FCk_EntityReplicationDriver_ConstructionInfo);
+    public:
+        friend class FProcessor_ReplicationDriver_HandleRequests;
+        friend class UCk_Utils_EntityReplicationDriver_UE;
 
-private:
-    UPROPERTY()
-    FCk_Entity _OriginalEntity;
+    public:
+        using RequestType = FCk_Request_ReplicationDriver_ReplicateEntity;
+        using RequestList = TArray<RequestType>;
 
-    UPROPERTY()
-    TObjectPtr<UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
+    private:
+        RequestList _Requests;
 
-public:
-    CK_PROPERTY(_OriginalEntity);
-    CK_PROPERTY_GET(_ConstructionScript);
-
-    CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_ConstructionInfo, _ConstructionScript);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKNET_API FCk_EntityReplicationDriver_ReplicateObjects_Data
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_EntityReplicationDriver_ReplicateObjects_Data);
-
-private:
-    UPROPERTY()
-    TArray<TSubclassOf<UCk_Ecs_ReplicatedObject_UE>> _Objects;
-
-    UPROPERTY()
-    TArray<FName> _NetStableNames;
-
-public:
-    CK_PROPERTY(_Objects);
-    CK_PROPERTY(_NetStableNames);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKNET_API FCk_EntityReplicationDriver_ReplicationData
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_EntityReplicationDriver_ReplicationData);
-
-private:
-    UPROPERTY()
-    FCk_EntityReplicationDriver_ConstructionInfo _ConstructionInfo;
-
-    UPROPERTY()
-    FCk_EntityReplicationDriver_ReplicateObjects_Data _ReplicatedObjectsData;
-
-public:
-    CK_PROPERTY_GET(_ConstructionInfo);
-    CK_PROPERTY_GET(_ReplicatedObjectsData);
-
-    CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_ReplicationData, _ConstructionInfo, _ReplicatedObjectsData);
-};
-
-
+    public:
+        CK_PROPERTY_GET(_Requests);
+    };
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -88,12 +45,18 @@ public:
     CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_EntityReplicationDriver_Rep);
 
 private:
-    auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
+    auto
+    GetLifetimeReplicatedProps(
+        TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
 
 public:
+    //auto
+    //Request_ReplicateEntity(
+    //    const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo) -> void;
+
     UFUNCTION(Server, Reliable)
     void
-    Request_ReplicateEntity(
+    Request_ReplicateEntity_OnServer(
         const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo);
 
 private:
@@ -106,6 +69,10 @@ private:
     TArray<FCk_EntityReplicationDriver_ReplicationData> _ReplicationData;
 
     int32 _ReplicateFrom = 0;
+
+public:
+    // TODO: reduce the exposure of this variable
+    CK_PROPERTY(_ReplicationData);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
