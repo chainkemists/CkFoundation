@@ -53,6 +53,11 @@ public:
     friend struct FCk_ReplicatedObjects;
 
 public:
+    static auto Setup(
+        UCk_Ecs_ReplicatedObject_UE* InExistingReplicatedObject,
+        AActor*                      InTopmostOwningActor,
+        const FCk_Handle&            InAssociatedEntity) -> UCk_Ecs_ReplicatedObject_UE*;
+
     static auto Create(
         TSubclassOf<UCk_Ecs_ReplicatedObject_UE> InReplicatedObject,
         AActor* InTopmostOwningActor,
@@ -63,9 +68,9 @@ public:
         UCk_Ecs_ReplicatedObject_UE* InRo) -> void;
 
 public:
-    virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
-    virtual auto BeginDestroy() -> void override;
-    virtual auto PreDestroyFromReplication() -> void override;
+    auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
+    auto BeginDestroy() -> void override;
+    auto PreDestroyFromReplication() -> void override;
 
 protected:
     virtual auto OnLink() -> void PURE_VIRTUAL(UCk_Ecs_ReplicateObject_UE::OnLink,);

@@ -12,6 +12,18 @@
 
 auto
     UCk_Ecs_ReplicatedObject_UE::
+    Setup(
+        UCk_Ecs_ReplicatedObject_UE* InExistingReplicatedObject,
+        AActor*                      InTopmostOwningActor,
+        const FCk_Handle&            InAssociatedEntity) -> UCk_Ecs_ReplicatedObject_UE*
+{
+    InExistingReplicatedObject->_AssociatedEntity = InAssociatedEntity;
+    InExistingReplicatedObject->_ReplicatedActor = InTopmostOwningActor;
+    return InExistingReplicatedObject;
+}
+
+auto
+    UCk_Ecs_ReplicatedObject_UE::
     Create(
         TSubclassOf<UCk_Ecs_ReplicatedObject_UE> InReplicatedObject,
         AActor* InTopmostOwningActor,
