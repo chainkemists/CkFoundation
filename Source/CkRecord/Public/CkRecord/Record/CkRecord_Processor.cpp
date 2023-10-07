@@ -9,8 +9,8 @@ namespace ck
     auto
         FProcessor_RecordOfEntities_Destructor::
         ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
+            TimeType                          InDeltaT,
+            const HandleType&                 InHandle,
             const FFragment_RecordOfEntities& InRecord) const
         -> void
     {
@@ -19,7 +19,7 @@ namespace ck
             auto RecordEntryHandle = MakeHandle(RecordEntryEntity, InHandle);
 
             auto& RecordEntryFragment = RecordEntryHandle.Get<FFragment_RecordEntry>();
-            RecordEntryFragment._Records.Remove(InHandle.Get_Entity());
+            RecordEntryFragment._Records.Remove(InHandle);
         }
     }
 }

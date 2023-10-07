@@ -159,7 +159,7 @@ namespace ck
     {
         const auto& Fragment = InRecordHandle.Get<RecordType>();
 
-        return ck::algo::AnyOf(Fragment.Get_RecordEntries(), [&](FCk_Entity InRecordEntry) -> bool
+        return ck::algo::AnyOf(Fragment.Get_RecordEntries(), [&](RecordEntityType InRecordEntry) -> bool
         {
             const auto RecordEntryHandle = ck::MakeHandle(InRecordEntry, InRecordHandle);
             return InPredicate(RecordEntryHandle);
@@ -241,7 +241,7 @@ namespace ck
         auto& RecordFragment = InRecordHandle.Get<RecordType>();
         const auto& CurrentRecordEntries = RecordFragment.Get_RecordEntries();
 
-        CK_ENSURE_IF_NOT(NOT CurrentRecordEntries.Contains(InRecordEntry.Get_Entity()),
+        CK_ENSURE_IF_NOT(NOT CurrentRecordEntries.Contains(InRecordEntry),
             TEXT("The Record [{}] ALREADY contains the RecordEntry [{}]"), InRecordHandle, InRecordEntry)
         { return; }
 
@@ -263,17 +263,18 @@ namespace ck
             { return; }
         }
 
-        RecordFragment._RecordEntries.Emplace(InRecordEntry.Get_Entity());
+        RecordFragment._RecordEntries.Emplace(InRecordEntry);
 
         if (NOT UCk_Utils_RecordEntry_UE::Has(InRecordEntry))
         { UCk_Utils_RecordEntry_UE::Add(InRecordEntry); }
 
         auto& RecordEntryFragment = InRecordEntry.Get<ck::FFragment_RecordEntry>();
-        RecordEntryFragment._Records.Emplace(InRecordHandle.Get_Entity());
+        RecordEntryFragment._Records.Emplace(InRecordHandle);
 
-        RecordEntryFragment._DisconnectionFuncs.Add(InRecordHandle.Get_Entity(), [](FCk_Handle InRecordEntity, FCk_Handle InRecordEntryEntity)
+        RecordEntryFragment._DisconnectionFuncs.Add(InRecordHandle,
+        [](FCk_Handle InRecordEntity, FCk_Handle InRecordEntryEntity)
         {
-            InRecordEntity.Get<T_DerivedRecord>()._RecordEntries.Remove(InRecordEntryEntity.Get_Entity());
+            InRecordEntity.Get<T_DerivedRecord>()._RecordEntries.Remove(InRecordEntryEntity);
         });
     }
 
@@ -293,7 +294,7 @@ namespace ck
 
         {
             auto& RecordFragment = InRecordHandle.Get<RecordType>();
-            const auto& RemovalSuccess = RecordFragment._RecordEntries.Remove(InRecordEntry.Get_Entity());
+            const auto& RemovalSuccess = RecordFragment._RecordEntries.Remove(InRecordEntry);
 
             CK_ENSURE_IF_NOT(RemovalSuccess,
                 TEXT("The Record [{}] couldn't remove the RecordEntry [{}]. Does the RecordEntry exist in the Record?"),
@@ -304,9 +305,9 @@ namespace ck
 
         {
             auto& RecordEntryFragment = InRecordEntry.Get<ck::FFragment_RecordEntry>();
-            const auto& RemovalSuccess = RecordEntryFragment._Records.Remove(InRecordHandle.Get_Entity());
+            const auto& RemovalSuccess = RecordEntryFragment._Records.Remove(InRecordHandle);
 
-            RecordEntryFragment._DisconnectionFuncs.Remove(InRecordHandle.Get_Entity());
+            RecordEntryFragment._DisconnectionFuncs.Remove(InRecordHandle);
 
             CK_ENSURE_IF_NOT(RemovalSuccess,
                 TEXT("The RecordEntry [{}] does NOT have the Record [{}] even though the Record had the RecordEntry. "

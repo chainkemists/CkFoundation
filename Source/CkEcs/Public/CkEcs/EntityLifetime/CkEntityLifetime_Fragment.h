@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkEcs/Handle/CkHandle.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -12,8 +14,12 @@ namespace ck
     {
         CK_GENERATED_BODY(FFragment_LifetimeOwner);
 
+    public:
+        // TODO: Use FCk_DebuggableEntity when available [OBS-845]
+        using EntityType = FCk_Handle;
+
     private:
-        FCk_Entity _Entity;
+        EntityType _Entity;
 
     public:
         CK_PROPERTY_GET(_Entity);
