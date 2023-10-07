@@ -25,7 +25,7 @@ namespace ck
         TPtrWrapper(T_Args&&... InArgs);
 
     public:
-        auto operator=(const ThisType& InOther) -> ThisType& ;
+        auto operator=(const ThisType& InOther) -> ThisType&;
         auto operator=(ThisType&& InOther) -> ThisType & = default;
 
     public:
@@ -107,3 +107,13 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TPtrWrapper);
+CK_DEFINE_CUSTOM_IS_VALID_T(T, ck::TPtrWrapper<T>, ck::IsValid_Policy_Default, [=](const ck::TPtrWrapper<T>& InPtr)
+{
+    return ck::IsValid(InPtr._Ptr);
+});
+
+// --------------------------------------------------------------------------------------------------------------------

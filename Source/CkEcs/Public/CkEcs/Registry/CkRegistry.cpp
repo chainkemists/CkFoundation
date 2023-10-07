@@ -47,6 +47,11 @@ auto
     IsValid(EntityType InEntity) const
     -> bool
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(_InternalRegistry),
+        TEXT("InternalRegistry is Invalid. Cannot determine whether Entity [{}] is valid or not"),
+        InEntity)
+    { return false; }
+
     return _InternalRegistry->valid(InEntity.Get_ID());
 }
 

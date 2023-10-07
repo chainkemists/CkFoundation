@@ -208,6 +208,13 @@ CK_DEFINE_CUSTOM_FORMATTER(FCk_Registry, [&]()
 
 // --------------------------------------------------------------------------------------------------------------------
 
+CK_DEFINE_CUSTOM_IS_VALID(FCk_Registry, ck::IsValid_Policy_Default, [=](const FCk_Registry& InRegistry)
+{
+    return ck::IsValid(InRegistry._InternalRegistry);
+});
+
+// --------------------------------------------------------------------------------------------------------------------
+
 
 template <typename T_FragmentType, typename ... T_Args>
 auto FCk_Registry::Add(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentType&
