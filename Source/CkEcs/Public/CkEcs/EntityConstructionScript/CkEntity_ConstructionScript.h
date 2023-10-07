@@ -16,7 +16,7 @@ public:
 public:
     auto
     Construct(
-        const FCk_Handle& InHandle) -> void;
+        FCk_Handle InHandle) -> void;
 
 protected:
     UFUNCTION(BlueprintNativeEvent,
