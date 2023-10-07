@@ -1,8 +1,7 @@
 #pragma once
 
-#include "CkEcs/Handle/CkHandle.h"
-
 #include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
+#include "CkEcs/Handle/CkHandle.h"
 
 #include "CkUnreal/Entity/CkUnrealEntity_Fragment_Params.h"
 

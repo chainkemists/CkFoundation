@@ -64,7 +64,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TArray<FCk_Fragment_MeterAttribute_ParamsData> _MeterAttributeParams;
+    TArray<TObjectPtr<class UCk_MeterAttribute_ConstructionScript_PDA>> _MeterAttributeParams;
 
 public:
     CK_PROPERTY_GET(_MeterAttributeParams);

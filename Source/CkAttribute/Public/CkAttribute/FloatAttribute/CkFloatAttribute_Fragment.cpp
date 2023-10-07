@@ -10,11 +10,13 @@ auto
         const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams)
     -> void
 {
-    _AlreadyConsumed = true;
-    CK_REP_OBJ_EXECUTE_IF_VALID([&]()
+    if (NOT Get_AssociatedEntity().IsValid()) { return; }
+    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this) { return; }
+    [&]()
     {
-        Broadcast_AddModifier_Clients(InModifierName, InParams);
-    });
+        Broadcast_AddModifier_Clients(InModifierName,
+                                      InParams);
+    }();
 }
 
 auto
@@ -24,17 +26,15 @@ auto
         FCk_Fragment_FloatAttributeModifier_ParamsData InParams)
     -> void
 {
-    if (_AlreadyConsumed)
-    {
-        _AlreadyConsumed = false;
-        return;
-    }
-
     if (NOT Get_AssociatedEntity().IsValid()) { return; }
     CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this) { return; }
+    if (GetWorld()->IsNetMode(NM_DedicatedServer)) { return; }
+    [&]()
     {
-        UCk_Utils_FloatAttributeModifier_UE::Add(Get_AssociatedEntity(), InModifierName, InParams);
-    }
+        UCk_Utils_FloatAttributeModifier_UE::Add(Get_AssociatedEntity(),
+                                                 InModifierName,
+                                                 InParams);
+    }();
 }
 
 auto
@@ -44,8 +44,6 @@ auto
         FGameplayTag InAttributeName)
     -> void
 {
-    _AlreadyConsumed = true;
-
     CK_REP_OBJ_EXECUTE_IF_VALID([&]()
     {
         Broadcast_RemoveModifier_Clients(InModifierName, InAttributeName);
@@ -59,12 +57,6 @@ auto
         FGameplayTag InAttributeName)
     -> void
 {
-    if (_AlreadyConsumed)
-    {
-        _AlreadyConsumed = false;
-        return;
-    }
-
     CK_REP_OBJ_EXECUTE_IF_VALID([&]()
     {
         UCk_Utils_FloatAttributeModifier_UE::Remove(Get_AssociatedEntity(), InAttributeName, InModifierName);

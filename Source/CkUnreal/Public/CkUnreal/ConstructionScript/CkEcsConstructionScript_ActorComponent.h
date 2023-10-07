@@ -1,13 +1,12 @@
 #pragma once
 
+#include "CkCore/Component/CkActorComponent.h"
 #include "CkCore/Enums/CkEnums.h"
 
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "CkUnreal/Entity/CkUnrealEntity_Fragment_Params.h"
-
-#include "CkCore/Component/CkActorComponent.h"
 
 #include "CkEcsConstructionScript_ActorComponent.generated.h"
 
