@@ -33,7 +33,7 @@
 #define CK_GENERATED_BODY_FRAGMENT_REP(_ClassType_)          \
     CK_GENERATED_BODY(_ClassType_);                          \
     protected:                                               \
-    auto OnLink() -> void                                    \
+    auto OnLink() -> void override                           \
     {                                                        \
         _AssociatedEntity.Add<TObjectPtr<ThisType>>() = this;\
     }
