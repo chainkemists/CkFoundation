@@ -36,7 +36,7 @@ FCk_Handle::
     , _Fragments(std::move(InOther._Fragments))
 #endif
 {
-    if (ck::IsValid(_Registry))
+    if (IsValid())
     { std::ignore = UCk_Utils_HandleDebugger_Subsystem_UE::Get_Subsystem()->GetOrAdd_FragmentsDebug(*this); }
 }
 
@@ -53,7 +53,7 @@ FCk_Handle::
     , _Fragments(InOther._Fragments)
 #endif
 {
-    if (ck::IsValid(_Registry))
+    if (IsValid())
     { std::ignore = UCk_Utils_HandleDebugger_Subsystem_UE::Get_Subsystem()->GetOrAdd_FragmentsDebug(*this); }
 }
 
@@ -71,10 +71,7 @@ FCk_Handle::
     ~FCk_Handle()
 {
 #if WITH_EDITORONLY_DATA
-    if (ck::Is_NOT_Valid(_Registry))
-    { return; }
-
-    if (ck::Is_NOT_Valid(_Fragments))
+    if (NOT IsValid())
     { return; }
 
     UCk_Utils_HandleDebugger_Subsystem_UE::Get_Subsystem()->Remove_FragmentsDebug(*this);
@@ -129,7 +126,7 @@ auto
 
 auto FCk_Handle::IsValid() const -> bool
 {
-    return ck::IsValid(_Registry) && _Registry->IsValid(_Entity);
+    return ck::IsValid(_Registry) && ck::IsValid(*_Registry) && _Registry->IsValid(_Entity);
 }
 
 auto
