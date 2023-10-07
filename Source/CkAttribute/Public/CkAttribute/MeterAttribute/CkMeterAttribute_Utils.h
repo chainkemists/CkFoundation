@@ -6,10 +6,34 @@
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment.h"
 #include "CkAttribute/MeterAttribute/CkMeterAttribute_Fragment.h"
 #include "CkAttribute/MeterAttribute/CkMeterAttribute_Fragment_Data.h"
+
+#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
+
 #include "CkEcsBasics/CkEcsBasics_Utils.h"
 #include "CkSignal/CkSignal_Fragment_Data.h"
 
 #include "CkMeterAttribute_Utils.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS()
+class CKATTRIBUTE_API UCk_MeterAttribute_ConstructionScript_PDA final : public UCk_Entity_ConstructionScript_PDA
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_MeterAttribute_ConstructionScript_PDA);
+
+    auto DoConstruct_Implementation(
+        const FCk_Handle& InHandle) -> void override;
+
+private:
+    UPROPERTY(EditAnywhere, meta=(AllowPrivateAccess))
+    FCk_Fragment_MeterAttribute_ParamsData _Params;
+
+public:
+    CK_PROPERTY(_Params);
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -40,7 +64,7 @@ public:
     static void
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_MeterAttribute_ParamsData& InParams);
+        UCk_MeterAttribute_ConstructionScript_PDA* InDataAsset);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Meter",

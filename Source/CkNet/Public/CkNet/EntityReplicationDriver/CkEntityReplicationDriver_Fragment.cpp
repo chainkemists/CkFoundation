@@ -5,6 +5,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
+#include "CkNet/CkNet_Log.h"
 #include "CkNet/CkNet_Utils.h"
 #include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
@@ -14,7 +15,7 @@
 
 auto
     UCk_Fragment_EntityReplicationDriver_Rep::
-    Request_ReplicateEntity_Implementation(
+    Request_ReplicateEntity_OnServer_Implementation(
         const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo)
     -> void
 {
@@ -60,6 +61,65 @@ void
     DOREPLIFETIME(ThisType, _ReplicationData);
 }
 
+//auto
+//    UCk_Fragment_EntityReplicationDriver_Rep::
+//    Request_ReplicateEntity(
+//        const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo)
+//    -> void
+//{
+//    // TODO: Duplicate code from Request_ReplicateEntity_OnServer, consolidate
+//    CK_ENSURE_IF_NOT(ck::IsValid(InConstructionInfo.Get_ConstructionScript()),
+//        TEXT("Unable to ReplicateEntity as ConstructionScript is [{}].[{}]"),
+//        InConstructionInfo.Get_ConstructionScript(),
+//        ck::Context(this))
+//    { return; }
+//
+//    const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(Get_AssociatedEntity());
+//    InConstructionInfo.Get_ConstructionScript()->Construct(NewEntity);
+//
+//    switch(const auto NetMode = UCk_Utils_Net_UE::Get_NetMode(this))
+//    {
+//    case ECk_Net_NetRoleType::Client:
+//    {
+//        Request_ReplicateEntity_OnServer(FCk_EntityReplicationDriver_ConstructionInfo{InConstructionInfo}
+//            .Set_OriginalEntity(NewEntity.Get_Entity()));
+//        break;
+//    }
+//    case ECk_Net_NetRoleType::Host:
+//    case ECk_Net_NetRoleType::Server:
+//    {
+//        UCk_Utils_EntityReplicationDriver_UE::Add(NewEntity);
+//
+//        // TODO: Duplicate code from Request_ReplicateEntity_OnServer, consolidate
+//        const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(NewEntity);
+//
+//        auto ReplicatedObjectsData = FCk_EntityReplicationDriver_ReplicateObjects_Data{};
+//
+//        for (const auto& ReplicatedObject : ReplicatedObjects.Get_ReplicatedObjects())
+//        {
+//            CK_ENSURE_IF_NOT(ck::IsValid(ReplicatedObject),
+//                TEXT("Invalid Replicated Object encountered for Entity [{}] on the SERVER.[{}]"),
+//                NewEntity,
+//                ck::Context(this))
+//            { continue; }
+//
+//            ReplicatedObjectsData.Update_Objects([&](auto& InReplicatedObjects)
+//                { InReplicatedObjects.Emplace(ReplicatedObject->GetClass()); });
+//
+//            ReplicatedObjectsData.Update_NetStableNames([&](auto& InNetStableNames)
+//                { InNetStableNames.Emplace(ReplicatedObject->GetFName()); });
+//        }
+//
+//        _ReplicationData.Emplace(FCk_EntityReplicationDriver_ReplicationData{InConstructionInfo, ReplicatedObjectsData});
+//        break;
+//    }
+//    case ECk_Net_NetRoleType::None:
+//    default:
+//        CK_INVALID_ENUM(NetMode);
+//        break;
+//    }
+//}
+
 auto
     UCk_Fragment_EntityReplicationDriver_Rep::
     OnRep_ReplicationData()
@@ -104,8 +164,14 @@ auto
 
         UCk_Utils_Net_UE::Copy(Get_AssociatedEntity(), NewOrExistingEntity);
 
+        CK_ENSURE_IF_NOT(ck::IsValid(ConstructionInfo.Get_ConstructionScript()),
+            TEXT("ConstructionScript is INVALID"))
+        { continue; }
+
         ConstructionInfo.Get_ConstructionScript()->Construct(NewOrExistingEntity);
 
         UCk_Utils_ReplicatedObjects_UE::Add(NewOrExistingEntity, ROs);
     }
+
+    _ReplicateFrom = _ReplicationData.Num();
 }
