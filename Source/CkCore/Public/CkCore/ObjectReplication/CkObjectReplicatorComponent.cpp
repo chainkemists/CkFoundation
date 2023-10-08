@@ -1,6 +1,12 @@
 #include "CkObjectReplicatorComponent.h"
 
+#include "CkCore/CkCore.h"
+
 #include "CkReplicatedObject.h"
+
+#include "CkCore/CkCoreLog.h"
+
+#include "Net/UnrealNetwork.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -27,6 +33,23 @@ Request_UnregisterObjectForReplication(
     // TODO: add some checks
     _ReplicatedObjects.Remove(InObject);
     RemoveReplicatedSubObject(InObject);
+}
+
+void
+    UCk_ObjectReplicator_ActorComponent_UE::GetLifetimeReplicatedProps(
+        TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME(ThisType, _ReplicatedObjects);
+}
+
+auto
+    UCk_ObjectReplicator_ActorComponent_UE::
+    OnRep_ReplicatedObject()
+    -> void
+{
+    UE_LOG(CkCore, Warning, TEXT("Object"));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
