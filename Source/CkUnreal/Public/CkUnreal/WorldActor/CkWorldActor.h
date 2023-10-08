@@ -10,7 +10,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract, Blueprintable, NotBlueprintType)
+UCLASS(NotBlueprintable, NotBlueprintType)
 class CKUNREAL_API ACk_World_Actor_UE : public ACk_World_Actor_Base_UE
 {
     GENERATED_BODY()

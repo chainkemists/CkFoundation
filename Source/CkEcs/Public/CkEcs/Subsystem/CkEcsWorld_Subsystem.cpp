@@ -5,6 +5,7 @@
 #include <Engine/World.h>
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkEcs/Settings/CkEcs_Settings.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -121,16 +122,22 @@ auto
     DoSpawnWorldActor()
     -> void
 {
+    const auto& EcsWorldActorClass = UCk_Utils_Ecs_ProjectSettings_UE::Get_EcsWorldActorClass();
+    const auto& EcsWorldTickingGroup = UCk_Utils_Ecs_ProjectSettings_UE::Get_EcsWorldTickingGroup();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(EcsWorldActorClass), TEXT("Invalid ECS World Actor class set in the Project Settings! ECS Framework won't work!"))
+    { return; }
+
     _WorldActor = Cast<ACk_World_Actor_Base_UE>
     (
         UCk_Utils_Actor_UE::Request_SpawnActor
         (
-            FCk_Utils_Actor_SpawnActor_Params{GetWorld(), _WorldActorClass}
+            FCk_Utils_Actor_SpawnActor_Params{GetWorld(), EcsWorldActorClass}
             .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel),
             [&](AActor* InActor)
             {
                 const auto WorldActor = Cast<ACk_World_Actor_Base_UE>(InActor);
-                WorldActor->Initialize(_TickingGroup);
+                WorldActor->Initialize(EcsWorldTickingGroup);
 
                 auto& Registry = WorldActor->_EcsWorld->Get_Registry();
                 _TransientEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(Registry);
