@@ -34,6 +34,9 @@ GetOwningActor() const -> AActor*
 auto UCk_ReplicatedObject_UE::
 GetWorld() const -> UWorld*
 {
+    if (IsTemplate())
+    { return Super::GetWorld(); }
+
     CK_ENSURE_OUTER_IS_VALID_OR_RETURN();
     return GetOwningActor()->GetWorld();
 }
@@ -44,6 +47,9 @@ CallRemoteFunction(UFunction* Function,
     FOutParmRec* OutParms,
     FFrame* Stack) -> bool
 {
+    if (IsTemplate())
+    { return Super::CallRemoteFunction(Function, Parms, OutParms, Stack); }
+
     CK_ENSURE_OUTER_IS_VALID_OR_RETURN();
 
     const auto MyOwner = GetOwningActor();
@@ -69,6 +75,9 @@ GetFunctionCallspace(
     UFunction* Function,
     FFrame* Stack) -> int32
 {
+    if (IsTemplate())
+    { Super::GetFunctionCallspace(Function, Stack); }
+
     CK_ENSURE_OUTER_IS_VALID_OR_RETURN();
 
     if ((Function->FunctionFlags & FUNC_Static))
@@ -107,17 +116,12 @@ GetLifetimeReplicatedProps(
 auto UCk_ReplicatedObject_UE::
 IsSupportedForNetworking() const -> bool
 {
+    if (IsTemplate())
+    { return IsSupportedForNetworking(); }
+
     CK_ENSURE_OUTER_IS_VALID_OR_RETURN();
 
     // Our Replicated UObject is ALWAYS assumed to be replicated
-    return true;
-}
-
-auto
-    UCk_ReplicatedObject_UE::
-    IsNameStableForNetworking() const
-    -> bool
-{
     return true;
 }
 

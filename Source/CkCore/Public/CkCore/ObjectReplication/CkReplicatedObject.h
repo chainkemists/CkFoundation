@@ -27,7 +27,6 @@ public:
     virtual auto GetFunctionCallspace(UFunction* Function, FFrame* Stack) -> int32 override;
     virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
     virtual auto IsSupportedForNetworking() const -> bool override;
-    virtual bool IsNameStableForNetworking() const override;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

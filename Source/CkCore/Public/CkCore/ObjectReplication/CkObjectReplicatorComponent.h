@@ -26,12 +26,20 @@ public:
     UCk_ObjectReplicator_ActorComponent_UE();
 
 public:
-    auto Request_RegisterObjectForReplication(UCk_ReplicatedObject_UE* InObject) -> void;
-    auto Request_UnregisterObjectForReplication(UCk_ReplicatedObject_UE* InObject) -> void;
+    UFUNCTION(BlueprintCallable)
+    void Request_RegisterObjectForReplication(UCk_ReplicatedObject_UE* InObject);
+
+    UFUNCTION(BlueprintCallable)
+    void Request_UnregisterObjectForReplication(UCk_ReplicatedObject_UE* InObject);
+
+    auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
 
 public:
-    UPROPERTY()
-    TSet<UCk_ReplicatedObject_UE*> _ReplicatedObjects;
+    UFUNCTION()
+    void OnRep_ReplicatedObject();
+
+    UPROPERTY(ReplicatedUsing = OnRep_ReplicatedObject)
+    TArray<UCk_ReplicatedObject_UE*> _ReplicatedObjects;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
