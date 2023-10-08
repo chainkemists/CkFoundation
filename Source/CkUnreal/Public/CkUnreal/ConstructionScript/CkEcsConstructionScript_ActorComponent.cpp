@@ -100,14 +100,14 @@ auto
 
     if (OwningActor->GetIsReplicated() && GetWorld()->IsNetMode(NM_DedicatedServer))
     {
-        const auto WorldSubsystem = Cast<UCk_EcsWorld_Subsystem_UE>(GetWorld()->GetSubsystemBase(_EcsWorldSubsystem));
+        const auto EcsWorldSubsystem = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
 
         // TODO: this hits at least once because the BP Subsystem is not loaded. Fix this.
-        CK_ENSURE_IF_NOT(ck::IsValid(WorldSubsystem),
-            TEXT("WorldSubsystem is [{}]. Did you forget to set the default value in the component?.[{}]"), _EcsWorldSubsystem, ck::Context(this))
+        CK_ENSURE_IF_NOT(ck::IsValid(EcsWorldSubsystem),
+            TEXT("WorldSubsystem is [{}]. Did you forget to set the default value in the component?.[{}]"), EcsWorldSubsystem, ck::Context(this))
         { return; }
 
-        auto Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(WorldSubsystem->Get_TransientEntity());
+        auto Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(EcsWorldSubsystem->Get_TransientEntity());
 
         Entity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
 

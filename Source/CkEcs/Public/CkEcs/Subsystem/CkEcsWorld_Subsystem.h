@@ -40,7 +40,7 @@ protected:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract, Blueprintable, BlueprintType)
+UCLASS(BlueprintType)
 class CKECS_API UCk_EcsWorld_Subsystem_UE : public UWorldSubsystem
 {
     GENERATED_BODY()
@@ -81,14 +81,8 @@ private:
     auto DoSpawnWorldActor() -> void;
 
 private:
-    UPROPERTY(EditDefaultsOnly, meta = (AllowPrivateAccess = true))
-    TEnumAsByte<ETickingGroup> _TickingGroup = TG_PrePhysics;
-
     UPROPERTY(BlueprintReadOnly, Transient, meta = (AllowPrivateAccess = true))
     FCk_Handle _TransientEntity;
-
-    UPROPERTY(EditDefaultsOnly)
-    TSubclassOf<ACk_World_Actor_Base_UE> _WorldActorClass;
 
     UPROPERTY(Transient)
     TObjectPtr<ACk_World_Actor_Base_UE> _WorldActor;
