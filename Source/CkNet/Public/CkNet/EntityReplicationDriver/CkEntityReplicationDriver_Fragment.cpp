@@ -3,13 +3,15 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "CkNet/CkNet_Log.h"
 #include "CkNet/CkNet_Utils.h"
 #include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
-#include "Net/UnrealNetwork.h"
+#include <Net/UnrealNetwork.h>
+#include <Engine/World.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -52,13 +54,17 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-void
-    UCk_Fragment_EntityReplicationDriver_Rep::GetLifetimeReplicatedProps(
+
+auto
+    UCk_Fragment_EntityReplicationDriver_Rep::
+    GetLifetimeReplicatedProps(
         TArray<FLifetimeProperty>& OutLifetimeProps) const
+    -> void
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
     DOREPLIFETIME(ThisType, _ReplicationData);
+    DOREPLIFETIME(ThisType, _ReplicationData_ReplicatedActor);
 }
 
 //auto
@@ -175,3 +181,33 @@ auto
 
     _ReplicateFrom = _ReplicationData.Num();
 }
+
+auto
+    UCk_Fragment_EntityReplicationDriver_Rep::
+    OnRep_ReplicationData_ReplicatedActor()
+    -> void
+{
+    if ([[maybe_unused]] const auto ShouldSkipIfAllObjectsAreNotYetResolved =
+        AnyOf(_ReplicationData_ReplicatedActor.Get_ReplicatedObjects(), ck::algo::Is_NOT_Valid{}))
+    { return; }
+
+    const auto CsWithTransform = _ReplicationData_ReplicatedActor.Get_ConstructionScript();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(CsWithTransform), TEXT("Entity Construction Script [{}] for Actor [{}] is NOT valid. "
+        "Unable to continue replication of Entity."),
+        _ReplicationData_ReplicatedActor.Get_ConstructionScript(),
+        _ReplicationData_ReplicatedActor.Get_ReplicatedActor())
+    { return; }
+
+    const auto WorldSubsystem = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+    auto Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(WorldSubsystem->Get_TransientEntity());
+    Entity.Add<ck::FFragment_OwningActor_Current>(_ReplicationData_ReplicatedActor.Get_ReplicatedActor());
+
+    // CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
+    CsWithTransform->Construct(Entity);
+
+    const auto& ReplicatedObjects = _ReplicationData_ReplicatedActor.Get_ReplicatedObjects();
+    UCk_Utils_ReplicatedObjects_UE::Add(Entity, FCk_ReplicatedObjects{}.Set_ReplicatedObjects(ReplicatedObjects));
+}
+
+// --------------------------------------------------------------------------------------------------------------------

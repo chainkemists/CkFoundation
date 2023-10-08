@@ -24,4 +24,11 @@ public:
     Request_Replicate(
         FCk_Handle InHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo) -> void;
+
+    static auto
+    Request_ReplicateEntityOnReplicatedActor(
+        FCk_Handle InHandle,
+        const FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor& InConstructionInfo) -> void;
 };
+
+// --------------------------------------------------------------------------------------------------------------------
