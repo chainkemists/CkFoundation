@@ -1,5 +1,8 @@
 #pragma once
+
 #include "CkCore/Types/DataAsset/CkDataAsset.h"
+
+#include "CkEcs/Handle/CkHandle.h"
 
 #include "CkEntity_ConstructionScript.generated.h"
 

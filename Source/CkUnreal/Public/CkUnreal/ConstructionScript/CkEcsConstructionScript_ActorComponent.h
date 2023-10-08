@@ -45,10 +45,6 @@ public:
     UFUNCTION(BlueprintImplementableEvent)
     bool ShouldConstruct() const;
 
-public:
-    UPROPERTY(EditDefaultsOnly)
-    TSubclassOf<class UCk_EcsWorld_Subsystem_UE> _EcsWorldSubsystem;
-
     UPROPERTY(EditDefaultsOnly)
     ECk_Replication _Replication = ECk_Replication::Replicates;
 
