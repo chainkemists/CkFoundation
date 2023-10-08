@@ -160,6 +160,46 @@ namespace ck                                                                    
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck::algo
+{
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKCORE_API IsValid
+    {
+    public:
+        template <typename T>
+        auto operator()(const T& InObject) const -> bool;
+    };
+
+    struct CKCORE_API Is_NOT_Valid
+    {
+    public:
+        template <typename T>
+        auto operator()(const T& InObject) const -> bool;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+    // Definitions
+
+    template <typename T>
+    auto
+        IsValid::operator()(
+            const T& InObject) const -> bool
+    {
+        return ck::IsValid(InObject);
+    }
+
+    template <typename T>
+    auto
+        Is_NOT_Valid::operator()(
+            const T& InObject) const -> bool
+    {
+        return ck::Is_NOT_Valid(InObject);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 #include "CkIsValid_Defaults.h"
 
 // --------------------------------------------------------------------------------------------------------------------
