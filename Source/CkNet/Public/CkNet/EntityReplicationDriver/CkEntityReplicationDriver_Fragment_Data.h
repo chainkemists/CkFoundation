@@ -9,6 +9,34 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKNET_API FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor);
+
+private:
+    UPROPERTY()
+    TObjectPtr<AActor> _ReplicatedActor;
+
+    UPROPERTY()
+    TObjectPtr<UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
+
+    UPROPERTY()
+    TArray<UCk_ReplicatedObject_UE*> _ReplicatedObjects;
+
+public:
+    CK_PROPERTY_GET(_ReplicatedActor);
+    CK_PROPERTY_GET(_ConstructionScript);
+    CK_PROPERTY(_ReplicatedObjects);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor, _ReplicatedActor, _ConstructionScript);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKNET_API FCk_EntityReplicationDriver_ConstructionInfo
 {
     GENERATED_BODY()
