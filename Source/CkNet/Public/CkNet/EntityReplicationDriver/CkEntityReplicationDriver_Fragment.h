@@ -64,15 +64,23 @@ private:
     void
     OnRep_ReplicationData();
 
+    UFUNCTION()
+    void
+    OnRep_ReplicationData_ReplicatedActor();
+
 private:
     UPROPERTY(ReplicatedUsing = OnRep_ReplicationData)
     TArray<FCk_EntityReplicationDriver_ReplicationData> _ReplicationData;
 
     int32 _ReplicateFrom = 0;
 
+    UPROPERTY(ReplicatedUsing = OnRep_ReplicationData_ReplicatedActor)
+    FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor _ReplicationData_ReplicatedActor;
+
 public:
     // TODO: reduce the exposure of this variable
     CK_PROPERTY(_ReplicationData);
+    CK_PROPERTY(_ReplicationData_ReplicatedActor);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
