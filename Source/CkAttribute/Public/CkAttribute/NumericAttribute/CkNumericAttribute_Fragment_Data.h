@@ -56,6 +56,10 @@ private:
               meta = (AllowPrivateAccess = true, EditCondition = "_AttachmentPolicyFlags == 2"))
     float _AttributeMaximumValue = 0.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<class UCk_MeterAttribute_ConstructionScript_PDA> _MeterAttributeConstructionScript;
+
 public:
     auto Get_ConstraintsPolicy() const -> ECk_NumericAttribute_ConstraintsPolicy;
 
@@ -64,6 +68,7 @@ public:
     CK_PROPERTY_GET(_AttributeStartingValue)
     CK_PROPERTY_GET(_AttributeMaximumValue)
     CK_PROPERTY_GET(_AttributeMinimumValue)
+    CK_PROPERTY_GET(_MeterAttributeConstructionScript)
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_NumericAttribute_ParamsData, _AttributeName, _AttributeStartingValue, _ConstraintsPolicyFlags, _AttributeMinimumValue, _AttributeMaximumValue);

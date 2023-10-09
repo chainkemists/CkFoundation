@@ -2,6 +2,7 @@
 
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
 #include "CkAttribute/MeterAttribute/CkMeterAttribute_Utils.h"
+#include "CkCore/Object/CkObject_Utils.h"
 
 #include <Kismet/KismetMathLibrary.h>
 
@@ -31,9 +32,8 @@ auto
 
         const auto& StartingPercentage = UKismetMathLibrary::MapRangeClamped(AttributeStartingValue, MinimumValue, MaximumValue, 0.0f, 1.0f);
 
-        UCk_Utils_MeterAttribute_UE::Add
+        InParams.Get_MeterAttributeConstructionScript()->Set_Params
         (
-            InHandle,
             FCk_Fragment_MeterAttribute_ParamsData
             {
                 AttributeName,
@@ -47,6 +47,12 @@ auto
                     .Set_StartingPercentage(FCk_FloatRange_0to1{static_cast<ck::FFragment_FloatAttribute::AttributeDataType>(StartingPercentage)})
                 }
             }
+        );
+
+        UCk_Utils_MeterAttribute_UE::Add
+        (
+            InHandle,
+            InParams.Get_MeterAttributeConstructionScript()
         );
     }
     else
