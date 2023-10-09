@@ -52,9 +52,9 @@ auto
         FCk_Fragment_MultipleFloatAttribute_ParamsData
         {
             {
-                { ck_meter_attribute::FMeterAttribute_Tags::Get_MinCapacity(), MeterCapacity.Get_MinCapacity() },
-                { ck_meter_attribute::FMeterAttribute_Tags::Get_MaxCapacity(), MeterCapacity.Get_MaxCapacity() },
-                { ck_meter_attribute::FMeterAttribute_Tags::Get_Current(), MeterStartingPercentage.Get_Value() }
+                { ck::FMeterAttribute_Tags::Get_MinCapacity(), MeterCapacity.Get_MinCapacity() },
+                { ck::FMeterAttribute_Tags::Get_MaxCapacity(), MeterCapacity.Get_MaxCapacity() },
+                { ck::FMeterAttribute_Tags::Get_Current(), MeterCapacity.Get_MaxCapacity() * MeterStartingPercentage.Get_Value() }
             }
         }
     );
@@ -67,19 +67,6 @@ auto
     RecordOfMeterAttributes_Utils::Request_Connect(LifetimeOwner, InHandle);
 }
 
-        UCk_Utils_FloatAttribute_UE::AddMultiple
-        (
-            NewAttributeEntity,
-            FCk_Fragment_MultipleFloatAttribute_ParamsData
-            {
-                {
-                    { ck::FMeterAttribute_Tags::Get_MinCapacity(), MeterCapacity.Get_MinCapacity() },
-                    { ck::FMeterAttribute_Tags::Get_MaxCapacity(), MeterCapacity.Get_MaxCapacity() },
-                    { ck::FMeterAttribute_Tags::Get_Current(), MeterCapacity.Get_MaxCapacity() * MeterStartingPercentage.Get_Value() }
-                }
-            }
-        );
-
 auto
     UCk_Utils_MeterAttribute_UE::
     Add(
@@ -90,7 +77,7 @@ auto
     if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InHandle))
     { return;}
 
-    // Meter is an Entity that is made up of sub-entities (FloatAttribute) and thus 
+    // Meter is an Entity that is made up of sub-entities (FloatAttribute) and thus
     UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(InHandle, FCk_EntityReplicationDriver_ConstructionInfo{InDataAsset});
 }
 
@@ -186,10 +173,12 @@ auto
     const auto& MaxCapacityValue = FloatAttribute_Utils::Get_BaseValue(MaxCapacity);
     const auto& CurrentValue = FloatAttribute_Utils::Get_BaseValue(Current);
 
+    const auto& CurrentPercentage = UKismetMathLibrary::MapRangeClamped(CurrentValue, MinCapacityValue, MaxCapacityValue, 0.0f, 1.0f);
+
     return FCk_Meter
     {
         FCk_Meter_Params{FCk_Meter_Capacity{MaxCapacityValue}.Set_MinCapacity(MinCapacityValue)}
-        .Set_StartingPercentage(FCk_FloatRange_0to1{CurrentValue})
+        .Set_StartingPercentage(FCk_FloatRange_0to1{static_cast<float>(CurrentPercentage)})
     };
 }
 
@@ -434,7 +423,8 @@ auto
             0.0f,
             1.0f,
             ModifierDeltaParams.Get_Capacity().Get_MinCapacity(),
-            ModifierDeltaParams.Get_Capacity().Get_MaxCapacity());
+            ModifierDeltaParams.Get_Capacity().Get_MaxCapacity()
+        );
 
         UCk_Utils_FloatAttributeModifier_UE::Add
         (
