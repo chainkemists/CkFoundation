@@ -126,6 +126,7 @@ class CKATTRIBUTE_API UCk_Fragment_FloatAttribute_Rep : public UCk_Ecs_Replicate
 
 public:
     CK_GENERATED_BODY(UCk_Fragment_FloatAttribute_Rep);
+    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_FloatAttribute_Rep);
 
 public:
     friend class ck::FProcessor_FloatAttribute_Replicate;
@@ -145,8 +146,8 @@ public:
 
     // TODO: 'permanent' modifiers
 
-public:
-    auto OnLink() -> void override;;
+private:
+    auto PostLink() -> void override;;
 
 private:
     auto

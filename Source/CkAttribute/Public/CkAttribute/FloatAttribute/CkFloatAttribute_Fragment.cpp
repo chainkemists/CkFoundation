@@ -28,10 +28,9 @@ void
 
 auto
     UCk_Fragment_FloatAttribute_Rep::
-    OnLink()
+    PostLink()
     -> void
 {
-    _AssociatedEntity.Add<TObjectPtr<ThisType>>() = this;
     OnRep_PendingModifiers();
 }
 
