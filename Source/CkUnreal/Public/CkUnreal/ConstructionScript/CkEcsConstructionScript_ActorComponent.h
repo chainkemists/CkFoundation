@@ -35,6 +35,11 @@ protected:
         const FCk_ActorComponent_DoConstruct_Params& InParams) -> void override;
 
 public:
+    // Temporary function for Obsidian Toggle
+    UFUNCTION(BlueprintImplementableEvent)
+    bool ShouldConstruct() const;
+
+public:
     UPROPERTY(EditDefaultsOnly)
     TSubclassOf<UCk_EcsWorld_Subsystem_UE> _EcsWorldSubsystem;
 
