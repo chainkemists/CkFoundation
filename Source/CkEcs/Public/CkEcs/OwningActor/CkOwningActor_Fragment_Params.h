@@ -62,6 +62,7 @@ public:
 public:
     friend class UCk_Utils_OwningActor_UE;
     friend class UCk_EcsConstructionScript_ActorComponent_UE;
+    friend class UCk_Fragment_EntityReplicationDriver_Rep;
 
 private:
     FCk_Handle _EntityHandle;
