@@ -145,14 +145,14 @@ namespace ck
         {
             case ECk_ModifierOperation_RevokablePolicy::NotRevokable:
             {
-                InHandle.Add<typename AttributeModifierFragmentType::Tag_IsNotRevokable>();
+                InHandle.Add<typename AttributeModifierFragmentType::Tag_IsNotRevokableModification>();
                 UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
 
                 break;
             }
             case ECk_ModifierOperation_RevokablePolicy::Revokable:
             {
-                InHandle.Add<typename AttributeModifierFragmentType::Tag_IsRevokable>();
+                InHandle.Add<typename AttributeModifierFragmentType::Tag_IsRevokableModification>();
                 RecordOfAttributeModifiers_Utils::AddIfMissing(InTarget, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
                 RecordOfAttributeModifiers_Utils::Request_Connect(InTarget, InHandle);
 

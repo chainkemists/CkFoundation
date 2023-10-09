@@ -25,7 +25,7 @@ namespace ck
         using TimeType              = typename Super::TimeType;
 
     public:
-        using Super::TProcessor;
+        using Super::Super;
 
     public:
         auto ForEachEntity(
@@ -37,7 +37,7 @@ namespace ck
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
 
-    // --------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_Attribute_RecomputeAll : public TProcessor<
@@ -58,7 +58,7 @@ namespace ck
         using TimeType                      = typename Super::TimeType;
 
     public:
-        using Super::TProcessor;
+        using Super::Super;
 
     public:
         auto ForEachEntity(
@@ -70,14 +70,15 @@ namespace ck
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
 
-    // --------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_Additive_Compute : public TProcessor<
-        TProcessor_AttributeModifier_Additive_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
+    class TProcessor_AttributeModifier_RevokableAdditive_Compute : public TProcessor<
+        TProcessor_AttributeModifier_RevokableAdditive_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
         T_DerivedAttributeModifier,
         FFragment_AttributeModifierTarget,
         typename T_DerivedAttributeModifier::Tag_AdditiveModification,
+        typename T_DerivedAttributeModifier::Tag_IsRevokableModification,
         typename T_DerivedAttributeModifier::Tag_ComputeResult>
     {
     public:
@@ -89,13 +90,14 @@ namespace ck
         using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
         using AttributeModifierTargetType   = FFragment_AttributeModifierTarget;
         using ModificationType              = typename AttributeModifierFragmentType::Tag_AdditiveModification;
-        using ThisType                      = TProcessor_AttributeModifier_Additive_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, AttributeModifierTargetType, ModificationType, MarkedDirtyBy>;
+        using IsRevokableModificationType   = typename AttributeModifierFragmentType::Tag_IsRevokableModification;
+        using ThisType                      = TProcessor_AttributeModifier_RevokableAdditive_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
+        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, AttributeModifierTargetType, ModificationType, IsRevokableModificationType, MarkedDirtyBy>;
         using HandleType                    = typename Super::HandleType;
         using TimeType                      = typename Super::TimeType;
 
     public:
-        using Super::TProcessor;
+        using Super::Super;
 
     public:
         auto ForEachEntity(
@@ -108,7 +110,47 @@ namespace ck
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
 
-    // --------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_NotRevokableAdditive_Compute : public TProcessor<
+        TProcessor_AttributeModifier_NotRevokableAdditive_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
+        T_DerivedAttributeModifier,
+        FFragment_AttributeModifierTarget,
+        typename T_DerivedAttributeModifier::Tag_AdditiveModification,
+        typename T_DerivedAttributeModifier::Tag_IsNotRevokableModification,
+        typename T_DerivedAttributeModifier::Tag_ComputeResult>
+    {
+    public:
+        using MarkedDirtyBy = typename T_DerivedAttributeModifier::Tag_ComputeResult;
+
+    public:
+        using AttributeModifierFragmentType  = T_DerivedAttributeModifier;
+        using AttributeFragmentType          = typename AttributeModifierFragmentType::AttributeFragmentType;
+        using AttributeDataType              = typename AttributeFragmentType::AttributeDataType;
+        using AttributeModifierTargetType    = FFragment_AttributeModifierTarget;
+        using ModificationType               = typename AttributeModifierFragmentType::Tag_AdditiveModification;
+        using IsNotRevokableModificationType = typename AttributeModifierFragmentType::Tag_IsNotRevokableModification;
+        using ThisType                       = TProcessor_AttributeModifier_NotRevokableAdditive_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
+        using Super                          = TProcessor<ThisType, AttributeModifierFragmentType, AttributeModifierTargetType, ModificationType, IsNotRevokableModificationType, MarkedDirtyBy>;
+        using HandleType                     = typename Super::HandleType;
+        using TimeType                       = typename Super::TimeType;
+
+    public:
+        using Super::Super;
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const AttributeModifierFragmentType& InAttributeModifier,
+            const AttributeModifierTargetType& InAttributeTarget) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_Additive_Teardown : public TProcessor<
@@ -116,6 +158,7 @@ namespace ck
         T_DerivedAttributeModifier,
         FFragment_AttributeModifierTarget,
         typename T_DerivedAttributeModifier::Tag_AdditiveModification,
+        typename T_DerivedAttributeModifier::Tag_IsRevokableModification,
         FTag_PendingDestroyEntity>
     {
     public:
@@ -124,13 +167,14 @@ namespace ck
         using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
         using AttributeModifierTargetType   = FFragment_AttributeModifierTarget;
         using ModificationType              = typename AttributeModifierFragmentType::Tag_AdditiveModification;
+        using IsRevokableModificationType   = typename AttributeModifierFragmentType::Tag_IsRevokableModification;
         using ThisType                      = TProcessor_AttributeModifier_Additive_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, AttributeModifierTargetType, ModificationType, FTag_PendingDestroyEntity>;
+        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, AttributeModifierTargetType, ModificationType, IsRevokableModificationType, FTag_PendingDestroyEntity>;
         using HandleType                    = typename Super::HandleType;
         using TimeType                      = typename Super::TimeType;
 
     public:
-        using Super::TProcessor;
+        using Super::Super;
 
     public:
         auto ForEachEntity(
@@ -143,14 +187,15 @@ namespace ck
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
 
-    // --------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_Multiplicative_Compute : public TProcessor<
-        TProcessor_AttributeModifier_Multiplicative_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
+    class TProcessor_AttributeModifier_RevokableMultiplicative_Compute : public TProcessor<
+        TProcessor_AttributeModifier_RevokableMultiplicative_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
         T_DerivedAttributeModifier,
         FFragment_AttributeModifierTarget,
         typename T_DerivedAttributeModifier::Tag_MultiplicativeModification,
+        typename T_DerivedAttributeModifier::Tag_IsRevokableModification,
         typename T_DerivedAttributeModifier::Tag_ComputeResult>
     {
     public:
@@ -162,13 +207,14 @@ namespace ck
         using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
         using AttributeModifierTargetType   = FFragment_AttributeModifierTarget;
         using ModificationType              = typename AttributeModifierFragmentType::Tag_MultiplicativeModification;
-        using ThisType                      = TProcessor_AttributeModifier_Multiplicative_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, AttributeModifierTargetType, ModificationType, MarkedDirtyBy>;
+        using IsRevokableModificationType   = typename AttributeModifierFragmentType::Tag_IsRevokableModification;
+        using ThisType                      = TProcessor_AttributeModifier_RevokableMultiplicative_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
+        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, AttributeModifierTargetType, ModificationType, IsRevokableModificationType, MarkedDirtyBy>;
         using HandleType                    = typename Super::HandleType;
         using TimeType                      = typename Super::TimeType;
 
     public:
-        using Super::TProcessor;
+        using Super::Super;
 
     public:
         auto ForEachEntity(
@@ -181,7 +227,47 @@ namespace ck
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
 
-    // --------------------------------------------------------
+        // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute : public TProcessor<
+        TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
+        T_DerivedAttributeModifier,
+        FFragment_AttributeModifierTarget,
+        typename T_DerivedAttributeModifier::Tag_MultiplicativeModification,
+        typename T_DerivedAttributeModifier::Tag_IsNotRevokableModification,
+        typename T_DerivedAttributeModifier::Tag_ComputeResult>
+    {
+    public:
+        using MarkedDirtyBy = typename T_DerivedAttributeModifier::Tag_ComputeResult;
+
+    public:
+        using AttributeModifierFragmentType  = T_DerivedAttributeModifier;
+        using AttributeFragmentType          = typename AttributeModifierFragmentType::AttributeFragmentType;
+        using AttributeDataType              = typename AttributeFragmentType::AttributeDataType;
+        using AttributeModifierTargetType    = FFragment_AttributeModifierTarget;
+        using ModificationType               = typename AttributeModifierFragmentType::Tag_MultiplicativeModification;
+        using IsNotRevokableModificationType = typename AttributeModifierFragmentType::Tag_IsNotRevokableModification;
+        using ThisType                       = TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
+        using Super                          = TProcessor<ThisType, AttributeModifierFragmentType, AttributeModifierTargetType, ModificationType, IsNotRevokableModificationType, MarkedDirtyBy>;
+        using HandleType                     = typename Super::HandleType;
+        using TimeType                       = typename Super::TimeType;
+
+    public:
+        using Super::Super;
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const AttributeModifierFragmentType& InAttributeModifier,
+            const AttributeModifierTargetType& InAttributeTarget) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_Multiplicative_Teardown : public TProcessor<
@@ -189,6 +275,7 @@ namespace ck
         T_DerivedAttributeModifier,
         FFragment_AttributeModifierTarget,
         typename T_DerivedAttributeModifier::Tag_MultiplicativeModification,
+        typename T_DerivedAttributeModifier::Tag_IsRevokableModification,
         FTag_PendingDestroyEntity>
     {
     public:
@@ -197,13 +284,14 @@ namespace ck
         using AttributeModifierTargetType   = FFragment_AttributeModifierTarget;
         using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
         using ModificationType              = typename AttributeModifierFragmentType::Tag_MultiplicativeModification;
+        using IsRevokableModificationType   = typename AttributeModifierFragmentType::Tag_IsRevokableModification;
         using ThisType                      = TProcessor_AttributeModifier_Multiplicative_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, AttributeModifierTargetType, ModificationType, FTag_PendingDestroyEntity>;
+        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, AttributeModifierTargetType, ModificationType, IsRevokableModificationType, FTag_PendingDestroyEntity>;
         using HandleType                    = typename Super::HandleType;
         using TimeType                      = typename Super::TimeType;
 
     public:
-        using Super::TProcessor;
+        using Super::Super;
 
     public:
         auto ForEachEntity(
