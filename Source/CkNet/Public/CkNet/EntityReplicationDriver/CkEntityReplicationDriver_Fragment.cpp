@@ -113,7 +113,7 @@ auto
     if (const auto EntityOwningActorComponent = ReplicatedActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
         ck::IsValid(EntityOwningActorComponent))
     {
-        EntityOwningActorComponent->Set_EntityHandle(Entity);
+        EntityOwningActorComponent->_EntityHandle = Entity;
     }
     else
     {
