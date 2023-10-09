@@ -153,7 +153,7 @@ namespace ck
             case ECk_ModifierOperation_RevokablePolicy::Revokable:
             {
                 InHandle.Add<typename AttributeModifierFragmentType::Tag_IsRevokableModification>();
-                RecordOfAttributeModifiers_Utils::AddIfMissing(InTarget, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
+                RecordOfAttributeModifiers_Utils::AddIfMissing(InTarget, ECk_Record_EntryHandlingPolicy::Default);
                 RecordOfAttributeModifiers_Utils::Request_Connect(InTarget, InHandle);
 
                 break;
