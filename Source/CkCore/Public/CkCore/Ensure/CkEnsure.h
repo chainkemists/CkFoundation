@@ -159,14 +159,14 @@ private:
                                                                                                                               \
     const auto& message = ck::Format_UE(InString, ##__VA_ARGS__);                                                             \
     const auto& stackTraceWith2Skips = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace(2);                                      \
-    const auto& bpStackTrace = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::AsString{});         \
+    const auto& bpStackTrace = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::AsString{});          \
     const auto& callstackPlusMessage = ck::Format_UE(                                                                         \
         TEXT("[{}]\nExpression: '{}'\nMessage: '{}'\n\n == BP CallStack ==\n{}\n == CallStack ==\n{}\n"),                     \
         GFrameCounter,                                                                                                        \
         TEXT(#InExpression),                                                                                                  \
         message,                                                                                                              \
-        stackTraceWith2Skips,                                                                                                 \
-        bpStackTrace                                                                                                          \
+        bpStackTrace,                                                                                                         \
+        stackTraceWith2Skips                                                                                                  \
     );                                                                                                                        \
                                                                                                                               \
     const auto& dialogMessage = FText::FromString(callstackPlusMessage);                                                      \
