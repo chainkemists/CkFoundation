@@ -24,13 +24,19 @@ namespace ck
     class TProcessor_Attribute_RecomputeAll;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_Additive_Compute;
+    class TProcessor_AttributeModifier_RevokableAdditive_Compute;
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_NotRevokableAdditive_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_Additive_Teardown;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_Multiplicative_Compute;
+    class TProcessor_AttributeModifier_RevokableMultiplicative_Compute;
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_Multiplicative_Teardown;
@@ -63,10 +69,16 @@ namespace ck
         friend class TProcessor_Attribute_RecomputeAll;
 
         template <typename, typename>
-        friend class TProcessor_AttributeModifier_Additive_Compute;
+        friend class TProcessor_AttributeModifier_RevokableAdditive_Compute;
 
         template <typename, typename>
-        friend class TProcessor_AttributeModifier_Multiplicative_Compute;
+        friend class TProcessor_AttributeModifier_NotRevokableAdditive_Compute;
+
+        template <typename, typename>
+        friend class TProcessor_AttributeModifier_RevokableMultiplicative_Compute;
+
+        template <typename, typename>
+        friend class TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute;
 
     public:
         struct Tag_RecomputeFinalValue {};
@@ -100,17 +112,12 @@ namespace ck
         template <typename>
         friend class TUtils_AttributeModifier;
 
-        template <typename, typename>
-        friend class TProcessor_AttributeModifier_Additive_Compute;
-
-        template <typename, typename>
-        friend class TProcessor_AttributeModifier_Multiplicative_Compute;
 
     public:
         struct Tag_AdditiveModification{};
         struct Tag_MultiplicativeModification{};
-        struct Tag_IsRevokable{};
-        struct Tag_IsNotRevokable{};
+        struct Tag_IsRevokableModification{};
+        struct Tag_IsNotRevokableModification{};
         struct Tag_ComputeResult{};
 
     public:
