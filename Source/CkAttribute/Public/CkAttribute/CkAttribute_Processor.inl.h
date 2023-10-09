@@ -65,14 +65,17 @@ namespace ck
 
         InAttribute._Final = InAttribute._Base;
 
-        TUtils_AttributeModifier<AttributeModifierFragmentType>::RecordOfAttributeModifiers_Utils::ForEachEntry
-        (
-            InHandle,
-            [&](auto InAttributeModifier) -> void
-            {
-                TUtils_AttributeModifier<AttributeModifierFragmentType>::Request_ComputeResult(InAttributeModifier);
-            }
-        );
+        if (TUtils_AttributeModifier<AttributeModifierFragmentType>::RecordOfAttributeModifiers_Utils::Has(InHandle))
+        {
+            TUtils_AttributeModifier<AttributeModifierFragmentType>::RecordOfAttributeModifiers_Utils::ForEachEntry
+            (
+                InHandle,
+                [&](auto InAttributeModifier) -> void
+                {
+                    TUtils_AttributeModifier<AttributeModifierFragmentType>::Request_ComputeResult(InAttributeModifier);
+                }
+            );
+        }
 
         TUtils_Attribute<AttributeFragmentType>::Request_FireSignals(InHandle);
     }
@@ -81,7 +84,7 @@ namespace ck
 
     template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
     auto
-        TProcessor_AttributeModifier_Additive_Compute<T_DerivedProcessor ,T_AttributeModifierFragment>::
+        TProcessor_AttributeModifier_RevokableAdditive_Compute<T_DerivedProcessor ,T_AttributeModifierFragment>::
         ForEachEntity(
             const TimeType&,
             HandleType InHandle,
@@ -96,12 +99,38 @@ namespace ck
 
         attribute::VeryVerbose
         (
-            TEXT("Computing Additive AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
+            TEXT("Computing REVOKABLE Additive AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
             InHandle,
             TargetEntity
         );
 
-        AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Add(AttributeComp._Final, InAttributeModifier._ModifierDelta);
+        AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Add(AttributeComp._Final, InAttributeModifier.Get_ModifierDelta());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    auto
+        TProcessor_AttributeModifier_NotRevokableAdditive_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const AttributeModifierFragmentType& InAttributeModifier,
+            const AttributeModifierTargetType& InAttributeTarget) const -> void
+    {
+        InHandle.template Remove<MarkedDirtyBy>();
+
+        auto TargetEntity = InAttributeTarget.Get_Entity();
+        auto& AttributeComp = TargetEntity.Get<AttributeFragmentType>();
+
+        attribute::VeryVerbose
+        (
+            TEXT("Computing NOT REVOKABLE Additive AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
+            InHandle,
+            TargetEntity
+        );
+
+        AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Add(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -120,7 +149,7 @@ namespace ck
 
         attribute::VeryVerbose
         (
-            TEXT("Removing Additive AttributeModifier value of Entity [{}] from Attribute component of target Entity [{}]. Forcing final value calculation again"),
+            TEXT("Removing REVOKABLE Additive AttributeModifier value of Entity [{}] from Attribute component of target Entity [{}]. Forcing final value calculation again"),
             InHandle,
             TargetEntity
         );
@@ -134,7 +163,7 @@ namespace ck
 
     template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
     auto
-        TProcessor_AttributeModifier_Multiplicative_Compute<T_DerivedProcessor, T_AttributeModifierFragment>::
+        TProcessor_AttributeModifier_RevokableMultiplicative_Compute<T_DerivedProcessor, T_AttributeModifierFragment>::
         ForEachEntity(
             const TimeType&,
             HandleType InHandle,
@@ -149,13 +178,41 @@ namespace ck
 
         attribute::VeryVerbose
         (
-            TEXT("Computing Multiplicative AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
+            TEXT("Computing REVOKABLE Multiplicative AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
             InHandle,
             TargetEntity
         );
 
-        AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Multiply(AttributeComp._Final, InAttributeModifier._ModifierDelta);
+        AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Multiply(AttributeComp._Final, InAttributeModifier.Get_ModifierDelta());
     }
+
+        // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
+    auto
+        TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute<T_DerivedProcessor, T_AttributeModifierFragment>::
+        ForEachEntity(
+            const TimeType&,
+            HandleType InHandle,
+            const AttributeModifierFragmentType& InAttributeModifier,
+            const AttributeModifierTargetType& InAttributeTarget) const
+        -> void
+    {
+        InHandle.template Remove<MarkedDirtyBy>();
+
+        auto TargetEntity = InAttributeTarget.Get_Entity();
+        auto& AttributeComp = TargetEntity.Get<AttributeFragmentType>();
+
+        attribute::VeryVerbose
+        (
+            TEXT("Computing NOT REVOKABLE Multiplicative AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
+            InHandle,
+            TargetEntity
+        );
+
+        AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Multiply(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
+    }
+
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -173,7 +230,7 @@ namespace ck
 
         attribute::VeryVerbose
         (
-            TEXT("Removing Multiplicative AttributeModifier value of Entity [{}] from Attribute component of target Entity [{}]. Forcing final value calculation again"),
+            TEXT("Removing REVOKABLE Multiplicative AttributeModifier value of Entity [{}] from Attribute component of target Entity [{}]. Forcing final value calculation again"),
             InHandle,
             TargetEntity
         );
