@@ -51,12 +51,4 @@ auto
     DOREPLIFETIME(ThisType, _ReplicatedObjects);
 }
 
-auto
-    UCk_ObjectReplicator_ActorComponent_UE::
-    OnRep_ReplicatedObject()
-    -> void
-{
-    UE_LOG(CkCore, Warning, TEXT("Object"));
-}
-
 // --------------------------------------------------------------------------------------------------------------------
