@@ -131,6 +131,7 @@ namespace ck
         );
 
         AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Add(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
+        AttributeComp._Final = AttributeComp._Base;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -186,7 +187,7 @@ namespace ck
         AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Multiply(AttributeComp._Final, InAttributeModifier.Get_ModifierDelta());
     }
 
-        // --------------------------------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
     auto
@@ -211,8 +212,8 @@ namespace ck
         );
 
         AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Multiply(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
+        AttributeComp._Final = AttributeComp._Base;
     }
-
 
     // --------------------------------------------------------------------------------------------------------------------
 
