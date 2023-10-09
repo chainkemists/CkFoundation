@@ -69,7 +69,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    float _ModifierDelta;
+    float _ModifierDelta = 0.0f;
 
     UPROPERTY(BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
