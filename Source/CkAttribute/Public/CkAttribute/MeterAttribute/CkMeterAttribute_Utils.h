@@ -65,7 +65,7 @@ public:
         const FCk_Handle& InHandle) -> void override;
 
 private:
-    UPROPERTY(EditAnywhere, meta=(AllowPrivateAccess))
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
     FCk_Fragment_MeterAttribute_ParamsData _Params;
 
 public:
