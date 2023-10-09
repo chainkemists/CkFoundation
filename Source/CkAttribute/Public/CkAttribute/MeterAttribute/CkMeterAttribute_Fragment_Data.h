@@ -97,6 +97,10 @@ private:
     ECk_ModifierOperation _ModifierOperation = ECk_ModifierOperation::Additive;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_ModifierOperation_RevokablePolicy _ModifierOperation_RevokablePolicy = ECk_ModifierOperation_RevokablePolicy::Revokable;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, Bitmask, BitmaskEnum = "ECk_MeterAttributeModifier_Policy"))
     int32 _ModifierPolicyFlags = 0;
 
@@ -107,9 +111,10 @@ public:
     CK_PROPERTY_GET(_ModifierDelta)
     CK_PROPERTY_GET(_TargetAttributeName)
     CK_PROPERTY_GET(_ModifierOperation)
+    CK_PROPERTY_GET(_ModifierOperation_RevokablePolicy)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MeterAttributeModifier_ParamsData, _ModifierDelta, _TargetAttributeName, _ModifierOperation, _ModifierPolicyFlags);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MeterAttributeModifier_ParamsData, _ModifierDelta, _TargetAttributeName, _ModifierOperation, _ModifierOperation_RevokablePolicy, _ModifierPolicyFlags);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

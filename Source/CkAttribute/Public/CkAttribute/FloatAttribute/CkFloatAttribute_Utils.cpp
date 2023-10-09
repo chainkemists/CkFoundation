@@ -200,7 +200,8 @@ auto
         NewModifierEntity,
         InParams.Get_ModifierDelta(),
         AttributeEntity,
-        InParams.Get_ModifierOperation()
+        InParams.Get_ModifierOperation(),
+        InParams.Get_ModifierOperation_RevokablePolicy()
     );
 
     if (NOT InAttributeOwnerEntity.Has<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>())

@@ -109,6 +109,8 @@ namespace ck
     public:
         struct Tag_AdditiveModification{};
         struct Tag_MultiplicativeModification{};
+        struct Tag_IsRevokable{};
+        struct Tag_IsNotRevokable{};
         struct Tag_ComputeResult{};
 
     public:
