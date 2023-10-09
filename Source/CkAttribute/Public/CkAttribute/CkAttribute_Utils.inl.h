@@ -146,6 +146,7 @@ namespace ck
             case ECk_ModifierOperation_RevokablePolicy::NotRevokable:
             {
                 InHandle.Add<typename AttributeModifierFragmentType::Tag_IsNotRevokableModification>();
+                Request_ComputeResult(InHandle);
                 UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
 
                 break;
