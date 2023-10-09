@@ -77,13 +77,55 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT()
+struct FCk_Fragment_FloatAttribute_PendingModifier
+{
+    GENERATED_BODY()
+
+private:
+    UPROPERTY()
+    FGameplayTag _ModifierName;
+
+    UPROPERTY()
+    FCk_Fragment_FloatAttributeModifier_ParamsData _Params;
+
+public:
+    CK_PROPERTY_GET(_ModifierName);
+    CK_PROPERTY_GET(_Params);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttribute_PendingModifier, _ModifierName, _Params);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT()
+struct FCk_Fragment_FloatAttribute_RemovePendingModifier
+{
+    GENERATED_BODY()
+
+private:
+    UPROPERTY()
+    FGameplayTag _AttributeName;
+
+    UPROPERTY()
+    FGameplayTag _ModifierName;
+
+public:
+    CK_PROPERTY_GET(_AttributeName);
+    CK_PROPERTY_GET(_ModifierName);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttribute_RemovePendingModifier, _AttributeName, _ModifierName);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(Blueprintable)
 class CKATTRIBUTE_API UCk_Fragment_FloatAttribute_Rep : public UCk_Ecs_ReplicatedObject_UE
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_FloatAttribute_Rep);
+    CK_GENERATED_BODY(UCk_Fragment_FloatAttribute_Rep);
 
 public:
     friend class ck::FProcessor_FloatAttribute_Replicate;
@@ -95,25 +137,35 @@ public:
         FGameplayTag InModifierName,
         const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams);
 
-    UFUNCTION(NetMulticast, Reliable)
-    void
-    Broadcast_AddModifier_Clients(
-        FGameplayTag                                   InModifierName,
-        FCk_Fragment_FloatAttributeModifier_ParamsData InParams);
-
     UFUNCTION(Server, Reliable)
     void
     Broadcast_RemoveModifier(
         FGameplayTag InModifierName,
         FGameplayTag InAttributeName);
 
-    UFUNCTION(NetMulticast, Reliable)
-    void
-    Broadcast_RemoveModifier_Clients(
-        FGameplayTag InModifierName,
-        FGameplayTag InAttributeName);
-
     // TODO: 'permanent' modifiers
+
+public:
+    auto OnLink() -> void override;;
+
+private:
+    auto
+    GetLifetimeReplicatedProps(
+        TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
+
+private:
+    UFUNCTION()
+    void
+    OnRep_PendingModifiers();
+
+private:
+    UPROPERTY(ReplicatedUsing = OnRep_PendingModifiers)
+    TArray<FCk_Fragment_FloatAttribute_PendingModifier> _PendingAddModifiers;
+    int32 _NextPendingAddModifier = 0;
+
+    UPROPERTY(ReplicatedUsing = OnRep_PendingModifiers)
+    TArray<FCk_Fragment_FloatAttribute_RemovePendingModifier> _PendingRemoveModifiers;
+    int32 _NextPendingRemoveModifier = 0;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
