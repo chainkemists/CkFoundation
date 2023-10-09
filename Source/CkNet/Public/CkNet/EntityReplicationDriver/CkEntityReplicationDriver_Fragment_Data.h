@@ -70,14 +70,12 @@ public:
 
 private:
     UPROPERTY()
-    TArray<TSubclassOf<UCk_Ecs_ReplicatedObject_UE>> _Objects;
-
-    UPROPERTY()
-    TArray<FName> _NetStableNames;
+    TArray<UCk_ReplicatedObject_UE*> _Objects;
 
 public:
-    CK_PROPERTY(_Objects);
-    CK_PROPERTY(_NetStableNames);
+    CK_PROPERTY_GET(_Objects);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_ReplicateObjects_Data, _Objects);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -92,12 +90,16 @@ public:
 
 private:
     UPROPERTY()
+    TObjectPtr<class UCk_Fragment_EntityReplicationDriver_Rep> _OwningEntityDriver;
+
+    UPROPERTY()
     FCk_EntityReplicationDriver_ConstructionInfo _ConstructionInfo;
 
     UPROPERTY()
     FCk_EntityReplicationDriver_ReplicateObjects_Data _ReplicatedObjectsData;
 
 public:
+    CK_PROPERTY(_OwningEntityDriver);
     CK_PROPERTY_GET(_ConstructionInfo);
     CK_PROPERTY_GET(_ReplicatedObjectsData);
 
