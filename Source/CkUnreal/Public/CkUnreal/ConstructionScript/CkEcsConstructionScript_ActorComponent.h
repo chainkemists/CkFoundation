@@ -12,96 +12,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-//USTRUCT(BlueprintType)
-//struct CKUNREAL_API FCk_EcsConstructionScript_ConstructionInfo
-//{
-//    GENERATED_BODY()
-//
-//public:
-//    CK_GENERATED_BODY(FCk_EcsConstructionScript_ConstructionInfo);
-//
-//private:
-//    UPROPERTY(meta=(AllowPrivateAccess))
-//    TObjectPtr<AActor> _OutermostActor;
-//
-//    UPROPERTY(meta=(AllowPrivateAccess))
-//    TSubclassOf<AActor> _ActorToReplicate;
-//
-//    UPROPERTY(meta=(AllowPrivateAccess))
-//    TObjectPtr<APlayerController> _OwningPlayerController;
-//
-//    UPROPERTY(meta=(AllowPrivateAccess))
-//    int32                 _OriginalOwnerEntity;
-//
-//    UPROPERTY(meta=(AllowPrivateAccess))
-//    FTransform            _Transform;
-//
-//public:
-//    CK_PROPERTY(_OutermostActor);
-//    CK_PROPERTY(_ActorToReplicate);
-//    CK_PROPERTY(_OwningPlayerController);
-//    CK_PROPERTY(_OriginalOwnerEntity);
-//    CK_PROPERTY(_Transform);
-//};
-//
-//// --------------------------------------------------------------------------------------------------------------------
-//
-//USTRUCT(BlueprintType)
-//struct CKUNREAL_API FCk_EcsConstructionScript_ReplicateObjects_Data
-//{
-//    GENERATED_BODY()
-//
-//public:
-//    CK_GENERATED_BODY(FCk_EcsConstructionScript_ReplicateObjects_Data);
-//
-//private:
-//    UPROPERTY()
-//    TObjectPtr<AActor> _Owner;
-//
-//    UPROPERTY()
-//    TArray<TSubclassOf<UCk_Ecs_ReplicatedObject_UE>> _Objects;
-//
-//    UPROPERTY()
-//    TArray<FName> _NetStableNames;
-//
-//public:
-//    CK_PROPERTY_GET(_Owner);
-//    CK_PROPERTY(_Objects);
-//    CK_PROPERTY(_NetStableNames);
-//
-//    CK_PROPERTY_GET_NON_CONST(_Objects);
-//    CK_PROPERTY_GET_NON_CONST(_NetStableNames);
-//
-//public:
-//    CK_DEFINE_CONSTRUCTORS(FCk_EcsConstructionScript_ReplicateObjects_Data, _Owner);
-//};
-//
-//// --------------------------------------------------------------------------------------------------------------------
-//
-//USTRUCT(BlueprintType)
-//struct CKUNREAL_API FCk_EcsConstructionScript_Replication_Data
-//{
-//    GENERATED_BODY()
-//
-//public:
-//    CK_GENERATED_BODY(FCk_EcsConstructionScript_Replication_Data);
-//
-//private:
-//    UPROPERTY()
-//    FCk_EcsConstructionScript_ConstructionInfo _ConstructionInfo;
-//
-//    UPROPERTY()
-//    FCk_EcsConstructionScript_ReplicateObjects_Data _ReplicatedObjects;
-//
-//public:
-//    CK_PROPERTY_GET(_ConstructionInfo);
-//    CK_PROPERTY_GET(_ReplicatedObjects);
-//
-//    CK_DEFINE_CONSTRUCTORS(FCk_EcsConstructionScript_Replication_Data, _ConstructionInfo, _ReplicatedObjects);
-//};
-
-// --------------------------------------------------------------------------------------------------------------------
-
 UCLASS(Abstract,
        Blueprintable,
        BlueprintType,
@@ -116,17 +26,6 @@ public:
 
 public:
     UCk_EcsConstructionScript_ActorComponent_UE();
-
-public:
-    //UFUNCTION(Server, Reliable)
-    //void
-    //Request_ReplicateActor_OnServer(
-    //    const FCk_EcsConstructionScript_ConstructionInfo& InRequest);
-
-private:
-    //auto Request_ReplicateActor_OnClients(
-    //    const FCk_EcsConstructionScript_ReplicateObjects_Data& InData,
-    //    const FCk_EcsConstructionScript_ConstructionInfo& InRequest) -> void;
 
 protected:
     auto OnUnregister() -> void override;
@@ -144,20 +43,6 @@ public:
 
     UPROPERTY(EditDefaultsOnly, Instanced)
     TObjectPtr<UCk_UnrealEntity_WithActor_PDA> _UnrealEntity;
-
-    UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Transient)
-    FCk_Handle _Entity;
-
-    //UPROPERTY(ReplicatedUsing = OnRep_ReplicationData)
-    //FCk_EcsConstructionScript_Replication_Data _ReplicationData;
-
-    //UFUNCTION()
-    //void OnRep_ReplicationData();
-
-    //auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
-
-    bool _DoConstructCalled = false;
-    bool _ReplicationDataReplicated = false;
 
 public:
     CK_PROPERTY(_UnrealEntity);
