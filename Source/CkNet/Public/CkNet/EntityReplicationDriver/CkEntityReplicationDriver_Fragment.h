@@ -49,16 +49,6 @@ private:
     GetLifetimeReplicatedProps(
         TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
 
-public:
-    //auto
-    //Request_ReplicateEntity(
-    //    const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo) -> void;
-
-    UFUNCTION(Server, Reliable)
-    void
-    Request_ReplicateEntity_OnServer(
-        const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo);
-
 private:
     UFUNCTION()
     void
@@ -70,12 +60,13 @@ private:
 
 private:
     UPROPERTY(ReplicatedUsing = OnRep_ReplicationData)
-    TArray<FCk_EntityReplicationDriver_ReplicationData> _ReplicationData;
-
-    int32 _ReplicateFrom = 0;
+    FCk_EntityReplicationDriver_ReplicationData _ReplicationData;
 
     UPROPERTY(ReplicatedUsing = OnRep_ReplicationData_ReplicatedActor)
     FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor _ReplicationData_ReplicatedActor;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>> _PendingChildEntityConstructions;
 
 public:
     // TODO: reduce the exposure of this variable
