@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkAttribute_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -101,7 +102,8 @@ namespace ck
             HandleType            InHandle,
             AttributeDataType     InModifierDelta,
             HandleType            InTarget,
-            ECk_ModifierOperation InModifierOperation)
+            ECk_ModifierOperation InModifierOperation,
+            ECk_ModifierOperation_RevokablePolicy InModifierOperationRevokablePolicy)
         -> void
     {
         CK_ENSURE_IF_NOT(ck::IsValid(InTarget),
@@ -115,9 +117,6 @@ namespace ck
             InHandle,
             InTarget)
         { return; }
-
-        RecordOfAttributeModifiers_Utils::AddIfMissing(InTarget, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
-        RecordOfAttributeModifiers_Utils::Request_Connect(InTarget, InHandle);
 
         InHandle.Add<AttributeModifierFragmentType>(InModifierDelta);
 
@@ -133,6 +132,30 @@ namespace ck
             case ECk_ModifierOperation::Multiplicative:
             {
                 InHandle.Add<typename AttributeModifierFragmentType::Tag_MultiplicativeModification>();
+                break;
+            }
+            default:
+            {
+                CK_INVALID_ENUM(InModifierOperation);
+                break;
+            }
+        }
+
+        switch (InModifierOperationRevokablePolicy)
+        {
+            case ECk_ModifierOperation_RevokablePolicy::NotRevokable:
+            {
+                InHandle.Add<typename AttributeModifierFragmentType::Tag_IsNotRevokable>();
+                UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+
+                break;
+            }
+            case ECk_ModifierOperation_RevokablePolicy::Revokable:
+            {
+                InHandle.Add<typename AttributeModifierFragmentType::Tag_IsRevokable>();
+                RecordOfAttributeModifiers_Utils::AddIfMissing(InTarget, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
+                RecordOfAttributeModifiers_Utils::Request_Connect(InTarget, InHandle);
+
                 break;
             }
             default:

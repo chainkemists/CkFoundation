@@ -79,13 +79,18 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_ModifierOperation _ModifierOperation = ECk_ModifierOperation::Additive;
 
-public:
-    CK_PROPERTY_GET(_ModifierDelta)
-    CK_PROPERTY_GET(_TargetAttributeName)
-    CK_PROPERTY_GET(_ModifierOperation)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_ModifierOperation_RevokablePolicy _ModifierOperation_RevokablePolicy = ECk_ModifierOperation_RevokablePolicy::Revokable;
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttributeModifier_ParamsData, _ModifierDelta, _TargetAttributeName, _ModifierOperation);
+    CK_PROPERTY_GET(_ModifierDelta);
+    CK_PROPERTY_GET(_TargetAttributeName);
+    CK_PROPERTY_GET(_ModifierOperation);
+    CK_PROPERTY_GET(_ModifierOperation_RevokablePolicy);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttributeModifier_ParamsData, _ModifierDelta, _TargetAttributeName, _ModifierOperation, _ModifierOperation_RevokablePolicy);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
