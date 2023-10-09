@@ -34,10 +34,7 @@ public:
     auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
 
 public:
-    UFUNCTION()
-    void OnRep_ReplicatedObject();
-
-    UPROPERTY(ReplicatedUsing = OnRep_ReplicatedObject)
+    UPROPERTY(Replicated)
     TArray<UCk_ReplicatedObject_UE*> _ReplicatedObjects;
 };
 
