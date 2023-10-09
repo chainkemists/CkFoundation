@@ -10,27 +10,6 @@ auto
         const FCk_Handle InHandle)
     -> void
 {
-    //const auto EntityWithActor = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwnerIf(InHandle, [](FCk_Handle Handle)
-    //{
-    //    return UCk_Utils_OwningActor_UE::Has(Handle);
-    //});
-
-    //CK_ENSURE_IF_NOT(ck::IsValid(EntityWithActor), TEXT("Invalid Actor"))
-    //{ return; }
-
-    //const auto& BasicDetails   = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(EntityWithActor);
-    //const auto& OwningActor    = BasicDetails.Get_Actor().Get();
-    //const auto& OutermostActor = UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(OwningActor);
-
-    //CK_ENSURE_IF_NOT(ck::IsValid(OutermostActor),
-    //    TEXT("OutermostActor for Actor [{}] with Entity [{}] is [{}]. Does this Entity require replication?"),
-    //    OwningActor, EntityWithActor, OutermostActor)
-    //{ return; }
-
-    //const auto Subsystem = OutermostActor->GetWorld()->GetSubsystem<UCk_EntityReplicationDriver_Subsystem_UE>();
-    //Subsystem->CreateEntityReplicationDrivers(OutermostActor);
-
-    //TryAddReplicatedFragment<UCk_Fragment_EntityReplicationDriver_Rep>(InHandle, Subsystem->Get_NextAvailableReplicationDriver());
     TryAddReplicatedFragment<UCk_Fragment_EntityReplicationDriver_Rep>(InHandle);
 }
 
@@ -41,11 +20,11 @@ auto
         const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo)
     -> void
 {
-    //CK_ENSURE_IF_NOT(InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>(),
-    //    TEXT("Entity [{}] does NOT have a ReplicationDriver. Unable to proceed with Replication of Entity with ConstructionScript [{}]"),
-    //    InHandle,
-    //    InConstructionInfo.Get_ConstructionScript())
-    //{ return; }
+    CK_ENSURE_IF_NOT(InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>(),
+        TEXT("Entity [{}] does NOT have a ReplicationDriver. Unable to proceed with Replication of Entity with ConstructionScript [{}]"),
+        InHandle,
+        InConstructionInfo.Get_ConstructionScript())
+    { return; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(InConstructionInfo.Get_ConstructionScript()),
         TEXT("Unable to ReplicateEntity as ConstructionScript is [{}]"),
@@ -67,34 +46,17 @@ auto
         case ECk_Net_NetRoleType::Host:
         case ECk_Net_NetRoleType::Server:
         {
-            Add(NewEntity);
-
+            const auto& RepDriver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
             const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(NewEntity);
 
-            auto ReplicatedObjectsData = FCk_EntityReplicationDriver_ReplicateObjects_Data{};
-
-            for (const auto& ReplicatedObject : ReplicatedObjects.Get_ReplicatedObjects())
-            {
-                CK_ENSURE_IF_NOT(ck::IsValid(ReplicatedObject),
-                    TEXT("Invalid Replicated Object encountered for Entity [{}] on the SERVER.[{}]"),
-                    NewEntity,
-                    ck::Context(InHandle))
-                { continue; }
-
-                ReplicatedObjectsData.Update_Objects([&](auto& InReplicatedObjects)
-                    { InReplicatedObjects.Emplace(ReplicatedObject->GetClass()); });
-
-                ReplicatedObjectsData.Update_NetStableNames([&](auto& InNetStableNames)
-                    { InNetStableNames.Emplace(ReplicatedObject->GetFName()); });
-            }
-
-            const auto& RepDriver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
-
-            RepDriver->Update_ReplicationData(
-                [&](TArray<FCk_EntityReplicationDriver_ReplicationData>& ReplicationData)
+            RepDriver->Set_ReplicationData
+            (
+                FCk_EntityReplicationDriver_ReplicationData
                 {
-                    ReplicationData.Emplace(FCk_EntityReplicationDriver_ReplicationData{InConstructionInfo, ReplicatedObjectsData});
-                });
+                    InConstructionInfo,
+                    FCk_EntityReplicationDriver_ReplicateObjects_Data{ReplicatedObjects.Get_ReplicatedObjects()}
+                }.Set_OwningEntityDriver(InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
+            );
             break;
         }
         case ECk_Net_NetRoleType::None:
@@ -102,16 +64,6 @@ auto
             CK_INVALID_ENUM(NetMode);
             break;
     }
-
-
-
-
-
-
-
-
-
-    //InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>()->Request_ReplicateEntity(InConstructionInfo);
 }
 
 auto
