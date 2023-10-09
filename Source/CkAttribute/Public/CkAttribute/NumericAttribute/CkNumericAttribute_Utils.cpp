@@ -283,4 +283,37 @@ auto
     );
 }
 
+auto
+    UCk_Utils_NumericAttributeModifier_UE::
+    Add(
+        FCk_Handle                                            InAttributeOwnerEntity,
+        FGameplayTag                                          InModifierName,
+        const FCk_Fragment_NumericAttributeModifier_ParamsData& InParams)
+    -> void
+{
+    if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InAttributeOwnerEntity))
+    { return; }
+
+    if (UCk_Utils_FloatAttribute_UE::Has(InAttributeOwnerEntity, InParams.Get_TargetAttributeName()))
+    {
+        UCk_Utils_FloatAttributeModifier_UE::Add(InAttributeOwnerEntity, InModifierName,
+            FCk_Fragment_FloatAttributeModifier_ParamsData
+            {
+                InParams.Get_ModifierDelta().Get_Value().Get_CurrentValue(),
+                InParams.Get_TargetAttributeName(),
+                InParams.Get_ModifierOperation(),
+                InParams.Get_ModifierOperation_RevokablePolicy()
+            });
+    }
+    else if (UCk_Utils_MeterAttribute_UE::Has(InAttributeOwnerEntity, InParams.Get_TargetAttributeName()))
+    {
+        UCk_Utils_MeterAttributeModifier_UE::Add(InAttributeOwnerEntity, InModifierName, InParams);
+    }
+    else
+    {
+        CK_ENSURE_FALSE(TEXT("Unable to add modifier. Entity [{}] does NOT have a Numeric Attribute (float/meter) [{}]"),
+            InAttributeOwnerEntity, InParams.Get_TargetAttributeName());
+    }
+}
+
 // --------------------------------------------------------------------------------------------------------------------

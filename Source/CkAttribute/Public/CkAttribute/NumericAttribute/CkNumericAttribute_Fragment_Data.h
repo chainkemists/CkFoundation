@@ -1,10 +1,14 @@
 #pragma once
 
+#include "CkAttribute/MeterAttribute/CkMeterAttribute_Fragment_Data.h"
+
 #include "CkCore/Enums/CkEnums.h"
-#include "CkEcs/Handle/CkHandle.h"
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Handle/CkHandle.h"
+
 #include "CkProvider/CkProvider_Data.h"
+
 #include "CkSignal/CkSignal_Fragment.h"
 #include "CkSignal/CkSignal_Utils.h"
 
@@ -270,5 +274,13 @@ namespace ck
         FFragment_Signal_UnrealMulticast_OnNumericAttributeValueChanged
     > {};
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKATTRIBUTE_API FCk_Fragment_NumericAttributeModifier_ParamsData : public FCk_Fragment_MeterAttributeModifier_ParamsData
+{
+    GENERATED_BODY()
+};
 
 // --------------------------------------------------------------------------------------------------------------------

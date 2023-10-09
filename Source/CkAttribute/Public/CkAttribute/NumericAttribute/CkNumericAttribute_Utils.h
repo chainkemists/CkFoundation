@@ -138,3 +138,50 @@ private:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable)
+class CKATTRIBUTE_API UCk_Utils_NumericAttributeModifier_UE : public UCk_Utils_Ecs_Base_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_NumericAttributeModifier_UE);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AttributeModifier|Numeric",
+              DisplayName="Add Numeric Attribute Modifier")
+    static void
+    Add(
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InModifierName,
+        const FCk_Fragment_NumericAttributeModifier_ParamsData& InParams);
+
+    // TODO: Implement the following functions
+    //UFUNCTION(BlueprintPure,
+    //          Category = "Ck|Utils|AttributeModifier|Numeric",
+    //          DisplayName="Has Numeric Attribute Modifier")
+    //static bool
+    //Has(
+    //    FCk_Handle InAttributeOwnerEntity,
+    //    FGameplayTag InAttributeName,
+    //    FGameplayTag InModifierName);
+
+    //UFUNCTION(BlueprintPure,
+    //          Category = "Ck|Utils|AttributeModifier|Numeric",
+    //          DisplayName="Ensure Has Numeric Attribute Modifier")
+    //static bool
+    //Ensure(
+    //    FCk_Handle InAttributeOwnerEntity,
+    //    FGameplayTag InAttributeName,
+    //    FGameplayTag InModifierName);
+
+    //UFUNCTION(BlueprintCallable,
+    //          Category = "Ck|Utils|AttributeModifier|Numeric",
+    //          DisplayName="Ensure Has Numeric Attribute Modifier")
+    //static void
+    //Remove(
+    //    FCk_Handle InAttributeOwnerEntity,
+    //    FGameplayTag InAttributeName,
+    //    FGameplayTag InModifierName);
+};
