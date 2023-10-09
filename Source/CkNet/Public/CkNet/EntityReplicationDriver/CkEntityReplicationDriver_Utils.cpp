@@ -32,6 +32,7 @@ auto
     { return; }
 
     const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
+    UCk_Utils_Net_UE::Copy(InHandle, NewEntity);
     InConstructionInfo.Get_ConstructionScript()->Construct(NewEntity);
 
     switch(const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(InHandle))

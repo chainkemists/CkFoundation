@@ -77,7 +77,8 @@ auto
     if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InHandle))
     { return;}
 
-    // Meter is an Entity that is made up of sub-entities (FloatAttribute) and thus
+    // Meter is an Entity that is made up of sub-entities (FloatAttribute) and thus requires us constructing it just like
+    // we would an Unreal Entity
     UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(InHandle, FCk_EntityReplicationDriver_ConstructionInfo{InDataAsset});
 }
 
