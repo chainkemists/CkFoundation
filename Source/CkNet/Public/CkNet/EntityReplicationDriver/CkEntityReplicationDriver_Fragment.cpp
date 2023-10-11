@@ -8,9 +8,7 @@
 #include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-#include "CkNet/CkNet_Log.h"
 #include "CkNet/CkNet_Utils.h"
-#include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
 #include <Net/UnrealNetwork.h>
 #include <Engine/World.h>
@@ -146,6 +144,11 @@ auto
     // --------------------------------------------------------------------------------------------------------------------
 
     ck::UUtils_Signal_OnReplicationComplete::Broadcast(Entity, ck::MakePayload(Entity));
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    ReplicatedActor->GetComponentByClass<UCk_EcsConstructionScript_ActorComponent_Base_UE>()->
+        TryInvoke_OnReplicationComplete(UCk_EcsConstructionScript_ActorComponent_Base_UE::EInvoke_Caller::ReplicationDriver);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
