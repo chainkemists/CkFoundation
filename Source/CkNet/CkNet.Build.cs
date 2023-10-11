@@ -22,6 +22,7 @@ public class CkNet : CkModuleRules
             "CkEcs",
             "CkLog",
             "CkSettings",
+            "CkSignal"
         });
     }
 }

@@ -1,7 +1,9 @@
 #include "CkEntityReplicationDriver_Fragment.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Payload/CkPayload.h"
 
+#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
@@ -140,6 +142,10 @@ auto
     }
 
     _PendingChildEntityConstructions.Reset();
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    ck::UUtils_Signal_OnReplicationComplete::Broadcast(Entity, ck::MakePayload(Entity));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
