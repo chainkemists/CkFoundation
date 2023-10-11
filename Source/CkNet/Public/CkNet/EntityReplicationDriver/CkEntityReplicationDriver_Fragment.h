@@ -5,7 +5,20 @@
 
 #include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Fragment_Data.h"
 
+#include "CkSignal/Public/CkSignal/CkSignal_Macros.h"
+
 #include "CkEntityReplicationDriver_Fragment.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKNET_API,
+        OnReplicationComplete,
+        FCk_Delegate_EntityReplicationDriver_OnReplicationComplete_MC,
+        FCk_Handle);
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 

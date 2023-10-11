@@ -79,4 +79,40 @@ auto
     RepDriver->Set_ReplicationData_ReplicatedActor(InConstructionInfo);
 }
 
+auto
+    UCk_Utils_EntityReplicationDriver_UE::
+    Has(
+        FCk_Handle InEntity)
+    -> bool
+{
+    return InEntity.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
+}
+
+auto
+    UCk_Utils_EntityReplicationDriver_UE::
+    Ensure(
+        FCk_Handle InEntity)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(Has(InEntity),
+        TEXT("Handle [{}] does NOT have [{}]"),
+        InEntity, ck::TypeToString<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>)
+    { return false; }
+
+    return true;
+}
+
+auto
+    UCk_Utils_EntityReplicationDriver_UE::
+    Promise_OnReplicationComplete(
+        FCk_Handle                                                        InEntity,
+        const FCk_Delegate_EntityReplicationDriver_OnReplicationComplete& InDelegate)
+    -> void
+{
+    if (NOT Ensure(InEntity))
+    { return; }
+
+    ck::UUtils_Signal_OnReplicationComplete::Bind(InEntity, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
