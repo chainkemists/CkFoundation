@@ -72,6 +72,27 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintType, NotBlueprintable)
+class CKECS_API UCk_EcsConstructionScript_ActorComponent_Base_UE : public UCk_ActorComponent_UE
+{
+    GENERATED_BODY()
+
+    friend class UCk_EcsConstructionScript_ActorComponent_UE;
+    friend class UCk_Fragment_EntityReplicationDriver_Rep;
+
+private:
+    enum class EInvoke_Caller
+    {
+        ReplicationDriver,
+        EcsConstructionScript,
+    };
+
+private:
+    virtual auto TryInvoke_OnReplicationComplete(EInvoke_Caller) -> void {}
+};
+
+// --------------------------------------------------------------------------------------------------------------------
 // IsValid and Formatters
 
 CK_DEFINE_CUSTOM_IS_VALID(FCk_EntityOwningActor_BasicDetails, ck::IsValid_Policy_Default,
