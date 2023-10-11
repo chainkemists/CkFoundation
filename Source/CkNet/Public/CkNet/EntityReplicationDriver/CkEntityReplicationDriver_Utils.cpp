@@ -74,6 +74,9 @@ auto
         const FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor& InConstructionInfo)
     -> void
 {
+    if (NOT Ensure(InHandle))
+    { return; }
+
     const auto& RepDriver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
 
     RepDriver->Set_ReplicationData_ReplicatedActor(InConstructionInfo);
