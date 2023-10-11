@@ -167,20 +167,17 @@ auto
             );
         }
 
-        if (OwningActor->HasAuthority())
+        if (ck::Is_NOT_Valid(OwningActor->GetComponentByClass<UCk_ObjectReplicator_ActorComponent_UE>()))
         {
-            if (ck::Is_NOT_Valid(OwningActor->GetComponentByClass<UCk_ObjectReplicator_ActorComponent_UE>()))
-            {
-                UCk_Utils_Actor_UE::Request_AddNewActorComponent<UCk_ObjectReplicator_ActorComponent_UE>
-                (
-                    UCk_Utils_Actor_UE::AddNewActorComponent_Params<UCk_ObjectReplicator_ActorComponent_UE>
-                    {
-                        OwningActor,
-                        true
-                    },
-                    [&](UCk_ObjectReplicator_ActorComponent_UE* InComp) { }
-                );
-            }
+            UCk_Utils_Actor_UE::Request_AddNewActorComponent<UCk_ObjectReplicator_ActorComponent_UE>
+            (
+                UCk_Utils_Actor_UE::AddNewActorComponent_Params<UCk_ObjectReplicator_ActorComponent_UE>
+                {
+                    OwningActor,
+                    true
+                },
+                [&](UCk_ObjectReplicator_ActorComponent_UE* InComp) { }
+            );
         }
 
         // Add the replication driver here
@@ -207,6 +204,56 @@ auto
             {
                 OwningActor, CsWithTransform
             }.Set_ReplicatedObjects(ReplicatedObjects.Get_ReplicatedObjects()));
+
+        // TODO: Invoking this manually although ideally this should be called by ReplicationDriver for the Server
+        TryInvoke_OnReplicationComplete(EInvoke_Caller::ReplicationDriver);
+    }
+
+    TryInvoke_OnReplicationComplete(EInvoke_Caller::EcsConstructionScript);
+}
+
+auto
+    UCk_EcsConstructionScript_ActorComponent_UE::
+    TryInvoke_OnReplicationComplete(EInvoke_Caller InCaller)
+    -> void
+{
+    switch (InCaller)
+    {
+        case EInvoke_Caller::ReplicationDriver:
+        {
+
+            if (_ReplicationComplete_BroadcastStep == EOnReplicationCompleteBroadcastStep::Wait)
+            { _ReplicationComplete_BroadcastStep = EOnReplicationCompleteBroadcastStep::WaitOnConstructionScript; }
+            else
+            {
+                CK_ENSURE_IF_NOT(_ReplicationComplete_BroadcastStep == EOnReplicationCompleteBroadcastStep::WaitOnReplicationDriver,
+                    TEXT("Expected BroadcastStep to be EOnReplicationCompleteBroadcastStep::WaitOnReplicationDriver"))
+                { return; }
+
+                _OnReplicationComplete_MC.Broadcast();
+            }
+
+            return;
+        }
+        case EInvoke_Caller::EcsConstructionScript:
+        {
+            if (_ReplicationComplete_BroadcastStep == EOnReplicationCompleteBroadcastStep::Wait)
+            { _ReplicationComplete_BroadcastStep = EOnReplicationCompleteBroadcastStep::WaitOnReplicationDriver; }
+            else
+            {
+                CK_ENSURE_IF_NOT(_ReplicationComplete_BroadcastStep == EOnReplicationCompleteBroadcastStep::WaitOnConstructionScript,
+                    TEXT("Expected BroadcastStep to be EOnReplicationCompleteBroadcastStep::WaitOnReplicationDriver"))
+                { return; }
+
+                _OnReplicationComplete_MC.Broadcast();
+            }
+            break;
+        }
+        default:
+        {
+            CK_ENSURE_FALSE(TEXT("Invalid enum value for Enum [{}]"), ck::TypeToString<EInvoke_Caller>);
+            return;
+        }
     }
 }
 
