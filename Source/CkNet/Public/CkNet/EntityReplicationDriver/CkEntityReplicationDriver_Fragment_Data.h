@@ -3,6 +3,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Entity/CkEntity.h"
+#include "CkEcs/Handle/CkHandle.h"
 
 #include "CkEntityReplicationDriver_Fragment_Data.generated.h"
 
@@ -21,10 +22,10 @@ private:
     TObjectPtr<AActor> _ReplicatedActor;
 
     UPROPERTY()
-    TObjectPtr<UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
+    TObjectPtr<class UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
 
     UPROPERTY()
-    TArray<UCk_ReplicatedObject_UE*> _ReplicatedObjects;
+    TArray<class UCk_ReplicatedObject_UE*> _ReplicatedObjects;
 
 public:
     CK_PROPERTY_GET(_ReplicatedActor);
@@ -124,5 +125,15 @@ public:
 
     CK_DEFINE_CONSTRUCTORS(FCk_Request_ReplicationDriver_ReplicateEntity, _ConstructionInfo);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(
+    FCk_Delegate_EntityReplicationDriver_OnReplicationComplete,
+    FCk_Handle, InHandle);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+    FCk_Delegate_EntityReplicationDriver_OnReplicationComplete_MC,
+    FCk_Handle, InHandle);
 
 // --------------------------------------------------------------------------------------------------------------------
