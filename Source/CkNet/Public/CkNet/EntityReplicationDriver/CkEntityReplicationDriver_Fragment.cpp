@@ -43,7 +43,7 @@ auto
     // wait on the owning entity to fully replicate
     if (ck::Is_NOT_Valid(OwningEntity))
     {
-        _ReplicationData.Get_OwningEntityDriver()->_PendingChildEntityConstructions.AddUnique(this);
+        _ReplicationData.Get_OwningEntityDriver()->_PendingChildEntityConstructions.Emplace(this);
         return;
     }
 
