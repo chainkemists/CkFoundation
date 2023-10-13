@@ -50,7 +50,7 @@ private:
     FCk_Entity _OriginalEntity;
 
     UPROPERTY()
-    TObjectPtr<UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
+    TSubclassOf<UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
 
 public:
     CK_PROPERTY(_OriginalEntity);

@@ -69,7 +69,7 @@ auto
         return UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OwningEntity);
     }();
 
-    ConstructionScript->Construct(NewOrExistingEntity);
+    ConstructionScript->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(NewOrExistingEntity);
 
     UCk_Utils_ReplicatedObjects_UE::Add(NewOrExistingEntity, FCk_ReplicatedObjects{}.
         Set_ReplicatedObjects(ReplicationData.Get_ReplicatedObjectsData().Get_Objects()));
