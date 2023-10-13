@@ -35,22 +35,18 @@ auto
         UCk_Utils_MeterAttribute_UE::Add
         (
             InHandle,
-            FCk_Fragment_MeterAttribute_ConstructionScriptData
+            FCk_Fragment_MeterAttribute_ParamsData
             {
-                FCk_Fragment_MeterAttribute_ParamsData
+                AttributeName,
+                FCk_Meter
                 {
-                    AttributeName,
-                    FCk_Meter
+                    FCk_Meter_Params
                     {
-                        FCk_Meter_Params
-                        {
-                            FCk_Meter_Capacity{MaximumValue}
-                            .Set_MinCapacity(MinimumValue)
-                        }
-                        .Set_StartingPercentage(FCk_FloatRange_0to1{static_cast<ck::FFragment_FloatAttribute::AttributeDataType>(StartingPercentage)})
+                        FCk_Meter_Capacity{MaximumValue}
+                        .Set_MinCapacity(MinimumValue)
                     }
-                },
-                InParams.Get_MeterAttributeConstructionScript()
+                    .Set_StartingPercentage(FCk_FloatRange_0to1{static_cast<ck::FFragment_FloatAttribute::AttributeDataType>(StartingPercentage)})
+                }
             }
         );
     }

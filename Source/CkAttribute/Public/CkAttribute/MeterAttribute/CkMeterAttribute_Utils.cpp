@@ -45,11 +45,11 @@ auto
     // Our owner may be storing the starting Parameters for us. In which case, initialize using those parameters
     auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
-    const auto& ParamsToUse = [&]()
+    const auto& ParamsToUse = [&]
     {
-        if (LifetimeOwner.Has<TArray<FCk_Fragment_MeterAttribute_ConstructionScriptData>>())
+        if (LifetimeOwner.Has<TArray<FCk_Fragment_MeterAttribute_ParamsData>>())
         {
-            return LifetimeOwner.Get<TArray<FCk_Fragment_MeterAttribute_ConstructionScriptData>>().Pop().Get_ParamsData();
+            return LifetimeOwner.Get<TArray<FCk_Fragment_MeterAttribute_ParamsData>>().Pop();
         }
 
         return _Params;
@@ -83,11 +83,11 @@ auto
     UCk_Utils_MeterAttribute_UE::
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_MeterAttribute_ConstructionScriptData& InConstructionScriptData)
+        const FCk_Fragment_MeterAttribute_ParamsData& InConstructionScriptData)
     -> void
 {
     // TODO: this should be a first-class concept driven by utils
-    InHandle.AddOrGet<TArray<FCk_Fragment_MeterAttribute_ConstructionScriptData>>().Emplace(InConstructionScriptData);
+    InHandle.AddOrGet<TArray<FCk_Fragment_MeterAttribute_ParamsData>>().Emplace(InConstructionScriptData);
 
     if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InHandle))
     { return;}
@@ -95,7 +95,7 @@ auto
     // Meter is an Entity that is made up of sub-entities (FloatAttribute) and thus requires us constructing it just like
     // we would an Unreal Entity
     UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(InHandle,
-        FCk_EntityReplicationDriver_ConstructionInfo{InConstructionScriptData.Get_ConstructionScript().GetDefaultObject()});
+        FCk_EntityReplicationDriver_ConstructionInfo{UCk_MeterAttribute_ConstructionScript_PDA::StaticClass()});
 }
 
 auto
