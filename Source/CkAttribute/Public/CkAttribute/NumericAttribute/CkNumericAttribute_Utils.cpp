@@ -32,27 +32,26 @@ auto
 
         const auto& StartingPercentage = UKismetMathLibrary::MapRangeClamped(AttributeStartingValue, MinimumValue, MaximumValue, 0.0f, 1.0f);
 
-        InParams.Get_MeterAttributeConstructionScript()->Set_Params
-        (
-            FCk_Fragment_MeterAttribute_ParamsData
-            {
-                AttributeName,
-                FCk_Meter
-                {
-                    FCk_Meter_Params
-                    {
-                        FCk_Meter_Capacity{MaximumValue}
-                        .Set_MinCapacity(MinimumValue)
-                    }
-                    .Set_StartingPercentage(FCk_FloatRange_0to1{static_cast<ck::FFragment_FloatAttribute::AttributeDataType>(StartingPercentage)})
-                }
-            }
-        );
-
         UCk_Utils_MeterAttribute_UE::Add
         (
             InHandle,
-            InParams.Get_MeterAttributeConstructionScript()
+            FCk_Fragment_MeterAttribute_ConstructionScriptData
+            {
+                FCk_Fragment_MeterAttribute_ParamsData
+                {
+                    AttributeName,
+                    FCk_Meter
+                    {
+                        FCk_Meter_Params
+                        {
+                            FCk_Meter_Capacity{MaximumValue}
+                            .Set_MinCapacity(MinimumValue)
+                        }
+                        .Set_StartingPercentage(FCk_FloatRange_0to1{static_cast<ck::FFragment_FloatAttribute::AttributeDataType>(StartingPercentage)})
+                    }
+                },
+                InParams.Get_MeterAttributeConstructionScript()
+            }
         );
     }
     else
