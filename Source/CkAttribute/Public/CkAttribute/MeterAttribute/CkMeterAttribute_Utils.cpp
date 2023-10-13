@@ -42,7 +42,20 @@ auto
 {
     using RecordOfMeterAttributes_Utils = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils;
 
-    const auto& MeterParams = Get_Params().Get_AttributeBaseValue().Get_Params();
+    // Our owner may be storing the starting Parameters for us. In which case, initialize using those parameters
+    auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+
+    const auto& ParamsToUse = [&]()
+    {
+        if (LifetimeOwner.Has<TArray<FCk_Fragment_MeterAttribute_ConstructionScriptData>>())
+        {
+            return LifetimeOwner.Get<TArray<FCk_Fragment_MeterAttribute_ConstructionScriptData>>().Pop().Get_ParamsData();
+        }
+
+        return _Params;
+    }();
+
+    const auto& MeterParams = ParamsToUse.Get_AttributeBaseValue().Get_Params();
     const auto& MeterCapacity = MeterParams.Get_Capacity();
     const auto& MeterStartingPercentage = MeterParams.Get_StartingPercentage();
 
@@ -59,8 +72,7 @@ auto
         }
     );
 
-    UCk_Utils_GameplayLabel_UE::Add(InHandle, Get_Params().Get_AttributeName());
-    const auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+    UCk_Utils_GameplayLabel_UE::Add(InHandle, ParamsToUse.Get_AttributeName());
 
     RecordOfMeterAttributes_Utils::AddIfMissing(
         LifetimeOwner, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
@@ -71,15 +83,19 @@ auto
     UCk_Utils_MeterAttribute_UE::
     Add(
         FCk_Handle InHandle,
-        UCk_MeterAttribute_ConstructionScript_PDA* InDataAsset)
+        const FCk_Fragment_MeterAttribute_ConstructionScriptData& InConstructionScriptData)
     -> void
 {
+    // TODO: this should be a first-class concept driven by utils
+    InHandle.AddOrGet<TArray<FCk_Fragment_MeterAttribute_ConstructionScriptData>>().Emplace(InConstructionScriptData);
+
     if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InHandle))
     { return;}
 
     // Meter is an Entity that is made up of sub-entities (FloatAttribute) and thus requires us constructing it just like
     // we would an Unreal Entity
-    UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(InHandle, FCk_EntityReplicationDriver_ConstructionInfo{InDataAsset});
+    UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(InHandle,
+        FCk_EntityReplicationDriver_ConstructionInfo{InConstructionScriptData.Get_ConstructionScript().GetDefaultObject()});
 }
 
 auto

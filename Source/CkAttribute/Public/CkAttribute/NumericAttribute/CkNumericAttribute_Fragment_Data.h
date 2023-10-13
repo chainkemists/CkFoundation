@@ -62,7 +62,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<class UCk_MeterAttribute_ConstructionScript_PDA> _MeterAttributeConstructionScript;
+    TSubclassOf<UCk_MeterAttribute_ConstructionScript_PDA> _MeterAttributeConstructionScript;
 
 public:
     auto Get_ConstraintsPolicy() const -> ECk_NumericAttribute_ConstraintsPolicy;

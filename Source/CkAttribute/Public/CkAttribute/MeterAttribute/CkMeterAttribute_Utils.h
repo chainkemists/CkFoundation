@@ -98,7 +98,7 @@ public:
     static void
     Add(
         FCk_Handle InHandle,
-        UCk_MeterAttribute_ConstructionScript_PDA* InDataAsset);
+        const FCk_Fragment_MeterAttribute_ConstructionScriptData& InConstructionScriptData);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Meter",
