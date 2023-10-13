@@ -7,21 +7,17 @@
 #include "CkCore/Meter/CkMeter.h"
 #include "CkCore/TypeConverter/CkTypeConverter.h"
 
+#include "CkSignal/CkSignal_Macros.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
-    struct CKATTRIBUTE_API FFragment_MeterAttribute : public TFragment_Attribute<FCk_Meter>
-    {
-        using TFragment_Attribute::TFragment_Attribute;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    struct CKATTRIBUTE_API FFragment_MeterAttributeModifier : public TFragment_AttributeModifier<FFragment_MeterAttribute>
-    {
-        using TFragment_AttributeModifier::TFragment_AttributeModifier;
-    };
+    /*
+     * Notes: Meter Attribute, at the moment, is a 'Meta Feature' where it uses Float Attributes internally.
+     * This means that there are no Attribute Fragments for the Meter itself. To allow us to work with
+     * multiple Meters though, we do need a RecordOfMeterAttributes and a Signal for Attribute Value Changed
+     */
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -32,40 +28,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <>
-    struct TAttributeModifierOperators<FCk_Meter>
-    {
-        static auto Add(FCk_Meter InA, FCk_Meter InB) -> FCk_Meter
-        {
-            return InA + InB;
-        };
-
-        static auto Multiply(FCk_Meter InA, FCk_Meter InB) -> FCk_Meter
-        {
-            return InA * InB;
-        };
-    };
-
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <>
-    struct TTypeConverter<TPayload_Attribute_OnValueChanged<FFragment_MeterAttribute>, TypeConverterPolicy::TypeToUnreal>
-    {
-        auto operator()(const TPayload_Attribute_OnValueChanged<FFragment_MeterAttribute>& InPayload) const
-        {
-            return FCk_Payload_MeterAttribute_OnValueChanged
-            {
-                InPayload.Get_BaseValue(),
-                InPayload.Get_FinalValue()
-            };
-        }
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    using UUtils_Signal_OnMeterAttributeValueChanged = TUtils_Signal_OnAttributeValueChanged<
-        FFragment_MeterAttribute, FCk_Delegate_MeterAttribute_OnValueChanged_MC>;
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKATTRIBUTE_API, OnMeterAttributeValueChanged,
+        FCk_Delegate_MeterAttribute_OnValueChanged_MC, FCk_Handle, FCk_Payload_MeterAttribute_OnValueChanged);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

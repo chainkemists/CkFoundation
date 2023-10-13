@@ -28,7 +28,6 @@ public:
     class FloatAttribute_Utils : public ck::TUtils_Attribute<ck::FFragment_FloatAttribute> {};
     class RecordOfFloatAttributes_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfFloatAttributes> {};
 
-    class MeterAttribute_Utils : public ck::TUtils_Attribute<ck::FFragment_MeterAttribute> {};
     class RecordOfMeterAttributes_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfMeterAttributes> {};
 
 public:

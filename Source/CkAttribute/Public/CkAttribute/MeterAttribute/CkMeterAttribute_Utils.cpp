@@ -308,9 +308,8 @@ auto
         ck::MakePayload
         (
             MeterAttributeOwnerEntity,
-            ck::TPayload_Attribute_OnValueChanged<ck::FFragment_MeterAttribute>
+            FCk_Payload_MeterAttribute_OnValueChanged
             {
-                MeterAttributeOwnerEntity,
                 Get_BaseValue(MeterAttributeOwnerEntity, MeterAttributeLabel),
                 Get_FinalValue(MeterAttributeOwnerEntity, MeterAttributeLabel)
             }
@@ -335,9 +334,8 @@ auto
         ck::MakePayload
         (
             MeterAttributeOwnerEntity,
-            ck::TPayload_Attribute_OnValueChanged<ck::FFragment_MeterAttribute>
+            FCk_Payload_MeterAttribute_OnValueChanged
             {
-                MeterAttributeOwnerEntity,
                 Get_BaseValue(MeterAttributeOwnerEntity, MeterAttributeLabel),
                 Get_FinalValue(MeterAttributeOwnerEntity, MeterAttributeLabel)
             }
@@ -362,9 +360,8 @@ auto
         ck::MakePayload
         (
             MeterAttributeOwnerEntity,
-            ck::TPayload_Attribute_OnValueChanged<ck::FFragment_MeterAttribute>
+            FCk_Payload_MeterAttribute_OnValueChanged
             {
-                MeterAttributeOwnerEntity,
                 Get_BaseValue(MeterAttributeOwnerEntity, MeterAttributeLabel),
                 Get_FinalValue(MeterAttributeOwnerEntity, MeterAttributeLabel)
             }
