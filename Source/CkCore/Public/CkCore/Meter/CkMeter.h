@@ -67,10 +67,10 @@ CK_DEFINE_CUSTOM_FORMATTER(FCk_Meter, [&]()
 {
     return ck::Format
     (
-        TEXT("Min: {}, Max: {}, Remaining: {}"),
+        TEXT("Min:[{}] Max:[{}] Used:[{}]"),
         InObj.Get_Params().Get_Capacity().Get_MinCapacity(),
         InObj.Get_Params().Get_Capacity().Get_MaxCapacity(),
-        InObj.Get_Remaining().Get_AmountRemaining()
+        InObj.Get_Used().Get_AmountUsed()
     );
 });
 

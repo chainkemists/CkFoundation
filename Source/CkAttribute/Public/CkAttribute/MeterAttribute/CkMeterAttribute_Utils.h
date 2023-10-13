@@ -53,7 +53,7 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(NotBlueprintType, NotBlueprintable)
 class CKATTRIBUTE_API UCk_MeterAttribute_ConstructionScript_PDA final : public UCk_Entity_ConstructionScript_PDA
 {
     GENERATED_BODY()
@@ -98,7 +98,7 @@ public:
     static void
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_MeterAttribute_ConstructionScriptData& InConstructionScriptData);
+        const FCk_Fragment_MeterAttribute_ParamsData& InConstructionScriptData);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Meter",

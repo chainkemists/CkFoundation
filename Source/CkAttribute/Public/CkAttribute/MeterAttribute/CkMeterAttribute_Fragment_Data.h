@@ -54,32 +54,6 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKATTRIBUTE_API FCk_Fragment_MeterAttribute_ConstructionScriptData
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Fragment_MeterAttribute_ConstructionScriptData);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Fragment_MeterAttribute_ParamsData _ParamsData;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    TSubclassOf<class UCk_MeterAttribute_ConstructionScript_PDA> _ConstructionScript;
-
-public:
-    CK_PROPERTY_GET(_ParamsData);
-    CK_PROPERTY_GET(_ConstructionScript);
-
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MeterAttribute_ConstructionScriptData, _ParamsData, _ConstructionScript);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
 struct CKATTRIBUTE_API FCk_Fragment_MultipleMeterAttribute_ParamsData
 {
     GENERATED_BODY()
@@ -90,7 +64,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TArray<FCk_Fragment_MeterAttribute_ConstructionScriptData> _MeterAttributeParams;
+    TArray<FCk_Fragment_MeterAttribute_ParamsData> _MeterAttributeParams;
 
 public:
     CK_PROPERTY_GET(_MeterAttributeParams);
