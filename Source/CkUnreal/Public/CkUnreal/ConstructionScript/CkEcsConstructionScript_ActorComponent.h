@@ -45,6 +45,9 @@ public:
     UFUNCTION(BlueprintImplementableEvent)
     bool ShouldConstruct() const;
 
+    UFUNCTION(BlueprintCallable)
+    bool Get_IsReplicationComplete() const;
+
     UPROPERTY(EditDefaultsOnly)
     ECk_Replication _Replication = ECk_Replication::Replicates;
 

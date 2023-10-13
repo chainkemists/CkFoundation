@@ -224,6 +224,7 @@ auto
                     TEXT("Expected BroadcastStep to be EOnReplicationCompleteBroadcastStep::WaitOnReplicationDriver"))
                 { return; }
 
+                _ReplicationComplete_BroadcastStep = EOnReplicationCompleteBroadcastStep::Broadcast;
                 _OnReplicationComplete_MC.Broadcast();
             }
 
@@ -239,6 +240,7 @@ auto
                     TEXT("Expected BroadcastStep to be EOnReplicationCompleteBroadcastStep::WaitOnReplicationDriver"))
                 { return; }
 
+                _ReplicationComplete_BroadcastStep = EOnReplicationCompleteBroadcastStep::Broadcast;
                 _OnReplicationComplete_MC.Broadcast();
             }
             break;
@@ -249,6 +251,15 @@ auto
             return;
         }
     }
+}
+
+auto
+    UCk_EcsConstructionScript_ActorComponent_UE::
+    Get_IsReplicationComplete() const
+    -> bool
+{
+    // TODO: replace with Future once we have the feature
+    return _ReplicationComplete_BroadcastStep == EOnReplicationCompleteBroadcastStep::Broadcast;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
