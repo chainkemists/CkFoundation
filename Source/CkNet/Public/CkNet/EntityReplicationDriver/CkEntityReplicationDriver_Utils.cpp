@@ -32,6 +32,7 @@ auto
     { return; }
 
     const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
+    Add(NewEntity);
     UCk_Utils_Net_UE::Copy(InHandle, NewEntity);
     InConstructionInfo.Get_ConstructionScript()->Construct(NewEntity);
 
@@ -47,7 +48,7 @@ auto
         case ECk_Net_NetRoleType::Host:
         case ECk_Net_NetRoleType::Server:
         {
-            const auto& RepDriver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
+            const auto& RepDriver = NewEntity.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
             const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(NewEntity);
 
             RepDriver->Set_ReplicationData
