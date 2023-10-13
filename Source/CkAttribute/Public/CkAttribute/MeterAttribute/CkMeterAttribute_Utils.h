@@ -21,7 +21,7 @@ namespace ck
     struct FMeterAttribute_Tags final : public FGameplayTagNativeAdder
     {
     public:
-        virtual ~FMeterAttribute_Tags() = default;
+        virtual ~FMeterAttribute_Tags() override = default;
 
     protected:
         auto AddTags() -> void override;
@@ -224,9 +224,6 @@ class CKATTRIBUTE_API UCk_Utils_MeterAttributeModifier_UE : public UCk_Utils_Ecs
 
 public:
     CK_GENERATED_BODY(UCk_Utils_MeterAttributeModifier_UE);
-
-private:
-    class MeterAttributeModifier_Utils : public ck::TUtils_AttributeModifier<ck::FFragment_MeterAttributeModifier> {};
 
 public:
     UFUNCTION(BlueprintCallable,
