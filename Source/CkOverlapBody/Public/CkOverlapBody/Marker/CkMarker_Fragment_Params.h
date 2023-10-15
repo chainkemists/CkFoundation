@@ -165,7 +165,7 @@ private:
     ECk_ActorComponent_AttachmentPolicy _AttachmentType = ECk_ActorComponent_AttachmentPolicy::Attach;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Bitmask, BitmaskEnum = "ECk_Marker_AttachmentPolicy"))
+              meta = (AllowPrivateAccess = true, Bitmask, BitmaskEnum = "/Script/CkOverlapBody.ECk_Marker_AttachmentPolicy"))
     int32  _AttachmentPolicyFlags = 0;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

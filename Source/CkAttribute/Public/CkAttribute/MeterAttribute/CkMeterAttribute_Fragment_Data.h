@@ -101,7 +101,7 @@ private:
     ECk_ModifierOperation_RevokablePolicy _ModifierOperation_RevokablePolicy = ECk_ModifierOperation_RevokablePolicy::Revokable;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Bitmask, BitmaskEnum = "ECk_MeterAttributeModifier_Policy"))
+              meta = (AllowPrivateAccess = true, Bitmask, BitmaskEnum = "/Script/CkAttribute.ECk_MeterAttributeModifier_Policy"))
     int32 _ModifierPolicyFlags = 0;
 
 public:

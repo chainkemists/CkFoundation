@@ -49,7 +49,7 @@ private:
     float _AttributeStartingValue = 0.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Bitmask, BitmaskEnum = "ECk_NumericAttribute_ConstraintsPolicy"))
+              meta = (AllowPrivateAccess = true, Bitmask, BitmaskEnum = "/Script/CkAttribute.ECk_NumericAttribute_ConstraintsPolicy"))
     int32 _ConstraintsPolicyFlags = 3;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
