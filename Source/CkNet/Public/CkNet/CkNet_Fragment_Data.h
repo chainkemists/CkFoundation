@@ -27,7 +27,7 @@ public:
     CK_GENERATED_BODY(FCk_Net_ConnectionSettings);
 
 private:
-    ECk_Net_NetRoleType _NetMode = ECk_Net_NetRoleType::None;
+    ECk_Net_NetModeType _NetMode = ECk_Net_NetModeType::None;
     ECk_Net_EntityNetRole _NetRole = ECk_Net_EntityNetRole::None;
 
 public:
