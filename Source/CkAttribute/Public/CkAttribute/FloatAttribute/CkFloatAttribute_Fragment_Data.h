@@ -24,7 +24,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ForceInlineRow))
-    float _AttributeBaseValue;
+    float _AttributeBaseValue = 0.0f;
 
 public:
     CK_PROPERTY_GET(_AttributeName);
@@ -218,10 +218,10 @@ private:
     FCk_Handle  _Handle;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-    float  _BaseValue;
+    float  _BaseValue = 0.0f;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-    float  _FinalValue;
+    float  _FinalValue = 0.0f;
 
 public:
     CK_PROPERTY_GET(_Handle);

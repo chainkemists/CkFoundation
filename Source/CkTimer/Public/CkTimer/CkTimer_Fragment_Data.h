@@ -99,7 +99,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_Timer_Manipulate _Manipulate;
+    ECk_Timer_Manipulate _Manipulate = ECk_Timer_Manipulate::Reset;
 
 public:
     CK_PROPERTY_GET(_Manipulate);

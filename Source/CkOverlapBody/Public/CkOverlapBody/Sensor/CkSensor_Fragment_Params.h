@@ -460,7 +460,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_EnableDisable _EnableDisable;
+    ECk_EnableDisable _EnableDisable = ECk_EnableDisable::Enable;
 
 public:
     CK_PROPERTY_GET(_EnableDisable)
