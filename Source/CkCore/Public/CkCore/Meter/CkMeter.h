@@ -10,8 +10,8 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta = (
-    HasNativeMake = "CkCore.Ck_Utils_Meter_UE.Make_Meter",
-    HasNativeBreak = "CkCore.Ck_Utils_Meter_UE.Break_Meter"))
+    HasNativeMake = "/Script/CkCore.Ck_Utils_Meter_UE:Make_Meter",
+    HasNativeBreak = "/Script/CkCore.Ck_Utils_Meter_UE:Break_Meter"))
 struct CKCORE_API FCk_Meter
 {
     GENERATED_BODY()

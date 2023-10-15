@@ -11,7 +11,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak="CkEcs.Ck_Utils_Entity_UE.Break_Entity"))
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak="/Script/CkEcs.Ck_Utils_Entity_UE:Break_Entity"))
 struct CKECS_API FCk_Entity
 {
     GENERATED_BODY()
