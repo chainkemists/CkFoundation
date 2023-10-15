@@ -220,10 +220,10 @@ private:
     FCk_Handle  _Handle;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-    float  _PreviousValue;
+    float  _PreviousValue = 0.0f;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-    float  _NewValue;
+    float  _NewValue = 0.0f;
 
 public:
     CK_PROPERTY_GET(_Handle);
