@@ -21,7 +21,7 @@ auto
     {
         InEntity.Add<ck::FTag_HasAuthority>();
     }
-    if (InConnectionSettings.Get_NetMode() == ECk_Net_NetRoleType::Host)
+    if (InConnectionSettings.Get_NetMode() == ECk_Net_NetModeType::Host)
     {
         InEntity.Add<ck::FTag_NetMode_IsHost>();
     }
@@ -77,7 +77,7 @@ auto
     UCk_Utils_Net_UE::
     Get_EntityNetMode(
         FCk_Handle InEntity)
-    -> ECk_Net_NetRoleType
+    -> ECk_Net_NetModeType
 {
     if (NOT Has(InEntity))
     { return {}; }
@@ -166,28 +166,28 @@ auto
         }
         case ECk_Net_ReplicationType::LocalAndHost:
         {
-            if (isLocallyOwned || netRole == ECk_Net_NetRoleType::Server || netRole == ECk_Net_NetRoleType::Host)
+            if (isLocallyOwned || netRole == ECk_Net_NetModeType::Server || netRole == ECk_Net_NetModeType::Host)
             { return true; }
 
             break;
         }
         case ECk_Net_ReplicationType::HostOnly:
         {
-            if (netRole == ECk_Net_NetRoleType::Host || netRole == ECk_Net_NetRoleType::Server)
+            if (netRole == ECk_Net_NetModeType::Host || netRole == ECk_Net_NetModeType::Server)
             { return true; }
 
             break;
         }
         case ECk_Net_ReplicationType::ClientsOnly:
         {
-            if (netRole != ECk_Net_NetRoleType::Server)
+            if (netRole != ECk_Net_NetModeType::Server)
             { return true; }
 
             break;
         }
         case ECk_Net_ReplicationType::ServerOnly:
         {
-            if (netRole == ECk_Net_NetRoleType::Server)
+            if (netRole == ECk_Net_NetModeType::Server)
             { return true; }
 
             break;
@@ -210,11 +210,11 @@ auto
     UCk_Utils_Net_UE::
     Get_NetRole(
         const UObject* InContext)
-    -> ECk_Net_NetRoleType
+    -> ECk_Net_NetModeType
 {
     if (IsRunningDedicatedServer())
     {
-        return ECk_Net_NetRoleType::Server;
+        return ECk_Net_NetModeType::Server;
     }
 
     const auto GetIsServer = [InContext]() -> bool
@@ -231,16 +231,16 @@ auto
     };
 
     if (GetIsServer())
-    { return ECk_Net_NetRoleType::Host; }
+    { return ECk_Net_NetModeType::Host; }
 
-    return ECk_Net_NetRoleType::Client;
+    return ECk_Net_NetModeType::Client;
 }
 
 auto
     UCk_Utils_Net_UE::
     Get_NetMode(
         const UObject* InContext)
-    -> ECk_Net_NetRoleType
+    -> ECk_Net_NetModeType
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InContext), TEXT("Invalid Object!"))
     { return {}; }
@@ -248,16 +248,16 @@ auto
     switch(InContext->GetWorld()->GetNetMode())
     {
     case NM_DedicatedServer:
-        return ECk_Net_NetRoleType::Server;
+        return ECk_Net_NetModeType::Server;
     case NM_Standalone:
     case NM_ListenServer:
-        return ECk_Net_NetRoleType::Host;
+        return ECk_Net_NetModeType::Host;
     case NM_Client:
-        return ECk_Net_NetRoleType::Client;
+        return ECk_Net_NetModeType::Client;
     case NM_MAX:
     default:
         CK_ENSURE_FALSE(TEXT("Invalid NetMode for [{}]."), InContext);
-        return ECk_Net_NetRoleType::None;
+        return ECk_Net_NetModeType::None;
     }
 }
 

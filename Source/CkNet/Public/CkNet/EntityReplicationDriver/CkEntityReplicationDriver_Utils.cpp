@@ -37,15 +37,15 @@ auto
 
     switch(const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(InHandle))
     {
-        case ECk_Net_NetRoleType::Client:
+        case ECk_Net_NetModeType::Client:
         {
             InHandle.AddOrGet<ck::FFragment_ReplicationDriver_Requests>()._Requests.Emplace(
                 FCk_EntityReplicationDriver_ConstructionInfo{InConstructionInfo}
                 .Set_OriginalEntity(NewEntity.Get_Entity()));
             break;
         }
-        case ECk_Net_NetRoleType::Host:
-        case ECk_Net_NetRoleType::Server:
+        case ECk_Net_NetModeType::Host:
+        case ECk_Net_NetModeType::Server:
         {
             const auto& RepDriver = NewEntity.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
             const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(NewEntity);
@@ -60,7 +60,7 @@ auto
             );
             break;
         }
-        case ECk_Net_NetRoleType::None:
+        case ECk_Net_NetModeType::None:
         default:
             CK_INVALID_ENUM(NetMode);
             break;

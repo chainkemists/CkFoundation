@@ -116,20 +116,20 @@ auto
 
         if (GetWorld()->IsNetMode(NM_Standalone))
         {
-            UCk_Utils_Net_UE::Add(Entity, FCk_Net_ConnectionSettings{ECk_Net_NetRoleType::Host, ECk_Net_EntityNetRole::Authority});
+            UCk_Utils_Net_UE::Add(Entity, FCk_Net_ConnectionSettings{ECk_Net_NetModeType::Host, ECk_Net_EntityNetRole::Authority});
         }
         else if (GetWorld()->IsNetMode(NM_DedicatedServer) || GetWorld()->IsNetMode(NM_ListenServer))
         {
             if (OwningActor->GetLocalRole() == ROLE_Authority)
             {
-                UCk_Utils_Net_UE::Add(Entity, FCk_Net_ConnectionSettings{ECk_Net_NetRoleType::Host, ECk_Net_EntityNetRole::Authority});
+                UCk_Utils_Net_UE::Add(Entity, FCk_Net_ConnectionSettings{ECk_Net_NetModeType::Host, ECk_Net_EntityNetRole::Authority});
             }
         }
         else if (GetWorld()->IsNetMode(NM_Client))
         {
             if (OwningActor->GetLocalRole() == ROLE_Authority)
             {
-                UCk_Utils_Net_UE::Add(Entity, FCk_Net_ConnectionSettings{ECk_Net_NetRoleType::Client, ECk_Net_EntityNetRole::Authority});
+                UCk_Utils_Net_UE::Add(Entity, FCk_Net_ConnectionSettings{ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
             }
         }
 
