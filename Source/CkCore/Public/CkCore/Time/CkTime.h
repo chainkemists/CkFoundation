@@ -64,7 +64,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType, meta = (HasNativeMake = "CkCore.Ck_Utils_Time_UE.Make_WorldTime"))
+USTRUCT(BlueprintType, meta = (HasNativeMake = "/Script/CkCore.Ck_Utils_Time_UE:Make_WorldTime"))
 struct CKCORE_API FCk_WorldTime
 {
     GENERATED_BODY()

@@ -32,7 +32,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Chrono_TickState);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType, meta = (HasNativeBreak = "CkCore.Ck_Utils_Chrono_UE.Break_Chrono"))
+USTRUCT(BlueprintType, meta = (HasNativeBreak = "/Script/CkCore.Ck_Utils_Chrono_UE:Break_Chrono"))
 struct CKCORE_API FCk_Chrono
 {
     GENERATED_BODY()
