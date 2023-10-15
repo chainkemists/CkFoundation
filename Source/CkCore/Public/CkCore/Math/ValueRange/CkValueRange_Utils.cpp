@@ -12,8 +12,8 @@ auto
         ECk_Inclusiveness   InInclusiveness)
     -> bool
 {
-    const auto& range = FCk_FloatRange(InRange.Get_Min(), InRange.Get_Max());
-    return UCk_Utils_FloatRange_UE::Get_IsWithinRange(InValue, range, InInclusiveness);
+    const auto& Range = FCk_FloatRange(InRange.Get_Min(), InRange.Get_Max());
+    return UCk_Utils_FloatRange_UE::Get_IsWithinRange(InValue, Range, InInclusiveness);
 }
 
 auto
@@ -78,6 +78,18 @@ auto
     -> int32
 {
     return InRange.Get_RandomValueInRange();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_FloatRange_0to1_UE::
+    // ReSharper disable once CppInconsistentNaming
+    Make_FloatRange_0to1(
+        float In0to1)
+    -> FCk_FloatRange_0to1
+{
+    return FCk_FloatRange_0to1{In0to1};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
