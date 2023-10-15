@@ -104,12 +104,10 @@ public:
 public:
     DEFINE_CK_CORE_MATH_VALUE_RANGE_FUNCS(float)
 
-protected:
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-    float _Min = 0.0f;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-    float _Max = 1.0f;
+private:
+    // Min/Max exists mainly to keep help the macro DEFINE_CK_CORE_MATH_VALUE_RANGE_FUNCS
+    inline static float _Min = 0.0f;
+    inline static float _Max = 1.0f;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -117,8 +115,6 @@ private:
     float _Value = 0.0f;
 
 public:
-    CK_PROPERTY_GET(_Min);
-    CK_PROPERTY_GET(_Max);
     CK_PROPERTY_GET(_Value);
 };
 
