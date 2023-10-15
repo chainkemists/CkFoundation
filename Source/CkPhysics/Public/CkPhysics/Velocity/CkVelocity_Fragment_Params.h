@@ -18,7 +18,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_LocalWorld _Coordinates;
+    ECk_LocalWorld _Coordinates = ECk_LocalWorld::Local;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
