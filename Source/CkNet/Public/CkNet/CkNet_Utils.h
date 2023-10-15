@@ -65,7 +65,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Net")
-    static ECk_Net_NetRoleType
+    static ECk_Net_NetModeType
     Get_EntityNetMode(
         FCk_Handle InEntity);
 
@@ -88,12 +88,12 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
-    static ECk_Net_NetRoleType
+    static ECk_Net_NetModeType
     Get_NetRole(const UObject* InContext = nullptr);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
-    static ECk_Net_NetRoleType
+    static ECk_Net_NetModeType
     Get_NetMode(const UObject* InContext = nullptr);
 
     UFUNCTION(BlueprintPure,

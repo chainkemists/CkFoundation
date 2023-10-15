@@ -21,7 +21,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Net_ReplicationType);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
-enum class ECk_Net_NetRoleType : uint8
+enum class ECk_Net_NetModeType : uint8
 {
     None  ,
     Client,
@@ -29,6 +29,6 @@ enum class ECk_Net_NetRoleType : uint8
     Server UMETA(DisplayName = "Dedicated Server")
 };
 
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Net_NetRoleType);
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Net_NetModeType);
 
 // --------------------------------------------------------------------------------------------------------------------
