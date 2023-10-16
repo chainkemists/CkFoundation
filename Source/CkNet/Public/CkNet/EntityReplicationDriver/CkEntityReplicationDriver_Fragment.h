@@ -18,6 +18,12 @@ namespace ck
         OnReplicationComplete,
         FCk_Delegate_EntityReplicationDriver_OnReplicationComplete_MC,
         FCk_Handle);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKNET_API,
+        OnDependentsReplicationComplete,
+        FCk_Delegate_EntityReplicationDriver_OnReplicationComplete_MC,
+        FCk_Handle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -26,6 +32,8 @@ class UCk_Utils_EntityReplicationDriver_UE;
 
 namespace ck
 {
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct FFragment_ReplicationDriver_Requests
     {
     public:
@@ -45,6 +53,8 @@ namespace ck
     public:
         CK_PROPERTY_GET(_Requests);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -71,6 +81,10 @@ private:
     void
     OnRep_ReplicationData_ReplicatedActor();
 
+    UFUNCTION()
+    void
+    OnRep_ExpectedNumberOfDependentReplicationDrivers();
+
 private:
     UPROPERTY(ReplicatedUsing = OnRep_ReplicationData)
     FCk_EntityReplicationDriver_ReplicationData _ReplicationData;
@@ -78,13 +92,25 @@ private:
     UPROPERTY(ReplicatedUsing = OnRep_ReplicationData_ReplicatedActor)
     FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor _ReplicationData_ReplicatedActor;
 
+    UPROPERTY(ReplicatedUsing = OnRep_ExpectedNumberOfDependentReplicationDrivers)
+    int32 _ExpectedNumberOfDependentReplicationDrivers = -1;
+
     UPROPERTY(Transient)
     TArray<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>> _PendingChildEntityConstructions;
+
+private:
+    auto
+    DoAdd_SyncedDependentReplicationDriver() -> void;
+
+private:
+    UPROPERTY(Transient)
+    int32 _NumSyncedDependentReplicationDrivers = 0;
 
 public:
     // TODO: reduce the exposure of this variable
     CK_PROPERTY(_ReplicationData);
     CK_PROPERTY(_ReplicationData_ReplicatedActor);
+    CK_PROPERTY(_ExpectedNumberOfDependentReplicationDrivers);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
