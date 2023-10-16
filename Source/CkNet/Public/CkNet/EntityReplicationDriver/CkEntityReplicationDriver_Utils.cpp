@@ -2,6 +2,8 @@
 
 #include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
 
+#include <numeric>
+
 // --------------------------------------------------------------------------------------------------------------------
 auto
     UCk_Utils_EntityReplicationDriver_UE::
@@ -10,6 +12,27 @@ auto
     -> void
 {
     TryAddReplicatedFragment<UCk_Fragment_EntityReplicationDriver_Rep>(InHandle);
+}
+
+auto
+    UCk_Utils_EntityReplicationDriver_UE::
+    Get_NumOfReplicationDriversIncludingDependents(
+        FCk_Handle InHandle)
+    -> int32
+{
+    if (Has(InHandle))
+    {
+        const auto& Dependents = UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(InHandle);
+
+        const auto Total = std::accumulate(Dependents.begin(), Dependents.end(), 1, [&](int32 Value, FCk_Handle Dependent)
+        {
+            return Value + Get_NumOfReplicationDriversIncludingDependents(Dependent);
+        });
+
+        return Total;
+    }
+
+    return 0;
 }
 
 auto
@@ -79,6 +102,7 @@ auto
 
     const auto& RepDriver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
 
+    RepDriver->Set_ExpectedNumberOfDependentReplicationDrivers(Get_NumOfReplicationDriversIncludingDependents(InHandle));
     RepDriver->Set_ReplicationData_ReplicatedActor(InConstructionInfo);
 }
 
@@ -116,6 +140,19 @@ auto
     { return; }
 
     ck::UUtils_Signal_OnReplicationComplete::Bind(InEntity, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
+}
+
+auto
+    UCk_Utils_EntityReplicationDriver_UE::
+    Promise_OnReplicationCompleteAllDependents(
+        FCk_Handle                                                        InEntity,
+        const FCk_Delegate_EntityReplicationDriver_OnReplicationComplete& InDelegate)
+    -> void
+{
+    if (NOT Ensure(InEntity))
+    { return; }
+
+    ck::UUtils_Signal_OnDependentsReplicationComplete::Bind(InEntity, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

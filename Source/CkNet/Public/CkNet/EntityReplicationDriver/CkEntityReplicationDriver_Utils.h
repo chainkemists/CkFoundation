@@ -20,6 +20,12 @@ public:
     Add(
         FCk_Handle InHandle) -> void;
 
+public:
+    static auto
+    Get_NumOfReplicationDriversIncludingDependents(
+        FCk_Handle InHandle) -> int32;
+
+public:
     static auto
     Request_Replicate(
         FCk_Handle InHandle,
@@ -50,6 +56,13 @@ public:
               Category = "Ck|Utils|ReplicationDriver")
     static void
     Promise_OnReplicationComplete(
+        FCk_Handle InEntity,
+        const FCk_Delegate_EntityReplicationDriver_OnReplicationComplete& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|ReplicationDriver")
+    static void
+    Promise_OnReplicationCompleteAllDependents(
         FCk_Handle InEntity,
         const FCk_Delegate_EntityReplicationDriver_OnReplicationComplete& InDelegate);
 };
