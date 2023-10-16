@@ -26,10 +26,7 @@ namespace ck
             FCk_Handle InHandle,
             TPayload<T_Args...>&& InPayload)
     {
-        if (NOT InHandle.Has<SignalType>())
-        { return; }
-
-        auto& Signal = InHandle.Get<SignalType>();
+        auto& Signal = InHandle.AddOrGet<SignalType>();
         const auto Invoker = [&Signal](auto&&... InArgs)
         {
             Signal._Invoke_Signal.publish(InArgs...);
