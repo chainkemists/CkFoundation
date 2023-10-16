@@ -144,6 +144,9 @@ namespace ck
     auto CKECS_API MakeHandle(FCk_Entity InEntity, FCk_Handle InValidHandle) -> FCk_Handle;
     auto CKECS_API MakeHandle(FCk_Handle InEntity, FCk_Handle InValidHandle) -> FCk_Handle;
 
+    auto CKECS_API IsValid(FCk_Entity InEntity, FCk_Handle InValidHandle) -> bool;
+    auto CKECS_API IsValid(FCk_Handle InEntity, FCk_Handle InValidHandle) -> bool;
+
     auto CKECS_API GetEntity(FCk_Entity InEntity) -> FCk_Entity;
     auto CKECS_API GetEntity(FCk_Handle InEntity) -> FCk_Entity;
 }
