@@ -53,6 +53,10 @@ public:
     Get_LifetimeOwner(FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityLifetime")
+    static TArray<FCk_Handle>
+    Get_LifetimeDependents(FCk_Handle InHandle);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityLifetime")
     static bool
     Get_IsPendingDestroy(FCk_Handle InHandle);
 
