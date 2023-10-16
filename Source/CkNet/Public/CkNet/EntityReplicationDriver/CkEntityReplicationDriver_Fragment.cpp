@@ -25,6 +25,7 @@ auto
 
     DOREPLIFETIME(ThisType, _ReplicationData);
     DOREPLIFETIME(ThisType, _ReplicationData_ReplicatedActor);
+    DOREPLIFETIME(ThisType, _ExpectedNumberOfDependentReplicationDrivers);
 }
 
 auto
@@ -73,6 +74,10 @@ auto
 
     UCk_Utils_ReplicatedObjects_UE::Add(NewOrExistingEntity, FCk_ReplicatedObjects{}.
         Set_ReplicatedObjects(ReplicationData.Get_ReplicatedObjectsData().Get_Objects()));
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    _ReplicationData.Get_OwningEntityDriver()->DoAdd_SyncedDependentReplicationDriver();
 }
 
 auto
@@ -147,8 +152,37 @@ auto
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    DoAdd_SyncedDependentReplicationDriver();
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     ReplicatedActor->GetComponentByClass<UCk_EcsConstructionScript_ActorComponent_Base_UE>()->
         TryInvoke_OnReplicationComplete(UCk_EcsConstructionScript_ActorComponent_Base_UE::EInvoke_Caller::ReplicationDriver);
+}
+
+auto
+    UCk_Fragment_EntityReplicationDriver_Rep::
+    OnRep_ExpectedNumberOfDependentReplicationDrivers()
+    -> void
+{
+    if (_NumSyncedDependentReplicationDrivers == Get_ExpectedNumberOfDependentReplicationDrivers())
+    {
+        const auto AssociatedEntity = Get_AssociatedEntity();
+        ck::UUtils_Signal_OnDependentsReplicationComplete::Broadcast(AssociatedEntity, ck::MakePayload(AssociatedEntity));
+    }
+}
+
+auto
+    UCk_Fragment_EntityReplicationDriver_Rep::
+    DoAdd_SyncedDependentReplicationDriver()
+    -> void
+{
+    _NumSyncedDependentReplicationDrivers++;
+    if (_ExpectedNumberOfDependentReplicationDrivers == _NumSyncedDependentReplicationDrivers)
+    {
+        const auto AssociatedEntity = Get_AssociatedEntity();
+        ck::UUtils_Signal_OnDependentsReplicationComplete::Broadcast(AssociatedEntity, ck::MakePayload(AssociatedEntity));
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
