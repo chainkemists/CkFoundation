@@ -219,6 +219,24 @@ namespace ck
     }
 
     auto
+        IsValid(
+            FCk_Entity InEntity,
+            FCk_Handle InValidHandle)
+        -> bool
+    {
+        return InValidHandle->IsValid(InEntity);
+    }
+
+    auto
+        IsValid(
+            FCk_Handle InEntity,
+            FCk_Handle InValidHandle)
+        -> bool
+    {
+        return InValidHandle->IsValid(InEntity.Get_Entity());
+    }
+
+    auto
         GetEntity(
             const FCk_Entity InEntity)
         -> FCk_Entity
