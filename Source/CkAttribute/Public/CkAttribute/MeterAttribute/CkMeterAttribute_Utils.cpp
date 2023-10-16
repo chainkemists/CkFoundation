@@ -86,6 +86,10 @@ auto
         const FCk_Fragment_MeterAttribute_ParamsData& InConstructionScriptData)
     -> void
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InConstructionScriptData.Get_AttributeName()),
+        TEXT("Invalid Attribute Name. Unable to add MeterAttribute to Entity [{}]"), InHandle)
+    { return; }
+
     // TODO: this should be a first-class concept driven by utils
     InHandle.AddOrGet<TArray<FCk_Fragment_MeterAttribute_ParamsData>>().Emplace(InConstructionScriptData);
 
@@ -184,6 +188,10 @@ auto
         FGameplayTag InAttributeName)
     -> FCk_Meter
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InAttributeName),
+        TEXT("Invalid AttributeName for Entity [{}]. Unable to get the BaseValue"), InAttributeOwnerEntity)
+    { return {}; }
+
     const auto [MinCapacity, MaxCapacity, Current] = Get_MinMaxAndCurrentAttributeEntities(InAttributeOwnerEntity, InAttributeName);
 
     const auto& MinCapacityValue =  FloatAttribute_Utils::Get_BaseValue(MinCapacity);
