@@ -131,6 +131,18 @@ auto
 
 auto
     UCk_Utils_EntityReplicationDriver_UE::
+    Get_IsReplicationCompleteAllDependents(
+        FCk_Handle InHandle)
+    -> bool
+{
+    if (NOT Ensure(InHandle))
+    { return false; }
+
+    return InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>()->Get_IsReplicationCompleteOnAllDependents();
+}
+
+auto
+    UCk_Utils_EntityReplicationDriver_UE::
     Promise_OnReplicationComplete(
         FCk_Handle                                                        InEntity,
         const FCk_Delegate_EntityReplicationDriver_OnReplicationComplete& InDelegate)
