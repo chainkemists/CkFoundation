@@ -17,6 +17,18 @@
 
 auto
     UCk_Fragment_EntityReplicationDriver_Rep::
+    Get_IsReplicationCompleteOnAllDependents()
+    -> bool
+{
+    const auto Entity = Get_AssociatedEntity();
+    if (UCk_Utils_Net_UE::Get_HasAuthority(Entity))
+    { return true; }
+
+    return Get_ExpectedNumberOfDependentReplicationDrivers() == _NumSyncedDependentReplicationDrivers;
+}
+
+auto
+    UCk_Fragment_EntityReplicationDriver_Rep::
     GetLifetimeReplicatedProps(
         TArray<FLifetimeProperty>& OutLifetimeProps) const
     -> void
