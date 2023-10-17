@@ -67,6 +67,10 @@ class CKNET_API UCk_Fragment_EntityReplicationDriver_Rep : public UCk_Ecs_Replic
 public:
     CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_EntityReplicationDriver_Rep);
 
+public:
+    auto
+    Get_IsReplicationCompleteOnAllDependents() -> bool;
+
 private:
     auto
     GetLifetimeReplicatedProps(

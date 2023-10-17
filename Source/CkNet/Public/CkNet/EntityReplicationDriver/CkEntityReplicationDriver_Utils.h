@@ -52,6 +52,13 @@ public:
         FCk_Handle InEntity);
 
 public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|ReplicationDriver")
+    static bool
+    Get_IsReplicationCompleteAllDependents(
+        FCk_Handle InHandle);
+
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ReplicationDriver")
     static void
