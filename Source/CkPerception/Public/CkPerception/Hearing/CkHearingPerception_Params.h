@@ -68,7 +68,7 @@ public:
 
 private:
     // Modifier applied to noises' emitted travel distance.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, UIMin = 0.0, ClampMin = 0.0))
+    UPROPERTY(EditDefaultsOnly, meta = (AllowPrivateAccess = true, UIMin = 0.0, ClampMin = 0.0))
     float _HearingModifier = 1.0;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
@@ -97,7 +97,7 @@ public:
         FCk_HearingPerception_Noise_DebugInfo InDebugParams);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, UIMin = 0.0, ClampMin = 0.0))
+    UPROPERTY(EditDefaultsOnly, meta = (AllowPrivateAccess = true, UIMin = 0.0, ClampMin = 0.0))
     float _LoudnessModifier = 1.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

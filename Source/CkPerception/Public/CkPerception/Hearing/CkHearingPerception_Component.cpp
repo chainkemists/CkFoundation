@@ -10,14 +10,16 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCk_HearingPerception_NoiseReceiver_ActorComponent_UE::
-UCk_HearingPerception_NoiseReceiver_ActorComponent_UE()
+    UCk_HearingPerception_NoiseReceiver_ActorComponent_UE()
 {
     this->PrimaryComponentTick.bCanEverTick = true;
     this->PrimaryComponentTick.bStartWithTickEnabled = false;
 }
 
-auto UCk_HearingPerception_NoiseReceiver_ActorComponent_UE::
-Client_HandleReportedNoiseEvent_Implementation(const FCk_HearingPerception_NoiseEvent& InNoise)
+auto
+    UCk_HearingPerception_NoiseReceiver_ActorComponent_UE::
+    Client_HandleReportedNoiseEvent_Implementation(
+        const FCk_HearingPerception_NoiseEvent& InNoise)
 -> void
 {
     if (ck::Is_NOT_Valid(InNoise))
@@ -39,30 +41,33 @@ Client_HandleReportedNoiseEvent_Implementation(const FCk_HearingPerception_Noise
     }
 }
 
-auto UCk_HearingPerception_NoiseReceiver_ActorComponent_UE::
-OnRegister()
--> void
+auto
+    UCk_HearingPerception_NoiseReceiver_ActorComponent_UE::
+    OnRegister()
+    -> void
 {
     Super::OnRegister();
 
     DoRegisterListenerToNoiseDispatcher();
 }
 
-auto UCk_HearingPerception_NoiseReceiver_ActorComponent_UE::
-OnUnregister()
--> void
+auto
+    UCk_HearingPerception_NoiseReceiver_ActorComponent_UE::
+    OnUnregister()
+    -> void
 {
     DoUnregisterListenerFromNoiseDispatcher();
 
     Super::OnUnregister();
 }
 
-auto UCk_HearingPerception_NoiseReceiver_ActorComponent_UE::
-TickComponent(
-    float                        DeltaTime,
-    ELevelTick                   TickType,
-    FActorComponentTickFunction* ThisTickFunction)
--> void
+auto
+    UCk_HearingPerception_NoiseReceiver_ActorComponent_UE::
+    TickComponent(
+        float DeltaTime,
+        ELevelTick TickType,
+        FActorComponentTickFunction* ThisTickFunction)
+    -> void
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
@@ -86,9 +91,18 @@ TickComponent(
     }
 }
 
-auto UCk_HearingPerception_NoiseReceiver_ActorComponent_UE::
-DoRegisterListenerToNoiseDispatcher()
--> void
+auto
+    UCk_HearingPerception_NoiseReceiver_ActorComponent_UE::
+    Get_HearingModifier_Implementation() const
+    -> float
+{
+    return _Params.Get_HearingModifier();
+}
+
+auto
+    UCk_HearingPerception_NoiseReceiver_ActorComponent_UE::
+    DoRegisterListenerToNoiseDispatcher()
+    -> void
 {
     if (NOT IsNetMode(NM_DedicatedServer))
     { return; }
@@ -108,9 +122,10 @@ DoRegisterListenerToNoiseDispatcher()
     noiseDispatcherComp->RegisterListener(FCk_HearingPerception_Listener{this});
 }
 
-auto UCk_HearingPerception_NoiseReceiver_ActorComponent_UE::
-DoUnregisterListenerFromNoiseDispatcher()
--> void
+auto
+    UCk_HearingPerception_NoiseReceiver_ActorComponent_UE::
+    DoUnregisterListenerFromNoiseDispatcher()
+    -> void
 {
     if (NOT IsNetMode(NM_DedicatedServer))
     { return; }
@@ -130,20 +145,31 @@ DoUnregisterListenerFromNoiseDispatcher()
     noiseDispatcherComp->UnregisterListener(FCk_HearingPerception_Listener{this});
 }
 
-auto UCk_HearingPerception_NoiseEmitter_ActorComponent_UE::
-TryEmitNoiseAtLocation(
-    const FGameplayTag& InNoiseTag,
-    const FVector& InNoiseLocation) const
--> void
+auto
+    UCk_HearingPerception_NoiseEmitter_ActorComponent_UE::
+    TryEmitNoiseAtLocation(
+        const FGameplayTag& InNoiseTag,
+        const FVector& InNoiseLocation) const
+    -> void
 {
     _OnEmitNoiseRequested.Broadcast(InNoiseTag, InNoiseLocation);
 }
 
+auto
+    UCk_HearingPerception_NoiseEmitter_ActorComponent_UE::
+    Get_LoudnessModifier_Implementation() const
+    -> float
+{
+    return _Params.Get_LoudnessModifier();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_HearingPerception_NoiseEmitter_ActorComponent_UE::
-Server_ReportNoiseEvent_Implementation(const FCk_HearingPerception_NoiseEvent& InNoise) const
--> void
+auto
+    UCk_HearingPerception_NoiseEmitter_ActorComponent_UE::
+    Server_ReportNoiseEvent_Implementation(
+        const FCk_HearingPerception_NoiseEvent& InNoise) const
+    -> void
 {
     const auto& world = GetWorld();
     if (ck::Is_NOT_Valid(world))
@@ -162,9 +188,11 @@ Server_ReportNoiseEvent_Implementation(const FCk_HearingPerception_NoiseEvent& I
 
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_HearingPerception_NoiseDispatcher_ActorComponent_UE::
-RegisterListener(const FCk_HearingPerception_Listener& InListener)
--> void
+auto
+    UCk_HearingPerception_NoiseDispatcher_ActorComponent_UE::
+    RegisterListener(
+        const FCk_HearingPerception_Listener& InListener)
+    -> void
 {
     if (NOT IsNetMode(NM_DedicatedServer))
     { return; }
@@ -175,9 +203,11 @@ RegisterListener(const FCk_HearingPerception_Listener& InListener)
     _RegisteredListeners.Add(InListener);
 }
 
-auto UCk_HearingPerception_NoiseDispatcher_ActorComponent_UE::
-UnregisterListener(const FCk_HearingPerception_Listener& InListener)
--> void
+auto
+    UCk_HearingPerception_NoiseDispatcher_ActorComponent_UE::
+    UnregisterListener(
+        const FCk_HearingPerception_Listener& InListener)
+    -> void
 {
     if (NOT IsNetMode(NM_DedicatedServer))
     { return; }
@@ -188,9 +218,11 @@ UnregisterListener(const FCk_HearingPerception_Listener& InListener)
     _RegisteredListeners.Remove(InListener);
 }
 
-auto UCk_HearingPerception_NoiseDispatcher_ActorComponent_UE::
-DispatchNoiseToListeners(const FCk_HearingPerception_NoiseEvent& InNoise)
--> void
+auto
+    UCk_HearingPerception_NoiseDispatcher_ActorComponent_UE::
+    DispatchNoiseToListeners(
+        const FCk_HearingPerception_NoiseEvent& InNoise)
+    -> void
 {
     if (NOT IsNetMode(NM_DedicatedServer))
     { return; }
@@ -245,7 +277,7 @@ DispatchNoiseToListeners(const FCk_HearingPerception_NoiseEvent& InNoise)
         { continue; }
 
         const auto& listenerLocation = listenerOwningActor->GetActorLocation();
-        const auto& listenerHearingModifier = noiseReceiverParams.Get_HearingModifier();
+        const auto& listenerHearingModifier = noiseReceiverComp->Get_HearingModifier();
 
         if (NOT IsNoisePerceivedByListener(listenerLocation, listenerHearingModifier, noiseLocation, noiseTravelDistance))
         { continue; }

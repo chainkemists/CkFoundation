@@ -28,6 +28,10 @@ public:
     UFUNCTION(Client, Reliable /*, WithValidation*/)
     void Client_HandleReportedNoiseEvent(const FCk_HearingPerception_NoiseEvent& InNoise);
 
+public:
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+    float Get_HearingModifier() const;
+
 private:
     auto DoRegisterListenerToNoiseDispatcher() -> void;
     auto DoUnregisterListenerFromNoiseDispatcher() -> void;
@@ -70,6 +74,10 @@ public:
 private:
     UFUNCTION(Server, Reliable, BlueprintCallable /*, WithValidation*/)
     void Server_ReportNoiseEvent(const FCk_HearingPerception_NoiseEvent& InNoise) const;
+
+public:
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent)
+    float Get_LoudnessModifier() const;
 
 private:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
