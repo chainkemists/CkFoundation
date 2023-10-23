@@ -49,7 +49,12 @@ auto
     {
         if (LifetimeOwner.Has<TArray<FCk_Fragment_MeterAttribute_ParamsData>>())
         {
-            return LifetimeOwner.Get<TArray<FCk_Fragment_MeterAttribute_ParamsData>>().Pop();
+            auto& MeterAttributeParams = LifetimeOwner.Get<TArray<FCk_Fragment_MeterAttribute_ParamsData>>();
+
+            CK_ENSURE_IF_NOT(NOT MeterAttributeParams.IsEmpty(), TEXT("Unexpected empty MeterAttribute Params Data found during Construction of the CS PDA."))
+            { return _Params; }
+
+            return MeterAttributeParams.Pop();
         }
 
         return _Params;
