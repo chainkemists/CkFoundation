@@ -1,0 +1,9 @@
+[submodule "FunctionalPlus"]
+	path = third_party/tests_thirdparty/FunctionalPlus
+	url = https://github.com/Dobiasd/FunctionalPlus.git
+[submodule "third_party/hana"]
+	path = third_party/tests_thirdparty/hana
+	url = https://github.com/pthom/hana.git
+[submodule "third_party/tests/range-v3"]
+	path = third_party/tests_thirdparty/range-v3
+	url = https://github.com/ericniebler/range-v3.git
