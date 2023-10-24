@@ -43,19 +43,15 @@ auto
     using RecordOfMeterAttributes_Utils = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils;
 
     // Our owner may be storing the starting Parameters for us. In which case, initialize using those parameters
-    auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+    const auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
     const auto& ParamsToUse = [&]
     {
-        if (LifetimeOwner.Has<TArray<FCk_Fragment_MeterAttribute_ParamsData>>())
-        {
-            auto& MeterAttributeParams = LifetimeOwner.Get<TArray<FCk_Fragment_MeterAttribute_ParamsData>>();
+        const auto& MeterAttributeParams = UCk_Utils_MeterAttribute_UE::
+            Pop_Parameter<FCk_Fragment_MeterAttribute_ParamsData>(LifetimeOwner);
 
-            CK_ENSURE_IF_NOT(NOT MeterAttributeParams.IsEmpty(), TEXT("Unexpected empty MeterAttribute Params Data found during Construction of the CS PDA."))
-            { return _Params; }
-
-            return MeterAttributeParams.Pop();
-        }
+        if (ck::IsValid(MeterAttributeParams))
+        { return *MeterAttributeParams; }
 
         return _Params;
     }();
@@ -95,8 +91,7 @@ auto
         TEXT("Invalid Attribute Name. Unable to add MeterAttribute to Entity [{}]"), InHandle)
     { return; }
 
-    // TODO: this should be a first-class concept driven by utils
-    InHandle.AddOrGet<TArray<FCk_Fragment_MeterAttribute_ParamsData>>().Emplace(InConstructionScriptData);
+    Store_Parameter(InHandle, InConstructionScriptData);
 
     if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InHandle))
     { return;}
