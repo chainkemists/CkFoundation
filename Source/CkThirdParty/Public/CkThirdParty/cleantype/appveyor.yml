@@ -1,0 +1,63 @@
+version: '{build}'
+
+
+branches:
+  only:
+  - master
+clone_folder: c:\projects\cleantype
+image:
+# - Visual Studio 2015
+- Visual Studio 2017
+configuration:
+- Release
+# - Debug
+platform:
+- x64
+environment:
+  matrix:
+  - arch: Win64
+  # - arch: #does not work, Release|x64 not a valid target
+matrix:
+  fast_finish: true
+
+# skip unsupported combinations
+init:
+- set arch=
+- if "%arch%"=="Win64" ( set arch= Win64)
+- echo %arch%
+- echo %APPVEYOR_BUILD_WORKER_IMAGE%
+- if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2017" ( set generator="Visual Studio 15 2017%arch%" )
+- if "%APPVEYOR_BUILD_WORKER_IMAGE%"=="Visual Studio 2015" ( set generator="Visual Studio 14 2015%arch%" )
+- echo %generator%
+
+before_build:
+- cmd: |-
+    echo "Downloading conan..."
+    set PATH=%PATH%;%PYTHON%/Scripts/
+    pip.exe install conan
+    conan user
+    conan --version
+    git submodule init
+    git submodule update
+
+build_script:
+- cmd: |-
+    mkdir build
+    cd build
+    conan install .. --build=missing
+    cmake --version
+    cmake ..  -DCLEANTYPE_ALL_OPTIONS=ON -G %generator% -DCMAKE_INSTALL_PREFIX=c:/projects/cleantype/install
+    cmake --build . --target ALL_BUILD --config Release
+    cmake --build . --target install --config Release
+    set PATH=%PATH%;c:/projects/cleantype/install/bin
+
+test_script:
+  - ps: cd c:\projects\cleantype\build
+  - ctest -C Release --output-on-failure
+
+only_commits:
+  files:
+    - CMakeLists.txt
+    - appveyor.yml
+    - src/
+    - cmake/

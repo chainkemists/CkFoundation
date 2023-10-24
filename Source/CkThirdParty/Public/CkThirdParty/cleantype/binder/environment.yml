@@ -1,0 +1,9 @@
+name: cling
+channels:
+  - QuantStack
+  - conda-forge
+dependencies:
+  - jupyter
+  - opencv
+  - xeus-cling=0.4.10=he860b03_1000
+  - rise
