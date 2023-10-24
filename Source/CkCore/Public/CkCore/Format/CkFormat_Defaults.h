@@ -232,7 +232,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T>
-    auto Context(T InContext) -> FContext<T>
+    auto Context(T&& InContext) -> FContext<T>
     {
         return FContext<T>{InContext};
     }
