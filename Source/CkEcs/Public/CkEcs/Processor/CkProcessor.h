@@ -1,8 +1,14 @@
 #pragma once
+#include "CkCore/Profiling/Stats/CkProfilingStats.h"
 #include "CkCore/Time/CkTime.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Registry/CkRegistry.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_STATS_GROUP(TEXT("ForEachEntity"), STATGROUP_CkProcessors_Details, STATCAT_Advanced);
+DECLARE_STATS_GROUP(TEXT("Tick"), STATGROUP_CkProcessors, STATCAT_Advanced);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -12,6 +18,10 @@ namespace ck
     class TProcessor
     {
         CK_GENERATED_BODY(TProcessor<T_DerivedProcessor COMMA T_Fragments...>);
+
+    public:
+        CK_DEFINE_STAT(STAT_ForEachEntity, T_DerivedProcessor, FStatGroup_STATGROUP_CkProcessors_Details);
+        CK_DEFINE_STAT(STAT_Tick, T_DerivedProcessor, FStatGroup_STATGROUP_CkProcessors);
 
     public:
         using EntityType = FCk_Entity;
@@ -73,8 +83,12 @@ namespace ck
             entt::type_list<T_ComponentsOnly...>)
         -> void
     {
+        CK_STAT(STAT_Tick);
+
         _Registry.View<T_Fragments...>().ForEach([&](EntityType InEntity, T_ComponentsOnly&... InComponents)
         {
+            CK_STAT(STAT_ForEachEntity);
+
             auto Handle = HandleType{InEntity, _Registry};
             This()->ForEachEntity(InDeltaT, Handle, InComponents...);
         });
