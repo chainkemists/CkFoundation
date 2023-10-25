@@ -14,9 +14,8 @@ auto
         const FCk_Handle& InHandle)
     -> UCk_Handle_FragmentsDebug*
 {
-    CK_ENSURE_IF_NOT(GIsRunning, TEXT("MainLoop isn't running. This function is being called too early.[{}]"),
-        ck::Context(InHandle))
-    { return nullptr; }
+    if (ck::Is_NOT_Valid(GetTransientPackage()))
+    { return Cast<UCk_Handle_FragmentsDebug>(UCk_Handle_FragmentsDebug::StaticClass()); }
 
     if (const auto Found = _EntityToDebug.Find(InHandle.Get_Entity()))
     {
@@ -37,8 +36,7 @@ auto
         const FCk_Handle& InHandle)
     -> void
 {
-    CK_ENSURE_IF_NOT(GIsRunning, TEXT("MainLoop isn't running. This function is being called too early.[{}]"),
-        ck::Context(InHandle))
+    if (ck::Is_NOT_Valid(GetTransientPackage()))
     { return; }
 
     const auto Found = _EntityToDebug.Find(InHandle.Get_Entity());
