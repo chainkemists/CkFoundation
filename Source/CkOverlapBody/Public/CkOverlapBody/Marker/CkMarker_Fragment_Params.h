@@ -140,7 +140,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FName _CollisionProfileName = TEXT("CkMarker");
+    FCollisionProfileName _CollisionProfileName  = FCollisionProfileName(TEXT("CkMarker"));
 
 public:
     CK_PROPERTY_GET(_CollisionType)
