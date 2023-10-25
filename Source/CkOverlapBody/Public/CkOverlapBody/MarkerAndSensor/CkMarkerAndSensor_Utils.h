@@ -125,28 +125,28 @@ auto
     if (NOT InMarkerOrSensorParams.Get_ShowDebug())
     { return; }
 
-    const auto& debugParams     = InMarkerOrSensorParams.Get_DebugParams();
-    const auto& shapeParams     = InMarkerOrSensorParams.Get_ShapeParams();
-    const auto& shapeDimensions = shapeParams.Get_ShapeDimensions();
+    const auto& DebugParams     = InMarkerOrSensorParams.Get_DebugParams();
+    const auto& ShapeParams     = InMarkerOrSensorParams.Get_ShapeParams();
+    const auto& ShapeDimensions = ShapeParams.Get_ShapeDimensions();
 
-    constexpr auto usePersistentDebugDrawLines = false;
-    constexpr auto debugLineLifetime = -1.0f;
+    constexpr auto UsePersistentDebugDrawLines = false;
+    constexpr auto DebugLineLifetime = -1.0f;
 
     const auto& [shapeComp, enableDisable] = [&]() -> TTuple<UShapeComponent*, ECk_EnableDisable>
     {
         if constexpr (std::is_same_v<T_MarkerOrSensorCurrent, ck::FFragment_Marker_Current>)
         {
-            const ck::FFragment_Marker_Current& markerCurrent = InMarkerOrSensorCurrent;
-            const auto& marker = markerCurrent.Get_Marker().Get();
+            const auto& MarkerCurrent = InMarkerOrSensorCurrent;
+            const auto& Marker = MarkerCurrent.Get_Marker().Get();
 
-            return MakeTuple(marker, markerCurrent.Get_EnableDisable());
+            return MakeTuple(Marker, MarkerCurrent.Get_EnableDisable());
         }
         else if constexpr (std::is_same_v<T_MarkerOrSensorCurrent, ck::FFragment_Sensor_Current>)
         {
-            const ck::FFragment_Sensor_Current& sensorCurrent = InMarkerOrSensorCurrent;
-            const auto& sensor = sensorCurrent.Get_Sensor().Get();
+            const auto& SensorCurrent = InMarkerOrSensorCurrent;
+            const auto& Sensor = SensorCurrent.Get_Sensor().Get();
 
-            return MakeTuple(sensor, sensorCurrent.Get_EnableDisable());
+            return MakeTuple(Sensor, SensorCurrent.Get_EnableDisable());
         }
         else
         {
@@ -158,78 +158,78 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(shapeComp), TEXT("Invalid Marker/Sensor ActorComp stored to draw debug lines for"))
     { return; }
 
-    const auto& transform  = shapeComp->GetComponentTransform();
-    const auto& isDisabled = enableDisable == ECk_EnableDisable::Disable;
+    const auto& Transform  = shapeComp->GetComponentTransform();
+    const auto& IsDisabled = enableDisable == ECk_EnableDisable::Disable;
 
-    const auto& colorMultiplier         = isDisabled ? 0.4f : 1.0f;
-    const auto& lineThicknessMultiplier = isDisabled ? 1.0f : 2.0f;
+    const auto& ColorMultiplier         = IsDisabled ? 0.4f : 1.0f;
+    const auto& LineThicknessMultiplier = IsDisabled ? 1.0f : 2.0f;
 
-    const auto& debugLineThickness = debugParams.Get_LineThickness() * lineThicknessMultiplier;
-    const auto& debugLineColor     = UCk_Utils_Graphics_UE::Get_ModifiedColorIntensity(debugParams.Get_DebugLineColor(), colorMultiplier);
+    const auto& DebugLineThickness = DebugParams.Get_LineThickness() * LineThicknessMultiplier;
+    const auto& DebugLineColor     = UCk_Utils_Graphics_UE::Get_ModifiedColorIntensity(DebugParams.Get_DebugLineColor(), ColorMultiplier);
 
-    switch (const auto& shapeType = shapeDimensions.Get_ShapeType())
+    switch (const auto& ShapeType = ShapeDimensions.Get_ShapeType())
     {
         case ECk_ShapeType::Box:
         {
-            const auto& box = shapeDimensions.Get_BoxExtents();
+            const auto& Box = ShapeDimensions.Get_BoxExtents();
 
             DrawDebugBox
             (
                 InOuter->GetWorld(),
-                transform.GetLocation(),
-                box.Get_Extents(),
-                transform.GetRotation(),
-                debugLineColor,
-                usePersistentDebugDrawLines,
-                debugLineLifetime,
+                Transform.GetLocation(),
+                Box.Get_Extents(),
+                Transform.GetRotation(),
+                DebugLineColor,
+                UsePersistentDebugDrawLines,
+                DebugLineLifetime,
                 0.0f,
-                debugLineThickness
+                DebugLineThickness
             );
 
             break;
         }
         case ECk_ShapeType::Sphere:
         {
-            const auto& sphere = shapeDimensions.Get_SphereRadius();
+            const auto& Sphere = ShapeDimensions.Get_SphereRadius();
 
             DrawDebugSphere
             (
                 InOuter->GetWorld(),
-                transform.GetLocation(),
-                sphere.Get_Radius(),
+                Transform.GetLocation(),
+                Sphere.Get_Radius(),
                 12,
-                debugLineColor,
-                usePersistentDebugDrawLines,
-                debugLineLifetime,
+                DebugLineColor,
+                UsePersistentDebugDrawLines,
+                DebugLineLifetime,
                 0.0f,
-                debugLineThickness
+                DebugLineThickness
             );
 
             break;
         }
         case ECk_ShapeType::Capsule:
         {
-            const auto& capsule = shapeDimensions.Get_CapsuleSize();
+            const auto& Capsule = ShapeDimensions.Get_CapsuleSize();
 
             DrawDebugCapsule
             (
                 InOuter->GetWorld(),
-                transform.GetLocation(),
-                capsule.Get_HalfHeight(),
-                capsule.Get_Radius(),
-                transform.GetRotation(),
-                debugLineColor,
-                usePersistentDebugDrawLines,
-                debugLineLifetime,
+                Transform.GetLocation(),
+                Capsule.Get_HalfHeight(),
+                Capsule.Get_Radius(),
+                Transform.GetRotation(),
+                DebugLineColor,
+                UsePersistentDebugDrawLines,
+                DebugLineLifetime,
                 0.0f,
-                debugLineThickness
+                DebugLineThickness
             );
 
             break;
         }
         default:
         {
-            CK_INVALID_ENUM(shapeType);
+            CK_INVALID_ENUM(ShapeType);
             break;
         }
     }
@@ -283,54 +283,55 @@ auto
         const T_MarkerOrSensorParams& InMarkerOrSensorParams)
     -> void
 {
-    const auto& markerOrSensorAttachedActor = InMarkerOrSensorAttachedEntityAndActor.Get_Actor().Get();
-    const auto& markerAttachedActorRootComponent = markerOrSensorAttachedActor->GetRootComponent();
+    const auto& MarkerOrSensorAttachedActor = InMarkerOrSensorAttachedEntityAndActor.Get_Actor().Get();
+    const auto& MarkerAttachedActorRootComponent = MarkerOrSensorAttachedActor->GetRootComponent();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(markerAttachedActorRootComponent),
+    CK_ENSURE_IF_NOT(ck::IsValid(MarkerAttachedActorRootComponent),
         TEXT("Invalid Root Component for Marker's Owning Actor [{}]!"),
-        markerOrSensorAttachedActor)
+        MarkerOrSensorAttachedActor)
     { return; }
 
-    auto* shapeHolderComponent = UCk_Utils_Actor_UE::Request_AddNewActorComponent<USceneComponent>
+    auto* ShapeHolderComponent = UCk_Utils_Actor_UE::Request_AddNewActorComponent<USceneComponent>
     (
         UCk_Utils_Actor_UE::AddNewActorComponent_Params<USceneComponent>
         {
-            markerOrSensorAttachedActor,
+            MarkerOrSensorAttachedActor,
             USceneComponent::StaticClass(),
             false,
-            markerAttachedActorRootComponent,
+            MarkerAttachedActorRootComponent,
             NAME_None
         }
     );
 
-    CK_ENSURE_IF_NOT(ck::IsValid(shapeHolderComponent),
+    CK_ENSURE_IF_NOT(ck::IsValid(ShapeHolderComponent),
         TEXT("Failed to add the shape holder SceneComponent to Marker/Sensor Owning Actor [{}]"),
-        markerOrSensorAttachedActor)
+        MarkerOrSensorAttachedActor)
     { return; }
 
-    const auto& actorScale            = markerOrSensorAttachedActor->GetActorScale3D();
-    const auto& actorScaleXNearlyZero = FMath::IsNearlyZero(actorScale.X);
-    const auto& actorScaleYNearlyZero = FMath::IsNearlyZero(actorScale.Y);
-    const auto& actorScaleZNearlyZero = FMath::IsNearlyZero(actorScale.Z);
+    const auto& ActorScale            = MarkerOrSensorAttachedActor->GetActorScale3D();
+    const auto& ActorScaleXNearlyZero = FMath::IsNearlyZero(ActorScale.X);
+    const auto& ActorScaleYNearlyZero = FMath::IsNearlyZero(ActorScale.Y);
+    const auto& ActorScaleZNearlyZero = FMath::IsNearlyZero(ActorScale.Z);
 
-    CK_ENSURE_IF_NOT(NOT actorScaleXNearlyZero && NOT actorScaleYNearlyZero && NOT actorScaleZNearlyZero,
+    CK_ENSURE_IF_NOT(NOT ActorScaleXNearlyZero && NOT ActorScaleYNearlyZero && NOT ActorScaleZNearlyZero,
         TEXT("Marker/Sensor Owning Actor [{}] has a scale that is too small! Scale: [{}]"),
-        markerOrSensorAttachedActor,
-        actorScale)
+        MarkerOrSensorAttachedActor,
+        ActorScale)
     {
-        const auto& adjustedShapeHolderScale = FVector::OneVector / actorScale;
-        shapeHolderComponent->SetRelativeScale3D(adjustedShapeHolderScale);
+        const auto& AdjustedShapeHolderScale = FVector::OneVector / ActorScale;
+        ShapeHolderComponent->SetRelativeScale3D(AdjustedShapeHolderScale);
     }
 
     const auto Make_MarkerOrSensor_ComponentParams = [&]() -> FCk_AddActorComponent_Params
     {
-        const auto& attachmentType = InMarkerOrSensorParams.Get_AttachmentParams().Get_AttachmentType() == ECk_ActorComponent_AttachmentPolicy::DoNotAttach
-                               ? ECk_ActorComponent_AttachmentPolicy::DoNotAttach
-                               : ECk_ActorComponent_AttachmentPolicy::Attach;
+        const auto& AttachmentType = InMarkerOrSensorParams.Get_AttachmentParams().Get_AttachmentType() ==
+                                     ECk_ActorComponent_AttachmentPolicy::DoNotAttach
+                                         ? ECk_ActorComponent_AttachmentPolicy::DoNotAttach
+                                         : ECk_ActorComponent_AttachmentPolicy::Attach;
 
-        static constexpr auto isComponentTickEnabled = true;
+        static constexpr auto IsComponentTickEnabled = true;
 
-        return FCk_AddActorComponent_Params{ isComponentTickEnabled, FCk_Time::Zero, attachmentType, shapeHolderComponent, NAME_None };
+        return FCk_AddActorComponent_Params{ IsComponentTickEnabled, FCk_Time::Zero, AttachmentType, ShapeHolderComponent, NAME_None };
     };
 
     UCk_Utils_ActorModifier_UE::Request_AddActorComponent
@@ -365,21 +366,21 @@ auto
         const T_MarkerOrSensorParams& InMarkerOrSensorParams)
     -> InitializerFuncType
 {
-    auto initializerFunc = [=](UActorComponent* InActorComp) mutable -> void
+    auto InitializerFunc = [=](UActorComponent* InActorComp) mutable -> void
     {
         CK_ENSURE_IF_NOT(ck::IsValid(InActorComp), TEXT("Invalid Actor Component"))
         { return; }
 
-        auto* markerOrSensorComp = Cast<T_MarkerOrSensorCompType>(InActorComp);
+        auto* MarkerOrSensorComp = Cast<T_MarkerOrSensorCompType>(InActorComp);
 
-        CK_ENSURE_IF_NOT(ck::IsValid(markerOrSensorComp), TEXT("Invalid Marker/Sensor Actor Component"))
+        CK_ENSURE_IF_NOT(ck::IsValid(MarkerOrSensorComp), TEXT("Invalid Marker/Sensor Actor Component"))
         { return; }
 
-        markerOrSensorComp->_OwningEntity = InMarkerOrSensorEntity;
+        MarkerOrSensorComp->_OwningEntity = InMarkerOrSensorEntity;
 
-        const auto* overlappedComponentAsOverlapBody = Cast<ICk_OverlapBody_Interface>(InActorComp);
+        const auto* OverlappedComponentAsOverlapBody = Cast<ICk_OverlapBody_Interface>(InActorComp);
 
-        switch(const auto& overlappedCompOverlapBodyType = overlappedComponentAsOverlapBody->Get_Type())
+        switch(const auto& OverlappedCompOverlapBodyType = OverlappedComponentAsOverlapBody->Get_Type())
         {
             case ECk_OverlapBody_Type::Marker:
             {
@@ -398,38 +399,38 @@ auto
             }
             default:
             {
-                CK_INVALID_ENUM(overlappedCompOverlapBodyType);
+                CK_INVALID_ENUM(OverlappedCompOverlapBodyType);
                 break;
             }
         }
 
-        const auto& physicsParams = InMarkerOrSensorParams.Get_PhysicsParams();
-        const auto& startingState = InMarkerOrSensorParams.Get_StartingState();
+        const auto& PhysicsParams = InMarkerOrSensorParams.Get_PhysicsParams();
+        const auto& StartingState = InMarkerOrSensorParams.Get_StartingState();
 
-        Set_MarkerOrSensor_PhysicsParams(markerOrSensorComp, physicsParams, startingState);
+        Set_MarkerOrSensor_PhysicsParams(MarkerOrSensorComp, PhysicsParams, StartingState);
 
-        const auto& boxExtents = InMarkerOrSensorParams.Get_ShapeParams().Get_ShapeDimensions().Get_BoxExtents().Get_Extents();
+        const auto& BoxExtents = InMarkerOrSensorParams.Get_ShapeParams().Get_ShapeDimensions().Get_BoxExtents().Get_Extents();
 
-        markerOrSensorComp->SetBoxExtent(boxExtents);
-        markerOrSensorComp->AddLocalTransform(InMarkerOrSensorParams.Get_RelativeTransform());
+        MarkerOrSensorComp->SetBoxExtent(BoxExtents);
+        MarkerOrSensorComp->AddLocalTransform(InMarkerOrSensorParams.Get_RelativeTransform());
 
         if (InMarkerOrSensorParams.Get_AttachmentParams().Get_AttachmentType() == ECk_ActorComponent_AttachmentPolicy::DoNotAttach)
         {
-            static constexpr auto callModifyOnComponent = true;
-            markerOrSensorComp->DetachFromComponent
+            static constexpr auto CallModifyOnComponent = true;
+            MarkerOrSensorComp->DetachFromComponent
             (
                 FDetachmentTransformRules
                 {
                     EDetachmentRule::KeepWorld,
                     EDetachmentRule::KeepWorld,
                     EDetachmentRule::KeepWorld,
-                    callModifyOnComponent
+                    CallModifyOnComponent
                 }
             );
         }
     };
 
-    return initializerFunc;
+    return InitializerFunc;
 }
 
 template <typename T_MarkerOrSensorCompType, typename T_MarkerOrSensorParams, ECk_ShapeType T_MarkerOrSensorShapeType, std::enable_if_t<ECk_ShapeType::Sphere == T_MarkerOrSensorShapeType, uint8>>
@@ -440,21 +441,21 @@ auto
         const T_MarkerOrSensorParams& InMarkerOrSensorParams)
     -> InitializerFuncType
 {
-    auto initializerFunc = [=](UActorComponent* InActorComp) mutable -> void
+    auto InitializerFunc = [=](UActorComponent* InActorComp) mutable -> void
     {
         CK_ENSURE_IF_NOT(ck::IsValid(InActorComp), TEXT("Invalid Actor Component"))
         { return; }
 
-        auto* markerOrSensorComp = Cast<T_MarkerOrSensorCompType>(InActorComp);
+        auto* MarkerOrSensorComp = Cast<T_MarkerOrSensorCompType>(InActorComp);
 
-        CK_ENSURE_IF_NOT(ck::IsValid(markerOrSensorComp), TEXT("Invalid Marker/Sensor Actor Component"))
+        CK_ENSURE_IF_NOT(ck::IsValid(MarkerOrSensorComp), TEXT("Invalid Marker/Sensor Actor Component"))
         { return; }
 
-        markerOrSensorComp->_OwningEntity = InMarkerOrSensorEntity;
+        MarkerOrSensorComp->_OwningEntity = InMarkerOrSensorEntity;
 
-        const auto* overlappedComponentAsOverlapBody = Cast<ICk_OverlapBody_Interface>(InActorComp);
+        const auto* OverlappedComponentAsOverlapBody = Cast<ICk_OverlapBody_Interface>(InActorComp);
 
-        switch(const auto& overlappedCompOverlapBodyType = overlappedComponentAsOverlapBody->Get_Type())
+        switch(const auto& OverlappedCompOverlapBodyType = OverlappedComponentAsOverlapBody->Get_Type())
         {
             case ECk_OverlapBody_Type::Marker:
             {
@@ -473,38 +474,38 @@ auto
             }
             default:
             {
-                CK_INVALID_ENUM(overlappedCompOverlapBodyType);
+                CK_INVALID_ENUM(OverlappedCompOverlapBodyType);
                 break;
             }
         }
 
-        const auto& physicsParams = InMarkerOrSensorParams.Get_PhysicsParams();
-        const auto& startingState = InMarkerOrSensorParams.Get_StartingState();
+        const auto& PhysicsParams = InMarkerOrSensorParams.Get_PhysicsParams();
+        const auto& StartingState = InMarkerOrSensorParams.Get_StartingState();
 
-        Set_MarkerOrSensor_PhysicsParams(markerOrSensorComp, physicsParams, startingState);
+        Set_MarkerOrSensor_PhysicsParams(MarkerOrSensorComp, PhysicsParams, StartingState);
 
-        const auto& sphereRadius = InMarkerOrSensorParams.Get_ShapeParams().Get_ShapeDimensions().Get_SphereRadius().Get_Radius();
+        const auto& SphereRadius = InMarkerOrSensorParams.Get_ShapeParams().Get_ShapeDimensions().Get_SphereRadius().Get_Radius();
 
-        markerOrSensorComp->SetSphereRadius(sphereRadius);
-        markerOrSensorComp->AddLocalTransform(InMarkerOrSensorParams.Get_RelativeTransform());
+        MarkerOrSensorComp->SetSphereRadius(SphereRadius);
+        MarkerOrSensorComp->AddLocalTransform(InMarkerOrSensorParams.Get_RelativeTransform());
 
         if (InMarkerOrSensorParams.Get_AttachmentParams().Get_AttachmentType() == ECk_ActorComponent_AttachmentPolicy::DoNotAttach)
         {
-            constexpr auto callModifyOnComponent = true;
-            markerOrSensorComp->DetachFromComponent
+            constexpr auto CallModifyOnComponent = true;
+            MarkerOrSensorComp->DetachFromComponent
             (
                 FDetachmentTransformRules
                 {
                     EDetachmentRule::KeepWorld,
                     EDetachmentRule::KeepWorld,
                     EDetachmentRule::KeepWorld,
-                    callModifyOnComponent
+                    CallModifyOnComponent
                 }
             );
         }
     };
 
-    return initializerFunc;
+    return InitializerFunc;
 }
 
 template <typename T_MarkerOrSensorCompType, typename T_MarkerOrSensorParams, ECk_ShapeType T_MarkerOrSensorShapeType, std::enable_if_t<ECk_ShapeType::Capsule == T_MarkerOrSensorShapeType, uint8>>
@@ -515,21 +516,21 @@ auto
         const T_MarkerOrSensorParams& InMarkerOrSensorParams)
     -> InitializerFuncType
 {
-    auto initializerFunc = [=](UActorComponent* InActorComp) mutable -> void
+    auto InitializerFunc = [=](UActorComponent* InActorComp) mutable -> void
     {
         CK_ENSURE_IF_NOT(ck::IsValid(InActorComp), TEXT("Invalid Actor Component"))
         { return; }
 
-        auto* markerOrSensorComp = Cast<T_MarkerOrSensorCompType>(InActorComp);
+        auto* MarkerOrSensorComp = Cast<T_MarkerOrSensorCompType>(InActorComp);
 
-        CK_ENSURE_IF_NOT(ck::IsValid(markerOrSensorComp), TEXT("Invalid Marker/Sensor Actor Component"))
+        CK_ENSURE_IF_NOT(ck::IsValid(MarkerOrSensorComp), TEXT("Invalid Marker/Sensor Actor Component"))
         { return; }
 
-        markerOrSensorComp->_OwningEntity = InMarkerOrSensorEntity;
+        MarkerOrSensorComp->_OwningEntity = InMarkerOrSensorEntity;
 
-        const auto* overlappedComponentAsOverlapBody = Cast<ICk_OverlapBody_Interface>(InActorComp);
+        const auto* OverlappedComponentAsOverlapBody = Cast<ICk_OverlapBody_Interface>(InActorComp);
 
-        switch(const auto& overlappedCompOverlapBodyType = overlappedComponentAsOverlapBody->Get_Type())
+        switch(const auto& OverlappedCompOverlapBodyType = OverlappedComponentAsOverlapBody->Get_Type())
         {
             case ECk_OverlapBody_Type::Marker:
             {
@@ -548,39 +549,39 @@ auto
             }
             default:
             {
-                CK_INVALID_ENUM(overlappedCompOverlapBodyType);
+                CK_INVALID_ENUM(OverlappedCompOverlapBodyType);
                 break;
             }
         }
 
-        const auto& physicsParams = InMarkerOrSensorParams.Get_PhysicsParams();
-        const auto& startingState = InMarkerOrSensorParams.Get_StartingState();
+        const auto& PhysicsParams = InMarkerOrSensorParams.Get_PhysicsParams();
+        const auto& StartingState = InMarkerOrSensorParams.Get_StartingState();
 
-        Set_MarkerOrSensor_PhysicsParams(markerOrSensorComp, physicsParams, startingState);
+        Set_MarkerOrSensor_PhysicsParams(MarkerOrSensorComp, PhysicsParams, StartingState);
 
-        const auto& capsuleSize = InMarkerOrSensorParams.Get_ShapeParams().Get_ShapeDimensions().Get_CapsuleSize();
+        const auto& CapsuleSize = InMarkerOrSensorParams.Get_ShapeParams().Get_ShapeDimensions().Get_CapsuleSize();
 
-        markerOrSensorComp->SetCapsuleRadius(capsuleSize.Get_Radius());
-        markerOrSensorComp->SetCapsuleHalfHeight(capsuleSize.Get_HalfHeight());
-        markerOrSensorComp->AddLocalTransform(InMarkerOrSensorParams.Get_RelativeTransform());
+        MarkerOrSensorComp->SetCapsuleRadius(CapsuleSize.Get_Radius());
+        MarkerOrSensorComp->SetCapsuleHalfHeight(CapsuleSize.Get_HalfHeight());
+        MarkerOrSensorComp->AddLocalTransform(InMarkerOrSensorParams.Get_RelativeTransform());
 
         if (InMarkerOrSensorParams.Get_AttachmentParams().Get_AttachmentType() == ECk_ActorComponent_AttachmentPolicy::DoNotAttach)
         {
-            constexpr auto callModifyOnComponent = true;
-            markerOrSensorComp->DetachFromComponent
+            constexpr auto CallModifyOnComponent = true;
+            MarkerOrSensorComp->DetachFromComponent
             (
                 FDetachmentTransformRules
                 {
                     EDetachmentRule::KeepWorld,
                     EDetachmentRule::KeepWorld,
                     EDetachmentRule::KeepWorld,
-                    callModifyOnComponent
+                    CallModifyOnComponent
                 }
             );
         }
     };
 
-    return initializerFunc;
+    return InitializerFunc;
 }
 
 template <typename T_MarkerOrSensorCompType, typename T_MarkerOrSensorPhysicsParams>
@@ -592,22 +593,21 @@ auto
         ECk_EnableDisable InEnableGenerateOverlapEvents)
     -> void
 {
-    const auto& collisionProfileName = InMarkerOrSensorPhysicsParams.Get_CollisionProfileName();
+    const auto& CollisionProfileName = InMarkerOrSensorPhysicsParams.Get_CollisionProfileName();
 
-    const auto& collisionDetectionType = InMarkerOrSensorPhysicsParams.Get_CollisionType();
-    const auto& navigationEffect       = InMarkerOrSensorPhysicsParams.Get_NavigationEffect();
-    const auto& overlapBehavior        = InMarkerOrSensorPhysicsParams.Get_OverlapBehavior();
-    const auto& collisionEnabled       = InEnableGenerateOverlapEvents == ECk_EnableDisable::Enable
+    const auto& CollisionDetectionType = InMarkerOrSensorPhysicsParams.Get_CollisionType();
+    const auto& NavigationEffect       = InMarkerOrSensorPhysicsParams.Get_NavigationEffect();
+    const auto& OverlapBehavior        = InMarkerOrSensorPhysicsParams.Get_OverlapBehavior();
+    const auto& CollisionEnabled       = InEnableGenerateOverlapEvents == ECk_EnableDisable::Enable
                                          ? ECollisionEnabled::QueryOnly
                                          : ECollisionEnabled::NoCollision;
 
-    UCk_Utils_Physics_UE::Request_SetCollisionProfileName(InMarkerOrSensorComp, collisionProfileName);
-    UCk_Utils_Physics_UE::Request_SetCollisionDetectionType(InMarkerOrSensorComp, collisionDetectionType);
-    UCk_Utils_Physics_UE::Request_SetNavigationEffects(InMarkerOrSensorComp, navigationEffect);
-    UCk_Utils_Physics_UE::Request_SetOverlapBehavior(InMarkerOrSensorComp, overlapBehavior);
-    UCk_Utils_Physics_UE::Request_SetCollisionProfileName(InMarkerOrSensorComp, collisionProfileName.Name);
+    UCk_Utils_Physics_UE::Request_SetCollisionProfileName(InMarkerOrSensorComp, CollisionProfileName.Name);
+    UCk_Utils_Physics_UE::Request_SetCollisionDetectionType(InMarkerOrSensorComp, CollisionDetectionType);
+    UCk_Utils_Physics_UE::Request_SetNavigationEffects(InMarkerOrSensorComp, NavigationEffect);
+    UCk_Utils_Physics_UE::Request_SetOverlapBehavior(InMarkerOrSensorComp, OverlapBehavior);
     UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(InMarkerOrSensorComp, InEnableGenerateOverlapEvents);
-    UCk_Utils_Physics_UE::Request_SetCollisionEnabled(InMarkerOrSensorComp, collisionEnabled);
+    UCk_Utils_Physics_UE::Request_SetCollisionEnabled(InMarkerOrSensorComp, CollisionEnabled);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
