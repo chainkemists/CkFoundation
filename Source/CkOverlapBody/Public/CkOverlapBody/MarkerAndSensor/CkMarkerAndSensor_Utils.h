@@ -605,6 +605,7 @@ auto
     UCk_Utils_Physics_UE::Request_SetCollisionDetectionType(InMarkerOrSensorComp, collisionDetectionType);
     UCk_Utils_Physics_UE::Request_SetNavigationEffects(InMarkerOrSensorComp, navigationEffect);
     UCk_Utils_Physics_UE::Request_SetOverlapBehavior(InMarkerOrSensorComp, overlapBehavior);
+    UCk_Utils_Physics_UE::Request_SetCollisionProfileName(InMarkerOrSensorComp, collisionProfileName.Name);
     UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(InMarkerOrSensorComp, InEnableGenerateOverlapEvents);
     UCk_Utils_Physics_UE::Request_SetCollisionEnabled(InMarkerOrSensorComp, collisionEnabled);
 }
