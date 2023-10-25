@@ -26,6 +26,7 @@ public class CkEcs : CkModuleRules
 
 				"CkThirdParty",
 				"CkCore",
+				"CkProfile",
 				"CkLog",
 				"CkSettings",
 				// ... add other public dependencies that you statically link with here ...
