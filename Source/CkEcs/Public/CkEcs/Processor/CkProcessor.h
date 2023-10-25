@@ -1,9 +1,10 @@
 #pragma once
-#include "CkCore/Profiling/Stats/CkProfilingStats.h"
 #include "CkCore/Time/CkTime.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Registry/CkRegistry.h"
+
+#include "CkProfile/Stats/CkStats.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "CkCore/Format/CkFormat.h"
-
 #include "cleantype/details/cleantype_clean.hpp"
 
 #include <Stats/Stats.h>
@@ -118,6 +116,8 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
 #define CK_DEFINE_STAT(CounterName, Type, GroupId)      \
 struct FStat_##CounterName : public ck::TStat_Id<Type>  \
 {                                                       \
@@ -125,6 +125,9 @@ struct FStat_##CounterName : public ck::TStat_Id<Type>  \
 };                                                      \
 static inline DEFINE_STAT(CounterName)
 
+// --------------------------------------------------------------------------------------------------------------------
+
 #define CK_STAT(CounterName)\
     STAT(FScopeCycleCounter TickCounter##CounterName{GET_STATID(##CounterName)});
 
+// --------------------------------------------------------------------------------------------------------------------
