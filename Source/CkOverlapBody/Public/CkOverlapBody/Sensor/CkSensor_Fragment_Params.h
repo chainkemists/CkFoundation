@@ -355,7 +355,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FName _CollisionProfileName  = TEXT("CkSensor");
+    FCollisionProfileName _CollisionProfileName  = FCollisionProfileName(TEXT("CkSensor"));
 
 public:
     CK_PROPERTY_GET(_CollisionType)
