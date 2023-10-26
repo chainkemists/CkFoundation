@@ -45,6 +45,17 @@ auto
         const FGameplayTag& InLabel)
     -> void
 {
+    if (Has(InHandle))
+    {
+        CK_ENSURE(Matches(InHandle, InLabel),
+            TEXT("Unable to add Label [{}]. Entity [{}] already has the Label [{}]."),
+            InLabel,
+            InHandle,
+            Get_Label(InHandle));
+
+        return;
+    }
+
     InHandle.Add<ck::FFragment_GameplayLabel>(DoGet_LabelOrNone(InLabel));
 }
 
