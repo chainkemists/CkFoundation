@@ -53,7 +53,7 @@ auto
                 if (NOT UCk_Utils_GameplayLabel_UE::Has(InHandle))
                 { return true; }
 
-                return UCk_Utils_GameplayLabel_UE::Matches(InHandle, InParams.Get_AttributeName());
+                return UCk_Utils_GameplayLabel_UE::MatchesExact(InHandle, InParams.Get_AttributeName());
             });
 
         if (ck::IsValid(MeterAttributeParams))
