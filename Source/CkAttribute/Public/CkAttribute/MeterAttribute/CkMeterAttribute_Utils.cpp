@@ -48,7 +48,13 @@ auto
     const auto& ParamsToUse = [&]
     {
         const auto& MeterAttributeParams = UCk_Utils_MeterAttribute_UE::
-            Pop_Parameter<FCk_Fragment_MeterAttribute_ParamsData>(LifetimeOwner);
+            Pop_Parameter<FCk_Fragment_MeterAttribute_ParamsData>(LifetimeOwner, [&](const FCk_Fragment_MeterAttribute_ParamsData& InParams)
+            {
+                if (NOT UCk_Utils_GameplayLabel_UE::Has(InHandle))
+                { return true; }
+
+                return UCk_Utils_GameplayLabel_UE::Matches(InHandle, InParams.Get_AttributeName());
+            });
 
         if (ck::IsValid(MeterAttributeParams))
         { return *MeterAttributeParams; }
@@ -99,7 +105,8 @@ auto
     // Meter is an Entity that is made up of sub-entities (FloatAttribute) and thus requires us constructing it just like
     // we would an Unreal Entity
     UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(InHandle,
-        FCk_EntityReplicationDriver_ConstructionInfo{UCk_MeterAttribute_ConstructionScript_PDA::StaticClass()});
+        FCk_EntityReplicationDriver_ConstructionInfo{UCk_MeterAttribute_ConstructionScript_PDA::StaticClass()}
+        .Set_Label(InConstructionScriptData.Get_AttributeName()));
 }
 
 auto
@@ -194,6 +201,9 @@ auto
 
     const auto [MinCapacity, MaxCapacity, Current] = Get_MinMaxAndCurrentAttributeEntities(InAttributeOwnerEntity, InAttributeName);
 
+    if (ck::Is_NOT_Valid(MinCapacity) || ck::Is_NOT_Valid(MaxCapacity) || ck::Is_NOT_Valid(Current))
+    { return {}; }
+
     const auto& MinCapacityValue =  FloatAttribute_Utils::Get_BaseValue(MinCapacity);
     const auto& MaxCapacityValue = FloatAttribute_Utils::Get_BaseValue(MaxCapacity);
     const auto& CurrentValue = FloatAttribute_Utils::Get_BaseValue(Current);
@@ -226,6 +236,9 @@ auto
 {
     const auto [MinCapacity, MaxCapacity, Current] = Get_MinMaxAndCurrentAttributeEntities(InAttributeOwnerEntity, InAttributeName);
 
+    if (ck::Is_NOT_Valid(MinCapacity) || ck::Is_NOT_Valid(MaxCapacity) || ck::Is_NOT_Valid(Current))
+    { return {}; }
+
     const auto& MinCapacityValue =  FloatAttribute_Utils::Get_FinalValue(MinCapacity);
     const auto& MaxCapacityValue = FloatAttribute_Utils::Get_FinalValue(MaxCapacity);
     const auto& CurrentValue = FloatAttribute_Utils::Get_FinalValue(Current);
@@ -252,6 +265,9 @@ auto
 
     const auto [MinCapacity, MaxCapacity, Current] = Get_MinMaxAndCurrentAttributeEntities(InAttributeOwnerEntity, InAttributeName);
 
+    if (ck::Is_NOT_Valid(MinCapacity) || ck::Is_NOT_Valid(MaxCapacity) || ck::Is_NOT_Valid(Current))
+    { return; }
+
     ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind<&UCk_Utils_MeterAttribute_UE::OnMinCapacityChanged>(MinCapacity, InBehavior);
     ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind<&UCk_Utils_MeterAttribute_UE::OnMaxCapacityChanged>(MaxCapacity, InBehavior);
     ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind<&UCk_Utils_MeterAttribute_UE::OnCurrentValueCanged>(Current, InBehavior);
@@ -271,6 +287,9 @@ auto
 
     const auto [MinCapacity, MaxCapacity, Current] = Get_MinMaxAndCurrentAttributeEntities(FoundEntity, InAttributeName);
 
+    if (ck::Is_NOT_Valid(MinCapacity) || ck::Is_NOT_Valid(MaxCapacity) || ck::Is_NOT_Valid(Current))
+    { return; }
+
     ck::UUtils_Signal_OnFloatAttributeValueChanged::Unbind<OnMinCapacityChanged>(MinCapacity);
     ck::UUtils_Signal_OnFloatAttributeValueChanged::Unbind<OnMaxCapacityChanged>(MaxCapacity);
     ck::UUtils_Signal_OnFloatAttributeValueChanged::Unbind<OnCurrentValueCanged>(Current);
@@ -286,6 +305,9 @@ auto
     -> std::tuple<FCk_Handle, FCk_Handle, FCk_Handle>
 {
     const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
+
+    CK_ENSURE_IF_NOT(ck::IsValid(FoundEntity), TEXT("Could not find Attribute [{}] in Entity [{}]"), InAttributeName, InAttributeOwnerEntity)
+    { return {}; }
 
     const auto& MinCapacity = Get_EntityOrRecordEntry_WithFragmentAndLabel
         <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(FoundEntity, ck::FMeterAttribute_Tags::Get_MinCapacity());
