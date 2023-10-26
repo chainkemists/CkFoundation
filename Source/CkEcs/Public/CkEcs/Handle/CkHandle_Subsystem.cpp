@@ -5,6 +5,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Settings/CkEcs_Settings.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -14,6 +15,9 @@ auto
         const FCk_Handle& InHandle)
     -> UCk_Handle_FragmentsDebug*
 {
+    if (UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Disable)
+    { return {}; }
+
     if (ck::Is_NOT_Valid(GetTransientPackage()))
     { return Cast<UCk_Handle_FragmentsDebug>(UCk_Handle_FragmentsDebug::StaticClass()); }
 
@@ -36,6 +40,9 @@ auto
         const FCk_Handle& InHandle)
     -> void
 {
+    if (UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Disable)
+    { return; }
+
     if (ck::Is_NOT_Valid(GetTransientPackage()))
     { return; }
 
