@@ -47,7 +47,7 @@ auto
 {
     if (Has(InHandle))
     {
-        CK_ENSURE(Matches(InHandle, InLabel),
+        CK_ENSURE(MatchesExact(InHandle, InLabel),
             TEXT("Unable to add Label [{}]. Entity [{}] already has the Label [{}]."),
             InLabel,
             InHandle,
