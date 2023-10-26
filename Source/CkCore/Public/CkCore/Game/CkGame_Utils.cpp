@@ -1,5 +1,6 @@
 #include "CkGame_Utils.h"
 
+#include "CkCore/Engine/CkGameInstance.h"
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkCore/Ensure/CkEnsure.h"
 
@@ -111,14 +112,19 @@ auto
         const UObject* InWorldContextObject)
     -> UGameInstance*
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InWorldContextObject, ck::IsValid_Policy_NullptrOnly{}),
-        TEXT("Unable to get the GameInstance. InContextObject is INVALID."))
-    { return {}; }
+    const auto IsValidContextObject = ck::IsValid(InWorldContextObject);
 
-    if (const auto* World = ck::IsValid(InWorldContextObject)
-                                ? Get_WorldForObject(InWorldContextObject)
-                                : nullptr;
-        ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}))
+    if (NOT IsValidContextObject)
+    {
+        if (auto* GameInstance = UCk_GameInstance_UE::Get_Instance(); ck::IsValid(GameInstance))
+        { return GameInstance; }
+    }
+
+    CK_ENSURE_IF_NOT(IsValidContextObject,
+        TEXT("INVALID InContextObject passed wot Get_GameInstance! Attempting to retrieve GameInstance from the GEngine list of WorldContexts."))
+    {}
+
+    if (const auto* World = Get_WorldForObject(InWorldContextObject); ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}))
     {
         return World->GetGameInstance();
     }
@@ -128,15 +134,15 @@ auto
 
     for (auto& Context : GEngine->GetWorldContexts())
     {
-        const auto& contextWorld = Context.World();
+        const auto& ContextWorld = Context.World();
 
-        if (ck::Is_NOT_Valid(contextWorld, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(ContextWorld, ck::IsValid_Policy_NullptrOnly{}))
         { continue; }
 
-        auto* gameInstance = contextWorld->GetGameInstance();
+        auto* GameInstance = ContextWorld->GetGameInstance();
 
-        if (ck::IsValid(gameInstance))
-        { return gameInstance; }
+        if (ck::IsValid(GameInstance))
+        { return GameInstance; }
     }
 
     return {};

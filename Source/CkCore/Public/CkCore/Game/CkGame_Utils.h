@@ -2,11 +2,15 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include <Engine/GameInstance.h>
 #include <Kismet/BlueprintFunctionLibrary.h>
 #include <CoreMinimal.h>
 
 #include "CkGame_Utils.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class UGameInstance;
+class UWorld;
 
 // --------------------------------------------------------------------------------------------------------------------
 
