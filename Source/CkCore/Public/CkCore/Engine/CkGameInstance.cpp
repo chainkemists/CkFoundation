@@ -26,4 +26,12 @@ auto
     Super::Shutdown();
 }
 
+auto
+    UCk_GameInstance_UE::
+    Get_Instance()
+    -> ThisType*
+{
+    return _Instance.Get();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
