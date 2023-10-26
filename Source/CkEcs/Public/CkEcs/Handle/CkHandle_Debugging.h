@@ -49,13 +49,15 @@ public:
     // ReSharper disable once CppInconsistentNaming
     static constexpr auto in_place_delete = true;
 
+    using DebugWrapperPtrType = TSharedPtr<FCk_DebugWrapper, ESPMode::NotThreadSafe>;
+
 public:
-    struct Concept_GetFragment : entt::type_list<FCk_DebugWrapper*(const FCk_Handle&) const, FName()>
+    struct Concept_GetFragment : entt::type_list<DebugWrapperPtrType(const FCk_Handle&) const, FName()>
     {
         template <typename Base>
         struct type : Base
         {
-            auto Get_Fragment(const FCk_Handle& InHandle) const -> FCk_DebugWrapper*;
+            auto Get_Fragment(const FCk_Handle& InHandle) const -> DebugWrapperPtrType;
             auto Get_FragmentName() -> FName;
         };
 
@@ -68,7 +70,7 @@ public:
     struct ConceptImpl_GetFragment
     {
         using ValueType = T_Fragment;
-        auto Get_Fragment(const FCk_Handle& InHandle) const -> FCk_DebugWrapper*;
+        auto Get_Fragment(const FCk_Handle& InHandle) const -> DebugWrapperPtrType;
         auto Get_FragmentName() -> FName;
     };
 
@@ -82,7 +84,7 @@ public:
     using Concept_GetFragment_PolyType = entt::poly<Concept_GetFragment>;
 
 private:
-    mutable TArray<FCk_DebugWrapper*> _AllFragments;
+    mutable TArray<DebugWrapperPtrType> _AllFragments;
     mutable TArray<Concept_GetFragment_PolyType> _GetFragments;
 };
 
@@ -139,7 +141,7 @@ auto
     FEntity_FragmentMapper::Concept_GetFragment::type<Base>::
     Get_Fragment(
         const FCk_Handle& InHandle) const
-    -> FCk_DebugWrapper*
+    -> DebugWrapperPtrType
 {
     return entt::poly_call<0>(*this, InHandle);
 }
