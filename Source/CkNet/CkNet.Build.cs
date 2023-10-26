@@ -15,6 +15,7 @@ public class CkNet : CkModuleRules
             "CoreUObject",
             "Engine",
             "DeveloperSettings",
+            "GameplayTags",
 
             "NetworkTimeSync",
 
@@ -22,7 +23,8 @@ public class CkNet : CkModuleRules
             "CkEcs",
             "CkLog",
             "CkSettings",
-            "CkSignal"
+            "CkSignal",
+            "CkLabel"
         });
     }
 }
