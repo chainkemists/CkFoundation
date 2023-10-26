@@ -15,11 +15,12 @@ auto
     TArray<FName> FragmentNames;
 
     _AllFragments.Reset();
+
     ck::algo::ForEachIsValid(_GetFragments.begin(), _GetFragments.end(),
     [&](Concept_GetFragment_PolyType FragmentGetter)
     {
         FragmentNames.Emplace(FragmentGetter->Get_FragmentName());
-        if (const auto Fragment = FragmentGetter->Get_Fragment(InHandle))
+        if (const auto& Fragment = FragmentGetter->Get_Fragment(InHandle))
         {
             _AllFragments.Emplace(Fragment);
         }

@@ -438,7 +438,7 @@ auto
     FEntity_FragmentMapper::ConceptImpl_GetFragment<T_Fragment>::
     Get_Fragment(
         const FCk_Handle& InHandle) const
-    -> FCk_DebugWrapper*
+    -> DebugWrapperPtrType
 {
     if (NOT InHandle.Has<T_Fragment>())
     {
@@ -447,11 +447,14 @@ auto
 
     if constexpr (std::is_empty_v<T_Fragment>)
     {
-        return new TCk_DebugWrapper<T_Fragment>{nullptr};
+        DebugWrapperPtrType Ret = MakeShared<TCk_DebugWrapper<T_Fragment>, ESPMode::NotThreadSafe>(nullptr);
+        return Ret;
     }
     else
     {
-        return new TCk_DebugWrapper<T_Fragment>{&InHandle.Get<T_Fragment>()};
+        DebugWrapperPtrType Ret = TSharedPtr<TCk_DebugWrapper<T_Fragment>, ESPMode::NotThreadSafe>
+            {new TCk_DebugWrapper<T_Fragment>(&InHandle.Get<T_Fragment>())};
+        return Ret;
     }
 }
 
