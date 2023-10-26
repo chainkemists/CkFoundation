@@ -12,14 +12,24 @@ namespace ck
     template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_MulticastType>
     auto
         TProcessor_Attribute_FireSignals<T_DerivedProcessor, T_DerivedAttribute, T_MulticastType>::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        Super::Tick(InDeltaT);
+
+        this->_Registry.template Clear<MarkedDirtyBy>();
+    }
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_MulticastType>
+    auto
+        TProcessor_Attribute_FireSignals<T_DerivedProcessor, T_DerivedAttribute, T_MulticastType>::
         ForEachEntity(
             const TimeType&,
             HandleType InHandle,
             AttributeFragmentType& InAttribute) const
         -> void
     {
-        InHandle.template Remove<MarkedDirtyBy>();
-
         attribute::VeryVerbose
         (
             TEXT("Dispatching Attribute Delegates of Entity [{}]"),
@@ -46,6 +56,18 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    auto
+        TProcessor_Attribute_RecomputeAll<T_DerivedProcessor, T_DerivedAttributeModifier>::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        Super::Tick(InDeltaT);
+
+        this->_Registry.template Clear<MarkedDirtyBy>();
+    }
+
     template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
     auto
         TProcessor_Attribute_RecomputeAll<T_DerivedProcessor, T_AttributeModifierFragment>::
@@ -55,8 +77,6 @@ namespace ck
             AttributeFragmentType& InAttribute) const
         -> void
     {
-        InHandle.template Remove<MarkedDirtyBy>();
-
         attribute::VeryVerbose
         (
             TEXT("Resetting Attribute FinalValue of Entity [{}] and requesting a new computation from all its Attribute Modifiers."),
@@ -81,6 +101,18 @@ namespace ck
     }
 
     // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    auto
+        TProcessor_AttributeModifier_RevokableAdditive_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        Super::Tick(InDeltaT);
+
+        this->_Registry.template Clear<MarkedDirtyBy>();
+    }
 
     template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
     auto
@@ -112,14 +144,24 @@ namespace ck
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     auto
         TProcessor_AttributeModifier_NotRevokableAdditive_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        Super::Tick(InDeltaT);
+
+        this->_Registry.template Clear<MarkedDirtyBy>();
+    }
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    auto
+        TProcessor_AttributeModifier_NotRevokableAdditive_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
             const AttributeModifierFragmentType& InAttributeModifier,
             const AttributeModifierTargetType& InAttributeTarget) const -> void
     {
-        InHandle.template Remove<MarkedDirtyBy>();
-
         auto TargetEntity = InAttributeTarget.Get_Entity();
         auto& AttributeComp = TargetEntity.Get<AttributeFragmentType>();
 
@@ -162,6 +204,18 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    auto
+        TProcessor_AttributeModifier_RevokableMultiplicative_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        Super::Tick(InDeltaT);
+
+        this->_Registry.template Clear<MarkedDirtyBy>();
+    }
+
     template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
     auto
         TProcessor_AttributeModifier_RevokableMultiplicative_Compute<T_DerivedProcessor, T_AttributeModifierFragment>::
@@ -172,8 +226,6 @@ namespace ck
             const AttributeModifierTargetType& InAttributeTarget) const
         -> void
     {
-        InHandle.template Remove<MarkedDirtyBy>();
-
         auto TargetEntity = InAttributeTarget.Get_Entity();
         auto& AttributeComp = TargetEntity.Get<AttributeFragmentType>();
 
@@ -189,6 +241,18 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    auto
+        TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        Super::Tick(InDeltaT);
+
+        this->_Registry.template Clear<MarkedDirtyBy>();
+    }
+
     template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
     auto
         TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute<T_DerivedProcessor, T_AttributeModifierFragment>::
@@ -199,8 +263,6 @@ namespace ck
             const AttributeModifierTargetType& InAttributeTarget) const
         -> void
     {
-        InHandle.template Remove<MarkedDirtyBy>();
-
         auto TargetEntity = InAttributeTarget.Get_Entity();
         auto& AttributeComp = TargetEntity.Get<AttributeFragmentType>();
 
