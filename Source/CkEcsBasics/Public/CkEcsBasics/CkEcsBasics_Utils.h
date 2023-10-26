@@ -28,6 +28,9 @@ private:
 
         auto Add(const T_ParamType& InParam) -> void;
         auto Pop() -> TOptional<T_ParamType>;
+
+        template <typename T_Pred>
+        auto Pop(T_Pred InFunc) -> TOptional<T_ParamType>;
     };
 
 protected:
@@ -71,6 +74,11 @@ public:
     Pop_Parameter(
         FCk_Handle InHandle) -> TOptional<T_ParamType>;
 
+    template <typename T_ParamType, typename T_Predicate>
+    static auto
+    Pop_Parameter(
+        FCk_Handle InHandle, T_Predicate InFunc) -> TOptional<T_ParamType>;
+
     template <typename T_ParamType>
     static auto
     Has_Parameter(
@@ -97,7 +105,28 @@ auto
     if (_Params.IsEmpty())
     { return {}; }
 
-    return _Params.Pop();
+    const auto Ret = _Params[0];
+    _Params.RemoveAt(0);
+    return Ret;
+}
+
+template <typename T_ParamType>
+template <typename T_Pred>
+auto
+    UCk_Utils_Ecs_Base_UE::
+    MetaFragment_Params<T_ParamType>::
+    Pop(
+        T_Pred InFunc)
+    -> TOptional<T_ParamType>
+{
+    auto Index = _Params.IndexOfByPredicate(InFunc);
+
+    if (Index == INDEX_NONE)
+    { return {}; }
+
+    const auto Ret = _Params[Index];
+    _Params.RemoveAt(Index);
+    return Ret;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -148,6 +177,20 @@ auto
     { return {}; }
 
     return InHandle.Get<MetaFragment_Params<T_ParamType>>().Pop();
+}
+
+template <typename T_ParamType, typename T_Predicate>
+auto
+    UCk_Utils_Ecs_Base_UE::
+    Pop_Parameter(
+        FCk_Handle InHandle,
+        T_Predicate InFunc)
+    -> TOptional<T_ParamType>
+{
+    if (NOT Has_Parameter<T_ParamType>(InHandle))
+    { return {}; }
+
+    return InHandle.Get<MetaFragment_Params<T_ParamType>>().Pop(InFunc);
 }
 
 template <typename T_ParamType>
