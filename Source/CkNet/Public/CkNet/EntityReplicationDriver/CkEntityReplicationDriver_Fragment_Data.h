@@ -50,10 +50,14 @@ private:
     FCk_Entity _OriginalEntity;
 
     UPROPERTY()
+    FGameplayTag _Label;
+
+    UPROPERTY()
     TSubclassOf<UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
 
 public:
     CK_PROPERTY(_OriginalEntity);
+    CK_PROPERTY(_Label);
     CK_PROPERTY_GET(_ConstructionScript);
 
     CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_ConstructionInfo, _ConstructionScript);
