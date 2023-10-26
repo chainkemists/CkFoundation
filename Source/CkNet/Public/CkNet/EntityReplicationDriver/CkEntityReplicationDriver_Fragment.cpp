@@ -8,6 +8,8 @@
 #include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
+#include "CkLabel/CkLabel_Utils.h"
+
 #include "CkNet/CkNet_Utils.h"
 
 #include <Net/UnrealNetwork.h>
@@ -81,6 +83,11 @@ auto
 
         return UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OwningEntity);
     }();
+
+    if (ck::IsValid(ConstructionInfo.Get_Label()))
+    {
+        UCk_Utils_GameplayLabel_UE::Add(NewOrExistingEntity, ConstructionInfo.Get_Label());
+    }
 
     ConstructionScript->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(NewOrExistingEntity);
 
