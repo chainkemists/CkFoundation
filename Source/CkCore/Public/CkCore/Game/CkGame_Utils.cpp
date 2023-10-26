@@ -121,7 +121,7 @@ auto
     }
 
     CK_ENSURE_IF_NOT(IsValidContextObject,
-        TEXT("INVALID InContextObject passed wot Get_GameInstance! Attempting to retrieve GameInstance from the GEngine list of WorldContexts."))
+        TEXT("INVALID InContextObject passed to Get_GameInstance! Attempting to retrieve GameInstance from the GEngine list of WorldContexts."))
     {}
 
     if (const auto* World = Get_WorldForObject(InWorldContextObject); ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}))
