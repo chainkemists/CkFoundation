@@ -38,23 +38,14 @@ namespace ck_vector
             const FCk_FloatRange& InClampRange)
         -> T
     {
-        const auto& lengthSqr = LengthSquared(InVector);
-        const auto& clampMax  = InClampRange.Get_Max();
-        const auto& clampMin  = InClampRange.Get_Min();
+        float VecLength;
+        T DirectionVec;
 
-        if (lengthSqr > FMath::Square(clampMax))
-        {
-            const auto& scale = FMath::InvSqrt(lengthSqr);
-            return InVector * scale * clampMax;
-        }
+        InVector.ToDirectionAndLength(DirectionVec, VecLength);
 
-        if (lengthSqr < FMath::Square(clampMin))
-        {
-            const auto& scale = FMath::InvSqrt(lengthSqr);
-            return InVector * scale * clampMin;
-        }
+        const auto& ClampedLength = InClampRange.Get_ClampedValue(VecLength);
 
-        return InVector;
+        return DirectionVec * ClampedLength;
     }
 
     template <typename T>
