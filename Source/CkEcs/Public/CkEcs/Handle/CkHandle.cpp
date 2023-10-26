@@ -5,6 +5,7 @@
 #include "CkEcs/Handle/CkHandle_Debugging.h"
 #include "CkEcs/Handle/CkHandle_Debugging_Data.h"
 #include "CkEcs/Handle/CkHandle_Subsystem.h"
+#include "CkEcs/Settings/CkEcs_Settings.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -162,6 +163,9 @@ auto
     DoUpdate_MapperAndFragments()
     -> void
 {
+    if (UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Disable)
+    { return; }
+
     if (NOT IsValid())
     { return; }
 
