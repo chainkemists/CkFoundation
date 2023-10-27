@@ -36,12 +36,12 @@ auto
             }
             case ECk_ASCII_ProgressBar_Style::FilledBlock_Symbol:
             {
-                return TEXT("|");
+                return TEXT("█");
             }
             default:
             {
                 CK_INVALID_ENUM(InStyle);
-                return TEXT("|");
+                return TEXT("█");
             }
         }
     }();
