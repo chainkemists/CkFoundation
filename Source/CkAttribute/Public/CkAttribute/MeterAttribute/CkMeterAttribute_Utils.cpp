@@ -62,6 +62,11 @@ auto
         return _Params;
     }();
 
+    CK_ENSURE_IF_NOT(NOT UCk_Utils_MeterAttribute_UE::Has(LifetimeOwner, ParamsToUse.Get_AttributeName()),
+        TEXT("The Entity [{}] already has the Attribute [{}] and is a DUPLICATE"),
+        InHandle, ParamsToUse.Get_AttributeName())
+    { return; }
+
     const auto& MeterParams = ParamsToUse.Get_AttributeBaseValue().Get_Params();
     const auto& MeterCapacity = MeterParams.Get_Capacity();
     const auto& MeterStartingPercentage = MeterParams.Get_StartingPercentage();
