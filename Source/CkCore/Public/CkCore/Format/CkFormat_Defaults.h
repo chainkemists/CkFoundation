@@ -102,7 +102,12 @@ CK_DEFINE_CUSTOM_FORMATTER(FTimespan, [&]()
 
 CK_DEFINE_CUSTOM_FORMATTER(FGameplayTag, [&]()
 {
-    return ck::Format(TEXT("{}"), InObj.ToString());
+    if (ck::IsValid(InObj))
+    {
+        return ck::Format(TEXT("{}"), InObj.ToString());
+    }
+
+    return ck::Format(TEXT("TAG_NOT_SET"));
 });
 
 // --------------------------------------------------------------------------------------------------------------------
