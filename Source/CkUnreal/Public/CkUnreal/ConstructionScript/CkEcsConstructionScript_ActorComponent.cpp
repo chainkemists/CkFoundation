@@ -247,7 +247,7 @@ auto
         }
         default:
         {
-            CK_ENSURE_FALSE(TEXT("Invalid enum value for Enum [{}]"), ck::TypeToString<EInvoke_Caller>);
+            CK_TRIGGER_ENSURE(TEXT("Invalid enum value for Enum [{}]"), ck::TypeToString<EInvoke_Caller>);
             return;
         }
     }
