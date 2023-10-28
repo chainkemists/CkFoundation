@@ -215,13 +215,13 @@ NOT [InWorldContextObject]()\
     return true;\
 }())
 
-#define CK_ENSURE_FALSE(InString, ...)\
+#define CK_TRIGGER_ENSURE(InString, ...)\
 CK_ENSURE(false, InString, ##__VA_ARGS__)
 
 // Technically, the same as CK_ENSURE(...), but semantically it's different i.e. we WANT the ensure to be triggered by
 // an expression that is not really part of the ensure itself
 #define CK_TRIGGER_ENSURE_IF(InExpression, InString, ...)\
-if(InExpression) { CK_ENSURE_FALSE(InString, ##__VA_ARGS__); }
+if(InExpression) { CK_TRIGGER_ENSURE(InString, ##__VA_ARGS__); }
 
 #define CK_INVALID_ENUM(InEnsure)\
-CK_ENSURE_FALSE(TEXT("Encountered an invalid value for Enum [{}]"), InEnsure)
+CK_TRIGGER_ENSURE(TEXT("Encountered an invalid value for Enum [{}]"), InEnsure)

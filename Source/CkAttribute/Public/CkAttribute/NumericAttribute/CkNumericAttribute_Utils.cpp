@@ -195,7 +195,7 @@ auto
         return;
     }
 
-    CK_ENSURE_FALSE(TEXT("Failed to Bind to OnValueChanged. Entity [{}] does NOT have a Numeric Attribute [{}]"), InAttributeOwnerEntity, InAttributeName);
+    CK_TRIGGER_ENSURE(TEXT("Failed to Bind to OnValueChanged. Entity [{}] does NOT have a Numeric Attribute [{}]"), InAttributeOwnerEntity, InAttributeName);
 }
 
 auto
@@ -227,7 +227,7 @@ auto
         return;
     }
 
-    CK_ENSURE_FALSE(TEXT("Failed to Unbind from OnValueChanged. Entity [{}] does NOT have a Numeric Attribute [{}]"), InAttributeOwnerEntity, InAttributeName);
+    CK_TRIGGER_ENSURE(TEXT("Failed to Unbind from OnValueChanged. Entity [{}] does NOT have a Numeric Attribute [{}]"), InAttributeOwnerEntity, InAttributeName);
 }
 
 auto
@@ -306,7 +306,7 @@ auto
     }
     else
     {
-        CK_ENSURE_FALSE(TEXT("Unable to add modifier. Entity [{}] does NOT have a Numeric Attribute (float/meter) [{}]"),
+        CK_TRIGGER_ENSURE(TEXT("Unable to add modifier. Entity [{}] does NOT have a Numeric Attribute (float/meter) [{}]"),
             InAttributeOwnerEntity, InParams.Get_TargetAttributeName());
     }
 }

@@ -136,7 +136,7 @@ auto
         case ROLE_MAX:
         default:
         {
-            CK_ENSURE_FALSE(TEXT("Unsupported Local Net Role for Actor [{}]"), InActor);
+            CK_TRIGGER_ENSURE(TEXT("Unsupported Local Net Role for Actor [{}]"), InActor);
             return true;
         }
     }
@@ -256,7 +256,7 @@ auto
         return ECk_Net_NetModeType::Client;
     case NM_MAX:
     default:
-        CK_ENSURE_FALSE(TEXT("Invalid NetMode for [{}]."), InContext);
+        CK_TRIGGER_ENSURE(TEXT("Invalid NetMode for [{}]."), InContext);
         return ECk_Net_NetModeType::None;
     }
 }

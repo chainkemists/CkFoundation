@@ -81,7 +81,7 @@ namespace ck_sensor
             return MakeTuple(sensorComp, sensorOverlapBody, markerOrOverlapComp, markerOverlapBody);
         }
 
-        CK_ENSURE_FALSE(TEXT("BeginOverlap/EndOverlap event between CompA [{}] and CompB [{}] but none of them are Sensors"), InCompA, InCompB);
+        CK_TRIGGER_ENSURE(TEXT("BeginOverlap/EndOverlap event between CompA [{}] and CompB [{}] but none of them are Sensors"), InCompA, InCompB);
         return {};
     }
 
