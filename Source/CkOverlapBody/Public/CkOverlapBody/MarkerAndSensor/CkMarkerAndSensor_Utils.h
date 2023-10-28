@@ -394,7 +394,7 @@ auto
             }
             case ECk_OverlapBody_Type::Other:
             {
-                CK_ENSURE_FALSE(TEXT("OverlapBody Component [{}] is neither a Marker or Sensor"), InActorComp);
+                CK_TRIGGER_ENSURE(TEXT("OverlapBody Component [{}] is neither a Marker or Sensor"), InActorComp);
                 break;
             }
             default:
@@ -469,7 +469,7 @@ auto
             }
             case ECk_OverlapBody_Type::Other:
             {
-                CK_ENSURE_FALSE(TEXT("OverlapBody Component [{}] is neither a Marker or Sensor"), InActorComp);
+                CK_TRIGGER_ENSURE(TEXT("OverlapBody Component [{}] is neither a Marker or Sensor"), InActorComp);
                 break;
             }
             default:
@@ -544,7 +544,7 @@ auto
             }
             case ECk_OverlapBody_Type::Other:
             {
-                CK_ENSURE_FALSE(TEXT("OverlapBody Component [{}] is neither a Marker or Sensor"), InActorComp);
+                CK_TRIGGER_ENSURE(TEXT("OverlapBody Component [{}] is neither a Marker or Sensor"), InActorComp);
                 break;
             }
             default:

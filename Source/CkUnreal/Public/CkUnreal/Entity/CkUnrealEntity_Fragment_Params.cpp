@@ -20,7 +20,7 @@ auto
     DoGet_EntityConstructionScript() const
     -> UCk_Entity_ConstructionScript_PDA*
 {
-    CK_ENSURE_FALSE(TEXT("DoGet_EntityConstructionScript was not Overriden in [{}]"), this);
+    CK_TRIGGER_ENSURE(TEXT("DoGet_EntityConstructionScript was not Overriden in [{}]"), this);
     return {};
 }
 

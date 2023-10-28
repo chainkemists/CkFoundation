@@ -126,7 +126,7 @@ auto
         return InHandle.Get<ck::FFragment_ImmutableTransform_Current>().Get_Transform();
     }
 
-    CK_ENSURE_FALSE(TEXT("Cannot get the Current Transform of Entity [{}] because it has no Transform component"), InHandle);
+    CK_TRIGGER_ENSURE(TEXT("Cannot get the Current Transform of Entity [{}] because it has no Transform component"), InHandle);
 
     return {};
 }
@@ -147,7 +147,7 @@ auto
         return InHandle.Get<ck::FFragment_ImmutableTransform_Current>().Get_Transform().GetLocation();
     }
 
-    CK_ENSURE_FALSE(TEXT("Cannot get the Current Location of Entity [{}] because it has no Transform component"), InHandle);
+    CK_TRIGGER_ENSURE(TEXT("Cannot get the Current Location of Entity [{}] because it has no Transform component"), InHandle);
 
     return {};
 }
@@ -168,7 +168,7 @@ auto
         return InHandle.Get<ck::FFragment_ImmutableTransform_Current>().Get_Transform().GetRotation().Rotator();
     }
 
-    CK_ENSURE_FALSE(TEXT("Cannot get the Current Rotation of Entity [{}] because it has no Transform component"), InHandle);
+    CK_TRIGGER_ENSURE(TEXT("Cannot get the Current Rotation of Entity [{}] because it has no Transform component"), InHandle);
 
     return {};
 }
@@ -189,7 +189,7 @@ auto
         return InHandle.Get<ck::FFragment_ImmutableTransform_Current>().Get_Transform().GetScale3D();
     }
 
-    CK_ENSURE_FALSE(TEXT("Cannot get the Current Scale of Entity [{}] because it has no Transform component"), InHandle);
+    CK_TRIGGER_ENSURE(TEXT("Cannot get the Current Scale of Entity [{}] because it has no Transform component"), InHandle);
 
     return {};
 }
