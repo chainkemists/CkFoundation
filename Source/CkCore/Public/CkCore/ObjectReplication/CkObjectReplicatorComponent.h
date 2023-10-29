@@ -31,10 +31,8 @@ public:
     UFUNCTION(BlueprintCallable)
     void Request_UnregisterObjectForReplication(UCk_ReplicatedObject_UE* InObject);
 
-    auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
-
 public:
-    UPROPERTY(Replicated)
+    UPROPERTY(Transient)
     TArray<UCk_ReplicatedObject_UE*> _ReplicatedObjects;
 };
 
