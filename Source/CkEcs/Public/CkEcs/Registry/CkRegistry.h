@@ -225,6 +225,13 @@ auto FCk_Registry::Add(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentTyp
         return Invalid_Fragment;
     }
 
+    CK_ENSURE_IF_NOT(Has<T_FragmentType>(InEntity) == false, TEXT("Fragment [{}] already exists in Entity [{}]."),
+        ck::TypeToString<T_FragmentType>, InEntity)
+    {
+        static T_FragmentType Invalid_Fragment;
+        return Invalid_Fragment;
+    }
+
     if constexpr (std::is_empty_v<T_FragmentType>)
     {
         _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID());
@@ -233,13 +240,6 @@ auto FCk_Registry::Add(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentTyp
     }
     else
     {
-        CK_ENSURE_IF_NOT(Has<T_FragmentType>(InEntity) == false, TEXT("Fragment [{}] already exists in Entity [{}]."),
-            ck::TypeToString<T_FragmentType>, InEntity)
-        {
-            static T_FragmentType Invalid_Fragment;
-            return Invalid_Fragment;
-        }
-
         auto& Fragment = _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID(), std::forward<T_Args>(InArgs)...);
         return Fragment;
     }
