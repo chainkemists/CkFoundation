@@ -372,7 +372,15 @@ auto FCk_Registry::Get(EntityType InEntity) -> T_Fragment&
         return Invalid_Fragment;
     }
 
-    return _InternalRegistry->get<T_Fragment>(InEntity.Get_ID());
+    if constexpr (std::is_empty_v<T_Fragment>)
+    {
+        static T_Fragment Empty_Tag;
+        return Empty_Tag;
+    }
+    else
+    {
+        return _InternalRegistry->get<T_Fragment>(InEntity.Get_ID());
+    }
 }
 
 template <typename T_Fragment>
@@ -386,5 +394,13 @@ auto FCk_Registry::Get(EntityType InEntity) const -> const T_Fragment&
         return Invalid_Fragment;
     }
 
-    return _InternalRegistry->get<T_Fragment>(InEntity.Get_ID());
+    if constexpr (std::is_empty_v<T_Fragment>)
+    {
+        static T_Fragment Empty_Tag;
+        return Empty_Tag;
+    }
+    else
+    {
+        return _InternalRegistry->get<T_Fragment>(InEntity.Get_ID());
+    }
 }
