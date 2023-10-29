@@ -15,25 +15,26 @@
     if (LIKELY(InExpression))                                                                                                                  \
     { return InExpression; }                                                                                                                   \
                                                                                                                                                \
-    const auto& message = ck::Format_UE(InString, ##__VA_ARGS__);                                                                              \
-    const auto& callStack = ck::Format_UE                                                                                                      \
+    const auto& Message = ck::Format_UE(InString, ##__VA_ARGS__);                                                                              \
+    const auto& Title = ck::Format_UE(TEXT("Ignore and Continue? Frame#[{}]"), GFrameCounter);                                                 \
+    const auto& CallStack = ck::Format_UE                                                                                                      \
     (                                                                                                                                          \
         TEXT("== BP CallStack ==\n{}\n"),                                                                                                      \
-        UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::AsString{})                                                             \
+        UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::AsString{})                                                   \
     );                                                                                                                                         \
-    const auto& callstackPlusMessage = ck::Format_UE                                                                                           \
+    const auto& CallstackPlusMessage = ck::Format_UE                                                                                           \
     (                                                                                                                                          \
-        TEXT("{}\n\n"),                                                                                                                        \
-        message,                                                                                                                               \
-        callStack                                                                                                                              \
+        TEXT("{}\n\n{}"),                                                                                                                      \
+        Message,                                                                                                                               \
+        CallStack                                                                                                                              \
     );                                                                                                                                         \
                                                                                                                                                \
-    if (UCk_Utils_Ensure_UE::Get_IsEnsureIgnored_WithCallstack(callStack))                                                                     \
+    if (UCk_Utils_Ensure_UE::Get_IsEnsureIgnored_WithCallstack(CallStack))                                                                     \
     { return InExpression; }                                                                                                                   \
                                                                                                                                                \
-    const auto& dialogMessage = FText::FromString(callstackPlusMessage);                                                                       \
-    const auto& _res = UCk_Utils_MessageDialog_UE::YesNoYesAll(dialogMessage, FText::FromString(TEXT("Ignore and Continue?")));                \
-    switch(_res)                                                                                                                               \
+    const auto& DialogMessage = FText::FromString(CallstackPlusMessage);                                                                       \
+    const auto& _Res = UCk_Utils_MessageDialog_UE::YesNoYesAll(DialogMessage, FText::FromString(Title));                                       \
+    switch(_Res)                                                                                                                               \
     {                                                                                                                                          \
         case ECk_MessageDialog_YesNoYesAll::Yes:                                                                                               \
         {                                                                                                                                      \
@@ -46,12 +47,12 @@
         }                                                                                                                                      \
         case ECk_MessageDialog_YesNoYesAll::YesAll:                                                                                            \
         {                                                                                                                                      \
-            UCk_Utils_Ensure_UE::Request_IgnoreEnsure_WithCallstack(callStack);                                                                \
+            UCk_Utils_Ensure_UE::Request_IgnoreEnsure_WithCallstack(CallStack);                                                                \
             return InExpression;                                                                                                               \
         }                                                                                                                                      \
         default:                                                                                                                               \
         {                                                                                                                                      \
-            return ensureMsgf(false, TEXT("Encountered an invalid value for Enum [{}]"), _res);                                                \
+            return ensureMsgf(false, TEXT("Encountered an invalid value for Enum [{}]"), _Res);                                                \
         }                                                                                                                                      \
     }                                                                                                                                          \
 }()
@@ -101,21 +102,17 @@ FCk_Ensure_OnEnsureIgnored_Payload::
 auto UCk_Utils_Ensure_UE::
 EnsureMsgf(bool InExpression,
            FText InMsg,
-           ECk_Ensure_HitStatus& OutHitStatus,
+           ECk_ValidInvalid& OutHitStatus,
            const UObject* InContext)
 -> void
 {
-    if (CK_ENSURE_BP(InExpression,
-        TEXT("{}\n\n== BP Callstack ==\n{}"),
-        InMsg.ToString(),
-        UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::AsString{})))
+    CK_ENSURE_IF_NOT(InExpression, TEXT("{}"), InMsg.ToString())
     {
-        OutHitStatus = ECk_Ensure_HitStatus::NotHit;
+        OutHitStatus = ECk_ValidInvalid::Invalid;
+        return;
     }
-    else
-    {
-        OutHitStatus = ECk_Ensure_HitStatus::Hit;
-    }
+
+    OutHitStatus = ECk_ValidInvalid::Valid;
 }
 
 auto UCk_Utils_Ensure_UE::
