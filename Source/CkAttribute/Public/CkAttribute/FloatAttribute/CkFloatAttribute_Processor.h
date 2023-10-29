@@ -24,24 +24,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKATTRIBUTE_API FProcessor_FloatAttributeModifier_RevokableAdditive_Compute
-        : public TProcessor_AttributeModifier_RevokableAdditive_Compute<FProcessor_FloatAttributeModifier_RevokableAdditive_Compute, FFragment_FloatAttributeModifier>
-    {
-    public:
-        using TProcessor_AttributeModifier_RevokableAdditive_Compute::TProcessor_AttributeModifier_RevokableAdditive_Compute;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKATTRIBUTE_API FProcessor_FloatAttributeModifier_NotRevokableAdditive_Compute
-        : public TProcessor_AttributeModifier_NotRevokableAdditive_Compute<FProcessor_FloatAttributeModifier_NotRevokableAdditive_Compute, FFragment_FloatAttributeModifier>
-    {
-    public:
-        using TProcessor_AttributeModifier_NotRevokableAdditive_Compute::TProcessor_AttributeModifier_NotRevokableAdditive_Compute;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     class CKATTRIBUTE_API FProcessor_FloatAttributeModifier_Additive_Teardown
         : public TProcessor_AttributeModifier_Additive_Teardown<FProcessor_FloatAttributeModifier_Additive_Teardown, FFragment_FloatAttributeModifier>
     {
@@ -51,20 +33,11 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKATTRIBUTE_API FProcessor_FloatAttributeModifier_RevokableMultiplicative_Compute
-        : public TProcessor_AttributeModifier_RevokableMultiplicative_Compute<FProcessor_FloatAttributeModifier_RevokableMultiplicative_Compute, FFragment_FloatAttributeModifier>
+    class CKATTRIBUTE_API FProcessor_FloatAttributeModifier_ComputeAll
+        : public TProcessor_AttributeModifier_ComputeAll<FProcessor_FloatAttributeModifier_ComputeAll, FFragment_FloatAttributeModifier>
     {
     public:
-        using TProcessor_AttributeModifier_RevokableMultiplicative_Compute::TProcessor_AttributeModifier_RevokableMultiplicative_Compute;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKATTRIBUTE_API FProcessor_FloatAttributeModifier_NotRevokableMultiplicative_Compute
-        : public TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute<FProcessor_FloatAttributeModifier_NotRevokableMultiplicative_Compute, FFragment_FloatAttributeModifier>
-    {
-    public:
-        using TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute::TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute;
+        using TProcessor_AttributeModifier_ComputeAll::TProcessor_AttributeModifier_ComputeAll;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

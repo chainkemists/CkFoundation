@@ -92,8 +92,6 @@ namespace ck
             const AttributeModifierTargetType& InAttributeTarget) const
         -> void
     {
-        InHandle.template Remove<MarkedDirtyBy>();
-
         auto TargetEntity = InAttributeTarget.Get_Entity();
         auto& AttributeComp = TargetEntity.Get<AttributeFragmentType>();
 
@@ -118,8 +116,6 @@ namespace ck
             const AttributeModifierFragmentType& InAttributeModifier,
             const AttributeModifierTargetType& InAttributeTarget) const -> void
     {
-        InHandle.template Remove<MarkedDirtyBy>();
-
         auto TargetEntity = InAttributeTarget.Get_Entity();
         auto& AttributeComp = TargetEntity.Get<AttributeFragmentType>();
 
@@ -172,8 +168,6 @@ namespace ck
             const AttributeModifierTargetType& InAttributeTarget) const
         -> void
     {
-        InHandle.template Remove<MarkedDirtyBy>();
-
         auto TargetEntity = InAttributeTarget.Get_Entity();
         auto& AttributeComp = TargetEntity.Get<AttributeFragmentType>();
 
@@ -199,8 +193,6 @@ namespace ck
             const AttributeModifierTargetType& InAttributeTarget) const
         -> void
     {
-        InHandle.template Remove<MarkedDirtyBy>();
-
         auto TargetEntity = InAttributeTarget.Get_Entity();
         auto& AttributeComp = TargetEntity.Get<AttributeFragmentType>();
 
@@ -213,6 +205,33 @@ namespace ck
 
         AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Multiply(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
         AttributeComp._Final = AttributeComp._Base;
+    }
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    TProcessor_AttributeModifier_ComputeAll<T_DerivedProcessor, T_DerivedAttributeModifier>::
+        TProcessor_AttributeModifier_ComputeAll(
+            RegistryType InRegistry)
+                : _NotRevokableAdditive_Compute(InRegistry)
+                , _NotRevokableMultiplicative_Compute(InRegistry)
+                , _RevokableAdditive_Compute(InRegistry)
+                , _RevokableMultiplicative_Compute(InRegistry)
+                , _Registry(InRegistry)
+    {
+    }
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    auto
+        TProcessor_AttributeModifier_ComputeAll<T_DerivedProcessor, T_DerivedAttributeModifier>::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        _NotRevokableAdditive_Compute.Tick(InDeltaT);
+        _NotRevokableMultiplicative_Compute.Tick(InDeltaT);
+        _RevokableAdditive_Compute.Tick(InDeltaT);
+        _RevokableMultiplicative_Compute.Tick(InDeltaT);
+
+        this->_Registry.template Clear<MarkedDirtyBy>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
