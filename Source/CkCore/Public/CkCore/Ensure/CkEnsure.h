@@ -150,12 +150,12 @@ private:
     { return false; }                                                                                                         \
                                                                                                                               \
     const auto& message = ck::Format_UE(InString, ##__VA_ARGS__);                                                             \
-    const auto& title = ck::Format_UE(TEXT("Ignore and Continue? Frame#[{}]"), GFrameCounter);                                \
+    const auto& title = ck::Format_UE(TEXT("Ignore and Continue? Frame#[{}] PIE-ID[{}]"), GFrameCounter, GPlayInEditorID - 1);\
     const auto& stackTraceWith2Skips = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace(2);                                      \
     const auto& bpStackTrace = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::AsString{});          \
     const auto& callstackPlusMessage = ck::Format_UE(                                                                         \
-        TEXT("Frame#[{}]\nExpression: '{}'\nMessage: '{}'\n\n == BP CallStack ==\n{}\n == CallStack ==\n{}\n"),               \
-        GFrameCounter,                                                                                                        \
+        TEXT("{}\nExpression: '{}'\nMessage: '{}'\n\n == BP CallStack ==\n{}\n == CallStack ==\n{}\n"),                       \
+        title,                                                                                                                \
         TEXT(#InExpression),                                                                                                  \
         message,                                                                                                              \
         bpStackTrace,                                                                                                         \
