@@ -28,7 +28,6 @@ namespace ck
         using Super::Super;
 
     public:
-        auto Tick(TimeType InDeltaT) -> void;
         auto ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
@@ -62,7 +61,6 @@ namespace ck
         using Super::Super;
 
     public:
-        auto Tick(TimeType InDeltaT) -> void;
         auto ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
@@ -102,7 +100,6 @@ namespace ck
         using Super::Super;
 
     public:
-        auto Tick(TimeType InDeltaT) -> void;
         auto ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
@@ -143,7 +140,6 @@ namespace ck
         using Super::Super;
 
     public:
-        auto Tick(TimeType InDeltaT) -> void;
         auto ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
@@ -221,7 +217,6 @@ namespace ck
         using Super::Super;
 
     public:
-        auto Tick(TimeType InDeltaT) -> void;
         auto ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
@@ -262,7 +257,6 @@ namespace ck
         using Super::Super;
 
     public:
-        auto Tick(TimeType InDeltaT) -> void;
         auto ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
