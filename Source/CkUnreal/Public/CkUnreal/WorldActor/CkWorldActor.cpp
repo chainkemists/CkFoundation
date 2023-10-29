@@ -30,7 +30,7 @@
 #include "CkRecord/RecordEntry/CkRecordEntry_Processor.h"
 #include "CkTimer/CkTimer_Processor.h"
 
-#include "CkUnreal/Entity/CkUnrealEntity_Processor.h"
+#include "CkUnreal/EntityBridge/CkEntityBridge_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -51,7 +51,7 @@ namespace ck_world_actor
         InWorld.Add<ck::FProcessor_FloatAttributeModifier_Additive_Teardown>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_FloatAttributeModifier_Multiplicative_Teardown>(InWorld.Get_Registry());
 
-        InWorld.Add<ck::FProcessor_UnrealEntity_HandleRequests>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_EntityBridge_HandleRequests>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FProcessor_ActorModifier_SpawnActor_HandleRequests>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_ActorModifier_AddActorComponent_HandleRequests>(InWorld.Get_Registry());

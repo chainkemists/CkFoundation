@@ -89,7 +89,7 @@ auto
         UCk_Utils_GameplayLabel_UE::Add(NewOrExistingEntity, ConstructionInfo.Get_Label());
     }
 
-    ConstructionScript->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(NewOrExistingEntity);
+    ConstructionScript->GetDefaultObject<UCk_EntityBridge_ConstructionScript_PDA>()->Construct(NewOrExistingEntity);
 
     UCk_Utils_ReplicatedObjects_UE::Add(NewOrExistingEntity, FCk_ReplicatedObjects{}.
         Set_ReplicatedObjects(ReplicationData.Get_ReplicatedObjectsData().Get_Objects()));
@@ -175,8 +175,8 @@ auto
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    ReplicatedActor->GetComponentByClass<UCk_EcsConstructionScript_ActorComponent_Base_UE>()->
-        TryInvoke_OnReplicationComplete(UCk_EcsConstructionScript_ActorComponent_Base_UE::EInvoke_Caller::ReplicationDriver);
+    ReplicatedActor->GetComponentByClass<UCk_EntityBridge_ActorComponent_Base_UE>()->
+        TryInvoke_OnReplicationComplete(UCk_EntityBridge_ActorComponent_Base_UE::EInvoke_Caller::ReplicationDriver);
 }
 
 auto

@@ -14,7 +14,7 @@ struct NAME_ConstructionScript
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Entity_ConstructionScript_PDA::Construct(
+    UCk_EntityBridge_ConstructionScript_PDA::Construct(
         FCk_Handle InHandle) -> void
 {
 
@@ -23,7 +23,7 @@ auto
 }
 
 auto
-    UCk_Entity_ConstructionScript_PDA::
+    UCk_EntityBridge_ConstructionScript_PDA::
     DoConstruct_Implementation(
         const FCk_Handle& InHandle)
     -> void

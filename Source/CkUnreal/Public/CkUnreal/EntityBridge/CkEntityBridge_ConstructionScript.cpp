@@ -1,29 +1,26 @@
-#include "CkEcsConstructionScript_ActorComponent.h"
+#include "CkEntityBridge_ConstructionScript.h"
+
+#include "CkEntityBridge_Fragment_Params.h"
 
 #include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Algorithms/CkAlgorithms.h"
-
 #include "CkCore/ObjectReplication/CkObjectReplicatorComponent.h"
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-#include "CkNet/CkNet_Fragment.h"
 #include "CkNet/CkNet_Utils.h"
 #include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
-#include "CkUnreal/Entity/CkUnrealEntity_ConstructionScript.h"
-
-#include "Engine/World.h"
+#include <Engine/World.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCk_EcsConstructionScript_ActorComponent_UE::
-    UCk_EcsConstructionScript_ActorComponent_UE()
+UCk_EntityBridge_ActorComponent_UE::
+    UCk_EntityBridge_ActorComponent_UE()
 {
     PrimaryComponentTick.bCanEverTick = false;
     bReplicateUsingRegisteredSubObjectList = true;
@@ -31,7 +28,7 @@ UCk_EcsConstructionScript_ActorComponent_UE::
 }
 
 auto
-    UCk_EcsConstructionScript_ActorComponent_UE::
+    UCk_EntityBridge_ActorComponent_UE::
     OnUnregister()
     -> void
 {
@@ -70,7 +67,7 @@ auto
 }
 
 auto
-    UCk_EcsConstructionScript_ActorComponent_UE::
+    UCk_EntityBridge_ActorComponent_UE::
     Do_Construct_Implementation(
         const FCk_ActorComponent_DoConstruct_Params& InParams)
     -> void
@@ -89,8 +86,8 @@ auto
 
     Super::Do_Construct_Implementation(InParams);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(_UnrealEntity),
-        TEXT("UnrealEntity is [{}]. Did you forget to set the default value in the component?.[{}]"), _UnrealEntity, ck::Context(this))
+    CK_ENSURE_IF_NOT(ck::IsValid(EntityConfig),
+        TEXT("EntityConfig is [{}]. Did you forget to set the default value in the component?.[{}]"), EntityConfig, ck::Context(this))
     { return; }
 
     CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)
@@ -137,7 +134,7 @@ auto
         // LINK TO ACTOR
         // EcsConstructionScript is a bit special in that it readies everything immediately instead of deferring the operation
 
-        // We need the EntityOwningActor ActorComponent to exist before building the Unreal Entity
+        // We need the EntityOwningActor ActorComponent to exist before building the Entity from Config
 
         // TODO: consolidate into a utilty. Other usage in replication driver
         if (const auto EntityOwningActorComponent = OwningActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
@@ -180,17 +177,17 @@ auto
         // --------------------------------------------------------------------------------------------------------------------
         // Build Entity
 
-        const auto CsWithTransform = Cast<UCk_UnrealEntity_ConstructionScript_WithTransform_PDA>(_UnrealEntity->Get_EntityConstructionScript());
+        const auto CsWithTransform = Cast<UCk_EntityBridge_ConstructionScript_WithTransform_PDA>(EntityConfig->Get_EntityConstructionScript());
 
         CK_ENSURE_IF_NOT(ck::IsValid(CsWithTransform), TEXT("Entity Construction Script [{}] for Actor [{}] is NOT one with Transform. "
-            "Entity Construction Scripts that have an Actor attached MUST use [{}]."), _UnrealEntity->Get_EntityConstructionScript(), OwningActor,
-            ck::TypeToString<UCk_UnrealEntity_ConstructionScript_WithTransform_PDA>)
+            "Entity Construction Scripts that have an Actor attached MUST use [{}]."), EntityConfig->Get_EntityConstructionScript(), OwningActor,
+            ck::TypeToString<UCk_EntityBridge_ConstructionScript_WithTransform_PDA>)
         { return; }
 
         // TODO:
         CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
 
-        _UnrealEntity->Build(Entity);
+        EntityConfig->Build(Entity);
 
         const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(Entity);
         UCk_Utils_EntityReplicationDriver_UE::Request_ReplicateEntityOnReplicatedActor(Entity,
@@ -207,7 +204,7 @@ auto
 }
 
 auto
-    UCk_EcsConstructionScript_ActorComponent_UE::
+    UCk_EntityBridge_ActorComponent_UE::
     TryInvoke_OnReplicationComplete(EInvoke_Caller InCaller)
     -> void
 {
@@ -254,7 +251,7 @@ auto
 }
 
 auto
-    UCk_EcsConstructionScript_ActorComponent_UE::
+    UCk_EntityBridge_ActorComponent_UE::
     Get_IsReplicationComplete() const
     -> bool
 {
@@ -263,3 +260,27 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCKk_Utils_EntityBridge_ConstructionScript_UE::
+    BuildEntity(
+        FCk_Handle InHandle,
+        const UCk_EntityBridge_Config_Base_PDA* InEntityConfig)
+    -> FCk_Handle
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InEntityConfig),
+        TEXT("InEntityConfig is INVALID. Cannot build Entity for Handle [{}]"), InHandle)
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
+        TEXT("Handle is INVALID. Unable to build entity for [{}]"), InEntityConfig)
+    { return {}; }
+
+    const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
+    InEntityConfig->Build(NewEntity);
+
+    return NewEntity;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
