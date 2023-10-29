@@ -162,7 +162,7 @@ CK_DEFINE_CUSTOM_IS_VALID(FCk_Handle, ck::IsValid_Policy_Default, [&](const FCk_
 
 CK_DEFINE_CUSTOM_FORMATTER(FCk_Handle, [&]()
 {
-    return ck::Format(TEXT("[{}][{}]"), InObj._Entity, InObj._Registry);
+    return ck::Format(TEXT("{}({})"), InObj._Entity, InObj._Registry);
 });
 
 // --------------------------------------------------------------------------------------------------------------------
