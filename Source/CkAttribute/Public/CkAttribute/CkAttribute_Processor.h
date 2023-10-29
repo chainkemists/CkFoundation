@@ -270,6 +270,42 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_ComputeAll
+    {
+    public:
+        using TimeType     = FCk_Time;
+        using RegistryType = FCk_Registry;
+        using MarkedDirtyBy = typename T_DerivedAttributeModifier::Tag_ComputeResult;
+
+    public:
+        explicit
+        TProcessor_AttributeModifier_ComputeAll(RegistryType InRegistry);
+
+    public:
+        auto Tick(
+            TimeType InDeltaT) -> void;
+
+
+    private:
+        TProcessor_AttributeModifier_NotRevokableAdditive_Compute<TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier>
+        _NotRevokableAdditive_Compute;
+
+        TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute<TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier>
+        _NotRevokableMultiplicative_Compute;
+
+        TProcessor_AttributeModifier_RevokableAdditive_Compute<TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier>
+        _RevokableAdditive_Compute;
+
+        TProcessor_AttributeModifier_RevokableMultiplicative_Compute<TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier>
+        _RevokableMultiplicative_Compute;
+
+    private:
+        RegistryType _Registry;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_Multiplicative_Teardown : public TProcessor<
         TProcessor_AttributeModifier_Multiplicative_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>,
         T_DerivedAttributeModifier,
