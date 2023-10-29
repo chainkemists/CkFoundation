@@ -13,7 +13,7 @@
 UCk_ObjectReplicator_ActorComponent_UE::
     UCk_ObjectReplicator_ActorComponent_UE()
 {
-    PrimaryComponentTick.bCanEverTick = true;
+    PrimaryComponentTick.bCanEverTick = false;
     bReplicateUsingRegisteredSubObjectList = true;
     SetIsReplicatedByDefault(true);
 }
@@ -38,17 +38,6 @@ auto
     // TODO: add some checks
     _ReplicatedObjects.Remove(InObject);
     RemoveReplicatedSubObject(InObject);
-}
-
-auto
-    UCk_ObjectReplicator_ActorComponent_UE::
-    GetLifetimeReplicatedProps(
-        TArray<FLifetimeProperty>& OutLifetimeProps) const
-    -> void
-{
-    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-    DOREPLIFETIME(ThisType, _ReplicatedObjects);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
