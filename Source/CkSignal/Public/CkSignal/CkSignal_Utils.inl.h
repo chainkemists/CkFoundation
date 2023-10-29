@@ -34,7 +34,8 @@ namespace ck
         };
 
         std::apply(Invoker, InPayload.Payload);
-        InHandle.Add<typename SignalType::FTag_PayloadInFlight>();
+
+        InHandle.AddOrGet<typename SignalType::FTag_PayloadInFlight>();
     }
 
     template <typename T_DerivedSignal>
