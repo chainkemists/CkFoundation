@@ -77,7 +77,7 @@ namespace ck
         if (NOT Ensure(InHandle))
         { return; }
 
-        InHandle.Add<typename AttributeFragmentType::Tag_RecomputeFinalValue>();
+        InHandle.AddOrGet<typename AttributeFragmentType::Tag_RecomputeFinalValue>();
     }
 
     template <typename T_DerivedAttribute>
