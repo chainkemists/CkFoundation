@@ -102,12 +102,7 @@ namespace ck_world_actor
         InWorld.Add<ck::FProcessor_Transform_FireSignals>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FProcessor_FloatAttribute_RecomputeAll>(InWorld.Get_Registry());
-
-        InWorld.Add<ck::FProcessor_FloatAttributeModifier_NotRevokableAdditive_Compute>(InWorld.Get_Registry());
-        InWorld.Add<ck::FProcessor_FloatAttributeModifier_NotRevokableMultiplicative_Compute>(InWorld.Get_Registry());
-
-        InWorld.Add<ck::FProcessor_FloatAttributeModifier_RevokableAdditive_Compute>(InWorld.Get_Registry());
-        InWorld.Add<ck::FProcessor_FloatAttributeModifier_RevokableMultiplicative_Compute>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_FloatAttributeModifier_ComputeAll>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FProcessor_FloatAttribute_FireSignals>(InWorld.Get_Registry());
 
