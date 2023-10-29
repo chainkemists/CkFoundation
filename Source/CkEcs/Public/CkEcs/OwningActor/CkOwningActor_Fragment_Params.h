@@ -61,7 +61,7 @@ public:
 
 public:
     friend class UCk_Utils_OwningActor_UE;
-    friend class UCk_EcsConstructionScript_ActorComponent_UE;
+    friend class UCk_EntityBridge_ActorComponent_UE;
     friend class UCk_Fragment_EntityReplicationDriver_Rep;
 
 private:
@@ -74,11 +74,11 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintType, NotBlueprintable)
-class CKECS_API UCk_EcsConstructionScript_ActorComponent_Base_UE : public UCk_ActorComponent_UE
+class CKECS_API UCk_EntityBridge_ActorComponent_Base_UE : public UCk_ActorComponent_UE
 {
     GENERATED_BODY()
 
-    friend class UCk_EcsConstructionScript_ActorComponent_UE;
+    friend class UCk_EntityBridge_ActorComponent_UE;
     friend class UCk_Fragment_EntityReplicationDriver_Rep;
 
 private:

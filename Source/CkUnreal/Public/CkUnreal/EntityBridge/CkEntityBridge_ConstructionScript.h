@@ -3,9 +3,14 @@
 #include "CkCore/Component/CkActorComponent.h"
 #include "CkCore/Enums/CkEnums.h"
 
+#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
+#include "CkEcs/Handle/CkHandle.h"
+
+#include "CkUnreal/EntityBridge/CkEntityBridge_Fragment_Params.h"
+
 #include "CkEcs/OwningActor/CkOwningActor_Fragment_Params.h"
 
-#include "CkEcsConstructionScript_ActorComponent.generated.h"
+#include "CkEntityBridge_ConstructionScript.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -18,15 +23,15 @@ UCLASS(Abstract,
        BlueprintType,
        HideCategories("Replication", "ComponentTick", "Rendering", "Activation", "Tags", "ComponentReplication", "Mobile", "RayTracing",
                       "Collision", "AssetUserData", "Cooking", "Sockets", "Variable", "Navigation", "HLOD", "Physics"))
-class CKUNREAL_API UCk_EcsConstructionScript_ActorComponent_UE : public UCk_EcsConstructionScript_ActorComponent_Base_UE
+class CKUNREAL_API UCk_EntityBridge_ActorComponent_UE : public UCk_EntityBridge_ActorComponent_Base_UE
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_EcsConstructionScript_ActorComponent_UE);
+    CK_GENERATED_BODY(UCk_EntityBridge_ActorComponent_UE);
 
 public:
-    UCk_EcsConstructionScript_ActorComponent_UE();
+    UCk_EntityBridge_ActorComponent_UE();
 
     friend class UCk_Fragment_EntityReplicationDriver_Rep;
 
@@ -52,7 +57,7 @@ public:
     ECk_Replication _Replication = ECk_Replication::Replicates;
 
     UPROPERTY(EditDefaultsOnly, Instanced)
-    TObjectPtr<class UCk_UnrealEntity_WithActor_PDA> _UnrealEntity;
+    TObjectPtr<class UCk_EntityBridge_Config_WithActor_PDA> EntityConfig;
 
 private:
     UPROPERTY(BlueprintAssignable, Category = "Public",
@@ -71,7 +76,43 @@ private:
     EOnReplicationCompleteBroadcastStep _ReplicationComplete_BroadcastStep = EOnReplicationCompleteBroadcastStep::Wait;
 
 public:
-    CK_PROPERTY(_UnrealEntity);
+    CK_PROPERTY(EntityConfig);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(Abstract, BlueprintType, Blueprintable, EditInlineNew)
+class CKUNREAL_API UCk_EntityBridge_ConstructionScript_WithTransform_PDA : public UCk_EntityBridge_ConstructionScript_PDA
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_EntityBridge_ConstructionScript_WithTransform_PDA);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ExposeOnSpawn, AllowPrivateAccess = true))
+    FTransform _EntityInitialTransform;
+
+public:
+    CK_PROPERTY(_EntityInitialTransform);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable)
+class CKUNREAL_API UCKk_Utils_EntityBridge_ConstructionScript_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCKk_Utils_EntityBridge_ConstructionScript_UE);
+
+private:
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|EntityBridge|ConstructionScript")
+    static FCk_Handle
+    BuildEntity(
+        FCk_Handle InHandle,
+        const UCk_EntityBridge_Config_Base_PDA* InEntityConfig);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

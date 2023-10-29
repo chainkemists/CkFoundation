@@ -1,33 +1,33 @@
-#include "CkUnrealEntity_Fragment_Params.h"
+#include "CkEntityBridge_Fragment_Params.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 
-#include "CkUnreal/Entity/CkUnrealEntity_ConstructionScript.h"
+#include "CkUnreal/EntityBridge/CkEntityBridge_ConstructionScript.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_UnrealEntity_Base_PDA::
+    UCk_EntityBridge_Config_Base_PDA::
     Get_EntityConstructionScript() const
-    -> UCk_Entity_ConstructionScript_PDA*
+    -> UCk_EntityBridge_ConstructionScript_PDA*
 {
     return DoGet_EntityConstructionScript();
 }
 
 auto
-    UCk_UnrealEntity_Base_PDA::
+    UCk_EntityBridge_Config_Base_PDA::
     DoGet_EntityConstructionScript() const
-    -> UCk_Entity_ConstructionScript_PDA*
+    -> UCk_EntityBridge_ConstructionScript_PDA*
 {
     CK_TRIGGER_ENSURE(TEXT("DoGet_EntityConstructionScript was not Overriden in [{}]"), this);
     return {};
 }
 
 auto
-    UCk_UnrealEntity_PDA::
+    UCk_EntityBridge_Config_PDA::
     DoGet_EntityConstructionScript() const
-    -> UCk_Entity_ConstructionScript_PDA*
+    -> UCk_EntityBridge_ConstructionScript_PDA*
 {
     return _EntityConstructionScript;
 }
@@ -35,26 +35,32 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_UnrealEntity_WithActor_PDA::
+    UCk_EntityBridge_Config_WithActor_PDA::
     DoGet_EntityConstructionScript() const
-    -> UCk_Entity_ConstructionScript_PDA*
+    -> UCk_EntityBridge_ConstructionScript_PDA*
 {
     return _EntityConstructionScript;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_UnrealEntity_Base_PDA::
-Build(FCk_Handle InEntity) const -> void
+auto
+    UCk_EntityBridge_Config_Base_PDA::
+    Build(
+        FCk_Handle InEntity) const
+    -> void
 {
     DoBuild(InEntity);
 }
 
-auto UCk_UnrealEntity_Base_PDA::
-DoBuild(FCk_Handle InHandle) const -> void
+auto
+    UCk_EntityBridge_Config_Base_PDA::
+    DoBuild(
+        FCk_Handle InHandle) const
+    -> void
 {
     const auto& EntityConstructionScript = Get_EntityConstructionScript();
-    CK_ENSURE_IF_NOT(ck::IsValid(EntityConstructionScript), TEXT("INVALID ConstructionScript in UnrealEntity [{}]"), GetPathName())
+    CK_ENSURE_IF_NOT(ck::IsValid(EntityConstructionScript), TEXT("INVALID ConstructionScript in EntityConfig [{}]"), GetPathName())
     { return; }
 
     EntityConstructionScript->Construct(InHandle);
@@ -62,29 +68,21 @@ DoBuild(FCk_Handle InHandle) const -> void
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Request_UnrealEntity_Spawn::
-FCk_Request_UnrealEntity_Spawn(const UCk_UnrealEntity_Base_PDA* InUnrealEntity)
-    : ThisType{InUnrealEntity, [](auto InHandle){}, [](auto InHandle){}}
+FCk_Request_EntityBridge_SpawnEntity::
+    FCk_Request_EntityBridge_SpawnEntity(
+        const UCk_EntityBridge_Config_Base_PDA* InEntityConfig)
+    : ThisType{InEntityConfig, [](auto InHandle){}, [](auto InHandle){}}
 {
 }
 
-FCk_Request_UnrealEntity_Spawn::
-FCk_Request_UnrealEntity_Spawn(
-    const UCk_UnrealEntity_Base_PDA* InUnrealEntity,
-    PreBuildFunc InPreBuildFunc,
-    PostSpawnFunc InPostSpawnFunc)
-    : _UnrealEntity(InUnrealEntity)
+FCk_Request_EntityBridge_SpawnEntity::
+    FCk_Request_EntityBridge_SpawnEntity(
+        const UCk_EntityBridge_Config_Base_PDA* InEntityConfig,
+        PreBuildFunc InPreBuildFunc,
+        PostSpawnFunc InPostSpawnFunc)
+    : _EntityConfig(InEntityConfig)
     , _PreBuildFunc(InPreBuildFunc)
     , _PostSpawnFunc(InPostSpawnFunc)
-{
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-FCk_Payload_UnrealEntity_EntityCreated::
-FCk_Payload_UnrealEntity_EntityCreated(FCk_Handle InHandle, FCk_Handle InCreatedEntity)
-    : _Handle(InHandle)
-    , _CreatedEntity(InCreatedEntity)
 {
 }
 
