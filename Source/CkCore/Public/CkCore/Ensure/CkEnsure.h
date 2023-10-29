@@ -4,6 +4,7 @@
 #include "CkCore/Build/CkBuild_Macros.h"
 
 // the following includes are needed if using the macros defined in this file
+#include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/MessageDialog/CkMessageDialog.h"
 
@@ -87,15 +88,6 @@ DECLARE_DYNAMIC_DELEGATE_OneParam
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UENUM(BlueprintType)
-enum class ECk_Ensure_HitStatus : uint8
-{
-    Hit,
-    NotHit
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
 UCLASS()
 class CKCORE_API UCk_Utils_Ensure_UE
     : public UBlueprintFunctionLibrary
@@ -109,7 +101,7 @@ public:
     static void
     EnsureMsgf(bool InExpression,
         FText InMsg,
-        ECk_Ensure_HitStatus& OutHitStatus,
+        ECk_ValidInvalid& OutHitStatus,
         const UObject* InContext = nullptr);
 
     UFUNCTION(BlueprintPure,
