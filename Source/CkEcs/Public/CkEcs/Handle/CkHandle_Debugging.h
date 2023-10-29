@@ -5,6 +5,8 @@
 #include "CkEcs/Entity/CkEntity.h"
 #include "CkEcs/Registry/CkRegistry.h"
 
+#include "entt/poly/poly.hpp"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 struct FCk_Handle;
