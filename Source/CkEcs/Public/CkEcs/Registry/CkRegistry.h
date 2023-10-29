@@ -6,7 +6,7 @@
 
 #include "CkEcs/Entity/CkEntity.h"
 
-#include "entt/entt.hpp"
+#include "entt/entity/registry.hpp"
 
 #include "CkRegistry.generated.h"
 
@@ -184,7 +184,7 @@ public:
 public:
     friend auto CKECS_API GetTypeHash(const ThisType& InRegistry) -> uint32;
 
-private:
+public:
     ck::TPtrWrapper<InternalRegistryPtrType> _InternalRegistry;
     EntityType _TransientEntity;
 
