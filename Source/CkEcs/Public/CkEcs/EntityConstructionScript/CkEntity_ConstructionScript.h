@@ -9,12 +9,12 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, BlueprintType, Blueprintable, EditInlineNew)
-class CKECS_API UCk_Entity_ConstructionScript_PDA : public UCk_DataAsset_PDA
+class CKECS_API UCk_EntityBridge_ConstructionScript_PDA : public UCk_DataAsset_PDA
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Entity_ConstructionScript_PDA);
+    CK_GENERATED_BODY(UCk_EntityBridge_ConstructionScript_PDA);
 
 public:
     auto
