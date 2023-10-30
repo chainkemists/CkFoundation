@@ -45,7 +45,8 @@ public:
     static void
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_Marker_ParamsData& InParams);
+        const FCk_Fragment_Marker_ParamsData& InParams,
+        ECk_Net_ReplicationType InReplicationType = ECk_Net_ReplicationType::All);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Marker",

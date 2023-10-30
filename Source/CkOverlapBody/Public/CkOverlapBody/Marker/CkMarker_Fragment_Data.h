@@ -290,7 +290,7 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_EnableDisable _StartingState = ECk_EnableDisable::Enable;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
     ECk_Net_ReplicationType _ReplicationType = ECk_Net_ReplicationType::All;
 
@@ -311,7 +311,29 @@ public:
     CK_PROPERTY_GET(_ShowDebug);
     CK_PROPERTY_GET(_DebugParams);
     CK_PROPERTY_GET(_StartingState);
-    CK_PROPERTY_GET(_ReplicationType);
+    CK_PROPERTY(_ReplicationType);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKOVERLAPBODY_API FCk_Fragment_MultipleMarker_ParamsData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Fragment_MultipleMarker_ParamsData);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<FCk_Fragment_Marker_ParamsData> _MarkerParams;
+
+public:
+    CK_PROPERTY_GET(_MarkerParams)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleMarker_ParamsData, _MarkerParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
