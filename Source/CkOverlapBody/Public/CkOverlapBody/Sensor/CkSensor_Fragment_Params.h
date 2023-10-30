@@ -819,7 +819,7 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_EnableDisable _StartingState = ECk_EnableDisable::Enable;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
     ECk_Net_ReplicationType _ReplicationType = ECk_Net_ReplicationType::All;
 
@@ -839,7 +839,7 @@ public:
     CK_PROPERTY_GET(_AttachmentParams);
     CK_PROPERTY_GET(_RelativeTransform);
     CK_PROPERTY_GET(_StartingState);
-    CK_PROPERTY_GET(_ReplicationType);
+    CK_PROPERTY(_ReplicationType);
     CK_PROPERTY_GET(_ShowDebug);
     CK_PROPERTY_GET(_DebugParams);
 };

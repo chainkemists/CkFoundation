@@ -71,7 +71,7 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Timer_State _StartingState = ECk_Timer_State::Paused;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
     ECk_Net_ReplicationType _ReplicationType = ECk_Net_ReplicationType::All;
 
