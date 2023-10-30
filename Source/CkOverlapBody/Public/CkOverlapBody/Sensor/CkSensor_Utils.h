@@ -44,7 +44,8 @@ public:
     static void
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_Sensor_ParamsData& InParams);
+        const FCk_Fragment_Sensor_ParamsData& InParams,
+        ECk_Net_ReplicationType InReplicationType = ECk_Net_ReplicationType::All);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",

@@ -1,9 +1,12 @@
 #include "CkTimer_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkEcsBasics/EntityHolder/CkEntityHolder_Utils.h"
+
 #include "CkTimer/CkTimer_Fragment.h"
+#include "CkTimer/CkTimer_Log.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -11,23 +14,39 @@ auto
     UCk_Utils_Timer_UE::
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_Timer_ParamsData& InData)
+        const FCk_Fragment_Timer_ParamsData& InParams,
+        ECk_Net_ReplicationType InReplicationType)
     -> void
 {
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InHandle, InReplicationType))
+    {
+        ck::timer::VeryVerbose
+        (
+            TEXT("Skipping creation of Timer [{}] because it's Replication Type [{}] does NOT match"),
+            InParams.Get_TimerName(),
+            InReplicationType
+        );
+
+        return;
+    }
+
+    auto ParamsToUse = InParams;
+    ParamsToUse.Set_ReplicationType(InReplicationType);
+
     auto newTimerEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
     ck::UCk_Utils_OwningEntity::Add(newTimerEntity, InHandle);
 
-    newTimerEntity.Add<ck::FFragment_Timer_Params>(InData);
-    newTimerEntity.Add<ck::FFragment_Timer_Current>(FCk_Chrono{InData.Get_Duration()});
+    newTimerEntity.Add<ck::FFragment_Timer_Params>(ParamsToUse);
+    newTimerEntity.Add<ck::FFragment_Timer_Current>(FCk_Chrono{ParamsToUse.Get_Duration()});
 
     UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_Timer_Rep>(newTimerEntity);
 
-    if (InData.Get_StartingState() == ECk_Timer_State::Running)
+    if (ParamsToUse.Get_StartingState() == ECk_Timer_State::Running)
     {
         newTimerEntity.Add<ck::FTag_Timer_NeedsUpdate>();
     }
 
-    UCk_Utils_GameplayLabel_UE::Add(newTimerEntity, InData.Get_TimerName());
+    UCk_Utils_GameplayLabel_UE::Add(newTimerEntity, ParamsToUse.Get_TimerName());
 
     RecordOfTimers_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
     RecordOfTimers_Utils::Request_Connect(InHandle, newTimerEntity);
