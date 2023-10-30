@@ -6,7 +6,7 @@
 #include "CkLabel/CkLabel_Fragment.h"
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkPhysics/Acceleration/CkAcceleration_Fragment_Params.h"
+#include "CkPhysics/Acceleration/CkAcceleration_Fragment_Data.h"
 #include "CkRecord/Record/CkRecord_Fragment.h"
 
 #include "CkAcceleration_Fragment.generated.h"

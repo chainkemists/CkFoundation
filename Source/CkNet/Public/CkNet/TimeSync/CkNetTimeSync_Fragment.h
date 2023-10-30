@@ -4,7 +4,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkNet/TimeSync/CkNetTimeSync_Fragment_Params.h"
+#include "CkNet/TimeSync/CkNetTimeSync_Fragment_Data.h"
 
 #include "CkNetTimeSync_Fragment.generated.h"
 

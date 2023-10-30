@@ -3,7 +3,7 @@
 #include "CkRecord_Fragment.h"
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
-#include "CkRecord/Record/CkRecord_Fragment_Params.h"
+#include "CkRecord/Record/CkRecord_Fragment_Data.h"
 #include "CkRecord/RecordEntry/CkRecordEntry_Utils.h"
 #include "CkRecord/RecordEntry/CkRecordEntry_Fragment.h"
 

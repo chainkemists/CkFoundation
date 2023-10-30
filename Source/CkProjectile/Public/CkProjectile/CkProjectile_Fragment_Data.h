@@ -1,8 +1,8 @@
 #pragma once
-#include "CkPhysics/Acceleration/CkAcceleration_Fragment_Params.h"
-#include "CkPhysics/Velocity/CkVelocity_Fragment_Params.h"
+#include "CkPhysics/Acceleration/CkAcceleration_Fragment_Data.h"
+#include "CkPhysics/Velocity/CkVelocity_Fragment_Data.h"
 
-#include "CkProjectile_Fragment_Params.generated.h"
+#include "CkProjectile_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

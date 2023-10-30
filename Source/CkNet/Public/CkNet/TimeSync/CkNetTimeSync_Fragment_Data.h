@@ -3,7 +3,7 @@
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Time/CkTime.h"
 
-#include "CkNetTimeSync_Fragment_Params.generated.h"
+#include "CkNetTimeSync_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

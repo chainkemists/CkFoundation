@@ -1,3 +1,5 @@
-#include "CkEulerIntegrator_Fragment_Params.h"
+#include "CkRecord_Fragment_Data.h"
 
 // --------------------------------------------------------------------------------------------------------------------
+
+CK_INTENTIONALLY_EMPTY()

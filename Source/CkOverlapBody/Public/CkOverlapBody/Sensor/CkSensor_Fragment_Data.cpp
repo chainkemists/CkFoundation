@@ -1,4 +1,4 @@
-#include "CkSensor_Fragment_Params.h"
+#include "CkSensor_Fragment_Data.h"
 
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkLabel/CkLabel_Utils.h"
