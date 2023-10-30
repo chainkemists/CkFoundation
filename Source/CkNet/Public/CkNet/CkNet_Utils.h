@@ -72,6 +72,11 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Net")
     static bool
+    Get_IsEntityRoleMatching(FCk_Handle InEntity, ECk_Net_ReplicationType InReplicationType);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net")
+    static bool
     Get_HasAuthority(
         FCk_Handle InEntity);
 

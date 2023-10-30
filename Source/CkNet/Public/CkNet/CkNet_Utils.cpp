@@ -87,6 +87,47 @@ auto
 
 auto
     UCk_Utils_Net_UE::
+    Get_IsEntityRoleMatching(
+        FCk_Handle              InEntity,
+        ECk_Net_ReplicationType InReplicationType)
+    -> bool
+{
+    switch (InReplicationType)
+    {
+        case ECk_Net_ReplicationType::LocalOnly:
+        {
+            return Get_HasAuthority(InEntity);
+        }
+        case ECk_Net_ReplicationType::LocalAndHost:
+        {
+            return Get_HasAuthority(InEntity) || Get_IsEntityNetMode_Host(InEntity);
+        }
+        case ECk_Net_ReplicationType::HostOnly:
+        {
+            return Get_IsEntityNetMode_Host(InEntity);
+        }
+        case ECk_Net_ReplicationType::ClientsOnly:
+        {
+            return Get_EntityNetMode(InEntity) == ECk_Net_NetModeType::Client;
+        }
+        case ECk_Net_ReplicationType::ServerOnly:
+        {
+            return Get_EntityNetMode(InEntity) == ECk_Net_NetModeType::Server;
+        }
+        case ECk_Net_ReplicationType::All:
+        {
+            return true;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InReplicationType);
+            return false;
+        }
+    }
+}
+
+auto
+    UCk_Utils_Net_UE::
     Get_HasAuthority(
         FCk_Handle InEntity)
     -> bool
