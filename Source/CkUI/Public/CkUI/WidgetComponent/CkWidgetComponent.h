@@ -42,7 +42,9 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract)
+UCLASS(Abstract,
+       HideCategories("Replication", "ComponentTick", "Activation", "Tags", "ComponentReplication", "Mobile", "RayTracing",
+                      "Collision", "AssetUserData", "Cooking", "Sockets", "Variable", "Navigation", "HLOD", "Physics")  )
 class CKUI_API UCk_WidgetComponent_UE : public UWidgetComponent
 {
     GENERATED_BODY()
