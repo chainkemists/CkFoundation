@@ -12,43 +12,36 @@ auto
     UCk_Utils_Sensor_UE::
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_Sensor_ParamsData& InParams)
+        const FCk_Fragment_Sensor_ParamsData& InParams,
+        ECk_Net_ReplicationType InReplicationType)
     -> void
 {
     CK_ENSURE_IF_NOT(UCk_Utils_OwningActor_UE::Has(InHandle), TEXT("Cannot Add a Sensor to Entity [{}] because it does NOT have an Owning Actor"), InHandle)
     { return; }
 
-    const auto& owningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(InHandle).Get_Actor().Get();
     const auto& sensorName = InParams.Get_SensorName();
-    const auto& sensorReplicationType = InParams.Get_ReplicationType();
-    const auto& outermostRemoteAuthority = [&]()
-    {
-        if (owningActor->GetIsReplicated())
-        { return owningActor; }
 
-        return UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(owningActor);
-    }();
-
-    if (NOT UCk_Utils_Net_UE::Get_IsRoleMatching(outermostRemoteAuthority, sensorReplicationType))
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InHandle, InReplicationType))
     {
         ck::overlap_body::VeryVerbose
         (
-            TEXT("Skipping creation of Sensor [{}] on Actor [{}] because it's Replication Type [{}] does NOT match the Outermost Remote Autority [{}]"),
+            TEXT("Skipping creation of Sensor [{}] because it's Replication Type [{}] does NOT match"),
             sensorName,
-            owningActor,
-            sensorReplicationType,
-            outermostRemoteAuthority
+            InReplicationType
         );
 
         return;
     }
 
+    auto ParamsToUse = InParams;
+    ParamsToUse.Set_ReplicationType(InReplicationType);
+
     auto sensorEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
 
     ck::UCk_Utils_OwningEntity::Add(sensorEntity, InHandle);
 
-    sensorEntity.Add<ck::FFragment_Sensor_Params>(InParams);
-    sensorEntity.Add<ck::FFragment_Sensor_Current>(InParams.Get_StartingState());
+    sensorEntity.Add<ck::FFragment_Sensor_Params>(ParamsToUse);
+    sensorEntity.Add<ck::FFragment_Sensor_Current>(ParamsToUse.Get_StartingState());
     sensorEntity.Add<ck::FTag_Sensor_Setup>();
 
     UCk_Utils_GameplayLabel_UE::Add(sensorEntity, sensorName);
