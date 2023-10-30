@@ -6,7 +6,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkIntent_Fragment_Params.generated.h"
+#include "CkIntent_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

@@ -15,7 +15,7 @@
 #include <Components/ShapeComponent.h>
 
 #include "CkNet/CkNet_Common.h"
-#include "CkMarker_Fragment_Params.generated.h"
+#include "CkMarker_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

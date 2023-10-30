@@ -3,7 +3,7 @@
 #include <CkEcs/Handle/CkHandle.h>
 
 #include <CkNet/CkNet_Utils.h>
-#include <CkNet/TimeSync/CkNetTimeSync_Fragment_Params.h>
+#include <CkNet/TimeSync/CkNetTimeSync_Fragment_Data.h>
 
 #include "CkNetTimeSync_Utils.generated.h"
 

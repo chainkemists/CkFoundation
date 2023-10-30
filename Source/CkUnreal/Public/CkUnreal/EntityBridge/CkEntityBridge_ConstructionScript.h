@@ -6,7 +6,7 @@
 #include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 #include "CkEcs/Handle/CkHandle.h"
 
-#include "CkUnreal/EntityBridge/CkEntityBridge_Fragment_Params.h"
+#include "CkUnreal/EntityBridge/CkEntityBridge_Fragment_Data.h"
 
 #include "CkEcs/OwningActor/CkOwningActor_Fragment_Params.h"
 

@@ -4,7 +4,7 @@
 
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 
-#include "CkEcsBasics/Transform/CkTransform_Fragment_Params.h"
+#include "CkEcsBasics/Transform/CkTransform_Fragment_Data.h"
 
 #include "CkCore/Macros/CkMacros.h"
 

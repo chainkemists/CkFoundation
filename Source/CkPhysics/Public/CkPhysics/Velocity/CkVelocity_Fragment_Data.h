@@ -3,7 +3,7 @@
 #include "CkCore/Enums/CkEnums.h"
 #include "CkEcs/Handle/CkHandle.h"
 
-#include "CkVelocity_Fragment_Params.generated.h"
+#include "CkVelocity_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

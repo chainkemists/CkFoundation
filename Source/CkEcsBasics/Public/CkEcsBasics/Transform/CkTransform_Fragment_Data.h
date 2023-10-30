@@ -7,7 +7,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkTransform_Fragment_Params.generated.h"
+#include "CkTransform_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

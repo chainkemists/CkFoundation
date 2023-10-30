@@ -4,7 +4,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkUnreal/EntityBridge/CkEntityBridge_Fragment_Params.h"
+#include "CkUnreal/EntityBridge/CkEntityBridge_Fragment_Data.h"
 
 #include "CkUnrealEntity_ActorProxy.generated.h"
 
