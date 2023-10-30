@@ -1,22 +1,17 @@
 #include "CkWorldActor.h"
 
-#include "NetworkTimeSyncComponent.h"
-
 #include "CkActor/ActorModifier/CkActorModifier_Processor.h"
+
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Processor.h"
-
-#include "CkIntent/CkIntent_Processor.h"
-
-#include "CkPhysics/Acceleration/CkAcceleration_Processor.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Processor.h"
 #include "CkEcs/OwningActor/CkOwningActor_Processors.h"
 
 #include "CkEcsBasics/Transform/CkTransform_Processor.h"
 
-#include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Processor.h"
+#include "CkIntent/CkIntent_Processor.h"
+
 #include "CkNet/TimeSync/CkNetTimeSync_Processor.h"
-#include "CkNet/TimeSync/CkNetTimeSync_Utils.h"
 
 #include "CkOverlapBody/Marker/CkMarker_Processor.h"
 #include "CkOverlapBody/Sensor/CkSensor_Processor.h"
@@ -24,10 +19,11 @@
 #include "CkPhysics/Acceleration/CkAcceleration_Processor.h"
 #include "CkPhysics/EulerIntegrator/CkEulerIntegrator_Processor.h"
 #include "CkPhysics/Velocity/CkVelocity_Processor.h"
+
 #include "CkProjectile/CkProjectile_Processor.h"
 
-#include "CkRecord/Record/CkRecord_Processor.h"
 #include "CkRecord/RecordEntry/CkRecordEntry_Processor.h"
+
 #include "CkTimer/CkTimer_Processor.h"
 
 #include "CkUnreal/EntityBridge/CkEntityBridge_Processor.h"
@@ -117,7 +113,6 @@ namespace ck_world_actor
         }
 
         InWorld.Add<ck::FProcessor_RecordEntry_Destructor>(InWorld.Get_Registry());
-        InWorld.Add<ck::FProcessor_RecordOfEntities_Destructor>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FProcessor_Marker_UpdateTransform>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_Sensor_UpdateTransform>(InWorld.Get_Registry());
