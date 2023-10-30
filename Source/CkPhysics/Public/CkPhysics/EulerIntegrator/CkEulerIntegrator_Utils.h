@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkEulerIntegrator_Fragment_Params.h"
+#include "CkEulerIntegrator_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkCore/Macros/CkMacros.h"

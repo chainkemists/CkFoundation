@@ -3,7 +3,7 @@
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkPhysics/EulerIntegrator/CkEulerIntegrator_Fragment_Params.h"
+#include "CkPhysics/EulerIntegrator/CkEulerIntegrator_Fragment_Data.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

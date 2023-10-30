@@ -5,7 +5,7 @@
 #include "CkCore/Types/DataAsset/CkDataAsset.h"
 #include "CkEcs/Registry/CkRegistry.h"
 
-#include "CkEntityBridge_Fragment_Params.generated.h"
+#include "CkEntityBridge_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

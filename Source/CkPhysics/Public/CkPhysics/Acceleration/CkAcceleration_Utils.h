@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkAcceleration_Fragment_Params.h"
+#include "CkAcceleration_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcsBasics/CkEcsBasics_Utils.h"

@@ -1,5 +1,3 @@
-#include "CkRecord_Fragment_Params.h"
+#include "CkVelocity_Fragment_Data.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-
-CK_INTENTIONALLY_EMPTY()

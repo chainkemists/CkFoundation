@@ -6,12 +6,12 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkOverlapBody/Marker/CkMarker_Fragment_Params.h"
+#include "CkOverlapBody/Marker/CkMarker_Fragment_Data.h"
 
 #include <GameplayTagContainer.h>
 #include <Components/ShapeComponent.h>
 
-#include "CkSensor_Fragment_Params.generated.h"
+#include "CkSensor_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

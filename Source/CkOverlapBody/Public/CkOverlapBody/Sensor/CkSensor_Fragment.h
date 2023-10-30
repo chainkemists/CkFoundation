@@ -2,7 +2,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkOverlapBody/Sensor/CkSensor_Fragment_Params.h"
+#include "CkOverlapBody/Sensor/CkSensor_Fragment_Data.h"
 
 #include <variant>
 
