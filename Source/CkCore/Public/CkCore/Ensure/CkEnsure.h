@@ -96,12 +96,31 @@ class CKCORE_API UCk_Utils_Ensure_UE
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Core|Ensure",
+              Category = "Ck|Utils|Ensure",
               meta     = (ExpandEnumAsExecs = "OutHitStatus", DefaultToSelf = "InContext", HidePin = "InContext"))
     static void
-    EnsureMsgf(bool InExpression,
+    EnsureMsgf(
+        bool InExpression,
         FText InMsg,
         ECk_ValidInvalid& OutHitStatus,
+        const UObject* InContext = nullptr);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ensure",
+              meta     = (ExpandEnumAsExecs = "OutHitStatus", DefaultToSelf = "InContext", HidePin = "InContext"))
+    static void
+    EnsureMsgf_IsValid(
+        UObject* InObject,
+        FText InMsg,
+        ECk_ValidInvalid& OutHitStatus,
+        const UObject* InContext = nullptr);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ensure",
+              meta     = (DefaultToSelf = "InContext", HidePin = "InContext"))
+    static void
+    TriggerEnsure(
+        FText InMsg,
         const UObject* InContext = nullptr);
 
     UFUNCTION(BlueprintPure,
@@ -117,20 +136,39 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ensure")
     static void
-    Bind_To_OnEnsureIgnored(const FCk_Ensure_OnEnsureIgnored_Delegate& InDelegate);
+    Bind_To_OnEnsureIgnored(
+        const FCk_Ensure_OnEnsureIgnored_Delegate& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ensure")
     static void
-    Unbind_From_OnEnsureIgnored(const FCk_Ensure_OnEnsureIgnored_Delegate& InDelegate);
+    Unbind_From_OnEnsureIgnored(
+        const FCk_Ensure_OnEnsureIgnored_Delegate& InDelegate);
 
 public:
-    static auto Get_IsEnsureIgnored(FName InFile, int32 InLine) -> bool;
-    static auto Get_IsEnsureIgnored_WithCallstack(const FString& InCallstack) -> bool;
+    static auto
+    Get_IsEnsureIgnored(
+        FName InFile,
+        int32 InLine) -> bool;
 
-    static auto Request_IgnoreEnsureAtFileAndLineWithMessage(FName InFile, const FText& InMessage, int32 InLine) -> void;
-    static auto Request_IgnoreEnsureAtFileAndLine(FName InFile, int32 InLine) -> void;
-    static auto Request_IgnoreEnsure_WithCallstack(const FString& InCallstack) -> void;
+    static auto
+    Get_IsEnsureIgnored_WithCallstack(
+        const FString& InCallstack) -> bool;
+
+    static auto
+    Request_IgnoreEnsureAtFileAndLineWithMessage(
+        FName InFile,
+        const FText& InMessage,
+        int32 InLine) -> void;
+
+    static auto
+    Request_IgnoreEnsureAtFileAndLine(
+        FName InFile,
+        int32 InLine) -> void;
+
+    static auto
+    Request_IgnoreEnsure_WithCallstack(
+        const FString& InCallstack) -> void;
 
 private:
     static TMap<FName, TSet<FCk_Ensure_IgnoredEntry>> _IgnoredEnsures;
@@ -154,7 +192,7 @@ private:
     const auto& stackTraceWith2Skips = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace(2);                                      \
     const auto& bpStackTrace = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::AsString{});          \
     const auto& callstackPlusMessage = ck::Format_UE(                                                                         \
-        TEXT("{}\nExpression: '{}'\nMessage: '{}'\n\n == BP CallStack ==\n{}\n == CallStack ==\n{}\n"),                       \
+        TEXT("{}\nExpression: {}\nMessage: {}\n\n == BP CallStack ==\n{}\n == CallStack ==\n{}\n"),                           \
         title,                                                                                                                \
         TEXT(#InExpression),                                                                                                  \
         message,                                                                                                              \
