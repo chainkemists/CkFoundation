@@ -73,14 +73,14 @@ public:
               meta = (DisplayName = "Time To Text", CompactNodeTitle = "->", BlueprintAutocast))
     static FText
     Conv_TimeToText(
-        const FCk_Time& InHandle);
+        const FCk_Time& InTime);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Chrono",
               meta = (DisplayName = "Time To String", CompactNodeTitle = "->", BlueprintAutocast))
     static FString
     Conv_TimeToString(
-        const FCk_Time& InHandle);
+        const FCk_Time& InTime);
 
 public:
     UFUNCTION(BlueprintPure,
