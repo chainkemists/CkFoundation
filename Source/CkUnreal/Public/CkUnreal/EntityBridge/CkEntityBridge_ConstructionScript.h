@@ -46,10 +46,6 @@ private:
     auto TryInvoke_OnReplicationComplete(EInvoke_Caller InCaller) -> void override;
 
 public:
-    // Temporary function for Obsidian Toggle
-    UFUNCTION(BlueprintImplementableEvent)
-    bool ShouldConstruct() const;
-
     UFUNCTION(BlueprintCallable)
     bool Get_IsReplicationComplete() const;
 
