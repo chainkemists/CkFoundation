@@ -7,19 +7,19 @@
 auto
     UCk_Utils_Time_UE::
     Conv_TimeToText(
-        const FCk_Time& InHandle)
+        const FCk_Time& InTime)
     -> FText
 {
-    return FText::FromString(Conv_TimeToString(InHandle));
+    return FText::FromString(Conv_TimeToString(InTime));
 }
 
 auto
     UCk_Utils_Time_UE::
     Conv_TimeToString(
-        const FCk_Time& InHandle)
+        const FCk_Time& InTime)
     -> FString
 {
-    return ck::Format_UE(TEXT("{}"), InHandle);
+    return ck::Format_UE(TEXT("{}"), InTime);
 }
 
 auto
