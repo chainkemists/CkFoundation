@@ -72,9 +72,6 @@ auto
         const FCk_ActorComponent_DoConstruct_Params& InParams)
     -> void
 {
-    if (NOT ShouldConstruct())
-    { return; }
-
     // --------------------------------------------------------------------------------------------------------------------
 
     const auto& OwningActor = GetOwner();
