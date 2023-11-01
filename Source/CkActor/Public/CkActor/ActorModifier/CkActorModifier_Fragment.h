@@ -1,12 +1,12 @@
 #pragma once
 
-#include <variant>
+#include "CkActor/ActorModifier/CkActorModifier_Fragment_Params.h"
 
-#include "CkActorModifier_Fragment_Params.h"
+#include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 
-#include "CkCore/Macros/CkMacros.h"
+#include "CkSignal/Public/CkSignal/CkSignal_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -59,6 +59,15 @@ namespace ck
     private:
         CK_PROPERTY_GET_NON_CONST(_Requests);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKACTOR_API,
+        OnActorSpawned,
+        FCk_Delegate_ActorModifier_OnActorSpawned_MC,
+        FCk_Handle,
+        AActor*);
 
 }
 

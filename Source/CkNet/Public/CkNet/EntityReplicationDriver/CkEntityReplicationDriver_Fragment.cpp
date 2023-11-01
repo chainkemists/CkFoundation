@@ -11,6 +11,7 @@
 #include "CkLabel/CkLabel_Utils.h"
 
 #include "CkNet/CkNet_Utils.h"
+#include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
 #include <Net/UnrealNetwork.h>
 #include <Engine/World.h>
@@ -39,7 +40,26 @@ auto
 
     DOREPLIFETIME(ThisType, _ReplicationData);
     DOREPLIFETIME(ThisType, _ReplicationData_ReplicatedActor);
+    DOREPLIFETIME(ThisType, _ReplicationData_NonReplicatedActor);
     DOREPLIFETIME(ThisType, _ExpectedNumberOfDependentReplicationDrivers);
+}
+
+auto
+    UCk_Fragment_EntityReplicationDriver_Rep::
+    Request_Replicate_NonReplicatedActor_Implementation(
+        FCk_EntityReplicationDriver_ConstructionInfo_NonReplicatedActor InConstructionInfo)
+    -> void
+{
+    const auto    ActorClass = InConstructionInfo.Get_NonReplicatedActor();
+    const AActor* Actor      = UCk_Utils_Actor_UE::Request_SpawnActor(
+        UCk_Utils_Actor_UE::SpawnActorParamsType{InConstructionInfo.Get_OuterReplicatedActor(), ActorClass});
+
+    const auto Entity = UCk_Utils_OwningActor_UE::Get_ActorEcsHandle(Actor);
+
+    const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(Entity);
+    InConstructionInfo.Set_ReplicatedObjects(ReplicatedObjects.Get_ReplicatedObjects());
+
+    UCk_Utils_EntityReplicationDriver_UE::Request_ReplicateEntityOnNonReplicatedActor(Entity, InConstructionInfo);
 }
 
 auto
@@ -81,18 +101,18 @@ auto
             return ck::MakeHandle(ConstructionInfo.Get_OriginalEntity(), OwningEntity);
         }
 
-        return UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OwningEntity);
+        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OwningEntity);
+
+        if (ck::IsValid(ConstructionInfo.Get_Label()))
+        { UCk_Utils_GameplayLabel_UE::Add(NewEntity, ConstructionInfo.Get_Label()); }
+
+        ConstructionScript->GetDefaultObject<UCk_EntityBridge_ConstructionScript_PDA>()->Construct(NewEntity);
+
+        UCk_Utils_ReplicatedObjects_UE::Add(NewEntity, FCk_ReplicatedObjects{}.
+            Set_ReplicatedObjects(ReplicationData.Get_ReplicatedObjectsData().Get_Objects()));
+
+        return NewEntity;
     }();
-
-    if (ck::IsValid(ConstructionInfo.Get_Label()))
-    {
-        UCk_Utils_GameplayLabel_UE::Add(NewOrExistingEntity, ConstructionInfo.Get_Label());
-    }
-
-    ConstructionScript->GetDefaultObject<UCk_EntityBridge_ConstructionScript_PDA>()->Construct(NewOrExistingEntity);
-
-    UCk_Utils_ReplicatedObjects_UE::Add(NewOrExistingEntity, FCk_ReplicatedObjects{}.
-        Set_ReplicatedObjects(ReplicationData.Get_ReplicatedObjectsData().Get_Objects()));
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -122,6 +142,8 @@ auto
     auto       Entity         = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(WorldSubsystem->Get_TransientEntity());
 
     Entity.Add<ck::FFragment_OwningActor_Current>(ReplicatedActor);
+
+    UCk_Utils_Net_UE::Add(Entity, FCk_Net_ConnectionSettings{ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Proxy});
 
     // TODO: we need the transform
     // CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
@@ -176,6 +198,63 @@ auto
     // --------------------------------------------------------------------------------------------------------------------
 
     ReplicatedActor->GetComponentByClass<UCk_EntityBridge_ActorComponent_Base_UE>()->
+        TryInvoke_OnReplicationComplete(UCk_EntityBridge_ActorComponent_Base_UE::EInvoke_Caller::ReplicationDriver);
+}
+
+auto
+    UCk_Fragment_EntityReplicationDriver_Rep::
+    OnRep_ReplicationData_NonReplicatedActor() -> void
+{
+    if ([[maybe_unused]] const auto ShouldSkipIfAllObjectsAreNotYetResolved =
+        AnyOf(_ReplicationData_NonReplicatedActor.Get_ReplicatedObjects(), ck::algo::Is_NOT_Valid{}))
+    { return; }
+
+    const auto WorldSubsystem = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+
+    auto Entity = [&]() -> FCk_Handle
+    {
+        // TODO: Getting the original entity is not a full guarantee that we are the original Entity who initiated
+        // the replication request. We need to send the PlayerController to verify that we are the original client
+        const auto TransientEntity = WorldSubsystem->Get_TransientEntity();
+        const auto PotentiallyValidEntity = TransientEntity->Get_ValidEntity(static_cast<entt::entity>(_ReplicationData_NonReplicatedActor.Get_OriginalEntity()));
+        if (TransientEntity->IsValid(PotentiallyValidEntity))
+        {
+            return ck::MakeHandle(PotentiallyValidEntity, WorldSubsystem->Get_TransientEntity());
+        }
+
+        const auto    ActorClass = _ReplicationData_NonReplicatedActor.Get_NonReplicatedActor();
+        const AActor* Actor      = UCk_Utils_Actor_UE::Request_SpawnActor(UCk_Utils_Actor_UE::SpawnActorParamsType
+            {_ReplicationData_NonReplicatedActor.Get_OuterReplicatedActor(), ActorClass});
+        return UCk_Utils_OwningActor_UE::Get_ActorEcsHandle(Actor);
+    }();
+
+    const auto& ReplicatedObjects = _ReplicationData_NonReplicatedActor.Get_ReplicatedObjects();
+    UCk_Utils_ReplicatedObjects_UE::Add(Entity, FCk_ReplicatedObjects{}.Set_ReplicatedObjects(ReplicatedObjects));
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // It's possible that some children are waiting on the parent to fully replicate
+    for (const auto ChildRepDriver : _PendingChildEntityConstructions)
+    {
+        ChildRepDriver->OnRep_ReplicationData();
+    }
+
+    _PendingChildEntityConstructions.Reset();
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    ck::UUtils_Signal_OnReplicationComplete::Broadcast(Entity, ck::MakePayload(Entity));
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    DoAdd_SyncedDependentReplicationDriver();
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    const auto Actor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(Entity);
+
+    // TODO: Ensure check this ptr
+    Actor->GetComponentByClass<UCk_EntityBridge_ActorComponent_Base_UE>()->
         TryInvoke_OnReplicationComplete(UCk_EntityBridge_ActorComponent_Base_UE::EInvoke_Caller::ReplicationDriver);
 }
 

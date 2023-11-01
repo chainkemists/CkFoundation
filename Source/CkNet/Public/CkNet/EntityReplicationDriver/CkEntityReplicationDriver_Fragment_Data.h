@@ -21,6 +21,7 @@ private:
     UPROPERTY()
     TObjectPtr<AActor> _ReplicatedActor;
 
+    // TODO: do we need the ConstructionScript Ptr if EntityBridge if the ReplicatedActor already has a reference to it?
     UPROPERTY()
     TObjectPtr<class UCk_EntityBridge_ConstructionScript_PDA> _ConstructionScript;
 
@@ -33,6 +34,36 @@ public:
     CK_PROPERTY(_ReplicatedObjects);
 
     CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor, _ReplicatedActor, _ConstructionScript);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKNET_API FCk_EntityReplicationDriver_ConstructionInfo_NonReplicatedActor
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_EntityReplicationDriver_ConstructionInfo_NonReplicatedActor);
+
+    UPROPERTY()
+    TObjectPtr<AActor> _OuterReplicatedActor;
+
+    UPROPERTY()
+    TSubclassOf<AActor> _NonReplicatedActor;
+
+    UPROPERTY()
+    int32 _OriginalEntity;
+
+    UPROPERTY()
+    TArray<class UCk_ReplicatedObject_UE*> _ReplicatedObjects;
+public:
+    CK_PROPERTY_GET(_OuterReplicatedActor);
+    CK_PROPERTY_GET(_NonReplicatedActor);
+    CK_PROPERTY_GET(_OriginalEntity);
+    CK_PROPERTY(_ReplicatedObjects);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_ConstructionInfo_NonReplicatedActor, _OuterReplicatedActor, _NonReplicatedActor, _OriginalEntity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
