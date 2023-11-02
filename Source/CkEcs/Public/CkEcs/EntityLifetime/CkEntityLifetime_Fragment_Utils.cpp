@@ -18,7 +18,7 @@ auto
     if (UCk_Utils_ReplicatedObjects_UE::Get_NetRole(InHandle) != ROLE_Authority)
     { return; }
 
-    InHandle.Add<ck::FTag_TriggerDestroyEntity>();
+    InHandle.AddOrGet<ck::FTag_TriggerDestroyEntity>();
 }
 
 auto
