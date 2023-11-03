@@ -153,13 +153,17 @@ auto
         FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         ECk_Signal_BindingPolicy InBehavior,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate)
     -> void
 {
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
         <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
 
-    ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind(AttributeEntity, InDelegate, InBehavior);
+    if (InPostFireBehavior == ECk_Signal_PostFireBehavior::DoNothing)
+    { ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind(AttributeEntity, InDelegate, InBehavior); }
+    else
+    { ck::UUtils_Signal_OnFloatAttributeValueChanged_PostFireUnbind::Bind(AttributeEntity, InDelegate, InBehavior); }
 }
 
 auto

@@ -171,6 +171,7 @@ auto
         FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         ECk_Signal_BindingPolicy InBehavior,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_NumericAttribute_OnValueChanged& InDelegate)
     -> void
 {
@@ -178,7 +179,7 @@ auto
     {
         const auto& FloatAttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
 
-        ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind<&ThisType::OnFloatAttribute_ValueChanged>(FloatAttributeEntity, InBehavior);
+        ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind<&ThisType::OnFloatAttribute_ValueChanged>(FloatAttributeEntity, InBehavior, InPostFireBehavior);
         ck::UUtils_Signal_NumericOnAttributeValueChanged::Bind(InAttributeOwnerEntity, InDelegate, InBehavior);
 
         return;
@@ -189,7 +190,7 @@ auto
         const auto& MeterAttributeEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
         const auto& MeterCurrenValueFloatAttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(MeterAttributeEntity, ck::FMeterAttribute_Tags::Get_Current());
 
-        ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind<&ThisType::OnMeterAttribute_ValueChanged>(MeterCurrenValueFloatAttributeEntity, InBehavior);
+        ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind<&ThisType::OnMeterAttribute_ValueChanged>(MeterCurrenValueFloatAttributeEntity, InBehavior, InPostFireBehavior);
         ck::UUtils_Signal_NumericOnAttributeValueChanged::Bind(InAttributeOwnerEntity, InDelegate, InBehavior);
 
         return;

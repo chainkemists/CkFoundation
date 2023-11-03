@@ -263,6 +263,7 @@ auto
         FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         ECk_Signal_BindingPolicy InBehavior,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_MeterAttribute_OnValueChanged& InDelegate)
     -> void
 {
@@ -273,9 +274,9 @@ auto
     if (ck::Is_NOT_Valid(MinCapacity) || ck::Is_NOT_Valid(MaxCapacity) || ck::Is_NOT_Valid(Current))
     { return; }
 
-    ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind<&UCk_Utils_MeterAttribute_UE::OnMinCapacityChanged>(MinCapacity, InBehavior);
-    ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind<&UCk_Utils_MeterAttribute_UE::OnMaxCapacityChanged>(MaxCapacity, InBehavior);
-    ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind<&UCk_Utils_MeterAttribute_UE::OnCurrentValueCanged>(Current, InBehavior);
+    ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind<&UCk_Utils_MeterAttribute_UE::OnMinCapacityChanged>(MinCapacity, InBehavior, InPostFireBehavior);
+    ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind<&UCk_Utils_MeterAttribute_UE::OnMaxCapacityChanged>(MaxCapacity, InBehavior, InPostFireBehavior);
+    ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind<&UCk_Utils_MeterAttribute_UE::OnCurrentValueCanged>(Current, InBehavior, InPostFireBehavior);
 
     ck::UUtils_Signal_OnMeterAttributeValueChanged::Bind(FoundEntity, InDelegate, InBehavior);
 }
