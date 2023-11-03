@@ -49,6 +49,14 @@ auto
 
 auto
     UCk_Utils_Time_UE::
+    Get_FrameCounter()
+    -> int64
+{
+    return GFrameCounter;
+}
+
+auto
+    UCk_Utils_Time_UE::
     Get_WorldTime(const FCk_Utils_Time_GetWorldTime_Params& InParams)
     -> FCk_Utils_Time_GetWorldTime_Result
 {

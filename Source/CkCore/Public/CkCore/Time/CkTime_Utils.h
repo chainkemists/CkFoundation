@@ -102,6 +102,11 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Time")
+    static int64
+    Get_FrameCounter();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Time")
     static FCk_Utils_Time_GetWorldTime_Result
     Get_WorldTime(const FCk_Utils_Time_GetWorldTime_Params& InParams);
 
