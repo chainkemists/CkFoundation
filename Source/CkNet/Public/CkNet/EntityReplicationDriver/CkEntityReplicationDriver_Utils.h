@@ -29,12 +29,18 @@ public:
     static auto
     Request_Replicate(
         FCk_Handle InHandle,
-        const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo) -> void;
+        const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo,
+        std::function<void(FCk_Handle)> InFunc_OnCreateEntityBeforeBuild = nullptr) -> FCk_Handle;
 
     static auto
     Request_ReplicateEntityOnReplicatedActor(
         FCk_Handle InHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor& InConstructionInfo) -> void;
+
+    static auto
+    Request_ReplicateEntityOnNonReplicatedActor(
+        FCk_Handle InHandle,
+        const FCk_EntityReplicationDriver_ConstructionInfo_NonReplicatedActor& InConstructionInfo) -> void;
 
 public:
     UFUNCTION(BlueprintPure,
