@@ -17,7 +17,11 @@ public class CkTemplate : CkModuleRules
 
             "CkCore",
             "CkEcs",
-            "CkLog"
+            "CkLabel",
+            "CkLog",
+            "CkRecord",
+            "CkSettings",
+            "CkSignal",
         });
     }
 }
