@@ -33,6 +33,8 @@ namespace ck
             FFragment_Transform_Requests& InRequestsComp) const
         -> void
     {
+        InComp.Set_ComponentsModified(ECk_TransformComponents::None);
+
         const auto PreviousTransform = InComp.Get_Transform();
 
         algo::ForEachRequest(InRequestsComp._LocationRequests, ck::Visitor(
@@ -50,9 +52,9 @@ namespace ck
         }));
 
         algo::ForEachRequest(InRequestsComp._ScaleRequests,
-        [&](const FFragment_Transform_Requests::ScaleRequestType& InRequest)
+        [&](const auto& InRequest)
         {
-            InComp._Transform.SetScale3D(InRequest.Get_NewScale());
+            DoHandleRequest(InHandle, InComp, InRequest);
             InComp.Set_ComponentsModified(InComp.Get_ComponentsModified() | ECk_TransformComponents::Scale);
         });
 
@@ -61,8 +63,11 @@ namespace ck
         if (NOT PreviousTransform.Equals(NewTransform))
         {
             ecs_basics::VeryVerbose(TEXT("Updated Transform [Old: {} | New: {}] of Entity [{}]"), PreviousTransform, NewTransform, InHandle);
-            InComp._Transform = NewTransform;
             InHandle.Add<ck::FTag_Transform_Updated>();
+        }
+        else
+        {
+            InComp.Set_ComponentsModified(ECk_TransformComponents::None);
         }
     }
 
@@ -164,6 +169,29 @@ namespace ck
         InComp._Transform.ConcatenateRotation(deltaRotation.Quaternion());
     }
 
+    auto
+        FProcessor_Transform_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_Transform_Current& InComp,
+            const FCk_Request_Transform_SetScale& InRequest) const
+        -> void
+    {
+        const auto& newScale = InRequest.Get_NewScale();
+
+        if (InRequest.Get_RelativeAbsolute() == ECk_RelativeAbsolute::Relative && UCk_Utils_OwningActor_UE::Has(InHandle))
+        {
+            const auto& basicDetails = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(InHandle);
+            basicDetails.Get_Actor()->SetActorRelativeScale3D(newScale);
+
+            InComp._Transform.SetScale3D(basicDetails.Get_Actor()->GetActorScale3D());
+
+            return;
+        }
+
+        InComp._Transform.SetScale3D(newScale);
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
@@ -204,7 +232,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Transform_Current& InCurrent,
+            FFragment_Transform_Current& InCurrent,
             const TObjectPtr<UCk_Fragment_Transform_Rep>& InComp) const
         -> void
     {
@@ -219,6 +247,8 @@ namespace ck
 
             if (EnumHasAnyFlags(InCurrent.Get_ComponentsModified(), ECk_TransformComponents::Scale))
             { InRepComp->_Scale = InCurrent.Get_Transform().GetScale3D(); }
+
+            InCurrent.Set_ComponentsModified(ECk_TransformComponents::None);
         });
     }
 

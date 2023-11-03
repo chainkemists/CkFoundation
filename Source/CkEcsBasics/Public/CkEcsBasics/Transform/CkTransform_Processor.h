@@ -50,6 +50,11 @@ namespace ck
             HandleType InHandle,
             FFragment_Transform_Current& InComp,
             const FCk_Request_Transform_AddRotationOffset& InRequest) const -> void;
+
+        auto DoHandleRequest(
+            HandleType InHandle,
+            FFragment_Transform_Current& InComp,
+            const FCk_Request_Transform_SetScale& InRequest) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -108,7 +113,7 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Transform_Current& InCurrent,
+            FFragment_Transform_Current& InCurrent,
             const TObjectPtr<UCk_Fragment_Transform_Rep>& InComp) const -> void;
     };
 

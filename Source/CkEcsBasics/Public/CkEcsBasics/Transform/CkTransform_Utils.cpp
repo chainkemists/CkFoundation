@@ -205,14 +205,13 @@ auto
     if (NOT Ensure(InHandle))
     { return; }
 
-    ck::UUtils_Signal_TransformUpdate::Bind(InHandle, InDelegate, InBehavior);;\
+    ck::UUtils_Signal_TransformUpdate::Bind(InHandle, InDelegate, InBehavior);
 }
 
 auto
     UCk_Utils_Transform_UE::
     UnbindFrom_OnUpdate(
         FCk_Handle InHandle,
-        ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_Transform_OnUpdate& InDelegate)
     -> void
 {

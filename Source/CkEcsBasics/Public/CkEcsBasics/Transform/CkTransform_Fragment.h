@@ -102,6 +102,7 @@ namespace ck
 
     public:
         friend class FProcessor_Transform_HandleRequests;
+        friend class FProcessor_Transform_Replicate;
         friend class UCk_Fragment_Transform_Rep;
         friend UCk_Utils_Transform_UE;
 
@@ -156,14 +157,12 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class FProcessor_Transform_Replicate;
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKECSBASICS_API, TransformUpdate, FCk_Delegate_Transform_OnUpdate_MC, FCk_Handle, FTransform);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+namespace ck { class FProcessor_Transform_Replicate; }
 
 UCLASS(Blueprintable)
 class CKECSBASICS_API UCk_Fragment_Transform_Rep : public UCk_Ecs_ReplicatedObject_UE
