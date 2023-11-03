@@ -191,6 +191,9 @@ auto
     GetTypeHash(
         const FCk_Handle& InHandle) -> uint32
 {
+    if (ck::Is_NOT_Valid(InHandle))
+    { return GetTypeHash(InHandle.Get_Entity()); }
+
     return GetTypeHash(InHandle.Get_Entity()) + GetTypeHash(InHandle.Get_Registry());
 }
 
