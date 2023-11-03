@@ -4,6 +4,8 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
+#include "CkSignal/CkSignal_Fragment_Data.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -34,28 +36,39 @@ namespace ck
 
     private:
         PayloadType _Payload;
+        int64 _PayloadFrameNumber = 0;
+
         SignalType _Invoke_Signal;
         SinkType _Invoke_Sink;
+
+        SignalType _InvokeAndUnbind_Signal;
+        SinkType _InvokeAndUnbind_Sink;
 
     private:
         CK_PROPERTY(_Payload);
         CK_PROPERTY(_Invoke_Signal);
         CK_PROPERTY(_Invoke_Sink);
+
+        CK_PROPERTY(_InvokeAndUnbind_Signal);
+        CK_PROPERTY(_InvokeAndUnbind_Sink);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_UnrealMulticast, typename... T_Args>
+    template <typename T_UnrealMulticast, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename... T_Args>
     struct TFragment_Signal_UnrealMulticast
     {
         template <typename, typename>
         friend class TUtils_Signal_UnrealMulticast;
 
-        CK_GENERATED_BODY(TFragment_Signal_UnrealMulticast<T_UnrealMulticast COMMA T_Args...>);
+        CK_GENERATED_BODY(TFragment_Signal_UnrealMulticast<T_UnrealMulticast COMMA T_PostFireBehavior COMMA T_Args...>);
 
     public:
         using ConnectionType = entt::connection;
         using MulticastType = T_UnrealMulticast;
+
+    public:
+        ~ TFragment_Signal_UnrealMulticast();
 
     public:
         auto DoBroadcast(T_Args&&... InArgs);
@@ -63,6 +76,7 @@ namespace ck
     private:
         MulticastType _Multicast;
         ConnectionType _Connection;
+        static constexpr auto PostFireBehavior = T_PostFireBehavior;
 
     private:
         CK_PROPERTY(_Multicast);

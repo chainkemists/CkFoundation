@@ -17,11 +17,15 @@
 
 #define CK_DEFINE_SIGNAL_WITH_DELEGATE(_API_, _SignalName_, _MulticastName_, ...)\
     _API_ struct FFragment_Signal_UnrealMulticast_##_SignalName_ \
-    : public ck::TFragment_Signal_UnrealMulticast<_MulticastName_, __VA_ARGS__> {}
+    : public ck::TFragment_Signal_UnrealMulticast<_MulticastName_, ECk_Signal_PostFireBehavior::DoNothing, __VA_ARGS__> {};\
+    _API_ struct FFragment_Signal_UnrealMulticast_##_SignalName_##_PostFireUnbind \
+    : public ck::TFragment_Signal_UnrealMulticast<_MulticastName_, ECk_Signal_PostFireBehavior::Unbind, __VA_ARGS__> {}
 
 #define CK_DEFINE_SIGNAL_WITH_DELEGATE_UTILS(_API_, _SignalName_)\
     _API_ class UUtils_Signal_##_SignalName_ \
-    : public ck::TUtils_Signal_UnrealMulticast<FFragment_Signal_##_SignalName_, FFragment_Signal_UnrealMulticast_##_SignalName_> {}
+    : public ck::TUtils_Signal_UnrealMulticast<FFragment_Signal_##_SignalName_, FFragment_Signal_UnrealMulticast_##_SignalName_> {};\
+    _API_ class UUtils_Signal_##_SignalName_##_PostFireUnbind\
+    : public ck::TUtils_Signal_UnrealMulticast<FFragment_Signal_##_SignalName_, FFragment_Signal_UnrealMulticast_##_SignalName_##_PostFireUnbind> {}
 
 // --------------------------------------------------------------------------------------------------------------------
 // 'Meta' Macros for defining Signals and Utilities
