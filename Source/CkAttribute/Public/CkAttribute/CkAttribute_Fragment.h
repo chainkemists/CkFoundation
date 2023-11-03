@@ -195,6 +195,16 @@ namespace ck
     struct TFragment_Signal_UnrealMulticast_OnAttributeValueChanged : public TFragment_Signal_UnrealMulticast
     <
         T_Multicast,
+        ECk_Signal_PostFireBehavior::DoNothing,
+        FCk_Handle,
+        TPayload_Attribute_OnValueChanged<T_DerivedAttribute>
+    > {};
+
+    template<typename T_DerivedAttribute, typename T_Multicast>
+    struct TFragment_Signal_UnrealMulticast_OnAttributeValueChanged_PostFireUnbind : public TFragment_Signal_UnrealMulticast
+    <
+        T_Multicast,
+        ECk_Signal_PostFireBehavior::Unbind,
         FCk_Handle,
         TPayload_Attribute_OnValueChanged<T_DerivedAttribute>
     > {};
@@ -206,6 +216,13 @@ namespace ck
     <
         TFragment_Signal_OnAttributeValueChanged<T_DerivedAttribute>,
         TFragment_Signal_UnrealMulticast_OnAttributeValueChanged<T_DerivedAttribute, T_Multicast>
+    > {};
+
+    template<typename T_DerivedAttribute, typename T_Multicast>
+    class TUtils_Signal_OnAttributeValueChanged_PostFireUnbind : public TUtils_Signal_UnrealMulticast
+    <
+        TFragment_Signal_OnAttributeValueChanged<T_DerivedAttribute>,
+        TFragment_Signal_UnrealMulticast_OnAttributeValueChanged_PostFireUnbind<T_DerivedAttribute, T_Multicast>
     > {};
 
     // --------------------------------------------------------------------------------------------------------------------
