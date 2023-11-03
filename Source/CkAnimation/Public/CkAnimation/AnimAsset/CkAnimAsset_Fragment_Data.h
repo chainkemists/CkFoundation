@@ -11,16 +11,16 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKANIMATION_API FCk_Animation_AssetInfo
+struct CKANIMATION_API FCk_AnimAsset_Animation
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Animation_AssetInfo);
+    CK_GENERATED_BODY(FCk_AnimAsset_Animation);
 
 public:
-    FCk_Animation_AssetInfo() = default;
-    FCk_Animation_AssetInfo(
+    FCk_AnimAsset_Animation() = default;
+    FCk_AnimAsset_Animation(
         const FGameplayTag& InAlias,
         UAnimationAsset* InAnimation);
 
@@ -48,13 +48,13 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FCk_Animation_AssetInfo _AnimationAssetInfo;
+    FCk_AnimAsset_Animation _AnnimationAsset;
 
 public:
-    CK_PROPERTY_GET(_AnimationAssetInfo);
+    CK_PROPERTY_GET(_AnnimationAsset);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_AnimAsset_ParamsData, _AnimationAssetInfo);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_AnimAsset_ParamsData, _AnnimationAsset);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -82,7 +82,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimAsset",
               DisplayName="Get Animation Asset Info")
-    static FCk_Animation_AssetInfo
+    static FCk_AnimAsset_Animation
     Get_Animation(
         FCk_Handle InAnimAssetOwnerEntity,
         FGameplayTag InAnimName);

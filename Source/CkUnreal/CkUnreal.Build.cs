@@ -18,6 +18,7 @@ public class CkUnreal : CkModuleRules
             "NetworkTimeSync",
 
             "CkActor",
+            "CkAnimation",
             "CkAttribute",
             "CkCore",
             "CkEcs",
@@ -29,7 +30,7 @@ public class CkUnreal : CkModuleRules
             "CkPhysics",
             "CkProjectile",
             "CkRecord",
-            "CkTimer"
+            "CkTimer",
         });
     }
 }
