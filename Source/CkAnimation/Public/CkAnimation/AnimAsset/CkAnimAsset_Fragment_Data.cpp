@@ -2,8 +2,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Animation_AssetInfo::
-    FCk_Animation_AssetInfo(
+FCk_AnimAsset_Animation::
+    FCk_AnimAsset_Animation(
         const FGameplayTag& InAlias,
         UAnimationAsset* InAnimation)
     : _Alias(InAlias)

@@ -21,6 +21,7 @@ public class CkAnimation : CkModuleRules
             "CkEcsBasics",
             "CkLabel",
             "CkLog",
+            "CkNet",
             "CkRecord",
             "CkSignal",
         });
