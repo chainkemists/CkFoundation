@@ -15,3 +15,12 @@ enum class ECk_Signal_BindingPolicy : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Signal_BindingPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Signal_PostFireBehavior : uint8
+{
+    DoNothing,
+    Unbind
+};
+
+// --------------------------------------------------------------------------------------------------------------------
