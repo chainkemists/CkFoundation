@@ -17,7 +17,8 @@ public class CkActor : CkModuleRules
 
             "CkCore",
             "CkEcs",
-            "CkLog"
+            "CkLog",
+            "CkSignal"
         });
     }
 }

@@ -73,9 +73,9 @@ namespace ck
 
             const auto& SpawnedActor = UCk_Utils_Actor_UE::Request_SpawnActor(InRequest.Get_SpawnParams(), InRequest.Get_PreFinishSpawnFunc());
 
-            const auto& postSpawnParams = InRequest.Get_PostSpawnParams();
+            const auto& PostSpawnParams = InRequest.Get_PostSpawnParams();
 
-            switch (const auto& postSpawnPolicy = postSpawnParams.Get_PostSpawnPolicy())
+            switch (const auto& PostSpawnPolicy = PostSpawnParams.Get_PostSpawnPolicy())
             {
             case ECk_SpawnActor_PostSpawnPolicy::None:
             {
@@ -88,12 +88,12 @@ namespace ck
             };
             default:
             {
-                CK_INVALID_ENUM(postSpawnPolicy);
+                CK_INVALID_ENUM(PostSpawnPolicy);
                 break;
             };
             }
 
-            // TODO: fire ActorSpawned signal
+            UUtils_Signal_OnActorSpawned::Broadcast(InHandle, MakePayload(InHandle, SpawnedActor));
         }
 
         InHandle.Remove<FFragment_ActorModifier_SpawnActorRequests>();

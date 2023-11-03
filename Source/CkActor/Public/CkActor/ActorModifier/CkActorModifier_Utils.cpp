@@ -20,13 +20,13 @@ auto
     if (NOT UCk_Utils_OwningActor_UE::Ensure(InHandle))
     { return; }
 
-    auto& requestsComp = InHandle.AddOrGet<ck::FFragment_ActorModifier_SpawnActorRequests>();
-    requestsComp._Requests.Add(InRequest);
+    auto& RequestsComp = InHandle.AddOrGet<ck::FFragment_ActorModifier_SpawnActorRequests>();
+    RequestsComp._Requests.Add(InRequest);
 
     if (NOT InDelegate.IsBound())
     { return; }
 
-    // TODO: Allow binding to the internal signal
+    ck::UUtils_Signal_OnActorSpawned_PostFireUnbind::Bind(InHandle, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -42,8 +42,8 @@ auto
     if (NOT UCk_Utils_OwningActor_UE::Ensure(InHandle))
     { return; }
 
-    auto& requestsComp = InHandle.AddOrGet<ck::FFragment_ActorModifier_AddActorComponentRequests>();
-    requestsComp._Requests.Add(InRequest);
+    auto& RequestsComp = InHandle.AddOrGet<ck::FFragment_ActorModifier_AddActorComponentRequests>();
+    RequestsComp._Requests.Add(InRequest);
 
     if (NOT InDelegate.IsBound())
     { return; }
