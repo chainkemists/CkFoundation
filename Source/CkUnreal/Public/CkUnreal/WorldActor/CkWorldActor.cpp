@@ -1,6 +1,7 @@
 #include "CkWorldActor.h"
 
 #include "CkActor/ActorModifier/CkActorModifier_Processor.h"
+#include "CkAnimation/AnimState/CkAnimState_Processor.h"
 
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Processor.h"
 
@@ -65,6 +66,8 @@ namespace ck_world_actor
         InWorld.Add<ck::FProcessor_Marker_HandleRequests>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_Sensor_HandleRequests>(InWorld.Get_Registry());
 
+        InWorld.Add<ck::FProcessor_AnimState_HandleRequests>(InWorld.Get_Registry());
+
         InWorld.Add<ck::FProcessor_Timer_HandleRequests>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_Timer_Update>(InWorld.Get_Registry());
 
@@ -110,6 +113,7 @@ namespace ck_world_actor
             InWorld.Add<ck::FProcessor_Acceleration_Replicate>(InWorld.Get_Registry());
             InWorld.Add<ck::FProcessor_Acceleration_Replicate>(InWorld.Get_Registry());
             InWorld.Add<ck::FProcessor_Transform_Replicate>(InWorld.Get_Registry());
+            InWorld.Add<ck::FProcessor_AnimState_Replicate>(InWorld.Get_Registry());
         }
 
         InWorld.Add<ck::FProcessor_RecordEntry_Destructor>(InWorld.Get_Registry());
