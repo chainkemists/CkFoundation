@@ -69,12 +69,12 @@ auto
         const AActor* InActor)
     -> FCk_EntityOwningActor_BasicDetails
 {
-    const auto& actorEcsHandle = Get_ActorEcsHandle(InActor);
+    const auto& ActorEcsHandle = Get_ActorEcsHandle(InActor);
 
-    if (ck::Is_NOT_Valid(actorEcsHandle))
+    if (ck::Is_NOT_Valid(ActorEcsHandle))
     { return {}; }
 
-    return Get_EntityOwningActorBasicDetails(actorEcsHandle);
+    return Get_EntityOwningActorBasicDetails(ActorEcsHandle);
 }
 
 auto
@@ -86,14 +86,14 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Cannot get the ECS Handle of Actor because it is invalid!"))
     { return {}; }
 
-    const auto& entityOwningActorComp = InActor->FindComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
+    const auto& EntityOwningActorComp = InActor->FindComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(entityOwningActorComp),
+    CK_ENSURE_IF_NOT(ck::IsValid(EntityOwningActorComp),
         TEXT("Actor [{}] does NOT have an Entity Owning Actor Unreal Actor Component! This means it is not ECS ready."),
         InActor)
     { return {}; }
 
-    return entityOwningActorComp->Get_EntityHandle();
+    return EntityOwningActorComp->Get_EntityHandle();
 }
 
 auto
@@ -105,9 +105,9 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Cannot check if Actor is ECS ready because it is invalid!"))
     { return {}; }
 
-    const auto& entityOwningActorComp = InActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
+    const auto& EntityOwningActorComp = InActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
 
-    return ck::IsValid(entityOwningActorComp);
+    return ck::IsValid(EntityOwningActorComp);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
