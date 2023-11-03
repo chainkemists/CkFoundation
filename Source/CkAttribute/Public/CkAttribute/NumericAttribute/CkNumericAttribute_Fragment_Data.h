@@ -257,6 +257,17 @@ namespace ck
     struct FFragment_Signal_UnrealMulticast_OnNumericAttributeValueChanged : public TFragment_Signal_UnrealMulticast
     <
         FCk_Delegate_NumericAttribute_OnValueChanged_MC,
+        ECk_Signal_PostFireBehavior::DoNothing,
+        FCk_Handle,
+        FCk_Payload_NumericAttribute_OnValueChanged
+    > {};
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct FFragment_Signal_UnrealMulticast_OnNumericAttributeValueChanged_PostFireUnbind : public TFragment_Signal_UnrealMulticast
+    <
+        FCk_Delegate_NumericAttribute_OnValueChanged_MC,
+        ECk_Signal_PostFireBehavior::Unbind,
         FCk_Handle,
         FCk_Payload_NumericAttribute_OnValueChanged
     > {};
@@ -266,6 +277,13 @@ namespace ck
     class UUtils_Signal_NumericOnAttributeValueChanged : public TUtils_Signal_UnrealMulticast
     <
         FFragment_Signal_OnNumericAttributeValueChanged,
+        FFragment_Signal_UnrealMulticast_OnNumericAttributeValueChanged
+    > {};
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class UUtils_Signal_NumericOnAttributeValueChanged_PostFireUnbind : public TUtils_Signal_UnrealMulticast
+    <
+        FFragment_Signal_UnrealMulticast_OnNumericAttributeValueChanged_PostFireUnbind,
         FFragment_Signal_UnrealMulticast_OnNumericAttributeValueChanged
     > {};
 }

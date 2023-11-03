@@ -180,6 +180,7 @@ public:
         FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         ECk_Signal_BindingPolicy InBehavior,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_MeterAttribute_OnValueChanged& InDelegate);
 
     UFUNCTION(BlueprintCallable,

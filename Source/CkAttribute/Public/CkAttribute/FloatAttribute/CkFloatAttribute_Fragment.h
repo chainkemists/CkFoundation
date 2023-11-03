@@ -70,6 +70,9 @@ namespace ck
     using UUtils_Signal_OnFloatAttributeValueChanged = TUtils_Signal_OnAttributeValueChanged<
         FFragment_FloatAttribute, FCk_Delegate_FloatAttribute_OnValueChanged_MC>;
 
+    using UUtils_Signal_OnFloatAttributeValueChanged_PostFireUnbind = TUtils_Signal_OnAttributeValueChanged_PostFireUnbind<
+        FFragment_FloatAttribute, FCk_Delegate_FloatAttribute_OnValueChanged_MC>;
+
     // --------------------------------------------------------------------------------------------------------------------
 
     class FProcessor_FloatAttribute_Replicate;
