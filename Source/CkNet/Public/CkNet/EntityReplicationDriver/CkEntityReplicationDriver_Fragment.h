@@ -65,6 +65,7 @@ class CKNET_API UCk_Fragment_EntityReplicationDriver_Rep : public UCk_Ecs_Replic
     GENERATED_BODY()
 
 public:
+    friend class UCk_Utils_EntityReplicationDriver_UE;
     CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_EntityReplicationDriver_Rep);
 
 public:
@@ -77,6 +78,12 @@ private:
         TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
 
 private:
+    UFUNCTION(Server, Reliable)
+    void
+    Request_Replicate_NonReplicatedActor(
+        FCk_EntityReplicationDriver_ConstructionInfo_NonReplicatedActor InConstructionInfo);
+
+private:
     UFUNCTION()
     void
     OnRep_ReplicationData();
@@ -84,6 +91,10 @@ private:
     UFUNCTION()
     void
     OnRep_ReplicationData_ReplicatedActor();
+
+    UFUNCTION()
+    void
+    OnRep_ReplicationData_NonReplicatedActor();
 
     UFUNCTION()
     void
@@ -95,6 +106,9 @@ private:
 
     UPROPERTY(ReplicatedUsing = OnRep_ReplicationData_ReplicatedActor)
     FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor _ReplicationData_ReplicatedActor;
+
+    UPROPERTY(ReplicatedUsing = OnRep_ReplicationData_NonReplicatedActor)
+    FCk_EntityReplicationDriver_ConstructionInfo_NonReplicatedActor _ReplicationData_NonReplicatedActor;
 
     UPROPERTY(ReplicatedUsing = OnRep_ExpectedNumberOfDependentReplicationDrivers)
     int32 _ExpectedNumberOfDependentReplicationDrivers = -1;
@@ -114,6 +128,7 @@ public:
     // TODO: reduce the exposure of this variable
     CK_PROPERTY(_ReplicationData);
     CK_PROPERTY(_ReplicationData_ReplicatedActor);
+    CK_PROPERTY(_ReplicationData_NonReplicatedActor);
     CK_PROPERTY(_ExpectedNumberOfDependentReplicationDrivers);
 };
 
