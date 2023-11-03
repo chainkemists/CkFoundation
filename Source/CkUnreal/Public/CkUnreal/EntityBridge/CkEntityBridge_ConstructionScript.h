@@ -47,6 +47,9 @@ private:
 
 public:
     UFUNCTION(BlueprintCallable)
+    void Request_ReplicateNonReplicatedActor();
+
+    UFUNCTION(BlueprintCallable)
     bool Get_IsReplicationComplete() const;
 
     UPROPERTY(EditDefaultsOnly)
