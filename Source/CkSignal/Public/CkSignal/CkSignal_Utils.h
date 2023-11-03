@@ -23,17 +23,19 @@ namespace ck
         template <typename... T_Args>
         static auto Broadcast(FCk_Handle InHandle, TPayload<T_Args...>&& InPayload);
 
-        template <auto T_Candidate, ECk_Signal_BindingPolicy InPayloadInFlightBehavior>
+        template <auto T_Candidate, ECk_Signal_BindingPolicy InPayloadInFlightBehavior, ECk_Signal_PostFireBehavior InPostFireBehavior>
         static auto Bind(FCk_Handle InHandle);
 
-        template <auto T_Candidate,  ECk_Signal_BindingPolicy InPayloadInFlightBehavior, typename T_Instance>
+        template <auto T_Candidate,  ECk_Signal_BindingPolicy InPayloadInFlightBehavior, ECk_Signal_PostFireBehavior InPostFireBehavior,
+            typename T_Instance>
         static auto Bind(T_Instance&& InInstance, FCk_Handle InHandle);
 
         template <auto T_Candidate>
-        static auto Bind(FCk_Handle InHandle, ECk_Signal_BindingPolicy InPayloadInFlightBehavior);
+        static auto Bind(FCk_Handle InHandle, ECk_Signal_BindingPolicy InPayloadInFlightBehavior, ECk_Signal_PostFireBehavior InPostFireBehavior);
 
         template <auto T_Candidate, typename T_Instance>
-        static auto Bind(T_Instance&& InInstance, FCk_Handle InHandle, ECk_Signal_BindingPolicy InPayloadInFlightBehavior);
+        static auto Bind(T_Instance&& InInstance, FCk_Handle InHandle, ECk_Signal_BindingPolicy InPayloadInFlightBehavior,
+            ECk_Signal_PostFireBehavior InPostFireBehavior);
 
         template <auto T_Candidate>
         static auto Unbind(FCk_Handle InHandle);
@@ -64,12 +66,21 @@ namespace ck
         using Super::Unbind;
 
         template <ECk_Signal_BindingPolicy T_PayloadInFlightBehavior>
-        static auto Bind(FCk_Handle InHandle,
-                         UnrealDynamicDelegateType InDelegate);
+        static auto
+        Bind(
+            FCk_Handle InHandle,
+            UnrealDynamicDelegateType InDelegate);
 
-        static auto Bind(FCk_Handle InHandle, UnrealDynamicDelegateType InDelegate, ECk_Signal_BindingPolicy InPayloadInFlightBehavior);
+        static auto
+        Bind(
+            FCk_Handle InHandle,
+            UnrealDynamicDelegateType InDelegate,
+            ECk_Signal_BindingPolicy InPayloadInFlightBehavior);
 
-        static auto Unbind(FCk_Handle InHandle, UnrealDynamicDelegateType InDelegate);
+        static auto
+        Unbind(
+            FCk_Handle InHandle,
+            UnrealDynamicDelegateType InDelegate);
     };
 
 }
