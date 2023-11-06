@@ -209,7 +209,8 @@ auto
     if (NOT Ensure(InEntity))
     { return; }
 
-    ck::UUtils_Signal_OnDependentsReplicationComplete::Bind(InEntity, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
+    ck::UUtils_Signal_OnDependentsReplicationComplete_PostFireUnbind::Bind(
+        InEntity, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
