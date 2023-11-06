@@ -125,7 +125,7 @@ auto
 
         // --------------------------------------------------------------------------------------------------------------------
         // LINK TO ACTOR
-        // EcsConstructionScript is a bit special in that it readies everything immediately instead of deferring the operation
+        // EntityBridge is a bit special in that it readies everything immediately instead of deferring the operation
 
         // We need the EntityOwningActor ActorComponent to exist before building the Entity from Config
 
@@ -264,7 +264,7 @@ auto
         EntityConfig->Get_EntityConstructionScript()->Construct(NewEntity);
     }
 
-    TryInvoke_OnReplicationComplete(EInvoke_Caller::EcsConstructionScript);
+    TryInvoke_OnReplicationComplete(EInvoke_Caller::EntityBridge);
 }
 
 auto
@@ -291,7 +291,7 @@ auto
 
             return;
         }
-        case EInvoke_Caller::EcsConstructionScript:
+        case EInvoke_Caller::EntityBridge:
         {
             if (_ReplicationComplete_BroadcastStep == EOnReplicationCompleteBroadcastStep::Wait)
             { _ReplicationComplete_BroadcastStep = EOnReplicationCompleteBroadcastStep::WaitOnReplicationDriver; }

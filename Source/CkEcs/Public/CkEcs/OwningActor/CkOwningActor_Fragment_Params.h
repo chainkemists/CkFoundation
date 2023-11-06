@@ -85,7 +85,7 @@ private:
     enum class EInvoke_Caller
     {
         ReplicationDriver,
-        EcsConstructionScript,
+        EntityBridge,
     };
 
 private:
