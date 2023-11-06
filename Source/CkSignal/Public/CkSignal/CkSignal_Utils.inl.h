@@ -249,10 +249,20 @@ namespace ck
 
         if (NOT UnrealMulticast._Connection)
         {
-            //SignalType s;
-            //s._Invoke_Sink.connect<&T_DerivedSignal_Unreal::DoBroadcast>(UnrealMulticast);
             auto Connection = Super::Bind <&T_DerivedSignal_Unreal::DoBroadcast>(
                 UnrealMulticast, InHandle, T_PayloadInFlightBehavior, T_DerivedSignal_Unreal::PostFireBehavior);
+
+            CK_ENSURE_IF_NOT(((UnrealMulticast._Multicast.IsBound() && Connection) ||
+                (NOT UnrealMulticast._Multicast.IsBound() && NOT Connection)),
+                TEXT("Our assumption that when we receive a valid Connection that we also have Bound multicasts is INVALID. "
+                    "We may receive an invalid Connection IFF the above previous Bind broadcasts payloads in flight AND the post-fire "
+                    "behavior was to unbind; in which case, the Multicast is cleared (see DoBroadcast). The assumption of this "
+                    "ensure check must hold true. If not, either this assumption is incorrect OR this is a symptom of a larger "
+                    "problem.\n\nContext: Entity [{}] trying to bind with [{}]"),
+                InHandle,
+                InDelegate.GetFunctionName().ToString())
+            { return; }
+
             UnrealMulticast._Connection = Connection;
         }
     }
