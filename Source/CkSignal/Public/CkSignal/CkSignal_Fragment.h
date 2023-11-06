@@ -79,8 +79,8 @@ namespace ck
         static constexpr auto PostFireBehavior = T_PostFireBehavior;
 
     private:
-        CK_PROPERTY(_Multicast);
         CK_PROPERTY(_Connection);
+        CK_PROPERTY(_Multicast);
     };
 }
 

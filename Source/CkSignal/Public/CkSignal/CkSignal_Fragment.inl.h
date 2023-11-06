@@ -43,11 +43,8 @@ namespace ck
         {
             _Multicast.Clear();
 
-            CK_ENSURE_IF_NOT(_Connection,
-                TEXT("Expected entt::connection to be valid considering we were bound and just received a broadcast"))
-            { return; }
-
-            _Connection.release();
+            if (_Connection)
+            { _Connection.release(); }
         }
     }
 
