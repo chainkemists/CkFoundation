@@ -21,19 +21,19 @@ public:
 public:
     FCk_AnimAsset_Animation() = default;
     FCk_AnimAsset_Animation(
-        const FGameplayTag& InAlias,
+        const FGameplayTag& InID,
         UAnimationAsset* InAnimation);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FGameplayTag _Alias;
+    FGameplayTag _ID;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     TObjectPtr<UAnimationAsset> _Animation;
 
 public:
     CK_PROPERTY_GET(_Animation);
-    CK_PROPERTY_GET(_Alias);
+    CK_PROPERTY_GET(_ID);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -48,13 +48,13 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FCk_AnimAsset_Animation _AnnimationAsset;
+    FCk_AnimAsset_Animation _AnimationAsset;
 
 public:
-    CK_PROPERTY_GET(_AnnimationAsset);
+    CK_PROPERTY_GET(_AnimationAsset);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_AnimAsset_ParamsData, _AnnimationAsset);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_AnimAsset_ParamsData, _AnimationAsset);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

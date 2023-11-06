@@ -4,9 +4,9 @@
 
 FCk_AnimAsset_Animation::
     FCk_AnimAsset_Animation(
-        const FGameplayTag& InAlias,
+        const FGameplayTag& InID,
         UAnimationAsset* InAnimation)
-    : _Alias(InAlias)
+    : _ID(InID)
     , _Animation(InAnimation)
 {
 }
