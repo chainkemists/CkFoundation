@@ -105,7 +105,7 @@ auto
         FCk_Handle InSensorOwnerEntity)
     -> TArray<FGameplayTag>
 {
-    if (NOT RecordOfSensors_Utils::Has(InSensorOwnerEntity))
+    if (NOT Has_Any(InSensorOwnerEntity))
     { return {}; }
 
     const auto& sensorEntities = RecordOfSensors_Utils::Get_AllRecordEntries(InSensorOwnerEntity);
@@ -123,7 +123,7 @@ auto
         FCk_Handle InHandle)
     -> void
 {
-    if (NOT RecordOfSensors_Utils::Has(InHandle))
+    if (NOT Has_Any(InHandle))
     { return; }
 
     RecordOfSensors_Utils::ForEachEntry(InHandle, [&](FCk_Handle InSensorEntity)

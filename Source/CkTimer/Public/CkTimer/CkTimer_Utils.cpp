@@ -106,7 +106,7 @@ auto
         FCk_Handle InTimerOwnerEntity)
     -> TArray<FGameplayTag>
 {
-    if (NOT RecordOfTimers_Utils::Has(InTimerOwnerEntity))
+    if (NOT Has_Any(InTimerOwnerEntity))
     { return {}; }
 
     const auto& timerEntities = RecordOfTimers_Utils::Get_AllRecordEntries(InTimerOwnerEntity);

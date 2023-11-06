@@ -109,7 +109,7 @@ auto
         FCk_Handle InMarkerOwnerEntity)
     -> TArray<FGameplayTag>
 {
-    if (NOT RecordOfMarkers_Utils::Has(InMarkerOwnerEntity))
+    if (NOT Has_Any(InMarkerOwnerEntity))
     { return {}; }
 
     const auto& markerEntities = RecordOfMarkers_Utils::Get_AllRecordEntries(InMarkerOwnerEntity);
@@ -127,7 +127,7 @@ auto
         FCk_Handle InHandle)
     -> void
 {
-    if (NOT RecordOfMarkers_Utils::Has(InHandle))
+    if (NOT Has_Any(InHandle))
     { return; }
 
     RecordOfMarkers_Utils::ForEachEntry(InHandle, [&](FCk_Handle InMarkerEntity)
