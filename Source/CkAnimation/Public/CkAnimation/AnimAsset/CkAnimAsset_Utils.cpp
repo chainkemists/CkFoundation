@@ -18,7 +18,7 @@ auto
     ck::UCk_Utils_OwningEntity::Add(NewAnimAssetEntity, InHandle);
 
     NewAnimAssetEntity.Add<ck::FFragment_AnimAsset_Params>(InParams);
-    UCk_Utils_GameplayLabel_UE::Add(NewAnimAssetEntity, InParams.Get_AnnimationAsset().Get_Alias());
+    UCk_Utils_GameplayLabel_UE::Add(NewAnimAssetEntity, InParams.Get_AnimationAsset().Get_ID());
 
     RecordOfAnimAssets_Utils::Request_Connect(InHandle, NewAnimAssetEntity);
 }
@@ -90,7 +90,7 @@ auto
         FCk_Handle InAnimAssetOwnerEntity)
     -> TArray<FGameplayTag>
 {
-    if (NOT RecordOfAnimAssets_Utils::Has(InAnimAssetOwnerEntity))
+    if (NOT Has_Any(InAnimAssetOwnerEntity))
     { return {}; }
 
     const auto& AnimAssetEntities = RecordOfAnimAssets_Utils::Get_AllRecordEntries(InAnimAssetOwnerEntity);
@@ -107,7 +107,6 @@ auto
         FCk_Handle   InAnimAssetOwnerEntity,
         FGameplayTag InAnimName)
     -> FCk_AnimAsset_Animation
-
 {
     if (NOT Ensure(InAnimAssetOwnerEntity, InAnimName))
     { return {}; }
@@ -117,7 +116,7 @@ auto
 
     const auto& AnimAssetParams = AnimAssetEntity.Get<ck::FFragment_AnimAsset_Params>().Get_Params();
 
-    return AnimAssetParams.Get_AnnimationAsset();
+    return AnimAssetParams.Get_AnimationAsset();
 }
 
 auto

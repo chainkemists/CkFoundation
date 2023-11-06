@@ -42,6 +42,9 @@ auto
         FCk_Handle InHandle)
     -> FCk_AnimState_Goal
 {
+    if (NOT Ensure(InHandle))
+    { return {}; }
+
     return InHandle.Get<ck::FFragment_AnimState_Current>().Get_AnimGoal();
 }
 
@@ -51,6 +54,9 @@ auto
         FCk_Handle InHandle)
     -> FCk_AnimState_State
 {
+    if (NOT Ensure(InHandle))
+    { return {}; }
+
     return InHandle.Get<ck::FFragment_AnimState_Current>().Get_AnimState();
 }
 
@@ -60,6 +66,9 @@ auto
         FCk_Handle InHandle)
     -> FCk_AnimState_Cluster
 {
+    if (NOT Ensure(InHandle))
+    { return {}; }
+
     return InHandle.Get<ck::FFragment_AnimState_Current>().Get_AnimCluster();
 }
 
@@ -69,6 +78,9 @@ auto
         FCk_Handle InHandle)
     -> FCk_AnimState_Overlay
 {
+    if (NOT Ensure(InHandle))
+    { return {}; }
+
     return InHandle.Get<ck::FFragment_AnimState_Current>().Get_AnimOverlay();
 }
 
@@ -145,6 +157,9 @@ auto
         const FCk_Delegate_AnimState_OnGoalChanged& InDelegate)
     -> void
 {
+    if (NOT Ensure(InHandle))
+    { return; }
+
     ck::UUtils_Signal_AnimState_OnGoalChanged::Unbind(InHandle, InDelegate);
 }
 
@@ -156,6 +171,9 @@ auto
         const FCk_Delegate_AnimState_OnStateChanged& InDelegate)
     -> void
 {
+    if (NOT Ensure(InHandle))
+    { return; }
+
     ck::UUtils_Signal_AnimState_OnStateChanged::Bind(InHandle, InDelegate, InBehavior);
 }
 
@@ -166,6 +184,9 @@ auto
         const FCk_Delegate_AnimState_OnStateChanged& InDelegate)
     -> void
 {
+    if (NOT Ensure(InHandle))
+    { return; }
+
     ck::UUtils_Signal_AnimState_OnStateChanged::Unbind(InHandle, InDelegate);
 }
 
@@ -177,6 +198,9 @@ auto
         const FCk_Delegate_AnimState_OnClusterChanged& InDelegate)
     -> void
 {
+    if (NOT Ensure(InHandle))
+    { return; }
+
     ck::UUtils_Signal_AnimState_OnClusterChanged::Bind(InHandle, InDelegate, InBehavior);
 }
 
@@ -187,6 +211,9 @@ auto
         const FCk_Delegate_AnimState_OnClusterChanged& InDelegate)
     -> void
 {
+    if (NOT Ensure(InHandle))
+    { return; }
+
     ck::UUtils_Signal_AnimState_OnClusterChanged::Unbind(InHandle, InDelegate);
 }
 
@@ -198,6 +225,9 @@ auto
         const FCk_Delegate_AnimState_OnOverlayChanged& InDelegate)
     -> void
 {
+    if (NOT Ensure(InHandle))
+    { return; }
+
     ck::UUtils_Signal_AnimState_OnOverlayChanged::Bind(InHandle, InDelegate, InBehavior);
 }
 
@@ -208,6 +238,9 @@ auto
         const FCk_Delegate_AnimState_OnOverlayChanged& InDelegate)
     -> void
 {
+    if (NOT Ensure(InHandle))
+    { return; }
+
     ck::UUtils_Signal_AnimState_OnOverlayChanged::Unbind(InHandle, InDelegate);
 }
 
