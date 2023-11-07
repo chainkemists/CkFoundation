@@ -27,10 +27,10 @@ auto
     UCk_Utils_AnimAsset_UE::
     AddMultiple(
         FCk_Handle InHandle,
-        const TArray<FCk_Fragment_AnimAsset_ParamsData>& InParams)
+        const FCk_Fragment_MultipleAnimAsset_ParamsData& InParams)
     -> void
 {
-    for (const auto& params : InParams)
+    for (const auto& params : InParams.Get_AnimAssetParams())
     {
         Add(InHandle, params);
     }
