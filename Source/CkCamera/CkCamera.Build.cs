@@ -1,9 +1,9 @@
 using System.IO;
 using UnrealBuildTool;
 
-public class CkUnreal : CkModuleRules
+public class CkCamera : CkModuleRules
 {
-    public CkUnreal(ReadOnlyTargetRules Target) : base(Target)
+    public CkCamera(ReadOnlyTargetRules Target) : base(Target)
     {
         PrivateIncludePaths.AddRange(new string[] {
             // ... add other private include paths required here ...
@@ -14,24 +14,16 @@ public class CkUnreal : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
+            "GameplayTags",
 
-            "NetworkTimeSync",
-
-            "CkActor",
-            "CkAnimation",
-            "CkAttribute",
-            "CkCamera",
             "CkCore",
             "CkEcs",
             "CkEcsBasics",
-            "CkIntent",
-            "CkNet",
+            "CkLabel",
             "CkLog",
-            "CkOverlapBody",
-            "CkPhysics",
-            "CkProjectile",
             "CkRecord",
-            "CkTimer",
+            "CkSettings",
+            "CkSignal",
         });
     }
 }
