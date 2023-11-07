@@ -56,19 +56,25 @@ namespace ck
 
         const auto& TargetPlayerController = Cast<APlayerController>(TargetOwningActor->GetInstigatorController());
 
-        CK_ENSURE_IF_NOT(ck::IsValid(TargetPlayerController), TEXT("Camera Shake Targets an Entity [{}] that is NO valid Player Controller!"), TargetEntity)
-        { return; }
+        if (ck::Is_NOT_Valid(TargetPlayerController))
+        {
+            camera::VeryVerbose(TEXT("Camera Shake Targets an Entity [{}] that is NO valid Player Controller!"), TargetEntity);
+            return;
+        }
 
         const auto& CameraManager = TargetPlayerController->PlayerCameraManager;
 
-        CK_ENSURE_IF_NOT(ck::IsValid(CameraManager), TEXT("Camera Shake Targets an Entity [{}] with Player Controller [{}] but has NO Player Camera Manager!"), TargetEntity, TargetPlayerController)
-        { return; }
+        if (ck::Is_NOT_Valid(CameraManager))
+        {
+            camera::VeryVerbose(TEXT("Camera Shake Targets an Entity [{}] with Player Controller [{}] but has NO Player Camera Manager!"), TargetEntity, TargetPlayerController);
+            return;
+        }
 
         const auto& Params = InParams.Get_Params();
         const auto& CameraShake = Params.Get_CameraShake();
         const auto& Scale = Params.Get_Scale();
 
-        camera::Verbose(TEXT("Playing CameraShake [{}] on Target Entity [{}] with Player Controller [{}]"), CameraShake, TargetEntity, TargetPlayerController);
+        camera::VeryVerbose(TEXT("Playing CameraShake [{}] on Target Entity [{}] with Player Controller [{}]"), CameraShake, TargetEntity, TargetPlayerController);
 
         CameraManager->StartCameraShake(CameraShake, Scale);
     }
@@ -94,7 +100,7 @@ namespace ck
         const auto& OrientTowardsEpicenter = Params.Get_OrientTowardsEpicenter();
         const auto& ShakeLocation          = InRequest.Get_Location();
 
-        camera::Verbose(TEXT("Playing CameraShake [{}] at Location [{}]"), CameraShake, ShakeLocation);
+        camera::VeryVerbose(TEXT("Playing CameraShake [{}] at Location [{}]"), CameraShake, ShakeLocation);
 
         UGameplayStatics::PlayWorldCameraShake(WorldContextObject->GetWorld(), CameraShake, ShakeLocation, InnerRadius, OuterRadius, FallOff, OrientTowardsEpicenter);
     }
