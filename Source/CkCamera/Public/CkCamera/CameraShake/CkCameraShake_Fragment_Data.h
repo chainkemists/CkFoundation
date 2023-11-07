@@ -228,3 +228,21 @@ private:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKCAMERA_API FCk_Provider_MultipleCameraShake_ParamsData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Provider_MultipleCameraShake_ParamsData);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, meta = (AllowPrivateAccess = true))
+    TObjectPtr<UCk_Provider_MultipleCameraShake_ParamsData_PDA> _Provider;
+
+public:
+    CK_PROPERTY_GET(_Provider);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
