@@ -39,7 +39,7 @@ public:
     static void
     AddMultiple(
         FCk_Handle InHandle,
-        const TArray<FCk_Fragment_AnimAsset_ParamsData>& InParams);
+        const FCk_Fragment_MultipleAnimAsset_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimAsset",
