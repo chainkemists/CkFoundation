@@ -56,10 +56,10 @@ auto
     UCk_Utils_Timer_UE::
     AddMultiple(
         FCk_Handle                                   InHandle,
-        const TArray<FCk_Fragment_Timer_ParamsData>& InParams)
+        const FCk_Fragment_MultipleTimer_ParamsData& InParams)
     -> void
 {
-    for (const auto& params : InParams)
+    for (const auto& params : InParams.Get_TimerParams())
     {
         Add(InHandle, params);
     }

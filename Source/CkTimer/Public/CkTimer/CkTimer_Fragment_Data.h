@@ -86,6 +86,26 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Timer_ParamsData, _Duration);
 };
 
+USTRUCT(BlueprintType)
+struct CKTIMER_API FCk_Fragment_MultipleTimer_ParamsData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Fragment_MultipleTimer_ParamsData);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<FCk_Fragment_Timer_ParamsData> _TimerParams;
+
+public:
+    CK_PROPERTY_GET(_TimerParams)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleTimer_ParamsData, _TimerParams);
+};
+
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
