@@ -173,3 +173,21 @@ private:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKANIMATION_API FCk_Provider_MultipleAnimAsset_ParamsData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Provider_MultipleAnimAsset_ParamsData);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, meta = (AllowPrivateAccess = true))
+    TObjectPtr<UCk_Provider_MultipleAnimAsset_ParamsData_PDA> _Provider;
+
+public:
+    CK_PROPERTY_GET(_Provider);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
