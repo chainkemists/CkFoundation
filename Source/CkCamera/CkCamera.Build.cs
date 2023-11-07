@@ -21,6 +21,7 @@ public class CkCamera : CkModuleRules
             "CkEcsBasics",
             "CkLabel",
             "CkLog",
+            "CkProvider",
             "CkRecord",
             "CkSettings",
             "CkSignal",
