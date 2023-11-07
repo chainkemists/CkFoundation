@@ -1,9 +1,12 @@
 #include "CkWorldActor.h"
 
 #include "CkActor/ActorModifier/CkActorModifier_Processor.h"
+
 #include "CkAnimation/AnimState/CkAnimState_Processor.h"
 
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Processor.h"
+
+#include "CkCamera/CameraShake/CkCameraShake_Processor.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Processor.h"
 #include "CkEcs/OwningActor/CkOwningActor_Processors.h"
@@ -105,7 +108,7 @@ namespace ck_world_actor
 
         InWorld.Add<ck::FProcessor_FloatAttribute_FireSignals>(InWorld.Get_Registry());
 
-        // TODO: Add FloatAttribute_FireSignals processor
+        InWorld.Add<ck::FProcessor_CameraShake_HandleRequests>(InWorld.Get_Registry());
 
         // Processors for Replication
         {
