@@ -44,7 +44,7 @@ public:
     static void
     AddMultiple(
         FCk_Handle InHandle,
-        const TArray<FCk_Fragment_Timer_ParamsData>& InParams);
+        const FCk_Fragment_MultipleTimer_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Timer",
