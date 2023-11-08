@@ -109,21 +109,6 @@ void
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(Get_AssociatedEntity());
 }
 
-auto
-    UCk_Ecs_ReplicatedObject_UE::
-    Request_TriggerDestroyAssociatedEntity_Implementation()
-    -> void
-{
-    if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
-    { return; }
-
-    if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(Get_AssociatedEntity()))
-    { return; }
-
-    _AssociatedEntity.Add<ck::FTag_TriggerDestroyEntity>();
-    _AssociatedEntity = {};
-}
-
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
