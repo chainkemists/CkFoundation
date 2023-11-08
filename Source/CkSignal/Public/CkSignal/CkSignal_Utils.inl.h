@@ -67,7 +67,8 @@ namespace ck
         auto& Signal = InHandle.AddOrGet<SignalType>();
         using ReturnType = decltype(Signal._InvokeAndUnbind_Sink.template connect<T_Candidate>());
 
-        if (ck::IsValid(Signal._Payload) && Signal._PayloadFrameNumber == GFrameCounter)
+        if (ck::IsValid(Signal._Payload) && (Signal._PayloadFrameNumber == GFrameCounter ||
+            T_PayloadInFlightBehavior == ECk_Signal_BindingPolicy::FireIfPayloadInFlight))
         {
             // If the behavior is to Unbind, we do not need to 'connect' this candidate to the Signal
             if (BroadcastIfPayloadInFlight(*Signal._Payload) && InPostFireBehavior == ECk_Signal_PostFireBehavior::Unbind)
@@ -105,7 +106,8 @@ namespace ck
         auto& Signal = InHandle.AddOrGet<SignalType>();
         using ReturnType = decltype(Signal._InvokeAndUnbind_Sink.template connect<T_Candidate>(InInstance));
 
-        if (ck::IsValid(Signal._Payload) && Signal._PayloadFrameNumber == GFrameCounter)
+        if (ck::IsValid(Signal._Payload) && (Signal._PayloadFrameNumber == GFrameCounter ||
+            T_PayloadInFlightBehavior == ECk_Signal_BindingPolicy::FireIfPayloadInFlight))
         {
             // See notes in the other Bind function
             if (BroadcastIfPayloadInFlight(*Signal._Payload) && InPostFireBehavior == ECk_Signal_PostFireBehavior::Unbind)
@@ -131,6 +133,13 @@ namespace ck
 
         switch(InPayloadInFlightBehavior)
         {
+            case ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame:
+            {
+                if (InPostFireBehavior == ECk_Signal_PostFireBehavior::DoNothing)
+                { return Bind<T_Candidate, ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame, ECk_Signal_PostFireBehavior::DoNothing>(InHandle); }
+
+                return Bind<T_Candidate, ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame, ECk_Signal_PostFireBehavior::Unbind>(InHandle);
+            }
             case ECk_Signal_BindingPolicy::FireIfPayloadInFlight:
             {
                 if (InPostFireBehavior == ECk_Signal_PostFireBehavior::DoNothing)
@@ -168,6 +177,17 @@ namespace ck
 
         switch(InPayloadInFlightBehavior)
         {
+            case ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame:
+            {
+                if (InPostFireBehavior == ECk_Signal_PostFireBehavior::DoNothing)
+                {
+                    return Bind<T_Candidate, ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame, ECk_Signal_PostFireBehavior::DoNothing>(
+                        std::forward<T_Instance>(InInstance), InHandle);
+                }
+
+                return Bind<T_Candidate, ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame, ECk_Signal_PostFireBehavior::Unbind>(
+                    std::forward<T_Instance>(InInstance), InHandle);
+            }
             case ECk_Signal_BindingPolicy::FireIfPayloadInFlight:
             {
                 if (InPostFireBehavior == ECk_Signal_PostFireBehavior::DoNothing)
@@ -277,6 +297,11 @@ namespace ck
     {
         switch(InPayloadInFlightBehavior)
         {
+            case ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame:
+            {
+                Bind<ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame>(InHandle, InDelegate);
+                break;
+            }
             case ECk_Signal_BindingPolicy::FireIfPayloadInFlight:
             {
                 Bind<ECk_Signal_BindingPolicy::FireIfPayloadInFlight>(InHandle, InDelegate);

@@ -8,6 +8,7 @@
 UENUM(BlueprintType)
 enum class ECk_Signal_BindingPolicy : uint8
 {
+    FireIfPayloadInFlightThisFrame,
     FireIfPayloadInFlight,
     IgnorePayloadInFlight
 };
