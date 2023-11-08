@@ -69,7 +69,6 @@ public:
         UCk_Ecs_ReplicatedObject_UE* InRo) -> void;
 
 public:
-    auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
     auto BeginDestroy() -> void override;
     auto PreDestroyFromReplication() -> void override;
 
@@ -81,8 +80,9 @@ protected:
     UPROPERTY(Transient)
     FCk_Handle _AssociatedEntity;
 
-    UPROPERTY(Replicated)
-    AActor* _ReplicatedActor = nullptr;
+private:
+    UPROPERTY(Transient)
+    TObjectPtr<AActor> _ReplicatedActor = nullptr;
 
 public:
     CK_PROPERTY_GET(_AssociatedEntity);
