@@ -77,10 +77,6 @@ protected:
     virtual auto OnLink() -> void PURE_VIRTUAL(UCk_Ecs_ReplicateObject_UE::OnLink,);
     virtual auto PostLink() -> void {};
 
-public:
-    UFUNCTION(NetMulticast, Reliable)
-    void Request_TriggerDestroyAssociatedEntity();
-
 protected:
     UPROPERTY(Transient)
     FCk_Handle _AssociatedEntity;
