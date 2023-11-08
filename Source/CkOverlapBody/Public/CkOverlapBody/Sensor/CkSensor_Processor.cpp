@@ -32,10 +32,14 @@ namespace ck
         const auto& sensorAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(owningEntity);
         const auto& sensorAttachedEntity = sensorAttachedEntityAndActor.Get_Handle();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(sensorAttachedEntityAndActor.Get_Actor()),
-            TEXT("Sensor Entity [{}] is attached to Entity [{}] that does NOT have a valid Actor"),
+        constexpr auto IncludePendingKill = true;
+        CK_ENSURE_IF_NOT(ck::IsValid(sensorAttachedEntityAndActor.Get_Actor().Get(IncludePendingKill), ck::IsValid_Policy_IncludePendingKill{}),
+            TEXT("Sensor Entity [{}] is attached to Entity [{}] that does NOT have a valid Actor even though we have an OwningActor Fragment"),
             InSensorEntity,
             sensorAttachedEntity)
+        { return; }
+
+        if (Is_NOT_Valid(sensorAttachedEntityAndActor.Get_Actor()))
         { return; }
 
         InCurrentComp._AttachedEntityAndActor = sensorAttachedEntityAndActor;
