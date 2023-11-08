@@ -3,10 +3,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 
-#include "CkCore/Format/CkFormat_Defaults.h"
-
 #include <Engine/World.h>
-#include <Net/UnrealNetwork.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -84,11 +81,6 @@ auto
         if (NOT Get_ReplicatedActor()->GetWorld()->IsNetMode(NM_Client))
         {
             Destroy(this);
-        }
-
-        if (Get_ReplicatedActor()->GetWorld()->IsNetMode(NM_Client))
-        {
-            ck::ecs::Log(TEXT("Client RepObj is being destroyed"));
         }
     }
 
