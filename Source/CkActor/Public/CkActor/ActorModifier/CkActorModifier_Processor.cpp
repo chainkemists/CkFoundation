@@ -110,16 +110,21 @@ namespace ck
             FFragment_ActorModifier_AddActorComponentRequests& InRequests) const
         -> void
     {
-        for (const auto& InRequest : InRequests._Requests)
+        for (const auto& Request : InRequests._Requests)
         {
             actor::VeryVerbose(TEXT("Handling AddActorComponent Request for Entity [{}]"), InHandle);
 
-            const auto& EntityActor = InOwningActorComp.Get_EntityOwningActor().Get();
+            constexpr auto IncludePendingKill = true;
+            const auto& EntityActor = InOwningActorComp.Get_EntityOwningActor().Get(IncludePendingKill);
 
-            CK_ENSURE_IF_NOT(ck::IsValid(EntityActor), TEXT("AddActorComponent Request on Entity [{}] that has NO Actor!"), InHandle)
-            { return; }
+            CK_ENSURE_IF_NOT(ck::IsValid(EntityActor, ck::IsValid_Policy_IncludePendingKill{}),
+                TEXT("AddActorComponent Request on Entity [{}] that has NO Actor!"), InHandle)
+            { continue; }
 
-            const auto& ComponentParams = InRequest.Get_ComponentParams();
+            if (EntityActor->IsPendingKillPending())
+            { continue; }
+
+            const auto& ComponentParams = Request.Get_ComponentParams();
             const auto& AttachmentType  = ComponentParams.Get_AttachmentType();
 
             const auto& Parent = [&]() -> USceneComponent*
@@ -138,20 +143,20 @@ namespace ck
                 UCk_Utils_Actor_UE::AddNewActorComponent_Params
                 {
                     EntityActor,
-                    InRequest.Get_ComponentToAdd(),
-                    InRequest.Get_IsUnique(),
+                    Request.Get_ComponentToAdd(),
+                    Request.Get_IsUnique(),
                     Parent,
                     ComponentParams.Get_AttachmentSocket()
                 }
             );
 
-            CK_ENSURE_IF_NOT(ck::IsValid(AddedActorComponent), TEXT("Failed to Add new Actor Component [{}] to Entity [{}]"), InRequest.Get_ComponentToAdd(), InHandle)
+            CK_ENSURE_IF_NOT(ck::IsValid(AddedActorComponent), TEXT("Failed to Add new Actor Component [{}] to Entity [{}]"), Request.Get_ComponentToAdd(), InHandle)
             { return; }
 
             AddedActorComponent->SetComponentTickEnabled(ComponentParams.Get_IsTickEnabled());
             AddedActorComponent->SetComponentTickInterval(ComponentParams.Get_TickInterval().Get_Seconds());
 
-            if (const auto& InitializerFunc = InRequest.Get_InitializerFunc())
+            if (const auto& InitializerFunc = Request.Get_InitializerFunc())
             {
                 InitializerFunc(AddedActorComponent);
             }
