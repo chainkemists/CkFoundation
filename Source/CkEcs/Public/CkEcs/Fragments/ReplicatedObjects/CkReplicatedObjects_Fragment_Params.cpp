@@ -54,10 +54,13 @@ auto
     Destroy(UCk_Ecs_ReplicatedObject_UE* InRo)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InRo), TEXT("ReplicatedObject is [{}]. Unable to Destroy."), InRo)
+    if (ck::Is_NOT_Valid(InRo))
     { return; }
 
-    if (ck::Is_NOT_Valid(InRo))
+    if (ck::Is_NOT_Valid(InRo->GetWorld()))
+    { return; }
+
+    if (InRo->GetWorld()->IsNetMode(NM_Client))
     { return; }
 
     if (ck::Is_NOT_Valid(InRo->_ReplicatedActor))
@@ -71,16 +74,6 @@ auto
     ObjectReplicator->Request_UnregisterObjectForReplication(InRo);
 }
 
-auto UCk_Ecs_ReplicatedObject_UE::
-    GetLifetimeReplicatedProps(
-        TArray<FLifetimeProperty>& OutLifetimeProps) const
-    -> void
-{
-    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-    DOREPLIFETIME(ThisType, _ReplicatedActor);
-}
-
 auto
     UCk_Ecs_ReplicatedObject_UE::
     BeginDestroy()
@@ -92,6 +85,17 @@ auto
         {
             Destroy(this);
         }
+
+        if (Get_ReplicatedActor()->GetWorld()->IsNetMode(NM_Client))
+        {
+            ck::ecs::Log(TEXT("Client RepObj is being destroyed"));
+        }
+    }
+
+    if (ck::IsValid(Get_AssociatedEntity()) && NOT UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(Get_AssociatedEntity()))
+    {
+        _AssociatedEntity.Add<ck::FTag_TriggerDestroyEntity>();
+        _AssociatedEntity = {};
     }
 
     Super::BeginDestroy();
