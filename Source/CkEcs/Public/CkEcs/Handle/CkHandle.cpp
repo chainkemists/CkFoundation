@@ -37,7 +37,7 @@ FCk_Handle::
     , _Fragments(std::move(InOther._Fragments))
 #endif
 {
-    if (IsValid())
+    if (IsValid() && UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable)
     { std::ignore = UCk_Utils_HandleDebugger_Subsystem_UE::Get_Subsystem()->GetOrAdd_FragmentsDebug(*this); }
 }
 
@@ -54,7 +54,7 @@ FCk_Handle::
     , _Fragments(InOther._Fragments)
 #endif
 {
-    if (IsValid())
+    if (IsValid() && UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable)
     { std::ignore = UCk_Utils_HandleDebugger_Subsystem_UE::Get_Subsystem()->GetOrAdd_FragmentsDebug(*this); }
 }
 
@@ -75,7 +75,8 @@ FCk_Handle::
     if (NOT IsValid())
     { return; }
 
-    UCk_Utils_HandleDebugger_Subsystem_UE::Get_Subsystem()->Remove_FragmentsDebug(*this);
+    if (IsValid() && UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable)
+    { UCk_Utils_HandleDebugger_Subsystem_UE::Get_Subsystem()->Remove_FragmentsDebug(*this); }
 #endif
 }
 
