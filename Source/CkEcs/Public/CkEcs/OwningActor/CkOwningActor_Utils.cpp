@@ -60,7 +60,11 @@ auto
     if (NOT Ensure(InHandle))
     { return {}; }
 
-    return FCk_EntityOwningActor_BasicDetails{ InHandle.Get<ck::FFragment_OwningActor_Current>().Get_EntityOwningActor().Get(), InHandle };
+    constexpr auto EvenIfPendingKill = true;
+    return FCk_EntityOwningActor_BasicDetails
+    {
+        InHandle.Get<ck::FFragment_OwningActor_Current>().Get_EntityOwningActor().Get(EvenIfPendingKill), InHandle
+    };
 }
 
 auto
