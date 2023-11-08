@@ -25,24 +25,12 @@ UCk_ReplicatedObject_UE::
     CK_SCOPE_CALL(CK_ENSURE_OUTER_IS_VALID_OR_RETURN());
 }
 
-auto 
+auto
     UCk_ReplicatedObject_UE::
     GetOwningActor() const
     -> AActor*
 {
     return GetTypedOuter<AActor>();
-}
-
-auto
-    UCk_ReplicatedObject_UE::
-    GetWorld() const
-    -> UWorld*
-{
-    if (IsTemplate())
-    { return Super::GetWorld(); }
-
-    CK_ENSURE_OUTER_IS_VALID_OR_RETURN();
-    return GetOwningActor()->GetWorld();
 }
 
 auto

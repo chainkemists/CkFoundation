@@ -22,7 +22,6 @@ public:
 public:
     auto GetOwningActor() const -> AActor*;
 
-    virtual auto GetWorld() const -> UWorld* override;
     virtual auto CallRemoteFunction(UFunction* Function, void* Parms, FOutParmRec* OutParms, FFrame* Stack) -> bool override;
     virtual auto GetFunctionCallspace(UFunction* Function, FFrame* Stack) -> int32 override;
     virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
