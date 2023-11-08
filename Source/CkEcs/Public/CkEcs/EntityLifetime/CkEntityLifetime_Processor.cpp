@@ -56,15 +56,12 @@ namespace ck
             ck::algo::ForEachIsValid(UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(InHandle).Get_ReplicatedObjects(),
                 [&](UCk_ReplicatedObject_UE* InRO)
                 {
-                    const auto OutermostActor = UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(InRO);
+                    const auto EcsRO = Cast<UCk_Ecs_ReplicatedObject_UE>(InRO);
 
-                    // In this case, we are one of the clients and we do NOT need to go any further
-                    if (ck::Is_NOT_Valid(OutermostActor))
+                    if (ck::Is_NOT_Valid(EcsRO))
                     { return; }
 
-                    const auto EcsReplicatedObject = Cast<UCk_Ecs_ReplicatedObject_UE>(InRO);
-
-                    EcsReplicatedObject->Request_TriggerDestroyAssociatedEntity();
+                    UCk_Ecs_ReplicatedObject_UE::Destroy(EcsRO);
                 });
         }
 
