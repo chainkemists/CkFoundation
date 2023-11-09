@@ -117,6 +117,16 @@
 			]
 		},
 		{
+			"Name": "CkInput",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
 			"Name": "CkLabel",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
