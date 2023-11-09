@@ -105,7 +105,7 @@ public:
 
 private:
     UPROPERTY()
-    TArray<UCk_ReplicatedObject_UE*> _ReplicatedObjects;
+    TArray<TWeakObjectPtr<UCk_ReplicatedObject_UE>> _ReplicatedObjects;
 
 protected:
     auto DoRequest_LinkAssociatedEntity(FCk_Handle InEntity) -> void;

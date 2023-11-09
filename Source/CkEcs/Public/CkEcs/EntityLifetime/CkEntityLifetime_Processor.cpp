@@ -54,9 +54,9 @@ namespace ck
         if (InHandle.Has<FTag_Replicated>())
         {
             ck::algo::ForEachIsValid(UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(InHandle).Get_ReplicatedObjects(),
-                [&](UCk_ReplicatedObject_UE* InRO)
+                [&](const TWeakObjectPtr<UCk_ReplicatedObject_UE>& InRO)
                 {
-                    const auto EcsRO = Cast<UCk_Ecs_ReplicatedObject_UE>(InRO);
+                    const auto EcsRO = Cast<UCk_Ecs_ReplicatedObject_UE>(InRO.Get());
 
                     if (ck::Is_NOT_Valid(EcsRO))
                     { return; }
