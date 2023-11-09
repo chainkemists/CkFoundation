@@ -51,7 +51,7 @@ namespace ck
         ecs::VeryVerbose(TEXT("Entity [{}] set to 'Pending Destroy'"), InHandle);
         InHandle.Add<FTag_PendingDestroyEntity>(InHandle);
 
-        if (InHandle.Has<FTag_Replicated>())
+        if (UCk_Utils_ReplicatedObjects_UE::Has(InHandle))
         {
             ck::algo::ForEachIsValid(UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(InHandle).Get_ReplicatedObjects(),
                 [&](const TWeakObjectPtr<UCk_ReplicatedObject_UE>& InRO)

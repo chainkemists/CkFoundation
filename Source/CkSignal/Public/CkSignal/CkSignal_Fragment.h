@@ -20,6 +20,9 @@ namespace ck
 
         CK_GENERATED_BODY(TFragment_Signal<T_Args...>);
 
+        // ReSharper disable once CppInconsistentNaming
+        static constexpr auto in_place_delete = true;
+
     public:
         struct FTag_PayloadInFlight {};
 
@@ -58,6 +61,9 @@ namespace ck
     template <typename T_UnrealMulticast, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename... T_Args>
     struct TFragment_Signal_UnrealMulticast
     {
+        // ReSharper disable once CppInconsistentNaming
+        static constexpr auto in_place_delete = true;
+
         template <typename, typename>
         friend class TUtils_Signal_UnrealMulticast;
 
@@ -71,6 +77,7 @@ namespace ck
         ~ TFragment_Signal_UnrealMulticast();
 
     public:
+        auto DoBroadcastDelegate(auto InDelegate, T_Args&&... InArgs);
         auto DoBroadcast(T_Args&&... InArgs);
 
     private:

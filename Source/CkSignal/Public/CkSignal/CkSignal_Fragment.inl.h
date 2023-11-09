@@ -33,19 +33,30 @@ namespace ck
     template <typename T_UnrealMulticast, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename ... T_Args>
     auto
         TFragment_Signal_UnrealMulticast<T_UnrealMulticast, T_PostFireBehavior, T_Args...>::
+        DoBroadcastDelegate(
+            auto InDelegate,
+            T_Args&&... InArgs)
+    {
+        InDelegate.ExecuteIfBound(
+            TTypeConverter<T_Args, ck::TypeConverterPolicy::TypeToUnreal>{}(std::forward<T_Args>(InArgs))...);
+    }
+
+    template <typename T_UnrealMulticast, ECk_Signal_PostFireBehavior T_PostFireBehavior, typename ... T_Args>
+    auto
+        TFragment_Signal_UnrealMulticast<T_UnrealMulticast, T_PostFireBehavior, T_Args...>::
         DoBroadcast(
             T_Args&&... InArgs)
     {
         Get_Multicast().Broadcast(
             TTypeConverter<T_Args, ck::TypeConverterPolicy::TypeToUnreal>{}(std::forward<T_Args>(InArgs))...);
 
-        if constexpr (T_PostFireBehavior == ECk_Signal_PostFireBehavior::Unbind)
-        {
-            _Multicast.Clear();
+        //if constexpr (T_PostFireBehavior == ECk_Signal_PostFireBehavior::Unbind)
+        //{
+        //    _Multicast.Clear();
 
-            if (_Connection)
-            { _Connection.release(); }
-        }
+        //    if (_Connection)
+        //    { _Connection.release(); }
+        //}
     }
 
     // --------------------------------------------------------------------------------------------------------------------
