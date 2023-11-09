@@ -57,7 +57,7 @@ auto
     InHandle.AddOrGet<ck::FCk_Fragment_ReplicatedObjects_Params>()
     .Update_ReplicatedObjects([&](FCk_ReplicatedObjects& InReplicatedObjects)
     {
-        InReplicatedObjects.Update_ReplicatedObjects([&](TArray<UCk_ReplicatedObject_UE*>& InArray)
+        InReplicatedObjects.Update_ReplicatedObjects([&](TArray<TWeakObjectPtr<UCk_ReplicatedObject_UE>>& InArray)
         {
             InArray.Add(InReplicatedObject);
         });
@@ -75,7 +75,7 @@ auto
 
     auto RoleToReturn = ENetRole::ROLE_None;
 
-    OnFirstValidReplicatedObject(InHandle, [&](UCk_ReplicatedObject_UE* InRO)
+    OnFirstValidReplicatedObject(InHandle, [&](const TWeakObjectPtr<UCk_ReplicatedObject_UE>& InRO)
     {
         const auto& ReplicatedObjectAsActor = Cast<AActor>(InRO->GetOuter());
 
@@ -93,7 +93,7 @@ auto
     UCk_Utils_ReplicatedObjects_UE::
     OnFirstValidReplicatedObject(
         FCk_Handle InHandle,
-        const std::function<void(UCk_ReplicatedObject_UE* InRO)>& InFunc)
+        const std::function<void(const TWeakObjectPtr<UCk_ReplicatedObject_UE>& InRO)>& InFunc)
     -> void
 {
     if (NOT Ensure(InHandle))
@@ -101,9 +101,9 @@ auto
 
     const auto ReplicatedObjects = Get_ReplicatedObjects(InHandle).Get_ReplicatedObjects();
 
-    const auto& ReplicatedObjectToUse = ReplicatedObjects.FindByPredicate([&](UCk_ReplicatedObject_UE* InRO)
+    const auto& ReplicatedObjectToUse = ReplicatedObjects.FindByPredicate([&](const TWeakObjectPtr<UCk_ReplicatedObject_UE>& InRO)
     {
-        return ck::IsValid(InRO, ck::IsValid_Policy_NullptrOnly{});
+        return ck::IsValid(InRO);
     });
 
     CK_ENSURE_IF_NOT(ck::IsValid(ReplicatedObjectToUse, ck::IsValid_Policy_NullptrOnly{}),

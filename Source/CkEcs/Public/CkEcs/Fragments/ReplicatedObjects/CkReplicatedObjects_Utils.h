@@ -45,7 +45,7 @@ public:
     static auto
     OnFirstValidReplicatedObject(
         FCk_Handle InHandle,
-        const std::function<void(UCk_ReplicatedObject_UE* InRO)>& InFunc) -> void;
+        const std::function<void(const TWeakObjectPtr<UCk_ReplicatedObject_UE>& InRO)>& InFunc) -> void;
 
 public:
     static auto

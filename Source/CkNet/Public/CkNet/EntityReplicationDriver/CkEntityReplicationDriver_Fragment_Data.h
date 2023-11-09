@@ -26,7 +26,7 @@ private:
     TObjectPtr<class UCk_EntityBridge_ConstructionScript_PDA> _ConstructionScript;
 
     UPROPERTY()
-    TArray<class UCk_ReplicatedObject_UE*> _ReplicatedObjects;
+    TArray<TWeakObjectPtr<UCk_ReplicatedObject_UE>> _ReplicatedObjects;
 
 public:
     CK_PROPERTY_GET(_ReplicatedActor);
@@ -62,7 +62,7 @@ public:
     FVector _StartingLocation;
 
     UPROPERTY()
-    TArray<class UCk_ReplicatedObject_UE*> _ReplicatedObjects;
+    TArray<TWeakObjectPtr<UCk_ReplicatedObject_UE>> _ReplicatedObjects;
 public:
     CK_PROPERTY_GET(_OuterReplicatedActor);
     CK_PROPERTY_GET(_NonReplicatedActor);
@@ -115,7 +115,7 @@ public:
 
 private:
     UPROPERTY()
-    TArray<UCk_ReplicatedObject_UE*> _Objects;
+    TArray<TWeakObjectPtr<UCk_ReplicatedObject_UE>> _Objects;
 
 public:
     CK_PROPERTY_GET(_Objects);
