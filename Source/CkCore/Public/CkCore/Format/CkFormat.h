@@ -16,6 +16,8 @@
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkCore/Debug/CkDebug_Utils.h"
 
+#include "cleantype/details/cleantype_clean.hpp"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -89,6 +91,14 @@ namespace ck
 
     template<typename T>
     constexpr ctti::detail::cstring TypeToString = ctti::nameof<T>();
+
+    template <typename T>
+    auto Get_RuntimeTypeToString()
+        -> FString
+    {
+        const auto& CleanName = cleantype::clean<T>();
+        return FString{static_cast<int32>(CleanName.length()), CleanName.data()};
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
