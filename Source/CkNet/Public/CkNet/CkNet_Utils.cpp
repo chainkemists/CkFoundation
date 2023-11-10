@@ -1,6 +1,7 @@
 #include "CkNet_Utils.h"
 
 #include "CkNet_Fragment.h"
+#include "CkCore/Time/CkTime_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment.h"
@@ -334,5 +335,93 @@ auto
     return InHandle.Has<ck::FTag_Replicated>();
 }
 
+auto
+    UCk_Utils_Net_UE::
+    Get_MinPing(
+        const UObject* InContext)
+    -> FCk_Time
+{
+    const auto& PrimaryPlayerState = UCk_Utils_Game_UE::Get_PrimaryPlayerState_AsClient(InContext);
+
+    if (ck::Is_NOT_Valid(PrimaryPlayerState))
+    { return {}; }
+
+    return PrimaryPlayerState->Get_MinPing();
+}
+
+auto
+    UCk_Utils_Net_UE::
+    Get_CurrentPing(
+        const UObject* InContext)
+    -> FCk_Time
+{
+    const auto& PrimaryPlayerState = UCk_Utils_Game_UE::Get_PrimaryPlayerState_AsClient(InContext);
+
+    if (ck::Is_NOT_Valid(PrimaryPlayerState))
+    { return {}; }
+
+    return UCk_Utils_Time_UE::Make_FromMilliSeconds(PrimaryPlayerState->Get_CurrentPingInMs());
+}
+
+auto
+    UCk_Utils_Net_UE::
+    Get_MaxPing(
+        const UObject* InContext)
+    -> FCk_Time
+{
+    const auto& PrimaryPlayerState = UCk_Utils_Game_UE::Get_PrimaryPlayerState_AsClient(InContext);
+
+    if (ck::Is_NOT_Valid(PrimaryPlayerState))
+    { return {}; }
+
+    return PrimaryPlayerState->Get_MaxPing();
+}
+
+auto
+    UCk_Utils_Net_UE::
+    Get_AveragePing(
+        const UObject* InContext)
+    -> FCk_Time
+{
+    const auto& PrimaryPlayerState = UCk_Utils_Game_UE::Get_PrimaryPlayerState_AsClient(InContext);
+
+    if (ck::Is_NOT_Valid(PrimaryPlayerState))
+    { return {}; }
+
+    const auto& AveragePingMs = PrimaryPlayerState->ExactPing;
+
+    return UCk_Utils_Time_UE::Make_FromMilliSeconds(AveragePingMs);
+}
+
+auto
+    UCk_Utils_Net_UE::
+    Get_AverageLatency(
+        const UObject* InContext)
+    -> FCk_Time
+{
+    const auto& PrimaryPlayerState = UCk_Utils_Game_UE::Get_PrimaryPlayerState_AsClient(InContext);
+
+    if (ck::Is_NOT_Valid(PrimaryPlayerState))
+    { return {}; }
+
+    const auto& AverageLatencyMs = PrimaryPlayerState->ExactPing / 2.0f;
+
+    return UCk_Utils_Time_UE::Make_FromMilliSeconds(AverageLatencyMs);
+}
+
+#if CK_BUILD_TEST
+auto
+    UCk_Utils_Net_UE::
+    Get_PingRangeHistoryEntries()
+    -> TArray<FCk_PlayerState_PingRange_History_Entry>
+{
+    const auto& PrimaryPlayerState = UCk_Utils_Game_UE::Get_PrimaryPlayerState_AsClient(nullptr);
+
+    if (ck::Is_NOT_Valid(PrimaryPlayerState))
+    { return {}; }
+
+    return PrimaryPlayerState->Get_PingRangeHistoryEntries();
+}
+#endif
 // --------------------------------------------------------------------------------------------------------------------
 

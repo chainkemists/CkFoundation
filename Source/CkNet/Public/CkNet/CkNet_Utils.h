@@ -1,12 +1,14 @@
 #pragma once
 
 #include "CkCore/Actor/CkActor_Utils.h"
+#include "CkCore/Engine/CkPlayerState.h"
 #include "CkCore/Enums/CkEnums.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Time/CkTime.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 
@@ -115,6 +117,37 @@ public:
               Category = "Ck|Utils|Net")
     static bool
     Get_IsEntityReplicated(FCk_Handle InHandle);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
+    static FCk_Time
+    Get_MinPing(const UObject* InContext = nullptr);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
+    static FCk_Time
+    Get_CurrentPing(const UObject* InContext = nullptr);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
+    static FCk_Time
+    Get_MaxPing(const UObject* InContext = nullptr);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
+    static FCk_Time
+    Get_AveragePing(const UObject* InContext = nullptr);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
+    static FCk_Time
+    Get_AverageLatency(const UObject* InContext = nullptr);
+
+#if CK_BUILD_TEST
+public:
+    static auto Get_PingRangeHistoryEntries() -> TArray<FCk_PlayerState_PingRange_History_Entry>;
+#endif
 };
 
 // --------------------------------------------------------------------------------------------------------------------
