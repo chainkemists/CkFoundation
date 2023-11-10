@@ -9,6 +9,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class ACk_PlayerState_UE;
 class UGameInstance;
 class UWorld;
 
@@ -61,6 +62,18 @@ public:
               meta     = (WorldContext="InWorldContextObject"))
     static UGameInstance*
     Get_GameInstance(const UObject* InWorldContextObject);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Game|Utils",
+              meta     = (WorldContext="InWorldContextObject"))
+    static ACk_PlayerState_UE*
+    Get_PrimaryPlayerState_AsClient(const UObject* InWorldContextObject);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Game|Utils",
+              meta     = (WorldContext="InWorldContextObject"))
+    static APlayerController*
+    Get_PrimaryPlayerController(const UObject* InWorldContextObject);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
