@@ -135,6 +135,13 @@ public:
     auto operator/(const ThisType& InOther) const  -> ThisType;
     CK_DECL_AND_DEF_ADD_SUBTRACT_ASSIGNMENT_OPERATORS(ThisType);
 
+    auto operator==(const TimeType& InOther) const -> bool;
+    auto operator< (const TimeType& InOther) const -> bool;
+    auto operator!=(const TimeType& InOther) const -> bool;
+    auto operator> (const TimeType& InOther) const -> bool;
+    auto operator<=(const TimeType& InOther) const -> bool;
+    auto operator>=(const TimeType& InOther) const -> bool;
+
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))

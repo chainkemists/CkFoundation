@@ -138,6 +138,60 @@ auto
 
 auto
     FCk_Time_Unreal::
+    operator==(
+        const TimeType& InOther) const
+    -> bool
+{
+    return Get_Time() == InOther;
+}
+
+auto
+    FCk_Time_Unreal::
+    operator<(
+        const TimeType& InOther) const
+    -> bool
+{
+    return Get_Time() < InOther;
+}
+
+auto
+    FCk_Time_Unreal::
+    operator!=(
+        const TimeType& InOther) const
+    -> bool
+{
+    return Get_Time() != InOther;
+}
+
+auto
+    FCk_Time_Unreal::
+    operator>(
+        const TimeType& InOther) const
+    -> bool
+{
+    return Get_Time() > InOther;
+}
+
+auto
+    FCk_Time_Unreal::
+    operator<=(
+        const TimeType& InOther) const
+    -> bool
+{
+    return Get_Time() <= InOther;
+}
+
+auto
+    FCk_Time_Unreal::
+    operator>=(
+        const TimeType& InOther) const
+    -> bool
+{
+    return Get_Time() >= InOther;
+}
+
+auto
+    FCk_Time_Unreal::
     operator-(const ThisType& InOther) const
     -> ThisType
 {
