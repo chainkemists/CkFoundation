@@ -59,14 +59,28 @@ auto
 
     for (auto Index = _NextPendingAddModifier; Index < _PendingAddModifiers.Num(); ++Index)
     {
-        UCk_Utils_FloatAttributeModifier_UE::Add(Get_AssociatedEntity(),
-            _PendingAddModifiers[Index].Get_ModifierName(),
-            _PendingAddModifiers[Index].Get_Params());
+        const auto& Modifier = _PendingAddModifiers[Index];
+
+        CK_ENSURE_IF_NOT(ck::IsValid(Modifier.Get_Params().Get_TargetAttributeName()),
+            TEXT("Received a AddModifier Request from the SERVER with name [{}].{}"),
+            Modifier.Get_ModifierName(),
+            ck::Context(this))
+        { continue; }
+
+        UCk_Utils_FloatAttributeModifier_UE::Add(Get_AssociatedEntity(), Modifier.Get_ModifierName(), Modifier.Get_Params());
     }
     _NextPendingAddModifier = _PendingAddModifiers.Num();
 
     for (auto Index = _NextPendingRemoveModifier; Index < _PendingRemoveModifiers.Num(); ++Index)
     {
+        const auto& Modifier = _PendingRemoveModifiers[Index];
+
+        CK_ENSURE_IF_NOT(ck::IsValid(Modifier.Get_AttributeName()),
+            TEXT("Received a RemoveModifier from the SERVER with name [{}].{}"),
+            Modifier.Get_ModifierName(),
+            ck::Context(this))
+        { continue; }
+
         UCk_Utils_FloatAttributeModifier_UE::Remove(Get_AssociatedEntity(),
             _PendingRemoveModifiers[Index].Get_AttributeName(),
             _PendingRemoveModifiers[Index].Get_ModifierName());
