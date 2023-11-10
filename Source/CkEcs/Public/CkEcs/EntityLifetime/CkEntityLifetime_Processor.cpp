@@ -50,6 +50,18 @@ namespace ck
     {
         ecs::VeryVerbose(TEXT("Entity [{}] set to 'Pending Destroy'"), InHandle);
         InHandle.Add<FTag_PendingDestroyEntity>(InHandle);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_EntityLifetime_PendingDestroyEntity::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle) const
+        -> void
+    {
+        ecs::VeryVerbose(TEXT("Destroying Entity [{}]"), InHandle);
 
         if (InHandle.Has<FTag_Replicated>())
         {
@@ -64,22 +76,6 @@ namespace ck
                     UCk_Ecs_ReplicatedObject_UE::Destroy(EcsRO);
                 });
         }
-
-        // TODO: Invoke Signal when Signals are ready
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProcessor_EntityLifetime_PendingDestroyEntity::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle) const
-        -> void
-    {
-        ecs::VeryVerbose(TEXT("Destroying Entity [{}]"), InHandle);
-
-        InHandle.Remove<FTag_PendingDestroyEntity>();
 
         InHandle->DestroyEntity(InHandle.Get_Entity());
     }
