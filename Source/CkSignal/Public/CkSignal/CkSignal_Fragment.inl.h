@@ -15,6 +15,14 @@ namespace ck
         , _InvokeAndUnbind_Sink(_InvokeAndUnbind_Signal)
     { }
 
+    template <typename ... T_Args>
+    auto
+        TFragment_Signal<T_Args...>::
+        Get_HasPayload() -> bool
+    {
+        return ck::IsValid(_Payload);
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 }
 
