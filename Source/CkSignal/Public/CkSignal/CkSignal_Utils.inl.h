@@ -265,24 +265,43 @@ namespace ck
             ck::Context(InHandle))
         { return; }
 
-        UnrealMulticast._Multicast.AddUnique(InDelegate);
+        // ReSharper disable once CppTooWideScope
+        const auto EnsurePayloadInFlightIsOnlyFiredOnLatestDelegate = ck::IsValid(Signal.Get_Payload()) &&
+            (T_PayloadInFlightBehavior == ECk_Signal_BindingPolicy::FireIfPayloadInFlight ||
+            T_PayloadInFlightBehavior == ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame);
 
-        if (NOT UnrealMulticast._Connection)
+        if (EnsurePayloadInFlightIsOnlyFiredOnLatestDelegate)
         {
+            auto ExistingMulticasts = UnrealMulticast._Multicast;
+
+            CK_ENSURE((UnrealMulticast._Connection && UnrealMulticast._Multicast.IsBound()) ||
+                (NOT UnrealMulticast._Connection && NOT UnrealMulticast._Multicast.IsBound()),
+                TEXT("Expected Connection to be VALID if Multicast is already bound OR Connection to be INVALID "
+                    "if Multicast is empty on Signal [{}] with Unreal Signal [{}] on Entity [{}] with BindingPolicy is [{}]. "
+                    "This ensure hints to a logical problem somewhere in the Signals logic (or this Ensure)."),
+                ck::Get_RuntimeTypeToString<T_DerivedSignal>(),
+                ck::Get_RuntimeTypeToString<T_DerivedSignal_Unreal>(),
+                InHandle,
+                T_PayloadInFlightBehavior);
+
+            UnrealMulticast._Multicast.Clear();
+            UnrealMulticast._Multicast.AddUnique(InDelegate);
+
+            if (UnrealMulticast._Connection)
+            { UnrealMulticast._Connection.release(); }
+
             auto Connection = Super::Bind <&T_DerivedSignal_Unreal::DoBroadcast>(
                 UnrealMulticast, InHandle, T_PayloadInFlightBehavior, T_DerivedSignal_Unreal::PostFireBehavior);
 
-            CK_ENSURE_IF_NOT(((UnrealMulticast._Multicast.IsBound() && Connection) ||
-                (NOT UnrealMulticast._Multicast.IsBound() && NOT Connection)),
-                TEXT("Our assumption that when we receive a valid Connection that we also have Bound multicasts is INVALID. "
-                    "We may receive an invalid Connection IFF the above previous Bind broadcasts payloads in flight AND the post-fire "
-                    "behavior was to unbind; in which case, the Multicast is cleared (see DoBroadcast). The assumption of this "
-                    "ensure check must hold true. If not, either this assumption is incorrect OR this is a symptom of a larger "
-                    "problem.\n\nContext: Entity [{}] trying to bind with [{}]"),
-                InHandle,
-                InDelegate.GetFunctionName().ToString())
-            { return; }
+            UnrealMulticast._Multicast = ExistingMulticasts;
+            UnrealMulticast._Connection = Connection;
+        }
+        else
+        {
+            UnrealMulticast._Multicast.Add(InDelegate);
 
+            auto Connection = Super::Bind <&T_DerivedSignal_Unreal::DoBroadcast>(
+                UnrealMulticast, InHandle, T_PayloadInFlightBehavior, T_DerivedSignal_Unreal::PostFireBehavior);
             UnrealMulticast._Connection = Connection;
         }
     }
