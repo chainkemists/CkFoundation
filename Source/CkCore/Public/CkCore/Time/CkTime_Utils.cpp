@@ -32,6 +32,15 @@ auto
 
 auto
     UCk_Utils_Time_UE::
+    Make_FromMilliSeconds(
+        float InMilliSeconds)
+    -> FCk_Time
+{
+    return Make_FromSeconds(InMilliSeconds / 1000.0f);
+}
+
+auto
+    UCk_Utils_Time_UE::
     Make_WorldTime(
         const UObject* InWorldContextObject)
     -> FCk_WorldTime
