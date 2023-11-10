@@ -89,6 +89,11 @@ public:
     Make_FromSeconds(float InSeconds);
 
     UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Time")
+    static FCk_Time
+    Make_FromMilliSeconds(float InMilliSeconds);
+
+    UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Time",
               meta = (NativeMakeFunc, DefaultToSelf = "InWorldContextObject"))
     static FCk_WorldTime
