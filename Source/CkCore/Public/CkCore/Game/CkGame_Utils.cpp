@@ -1,6 +1,7 @@
 #include "CkGame_Utils.h"
 
 #include "CkCore/Engine/CkGameInstance.h"
+#include "CkCore/Engine/CkPlayerState.h"
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkCore/Ensure/CkEnsure.h"
 
@@ -146,6 +147,42 @@ auto
     }
 
     return {};
+}
+
+auto
+    UCk_Utils_Game_UE::
+    Get_PrimaryPlayerState_AsClient(
+        const UObject* InWorldContextObject)
+    -> ACk_PlayerState_UE*
+{
+    const auto& PrimaryPlayerController = Get_PrimaryPlayerController(InWorldContextObject);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(PrimaryPlayerController), TEXT("Invalid Primary Player Controller!"))
+    { return {}; }
+
+    if (PrimaryPlayerController->HasAuthority())
+    { return {}; }
+
+    const auto& PlayerState = Cast<ACk_PlayerState_UE>(PrimaryPlayerController->PlayerState);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(PlayerState), TEXT("Invalid PlayerState for Primary Player Controller [{}]"), PrimaryPlayerController)
+    { return {}; }
+
+    return PlayerState;
+}
+
+auto
+    UCk_Utils_Game_UE::
+    Get_PrimaryPlayerController(
+        const UObject* InWorldContextObject)
+    -> APlayerController*
+{
+    const auto& GameInstance = Get_GameInstance(InWorldContextObject);
+
+    if (ck::Is_NOT_Valid(GameInstance))
+    { return {}; }
+
+    return GameInstance->GetPrimaryPlayerController();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
