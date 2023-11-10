@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkEcs/Entity/CkEntity.h"
 
 #include "CkEcs/Handle/CkHandle_Debugging_Data.h"
 
