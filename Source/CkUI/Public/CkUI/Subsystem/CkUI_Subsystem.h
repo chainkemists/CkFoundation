@@ -19,8 +19,13 @@ public:
     CK_GENERATED_BODY(UCk_UI_Subsystem_UE);
 
 public:
-    virtual auto Initialize(FSubsystemCollectionBase& InCollection) -> void override;
-    virtual auto Deinitialize() -> void override;
+    auto Initialize(FSubsystemCollectionBase& InCollection) -> void override;
+    auto Deinitialize() -> void override;
+
+private:
+    auto OnPlayerControllerReady(
+        APlayerController* InNewPlayerController,
+        TArray<APlayerController*> InAllPlayerControllers) const -> void;
 
 public:
     auto Request_UpdateWatermarkDisplayPolicy(ECk_Watermark_DisplayPolicy InDisplayPolicy) const -> void;

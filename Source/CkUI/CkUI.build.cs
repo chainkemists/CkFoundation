@@ -41,8 +41,11 @@ public class CkUI : CkModuleRules
 
                 "CkThirdParty",
                 "CkCore",
+                "CkEcs",
                 "CkLog",
-                "CkSettings"
+                "CkSettings",
+                "CkSignal",
+                "CkGameSession"
                 // ... add private dependencies that you statically link with here ...
             }
             );
