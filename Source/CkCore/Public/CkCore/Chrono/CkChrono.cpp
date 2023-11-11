@@ -4,7 +4,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-const FCk_Chrono FCk_Chrono::Zero = FCk_Chrono{ FCk_Time::Zero };
+const FCk_Chrono FCk_Chrono::Zero = FCk_Chrono{ FCk_Time::ZeroSecond() };
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -35,7 +35,7 @@ auto
 
     const auto& nonClampedNewValue = _CurrentValue + InDeltaT;
 
-    _CurrentValue = FMath::Clamp(nonClampedNewValue, TimeType::Zero, _GoalValue);
+    _CurrentValue = FMath::Clamp(nonClampedNewValue, TimeType::ZeroSecond(), _GoalValue);
 
     return Get_IsDone() ? TickStateType::Done : TickStateType::Ticking;
 }
@@ -49,7 +49,7 @@ auto
     const auto previousValue = _CurrentValue;
     const auto& nonClampedNewValue = _CurrentValue - InDeltaT;
 
-    _CurrentValue = FMath::Clamp(nonClampedNewValue, TimeType::Zero, _GoalValue);
+    _CurrentValue = FMath::Clamp(nonClampedNewValue, TimeType::ZeroSecond(), _GoalValue);
 
     if (_CurrentValue == previousValue)
     {
@@ -79,7 +79,7 @@ auto
     Reset()
     -> ThisType&
 {
-    _CurrentValue = TimeType::Zero;
+    _CurrentValue = TimeType::ZeroSecond();
 
     return *this;
 }
@@ -97,7 +97,7 @@ auto
     Get_HasStarted() const
     -> bool
 {
-    return _CurrentValue > TimeType::Zero;
+    return _CurrentValue > TimeType::ZeroSecond();
 }
 
 auto

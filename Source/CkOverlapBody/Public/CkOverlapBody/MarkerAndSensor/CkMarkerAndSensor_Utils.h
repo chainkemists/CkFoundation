@@ -331,7 +331,7 @@ auto
 
         static constexpr auto IsComponentTickEnabled = true;
 
-        return FCk_AddActorComponent_Params{ IsComponentTickEnabled, FCk_Time::Zero, AttachmentType, ShapeHolderComponent, NAME_None };
+        return FCk_AddActorComponent_Params{ IsComponentTickEnabled, FCk_Time::ZeroSecond(), AttachmentType, ShapeHolderComponent, NAME_None };
     };
 
     UCk_Utils_ActorModifier_UE::Request_AddActorComponent

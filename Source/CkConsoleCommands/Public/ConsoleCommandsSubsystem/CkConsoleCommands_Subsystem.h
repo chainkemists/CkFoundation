@@ -4,6 +4,7 @@
 
 #include "CkEcs/World/CkEcsWorld.h"
 
+#include <GameFramework/GameModeBase.h>
 #include <Subsystems/WorldSubsystem.h>
 
 #include "CkConsoleCommands_Subsystem.generated.h"
@@ -38,7 +39,7 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable, BlueprintType)
+UCLASS(NotBlueprintable, BlueprintType, DisplayName = "Ck Console Commands Subsystem")
 class CKCONSOLECOMMANDS_API UCk_ConsoleCommands_Subsystem_UE : public UWorldSubsystem
 {
     GENERATED_BODY()

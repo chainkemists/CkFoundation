@@ -99,7 +99,7 @@ namespace ck
     {
         auto& timerChrono = InCurrentComp._Chrono;
 
-        if (timerChrono.Get_IsDone() && timerChrono.Get_GoalValue() > FCk_Time::Zero)
+        if (timerChrono.Get_IsDone() && timerChrono.Get_GoalValue() > FCk_Time::ZeroSecond())
         { return; }
 
         timer::VeryVerbose(TEXT("Ticking Timer with Entity [{}]"), InTimerEntity);

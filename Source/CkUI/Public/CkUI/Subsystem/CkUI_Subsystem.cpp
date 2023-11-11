@@ -55,7 +55,8 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(WatermarkWidgetClass), TEXT("Invalid Watermark Widget setup in the Project Settings!"))
     { return; }
 
-    _WatermarkWidget = Cast<UCk_Watermark_UserWidget_UE>(CreateWidget(GetWorld(), WatermarkWidgetClass));
+    const auto& GameInstance = UCk_Utils_Game_UE::Get_GameInstance(this);
+    _WatermarkWidget = Cast<UCk_Watermark_UserWidget_UE>(CreateWidget(GameInstance, WatermarkWidgetClass));
 
     CK_ENSURE_IF_NOT(ck::IsValid(_WatermarkWidget), TEXT("Failed to create the Watermark Widget!"))
     { return; }
