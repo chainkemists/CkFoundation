@@ -5,6 +5,10 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Game/CkGame_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
+
+#include "CkGameSession/Subsystem/CkGameSession_Subsystem.h"
+#include "CkSignal/Public/CkSignal/CkSignal_Fragment_Data.h"
+
 #include "CkUI/CustomWidgets/Watermark/CkWatermark_Widget.h"
 
 #include "CkUI/Settings/CkUI_Settings.h"
@@ -63,7 +67,18 @@ auto
 
     _WatermarkWidget->Request_SetDisplayPolicy(static_cast<ECk_Watermark_DisplayPolicy>(ck_ui::cvar::WatermarkDisplayPolicy));
 
-    _WatermarkWidget->AddToViewport(INT32_MAX);
+    const auto& GameSessionSubsystem = GameInstance->GetSubsystem<UCk_GameSession_Subsystem_UE>();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(GameSessionSubsystem), TEXT("Failed to retrive the GameSession Subsystem!"))
+    { return; }
+
+    ck::UUtils_Signal_OnLoginEvent_PostFireUnbind::Bind<&UCk_UI_Subsystem_UE::OnPlayerControllerReady>
+    (
+        this,
+        GameSessionSubsystem->Get_SignalHandle(),
+        ECk_Signal_BindingPolicy::FireIfPayloadInFlight,
+        ECk_Signal_PostFireBehavior::Unbind
+    );
 }
 
 auto
@@ -78,6 +93,19 @@ auto
     }
 
     Super::Deinitialize();
+}
+
+auto
+    UCk_UI_Subsystem_UE::
+    OnPlayerControllerReady(
+        APlayerController* InNewPlayerController,
+        TArray<APlayerController*> InAllPlayerControllers) const
+    -> void
+{
+    if (ck::Is_NOT_Valid(_WatermarkWidget))
+    { return; }
+
+    _WatermarkWidget->AddToViewport(INT32_MAX);
 }
 
 auto
