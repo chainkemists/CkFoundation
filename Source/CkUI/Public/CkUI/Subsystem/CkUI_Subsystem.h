@@ -24,8 +24,8 @@ public:
 
 private:
     auto OnPlayerControllerReady(
-        APlayerController* InNewPlayerController,
-        TArray<APlayerController*> InAllPlayerControllers) const -> void;
+        TWeakObjectPtr<APlayerController> InNewPlayerController,
+        TArray<TWeakObjectPtr<APlayerController>> InAllPlayerControllers) const -> void;
 
 public:
     auto Request_UpdateWatermarkDisplayPolicy(ECk_Watermark_DisplayPolicy InDisplayPolicy) const -> void;
