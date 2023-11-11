@@ -106,7 +106,7 @@ public:
 
 CK_DEFINE_CUSTOM_FORMATTER(FCk_Time, [&]()
 {
-    return ck::Format(TEXT("{.3f}s"), InObj.Get_Seconds());
+    return ck::Format(TEXT("{:.3f}s"), InObj.Get_Seconds());
 });
 
 // --------------------------------------------------------------------------------------------------------------------
