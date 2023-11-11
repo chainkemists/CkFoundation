@@ -39,7 +39,7 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(NotBlueprintable, BlueprintType, DisplayName = "Ck Console Commands Subsystem")
+UCLASS(NotBlueprintable, BlueprintType, DisplayName = "CkSubsystem_ConsoleCommands")
 class CKCONSOLECOMMANDS_API UCk_ConsoleCommands_Subsystem_UE : public UWorldSubsystem
 {
     GENERATED_BODY()
