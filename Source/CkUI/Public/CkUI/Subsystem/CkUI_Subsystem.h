@@ -10,7 +10,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(DisplayName = "Ck UI Subsystem")
+UCLASS(DisplayName = "CkSubsystem_UI")
 class CKUI_API UCk_UI_Subsystem_UE : public UGameInstanceSubsystem
 {
     GENERATED_BODY()
