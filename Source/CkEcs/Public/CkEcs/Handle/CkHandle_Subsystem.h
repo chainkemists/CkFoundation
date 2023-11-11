@@ -5,7 +5,7 @@
 
 #include "CkEcs/Handle/CkHandle_Debugging_Data.h"
 
-#include <Subsystems/GameInstanceSubsystem.h>
+#include "Subsystems/EngineSubsystem.h"
 
 #include "CkHandle_Subsystem.generated.h"
 

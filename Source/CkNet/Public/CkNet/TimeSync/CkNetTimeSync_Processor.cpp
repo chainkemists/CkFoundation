@@ -83,7 +83,7 @@ auto
     [&](const FCk_Request_NetTimeSync_NewSync& InNewSync)
     {
         const auto& isNetTimeSyncEnabled = UCk_Utils_NetTimeSync_UserSettings_UE::Get_EnableNetTimeSynchronization();
-        const auto& roundTripTime = isNetTimeSyncEnabled ? InNewSync.Get_RoundTripTime() : FCk_Time::Zero;
+        const auto& roundTripTime = isNetTimeSyncEnabled ? InNewSync.Get_RoundTripTime() : FCk_Time::ZeroSecond();
 
         _Registry.View<FFragment_NetTimeSync>().ForEach([&](EntityType InEntity, FFragment_NetTimeSync& InTimeSync)
         {
