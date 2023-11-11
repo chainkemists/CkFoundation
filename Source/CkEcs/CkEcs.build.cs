@@ -28,6 +28,7 @@ public class CkEcs : CkModuleRules
 				"CkCore",
 				"CkProfile",
 				"CkLog",
+				"CkMemory",
 				"CkSettings",
 				// ... add other public dependencies that you statically link with here ...
 			}

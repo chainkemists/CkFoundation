@@ -27,6 +27,7 @@ public class CkUnreal : CkModuleRules
             "CkIntent",
             "CkNet",
             "CkLog",
+            "CkMemory",
             "CkOverlapBody",
             "CkPhysics",
             "CkProjectile",

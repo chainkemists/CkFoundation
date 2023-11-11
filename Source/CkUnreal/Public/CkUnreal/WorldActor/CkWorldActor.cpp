@@ -15,6 +15,8 @@
 
 #include "CkIntent/CkIntent_Processor.h"
 
+#include "CkMemory/CkMemory_Processor.h"
+
 #include "CkNet/TimeSync/CkNetTimeSync_Processor.h"
 
 #include "CkOverlapBody/Marker/CkMarker_Processor.h"
@@ -132,6 +134,10 @@ namespace ck_world_actor
             InWorld.Add<ck::FProcessor_OwningActor_Destroy>(InWorld.Get_Registry());
             InWorld.Add<ck::FProcessor_EntityLifetime_EntityJustCreated>(InWorld.Get_Registry());
             InWorld.Add<ck::FProcessor_EntityLifetime_PendingDestroyEntity>(InWorld.Get_Registry());
+
+#if CK_MEMORY_TRACKING
+            InWorld.Add<ck::FProcessor_Memory_Stats>();
+#endif
         }
     }
 }

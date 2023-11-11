@@ -24,31 +24,37 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_BYPASS_ENSURES=0");
                         PublicDefinitions.Add("CK_LOG_NO_CONTEXT=0");
                         PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=0");
+                        PublicDefinitions.Add("CK_MEMORY_TRACKING=0");
                         break;
                     case UnrealTargetConfiguration.Debug:
                         PublicDefinitions.Add("CK_BYPASS_ENSURES=0");
                         PublicDefinitions.Add("CK_LOG_NO_CONTEXT=0");
                         PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=0");
+                        PublicDefinitions.Add("CK_MEMORY_TRACKING=0");
                         break;
                     case UnrealTargetConfiguration.DebugGame:
                         PublicDefinitions.Add("CK_BYPASS_ENSURES=0");
                         PublicDefinitions.Add("CK_LOG_NO_CONTEXT=0");
                         PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=0");
+                        PublicDefinitions.Add("CK_MEMORY_TRACKING=0");
                         break;
                     case UnrealTargetConfiguration.Development:
                         PublicDefinitions.Add("CK_BYPASS_ENSURES=0");
                         PublicDefinitions.Add("CK_LOG_NO_CONTEXT=0");
                         PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=0");
+                        PublicDefinitions.Add("CK_MEMORY_TRACKING=0");
                         break;
                     case UnrealTargetConfiguration.Test:
                         PublicDefinitions.Add("CK_BYPASS_ENSURES=0");
                         PublicDefinitions.Add("CK_LOG_NO_CONTEXT=0");
                         PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=0");
+                        PublicDefinitions.Add("CK_MEMORY_TRACKING=0");
                         break;
                     case UnrealTargetConfiguration.Shipping:
                         PublicDefinitions.Add("CK_BYPASS_ENSURES=1");
                         PublicDefinitions.Add("CK_LOG_NO_CONTEXT=1");
                         PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=1");
+                        PublicDefinitions.Add("CK_MEMORY_TRACKING=0");
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -58,6 +64,7 @@ public class CkModuleRules : ModuleRules
             case BuildConfiguration.Profile:
                 PublicDefinitions.Add("CK_LOG_NO_CONTEXT=1");
                 PublicDefinitions.Add("CK_BYPASS_ENSURES=1");
+                PublicDefinitions.Add("CK_MEMORY_TRACKING=1");
                 break;
             default:
                 throw new ArgumentOutOfRangeException();

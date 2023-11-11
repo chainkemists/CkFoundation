@@ -17,8 +17,12 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Screen_UE);
 
 public:
-    UFUNCTION(BlueprintPure)
-    static bool ProjectWorldLocationToWidgetPositionCoords(APlayerController* InPlayerController, const FVector& InWorldLocation, FVector2D& OutViewportPosition);
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|UI")
+    static bool
+    ProjectWorldLocationToWidgetPositionCoords(
+        APlayerController* InPlayerController,
+        const FVector& InWorldLocation, 
+        FVector2D& OutViewportPosition);
 
     /**
     * Converts a world location to screen position for HUD drawing. This differs from the results of FSceneView::WorldToScreen in that it returns a position along the edge of the screen for offscreen locations
@@ -30,8 +34,11 @@ public:
     * @param OutRotationAngleDegrees - The angle to rotate a hud element if you want it pointing toward the offscreen indicator, 0° if onscreen
     * @param OutIsOnScreen - True if the specified location is in the camera view (may be obstructed)
     */
-    UFUNCTION( BlueprintPure, meta=( WorldContext = "InWorldContextObject", CallableWithoutWorldContext))
-    static void FindScreenEdgeLocationForWorldLocation(
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|UI",
+              meta=(WorldContext = "InWorldContextObject", CallableWithoutWorldContext))
+    static void
+    FindScreenEdgeLocationForWorldLocation(
         UObject* InWorldContextObject,
         const FVector& InLocation,
         float InEdgePercent,
