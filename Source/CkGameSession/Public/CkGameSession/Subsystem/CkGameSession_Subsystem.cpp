@@ -71,7 +71,7 @@ auto
     -> void
 {
     _AllPlayerControllers.Emplace(InPlayerController);
-    ck::UUtils_Signal_OnLoginEvent::Broadcast(_SignalHandle, ck::MakePayload(InPlayerController, _AllPlayerControllers));
+    ck::UUtils_Signal_OnLoginEvent::Broadcast(_SignalHandle, ck::MakePayload(MakeWeakObjectPtr(InPlayerController), _AllPlayerControllers));
 }
 
 auto

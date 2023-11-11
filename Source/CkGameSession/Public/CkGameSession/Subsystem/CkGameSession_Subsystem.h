@@ -15,30 +15,30 @@
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_OnLoginEvent,
-    APlayerController*,
+    TWeakObjectPtr<APlayerController>,
     InPlayerController,
-    const TArray<APlayerController*>&,
+    const TArray<TWeakObjectPtr<APlayerController>>&,
     InAllPlayerControllers);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_OnLoginEvent_MC,
-    APlayerController*,
+    TWeakObjectPtr<APlayerController>,
     InPlayerController,
-    const TArray<APlayerController*>&,
+    const TArray<TWeakObjectPtr<APlayerController>>&,
     InAllPlayerControllers);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_OnLogoutEvent,
-    APlayerController*,
+    TWeakObjectPtr<APlayerController>,
     InPlayerController,
-    const TArray<APlayerController*>&,
+    const TArray<TWeakObjectPtr<APlayerController>>&,
     InAllPlayerControllers);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_OnLogoutEvent_MC,
-    APlayerController*,
+    TWeakObjectPtr<APlayerController>,
     InPlayerController,
-    const TArray<APlayerController*>&,
+    const TArray<TWeakObjectPtr<APlayerController>>&,
     InAllPlayerControllers);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -49,15 +49,15 @@ namespace ck
         CKGAMESESSION_API,
         OnLoginEvent,
         FCk_Delegate_OnLoginEvent_MC,
-        APlayerController*,
-        TArray<APlayerController*>);
+        TWeakObjectPtr<APlayerController>,
+        TArray<TWeakObjectPtr<APlayerController>>);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKGAMESESSION_API,
         OnLogoutEvent,
         FCk_Delegate_OnLogoutEvent_MC,
-        APlayerController*,
-        TArray<APlayerController*>);
+        TWeakObjectPtr<APlayerController>,
+        TArray<TWeakObjectPtr<APlayerController>>);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -119,7 +119,7 @@ public:
 
 private:
     UPROPERTY(meta=(AllowPrivateAccess))
-    TArray<APlayerController*>  _AllPlayerControllers;
+    TArray<TWeakObjectPtr<APlayerController>>  _AllPlayerControllers;
 
 private:
     FCk_Registry _InternalRegistry;
