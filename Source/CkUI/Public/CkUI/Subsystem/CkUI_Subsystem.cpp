@@ -98,8 +98,8 @@ auto
 auto
     UCk_UI_Subsystem_UE::
     OnPlayerControllerReady(
-        APlayerController* InNewPlayerController,
-        TArray<APlayerController*> InAllPlayerControllers) const
+        TWeakObjectPtr<APlayerController> InNewPlayerController,
+        TArray<TWeakObjectPtr<APlayerController>> InAllPlayerControllers) const
     -> void
 {
     if (ck::Is_NOT_Valid(_WatermarkWidget))
