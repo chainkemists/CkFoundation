@@ -36,6 +36,12 @@ namespace ck
 
     public:
         TFragment_Signal();
+        TFragment_Signal(const ThisType&) = delete;
+        TFragment_Signal(ThisType&& InOther) noexcept;
+
+    public:
+        auto operator==(ThisType) -> ThisType& = delete;
+        auto operator==(ThisType&& InOther) -> ThisType&;
 
     private:
         PayloadType _Payload;
@@ -77,7 +83,14 @@ namespace ck
         using MulticastType = T_UnrealMulticast;
 
     public:
+        TFragment_Signal_UnrealMulticast() = default;
+        TFragment_Signal_UnrealMulticast(const ThisType&) = delete;
+        TFragment_Signal_UnrealMulticast(ThisType&& InOther) noexcept;
         ~ TFragment_Signal_UnrealMulticast();
+
+    public:
+        auto operator=(ThisType InOther) -> ThisType& = delete;
+        auto operator=(ThisType&& InOther) noexcept -> ThisType&;
 
     public:
         auto DoBroadcast(T_Args&&... InArgs);
