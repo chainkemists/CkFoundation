@@ -47,4 +47,24 @@ auto
     }
 }
 
+auto
+    UCk_Utils_IO_UE::
+    Get_ProjectVersion()
+    -> FString
+{
+    if (ck::Is_NOT_Valid(GConfig, ck::IsValid_Policy_NullptrOnly{}))
+    { return {}; }
+
+    FString OutProjectVersion;
+    GConfig->GetString
+    (
+        TEXT("Script/EngineSettings.GeneralProjectSettings"),
+        TEXT("ProjectVersion"),
+        OutProjectVersion,
+        GGameIni
+    );
+
+    return OutProjectVersion;
+}
+
 // --------------------------------------------------------------------------------------------------------------------

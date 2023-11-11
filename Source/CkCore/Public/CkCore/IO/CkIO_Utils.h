@@ -39,6 +39,11 @@ public:
     static UFont*
     Get_Engine_DefaultTextFont(
         ECk_Engine_TextFontSize InFontSize);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IO")
+    static FString
+    Get_ProjectVersion();
 };
 
 // --------------------------------------------------------------------------------------------------------------------
