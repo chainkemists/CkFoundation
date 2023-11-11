@@ -42,6 +42,7 @@ public class CkUI : CkModuleRules
                 "CkThirdParty",
                 "CkCore",
                 "CkLog",
+                "CkSettings"
                 // ... add private dependencies that you statically link with here ...
             }
             );

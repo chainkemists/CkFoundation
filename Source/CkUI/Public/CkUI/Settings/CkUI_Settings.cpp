@@ -1,0 +1,15 @@
+#include "CkUI_Settings.h"
+
+#include "CkCore/Object/CkObject_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_UI_ProjectSettings_UE::
+    Get_WatermarkWidgetClass()
+    -> TSubclassOf<UCk_Watermark_UserWidget_UE>
+{
+    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_UI_ProjectSettings_UE>()->Get_WatermarkWidgetClass().LoadSynchronous();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
