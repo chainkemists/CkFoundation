@@ -67,7 +67,7 @@ namespace ck
         OnActorSpawned,
         FCk_Delegate_ActorModifier_OnActorSpawned_MC,
         FCk_Handle,
-        AActor*);
+        TWeakObjectPtr<AActor>);
 
 }
 
