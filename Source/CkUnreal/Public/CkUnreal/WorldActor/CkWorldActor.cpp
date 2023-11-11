@@ -13,8 +13,6 @@
 
 #include "CkEcsBasics/Transform/CkTransform_Processor.h"
 
-#include "CkIntent/CkIntent_Processor.h"
-
 #include "CkMemory/CkMemory_Processor.h"
 
 #include "CkNet/TimeSync/CkNetTimeSync_Processor.h"
@@ -61,9 +59,6 @@ namespace ck_world_actor
         InWorld.Add<ck::FProcessor_NetTimeSync_HandleRequests>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_NetTimeSync_OnNetworkClockSynchronized>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_NetTimeSync_FirstSync>(InWorld.Get_Registry());
-
-        InWorld.Add<ck::FProcessor_Intent_Setup>(InWorld.Get_Registry());
-        InWorld.Add<ck::FProcessor_Intent_HandleRequests>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FProcessor_Marker_Setup>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_Sensor_Setup>(InWorld.Get_Registry());
