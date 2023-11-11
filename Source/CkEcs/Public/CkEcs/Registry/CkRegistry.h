@@ -6,6 +6,8 @@
 
 #include "CkEcs/Entity/CkEntity.h"
 
+#include "CkMemory/Allocator/CkMemoryAllocator.h"
+
 #include "entt/entity/registry.hpp"
 
 #include "CkRegistry.generated.h"
@@ -41,9 +43,16 @@ public:
     friend class ck::FProcessor_EntityLifetime_PendingDestroyEntity;
 
 public:
-    using InternalRegistryType = entt::registry;
-    using InternalRegistryPtrType = TSharedPtr<InternalRegistryType>;
     using EntityType = FCk_Entity;
+
+#if CK_MEMORY_TRACKING
+    // TODO: Replace 'std::allocator' with custom one when it is created
+    using InternalRegistryType = entt::basic_registry<EntityType::IdType, std::allocator<EntityType::IdType>>;
+#else
+    using InternalRegistryType = entt::basic_registry<EntityType::IdType, std::allocator<EntityType::IdType>>;
+#endif
+
+    using InternalRegistryPtrType = TSharedPtr<InternalRegistryType>;
 
 public:
     template <typename T_RegistryType, typename ... T_Fragments>

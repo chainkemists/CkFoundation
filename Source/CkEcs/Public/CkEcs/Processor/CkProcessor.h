@@ -1,4 +1,5 @@
 #pragma once
+
 #include "CkCore/Time/CkTime.h"
 
 #include "CkEcs/Handle/CkHandle.h"
