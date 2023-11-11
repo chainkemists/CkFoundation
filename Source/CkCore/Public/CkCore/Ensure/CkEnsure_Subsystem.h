@@ -8,7 +8,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(DisplayName = "Ck Ensure Subsystem")
+UCLASS(DisplayName = "CkSubsystem_Ensure")
 class CKCORE_API UCk_Ensure_Subsystem_UE : public UGameInstanceSubsystem
 {
     GENERATED_BODY()
