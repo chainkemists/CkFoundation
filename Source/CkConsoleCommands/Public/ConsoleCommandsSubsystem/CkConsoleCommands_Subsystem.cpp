@@ -3,6 +3,7 @@
 #include "CkConsoleCommands/CkConsoleCommands_Log.h"
 
 #include "CkCore/Actor/CkActor_Utils.h"
+#include "Engine/World.h"
 
 #include "GameFramework/GameModeBase.h"
 

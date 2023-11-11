@@ -66,12 +66,13 @@ private:
     FCk_Time _MinPing;
     FCk_Time _MaxPing;
 
-    FCk_Time _NextMinPing = FCk_Time::OneSecond;
-    FCk_Time _NextMaxPing = FCk_Time::Zero;
+    FCk_Time _NextMinPing = FCk_Time::OneSecond();
+    FCk_Time _NextMaxPing = FCk_Time::ZeroSecond();
 
     FCk_Time _LastUpdateTime;
 
-    static const FCk_Time _UpdateFrequency;
+private:
+    static auto Get_UpdateFrequency() -> FCk_Time;
 
 public:
     CK_PROPERTY_GET(_MaxPing);
@@ -97,21 +98,7 @@ public:
     CK_GENERATED_BODY(ACk_PlayerState_UE);
 
 public:
-    auto BeginPlay() -> void override;
-    auto EndPlay(EEndPlayReason::Type InEndPlayReason) -> void override;
     auto UpdatePing(float InPing) -> void override;
-
-    auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
-
-public:
-    UFUNCTION(Server, Reliable, WithValidation)
-    void Server_Request_Pong();
-
-    UFUNCTION(Client, Reliable)
-    void Client_Request_Ping();
-
-private:
-    void DoRequest_Ping();
 
 public:
     auto Get_MinPing() const -> FCk_Time;
@@ -122,21 +109,13 @@ public:
 #endif
 
 private:
-    UPROPERTY(BlueprintReadOnly, Transient, Replicated, meta = (AllowPrivateAccess = true, Units = "ms"))
-    int32 _CurrentPingInMs = 0;
-
-private:
     FCk_PlayerState_PingRange _PingRange;
 
     FTimerHandle _PingTimerHandle;
 
-    FCk_Time _PingSentTime = FCk_Time::Zero;
-
-    static const FCk_Time _PingFrequency;
+    FCk_Time _PingSentTime = FCk_Time::ZeroSecond();
 
 public:
-    CK_PROPERTY_GET(_CurrentPingInMs);
-    CK_PROPERTY_GET(_PingFrequency);
     CK_PROPERTY_GET(_PingSentTime);
 };
 

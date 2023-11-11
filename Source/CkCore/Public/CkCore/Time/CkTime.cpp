@@ -7,14 +7,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-const FCk_Time FCk_Time::Zero                = FCk_Time{ 0.0f };
-const FCk_Time FCk_Time::OneMillisecond      = FCk_Time{ 0.001f };
-const FCk_Time FCk_Time::TenMilliseconds     = FCk_Time{ 0.01f };
-const FCk_Time FCk_Time::HundredMilliseconds = FCk_Time{ 0.1f };
-const FCk_Time FCk_Time::OneSecond           = FCk_Time{ 1.0f };
-
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     FCk_Time::
     operator==(
@@ -75,6 +67,51 @@ auto
     -> float
 {
     return _Seconds * 1000.0f;
+}
+
+auto
+    FCk_Time::
+    ZeroSecond()
+    -> FCk_Time
+{
+    static auto ZeroSecond = FCk_Time{ 0.0f };
+    return ZeroSecond;
+}
+
+auto
+    FCk_Time::
+    OneMillisecond()
+    -> FCk_Time
+{
+    static auto OneMillisecond = FCk_Time{ 0.001f };
+    return OneMillisecond;
+}
+
+auto
+    FCk_Time::
+    TenMilliseconds()
+    -> FCk_Time
+{
+    static auto TenMilliseconds = FCk_Time{ 0.01f };
+    return TenMilliseconds;
+}
+
+auto
+    FCk_Time::
+    HundredMilliseconds()
+    -> FCk_Time
+{
+    static auto HundredMilliseconds = FCk_Time{ 0.1f };
+    return HundredMilliseconds;
+}
+
+auto
+    FCk_Time::
+    OneSecond()
+    -> FCk_Time
+{
+    static auto OneSecond = FCk_Time{ 1.0f };
+    return OneSecond;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

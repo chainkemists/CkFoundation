@@ -103,7 +103,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, EditCondition = "_IsTickEnabled"))
-    FCk_Time _TickInterval = FCk_Time::Zero;
+    FCk_Time _TickInterval = FCk_Time::ZeroSecond();
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))

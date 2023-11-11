@@ -44,11 +44,11 @@ public:
     auto Get_Milliseconds() const -> float;
 
 public:
-    static const FCk_Time Zero;
-    static const FCk_Time OneMillisecond;
-    static const FCk_Time TenMilliseconds;
-    static const FCk_Time HundredMilliseconds;
-    static const FCk_Time OneSecond;
+    static auto ZeroSecond() -> FCk_Time;
+    static auto OneMillisecond() -> FCk_Time;
+    static auto TenMilliseconds() -> FCk_Time;
+    static auto HundredMilliseconds() -> FCk_Time;
+    static auto OneSecond() -> FCk_Time;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,

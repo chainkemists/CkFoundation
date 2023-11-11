@@ -351,20 +351,6 @@ auto
 
 auto
     UCk_Utils_Net_UE::
-    Get_CurrentPing(
-        const UObject* InContext)
-    -> FCk_Time
-{
-    const auto& PrimaryPlayerState = UCk_Utils_Game_UE::Get_PrimaryPlayerState_AsClient(InContext);
-
-    if (ck::Is_NOT_Valid(PrimaryPlayerState))
-    { return {}; }
-
-    return UCk_Utils_Time_UE::Make_FromMilliSeconds(PrimaryPlayerState->Get_CurrentPingInMs());
-}
-
-auto
-    UCk_Utils_Net_UE::
     Get_MaxPing(
         const UObject* InContext)
     -> FCk_Time

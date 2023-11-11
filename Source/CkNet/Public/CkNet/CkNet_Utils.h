@@ -127,11 +127,6 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
     static FCk_Time
-    Get_CurrentPing(const UObject* InContext = nullptr);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
-    static FCk_Time
     Get_MaxPing(const UObject* InContext = nullptr);
 
     UFUNCTION(BlueprintPure,
