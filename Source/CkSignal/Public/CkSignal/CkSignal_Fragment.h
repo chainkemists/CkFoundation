@@ -24,6 +24,10 @@ namespace ck
         static constexpr auto in_place_delete = true;
 
     public:
+        static_assert((std::is_reference_v<T_Args> || ...) == false, "None of the T_Args of a Signal can be references");
+        static_assert((std::is_pointer_v<T_Args> || ...) == false, "None of the T_Args of a Signal can be raw pointers");
+
+    public:
         struct FTag_PayloadInFlight {};
 
     public:
