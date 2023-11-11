@@ -157,6 +157,16 @@
 			]
 		},
 		{
+			"Name": "CkMemory",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
 			"Name": "CkNet",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",

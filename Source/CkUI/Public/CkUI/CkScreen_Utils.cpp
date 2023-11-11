@@ -11,12 +11,13 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_Utils_Screen_UE::
-ProjectWorldLocationToWidgetPositionCoords(
-    APlayerController* InPlayerController,
-    const FVector&     InWorldLocation,
-    FVector2D&         OutViewportPosition)
--> bool
+auto
+    UCk_Utils_Screen_UE::
+    ProjectWorldLocationToWidgetPositionCoords(
+        APlayerController* InPlayerController,
+        const FVector&     InWorldLocation,
+        FVector2D&         OutViewportPosition)
+    -> bool
 {
     OutViewportPosition = FVector2D::ZeroVector;
 
@@ -43,16 +44,17 @@ ProjectWorldLocationToWidgetPositionCoords(
     return true;
 }
 
-auto UCk_Utils_Screen_UE::
-FindScreenEdgeLocationForWorldLocation(
-    UObject* InWorldContextObject,
-    const FVector& InLocation,
-    float InEdgePercent,
-    FVector2D InViewportCenterLoc,
-    FVector2D& OutScreenPosition,
-    float& OutRotationAngleDegrees,
-    bool &OutIsOnScreen)
--> void
+auto
+    UCk_Utils_Screen_UE::
+    FindScreenEdgeLocationForWorldLocation(
+        UObject* InWorldContextObject,
+        const FVector& InLocation,
+        float InEdgePercent,
+        FVector2D InViewportCenterLoc,
+        FVector2D& OutScreenPosition,
+        float& OutRotationAngleDegrees,
+        bool &OutIsOnScreen)
+    -> void
 {
     OutIsOnScreen = false;
     OutRotationAngleDegrees = 0.f;
@@ -147,11 +149,12 @@ FindScreenEdgeLocationForWorldLocation(
     OutScreenPosition = outTempScreenPosition;
 }
 
-auto UCk_Utils_Screen_UE::
-DoGet_PlayerControllerViewportSize(
-    UObject* InWorldContextObject,
-    APlayerController* InPlayerController)
--> FVector2D
+auto
+    UCk_Utils_Screen_UE::
+    DoGet_PlayerControllerViewportSize(
+        UObject* InWorldContextObject,
+        APlayerController* InPlayerController)
+    -> FVector2D
 {
     if(ck::Is_NOT_Valid(InPlayerController))
     { return {}; }
