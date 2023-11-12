@@ -51,6 +51,7 @@ public:
 
 public:
     auto Initialize(FSubsystemCollectionBase& Collection) -> void override;
+    auto Deinitialize() -> void override;
     auto ShouldCreateSubsystem(UObject* InOuter) const -> bool override;
 
 public:
@@ -72,8 +73,12 @@ public:
 
 private:
     auto DoSpawnConsoleCommandsActor(APlayerController* InPlayerController) -> void;
+    auto DoUnregisterConsoleCommand() -> void;
 
 private:
     UPROPERTY(Transient)
     TArray<TObjectPtr<ACk_ConsoleCommandsHelper_UE>> _ConsoleCommandsHelper;
+
+private:
+    inline static IConsoleObject* _ConsoleCommand = nullptr;
 };

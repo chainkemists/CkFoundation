@@ -68,7 +68,11 @@ auto
     if (NOT UCk_Utils_Game_UE::Get_IsInGame(this))
     { return; }
 
-    IConsoleManager::Get().RegisterConsoleCommand
+    // ideally we will only have 1 console command registration, however due to the many number of Worlds in the Editor
+    // it is difficult to make sure that the last created game world (and subsequently this subsystem) registers the command
+    DoUnregisterConsoleCommand();
+
+    _ConsoleCommand = IConsoleManager::Get().RegisterConsoleCommand
     (
         TEXT("RunConsoleCommand_OnServer"),
         TEXT("Runs console commands on Server"),
@@ -77,6 +81,14 @@ auto
     );
 
     FGameModeEvents::GameModePostLoginEvent.AddUObject(this, &UCk_ConsoleCommands_Subsystem_UE::OnNewPlayerControllerAdded);
+}
+
+auto
+    UCk_ConsoleCommands_Subsystem_UE::
+    Deinitialize() -> void
+{
+    DoUnregisterConsoleCommand();
+    Super::Deinitialize();
 }
 
 auto
@@ -158,4 +170,16 @@ auto
             [&](AActor* InActor) { }
         )
     ));
+}
+
+auto
+    UCk_ConsoleCommands_Subsystem_UE::
+    DoUnregisterConsoleCommand()
+    -> void
+{
+    if (ck::IsValid(_ConsoleCommand, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        IConsoleManager::Get().UnregisterConsoleObject(_ConsoleCommand);
+        _ConsoleCommand = nullptr;
+    }
 }
