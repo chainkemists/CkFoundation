@@ -50,7 +50,7 @@ private:
     FGameplayTag _CameraShakeID;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FVector _Location;
+    FVector _Location = FVector::Zero();
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     TObjectPtr<UObject> _WorldContextObject;
