@@ -53,13 +53,13 @@ public:
     TSubclassOf<AActor> _NonReplicatedActor;
 
     UPROPERTY()
-    int32 _OriginalEntity;
+    int32 _OriginalEntity = -1;
 
     UPROPERTY()
     TObjectPtr<APlayerController> _OwningPlayerController;
 
     UPROPERTY()
-    FVector _StartingLocation;
+    FVector _StartingLocation = FVector::Zero();
 
     UPROPERTY()
     TArray<TWeakObjectPtr<UCk_ReplicatedObject_UE>> _ReplicatedObjects;
