@@ -80,13 +80,16 @@ auto
         ECVF_Default
     );
 
-    FGameModeEvents::GameModePostLoginEvent.AddUObject(this, &UCk_ConsoleCommands_Subsystem_UE::OnNewPlayerControllerAdded);
+    _PostLoginDelegateHandle = FGameModeEvents::GameModePostLoginEvent.AddUObject(
+        this, &UCk_ConsoleCommands_Subsystem_UE::OnNewPlayerControllerAdded);
 }
 
 auto
     UCk_ConsoleCommands_Subsystem_UE::
     Deinitialize() -> void
 {
+    FGameModeEvents::GameModePostLoginEvent.Remove(_PostLoginDelegateHandle);
+
     DoUnregisterConsoleCommand();
     Super::Deinitialize();
 }
