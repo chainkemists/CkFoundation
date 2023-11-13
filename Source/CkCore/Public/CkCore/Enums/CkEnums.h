@@ -353,3 +353,17 @@ enum class ECk_ExtentScope : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ExtentScope);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_PerformanceRating : uint8
+{
+    VeryGood,
+    Good,
+    Okay,
+    Bad,
+    VeryBad
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_PerformanceRating);
+
+// --------------------------------------------------------------------------------------------------------------------
