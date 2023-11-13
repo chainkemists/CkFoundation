@@ -26,17 +26,17 @@ auto
 
     const FName NameStatgroupRHI(FStatGroup_STATGROUP_RHI::GetGroupName());
 
-    const auto TotalRHIMemory = std::accumulate(OutStatMessages.begin(), OutStatMessages.end(), 1, [&](int64 Value, const FStatMessage& StatMessage)
-    {
-        const auto& MetaInfo = StatMessage.NameAndInfo;
+    const int64 TotalRHIMemory = std::accumulate(OutStatMessages.begin(), OutStatMessages.end(), 0LL,
+    [&](int64 InAccumulator, const FStatMessage& InStatMessage) {
+        const auto& MetaInfo = InStatMessage.NameAndInfo;
 
-        if (const auto& LastGroup = MetaInfo.GetGroupName(); LastGroup == NameStatgroupRHI && MetaInfo.GetFlag(EStatMetaFlags::IsMemory))
-        {
-            return Value += StatMessage.GetValue_int64();
+        if (const auto& LastGroup = MetaInfo.GetGroupName(); LastGroup == NameStatgroupRHI && MetaInfo.GetFlag(EStatMetaFlags::IsMemory)) {
+            return InAccumulator + InStatMessage.GetValue_int64();
         }
 
-        return Value;
-    });
+        return InAccumulator;
+    }
+    );
 
     const auto MemoryCountSnapshot = FCk_Utils_Memory_MemoryCountSnapshot_Result{}
                                         .Set_RHIMemoryUsed          (TotalRHIMemory          * InvGB)
