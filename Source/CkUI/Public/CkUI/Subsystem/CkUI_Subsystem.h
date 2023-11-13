@@ -2,6 +2,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkGameSession/Subsystem/CkGameSession_Subsystem.h"
+
 #include "CkUI/CustomWidgets/Watermark/CkWatermark_Widget.h"
 
 #include <Subsystems/GameInstanceSubsystem.h>
@@ -33,6 +35,9 @@ public:
 private:
     UPROPERTY(Transient)
     TObjectPtr<UCk_Watermark_UserWidget_UE> _WatermarkWidget;
+
+private:
+    ck::UUtils_Signal_OnLoginEvent_PostFireUnbind::ConnectionType _PostFireUnbind_Connection;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
