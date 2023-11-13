@@ -57,6 +57,7 @@ namespace ck
     public:
         using Super = TUtils_Signal<T_DerivedSignal>;
         using Super::SignalType;
+        using Super::ConnectionType;
 
         using UnrealSignalType = T_DerivedSignal_Unreal;
         using UnrealDynamicDelegateType = typename T_DerivedSignal_Unreal::MulticastType::FDelegate;

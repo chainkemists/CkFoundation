@@ -34,6 +34,7 @@ namespace ck
         using ArgsType = std::tuple<T_Args...>;
         using PayloadType = TOptional<ArgsType>;
 
+        using ConnectionType = entt::connection;
         using SignalType = entt::sigh<void(T_Args...)>;
         using SinkType = entt::sink<SignalType>;
         using DelegateType = entt::delegate<void(T_Args...)>;
