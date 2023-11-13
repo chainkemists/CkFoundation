@@ -72,7 +72,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(GameSessionSubsystem), TEXT("Failed to retrive the GameSession Subsystem!"))
     { return; }
 
-    ck::UUtils_Signal_OnLoginEvent_PostFireUnbind::Bind<&UCk_UI_Subsystem_UE::OnPlayerControllerReady>
+    _PostFireUnbind_Connection = ck::UUtils_Signal_OnLoginEvent_PostFireUnbind::Bind<&UCk_UI_Subsystem_UE::OnPlayerControllerReady>
     (
         this,
         GameSessionSubsystem->Get_SignalHandle(),
@@ -86,6 +86,8 @@ auto
     Deinitialize()
     -> void
 {
+    _PostFireUnbind_Connection.release();
+
     if (ck::IsValid(_WatermarkWidget))
     {
         _WatermarkWidget->RemoveFromParent();
