@@ -81,4 +81,7 @@ private:
 
 private:
     inline static IConsoleObject* _ConsoleCommand = nullptr;
+
+private:
+    FDelegateHandle _PostLoginDelegateHandle;
 };
