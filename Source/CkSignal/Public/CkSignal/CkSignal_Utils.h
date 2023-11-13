@@ -16,6 +16,7 @@ namespace ck
     {
     public:
         using SignalType = T_DerivedSignal;
+        using ConnectionType = typename SignalType::ConnectionType;
 
     public:
         static auto Has(FCk_Handle InHandle) -> bool;
@@ -24,16 +25,19 @@ namespace ck
         static auto Broadcast(FCk_Handle InHandle, TPayload<T_Args...>&& InPayload);
 
         template <auto T_Candidate, ECk_Signal_BindingPolicy InPayloadInFlightBehavior, ECk_Signal_PostFireBehavior InPostFireBehavior>
+        [[nodiscard]]
         static auto Bind(FCk_Handle InHandle);
 
         template <auto T_Candidate,  ECk_Signal_BindingPolicy InPayloadInFlightBehavior, ECk_Signal_PostFireBehavior InPostFireBehavior,
             typename T_Instance>
+        [[nodiscard]]
         static auto Bind(T_Instance&& InInstance, FCk_Handle InHandle);
 
         template <auto T_Candidate>
         static auto Bind(FCk_Handle InHandle, ECk_Signal_BindingPolicy InPayloadInFlightBehavior, ECk_Signal_PostFireBehavior InPostFireBehavior);
 
         template <auto T_Candidate, typename T_Instance>
+        [[nodiscard]]
         static auto Bind(T_Instance&& InInstance, FCk_Handle InHandle, ECk_Signal_BindingPolicy InPayloadInFlightBehavior,
             ECk_Signal_PostFireBehavior InPostFireBehavior);
 
