@@ -47,74 +47,12 @@ auto
 
 auto
     UCk_EcsWorld_Subsystem_UE::
-    Deinitialize()
-    -> void
-{
-    OnDeinitialize();
-
-    _WorldActor = nullptr;
-}
-
-auto
-    UCk_EcsWorld_Subsystem_UE::
-    Initialize(
-        FSubsystemCollectionBase& Collection)
-    -> void
-{
-    Super::Initialize(Collection);
-
-    OnInitialize();
-}
-
-auto
-    UCk_EcsWorld_Subsystem_UE::
-    PostInitialize()
-    -> void
-{
-    Super::PostInitialize();
-
-    OnAllWorldSubsystemsInitialized();
-}
-
-auto
-    UCk_EcsWorld_Subsystem_UE::
     OnWorldBeginPlay(
         UWorld& InWorld) -> void
 {
     Super::OnWorldBeginPlay(InWorld);
 
     DoSpawnWorldActor();
-}
-
-auto
-    UCk_EcsWorld_Subsystem_UE::
-    ShouldCreateSubsystem(
-        UObject* InOuter) const
-    -> bool
-{
-    const auto& ShouldCreateSubsystem = Super::ShouldCreateSubsystem(InOuter);
-
-    if (NOT ShouldCreateSubsystem)
-    { return false; }
-
-    if (ck::Is_NOT_Valid(InOuter))
-    { return true; }
-
-    const auto& World = InOuter->GetWorld();
-
-    if (ck::Is_NOT_Valid(World))
-    { return true; }
-
-    return DoesSupportWorldType(World->WorldType);
-}
-
-auto
-    UCk_EcsWorld_Subsystem_UE::
-    DoesSupportWorldType(
-        const EWorldType::Type WorldType) const
-    -> bool
-{
-    return WorldType == EWorldType::Game || WorldType == EWorldType::PIE;
 }
 
 auto

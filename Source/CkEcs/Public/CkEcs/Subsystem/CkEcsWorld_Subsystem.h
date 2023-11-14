@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
 
 #include "CkEcs/World/CkEcsWorld.h"
 
@@ -41,7 +42,7 @@ protected:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(BlueprintType)
-class CKECS_API UCk_EcsWorld_Subsystem_UE : public UWorldSubsystem
+class CKECS_API UCk_EcsWorld_Subsystem_UE : public UCk_Game_WorldSubsystem_Base_UE
 {
     GENERATED_BODY()
 
@@ -52,30 +53,8 @@ public:
     using EcsWorldType = ck::FEcsWorld;
 
 public:
-    virtual auto Deinitialize() -> void override;
-    virtual auto Initialize(FSubsystemCollectionBase& Collection) -> void override;
-
-    /** Called once all UWorldSubsystems have been initialized */
-    virtual auto PostInitialize() -> void override;
-
     /** Called when world is ready to start gameplay before the game mode transitions to the correct state and call BeginPlay on all actors */
-    virtual auto OnWorldBeginPlay(UWorld& InWorld) -> void override;
-
-    virtual auto ShouldCreateSubsystem(UObject* Outer) const -> bool override;
-
-protected:
-    // Called when determining whether to create this Subsystem
-    virtual auto DoesSupportWorldType(const EWorldType::Type WorldType) const -> bool override;
-
-public:
-    UFUNCTION(BlueprintImplementableEvent)
-    void OnInitialize();
-
-    UFUNCTION(BlueprintImplementableEvent)
-    void OnAllWorldSubsystemsInitialized();
-
-    UFUNCTION(BlueprintImplementableEvent)
-    void OnDeinitialize();
+    auto OnWorldBeginPlay(UWorld& InWorld) -> void override;
 
 private:
     auto DoSpawnWorldActor() -> void;
