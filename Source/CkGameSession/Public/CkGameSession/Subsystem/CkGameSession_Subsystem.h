@@ -15,30 +15,30 @@
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_OnLoginEvent,
-    TWeakObjectPtr<APlayerController>,
+    APlayerController*,
     InPlayerController,
-    const TArray<TWeakObjectPtr<APlayerController>>&,
+    const TArray<APlayerController*>&,
     InAllPlayerControllers);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_OnLoginEvent_MC,
-    TWeakObjectPtr<APlayerController>,
+    APlayerController*,
     InPlayerController,
-    const TArray<TWeakObjectPtr<APlayerController>>&,
+    const TArray<APlayerController*>&,
     InAllPlayerControllers);
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_OnLogoutEvent,
-    TWeakObjectPtr<APlayerController>,
+    APlayerController*,
     InPlayerController,
-    const TArray<TWeakObjectPtr<APlayerController>>&,
+    const TArray<APlayerController*>&,
     InAllPlayerControllers);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_OnLogoutEvent_MC,
-    TWeakObjectPtr<APlayerController>,
+    APlayerController*,
     InPlayerController,
-    const TArray<TWeakObjectPtr<APlayerController>>&,
+    const TArray<APlayerController*>&,
     InAllPlayerControllers);
 
 // --------------------------------------------------------------------------------------------------------------------
