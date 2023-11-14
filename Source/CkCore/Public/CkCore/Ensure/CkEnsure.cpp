@@ -2,6 +2,7 @@
 
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkCore/Debug/CkDebug_Utils.h"
+#include "CkCore/Settings/CkCore_Settings.h"
 
 #if WITH_EDITOR
 #include <Kismet2/KismetDebugUtilities.h>
@@ -12,16 +13,25 @@
 {                                                                                                                                              \
     using namespace ck;                                                                                                                        \
                                                                                                                                                \
-    if (LIKELY(InExpression))                                                                                                                  \
-    { return InExpression; }                                                                                                                   \
+    const auto ExpressionResult = InExpression;                                                                                                \
+                                                                                                                                               \
+    if (LIKELY(ExpressionResult))                                                                                                              \
+    { return ExpressionResult; }                                                                                                               \
+                                                                                                                                               \
+    const auto IsMessageOnly = UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDetailsPolicy() == ECk_Core_EnsureDetailsPolicy::MessageOnly;      \
                                                                                                                                                \
     const auto& Message = ck::Format_UE(InString, ##__VA_ARGS__);                                                                              \
     const auto& Title = ck::Format_UE(TEXT("Ignore and Continue? Frame#[{}]"), GFrameCounter);                                                 \
     const auto& CallStack = ck::Format_UE                                                                                                      \
     (                                                                                                                                          \
         TEXT("== BP CallStack ==\n{}\n"),                                                                                                      \
+        IsMessageOnly ? TEXT("[BP StackTrace DISABLED]") :                                                                                     \
         UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::AsString{})                                                   \
     );                                                                                                                                         \
+                                                                                                                                               \
+    if (UCk_Utils_Ensure_UE::Get_IsEnsureIgnored_WithCallstack(CallStack))                                                                     \
+    { return ExpressionResult; }                                                                                                               \
+                                                                                                                                               \
     const auto& CallstackPlusMessage = ck::Format_UE                                                                                           \
     (                                                                                                                                          \
         TEXT("{}\n\n{}"),                                                                                                                      \
@@ -29,8 +39,7 @@
         CallStack                                                                                                                              \
     );                                                                                                                                         \
                                                                                                                                                \
-    if (UCk_Utils_Ensure_UE::Get_IsEnsureIgnored_WithCallstack(CallStack))                                                                     \
-    { return InExpression; }                                                                                                                   \
+    _DETAILS_CK_ENSURE_LOG_OR_PUSHMESSAGE("CkEnsure Blueprints", CallstackPlusMessage, InContext);                                             \
                                                                                                                                                \
     const auto& DialogMessage = FText::FromString(CallstackPlusMessage);                                                                       \
     const auto& _Res = UCk_Utils_MessageDialog_UE::YesNoYesAll(DialogMessage, FText::FromString(Title));                                       \
@@ -38,17 +47,17 @@
     {                                                                                                                                          \
         case ECk_MessageDialog_YesNoYesAll::Yes:                                                                                               \
         {                                                                                                                                      \
-            return InExpression;                                                                                                               \
+            return ExpressionResult;                                                                                                           \
         }                                                                                                                                      \
         case ECk_MessageDialog_YesNoYesAll::No:                                                                                                \
         {                                                                                                                                      \
             UCk_Utils_Debug_StackTrace_UE::Try_BreakInScript(InContext);                                                                       \
-            return InExpression;                                                                                                               \
+            return ExpressionResult;                                                                                                           \
         }                                                                                                                                      \
         case ECk_MessageDialog_YesNoYesAll::YesAll:                                                                                            \
         {                                                                                                                                      \
             UCk_Utils_Ensure_UE::Request_IgnoreEnsure_WithCallstack(CallStack);                                                                \
-            return InExpression;                                                                                                               \
+            return ExpressionResult;                                                                                                           \
         }                                                                                                                                      \
         default:                                                                                                                               \
         {                                                                                                                                      \
@@ -104,10 +113,10 @@ FCk_Ensure_OnEnsureIgnored_Payload::
 auto
     UCk_Utils_Ensure_UE::
     EnsureMsgf(
-        bool InExpression,
-        FText InMsg,
+        const bool        InExpression,
+        const FText       InMsg,
         ECk_ValidInvalid& OutHitStatus,
-        const UObject* InContext)
+        const UObject*    InContext)
     -> void
 {
     if (NOT CK_ENSURE_BP(InExpression, TEXT("{}.{}"), InMsg.ToString(), ck::Context(InContext)))
@@ -123,7 +132,7 @@ auto
     UCk_Utils_Ensure_UE::
     EnsureMsgf_IsValid(
         UObject*          InObject,
-        FText             InMsg,
+        const FText       InMsg,
         ECk_ValidInvalid& OutHitStatus,
         const UObject*    InContext)
     -> void

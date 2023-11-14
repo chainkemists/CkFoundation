@@ -1,12 +1,15 @@
 #pragma once
 
-#include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Build/CkBuild_Macros.h"
+#include "CkCore/Macros/CkMacros.h"
 
 // the following includes are needed if using the macros defined in this file
+#include "CkCore/CkCoreLog.h"
+#include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/MessageDialog/CkMessageDialog.h"
+#include "CkCore/Settings/CkCore_Settings.h"
 
 #include <CoreMinimal.h>
 
@@ -178,51 +181,91 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#define CK_ENSURE(InExpression, InString, ...)                                                                                \
-[&]() -> bool                                                                                                                 \
-{                                                                                                                             \
-    if (LIKELY(InExpression))                                                                                                 \
-    { return true; }                                                                                                          \
-                                                                                                                              \
-    if (UCk_Utils_Ensure_UE::Get_IsEnsureIgnored(__FILE__, __LINE__))                                                         \
-    { return false; }                                                                                                         \
-                                                                                                                              \
-    const auto& message = ck::Format_UE(InString, ##__VA_ARGS__);                                                             \
-    const auto& title = ck::Format_UE(TEXT("Ignore and Continue? Frame#[{}] PIE-ID[{}]"), GFrameCounter, GPlayInEditorID - 1);\
-    const auto& stackTraceWith2Skips = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace(2);                                      \
-    const auto& bpStackTrace = UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::AsString{});          \
-    const auto& callstackPlusMessage = ck::Format_UE(                                                                         \
-        TEXT("{}\nExpression: {}\nMessage: {}\n\n == BP CallStack ==\n{}\n == CallStack ==\n{}\n"),                           \
-        title,                                                                                                                \
-        TEXT(#InExpression),                                                                                                  \
-        message,                                                                                                              \
-        bpStackTrace,                                                                                                         \
-        stackTraceWith2Skips                                                                                                  \
-    );                                                                                                                        \
-                                                                                                                              \
-    const auto& dialogMessage = FText::FromString(callstackPlusMessage);                                                      \
-    const auto& ans = UCk_Utils_MessageDialog_UE::YesNoYesAll(dialogMessage, FText::FromString(title));                       \
-    switch(ans)                                                                                                               \
-    {                                                                                                                         \
-        case ECk_MessageDialog_YesNoYesAll::Yes:                                                                              \
-        {                                                                                                                     \
-            return false;                                                                                                     \
-        }                                                                                                                     \
-        case ECk_MessageDialog_YesNoYesAll::No:                                                                               \
-        {                                                                                                                     \
-            const auto& ensureAns = ensureAlwaysMsgf(false, TEXT("[DEBUG BREAK HIT] %s"), *message);                          \
-            return ensureAns;                                                                                                 \
-        }                                                                                                                     \
-        case ECk_MessageDialog_YesNoYesAll::YesAll:                                                                           \
-        {                                                                                                                     \
-            UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLineWithMessage(__FILE__, dialogMessage, __LINE__);             \
-            return false;                                                                                                     \
-        }                                                                                                                     \
-        default:                                                                                                              \
-        {                                                                                                                     \
-            return ensureMsgf(false, TEXT("Encountered an invalid value for Enum [{}]"), ans);                                \
-        }                                                                                                                     \
-    }                                                                                                                         \
+#if WITH_EDITOR
+// ReSharper disable once CppInconsistentNaming
+#define _DETAILS_CK_ENSURE_LOG_OR_PUSHMESSAGE(_Category_, _Msg_, _ContextObject_)                                                          \
+    UCk_Utils_EditorOnly_UE::Request_PushNewEditorMessage                                                                                  \
+    (                                                                                                                                      \
+        FCk_Utils_EditorOnly_PushNewEditorMessage_Params                                                                                   \
+        {                                                                                                                                  \
+            TEXT(_Category_),                                                                                                              \
+            FCk_MessageSegments                                                                                                            \
+            {                                                                                                                              \
+                {                                                                                                                          \
+                    FCk_TokenizedMessage{_Msg_}.Set_TargetObject(const_cast<UObject*>(_ContextObject_))                                    \
+                }                                                                                                                          \
+            },                                                                                                                             \
+            ECk_EditorMessage_Severity::Error,                                                                                             \
+            ECk_EditorMessage_DisplayPolicy::ToastNotification                                                                             \
+        }                                                                                                                                  \
+    );                                                                                                                                     \
+    if (UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDisplayPolicy() == ECk_Core_EnsureDisplayPolicy::LogOnly)                             \
+    { return false; }
+#else
+// ReSharper disable once CppInconsistentNaming
+#define _DETAILS_CK_ENSURE_LOG_OR_PUSHMESSAGE(_Category_, _Msg_, _ContextObject_)                                                          \
+    if (UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDisplayPolicy() == ECk_Core_EnsureDisplayPolicy::LogOnly)                             \
+    {                                                                                                                                      \
+        UE_LOG(CkCore, Error, TEXT("%s"), *_Msg_);                                                                                         \
+        return false;                                                                                                                      \
+    }
+#endif
+
+#define CK_ENSURE(InExpression, InString, ...)                                                                                             \
+[&]() -> bool                                                                                                                              \
+{                                                                                                                                          \
+    const auto ExpressionResult = InExpression;                                                                                            \
+                                                                                                                                           \
+    if (LIKELY(ExpressionResult))                                                                                                          \
+    { return true; }                                                                                                                       \
+                                                                                                                                           \
+    if (UCk_Utils_Ensure_UE::Get_IsEnsureIgnored(__FILE__, __LINE__))                                                                      \
+    { return false; }                                                                                                                      \
+                                                                                                                                           \
+    const auto IsMessageOnly = UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDetailsPolicy() == ECk_Core_EnsureDetailsPolicy::MessageOnly;  \
+                                                                                                                                           \
+    const auto& message = ck::Format_UE(InString, ##__VA_ARGS__);                                                                          \
+    const auto& title = ck::Format_UE(TEXT("Ignore and Continue? Frame#[{}] PIE-ID[{}]"), GFrameCounter, GPlayInEditorID - 1);             \
+    const auto& stackTraceWith2Skips = IsMessageOnly ?                                                                                     \
+        TEXT("[StackTrace DISABLED]") :                                                                                                    \
+        UCk_Utils_Debug_StackTrace_UE::Get_StackTrace(2);                                                                                  \
+    const auto& bpStackTrace = IsMessageOnly ?                                                                                             \
+        TEXT("[BP StackTrace DISABLED]") :                                                                                                 \
+        UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::AsString{});                                              \
+    const auto& callstackPlusMessage = ck::Format_UE(                                                                                      \
+        TEXT("{}\nExpression: {}\nMessage: {}\n\n == BP CallStack ==\n{}\n == CallStack ==\n{}\n"),                                        \
+        title,                                                                                                                             \
+        TEXT(#InExpression),                                                                                                               \
+        message,                                                                                                                           \
+        bpStackTrace,                                                                                                                      \
+        stackTraceWith2Skips                                                                                                               \
+    );                                                                                                                                     \
+                                                                                                                                           \
+    _DETAILS_CK_ENSURE_LOG_OR_PUSHMESSAGE("CkEnsures", callstackPlusMessage, nullptr);                                                     \
+                                                                                                                                           \
+    const auto& dialogMessage = FText::FromString(callstackPlusMessage);                                                                   \
+    const auto& ans = UCk_Utils_MessageDialog_UE::YesNoYesAll(dialogMessage, FText::FromString(title));                                    \
+    switch(ans)                                                                                                                            \
+    {                                                                                                                                      \
+        case ECk_MessageDialog_YesNoYesAll::Yes:                                                                                           \
+        {                                                                                                                                  \
+            return false;                                                                                                                  \
+        }                                                                                                                                  \
+        case ECk_MessageDialog_YesNoYesAll::No:                                                                                            \
+        {                                                                                                                                  \
+            const auto& ensureAns = ensureAlwaysMsgf(false, TEXT("[DEBUG BREAK HIT] %s"), *message);                                       \
+            return ensureAns;                                                                                                              \
+        }                                                                                                                                  \
+        case ECk_MessageDialog_YesNoYesAll::YesAll:                                                                                        \
+        {                                                                                                                                  \
+            UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLineWithMessage(__FILE__, dialogMessage, __LINE__);                          \
+            return false;                                                                                                                  \
+        }                                                                                                                                  \
+        default:                                                                                                                           \
+        {                                                                                                                                  \
+            return ensureMsgf(false, TEXT("Encountered an invalid value for Enum [{}]"), ans);                                             \
+        }                                                                                                                                  \
+    }                                                                                                                                      \
 }()
 
 #if CK_BYPASS_ENSURES
