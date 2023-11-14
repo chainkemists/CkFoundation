@@ -3,6 +3,7 @@
 #include "CkConsoleCommands/CkConsoleCommands_Log.h"
 
 #include "CkCore/Actor/CkActor_Utils.h"
+#include "CkCore/Algorithms/CkAlgorithms.h"
 #include "Engine/World.h"
 
 #include "GameFramework/GameModeBase.h"
@@ -60,7 +61,8 @@ auto
 
 auto
     UCk_ConsoleCommands_Subsystem_UE::
-    Initialize(FSubsystemCollectionBase& Collection)
+    Initialize(
+        FSubsystemCollectionBase& Collection)
     -> void
 {
     Super::Initialize(Collection);
@@ -86,7 +88,8 @@ auto
 
 auto
     UCk_ConsoleCommands_Subsystem_UE::
-    Deinitialize() -> void
+    Deinitialize()
+    -> void
 {
     FGameModeEvents::GameModePostLoginEvent.Remove(_PostLoginDelegateHandle);
 
@@ -96,31 +99,10 @@ auto
 
 auto
     UCk_ConsoleCommands_Subsystem_UE::
-    ShouldCreateSubsystem(
-        UObject* InOuter) const
-    -> bool
-{
-    const auto& ShouldCreateSubsystem = Super::ShouldCreateSubsystem(InOuter);
-
-    if (NOT ShouldCreateSubsystem)
-    { return false; }
-
-    if (ck::Is_NOT_Valid(InOuter))
-    { return true; }
-
-    const auto& World = InOuter->GetWorld();
-
-    if (ck::Is_NOT_Valid(World))
-    { return true; }
-
-    return DoesSupportWorldType(World->WorldType);
-}
-
-void
-    UCk_ConsoleCommands_Subsystem_UE::
     OnNewPlayerControllerAdded(
         AGameModeBase*,
         APlayerController* InPlayerController)
+    -> void
 {
     if (GetWorld()->IsNetMode(NM_Client))
     { return; }
@@ -134,29 +116,27 @@ auto
         const TArray<FString>& InCommand)
     -> void
 {
-    auto Command = FString{};
-    for (const auto& CommandPiece : InCommand)
-    {
-        Command += " ";
-        Command += CommandPiece;
-    }
+    const auto Command = FString::Join(InCommand, TEXT(" "));
+
     Request_RunConsoleCommand_OnServer(Command);
 }
 
 auto
     UCk_ConsoleCommands_Subsystem_UE::
     Request_RunConsoleCommand_OnServer(
-        const FString& InCommand) -> void
+        const FString& InCommand)
+    -> void
 {
-    for (const auto Helper : _ConsoleCommandsHelper)
+    ck::algo::ForEachIsValid(_ConsoleCommandsHelper, [&](const TObjectPtr<ACk_ConsoleCommandsHelper_UE> InHelper)
     {
-        Helper->Server_Request_RunConsoleCommand(InCommand);
-    }
+        InHelper->Server_Request_RunConsoleCommand(InCommand);
+    });
 }
 
 auto
     UCk_ConsoleCommands_Subsystem_UE::
-    DoSpawnConsoleCommandsActor(APlayerController* InPlayerController)
+    DoSpawnConsoleCommandsActor(
+        APlayerController* InPlayerController)
     -> void
 {
     _ConsoleCommandsHelper.Emplace(Cast<ACk_ConsoleCommandsHelper_UE>
@@ -177,7 +157,7 @@ auto
 
 auto
     UCk_ConsoleCommands_Subsystem_UE::
-    DoUnregisterConsoleCommand()
+    DoUnregisterConsoleCommand() const
     -> void
 {
     if (ck::IsValid(_ConsoleCommand, ck::IsValid_Policy_NullptrOnly{}))
@@ -186,3 +166,5 @@ auto
         _ConsoleCommand = nullptr;
     }
 }
+
+// --------------------------------------------------------------------------------------------------------------------
