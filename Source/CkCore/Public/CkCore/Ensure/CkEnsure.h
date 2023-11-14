@@ -192,7 +192,7 @@ private:
             FCk_MessageSegments                                                                                                            \
             {                                                                                                                              \
                 {                                                                                                                          \
-                    FCk_TokenizedMessage{_Msg_}.Set_TargetObject(const_cast<UObject*>(_ContextObject_))                                    \
+                    FCk_TokenizedMessage{_Msg_}.Set_TargetObject(_ContextObject_)                                                          \
                 }                                                                                                                          \
             },                                                                                                                             \
             ECk_EditorMessage_Severity::Error,                                                                                             \
