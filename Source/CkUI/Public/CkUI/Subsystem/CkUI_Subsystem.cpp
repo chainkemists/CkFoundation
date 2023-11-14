@@ -72,12 +72,12 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(GameSessionSubsystem), TEXT("Failed to retrive the GameSession Subsystem!"))
     { return; }
 
-    _PostFireUnbind_Connection = ck::UUtils_Signal_OnLoginEvent_PostFireUnbind::Bind<&UCk_UI_Subsystem_UE::OnPlayerControllerReady>
+    _PostFireUnbind_Connection = ck::UUtils_Signal_OnLoginEvent::Bind<&UCk_UI_Subsystem_UE::OnPlayerControllerReady>
     (
         this,
         GameSessionSubsystem->Get_SignalHandle(),
         ECk_Signal_BindingPolicy::FireIfPayloadInFlight,
-        ECk_Signal_PostFireBehavior::Unbind
+        ECk_Signal_PostFireBehavior::DoNothing
     );
 }
 
