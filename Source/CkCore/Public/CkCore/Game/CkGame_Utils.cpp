@@ -163,9 +163,17 @@ auto
     if (PrimaryPlayerController->HasAuthority())
     { return {}; }
 
+    CK_ENSURE_IF_NOT(ck::IsValid(PrimaryPlayerController->PlayerState),
+        TEXT("Invalid PlayerState for Primary Player Controller [{}]."),
+        PrimaryPlayerController)
+    { return {}; }
+
     const auto& PlayerState = Cast<ACk_PlayerState_UE>(PrimaryPlayerController->PlayerState);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(PlayerState), TEXT("Invalid PlayerState for Primary Player Controller [{}]"), PrimaryPlayerController)
+    CK_ENSURE_IF_NOT(ck::IsValid(PlayerState),
+        TEXT("Could not Cast [{0}] to [{1}]. Is the current PlayerState [{0}] derived from [{1}]?"),
+        PrimaryPlayerController->PlayerState,
+        ck::Get_RuntimeTypeToString<ACk_PlayerState_UE>())
     { return {}; }
 
     return PlayerState;
