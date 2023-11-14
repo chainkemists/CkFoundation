@@ -1,7 +1,5 @@
 #pragma once
 
-#include "CkCore/Macros/CkMacros.h"
-
 #include <Kismet/BlueprintFunctionLibrary.h>
 
 #include "CkProjectSettings_Utils.generated.h"
@@ -23,9 +21,6 @@ UCLASS(BlueprintType)
 class CKSETTINGS_API UCk_Utils_ProjectSettings_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_Utils_ProjectSettings_UE);
 
 public:
     UFUNCTION(BlueprintPure,
