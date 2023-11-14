@@ -31,7 +31,7 @@ auto
 
     const auto& FormatMessage = [&](const TSharedPtr<FTokenizedMessage>& InMessageToFormat) -> void
     {
-        for (const auto& MessageSegments = InParams.Get_MessageSegments(); 
+        for (const auto& MessageSegments = InParams.Get_MessageSegments();
             const auto& Segment : MessageSegments.Get_MessageSegments())
         {
             if (ck::IsValid(Segment.Get_TargetObject()))
@@ -48,7 +48,7 @@ auto
         }
     };
 
-    if (auto& MessageLogModule = FModuleManager::LoadModuleChecked<FMessageLogModule>(TEXT("MessageLog")); 
+    if (auto& MessageLogModule = FModuleManager::LoadModuleChecked<FMessageLogModule>(TEXT("MessageLog"));
         NOT MessageLogModule.IsRegisteredLogListing(LoggerToUse))
     {
         FMessageLogInitializationOptions InitOptions;
