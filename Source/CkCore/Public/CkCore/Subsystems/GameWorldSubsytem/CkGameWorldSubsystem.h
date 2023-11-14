@@ -2,6 +2,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include <Subsystems/WorldSubsystem.h>
+
 #include "CkGameWorldSubsystem.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
