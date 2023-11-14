@@ -10,10 +10,9 @@ auto
     Get_RendererSettings_CustomDepthValue()
     -> ECk_RendererSettings_CustomDepth
 {
-    const auto* consoleVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.CustomDepth"));
-    const auto& customDepth = consoleVar->GetInt();
+    const auto* ConsoleVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.CustomDepth"));
 
-    switch (static_cast<ECustomDepthStencil::Type>(customDepth))
+    switch (const auto& CustomDepth = ConsoleVar->GetInt(); static_cast<ECustomDepthStencil::Type>(CustomDepth))
     {
         case ECustomDepthStencil::Disabled:
         {

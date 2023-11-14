@@ -15,8 +15,6 @@ public class CkSettings : CkModuleRules
             "CoreUObject",
             "Engine",
             "DeveloperSettings",
-
-            "CkCore",
         });
     }
 }
