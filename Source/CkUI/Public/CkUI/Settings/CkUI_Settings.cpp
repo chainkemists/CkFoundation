@@ -12,4 +12,12 @@ auto
     return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_UI_ProjectSettings_UE>()->Get_WatermarkWidgetClass().LoadSynchronous();
 }
 
+auto
+    UCk_Utils_UI_ProjectSettings_UE::
+    Get_WatermarkWidget_ZOrder()
+    -> int32
+{
+    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_UI_ProjectSettings_UE>()->Get_WatermarkWidget_ZOrder();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
