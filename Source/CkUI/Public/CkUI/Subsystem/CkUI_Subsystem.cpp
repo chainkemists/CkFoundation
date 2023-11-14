@@ -107,7 +107,7 @@ auto
     if (ck::Is_NOT_Valid(_WatermarkWidget))
     { return; }
 
-    _WatermarkWidget->AddToViewport(INT32_MAX);
+    _WatermarkWidget->AddToViewport(UCk_Utils_UI_ProjectSettings_UE::Get_WatermarkWidget_ZOrder());
 }
 
 auto
