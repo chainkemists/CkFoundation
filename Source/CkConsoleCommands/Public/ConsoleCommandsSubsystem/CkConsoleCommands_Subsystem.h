@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
 
 #include "CkEcs/World/CkEcsWorld.h"
 
@@ -40,7 +41,7 @@ private:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, BlueprintType, DisplayName = "CkSubsystem_ConsoleCommands")
-class CKCONSOLECOMMANDS_API UCk_ConsoleCommands_Subsystem_UE : public UWorldSubsystem
+class CKCONSOLECOMMANDS_API UCk_ConsoleCommands_Subsystem_UE : public UCk_Game_WorldSubsystem_Base_UE
 {
     GENERATED_BODY()
 
@@ -52,7 +53,6 @@ public:
 public:
     auto Initialize(FSubsystemCollectionBase& Collection) -> void override;
     auto Deinitialize() -> void override;
-    auto ShouldCreateSubsystem(UObject* InOuter) const -> bool override;
 
 public:
     UFUNCTION()
@@ -73,7 +73,7 @@ public:
 
 private:
     auto DoSpawnConsoleCommandsActor(APlayerController* InPlayerController) -> void;
-    auto DoUnregisterConsoleCommand() -> void;
+    auto DoUnregisterConsoleCommand() const -> void;
 
 private:
     UPROPERTY(Transient)
@@ -85,3 +85,5 @@ private:
 private:
     FDelegateHandle _PostLoginDelegateHandle;
 };
+
+// --------------------------------------------------------------------------------------------------------------------
