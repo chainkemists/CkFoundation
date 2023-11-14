@@ -52,7 +52,7 @@ private:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<UObject> _TargetObject;
+    TObjectPtr<const UObject> _TargetObject;
 
 public:
     CK_PROPERTY_GET(_Message);
