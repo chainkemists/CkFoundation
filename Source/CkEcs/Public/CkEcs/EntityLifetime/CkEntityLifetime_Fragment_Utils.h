@@ -21,9 +21,10 @@ public:
     CK_GENERATED_BODY(UCk_Utils_EntityLifetime_UE);
 
 public:
-    using RegistryType = FCk_Registry;
-    using EntityType   = FCk_Entity;
-    using HandleType   = FCk_Handle;
+    using RegistryType          = FCk_Registry;
+    using EntityType            = FCk_Entity;
+    using HandleType            = FCk_Handle;
+    using PostEntityCreatedFunc = TFunction<void(FCk_Handle)>;
 
 public:
     struct EntityIdHint
@@ -41,11 +42,13 @@ public:
 public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|EntityLifetime")
     static void
-    Request_DestroyEntity(FCk_Handle InHandle);
+    Request_DestroyEntity(
+        FCk_Handle InHandle);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|EntityLifetime")
     static FCk_Handle
-    Request_CreateEntity(FCk_Handle InHandle);
+    Request_CreateEntity(
+        FCk_Handle InHandle);
 
 public:
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityLifetime")
@@ -54,31 +57,52 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityLifetime")
     static TArray<FCk_Handle>
-    Get_LifetimeDependents(FCk_Handle InHandle);
+    Get_LifetimeDependents(
+        FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityLifetime")
     static bool
-    Get_IsPendingDestroy(FCk_Handle InHandle);
+    Get_IsPendingDestroy(
+        FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityLifetime")
     static FCk_Handle
-    Get_TransientEntity(FCk_Handle InHandle);
+    Get_TransientEntity(
+        FCk_Handle InHandle);
 
 public:
     template <typename T_Predicate>
+    [[nodiscard]]
     static auto
     Get_LifetimeOwnerIf(
         FCk_Handle  InHandle,
-        T_Predicate T_Func) -> FCk_Handle
-    ;
+        T_Predicate T_Func) -> FCk_Handle;
 
 public:
-    static auto Request_CreateEntity(RegistryType& InRegistry) -> HandleType;
-    static auto Request_CreateEntity(RegistryType& InRegistry,
-        const EntityIdHint& InEntityHint) -> HandleType;
+    [[nodiscard]]
+    static auto
+    Request_CreateEntity(
+        FCk_Handle InHandle,
+        PostEntityCreatedFunc InFunc) -> HandleType;
+
+    [[nodiscard]]
+    static auto
+    Request_CreateEntity(
+        RegistryType& InRegistry,
+        PostEntityCreatedFunc InFunc = PostEntityCreatedFunc{}) -> HandleType;
+
+    [[nodiscard]]
+    static auto
+    Request_CreateEntity(
+        RegistryType& InRegistry,
+        const EntityIdHint& InEntityHint,
+        PostEntityCreatedFunc InFunc = PostEntityCreatedFunc{}) -> HandleType;
 
 public:
-    static auto Get_TransientEntity(const RegistryType& InRegistry) -> HandleType;
+    [[nodiscard]]
+    static auto
+    Get_TransientEntity(
+        const RegistryType& InRegistry) -> HandleType;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
