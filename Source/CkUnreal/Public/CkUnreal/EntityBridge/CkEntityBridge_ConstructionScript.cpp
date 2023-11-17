@@ -50,7 +50,7 @@ auto
         if (const auto EntityOwningActorComponent = OwningActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
             ck::IsValid(EntityOwningActorComponent))
         {
-            auto OwningEntity = EntityOwningActorComponent->Get_EntityHandle();
+            const auto OwningEntity = EntityOwningActorComponent->Get_EntityHandle();
 
             if (NOT UCk_Utils_ReplicatedObjects_UE::Has(OwningEntity))
             { return; }
@@ -269,7 +269,8 @@ auto
 
 auto
     UCk_EntityBridge_ActorComponent_UE::
-    TryInvoke_OnReplicationComplete(EInvoke_Caller InCaller)
+    TryInvoke_OnReplicationComplete(
+        EInvoke_Caller InCaller)
     -> void
 {
     switch (InCaller)
@@ -298,7 +299,7 @@ auto
             else
             {
                 CK_ENSURE_IF_NOT(_ReplicationComplete_BroadcastStep == EOnReplicationCompleteBroadcastStep::WaitOnConstructionScript,
-                    TEXT("Expected BroadcastStep to be EOnReplicationCompleteBroadcastStep::WaitOnReplicationDriver"))
+                    TEXT("Expected BroadcastStep to be EOnReplicationCompleteBroadcastStep::WaitOnConstructionScript"))
                 { return; }
 
                 _ReplicationComplete_BroadcastStep = EOnReplicationCompleteBroadcastStep::Broadcast;
