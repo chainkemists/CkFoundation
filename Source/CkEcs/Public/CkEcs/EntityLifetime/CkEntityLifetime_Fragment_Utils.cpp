@@ -27,13 +27,7 @@ auto
         FCk_Handle InHandle)
     -> FCk_Handle
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Cannot create Entity with Invalid Handle"))
-    { return {}; }
-
-    auto NewEntity = Request_CreateEntity(**InHandle);
-    NewEntity.Add<ck::FFragment_LifetimeOwner>(InHandle);
-    InHandle.AddOrGet<ck::FFragment_LifetimeDependents>()._Entities.Emplace(NewEntity);
-    return NewEntity;
+    return Request_CreateEntity(InHandle, PostEntityCreatedFunc{});
 }
 
 auto
@@ -96,26 +90,59 @@ auto
 auto
     UCk_Utils_EntityLifetime_UE::
     Request_CreateEntity(
-        RegistryType& InRegistry)
+        FCk_Handle InHandle,
+        PostEntityCreatedFunc InFunc)
     -> HandleType
 {
-    const auto& NewEntity = InRegistry.CreateEntity();
-    InRegistry.Add<ck::FTag_EntityJustCreated>(NewEntity);
+    CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Cannot create Entity with Invalid Handle"))
+    { return {}; }
 
-    return HandleType{ NewEntity, InRegistry };
+    auto NewEntity = Request_CreateEntity(**InHandle, InFunc);
+    NewEntity.Add<ck::FFragment_LifetimeOwner>(InHandle);
+    InHandle.AddOrGet<ck::FFragment_LifetimeDependents>()._Entities.Emplace(NewEntity);
+
+    return NewEntity;
 }
 
 auto
     UCk_Utils_EntityLifetime_UE::
     Request_CreateEntity(
         RegistryType& InRegistry,
-        const EntityIdHint& InEntityHint)
+        PostEntityCreatedFunc InFunc)
+    -> HandleType
+{
+    const auto& NewEntity = InRegistry.CreateEntity();
+    InRegistry.Add<ck::FTag_EntityJustCreated>(NewEntity);
+
+    auto NewEntityHandle = HandleType{ NewEntity, InRegistry };
+
+    if (InFunc)
+    {
+        InFunc(NewEntityHandle);
+    }
+
+    return NewEntityHandle;
+}
+
+auto
+    UCk_Utils_EntityLifetime_UE::
+    Request_CreateEntity(
+        RegistryType& InRegistry,
+        const EntityIdHint& InEntityHint,
+        PostEntityCreatedFunc InFunc)
     -> HandleType
 {
     const auto& NewEntity = InRegistry.CreateEntity(InEntityHint.Get_Entity());
     InRegistry.Add<ck::FTag_EntityJustCreated>(NewEntity);
 
-    return HandleType{ NewEntity, InRegistry };
+    auto NewEntityHandle = HandleType{ NewEntity, InRegistry };
+
+    if (InFunc)
+    {
+        InFunc(NewEntityHandle);
+    }
+
+    return NewEntityHandle;
 }
 
 auto
