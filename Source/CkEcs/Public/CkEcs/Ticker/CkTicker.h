@@ -48,23 +48,27 @@ namespace ck
     template <typename T_Tickable>
     auto FTicker::Add(T_Tickable&& InTickable) -> FHandleType
     {
-        auto Handle = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_ProcessorsRegistry);
+        const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_ProcessorsRegistry, [&](FCk_Handle InEntity)
+        {
+            InEntity.Add<FTickableType>(std::forward<T_Tickable>(InTickable));
+        });
 
-        Handle.Add<FTickableType>(std::forward<T_Tickable>(InTickable));
         DoSortTickable<T_Tickable>();
 
-        return Handle;
+        return NewEntity;
     }
 
     template <typename T_Tickable, typename ... T_Args>
     auto FTicker::Add(T_Args&&... InArgs) -> FHandleType
     {
-        auto Handle = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_ProcessorsRegistry);
+        const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_ProcessorsRegistry, [&](FCk_Handle InEntity)
+        {
+            InEntity.Add<FTickableType>(T_Tickable{std::forward<T_Args>(InArgs)...});
+        });
 
-        Handle.Add<FTickableType>(T_Tickable{std::forward<T_Args>(InArgs)...});
         DoSortTickable<FTickableType>();
 
-        return Handle;
+        return NewEntity;
     }
 
     template <typename T_Tickable>
