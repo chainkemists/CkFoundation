@@ -142,18 +142,18 @@ auto
     { return; }
 
     const auto WorldSubsystem = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
-    auto       Entity         = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(WorldSubsystem->Get_TransientEntity());
-
-    Entity.Add<ck::FFragment_OwningActor_Current>(ReplicatedActor);
-
-    UCk_Utils_Net_UE::Add(Entity, FCk_Net_ConnectionSettings{ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Proxy});
+    const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(WorldSubsystem->Get_TransientEntity(), [&](FCk_Handle InEntity)
+    {
+        InEntity.Add<ck::FFragment_OwningActor_Current>(ReplicatedActor);
+        UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Proxy});
+    });
 
     // TODO: we need the transform
     // CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
-    CsWithTransform->Construct(Entity);
+    CsWithTransform->Construct(NewEntity);
 
     const auto& ReplicatedObjects = _ReplicationData_ReplicatedActor.Get_ReplicatedObjects();
-    UCk_Utils_ReplicatedObjects_UE::Add(Entity, FCk_ReplicatedObjects{}.Set_ReplicatedObjects(ReplicatedObjects));
+    UCk_Utils_ReplicatedObjects_UE::Add(NewEntity, FCk_ReplicatedObjects{}.Set_ReplicatedObjects(ReplicatedObjects));
 
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -162,7 +162,7 @@ auto
     if (const auto EntityOwningActorComponent = ReplicatedActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
         ck::IsValid(EntityOwningActorComponent))
     {
-        EntityOwningActorComponent->_EntityHandle = Entity;
+        EntityOwningActorComponent->_EntityHandle = NewEntity;
     }
     else
     {
@@ -175,7 +175,7 @@ auto
             },
             [&](UCk_EntityOwningActor_ActorComponent_UE* InComp)
             {
-                InComp->_EntityHandle = Entity;
+                InComp->_EntityHandle = NewEntity;
             }
         );
     }
@@ -192,7 +192,7 @@ auto
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    ck::UUtils_Signal_OnReplicationComplete::Broadcast(Entity, ck::MakePayload(Entity));
+    ck::UUtils_Signal_OnReplicationComplete::Broadcast(NewEntity, ck::MakePayload(NewEntity));
 
     // --------------------------------------------------------------------------------------------------------------------
 

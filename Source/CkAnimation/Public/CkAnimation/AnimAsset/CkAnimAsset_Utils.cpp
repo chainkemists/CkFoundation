@@ -11,15 +11,15 @@ auto
         const FCk_Fragment_AnimAsset_ParamsData& InParams)
     -> void
 {
+    const auto NewAnimAssetEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InAnimAssetEntity)
+    {
+        InAnimAssetEntity.Add<ck::FFragment_AnimAsset_Params>(InParams);
+
+        ck::UCk_Utils_OwningEntity::Add(InAnimAssetEntity, InHandle);
+        UCk_Utils_GameplayLabel_UE::Add(InAnimAssetEntity, InParams.Get_AnimationAsset().Get_ID());
+    });
+
     RecordOfAnimAssets_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
-
-    auto NewAnimAssetEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
-
-    ck::UCk_Utils_OwningEntity::Add(NewAnimAssetEntity, InHandle);
-
-    NewAnimAssetEntity.Add<ck::FFragment_AnimAsset_Params>(InParams);
-    UCk_Utils_GameplayLabel_UE::Add(NewAnimAssetEntity, InParams.Get_AnimationAsset().Get_ID());
-
     RecordOfAnimAssets_Utils::Request_Connect(InHandle, NewAnimAssetEntity);
 }
 

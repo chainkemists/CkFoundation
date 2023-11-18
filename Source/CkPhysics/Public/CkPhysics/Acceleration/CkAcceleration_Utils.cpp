@@ -96,14 +96,14 @@ auto
         InAccelerationOwnerEntity)
     { return; }
 
-    auto newChannelEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAccelerationOwnerEntity);
-
-    newChannelEntity.Add<ck::FTag_AccelerationChannel>();
-
-    UCk_Utils_GameplayLabel_UE::Add(newChannelEntity, InAccelerationChannel);
+    const auto NewChannelEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAccelerationOwnerEntity, [&](FCk_Handle InChannelEntity)
+    {
+        InChannelEntity.Add<ck::FTag_AccelerationChannel>();
+        UCk_Utils_GameplayLabel_UE::Add(InChannelEntity, InAccelerationChannel);
+    });
 
     RecordOfAccelerationChannels_Utils::AddIfMissing(InAccelerationOwnerEntity);
-    RecordOfAccelerationChannels_Utils::Request_Connect(InAccelerationOwnerEntity, newChannelEntity);
+    RecordOfAccelerationChannels_Utils::Request_Connect(InAccelerationOwnerEntity, NewChannelEntity);
 }
 
 auto
@@ -177,20 +177,20 @@ auto
         InAccelerationOwnerEntity)
     { return {}; }
 
-    auto newModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAccelerationOwnerEntity);
+    const auto NewModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAccelerationOwnerEntity, [&](FCk_Handle InModifierEntity)
+    {
+        InModifierEntity.Add<ck::FTag_AccelerationModifier>();
+        InModifierEntity.Add<ck::FTag_AccelerationModifier_Setup>();
 
-    newModifierEntity.Add<ck::FTag_AccelerationModifier>();
-    newModifierEntity.Add<ck::FTag_AccelerationModifier_Setup>();
-
-    UCk_Utils_GameplayLabel_UE::Add(newModifierEntity, InModifierName);
+        UCk_Utils_GameplayLabel_UE::Add(InModifierEntity, InModifierName);
+        UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Add(InModifierEntity, InAccelerationOwnerEntity);
+        UCk_Utils_Acceleration_UE::Add(InModifierEntity, InParams.Get_AccelerationParams());
+    });
 
     RecordOfAccelerationModifiers_Utils::AddIfMissing(InAccelerationOwnerEntity);
-    RecordOfAccelerationModifiers_Utils::Request_Connect(InAccelerationOwnerEntity, newModifierEntity);
+    RecordOfAccelerationModifiers_Utils::Request_Connect(InAccelerationOwnerEntity, NewModifierEntity);
 
-    UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Add(newModifierEntity, InAccelerationOwnerEntity);
-    UCk_Utils_Acceleration_UE::Add(newModifierEntity, InParams.Get_AccelerationParams());
-
-    return newModifierEntity;
+    return NewModifierEntity;
 }
 
 auto
@@ -258,22 +258,23 @@ auto
         const FCk_Fragment_BulkAccelerationModifier_ParamsData& InParams)
     -> FCk_Handle
 {
-    auto newModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
-
-    newModifierEntity.Add<ck::FFragment_BulkAccelerationModifier_Params>(InParams);
-    newModifierEntity.Add<ck::FTag_BulkAccelerationModifier_Setup>();
-
-    if (InParams.Get_ModifierScope() == ECk_ExtentScope::Global)
+    const auto NewModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InModifierEntity)
     {
-        newModifierEntity.Add<ck::FTag_BulkAccelerationModifier_GlobalScope>();
-    }
+        InModifierEntity.Add<ck::FFragment_BulkAccelerationModifier_Params>(InParams);
+        InModifierEntity.Add<ck::FTag_BulkAccelerationModifier_Setup>();
 
-    UCk_Utils_GameplayLabel_UE::Add(newModifierEntity, InModifierName);
+        if (InParams.Get_ModifierScope() == ECk_ExtentScope::Global)
+        {
+            InModifierEntity.Add<ck::FTag_BulkAccelerationModifier_GlobalScope>();
+        }
+
+        UCk_Utils_GameplayLabel_UE::Add(InModifierEntity, InModifierName);
+    });
 
     RecordOfBulkAccelerationModifiers_Utils::AddIfMissing(InHandle);
-    RecordOfBulkAccelerationModifiers_Utils::Request_Connect(InHandle, newModifierEntity);
+    RecordOfBulkAccelerationModifiers_Utils::Request_Connect(InHandle, NewModifierEntity);
 
-    return newModifierEntity;
+    return NewModifierEntity;
 }
 
 auto

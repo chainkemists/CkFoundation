@@ -96,14 +96,14 @@ auto
         InVelocityOwnerEntity)
     { return; }
 
-    auto newChannelEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InVelocityOwnerEntity);
-
-    newChannelEntity.Add<ck::FTag_VelocityChannel>();
-
-    UCk_Utils_GameplayLabel_UE::Add(newChannelEntity, InVelocityChannel);
+    const auto NewChannelEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InVelocityOwnerEntity, [&](FCk_Handle InChannelEntity)
+    {
+        InChannelEntity.Add<ck::FTag_VelocityChannel>();
+        UCk_Utils_GameplayLabel_UE::Add(InChannelEntity, InVelocityChannel);
+    });
 
     RecordOfVelocityChannels_Utils::AddIfMissing(InVelocityOwnerEntity);
-    RecordOfVelocityChannels_Utils::Request_Connect(InVelocityOwnerEntity, newChannelEntity);
+    RecordOfVelocityChannels_Utils::Request_Connect(InVelocityOwnerEntity, NewChannelEntity);
 }
 
 auto
@@ -177,20 +177,20 @@ auto
         InVelocityOwnerEntity)
     { return {}; }
 
-    auto newModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InVelocityOwnerEntity);
+    const auto NewModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InVelocityOwnerEntity, [&](FCk_Handle InModifierEntity)
+    {
+        InModifierEntity.Add<ck::FTag_VelocityModifier>();
+        InModifierEntity.Add<ck::FTag_VelocityModifier_Setup>();
 
-    newModifierEntity.Add<ck::FTag_VelocityModifier>();
-    newModifierEntity.Add<ck::FTag_VelocityModifier_Setup>();
-
-    UCk_Utils_GameplayLabel_UE::Add(newModifierEntity, InModifierName);
+        UCk_Utils_GameplayLabel_UE::Add(InModifierEntity, InModifierName);
+        UCk_Utils_Velocity_UE::VelocityTarget_Utils::Add(InModifierEntity, InVelocityOwnerEntity);
+        UCk_Utils_Velocity_UE::Add(InModifierEntity, InParams.Get_VelocityParams());
+    });
 
     RecordOfVelocityModifiers_Utils::AddIfMissing(InVelocityOwnerEntity);
-    RecordOfVelocityModifiers_Utils::Request_Connect(InVelocityOwnerEntity, newModifierEntity);
+    RecordOfVelocityModifiers_Utils::Request_Connect(InVelocityOwnerEntity, NewModifierEntity);
 
-    UCk_Utils_Velocity_UE::VelocityTarget_Utils::Add(newModifierEntity, InVelocityOwnerEntity);
-    UCk_Utils_Velocity_UE::Add(newModifierEntity, InParams.Get_VelocityParams());
-
-    return newModifierEntity;
+    return NewModifierEntity;
 }
 
 auto
@@ -258,22 +258,23 @@ auto
         const FCk_Fragment_BulkVelocityModifier_ParamsData& InParams)
     -> FCk_Handle
 {
-    auto newModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
-
-    newModifierEntity.Add<ck::FFragment_BulkVelocityModifier_Params>(InParams);
-    newModifierEntity.Add<ck::FTag_BulkVelocityModifier_Setup>();
-
-    if (InParams.Get_ModifierScope() == ECk_ExtentScope::Global)
+    const auto NewModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InModifierEntity)
     {
-        newModifierEntity.Add<ck::FTag_BulkVelocityModifier_GlobalScope>();
-    }
+        InModifierEntity.Add<ck::FFragment_BulkVelocityModifier_Params>(InParams);
+        InModifierEntity.Add<ck::FTag_BulkVelocityModifier_Setup>();
 
-    UCk_Utils_GameplayLabel_UE::Add(newModifierEntity, InModifierName);
+        if (InParams.Get_ModifierScope() == ECk_ExtentScope::Global)
+        {
+            InModifierEntity.Add<ck::FTag_BulkVelocityModifier_GlobalScope>();
+        }
+
+        UCk_Utils_GameplayLabel_UE::Add(InModifierEntity, InModifierName);
+    });
 
     RecordOfBulkVelocityModifiers_Utils::AddIfMissing(InHandle);
-    RecordOfBulkVelocityModifiers_Utils::Request_Connect(InHandle, newModifierEntity);
+    RecordOfBulkVelocityModifiers_Utils::Request_Connect(InHandle, NewModifierEntity);
 
-    return newModifierEntity;
+    return NewModifierEntity;
 }
 
 auto
