@@ -36,19 +36,18 @@ auto
     auto ParamsToUse = InParams;
     ParamsToUse.Set_ReplicationType(InReplicationType);
 
-    auto sensorEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
+    const auto NewSensorEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InSensorEntity)
+    {
+        InSensorEntity.Add<ck::FFragment_Sensor_Params>(ParamsToUse);
+        InSensorEntity.Add<ck::FFragment_Sensor_Current>(ParamsToUse.Get_StartingState());
+        InSensorEntity.Add<ck::FTag_Sensor_Setup>();
 
-    ck::UCk_Utils_OwningEntity::Add(sensorEntity, InHandle);
-
-    sensorEntity.Add<ck::FFragment_Sensor_Params>(ParamsToUse);
-    sensorEntity.Add<ck::FFragment_Sensor_Current>(ParamsToUse.Get_StartingState());
-    sensorEntity.Add<ck::FTag_Sensor_Setup>();
-
-    UCk_Utils_GameplayLabel_UE::Add(sensorEntity, sensorName);
+        ck::UCk_Utils_OwningEntity::Add(InSensorEntity, InHandle);
+        UCk_Utils_GameplayLabel_UE::Add(InSensorEntity, sensorName);
+    });
 
     RecordOfSensors_Utils::AddIfMissing(InHandle ,ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
-
-    RecordOfSensors_Utils::Request_Connect(InHandle, sensorEntity);
+    RecordOfSensors_Utils::Request_Connect(InHandle, NewSensorEntity);
 }
 
 auto
@@ -108,9 +107,9 @@ auto
     if (NOT Has_Any(InSensorOwnerEntity))
     { return {}; }
 
-    const auto& sensorEntities = RecordOfSensors_Utils::Get_AllRecordEntries(InSensorOwnerEntity);
+    const auto& SensorEntities = RecordOfSensors_Utils::Get_AllRecordEntries(InSensorOwnerEntity);
 
-    return ck::algo::Transform<TArray<FGameplayTag>>(sensorEntities, [&](FCk_Handle InSensorEntity)
+    return ck::algo::Transform<TArray<FGameplayTag>>(SensorEntities, [&](FCk_Handle InSensorEntity)
     {
         return UCk_Utils_GameplayLabel_UE::Get_Label(InSensorEntity);
     });
