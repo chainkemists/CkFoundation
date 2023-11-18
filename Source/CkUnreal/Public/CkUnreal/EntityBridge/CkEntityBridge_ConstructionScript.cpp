@@ -235,9 +235,11 @@ auto
             ck::Context(this))
         { return; }
 
-        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OuterOwnerEntity);
-        NewEntity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
-        UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings{ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
+        const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OuterOwnerEntity, [&](FCk_Handle InEntity)
+        {
+            InEntity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
+            UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
+        });
 
         // TODO: consolidate into a utilty. Other usage in replication driver
         if (const auto EntityOwningActorComponent = OwningActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();

@@ -33,23 +33,24 @@ auto
     auto ParamsToUse = InParams;
     ParamsToUse.Set_ReplicationType(InReplicationType);
 
-    auto newTimerEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
-    ck::UCk_Utils_OwningEntity::Add(newTimerEntity, InHandle);
-
-    newTimerEntity.Add<ck::FFragment_Timer_Params>(ParamsToUse);
-    newTimerEntity.Add<ck::FFragment_Timer_Current>(FCk_Chrono{ParamsToUse.Get_Duration()});
-
-    UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_Timer_Rep>(newTimerEntity);
-
-    if (ParamsToUse.Get_StartingState() == ECk_Timer_State::Running)
+    const auto NewTimerEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
     {
-        newTimerEntity.Add<ck::FTag_Timer_NeedsUpdate>();
-    }
+        ck::UCk_Utils_OwningEntity::Add(InNewEntity, InHandle);
+        UCk_Utils_GameplayLabel_UE::Add(InNewEntity, ParamsToUse.Get_TimerName());
 
-    UCk_Utils_GameplayLabel_UE::Add(newTimerEntity, ParamsToUse.Get_TimerName());
+        InNewEntity.Add<ck::FFragment_Timer_Params>(ParamsToUse);
+        InNewEntity.Add<ck::FFragment_Timer_Current>(FCk_Chrono{ParamsToUse.Get_Duration()});
+
+        UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_Timer_Rep>(InNewEntity);
+
+        if (ParamsToUse.Get_StartingState() == ECk_Timer_State::Running)
+        {
+            InNewEntity.Add<ck::FTag_Timer_NeedsUpdate>();
+        }
+    });
 
     RecordOfTimers_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
-    RecordOfTimers_Utils::Request_Connect(InHandle, newTimerEntity);
+    RecordOfTimers_Utils::Request_Connect(InHandle, NewTimerEntity);
 }
 
 auto

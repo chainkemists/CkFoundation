@@ -11,15 +11,15 @@ auto
         const FCk_Fragment_CameraShake_ParamsData& InParams)
     -> void
 {
+    const auto NewCameraShakeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InCameraShakeEntity)
+    {
+        InCameraShakeEntity.Add<ck::FFragment_CameraShake_Params>(InParams);
+
+        ck::UCk_Utils_OwningEntity::Add(InCameraShakeEntity, InHandle);
+        UCk_Utils_GameplayLabel_UE::Add(InCameraShakeEntity, InParams.Get_ID());
+    });
+
     RecordOfCameraShakes_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
-
-    auto NewCameraShakeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
-
-    ck::UCk_Utils_OwningEntity::Add(NewCameraShakeEntity, InHandle);
-
-    NewCameraShakeEntity.Add<ck::FFragment_CameraShake_Params>(InParams);
-    UCk_Utils_GameplayLabel_UE::Add(NewCameraShakeEntity, InParams.Get_ID());
-
     RecordOfCameraShakes_Utils::Request_Connect(InHandle, NewCameraShakeEntity);
 }
 

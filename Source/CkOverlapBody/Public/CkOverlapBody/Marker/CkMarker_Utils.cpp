@@ -40,19 +40,18 @@ auto
     auto ParamsToUse = InParams;
     ParamsToUse.Set_ReplicationType(InReplicationType);
 
-    auto markerEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
+    const auto NewMarkerEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InMarkerEntity)
+    {
+        InMarkerEntity.Add<ck::FFragment_Marker_Params>(ParamsToUse);
+        InMarkerEntity.Add<ck::FFragment_Marker_Current>(ParamsToUse.Get_StartingState());
+        InMarkerEntity.Add<ck::FTag_Marker_Setup>();
 
-    ck::UCk_Utils_OwningEntity::Add(markerEntity, InHandle);
-
-    markerEntity.Add<ck::FFragment_Marker_Params>(ParamsToUse);
-    markerEntity.Add<ck::FFragment_Marker_Current>(ParamsToUse.Get_StartingState());
-    markerEntity.Add<ck::FTag_Marker_Setup>();
-
-    UCk_Utils_GameplayLabel_UE::Add(markerEntity, markerName);
+        ck::UCk_Utils_OwningEntity::Add(InMarkerEntity, InHandle);
+        UCk_Utils_GameplayLabel_UE::Add(InMarkerEntity, markerName);
+    });
 
     RecordOfMarkers_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
-
-    RecordOfMarkers_Utils::Request_Connect(InHandle, markerEntity);
+    RecordOfMarkers_Utils::Request_Connect(InHandle, NewMarkerEntity);
 }
 
 auto
