@@ -32,7 +32,7 @@ auto
 
 auto
     UCk_Utils_Time_UE::
-    Make_FromMilliSeconds(
+    Make_FromMilliseconds(
         float InMilliSeconds)
     -> FCk_Time
 {
