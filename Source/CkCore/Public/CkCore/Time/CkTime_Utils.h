@@ -91,7 +91,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Time")
     static FCk_Time
-    Make_FromMilliSeconds(float InMilliSeconds);
+    Make_FromMilliseconds(float InMilliSeconds);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Time",

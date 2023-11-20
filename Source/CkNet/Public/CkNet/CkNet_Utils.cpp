@@ -376,7 +376,7 @@ auto
 
     const auto& AveragePingMs = PrimaryPlayerState->ExactPing;
 
-    return UCk_Utils_Time_UE::Make_FromMilliSeconds(AveragePingMs);
+    return UCk_Utils_Time_UE::Make_FromMilliseconds(AveragePingMs);
 }
 
 auto
@@ -392,7 +392,7 @@ auto
 
     const auto& AverageLatencyMs = PrimaryPlayerState->ExactPing / 2.0f;
 
-    return UCk_Utils_Time_UE::Make_FromMilliSeconds(AverageLatencyMs);
+    return UCk_Utils_Time_UE::Make_FromMilliseconds(AverageLatencyMs);
 }
 
 #if CK_BUILD_TEST
