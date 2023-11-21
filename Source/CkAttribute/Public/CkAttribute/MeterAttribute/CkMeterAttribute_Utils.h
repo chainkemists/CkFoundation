@@ -194,6 +194,18 @@ public:
 
 public:
     static auto
+    Get_MinAndCurrentAttributeEntities(
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName)
+    -> std::tuple<FCk_Handle, FCk_Handle>;
+
+    static auto
+    Get_MaxAndCurrentAttributeEntities(
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName)
+    -> std::tuple<FCk_Handle, FCk_Handle>;
+
+    static auto
     Get_MinMaxAndCurrentAttributeEntities(
         FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName)
