@@ -33,7 +33,7 @@ private:
         auto Pop(T_Pred InFunc) -> TOptional<T_ParamType>;
     };
 
-protected:
+public:
     template <typename T_FragmentUtils, typename T_RecordUtils>
     static auto
     Get_EntityOrRecordEntry_WithFragmentAndLabel(
