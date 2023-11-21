@@ -48,7 +48,8 @@ auto
     const auto& ParamsToUse = [&]
     {
         const auto& MeterAttributeParams = UCk_Utils_MeterAttribute_UE::
-            Pop_Parameter<FCk_Fragment_MeterAttribute_ParamsData>(LifetimeOwner, [&](const FCk_Fragment_MeterAttribute_ParamsData& InParams)
+            Pop_Parameter<FCk_Fragment_MeterAttribute_ParamsData>(LifetimeOwner,
+                [&](const FCk_Fragment_MeterAttribute_ParamsData& InParams)
             {
                 if (NOT UCk_Utils_GameplayLabel_UE::Has(InHandle))
                 { return true; }
@@ -83,6 +84,13 @@ auto
             }
         }
     );
+
+    // TODO: Adding all 3 tags to the Meter Attribute Entity which may seem redundant. However, this is in preparation
+    // for when we have OPTIONAL min/max
+    auto ModifiableHandle = InHandle;
+    ModifiableHandle.AddOrGet<ck::FTag_MinValue>();
+    ModifiableHandle.AddOrGet<ck::FTag_MaxValue>();
+    ModifiableHandle.AddOrGet<ck::FTag_CurrentValue>();
 
     UCk_Utils_GameplayLabel_UE::Add(InHandle, ParamsToUse.Get_AttributeName());
 
@@ -305,14 +313,62 @@ auto
 
 auto
     UCk_Utils_MeterAttribute_UE::
+    Get_MinAndCurrentAttributeEntities(
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName)
+    -> std::tuple<FCk_Handle, FCk_Handle>
+{
+    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity,
+        ck::algo::MatchesGameplayLabelExact{InAttributeName});
+
+    CK_ENSURE_IF_NOT(ck::IsValid(FoundEntity), TEXT("Could not find Attribute [{}] in Entity [{}]"),
+        InAttributeName, InAttributeOwnerEntity)
+    { return {}; }
+
+    const auto& MinCapacity = Get_EntityOrRecordEntry_WithFragmentAndLabel
+        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(FoundEntity, ck::FMeterAttribute_Tags::Get_MinCapacity());
+
+    const auto& Current = Get_EntityOrRecordEntry_WithFragmentAndLabel
+        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(FoundEntity, ck::FMeterAttribute_Tags::Get_Current());
+
+    return {MinCapacity, Current};
+}
+
+auto
+    UCk_Utils_MeterAttribute_UE::
+    Get_MaxAndCurrentAttributeEntities(
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName)
+    -> std::tuple<FCk_Handle, FCk_Handle>
+{
+    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity,
+        ck::algo::MatchesGameplayLabelExact{InAttributeName});
+
+    CK_ENSURE_IF_NOT(ck::IsValid(FoundEntity), TEXT("Could not find Attribute [{}] in Entity [{}]"),
+        InAttributeName, InAttributeOwnerEntity)
+    { return {}; }
+
+    const auto& MaxCapacity = Get_EntityOrRecordEntry_WithFragmentAndLabel
+        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(FoundEntity, ck::FMeterAttribute_Tags::Get_MaxCapacity());
+
+    const auto& Current = Get_EntityOrRecordEntry_WithFragmentAndLabel
+        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(FoundEntity, ck::FMeterAttribute_Tags::Get_Current());
+
+    return {MaxCapacity, Current};
+}
+
+auto
+    UCk_Utils_MeterAttribute_UE::
     Get_MinMaxAndCurrentAttributeEntities(
         FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName)
     -> std::tuple<FCk_Handle, FCk_Handle, FCk_Handle>
 {
-    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
+    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity,
+        ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
-    CK_ENSURE_IF_NOT(ck::IsValid(FoundEntity), TEXT("Could not find Attribute [{}] in Entity [{}]"), InAttributeName, InAttributeOwnerEntity)
+    CK_ENSURE_IF_NOT(ck::IsValid(FoundEntity), TEXT("Could not find Attribute [{}] in Entity [{}]"),
+        InAttributeName, InAttributeOwnerEntity)
     { return {}; }
 
     const auto& MinCapacity = Get_EntityOrRecordEntry_WithFragmentAndLabel
