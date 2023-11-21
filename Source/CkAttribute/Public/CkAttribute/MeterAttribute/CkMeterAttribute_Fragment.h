@@ -13,6 +13,14 @@
 
 namespace ck
 {
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct FTag_MinValue {};
+    struct FTag_MaxValue {};
+    struct FTag_CurrentValue {};
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     /*
      * Notes: Meter Attribute, at the moment, is a 'Meta Feature' where it uses Float Attributes internally.
      * This means that there are no Attribute Fragments for the Meter itself. To allow us to work with

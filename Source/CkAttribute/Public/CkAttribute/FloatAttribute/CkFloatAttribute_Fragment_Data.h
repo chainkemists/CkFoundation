@@ -90,7 +90,8 @@ public:
     CK_PROPERTY_GET(_ModifierOperation_RevokablePolicy);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttributeModifier_ParamsData, _ModifierDelta, _TargetAttributeName, _ModifierOperation, _ModifierOperation_RevokablePolicy);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttributeModifier_ParamsData, _ModifierDelta, _TargetAttributeName,
+        _ModifierOperation, _ModifierOperation_RevokablePolicy);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -169,7 +170,8 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKATTRIBUTE_API UCk_Provider_MultipleFloatAttribute_ParamsData_Literal_PDA : public UCk_Provider_MultipleFloatAttribute_ParamsData_PDA
+class CKATTRIBUTE_API UCk_Provider_MultipleFloatAttribute_ParamsData_Literal_PDA
+    : public UCk_Provider_MultipleFloatAttribute_ParamsData_PDA
 {
     GENERATED_BODY()
 

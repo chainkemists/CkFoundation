@@ -81,6 +81,9 @@ namespace ck
         friend class TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute;
 
     public:
+        CK_GENERATED_BODY(TFragment_Attribute<T_AttributeType>);
+
+    public:
         struct Tag_RecomputeFinalValue {};
         struct Tag_FireSignals {};
 
@@ -101,6 +104,8 @@ namespace ck
     public:
         CK_PROPERTY_GET(_Base);
         CK_PROPERTY_GET(_Final);
+
+        CK_DEFINE_CONSTRUCTOR(TFragment_Attribute<T_AttributeType>, _Base, _Final);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
