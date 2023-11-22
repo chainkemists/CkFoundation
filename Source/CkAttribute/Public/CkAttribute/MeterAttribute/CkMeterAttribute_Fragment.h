@@ -15,9 +15,10 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FTag_MinValue {};
-    struct FTag_MaxValue {};
-    struct FTag_CurrentValue {};
+    struct FTagMeter_MinValue {};
+    struct FTagMeter_MaxValue {};
+    struct FTagMeter_CurrentValue {};
+    struct FTagMeter_RequiresUpdate {};
 
     // --------------------------------------------------------------------------------------------------------------------
 
