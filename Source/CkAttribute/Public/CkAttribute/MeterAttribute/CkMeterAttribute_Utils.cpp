@@ -88,9 +88,9 @@ auto
     // TODO: Adding all 3 tags to the Meter Attribute Entity which may seem redundant. However, this is in preparation
     // for when we have OPTIONAL min/max
     auto ModifiableHandle = InHandle;
-    ModifiableHandle.AddOrGet<ck::FTag_MinValue>();
-    ModifiableHandle.AddOrGet<ck::FTag_MaxValue>();
-    ModifiableHandle.AddOrGet<ck::FTag_CurrentValue>();
+    ModifiableHandle.AddOrGet<ck::FTagMeter_MinValue>();
+    ModifiableHandle.AddOrGet<ck::FTagMeter_MaxValue>();
+    ModifiableHandle.AddOrGet<ck::FTagMeter_CurrentValue>();
 
     UCk_Utils_GameplayLabel_UE::Add(InHandle, ParamsToUse.Get_AttributeName());
 
@@ -481,7 +481,7 @@ auto
             "(MinCapacity, MaxCapacity or CurrentValue)"), InModifierName, InAttributeOwnerEntity)
     { return; }
 
-    const auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_RecordEntryIf
+    auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_RecordEntryIf
     (
         InAttributeOwnerEntity,
         ck::algo::MatchesGameplayLabelExact{InParams.Get_TargetAttributeName()}
@@ -545,6 +545,8 @@ auto
             }}
         );
     }
+
+    FoundEntity.AddOrGet<ck::FTagMeter_RequiresUpdate>();
 }
 
 auto
@@ -586,7 +588,7 @@ auto
         FGameplayTag InModifierName)
     -> void
 {
-    const auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
+    auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
     const auto& HasMeterModifier_MinCapacity  = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck::FMeterAttribute_Tags::Get_MinCapacity(), InModifierName);
     const auto& HasMeterModifier_MaxCapacity  = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck::FMeterAttribute_Tags::Get_MaxCapacity(), InModifierName);
@@ -606,6 +608,8 @@ auto
     {
         UCk_Utils_FloatAttributeModifier_UE::Remove(FoundEntity, ck::FMeterAttribute_Tags::Get_Current(), InModifierName);
     }
+
+    FoundEntity.AddOrGet<ck::FTagMeter_RequiresUpdate>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
