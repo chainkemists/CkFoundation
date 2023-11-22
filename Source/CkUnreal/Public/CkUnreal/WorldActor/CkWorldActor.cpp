@@ -104,8 +104,7 @@ namespace ck_world_actor
         InWorld.Add<ck::FProcessor_FloatAttribute_RecomputeAll>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_FloatAttributeModifier_ComputeAll>(InWorld.Get_Registry());
 
-        InWorld.Add<ck::FProcessor_Meter_MinClamp>(InWorld.Get_Registry());
-        InWorld.Add<ck::FProcessor_Meter_MaxClamp>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_Meter_Clamp>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FProcessor_FloatAttribute_FireSignals>(InWorld.Get_Registry());
 

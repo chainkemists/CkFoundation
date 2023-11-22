@@ -285,7 +285,6 @@ namespace ck
         auto Tick(
             TimeType InDeltaT) -> void;
 
-
     private:
         TProcessor_AttributeModifier_NotRevokableAdditive_Compute<TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier>
         _NotRevokableAdditive_Compute;

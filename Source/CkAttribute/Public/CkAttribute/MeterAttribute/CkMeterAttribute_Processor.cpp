@@ -68,4 +68,26 @@ namespace ck
         auto& FloatAttribute = Current.Get<ck::FFragment_FloatAttribute>();
         FloatAttribute = FFragment_FloatAttribute{ClampedBaseValue, ClampedFinalValue};
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    FProcessor_Meter_Clamp::
+        FProcessor_Meter_Clamp(
+        const RegistryType& InRegistry)
+        : _Registry(InRegistry)
+        , _MinClamp(InRegistry)
+        , _MaxClamp(InRegistry)
+    {
+    }
+
+    auto
+        FProcessor_Meter_Clamp::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        _MinClamp.Tick(InDeltaT);
+        _MaxClamp.Tick(InDeltaT);
+        _Registry.Clear<MarkedDirtyBy>();
+    }
 }
