@@ -1,5 +1,7 @@
 #include "CkVector_Utils.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_vector
@@ -103,12 +105,80 @@ namespace ck_vector
 
 auto
     UCk_Utils_Vector3_UE::
-    ClampLength(
+    Get_AngleBetweenVectors(
+        const FVector& InA,
+        const FVector& InB)
+    -> float
+{
+    return FMath::RadiansToDegrees(acosf(ck_vector::Dot(InA, InB)));
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    Get_HeadingAngle(
+        const FVector& InVector)
+    -> float
+{
+    return FMath::RadiansToDegrees(InVector.HeadingAngle());
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    Get_ClampedLength(
         const FVector&        InVector,
         const FCk_FloatRange& InClampRange)
     -> FVector
 {
     return ck_vector::ClampLength(InVector, InClampRange);
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    Get_DistanceBetweenActors(
+        const AActor* InA,
+        const AActor* InB)
+    -> float
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InA), TEXT("Unable to get distance between Actors. Actor InA is [{}]"), InA)
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InB), TEXT("Unable to get distance between Actors. Actor InB is [{}]"), InB)
+    { return {}; }
+
+    return FVector::Distance(InA->GetActorLocation(), InB->GetActorLocation());
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    Get_Flattened(
+        const FVector& InVector,
+        ECk_Plane_Axis InAxis)
+    -> FVector
+{
+    switch(InAxis)
+    {
+        case ECk_Plane_Axis::XY:
+            return FVector(InVector.X, InVector.Y, 0.0f);
+        case ECk_Plane_Axis::XZ:
+            return FVector(InVector.X, 0.0f, InVector.Z);
+        case ECk_Plane_Axis::YZ:
+            return FVector(0.0f, InVector.Y, InVector.Z);
+        default:
+            CK_INVALID_ENUM(InAxis);
+            return InVector;
+    }
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    Get_FlattenedAndNormalized(
+        const FVector& InVector,
+        ECk_Plane_Axis InAxis)
+    -> FVector
+{
+    auto V = Get_Flattened(InVector, InAxis);
+    V.Normalize();
+    return V;
 }
 
 auto
@@ -155,7 +225,17 @@ auto
 
 auto
     UCk_Utils_Vector2_UE::
-    ClampLength(
+    Get_AngleBetweenVectors(
+        const FVector2D& InA,
+        const FVector2D& InB)
+    -> float
+{
+    return FMath::RadiansToDegrees(acosf(ck_vector::Dot(InA, InB)));
+}
+
+auto
+    UCk_Utils_Vector2_UE::
+    Get_ClampedLength(
         const FVector2D&      InVector,
         const FCk_FloatRange& InClampRange)
     -> FVector2D
