@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Math/ValueRange/CkValueRange.h"
 
@@ -20,10 +21,44 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|Vector3")
+    static float
+    Get_AngleBetweenVectors(
+        const FVector& InA,
+        const FVector& InB);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Vector3")
+    static float
+    Get_HeadingAngle(
+        const FVector& InVector);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Vector3")
     static FVector
-    ClampLength(
+    Get_ClampedLength(
         const FVector& InVector,
         const FCk_FloatRange& InClampRange);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Vector3")
+    static float
+    Get_DistanceBetweenActors(
+        const AActor* InA,
+        const AActor* InB);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Vector3")
+    static FVector
+    Get_Flattened(
+        const FVector& InVector,
+        ECk_Plane_Axis InAxis);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Vector3")
+    static FVector
+    Get_FlattenedAndNormalized(
+        const FVector& InVector,
+        ECk_Plane_Axis InAxis);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|Vector3",
@@ -71,8 +106,15 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|Vector2")
+    static float
+    Get_AngleBetweenVectors(
+        const FVector2D& InA,
+        const FVector2D& InB);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Vector2")
     static FVector2D
-    ClampLength(
+    Get_ClampedLength(
         const FVector2D& InVector,
         const FCk_FloatRange& InClampRange);
 
