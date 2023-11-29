@@ -88,9 +88,9 @@ auto
     // TODO: Adding all 3 tags to the Meter Attribute Entity which may seem redundant. However, this is in preparation
     // for when we have OPTIONAL min/max
     auto ModifiableHandle = InHandle;
-    ModifiableHandle.AddOrGet<ck::FTagMeter_MinValue>();
-    ModifiableHandle.AddOrGet<ck::FTagMeter_MaxValue>();
-    ModifiableHandle.AddOrGet<ck::FTagMeter_CurrentValue>();
+    ModifiableHandle.AddOrGet<ck::FTag_Meter_MinValue>();
+    ModifiableHandle.AddOrGet<ck::FTag_Meter_MaxValue>();
+    ModifiableHandle.AddOrGet<ck::FTag_Meter_CurrentValue>();
 
     UCk_Utils_GameplayLabel_UE::Add(InHandle, ParamsToUse.Get_AttributeName());
 
@@ -546,7 +546,7 @@ auto
         );
     }
 
-    FoundEntity.AddOrGet<ck::FTagMeter_RequiresUpdate>();
+    FoundEntity.AddOrGet<ck::FTag_Meter_RequiresUpdate>();
 }
 
 auto
@@ -609,7 +609,7 @@ auto
         UCk_Utils_FloatAttributeModifier_UE::Remove(FoundEntity, ck::FMeterAttribute_Tags::Get_Current(), InModifierName);
     }
 
-    FoundEntity.AddOrGet<ck::FTagMeter_RequiresUpdate>();
+    FoundEntity.AddOrGet<ck::FTag_Meter_RequiresUpdate>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
