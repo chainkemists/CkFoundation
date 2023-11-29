@@ -11,10 +11,10 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKATTRIBUTE_API FProcessor_Meter_MinClamp
-        : public TProcessor<FProcessor_Meter_MinClamp, FTagMeter_MinValue, FTagMeter_CurrentValue, FTagMeter_RequiresUpdate>
+        : public TProcessor<FProcessor_Meter_MinClamp, FTag_Meter_MinValue, FTag_Meter_CurrentValue, FTag_Meter_RequiresUpdate>
     {
     public:
-        using MarkedDirtyBy = FTagMeter_RequiresUpdate;
+        using MarkedDirtyBy = FTag_Meter_RequiresUpdate;
 
     public:
         using TProcessor::TProcessor;
@@ -27,10 +27,10 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKATTRIBUTE_API FProcessor_Meter_MaxClamp
-        : public TProcessor<FProcessor_Meter_MaxClamp, FTagMeter_MaxValue, FTagMeter_CurrentValue, FTagMeter_RequiresUpdate>
+        : public TProcessor<FProcessor_Meter_MaxClamp, FTag_Meter_MaxValue, FTag_Meter_CurrentValue, FTag_Meter_RequiresUpdate>
     {
     public:
-        using MarkedDirtyBy = FTagMeter_RequiresUpdate;
+        using MarkedDirtyBy = FTag_Meter_RequiresUpdate;
 
     public:
         using TProcessor::TProcessor;
@@ -48,7 +48,7 @@ namespace ck
     public:
         using TimeType     = FCk_Time;
         using RegistryType = FCk_Registry;
-        using MarkedDirtyBy = FTagMeter_RequiresUpdate;
+        using MarkedDirtyBy = FTag_Meter_RequiresUpdate;
 
     public:
         explicit
