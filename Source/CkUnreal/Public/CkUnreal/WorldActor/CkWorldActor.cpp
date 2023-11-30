@@ -22,6 +22,7 @@
 #include "CkOverlapBody/Sensor/CkSensor_Processor.h"
 
 #include "CkPhysics/Acceleration/CkAcceleration_Processor.h"
+#include "CkPhysics/AutoReorient/CkAutoReorient_Processor.h"
 #include "CkPhysics/EulerIntegrator/CkEulerIntegrator_Processor.h"
 #include "CkPhysics/Velocity/CkVelocity_Processor.h"
 
@@ -97,6 +98,8 @@ namespace ck_world_actor
 
         InWorld.Add<ck::FProcessor_Projectile_Update>(InWorld.Get_Registry());
 
+        InWorld.Add<ck::FProcessor_AutoReorient_OrientTowardsVelocity>(InWorld.Get_Registry());
+
         InWorld.Add<ck::FProcessor_Transform_InterpolateToGoal_Location>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_Transform_InterpolateToGoal_Rotation>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_Transform_HandleRequests>(InWorld.Get_Registry());
@@ -112,6 +115,14 @@ namespace ck_world_actor
 
         InWorld.Add<ck::FProcessor_CameraShake_HandleRequests>(InWorld.Get_Registry());
 
+        InWorld.Add<ck::FProcessor_RecordEntry_Destructor>(InWorld.Get_Registry());
+
+        InWorld.Add<ck::FProcessor_Marker_UpdateTransform>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_Sensor_UpdateTransform>(InWorld.Get_Registry());
+
+        InWorld.Add<ck::FProcessor_Marker_DebugPreviewAll>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_Sensor_DebugPreviewAll>(InWorld.Get_Registry());
+
         // Processors for Replication
         {
             InWorld.Add<ck::FProcessor_Timer_Replicate>(InWorld.Get_Registry());
@@ -120,14 +131,6 @@ namespace ck_world_actor
             InWorld.Add<ck::FProcessor_Transform_Replicate>(InWorld.Get_Registry());
             InWorld.Add<ck::FProcessor_AnimState_Replicate>(InWorld.Get_Registry());
         }
-
-        InWorld.Add<ck::FProcessor_RecordEntry_Destructor>(InWorld.Get_Registry());
-
-        InWorld.Add<ck::FProcessor_Marker_UpdateTransform>(InWorld.Get_Registry());
-        InWorld.Add<ck::FProcessor_Sensor_UpdateTransform>(InWorld.Get_Registry());
-
-        InWorld.Add<ck::FProcessor_Marker_DebugPreviewAll>(InWorld.Get_Registry());
-        InWorld.Add<ck::FProcessor_Sensor_DebugPreviewAll>(InWorld.Get_Registry());
 
         // Always last systems
         {
