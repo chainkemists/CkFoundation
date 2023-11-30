@@ -79,7 +79,7 @@ namespace ck
 
         const auto ClampRange = FCk_FloatRange{ClampMin, ClampMax};
 
-        InCurrent._CurrentVelocity = UCk_Utils_Vector3_UE::ClampLength(CurrentVelocity, ClampRange);
+        InCurrent._CurrentVelocity = UCk_Utils_Vector3_UE::Get_ClampedLength(CurrentVelocity, ClampRange);
     }
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -1,0 +1,38 @@
+#pragma once
+
+#include "CkEcs/Processor/CkProcessor.h"
+
+#include "CkEcsBasics/Transform/CkTransform_Fragment.h"
+
+#include "CkPhysics/AutoReorient/CkAutoReorient_Fragment.h"
+#include "CkPhysics/Velocity/CkVelocity_Fragment.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    class CKPHYSICS_API FProcessor_AutoReorient_OrientTowardsVelocity : public TProcessor<
+            FProcessor_AutoReorient_OrientTowardsVelocity,
+            FFragment_Velocity_Current,
+            FFragment_Transform_Current,
+            FFragment_AutoReorient_Params,
+            FTag_AutoReorient_OrientTowardsVelocity>
+    {
+    public:
+        using MarkedDirtyBy = FTag_AutoReorient_OrientTowardsVelocity;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Velocity_Current& InVelocityCurrent,
+            const FFragment_Transform_Current& InTransformCurrent,
+            const FFragment_AutoReorient_Params& InAutoReorientParams) const -> void;
+    };
+}
+
+// --------------------------------------------------------------------------------------------------------------------
