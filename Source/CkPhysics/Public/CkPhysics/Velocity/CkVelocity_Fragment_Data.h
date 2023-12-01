@@ -5,6 +5,44 @@
 
 #include "CkVelocity_Fragment_Data.generated.h"
 
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKPHYSICS_API FCk_Fragment_Velocity_MinMax_ParamsData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Fragment_Velocity_MinMax_ParamsData);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, InlineEditConditionToggle))
+    bool _HasMinSpeed = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditCondition = "_HasMinSpeed"))
+    float _MinSpeed = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, InlineEditConditionToggle))
+    bool _HasMaxSpeed = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditCondition = "_HasMaxSpeed"))
+    float _MaxSpeed = 0.0f;
+
+public:
+    CK_PROPERTY_GET(_HasMinSpeed);
+    CK_PROPERTY_GET(_MinSpeed);
+    CK_PROPERTY_GET(_HasMaxSpeed);
+    CK_PROPERTY_GET(_MaxSpeed);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Velocity_MinMax_ParamsData, _HasMinSpeed, _MinSpeed, _HasMaxSpeed, _MaxSpeed);
+};
+
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -24,12 +62,17 @@ private:
               meta = (AllowPrivateAccess = true))
     FVector _StartingVelocity = FVector::ZeroVector;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Fragment_Velocity_MinMax_ParamsData _VelocityMinMax;
+
 public:
     CK_PROPERTY_GET(_Coordinates);
     CK_PROPERTY_GET(_StartingVelocity);
+    CK_PROPERTY_GET(_VelocityMinMax);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Velocity_ParamsData, _Coordinates, _StartingVelocity);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Velocity_ParamsData, _Coordinates, _StartingVelocity, _VelocityMinMax);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
