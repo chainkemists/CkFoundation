@@ -102,6 +102,7 @@ public class CkCore : CkModuleRules
             new string[]
             {
                 "Core",
+                "GameplayTags",
 
                 "CkLog",
                 "CkSettings",
@@ -119,7 +120,6 @@ public class CkCore : CkModuleRules
                 "Slate",
                 "SlateCore",
                 "InputCore",
-                "GameplayTags",
                 "DeveloperSettings",
 
                 "CkThirdParty",
