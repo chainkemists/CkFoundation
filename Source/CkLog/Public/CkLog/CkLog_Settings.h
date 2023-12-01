@@ -1,41 +1,28 @@
 #pragma once
 
-#include "CkCore/Macros/CkMacros.h"
+#include "CkSettings/ProjectSettings/CkProjectSettings.h"
 
 #include <Kismet/BlueprintFunctionLibrary.h>
-#include <Engine/DeveloperSettings.h>
 
 #include "CkLog_Settings.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(meta = (DisplayName = "Ck Log"))
-class CKLOG_API UCk_Log_Settings_UE : public UDeveloperSettings
+UCLASS(meta = (DisplayName = "Logging"))
+class CKLOG_API UCk_Log_Settings_UE : public UCk_Engine_ProjectSettings_UE
 {
     GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_Log_Settings_UE);
-
-public:
-    UCk_Log_Settings_UE();
 
 protected:
     /**
     * Default logger to use if none was explicitly specified when calling the various log functions
     */
-    UPROPERTY(EditAnywhere, Category = "Logger Settings")
-    FString _DefaultLoggerName;
-
-private:
-#if WITH_EDITOR
-    virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
-    virtual FName GetCategoryName() const override;
-    void SaveToIni();
-#endif
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Logger",
+              meta = (AllowPrivateAccess = true))
+    FName _DefaultLoggerName = TEXT("CkLogger");
 
 public:
-    CK_PROPERTY_GET(_DefaultLoggerName)
+    auto Get_DefaultLoggerName() const -> FName;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -46,11 +33,8 @@ class CKLOG_API UCk_Utils_Log_Settings_UE : public UBlueprintFunctionLibrary
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Utils_Log_Settings_UE);
-
-public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Settings|Logger")
-    static FString Get_DefaultLoggerName();
+    static FName Get_DefaultLoggerName();
 };
 // --------------------------------------------------------------------------------------------------------------------

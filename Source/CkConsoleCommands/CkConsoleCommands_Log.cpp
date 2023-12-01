@@ -4,7 +4,7 @@
 
 DEFINE_LOG_CATEGORY(CkConsoleCommands);
 
-namespace ck::log
+namespace ck::console_commands
 {
 	CK_REGISTER_LOG_FUNCTIONS(CkConsoleCommands);
 }

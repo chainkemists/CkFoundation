@@ -1,12 +1,9 @@
-#include "CkProfile_Log.h"
+#pragma once
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DEFINE_LOG_CATEGORY(CkProfile);
-
-namespace ck::profile
-{
-	CK_REGISTER_LOG_FUNCTIONS(CkProfile);
-}
+#include "CkCore/Log/CkLog.h"
+#include "CkLog/CkLog_Utils.h"
+#include "CkCore/Format/CkFormat.h"
 
 // --------------------------------------------------------------------------------------------------------------------
