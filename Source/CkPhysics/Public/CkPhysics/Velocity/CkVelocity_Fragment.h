@@ -57,6 +57,7 @@ namespace ck
     public:
         friend class UCk_Utils_Velocity_UE;
         friend class FProcessor_Velocity_Setup;
+        friend class FProcessor_Velocity_Clamp;
         friend class FProcessor_VelocityModifier_Setup;
         friend class FProcessor_VelocityModifier_Teardown;
 
@@ -68,6 +69,25 @@ namespace ck
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_Velocity_Current, _CurrentVelocity);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKPHYSICS_API FFragment_Velocity_MinMax
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Velocity_MinMax);
+
+    public:
+        friend class UCk_Utils_Velocity_UE;
+
+    private:
+        TOptional<float> _MinSpeed;
+        TOptional<float> _MaxSpeed;
+
+    public:
+        CK_PROPERTY_GET(_MinSpeed);
+        CK_PROPERTY_GET(_MaxSpeed);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

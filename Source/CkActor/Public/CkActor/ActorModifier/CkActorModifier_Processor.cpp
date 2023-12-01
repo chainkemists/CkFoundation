@@ -22,53 +22,67 @@ namespace ck
         {
             actor::VeryVerbose(TEXT("Handling SpawnActor Request for Entity [{}]"), InHandle);
 
-            switch(InRequest.Get_SpawnPolicy())
+            switch(const auto& SpawnPolicy = InRequest.Get_SpawnPolicy())
             {
-            case ECk_SpawnActor_SpawnPolicy::SpawnOnInstanceWithOwership:
-            {
-                auto OwningActor = Cast<AActor>(InRequest.Get_SpawnParams().Get_OwnerOrWorld().Get());
-
-                CK_ENSURE_IF_NOT(ck::IsValid(OwningActor),
-                    TEXT("SpawnPolicy [{}] REQUIRES the Owner to be an Actor. Unable to Spawn [{}]"),
-                    InRequest.Get_SpawnPolicy(),
-                    InRequest.Get_SpawnParams().Get_ActorClass())
-                { continue; }
-
-                const auto OutermostActor = UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(OwningActor);
-
-                if (ck::IsValid(OutermostActor))
+                case ECk_SpawnActor_SpawnPolicy::SpawnOnInstanceWithOwership:
                 {
-                    if (OutermostActor->GetLocalRole() == ROLE_AutonomousProxy ||
-                        (OutermostActor->GetLocalRole() == ROLE_Authority && OutermostActor->GetRemoteRole() != ROLE_AutonomousProxy))
-                    { break; }
+                    const auto OwningActor = Cast<AActor>(InRequest.Get_SpawnParams().Get_OwnerOrWorld().Get());
+
+                    CK_ENSURE_IF_NOT(ck::IsValid(OwningActor),
+                        TEXT("SpawnPolicy [{}] REQUIRES the Owner to be an Actor. Unable to Spawn [{}]"),
+                        SpawnPolicy,
+                        InRequest.Get_SpawnParams().Get_ActorClass())
+                    { continue; }
+
+                    const auto OutermostActor = UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(OwningActor);
+
+                    if (ck::IsValid(OutermostActor))
+                    {
+                        if (OutermostActor->GetLocalRole() == ROLE_AutonomousProxy ||
+                            (OutermostActor->GetLocalRole() == ROLE_Authority && OutermostActor->GetRemoteRole() != ROLE_AutonomousProxy))
+                        { break; }
+                    }
+
+                    actor::VeryVerbose
+                    (
+                        TEXT("Skipped Spawning [{}] from Entity [{}] because spawn policy is [{}] and our role is "
+                        "neither ROLE_AutomousProxy NOR (if we are a client) do we have ROLE_Authority"),
+                        InRequest.Get_SpawnParams().Get_ActorClass(),
+                        InHandle,
+                        SpawnPolicy
+                    );
+
+                    continue;
                 }
+                case ECk_SpawnActor_SpawnPolicy::SpawnOnServer:
+                {
+                    const auto OwnerOrWorld = Cast<AActor>(InRequest.Get_SpawnParams().Get_OwnerOrWorld());
 
-                actor::VeryVerbose(TEXT("Skipped Spawning [{}] from Entity [{}] because spawn policy is [{}] and our role is "
-                    "neither ROLE_AutomousProxy NOR (if we are a client) do we have ROLE_Authority"),
-                    InRequest.Get_SpawnParams().Get_ActorClass(), InHandle, InRequest.Get_SpawnPolicy());
+                    CK_ENSURE_IF_NOT(ck::IsValid(OwnerOrWorld),
+                        TEXT("Unable to Spawn [{}] from Entity [{}] because OwnerOrWorld is [{}]"),
+                        InRequest.Get_SpawnParams().Get_ActorClass(),
+                        InHandle,
+                        InRequest.Get_SpawnParams().Get_OwnerOrWorld())
+                    { continue; }
 
-                continue;
-            }
-            case ECk_SpawnActor_SpawnPolicy::SpawnOnServer:
-            {
-                const auto OwnerOrWorld = Cast<AActor>(InRequest.Get_SpawnParams().Get_OwnerOrWorld());
+                    if (NOT OwnerOrWorld->GetWorld()->IsNetMode(NM_Client))
+                    { break; }
 
-                CK_ENSURE_IF_NOT(ck::IsValid(OwnerOrWorld), TEXT("Unable to Spawn [{}] from Entity [{}] because OwnerOrWorld is [{}]"),
-                    InRequest.Get_SpawnParams().Get_ActorClass(), InHandle, InRequest.Get_SpawnParams().Get_OwnerOrWorld())
-                { continue; }
+                    actor::VeryVerbose
+                    (
+                        TEXT("Skipped Spawning [{}] from Entity [{}] because spawn policy is [{}] and we are a client"),
+                        InRequest.Get_SpawnParams().Get_ActorClass(),
+                        InHandle,
+                        SpawnPolicy
+                    );
 
-                if (NOT OwnerOrWorld->GetWorld()->IsNetMode(NM_Client))
-                { break; }
-
-                actor::VeryVerbose(TEXT("Skipped Spawning [{}] from Entity [{}] because spawn policy is [{}] and we are a client"),
-                    InRequest.Get_SpawnParams().Get_ActorClass(), InHandle, InRequest.Get_SpawnPolicy());
-
-                continue;
-            }
-            default:
-            {
-                CK_INVALID_ENUM(InRequest.Get_SpawnPolicy());
-            }
+                    continue;
+                }
+                default:
+                {
+                    CK_INVALID_ENUM(SpawnPolicy);
+                    break;
+                }
             }
 
             const auto& SpawnedActor = UCk_Utils_Actor_UE::Request_SpawnActor(InRequest.Get_SpawnParams(), InRequest.Get_PreFinishSpawnFunc());
@@ -77,20 +91,20 @@ namespace ck
 
             switch (const auto& PostSpawnPolicy = PostSpawnParams.Get_PostSpawnPolicy())
             {
-            case ECk_SpawnActor_PostSpawnPolicy::None:
-            {
-                break;
-            };
-            case ECk_SpawnActor_PostSpawnPolicy::AttachImmediately:
-            {
-                // TODO: get attachments to work
-                break;
-            };
-            default:
-            {
-                CK_INVALID_ENUM(PostSpawnPolicy);
-                break;
-            };
+                case ECk_SpawnActor_PostSpawnPolicy::None:
+                {
+                    break;
+                };
+                case ECk_SpawnActor_PostSpawnPolicy::AttachImmediately:
+                {
+                    // TODO: get attachments to work
+                    break;
+                };
+                default:
+                {
+                    CK_INVALID_ENUM(PostSpawnPolicy);
+                    break;
+                };
             }
 
             UUtils_Signal_OnActorSpawned::Broadcast(InHandle, MakePayload(InHandle, SpawnedActor));
@@ -118,7 +132,8 @@ namespace ck
             const auto& EntityActor = InOwningActorComp.Get_EntityOwningActor().Get(IncludePendingKill);
 
             CK_ENSURE_IF_NOT(ck::IsValid(EntityActor, ck::IsValid_Policy_IncludePendingKill{}),
-                TEXT("AddActorComponent Request on Entity [{}] that has NO Actor!"), InHandle)
+                TEXT("AddActorComponent Request on Entity [{}] that has NO Actor!"),
+                InHandle)
             { continue; }
 
             if (EntityActor->IsPendingKillPending())
@@ -170,7 +185,7 @@ namespace ck
                             "Actor's starting location"),
                         AddedActorComponent,
                         InHandle,
-                        ComponentParams.Get_AttachmentType())                )
+                        ComponentParams.Get_AttachmentType()))
                 {
                     SceneComponent->SetWorldTransform(EntityActor->GetTransform());
                 }

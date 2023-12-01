@@ -32,6 +32,28 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class CKPHYSICS_API FProcessor_Velocity_Clamp : public TProcessor<
+            FProcessor_Velocity_Clamp,
+            FFragment_Velocity_Current,
+            FFragment_Velocity_MinMax>
+    {
+    public:
+        using MarkedDirtyBy = FFragment_Velocity_MinMax;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_Velocity_Current& InCurrent,
+            const FFragment_Velocity_MinMax& InMinMax) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKPHYSICS_API FProcessor_VelocityModifier_Setup : public TProcessor<
             FProcessor_VelocityModifier_Setup,
             FFragment_Velocity_Current,
