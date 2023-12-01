@@ -1,7 +1,5 @@
 #pragma once
 
-#include "CkCore/Format/CkFormat.h"
-
 #include <CoreMinimal.h>
 #include <Kismet/BlueprintFunctionLibrary.h>
 #include <functional>
