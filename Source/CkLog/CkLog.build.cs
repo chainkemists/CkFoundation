@@ -39,7 +39,7 @@ public class CkLog : CkModuleRules
 				"DeveloperSettings",
 
 				"CkThirdParty",
-				"CkCore",
+				"CkSettings",
 				// ... add private dependencies that you statically link with here ...
 			}
 			);

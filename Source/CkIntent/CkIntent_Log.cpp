@@ -4,7 +4,7 @@
 
 DEFINE_LOG_CATEGORY(CkIntent);
 
-namespace ck::log
+namespace ck::intent
 {
 	CK_REGISTER_LOG_FUNCTIONS(CkIntent);
 }

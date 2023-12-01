@@ -4,10 +4,9 @@
 
 DEFINE_LOG_CATEGORY(CkCore);
 
-namespace ck::ecs
+namespace ck::core
 {
-    // TODO: uncomment once [OBS-859] is resolved
-	// CK_REGISTER_LOG_FUNCTIONS(CkEcs);
+	CK_REGISTER_LOG_FUNCTIONS(CkCore);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

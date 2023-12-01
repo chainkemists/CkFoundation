@@ -4,7 +4,7 @@
 
 DEFINE_LOG_CATEGORY(CkTemplate);
 
-namespace ck::log
+namespace ck::Template
 {
 	CK_REGISTER_LOG_FUNCTIONS(CkTemplate);
 }
