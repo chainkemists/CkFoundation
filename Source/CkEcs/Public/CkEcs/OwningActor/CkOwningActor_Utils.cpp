@@ -87,7 +87,7 @@ auto
         const AActor* InActor)
     -> FCk_Handle
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Cannot get the ECS Handle of Actor because it is invalid!"))
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Cannot get the ECS Handle of Actor because the Actor is invalid!"))
     { return {}; }
 
     const auto& EntityOwningActorComp = InActor->FindComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();

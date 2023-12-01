@@ -173,12 +173,12 @@ public:
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_ActorModifier_OnActorSpawned,
     FCk_Handle, InHandle,
-    TWeakObjectPtr<AActor>, InActorSpawned);
+    AActor*, InActorSpawned);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_ActorModifier_OnActorSpawned_MC,
     FCk_Handle, InHandle,
-    TWeakObjectPtr<AActor>, InActorSpawned);
+    AActor*, InActorSpawned);
 
 // --------------------------------------------------------------------------------------------------------------------
 
