@@ -1,6 +1,8 @@
 #include "CkVelocity_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Math/ValueRange/CkValueRange.h"
+#include "CkCore/Math/Vector/CkVector_Utils.h"
 #include "CkEcsBasics/Transform/CkTransform_Utils.h"
 #include "CkPhysics/Velocity/CkVelocity_Utils.h"
 
@@ -58,6 +60,26 @@ namespace ck
         }
 
         InHandle.Remove<MarkedDirtyBy>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Velocity_Clamp::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_Velocity_Current& InCurrent,
+            const FFragment_Velocity_MinMax& InMinMax) const
+        -> void
+    {
+        const auto& CurrentVelocity = InCurrent.Get_CurrentVelocity();
+        const auto& ClampMin = InMinMax.Get_MinSpeed().Get(0.0f);
+        const auto& ClampMax = InMinMax.Get_MaxSpeed().Get(CurrentVelocity.Length());
+
+        const auto ClampRange = FCk_FloatRange{ClampMin, ClampMax};
+
+        InCurrent._CurrentVelocity = UCk_Utils_Vector3_UE::ClampLength(CurrentVelocity, ClampRange);
     }
 
     // --------------------------------------------------------------------------------------------------------------------

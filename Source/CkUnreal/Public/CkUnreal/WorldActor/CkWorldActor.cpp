@@ -93,6 +93,8 @@ namespace ck_world_actor
         InWorld.Add<ck::FProcessor_EulerIntegrator_Update>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_EulerIntegrator_DoOnePredictiveUpdate>(InWorld.Get_Registry());
 
+        InWorld.Add<ck::FProcessor_Velocity_Clamp>(InWorld.Get_Registry());
+
         InWorld.Add<ck::FProcessor_Projectile_Update>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FProcessor_Transform_InterpolateToGoal_Location>(InWorld.Get_Registry());

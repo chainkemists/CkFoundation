@@ -17,6 +17,18 @@ auto
     InHandle.Add<ck::FFragment_Velocity_Current>(InParams.Get_StartingVelocity());
     InHandle.Add<ck::FTag_Velocity_Setup>();
 
+    const auto& VelocityMinMax = InParams.Get_VelocityMinMax();
+
+    if (VelocityMinMax.Get_HasMaxSpeed())
+    {
+        InHandle.AddOrGet<ck::FFragment_Velocity_MinMax>()._MaxSpeed = VelocityMinMax.Get_MaxSpeed();
+    }
+
+    if (VelocityMinMax.Get_HasMinSpeed())
+    {
+        InHandle.AddOrGet<ck::FFragment_Velocity_MinMax>()._MaxSpeed = VelocityMinMax.Get_MinSpeed();
+    }
+
     TryAddReplicatedFragment<UCk_Fragment_Velocity_Rep>(InHandle);
 }
 
