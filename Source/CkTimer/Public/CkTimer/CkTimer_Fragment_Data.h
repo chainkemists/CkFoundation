@@ -86,6 +86,8 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Timer_ParamsData, _Duration);
 };
 
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKTIMER_API FCk_Fragment_MultipleTimer_ParamsData
 {
