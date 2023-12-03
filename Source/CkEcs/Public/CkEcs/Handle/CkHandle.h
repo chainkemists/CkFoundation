@@ -20,12 +20,12 @@ public:
     CK_ENABLE_CUSTOM_FORMATTER(FCk_Handle);
 
 public:
-    using FEntityType = FCk_Entity;
-    using FRegistryType = FCk_Registry;
+    using EntityType = FCk_Entity;
+    using RegistryType = FCk_Registry;
 
 public:
     FCk_Handle() = default;
-    FCk_Handle(FEntityType InEntity, const FRegistryType& InRegistry);
+    FCk_Handle(EntityType InEntity, const RegistryType& InRegistry);
 
     FCk_Handle(ThisType&& InOther) noexcept;
     FCk_Handle(const ThisType& InOther);
@@ -95,7 +95,7 @@ public:
 
 public:
     auto IsValid() const -> bool;
-    auto Get_ValidHandle(FEntityType::IdType InEntity) const -> ThisType;
+    auto Get_ValidHandle(EntityType::IdType InEntity) const -> ThisType;
 
     auto Get_Registry() -> FCk_Registry&;
     auto Get_Registry() const -> const FCk_Registry&;
@@ -334,7 +334,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to prepare a View. Handle [{}] does NOT have a valid Registry."), *this)
     {
-        static FRegistryType Invalid_Registry;
+        static RegistryType Invalid_Registry;
         return Invalid_Registry.View<T_Fragment...>();
     }
 
@@ -350,7 +350,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to prepare a View. Handle [{}] does NOT have a valid Registry."), *this)
     {
-        static FRegistryType Invalid_Registry;
+        static RegistryType Invalid_Registry;
         return Invalid_Registry.View<T_Fragment...>();
     }
 

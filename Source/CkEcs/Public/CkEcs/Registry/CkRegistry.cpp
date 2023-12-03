@@ -10,9 +10,18 @@ FCk_Registry::
 
 auto
     FCk_Registry::
-    CreateEntity() -> EntityType
+    CreateEntity()
+    -> EntityType
 {
-    return _InternalRegistry->create();
+    const auto EntityFromEntt = _InternalRegistry->create();
+    const auto CreatedEntity = EntityType{EntityFromEntt};
+
+    CK_ENSURE_IF_NOT(_InternalRegistry->orphan(CreatedEntity.Get_ID()),
+        TEXT("The Newly Created Entity with ID [{}] still HAS components attached. We have likely RUN OUT of Entities"),
+        static_cast<int32>(CreatedEntity.Get_ID()))
+    { return {}; }
+
+    return CreatedEntity;
 }
 
 auto
@@ -20,10 +29,21 @@ auto
     CreateEntity(EntityType InEntityHint)
     -> EntityType
 {
-    return _InternalRegistry->create(InEntityHint.Get_ID());
+    const auto EntityFromEntt = _InternalRegistry->create(InEntityHint.Get_ID());
+    const auto CreatedEntity = EntityType{EntityFromEntt};
+
+    CK_ENSURE_IF_NOT(_InternalRegistry->orphan(CreatedEntity.Get_ID()),
+        TEXT("The Newly Created Entity with ID [{}] through HINTING still HAS components attached. We have likely RUN OUT of Entities"),
+        static_cast<int32>(CreatedEntity.Get_ID()))
+    { return {}; }
+
+    return CreatedEntity;
 }
 
-auto FCk_Registry::DestroyEntity(EntityType InEntity) -> void
+auto
+    FCk_Registry::
+    DestroyEntity(EntityType InEntity)
+    -> void
 {
     _InternalRegistry->destroy(InEntity.Get_ID());
 }
@@ -35,8 +55,10 @@ auto
     -> EntityType
 {
     const auto Entity = EntityType{InEntity};
+
     CK_ENSURE_IF_NOT(IsValid(Entity), TEXT("Entity ID [{}] is NOT a valid ID for Registry [{}]"),
-        static_cast<int32>(InEntity), *this)
+        static_cast<int32>(InEntity),
+        *this)
     {  return EntityType{}; }
 
     return Entity;
@@ -58,7 +80,9 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-GetTypeHash(const FCk_Registry& InRegistry) -> uint32
+    GetTypeHash(
+        const FCk_Registry& InRegistry)
+    -> uint32
 {
     return GetTypeHash(InRegistry._InternalRegistry);
 }

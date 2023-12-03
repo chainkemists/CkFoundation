@@ -226,7 +226,12 @@ CK_DEFINE_CUSTOM_IS_VALID(FCk_Registry, ck::IsValid_Policy_Default, [=](const FC
 
 
 template <typename T_FragmentType, typename ... T_Args>
-auto FCk_Registry::Add(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentType&
+auto
+    FCk_Registry::
+    Add(
+        EntityType InEntity,
+        T_Args&&... InArgs)
+    -> T_FragmentType&
 {
     CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to Add Fragment/Tag."), InEntity)
     {
@@ -234,7 +239,8 @@ auto FCk_Registry::Add(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentTyp
         return Invalid_Fragment;
     }
 
-    CK_ENSURE_IF_NOT(Has<T_FragmentType>(InEntity) == false, TEXT("Fragment [{}] already exists in Entity [{}]."),
+    CK_ENSURE_IF_NOT(Has<T_FragmentType>(InEntity) == false,
+        TEXT("Fragment [{}] already exists in Entity [{}]."),
         ck::TypeToString<T_FragmentType>, InEntity)
     {
         static T_FragmentType Invalid_Fragment;
@@ -256,8 +262,11 @@ auto FCk_Registry::Add(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentTyp
 
 template <typename T_FragmentType, typename ... T_Args>
 auto
-    FCk_Registry::AddOrGet(EntityType InEntity,
-        T_Args&&... InArgs) -> T_FragmentType&
+    FCk_Registry::
+    AddOrGet(
+        EntityType InEntity,
+        T_Args&&... InArgs)
+    -> T_FragmentType&
 {
     if (Has<T_FragmentType>(InEntity))
     { return Get<T_FragmentType>(InEntity); }
@@ -280,8 +289,12 @@ auto
 }
 
 template <typename T_FragmentType, typename ... T_Args>
-auto FCk_Registry::Replace(EntityType InEntity,
-    T_Args&&... InArgs) -> T_FragmentType&
+auto
+    FCk_Registry::
+    Replace(
+        EntityType InEntity,
+        T_Args&&... InArgs)
+    -> T_FragmentType&
 {
     static_assert(std::is_empty_v<T_FragmentType> == false, "You can only replace Fragments with data.");
 
@@ -292,8 +305,8 @@ auto FCk_Registry::Replace(EntityType InEntity,
     }
 
     CK_ENSURE_IF_NOT(Has<T_FragmentType>(InEntity),
-                     TEXT("Unable to Replace Fragment. Fragment/Tag [{}] does NOT exist in Entity [{}]."),
-                     ck::TypeToString<T_FragmentType>, InEntity)
+        TEXT("Unable to Replace Fragment. Fragment/Tag [{}] does NOT exist in Entity [{}]."),
+        ck::TypeToString<T_FragmentType>, InEntity)
     {
         static T_FragmentType Invalid_Fragment;
         return Invalid_Fragment;
@@ -306,21 +319,29 @@ auto FCk_Registry::Replace(EntityType InEntity,
 }
 
 template <typename T_Fragment>
-auto FCk_Registry::Remove(EntityType InEntity) -> void
+auto
+    FCk_Registry::
+    Remove(
+        EntityType InEntity)
+    -> void
 {
     CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to Add Fragment/Tag."), InEntity)
     { return; }
 
     CK_ENSURE_IF_NOT(Has<T_Fragment>(InEntity),
-                     TEXT("Unable to Remove Fragment/Tag. Fragment/Tag [{}] does NOT exist in Entity [{}]."),
-                     ck::TypeToString<T_Fragment>, InEntity)
+        TEXT("Unable to Remove Fragment/Tag. Fragment/Tag [{}] does NOT exist in Entity [{}]."),
+        ck::TypeToString<T_Fragment>, InEntity)
     { return; }
 
     _InternalRegistry->remove<T_Fragment>(InEntity.Get_ID());
 }
 
 template <typename T_Fragment>
-auto FCk_Registry::Try_Remove(EntityType InEntity) -> void
+auto
+    FCk_Registry::
+    Try_Remove(
+        EntityType InEntity)
+    -> void
 {
     CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to Add Fragment/Tag."), InEntity)
     { return {}; }
@@ -329,53 +350,82 @@ auto FCk_Registry::Try_Remove(EntityType InEntity) -> void
 }
 
 template <typename ... T_Fragments>
-auto FCk_Registry::Clear() -> void
+auto
+    FCk_Registry::
+    Clear()
+    -> void
 {
     _InternalRegistry->clear<T_Fragments...>();
 }
 
 template <typename... T_Fragments>
-auto FCk_Registry::View() -> RegistryViewType<T_Fragments...>
+auto
+    FCk_Registry::
+    View()
+    -> RegistryViewType<T_Fragments...>
 {
     return TView<InternalRegistryType, T_Fragments...>{*_InternalRegistry};
 }
 
 template <typename... T_Fragments>
-auto FCk_Registry::View() const -> ConstRegistryViewType<T_Fragments...>
+auto
+    FCk_Registry::
+    View() const
+    -> ConstRegistryViewType<T_Fragments...>
 {
     return TView<const InternalRegistryType, T_Fragments...>{*_InternalRegistry};
 }
 
 template <typename T_Fragment, typename T_Compare>
-auto FCk_Registry::Sort(T_Compare InCompare) -> void
+auto
+    FCk_Registry::
+    Sort(
+        T_Compare InCompare)
+    -> void
 {
     _InternalRegistry->sort<T_Fragment>(InCompare);
 }
 
 template <typename T_Fragment>
-auto FCk_Registry::Has(EntityType InEntity) const -> bool
+auto
+    FCk_Registry::
+    Has(
+        EntityType InEntity) const
+    -> bool
 {
     return _InternalRegistry->any_of<T_Fragment>(InEntity.Get_ID());
 }
 
 template <typename ... T_Fragment>
-auto FCk_Registry::Has_Any(EntityType InEntity) const -> bool
+auto
+    FCk_Registry::
+    Has_Any(
+        EntityType InEntity) const
+    -> bool
 {
     return _InternalRegistry->any_of<T_Fragment...>(InEntity.Get_ID());
 }
 
 template <typename ... T_Fragment>
-auto FCk_Registry::Has_All(EntityType InEntity) const -> bool
+auto
+    FCk_Registry::
+    Has_All(
+        EntityType InEntity) const
+    -> bool
 {
     return _InternalRegistry->all_of<T_Fragment...>(InEntity.Get_ID());
 }
 
 template <typename T_Fragment>
-auto FCk_Registry::Get(EntityType InEntity) -> T_Fragment&
+auto
+    FCk_Registry::
+    Get(
+        EntityType InEntity)
+    -> T_Fragment&
 {
     CK_ENSURE_IF_NOT(Has<T_Fragment>(InEntity),
-                     TEXT("Unable to Get Fragment. Fragment [{}] does NOT exist in Entity [{}]."),
-                     ck::TypeToString<T_Fragment>, InEntity)
+         TEXT("Unable to Get Fragment. Fragment [{}] does NOT exist in Entity [{}]."),
+         ck::TypeToString<T_Fragment>, InEntity)
     {
         static T_Fragment Invalid_Fragment;
         return Invalid_Fragment;
@@ -393,11 +443,15 @@ auto FCk_Registry::Get(EntityType InEntity) -> T_Fragment&
 }
 
 template <typename T_Fragment>
-auto FCk_Registry::Get(EntityType InEntity) const -> const T_Fragment&
+auto
+    FCk_Registry::
+    Get(
+        EntityType InEntity) const
+    -> const T_Fragment&
 {
     CK_ENSURE_IF_NOT(Has<T_Fragment>(InEntity),
-                     TEXT("Unable to Get Fragment. Fragment [{}] does NOT exist in Entity [{}]."),
-                     ck::TypeToString<T_Fragment>, InEntity)
+        TEXT("Unable to Get Fragment. Fragment [{}] does NOT exist in Entity [{}]."),
+        ck::TypeToString<T_Fragment>, InEntity)
     {
         static T_Fragment Invalid_Fragment;
         return Invalid_Fragment;
@@ -413,3 +467,5 @@ auto FCk_Registry::Get(EntityType InEntity) const -> const T_Fragment&
         return _InternalRegistry->get<T_Fragment>(InEntity.Get_ID());
     }
 }
+
+// --------------------------------------------------------------------------------------------------------------------

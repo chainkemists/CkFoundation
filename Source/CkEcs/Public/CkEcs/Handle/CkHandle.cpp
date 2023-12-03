@@ -11,8 +11,8 @@
 
 FCk_Handle::
     FCk_Handle(
-        FEntityType InEntity,
-        const FRegistryType& InRegistry)
+        EntityType InEntity,
+        const RegistryType& InRegistry)
     : _Entity(InEntity)
     , _Registry(InRegistry)
 #if WITH_EDITORONLY_DATA
@@ -133,7 +133,7 @@ auto FCk_Handle::IsValid() const -> bool
 
 auto
     FCk_Handle::
-    Get_ValidHandle(FEntityType::IdType InEntity) const
+    Get_ValidHandle(EntityType::IdType InEntity) const
     -> ThisType
 {
     CK_ENSURE_IF_NOT(IsValid(),
