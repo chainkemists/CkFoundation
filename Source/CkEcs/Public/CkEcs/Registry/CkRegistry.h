@@ -189,6 +189,7 @@ private:
 
 public:
     auto IsValid(EntityType InEntity) const -> bool;
+    auto Orphan(EntityType InEntity) const -> bool;
     auto Get_ValidEntity(EntityType::IdType InEntity) const -> EntityType;
 
 public:
