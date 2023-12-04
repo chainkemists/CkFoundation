@@ -3,12 +3,15 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Params.h"
 #include "CkEcs/Registry/CkRegistry.h"
 #include "CkEcs/Handle/CkHandle.h"
 
 #include <CoreMinimal.h>
 
 #include "CkEntityLifetime_Fragment_Utils.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -43,7 +46,8 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|EntityLifetime")
     static void
     Request_DestroyEntity(
-        FCk_Handle InHandle);
+        FCk_Handle InHandle,
+        ECk_EntityLifetime_DestructionBehavior InDestructionBehavior = ECk_EntityLifetime_DestructionBehavior::ForceDestroy);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|Utils|EntityLifetime")
     static FCk_Handle
