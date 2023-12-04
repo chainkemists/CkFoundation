@@ -11,12 +11,33 @@
 auto
     UCk_Utils_EntityLifetime_UE::
     Request_DestroyEntity(
-        FCk_Handle InHandle)
+        FCk_Handle InHandle,
+        ECk_EntityLifetime_DestructionBehavior InDestructionBehavior)
     -> void
 {
     // TODO: Fix for singleplayer
     if (UCk_Utils_ReplicatedObjects_UE::Get_NetRole(InHandle) != ROLE_Authority)
     { return; }
+
+    switch(InDestructionBehavior)
+    {
+        case ECk_EntityLifetime_DestructionBehavior::ForceDestroy:
+        {
+            break;
+        }
+        case ECk_EntityLifetime_DestructionBehavior::DestroyOnlyIfOrphan:
+        {
+            if (NOT InHandle.Orphan())
+            { return; }
+
+            break;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InDestructionBehavior);
+            return;
+        }
+    }
 
     InHandle.AddOrGet<ck::FTag_TriggerDestroyEntity>();
 }
