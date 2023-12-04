@@ -217,7 +217,7 @@ auto
             ck::Context(this))
         { return; }
 
-        const auto OuterOwnerEntity = UCk_Utils_OwningActor_UE::Get_ActorEcsHandle(OuterOwner);
+        const auto OuterOwnerEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(OuterOwner);
 
         CK_ENSURE_IF_NOT(UCk_Utils_EntityReplicationDriver_UE::Has(OuterOwnerEntity),
             TEXT("Unable to Replicate the Entity Associated with [{}]. The OuterOwner [{}] does NOT have a EntityReplicationDriver."
@@ -351,7 +351,7 @@ auto
         ck::Context(this))
     { return; }
 
-    const auto OuterOwnerEntity = UCk_Utils_OwningActor_UE::Get_ActorEcsHandle(OuterOwner);
+    const auto OuterOwnerEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(OuterOwner);
 
     CK_ENSURE_IF_NOT(UCk_Utils_EntityReplicationDriver_UE::Has(OuterOwnerEntity),
         TEXT("Unable to Replicate the Entity Associated with [{}]. The OuterOwner [{}] does NOT have a EntityReplicationDriver."
@@ -369,7 +369,7 @@ auto
         ck::Context(this))
     { return; }
 
-    const auto NewEntity = UCk_Utils_OwningActor_UE::Get_ActorEcsHandle(OwningActor);
+    const auto NewEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(OwningActor);
 
     UCk_Utils_EntityReplicationDriver_UE::Request_ReplicateEntityOnNonReplicatedActor(OuterOwnerEntity,
         FCk_EntityReplicationDriver_ConstructionInfo_NonReplicatedActor
