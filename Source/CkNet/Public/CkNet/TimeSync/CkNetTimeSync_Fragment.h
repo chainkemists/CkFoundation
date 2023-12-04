@@ -14,9 +14,7 @@ class UCk_Utils_NetTimeSync_UE;
 
 namespace ck
 {
-    // --------------------------------------------------------------------------------------------------------------------
-
-    struct FTag_NetTimeSync_SyncedAtleastOnce {};
+    CK_DEFINE_ECS_TAG(FTag_NetTimeSync_SyncedAtleastOnce);
 
     // --------------------------------------------------------------------------------------------------------------------
 

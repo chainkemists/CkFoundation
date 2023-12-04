@@ -5,6 +5,7 @@
 #include "CkCore/Types/CkPtrWrapper.h"
 
 #include "CkEcs/Entity/CkEntity.h"
+#include "CkEcs/Tag/CkTag.h"
 
 #include "CkMemory/Allocator/CkMemoryAllocator.h"
 
@@ -249,6 +250,8 @@ auto
 
     if constexpr (std::is_empty_v<T_FragmentType>)
     {
+        static_assert(std::is_base_of_v<ck::FTag<T_FragmentType>, T_FragmentType>, "Tags must derive from ck::FTag (see helper macro)");
+
         _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID());
         static T_FragmentType Empty_Tag;
         return Empty_Tag;

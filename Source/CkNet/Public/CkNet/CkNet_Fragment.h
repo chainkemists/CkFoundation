@@ -5,13 +5,11 @@
 
 namespace ck
 {
-    struct FTag_HasAuthority {};
+    CK_DEFINE_ECS_TAG(FTag_HasAuthority);
+    CK_DEFINE_ECS_TAG(FTag_NetMode_IsHost);
 
-    struct FTag_NetMode_IsHost{};
-}
+    // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck
-{
     struct CKNET_API FFragment_Net_Params
     {
     public:
