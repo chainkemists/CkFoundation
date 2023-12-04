@@ -133,6 +133,18 @@ auto FCk_Handle::IsValid() const -> bool
 
 auto
     FCk_Handle::
+    Orphan() const
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
+        TEXT("Unable to perform Orphan query. Handle [{}] does NOT have a valid Registry."), *this)
+    { return true; }
+
+    return _Registry->Orphan(_Entity);
+}
+
+auto
+    FCk_Handle::
     Get_ValidHandle(EntityType::IdType InEntity) const
     -> ThisType
 {
