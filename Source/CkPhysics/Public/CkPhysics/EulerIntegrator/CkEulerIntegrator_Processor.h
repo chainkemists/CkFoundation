@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 
 #include "CkNet/CkNet_Fragment.h"
