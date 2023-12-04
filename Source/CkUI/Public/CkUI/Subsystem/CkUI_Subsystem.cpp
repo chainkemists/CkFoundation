@@ -67,7 +67,7 @@ auto
 
     _WatermarkWidget->Request_SetDisplayPolicy(static_cast<ECk_Watermark_DisplayPolicy>(ck_ui::cvar::WatermarkDisplayPolicy));
 
-    const auto& GameSessionSubsystem = GameInstance->GetSubsystem<UCk_GameSession_Subsystem_UE>();
+    const auto& GameSessionSubsystem = InCollection.InitializeDependency<UCk_GameSession_Subsystem_UE>();
 
     CK_ENSURE_IF_NOT(ck::IsValid(GameSessionSubsystem), TEXT("Failed to retrive the GameSession Subsystem!"))
     { return; }
