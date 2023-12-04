@@ -95,6 +95,7 @@ public:
 
 public:
     auto IsValid() const -> bool;
+    auto Orphan() const -> bool;
     auto Get_ValidHandle(EntityType::IdType InEntity) const -> ThisType;
 
     auto Get_Registry() -> FCk_Registry&;

@@ -77,6 +77,15 @@ auto
     return _InternalRegistry->valid(InEntity.Get_ID());
 }
 
+auto
+    FCk_Registry::
+    Orphan(
+        EntityType InEntity) const
+    -> bool
+{
+    return _InternalRegistry->orphan(InEntity.Get_ID());
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
