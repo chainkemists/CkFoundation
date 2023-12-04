@@ -10,6 +10,7 @@
 UENUM(BlueprintType)
 enum class ECk_AutoReorient_Policy : uint8
 {
+    NoAutoReorient,
     OrientTowardsVelocity
 };
 
@@ -28,7 +29,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_AutoReorient_Policy _ReorientPolicy = ECk_AutoReorient_Policy::OrientTowardsVelocity;
+    ECk_AutoReorient_Policy _ReorientPolicy = ECk_AutoReorient_Policy::NoAutoReorient;
 
     // TODO: Add tunables for how much we should reorient per DeltaT. For now, snap
 
