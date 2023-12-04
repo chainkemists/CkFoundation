@@ -16,7 +16,7 @@ class UCk_Utils_AnimState_UE;
 
 namespace ck
 {
-    struct FTag_AnimState_Updated {};
+    CK_DEFINE_ECS_TAG(FTag_AnimState_Updated);
 
     // --------------------------------------------------------------------------------------------------------------------
 

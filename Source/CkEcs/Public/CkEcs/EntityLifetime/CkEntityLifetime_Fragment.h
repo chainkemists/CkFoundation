@@ -6,13 +6,12 @@
 
 namespace ck
 {
-    struct FTag_PendingDestroyEntity { };
-    struct FTag_TriggerDestroyEntity { };
-    struct FTag_EntityJustCreated    { };
-}
+    CK_DEFINE_ECS_TAG(FTag_PendingDestroyEntity);
+    CK_DEFINE_ECS_TAG(FTag_TriggerDestroyEntity);
+    CK_DEFINE_ECS_TAG(FTag_EntityJustCreated);
 
-namespace ck
-{
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct FFragment_LifetimeDependents
     {
         CK_GENERATED_BODY(FFragment_LifetimeDependents);
