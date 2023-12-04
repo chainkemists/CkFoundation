@@ -4,6 +4,8 @@
 
 #include "CkActor/CkActor_Log.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -111,6 +113,7 @@ namespace ck
         }
 
         InHandle.Remove<FFragment_ActorModifier_SpawnActorRequests>();
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle, ECk_EntityLifetime_DestructionBehavior::DestroyOnlyIfOrphan);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
