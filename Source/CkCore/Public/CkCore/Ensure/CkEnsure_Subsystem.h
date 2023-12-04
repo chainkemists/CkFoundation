@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Macros/CkMacros.h"
 
 #include <Subsystems/GameInstanceSubsystem.h>
@@ -20,12 +21,71 @@ public:
     virtual auto Deinitialize() -> void override;
     virtual auto Initialize(FSubsystemCollectionBase& InCollection) -> void override;
 
-protected:
-    UFUNCTION(BlueprintImplementableEvent)
-    void OnInitialize();
+public:
+    static auto Get(const UObject* InWorldContextObject = nullptr) -> UCk_Ensure_Subsystem_UE*;
 
-    UFUNCTION(BlueprintImplementableEvent)
-    void OnDeinitialize();
+public:
+    auto
+    Get_IsEnsureIgnored(
+        FName InFile,
+        int32 InLine) const -> bool;
+
+    auto
+    Get_IsEnsureIgnored_WithCallstack(
+        const FString& InCallstack) const -> bool;
+
+    auto
+    Get_AllIgnoredEnsures() const -> TArray<FCk_Ensure_IgnoredEntry>;
+
+    auto
+    Get_NumberOfEnsuresTriggered() const -> int32;
+
+public:
+    auto
+    BindTo_OnEnsureIgnored(
+        const FCk_Ensure_OnEnsureIgnored_Delegate& InDelegate) -> void;
+
+    auto
+    UnbindFrom_OnEnsureIgnored(
+        const FCk_Ensure_OnEnsureIgnored_Delegate& InDelegate) -> void;
+
+    auto
+    BindTo_OnEnsureCountChanged(
+        const FCk_Ensure_OnEnsureCountChanged_Delegate& InDelegate) -> void;
+
+    auto
+    UnbindFrom_OnEnsureCountChanged(
+        const FCk_Ensure_OnEnsureCountChanged_Delegate& InDelegate) -> void;
+
+public:
+    auto
+    Request_ClearAllIgnoredEnsures() -> void;
+
+    auto
+    Request_IncrementEnsureCount() -> void;
+
+    auto
+    Request_IgnoreEnsureAtFileAndLineWithMessage(
+        FName InFile,
+        const FText& InMessage,
+        int32 InLine) -> void;
+
+    auto
+    Request_IgnoreEnsureAtFileAndLine(
+        FName InFile,
+        int32 InLine) -> void;
+
+    auto
+    Request_IgnoreEnsure_WithCallstack(
+        const FString& InCallstack) -> void;
+
+private:
+    int32                                      _NumberOfEnsuresTriggered = 0;
+    TMap<FName, TSet<FCk_Ensure_IgnoredEntry>> _IgnoredEnsures;
+    TSet<FString>                              _IgnoredEnsures_BP;
+
+    FCk_Ensure_OnEnsureIgnored_Delegate_MC      _OnIgnoredEnsure_MC;
+    FCk_Ensure_OnEnsureCountChanged_Delegate_MC _OnEnsureCountChanged_MC;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
