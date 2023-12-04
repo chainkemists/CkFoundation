@@ -5,6 +5,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+TWeakObjectPtr<UCk_Ensure_Subsystem_UE> UCk_Ensure_Subsystem_UE::_Instance;
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Ensure_Subsystem_UE::
     Initialize(
@@ -19,6 +23,8 @@ auto
     Deinitialize()
     -> void
 {
+    _Instance.Reset();
+
     _NumberOfEnsuresTriggered = 0;
     _IgnoredEnsures.Reset();
     _IgnoredEnsures_BP.Reset();
@@ -35,14 +41,12 @@ auto
         const UObject* InWorldContextObject)
     -> UCk_Ensure_Subsystem_UE*
 {
-    static UCk_Ensure_Subsystem_UE* SubSystem = nullptr;
-
-    if (ck::Is_NOT_Valid(SubSystem))
+    if (ck::Is_NOT_Valid(_Instance))
     {
-        SubSystem = UCk_Utils_Game_UE::Get_GameInstance(InWorldContextObject)->GetSubsystem<UCk_Ensure_Subsystem_UE>();
+        _Instance = UCk_Utils_Game_UE::Get_GameInstance(InWorldContextObject)->GetSubsystem<UCk_Ensure_Subsystem_UE>();
     }
 
-    return SubSystem;
+    return _Instance.Get();
 }
 
 
