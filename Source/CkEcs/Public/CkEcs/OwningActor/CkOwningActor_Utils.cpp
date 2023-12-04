@@ -73,7 +73,7 @@ auto
         const AActor* InActor)
     -> FCk_EntityOwningActor_BasicDetails
 {
-    const auto& ActorEcsHandle = Get_ActorEcsHandle(InActor);
+    const auto& ActorEcsHandle = Get_ActorEntityHandle(InActor);
 
     if (ck::Is_NOT_Valid(ActorEcsHandle))
     { return {}; }
@@ -83,7 +83,7 @@ auto
 
 auto
     UCk_Utils_OwningActor_UE::
-    Get_ActorEcsHandle(
+    Get_ActorEntityHandle(
         const AActor* InActor)
     -> FCk_Handle
 {
@@ -112,6 +112,15 @@ auto
     const auto& EntityOwningActorComp = InActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
 
     return ck::IsValid(EntityOwningActorComp);
+}
+
+auto
+    UCk_Utils_OwningActor_UE::
+    Get_ActorEntityHandleFromSelf(
+        const AActor* InActor)
+    -> FCk_Handle
+{
+    return Get_ActorEntityHandle(InActor);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

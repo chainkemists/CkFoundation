@@ -57,7 +57,7 @@ auto
         }.Set_SpawnTransform(FTransform{InConstructionInfo.Get_StartingLocation()}
     ));
 
-    const auto Entity = UCk_Utils_OwningActor_UE::Get_ActorEcsHandle(Actor);
+    const auto Entity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(Actor);
 
     const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(Entity);
     InConstructionInfo.Set_ReplicatedObjects(ReplicatedObjects.Get_ReplicatedObjects());
@@ -241,7 +241,7 @@ auto
             }.Set_SpawnTransform(
                 FTransform{_ReplicationData_NonReplicatedActor.Get_StartingLocation()}
             ));
-        return UCk_Utils_OwningActor_UE::Get_ActorEcsHandle(Actor);
+        return UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(Actor);
     }();
 
     const auto& ReplicatedObjects = _ReplicationData_NonReplicatedActor.Get_ReplicatedObjects();

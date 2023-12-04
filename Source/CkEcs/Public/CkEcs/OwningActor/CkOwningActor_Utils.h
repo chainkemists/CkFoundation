@@ -59,9 +59,9 @@ public:
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|OwningActor",
-        meta = (DefaultToSelf = "InActor"))
+        meta=(CompactNodeTitle="ActorEntityHandle"))
     static FCk_Handle
-    Get_ActorEcsHandle(
+    Get_ActorEntityHandle(
         const AActor* InActor);
 
     UFUNCTION(BlueprintPure,
@@ -70,6 +70,15 @@ public:
     static bool
     Get_IsActorEcsReady(
         AActor* InActor);
+
+private:
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|OwningActor",
+        meta = (DefaultToSelf = "InActor", HidePin = "InActor",
+            CompactNodeTitle="ActorEntityHandleSelf"))
+    static FCk_Handle
+    Get_ActorEntityHandleFromSelf(
+        const AActor* InActor);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
