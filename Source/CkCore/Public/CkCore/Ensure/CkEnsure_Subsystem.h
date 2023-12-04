@@ -84,8 +84,15 @@ private:
     TMap<FName, TSet<FCk_Ensure_IgnoredEntry>> _IgnoredEnsures;
     TSet<FString>                              _IgnoredEnsures_BP;
 
+private:
+    UPROPERTY(Transient)
     FCk_Ensure_OnEnsureIgnored_Delegate_MC      _OnIgnoredEnsure_MC;
+
+    UPROPERTY(Transient)
     FCk_Ensure_OnEnsureCountChanged_Delegate_MC _OnEnsureCountChanged_MC;
+
+private:
+    static TWeakObjectPtr<ThisType> _Instance;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
