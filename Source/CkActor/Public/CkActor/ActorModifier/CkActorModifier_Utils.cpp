@@ -4,6 +4,7 @@
 
 #include "CkActorModifier_Fragment.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
@@ -17,16 +18,15 @@ auto
         const FCk_Delegate_ActorModifier_OnActorSpawned& InDelegate)
     -> void
 {
-    if (NOT UCk_Utils_OwningActor_UE::Ensure(InHandle))
-    { return; }
+    auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
 
-    auto& RequestsComp = InHandle.AddOrGet<ck::FFragment_ActorModifier_SpawnActorRequests>();
+    auto& RequestsComp = RequestEntity.AddOrGet<ck::FFragment_ActorModifier_SpawnActorRequests>();
     RequestsComp._Requests.Add(InRequest);
 
     if (NOT InDelegate.IsBound())
     { return; }
 
-    ck::UUtils_Signal_OnActorSpawned_PostFireUnbind::Bind(InHandle, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
+    ck::UUtils_Signal_OnActorSpawned_PostFireUnbind::Bind(RequestEntity, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
