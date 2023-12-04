@@ -2,6 +2,7 @@
 
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkCore/Debug/CkDebug_Utils.h"
+#include "CkCore/Ensure/CkEnsure_Subsystem.h"
 #include "CkCore/Settings/CkCore_Settings.h"
 
 #if WITH_EDITOR
@@ -17,6 +18,8 @@
                                                                                                                                                \
     if (LIKELY(ExpressionResult))                                                                                                              \
     { return ExpressionResult; }                                                                                                               \
+                                                                                                                                               \
+    UCk_Utils_Ensure_UE::Request_IncrementEnsureCount();                                                                                       \
                                                                                                                                                \
     const auto IsMessageOnly = UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDetailsPolicy() == ECk_Core_EnsureDetailsPolicy::MessageOnly;      \
                                                                                                                                                \
@@ -65,12 +68,6 @@
         }                                                                                                                                      \
     }                                                                                                                                          \
 }()
-
-// --------------------------------------------------------------------------------------------------------------------
-
-TMap<FName, TSet<FCk_Ensure_IgnoredEntry>>	UCk_Utils_Ensure_UE::_IgnoredEnsures;
-TSet<FString>                               UCk_Utils_Ensure_UE::_IgnoredEnsures_BP;
-FCk_Ensure_OnEnsureIgnored_Delegate_MC      UCk_Utils_Ensure_UE::_OnIgnoredEnsure_MC;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -161,22 +158,25 @@ auto
     Get_AllIgnoredEnsures()
     -> TArray<FCk_Ensure_IgnoredEntry>
 {
-    const auto& AllIgnoredEnsures = [&]() -> TArray<FCk_Ensure_IgnoredEntry>
-    {
-        auto Ret = TArray<FCk_Ensure_IgnoredEntry>{};
+    const auto EnsureSubsystem = UCk_Ensure_Subsystem_UE::Get();
 
-        auto IgnoredEnsureEntrySets = TArray<TSet<FCk_Ensure_IgnoredEntry>>{};
-        _IgnoredEnsures.GenerateValueArray(IgnoredEnsureEntrySets);
+    if (ck::Is_NOT_Valid(EnsureSubsystem))
+    { return {}; }
 
-        for (const auto& IgnoredEnsureEntrySet : IgnoredEnsureEntrySets)
-        {
-            Ret.Append(IgnoredEnsureEntrySet.Array());
-        }
+    return EnsureSubsystem->Get_AllIgnoredEnsures();
+}
 
-        return Ret;
-    }();
+auto
+    UCk_Utils_Ensure_UE::
+    Get_NumberOfEnsuresTriggered()
+    -> int32
+{
+    const auto EnsureSubsystem = UCk_Ensure_Subsystem_UE::Get();
 
-    return AllIgnoredEnsures;
+    if (ck::Is_NOT_Valid(EnsureSubsystem))
+    { return {}; }
+
+    return EnsureSubsystem->Get_NumberOfEnsuresTriggered();
 }
 
 auto
@@ -184,24 +184,66 @@ auto
     Request_ClearAllIgnoredEnsures()
     -> void
 {
-    _IgnoredEnsures.Empty();
-    _IgnoredEnsures_BP.Empty();
+    const auto EnsureSubsystem = UCk_Ensure_Subsystem_UE::Get();
+
+    if (ck::Is_NOT_Valid(EnsureSubsystem))
+    { return; }
+
+    EnsureSubsystem->Request_ClearAllIgnoredEnsures();
 }
 
 auto
     UCk_Utils_Ensure_UE::
-    Bind_To_OnEnsureIgnored(const FCk_Ensure_OnEnsureIgnored_Delegate& InDelegate)
+    BindTo_OnEnsureIgnored(const FCk_Ensure_OnEnsureIgnored_Delegate& InDelegate)
     -> void
 {
-    _OnIgnoredEnsure_MC.Add(InDelegate);
+    const auto EnsureSubsystem = UCk_Ensure_Subsystem_UE::Get();
+
+    if (ck::Is_NOT_Valid(EnsureSubsystem))
+    { return; }
+
+    EnsureSubsystem->BindTo_OnEnsureIgnored(InDelegate);
 }
 
 auto
     UCk_Utils_Ensure_UE::
-    Unbind_From_OnEnsureIgnored(const FCk_Ensure_OnEnsureIgnored_Delegate& InDelegate)
+    UnbindFrom_OnEnsureIgnored(const FCk_Ensure_OnEnsureIgnored_Delegate& InDelegate)
     -> void
 {
-    _OnIgnoredEnsure_MC.Remove(InDelegate);
+    const auto EnsureSubsystem = UCk_Ensure_Subsystem_UE::Get();
+
+    if (ck::Is_NOT_Valid(EnsureSubsystem))
+    { return; }
+
+    EnsureSubsystem->UnbindFrom_OnEnsureIgnored(InDelegate);
+}
+
+auto
+    UCk_Utils_Ensure_UE::
+    BindTo_OnEnsureCountChanged(
+        const FCk_Ensure_OnEnsureCountChanged_Delegate& InDelegate)
+    -> void
+{
+    const auto EnsureSubsystem = UCk_Ensure_Subsystem_UE::Get();
+
+    if (ck::Is_NOT_Valid(EnsureSubsystem))
+    { return; }
+
+    EnsureSubsystem->BindTo_OnEnsureCountChanged(InDelegate);
+}
+
+auto
+    UCk_Utils_Ensure_UE::
+    UnbindFrom_OnEnsureCountChanged(
+        const FCk_Ensure_OnEnsureCountChanged_Delegate& InDelegate)
+    -> void
+{
+    const auto EnsureSubsystem = UCk_Ensure_Subsystem_UE::Get();
+
+    if (ck::Is_NOT_Valid(EnsureSubsystem))
+    { return; }
+
+    EnsureSubsystem->UnbindFrom_OnEnsureCountChanged(InDelegate);
 }
 
 auto
@@ -211,7 +253,12 @@ auto
         int32 InLine)
     -> void
 {
-    Request_IgnoreEnsureAtFileAndLineWithMessage(InFile, FText::GetEmpty(), InLine);
+    const auto EnsureSubsystem = UCk_Ensure_Subsystem_UE::Get();
+
+    if (ck::Is_NOT_Valid(EnsureSubsystem))
+    { return; }
+
+    EnsureSubsystem->Request_IgnoreEnsureAtFileAndLine(InFile, InLine);
 }
 
 auto
@@ -222,14 +269,12 @@ auto
         int32        InLine)
     -> void
 {
-    auto& LineSet = _IgnoredEnsures.FindOrAdd(InFile);
-    const auto& IgnoredEnsure = FCk_Ensure_IgnoredEntry{InFile, InLine, InMessage};
-    LineSet.Add(IgnoredEnsure);
+    const auto EnsureSubsystem = UCk_Ensure_Subsystem_UE::Get();
 
-    _OnIgnoredEnsure_MC.Broadcast
-    (
-        FCk_Ensure_OnEnsureIgnored_Payload{IgnoredEnsure}
-    );
+    if (ck::Is_NOT_Valid(EnsureSubsystem))
+    { return; }
+
+    EnsureSubsystem->Request_IgnoreEnsureAtFileAndLineWithMessage(InFile, InMessage, InLine);
 }
 
 auto
@@ -239,16 +284,12 @@ auto
         int32 InLine)
     -> bool
 {
-    const auto* LineSet = _IgnoredEnsures.Find(InFile);
+    const auto EnsureSubsystem = UCk_Ensure_Subsystem_UE::Get();
 
-    if (NOT ck::IsValid(LineSet, ck::IsValid_Policy_NullptrOnly{}))
-    { return false; }
+    if (ck::Is_NOT_Valid(EnsureSubsystem))
+    { return {}; }
 
-    return ck::IsValid
-    (
-        LineSet->Find(FCk_Ensure_IgnoredEntry{InFile, InLine}),
-        ck::IsValid_Policy_NullptrOnly{}
-    );
+    return EnsureSubsystem->Get_IsEnsureIgnored(InFile, InLine);
 }
 
 auto
@@ -257,7 +298,12 @@ auto
         const FString& InCallstack)
     -> void
 {
-    _IgnoredEnsures_BP.Add(InCallstack);
+    const auto EnsureSubsystem = UCk_Ensure_Subsystem_UE::Get();
+
+    if (ck::Is_NOT_Valid(EnsureSubsystem))
+    { return; }
+
+    EnsureSubsystem->Request_IgnoreEnsure_WithCallstack(InCallstack);
 }
 
 auto
@@ -266,7 +312,25 @@ auto
         const FString& InCallstack)
     -> bool
 {
-    return ck::IsValid(_IgnoredEnsures_BP.Find(InCallstack), ck::IsValid_Policy_NullptrOnly{});
+    const auto EnsureSubsystem = UCk_Ensure_Subsystem_UE::Get();
+
+    if (ck::Is_NOT_Valid(EnsureSubsystem))
+    { return {}; }
+
+    return EnsureSubsystem->Get_IsEnsureIgnored_WithCallstack(InCallstack);
+}
+
+auto
+    UCk_Utils_Ensure_UE::
+    Request_IncrementEnsureCount()
+    -> void
+{
+    const auto EnsureSubsystem = UCk_Ensure_Subsystem_UE::Get();
+
+    if (ck::Is_NOT_Valid(EnsureSubsystem))
+    { return; }
+
+    EnsureSubsystem->Request_IncrementEnsureCount();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
