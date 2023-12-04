@@ -60,9 +60,13 @@ auto
     { return; }
 
 
-    if (const auto& ReorientPolicy = InHandle.Get<ck::FFragment_AutoReorient_Params>().Get_Params().Get_ReorientPolicy() == ECk_AutoReorient_Policy::OrientTowardsVelocity)
+    if (const auto& ReorientPolicy = InHandle.Get<ck::FFragment_AutoReorient_Params>().Get_Params().Get_ReorientPolicy() ==
+        ECk_AutoReorient_Policy::OrientTowardsVelocity)
     {
-        CK_ENSURE_IF_NOT(UCk_Utils_Velocity_UE::Has(InHandle), TEXT("AutoReorient for Entity [{}] is set to [{}] but does NOT have a Velocity fragment!"), InHandle, ReorientPolicy)
+        CK_ENSURE_IF_NOT(UCk_Utils_Velocity_UE::Has(InHandle),
+            TEXT("AutoReorient for Entity [{}] is set to [{}] but does NOT have a Velocity fragment!"),
+            InHandle,
+            ReorientPolicy)
         { return; }
 
         InHandle.Add<ck::FTag_AutoReorient_OrientTowardsVelocity>();
