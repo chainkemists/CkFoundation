@@ -19,8 +19,8 @@ class UCk_Utils_MarkerAndSensor_UE;
 
 namespace ck
 {
-    struct FTag_Sensor_Setup {};
-    struct FTag_Sensor_UpdateTransform {};
+    CK_DEFINE_ECS_TAG(FTag_Sensor_Setup);
+    CK_DEFINE_ECS_TAG(FTag_Sensor_UpdateTransform);
 
     // --------------------------------------------------------------------------------------------------------------------
 

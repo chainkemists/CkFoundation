@@ -9,7 +9,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-struct NAME_TransientEntity {};
+CK_DEFINE_ECS_TAG(FTag_NAME_TransientEntity);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -79,7 +79,7 @@ auto
 
                 auto& Registry = WorldActor->_EcsWorld->Get_Registry();
                 _TransientEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(Registry);
-                _TransientEntity.Add<NAME_TransientEntity>();
+                _TransientEntity.Add<FTag_NAME_TransientEntity>();
             }
         )
     );

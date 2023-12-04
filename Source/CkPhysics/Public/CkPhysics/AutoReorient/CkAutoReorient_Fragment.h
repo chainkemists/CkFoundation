@@ -9,7 +9,7 @@
 
 namespace ck
 {
-    struct FTag_AutoReorient_OrientTowardsVelocity {};
+    CK_DEFINE_ECS_TAG(FTag_AutoReorient_OrientTowardsVelocity);
 
     // --------------------------------------------------------------------------------------------------------------------
 

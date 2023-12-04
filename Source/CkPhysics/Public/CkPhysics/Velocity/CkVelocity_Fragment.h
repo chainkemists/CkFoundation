@@ -20,12 +20,12 @@ class UCk_Utils_BulkVelocityModifier_UE;
 
 namespace ck
 {
-    struct FTag_Velocity_Setup {};
-    struct FTag_VelocityChannel {};
-    struct FTag_VelocityModifier {};
-    struct FTag_VelocityModifier_Setup {};
-    struct FTag_BulkVelocityModifier_Setup {};
-    struct FTag_BulkVelocityModifier_GlobalScope {};
+    CK_DEFINE_ECS_TAG(FTag_Velocity_Setup);
+    CK_DEFINE_ECS_TAG(FTag_VelocityChannel);
+    CK_DEFINE_ECS_TAG(FTag_VelocityModifier);
+    CK_DEFINE_ECS_TAG(FTag_VelocityModifier_Setup);
+    CK_DEFINE_ECS_TAG(FTag_BulkVelocityModifier_Setup);
+    CK_DEFINE_ECS_TAG(FTag_BulkVelocityModifier_GlobalScope);
 
     // --------------------------------------------------------------------------------------------------------------------
 

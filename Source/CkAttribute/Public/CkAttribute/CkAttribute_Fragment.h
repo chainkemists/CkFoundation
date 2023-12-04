@@ -84,8 +84,8 @@ namespace ck
         CK_GENERATED_BODY(TFragment_Attribute<T_AttributeType>);
 
     public:
-        struct Tag_RecomputeFinalValue {};
-        struct Tag_FireSignals {};
+        CK_DEFINE_ECS_TAG(Tag_RecomputeFinalValue);
+        CK_DEFINE_ECS_TAG(Tag_FireSignals);
 
     public:
         using AttributeDataType = T_AttributeType;
@@ -117,13 +117,12 @@ namespace ck
         template <typename>
         friend class TUtils_AttributeModifier;
 
-
     public:
-        struct Tag_AdditiveModification{};
-        struct Tag_MultiplicativeModification{};
-        struct Tag_IsRevokableModification{};
-        struct Tag_IsNotRevokableModification{};
-        struct Tag_ComputeResult{};
+        CK_DEFINE_ECS_TAG(Tag_AdditiveModification);
+        CK_DEFINE_ECS_TAG(Tag_MultiplicativeModification);
+        CK_DEFINE_ECS_TAG(Tag_IsRevokableModification);
+        CK_DEFINE_ECS_TAG(Tag_IsNotRevokableModification);
+        CK_DEFINE_ECS_TAG(Tag_ComputeResult);
 
     public:
         using AttributeFragmentType = T_DerivedAttribute;
