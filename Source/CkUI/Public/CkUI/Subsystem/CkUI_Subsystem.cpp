@@ -69,7 +69,7 @@ auto
 
     const auto& GameSessionSubsystem = InCollection.InitializeDependency<UCk_GameSession_Subsystem_UE>();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(GameSessionSubsystem), TEXT("Failed to retrive the GameSession Subsystem!"))
+    CK_ENSURE_IF_NOT(ck::IsValid(GameSessionSubsystem), TEXT("Failed to retrieve the GameSession Subsystem!"))
     { return; }
 
     _PostFireUnbind_Connection = ck::UUtils_Signal_OnLoginEvent::Bind<&UCk_UI_Subsystem_UE::OnPlayerControllerReady>

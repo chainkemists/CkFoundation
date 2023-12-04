@@ -75,19 +75,21 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam
-(
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
     FCk_Ensure_OnEnsureIgnored_Delegate_MC,
-    const FCk_Ensure_OnEnsureIgnored_Payload&,
-    InPayload
-);
+    const FCk_Ensure_OnEnsureIgnored_Payload&, InPayload);
 
-DECLARE_DYNAMIC_DELEGATE_OneParam
-(
+DECLARE_DYNAMIC_DELEGATE_OneParam(
     FCk_Ensure_OnEnsureIgnored_Delegate,
-    const FCk_Ensure_OnEnsureIgnored_Payload&,
-    InPayload
-);
+    const FCk_Ensure_OnEnsureIgnored_Payload&, InPayload);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+    FCk_Ensure_OnEnsureCountChanged_Delegate_MC,
+    int32, InNewCount);
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(
+    FCk_Ensure_OnEnsureCountChanged_Delegate,
+    int32, InNewCount);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -131,6 +133,11 @@ public:
     static TArray<FCk_Ensure_IgnoredEntry>
     Get_AllIgnoredEnsures();
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ensure")
+    static int32
+    Get_NumberOfEnsuresTriggered();
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ensure")
     static void
@@ -139,14 +146,26 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ensure")
     static void
-    Bind_To_OnEnsureIgnored(
+    BindTo_OnEnsureIgnored(
         const FCk_Ensure_OnEnsureIgnored_Delegate& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ensure")
     static void
-    Unbind_From_OnEnsureIgnored(
+    UnbindFrom_OnEnsureIgnored(
         const FCk_Ensure_OnEnsureIgnored_Delegate& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ensure")
+    static void
+    BindTo_OnEnsureCountChanged(
+        const FCk_Ensure_OnEnsureCountChanged_Delegate& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ensure")
+    static void
+    UnbindFrom_OnEnsureCountChanged(
+        const FCk_Ensure_OnEnsureCountChanged_Delegate& InDelegate);
 
 public:
     static auto
@@ -157,6 +176,9 @@ public:
     static auto
     Get_IsEnsureIgnored_WithCallstack(
         const FString& InCallstack) -> bool;
+
+    static auto
+    Request_IncrementEnsureCount() -> void;
 
     static auto
     Request_IgnoreEnsureAtFileAndLineWithMessage(
@@ -172,11 +194,6 @@ public:
     static auto
     Request_IgnoreEnsure_WithCallstack(
         const FString& InCallstack) -> void;
-
-private:
-    static TMap<FName, TSet<FCk_Ensure_IgnoredEntry>> _IgnoredEnsures;
-    static TSet<FString>                              _IgnoredEnsures_BP;
-    static FCk_Ensure_OnEnsureIgnored_Delegate_MC     _OnIgnoredEnsure_MC;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -219,6 +236,8 @@ private:
     if (LIKELY(ExpressionResult))                                                                                                          \
     { return true; }                                                                                                                       \
                                                                                                                                            \
+    UCk_Utils_Ensure_UE::Request_IncrementEnsureCount();                                                                                   \
+                                                                                                                                           \
     if (UCk_Utils_Ensure_UE::Get_IsEnsureIgnored(__FILE__, __LINE__))                                                                      \
     { return false; }                                                                                                                      \
                                                                                                                                            \
@@ -238,8 +257,7 @@ private:
         TEXT(#InExpression),                                                                                                               \
         message,                                                                                                                           \
         bpStackTrace,                                                                                                                      \
-        stackTraceWith2Skips                                                                                                               \
-    );                                                                                                                                     \
+        stackTraceWith2Skips);                                                                                                             \
                                                                                                                                            \
     _DETAILS_CK_ENSURE_LOG_OR_PUSHMESSAGE("CkEnsures", callstackPlusMessage, nullptr);                                                     \
                                                                                                                                            \
