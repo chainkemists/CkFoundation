@@ -34,6 +34,7 @@ public:
 
 public:
     friend class UCk_Utils_Ecs_Base_UE;
+    friend class UCk_Ability_ConstructionScript_PDA;
     friend class ck::FProcessor_AbilityOwner_HandleRequests;
 
 public:
@@ -125,6 +126,11 @@ private:
         FCk_Handle InHandle) -> void;
 
 private:
+    static auto
+    DoAdd(
+        FCk_Handle InHandle,
+        const FCk_Fragment_Ability_ParamsData& InParams) -> void;
+
     static auto
     Has(
         FCk_Handle InHandle) -> bool;
