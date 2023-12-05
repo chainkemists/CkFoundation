@@ -16,6 +16,8 @@ auto
     -> void
 {
     Super::Initialize(InCollection);
+
+    _Instance = this;
 }
 
 auto
@@ -37,15 +39,9 @@ auto
 
 auto
     UCk_Ensure_Subsystem_UE::
-    Get(
-        const UObject* InWorldContextObject)
+    Get_Instance()
     -> UCk_Ensure_Subsystem_UE*
 {
-    if (ck::Is_NOT_Valid(_Instance))
-    {
-        _Instance = UCk_Utils_Game_UE::Get_GameInstance(InWorldContextObject)->GetSubsystem<UCk_Ensure_Subsystem_UE>();
-    }
-
     return _Instance.Get();
 }
 
