@@ -105,7 +105,7 @@ namespace ck
                 InAbilityOwnerEntity
             );
 
-            UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Request_Connect(InAbilityEntity, InAbilityOwnerEntity);
+            UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Request_Connect(InAbilityOwnerEntity, InAbilityEntity);
 
             if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityEntity, AbilityName).Get_ActivationPolicy();
                 ActivationPolicy == ECk_Ability_ActivationPolicy::ActivateOnGranted)

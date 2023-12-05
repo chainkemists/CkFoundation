@@ -171,22 +171,26 @@ struct CKABILITY_API FCk_Fragment_Ability_ParamsData
 public:
     CK_GENERATED_BODY(FCk_Fragment_Ability_ParamsData);
 
+public:
+    FCk_Fragment_Ability_ParamsData() = default;
+    FCk_Fragment_Ability_ParamsData(const TSubclassOf<UCk_Ability_Script_PDA>& InAbilityScript);
+
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               Category = "Script",
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, AllowAbstract = false))
     TSubclassOf<UCk_Ability_Script_PDA> _AbilityScriptClass;
 
 private:
-    UPROPERTY(Transient)
-    FCk_Ability_Script_Data _Data;
+    mutable TOptional<FCk_Ability_Script_Data> _Data;
 
 public:
     CK_PROPERTY_GET(_AbilityScriptClass);
-    CK_PROPERTY(_Data);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Ability_ParamsData, _AbilityScriptClass);
+    [[nodiscard]]
+    auto
+    Get_Data() const -> const FCk_Ability_Script_Data&;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -220,6 +224,10 @@ class CKABILITY_API UCk_Ability_ConstructionScript_PDA : public UCk_EntityBridge
 
 public:
     CK_GENERATED_BODY(UCk_Ability_ConstructionScript_PDA);
+
+public:
+    auto DoConstruct_Implementation(
+        const FCk_Handle& InHandle) -> void override;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ExposeOnSpawn, AllowPrivateAccess = true))
