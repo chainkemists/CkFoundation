@@ -1,6 +1,7 @@
 #include "CkAbility_Utils.h"
 
 #include "CkAbility/CkAbility_Log.h"
+#include "CkAbility/CkAbility_Subsystem.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Object/CkObject_Utils.h"
@@ -181,6 +182,14 @@ auto
 
     auto& AbilityCurrent = InHandle.Get<ck::FFragment_Ability_Current>();
 
+    if (AbilityCurrent._Status == ECk_Ability_Status::Active)
+    { return; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityCurrent._AbilityScript),
+        TEXT("Cannot Activate Ability with Entity [{}] because its AbilityScript is INVALID"),
+        InHandle)
+    { return; }
+
     AbilityCurrent._Status = ECk_Ability_Status::Active;
     AbilityCurrent._AbilityScript->OnActivateAbility();
 
@@ -197,6 +206,14 @@ auto
     { return; }
 
     auto& AbilityCurrent = InHandle.Get<ck::FFragment_Ability_Current>();
+
+    if (AbilityCurrent._Status == ECk_Ability_Status::NotActive)
+    { return; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityCurrent._AbilityScript),
+        TEXT("Cannot End Ability with Entity [{}] because its AbilityScript is INVALID"),
+        InHandle)
+    { return; }
 
     AbilityCurrent._Status = ECk_Ability_Status::NotActive;
     AbilityCurrent._AbilityScript->OnEndAbility();
@@ -243,14 +260,15 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptInstance), TEXT("Failed to create instance of Ability Script of Class [{}]"), AbilityScriptClass)
     { return; }
 
-    // TODO: Replace with PostEntityCreated func once available
-
-    auto ParamsToUse = InParams;
+    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(AbilityScriptInstance)
+    { return; }
 
     UCk_Utils_GameplayLabel_UE::Add(InHandle, AbilityName);
 
-    InHandle.Add<ck::FFragment_Ability_Params>(ParamsToUse);
+    InHandle.Add<ck::FFragment_Ability_Params>(InParams);
     InHandle.Add<ck::FFragment_Ability_Current>(AbilityScriptInstance);
+
+    UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityScriptInstance->GetWorld())->Request_TrackAbilityScript(AbilityScriptInstance);
 
     // TODO: Add Rep Fragment
 }
