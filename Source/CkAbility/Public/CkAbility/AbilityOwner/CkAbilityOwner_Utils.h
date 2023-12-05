@@ -49,9 +49,17 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
-              DisplayName="Get All Active Abilities")
-    static TArray<FCk_Handle>
-    Get_ActiveAbilities(
+              DisplayName="Get All Abilities With Status")
+    static TArray<FGameplayTag>
+    Get_AbilitiesWithStatus(
+        FCk_Handle InHandle,
+        ECk_Ability_Status InStatus);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability",
+              DisplayName="Get All Abilities")
+    static TArray<FGameplayTag>
+    Get_Abilities(
         FCk_Handle InHandle);
 
 public:
