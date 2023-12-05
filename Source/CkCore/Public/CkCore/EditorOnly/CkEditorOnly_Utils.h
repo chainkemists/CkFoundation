@@ -23,13 +23,24 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EditorMessage_Severity);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
-enum class ECk_EditorMessage_DisplayPolicy: uint8
+enum class ECk_EditorMessage_ToastNotification_DisplayPolicy : uint8
 {
-    ToastNotification,
-    ToastNotificationAndOpenMessageLogWindow
+    DoNotDisplay,
+    Display
 };
 
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EditorMessage_DisplayPolicy);
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EditorMessage_ToastNotification_DisplayPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_EditorMessage_MessageLog_DisplayPolicy : uint8
+{
+    DoNotFocus,
+    Focus
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EditorMessage_MessageLog_DisplayPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -110,16 +121,24 @@ private:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_EditorMessage_DisplayPolicy _DisplayPolicy = ECk_EditorMessage_DisplayPolicy::ToastNotificationAndOpenMessageLogWindow;
+    ECk_EditorMessage_ToastNotification_DisplayPolicy _ToastNotificationDisplayPolicy =
+        ECk_EditorMessage_ToastNotification_DisplayPolicy::DoNotDisplay;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EditorMessage_MessageLog_DisplayPolicy _MessageLogDisplayPolicy =
+        ECk_EditorMessage_MessageLog_DisplayPolicy::DoNotFocus;
 
 public:
     CK_PROPERTY_GET(_LoggerToUse);
     CK_PROPERTY_GET(_MessageSegments);
-    CK_PROPERTY_GET(_MessageSeverity);
-    CK_PROPERTY_GET(_DisplayPolicy);
+
+    CK_PROPERTY(_MessageSeverity);
+    CK_PROPERTY(_ToastNotificationDisplayPolicy);
+    CK_PROPERTY(_MessageLogDisplayPolicy);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Utils_EditorOnly_PushNewEditorMessage_Params, _LoggerToUse, _MessageSegments, _MessageSeverity, _DisplayPolicy);
+    CK_DEFINE_CONSTRUCTORS(FCk_Utils_EditorOnly_PushNewEditorMessage_Params, _LoggerToUse, _MessageSegments);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
