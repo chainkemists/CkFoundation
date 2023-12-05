@@ -38,7 +38,7 @@ public:
     Get_AllIgnoredEnsures() const -> TArray<FCk_Ensure_IgnoredEntry>;
 
     auto
-    Get_NumberOfEnsuresTriggered() const -> int32;
+    Get_EnsureCount() const -> int32;
 
 public:
     auto

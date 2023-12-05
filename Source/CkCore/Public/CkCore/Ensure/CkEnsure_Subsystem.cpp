@@ -71,7 +71,7 @@ auto
 
 auto
     UCk_Ensure_Subsystem_UE::
-    Get_NumberOfEnsuresTriggered() const
+    Get_EnsureCount() const
     -> int32
 {
     return _NumberOfEnsuresTriggered;
