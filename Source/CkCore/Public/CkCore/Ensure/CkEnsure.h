@@ -211,10 +211,11 @@ public:
                 {                                                                                                                          \
                     FCk_TokenizedMessage{_Msg_}.Set_TargetObject(_ContextObject_)                                                          \
                 }                                                                                                                          \
-            },                                                                                                                             \
-            ECk_EditorMessage_Severity::Error,                                                                                             \
-            ECk_EditorMessage_DisplayPolicy::ToastNotification                                                                             \
+            }                                                                                                                              \
         }                                                                                                                                  \
+        .Set_MessageSeverity(ECk_EditorMessage_Severity::Error)                                                                            \
+        .Set_ToastNotificationDisplayPolicy(ECk_EditorMessage_ToastNotification_DisplayPolicy::DoNotDisplay)                               \
+        .Set_MessageLogDisplayPolicy(ECk_EditorMessage_MessageLog_DisplayPolicy::DoNotFocus)                                               \
     );                                                                                                                                     \
     if (UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDisplayPolicy() == ECk_Core_EnsureDisplayPolicy::LogOnly)                             \
     { return false; }
