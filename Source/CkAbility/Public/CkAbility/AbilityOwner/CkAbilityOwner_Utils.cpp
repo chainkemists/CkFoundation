@@ -105,7 +105,7 @@ auto
     if (NOT Ensure(InHandle))
     { return; }
 
-    InHandle.Add<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
+    InHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
 }
 
 auto
@@ -118,7 +118,7 @@ auto
     if (NOT Ensure(InHandle))
     { return; }
 
-    InHandle.Add<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
+    InHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
 }
 
 auto
@@ -131,7 +131,7 @@ auto
     if (NOT Ensure(InHandle))
     { return; }
 
-    InHandle.Add<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
+    InHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
 }
 
 auto
@@ -144,7 +144,7 @@ auto
     if (NOT Ensure(InHandle))
     { return; }
 
-    InHandle.Add<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
+    InHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
