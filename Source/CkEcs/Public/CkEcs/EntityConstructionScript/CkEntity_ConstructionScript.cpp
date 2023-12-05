@@ -28,7 +28,8 @@ auto
         const FCk_Handle& InHandle)
     -> void
 {
-    CK_TRIGGER_ENSURE(TEXT("The function in the BASE class [{}] of [{}] should have been overridden"), ck::TypeToString<ThisType>, this);
+    CK_TRIGGER_ENSURE(TEXT("The function DoConstruct in the BASE class [{}] of [{}] should have been overridden"),
+        ck::Get_RuntimeTypeToString<ThisType>(), this);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
