@@ -136,7 +136,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ensure")
     static int32
-    Get_NumberOfEnsuresTriggered();
+    Get_EnsureCount();
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ensure")
