@@ -51,22 +51,6 @@ auto
 {
     Super::Initialize(InCollection);
 
-    if (GetWorld()->IsNetMode(NM_DedicatedServer))
-    { return; }
-
-    const auto& WatermarkWidgetClass = UCk_Utils_UI_ProjectSettings_UE::Get_WatermarkWidgetClass();
-
-    CK_ENSURE_IF_NOT(ck::IsValid(WatermarkWidgetClass), TEXT("Invalid Watermark Widget setup in the Project Settings!"))
-    { return; }
-
-    const auto& GameInstance = UCk_Utils_Game_UE::Get_GameInstance(this);
-    _WatermarkWidget = Cast<UCk_Watermark_UserWidget_UE>(CreateWidget(GameInstance, WatermarkWidgetClass));
-
-    CK_ENSURE_IF_NOT(ck::IsValid(_WatermarkWidget), TEXT("Failed to create the Watermark Widget!"))
-    { return; }
-
-    _WatermarkWidget->Request_SetDisplayPolicy(static_cast<ECk_Watermark_DisplayPolicy>(ck_ui::cvar::WatermarkDisplayPolicy));
-
     const auto& GameSessionSubsystem = InCollection.InitializeDependency<UCk_GameSession_Subsystem_UE>();
 
     CK_ENSURE_IF_NOT(ck::IsValid(GameSessionSubsystem), TEXT("Failed to retrieve the GameSession Subsystem!"))
@@ -99,11 +83,28 @@ auto
 
 auto
     UCk_UI_Subsystem_UE::
+    ShouldCreateSubsystem(
+        UObject* InOuter) const
+    -> bool
+{
+    const auto& GameInstance = CastChecked<UGameInstance>(InOuter);
+    const auto& IsServerWorld = GameInstance->IsDedicatedServerInstance();
+
+    return NOT IsServerWorld;
+}
+
+auto
+    UCk_UI_Subsystem_UE::
     OnPlayerControllerReady(
         TWeakObjectPtr<APlayerController> InNewPlayerController,
-        TArray<TWeakObjectPtr<APlayerController>> InAllPlayerControllers) const
+        TArray<TWeakObjectPtr<APlayerController>> InAllPlayerControllers)
     -> void
 {
+    if (ck::Is_NOT_Valid(_WatermarkWidget))
+    {
+        DoCreateAndSetWatermarkWidget();
+    }
+
     if (ck::Is_NOT_Valid(_WatermarkWidget))
     { return; }
 
@@ -120,6 +121,28 @@ auto
     { return; }
 
     _WatermarkWidget->Request_SetDisplayPolicy(InDisplayPolicy);
+}
+
+auto
+    UCk_UI_Subsystem_UE::
+    DoCreateAndSetWatermarkWidget()
+    -> void
+{
+    if (ck::IsValid(_WatermarkWidget))
+    { return; }
+
+    const auto& WatermarkWidgetClass = UCk_Utils_UI_ProjectSettings_UE::Get_WatermarkWidgetClass();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(WatermarkWidgetClass), TEXT("Invalid Watermark Widget setup in the Project Settings!"))
+    { return; }
+
+    const auto& GameInstance = UCk_Utils_Game_UE::Get_GameInstance(this);
+    _WatermarkWidget = Cast<UCk_Watermark_UserWidget_UE>(CreateWidget(GameInstance, WatermarkWidgetClass));
+
+    CK_ENSURE_IF_NOT(ck::IsValid(_WatermarkWidget), TEXT("Failed to create the Watermark Widget!"))
+    { return; }
+
+    _WatermarkWidget->Request_SetDisplayPolicy(static_cast<ECk_Watermark_DisplayPolicy>(ck_ui::cvar::WatermarkDisplayPolicy));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
