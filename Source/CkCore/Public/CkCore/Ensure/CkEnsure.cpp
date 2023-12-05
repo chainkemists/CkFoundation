@@ -168,7 +168,7 @@ auto
 
 auto
     UCk_Utils_Ensure_UE::
-    Get_NumberOfEnsuresTriggered()
+    Get_EnsureCount()
     -> int32
 {
     const auto EnsureSubsystem = UCk_Ensure_Subsystem_UE::Get_Instance();
@@ -176,7 +176,7 @@ auto
     if (ck::Is_NOT_Valid(EnsureSubsystem))
     { return {}; }
 
-    return EnsureSubsystem->Get_NumberOfEnsuresTriggered();
+    return EnsureSubsystem->Get_EnsureCount();
 }
 
 auto

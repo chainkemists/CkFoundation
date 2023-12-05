@@ -108,7 +108,19 @@ auto
     if (ck::Is_NOT_Valid(_WatermarkWidget))
     { return; }
 
-    _WatermarkWidget->AddToViewport(UCk_Utils_UI_ProjectSettings_UE::Get_WatermarkWidget_ZOrder());
+    const auto& GameInstance = UCk_Utils_Game_UE::Get_GameInstance(nullptr);
+
+    if (ck::Is_NOT_Valid(GameInstance))
+    { return; }
+
+    _WatermarkWidget->AddToViewport();
+
+    auto* ClientGameViewport = GameInstance->GetGameViewportClient();
+
+    if (ck::Is_NOT_Valid(ClientGameViewport))
+    { return; }
+
+    ClientGameViewport->AddViewportWidgetContent(_WatermarkWidget->TakeWidget(), UCk_Utils_UI_ProjectSettings_UE::Get_WatermarkWidget_ZOrder());
 }
 
 auto
