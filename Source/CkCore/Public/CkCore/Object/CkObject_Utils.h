@@ -105,8 +105,12 @@ public:
 public:
     template <typename T_Object>
     static auto
-    Get_ClassDefaultObject ()
-    -> T_Object*;
+    Get_ClassDefaultObject () -> T_Object*;
+
+    template <typename T>
+    static auto
+    Get_ClassDefaultObject(
+        TSubclassOf<UObject> InObject) -> T*;
 
     template <typename T>
     static auto
@@ -203,11 +207,13 @@ public:
     Get_IsDefaultObject(
         UObject* InObject);
 
+private:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Object",
+              DisplayName = "Get_ClassDefaultObject",
               meta     = (DeterminesOutputType = "InObject"))
     static UObject*
-    Get_ClassDefaultObject(
+    DoGet_ClassDefaultObject(
         TSubclassOf<UObject> InObject);
 };
 
@@ -219,7 +225,20 @@ auto
     Get_ClassDefaultObject()
     -> T_Object*
 {
-    return Cast<T_Object>(Get_ClassDefaultObject(T_Object::StaticClass()));
+    return Get_ClassDefaultObject<T_Object>(T_Object::StaticClass());
+}
+
+template <typename T>
+auto
+    UCk_Utils_Object_UE::
+    Get_ClassDefaultObject(
+        TSubclassOf<UObject> InObject)
+    -> T*
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Invalid Class supplied to Get_ClassDefaultObject"))
+    { return {}; }
+
+    return Cast<T>(InObject->GetDefaultObject());
 }
 
 template <typename T>
