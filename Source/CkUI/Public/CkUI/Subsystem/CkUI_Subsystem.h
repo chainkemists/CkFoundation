@@ -23,14 +23,18 @@ public:
 public:
     auto Initialize(FSubsystemCollectionBase& InCollection) -> void override;
     auto Deinitialize() -> void override;
+    auto ShouldCreateSubsystem(UObject* InOuter) const -> bool override;
 
 private:
     auto OnPlayerControllerReady(
         TWeakObjectPtr<APlayerController> InNewPlayerController,
-        TArray<TWeakObjectPtr<APlayerController>> InAllPlayerControllers) const -> void;
+        TArray<TWeakObjectPtr<APlayerController>> InAllPlayerControllers) -> void;
 
 public:
     auto Request_UpdateWatermarkDisplayPolicy(ECk_Watermark_DisplayPolicy InDisplayPolicy) const -> void;
+
+private:
+    auto DoCreateAndSetWatermarkWidget() -> void;
 
 private:
     UPROPERTY(Transient)
