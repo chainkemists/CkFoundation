@@ -17,54 +17,16 @@ auto
         const FCk_Fragment_Ability_ParamsData& InParams)
     -> void
 {
-    const auto& AbilityScriptClass = InParams.Get_AbilityScriptClass();
-
-    CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptClass), TEXT("Invalid Ability Script Class"))
-    { return; }
-
-    const auto& AbilityScriptCDO = Cast<UCk_Ability_Script_PDA>(UCk_Utils_Object_UE::Get_ClassDefaultObject(AbilityScriptClass));
-
-    CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptCDO), TEXT("Failed to create CDO of Ability Script of Class [{}]"), AbilityScriptClass)
-    { return; }
-
-    const auto& AbilityData = AbilityScriptCDO->Get_Data();
-    const auto& AbilityName = AbilityData.Get_AbilityName();
-    const auto& NetworkSettings = AbilityData.Get_NetworkSettings();
-    const auto& ReplicationType = NetworkSettings.Get_ReplicationType();
-
-    if (NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InHandle, ReplicationType))
-    {
-        ck::ability::VeryVerbose
-        (
-            TEXT("Skipping creation of Ability [{}] because it's Replication Type [{}] does NOT match"),
-            AbilityName,
-            ReplicationType
-        );
-
-        return;
-    }
-
-    const auto& AbilityScriptInstance = UCk_Utils_Object_UE::Request_CreateNewObject_TransientPackage(AbilityScriptClass);
-
-    CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptInstance), TEXT("Failed to create instance of Ability Script of Class [{}]"), AbilityScriptClass)
-    { return; }
-
     // TODO: Replace with PostEntityCreated func once available
-    const auto NewAbilityEntity = [&]()
+    const auto NewAbilityEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle,
+    [&](const FCk_Handle& InNewEntity)
     {
-        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
-        auto ParamsToUse = InParams;
-        ParamsToUse.Set_Data(AbilityData);
+        ck::UCk_Utils_OwningEntity::Add(InNewEntity, InHandle);
 
-        ck::UCk_Utils_OwningEntity::Add(NewEntity, InHandle);
-        UCk_Utils_GameplayLabel_UE::Add(NewEntity, AbilityName);
-
-        NewEntity.Add<ck::FFragment_Ability_Params>(ParamsToUse);
-        NewEntity.Add<ck::FFragment_Ability_Current>(AbilityScriptInstance);
+        DoAdd(InNewEntity, InParams);
 
         // TODO: Add Rep Fragment
-        return NewEntity;
-    }();
+    });
 
     RecordOfAbilities_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
     RecordOfAbilities_Utils::Request_Connect(InHandle, NewAbilityEntity);
@@ -240,6 +202,57 @@ auto
     AbilityCurrent._AbilityScript->OnEndAbility();
 
     // TODO: Fire Signal
+}
+
+auto
+    UCk_Utils_Ability_UE::
+    DoAdd(
+        FCk_Handle InHandle,
+        const FCk_Fragment_Ability_ParamsData& InParams)
+    -> void
+{
+    const auto& AbilityScriptClass = InParams.Get_AbilityScriptClass();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptClass), TEXT("Invalid Ability Script Class"))
+    { return; }
+
+    const auto& AbilityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_Script_PDA>(AbilityScriptClass);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptCDO), TEXT("Failed to create CDO of Ability Script of Class [{}]"), AbilityScriptClass)
+    { return; }
+
+    const auto& AbilityData = AbilityScriptCDO->Get_Data();
+    const auto& AbilityName = AbilityData.Get_AbilityName();
+    const auto& NetworkSettings = AbilityData.Get_NetworkSettings();
+    const auto& ReplicationType = NetworkSettings.Get_ReplicationType();
+
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InHandle, ReplicationType))
+    {
+        ck::ability::VeryVerbose
+        (
+            TEXT("Skipping creation of Ability [{}] because it's Replication Type [{}] does NOT match"),
+            AbilityName,
+            ReplicationType
+        );
+
+        return;
+    }
+
+    const auto& AbilityScriptInstance = UCk_Utils_Object_UE::Request_CreateNewObject_TransientPackage(AbilityScriptClass);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptInstance), TEXT("Failed to create instance of Ability Script of Class [{}]"), AbilityScriptClass)
+    { return; }
+
+    // TODO: Replace with PostEntityCreated func once available
+
+    auto ParamsToUse = InParams;
+
+    UCk_Utils_GameplayLabel_UE::Add(InHandle, AbilityName);
+
+    InHandle.Add<ck::FFragment_Ability_Params>(ParamsToUse);
+    InHandle.Add<ck::FFragment_Ability_Current>(AbilityScriptInstance);
+
+    // TODO: Add Rep Fragment
 }
 
 // --------------------------------------------------------------------------------------------------------------------
