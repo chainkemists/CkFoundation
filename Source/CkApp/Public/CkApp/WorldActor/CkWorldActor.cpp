@@ -1,5 +1,8 @@
 #include "CkWorldActor.h"
 
+#include "CkAbility/Ability/CkAbility_Processor.h"
+#include "CkAbility/AbilityOwner/CkAbilityOwner_Processor.h"
+
 #include "CkActor/ActorModifier/CkActorModifier_Processor.h"
 
 #include "CkAnimation/AnimState/CkAnimState_Processor.h"
@@ -49,6 +52,9 @@ namespace ck_world_actor
         }
 
         //InWorld.Add<ck::FProcessor_ReplicationDriver_HandleRequests>(InWorld.Get_Registry());
+
+        InWorld.Add<ck::FProcessor_AbilityOwner_Setup>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_AbilityOwner_HandleRequests>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FProcessor_FloatAttributeModifier_Additive_Teardown>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_FloatAttributeModifier_Multiplicative_Teardown>(InWorld.Get_Registry());
