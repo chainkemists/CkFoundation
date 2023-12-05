@@ -22,7 +22,7 @@ public:
     virtual auto Initialize(FSubsystemCollectionBase& InCollection) -> void override;
 
 public:
-    static auto Get(const UObject* InWorldContextObject = nullptr) -> UCk_Ensure_Subsystem_UE*;
+    static auto Get_Instance() -> UCk_Ensure_Subsystem_UE*;
 
 public:
     auto
