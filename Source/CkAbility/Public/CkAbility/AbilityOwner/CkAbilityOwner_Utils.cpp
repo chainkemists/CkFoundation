@@ -52,29 +52,47 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
-    Get_ActiveAbilities(
-        FCk_Handle InHandle)
-    -> TArray<FCk_Handle>
+    Get_AbilitiesWithStatus(
+        FCk_Handle InHandle,
+        ECk_Ability_Status InStatus)
+    -> TArray<FGameplayTag>
 {
     if (NOT Ensure(InHandle))
     { return {}; }
 
-    TArray<FCk_Handle> ActiveAbilities;
+    TArray<FGameplayTag> ActiveAbilities;
 
     UCk_Utils_Ability_UE::RecordOfAbilities_Utils::ForEachEntry
     (
         InHandle,
         [&](const FCk_Handle& InAbilityEntity)
         {
-            if (UCk_Utils_Ability_UE::Get_Status(InAbilityEntity, UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntity))
-                == ECk_Ability_Status::Active)
+            const auto& AbilityName = UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntity);
+            if (UCk_Utils_Ability_UE::Get_Status(InAbilityEntity, AbilityName) == InStatus)
             {
-                ActiveAbilities.Add(InHandle);
+                ActiveAbilities.Add(AbilityName);
             }
         }
     );
 
     return ActiveAbilities;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Get_Abilities(
+        FCk_Handle InHandle)
+    -> TArray<FGameplayTag>
+{
+    if (NOT Ensure(InHandle))
+    { return {}; }
+
+    const auto& AbilityEntities = UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Get_AllRecordEntries(InHandle);
+
+    return ck::algo::Transform<TArray<FGameplayTag>>(AbilityEntities, [&](FCk_Handle InAbilityEntity)
+    {
+        return UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntity);
+    });
 }
 
 auto
