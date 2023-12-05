@@ -23,8 +23,8 @@ auto
 #if WITH_EDITOR
     const auto& LoggerToUse     = InParams.Get_LoggerToUse();
     const auto& MessageSeverity = InParams.Get_MessageSeverity();
-    const auto& DisplayPolicy   = InParams.Get_DisplayPolicy();
-    const auto& ForceOpenWindow = DisplayPolicy == ECk_EditorMessage_DisplayPolicy::ToastNotificationAndOpenMessageLogWindow;
+    const auto& ToastDisplayPolicy   = InParams.Get_ToastNotificationDisplayPolicy();
+    const auto& MessageDisplayPolicy = InParams.Get_MessageLogDisplayPolicy();
 
     CK_ENSURE_IF_NOT(ck::IsValid(LoggerToUse), TEXT("Cannot push a new Editor Message because the supplied Logger Name to use is Invalid!"))
     { return; }
@@ -58,7 +58,8 @@ auto
     }
 
     FMessageLog MessageLog(LoggerToUse);
-    static constexpr auto _ForceNotify = true;
+    const auto ToastNotify = ToastDisplayPolicy == ECk_EditorMessage_ToastNotification_DisplayPolicy::Display;
+    const auto MessageLogFocus = MessageDisplayPolicy == ECk_EditorMessage_MessageLog_DisplayPolicy::Focus;
 
     switch (MessageSeverity)
     {
@@ -66,32 +67,32 @@ auto
         {
             const auto& MessageToFormat = MessageLog.Info();
             FormatMessage(MessageToFormat);
-            MessageLog.Notify(MessageToFormat->ToText(), EMessageSeverity::Info, _ForceNotify);
-            MessageLog.Open(EMessageSeverity::Info, ForceOpenWindow);
+            MessageLog.Notify(MessageToFormat->ToText(), EMessageSeverity::Info, ToastNotify);
+            MessageLog.Open(EMessageSeverity::Info, MessageLogFocus);
             break;
         }
         case ECk_EditorMessage_Severity::Error:
         {
             const auto& MessageToFormat = MessageLog.Error();
             FormatMessage(MessageToFormat);
-            MessageLog.Notify(MessageToFormat->ToText(), EMessageSeverity::Error, _ForceNotify);
-            MessageLog.Open(EMessageSeverity::Error, ForceOpenWindow);
+            MessageLog.Notify(MessageToFormat->ToText(), EMessageSeverity::Error, ToastNotify);
+            MessageLog.Open(EMessageSeverity::Error, MessageLogFocus);
             break;
         }
         case ECk_EditorMessage_Severity::PerformanceWarning:
         {
             const auto& MessageToFormat = MessageLog.PerformanceWarning();
             FormatMessage(MessageToFormat);
-            MessageLog.Notify(MessageToFormat->ToText(), EMessageSeverity::PerformanceWarning, _ForceNotify);
-            MessageLog.Open(EMessageSeverity::PerformanceWarning, ForceOpenWindow);
+            MessageLog.Notify(MessageToFormat->ToText(), EMessageSeverity::PerformanceWarning, ToastNotify);
+            MessageLog.Open(EMessageSeverity::PerformanceWarning, MessageLogFocus);
             break;
         }
         case ECk_EditorMessage_Severity::Warning:
         {
             const auto& MessageToFormat = MessageLog.Warning();
             FormatMessage(MessageToFormat);
-            MessageLog.Notify(MessageToFormat->ToText(), EMessageSeverity::Warning, _ForceNotify);
-            MessageLog.Open(EMessageSeverity::Warning, ForceOpenWindow);
+            MessageLog.Notify(MessageToFormat->ToText(), EMessageSeverity::Warning, ToastNotify);
+            MessageLog.Open(EMessageSeverity::Warning, MessageLogFocus);
             break;
         }
         default:
