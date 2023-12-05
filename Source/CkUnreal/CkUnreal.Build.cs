@@ -17,22 +17,10 @@ public class CkUnreal : CkModuleRules
 
             "NetworkTimeSync",
 
-            "CkActor",
-            "CkAnimation",
-            "CkAttribute",
-            "CkCamera",
             "CkCore",
             "CkEcs",
-            "CkEcsBasics",
-            "CkIntent",
             "CkNet",
             "CkLog",
-            "CkMemory",
-            "CkOverlapBody",
-            "CkPhysics",
-            "CkProjectile",
-            "CkRecord",
-            "CkTimer",
         });
     }
 }
