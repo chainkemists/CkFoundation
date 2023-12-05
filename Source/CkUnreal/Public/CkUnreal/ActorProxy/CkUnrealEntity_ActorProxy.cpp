@@ -65,7 +65,7 @@ auto
     if (GetWorld()->IsNetMode(NM_Client))
     { return; }
 
-    const auto ActorCdo = Cast<AActor>(UCk_Utils_Object_UE::Get_ClassDefaultObject(_ActorToSpawn));
+    const auto ActorCdo = UCk_Utils_Object_UE::Get_ClassDefaultObject<AActor>(_ActorToSpawn);
 
     CK_ENSURE_IF_NOT(ck::IsValid(ActorCdo),
         TEXT("Could not get a valid Class Default Object for [{}] OR could not cast it to AActor.[{}]"),

@@ -147,7 +147,7 @@ auto
 
 auto
     UCk_Utils_Object_UE::
-    Get_ClassDefaultObject(
+    DoGet_ClassDefaultObject(
         TSubclassOf<UObject> InObject)
     -> UObject*
 {
