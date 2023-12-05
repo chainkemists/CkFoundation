@@ -11,30 +11,28 @@ auto
     GetWorld() const
     -> UWorld*
 {
-    const auto& world = [&]() -> UWorld*
+    const auto& World = [&]() -> UWorld*
     {
         if (ck::Is_NOT_Valid(GEngine))
         { return {}; }
 
-        for (auto& context : GEngine->GetWorldContexts())
+        for (auto& Context : GEngine->GetWorldContexts())
         {
-            const auto& contextWorld = context.World();
+            const auto& ContextWorld = Context.World();
 
-            if (ck::Is_NOT_Valid(contextWorld))
+            if (ck::Is_NOT_Valid(ContextWorld))
             { continue; }
 
-            const auto& gameInstance = contextWorld->GetGameInstance();
-
-            if (ck::IsValid(gameInstance))
+            if (const auto& GameInstance = ContextWorld->GetGameInstance(); ck::IsValid(GameInstance))
             {
-                return gameInstance->GetWorld();
+                return GameInstance->GetWorld();
             }
         }
 
         return {};
     }();
 
-    return world;
+    return World;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
