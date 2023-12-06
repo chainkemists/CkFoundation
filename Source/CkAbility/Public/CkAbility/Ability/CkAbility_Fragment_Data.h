@@ -243,7 +243,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, EditInlineNew, Blueprintable, BlueprintType)
-class CKABILITY_API UCk_Ability_ConstructionScript_PDA : public UCk_EntityBridge_ConstructionScript_PDA
+class CKABILITY_API UCk_Ability_ConstructionScript_PDA : public UCk_Entity_ConstructionScript_PDA
 {
     GENERATED_BODY()
 
@@ -274,7 +274,7 @@ public:
 
 private:
     auto
-    DoGet_EntityConstructionScript() const -> UCk_EntityBridge_ConstructionScript_PDA* override;
+    DoGet_EntityConstructionScript() const -> UCk_Entity_ConstructionScript_PDA* override;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,

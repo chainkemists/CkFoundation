@@ -23,7 +23,7 @@ private:
 
     // TODO: do we need the ConstructionScript Ptr if EntityBridge if the ReplicatedActor already has a reference to it?
     UPROPERTY()
-    TObjectPtr<class UCk_EntityBridge_ConstructionScript_PDA> _ConstructionScript;
+    TObjectPtr<class UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
 
     UPROPERTY()
     TArray<TWeakObjectPtr<UCk_ReplicatedObject_UE>> _ReplicatedObjects;
@@ -93,7 +93,7 @@ private:
     FGameplayTag _Label;
 
     UPROPERTY()
-    TSubclassOf<UCk_EntityBridge_ConstructionScript_PDA> _ConstructionScript;
+    TSubclassOf<UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
 
 public:
     CK_PROPERTY(_OriginalEntity);
