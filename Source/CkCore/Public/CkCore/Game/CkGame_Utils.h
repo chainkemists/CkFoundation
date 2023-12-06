@@ -53,7 +53,8 @@ public:
     Get_IsPIE(const UObject* InWorldContextObject, bool InEnsureWorldIsValid = false);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Game|Utils")
+              Category = "Ck|Game|Utils",
+              meta     = (WorldContext="InContextObject"))
     static UWorld*
     Get_WorldForObject(const UObject* InContextObject);
 
