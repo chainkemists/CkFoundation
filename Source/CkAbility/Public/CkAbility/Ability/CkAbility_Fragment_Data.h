@@ -171,18 +171,11 @@ struct CKABILITY_API FCk_Fragment_Ability_ParamsData
 public:
     CK_GENERATED_BODY(FCk_Fragment_Ability_ParamsData);
 
-public:
-    FCk_Fragment_Ability_ParamsData() = default;
-    FCk_Fragment_Ability_ParamsData(const TSubclassOf<UCk_Ability_Script_PDA>& InAbilityScript);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               Category = "Script",
               meta = (AllowPrivateAccess = true, AllowAbstract = false))
     TSubclassOf<UCk_Ability_Script_PDA> _AbilityScriptClass;
-
-private:
-    mutable TOptional<FCk_Ability_Script_Data> _Data;
 
 public:
     CK_PROPERTY_GET(_AbilityScriptClass);
@@ -191,6 +184,9 @@ public:
     [[nodiscard]]
     auto
     Get_Data() const -> const FCk_Ability_Script_Data&;
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Ability_ParamsData, _AbilityScriptClass);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
