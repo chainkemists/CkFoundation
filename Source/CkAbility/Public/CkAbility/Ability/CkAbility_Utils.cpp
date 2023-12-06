@@ -238,7 +238,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptCDO), TEXT("Failed to create CDO of Ability Script of Class [{}]"), AbilityScriptClass)
     { return; }
 
-    const auto& AbilityData = AbilityScriptCDO->Get_Data();
+    const auto AbilityData = AbilityScriptCDO->Get_Data();
     const auto& AbilityName = AbilityData.Get_AbilityName();
     const auto& NetworkSettings = AbilityData.Get_NetworkSettings();
     const auto& ReplicationType = NetworkSettings.Get_ReplicationType();
@@ -271,6 +271,26 @@ auto
     UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityScriptInstance->GetWorld())->Request_TrackAbilityScript(AbilityScriptInstance);
 
     // TODO: Add Rep Fragment
+}
+
+auto
+    UCk_Utils_Ability_UE::
+    DoGive(
+        FCk_Handle InAbilityOwner,
+        FCk_Handle InAbility)
+    -> void
+{
+    UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Request_Connect(InAbilityOwner, InAbility);
+    const auto Script = InAbility.Get<ck::FFragment_Ability_Current>().Get_AbilityScript();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Script),
+        TEXT("AbilityScript for Handle [{}] with AbilityOwner [{}] is INVALID. Unable to GIVE the Ability properly"),
+            InAbility,
+            InAbilityOwner)
+    { return; }
+
+    Script->_AbilityOwnerHandle = InAbilityOwner;
+    Script->_AbilityHandle = InAbility;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

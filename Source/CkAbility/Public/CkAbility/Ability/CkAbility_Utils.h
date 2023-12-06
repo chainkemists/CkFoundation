@@ -132,6 +132,11 @@ private:
         const FCk_Fragment_Ability_ParamsData& InParams) -> void;
 
     static auto
+    DoGive(
+        FCk_Handle InAbilityOwner,
+        FCk_Handle InAbility) -> void;
+
+    static auto
     Has(
         FCk_Handle InHandle) -> bool;
 };

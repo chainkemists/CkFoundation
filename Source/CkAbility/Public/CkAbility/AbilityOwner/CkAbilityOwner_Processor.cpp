@@ -86,14 +86,27 @@ namespace ck
             InAbilityOwnerEntity)
         { return; }
 
+        const auto ReplicationType = AbilityParams.Get_Data().Get_NetworkSettings().Get_ReplicationType();
+
+        if (NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InAbilityOwnerEntity, ReplicationType))
+        {
+            ability::Verbose
+            (
+                TEXT("Skipping Giving Ability [{}] because ReplicationType [{}] does not match for Entity [{}]"),
+                AbilityEntityConfig,
+                ReplicationType,
+                InAbilityOwnerEntity
+            );
+
+            return;
+        }
+
         const auto& AbilityName = AbilityParams.Get_Data().Get_AbilityName();
 
         const auto& AlreadyHasAbilityWithName = UCk_Utils_Ability_UE::Has(InAbilityOwnerEntity, AbilityName);
 
         CK_ENSURE_IF_NOT(NOT AlreadyHasAbilityWithName, TEXT("Cannot give Ability [{}] to Ability Owner [{}] because it already has it"), AbilityName, InAbilityOwnerEntity)
         { return; }
-
-        // TODO: Validate that deferring the creation of the ability does not cause a problem. If it does, we will have to create it here
 
         const auto PostAbilityCreationFunc = [InAbilityOwnerEntity, AbilityName](const FCk_Handle& InAbilityEntity) -> void
         {
@@ -105,7 +118,7 @@ namespace ck
                 InAbilityOwnerEntity
             );
 
-            UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Request_Connect(InAbilityOwnerEntity, InAbilityEntity);
+            UCk_Utils_Ability_UE::DoGive(InAbilityOwnerEntity, InAbilityEntity);
 
             if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityEntity, AbilityName).Get_ActivationPolicy();
                 ActivationPolicy == ECk_Ability_ActivationPolicy::ActivateOnGranted)
