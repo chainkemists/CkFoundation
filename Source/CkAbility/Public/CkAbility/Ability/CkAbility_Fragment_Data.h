@@ -85,10 +85,15 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    ECk_Net_ReplicationType _ReplicationType = ECk_Net_ReplicationType::All;
+     ECk_Net_ReplicationType _ReplicationType = ECk_Net_ReplicationType::LocalAndHost;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    ECk_Net_NetExecutionPolicy _ExecutionPolicy = ECk_Net_NetExecutionPolicy::PreferHost;
 
 public:
     CK_PROPERTY(_ReplicationType);
+    CK_PROPERTY(_ExecutionPolicy);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -134,12 +139,17 @@ class CKABILITY_API UCk_Ability_Script_PDA : public UCk_DataAsset_PDA
 {
     GENERATED_BODY()
 
+    friend class UCk_Utils_Ability_UE;
+
 public:
     CK_GENERATED_BODY(UCk_Ability_Script_PDA);
 
 public:
-    auto OnActivateAbility() -> void;
-    auto OnEndAbility() -> void;
+    auto
+    OnActivateAbility() -> void;
+
+    auto
+    OnEndAbility() -> void;
 
 protected:
     UFUNCTION(BlueprintNativeEvent,
@@ -152,13 +162,32 @@ protected:
               meta     = (DisplayName = "OnEndAbility"))
     void DoOnEndAbility();
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Ability|Script",
+              meta = (CompactNodeTitle="AbilityEntity", DefaultToSelf="InScript", HidePin="InScript"))
+    static FCk_Handle Get_AbilityEntity(const UCk_Ability_Script_PDA* InScript);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Ability|Script",
+              meta = (CompactNodeTitle="AbilityOwnerEntity", DefaultToSelf="InScript", HidePin="InScript"))
+    static FCk_Handle Get_AbilityOwnerEntity(const UCk_Ability_Script_PDA* InScript);
+
+
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Ability_Script_Data _Data;
 
+    UPROPERTY(Transient)
+    FCk_Handle _AbilityHandle;
+
+    UPROPERTY(Transient)
+    FCk_Handle _AbilityOwnerHandle;
+
 public:
     CK_PROPERTY_GET(_Data);
+    CK_PROPERTY_GET(_AbilityHandle);
+    CK_PROPERTY_GET(_AbilityOwnerHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
