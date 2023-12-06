@@ -35,13 +35,8 @@ auto
     Get_Data() const
     -> const FCk_Ability_Script_Data&
 {
-    if (ck::Is_NOT_Valid(_Data))
-    {
-        const auto& AbilityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_Script_PDA>(_AbilityScriptClass);
-        _Data = AbilityScriptCDO->Get_Data();
-    }
-
-    return *_Data;
+    const auto& AbilityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_Script_PDA>(_AbilityScriptClass);
+    return AbilityScriptCDO->Get_Data();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
