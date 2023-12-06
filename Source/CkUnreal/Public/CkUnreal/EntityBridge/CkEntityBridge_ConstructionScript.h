@@ -80,24 +80,6 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract, BlueprintType, Blueprintable, EditInlineNew)
-class CKUNREAL_API UCk_EntityBridge_ConstructionScript_WithTransform_PDA : public UCk_EntityBridge_ConstructionScript_PDA
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_EntityBridge_ConstructionScript_WithTransform_PDA);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ExposeOnSpawn, AllowPrivateAccess = true))
-    FTransform _EntityInitialTransform;
-
-public:
-    CK_PROPERTY(_EntityInitialTransform);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
 UCLASS(NotBlueprintable)
 class CKUNREAL_API UCKk_Utils_EntityBridge_ConstructionScript_UE : public UBlueprintFunctionLibrary
 {
