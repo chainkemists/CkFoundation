@@ -112,7 +112,7 @@ auto
         [&](const FCk_Handle& InAbilityEntity)
         {
             const auto& AbilityName = UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntity);
-            if (UCk_Utils_Ability_UE::Get_Status(InAbilityEntity, AbilityName) == InStatus)
+            if (Get_Status(InAbilityEntity, AbilityName) == InStatus)
             {
                 Abilities.Add(AbilityName);
             }
