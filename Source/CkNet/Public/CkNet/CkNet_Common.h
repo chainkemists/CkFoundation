@@ -32,3 +32,16 @@ enum class ECk_Net_NetModeType : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Net_NetModeType);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Net_NetExecutionPolicy : uint8
+{
+    // Prefer running on Server. If in SinglePlayer, run locally
+    PreferHost,
+    // Run on owning client and Server
+    LocalAndHost,
+    // Run on all clients and Server
+    All
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Net_NetExecutionPolicy);
