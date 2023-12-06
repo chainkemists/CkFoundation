@@ -17,6 +17,8 @@
 #include "CkNet/CkNet_Utils.h"
 #include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
+#include "CkUnreal/CkUnreal_Log.h"
+
 #include <Engine/World.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -167,7 +169,6 @@ auto
             ck::TypeToString<UCk_EntityBridge_ConstructionScript_WithTransform_PDA>)
         { return; }
 
-        // TODO:
         CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
 
         EntityConfig->Build(Entity);
@@ -255,6 +256,18 @@ auto
             );
         }
 
+        // --------------------------------------------------------------------------------------------------------------------
+
+        const auto CsWithTransform = Cast<UCk_EntityBridge_ConstructionScript_WithTransform_PDA>(EntityConfig->Get_EntityConstructionScript());
+
+        CK_ENSURE_IF_NOT(ck::IsValid(CsWithTransform), TEXT("Entity Construction Script [{}] for Actor [{}] is NOT one with Transform. "
+            "Entity Construction Scripts that have an Actor attached MUST use [{}]."), EntityConfig->Get_EntityConstructionScript(), OwningActor,
+            ck::TypeToString<UCk_EntityBridge_ConstructionScript_WithTransform_PDA>)
+        { return; }
+
+        CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
+
+        // TODO: Why are we not calling Build here?
         EntityConfig->Get_EntityConstructionScript()->Construct(NewEntity);
 
         ck::unreal::Log(TEXT("[EntityActorMapping] [{}] -> [{}]"), NewEntity, OwningActor);
