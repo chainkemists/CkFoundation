@@ -68,10 +68,10 @@ auto
         FCk_Handle InEntity)
     -> ECk_Net_EntityNetRole
 {
-    if (NOT Has(InEntity))
-    { return {}; }
+    if (Has(InEntity))
+    { return InEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings().Get_NetRole(); }
 
-    return InEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings().Get_NetRole();
+    return Get_EntityNetRole(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InEntity));
 }
 
 auto
@@ -80,10 +80,10 @@ auto
         FCk_Handle InEntity)
     -> ECk_Net_NetModeType
 {
-    if (NOT Has(InEntity))
-    { return {}; }
+    if (Has(InEntity))
+    { return InEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings().Get_NetMode(); }
 
-    return InEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings().Get_NetMode();
+    return Get_EntityNetMode(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InEntity));
 }
 
 auto
@@ -133,7 +133,10 @@ auto
         FCk_Handle InEntity)
     -> bool
 {
-    return InEntity.Has<ck::FTag_HasAuthority>();
+    if (Has(InEntity))
+    { return InEntity.Has<ck::FTag_HasAuthority>(); }
+
+    return Get_HasAuthority(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InEntity));
 }
 
 auto
