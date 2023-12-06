@@ -133,7 +133,8 @@ auto
 
     auto ReplicatedActor = _ReplicationData_ReplicatedActor.Get_ReplicatedActor();
 
-    const auto CsWithTransform = _ReplicationData_ReplicatedActor.Get_ConstructionScript();
+    const auto CsWithTransform = Cast<UCk_EntityBridge_ConstructionScript_WithTransform_PDA>(
+        _ReplicationData_ReplicatedActor.Get_ConstructionScript());
 
     CK_ENSURE_IF_NOT(ck::IsValid(CsWithTransform), TEXT("Entity Construction Script [{}] for Actor [{}] is NOT valid. "
         "Unable to continue replication of Entity."),
@@ -149,7 +150,7 @@ auto
     });
 
     // TODO: we need the transform
-    // CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
+    CsWithTransform->Set_EntityInitialTransform(ReplicatedActor->GetActorTransform());
     CsWithTransform->Construct(NewEntity);
 
     const auto& ReplicatedObjects = _ReplicationData_ReplicatedActor.Get_ReplicatedObjects();
