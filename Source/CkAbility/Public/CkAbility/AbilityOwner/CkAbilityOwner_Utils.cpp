@@ -52,51 +52,6 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
-    Get_AbilitiesWithStatus(
-        FCk_Handle InHandle,
-        ECk_Ability_Status InStatus)
-    -> TArray<FGameplayTag>
-{
-    if (NOT Ensure(InHandle))
-    { return {}; }
-
-    TArray<FGameplayTag> ActiveAbilities;
-
-    UCk_Utils_Ability_UE::RecordOfAbilities_Utils::ForEachEntry
-    (
-        InHandle,
-        [&](const FCk_Handle& InAbilityEntity)
-        {
-            const auto& AbilityName = UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntity);
-            if (UCk_Utils_Ability_UE::Get_Status(InAbilityEntity, AbilityName) == InStatus)
-            {
-                ActiveAbilities.Add(AbilityName);
-            }
-        }
-    );
-
-    return ActiveAbilities;
-}
-
-auto
-    UCk_Utils_AbilityOwner_UE::
-    Get_Abilities(
-        FCk_Handle InHandle)
-    -> TArray<FGameplayTag>
-{
-    if (NOT Ensure(InHandle))
-    { return {}; }
-
-    const auto& AbilityEntities = UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Get_AllRecordEntries(InHandle);
-
-    return ck::algo::Transform<TArray<FGameplayTag>>(AbilityEntities, [&](FCk_Handle InAbilityEntity)
-    {
-        return UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntity);
-    });
-}
-
-auto
-    UCk_Utils_AbilityOwner_UE::
     Request_GiveAbility(
         FCk_Handle                                  InHandle,
         const FCk_Request_AbilityOwner_GiveAbility& InRequest)

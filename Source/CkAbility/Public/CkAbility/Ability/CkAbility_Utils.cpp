@@ -96,6 +96,34 @@ auto
 
 auto
     UCk_Utils_Ability_UE::
+    Get_AllWithStatus(
+        FCk_Handle InAbilityOwnerEntity,
+        ECk_Ability_Status InStatus)
+    -> TArray<FGameplayTag>
+{
+    if (NOT Has_Any(InAbilityOwnerEntity))
+    { return {}; }
+
+    TArray<FGameplayTag> Abilities;
+
+    RecordOfAbilities_Utils::ForEachEntry
+    (
+        InAbilityOwnerEntity,
+        [&](const FCk_Handle& InAbilityEntity)
+        {
+            const auto& AbilityName = UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntity);
+            if (UCk_Utils_Ability_UE::Get_Status(InAbilityEntity, AbilityName) == InStatus)
+            {
+                Abilities.Add(AbilityName);
+            }
+        }
+    );
+
+    return Abilities;
+}
+
+auto
+    UCk_Utils_Ability_UE::
     Get_All(
         FCk_Handle InAbilityOwnerEntity)
     -> TArray<FGameplayTag>
