@@ -12,8 +12,6 @@
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-#include "CkLabel/CkLabel_Utils.h"
-
 #include "CkNet/CkNet_Utils.h"
 #include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
@@ -162,11 +160,11 @@ auto
         // --------------------------------------------------------------------------------------------------------------------
         // Build Entity
 
-        const auto CsWithTransform = Cast<UCk_EntityBridge_ConstructionScript_WithTransform_PDA>(EntityConfig->Get_EntityConstructionScript());
+        const auto CsWithTransform = Cast<UCk_Entity_ConstructionScript_WithTransform_PDA>(EntityConfig->Get_EntityConstructionScript());
 
         CK_ENSURE_IF_NOT(ck::IsValid(CsWithTransform), TEXT("Entity Construction Script [{}] for Actor [{}] is NOT one with Transform. "
             "Entity Construction Scripts that have an Actor attached MUST use [{}]."), EntityConfig->Get_EntityConstructionScript(), OwningActor,
-            ck::TypeToString<UCk_EntityBridge_ConstructionScript_WithTransform_PDA>)
+            ck::TypeToString<UCk_Entity_ConstructionScript_WithTransform_PDA>)
         { return; }
 
         CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
@@ -258,11 +256,11 @@ auto
 
         // --------------------------------------------------------------------------------------------------------------------
 
-        const auto CsWithTransform = Cast<UCk_EntityBridge_ConstructionScript_WithTransform_PDA>(EntityConfig->Get_EntityConstructionScript());
+        const auto CsWithTransform = Cast<UCk_Entity_ConstructionScript_WithTransform_PDA>(EntityConfig->Get_EntityConstructionScript());
 
         CK_ENSURE_IF_NOT(ck::IsValid(CsWithTransform), TEXT("Entity Construction Script [{}] for Actor [{}] is NOT one with Transform. "
             "Entity Construction Scripts that have an Actor attached MUST use [{}]."), EntityConfig->Get_EntityConstructionScript(), OwningActor,
-            ck::TypeToString<UCk_EntityBridge_ConstructionScript_WithTransform_PDA>)
+            ck::TypeToString<UCk_Entity_ConstructionScript_WithTransform_PDA>)
         { return; }
 
         CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
@@ -395,29 +393,6 @@ auto
 {
     // TODO: replace with Future once we have the feature
     return _ReplicationComplete_BroadcastStep == EOnReplicationCompleteBroadcastStep::Broadcast;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCKk_Utils_EntityBridge_ConstructionScript_UE::
-    BuildEntity(
-        FCk_Handle InHandle,
-        const UCk_EntityBridge_Config_Base_PDA* InEntityConfig)
-    -> FCk_Handle
-{
-    CK_ENSURE_IF_NOT(ck::IsValid(InEntityConfig),
-        TEXT("InEntityConfig is INVALID. Cannot build Entity for Handle [{}]"), InHandle)
-    { return {}; }
-
-    CK_ENSURE_IF_NOT(ck::IsValid(InHandle),
-        TEXT("Handle is INVALID. Unable to build entity for [{}]"), InEntityConfig)
-    { return {}; }
-
-    const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
-    InEntityConfig->Build(NewEntity);
-
-    return NewEntity;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
