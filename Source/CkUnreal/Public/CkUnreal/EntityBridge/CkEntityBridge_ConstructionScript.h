@@ -79,21 +79,3 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(NotBlueprintable)
-class CKUNREAL_API UCKk_Utils_EntityBridge_ConstructionScript_UE : public UBlueprintFunctionLibrary
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCKk_Utils_EntityBridge_ConstructionScript_UE);
-
-private:
-    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|EntityBridge|ConstructionScript")
-    static FCk_Handle
-    BuildEntity(
-        FCk_Handle InHandle,
-        const UCk_EntityBridge_Config_Base_PDA* InEntityConfig);
-};
-
-// --------------------------------------------------------------------------------------------------------------------

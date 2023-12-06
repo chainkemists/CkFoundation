@@ -109,7 +109,7 @@ auto
         if (ck::IsValid(ConstructionInfo.Get_Label()))
         { UCk_Utils_GameplayLabel_UE::Add(NewEntity, ConstructionInfo.Get_Label()); }
 
-        ConstructionScript->GetDefaultObject<UCk_EntityBridge_ConstructionScript_PDA>()->Construct(NewEntity);
+        ConstructionScript->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(NewEntity);
 
         UCk_Utils_ReplicatedObjects_UE::Add(NewEntity, FCk_ReplicatedObjects{}.
             Set_ReplicatedObjects(ReplicationData.Get_ReplicatedObjectsData().Get_Objects()));
@@ -133,7 +133,7 @@ auto
 
     auto ReplicatedActor = _ReplicationData_ReplicatedActor.Get_ReplicatedActor();
 
-    const auto CsWithTransform = Cast<UCk_EntityBridge_ConstructionScript_WithTransform_PDA>(
+    const auto CsWithTransform = Cast<UCk_Entity_ConstructionScript_WithTransform_PDA>(
         _ReplicationData_ReplicatedActor.Get_ConstructionScript());
 
     CK_ENSURE_IF_NOT(ck::IsValid(CsWithTransform), TEXT("Entity Construction Script [{}] for Actor [{}] is NOT valid. "

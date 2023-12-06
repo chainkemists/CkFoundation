@@ -54,7 +54,7 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintType, NotBlueprintable)
-class CKATTRIBUTE_API UCk_MeterAttribute_ConstructionScript_PDA final : public UCk_EntityBridge_ConstructionScript_PDA
+class CKATTRIBUTE_API UCk_MeterAttribute_ConstructionScript_PDA final : public UCk_Entity_ConstructionScript_PDA
 {
     GENERATED_BODY()
 

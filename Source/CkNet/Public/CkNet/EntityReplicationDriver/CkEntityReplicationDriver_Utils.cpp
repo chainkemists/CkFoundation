@@ -63,7 +63,7 @@ auto
     Add(NewEntity);
     UCk_Utils_Net_UE::Copy(InHandle, NewEntity);
 
-    InConstructionInfo.Get_ConstructionScript()->GetDefaultObject<UCk_EntityBridge_ConstructionScript_PDA>()->Construct(NewEntity);
+    InConstructionInfo.Get_ConstructionScript()->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(NewEntity);
 
     switch(const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(InHandle))
     {

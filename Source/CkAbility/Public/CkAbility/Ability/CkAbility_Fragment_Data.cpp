@@ -114,7 +114,7 @@ auto
 auto
     UCk_Ability_EntityConfig_PDA::
     DoGet_EntityConstructionScript() const
-    -> UCk_EntityBridge_ConstructionScript_PDA*
+    -> UCk_Entity_ConstructionScript_PDA*
 {
     return _EntityConstructionScript;
 }

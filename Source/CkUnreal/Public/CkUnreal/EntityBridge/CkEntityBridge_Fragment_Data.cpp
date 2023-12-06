@@ -10,7 +10,7 @@
 auto
     UCk_EntityBridge_Config_Base_PDA::
     Get_EntityConstructionScript() const
-    -> UCk_EntityBridge_ConstructionScript_PDA*
+    -> UCk_Entity_ConstructionScript_PDA*
 {
     return DoGet_EntityConstructionScript();
 }
@@ -18,7 +18,7 @@ auto
 auto
     UCk_EntityBridge_Config_Base_PDA::
     DoGet_EntityConstructionScript() const
-    -> UCk_EntityBridge_ConstructionScript_PDA*
+    -> UCk_Entity_ConstructionScript_PDA*
 {
     CK_TRIGGER_ENSURE(TEXT("DoGet_EntityConstructionScript was not Overriden in [{}]"), this);
     return {};
@@ -27,7 +27,7 @@ auto
 auto
     UCk_EntityBridge_Config_PDA::
     DoGet_EntityConstructionScript() const
-    -> UCk_EntityBridge_ConstructionScript_PDA*
+    -> UCk_Entity_ConstructionScript_PDA*
 {
     return _EntityConstructionScript;
 }
@@ -37,7 +37,7 @@ auto
 auto
     UCk_EntityBridge_Config_WithActor_PDA::
     DoGet_EntityConstructionScript() const
-    -> UCk_EntityBridge_ConstructionScript_PDA*
+    -> UCk_Entity_ConstructionScript_PDA*
 {
     return _EntityConstructionScript;
 }
