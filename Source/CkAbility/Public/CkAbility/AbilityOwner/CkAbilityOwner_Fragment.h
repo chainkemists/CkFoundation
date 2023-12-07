@@ -4,6 +4,8 @@
 
 #include "CkEcsBasics/Transform/CkTransform_Processor.h"
 
+#include "GameplayEffectTypes.h"
+
 #include "CkAbilityOwner_Fragment.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -42,14 +44,18 @@ namespace ck
     public:
         CK_GENERATED_BODY(FFragment_AbilityOwner_Current);
 
-    public:
-        friend class FProcessor_AbilityOwner_HandleRequests;
-
     private:
-        FGameplayTagContainer _ActiveTags;
+        // Aggregate list of all tags granted by the owned active abilities
+        FGameplayTagCountContainer _ActiveTags;
 
     public:
-        CK_PROPERTY_GET(_ActiveTags);
+        auto Get_ActiveTags() const -> FGameplayTagContainer;
+        auto Get_SpecificActiveTagCount(const FGameplayTag& InTag) const -> int32;
+
+        auto AppendTags(const FGameplayTagContainer& InTagsToAdd) -> void;
+        auto AddTag(const FGameplayTag& InTagToAdd) -> void;
+        auto RemoveTags(const FGameplayTagContainer& InTagsToRemove) -> void;
+        auto RemoveTag(const FGameplayTag& InTagToRemove) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
