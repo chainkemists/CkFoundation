@@ -126,24 +126,35 @@ public:
         FGameplayTag InAbilityName);
 private:
     static auto
-    Activate(
-        FCk_Handle InHandle) -> void;
-
-    static auto
-    End(
-        FCk_Handle InHandle) -> void;
-
-private:
-    static auto
     DoAdd(
         FCk_Handle InHandle,
         const FCk_Fragment_Ability_ParamsData& InParams) -> void;
+
+// TODO: Move these back to the processor ? 
+private:
+    static auto
+    DoActivate(
+        FCk_Handle InHandle) -> void;
+
+    static auto
+    DoEnd(
+        FCk_Handle InHandle) -> void;
+
+    static auto
+    DoGet_CanActivate(
+        FCk_Handle InHandle) -> bool;
 
     static auto
     DoGive(
         FCk_Handle InAbilityOwner,
         FCk_Handle InAbility) -> void;
 
+    static auto
+    DoRevoke(
+        FCk_Handle InAbilityOwner,
+        FCk_Handle InAbility) -> void;
+
+private:
     static auto
     Has(
         FCk_Handle InHandle) -> bool;
