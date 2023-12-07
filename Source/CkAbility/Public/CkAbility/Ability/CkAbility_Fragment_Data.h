@@ -202,7 +202,8 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+        Category = "Ck|Config",
+        meta = (AllowPrivateAccess = true))
     FCk_Ability_Script_Data _Data;
 
     UPROPERTY(Transient)
