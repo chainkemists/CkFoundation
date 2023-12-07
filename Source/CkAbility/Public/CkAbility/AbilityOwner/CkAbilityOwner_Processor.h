@@ -19,9 +19,27 @@ namespace ck
 
     public:
         auto ForEachEntity(
-            TimeType                                         InDeltaT,
-            HandleType                                       InHandle,
+            TimeType InDeltaT,
+            HandleType InHandle,
             const FFragment_AbilityOwner_Params& InAbilityOwnerParams) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKABILITY_API FProcessor_AbilityOwner_HandleEvents
+        : public TProcessor<FProcessor_AbilityOwner_HandleEvents, FFragment_AbilityOwner_Events>
+    {
+    public:
+        using MarkedDirtyBy = FFragment_AbilityOwner_Events;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_AbilityOwner_Events&  InAbilityOwnerEvents) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -37,9 +55,9 @@ namespace ck
 
     public:
         auto ForEachEntity(
-            TimeType                         InDeltaT,
-            HandleType                       InHandle,
-            FFragment_AbilityOwner_Current&  InAbilityOwnerComp,
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
             FFragment_AbilityOwner_Requests& InAbilityRequestsComp) const -> void;
 
     private:
