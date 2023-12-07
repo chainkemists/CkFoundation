@@ -55,6 +55,35 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
+    Get_CanActivateAbility() const
+    -> bool
+{
+    const auto& AbilityHandle = Get_AbilityHandle();
+    const auto& AbilityName = UCk_Utils_GameplayLabel_UE::Get_Label(AbilityHandle);
+    if (UCk_Utils_Ability_UE::Get_Status(AbilityHandle, AbilityName) == ECk_Ability_Status::Active)
+    { return false; }
+
+    return DoGet_CanActivateAbility();
+}
+
+auto
+    UCk_Ability_Script_PDA::
+    OnGiveAbility()
+    -> void
+{
+    DoOnGiveAbility();
+}
+
+auto
+    UCk_Ability_Script_PDA::
+    OnRevokeAbility()
+    -> void
+{
+    DoOnRevokeAbility();
+}
+
+auto
+    UCk_Ability_Script_PDA::
     Get_AbilityEntity(const UCk_Ability_Script_PDA* InScript)
     -> FCk_Handle
 {
@@ -133,6 +162,28 @@ auto
     DoOnActivateAbility_Implementation()
     -> void
 {
+}
+
+auto
+    UCk_Ability_Script_PDA::
+    DoOnGiveAbility_Implementation()
+    -> void
+{
+}
+
+auto
+    UCk_Ability_Script_PDA::
+    DoOnRevokeAbility_Implementation()
+    -> void
+{
+}
+
+auto
+    UCk_Ability_Script_PDA::
+    DoGet_CanActivateAbility_Implementation() const
+    -> bool
+{
+    return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
