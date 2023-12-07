@@ -2,6 +2,7 @@
 
 #include "CkAbility/CkAbility_Log.h"
 #include "CkAbility/CkAbility_Subsystem.h"
+#include "CkAbility/AbilityOwner/CkAbilityOwner_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Object/CkObject_Utils.h"
@@ -201,7 +202,7 @@ auto
 
 auto
     UCk_Utils_Ability_UE::
-    Activate(
+    DoActivate(
         FCk_Handle InHandle)
     -> void
 {
@@ -209,9 +210,6 @@ auto
     { return; }
 
     auto& AbilityCurrent = InHandle.Get<ck::FFragment_Ability_Current>();
-
-    if (AbilityCurrent._Status == ECk_Ability_Status::Active)
-    { return; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityCurrent._AbilityScript),
         TEXT("Cannot Activate Ability with Entity [{}] because its AbilityScript is INVALID"),
@@ -226,7 +224,7 @@ auto
 
 auto
     UCk_Utils_Ability_UE::
-    End(
+    DoEnd(
         FCk_Handle InHandle)
     -> void
 {
@@ -234,9 +232,6 @@ auto
     { return; }
 
     auto& AbilityCurrent = InHandle.Get<ck::FFragment_Ability_Current>();
-
-    if (AbilityCurrent._Status == ECk_Ability_Status::NotActive)
-    { return; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityCurrent._AbilityScript),
         TEXT("Cannot End Ability with Entity [{}] because its AbilityScript is INVALID"),
@@ -247,6 +242,25 @@ auto
     AbilityCurrent._AbilityScript->OnEndAbility();
 
     // TODO: Fire Signal
+}
+
+auto
+    UCk_Utils_Ability_UE::
+    DoGet_CanActivate(
+        FCk_Handle InHandle)
+    -> bool
+{
+    if (NOT Has(InHandle))
+    { return {}; }
+
+    const auto& AbilityCurrent = InHandle.Get<ck::FFragment_Ability_Current>();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityCurrent._AbilityScript),
+        TEXT("Cannot check if Ability with Entity [{}] can be Activated because its AbilityScript is INVALID"),
+        InHandle)
+    { return {}; }
+
+    return AbilityCurrent._AbilityScript->Get_CanActivateAbility();
 }
 
 auto
@@ -308,17 +322,51 @@ auto
         FCk_Handle InAbility)
     -> void
 {
-    UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Request_Connect(InAbilityOwner, InAbility);
+    RecordOfAbilities_Utils::Request_Connect(InAbilityOwner, InAbility);
     const auto Script = InAbility.Get<ck::FFragment_Ability_Current>().Get_AbilityScript();
 
     CK_ENSURE_IF_NOT(ck::IsValid(Script),
         TEXT("AbilityScript for Handle [{}] with AbilityOwner [{}] is INVALID. Unable to GIVE the Ability properly"),
-            InAbility,
-            InAbilityOwner)
+        InAbility,
+        InAbilityOwner)
     { return; }
 
     Script->_AbilityOwnerHandle = InAbilityOwner;
     Script->_AbilityHandle = InAbility;
+
+    Script->OnGiveAbility();
+}
+
+auto
+    UCk_Utils_Ability_UE::
+    DoRevoke(
+        FCk_Handle InAbilityOwner,
+        FCk_Handle InAbility)
+    -> void
+{
+    const auto& Current = InAbility.Get<ck::FFragment_Ability_Current>();
+    if (Current.Get_Status() == ECk_Ability_Status::Active)
+    {
+        UCk_Utils_AbilityOwner_UE::Request_EndAbility(InAbilityOwner, FCk_Request_AbilityOwner_EndAbility{InAbility});
+        UCk_Utils_AbilityOwner_UE::Request_RevokeAbility(InAbilityOwner, FCk_Request_AbilityOwner_RevokeAbility{InAbility});
+
+        return;
+    }
+
+    RecordOfAbilities_Utils::Request_Disconnect(InAbilityOwner, InAbility);
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAbility);
+
+    const auto Script = Current.Get_AbilityScript();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Script),
+        TEXT("AbilityScript for Handle [{}] with AbilityOwner [{}] is INVALID. Unable to REVOKE the Ability properly"),
+        InAbility,
+        InAbilityOwner)
+    { return; }
+
+    Script->OnRevokeAbility();
+
+    UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(Script->GetWorld())->Request_RemoveAbilityScript(Script.Get());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
