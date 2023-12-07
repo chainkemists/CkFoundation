@@ -218,81 +218,62 @@ namespace ck
             return ActivateTags.HasAllExact(ActivationRequirements) && NOT ActivateTags.HasAny(ActivationBlockers);
         };
 
-        const auto& DoTryActivateAbility = [&](const FCk_Handle& InAbilityEntity, const FGameplayTag& InAbilityName) -> void
+        const auto& DoTryActivateAbility = [&](const FCk_Handle& InAbilityToActivateEntity, const FGameplayTag& InAbilityToActivateName) -> void
         {
-            if (NOT UCk_Utils_Ability_UE::DoGet_CanActivate(InAbilityEntity))
+            if (NOT UCk_Utils_Ability_UE::DoGet_CanActivate(InAbilityToActivateEntity))
             { return; }
 
-            const auto& AbilityActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityEntity, InAbilityName);
+            const auto& AbilityActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityToActivateEntity, InAbilityToActivateName);
 
             if (NOT DoGet_AreActivationRequirementsMet(AbilityActivationSettings))
             {
                 ability::VeryVerbose
                 (
                     TEXT("Failed to Activate Ability Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
-                        "because the Activation Requirements are NOT met"),
-                    InAbilityName,
-                    InAbilityEntity,
+                         "because the Activation Requirements are NOT met"),
+                    InAbilityToActivateName,
+                    InAbilityToActivateEntity,
                     InAbilityOwnerEntity
                 );
 
                 return;
             }
 
-            // const auto& abilityCostSettings = UTT_Utils_Ability_UE::Get_CostSettings(InAbilityEntity);
-
-            // // Check and Apply Ability Cost
-            // if (abilityCostSettings.Get_HasCost())
-            // {
-            //     const auto& abilityCost = abilityCostSettings.Get_AbilityCost();
-            //     CK_ENSURE_IF_NOT(ck::IsValid(abilityCost),
-            //         TEXT("Ability Ability [Name: {} | Entity: {}] on Ability Owner [{}] has an INVALID Cost"), AbilityName, InAbilityEntity, InAbilityOwnerEntity)
-            //     { return; }
-
-            //     if (NOT abilityCost->CheckCost(InAbilityOwnerEntity, InAbilityEntity))
-            //     {
-            //         ability::VeryVerbose
-            //         (
-            //             TEXT("Failed to Activate Ability Ability [Name: {} | Entity: {}] on Ability Owner [{}] because the Cost cannot be afforded"),
-            //             AbilityName,
-            //             InAbilityEntity,
-            //             InAbilityOwnerEntity
-            //         );
-
-            //         return;
-            //     }
-
-            //     abilityCost->ApplyCost(InAbilityOwnerEntity, InAbilityEntity);
-            // }
-
             const auto& GrantedTags = AbilityActivationSettings.Get_ActivationOwnerGrantedTags();
+            InAbilityOwnerComp.AppendTags(GrantedTags);
 
-            InAbilityOwnerComp._ActiveTags.AppendTags(GrantedTags);
+            ability::VeryVerbose
+            (
+                TEXT("Activating Ability [Name: {} | Entity: {}] on Ability Owner [{}] and Granting Tags [{}]"),
+                InAbilityToActivateName,
+                InAbilityToActivateEntity,
+                InAbilityOwnerEntity,
+                GrantedTags
+            );
 
             // Cancel All Abilities that are cancelled by the newly granted tags
             UCk_Utils_Ability_UE::RecordOfAbilities_Utils::ForEachEntryIf
             (
                 InAbilityOwnerEntity,
-                [InAbilityOwnerEntity](const FCk_Handle& InAbilityEntity)
+                [&](const FCk_Handle& InAbilityEntityToCancel)
                 {
+                    ability::VeryVerbose
+                    (
+                        TEXT("Cancelling Ability [Name: {} | Entity: {}] after Activating Ability [Name: {} | Entity: {}] on Ability Owner [{}]"),
+                        UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntityToCancel),
+                        InAbilityEntityToCancel,
+                        InAbilityToActivateName,
+                        InAbilityToActivateEntity,
+                        InAbilityOwnerEntity
+                    );
+
                     UCk_Utils_AbilityOwner_UE::Request_EndAbility(InAbilityOwnerEntity,
-                        FCk_Request_AbilityOwner_EndAbility{InAbilityEntity});
+                        FCk_Request_AbilityOwner_EndAbility{InAbilityEntityToCancel});
                 },
                 algo::MatchesAnyAbilityActivationCancelledTags{GrantedTags}
             );
 
-            ability::VeryVerbose
-            (
-                TEXT("Activating Ability [Name: {} | Entity: {}] on Ability Owner [{}]"),
-                InAbilityName,
-                InAbilityEntity,
-                InAbilityOwnerEntity
-            );
-
-            UCk_Utils_Ability_UE::DoActivate(InAbilityEntity);
-
-            // TODO: Call Activate/End instead (or in addition to) firing a Signal
-            // UTT_UtilsSignal_Ability_OnActivated::Invoke(InAbilityEntity, MakePayload(InAbilityEntity, InAbilityOwnerEntity));
+            UCk_Utils_Ability_UE::DoActivate(InAbilityToActivateEntity);
         };
 
         switch (const auto& SearchPolicy = InRequest.Get_SearchPolicy())
@@ -343,14 +324,15 @@ namespace ck
             const auto& AbilityActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityEntity, InAbilityName);
             const auto& GrantedTags = AbilityActivationSettings.Get_ActivationOwnerGrantedTags();
 
-            InAbilityOwnerComp._ActiveTags.RemoveTags(GrantedTags);
+            InAbilityOwnerComp.RemoveTags(GrantedTags);
 
             ability::VeryVerbose
             (
-                TEXT("Ending Ability [Name: {} | Entity: {}] from Ability Owner [{}]"),
+                TEXT("Ending Ability [Name: {} | Entity: {}] from Ability Owner [{}] and Remove Tags [{}]"),
                 InAbilityName,
                 InAbilityEntity,
-                InAbilityOwnerEntity
+                InAbilityOwnerEntity,
+                GrantedTags
             );
 
             UCk_Utils_Ability_UE::DoEnd(InAbilityEntity);
