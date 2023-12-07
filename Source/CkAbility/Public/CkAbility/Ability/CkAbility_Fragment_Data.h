@@ -191,13 +191,13 @@ public:
               Category = "Ck|Ability|Script",
               meta = (CompactNodeTitle="AbilityEntity", DefaultToSelf="InScript", HidePin="InScript"))
     static FCk_Handle
-     Get_AbilityEntity(const UCk_Ability_Script_PDA* InScript);
+    Get_AbilityEntity(const UCk_Ability_Script_PDA* InScript);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Ability|Script",
               meta = (CompactNodeTitle="AbilityOwnerEntity", DefaultToSelf="InScript", HidePin="InScript"))
     static FCk_Handle
-     Get_AbilityOwnerEntity(const UCk_Ability_Script_PDA* InScript);
+    Get_AbilityOwnerEntity(const UCk_Ability_Script_PDA* InScript);
 
 
 private:
