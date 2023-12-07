@@ -41,65 +41,106 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     Get_ActiveTags(
-        FCk_Handle InHandle)
+        FCk_Handle InAbilityOwnerHandle)
     -> FGameplayTagContainer
 {
-    if (NOT Ensure(InHandle))
+    if (NOT Ensure(InAbilityOwnerHandle))
     { return {}; }
 
-    return InHandle.Get<ck::FFragment_AbilityOwner_Current>().Get_ActiveTags();
+    return InAbilityOwnerHandle.Get<ck::FFragment_AbilityOwner_Current>().Get_ActiveTags();
 }
 
 auto
     UCk_Utils_AbilityOwner_UE::
     Request_GiveAbility(
-        FCk_Handle                                  InHandle,
+        FCk_Handle                                  InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_GiveAbility& InRequest)
     -> void
 {
-    if (NOT Ensure(InHandle))
+    if (NOT Ensure(InAbilityOwnerHandle))
     { return; }
 
-    InHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
+    InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
 }
 
 auto
     UCk_Utils_AbilityOwner_UE::
     Request_RevokeAbility(
-        FCk_Handle                                    InHandle,
+        FCk_Handle                                    InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_RevokeAbility& InRequest)
     -> void
 {
-    if (NOT Ensure(InHandle))
+    if (NOT Ensure(InAbilityOwnerHandle))
     { return; }
 
-    InHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
+    InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
 }
 
 auto
     UCk_Utils_AbilityOwner_UE::
     Request_TryActivateAbility(
-        FCk_Handle                                      InHandle,
+        FCk_Handle                                      InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_ActivateAbility& InRequest)
     -> void
 {
-    if (NOT Ensure(InHandle))
+    if (NOT Ensure(InAbilityOwnerHandle))
     { return; }
 
-    InHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
+    InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
 }
 
 auto
     UCk_Utils_AbilityOwner_UE::
     Request_EndAbility(
-        FCk_Handle                                 InHandle,
+        FCk_Handle                                 InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_EndAbility& InRequest)
     -> void
 {
-    if (NOT Ensure(InHandle))
+    if (NOT Ensure(InAbilityOwnerHandle))
     { return; }
 
-    InHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
+    InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Request_SendEvent(
+        FCk_Handle                    InAbilityOwnerHandle,
+        const FCk_Request_AbilityOwner_SendEvent& InRequest)
+    -> void
+{
+    if (NOT Ensure(InAbilityOwnerHandle))
+    { return; }
+
+    auto& Events = InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Events>();
+    Events._Events.Emplace(InRequest.Get_Event());
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    BindTo_OnEvents(
+        FCk_Handle                              InAbilityOwnerHandle,
+        ECk_Signal_BindingPolicy                InBehavior,
+        const FCk_Delegate_AbilityOwner_Events& InDelegate)
+    -> void
+{
+    if (NOT Ensure(InAbilityOwnerHandle))
+    { return; }
+
+    ck::UUtils_Signal_AbilityOwner_Events::Bind(InAbilityOwnerHandle, InDelegate, InBehavior);
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    UnbindFrom_OnEvents(
+        FCk_Handle                              InAbilityOwnerHandle,
+        const FCk_Delegate_AbilityOwner_Events& InDelegate)
+    -> void
+{
+    if (NOT Ensure(InAbilityOwnerHandle))
+    { return; }
+
+    ck::UUtils_Signal_AbilityOwner_Events::Unbind(InAbilityOwnerHandle, InDelegate);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

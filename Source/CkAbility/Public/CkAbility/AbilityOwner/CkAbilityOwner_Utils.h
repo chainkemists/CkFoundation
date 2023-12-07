@@ -45,36 +45,62 @@ public:
               DisplayName="Get All Ability Owner Active Tags")
     static FGameplayTagContainer
     Get_ActiveTags(
-        FCk_Handle InHandle);
+        FCk_Handle InAbilityOwnerHandle);
 
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner")
     static void
     Request_GiveAbility(
-        FCk_Handle InHandle,
+        FCk_Handle InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_GiveAbility& InRequest);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner")
     static void
     Request_RevokeAbility(
-        FCk_Handle InHandle,
+        FCk_Handle InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_RevokeAbility& InRequest);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner")
     static void
     Request_TryActivateAbility(
-        FCk_Handle InHandle,
+        FCk_Handle InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_ActivateAbility& InRequest);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner")
     static void
     Request_EndAbility(
-        FCk_Handle InHandle,
+        FCk_Handle InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_EndAbility& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName = "Send Event on AbilityOwner")
+    static void
+    Request_SendEvent(
+        FCk_Handle InAbilityOwnerHandle,
+        const FCk_Request_AbilityOwner_SendEvent& InRequest);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName = "Bind To AbilityOwner Events")
+    static void
+    BindTo_OnEvents(
+        FCk_Handle InAbilityOwnerHandle,
+        ECk_Signal_BindingPolicy InBehavior,
+        const FCk_Delegate_AbilityOwner_Events& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName = "Unbind From AbilityOwner Events")
+    static void
+    UnbindFrom_OnEvents(
+        FCk_Handle InAbilityOwnerHandle,
+        const FCk_Delegate_AbilityOwner_Events& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
