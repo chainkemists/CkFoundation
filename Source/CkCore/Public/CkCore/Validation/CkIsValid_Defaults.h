@@ -87,6 +87,11 @@ CK_DEFINE_CUSTOM_IS_VALID(FGameplayTag, ck::IsValid_Policy_Default, [=](FGamepla
     return InGameplayTag.IsValid();
 });
 
+CK_DEFINE_CUSTOM_IS_VALID(FGameplayTagContainer, ck::IsValid_Policy_Default, [=](FGameplayTagContainer InGameplayTagContainer)
+{
+    return InGameplayTagContainer.IsValid();
+});
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_CUSTOM_IS_VALID_T(T, T*, ck::IsValid_Policy_NullptrOnly, [=](const T* InObj)
