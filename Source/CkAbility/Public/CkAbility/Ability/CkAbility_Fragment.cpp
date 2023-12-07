@@ -20,3 +20,5 @@ namespace ck::algo
         return UCk_Utils_Ability_UE::Get_ActivationSettings(InHandle, AbilityName).Get_ActivationCancelledTags().HasAnyExact(_Tags);
     }
 }
+
+// --------------------------------------------------------------------------------------------------------------------
