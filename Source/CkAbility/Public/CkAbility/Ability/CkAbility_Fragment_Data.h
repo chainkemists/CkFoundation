@@ -146,10 +146,19 @@ public:
 
 public:
     auto
+    OnGiveAbility() -> void;
+
+    auto
+    OnRevokeAbility() -> void;
+
+    auto
     OnActivateAbility() -> void;
 
     auto
     OnEndAbility() -> void;
+
+    auto
+    Get_CanActivateAbility() const -> bool;
 
 protected:
     UFUNCTION(BlueprintNativeEvent,
@@ -162,15 +171,33 @@ protected:
               meta     = (DisplayName = "OnEndAbility"))
     void DoOnEndAbility();
 
+    UFUNCTION(BlueprintNativeEvent,
+              Category = "Ck|Ability|Script",
+              meta     = (DisplayName = "OnGiveAbility"))
+    void DoOnGiveAbility();
+
+    UFUNCTION(BlueprintNativeEvent,
+              Category = "Ck|Ability|Script",
+              meta     = (DisplayName = "OnRevokeAbility"))
+    void DoOnRevokeAbility();
+
+    UFUNCTION(BlueprintNativeEvent,
+              Category = "Ck|Ability|Script",
+              meta     = (DisplayName = "Get_CanActivateAbility"))
+    bool DoGet_CanActivateAbility() const;
+
+public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Ability|Script",
               meta = (CompactNodeTitle="AbilityEntity", DefaultToSelf="InScript", HidePin="InScript"))
-    static FCk_Handle Get_AbilityEntity(const UCk_Ability_Script_PDA* InScript);
+    static FCk_Handle
+     Get_AbilityEntity(const UCk_Ability_Script_PDA* InScript);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Ability|Script",
               meta = (CompactNodeTitle="AbilityOwnerEntity", DefaultToSelf="InScript", HidePin="InScript"))
-    static FCk_Handle Get_AbilityOwnerEntity(const UCk_Ability_Script_PDA* InScript);
+    static FCk_Handle
+     Get_AbilityOwnerEntity(const UCk_Ability_Script_PDA* InScript);
 
 
 private:
