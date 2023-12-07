@@ -13,8 +13,8 @@ namespace ck
     auto
         FProcessor_AbilityOwner_Setup::
         ForEachEntity(
-            TimeType                             InDeltaT,
-            HandleType                           InHandle,
+            TimeType InDeltaT,
+            HandleType InHandle,
             const FFragment_AbilityOwner_Params& InAbilityOwnerParams) const
         -> void
     {
@@ -36,10 +36,24 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
+        FProcessor_AbilityOwner_HandleEvents::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_AbilityOwner_Events&  InAbilityOwnerEvents) const
+        -> void
+    {
+        UUtils_Signal_AbilityOwner_Events::Broadcast(InHandle, MakePayload(InHandle, InAbilityOwnerEvents.Get_Events()));
+        InHandle.Remove<MarkedDirtyBy>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_AbilityOwner_HandleRequests::
         ForEachEntity(
-            TimeType                         InDeltaT,
-            HandleType                       InHandle,
+            TimeType InDeltaT,
+            HandleType InHandle,
             FFragment_AbilityOwner_Current&  InAbilityOwnerComp,
             FFragment_AbilityOwner_Requests& InAbilityRequestsComp) const
         -> void
@@ -112,7 +126,7 @@ namespace ck
         {
             ability::VeryVerbose
             (
-                TEXT("Granting Ability [Name: {} | Entity: {}] to Ability Owner [{}]"),
+                TEXT("Giving Ability [Name: {} | Entity: {}] to Ability Owner [{}]"),
                 AbilityName,
                 InAbilityEntity,
                 InAbilityOwnerEntity
@@ -151,11 +165,7 @@ namespace ck
                 InAbilityOwnerEntity
             );
 
-            UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Request_Disconnect(InAbilityEntity, InAbilityOwnerEntity);
-
-            UCk_Utils_AbilityOwner_UE::Request_EndAbility(InAbilityOwnerEntity, FCk_Request_AbilityOwner_EndAbility{InAbilityEntity});
-
-            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAbilityEntity);
+            UCk_Utils_Ability_UE::DoRevoke(InAbilityOwnerEntity, InAbilityEntity);
         };
 
         switch (const auto& SearchPolicy = InRequest.Get_SearchPolicy())
@@ -210,7 +220,7 @@ namespace ck
 
         const auto& DoTryActivateAbility = [&](const FCk_Handle& InAbilityEntity, const FGameplayTag& InAbilityName) -> void
         {
-            if (UCk_Utils_Ability_UE::Get_Status(InAbilityEntity, InAbilityName) == ECk_Ability_Status::Active)
+            if (NOT UCk_Utils_Ability_UE::DoGet_CanActivate(InAbilityEntity))
             { return; }
 
             const auto& AbilityActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityEntity, InAbilityName);
@@ -279,7 +289,7 @@ namespace ck
                 InAbilityOwnerEntity
             );
 
-            UCk_Utils_Ability_UE::Activate(InAbilityEntity);
+            UCk_Utils_Ability_UE::DoActivate(InAbilityEntity);
 
             // TODO: Call Activate/End instead (or in addition to) firing a Signal
             // UTT_UtilsSignal_Ability_OnActivated::Invoke(InAbilityEntity, MakePayload(InAbilityEntity, InAbilityOwnerEntity));
@@ -343,7 +353,7 @@ namespace ck
                 InAbilityOwnerEntity
             );
 
-            UCk_Utils_Ability_UE::End(InAbilityEntity);
+            UCk_Utils_Ability_UE::DoEnd(InAbilityEntity);
         };
 
         switch (const auto& SearchPolicy = InRequest.Get_SearchPolicy())
@@ -430,3 +440,5 @@ namespace ck
         return InAbilityEntity;
     }
 }
+
+// --------------------------------------------------------------------------------------------------------------------
