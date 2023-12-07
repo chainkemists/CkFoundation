@@ -118,7 +118,7 @@ public:
         const FCk_Delegate_OnLogoutEvent& InDelegate);
 
 private:
-    UPROPERTY(meta=(AllowPrivateAccess))
+    UPROPERTY(Transient)
     TArray<TWeakObjectPtr<APlayerController>>  _AllPlayerControllers;
 
 private:
