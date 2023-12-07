@@ -48,18 +48,22 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Ability_ActivationPolicy _ActivationPolicy = ECk_Ability_ActivationPolicy::ActivateManually;
 
+    // While this Ability is executing, the owner of the Ability will be granted this set of Tags.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FGameplayTagContainer _ActivationOwnerGrantedTags;
 
+    // The Ability will be cancelled as soon as the AbilityOwner has any of these Tags.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FGameplayTagContainer _ActivationCancelledTags;
 
+    // The Ability can only be activated if the AbilityOwner has all of these Tags.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FGameplayTagContainer _ActivationRequiredTags;
 
+    // The Ability can only be activated if the AbilityOwner does not have any of these Tags.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FGameplayTagContainer _ActivationBlockedTags;
@@ -133,7 +137,6 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 // This Object itself is NOT replicated. It may be 'implicitly' replicated through the Ability's replicated fragment
-// TODO: Hide necessary categories
 UCLASS(Abstract, EditInlineNew, Blueprintable, BlueprintType)
 class CKABILITY_API UCk_Ability_Script_PDA : public UCk_DataAsset_PDA
 {
@@ -206,6 +209,7 @@ private:
         meta = (AllowPrivateAccess = true))
     FCk_Ability_Script_Data _Data;
 
+private:
     UPROPERTY(Transient)
     FCk_Handle _AbilityHandle;
 
