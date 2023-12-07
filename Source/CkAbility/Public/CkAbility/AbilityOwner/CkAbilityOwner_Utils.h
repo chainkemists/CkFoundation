@@ -4,6 +4,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkSignal/CkSignal_Fragment_Data.h"
+
 #include "CkAbilityOwner_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
