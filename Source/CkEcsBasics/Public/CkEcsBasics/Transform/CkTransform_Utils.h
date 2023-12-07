@@ -146,7 +146,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "Bind To OnTransformUpdate")
+              DisplayName = "Unbind From OnTransformUpdate")
     static void
     UnbindFrom_OnUpdate(
         FCk_Handle InHandle,
