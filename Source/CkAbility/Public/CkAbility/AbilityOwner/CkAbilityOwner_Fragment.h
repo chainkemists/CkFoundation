@@ -2,6 +2,10 @@
 
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Fragment_Data.h"
 
+#include "CkEcsBasics/Transform/CkTransform_Processor.h"
+
+#include "CkAbilityOwner_Fragment.generated.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_AbilityOwner_UE;
@@ -75,6 +79,61 @@ namespace ck
     public:
         CK_PROPERTY_GET(_Requests);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKABILITY_API FFragment_AbilityOwner_Events
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_AbilityOwner_Events);
+
+    public:
+        friend class UCk_Utils_AbilityOwner_UE;
+        friend class FProcessor_AbilityOwner_HandleEvents;
+
+    public:
+        using EventType = FCk_AbilityOwner_Event;
+        using EventList = TArray<EventType>;
+
+    public:
+        EventList _Events;
+
+    public:
+        CK_PROPERTY_GET(_Events);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_Events,
+        FCk_Delegate_AbilityOwner_Events_MC, FCk_Handle, TArray<FCk_AbilityOwner_Event>);
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck { class FProcessor_AbilityOwner_Events_Replicate; }
+
+UCLASS(Blueprintable)
+class CKABILITY_API UCk_Fragment_AbilityOwner_Events_Rep : public UCk_Ecs_ReplicatedObject_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_AbilityOwner_Events_Rep);
+
+public:
+    friend class ck::FProcessor_AbilityOwner_Events_Replicate;
+
+public:
+    auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
+
+public:
+    UFUNCTION()
+    void OnRep_NewEvents();
+
+private:
+    UPROPERTY(ReplicatedUsing = OnRep_NewEvents)
+    TArray<FCk_AbilityOwner_Event> _Events;
+    int32 _NextEventToProcess = 0;
+};
 
 // --------------------------------------------------------------------------------------------------------------------
