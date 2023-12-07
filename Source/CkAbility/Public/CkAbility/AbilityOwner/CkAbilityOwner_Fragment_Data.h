@@ -3,6 +3,7 @@
 
 #include "CkCore/Format/CkFormat.h"
 
+#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 #include "CkEcs/Handle/CkHandle.h"
 
 #include "CkAbilityOwner_Fragment_Data.generated.h"
@@ -17,6 +18,41 @@ enum class ECk_AbilityOwner_AbilitySearchPolicy : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_AbilitySearchPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(Blueprintable, BlueprintType)
+class CKABILITY_API UCk_Ability_EventData_UE : public UCk_ReplicatedObject_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Ability_EventData_UE);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_AbilityOwner_Event
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_AbilityOwner_Event);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    FGameplayTag _EventName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    TObjectPtr<UCk_Ability_EventData_UE> _EventData;
+
+public:
+    CK_PROPERTY_GET(_EventName);
+    CK_PROPERTY_GET(_EventData);
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -70,6 +106,11 @@ struct CKABILITY_API FCk_Request_AbilityOwner_RevokeAbility
 
 public:
     CK_GENERATED_BODY(FCk_Request_AbilityOwner_RevokeAbility);
+
+public:
+    FCk_Request_AbilityOwner_RevokeAbility() = default;
+    explicit FCk_Request_AbilityOwner_RevokeAbility(FGameplayTag InAbilityName);
+    explicit FCk_Request_AbilityOwner_RevokeAbility(FCk_Handle InAbilityHandle);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -175,3 +216,38 @@ public:
     CK_PROPERTY_GET(_AbilityName);
     CK_PROPERTY_GET(_AbilityHandle);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Request_AbilityOwner_SendEvent
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_AbilityOwner_SendEvent);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_AbilityOwner_Event _Event;
+
+public:
+    CK_PROPERTY_GET(_Event);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_AbilityOwner_Events,
+    FCk_Handle, InHandle,
+    const TArray<FCk_AbilityOwner_Event>&,
+    InEvents);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FCk_Delegate_AbilityOwner_Events_MC,
+    FCk_Handle, InHandle,
+    const TArray<FCk_AbilityOwner_Event>&,
+    InEvents);
+
+// --------------------------------------------------------------------------------------------------------------------
