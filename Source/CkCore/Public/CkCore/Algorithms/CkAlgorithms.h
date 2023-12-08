@@ -75,8 +75,14 @@ namespace ck::algo
     template <class T_ReturnContainer, class T_TransformFunc, class T_Container>
     auto Transform(T_Container& InContainer, T_TransformFunc InFunc) -> T_ReturnContainer;
 
+    template <class T_ReturnContainer, class T_TransformFunc, class T_ItrType>
+    auto Transform(T_ItrType InItrBegin, T_ItrType InItrEnd, T_TransformFunc InFunc) -> T_ReturnContainer;
+
     template <class T_ReturnContainer, class T_TransformFunc, class T_Container>
     auto Transform(T_Container& InContainer, TToTransform<T_ReturnContainer> InReturnContainer, T_TransformFunc InFunc) -> void;
+
+    template <class T_ReturnContainer, class T_TransformFunc, class T_ItrType>
+    auto Transform(T_ItrType InItrBegin, T_ItrType InItrEnd, TToTransform<T_ReturnContainer> InReturnContainer, T_TransformFunc InFunc) -> void;
 
     template <typename T_Container, typename T_PredicateFunction>
     auto Filter(T_Container& InContainer, T_PredicateFunction InFunc) -> T_Container;
