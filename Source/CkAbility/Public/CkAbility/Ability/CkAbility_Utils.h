@@ -16,6 +16,7 @@
 
 namespace ck
 {
+    class FProcessor_AbilityOwner_Setup;
     class FProcessor_AbilityOwner_HandleRequests;
 }
 
@@ -35,6 +36,7 @@ public:
 public:
     friend class UCk_Utils_Ecs_Base_UE;
     friend class UCk_Ability_ConstructionScript_PDA;
+    friend class ck::FProcessor_AbilityOwner_Setup;
     friend class ck::FProcessor_AbilityOwner_HandleRequests;
 
 public:
@@ -124,13 +126,21 @@ public:
     Get_Status(
         FCk_Handle InAbilityOwnerEntity,
         FGameplayTag InAbilityName);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability",
+              DisplayName="Get Ability Status from Handle")
+    static ECk_Ability_Status
+    Get_Status_FromHandle(
+        FCk_Handle InAbilityHandle);
+
 private:
     static auto
     DoAdd(
         FCk_Handle InHandle,
         const FCk_Fragment_Ability_ParamsData& InParams) -> void;
 
-// TODO: Move these back to the processor ? 
+// TODO: Move these back to the processor ?
 private:
     static auto
     DoActivate(
