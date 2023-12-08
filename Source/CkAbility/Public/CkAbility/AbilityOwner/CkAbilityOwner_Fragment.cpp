@@ -16,6 +16,24 @@ namespace ck
 
     auto
         FFragment_AbilityOwner_Current::
+        Get_ActiveTagsWithCount() const
+        -> TMap<FGameplayTag, int32>
+    {
+        TArray<FGameplayTag> OutActiveTagArray;
+        Get_ActiveTags().GetGameplayTagArray(OutActiveTagArray);
+
+        TMap<FGameplayTag, int32> Ret;
+
+        for (const auto& ActiveTag : OutActiveTagArray)
+        {
+            Ret.Add(ActiveTag, Get_SpecificActiveTagCount(ActiveTag));
+        }
+
+        return Ret;
+    }
+
+    auto
+        FFragment_AbilityOwner_Current::
         Get_SpecificActiveTagCount(
             const FGameplayTag& InTag) const
         -> int32
