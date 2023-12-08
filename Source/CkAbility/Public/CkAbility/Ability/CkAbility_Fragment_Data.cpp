@@ -1,6 +1,7 @@
 #include "CkAbility_Fragment_Data.h"
 
 #include "CkAbility/Ability/CkAbility_Utils.h"
+#include "CkAbility/AbilityOwner/CkAbilityOwner_Utils.h"
 
 #include "CkCore/Object/CkObject_Utils.h"
 
@@ -80,6 +81,14 @@ auto
     -> void
 {
     DoOnRevokeAbility();
+}
+
+auto
+    UCk_Ability_Script_PDA::
+    EndAbility()
+    -> void
+{
+    UCk_Utils_AbilityOwner_UE::Request_EndAbility(Get_AbilityOwnerHandle(), FCk_Request_AbilityOwner_EndAbility{Get_AbilityHandle()});
 }
 
 auto
