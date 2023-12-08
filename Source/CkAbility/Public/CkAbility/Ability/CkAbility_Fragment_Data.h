@@ -189,6 +189,11 @@ protected:
               meta     = (DisplayName = "Get_CanActivateAbility"))
     bool DoGet_CanActivateAbility() const;
 
+private:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Ability|Script")
+    void EndAbility();
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Ability|Script",
