@@ -85,7 +85,9 @@ public:
 
 public:
     FCk_Request_AbilityOwner_GiveAbility() = default;
-    explicit FCk_Request_AbilityOwner_GiveAbility(
+
+    explicit
+	FCk_Request_AbilityOwner_GiveAbility(
         const UCk_Ability_EntityConfig_PDA* InAbilityEntityConfig);
 
 private:
@@ -109,8 +111,14 @@ public:
 
 public:
     FCk_Request_AbilityOwner_RevokeAbility() = default;
-    explicit FCk_Request_AbilityOwner_RevokeAbility(FGameplayTag InAbilityName);
-    explicit FCk_Request_AbilityOwner_RevokeAbility(FCk_Handle InAbilityHandle);
+
+    explicit
+	FCk_Request_AbilityOwner_RevokeAbility(
+        FGameplayTag InAbilityName);
+
+    explicit
+	FCk_Request_AbilityOwner_RevokeAbility(
+        FCk_Handle InAbilityHandle);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -146,13 +154,14 @@ public:
 
 public:
     FCk_Request_AbilityOwner_ActivateAbility() = default;
-    FCk_Request_AbilityOwner_ActivateAbility(
-        FGameplayTag InAbilityName,
-        FCk_Handle InActivationContextEntity);
 
-    FCk_Request_AbilityOwner_ActivateAbility(
-        FCk_Handle InAbilityHandle,
-        FCk_Handle InActivationContextEntity);
+    explicit
+	FCk_Request_AbilityOwner_ActivateAbility(
+        FGameplayTag InAbilityName);
+
+    explicit
+	FCk_Request_AbilityOwner_ActivateAbility(
+        FCk_Handle InAbilityHandle);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -170,14 +179,10 @@ private:
                   EditCondition="_SearchPolicy==ECk_GameplayAbilityOwner_AbilitySearchPolicy::SearchByHandle"))
     FCk_Handle _AbilityHandle;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FCk_Handle _ActivationContextEntity;
-
 public:
     CK_PROPERTY_GET(_SearchPolicy);
     CK_PROPERTY_GET(_AbilityName);
     CK_PROPERTY_GET(_AbilityHandle);
-    CK_PROPERTY_GET(_ActivationContextEntity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -192,8 +197,14 @@ public:
 
 public:
     FCk_Request_AbilityOwner_EndAbility() = default;
-    explicit FCk_Request_AbilityOwner_EndAbility(FGameplayTag InAbilityName);
-    explicit FCk_Request_AbilityOwner_EndAbility(FCk_Handle InAbilityHandle);
+
+    explicit
+	FCk_Request_AbilityOwner_EndAbility(
+        FGameplayTag InAbilityName);
+
+    explicit
+	FCk_Request_AbilityOwner_EndAbility(
+        FCk_Handle InAbilityHandle);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
