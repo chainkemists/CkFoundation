@@ -68,6 +68,9 @@ auto
         FCk_Handle InEntity)
     -> ECk_Net_EntityNetRole
 {
+    if (ck::Is_NOT_Valid(InEntity))
+    { return ECk_Net_EntityNetRole::None; }
+
     if (Has(InEntity))
     { return InEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings().Get_NetRole(); }
 
@@ -80,6 +83,9 @@ auto
         FCk_Handle InEntity)
     -> ECk_Net_NetModeType
 {
+    if (ck::Is_NOT_Valid(InEntity))
+    { return ECk_Net_NetModeType::None; }
+
     if (Has(InEntity))
     { return InEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings().Get_NetMode(); }
 
@@ -133,6 +139,9 @@ auto
         FCk_Handle InEntity)
     -> bool
 {
+    if (ck::Is_NOT_Valid(InEntity))
+    { return false; }
+
     if (Has(InEntity))
     { return InEntity.Has<ck::FTag_HasAuthority>(); }
 
