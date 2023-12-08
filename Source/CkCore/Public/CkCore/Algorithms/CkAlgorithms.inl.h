@@ -187,16 +187,45 @@ namespace ck::algo
         return ToRet;
     }
 
+    template <class T_ReturnContainer, class T_TransformFunc, class T_ItrType>
+    auto
+        Transform(
+            T_ItrType InItrBegin,
+            T_ItrType InItrEnd,
+            T_TransformFunc InFunc)
+        -> T_ReturnContainer
+    {
+        auto ToRet = T_ReturnContainer{};
+        Transform(InItrBegin, InItrEnd, ToTransform(ToRet), InFunc);
+        return ToRet;
+    }
+
     template <typename T_ReturnContainer, typename T_TransformFunc, typename T_Container>
     auto
         Transform(
             T_Container& InContainer,
             TToTransform<T_ReturnContainer> InReturnContainer,
-            T_TransformFunc InFunc) -> void
+            T_TransformFunc InFunc)
+        -> void
     {
         for (int Index = 0; Index < InContainer.Num(); ++Index)
         {
             InReturnContainer._Container.Add(InFunc(InContainer[Index]));
+        }
+    }
+
+    template <class T_ReturnContainer, class T_TransformFunc, class T_ItrType>
+    auto
+        Transform(
+            T_ItrType InItrBegin,
+            T_ItrType InItrEnd,
+            TToTransform<T_ReturnContainer> InReturnContainer,
+            T_TransformFunc InFunc)
+        -> void
+    {
+        for (; InItrBegin != InItrEnd; ++InItrBegin)
+        {
+            InReturnContainer._Container.Add(InFunc(*InItrBegin));
         }
     }
 
