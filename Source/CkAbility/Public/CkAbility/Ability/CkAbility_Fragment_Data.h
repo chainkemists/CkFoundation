@@ -287,7 +287,9 @@ public:
         const FCk_Handle& InHandle) -> void override;
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ExposeOnSpawn, AllowPrivateAccess = true))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              Category = "Ck|Config",
+              meta = (ExposeOnSpawn, AllowPrivateAccess = true))
     FCk_Fragment_Ability_ParamsData _AbilityParams;
 
 public:
