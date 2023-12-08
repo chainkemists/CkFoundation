@@ -40,6 +40,15 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
+              DisplayName="Replace Timer")
+    static void
+    Replace(
+        FCk_Handle InTimerOwnerEntity,
+        FGameplayTag InTimerName,
+        const FCk_Fragment_Timer_ParamsData& InParams);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Timer",
               DisplayName="Add Multiple New Timers")
     static void
     AddMultiple(
@@ -109,7 +118,6 @@ public:
         FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName);
 
-public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
               DisplayName="Request Reset Timer")
