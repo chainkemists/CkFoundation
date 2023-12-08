@@ -50,6 +50,7 @@ namespace ck
 
     public:
         auto Get_ActiveTags() const -> FGameplayTagContainer;
+        auto Get_ActiveTagsWithCount() const -> TMap<FGameplayTag, int32>;
         auto Get_SpecificActiveTagCount(const FGameplayTag& InTag) const -> int32;
 
         auto AppendTags(const FGameplayTagContainer& InTagsToAdd) -> void;

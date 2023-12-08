@@ -49,6 +49,13 @@ public:
     Get_ActiveTags(
         FCk_Handle InAbilityOwnerHandle);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="Get All Ability Owner Active Tags With Count")
+    static TMap<FGameplayTag, int32>
+    Get_ActiveTagsWithCount(
+        FCk_Handle InAbilityOwnerHandle);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner")

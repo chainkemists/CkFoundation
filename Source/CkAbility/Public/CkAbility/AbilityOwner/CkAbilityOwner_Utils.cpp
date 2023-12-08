@@ -52,6 +52,18 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
+    Get_ActiveTagsWithCount(
+        FCk_Handle InAbilityOwnerHandle)
+    -> TMap<FGameplayTag, int32>
+{
+    if (NOT Ensure(InAbilityOwnerHandle))
+    { return {}; }
+
+    return InAbilityOwnerHandle.Get<ck::FFragment_AbilityOwner_Current>().Get_ActiveTagsWithCount();
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
     Request_GiveAbility(
         FCk_Handle                                  InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_GiveAbility& InRequest)
