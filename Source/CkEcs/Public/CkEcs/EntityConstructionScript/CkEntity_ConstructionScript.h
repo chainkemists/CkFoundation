@@ -40,7 +40,9 @@ public:
     CK_GENERATED_BODY(UCk_Entity_ConstructionScript_WithTransform_PDA);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ExposeOnSpawn, AllowPrivateAccess = true))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              Category = "Ck|Config",
+              meta = (ExposeOnSpawn, AllowPrivateAccess = true))
     FTransform _EntityInitialTransform;
 
 public:
