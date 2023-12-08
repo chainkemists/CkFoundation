@@ -192,6 +192,18 @@ auto
 }
 
 auto
+	UCk_Utils_Ability_UE::
+	Get_Status_FromHandle(
+		FCk_Handle InAbilityHandle)
+	-> ECk_Ability_Status
+{
+    CK_ENSURE_IF_NOT(Has(InAbilityHandle), TEXT("Handle [{}] does NOT have Ability"), InAbilityHandle)
+	{ return {}; }
+
+	return InAbilityHandle.Get<ck::FFragment_Ability_Current>().Get_Status();
+}
+
+auto
     UCk_Utils_Ability_UE::
     Has(
         FCk_Handle InHandle)
