@@ -118,9 +118,16 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Cannot create Entity with Invalid Handle"))
     { return {}; }
 
-    auto NewEntity = Request_CreateEntity(**InHandle, InFunc);
-    NewEntity.Add<ck::FFragment_LifetimeOwner>(InHandle);
-    InHandle.AddOrGet<ck::FFragment_LifetimeDependents>()._Entities.Emplace(NewEntity);
+    const auto NewEntity = Request_CreateEntity(**InHandle, [&](FCk_Handle InNewEntity)
+    {
+		InNewEntity.Add<ck::FFragment_LifetimeOwner>(InHandle);
+		InHandle.AddOrGet<ck::FFragment_LifetimeDependents>()._Entities.Emplace(InNewEntity);
+
+		if (InFunc)
+		{
+			InFunc(InNewEntity);
+        }
+	});
 
     return NewEntity;
 }
