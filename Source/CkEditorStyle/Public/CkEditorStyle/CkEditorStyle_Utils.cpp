@@ -6,13 +6,14 @@
 
 #include <Styling/SlateStyleRegistry.h>
 
-#define IMAGE_BRUSH(RelativePath, ...) FSlateImageBrush(_StyleInstance->RootToContentDir(RelativePath, TEXT(".png")), __VA_ARGS__)
+#define IMAGE_PLUGIN_BRUSH(RelativePath, ...) FSlateImageBrush(_StyleInstance->RootToContentDir(RelativePath, TEXT(".png")), __VA_ARGS__)
+#define IMAGE_PLUGIN_BRUSH_SVG(RelativePath, ...) FSlateVectorImageBrush(_StyleInstance->RootToContentDir(RelativePath, TEXT(".svg")), __VA_ARGS__)
 
 // --------------------------------------------------------------------------------------------------------------------
 
 TSharedPtr<FSlateStyleSet> UCk_Utils_EditorStyle_UE::_StyleInstance = nullptr;
 
-FName     UCk_Utils_EditorStyle_UE::_StyleSetName   = FName(TEXT("CkFondation_EditorStyle"));
+FName UCk_Utils_EditorStyle_UE::_StyleSetName = FName(TEXT("CkFondation_EditorStyle"));
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -26,6 +27,8 @@ auto
 
     _StyleInstance = MakeShareable(new FSlateStyleSet(_StyleSetName));
     _StyleInstance->SetContentRoot(UCk_Utils_IO_UE::Get_PluginDir(TEXT("CkFoundation")) / TEXT("/Resources/Editor"));
+
+    FSlateStyleRegistry::RegisterSlateStyle(*_StyleInstance);
 }
 
 auto
@@ -122,11 +125,34 @@ auto
         DoRegister_SlateStyle();
     }
 
-    _StyleInstance->Set
-    (
-        InParams.Get_StyleName(),
-        new IMAGE_BRUSH(InParams.Get_StyleName().ToString(), DoGet_IconSize(InParams.Get_IconSize()))
-    );
+    switch (const auto& IconBrushType = InParams.Get_IconBrushType())
+    {
+        case ECk_IconBrushType::PNG:
+        {
+            _StyleInstance->Set
+            (
+                InParams.Get_StyleName(),
+                new IMAGE_PLUGIN_BRUSH(InParams.Get_IconAssetName().ToString(), DoGet_IconSize(InParams.Get_IconSize()))
+            );
+
+            break;
+        }
+        case ECk_IconBrushType::SVG:
+        {
+            _StyleInstance->Set
+            (
+                InParams.Get_StyleName(),
+                new IMAGE_PLUGIN_BRUSH_SVG(InParams.Get_IconAssetName().ToString(), DoGet_IconSize(InParams.Get_IconSize()))
+            );
+
+            break;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(IconBrushType);
+            return;
+        }
+    }
 
     DoReloadTextures();
 }

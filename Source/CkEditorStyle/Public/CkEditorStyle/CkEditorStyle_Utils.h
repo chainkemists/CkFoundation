@@ -28,6 +28,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_IconSize);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM()
+enum class ECk_IconBrushType : uint8
+{
+    PNG,
+    SVG
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_IconBrushType);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM()
 enum class ECk_AssetStyleType : uint8
 {
     AssetThumbnail,
@@ -40,7 +51,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AssetStyleType);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT()
-struct FCk_CustomSlateStyle_Params
+struct CKEDITORSTYLE_API FCk_CustomSlateStyle_Params
 {
     GENERATED_BODY()
 
@@ -54,24 +65,33 @@ private:
     UPROPERTY()
     ECk_IconSize _IconSize = ECk_IconSize::IconSize_16x16;
 
+    UPROPERTY()
+    ECk_IconBrushType _IconBrushType = ECk_IconBrushType::PNG;
+
     // StyleName for AssetStyle of type AssetThumbnail or AssetIcon mus tbe the name of the class without the 'U' prefix
     UPROPERTY()
     FName _StyleName = NAME_None;
+
+    // Asset name on disk without the extension
+    UPROPERTY()
+    FName _IconAssetName = NAME_None;
 
 public:
     auto Get_StyleName() const -> FName;
 
 public:
-    CK_PROPERTY_GET(_IconSize);
+    CK_PROPERTY(_IconSize);
+    CK_PROPERTY(_IconAssetName);
+    CK_PROPERTY(_IconBrushType);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_CustomSlateStyle_Params, _AssetStyleType, _IconSize, _StyleName);
+    CK_DEFINE_CONSTRUCTORS(FCk_CustomSlateStyle_Params, _AssetStyleType, _StyleName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class UCk_Utils_EditorStyle_UE : public UBlueprintFunctionLibrary
+class CKEDITORSTYLE_API UCk_Utils_EditorStyle_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
@@ -103,7 +123,7 @@ private:
     DoGet_IconSize(
         ECk_IconSize InSize) -> const FVector2D&;
 
-private:
+public:
     static TSharedPtr<class FSlateStyleSet> _StyleInstance;
     static FName                            _StyleSetName;
 };

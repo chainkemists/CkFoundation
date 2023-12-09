@@ -1,8 +1,11 @@
 #include "CkEditorStyle.h"
 
 #include "CkEditorStyle/CkEditorStyle_Utils.h"
+#include "CkEditorStyle/Settings/CkEditorStyle_Settings.h"
 
 #define LOCTEXT_NAMESPACE "FCkEditorStyleModule"
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCkEditorStyleModule::
@@ -11,6 +14,13 @@ auto
 {
     UCk_Utils_EditorStyle_UE::DoRegister_SlateStyle();
     UCk_Utils_EditorStyle_UE::DoReloadTextures();
+
+    auto& PropertyModule = FModuleManager::GetModuleChecked<FPropertyEditorModule>("PropertyEditor");
+    PropertyModule.RegisterCustomClassLayout
+    (
+        UCk_EditorStyle_ProjectSettings_UE::StaticClass()->GetFName(),
+        FOnGetDetailCustomizationInstance::CreateStatic(&ck::details::FEditorStyle_ProjectSettings_Details::MakeInstance)
+    );
 }
 
 auto
@@ -20,6 +30,8 @@ auto
 {
     UCk_Utils_EditorStyle_UE::DoUnregister_SlateStyle();
 }
+
+// --------------------------------------------------------------------------------------------------------------------
 
 #undef LOCTEXT_NAMESPACE
 

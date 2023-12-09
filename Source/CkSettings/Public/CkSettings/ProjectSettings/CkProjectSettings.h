@@ -17,6 +17,17 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UCLASS(Abstract, Defaultconfig, Config = Editor)
+class CKSETTINGS_API UCk_Editor_ProjectSettings_UE : public UDeveloperSettingsBackedByCVars
+{
+    GENERATED_BODY()
+
+public:
+    explicit UCk_Editor_ProjectSettings_UE(const FObjectInitializer& ObjectInitializer);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(Abstract, Defaultconfig, Config = Game)
 class CKSETTINGS_API UCk_Game_ProjectSettings_UE : public UDeveloperSettingsBackedByCVars
 {
