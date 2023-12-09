@@ -44,6 +44,32 @@ public:
               Category = "Ck|Utils|IO")
     static FString
     Get_ProjectVersion();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IO")
+    static FString
+    Get_ProjectDir();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IO")
+    static FString
+    Get_PluginDir(
+        const FString& InPluginName);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IO")
+    static FString
+    Get_ProjectContentDir();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IO")
+    static FString
+    Get_ProjectPluginsDir();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IO")
+    static FString
+    Get_EnginePluginsDir();
 };
 
 // --------------------------------------------------------------------------------------------------------------------

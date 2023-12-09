@@ -67,4 +67,50 @@ auto
     return OutProjectVersion;
 }
 
+auto
+    UCk_Utils_IO_UE::
+    Get_ProjectDir()
+    -> FString
+{
+    return UBlueprintPathsLibrary::ProjectDir();
+}
+
+auto
+    UCk_Utils_IO_UE::
+    Get_PluginDir(
+        const FString& InPluginName)
+    -> FString
+{
+    const auto& PluginInstalledInGame   = Get_ProjectPluginsDir() + InPluginName;
+    const auto& PluginInstalledInEngine = Get_EnginePluginsDir()  + InPluginName;
+
+    return UBlueprintPathsLibrary::DirectoryExists(PluginInstalledInGame)
+        ? PluginInstalledInGame
+        : PluginInstalledInEngine;
+}
+
+auto
+    UCk_Utils_IO_UE::
+    Get_ProjectContentDir()
+    -> FString
+{
+    return UBlueprintPathsLibrary::ProjectContentDir();
+}
+
+auto
+    UCk_Utils_IO_UE::
+    Get_ProjectPluginsDir()
+    -> FString
+{
+    return UBlueprintPathsLibrary::ProjectPluginsDir();
+}
+
+auto
+    UCk_Utils_IO_UE::
+    Get_EnginePluginsDir()
+    -> FString
+{
+    return UBlueprintPathsLibrary::EnginePluginsDir();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
