@@ -28,8 +28,12 @@ public class CkEditorStyle : CkModuleRules
             "EditorStyle",
             "InputCore",
             "ToolMenus",
+            "DeveloperSettings",
+            "DesktopPlatform",
+            "ClassViewer",
 
             "CkCore",
+            "CkSettings",
         });
     }
 }
