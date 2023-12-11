@@ -109,7 +109,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="For Each Ability")
+              DisplayName="For Each Ability with Status")
     static void
     ForEach_Ability_WithStatus(
         FCk_Handle InAbilityOwnerEntity,
