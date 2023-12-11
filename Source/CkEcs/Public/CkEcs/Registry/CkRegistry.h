@@ -348,9 +348,9 @@ auto
     -> void
 {
     CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to Add Fragment/Tag."), InEntity)
-    { return {}; }
+    { return; }
 
-    _InternalRegistry->remove<T_Fragment>(InEntity);
+    _InternalRegistry->remove<T_Fragment>(InEntity.Get_ID());
 }
 
 template <typename ... T_Fragments>
