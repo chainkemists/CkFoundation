@@ -210,6 +210,22 @@ auto
     return GetTypeHash(InHandle.Get_Entity()) + GetTypeHash(InHandle.Get_Registry());
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck::algo
+{
+    auto
+        MatchesEntityHandle::
+        operator()(
+            const FCk_Handle& InHandle) const
+        -> bool
+    {
+        return InHandle == _EntityHandle;
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     auto
