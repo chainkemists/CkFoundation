@@ -59,6 +59,7 @@ public:
     auto Complete() -> ThisType&;
     auto Reset() -> ThisType&;
     auto Get_IsDone() const -> bool;
+    auto Get_IsDepleted() const -> bool;
     auto Get_HasStarted() const -> bool;
 
     auto Get_TimeRemaining(NormalizationPolicyType InNormalizationPolicy = NormalizationPolicyType::None) const -> FCk_Time;
