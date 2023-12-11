@@ -15,7 +15,6 @@ auto
     {
         InCameraShakeEntity.Add<ck::FFragment_CameraShake_Params>(InParams);
 
-        ck::UCk_Utils_OwningEntity::Add(InCameraShakeEntity, InHandle);
         UCk_Utils_GameplayLabel_UE::Add(InCameraShakeEntity, InParams.Get_ID());
     });
 
