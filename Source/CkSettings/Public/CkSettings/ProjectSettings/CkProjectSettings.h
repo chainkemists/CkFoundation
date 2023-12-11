@@ -6,7 +6,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract, Defaultconfig, Config = Engine)
+UCLASS(Abstract, DefaultConfig, Config = Engine)
 class CKSETTINGS_API UCk_Engine_ProjectSettings_UE : public UDeveloperSettingsBackedByCVars
 {
     GENERATED_BODY()
@@ -17,7 +17,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract, Defaultconfig, Config = Editor)
+UCLASS(Abstract, DefaultConfig, Config = Editor)
 class CKSETTINGS_API UCk_Editor_ProjectSettings_UE : public UDeveloperSettingsBackedByCVars
 {
     GENERATED_BODY()
@@ -28,7 +28,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract, Defaultconfig, Config = Game)
+UCLASS(Abstract, DefaultConfig, Config = Game)
 class CKSETTINGS_API UCk_Game_ProjectSettings_UE : public UDeveloperSettingsBackedByCVars
 {
     GENERATED_BODY()

@@ -28,13 +28,13 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_IconSize);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM()
-enum class ECk_IconBrushType : uint8
+enum class ECk_CustomIconBrushType : uint8
 {
     PNG,
     SVG
 };
 
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_IconBrushType);
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CustomIconBrushType);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -50,13 +50,13 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AssetStyleType);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT()
-struct CKEDITORSTYLE_API FCk_CustomSlateStyle_Params
+USTRUCT(BlueprintType)
+struct CKEDITORSTYLE_API FCk_CustomAssetStyle_Params
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_CustomSlateStyle_Params);
+    CK_GENERATED_BODY(FCk_CustomAssetStyle_Params);
 
 private:
     UPROPERTY()
@@ -65,27 +65,27 @@ private:
     UPROPERTY()
     ECk_IconSize _IconSize = ECk_IconSize::IconSize_16x16;
 
-    UPROPERTY()
-    ECk_IconBrushType _IconBrushType = ECk_IconBrushType::PNG;
+    UPROPERTY(VisibleDefaultsOnly)
+    ECk_CustomIconBrushType _IconBrushType = ECk_CustomIconBrushType::PNG;
 
-    // StyleName for AssetStyle of type AssetThumbnail or AssetIcon mus tbe the name of the class without the 'U' prefix
+    // StyleName for AssetStyle of type AssetThumbnail or AssetIcon must be the name of the class without the 'U' prefix
     UPROPERTY()
     FName _StyleName = NAME_None;
 
-    // Asset name on disk without the extension
-    UPROPERTY()
-    FName _IconAssetName = NAME_None;
+    // Filename of the icon on disk without the extension
+    UPROPERTY(VisibleDefaultsOnly)
+    FName _IconFileName = NAME_None;
 
 public:
     auto Get_StyleName() const -> FName;
 
 public:
     CK_PROPERTY(_IconSize);
-    CK_PROPERTY(_IconAssetName);
+    CK_PROPERTY(_IconFileName);
     CK_PROPERTY(_IconBrushType);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_CustomSlateStyle_Params, _AssetStyleType, _StyleName);
+    CK_DEFINE_CONSTRUCTORS(FCk_CustomAssetStyle_Params, _AssetStyleType, _StyleName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -107,7 +107,7 @@ public:
 
     static auto
     Register_CustomSlateStyle(
-        const FCk_CustomSlateStyle_Params& InParams) -> void;
+        const FCk_CustomAssetStyle_Params& InParams) -> void;
 
 private:
     static auto
@@ -123,9 +123,13 @@ private:
     DoGet_IconSize(
         ECk_IconSize InSize) -> const FVector2D&;
 
-public:
+private:
     static TSharedPtr<class FSlateStyleSet> _StyleInstance;
     static FName                            _StyleSetName;
+
+public:
+    CK_PROPERTY_GET_STATIC(_StyleInstance);
+    CK_PROPERTY_GET_STATIC(_StyleSetName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

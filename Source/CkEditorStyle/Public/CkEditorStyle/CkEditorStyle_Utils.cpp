@@ -6,14 +6,14 @@
 
 #include <Styling/SlateStyleRegistry.h>
 
-#define IMAGE_PLUGIN_BRUSH(RelativePath, ...) FSlateImageBrush(_StyleInstance->RootToContentDir(RelativePath, TEXT(".png")), __VA_ARGS__)
+#define IMAGE_PLUGIN_BRUSH_PNG(RelativePath, ...) FSlateImageBrush(_StyleInstance->RootToContentDir(RelativePath, TEXT(".png")), __VA_ARGS__)
 #define IMAGE_PLUGIN_BRUSH_SVG(RelativePath, ...) FSlateVectorImageBrush(_StyleInstance->RootToContentDir(RelativePath, TEXT(".svg")), __VA_ARGS__)
 
 // --------------------------------------------------------------------------------------------------------------------
 
 TSharedPtr<FSlateStyleSet> UCk_Utils_EditorStyle_UE::_StyleInstance = nullptr;
 
-FName UCk_Utils_EditorStyle_UE::_StyleSetName = FName(TEXT("CkFondation_EditorStyle"));
+FName UCk_Utils_EditorStyle_UE::_StyleSetName = FName(TEXT("CkFoundation_EditorStyle"));
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -117,7 +117,7 @@ auto
 auto
     UCk_Utils_EditorStyle_UE::
     Register_CustomSlateStyle(
-        const FCk_CustomSlateStyle_Params& InParams)
+        const FCk_CustomAssetStyle_Params& InParams)
     -> void
 {
     if (ck::Is_NOT_Valid(_StyleInstance))
@@ -127,22 +127,22 @@ auto
 
     switch (const auto& IconBrushType = InParams.Get_IconBrushType())
     {
-        case ECk_IconBrushType::PNG:
+        case ECk_CustomIconBrushType::PNG:
         {
             _StyleInstance->Set
             (
                 InParams.Get_StyleName(),
-                new IMAGE_PLUGIN_BRUSH(InParams.Get_IconAssetName().ToString(), DoGet_IconSize(InParams.Get_IconSize()))
+                new IMAGE_PLUGIN_BRUSH_PNG(InParams.Get_IconFileName().ToString(), DoGet_IconSize(InParams.Get_IconSize()))
             );
 
             break;
         }
-        case ECk_IconBrushType::SVG:
+        case ECk_CustomIconBrushType::SVG:
         {
             _StyleInstance->Set
             (
                 InParams.Get_StyleName(),
-                new IMAGE_PLUGIN_BRUSH_SVG(InParams.Get_IconAssetName().ToString(), DoGet_IconSize(InParams.Get_IconSize()))
+                new IMAGE_PLUGIN_BRUSH_SVG(InParams.Get_IconFileName().ToString(), DoGet_IconSize(InParams.Get_IconSize()))
             );
 
             break;
@@ -160,7 +160,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_CustomSlateStyle_Params::
+    FCk_CustomAssetStyle_Params::
     Get_StyleName() const
     -> FName
 {
