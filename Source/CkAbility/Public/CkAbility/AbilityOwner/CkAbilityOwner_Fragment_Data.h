@@ -1,0 +1,177 @@
+#pragma once
+#include "CkAbility/Ability/CkAbility_Fragment_Data.h"
+
+#include "CkCore/Format/CkFormat.h"
+
+#include "CkEcs/Handle/CkHandle.h"
+
+#include "CkAbilityOwner_Fragment_Data.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_AbilityOwner_AbilitySearchPolicy : uint8
+{
+    SearchByName,
+    SearchByHandle
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_AbilitySearchPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Fragment_AbilityOwner_ParamsData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Fragment_AbilityOwner_ParamsData);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<TObjectPtr<const class UCk_Ability_EntityConfig_PDA>> _DefaultAbilities;
+
+public:
+    CK_PROPERTY_GET(_DefaultAbilities);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Request_AbilityOwner_GiveAbility
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_AbilityOwner_GiveAbility);
+
+public:
+    FCk_Request_AbilityOwner_GiveAbility() = default;
+    explicit FCk_Request_AbilityOwner_GiveAbility(
+        const UCk_Ability_EntityConfig_PDA* InAbilityEntityConfig);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<const UCk_Ability_EntityConfig_PDA> _AbilityEntityConfig;
+
+public:
+    CK_PROPERTY_GET(_AbilityEntityConfig)
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Request_AbilityOwner_RevokeAbility
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_AbilityOwner_RevokeAbility);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_AbilityOwner_AbilitySearchPolicy _SearchPolicy = ECk_AbilityOwner_AbilitySearchPolicy::SearchByName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true,
+                  EditCondition="_SearchPolicy==ECk_AbilityOwner_AbilitySearchPolicy::SearchByName",
+                  GameplayTagFilter = "GameplayAbility"))
+    FGameplayTag _AbilityName = FGameplayTag::EmptyTag;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true,
+                  EditCondition="_SearchPolicy==ECk_AbilityOwner_AbilitySearchPolicy::SearchByHandle"))
+    FCk_Handle _AbilityHandle;
+
+public:
+    CK_PROPERTY_GET(_SearchPolicy);
+    CK_PROPERTY_GET(_AbilityName);
+    CK_PROPERTY_GET(_AbilityHandle);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Request_AbilityOwner_ActivateAbility
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_AbilityOwner_ActivateAbility);
+
+public:
+    FCk_Request_AbilityOwner_ActivateAbility() = default;
+    FCk_Request_AbilityOwner_ActivateAbility(
+        FGameplayTag InAbilityName,
+        FCk_Handle InActivationContextEntity);
+
+    FCk_Request_AbilityOwner_ActivateAbility(
+        FCk_Handle InAbilityHandle,
+        FCk_Handle InActivationContextEntity);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_AbilityOwner_AbilitySearchPolicy _SearchPolicy = ECk_AbilityOwner_AbilitySearchPolicy::SearchByName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true,
+                  EditCondition="_SearchPolicy==ECk_GameplayAbilityOwner_AbilitySearchPolicy::SearchByName",
+                  GameplayTagFilter = "GameplayAbility"))
+    FGameplayTag _AbilityName = FGameplayTag::EmptyTag;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true,
+                  EditCondition="_SearchPolicy==ECk_GameplayAbilityOwner_AbilitySearchPolicy::SearchByHandle"))
+    FCk_Handle _AbilityHandle;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FCk_Handle _ActivationContextEntity;
+
+public:
+    CK_PROPERTY_GET(_SearchPolicy);
+    CK_PROPERTY_GET(_AbilityName);
+    CK_PROPERTY_GET(_AbilityHandle);
+    CK_PROPERTY_GET(_ActivationContextEntity);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Request_AbilityOwner_EndAbility
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_AbilityOwner_EndAbility);
+
+public:
+    FCk_Request_AbilityOwner_EndAbility() = default;
+    explicit FCk_Request_AbilityOwner_EndAbility(FGameplayTag InAbilityName);
+    explicit FCk_Request_AbilityOwner_EndAbility(FCk_Handle InAbilityHandle);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_AbilityOwner_AbilitySearchPolicy _SearchPolicy = ECk_AbilityOwner_AbilitySearchPolicy::SearchByName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true,
+                  EditCondition="_SearchPolicy==ECk_AbilityOwner_AbilitySearchPolicy::SearchByName",
+                  GameplayTagFilter = "GameplayAbility"))
+    FGameplayTag _AbilityName = FGameplayTag::EmptyTag;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true,
+                  EditCondition="_SearchPolicy==ECk_AbilityOwner_AbilitySearchPolicy::SearchByHandle"))
+    FCk_Handle _AbilityHandle;
+
+public:
+    CK_PROPERTY_GET(_SearchPolicy);
+    CK_PROPERTY_GET(_AbilityName);
+    CK_PROPERTY_GET(_AbilityHandle);
+};
