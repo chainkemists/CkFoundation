@@ -23,8 +23,6 @@ auto
     const auto NewAbilityEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle,
     [&](const FCk_Handle& InNewEntity)
     {
-        ck::UCk_Utils_OwningEntity::Add(InNewEntity, InHandle);
-
         DoAdd(InNewEntity, InParams);
 
         // TODO: Add Rep Fragment
@@ -192,15 +190,15 @@ auto
 }
 
 auto
-	UCk_Utils_Ability_UE::
-	Get_Status_FromHandle(
-		FCk_Handle InAbilityHandle)
-	-> ECk_Ability_Status
+    UCk_Utils_Ability_UE::
+    Get_Status_FromHandle(
+        FCk_Handle InAbilityHandle)
+    -> ECk_Ability_Status
 {
     CK_ENSURE_IF_NOT(Has(InAbilityHandle), TEXT("Handle [{}] does NOT have Ability"), InAbilityHandle)
-	{ return {}; }
+    { return {}; }
 
-	return InAbilityHandle.Get<ck::FFragment_Ability_Current>().Get_Status();
+    return InAbilityHandle.Get<ck::FFragment_Ability_Current>().Get_Status();
 }
 
 auto
