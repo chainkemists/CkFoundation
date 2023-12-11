@@ -333,14 +333,14 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to Try_Remove Fragment [{}]. Handle [{}] does NOT have a valid Registry."),
         ck::TypeToString<T_Fragment>, *this)
-    { return {}; }
+    { return; }
 
     CK_ENSURE_IF_NOT(IsValid(),
         TEXT("Unable to Try_Remove Fragment [{}]. Handle [{}] does NOT have a valid Entity."),
         ck::TypeToString<T_Fragment>, *this)
-    { return {}; }
+    { return; }
 
-    return _Registry->Remove<T_Fragment>(_Entity);
+    _Registry->Try_Remove<T_Fragment>(_Entity);
 }
 
 template <typename ... T_Fragment>
