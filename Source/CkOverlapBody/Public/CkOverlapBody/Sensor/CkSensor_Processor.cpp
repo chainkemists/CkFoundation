@@ -28,69 +28,69 @@ namespace ck
     {
         InSensorEntity.Remove<MarkedDirtyBy>();
 
-        const auto& owningEntity = UCk_Utils_OwningEntity::Get_StoredEntity(InSensorEntity);
-        const auto& sensorAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(owningEntity);
-        const auto& sensorAttachedEntity = sensorAttachedEntityAndActor.Get_Handle();
+        const auto& SensorLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InSensorEntity);
+        const auto& SensorAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(SensorLifetimeOwner);
+        const auto& SensorAttachedEntity = SensorAttachedEntityAndActor.Get_Handle();
 
         constexpr auto IncludePendingKill = true;
-        CK_ENSURE_IF_NOT(ck::IsValid(sensorAttachedEntityAndActor.Get_Actor().Get(IncludePendingKill), ck::IsValid_Policy_IncludePendingKill{}),
+        CK_ENSURE_IF_NOT(ck::IsValid(SensorAttachedEntityAndActor.Get_Actor().Get(IncludePendingKill), ck::IsValid_Policy_IncludePendingKill{}),
             TEXT("Sensor Entity [{}] is attached to Entity [{}] that does NOT have a valid Actor even though we have an OwningActor Fragment"),
             InSensorEntity,
-            sensorAttachedEntity)
+            SensorAttachedEntity)
         { return; }
 
-        if (Is_NOT_Valid(sensorAttachedEntityAndActor.Get_Actor()))
+        if (Is_NOT_Valid(SensorAttachedEntityAndActor.Get_Actor()))
         { return; }
 
-        InCurrentComp._AttachedEntityAndActor = sensorAttachedEntityAndActor;
+        InCurrentComp._AttachedEntityAndActor = SensorAttachedEntityAndActor;
 
-        const auto& params      = InParamsComp.Get_Params();
-        const auto& shapeParams = params.Get_ShapeParams();
+        const auto& Params      = InParamsComp.Get_Params();
+        const auto& ShapeParams = Params.Get_ShapeParams();
 
-        switch (const auto& shapeType = shapeParams.Get_ShapeDimensions().Get_ShapeType())
+        switch (const auto& ShapeType = ShapeParams.Get_ShapeDimensions().Get_ShapeType())
         {
             case ECk_ShapeType::Box:
             {
-                UCk_Utils_MarkerAndSensor_UE::Add_MarkerOrSensor_ActorComponent<UCk_Sensor_ActorComponent_Box_UE, ECk_ShapeType::Box>(InSensorEntity, sensorAttachedEntityAndActor, params);
+                UCk_Utils_MarkerAndSensor_UE::Add_MarkerOrSensor_ActorComponent<UCk_Sensor_ActorComponent_Box_UE, ECk_ShapeType::Box>(InSensorEntity, SensorAttachedEntityAndActor, Params);
                 break;
             }
             case ECk_ShapeType::Sphere:
             {
-                UCk_Utils_MarkerAndSensor_UE::Add_MarkerOrSensor_ActorComponent<UCk_Sensor_ActorComponent_Sphere_UE, ECk_ShapeType::Sphere>(InSensorEntity, sensorAttachedEntityAndActor, params);
+                UCk_Utils_MarkerAndSensor_UE::Add_MarkerOrSensor_ActorComponent<UCk_Sensor_ActorComponent_Sphere_UE, ECk_ShapeType::Sphere>(InSensorEntity, SensorAttachedEntityAndActor, Params);
                 break;
             }
             case ECk_ShapeType::Capsule:
             {
-                UCk_Utils_MarkerAndSensor_UE::Add_MarkerOrSensor_ActorComponent<UCk_Sensor_ActorComponent_Capsule_UE, ECk_ShapeType::Capsule>(InSensorEntity, sensorAttachedEntityAndActor, params);
+                UCk_Utils_MarkerAndSensor_UE::Add_MarkerOrSensor_ActorComponent<UCk_Sensor_ActorComponent_Capsule_UE, ECk_ShapeType::Capsule>(InSensorEntity, SensorAttachedEntityAndActor, Params);
                 break;
             }
             default:
             {
-                CK_INVALID_ENUM(shapeType);
+                CK_INVALID_ENUM(ShapeType);
                 break;
             }
         }
 
-        const auto& attachmentParams = params.Get_AttachmentParams();
-        const auto& useBoneTransform = EnumHasAnyFlags(attachmentParams.Get_AttachmentPolicy(), ECk_Sensor_AttachmentPolicy::UseBonePosition | ECk_Sensor_AttachmentPolicy::UseBoneRotation);
+        const auto& AttachmentParams = Params.Get_AttachmentParams();
+        const auto& UseBoneTransform = EnumHasAnyFlags(AttachmentParams.Get_AttachmentPolicy(), ECk_Sensor_AttachmentPolicy::UseBonePosition | ECk_Sensor_AttachmentPolicy::UseBoneRotation);
 
-        if (NOT useBoneTransform)
+        if (NOT UseBoneTransform)
         { return; }
 
-        CK_ENSURE_IF_NOT(ck::IsValid(attachmentParams.Get_BoneName()),
+        CK_ENSURE_IF_NOT(ck::IsValid(AttachmentParams.Get_BoneName()),
             TEXT("Sensor Entity [{}] uses Attachment Policy [UseBonePosition: {}, UseBoneRotation: {}] but has an INVALID BoneName specified"),
             InSensorEntity,
-            EnumHasAnyFlags(attachmentParams.Get_AttachmentPolicy(), ECk_Sensor_AttachmentPolicy::UseBonePosition),
-            EnumHasAnyFlags(attachmentParams.Get_AttachmentPolicy(), ECk_Sensor_AttachmentPolicy::UseBoneRotation))
+            EnumHasAnyFlags(AttachmentParams.Get_AttachmentPolicy(), ECk_Sensor_AttachmentPolicy::UseBonePosition),
+            EnumHasAnyFlags(AttachmentParams.Get_AttachmentPolicy(), ECk_Sensor_AttachmentPolicy::UseBoneRotation))
         { return; }
 
-        const auto& attachedActorSkeletalMeshComponent = sensorAttachedEntityAndActor.Get_Actor()->FindComponentByClass<USkeletalMeshComponent>();
+        const auto& AttachedActorSkeletalMeshComponent = SensorAttachedEntityAndActor.Get_Actor()->FindComponentByClass<USkeletalMeshComponent>();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(attachedActorSkeletalMeshComponent),
+        CK_ENSURE_IF_NOT(ck::IsValid(AttachedActorSkeletalMeshComponent),
             TEXT("Sensor Entity [{}] cannot use Attachment Policy [UseBonePosition: {}, UseBoneRotation: {}] because it is attached to an Actor that has NO SkeletalMesh"),
             InSensorEntity,
-            EnumHasAnyFlags(attachmentParams.Get_AttachmentPolicy(), ECk_Sensor_AttachmentPolicy::UseBonePosition),
-            EnumHasAnyFlags(attachmentParams.Get_AttachmentPolicy(), ECk_Sensor_AttachmentPolicy::UseBoneRotation))
+            EnumHasAnyFlags(AttachmentParams.Get_AttachmentPolicy(), ECk_Sensor_AttachmentPolicy::UseBonePosition),
+            EnumHasAnyFlags(AttachmentParams.Get_AttachmentPolicy(), ECk_Sensor_AttachmentPolicy::UseBoneRotation))
         { return; }
 
         UCk_Utils_Sensor_UE::Request_MarkSensor_AsNeedToUpdateTransform(InSensorEntity);
@@ -319,10 +319,10 @@ namespace ck
             OverlapDetails
         };
 
-        const auto& sensorOwningEntity = UCk_Utils_OwningEntity::Get_StoredEntity(InSensorEntity);
+        const auto& SensorLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InSensorEntity);
 
         UUtils_Signal_OnSensorEndOverlap::Broadcast(InSensorEntity, MakePayload(
-            sensorOwningEntity, OnEndOverlapPayload));
+            SensorLifetimeOwner, OnEndOverlapPayload));
     }
 
     auto
@@ -423,8 +423,8 @@ namespace ck
             InSensorEntity)
         { return; }
 
-        const auto& sensor = InCurrentComp.Get_Sensor().Get();
-        CK_ENSURE_IF_NOT(ck::IsValid(sensor), TEXT("Invalid Sensor Actor Component stored for Sensor Entity [{}]"), InSensorEntity)
+        const auto& Sensor = InCurrentComp.Get_Sensor().Get();
+        CK_ENSURE_IF_NOT(ck::IsValid(Sensor), TEXT("Invalid Sensor Actor Component stored for Sensor Entity [{}]"), InSensorEntity)
         { return; }
 
         const auto& BoneTransform = [&]() -> TOptional<FTransform>
@@ -466,8 +466,8 @@ namespace ck
         if (ck::Is_NOT_Valid(BoneTransform))
         { return; }
 
-        sensor->SetWorldTransform(*BoneTransform);
-        sensor->AddLocalTransform(InParamsComp.Get_Params().Get_RelativeTransform());
+        Sensor->SetWorldTransform(*BoneTransform);
+        Sensor->AddLocalTransform(InParamsComp.Get_Params().Get_RelativeTransform());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

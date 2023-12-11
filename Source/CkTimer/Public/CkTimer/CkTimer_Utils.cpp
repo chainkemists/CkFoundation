@@ -35,7 +35,6 @@ auto
 
     const auto NewTimerEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
     {
-        ck::UCk_Utils_OwningEntity::Add(InNewEntity, InHandle);
         UCk_Utils_GameplayLabel_UE::Add(InNewEntity, ParamsToUse.Get_TimerName());
 
         InNewEntity.Add<ck::FFragment_Timer_Params>(ParamsToUse);
@@ -54,12 +53,12 @@ auto
 }
 
 auto
-	UCk_Utils_Timer_UE::
-	Replace(
-		FCk_Handle                           InTimerOwnerEntity,
-		FGameplayTag                         InTimerName,
-		const FCk_Fragment_Timer_ParamsData& InParams)
-	-> void
+    UCk_Utils_Timer_UE::
+    Replace(
+        FCk_Handle                           InTimerOwnerEntity,
+        FGameplayTag                         InTimerName,
+        const FCk_Fragment_Timer_ParamsData& InParams)
+    -> void
 {
     if (NOT Ensure(InTimerOwnerEntity, InTimerName))
     { return; }
@@ -71,10 +70,10 @@ auto
     TimerEntity.Replace<ck::FFragment_Timer_Params>(InParams);
     TimerEntity.Replace<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
 
-	if (InParams.Get_StartingState() == ECk_Timer_State::Running)
-	{
-		TimerEntity.Add<ck::FTag_Timer_NeedsUpdate>();
-	}
+    if (InParams.Get_StartingState() == ECk_Timer_State::Running)
+    {
+        TimerEntity.Add<ck::FTag_Timer_NeedsUpdate>();
+    }
 }
 
 auto

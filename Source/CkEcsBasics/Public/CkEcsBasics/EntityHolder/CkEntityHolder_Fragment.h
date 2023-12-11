@@ -19,10 +19,6 @@ namespace ck
     public:
         using EntityType = FCk_Handle;
 
-    public:
-        FFragment_EntityHolder() = default;
-        explicit FFragment_EntityHolder(EntityType InEntity);
-
     private:
         EntityType _Entity;
 
@@ -31,6 +27,9 @@ namespace ck
 
     private:
         CK_PROPERTY_GET_NON_CONST(_Entity);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_EntityHolder, _Entity);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -43,13 +42,6 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     struct FFragment_TargetEntity : public FFragment_EntityHolder
-    {
-        using FFragment_EntityHolder::FFragment_EntityHolder;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    struct FFragment_OwningEntity : public FFragment_EntityHolder
     {
         using FFragment_EntityHolder::FFragment_EntityHolder;
     };

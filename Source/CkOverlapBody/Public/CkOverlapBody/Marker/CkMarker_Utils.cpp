@@ -46,7 +46,6 @@ auto
         InMarkerEntity.Add<ck::FFragment_Marker_Current>(ParamsToUse.Get_StartingState());
         InMarkerEntity.Add<ck::FTag_Marker_Setup>();
 
-        ck::UCk_Utils_OwningEntity::Add(InMarkerEntity, InHandle);
         UCk_Utils_GameplayLabel_UE::Add(InMarkerEntity, markerName);
     });
 

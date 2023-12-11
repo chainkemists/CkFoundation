@@ -22,8 +22,6 @@ auto
     {
         const auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwner);
 
-        ck::UCk_Utils_OwningEntity::Add(NewAttributeEntity, InHandle);
-
         FloatAttribute_Utils::Add(NewAttributeEntity, InAttributeBaseValue);
         UCk_Utils_GameplayLabel_UE::Add(NewAttributeEntity, InAttributeName);
 
