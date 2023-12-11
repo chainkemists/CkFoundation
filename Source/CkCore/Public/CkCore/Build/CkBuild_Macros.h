@@ -54,8 +54,12 @@ namespace ck
     #define CK_BUILD_LOGGING 1
 #endif
 
+#ifdef ENABLE_DRAW_DEBUG
 #if ENABLE_DRAW_DEBUG
     #define CK_BUILD_DEBUG_DRAW 1
+#else
+    #define CK_BUILD_DEBUG_DRAW 0
+#endif
 #else
     #define CK_BUILD_DEBUG_DRAW 0
 #endif
