@@ -3,6 +3,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Handle/CkHandle.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_RecordEntry_UE;
