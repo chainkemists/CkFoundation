@@ -48,182 +48,89 @@ auto
 auto
     UCk_Utils_Ability_UE::
     Has(
-        FCk_Handle   InAbilityOwnerEntity,
-        FGameplayTag InAbilityName)
+        FCk_Handle InAbilityEntity)
     -> bool
 {
-    const auto& AbilityEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Ability_UE,
-        RecordOfAbilities_Utils>(InAbilityOwnerEntity, InAbilityName);
-
-    return ck::IsValid(AbilityEntity);
-}
-
-auto
-    UCk_Utils_Ability_UE::
-    Has_Any(
-        FCk_Handle InAbilityOwnerEntity)
-    -> bool
-{
-    return RecordOfAbilities_Utils::Has(InAbilityOwnerEntity);
+    return InAbilityEntity.Has_All<ck::FFragment_Ability_Params, ck::FFragment_Ability_Current>();
 }
 
 auto
     UCk_Utils_Ability_UE::
     Ensure(
-        FCk_Handle   InAbilityOwnerEntity,
-        FGameplayTag InAbilityName)
+        FCk_Handle InAbilityEntity)
     -> bool
 {
-    CK_ENSURE_IF_NOT(Has(InAbilityOwnerEntity, InAbilityName), TEXT("Handle [{}] does NOT have Ability [{}]"), InAbilityOwnerEntity, InAbilityName)
+    CK_ENSURE_IF_NOT(Has(InAbilityEntity), TEXT("Handle [{}] does NOT have an Ability"), InAbilityEntity)
     { return false; }
 
     return true;
 }
 
 auto
-    UCk_Utils_Ability_UE::
-    Ensure_Any(
-        FCk_Handle InAbilityOwnerEntity)
-    -> bool
+	UCk_Utils_Ability_UE::
+	Get_Info(
+		FCk_Handle InAbilityEntity)
+	-> FCk_Ability_Info
 {
-    CK_ENSURE_IF_NOT(Has_Any(InAbilityOwnerEntity), TEXT("Handle [{}] does NOT have any Ability [{}]"), InAbilityOwnerEntity)
-    { return false; }
-
-    return true;
-}
-
-auto
-    UCk_Utils_Ability_UE::
-    Get_AllWithStatus(
-        FCk_Handle InAbilityOwnerEntity,
-        ECk_Ability_Status InStatus)
-    -> TArray<FGameplayTag>
-{
-    if (NOT Has_Any(InAbilityOwnerEntity))
+    if (NOT Ensure(InAbilityEntity))
     { return {}; }
 
-    TArray<FGameplayTag> Abilities;
+    const auto& Label = UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntity);
+    const auto& AbilityOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityEntity);
 
-    RecordOfAbilities_Utils::ForEachEntry
-    (
-        InAbilityOwnerEntity,
-        [&](const FCk_Handle& InAbilityEntity)
-        {
-            const auto& AbilityName = UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntity);
-            if (UCk_Utils_Ability_UE::Get_Status(InAbilityEntity, AbilityName) == InStatus)
-            {
-                Abilities.Add(AbilityName);
-            }
-        }
-    );
-
-    return Abilities;
-}
-
-auto
-    UCk_Utils_Ability_UE::
-    Get_All(
-        FCk_Handle InAbilityOwnerEntity)
-    -> TArray<FGameplayTag>
-{
-    if (NOT Has_Any(InAbilityOwnerEntity))
-    { return {}; }
-
-    const auto& AbilityEntities = RecordOfAbilities_Utils::Get_AllRecordEntries(InAbilityOwnerEntity);
-
-    return ck::algo::Transform<TArray<FGameplayTag>>(AbilityEntities, [&](FCk_Handle InAbilityEntity)
-    {
-        return UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntity);
-    });
+    return FCk_Ability_Info{Label, AbilityOwner};
 }
 
 auto
     UCk_Utils_Ability_UE::
     Get_ActivationSettings(
-        FCk_Handle   InAbilityOwnerEntity,
-        FGameplayTag InAbilityName)
+        FCk_Handle InAbilityEntity)
     -> FCk_Ability_ActivationSettings
 {
-    if (NOT Ensure(InAbilityOwnerEntity, InAbilityName))
+    if (NOT Ensure(InAbilityEntity))
     { return {}; }
 
-    const auto& AbilityEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Ability_UE,
-        RecordOfAbilities_Utils>(InAbilityOwnerEntity, InAbilityName);
-
-    return AbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params().Get_Data().Get_ActivationSettings();
+    return InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params().Get_Data().Get_ActivationSettings();
 }
 
 auto
     UCk_Utils_Ability_UE::
     Get_NetworkSettings(
-        FCk_Handle   InAbilityOwnerEntity,
-        FGameplayTag InAbilityName)
+        FCk_Handle InAbilityEntity)
     -> FCk_Ability_NetworkSettings
 {
-    if (NOT Ensure(InAbilityOwnerEntity, InAbilityName))
+    if (NOT Ensure(InAbilityEntity))
     { return {}; }
 
-    const auto& AbilityEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Ability_UE,
-        RecordOfAbilities_Utils>(InAbilityOwnerEntity, InAbilityName);
-
-    return AbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params().Get_Data().Get_NetworkSettings();
+    return InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params().Get_Data().Get_NetworkSettings();
 }
 
 auto
     UCk_Utils_Ability_UE::
     Get_Status(
-        FCk_Handle   InAbilityOwnerEntity,
-        FGameplayTag InAbilityName)
+        FCk_Handle InAbilityEntity)
     -> ECk_Ability_Status
 {
-    if (NOT Ensure(InAbilityOwnerEntity, InAbilityName))
+    if (NOT Ensure(InAbilityEntity))
     { return {}; }
 
-    const auto& AbilityEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Ability_UE,
-        RecordOfAbilities_Utils>(InAbilityOwnerEntity, InAbilityName);
-
-    return AbilityEntity.Get<ck::FFragment_Ability_Current>().Get_Status();
-}
-
-auto
-    UCk_Utils_Ability_UE::
-    Get_Status_FromHandle(
-        FCk_Handle InAbilityHandle)
-    -> ECk_Ability_Status
-{
-    CK_ENSURE_IF_NOT(Has(InAbilityHandle), TEXT("Handle [{}] does NOT have Ability"), InAbilityHandle)
-    { return {}; }
-
-    return InAbilityHandle.Get<ck::FFragment_Ability_Current>().Get_Status();
-}
-
-auto
-    UCk_Utils_Ability_UE::
-    Has(
-        FCk_Handle InHandle)
-    -> bool
-{
-    return InHandle.Has_All<ck::FFragment_Ability_Params, ck::FFragment_Ability_Current>();
+    return InAbilityEntity.Get<ck::FFragment_Ability_Current>().Get_Status();
 }
 
 auto
     UCk_Utils_Ability_UE::
     DoActivate(
-        FCk_Handle InHandle)
+        FCk_Handle InAbilityEntity)
     -> void
 {
-    if (NOT Has(InHandle))
+    if (NOT Has(InAbilityEntity))
     { return; }
 
-    auto& AbilityCurrent = InHandle.Get<ck::FFragment_Ability_Current>();
+    auto& AbilityCurrent = InAbilityEntity.Get<ck::FFragment_Ability_Current>();
 
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityCurrent._AbilityScript),
         TEXT("Cannot Activate Ability with Entity [{}] because its AbilityScript is INVALID"),
-        InHandle)
+        InAbilityEntity)
     { return; }
 
     AbilityCurrent._Status = ECk_Ability_Status::Active;
@@ -235,17 +142,17 @@ auto
 auto
     UCk_Utils_Ability_UE::
     DoEnd(
-        FCk_Handle InHandle)
+        FCk_Handle InAbilityEntity)
     -> void
 {
-    if (NOT Has(InHandle))
+    if (NOT Has(InAbilityEntity))
     { return; }
 
-    auto& AbilityCurrent = InHandle.Get<ck::FFragment_Ability_Current>();
+    auto& AbilityCurrent = InAbilityEntity.Get<ck::FFragment_Ability_Current>();
 
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityCurrent._AbilityScript),
         TEXT("Cannot End Ability with Entity [{}] because its AbilityScript is INVALID"),
-        InHandle)
+        InAbilityEntity)
     { return; }
 
     AbilityCurrent._Status = ECk_Ability_Status::NotActive;
@@ -257,17 +164,17 @@ auto
 auto
     UCk_Utils_Ability_UE::
     DoGet_CanActivate(
-        FCk_Handle InHandle)
+        FCk_Handle InAbilityEntity)
     -> bool
 {
-    if (NOT Has(InHandle))
+    if (NOT Ensure(InAbilityEntity))
     { return {}; }
 
-    const auto& AbilityCurrent = InHandle.Get<ck::FFragment_Ability_Current>();
+    const auto& AbilityCurrent = InAbilityEntity.Get<ck::FFragment_Ability_Current>();
 
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityCurrent._AbilityScript),
         TEXT("Cannot check if Ability with Entity [{}] can be Activated because its AbilityScript is INVALID"),
-        InHandle)
+        InAbilityEntity)
     { return {}; }
 
     return AbilityCurrent._AbilityScript->Get_CanActivateAbility();
@@ -332,6 +239,9 @@ auto
         FCk_Handle InAbility)
     -> void
 {
+    if (NOT Ensure(InAbility))
+    { return; }
+
     RecordOfAbilities_Utils::Request_Connect(InAbilityOwner, InAbility);
     const auto Script = InAbility.Get<ck::FFragment_Ability_Current>().Get_AbilityScript();
 
@@ -354,6 +264,9 @@ auto
         FCk_Handle InAbility)
     -> void
 {
+    if (NOT Ensure(InAbility))
+    { return; }
+
     const auto& Current = InAbility.Get<ck::FFragment_Ability_Current>();
     if (Current.Get_Status() == ECk_Ability_Status::Active)
     {

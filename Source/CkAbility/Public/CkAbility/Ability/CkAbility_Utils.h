@@ -22,6 +22,33 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Ability_Info
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Ability_Info);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTag _AbilityName = FGameplayTag::EmptyTag;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              Category = "Activation",
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _AbilityOwnerEntity;
+
+public:
+    CK_PROPERTY_GET(_AbilityName);
+    CK_PROPERTY_GET(_AbilityOwnerEntity);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Ability_Info, _AbilityName, _AbilityOwnerEntity);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable)
 class CKABILITY_API UCk_Utils_Ability_UE : public UCk_Utils_Ecs_Base_UE
 {
@@ -56,83 +83,49 @@ public:
         FCk_Handle InHandle,
         const FCk_Fragment_MultipleAbility_ParamsData& InParams);
 
+public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
               DisplayName="Has Ability")
     static bool
     Has(
-        FCk_Handle InAbilityOwnerEntity,
-        FGameplayTag InAbilityName);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Ability",
-              DisplayName="Has Any Ability")
-    static bool
-    Has_Any(
-        FCk_Handle InAbilityOwnerEntity);
+        FCk_Handle InAbilityEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
               DisplayName="Ensure Has Ability")
     static bool
     Ensure(
-        FCk_Handle InAbilityOwnerEntity,
-        FGameplayTag InAbilityName);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Ability",
-              DisplayName="Ensure Has Any Ability")
-    static bool
-    Ensure_Any(
-        FCk_Handle InAbilityOwnerEntity);
+        FCk_Handle InAbilityEntity);
 
 public:
-    UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability",
-              DisplayName="Get All Abilities With Status")
-    static TArray<FGameplayTag>
-    Get_AllWithStatus(
-        FCk_Handle InAbilityOwnerEntity,
-        ECk_Ability_Status InStatus);
+			  meta=(CompactNodeTitle="."))
+    static FCk_Ability_Info
+    Get_Info(
+        FCk_Handle InAbilityEntity);
 
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Ability",
-              DisplayName="Get All Abilities")
-    static TArray<FGameplayTag>
-    Get_All(
-        FCk_Handle InAbilityOwnerEntity);
-
-public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
               DisplayName="Get Ability Activation Settings")
     static FCk_Ability_ActivationSettings
     Get_ActivationSettings(
-        FCk_Handle InAbilityOwnerEntity,
-        FGameplayTag InAbilityName);
+        FCk_Handle InAbilityEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
               DisplayName="Get Ability Network Settings")
     static FCk_Ability_NetworkSettings
     Get_NetworkSettings(
-        FCk_Handle InAbilityOwnerEntity,
-        FGameplayTag InAbilityName);
+        FCk_Handle InAbilityEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
               DisplayName="Get Ability Status")
     static ECk_Ability_Status
     Get_Status(
-        FCk_Handle InAbilityOwnerEntity,
-        FGameplayTag InAbilityName);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Ability",
-              DisplayName="Get Ability Status from Handle")
-    static ECk_Ability_Status
-    Get_Status_FromHandle(
-        FCk_Handle InAbilityHandle);
+        FCk_Handle InAbilityEntity);
 
 private:
     static auto
@@ -144,15 +137,15 @@ private:
 private:
     static auto
     DoActivate(
-        FCk_Handle InHandle) -> void;
+        FCk_Handle InAbilityEntity) -> void;
 
     static auto
     DoEnd(
-        FCk_Handle InHandle) -> void;
+        FCk_Handle InAbilityEntity) -> void;
 
     static auto
     DoGet_CanActivate(
-        FCk_Handle InHandle) -> bool;
+        FCk_Handle InAbilityEntity) -> bool;
 
     static auto
     DoGive(
@@ -163,11 +156,6 @@ private:
     DoRevoke(
         FCk_Handle InAbilityOwner,
         FCk_Handle InAbility) -> void;
-
-private:
-    static auto
-    Has(
-        FCk_Handle InHandle) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -34,8 +34,6 @@ namespace ck
 				InHandle,
 				InHandle)
 			{ return; }
-
-			Script->OnGiveAbility();
         }
 
         for (const auto& DefaultAbility : Params.Get_DefaultAbilities())
@@ -133,7 +131,7 @@ namespace ck
 
         const auto& AbilityName = AbilityParams.Get_Data().Get_AbilityName();
 
-        const auto& AlreadyHasAbilityWithName = UCk_Utils_Ability_UE::Has(InAbilityOwnerEntity, AbilityName);
+        const auto& AlreadyHasAbilityWithName = UCk_Utils_AbilityOwner_UE::Has_Ability(InAbilityOwnerEntity, AbilityName);
 
         CK_ENSURE_IF_NOT(NOT AlreadyHasAbilityWithName, TEXT("Cannot give Ability [{}] to Ability Owner [{}] because it already has it"), AbilityName, InAbilityOwnerEntity)
         { return; }
@@ -150,7 +148,7 @@ namespace ck
 
             UCk_Utils_Ability_UE::DoGive(InAbilityOwnerEntity, InAbilityEntity);
 
-            if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityEntity, AbilityName).Get_ActivationPolicy();
+            if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityEntity).Get_ActivationPolicy();
                 ActivationPolicy == ECk_Ability_ActivationPolicy::ActivateOnGranted)
             {
                 // TODO: Activation Context Entity for SelfActivating Abilities is the Owner of the Ability
@@ -224,14 +222,27 @@ namespace ck
             const FCk_Request_AbilityOwner_ActivateAbility& InRequest) const
         -> void
     {
-        const auto& DoGet_AreActivationRequirementsMet = [&](const FCk_Ability_ActivationSettings& InAbilityActivationSettings)
+        const auto& DoGet_AreActivationRequirementsMetOnOwner = [&](const FCk_Ability_ActivationSettings_OnOwner& InAbilityActivationSettings)
         {
-            const auto ActivationRequirements = InAbilityActivationSettings.Get_ActivationRequiredTags();
-            const auto ActivationBlockers = InAbilityActivationSettings.Get_ActivationBlockedTags();
+            const auto ActivationRequirements = InAbilityActivationSettings.Get_RequiredTagsOnAbilityOwner();
+            const auto ActivationBlockers = InAbilityActivationSettings.Get_BlockedByTagsOnAbilityOwner();
 
             const auto& ActivateTags = InAbilityOwnerComp.Get_ActiveTags();
 
             return ActivateTags.HasAllExact(ActivationRequirements) && NOT ActivateTags.HasAny(ActivationBlockers);
+        };
+
+        const auto& DoGet_AreActivationRequirementsMetOnSelf = [&](FCk_Handle InAbilityHandle,
+            const FCk_Ability_ActivationSettings_OnSelf& InAbilityActivationSettings)
+        {
+            if (NOT UCk_Utils_AbilityOwner_UE::Has(InAbilityHandle))
+            { return true; }
+
+            const auto ActivationBlockers = InAbilityActivationSettings.Get_BlockedByTagsOnSelf();
+
+            const auto& ActivateTags = UCk_Utils_AbilityOwner_UE::Get_ActiveTags(InAbilityHandle);
+
+            return NOT ActivateTags.HasAny(ActivationBlockers);
         };
 
         const auto& DoTryActivateAbility = [&](const FCk_Handle& InAbilityToActivateEntity, const FGameplayTag& InAbilityToActivateName) -> void
@@ -239,14 +250,14 @@ namespace ck
             if (NOT UCk_Utils_Ability_UE::DoGet_CanActivate(InAbilityToActivateEntity))
             { return; }
 
-            const auto& AbilityActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityToActivateEntity, InAbilityToActivateName);
+            const auto& AbilityActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityToActivateEntity);
 
-            if (NOT DoGet_AreActivationRequirementsMet(AbilityActivationSettings))
+            if (NOT DoGet_AreActivationRequirementsMetOnOwner(AbilityActivationSettings.Get_ActivationSettingsOnOwner()))
             {
-                ability::VeryVerbose
+                ability::Verbose
                 (
-                    TEXT("Failed to Activate Ability Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
-                         "because the Activation Requirements are NOT met"),
+                    TEXT("Failed to Activate Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
+                         "because the Activation Requirements on ABILITY OWNER are NOT met"),
                     InAbilityToActivateName,
                     InAbilityToActivateEntity,
                     InAbilityOwnerEntity
@@ -255,10 +266,25 @@ namespace ck
                 return;
             }
 
-            const auto& GrantedTags = AbilityActivationSettings.Get_ActivationOwnerGrantedTags();
+            if (NOT DoGet_AreActivationRequirementsMetOnSelf(InAbilityToActivateEntity,
+                AbilityActivationSettings.Get_ActivationSettingsOnSelf()))
+            {
+                ability::Verbose
+                (
+                    TEXT("Failed to Activate Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
+                         "because the Activation Requirements on ABILITY ITSELF are NOT met"),
+                    InAbilityToActivateName,
+                    InAbilityToActivateEntity,
+                    InAbilityOwnerEntity
+                );
+
+                return;
+            }
+
+            const auto& GrantedTags = AbilityActivationSettings.Get_ActivationSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
             InAbilityOwnerComp.AppendTags(GrantedTags);
 
-            ability::VeryVerbose
+            ability::Verbose
             (
                 TEXT("Activating Ability [Name: {} | Entity: {}] on Ability Owner [{}] and Granting Tags [{}]"),
                 InAbilityToActivateName,
@@ -273,7 +299,7 @@ namespace ck
                 InAbilityOwnerEntity,
                 [&](const FCk_Handle& InAbilityEntityToCancel)
                 {
-                    ability::VeryVerbose
+                    ability::Verbose
                     (
                         TEXT("Cancelling Ability [Name: {} | Entity: {}] after Activating Ability [Name: {} | Entity: {}] on Ability Owner [{}]"),
                         UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntityToCancel),
@@ -334,11 +360,11 @@ namespace ck
     {
         const auto& DoEndAbility = [&](const FCk_Handle& InAbilityEntity, const FGameplayTag& InAbilityName) -> void
         {
-            if (UCk_Utils_Ability_UE::Get_Status(InAbilityEntity, InAbilityName) == ECk_Ability_Status::NotActive)
+            if (UCk_Utils_Ability_UE::Get_Status(InAbilityEntity) == ECk_Ability_Status::NotActive)
             { return; }
 
-            const auto& AbilityActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityEntity, InAbilityName);
-            const auto& GrantedTags = AbilityActivationSettings.Get_ActivationOwnerGrantedTags();
+            const auto& AbilityActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityEntity);
+            const auto& GrantedTags = AbilityActivationSettings.Get_ActivationSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
 
             InAbilityOwnerComp.RemoveTags(GrantedTags);
 

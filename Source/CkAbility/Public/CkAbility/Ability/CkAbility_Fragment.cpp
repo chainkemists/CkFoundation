@@ -1,6 +1,7 @@
 #include "CkAbility_Fragment.h"
 
 #include "CkAbility/Ability/CkAbility_Utils.h"
+#include "CkAbility/AbilityOwner/CkAbilityOwner_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -14,10 +15,19 @@ namespace ck::algo
     {
         const auto AbilityName = UCk_Utils_GameplayLabel_UE::Get_Label(InHandle);
 
-        if (NOT UCk_Utils_Ability_UE::Has(InHandle, AbilityName))
+        if (NOT UCk_Utils_AbilityOwner_UE::Has_Ability(InHandle, AbilityName))
         { return false; }
 
-        return UCk_Utils_Ability_UE::Get_ActivationSettings(InHandle, AbilityName).Get_ActivationCancelledTags().HasAnyExact(_Tags);
+        const auto CancelledByTags = [&]()
+        {
+            const auto& ActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InHandle);
+            auto Tags = ActivationSettings.Get_ActivationSettingsOnOwner().Get_CancelledByTagsOnAbilityOwner();
+            Tags.AppendTags(ActivationSettings.Get_ActivationSettingsOnSelf().Get_CancelledByTagsOnSelf());
+
+            return Tags;
+		}();
+
+        return CancelledByTags.HasAnyExact(_Tags);
     }
 }
 
