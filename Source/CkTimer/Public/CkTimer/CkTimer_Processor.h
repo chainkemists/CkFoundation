@@ -24,12 +24,26 @@ namespace ck
             FFragment_Timer_Current& InCurrentComp,
             const FFragment_Timer_Params& InParamsComp,
             FFragment_Timer_Requests& InRequestsComp) const -> void;
+
+    private:
+        auto DoHandleRequest(
+            HandleType InHandle,
+            FFragment_Timer_Current& InCurrentComp,
+            const FFragment_Timer_Params& InParamsComp,
+            const FCk_Request_Timer_Manipulate& InRequest) const -> void;
+
+        auto DoHandleRequest(
+            HandleType InHandle,
+            FFragment_Timer_Current& InCurrentComp,
+            const FFragment_Timer_Params& InParamsComp,
+            const FCk_Request_Timer_Jump& InRequest) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKTIMER_API FProcessor_Timer_Update
-        : public TProcessor<FProcessor_Timer_Update, FFragment_Timer_Params, FFragment_Timer_Current, FTag_Timer_NeedsUpdate>
+        : public TProcessor<FProcessor_Timer_Update, FFragment_Timer_Params, FFragment_Timer_Current, FTag_Timer_NeedsUpdate,
+			ck::TExclude<FTag_Timer_Countdown>>
     {
     public:
         using MarkedDirtyBy = FTag_Timer_NeedsUpdate;
@@ -47,12 +61,12 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKTIMER_API FProcessor_Timer_Replicate
-        : public TProcessor<FProcessor_Timer_Replicate,
-            FFragment_Timer_Current, TObjectPtr<UCk_Fragment_Timer_Rep>, FTag_Timer_Updated>
+    class CKTIMER_API FProcessor_Timer_Update_Countdown
+        : public TProcessor<FProcessor_Timer_Update_Countdown, FFragment_Timer_Params, FFragment_Timer_Current, FTag_Timer_NeedsUpdate,
+			FTag_Timer_Countdown>
     {
     public:
-        using MarkedDirtyBy = FTag_Timer_Updated;
+        using MarkedDirtyBy = FTag_Timer_NeedsUpdate;
 
     public:
         using TProcessor::TProcessor;
@@ -60,10 +74,12 @@ namespace ck
     public:
         auto ForEachEntity(
             TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_Timer_Current& InCurrent,
-            const TObjectPtr<UCk_Fragment_Timer_Rep>& InComp) const -> void;
+            HandleType InTimerEntity,
+            const FFragment_Timer_Params& InParams,
+            FFragment_Timer_Current& InCurrentComp) const -> void;
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------
