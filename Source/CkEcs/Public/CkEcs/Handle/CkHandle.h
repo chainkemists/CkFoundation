@@ -154,6 +154,23 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck::algo
+{
+    struct CKECS_API MatchesEntityHandle
+    {
+    public:
+        auto operator()(const FCk_Handle& InHandle) const -> bool;
+
+    private:
+        FCk_Handle _EntityHandle;
+
+    public:
+        CK_DEFINE_CONSTRUCTOR(MatchesEntityHandle, _EntityHandle);
+    };
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 CK_DEFINE_CUSTOM_IS_VALID(FCk_Handle, ck::IsValid_Policy_Default, [&](const FCk_Handle& InHandle)
 {
     return InHandle.IsValid();
