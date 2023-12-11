@@ -40,6 +40,133 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
+    Has_Ability(
+        FCk_Handle   InAbilityOwnerEntity,
+        FGameplayTag InAbilityName)
+    -> bool
+{
+    const auto& AbilityEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Ability_UE,
+        RecordOfAbilities_Utils>(InAbilityOwnerEntity, InAbilityName);
+
+    return ck::IsValid(AbilityEntity);
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Has_Any(
+        FCk_Handle InAbilityOwnerEntity)
+    -> bool
+{
+    return RecordOfAbilities_Utils::Has(InAbilityOwnerEntity);
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Ensure_Ability(
+        FCk_Handle   InAbilityOwnerEntity,
+        FGameplayTag InAbilityName)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(Has_Ability(InAbilityOwnerEntity, InAbilityName),
+        TEXT("Handle [{}] does NOT have Ability [{}]"), InAbilityOwnerEntity, InAbilityName)
+    { return false; }
+
+    return true;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Ensure_Any(
+        FCk_Handle InAbilityOwnerEntity)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(Has_Any(InAbilityOwnerEntity), TEXT("Handle [{}] does NOT have any Ability [{}]"), InAbilityOwnerEntity)
+    { return false; }
+
+    return true;
+}
+
+auto
+	UCk_Utils_AbilityOwner_UE::
+	Get_Ability(
+		FCk_Handle   InAbilityOwnerEntity,
+		FGameplayTag InAbilityName)
+	-> FCk_Handle
+{
+    if (NOT Ensure_Ability(InAbilityOwnerEntity, InAbilityName))
+    { return {}; }
+
+    const auto& AbilityEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Ability_UE,
+        RecordOfAbilities_Utils>(InAbilityOwnerEntity, InAbilityName);
+
+    return AbilityEntity;
+}
+
+auto
+	UCk_Utils_AbilityOwner_UE::
+	ForEach_Ability(
+		FCk_Handle                                      InAbilityOwnerEntity,
+		const FCk_Delegate_AbilityOwner_ForEachAbility& InDelegate)
+	-> void
+{
+    ForEach_Ability(InAbilityOwnerEntity, [&](FCk_Handle InAbility)
+	{
+		InDelegate.Execute(InAbility);
+	});
+}
+
+auto
+	UCk_Utils_AbilityOwner_UE::
+	ForEach_Ability(
+		FCk_Handle                         InAbilityOwnerEntity,
+		const TFunction<void(FCk_Handle)>& InFunc)
+	-> void
+{
+    RecordOfAbilities_Utils::ForEachEntry
+    (
+        InAbilityOwnerEntity,
+        [&](const FCk_Handle& InAbilityEntity)
+        {
+            InFunc(InAbilityEntity);
+        }
+    );
+}
+
+auto
+	UCk_Utils_AbilityOwner_UE::
+	ForEach_Ability_WithStatus(
+		FCk_Handle                                      InAbilityOwnerEntity,
+		ECk_Ability_Status                              InStatus,
+		const FCk_Delegate_AbilityOwner_ForEachAbility& InDelegate)
+	-> void
+{
+    ForEach_Ability_WithStatus(InAbilityOwnerEntity, InStatus, [&](FCk_Handle InAbility)
+	{
+		InDelegate.Execute(InAbility);
+	});
+}
+
+auto
+	UCk_Utils_AbilityOwner_UE::
+	ForEach_Ability_WithStatus(
+		FCk_Handle InAbilityOwnerEntity,
+		ECk_Ability_Status InStatus,
+		const TFunction<void(FCk_Handle)>& InFunc)
+	-> void
+{
+    ForEach_Ability(InAbilityOwnerEntity, [&](FCk_Handle InAbility)
+	{
+		if (UCk_Utils_Ability_UE::Get_Status(InAbility) == InStatus)
+		{
+			InFunc(InAbility);
+		}
+	});
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
     Get_ActiveTags(
         FCk_Handle InAbilityOwnerHandle)
     -> FGameplayTagContainer

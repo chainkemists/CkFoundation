@@ -36,6 +36,70 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_Status);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Ability_ActivationSettings_OnOwner
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Ability_ActivationSettings_OnOwner);
+
+private:
+    // While this Ability is executing, the owner of the Ability will be granted this set of Tags.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTagContainer _GrantTagsOnAbilityOwner;
+
+    // The Ability will be cancelled as soon as the AbilityOwner has any of these Tags.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTagContainer _CancelledByTagsOnAbilityOwner;
+
+    // The Ability can only be activated if the AbilityOwner has all of these Tags.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTagContainer _RequiredTagsOnAbilityOwner;
+
+    // The Ability can only be activated if the AbilityOwner does not have any of these Tags.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTagContainer _BlockedByTagsOnAbilityOwner;
+
+public:
+    CK_PROPERTY(_GrantTagsOnAbilityOwner);
+    CK_PROPERTY(_CancelledByTagsOnAbilityOwner);
+    CK_PROPERTY(_RequiredTagsOnAbilityOwner);
+    CK_PROPERTY(_BlockedByTagsOnAbilityOwner);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Ability_ActivationSettings_OnSelf
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Ability_ActivationSettings_OnSelf);
+
+private:
+    // If this Ability is also an AbilityOwner, then this Ability will be cancelled as soon as the Ability has any of these Tags.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTagContainer _CancelledByTagsOnSelf;
+
+    // If this Ability is also an AbilityOwner, then this Ability can only be activated if the Ability does not have any of these Tags.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTagContainer _BlockedByTagsOnSelf;
+
+public:
+    CK_PROPERTY(_CancelledByTagsOnSelf);
+    CK_PROPERTY(_BlockedByTagsOnSelf);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKABILITY_API FCk_Ability_ActivationSettings
 {
     GENERATED_BODY()
@@ -48,32 +112,20 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Ability_ActivationPolicy _ActivationPolicy = ECk_Ability_ActivationPolicy::ActivateManually;
 
-    // While this Ability is executing, the owner of the Ability will be granted this set of Tags.
+    // Tags on AbilityOwner that affect this Ability
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FGameplayTagContainer _ActivationOwnerGrantedTags;
+    FCk_Ability_ActivationSettings_OnOwner _ActivationSettingsOnOwner;
 
-    // The Ability will be cancelled as soon as the AbilityOwner has any of these Tags.
+    // Tags on Ability itself that affect this Ability (only applicable if Ability itself is an AbilityOwner)
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FGameplayTagContainer _ActivationCancelledTags;
-
-    // The Ability can only be activated if the AbilityOwner has all of these Tags.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FGameplayTagContainer _ActivationRequiredTags;
-
-    // The Ability can only be activated if the AbilityOwner does not have any of these Tags.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FGameplayTagContainer _ActivationBlockedTags;
+    FCk_Ability_ActivationSettings_OnSelf _ActivationSettingsOnSelf;
 
 public:
     CK_PROPERTY(_ActivationPolicy);
-    CK_PROPERTY(_ActivationOwnerGrantedTags);
-    CK_PROPERTY(_ActivationCancelledTags);
-    CK_PROPERTY(_ActivationRequiredTags);
-    CK_PROPERTY(_ActivationBlockedTags);
+    CK_PROPERTY(_ActivationSettingsOnOwner);
+    CK_PROPERTY(_ActivationSettingsOnSelf);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

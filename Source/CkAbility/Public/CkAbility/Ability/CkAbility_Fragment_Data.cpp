@@ -60,8 +60,7 @@ auto
     -> bool
 {
     const auto& AbilityHandle = Get_AbilityHandle();
-    const auto& AbilityName = UCk_Utils_GameplayLabel_UE::Get_Label(AbilityHandle);
-    if (UCk_Utils_Ability_UE::Get_Status(AbilityHandle, AbilityName) == ECk_Ability_Status::Active)
+    if (UCk_Utils_Ability_UE::Get_Status(AbilityHandle) == ECk_Ability_Status::Active)
     { return false; }
 
     return DoGet_CanActivateAbility();
@@ -139,7 +138,7 @@ auto
     { return {}; }
 
     const auto& AbilityHandle = InScript->Get_AbilityHandle();
-    return UCk_Utils_Ability_UE::Get_Status_FromHandle(AbilityHandle);
+    return UCk_Utils_Ability_UE::Get_Status(AbilityHandle);
 }
 
 auto
