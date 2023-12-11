@@ -93,6 +93,14 @@ auto
 }
 
 auto
+	FCk_Chrono::
+	Get_IsDepleted() const
+	-> bool
+{
+    return _CurrentValue <= TimeType::ZeroSecond();
+}
+
+auto
     FCk_Chrono::
     Get_HasStarted() const
     -> bool
