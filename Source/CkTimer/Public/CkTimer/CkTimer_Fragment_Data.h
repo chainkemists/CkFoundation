@@ -46,6 +46,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Timer_State);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_Timer_CountDirection : uint8
+{
+    CountUp,
+    CountDown
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Timer_CountDirection);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKTIMER_API FCk_Fragment_Timer_ParamsData
 {
@@ -65,6 +76,10 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
+    ECk_Timer_CountDirection _CountDirection = ECk_Timer_CountDirection::CountUp;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
     ECk_Timer_Behavior _Behavior = ECk_Timer_Behavior::PauseOnDone;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -78,6 +93,7 @@ private:
 public:
     CK_PROPERTY(_TimerName);
     CK_PROPERTY_GET(_Duration);
+    CK_PROPERTY(_CountDirection);
     CK_PROPERTY(_Behavior);
     CK_PROPERTY(_StartingState);
     CK_PROPERTY(_ReplicationType);
@@ -111,6 +127,28 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKTIMER_API FCk_Request_Timer_Jump
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Timer_Jump);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _JumpDuration;
+
+public:
+    CK_PROPERTY_GET(_JumpDuration);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Timer_Jump, _JumpDuration);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKTIMER_API FCk_Request_Timer_Manipulate
 {
     GENERATED_BODY()
@@ -128,6 +166,28 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Timer_Manipulate, _Manipulate);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKTIMER_API FCk_Request_Timer_ChangeDirection
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Timer_ChangeDirection);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Timer_CountDirection _CountDirection = ECk_Timer_CountDirection::CountUp;
+
+public:
+    CK_PROPERTY_GET(_CountDirection);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Timer_ChangeDirection, _CountDirection);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

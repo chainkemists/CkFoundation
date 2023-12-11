@@ -20,7 +20,7 @@ auto
 {
     if (NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InHandle, InReplicationType))
     {
-        ck::timer::VeryVerbose
+        ck::timer::Verbose
         (
             TEXT("Skipping creation of Timer [{}] because it's Replication Type [{}] does NOT match"),
             InParams.Get_TimerName(),
@@ -40,7 +40,8 @@ auto
         InNewEntity.Add<ck::FFragment_Timer_Params>(ParamsToUse);
         InNewEntity.Add<ck::FFragment_Timer_Current>(FCk_Chrono{ParamsToUse.Get_Duration()});
 
-        UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_Timer_Rep>(InNewEntity);
+        if (ParamsToUse.Get_CountDirection() == ECk_Timer_CountDirection::CountDown)
+		{ InNewEntity.Add<ck::FTag_Timer_Countdown>(); }
 
         if (ParamsToUse.Get_StartingState() == ECk_Timer_State::Running)
         {
@@ -181,6 +182,26 @@ auto
 }
 
 auto
+	UCk_Utils_Timer_UE::
+	Get_CountDirection(
+		FCk_Handle   InTimerOwnerEntity,
+		FGameplayTag InTimerName)
+	-> ECk_Timer_CountDirection
+{
+    if (NOT Ensure(InTimerOwnerEntity, InTimerName))
+    { return {}; }
+
+    const auto TimerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Timer_UE,
+        RecordOfTimers_Utils>(InTimerOwnerEntity, InTimerName);
+
+    if (TimerEntity.Has<ck::FTag_Timer_Countdown>())
+    { return ECk_Timer_CountDirection::CountDown; }
+
+	return ECk_Timer_CountDirection::CountUp;
+}
+
+auto
     UCk_Utils_Timer_UE::
     Get_Behavior(
         FCk_Handle   InTimerOwnerEntity,
@@ -282,6 +303,74 @@ auto
         RecordOfTimers_Utils>(InTimerOwnerEntity, InTimerName);
 
     TimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Resume});
+}
+
+auto
+	UCk_Utils_Timer_UE::
+	Request_Jump(
+		FCk_Handle             InTimerOwnerEntity,
+		FGameplayTag           InTimerName,
+		FCk_Request_Timer_Jump InRequest)
+	-> void
+{
+    if (NOT Ensure(InTimerOwnerEntity, InTimerName))
+    { return; }
+
+    auto TimerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Timer_UE,
+        RecordOfTimers_Utils>(InTimerOwnerEntity, InTimerName);
+
+    TimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(InRequest);
+}
+
+auto
+	UCk_Utils_Timer_UE::
+	Request_ChangeCountDirection(
+		FCk_Handle               InTimerOwnerEntity,
+		FGameplayTag             InTimerName,
+		ECk_Timer_CountDirection InCountDirection)
+	-> void
+{
+    if (NOT Ensure(InTimerOwnerEntity, InTimerName))
+    { return; }
+
+    auto TimerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Timer_UE,
+        RecordOfTimers_Utils>(InTimerOwnerEntity, InTimerName);
+
+    switch(InCountDirection)
+    {
+	    case ECk_Timer_CountDirection::CountUp:
+		{
+            TimerEntity.Try_Remove<ck::FTag_Timer_Countdown>();
+		    break;
+        }
+	    case ECk_Timer_CountDirection::CountDown:
+		{
+            TimerEntity.AddOrGet<ck::FTag_Timer_Countdown>();
+		    break;
+        }
+    }
+}
+
+auto
+	UCk_Utils_Timer_UE::
+	Request_ReverseDirection(
+		FCk_Handle   InTimerOwnerEntity,
+		FGameplayTag InTimerName)
+	-> void
+{
+    if (NOT Ensure(InTimerOwnerEntity, InTimerName))
+    { return; }
+
+    auto TimerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Timer_UE,
+        RecordOfTimers_Utils>(InTimerOwnerEntity, InTimerName);
+
+    if (TimerEntity.Has<ck::FTag_Timer_Countdown>())
+    { TimerEntity.Remove<ck::FTag_Timer_Countdown>(); }
+    else
+    { TimerEntity.Add<ck::FTag_Timer_Countdown>(); }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
