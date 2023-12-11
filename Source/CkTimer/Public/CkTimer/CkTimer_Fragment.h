@@ -10,8 +10,6 @@
 
 #include "CkTimer/CkTimer_Fragment_Data.h"
 
-#include "CkTimer_Fragment.generated.h"
-
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_Timer_UE;
@@ -22,6 +20,7 @@ namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_Timer_NeedsUpdate);
     CK_DEFINE_ECS_TAG(FTag_Timer_Updated);
+    CK_DEFINE_ECS_TAG(FTag_Timer_Countdown);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -53,6 +52,7 @@ namespace ck
     public:
         friend class FProcessor_Timer_HandleRequests;
         friend class FProcessor_Timer_Update;
+        friend class FProcessor_Timer_Update_Countdown;
         friend class FProcessor_Timer_Replicate;
 
     private:
@@ -77,7 +77,7 @@ namespace ck
         friend class UCk_Utils_Timer_UE;
 
     public:
-        using RequestType = FCk_Request_Timer_Manipulate;
+        using RequestType = std::variant<FCk_Request_Timer_Manipulate, FCk_Request_Timer_Jump>;
         using RequestList = TArray<RequestType>;
 
     private:
@@ -103,30 +103,5 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKTIMER_API, OnTimerDone, FCk_Delegate_Timer_MC, FCk_Handle, FCk_Chrono);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKTIMER_API, OnTimerUpdate, FCk_Delegate_Timer_MC, FCk_Handle, FCk_Chrono);
 }
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(Blueprintable)
-class CKTIMER_API UCk_Fragment_Timer_Rep : public UCk_Ecs_ReplicatedObject_UE
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_Timer_Rep);
-
-public:
-    friend class ck::FProcessor_Timer_Replicate;
-
-public:
-    virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
-
-public:
-    UFUNCTION()
-    void OnRep_Chrono();
-
-private:
-    UPROPERTY(ReplicatedUsing = OnRep_Chrono)
-    FCk_Chrono _Chrono;
-};
 
 // --------------------------------------------------------------------------------------------------------------------

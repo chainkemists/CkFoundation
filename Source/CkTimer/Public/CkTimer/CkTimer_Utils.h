@@ -104,6 +104,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Timer",
+              DisplayName="Get Timer Count Direction")
+    static ECk_Timer_CountDirection
+    Get_CountDirection(
+        FCk_Handle InTimerOwnerEntity,
+        FGameplayTag InTimerName);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Timer",
               DisplayName="Get Timer Behavior")
     static ECk_Timer_Behavior
     Get_Behavior(
@@ -118,6 +126,7 @@ public:
         FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName);
 
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
               DisplayName="Request Reset Timer")
@@ -147,6 +156,32 @@ public:
               DisplayName="Request Resume Timer")
     static void
     Request_Resume(
+        FCk_Handle InTimerOwnerEntity,
+        FGameplayTag InTimerName);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Timer",
+              DisplayName="Request Jump Timer")
+    static void
+    Request_Jump(
+        FCk_Handle InTimerOwnerEntity,
+        FGameplayTag InTimerName,
+        FCk_Request_Timer_Jump InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Timer",
+              DisplayName="Request Change Count Direction")
+    static void
+    Request_ChangeCountDirection(
+        FCk_Handle InTimerOwnerEntity,
+        FGameplayTag InTimerName,
+        ECk_Timer_CountDirection InCountDirection);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Timer",
+              DisplayName="Request Reverse Direction")
+    static void
+    Request_ReverseDirection(
         FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName);
 
