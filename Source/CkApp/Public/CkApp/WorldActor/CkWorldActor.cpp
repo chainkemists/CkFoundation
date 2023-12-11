@@ -79,6 +79,7 @@ namespace ck_world_actor
 
         InWorld.Add<ck::FProcessor_Timer_HandleRequests>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_Timer_Update>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_Timer_Update_Countdown>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FProcessor_BulkVelocityModifier_Setup>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_BulkVelocityModifier_AddNewTargets>(InWorld.Get_Registry());
@@ -132,7 +133,6 @@ namespace ck_world_actor
 
         // Processors for Replication
         {
-            InWorld.Add<ck::FProcessor_Timer_Replicate>(InWorld.Get_Registry());
             InWorld.Add<ck::FProcessor_Acceleration_Replicate>(InWorld.Get_Registry());
             InWorld.Add<ck::FProcessor_Acceleration_Replicate>(InWorld.Get_Registry());
             InWorld.Add<ck::FProcessor_Transform_Replicate>(InWorld.Get_Registry());
