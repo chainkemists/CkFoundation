@@ -261,17 +261,17 @@ auto
         ck::TPayload_Attribute_OnValueChanged<ck::FFragment_FloatAttribute> InValueChanged)
     -> void
 {
-    auto MeterAttributeOwnerEntity =ck::UCk_Utils_OwningEntity::Get_StoredEntity(InMeterAttributeEntity);
+    auto MeterAttributeLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InMeterAttributeEntity);
 
     ck::UUtils_Signal_NumericOnAttributeValueChanged::Broadcast
     (
-        MeterAttributeOwnerEntity,
+        MeterAttributeLifetimeOwner,
         ck::MakePayload
         (
-            MeterAttributeOwnerEntity,
+            MeterAttributeLifetimeOwner,
             FCk_Payload_NumericAttribute_OnValueChanged
             {
-                MeterAttributeOwnerEntity,
+                MeterAttributeLifetimeOwner,
                 InValueChanged.Get_BaseValue(),
                 InValueChanged.Get_FinalValue()
             }

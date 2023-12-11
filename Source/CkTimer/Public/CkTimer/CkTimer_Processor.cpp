@@ -19,8 +19,8 @@ namespace ck
             FFragment_Timer_Requests& InRequestsComp) const
         -> void
     {
-        auto& timerChrono = InCurrentComp._Chrono;
-        const auto& timerOwningEntity = UCk_Utils_OwningEntity::Get_StoredEntity(InTimerEntity);
+        auto& TimerChrono = InCurrentComp._Chrono;
+        const auto& TimerLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InTimerEntity);
 
         ck::algo::ForEachRequest(InRequestsComp._ManipulateRequests,
         [&](const FFragment_Timer_Requests::RequestType& InRequest) -> void
@@ -34,11 +34,11 @@ namespace ck
                     InTimerEntity.Add<FTag_Timer_NeedsUpdate>();
                     InTimerEntity.Add<FTag_Timer_Updated>();
 
-                    UUtils_Signal_OnTimerReset::Broadcast(InTimerEntity, MakePayload(timerOwningEntity, timerChrono));
+                    UUtils_Signal_OnTimerReset::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
 
-                    timerChrono.Reset();
+                    TimerChrono.Reset();
 
-                    UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(timerOwningEntity, timerChrono));
+                    UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
 
                     break;
                 }
@@ -49,11 +49,11 @@ namespace ck
                     InTimerEntity.Remove<FTag_Timer_NeedsUpdate>();
                     InTimerEntity.Add<FTag_Timer_Updated>();
 
-                    UUtils_Signal_OnTimerStop::Broadcast(InTimerEntity, MakePayload(timerOwningEntity, timerChrono));
+                    UUtils_Signal_OnTimerStop::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
 
-                    timerChrono.Reset();
+                    TimerChrono.Reset();
 
-                    UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(timerOwningEntity, timerChrono));
+                    UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
 
                     break;
                 }
@@ -62,7 +62,7 @@ namespace ck
                     timer::VeryVerbose(TEXT("Handling Pause Request for Timer with Entity [{}]"), InTimerEntity);
 
                     InTimerEntity.Remove<FTag_Timer_NeedsUpdate>();
-                    UUtils_Signal_OnTimerPause::Broadcast(InTimerEntity, MakePayload(timerOwningEntity, timerChrono));
+                    UUtils_Signal_OnTimerPause::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
 
                     break;
                 }
@@ -71,7 +71,7 @@ namespace ck
                     timer::VeryVerbose(TEXT("Handling Resume Request for Timer with Entity [{}]"), InTimerEntity);
 
                     InTimerEntity.Add<FTag_Timer_NeedsUpdate>();
-                    UUtils_Signal_OnTimerResume::Broadcast(InTimerEntity, MakePayload(timerOwningEntity, timerChrono));
+                    UUtils_Signal_OnTimerResume::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
 
                     break;
                 }
@@ -106,9 +106,9 @@ namespace ck
 
         timerChrono.Tick(InDeltaT);
 
-        const auto& timerOwningEntity = UCk_Utils_OwningEntity::Get_StoredEntity(InTimerEntity);
+        const auto& TimerLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InTimerEntity);
 
-        UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(timerOwningEntity, timerChrono));
+        UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, timerChrono));
 
         InTimerEntity.Add<FTag_Timer_Updated>();
 
@@ -163,7 +163,7 @@ namespace ck
             }
         }
 
-        UUtils_Signal_OnTimerDone::Broadcast(InTimerEntity, MakePayload(timerOwningEntity, timerChrono));
+        UUtils_Signal_OnTimerDone::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, timerChrono));
     }
 
     // --------------------------------------------------------------------------------------------------------------------

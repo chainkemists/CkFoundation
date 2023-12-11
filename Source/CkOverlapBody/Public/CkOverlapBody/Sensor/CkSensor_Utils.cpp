@@ -19,14 +19,14 @@ auto
     CK_ENSURE_IF_NOT(UCk_Utils_OwningActor_UE::Has(InHandle), TEXT("Cannot Add a Sensor to Entity [{}] because it does NOT have an Owning Actor"), InHandle)
     { return; }
 
-    const auto& sensorName = InParams.Get_SensorName();
+    const auto& SensorName = InParams.Get_SensorName();
 
     if (NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InHandle, InReplicationType))
     {
         ck::overlap_body::VeryVerbose
         (
             TEXT("Skipping creation of Sensor [{}] because it's Replication Type [{}] does NOT match"),
-            sensorName,
+            SensorName,
             InReplicationType
         );
 
@@ -42,8 +42,7 @@ auto
         InSensorEntity.Add<ck::FFragment_Sensor_Current>(ParamsToUse.Get_StartingState());
         InSensorEntity.Add<ck::FTag_Sensor_Setup>();
 
-        ck::UCk_Utils_OwningEntity::Add(InSensorEntity, InHandle);
-        UCk_Utils_GameplayLabel_UE::Add(InSensorEntity, sensorName);
+        UCk_Utils_GameplayLabel_UE::Add(InSensorEntity, SensorName);
     });
 
     RecordOfSensors_Utils::AddIfMissing(InHandle ,ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
