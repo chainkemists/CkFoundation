@@ -75,7 +75,8 @@ FCk_Handle::
     if (NOT IsValid())
     { return; }
 
-    if (IsValid() && UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable)
+    if (IsValid() && UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable && 
+        ck::IsValid(GEngine))
     { UCk_Utils_HandleDebugger_Subsystem_UE::Get_Subsystem()->Remove_FragmentsDebug(*this); }
 #endif
 }
