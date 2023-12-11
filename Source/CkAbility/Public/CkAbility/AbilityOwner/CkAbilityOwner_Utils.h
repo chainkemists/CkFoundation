@@ -1,8 +1,13 @@
 #pragma once
 
+#include "CkAbility/Ability/CkAbility_Fragment.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Fragment_Data.h"
 
 #include "CkCore/Macros/CkMacros.h"
+
+#include "CkEcsBasics/CkEcsBasics_Utils.h"
+
+#include "CkRecord/Record/CkRecord_Utils.h"
 
 #include "CkSignal/CkSignal_Fragment_Data.h"
 
@@ -10,10 +15,19 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+DECLARE_DYNAMIC_DELEGATE_OneParam(
+    FCk_Delegate_AbilityOwner_ForEachAbility,
+    FCk_Handle, InAbilityHandle);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable)
-class CKABILITY_API UCk_Utils_AbilityOwner_UE : public UBlueprintFunctionLibrary
+class CKABILITY_API UCk_Utils_AbilityOwner_UE : public UCk_Utils_Ecs_Base_UE
 {
     GENERATED_BODY()
+
+public:
+    struct RecordOfAbilities_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfAbilities> {};
 
 public:
     CK_GENERATED_BODY(UCk_Utils_AbilityOwner_UE);
@@ -40,6 +54,72 @@ public:
     static bool
     Ensure(
         FCk_Handle InHandle);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="Has Ability")
+    static bool
+    Has_Ability(
+        FCk_Handle InAbilityOwnerEntity,
+        FGameplayTag InAbilityName);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="Has Any Ability")
+    static bool
+    Has_Any(
+        FCk_Handle InAbilityOwnerEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="Ensure Has Ability")
+    static bool
+    Ensure_Ability(
+        FCk_Handle InAbilityOwnerEntity,
+        FGameplayTag InAbilityName);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="Ensure Has Any Ability")
+    static bool
+    Ensure_Any(
+        FCk_Handle InAbilityOwnerEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="Get Ability")
+    static FCk_Handle
+    Get_Ability(
+        FCk_Handle InAbilityOwnerEntity,
+        FGameplayTag InAbilityName);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="For Each Ability")
+    static void
+    ForEach_Ability(
+        FCk_Handle InAbilityOwnerEntity,
+        const FCk_Delegate_AbilityOwner_ForEachAbility& InDelegate);
+    static auto
+    ForEach_Ability(
+        FCk_Handle InAbilityOwnerEntity,
+        const TFunction<void(FCk_Handle)>& InFunc) -> void;
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="For Each Ability")
+    static void
+    ForEach_Ability_WithStatus(
+        FCk_Handle InAbilityOwnerEntity,
+        ECk_Ability_Status InStatus,
+        const FCk_Delegate_AbilityOwner_ForEachAbility& InDelegate);
+    static auto
+    ForEach_Ability_WithStatus(
+        FCk_Handle InAbilityOwnerEntity,
+        ECk_Ability_Status InStatus,
+        const TFunction<void(FCk_Handle)>& InFunc) -> void;
 
 public:
     UFUNCTION(BlueprintPure,
