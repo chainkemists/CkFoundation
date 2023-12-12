@@ -86,7 +86,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
-              DisplayName="Has Ability")
+              DisplayName="Is Ability")
     static bool
     Has(
         FCk_Handle InAbilityEntity);
