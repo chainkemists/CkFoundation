@@ -76,7 +76,7 @@ namespace ck
         friend class UCk_Utils_Timer_UE;
 
     public:
-        using RequestType = std::variant<FCk_Request_Timer_Manipulate, FCk_Request_Timer_Jump>;
+        using RequestType = std::variant<FCk_Request_Timer_Manipulate, FCk_Request_Timer_Jump, FCk_Request_Timer_Consume>;
         using RequestList = TArray<RequestType>;
 
     private:
