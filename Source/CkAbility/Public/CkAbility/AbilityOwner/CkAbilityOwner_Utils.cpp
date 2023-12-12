@@ -109,12 +109,19 @@ auto
 	ForEach_Ability(
 		FCk_Handle                                      InAbilityOwnerEntity,
 		const FCk_Delegate_AbilityOwner_ForEachAbility& InDelegate)
-	-> void
+	-> TArray<FCk_Handle>
 {
+    auto Abilities = TArray<FCk_Handle>{};
+
     ForEach_Ability(InAbilityOwnerEntity, [&](FCk_Handle InAbility)
 	{
-		InDelegate.Execute(InAbility);
+        if (InDelegate.IsBound())
+        { InDelegate.Execute(InAbility); }
+        else
+        { Abilities.Emplace(InAbility); }
 	});
+
+    return Abilities;
 }
 
 auto
@@ -140,12 +147,19 @@ auto
 		FCk_Handle                                      InAbilityOwnerEntity,
 		ECk_Ability_Status                              InStatus,
 		const FCk_Delegate_AbilityOwner_ForEachAbility& InDelegate)
-	-> void
+	-> TArray<FCk_Handle>
 {
+    auto Abilities = TArray<FCk_Handle>{};
+
     ForEach_Ability_WithStatus(InAbilityOwnerEntity, InStatus, [&](FCk_Handle InAbility)
 	{
-		InDelegate.Execute(InAbility);
+        if (InDelegate.IsBound())
+        { InDelegate.Execute(InAbility); }
+        else
+        { Abilities.Emplace(InAbility); }
 	});
+
+    return Abilities;
 }
 
 auto
