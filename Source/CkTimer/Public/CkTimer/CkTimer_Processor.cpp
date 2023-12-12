@@ -47,7 +47,6 @@ namespace ck
 				timer::VeryVerbose(TEXT("Handling Reset Request for Timer with Entity [{}]"), InTimerEntity);
 
 				InTimerEntity.AddOrGet<FTag_Timer_NeedsUpdate>();
-				InTimerEntity.AddOrGet<FTag_Timer_Updated>();
 
 				UUtils_Signal_OnTimerReset::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
 
@@ -65,7 +64,6 @@ namespace ck
 				timer::VeryVerbose(TEXT("Handling Stop Request for Timer with Entity [{}]"), InTimerEntity);
 
 				InTimerEntity.Remove<FTag_Timer_NeedsUpdate>();
-				InTimerEntity.AddOrGet<FTag_Timer_Updated>();
 
 				UUtils_Signal_OnTimerStop::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
 
@@ -151,8 +149,6 @@ namespace ck
 
         UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
 
-        InTimerEntity.AddOrGet<FTag_Timer_Updated>();
-
         if (NOT TimerChrono.Get_IsDone())
         { return; }
 
@@ -228,8 +224,6 @@ namespace ck
         const auto& TimerLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InTimerEntity);
 
         UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
-
-        InTimerEntity.AddOrGet<FTag_Timer_Updated>();
 
         if (NOT TimerChrono.Get_IsDepleted())
         { return; }
