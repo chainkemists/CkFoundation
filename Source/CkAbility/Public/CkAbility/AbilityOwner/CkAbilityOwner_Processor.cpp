@@ -26,14 +26,14 @@ namespace ck
         // we have it as one of the granted abilities
         if (UCk_Utils_Ability_UE::Has(InHandle))
         {
-			UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Request_Connect(InHandle, InHandle);
-			const auto Script = InHandle.Get<ck::FFragment_Ability_Current>().Get_AbilityScript();
+            UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Request_Connect(InHandle, InHandle);
+            const auto Script = InHandle.Get<ck::FFragment_Ability_Current>().Get_AbilityScript();
 
-			CK_ENSURE_IF_NOT(ck::IsValid(Script),
-				TEXT("AbilityScript for Handle [{}] with AbilityOwner [{}] is INVALID. Unable to GIVE the Ability properly"),
-				InHandle,
-				InHandle)
-			{ return; }
+            CK_ENSURE_IF_NOT(ck::IsValid(Script),
+                TEXT("AbilityScript for Handle [{}] with AbilityOwner [{}] is INVALID. Unable to GIVE the Ability properly"),
+                InHandle,
+                InHandle)
+            { return; }
         }
 
         for (const auto& DefaultAbility : Params.Get_DefaultAbilities())
