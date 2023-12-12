@@ -43,7 +43,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="Has Ability Owner")
+              DisplayName="Is Ability Owner")
     static bool
     Has(
         FCk_Handle InHandle);
