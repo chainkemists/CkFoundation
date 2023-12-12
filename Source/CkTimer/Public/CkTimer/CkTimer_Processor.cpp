@@ -19,108 +19,114 @@ namespace ck
             FFragment_Timer_Requests& InRequestsComp) const
         -> void
     {
-        ck::algo::ForEachRequest(InRequestsComp._ManipulateRequests, ck::Visitor(
+        const auto RequestsCopy = InRequestsComp._ManipulateRequests;
+        InRequestsComp._ManipulateRequests.Reset();
+
+        algo::ForEachRequest(RequestsCopy, ck::Visitor(
         [&](const auto& InRequestVariant) -> void
         {
             DoHandleRequest(InTimerEntity, InCurrentComp, InParamsComp, InRequestVariant);
-        }));
+        }), policy::DontResetContainer{});
 
-        InTimerEntity.Remove<MarkedDirtyBy>();
+        if (InRequestsComp._ManipulateRequests.IsEmpty())
+        {
+            InTimerEntity.Remove<MarkedDirtyBy>();
+        }
     }
 
     auto
-	    FProcessor_Timer_HandleRequests::
-		DoHandleRequest(
-		    HandleType InTimerEntity,
-		    FFragment_Timer_Current& InCurrentComp,
-		    const FFragment_Timer_Params& InParamsComp,
-		    const FCk_Request_Timer_Manipulate& InRequest) const
-		-> void
+        FProcessor_Timer_HandleRequests::
+        DoHandleRequest(
+            HandleType InTimerEntity,
+            FFragment_Timer_Current& InCurrentComp,
+            const FFragment_Timer_Params& InParamsComp,
+            const FCk_Request_Timer_Manipulate& InRequest) const
+        -> void
     {
         auto& TimerChrono = InCurrentComp._Chrono;
         const auto& TimerLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InTimerEntity);
 
-		switch (const auto& TimeManipulate = InRequest.Get_Manipulate())
-		{
-			case ECk_Timer_Manipulate::Reset:
-			{
-				timer::VeryVerbose(TEXT("Handling Reset Request for Timer with Entity [{}]"), InTimerEntity);
+        switch (const auto& TimeManipulate = InRequest.Get_Manipulate())
+        {
+            case ECk_Timer_Manipulate::Reset:
+            {
+                timer::VeryVerbose(TEXT("Handling Reset Request for Timer with Entity [{}]"), InTimerEntity);
 
-				InTimerEntity.AddOrGet<FTag_Timer_NeedsUpdate>();
+                InTimerEntity.AddOrGet<FTag_Timer_NeedsUpdate>();
 
-				UUtils_Signal_OnTimerReset::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
+                UUtils_Signal_OnTimerReset::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
 
                 if (InParamsComp.Get_Params().Get_CountDirection() == ECk_Timer_CountDirection::CountUp)
-				{ TimerChrono.Reset(); }
-				else
-				{ TimerChrono.Complete(); }
+                { TimerChrono.Reset(); }
+                else
+                { TimerChrono.Complete(); }
 
-				UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
+                UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
 
-				break;
-			}
-			case ECk_Timer_Manipulate::Stop:
-			{
-				timer::VeryVerbose(TEXT("Handling Stop Request for Timer with Entity [{}]"), InTimerEntity);
+                break;
+            }
+            case ECk_Timer_Manipulate::Stop:
+            {
+                timer::VeryVerbose(TEXT("Handling Stop Request for Timer with Entity [{}]"), InTimerEntity);
 
-				InTimerEntity.Remove<FTag_Timer_NeedsUpdate>();
+                InTimerEntity.Remove<FTag_Timer_NeedsUpdate>();
 
-				UUtils_Signal_OnTimerStop::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
+                UUtils_Signal_OnTimerStop::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
 
-				TimerChrono.Reset();
+                TimerChrono.Reset();
 
-				UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
+                UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
 
-				break;
-			}
-			case ECk_Timer_Manipulate::Pause:
-			{
-				timer::VeryVerbose(TEXT("Handling Pause Request for Timer with Entity [{}]"), InTimerEntity);
+                break;
+            }
+            case ECk_Timer_Manipulate::Pause:
+            {
+                timer::VeryVerbose(TEXT("Handling Pause Request for Timer with Entity [{}]"), InTimerEntity);
 
-				InTimerEntity.Remove<FTag_Timer_NeedsUpdate>();
-				UUtils_Signal_OnTimerPause::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
+                InTimerEntity.Remove<FTag_Timer_NeedsUpdate>();
+                UUtils_Signal_OnTimerPause::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
 
-				break;
-			}
-			case ECk_Timer_Manipulate::Resume:
-			{
-				timer::VeryVerbose(TEXT("Handling Resume Request for Timer with Entity [{}]"), InTimerEntity);
+                break;
+            }
+            case ECk_Timer_Manipulate::Resume:
+            {
+                timer::VeryVerbose(TEXT("Handling Resume Request for Timer with Entity [{}]"), InTimerEntity);
 
-				InTimerEntity.AddOrGet<FTag_Timer_NeedsUpdate>();
-				UUtils_Signal_OnTimerResume::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
+                InTimerEntity.AddOrGet<FTag_Timer_NeedsUpdate>();
+                UUtils_Signal_OnTimerResume::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
 
-				break;
-			}
-			default:
-			{
-				CK_INVALID_ENUM(TimeManipulate);
-				break;
-			}
-		}
+                break;
+            }
+            default:
+            {
+                CK_INVALID_ENUM(TimeManipulate);
+                break;
+            }
+        }
     }
 
     auto
-	    FProcessor_Timer_HandleRequests::
-		DoHandleRequest(
-		    HandleType InHandle,
-		    FFragment_Timer_Current& InCurrentComp,
-		    const FFragment_Timer_Params& InParamsComp,
-		    const FCk_Request_Timer_Jump& InRequest) const
-		-> void
+        FProcessor_Timer_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_Timer_Current& InCurrentComp,
+            const FFragment_Timer_Params& InParamsComp,
+            const FCk_Request_Timer_Jump& InRequest) const
+        -> void
     {
         auto& TimerChrono = InCurrentComp._Chrono;
 
         switch(InParamsComp.Get_Params().Get_CountDirection())
         {
-	        case ECk_Timer_CountDirection::CountUp:
-			{
+            case ECk_Timer_CountDirection::CountUp:
+            {
                 TimerChrono.Tick(InRequest.Get_JumpDuration());
-		        break;
+                break;
             }
-	        case ECk_Timer_CountDirection::CountDown:
-			{
-				TimerChrono.Consume(InRequest.Get_JumpDuration());
-		        break;
+            case ECk_Timer_CountDirection::CountDown:
+            {
+                TimerChrono.Consume(InRequest.Get_JumpDuration());
+                break;
             }
         }
     }
@@ -204,13 +210,13 @@ namespace ck
     }
 
     auto
-	    FProcessor_Timer_Update_Countdown::
-		ForEachEntity(
-		    TimeType InDeltaT,
-		    HandleType InTimerEntity,
-		    const FFragment_Timer_Params& InParams,
-		    FFragment_Timer_Current& InCurrentComp) const
-		-> void
+        FProcessor_Timer_Update_Countdown::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InTimerEntity,
+            const FFragment_Timer_Params& InParams,
+            FFragment_Timer_Current& InCurrentComp) const
+        -> void
     {
         auto& TimerChrono = InCurrentComp._Chrono;
 
