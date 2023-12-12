@@ -99,9 +99,9 @@ public:
         FCk_Handle InAbilityEntity);
 
 public:
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
-			  meta=(CompactNodeTitle="."))
+			  meta=(CompactNodeTitle="Info"))
     static FCk_Ability_Info
     Get_Info(
         FCk_Handle InAbilityEntity);
