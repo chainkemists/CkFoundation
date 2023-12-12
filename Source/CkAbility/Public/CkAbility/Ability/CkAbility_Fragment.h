@@ -8,6 +8,8 @@
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
 
+#include "CkSignal/CkSignal_Macros.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_Ability_UE;
@@ -63,6 +65,11 @@ namespace ck
     {
         using FFragment_RecordOfEntities::FFragment_RecordOfEntities;
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, OnAbilityActivated, FCk_Delegate_Ability_OnActivated_MC, FCk_Handle);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, OnAbilityDeactivated, FCk_Delegate_Ability_OnDeactivated_MC, FCk_Handle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

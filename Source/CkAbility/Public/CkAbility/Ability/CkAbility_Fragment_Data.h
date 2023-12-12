@@ -398,26 +398,34 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
-    FCk_Delegate_GameplayAbility_OnEnded,
+    FCk_Delegate_Ability_OnEnded,
     FCk_Handle, InAbilityHandle,
     FCk_Handle, InAbilityOwnerHandle);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_GameplayAbility_OnEnded_MC,
+    FCk_Delegate_Ability_OnEnded_MC,
     FCk_Handle, InAbilityHandle,
     FCk_Handle, InAbilityOwnerHandle);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_TwoParams(
-    FCk_Delegate_GameplayAbility_OnActivated,
-    FCk_Handle, InAbilityHandle,
-    FCk_Handle, InAbilityOwnerHandle);
+DECLARE_DYNAMIC_DELEGATE_OneParam(
+    FCk_Delegate_Ability_OnActivated,
+    FCk_Handle, InAbilityHandle);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_GameplayAbility_OnActivated_MC,
-    FCk_Handle, InAbilityHandle,
-    FCk_Handle, InAbilityOwnerHandle);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+    FCk_Delegate_Ability_OnActivated_MC,
+    FCk_Handle, InAbilityHandle);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(
+    FCk_Delegate_Ability_OnDeactivated,
+    FCk_Handle, InAbilityHandle);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+    FCk_Delegate_Ability_OnDeactivated_MC,
+    FCk_Handle, InAbilityHandle);
 
 // --------------------------------------------------------------------------------------------------------------------
 // Formatters and IsValid
