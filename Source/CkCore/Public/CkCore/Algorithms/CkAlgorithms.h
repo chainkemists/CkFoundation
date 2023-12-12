@@ -64,10 +64,10 @@ namespace ck::algo
     auto ForEachRequest(TOptional<T_ValueType>& InContainer, T_UnaryFunction InFunc) -> void;
 
     template <typename T_ValueType, typename T_UnaryFunction>
-    auto ForEachRequest(TArray<T_ValueType>& InContainer, T_UnaryFunction InFunc, policy::DontResetContainer) -> void;
+    auto ForEachRequest(const TArray<T_ValueType>& InContainer, T_UnaryFunction InFunc, policy::DontResetContainer) -> void;
 
     template <typename T_ValueType, typename T_UnaryFunction>
-    auto ForEachRequest(TOptional<T_ValueType>& InContainer, T_UnaryFunction InFunc, policy::DontResetContainer) -> void;
+    auto ForEachRequest(const TOptional<T_ValueType>& InContainer, T_UnaryFunction InFunc, policy::DontResetContainer) -> void;
 
     template <typename T_Array, typename T_UnaryFunction>
     auto ForEachReverse(T_Array& InArray, T_UnaryFunction InFunc) -> void;

@@ -148,7 +148,7 @@ namespace ck::algo
 
     template <typename T_ValueType, typename T_UnaryFunction>
     auto
-        ForEachRequest(TArray<T_ValueType>& InContainer, T_UnaryFunction InFunc, policy::DontResetContainer)
+        ForEachRequest(const TArray<T_ValueType>& InContainer, T_UnaryFunction InFunc, policy::DontResetContainer)
         -> void
     {
         ForEach(InContainer.begin(), InContainer.end(), InFunc);
@@ -156,7 +156,7 @@ namespace ck::algo
 
     template <typename T_ValueType, typename T_UnaryFunction>
     auto
-        ForEachRequest(TOptional<T_ValueType>& InContainer, T_UnaryFunction InFunc, policy::DontResetContainer)
+        ForEachRequest(const TOptional<T_ValueType>& InContainer, T_UnaryFunction InFunc, policy::DontResetContainer)
         -> void
     {
         if (InContainer.IsSet())
