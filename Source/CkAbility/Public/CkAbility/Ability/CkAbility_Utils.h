@@ -127,6 +127,41 @@ public:
     Get_Status(
         FCk_Handle InAbilityEntity);
 
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability",
+              DisplayName = "Bind To OnAbilityActivated")
+    static void
+    BindTo_OnAbilityActivated(
+        FCk_Handle InAbilityHandle,
+        ECk_Signal_BindingPolicy InBehavior,
+        const FCk_Delegate_Ability_OnActivated& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability",
+              DisplayName = "Unbind From OnAbilityActivated")
+    static void
+    UnbindFrom_OnAbilityActivated(
+        FCk_Handle InAbilityHandle,
+        const FCk_Delegate_Ability_OnActivated& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability",
+              DisplayName = "Bind To OnAbilityDeactivated")
+    static void
+    BindTo_OnAbilityDeactivated(
+        FCk_Handle InAbilityHandle,
+        ECk_Signal_BindingPolicy InBehavior,
+        const FCk_Delegate_Ability_OnDeactivated& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability",
+              DisplayName = "Unbind From OnAbilityDeactivated")
+    static void
+    UnbindFrom_OnAbilityDeactivated(
+        FCk_Handle InAbilityHandle,
+        const FCk_Delegate_Ability_OnDeactivated& InDelegate);
+
 private:
     static auto
     DoAdd(
