@@ -295,6 +295,7 @@ namespace ck
 
             UnrealMulticast._Multicast = ExistingMulticasts;
             UnrealMulticast._Connection = Connection;
+            UnrealMulticast._Multicast.Add(InDelegate);
         }
         else
         {
