@@ -48,10 +48,10 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    OnEndAbility()
+    OnDeactivateAbility()
     -> void
 {
-    DoOnEndAbility();
+    DoOnDeactivateAbility();
 }
 
 auto
@@ -83,10 +83,10 @@ auto
 }
 
 auto
-	UCk_Ability_Script_PDA::
-	Self_Request_ActivateAbility(
-		const UCk_Ability_Script_PDA* InScript)
-	-> void
+    UCk_Ability_Script_PDA::
+    Self_Request_ActivateAbility(
+        const UCk_Ability_Script_PDA* InScript)
+    -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InScript),
         TEXT("AbilityScript is [{}]. Was this Ability GC'ed and this function is being called in a latent node?"),
@@ -104,7 +104,7 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    Self_Request_EndAbility(const UCk_Ability_Script_PDA* InScript)
+    Self_Request_DeactivateAbility(const UCk_Ability_Script_PDA* InScript)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InScript),
@@ -117,15 +117,15 @@ auto
         ck::Context(InScript))
     { return; }
 
-    UCk_Utils_AbilityOwner_UE::Request_EndAbility(InScript->Get_AbilityOwnerHandle(),
-        FCk_Request_AbilityOwner_EndAbility{InScript->Get_AbilityHandle()});
+    UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(InScript->Get_AbilityOwnerHandle(),
+        FCk_Request_AbilityOwner_DeactivateAbility{InScript->Get_AbilityHandle()});
 }
 
 auto
-	UCk_Ability_Script_PDA::
-	Self_Get_Status(
+    UCk_Ability_Script_PDA::
+    Self_Get_Status(
         const UCk_Ability_Script_PDA* InScript)
-	-> ECk_Ability_Status
+    -> ECk_Ability_Status
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InScript),
         TEXT("AbilityScript is [{}]. Was this Ability GC'ed and this function is being called in a latent node?"),
@@ -213,7 +213,7 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    DoOnEndAbility_Implementation()
+    DoOnDeactivateAbility_Implementation()
     -> void
 {
 }

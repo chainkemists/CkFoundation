@@ -87,7 +87,7 @@ public:
     FCk_Request_AbilityOwner_GiveAbility() = default;
 
     explicit
-	FCk_Request_AbilityOwner_GiveAbility(
+    FCk_Request_AbilityOwner_GiveAbility(
         const UCk_Ability_EntityConfig_PDA* InAbilityEntityConfig);
 
 private:
@@ -113,11 +113,11 @@ public:
     FCk_Request_AbilityOwner_RevokeAbility() = default;
 
     explicit
-	FCk_Request_AbilityOwner_RevokeAbility(
+    FCk_Request_AbilityOwner_RevokeAbility(
         FGameplayTag InAbilityName);
 
     explicit
-	FCk_Request_AbilityOwner_RevokeAbility(
+    FCk_Request_AbilityOwner_RevokeAbility(
         FCk_Handle InAbilityHandle);
 
 private:
@@ -156,11 +156,11 @@ public:
     FCk_Request_AbilityOwner_ActivateAbility() = default;
 
     explicit
-	FCk_Request_AbilityOwner_ActivateAbility(
+    FCk_Request_AbilityOwner_ActivateAbility(
         FGameplayTag InAbilityName);
 
     explicit
-	FCk_Request_AbilityOwner_ActivateAbility(
+    FCk_Request_AbilityOwner_ActivateAbility(
         FCk_Handle InAbilityHandle);
 
 private:
@@ -188,22 +188,22 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKABILITY_API FCk_Request_AbilityOwner_EndAbility
+struct CKABILITY_API FCk_Request_AbilityOwner_DeactivateAbility
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Request_AbilityOwner_EndAbility);
+    CK_GENERATED_BODY(FCk_Request_AbilityOwner_DeactivateAbility);
 
 public:
-    FCk_Request_AbilityOwner_EndAbility() = default;
+    FCk_Request_AbilityOwner_DeactivateAbility() = default;
 
     explicit
-	FCk_Request_AbilityOwner_EndAbility(
+    FCk_Request_AbilityOwner_DeactivateAbility(
         FGameplayTag InAbilityName);
 
     explicit
-	FCk_Request_AbilityOwner_EndAbility(
+    FCk_Request_AbilityOwner_DeactivateAbility(
         FCk_Handle InAbilityHandle);
 
 private:
