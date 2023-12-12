@@ -301,6 +301,9 @@ namespace ck
         {
             UnrealMulticast._Multicast.Add(InDelegate);
 
+            if (UnrealMulticast._Connection)
+            { UnrealMulticast._Connection.release(); }
+
             auto Connection = Super::Bind <&T_DerivedSignal_Unreal::DoBroadcast>(
                 UnrealMulticast, InHandle, T_PayloadInFlightBehavior, T_DerivedSignal_Unreal::PostFireBehavior);
             UnrealMulticast._Connection = Connection;
