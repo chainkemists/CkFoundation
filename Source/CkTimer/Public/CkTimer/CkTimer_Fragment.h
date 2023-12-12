@@ -19,7 +19,6 @@ class UCk_Utils_Timer_UE;
 namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_Timer_NeedsUpdate);
-    CK_DEFINE_ECS_TAG(FTag_Timer_Updated);
     CK_DEFINE_ECS_TAG(FTag_Timer_Countdown);
 
     // --------------------------------------------------------------------------------------------------------------------
