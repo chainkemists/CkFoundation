@@ -17,9 +17,9 @@ namespace ck
             FFragment_Acceleration_Current& InCurrent) const
         -> void
     {
-        const auto& params = InParams.Get_Params();
+        const auto& Params = InParams.Get_Params();
 
-        switch(const auto& coordinates = params.Get_Coordinates())
+        switch(const auto& Coordinates = Params.Get_Coordinates())
         {
             case ECk_LocalWorld::Local:
             {
@@ -36,23 +36,23 @@ namespace ck
                         InHandle)
                     { return {}; }
 
-                    const auto accelerationTarget = UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Get_StoredEntity(InHandle);
+                    const auto AccelerationTarget = UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Get_StoredEntity(InHandle);
 
-                    return UCk_Utils_Transform_UE::Get_EntityCurrentRotation(accelerationTarget);
+                    return UCk_Utils_Transform_UE::Get_EntityCurrentRotation(AccelerationTarget);
                 };
 
-                const auto& rotation = DoGetRotationFromEntityOrTargetEntity();
-                InCurrent._CurrentAcceleration = rotation.RotateVector(params.Get_StartingAcceleration());
+                const auto& Rotation = DoGetRotationFromEntityOrTargetEntity();
+                InCurrent._CurrentAcceleration = Rotation.RotateVector(Params.Get_StartingAcceleration());
                 break;
             }
             case ECk_LocalWorld::World:
             {
-                InCurrent._CurrentAcceleration = params.Get_StartingAcceleration();
+                InCurrent._CurrentAcceleration = Params.Get_StartingAcceleration();
                 break;
             }
             default:
             {
-                CK_INVALID_ENUM(coordinates);
+                CK_INVALID_ENUM(Coordinates);
                 break;
             }
         }
@@ -71,10 +71,10 @@ namespace ck
             const FFragment_Acceleration_Target& InTarget) const
         -> void
     {
-        auto targetEntity  = InTarget.Get_Entity();
-        auto& targetAcceleration = targetEntity.Get<FFragment_Acceleration_Current>();
+        auto TargetEntity  = InTarget.Get_Entity();
+        auto& TargetAcceleration = TargetEntity.Get<FFragment_Acceleration_Current>();
 
-        targetAcceleration._CurrentAcceleration += InAcceleration.Get_CurrentAcceleration();
+        TargetAcceleration._CurrentAcceleration += InAcceleration.Get_CurrentAcceleration();
 
         InHandle.Remove<MarkedDirtyBy>();
     }
@@ -90,10 +90,10 @@ namespace ck
             const FFragment_Acceleration_Target& InTarget) const
         -> void
     {
-        auto targetEntity = InTarget.Get_Entity();
-        auto& targetAcceleration = targetEntity.Get<FFragment_Acceleration_Current>();
+        auto TargetEntity = InTarget.Get_Entity();
+        auto& TargetAcceleration = TargetEntity.Get<FFragment_Acceleration_Current>();
 
-        targetAcceleration._CurrentAcceleration -= InAcceleration._CurrentAcceleration;
+        TargetAcceleration._CurrentAcceleration -= InAcceleration._CurrentAcceleration;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -106,20 +106,20 @@ namespace ck
             const FFragment_BulkAccelerationModifier_Params& InParams) const
         -> void
     {
-        const auto& targetAccelerationChannels = InParams.Get_Params().Get_TargetChannels();
+        const auto& TargetAccelerationChannels = InParams.Get_Params().Get_TargetChannels();
 
         InHandle.View<FFragment_RecordOfAccelerationChannels>().ForEach(
         [&](FCk_Entity InEntity, const FFragment_RecordOfAccelerationChannels& InAccelerationChannels)
         {
-            const auto& targetEntity = MakeHandle(InEntity, InHandle);
+            const auto& TargetEntity = MakeHandle(InEntity, InHandle);
 
-            if (NOT UCk_Utils_AccelerationChannel_UE::Get_IsAffectedByAnyOtherChannel(targetEntity, targetAccelerationChannels))
+            if (NOT UCk_Utils_AccelerationChannel_UE::Get_IsAffectedByAnyOtherChannel(TargetEntity, TargetAccelerationChannels))
             { return; }
 
             UCk_Utils_BulkAccelerationModifier_UE::DoRequest_AddTarget
             (
                 InHandle,
-                FCk_Request_BulkAccelerationModifier_AddTarget{targetEntity}
+                FCk_Request_BulkAccelerationModifier_AddTarget{TargetEntity}
             );
         });
 
@@ -162,18 +162,18 @@ namespace ck
             FFragment_BulkAccelerationModifier_Requests& InRequests) const
         -> void
     {
-        const auto& targetAccelerationChannels = InParams.Get_Params().Get_TargetChannels();
+        const auto& TargetAccelerationChannels = InParams.Get_Params().Get_TargetChannels();
 
         algo::ForEachRequest(InRequests._Requests, ck::Visitor(
         [&](const auto& InRequestVariant)
         {
-            const auto& targetEntity = InRequestVariant.Get_TargetEntity();
+            const auto& TargetEntity = InRequestVariant.Get_TargetEntity();
 
             // Entity may have been destroyed before we got a chance to process it
-            if (ck::Is_NOT_Valid(targetEntity))
+            if (ck::Is_NOT_Valid(TargetEntity))
             { return; }
 
-            if (NOT UCk_Utils_AccelerationChannel_UE::Get_IsAffectedByAnyOtherChannel(targetEntity, targetAccelerationChannels))
+            if (NOT UCk_Utils_AccelerationChannel_UE::Get_IsAffectedByAnyOtherChannel(TargetEntity, TargetAccelerationChannels))
             { return; }
 
             DoHandleRequest(InHandle, InParams, InRequestVariant);
@@ -190,11 +190,11 @@ namespace ck
             const FCk_Request_BulkAccelerationModifier_AddTarget& InRequest)
         -> void
     {
-        const auto& targetEntity = InRequest.Get_TargetEntity();
+        const auto& TargetEntity = InRequest.Get_TargetEntity();
 
         UCk_Utils_AccelerationModifier_UE::Add
         (
-            targetEntity,
+            TargetEntity,
             UCk_Utils_GameplayLabel_UE::Get_Label(InHandle),
             FCk_Fragment_AccelerationModifier_ParamsData
             {
@@ -211,11 +211,11 @@ namespace ck
             const FCk_Request_BulkAccelerationModifier_RemoveTarget& InRequest)
         -> void
     {
-        const auto& targetEntity = InRequest.Get_TargetEntity();
+        const auto& TargetEntity = InRequest.Get_TargetEntity();
 
         UCk_Utils_AccelerationModifier_UE::Remove
         (
-            targetEntity,
+            TargetEntity,
             UCk_Utils_GameplayLabel_UE::Get_Label(InHandle)
         );
     }
