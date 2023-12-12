@@ -256,6 +256,23 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
+    Request_Complete(
+        FCk_Handle   InTimerOwnerEntity,
+        FGameplayTag InTimerName)
+    -> void
+{
+    if (NOT Ensure(InTimerOwnerEntity, InTimerName))
+    { return; }
+
+    auto TimerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Timer_UE,
+        RecordOfTimers_Utils>(InTimerOwnerEntity, InTimerName);
+
+    TimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Complete});
+}
+
+auto
+    UCk_Utils_Timer_UE::
     Request_Stop(
         FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName)
@@ -490,6 +507,25 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
+    BindTo_OnTimerDepleted(
+        FCk_Handle                InTimerOwnerEntity,
+        FGameplayTag              InTimerName,
+        ECk_Signal_BindingPolicy  InBindingPolicy,
+        const FCk_Delegate_Timer& InDelegate)
+    -> void
+{
+    if (NOT Ensure(InTimerOwnerEntity, InTimerName))
+    { return; }
+
+    const auto& TimerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Timer_UE,
+        RecordOfTimers_Utils>(InTimerOwnerEntity, InTimerName);
+
+    ck::UUtils_Signal_OnTimerDepleted::Bind(TimerEntity, InDelegate, InBindingPolicy);
+}
+
+auto
+    UCk_Utils_Timer_UE::
     BindTo_OnTimerUpdate(
         FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName,
@@ -595,6 +631,24 @@ auto
         RecordOfTimers_Utils>(InTimerOwnerEntity, InTimerName);
 
     ck::UUtils_Signal_OnTimerDone::Unbind(TimerEntity, InDelegate);
+}
+
+auto
+    UCk_Utils_Timer_UE::
+    UnbindFrom_OnTimerDepleted(
+        FCk_Handle                InTimerOwnerEntity,
+        FGameplayTag              InTimerName,
+        const FCk_Delegate_Timer& InDelegate)
+    -> void
+{
+    if (NOT Ensure(InTimerOwnerEntity, InTimerName))
+    { return; }
+
+    const auto& TimerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Timer_UE,
+        RecordOfTimers_Utils>(InTimerOwnerEntity, InTimerName);
+
+    ck::UUtils_Signal_OnTimerDepleted::Unbind(TimerEntity, InDelegate);
 }
 
 auto
