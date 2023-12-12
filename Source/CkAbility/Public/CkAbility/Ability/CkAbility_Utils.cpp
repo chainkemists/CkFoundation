@@ -67,10 +67,10 @@ auto
 }
 
 auto
-	UCk_Utils_Ability_UE::
-	Get_Info(
-		FCk_Handle InAbilityEntity)
-	-> FCk_Ability_Info
+    UCk_Utils_Ability_UE::
+    Get_Info(
+        FCk_Handle InAbilityEntity)
+    -> FCk_Ability_Info
 {
     if (NOT Ensure(InAbilityEntity))
     { return {}; }
@@ -119,6 +119,60 @@ auto
 
 auto
     UCk_Utils_Ability_UE::
+    BindTo_OnAbilityActivated(
+        FCk_Handle                                         InAbilityHandle,
+        ECk_Signal_BindingPolicy                           InBehavior,
+        const FCk_Delegate_Ability_OnActivated& InDelegate)
+    -> void
+{
+    if (NOT Ensure(InAbilityHandle))
+    { return; }
+
+    ck::UUtils_Signal_OnAbilityActivated::Bind(InAbilityHandle, InDelegate, InBehavior);
+}
+
+auto
+    UCk_Utils_Ability_UE::
+    UnbindFrom_OnAbilityActivated(
+        FCk_Handle                              InAbilityHandle,
+        const FCk_Delegate_Ability_OnActivated& InDelegate)
+    -> void
+{
+    if (NOT Ensure(InAbilityHandle))
+    { return; }
+
+    ck::UUtils_Signal_OnAbilityActivated::Unbind(InAbilityHandle, InDelegate);
+}
+
+auto
+    UCk_Utils_Ability_UE::
+    BindTo_OnAbilityDeactivated(
+        FCk_Handle                                           InAbilityHandle,
+        ECk_Signal_BindingPolicy                             InBehavior,
+        const FCk_Delegate_Ability_OnDeactivated& InDelegate)
+    -> void
+{
+    if (NOT Ensure(InAbilityHandle))
+    { return; }
+
+    ck::UUtils_Signal_OnAbilityDeactivated::Bind(InAbilityHandle, InDelegate, InBehavior);
+}
+
+auto
+    UCk_Utils_Ability_UE::
+    UnbindFrom_OnAbilityDeactivated(
+        FCk_Handle                                           InAbilityHandle,
+        const FCk_Delegate_Ability_OnDeactivated& InDelegate)
+    -> void
+{
+    if (NOT Ensure(InAbilityHandle))
+    { return; }
+
+    ck::UUtils_Signal_OnAbilityDeactivated::Unbind(InAbilityHandle, InDelegate);
+}
+
+auto
+    UCk_Utils_Ability_UE::
     DoActivate(
         FCk_Handle InAbilityEntity)
     -> void
@@ -136,7 +190,7 @@ auto
     AbilityCurrent._Status = ECk_Ability_Status::Active;
     AbilityCurrent._AbilityScript->OnActivateAbility();
 
-    // TODO: Fire Signal
+    ck::UUtils_Signal_OnAbilityActivated::Broadcast(InAbilityEntity, ck::MakePayload(InAbilityEntity));
 }
 
 auto
@@ -158,7 +212,7 @@ auto
     AbilityCurrent._Status = ECk_Ability_Status::NotActive;
     AbilityCurrent._AbilityScript->OnEndAbility();
 
-    // TODO: Fire Signal
+    ck::UUtils_Signal_OnAbilityDeactivated::Broadcast(InAbilityEntity, ck::MakePayload(InAbilityEntity));
 }
 
 auto
