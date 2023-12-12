@@ -65,6 +65,22 @@ namespace ck
 
                 break;
             }
+            case ECk_Timer_Manipulate::Complete:
+            {
+                timer::VeryVerbose(TEXT("Handling Complete Request for Timer with Entity [{}]"), InTimerEntity);
+
+                UUtils_Signal_OnTimerReset::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
+
+                if (InParamsComp.Get_Params().Get_CountDirection() == ECk_Timer_CountDirection::CountUp)
+                { TimerChrono.Complete(); }
+                else
+                { TimerChrono.Reset(); }
+
+                UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
+                UUtils_Signal_OnTimerDone::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
+
+                break;
+            }
             case ECk_Timer_Manipulate::Stop:
             {
                 timer::VeryVerbose(TEXT("Handling Stop Request for Timer with Entity [{}]"), InTimerEntity);
