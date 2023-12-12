@@ -189,6 +189,8 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 // This Object itself is NOT replicated. It may be 'implicitly' replicated through the Ability's replicated fragment
+// The interface is purposefully similar to GAS' Gameplay Ability.
+// We chose to use the term 'Activate/Deactivate Ability' as opposed to 'Start/End Ability' since it evokes a more immediate process
 UCLASS(Abstract, EditInlineNew, Blueprintable, BlueprintType)
 class CKABILITY_API UCk_Ability_Script_PDA : public UCk_DataAsset_PDA
 {
@@ -210,7 +212,7 @@ public:
     OnActivateAbility() -> void;
 
     auto
-    OnEndAbility() -> void;
+    OnDeactivateAbility() -> void;
 
     auto
     Get_CanActivateAbility() const -> bool;
@@ -220,64 +222,68 @@ protected:
               Category = "Ck|Ability|Script",
               meta     = (DisplayName = "OnActivateAbility"))
     void
-	DoOnActivateAbility();
+    DoOnActivateAbility();
 
     UFUNCTION(BlueprintNativeEvent,
               Category = "Ck|Ability|Script",
-              meta     = (DisplayName = "OnEndAbility"))
+              meta     = (DisplayName = "OnDeactivateAbility"))
     void
-	DoOnEndAbility();
+    DoOnDeactivateAbility();
 
     UFUNCTION(BlueprintNativeEvent,
               Category = "Ck|Ability|Script",
               meta     = (DisplayName = "OnGiveAbility"))
     void
-	DoOnGiveAbility();
+    DoOnGiveAbility();
 
     UFUNCTION(BlueprintNativeEvent,
               Category = "Ck|Ability|Script",
               meta     = (DisplayName = "OnRevokeAbility"))
     void
-	DoOnRevokeAbility();
+    DoOnRevokeAbility();
 
     UFUNCTION(BlueprintNativeEvent,
               Category = "Ck|Ability|Script",
               meta     = (DisplayName = "Get_CanActivateAbility"))
     bool
-	DoGet_CanActivateAbility() const;
+    DoGet_CanActivateAbility() const;
 
 private:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
-              meta = (CompactNodeTitle="ActivateThisAbility", DefaultToSelf="InScript", HidePin="InScript"))
+              meta = (CompactNodeTitle="ACTIVATE_ThisAbility", DefaultToSelf="InScript", HidePin="InScript"))
     static void
-	Self_Request_ActivateAbility(const UCk_Ability_Script_PDA* InScript);
+    Self_Request_ActivateAbility(
+        const UCk_Ability_Script_PDA* InScript);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
-              meta = (CompactNodeTitle="EndThisAbility", DefaultToSelf="InScript", HidePin="InScript"))
+              meta = (CompactNodeTitle="DEACTIVATE_ThisAbility", DefaultToSelf="InScript", HidePin="InScript"))
     static void
-	Self_Request_EndAbility(const UCk_Ability_Script_PDA* InScript);
+    Self_Request_DeactivateAbility(
+        const UCk_Ability_Script_PDA* InScript);
 
 private:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Ability|Script",
-              meta = (CompactNodeTitle="ThisAbilityStatus", DefaultToSelf="InScript", HidePin="InScript"))
+              meta = (CompactNodeTitle="STATUS_ThisAbility", DefaultToSelf="InScript", HidePin="InScript"))
     static ECk_Ability_Status
-	Self_Get_Status(const UCk_Ability_Script_PDA* InScript);
+    Self_Get_Status(
+        const UCk_Ability_Script_PDA* InScript);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Ability|Script",
               meta = (CompactNodeTitle="AbilityEntity", DefaultToSelf="InScript", HidePin="InScript"))
     static FCk_Handle
-    Self_Get_AbilityEntity(const UCk_Ability_Script_PDA* InScript);
+    Self_Get_AbilityEntity(
+        const UCk_Ability_Script_PDA* InScript);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Ability|Script",
               meta = (CompactNodeTitle="AbilityOwnerEntity", DefaultToSelf="InScript", HidePin="InScript"))
     static FCk_Handle
-    Self_Get_AbilityOwnerEntity(const UCk_Ability_Script_PDA* InScript);
-
+    Self_Get_AbilityOwnerEntity(
+        const UCk_Ability_Script_PDA* InScript);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

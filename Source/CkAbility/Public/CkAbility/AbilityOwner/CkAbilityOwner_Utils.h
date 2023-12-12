@@ -50,7 +50,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="Ensure Has Ability Owner")
+              DisplayName="Ensure Is Ability Owner")
     static bool
     Ensure(
         FCk_Handle InHandle);
@@ -163,9 +163,9 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner")
     static void
-    Request_EndAbility(
+    Request_DeactivateAbility(
         FCk_Handle InAbilityOwnerHandle,
-        const FCk_Request_AbilityOwner_EndAbility& InRequest);
+        const FCk_Request_AbilityOwner_DeactivateAbility& InRequest);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",

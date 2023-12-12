@@ -15,17 +15,14 @@
 auto
     UCk_Utils_Ability_UE::
     Add(
-        FCk_Handle                             InHandle,
+        FCk_Handle InHandle,
         const FCk_Fragment_Ability_ParamsData& InParams)
     -> void
 {
-    // TODO: Replace with PostEntityCreated func once available
     const auto NewAbilityEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle,
     [&](const FCk_Handle& InNewEntity)
     {
         DoAdd(InNewEntity, InParams);
-
-        // TODO: Add Rep Fragment
     });
 
     RecordOfAbilities_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
@@ -120,8 +117,8 @@ auto
 auto
     UCk_Utils_Ability_UE::
     BindTo_OnAbilityActivated(
-        FCk_Handle                                         InAbilityHandle,
-        ECk_Signal_BindingPolicy                           InBehavior,
+        FCk_Handle InAbilityHandle,
+        ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_Ability_OnActivated& InDelegate)
     -> void
 {
@@ -134,7 +131,7 @@ auto
 auto
     UCk_Utils_Ability_UE::
     UnbindFrom_OnAbilityActivated(
-        FCk_Handle                              InAbilityHandle,
+        FCk_Handle InAbilityHandle,
         const FCk_Delegate_Ability_OnActivated& InDelegate)
     -> void
 {
@@ -147,8 +144,8 @@ auto
 auto
     UCk_Utils_Ability_UE::
     BindTo_OnAbilityDeactivated(
-        FCk_Handle                                           InAbilityHandle,
-        ECk_Signal_BindingPolicy                             InBehavior,
+        FCk_Handle InAbilityHandle,
+        ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_Ability_OnDeactivated& InDelegate)
     -> void
 {
@@ -161,7 +158,7 @@ auto
 auto
     UCk_Utils_Ability_UE::
     UnbindFrom_OnAbilityDeactivated(
-        FCk_Handle                                           InAbilityHandle,
+        FCk_Handle InAbilityHandle,
         const FCk_Delegate_Ability_OnDeactivated& InDelegate)
     -> void
 {
@@ -195,7 +192,7 @@ auto
 
 auto
     UCk_Utils_Ability_UE::
-    DoEnd(
+    DoDeactivate(
         FCk_Handle InAbilityEntity)
     -> void
 {
@@ -205,12 +202,12 @@ auto
     auto& AbilityCurrent = InAbilityEntity.Get<ck::FFragment_Ability_Current>();
 
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityCurrent._AbilityScript),
-        TEXT("Cannot End Ability with Entity [{}] because its AbilityScript is INVALID"),
+        TEXT("Cannot Deactivate Ability with Entity [{}] because its AbilityScript is INVALID"),
         InAbilityEntity)
     { return; }
 
     AbilityCurrent._Status = ECk_Ability_Status::NotActive;
-    AbilityCurrent._AbilityScript->OnEndAbility();
+    AbilityCurrent._AbilityScript->OnDeactivateAbility();
 
     ck::UUtils_Signal_OnAbilityDeactivated::Broadcast(InAbilityEntity, ck::MakePayload(InAbilityEntity));
 }
@@ -324,7 +321,7 @@ auto
     const auto& Current = InAbility.Get<ck::FFragment_Ability_Current>();
     if (Current.Get_Status() == ECk_Ability_Status::Active)
     {
-        UCk_Utils_AbilityOwner_UE::Request_EndAbility(InAbilityOwner, FCk_Request_AbilityOwner_EndAbility{InAbility});
+        UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(InAbilityOwner, FCk_Request_AbilityOwner_DeactivateAbility{InAbility});
         UCk_Utils_AbilityOwner_UE::Request_RevokeAbility(InAbilityOwner, FCk_Request_AbilityOwner_RevokeAbility{InAbility});
 
         return;

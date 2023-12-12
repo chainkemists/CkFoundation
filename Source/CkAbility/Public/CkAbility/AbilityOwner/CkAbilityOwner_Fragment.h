@@ -74,10 +74,10 @@ namespace ck
         using GiveAbilityRequestType = FCk_Request_AbilityOwner_GiveAbility;
         using RevokeAbilityRequestType = FCk_Request_AbilityOwner_RevokeAbility;
         using ActivateAbilityRequestType = FCk_Request_AbilityOwner_ActivateAbility;
-        using EndAbilityRequestType = FCk_Request_AbilityOwner_EndAbility;
+        using DeactivateAbilityRequestType = FCk_Request_AbilityOwner_DeactivateAbility;
 
         using RequestType = std::variant<GiveAbilityRequestType, RevokeAbilityRequestType,
-            ActivateAbilityRequestType, EndAbilityRequestType>;
+            ActivateAbilityRequestType, DeactivateAbilityRequestType>;
         using RequestList = TArray<RequestType>;
 
     public:

@@ -309,8 +309,8 @@ namespace ck
                         InAbilityOwnerEntity
                     );
 
-                    UCk_Utils_AbilityOwner_UE::Request_EndAbility(InAbilityOwnerEntity,
-                        FCk_Request_AbilityOwner_EndAbility{InAbilityEntityToCancel});
+                    UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(InAbilityOwnerEntity,
+                        FCk_Request_AbilityOwner_DeactivateAbility{InAbilityEntityToCancel});
                 },
                 algo::MatchesAnyAbilityActivationCancelledTags{GrantedTags}
             );
@@ -355,10 +355,10 @@ namespace ck
         DoHandleRequest(
             HandleType InAbilityOwnerEntity,
             FFragment_AbilityOwner_Current& InAbilityOwnerComp,
-            const FCk_Request_AbilityOwner_EndAbility& InRequest) const
+            const FCk_Request_AbilityOwner_DeactivateAbility& InRequest) const
         -> void
     {
-        const auto& DoEndAbility = [&](const FCk_Handle& InAbilityEntity, const FGameplayTag& InAbilityName) -> void
+        const auto& DoDeactivateAbility = [&](const FCk_Handle& InAbilityEntity, const FGameplayTag& InAbilityName) -> void
         {
             if (UCk_Utils_Ability_UE::Get_Status(InAbilityEntity) == ECk_Ability_Status::NotActive)
             { return; }
@@ -370,14 +370,14 @@ namespace ck
 
             ability::VeryVerbose
             (
-                TEXT("Ending Ability [Name: {} | Entity: {}] from Ability Owner [{}] and Remove Tags [{}]"),
+                TEXT("Deactivating Ability [Name: {} | Entity: {}] from Ability Owner [{}] and Remove Tags [{}]"),
                 InAbilityName,
                 InAbilityEntity,
                 InAbilityOwnerEntity,
                 GrantedTags
             );
 
-            UCk_Utils_Ability_UE::DoEnd(InAbilityEntity);
+            UCk_Utils_Ability_UE::DoDeactivate(InAbilityEntity);
         };
 
         switch (const auto& SearchPolicy = InRequest.Get_SearchPolicy())
@@ -389,7 +389,7 @@ namespace ck
                 if (ck::Is_NOT_Valid(FoundAbilityEntity))
                 { break; }
 
-                DoEndAbility(FoundAbilityEntity, InRequest.Get_AbilityName());
+                DoDeactivateAbility(FoundAbilityEntity, InRequest.Get_AbilityName());
 
                 break;
             }
@@ -400,7 +400,7 @@ namespace ck
                 if (ck::Is_NOT_Valid(FoundAbilityEntity))
                 { break; }
 
-                DoEndAbility(FoundAbilityEntity, UCk_Utils_GameplayLabel_UE::Get_Label(FoundAbilityEntity));
+                DoDeactivateAbility(FoundAbilityEntity, UCk_Utils_GameplayLabel_UE::Get_Label(FoundAbilityEntity));
 
                 break;
             }
