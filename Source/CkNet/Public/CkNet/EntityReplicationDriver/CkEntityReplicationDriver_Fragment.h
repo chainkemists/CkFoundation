@@ -126,10 +126,16 @@ private:
 
 public:
     // TODO: reduce the exposure of this variable
-    CK_PROPERTY(_ReplicationData);
-    CK_PROPERTY(_ReplicationData_ReplicatedActor);
-    CK_PROPERTY(_ReplicationData_NonReplicatedActor);
-    CK_PROPERTY(_ExpectedNumberOfDependentReplicationDrivers);
+    CK_PROPERTY_GET(_ReplicationData);
+    CK_PROPERTY_GET(_ReplicationData_ReplicatedActor);
+    CK_PROPERTY_GET(_ReplicationData_NonReplicatedActor);
+    CK_PROPERTY_GET(_ExpectedNumberOfDependentReplicationDrivers);
+
+    auto Set_ReplicationData(const decltype(_ReplicationData)& InValue) -> ThisType&;
+    auto Set_ReplicationData_ReplicatedActor(const decltype(_ReplicationData_ReplicatedActor)& InValue) -> ThisType&;
+    auto Set_ReplicationData_NonReplicatedActor(const decltype(_ReplicationData_NonReplicatedActor)& InValue) -> ThisType&;
+    auto Set_ExpectedNumberOfDependentReplicationDrivers(const decltype(_ExpectedNumberOfDependentReplicationDrivers)& InValue) -> ThisType&;
+    ;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

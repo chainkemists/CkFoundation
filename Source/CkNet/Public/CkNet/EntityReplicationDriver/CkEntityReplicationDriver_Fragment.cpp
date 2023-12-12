@@ -13,6 +13,8 @@
 #include "CkNet/CkNet_Utils.h"
 #include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
+#include "Net/Core/PushModel/PushModel.h"
+
 #include <Net/UnrealNetwork.h>
 #include <Engine/World.h>
 
@@ -38,10 +40,14 @@ auto
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    DOREPLIFETIME(ThisType, _ReplicationData);
-    DOREPLIFETIME(ThisType, _ReplicationData_ReplicatedActor);
-    DOREPLIFETIME(ThisType, _ReplicationData_NonReplicatedActor);
-    DOREPLIFETIME(ThisType, _ExpectedNumberOfDependentReplicationDrivers);
+    FDoRepLifetimeParams Params;
+    Params.bIsPushBased = true;
+    Params.Condition = COND_Custom;
+
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData_ReplicatedActor, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData_NonReplicatedActor, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ExpectedNumberOfDependentReplicationDrivers, Params);
 }
 
 auto
@@ -297,6 +303,50 @@ auto
         const auto AssociatedEntity = Get_AssociatedEntity();
         ck::UUtils_Signal_OnDependentsReplicationComplete::Broadcast(AssociatedEntity, ck::MakePayload(AssociatedEntity));
     }
+}
+
+auto
+	UCk_Fragment_EntityReplicationDriver_Rep::
+	Set_ReplicationData(
+		const decltype(_ReplicationData)& InValue)
+	-> ThisType&
+{
+	_ReplicationData = InValue;
+	MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _ReplicationData, this);
+	return *this;
+}
+
+auto
+	UCk_Fragment_EntityReplicationDriver_Rep::
+	Set_ReplicationData_ReplicatedActor(
+		const decltype(_ReplicationData_ReplicatedActor)& InValue)
+	-> ThisType&
+{
+	_ReplicationData_ReplicatedActor = InValue;
+	MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _ReplicationData_ReplicatedActor, this);
+	return *this;
+}
+
+auto
+	UCk_Fragment_EntityReplicationDriver_Rep::
+	Set_ReplicationData_NonReplicatedActor(
+		const decltype(_ReplicationData_NonReplicatedActor)& InValue)
+	-> decltype(*this)
+{
+	_ReplicationData_NonReplicatedActor = InValue;
+	MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _ReplicationData_NonReplicatedActor, this);
+	return *this;
+}
+
+auto
+	UCk_Fragment_EntityReplicationDriver_Rep::
+	Set_ExpectedNumberOfDependentReplicationDrivers(
+		const decltype(_ExpectedNumberOfDependentReplicationDrivers)& InValue)
+	-> decltype(*this)
+{
+	_ExpectedNumberOfDependentReplicationDrivers = InValue;
+	MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _ExpectedNumberOfDependentReplicationDrivers, this);
+	return *this;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

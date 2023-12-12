@@ -3,6 +3,7 @@
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
 
 #include "Net/UnrealNetwork.h"
+#include "Net/Core/PushModel/PushModel.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 auto
@@ -13,6 +14,8 @@ auto
     -> void
 {
     _PendingAddModifiers.Emplace(FCk_Fragment_FloatAttribute_PendingModifier{InModifierName, InParams});
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _PendingAddModifiers, this);
+
 }
 
 void
@@ -22,6 +25,7 @@ void
         FGameplayTag InAttributeName)
 {
     _PendingRemoveModifiers.Emplace(FCk_Fragment_FloatAttribute_RemovePendingModifier{InAttributeName, InModifierName});
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _PendingRemoveModifiers, this);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -42,8 +46,12 @@ void
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    DOREPLIFETIME(ThisType, _PendingAddModifiers);
-    DOREPLIFETIME(ThisType, _PendingRemoveModifiers);
+    FDoRepLifetimeParams Params;
+    Params.bIsPushBased = true;
+    Params.Condition = COND_Custom;
+
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingAddModifiers, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingRemoveModifiers, Params);
 }
 
 auto
