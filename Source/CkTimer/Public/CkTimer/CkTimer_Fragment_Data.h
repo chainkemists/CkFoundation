@@ -14,6 +14,7 @@ UENUM(BlueprintType)
 enum class ECk_Timer_Manipulate : uint8
 {
     Reset,
+    Complete,
     Stop,
     Pause,
     Resume

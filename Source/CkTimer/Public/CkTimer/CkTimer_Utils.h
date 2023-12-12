@@ -137,6 +137,14 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
+              DisplayName="Request Complete Timer")
+    static void
+    Request_Complete(
+        FCk_Handle InTimerOwnerEntity,
+        FGameplayTag InTimerName);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Timer",
               DisplayName="Request Stop Timer")
     static void
     Request_Stop(
@@ -248,6 +256,16 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
+              DisplayName = "Bind To Timer Depleted")
+    static void
+    BindTo_OnTimerDepleted(
+        FCk_Handle InTimerOwnerEntity,
+        FGameplayTag InTimerName,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        const FCk_Delegate_Timer& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Timer",
               DisplayName = "Bind To Timer Update")
     static void
     BindTo_OnTimerUpdate(
@@ -299,6 +317,15 @@ public:
               DisplayName = "Unbind From Timer Done")
     static void
     UnbindFrom_OnTimerDone(
+        FCk_Handle InTimerOwnerEntity,
+        FGameplayTag InTimerName,
+        const FCk_Delegate_Timer& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Timer",
+              DisplayName = "Unbind From Timer Depleted")
+    static void
+    UnbindFrom_OnTimerDepleted(
         FCk_Handle InTimerOwnerEntity,
         FGameplayTag InTimerName,
         const FCk_Delegate_Timer& InDelegate);
