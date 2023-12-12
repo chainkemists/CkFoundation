@@ -97,8 +97,9 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="For Each Ability")
-    static void
+              DisplayName="For Each Ability",
+              meta=(AutoCreateRefTerm="InDelegate"))
+    static TArray<FCk_Handle>
     ForEach_Ability(
         FCk_Handle InAbilityOwnerEntity,
         const FCk_Delegate_AbilityOwner_ForEachAbility& InDelegate);
@@ -109,8 +110,9 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="For Each Ability with Status")
-    static void
+              DisplayName="For Each Ability with Status",
+              meta=(AutoCreateRefTerm="InDelegate"))
+    static TArray<FCk_Handle>
     ForEach_Ability_WithStatus(
         FCk_Handle InAbilityOwnerEntity,
         ECk_Ability_Status InStatus,
