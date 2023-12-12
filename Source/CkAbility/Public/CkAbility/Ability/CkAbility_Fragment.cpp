@@ -25,7 +25,7 @@ namespace ck::algo
             Tags.AppendTags(ActivationSettings.Get_ActivationSettingsOnSelf().Get_CancelledByTagsOnSelf());
 
             return Tags;
-		}();
+        }();
 
         return CancelledByTags.HasAnyExact(_Tags);
     }

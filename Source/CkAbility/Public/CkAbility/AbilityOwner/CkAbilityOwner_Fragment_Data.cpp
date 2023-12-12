@@ -46,15 +46,15 @@ FCk_Request_AbilityOwner_ActivateAbility::
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Request_AbilityOwner_EndAbility::
-    FCk_Request_AbilityOwner_EndAbility(
+FCk_Request_AbilityOwner_DeactivateAbility::
+    FCk_Request_AbilityOwner_DeactivateAbility(
         FGameplayTag InAbilityName)
         : _SearchPolicy(ECk_AbilityOwner_AbilitySearchPolicy::SearchByName)
         , _AbilityName(InAbilityName)
 { }
 
-FCk_Request_AbilityOwner_EndAbility::
-    FCk_Request_AbilityOwner_EndAbility(
+FCk_Request_AbilityOwner_DeactivateAbility::
+    FCk_Request_AbilityOwner_DeactivateAbility(
         FCk_Handle InAbilityHandle)
         : _SearchPolicy(ECk_AbilityOwner_AbilitySearchPolicy::SearchByHandle)
         , _AbilityHandle(InAbilityHandle)

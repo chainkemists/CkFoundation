@@ -93,7 +93,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
-              DisplayName="Ensure Has Ability")
+              DisplayName="Ensure Is Ability")
     static bool
     Ensure(
         FCk_Handle InAbilityEntity);
@@ -101,7 +101,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
-			  meta=(CompactNodeTitle="Info"))
+		    meta=(CompactNodeTitle="Info"))
     static FCk_Ability_Info
     Get_Info(
         FCk_Handle InAbilityEntity);
@@ -175,7 +175,7 @@ private:
         FCk_Handle InAbilityEntity) -> void;
 
     static auto
-    DoEnd(
+    DoDeactivate(
         FCk_Handle InAbilityEntity) -> void;
 
     static auto

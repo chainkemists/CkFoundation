@@ -79,7 +79,7 @@ namespace ck
         auto DoHandleRequest(
             HandleType InAbilityOwnerEntity,
             FFragment_AbilityOwner_Current& InAbilityOwnerComp,
-            const FCk_Request_AbilityOwner_EndAbility& InRequest) const -> void;
+            const FCk_Request_AbilityOwner_DeactivateAbility& InRequest) const -> void;
 
     private:
         auto DoFindAbilityByName(
