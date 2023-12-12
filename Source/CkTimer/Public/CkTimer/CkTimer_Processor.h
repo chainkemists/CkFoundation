@@ -43,7 +43,7 @@ namespace ck
 
     class CKTIMER_API FProcessor_Timer_Update
         : public TProcessor<FProcessor_Timer_Update, FFragment_Timer_Params, FFragment_Timer_Current, FTag_Timer_NeedsUpdate,
-			ck::TExclude<FTag_Timer_Countdown>>
+            ck::TExclude<FTag_Timer_Countdown>>
     {
     public:
         using MarkedDirtyBy = FTag_Timer_NeedsUpdate;
@@ -63,7 +63,7 @@ namespace ck
 
     class CKTIMER_API FProcessor_Timer_Update_Countdown
         : public TProcessor<FProcessor_Timer_Update_Countdown, FFragment_Timer_Params, FFragment_Timer_Current, FTag_Timer_NeedsUpdate,
-			FTag_Timer_Countdown>
+            FTag_Timer_Countdown>
     {
     public:
         using MarkedDirtyBy = FTag_Timer_NeedsUpdate;
@@ -78,8 +78,6 @@ namespace ck
             const FFragment_Timer_Params& InParams,
             FFragment_Timer_Current& InCurrentComp) const -> void;
     };
-
-    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------
