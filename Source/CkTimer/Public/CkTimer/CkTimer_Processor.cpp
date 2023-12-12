@@ -131,6 +131,46 @@ namespace ck
         }
     }
 
+    auto
+        FProcessor_Timer_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_Timer_Current& InCurrentComp,
+            const FFragment_Timer_Params& InParamsComp,
+            const FCk_Request_Timer_Consume& InRequest) const
+        -> void
+    {
+        auto& TimerChrono = InCurrentComp._Chrono;
+
+        switch(InParamsComp.Get_Params().Get_CountDirection())
+        {
+            case ECk_Timer_CountDirection::CountUp:
+            {
+                TimerChrono.Consume(InRequest.Get_ConsumeDuration());
+
+                if (TimerChrono.Get_IsDepleted())
+                {
+                    UUtils_Signal_OnTimerDepleted::Broadcast(InHandle,
+                        MakePayload(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle), TimerChrono));
+                }
+
+                break;
+            }
+            case ECk_Timer_CountDirection::CountDown:
+            {
+                TimerChrono.Tick(InRequest.Get_ConsumeDuration());
+
+                if (TimerChrono.Get_IsDone())
+                {
+                    UUtils_Signal_OnTimerDepleted::Broadcast(InHandle,
+                        MakePayload(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle), TimerChrono));
+                }
+
+                break;
+            }
+        }
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     auto

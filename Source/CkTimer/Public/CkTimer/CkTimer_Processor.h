@@ -37,6 +37,12 @@ namespace ck
             FFragment_Timer_Current& InCurrentComp,
             const FFragment_Timer_Params& InParamsComp,
             const FCk_Request_Timer_Jump& InRequest) const -> void;
+
+        auto DoHandleRequest(
+            HandleType InHandle,
+            FFragment_Timer_Current& InCurrentComp,
+            const FFragment_Timer_Params& InParamsComp,
+            const FCk_Request_Timer_Consume& InRequest) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

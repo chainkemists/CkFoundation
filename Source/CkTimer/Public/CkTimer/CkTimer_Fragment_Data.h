@@ -149,6 +149,28 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKTIMER_API FCk_Request_Timer_Consume
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Timer_Consume);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _ConsumeDuration;
+
+public:
+    CK_PROPERTY_GET(_ConsumeDuration);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Timer_Consume, _ConsumeDuration);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKTIMER_API FCk_Request_Timer_Manipulate
 {
     GENERATED_BODY()

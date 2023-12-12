@@ -170,6 +170,15 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
+              DisplayName="Request Consume Timer")
+    static void
+    Request_Consume(
+        FCk_Handle InTimerOwnerEntity,
+        FGameplayTag InTimerName,
+        FCk_Request_Timer_Consume InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Timer",
               DisplayName="Request Change Count Direction")
     static void
     Request_ChangeCountDirection(

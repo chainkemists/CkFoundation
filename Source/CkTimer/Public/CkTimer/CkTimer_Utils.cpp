@@ -324,6 +324,24 @@ auto
 }
 
 auto
+    UCk_Utils_Timer_UE::
+    Request_Consume(
+        FCk_Handle                InTimerOwnerEntity,
+        FGameplayTag              InTimerName,
+        FCk_Request_Timer_Consume InRequest)
+    -> void
+{
+    if (NOT Ensure(InTimerOwnerEntity, InTimerName))
+    { return; }
+
+    auto TimerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Timer_UE,
+        RecordOfTimers_Utils>(InTimerOwnerEntity, InTimerName);
+
+    TimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(InRequest);
+}
+
+auto
 	UCk_Utils_Timer_UE::
 	Request_ChangeCountDirection(
 		FCk_Handle               InTimerOwnerEntity,
