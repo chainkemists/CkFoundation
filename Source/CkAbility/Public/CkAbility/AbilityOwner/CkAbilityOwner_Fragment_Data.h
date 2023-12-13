@@ -6,8 +6,6 @@
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 #include "CkEcs/Handle/CkHandle.h"
 
-#include "CkProvider/CkProvider_Data.h"
-
 #include "CkAbilityOwner_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -20,6 +18,20 @@ enum class ECk_AbilityOwner_AbilitySearchPolicy : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_AbilitySearchPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_AbilityOwner_ForEachAbilityPolicy : uint8
+{
+    // If the AbilityOwner is also an Ability, SKIP it as when iterating over the list of abilities
+    IgnoreSelf,
+
+    // If the AbilityOwner is also an Ability, INCLUDE it as when iterating over the list of abilities
+    IncludeSelfIfApplicable,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_ForEachAbilityPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
