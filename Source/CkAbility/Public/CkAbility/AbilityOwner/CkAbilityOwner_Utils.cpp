@@ -106,6 +106,18 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
+    Get_AbilityCount(
+        FCk_Handle InAbilityOwnerEntity)
+    -> int32
+{
+    if (NOT Ensure_Any(InAbilityOwnerEntity))
+    { return {}; }
+
+    return RecordOfAbilities_Utils::Get_RecordEntriesCount(InAbilityOwnerEntity);
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
     ForEach_Ability(
         FCk_Handle InAbilityOwnerEntity,
         ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
