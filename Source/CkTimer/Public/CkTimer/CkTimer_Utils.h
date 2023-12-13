@@ -40,11 +40,10 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="Replace Timer")
+              DisplayName="AddOrReplace Timer")
     static void
-    Replace(
+    AddOrReplace(
         FCk_Handle InTimerOwnerEntity,
-        FGameplayTag InTimerName,
         const FCk_Fragment_Timer_ParamsData& InParams);
 
     UFUNCTION(BlueprintCallable,
