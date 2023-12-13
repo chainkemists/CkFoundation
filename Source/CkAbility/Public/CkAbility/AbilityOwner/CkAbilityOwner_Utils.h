@@ -94,6 +94,13 @@ public:
         FCk_Handle InAbilityOwnerEntity,
         FGameplayTag InAbilityName);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="Get Ability Count")
+    static int32
+    Get_AbilityCount(
+        FCk_Handle InAbilityOwnerEntity);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
