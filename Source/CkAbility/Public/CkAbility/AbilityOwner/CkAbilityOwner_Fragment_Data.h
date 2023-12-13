@@ -6,6 +6,8 @@
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 #include "CkEcs/Handle/CkHandle.h"
 
+#include "CkProvider/CkProvider_Data.h"
+
 #include "CkAbilityOwner_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -65,9 +67,9 @@ public:
     CK_GENERATED_BODY(FCk_Fragment_AbilityOwner_ParamsData);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
               meta = (AllowPrivateAccess = true))
-    TArray<TObjectPtr<const class UCk_Ability_EntityConfig_PDA>> _DefaultAbilities;
+    TArray<const class UCk_Ability_EntityConfig_PDA*> _DefaultAbilities;
 
 public:
     CK_PROPERTY_GET(_DefaultAbilities);
