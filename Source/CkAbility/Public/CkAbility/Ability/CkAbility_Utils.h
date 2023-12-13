@@ -36,7 +36,6 @@ private:
     FGameplayTag _AbilityName = FGameplayTag::EmptyTag;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              Category = "Activation",
               meta = (AllowPrivateAccess = true))
     FCk_Handle _AbilityOwnerEntity;
 
@@ -101,7 +100,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
-		    meta=(CompactNodeTitle="Info"))
+              meta=(CompactNodeTitle="Info"))
     static FCk_Ability_Info
     Get_Info(
         FCk_Handle InAbilityEntity);
@@ -125,6 +124,13 @@ public:
               DisplayName="Get Ability Status")
     static ECk_Ability_Status
     Get_Status(
+        FCk_Handle InAbilityEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability",
+              DisplayName="Get Ability Script Class")
+    static TSubclassOf<UCk_Ability_Script_PDA>
+    Get_ScriptClass(
         FCk_Handle InAbilityEntity);
 
 public:

@@ -116,6 +116,18 @@ auto
 
 auto
     UCk_Utils_Ability_UE::
+    Get_ScriptClass(
+        FCk_Handle InAbilityEntity)
+    -> TSubclassOf<UCk_Ability_Script_PDA>
+{
+    if (NOT Ensure(InAbilityEntity))
+    { return {}; }
+
+    return InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params().Get_AbilityScriptClass();
+}
+
+auto
+    UCk_Utils_Ability_UE::
     BindTo_OnAbilityActivated(
         FCk_Handle InAbilityHandle,
         ECk_Signal_BindingPolicy InBehavior,
