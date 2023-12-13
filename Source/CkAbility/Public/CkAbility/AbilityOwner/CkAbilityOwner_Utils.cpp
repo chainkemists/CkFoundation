@@ -81,7 +81,7 @@ auto
         FCk_Handle InAbilityOwnerEntity)
     -> bool
 {
-    CK_ENSURE_IF_NOT(Has_Any(InAbilityOwnerEntity), TEXT("Handle [{}] does NOT have any Ability [{}]"), InAbilityOwnerEntity)
+    CK_ENSURE_IF_NOT(Has_Any(InAbilityOwnerEntity), TEXT("Handle [{}] does NOT have any Ability"), InAbilityOwnerEntity)
     { return false; }
 
     return true;
@@ -108,12 +108,13 @@ auto
     UCk_Utils_AbilityOwner_UE::
     ForEach_Ability(
         FCk_Handle InAbilityOwnerEntity,
+        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
         const FCk_Delegate_AbilityOwner_ForEachAbility& InDelegate)
     -> TArray<FCk_Handle>
 {
     auto Abilities = TArray<FCk_Handle>{};
 
-    ForEach_Ability(InAbilityOwnerEntity, [&](FCk_Handle InAbility)
+    ForEach_Ability(InAbilityOwnerEntity, InForEachAbilityPolicy, [&](FCk_Handle InAbility)
     {
         if (InDelegate.IsBound())
         { InDelegate.Execute(InAbility); }
@@ -128,14 +129,21 @@ auto
     UCk_Utils_AbilityOwner_UE::
     ForEach_Ability(
         FCk_Handle InAbilityOwnerEntity,
+        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
         const TFunction<void(FCk_Handle)>& InFunc)
     -> void
 {
+    if (NOT Ensure_Any(InAbilityOwnerEntity))
+    { return; }
+
     RecordOfAbilities_Utils::ForEachEntry
     (
         InAbilityOwnerEntity,
         [&](const FCk_Handle& InAbilityEntity)
         {
+            if (InForEachAbilityPolicy == ECk_AbilityOwner_ForEachAbilityPolicy::IgnoreSelf && InAbilityEntity == InAbilityOwnerEntity)
+            { return; }
+
             InFunc(InAbilityEntity);
         }
     );
@@ -146,12 +154,13 @@ auto
     ForEach_Ability_WithStatus(
         FCk_Handle InAbilityOwnerEntity,
         ECk_Ability_Status InStatus,
+        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
         const FCk_Delegate_AbilityOwner_ForEachAbility& InDelegate)
     -> TArray<FCk_Handle>
 {
     auto Abilities = TArray<FCk_Handle>{};
 
-    ForEach_Ability_WithStatus(InAbilityOwnerEntity, InStatus, [&](FCk_Handle InAbility)
+    ForEach_Ability_WithStatus(InAbilityOwnerEntity, InStatus, InForEachAbilityPolicy, [&](FCk_Handle InAbility)
     {
         if (InDelegate.IsBound())
         { InDelegate.Execute(InAbility); }
@@ -167,11 +176,18 @@ auto
     ForEach_Ability_WithStatus(
         FCk_Handle InAbilityOwnerEntity,
         ECk_Ability_Status InStatus,
+        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
         const TFunction<void(FCk_Handle)>& InFunc)
     -> void
 {
-    ForEach_Ability(InAbilityOwnerEntity, [&](FCk_Handle InAbility)
+    if (NOT Ensure_Any(InAbilityOwnerEntity))
+    { return; }
+
+    ForEach_Ability(InAbilityOwnerEntity, InForEachAbilityPolicy, [&](FCk_Handle InAbility)
     {
+        if (InForEachAbilityPolicy == ECk_AbilityOwner_ForEachAbilityPolicy::IgnoreSelf && InAbility == InAbilityOwnerEntity)
+        { return; }
+
         if (UCk_Utils_Ability_UE::Get_Status(InAbility) == InStatus)
         {
             InFunc(InAbility);
