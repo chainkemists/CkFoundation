@@ -11,6 +11,7 @@ auto
     Create_ASCII_ProgressBar(
         const FCk_FloatRange_0to1&  InProgressValue,
         const int32                 InProgressBarCharacterLength,
+        ECk_ForwardReverse          InForwardOrReverse,
         ECk_ASCII_ProgressBar_Style InStyle)
     -> FString
 {
@@ -46,15 +47,42 @@ auto
         }
     }();
 
-    for (auto Index = 0; Index < InProgressBarCharacterLength; ++Index)
+    switch (InForwardOrReverse)
     {
-        if (Index < NumberOfCharacters)
+        case ECk_ForwardReverse::Forward:
         {
-            StringBuilder.Append(ProgressCharacter);
+            for (auto Index = 0; Index < InProgressBarCharacterLength; ++Index)
+            {
+                if (Index < NumberOfCharacters)
+                {
+                    StringBuilder.Append(ProgressCharacter);
+                }
+                else
+                {
+                    StringBuilder.Append(TEXT(" "));
+                }
+            }
+            break;
         }
-        else
+        case ECk_ForwardReverse::Reverse:
         {
-            StringBuilder.Append(TEXT(" "));
+            for (auto Index = InProgressBarCharacterLength - 1; Index >= 0; --Index)
+            {
+                if (Index < NumberOfCharacters)
+                {
+                    StringBuilder.Append(ProgressCharacter);
+                }
+                else
+                {
+                    StringBuilder.Append(TEXT(" "));
+                }
+            }
+            break;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InForwardOrReverse);
+            break;
         }
     }
 

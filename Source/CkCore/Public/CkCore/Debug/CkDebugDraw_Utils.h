@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Math/ValueRange/CkValueRange.h"
 
@@ -36,6 +37,7 @@ public:
     Create_ASCII_ProgressBar(
         const FCk_FloatRange_0to1& InProgressValue,
         int32 InProgressBarCharacterLength,
+        ECk_ForwardReverse InForwardOrReverse = ECk_ForwardReverse::Forward,
         ECk_ASCII_ProgressBar_Style InStyle = ECk_ASCII_ProgressBar_Style::FilledBlock_Symbol);
 };
 
