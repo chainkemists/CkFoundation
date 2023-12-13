@@ -102,10 +102,12 @@ public:
     static TArray<FCk_Handle>
     ForEach_Ability(
         FCk_Handle InAbilityOwnerEntity,
+        ECk_AbilityOwner_ForEachAbilityPolicy ForEachAbilityPolicy,
         const FCk_Delegate_AbilityOwner_ForEachAbility& InDelegate);
     static auto
     ForEach_Ability(
         FCk_Handle InAbilityOwnerEntity,
+        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
         const TFunction<void(FCk_Handle)>& InFunc) -> void;
 
     UFUNCTION(BlueprintCallable,
@@ -116,11 +118,13 @@ public:
     ForEach_Ability_WithStatus(
         FCk_Handle InAbilityOwnerEntity,
         ECk_Ability_Status InStatus,
+        ECk_AbilityOwner_ForEachAbilityPolicy ForEachAbilityPolicy,
         const FCk_Delegate_AbilityOwner_ForEachAbility& InDelegate);
     static auto
     ForEach_Ability_WithStatus(
         FCk_Handle InAbilityOwnerEntity,
         ECk_Ability_Status InStatus,
+        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
         const TFunction<void(FCk_Handle)>& InFunc) -> void;
 
 public:
