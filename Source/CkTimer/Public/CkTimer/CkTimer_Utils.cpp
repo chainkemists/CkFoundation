@@ -55,25 +55,27 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
-    Replace(
+    AddOrReplace(
         FCk_Handle                           InTimerOwnerEntity,
-        FGameplayTag                         InTimerName,
         const FCk_Fragment_Timer_ParamsData& InParams)
     -> void
 {
-    if (NOT Ensure(InTimerOwnerEntity, InTimerName))
-    { return; }
+    if (NOT Has(InTimerOwnerEntity, InParams.Get_TimerName()))
+    {
+        Add(InTimerOwnerEntity, InParams);
+        return;
+    }
 
     auto TimerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Timer_UE,
-        RecordOfTimers_Utils>(InTimerOwnerEntity, InTimerName);
+        RecordOfTimers_Utils>(InTimerOwnerEntity, InParams.Get_TimerName());
 
     TimerEntity.Replace<ck::FFragment_Timer_Params>(InParams);
     TimerEntity.Replace<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
 
     if (InParams.Get_StartingState() == ECk_Timer_State::Running)
     {
-        TimerEntity.Add<ck::FTag_Timer_NeedsUpdate>();
+        TimerEntity.AddOrGet<ck::FTag_Timer_NeedsUpdate>();
     }
 }
 
