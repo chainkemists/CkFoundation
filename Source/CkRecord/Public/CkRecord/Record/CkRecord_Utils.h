@@ -51,6 +51,10 @@ namespace ck
         Get_AllRecordEntries(
             FCk_Handle InRecordHandle) -> TArray<FCk_Handle>;
 
+        static auto
+        Get_RecordEntriesCount(
+            FCk_Handle InRecordHandle) -> int32;
+
     public:
         template <typename T_Predicate>
         static auto
@@ -146,6 +150,17 @@ namespace ck
         }
 
         return RecordEntries;
+    }
+
+    template <typename T_DerivedRecord>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        Get_RecordEntriesCount(
+            FCk_Handle InRecordHandle)
+        -> int32
+    {
+        const auto& Fragment = InRecordHandle.Get<RecordType>();
+        return Fragment.Get_RecordEntries().Num();
     }
 
     template <typename T_DerivedRecord>
