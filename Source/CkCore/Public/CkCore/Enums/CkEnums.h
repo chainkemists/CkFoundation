@@ -48,6 +48,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SucceededFailed);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_ForwardReverse : uint8
+{
+    Forward,
+    Reverse
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ForwardReverse);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_AddedOrNot : uint8
 {
     Added,
