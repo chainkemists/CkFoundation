@@ -35,6 +35,35 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_Status);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_Ability_RecyclingPolicy : uint8
+{
+    // Recycle the existing Ability Script for the next Activation. Instead of creating a new instance of the UObject,
+    // we reset all of its properties to the CDO value
+    Recycle,
+
+    // Create a new instance of the Ability Script UObject in between activations
+    DoNotRecycle
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_RecyclingPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Ability_InstancingPolicy : uint8
+{
+    // This Ability is never instanced. Anything that executes the Ability is operating on the CDO
+    NotInstanced UMETA(DisplayName = "Not Instanced (uses CDO)"),
+
+    // A new instance of the Ability is made every time it is deactivated.
+    InstancedPerAbilityActivation
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_InstancingPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKABILITY_API FCk_Ability_ActivationSettings_OnOwner
 {
@@ -178,10 +207,16 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Ability_NetworkSettings _NetworkSettings;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              Category = "Advanced",
+              meta = (AllowPrivateAccess = true))
+    ECk_Ability_InstancingPolicy _InstancingPolicy = ECk_Ability_InstancingPolicy::InstancedPerAbilityActivation;
+
 public:
     CK_PROPERTY_GET(_AbilityName);
     CK_PROPERTY(_ActivationSettings);
     CK_PROPERTY(_NetworkSettings);
+    CK_PROPERTY(_InstancingPolicy);
 
     CK_DEFINE_CONSTRUCTORS(FCk_Ability_Script_Data, _AbilityName);
 };

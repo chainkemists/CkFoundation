@@ -206,6 +206,7 @@ auto
 auto
     UCk_Utils_Ability_UE::
     DoDeactivate(
+        FCk_Handle InAbilityOwnerEntity,
         FCk_Handle InAbilityEntity)
     -> void
 {
@@ -223,6 +224,58 @@ auto
     AbilityCurrent._AbilityScript->OnDeactivateAbility();
 
     ck::UUtils_Signal_OnAbilityDeactivated::Broadcast(InAbilityEntity, ck::MakePayload(InAbilityEntity));
+
+    const auto& AbilityParams = InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params();
+
+    // NOTE: If we reset the ability script properties on DEACTIVATE, we are potentially doing a cleanup for nothing
+    // if the ability is not activated again. If we do it on ACTIVATE then we are going to perform a cleanup for nothing
+    // the very first time it is activated
+    if (AbilityParams.Get_Data().Get_InstancingPolicy() == ECk_Ability_InstancingPolicy::InstancedPerAbilityActivation)
+    {
+        switch (const auto& RecyclingPolicy = UCk_Utils_Ability_ProjectSettings_UE::Get_AbilityRecyclingPolicy())
+        {
+            case ECk_Ability_RecyclingPolicy::Recycle:
+            {
+                ck::ability::VeryVerbose
+                (
+                    TEXT("Recycling Ability Script [{}] with Entity [{}] for Ability Owner [{}]"),
+                    AbilityCurrent._AbilityScript,
+                    InAbilityEntity,
+                    InAbilityOwnerEntity
+                );
+
+                UCk_Utils_Object_UE::Request_ResetAllPropertiesToDefault(AbilityCurrent._AbilityScript.Get());
+
+                break;
+            }
+            case ECk_Ability_RecyclingPolicy::DoNotRecycle:
+            {
+                ck::ability::VeryVerbose
+                (
+                    TEXT("Instancing new Ability Script [{}] with Entity [{}] for Ability Owner [{}]"),
+                    AbilityCurrent._AbilityScript,
+                    InAbilityEntity,
+                    InAbilityOwnerEntity
+                );
+
+                const auto& AbilityScriptClass = AbilityParams.Get_AbilityScriptClass();
+                AbilityCurrent._AbilityScript = UCk_Utils_Object_UE::Request_CreateNewObject_TransientPackage(AbilityScriptClass);
+
+                break;
+            }
+            default:
+            {
+                CK_INVALID_ENUM(RecyclingPolicy);
+                return;
+            }
+        }
+
+        if (ck::IsValid(AbilityCurrent._AbilityScript))
+        {
+            AbilityCurrent._AbilityScript->_AbilityHandle = InAbilityEntity;
+            AbilityCurrent._AbilityScript->_AbilityOwnerHandle = InAbilityOwnerEntity;
+        }
+    }
 }
 
 auto
@@ -261,10 +314,11 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptCDO), TEXT("Failed to create CDO of Ability Script of Class [{}]"), AbilityScriptClass)
     { return; }
 
-    const auto AbilityData = AbilityScriptCDO->Get_Data();
+    const auto& AbilityData = AbilityScriptCDO->Get_Data();
     const auto& AbilityName = AbilityData.Get_AbilityName();
     const auto& NetworkSettings = AbilityData.Get_NetworkSettings();
     const auto& ReplicationType = NetworkSettings.Get_ReplicationType();
+    const auto& InstancingPolicy = AbilityData.Get_InstancingPolicy();
 
     if (NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InHandle, ReplicationType))
     {
@@ -278,20 +332,22 @@ auto
         return;
     }
 
-    const auto& AbilityScriptInstance = UCk_Utils_Object_UE::Request_CreateNewObject_TransientPackage(AbilityScriptClass);
+    const auto& AbilityScriptToUse = InstancingPolicy == ECk_Ability_InstancingPolicy::NotInstanced
+                                       ? AbilityScriptCDO
+                                       : UCk_Utils_Object_UE::Request_CreateNewObject_TransientPackage(AbilityScriptClass);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptInstance), TEXT("Failed to create instance of Ability Script of Class [{}]"), AbilityScriptClass)
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptToUse), TEXT("Failed to create instance of Ability Script of Class [{}]"), AbilityScriptClass)
     { return; }
 
-    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(AbilityScriptInstance)
+    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(AbilityScriptToUse)
     { return; }
 
     UCk_Utils_GameplayLabel_UE::Add(InHandle, AbilityName);
 
     InHandle.Add<ck::FFragment_Ability_Params>(InParams);
-    InHandle.Add<ck::FFragment_Ability_Current>(AbilityScriptInstance);
+    InHandle.Add<ck::FFragment_Ability_Current>(AbilityScriptToUse);
 
-    UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityScriptInstance->GetWorld())->Request_TrackAbilityScript(AbilityScriptInstance);
+    UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityScriptToUse->GetWorld())->Request_TrackAbilityScript(AbilityScriptToUse);
 
     // TODO: Add Rep Fragment
 }
