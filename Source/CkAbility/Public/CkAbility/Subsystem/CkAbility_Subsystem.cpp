@@ -3,11 +3,9 @@
 #include "CkAbility/CkAbility_Log.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
-#include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkEcs/Handle/CkHandle.h"
-#include "CkEcs/Settings/CkEcs_Settings.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
