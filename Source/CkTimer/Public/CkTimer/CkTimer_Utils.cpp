@@ -86,10 +86,27 @@ auto
         const FCk_Fragment_MultipleTimer_ParamsData& InParams)
     -> void
 {
-    for (const auto& params : InParams.Get_TimerParams())
+    for (const auto& Params : InParams.Get_TimerParams())
     {
-        Add(InHandle, params);
+        Add(InHandle, Params);
     }
+}
+
+auto
+    UCk_Utils_Timer_UE::
+    Remove(
+        FCk_Handle   InTimerOwnerEntity,
+        FGameplayTag InTimerName)
+    -> void
+{
+    if (NOT Ensure(InTimerOwnerEntity, InTimerName))
+    { return; }
+
+    const auto TimerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+        UCk_Utils_Timer_UE,
+        RecordOfTimers_Utils>(InTimerOwnerEntity, InTimerName);
+
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(TimerEntity, ECk_EntityLifetime_DestructionBehavior::ForceDestroy);
 }
 
 auto
