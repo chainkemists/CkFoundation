@@ -360,11 +360,9 @@ auto
 
             UCk_Utils_Object_UE::Request_CopyAllProperties
             (
-                FCk_Utils_Object_CopyAllProperties_Params
-                {
-                    InDestinationActorComponent,
-                    InSourceActorComponent
-                }
+                FCk_Utils_Object_CopyAllProperties_Params{}
+                .Set_Destination(InDestinationActorComponent)
+                .Set_Source(InSourceActorComponent)
             );
         });
     });
