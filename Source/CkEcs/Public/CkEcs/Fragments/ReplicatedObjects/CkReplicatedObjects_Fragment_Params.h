@@ -10,17 +10,17 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#define CK_REP_OBJ_EXECUTE_IF_VALID(_Func_)              \
-    if (NOT Get_AssociatedEntity().IsValid())            \
-    { return; }                                          \
-                                                         \
-    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)            \
-    { return; }                                          \
-                                                         \
+#define CK_REP_OBJ_EXECUTE_IF_VALID(_Func_)      \
+    if (NOT ck::IsValid(Get_AssociatedEntity())) \
+    { return; }                                  \
+                                                 \
+    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)    \
+    { return; }                                  \
+                                                 \
     _Func_()
 
 #define CK_REP_OBJ_EXECUTE_IF_VALID_IGNORE_SERVER(_Func_)\
-    if (NOT Get_AssociatedEntity().IsValid())            \
+    if (NOT ck::IsValid(Get_AssociatedEntity()))         \
     { return; }                                          \
                                                          \
     CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)            \

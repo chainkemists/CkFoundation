@@ -94,7 +94,9 @@ public:
     auto operator->() const -> TOptional<FCk_Registry>;
 
 public:
-    auto IsValid() const -> bool;
+    auto IsValid(ck::IsValid_Policy_Default) const -> bool;
+    auto IsValid(ck::IsValid_Policy_IncludePendingKill) const -> bool;
+
     auto Orphan() const -> bool;
     auto Get_ValidHandle(EntityType::IdType InEntity) const -> ThisType;
 
@@ -173,7 +175,12 @@ namespace ck::algo
 
 CK_DEFINE_CUSTOM_IS_VALID(FCk_Handle, ck::IsValid_Policy_Default, [&](const FCk_Handle& InHandle)
 {
-    return InHandle.IsValid();
+    return InHandle.IsValid(ck::IsValid_Policy_Default{});
+});
+
+CK_DEFINE_CUSTOM_IS_VALID(FCk_Handle, ck::IsValid_Policy_IncludePendingKill, [&](const FCk_Handle& InHandle)
+{
+    return InHandle.IsValid(ck::IsValid_Policy_IncludePendingKill{});
 });
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -200,7 +207,7 @@ auto
         return Invalid_Fragment;
     }
 
-    CK_ENSURE_IF_NOT(IsValid(),
+    CK_ENSURE_IF_NOT(IsValid(ck::IsValid_Policy_Default{}),
         TEXT("Unable to Add Fragment [{}]. Handle [{}] does NOT have a valid Entity."),
         ck::TypeToString<T_FragmentType>, *this)
     {
@@ -236,7 +243,7 @@ auto
         return Invalid_Fragment;
     }
 
-    CK_ENSURE_IF_NOT(IsValid(),
+    CK_ENSURE_IF_NOT(IsValid(ck::IsValid_Policy_Default{}),
         TEXT("Unable to Add Fragment [{}]. Handle [{}] does NOT have a valid Entity."),
         ck::TypeToString<T_FragmentType>, *this)
     {
@@ -269,7 +276,7 @@ auto
         ck::TypeToString<T_FragmentType>, *this)
     { return; }
 
-    CK_ENSURE_IF_NOT(IsValid(),
+    CK_ENSURE_IF_NOT(IsValid(ck::IsValid_Policy_Default{}),
         TEXT("Unable to Try_Transform Fragment [{}]. Handle [{}] does NOT have a valid Entity."),
         ck::TypeToString<T_FragmentType>, *this)
     { return; }
@@ -292,7 +299,7 @@ auto
         return Invalid_Fragment;
     }
 
-    CK_ENSURE_IF_NOT(IsValid(),
+    CK_ENSURE_IF_NOT(IsValid(ck::IsValid_Policy_Default{}),
         TEXT("Unable to Replace Fragment [{}]. Handle [{}] does NOT have a valid Entity."),
         ck::TypeToString<T_FragmentType>, *this)
     {
@@ -314,7 +321,7 @@ auto
         ck::TypeToString<T_Fragment>, *this)
     { return; }
 
-    CK_ENSURE_IF_NOT(IsValid(),
+    CK_ENSURE_IF_NOT(IsValid(ck::IsValid_Policy_Default{}),
         TEXT("Unable to Remove Fragment [{}]. Handle [{}] does NOT have a valid Entity."),
         ck::TypeToString<T_Fragment>, *this)
     { return; }
@@ -335,7 +342,7 @@ auto
         ck::TypeToString<T_Fragment>, *this)
     { return; }
 
-    CK_ENSURE_IF_NOT(IsValid(),
+    CK_ENSURE_IF_NOT(IsValid(ck::IsValid_Policy_Default{}),
         TEXT("Unable to Try_Remove Fragment [{}]. Handle [{}] does NOT have a valid Entity."),
         ck::TypeToString<T_Fragment>, *this)
     { return; }
