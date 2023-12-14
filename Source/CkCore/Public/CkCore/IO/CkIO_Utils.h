@@ -25,6 +25,28 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Engine_TextFontSize);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct FCk_Utils_IO_AssetInfoFromPath_Result
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Utils_IO_AssetInfoFromPath_Result);
+
+private:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    bool        _AssetFound = false;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FAssetData  _AssetData;
+
+public:
+    CK_PROPERTY(_AssetFound);
+    CK_PROPERTY(_AssetData);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(BlueprintType)
 class CKCORE_API UCk_Utils_IO_UE : public UBlueprintFunctionLibrary
 {
@@ -70,6 +92,12 @@ public:
               Category = "Ck|Utils|IO")
     static FString
     Get_EnginePluginsDir();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IO")
+    static FCk_Utils_IO_AssetInfoFromPath_Result
+    Get_AssetInfoFromPath(
+        const FString& InAssetPath);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
