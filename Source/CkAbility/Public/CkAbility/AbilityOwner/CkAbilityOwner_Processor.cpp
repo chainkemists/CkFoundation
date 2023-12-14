@@ -377,7 +377,7 @@ namespace ck
                 GrantedTags
             );
 
-            UCk_Utils_Ability_UE::DoDeactivate(InAbilityEntity);
+            UCk_Utils_Ability_UE::DoDeactivate(InAbilityOwnerEntity, InAbilityEntity);
         };
 
         switch (const auto& SearchPolicy = InRequest.Get_SearchPolicy())
