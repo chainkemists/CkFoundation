@@ -182,6 +182,7 @@ private:
 
     static auto
     DoDeactivate(
+        FCk_Handle InAbilityOwnerEntity,
         FCk_Handle InAbilityEntity) -> void;
 
     static auto
