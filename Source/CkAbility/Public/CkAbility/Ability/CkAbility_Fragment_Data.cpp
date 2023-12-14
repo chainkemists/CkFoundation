@@ -123,6 +123,24 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
+    Self_Request_TrackTask(
+        UCk_Ability_Script_PDA* InScript,
+        UObject* InTask)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InScript),
+        TEXT("AbilityScript is [{}]. Was this Ability GC'ed and this function is being called in a latent node?"),
+        InScript)
+    { return; }
+
+    if (ck::Is_NOT_Valid(InTask))
+    { return; }
+
+    InScript->_Tasks.Emplace(InTask);
+}
+
+auto
+    UCk_Ability_Script_PDA::
     Self_Get_Status(
         const UCk_Ability_Script_PDA* InScript)
     -> ECk_Ability_Status
