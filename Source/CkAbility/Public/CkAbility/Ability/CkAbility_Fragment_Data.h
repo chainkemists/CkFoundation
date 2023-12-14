@@ -263,6 +263,14 @@ private:
     Self_Request_DeactivateAbility(
         const UCk_Ability_Script_PDA* InScript);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Ability|Script",
+              meta = (CompactNodeTitle="TRACK_Task", DefaultToSelf="InScript", HidePin="InScript"))
+    static void
+    Self_Request_TrackTask(
+        UCk_Ability_Script_PDA* InScript,
+        UObject* InTask);
+
 private:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Ability|Script",
@@ -297,6 +305,9 @@ private:
 
     UPROPERTY(Transient)
     FCk_Handle _AbilityOwnerHandle;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UObject>> _Tasks;
 
 public:
     CK_PROPERTY_GET(_Data);
