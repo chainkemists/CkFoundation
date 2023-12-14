@@ -2,6 +2,7 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include <Engine/AssetManager.h>
 #include <Engine/Engine.h>
 #include <Misc/ConfigCacheIni.h>
 #include <Runtime/Engine/Classes/Kismet/BlueprintPathsLibrary.h>
@@ -111,6 +112,24 @@ auto
     -> FString
 {
     return UBlueprintPathsLibrary::EnginePluginsDir();
+}
+
+auto
+    UCk_Utils_IO_UE::
+    Get_AssetInfoFromPath(
+        const FString& InAssetPath)
+    -> FCk_Utils_IO_AssetInfoFromPath_Result
+{
+    const auto& AssetManager = UAssetManager::Get();
+
+    FAssetData OutssetData;
+    const auto& AssetFound = AssetManager.GetAssetDataForPath(InAssetPath, OutssetData);
+
+    const auto AssetInfo = FCk_Utils_IO_AssetInfoFromPath_Result{}
+                           .Set_AssetFound(AssetFound)
+                           .Set_AssetData(OutssetData);
+
+    return AssetInfo;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
