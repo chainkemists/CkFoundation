@@ -41,12 +41,6 @@ struct FCk_Utils_Object_CopyAllProperties_Params
 public:
     CK_GENERATED_BODY(FCk_Utils_Object_CopyAllProperties_Params);
 
-public:
-    FCk_Utils_Object_CopyAllProperties_Params() = default;
-    FCk_Utils_Object_CopyAllProperties_Params(
-        UObject* InDestination,
-        UObject* InSource);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     TObjectPtr<UObject> _Destination;
@@ -55,8 +49,8 @@ private:
     TObjectPtr<UObject> _Source;
 
 public:
-    CK_PROPERTY_GET(_Destination);
-    CK_PROPERTY_GET(_Source);
+    CK_PROPERTY(_Destination);
+    CK_PROPERTY(_Source);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -68,13 +62,6 @@ struct CKCORE_API FCk_Utils_Object_SetOuter_Params
 
 public:
     CK_GENERATED_BODY(FCk_Utils_Object_SetOuter_Params);
-
-public:
-    FCk_Utils_Object_SetOuter_Params() = default;
-    FCk_Utils_Object_SetOuter_Params(
-        UObject* InObject,
-        UObject* InOuter,
-        ECk_Utils_Object_RenameFlags InFlag);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
@@ -90,6 +77,8 @@ public:
     CK_PROPERTY_GET(_Object);
     CK_PROPERTY_GET(_Outer);
     CK_PROPERTY_GET(_RenameFlags);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Utils_Object_SetOuter_Params, _Object, _Outer, _RenameFlags);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -185,6 +174,13 @@ public:
     static ECk_Utils_Object_CopyAllProperties_Result
     Request_CopyAllProperties(
         const FCk_Utils_Object_CopyAllProperties_Params& InParams);
+
+    // Reset all the properties of a UObject to the value assigned in the CDO.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Object")
+    static bool
+    Request_ResetAllPropertiesToDefault(
+        UObject* InObject);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Object",
