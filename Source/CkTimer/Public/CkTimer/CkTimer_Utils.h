@@ -54,6 +54,14 @@ public:
         FCk_Handle InHandle,
         const FCk_Fragment_MultipleTimer_ParamsData& InParams);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Timer",
+              DisplayName="Remove Timer")
+    static void
+    Remove(
+        FCk_Handle InTimerOwnerEntity,
+        FGameplayTag InTimerName);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Timer",
               DisplayName="Has Timer")
