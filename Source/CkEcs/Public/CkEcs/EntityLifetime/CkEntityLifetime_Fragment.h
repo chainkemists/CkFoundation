@@ -10,6 +10,9 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_TriggerDestroyEntity);
     CK_DEFINE_ECS_TAG(FTag_EntityJustCreated);
 
+#define CK_IGNORE_PENDING_KILL \
+    ck::TExclude<ck::FTag_PendingDestroyEntity>, ck::TExclude<ck::FTag_TriggerDestroyEntity>
+
     // --------------------------------------------------------------------------------------------------------------------
 
     struct FFragment_LifetimeDependents
