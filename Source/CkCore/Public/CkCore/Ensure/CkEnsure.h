@@ -272,7 +272,7 @@ public:
         }                                                                                                                                  \
         case ECk_MessageDialog_YesNoYesAll::No:                                                                                            \
         {                                                                                                                                  \
-            const auto& ensureAns = ensureAlwaysMsgf(false, TEXT("[DEBUG BREAK HIT] %s"), *message);                                       \
+            const auto& ensureAns = ensureAlwaysMsgf(false, TEXT("[DEBUG BREAK HIT]"));                                                    \
             return ensureAns;                                                                                                              \
         }                                                                                                                                  \
         case ECk_MessageDialog_YesNoYesAll::YesAll:                                                                                        \
