@@ -2,6 +2,7 @@
 
 #include "CkCore/Object/CkObject_Utils.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkEcs/Handle/CkHandle_Debugging.h"
 #include "CkEcs/Handle/CkHandle_Debugging_Data.h"
 #include "CkEcs/Handle/CkHandle_Subsystem.h"
@@ -37,7 +38,7 @@ FCk_Handle::
     , _Fragments(std::move(InOther._Fragments))
 #endif
 {
-    if (IsValid() && UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable)
+    if (IsValid(ck::IsValid_Policy_Default{}) && UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable)
     { std::ignore = UCk_Utils_HandleDebugger_Subsystem_UE::Get_Subsystem()->GetOrAdd_FragmentsDebug(*this); }
 }
 
@@ -54,7 +55,7 @@ FCk_Handle::
     , _Fragments(InOther._Fragments)
 #endif
 {
-    if (IsValid() && UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable)
+    if (IsValid(ck::IsValid_Policy_Default{}) && UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable)
     { std::ignore = UCk_Utils_HandleDebugger_Subsystem_UE::Get_Subsystem()->GetOrAdd_FragmentsDebug(*this); }
 }
 
@@ -72,10 +73,10 @@ FCk_Handle::
     ~FCk_Handle()
 {
 #if WITH_EDITORONLY_DATA
-    if (NOT IsValid())
+    if (NOT IsValid(ck::IsValid_Policy_IncludePendingKill{}))
     { return; }
 
-    if (IsValid() && UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable && 
+    if (IsValid(ck::IsValid_Policy_Default{}) && UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable &&
         ck::IsValid(GEngine))
     { UCk_Utils_HandleDebugger_Subsystem_UE::Get_Subsystem()->Remove_FragmentsDebug(*this); }
 #endif
@@ -105,18 +106,26 @@ auto
     return Get_Entity() == InOther.Get_Entity() && GetTypeHash(*_Registry) == GetTypeHash(*InOther._Registry);
 }
 
-auto FCk_Handle::operator*() -> TOptional<FCk_Registry>
-{
-    return _Registry;
-}
-
-auto FCk_Handle::operator*() const -> TOptional<FCk_Registry>
+auto
+    FCk_Handle::
+    operator*()
+    -> TOptional<FCk_Registry>
 {
     return _Registry;
 }
 
 auto
-    FCk_Handle::operator->() -> TOptional<FCk_Registry>
+    FCk_Handle::
+    operator*() const
+    -> TOptional<FCk_Registry>
+{
+    return _Registry;
+}
+
+auto
+    FCk_Handle::
+    operator
+    ->() -> TOptional<FCk_Registry>
 {
     return _Registry;
 }
@@ -127,9 +136,22 @@ auto
     return _Registry;
 }
 
-auto FCk_Handle::IsValid() const -> bool
+auto
+    FCk_Handle::
+    IsValid(
+        ck::IsValid_Policy_IncludePendingKill) const
+    -> bool
 {
     return ck::IsValid(_Registry) && ck::IsValid(*_Registry) && _Registry->IsValid(_Entity);
+}
+
+auto
+    FCk_Handle::
+    IsValid(
+        ck::IsValid_Policy_Default) const
+    -> bool
+{
+    return IsValid(ck::IsValid_Policy_IncludePendingKill{}) && NOT UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(*this);
 }
 
 auto
@@ -149,7 +171,7 @@ auto
     Get_ValidHandle(EntityType::IdType InEntity) const
     -> ThisType
 {
-    CK_ENSURE_IF_NOT(IsValid(),
+    CK_ENSURE_IF_NOT(IsValid(ck::IsValid_Policy_IncludePendingKill{}),
         TEXT("Unable to Validate Entity [{}]. Handle [{}] does NOT have a valid Registry."), FCk_Entity{InEntity}, *this)
     { return {}; }
 
@@ -180,7 +202,7 @@ auto
     if (UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Disable)
     { return; }
 
-    if (NOT IsValid())
+    if (NOT IsValid(ck::IsValid_Policy_IncludePendingKill{}))
     { return; }
 
     if (Has<FEntity_FragmentMapper>())

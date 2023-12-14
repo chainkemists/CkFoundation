@@ -49,7 +49,8 @@ namespace ck
         -> void
     {
         ecs::VeryVerbose(TEXT("Entity [{}] set to 'Pending Destroy'"), InHandle);
-        InHandle.Add<FTag_PendingDestroyEntity>(InHandle);
+        // not using Handle's version of Add to bypass the check for an Entity already being destroyed
+        InHandle->Add<FTag_PendingDestroyEntity>(InHandle.Get_Entity());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

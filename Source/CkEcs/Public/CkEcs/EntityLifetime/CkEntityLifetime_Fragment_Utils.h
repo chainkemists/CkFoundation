@@ -65,7 +65,7 @@ public:
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityLifetime")
     static bool
     Get_IsPendingDestroy(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityLifetime")
     static FCk_Handle
