@@ -294,9 +294,8 @@ private:
         const UCk_Ability_Script_PDA* InScript);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        Category = "Ck|Config",
-        meta = (AllowPrivateAccess = true))
+    UPROPERTY(EditDefaultsOnly,
+              meta = (ShowOnlyInnerProperties))
     FCk_Ability_Script_Data _Data;
 
 private:
