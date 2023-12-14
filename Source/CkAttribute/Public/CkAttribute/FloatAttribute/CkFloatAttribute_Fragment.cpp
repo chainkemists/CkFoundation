@@ -51,7 +51,7 @@ auto
     OnRep_PendingModifiers()
     -> void
 {
-    if (NOT Get_AssociatedEntity().IsValid())
+    if (NOT ck::IsValid(Get_AssociatedEntity()))
     { return; }
 
     if (GetWorld()->IsNetMode(NM_DedicatedServer))
