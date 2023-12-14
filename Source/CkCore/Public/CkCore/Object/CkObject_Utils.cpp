@@ -2,29 +2,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Utils_Object_CopyAllProperties_Params::
-    FCk_Utils_Object_CopyAllProperties_Params(
-        UObject* InDestination,
-        UObject* InSource)
-    : _Destination(InDestination)
-    , _Source(InSource)
-{ }
-
-// --------------------------------------------------------------------------------------------------------------------
-
-FCk_Utils_Object_SetOuter_Params::
-    FCk_Utils_Object_SetOuter_Params(
-        UObject* InObject,
-        UObject* InOuter,
-        ECk_Utils_Object_RenameFlags InFlag)
-    : _Object(InObject)
-    , _Outer(InOuter)
-    , _RenameFlags(InFlag)
-{
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     UCk_Utils_Object_UE::
     Request_TrySetOuter(
@@ -33,11 +10,11 @@ auto
 {
     const auto& Object = InParams.Get_Object();
     CK_ENSURE_IF_NOT(ck::IsValid(Object), TEXT("Object is not valid!"))
-    { return false; }
+    { return {}; }
 
     const auto& Outer = InParams.Get_Outer();
     CK_ENSURE_IF_NOT(ck::IsValid(Outer), TEXT("Outer is not valid!"))
-    { return false; }
+    { return {}; }
 
     const auto& RenameFlag = [&]()
     {
@@ -55,7 +32,7 @@ auto
 
     if (const auto& Result = Object->Rename(nullptr, Outer, RenameFlag);
         NOT Result)
-    { return false; }
+    { return {}; }
 
     return true;
 }
@@ -66,37 +43,60 @@ auto
         const FCk_Utils_Object_CopyAllProperties_Params& InParams)
     -> ECk_Utils_Object_CopyAllProperties_Result
 {
-    using result_type = ECk_Utils_Object_CopyAllProperties_Result;
+    using ResultType = ECk_Utils_Object_CopyAllProperties_Result;
 
     const auto& Source = InParams.Get_Source();
     CK_ENSURE_IF_NOT(ck::IsValid(Source), TEXT("The Source in Params is not valid"))
-    { return result_type::Failed; }
+    { return ResultType::Failed; }
 
     const auto& Destination = InParams.Get_Destination();
     CK_ENSURE_IF_NOT(ck::IsValid(Destination), TEXT("The Destination in Params is not valid"))
-    { return result_type::Failed; }
+    { return ResultType::Failed; }
 
     const auto& SourceClass = Get_DefaultClass_UpToDate(Source->GetClass());
 
     CK_ENSURE_IF_NOT(ck::IsValid(SourceClass), TEXT("Could not get the up-to-date default class of Source object [{}]"), Source)
-    { return result_type::Failed; }
+    { return ResultType::Failed; }
 
     CK_ENSURE_IF_NOT(Destination->IsA(SourceClass), TEXT("The Destination [{}] and Source [{}] are not the same type"), Destination, Source)
-    { return result_type::Failed; }
+    { return ResultType::Failed; }
 
-    auto Result = result_type::AllPropertiesIdentical;
+    auto Result = ResultType::AllPropertiesIdentical;
 
     for (auto* Property = Destination->GetClass()->PropertyLink; ck::IsValid(Property); Property = Property->PropertyLinkNext)
     {
-        if (Result == result_type::AllPropertiesIdentical && NOT Property->Identical_InContainer(Destination, Source, PPF_None))
+        if (Result == ResultType::AllPropertiesIdentical && NOT Property->Identical_InContainer(Destination, Source, PPF_None))
         {
-            Result = result_type::Succeeded;
+            Result = ResultType::Succeeded;
         }
 
         Property->CopyCompleteValue_InContainer(Destination, Source);
     }
 
     return Result;
+}
+
+auto
+    UCk_Utils_Object_UE::
+    Request_ResetAllPropertiesToDefault(
+        UObject* InObject)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Invalid Object supplied to Request_ResetAllPropertiesToDefault"))
+    { return {}; }
+
+    if (Get_IsDefaultObject(InObject))
+    { return true; }
+
+    const auto& ObjectCDO = DoGet_ClassDefaultObject(InObject->GetClass());
+
+    const auto CopyAllPropertiesParams = FCk_Utils_Object_CopyAllProperties_Params{}
+                                            .Set_Destination(InObject)
+                                            .Set_Source(ObjectCDO);
+
+    const auto& Result = Request_CopyAllProperties(CopyAllPropertiesParams);
+
+    return Result == ECk_Utils_Object_CopyAllProperties_Result::Failed ? false : true;
 }
 
 auto
@@ -142,7 +142,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Invalid Object supplied to Get_IsDefaultObject"))
     { return {}; }
 
-    return InObject == InObject->GetClass()->GetDefaultObject();
+    return InObject == DoGet_ClassDefaultObject(InObject->GetClass()) && InObject->HasAnyFlags(RF_ClassDefaultObject);
 }
 
 auto
@@ -151,7 +151,7 @@ auto
         TSubclassOf<UObject> InObject)
     -> UObject*
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Invalid Class supplied to Get_ClassDefaultObject"))
+    CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Invalid Class supplied to DoGet_ClassDefaultObject"))
     { return {}; }
 
     return InObject->GetDefaultObject();
