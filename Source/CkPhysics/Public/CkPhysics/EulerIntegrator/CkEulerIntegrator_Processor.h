@@ -19,7 +19,8 @@ namespace ck
             FTag_EulerIntegrator_DoOnePredictiveUpdate,
             FFragment_EulerIntegrator_Current,
             FFragment_Velocity_Current,
-            FFragment_Acceleration_Current>
+            FFragment_Acceleration_Current,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using TProcessor::TProcessor;
@@ -44,7 +45,8 @@ namespace ck
             FTag_EulerIntegrator_NeedsUpdate,
             FFragment_EulerIntegrator_Current,
             FFragment_Velocity_Current,
-            FFragment_Acceleration_Current>
+            FFragment_Acceleration_Current,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using TProcessor::TProcessor;

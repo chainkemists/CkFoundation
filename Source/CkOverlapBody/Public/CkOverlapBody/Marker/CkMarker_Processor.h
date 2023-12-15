@@ -1,14 +1,20 @@
 #pragma once
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
+
 #include "CkOverlapBody/Marker/CkMarker_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
-    class CKOVERLAPBODY_API FProcessor_Marker_Setup
-        : public TProcessor<FProcessor_Marker_Setup, FFragment_Marker_Current, FFragment_Marker_Params, FTag_Marker_NeedsSetup>
+    class CKOVERLAPBODY_API FProcessor_Marker_Setup : public TProcessor<
+            FProcessor_Marker_Setup,
+            FFragment_Marker_Current,
+            FFragment_Marker_Params,
+            FTag_Marker_NeedsSetup,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FTag_Marker_NeedsSetup;
@@ -26,8 +32,12 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKOVERLAPBODY_API FProcessor_Marker_HandleRequests
-        : public TProcessor<FProcessor_Marker_HandleRequests, FFragment_Marker_Current, FFragment_Marker_Params, FFragment_Marker_Requests>
+    class CKOVERLAPBODY_API FProcessor_Marker_HandleRequests : public TProcessor<
+            FProcessor_Marker_HandleRequests,
+            FFragment_Marker_Current,
+            FFragment_Marker_Params,
+            FFragment_Marker_Requests,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FFragment_Marker_Requests;
@@ -46,8 +56,12 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKOVERLAPBODY_API FProcessor_Marker_UpdateTransform
-        : public TProcessor<FProcessor_Marker_UpdateTransform, FFragment_Marker_Current, FFragment_Marker_Params, FTag_Marker_UpdateTransform>
+    class CKOVERLAPBODY_API FProcessor_Marker_UpdateTransform : public TProcessor<
+            FProcessor_Marker_UpdateTransform,
+            FFragment_Marker_Current,
+            FFragment_Marker_Params,
+            FTag_Marker_UpdateTransform,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using TProcessor::TProcessor;

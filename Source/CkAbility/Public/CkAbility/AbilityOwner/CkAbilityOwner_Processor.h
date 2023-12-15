@@ -8,8 +8,11 @@
 
 namespace ck
 {
-    class CKABILITY_API FProcessor_AbilityOwner_Setup
-        : public TProcessor<FProcessor_AbilityOwner_Setup, FFragment_AbilityOwner_Params, FTag_AbilityOwner_NeedsSetup>
+    class CKABILITY_API FProcessor_AbilityOwner_Setup : public TProcessor<
+            FProcessor_AbilityOwner_Setup,
+            FFragment_AbilityOwner_Params,
+            FTag_AbilityOwner_NeedsSetup,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FTag_AbilityOwner_NeedsSetup;
@@ -26,8 +29,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKABILITY_API FProcessor_AbilityOwner_HandleEvents
-        : public TProcessor<FProcessor_AbilityOwner_HandleEvents, FFragment_AbilityOwner_Events>
+    class CKABILITY_API FProcessor_AbilityOwner_HandleEvents : public TProcessor<
+            FProcessor_AbilityOwner_HandleEvents,
+            FFragment_AbilityOwner_Events,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FFragment_AbilityOwner_Events;
@@ -44,8 +49,11 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKABILITY_API FProcessor_AbilityOwner_HandleRequests
-        : public TProcessor<FProcessor_AbilityOwner_HandleRequests, FFragment_AbilityOwner_Current, FFragment_AbilityOwner_Requests>
+    class CKABILITY_API FProcessor_AbilityOwner_HandleRequests : public TProcessor<
+            FProcessor_AbilityOwner_HandleRequests,
+            FFragment_AbilityOwner_Current,
+            FFragment_AbilityOwner_Requests,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FFragment_AbilityOwner_Requests;
