@@ -259,7 +259,14 @@ auto
                 );
 
                 const auto& AbilityScriptClass = AbilityParams.Get_AbilityScriptClass();
+
+                UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityCurrent.Get_AbilityScript()->GetWorld())->
+                    Request_RemoveAbilityScript(AbilityCurrent.Get_AbilityScript().Get());
+
                 AbilityCurrent._AbilityScript = UCk_Utils_Object_UE::Request_CreateNewObject_TransientPackage(AbilityScriptClass);
+
+                UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityCurrent.Get_AbilityScript()->GetWorld())->
+                    Request_TrackAbilityScript(AbilityCurrent.Get_AbilityScript().Get());
 
                 break;
             }
