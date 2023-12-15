@@ -41,7 +41,7 @@ auto
         InNewEntity.Add<ck::FFragment_Timer_Current>(FCk_Chrono{ParamsToUse.Get_Duration()});
 
         if (ParamsToUse.Get_CountDirection() == ECk_Timer_CountDirection::CountDown)
-		{ InNewEntity.Add<ck::FTag_Timer_Countdown>(); }
+        { InNewEntity.Add<ck::FTag_Timer_Countdown>(); }
 
         if (ParamsToUse.Get_StartingState() == ECk_Timer_State::Running)
         {
@@ -153,12 +153,14 @@ auto
     if (NOT Has_Any(InTimerOwnerEntity))
     { return {}; }
 
-    const auto& timerEntities = RecordOfTimers_Utils::Get_AllRecordEntries(InTimerOwnerEntity);
+    auto AllTimers = TArray<FGameplayTag>{};
 
-    return ck::algo::Transform<TArray<FGameplayTag>>(timerEntities, [&](FCk_Handle InTimerEntity)
+    RecordOfTimers_Utils::ForEach_ValidEntry(InTimerOwnerEntity, [&](FCk_Handle InTimerEntity)
     {
-        return UCk_Utils_GameplayLabel_UE::Get_Label(InTimerEntity);
+        AllTimers.Emplace(UCk_Utils_GameplayLabel_UE::Get_Label(InTimerEntity));
     });
+
+    return AllTimers;
 }
 
 auto
@@ -201,11 +203,11 @@ auto
 }
 
 auto
-	UCk_Utils_Timer_UE::
-	Get_CountDirection(
-		FCk_Handle   InTimerOwnerEntity,
-		FGameplayTag InTimerName)
-	-> ECk_Timer_CountDirection
+    UCk_Utils_Timer_UE::
+    Get_CountDirection(
+        FCk_Handle   InTimerOwnerEntity,
+        FGameplayTag InTimerName)
+    -> ECk_Timer_CountDirection
 {
     if (NOT Ensure(InTimerOwnerEntity, InTimerName))
     { return {}; }
@@ -217,7 +219,7 @@ auto
     if (TimerEntity.Has<ck::FTag_Timer_Countdown>())
     { return ECk_Timer_CountDirection::CountDown; }
 
-	return ECk_Timer_CountDirection::CountUp;
+    return ECk_Timer_CountDirection::CountUp;
 }
 
 auto
@@ -342,12 +344,12 @@ auto
 }
 
 auto
-	UCk_Utils_Timer_UE::
-	Request_Jump(
-		FCk_Handle             InTimerOwnerEntity,
-		FGameplayTag           InTimerName,
-		FCk_Request_Timer_Jump InRequest)
-	-> void
+    UCk_Utils_Timer_UE::
+    Request_Jump(
+        FCk_Handle             InTimerOwnerEntity,
+        FGameplayTag           InTimerName,
+        FCk_Request_Timer_Jump InRequest)
+    -> void
 {
     if (NOT Ensure(InTimerOwnerEntity, InTimerName))
     { return; }
@@ -378,12 +380,12 @@ auto
 }
 
 auto
-	UCk_Utils_Timer_UE::
-	Request_ChangeCountDirection(
-		FCk_Handle               InTimerOwnerEntity,
-		FGameplayTag             InTimerName,
-		ECk_Timer_CountDirection InCountDirection)
-	-> void
+    UCk_Utils_Timer_UE::
+    Request_ChangeCountDirection(
+        FCk_Handle               InTimerOwnerEntity,
+        FGameplayTag             InTimerName,
+        ECk_Timer_CountDirection InCountDirection)
+    -> void
 {
     if (NOT Ensure(InTimerOwnerEntity, InTimerName))
     { return; }
@@ -394,25 +396,25 @@ auto
 
     switch(InCountDirection)
     {
-	    case ECk_Timer_CountDirection::CountUp:
-		{
+        case ECk_Timer_CountDirection::CountUp:
+        {
             TimerEntity.Try_Remove<ck::FTag_Timer_Countdown>();
-		    break;
+            break;
         }
-	    case ECk_Timer_CountDirection::CountDown:
-		{
+        case ECk_Timer_CountDirection::CountDown:
+        {
             TimerEntity.AddOrGet<ck::FTag_Timer_Countdown>();
-		    break;
+            break;
         }
     }
 }
 
 auto
-	UCk_Utils_Timer_UE::
-	Request_ReverseDirection(
-		FCk_Handle   InTimerOwnerEntity,
-		FGameplayTag InTimerName)
-	-> void
+    UCk_Utils_Timer_UE::
+    Request_ReverseDirection(
+        FCk_Handle   InTimerOwnerEntity,
+        FGameplayTag InTimerName)
+    -> void
 {
     if (NOT Ensure(InTimerOwnerEntity, InTimerName))
     { return; }

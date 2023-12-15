@@ -294,7 +294,7 @@ namespace ck
             );
 
             // Cancel All Abilities that are cancelled by the newly granted tags
-            UCk_Utils_Ability_UE::RecordOfAbilities_Utils::ForEachEntryIf
+            UCk_Utils_Ability_UE::RecordOfAbilities_Utils::ForEach_ValidEntry_If
             (
                 InAbilityOwnerEntity,
                 [&](const FCk_Handle& InAbilityEntityToCancel)

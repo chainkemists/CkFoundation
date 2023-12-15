@@ -30,7 +30,7 @@ namespace ck
     public:
         // TODO: Use FCk_DebuggableEntity when available [OBS-845]
         using EntityType = FCk_Handle;
-        using RecordEntriesType = TSet<EntityType>;
+        using RecordEntriesType = TArray<EntityType>;
 
     private:
         RecordEntriesType _RecordEntries;
