@@ -245,6 +245,24 @@ namespace ck::algo
     {
         return InHandle == _EntityHandle;
     }
+
+    auto
+        IsValidEntityHandle::
+        operator()(
+            const FCk_Handle& InHandle) const
+        -> bool
+    {
+        return ck::IsValid(InHandle);
+    }
+
+    auto
+        IsValidEntityHandle_IncludePendingKill::
+        operator()(
+            const FCk_Handle& InHandle) const
+        -> bool
+    {
+        return ck::IsValid(InHandle, ck::IsValid_Policy_IncludePendingKill{});
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -172,6 +172,22 @@ namespace ck::algo
     public:
         CK_DEFINE_CONSTRUCTOR(MatchesEntityHandle, _EntityHandle);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKECS_API IsValidEntityHandle
+    {
+    public:
+        auto operator()(const FCk_Handle& InHandle) const -> bool;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKECS_API IsValidEntityHandle_IncludePendingKill
+    {
+    public:
+        auto operator()(const FCk_Handle& InHandle) const -> bool;
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
