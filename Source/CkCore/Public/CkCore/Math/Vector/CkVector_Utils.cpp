@@ -1,11 +1,29 @@
 #include "CkVector_Utils.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_vector
 {
+    template <typename T>
+    auto
+        IsNormalized(
+            const T& InVector)
+        -> bool
+    {
+        return InVector.IsNormalized();
+    }
+
+    auto
+        IsNormalized(
+            const FVector2D& InVector)
+        -> bool
+    {
+        return FMath::IsNearlyEqual(InVector.Length(), 1.0f);
+    }
+
     template <typename T>
     auto
         Length(
@@ -105,6 +123,24 @@ namespace ck_vector
 
 auto
     UCk_Utils_Vector3_UE::
+    Get_LocationFromOriginInDirection(
+        const FVector& InOrigin,
+        const FVector& InDirection,
+        float          InDistanceFromOriginInDirection)
+    -> FVector
+{
+    CK_ENSURE_IF_NOT(ck_vector::IsNormalized(InDirection),
+        TEXT("Direciton Vector [{}] is NOT normalized. Normalizing for you but this will NOT work in Shipping."),
+        InDirection)
+    {
+        return Get_LocationFromOriginInDirection(InOrigin, InDirection.GetSafeNormal(), InDistanceFromOriginInDirection);
+    }
+
+    return InOrigin + (InDirection * InDistanceFromOriginInDirection);
+}
+
+auto
+    UCk_Utils_Vector3_UE::
     Get_AngleBetweenVectors(
         const FVector& InA,
         const FVector& InB)
@@ -130,22 +166,6 @@ auto
     -> FVector
 {
     return ck_vector::ClampLength(InVector, InClampRange);
-}
-
-auto
-    UCk_Utils_Vector3_UE::
-    Get_DistanceBetweenActors(
-        const AActor* InA,
-        const AActor* InB)
-    -> float
-{
-    CK_ENSURE_IF_NOT(ck::IsValid(InA), TEXT("Unable to get distance between Actors. Actor InA is [{}]"), InA)
-    { return {}; }
-
-    CK_ENSURE_IF_NOT(ck::IsValid(InB), TEXT("Unable to get distance between Actors. Actor InB is [{}]"), InB)
-    { return {}; }
-
-    return FVector::Distance(InA->GetActorLocation(), InB->GetActorLocation());
 }
 
 auto
@@ -221,7 +241,170 @@ auto
     return ck_vector::Get_IsLengthLessThanOrEqualTo(InVector, InLength);
 }
 
+auto
+    UCk_Utils_Vector3_UE::
+    Get_WorldDirection(
+        ECk_Direction_3D InDirection)
+    -> FVector
+{
+    switch (InDirection)
+    {
+        case ECk_Direction_3D::Left:
+            return FVector::LeftVector;
+        case ECk_Direction_3D::Right:
+            return FVector::RightVector;
+        case ECk_Direction_3D::Forward:
+            return FVector::ForwardVector;
+        case ECk_Direction_3D::Back:
+            return FVector::BackwardVector;
+        case ECk_Direction_3D::Up:
+            return FVector::UpVector;
+        case ECk_Direction_3D::Down:
+            return FVector::DownVector;
+        default:
+            CK_INVALID_ENUM(InDirection);
+            return {};
+    }
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    Get_ClosestWorldDirectionFromVector(
+        const FVector& InVector)
+    -> ECk_Direction_3D
+{
+    const auto& NormalizedVector = InVector.GetSafeNormal();
+
+    static const std::map<ECk_Direction_3D, FCk_FloatRange> DirectionThresholds =
+    {
+        { ECk_Direction_3D::Forward, FCk_FloatRange(0.5f, 1.0f) },
+        { ECk_Direction_3D::Right,   FCk_FloatRange(0.5f, 1.0f) },
+        { ECk_Direction_3D::Left,    FCk_FloatRange(0.5f, 1.0f) },
+        { ECk_Direction_3D::Up,      FCk_FloatRange(0.5f, 1.0f) },
+        { ECk_Direction_3D::Down,    FCk_FloatRange(0.5f, 1.0f) },
+        { ECk_Direction_3D::Back,    FCk_FloatRange(0.5f, 1.0f) }
+    };
+
+    const auto& FoundDirection = std::find_if
+    (
+        DirectionThresholds.begin(),
+        DirectionThresholds.end(),
+        [&](const std::pair<ECk_Direction_3D, FCk_FloatRange>& InKvp)
+        {
+            const auto& Direction3D        = InKvp.first;
+            const auto& DirectionThreshold = InKvp.second;
+            const auto& DotProduct         = FVector::DotProduct
+            (
+                NormalizedVector,
+                Get_WorldDirection(Direction3D)
+            );
+
+            return DirectionThreshold.Get_IsWithinInclusive(DotProduct);
+        }
+    );
+
+    CK_ENSURE_IF_NOT(FoundDirection != DirectionThresholds.end(),
+        TEXT("Failed to find Direction for Vector [{}]"), InVector)
+    { return ECk_Direction_3D::Forward; }
+
+    return FoundDirection->first;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ActorVector3_UE::
+    Get_DistanceBetweenActors(
+        const AActor* InA,
+        const AActor* InB)
+    -> float
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InA), TEXT("Unable to get distance between Actors. Actor InA is [{}]"), InA)
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InB), TEXT("Unable to get distance between Actors. Actor InB is [{}]"), InB)
+    { return {}; }
+
+    return FVector::Distance(InA->GetActorLocation(), InB->GetActorLocation());
+}
+
+auto
+    UCk_Utils_ActorVector3_UE::
+    Get_LocationFromActorInDirection(
+        const AActor* InActor,
+        ECk_Direction_3D InDirection,
+        float InDistanceFromOriginInDirection)
+    -> FVector
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor),
+        TEXT("Unable to get location from Actor in Direction [{}]. Actor is [{}]"),
+        InDirection,
+        InActor)
+    { return {}; }
+
+    const auto& ActorLocation = InActor->GetActorLocation();
+
+    switch(InDirection)
+    {
+        case ECk_Direction_3D::Forward:
+        {
+            return UCk_Utils_Vector3_UE::Get_LocationFromOriginInDirection(
+                ActorLocation, InActor->GetActorForwardVector(), InDistanceFromOriginInDirection);
+        }
+        case ECk_Direction_3D::Back:
+        {
+            return UCk_Utils_Vector3_UE::Get_LocationFromOriginInDirection(
+                ActorLocation, ck::Negate(InActor->GetActorForwardVector()), InDistanceFromOriginInDirection);
+        }
+        case ECk_Direction_3D::Right:
+        {
+            return UCk_Utils_Vector3_UE::Get_LocationFromOriginInDirection(
+                ActorLocation, InActor->GetActorRightVector(), InDistanceFromOriginInDirection);
+        }
+        case ECk_Direction_3D::Left:
+        {
+            return UCk_Utils_Vector3_UE::Get_LocationFromOriginInDirection(
+                ActorLocation, ck::Negate(InActor->GetActorRightVector()), InDistanceFromOriginInDirection);
+        }
+        case ECk_Direction_3D::Up:
+        {
+            return UCk_Utils_Vector3_UE::Get_LocationFromOriginInDirection(
+                ActorLocation, InActor->GetActorUpVector(), InDistanceFromOriginInDirection);
+        }
+        case ECk_Direction_3D::Down:
+        {
+            return UCk_Utils_Vector3_UE::Get_LocationFromOriginInDirection(
+                ActorLocation, ck::Negate(InActor->GetActorUpVector()), InDistanceFromOriginInDirection);
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InDirection);
+            return {};
+        }
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Vector2_UE::
+    Get_LocationFromOriginInDirection(
+        const FVector2D& InOrigin,
+        const FVector2D& InDirection,
+        float            InDistanceFromOriginInDirection)
+    -> FVector2D
+{
+    // check if FVector2D is normalized
+
+    CK_ENSURE_IF_NOT(ck_vector::IsNormalized(InDirection),
+        TEXT("Direciton Vector [{}] is NOT normalized. Normalizing for you but this will NOT work in Shipping."),
+        InDirection)
+    {
+        return Get_LocationFromOriginInDirection(InOrigin, InDirection.GetSafeNormal(), InDistanceFromOriginInDirection);
+    }
+
+    return InOrigin + (InDirection * InDistanceFromOriginInDirection);
+}
 
 auto
     UCk_Utils_Vector2_UE::
