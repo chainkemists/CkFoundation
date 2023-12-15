@@ -25,16 +25,19 @@ namespace ck::algo
 namespace ck::algo
 {
     template <typename T_Container, typename T_PredicateFunction>
-    auto AllOf(T_Container& InContainer, T_PredicateFunction InFunc) -> bool;
+    auto AllOf(const T_Container& InContainer, T_PredicateFunction InFunc) -> bool;
 
     template <typename T_ItrType, typename T_PredicateFunction>
     auto AllOf(T_ItrType InItrBegin, T_ItrType InItrEnd, T_PredicateFunction InFunc) -> bool;
 
     template <typename T_Container, typename T_PredicateFunction>
-    auto AnyOf(T_Container& InContainer, T_PredicateFunction InFunc) -> bool;
+    auto AnyOf(const T_Container& InContainer, T_PredicateFunction InFunc) -> bool;
 
     template <typename T_ItrType, typename T_PredicateFunction>
     auto AnyOf(T_ItrType InItrBegin, T_ItrType InItrEnd, T_PredicateFunction InFunc) -> bool;
+
+    template <typename T_Container, typename T_PredicateFunction>
+    auto CountIf(const T_Container& InContainer, T_PredicateFunction InFunc) -> int32;
 
     template <typename T_Container, typename T_UnaryFunction>
     auto ForEach(T_Container& InContainer, T_UnaryFunction InFunc) -> void;
