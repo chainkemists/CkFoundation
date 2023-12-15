@@ -13,7 +13,8 @@ namespace ck
             FProcessor_Velocity_Setup,
             FFragment_Velocity_Params,
             FFragment_Velocity_Current,
-            FTag_Velocity_NeedsSetup>
+            FTag_Velocity_NeedsSetup,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FTag_Velocity_NeedsSetup;
@@ -35,7 +36,8 @@ namespace ck
     class CKPHYSICS_API FProcessor_Velocity_Clamp : public TProcessor<
             FProcessor_Velocity_Clamp,
             FFragment_Velocity_Current,
-            FFragment_Velocity_MinMax>
+            FFragment_Velocity_MinMax,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FFragment_Velocity_MinMax;
@@ -59,7 +61,8 @@ namespace ck
             FFragment_Velocity_Current,
             FFragment_Velocity_Target,
             FTag_VelocityModifier,
-            FTag_VelocityModifier_NeedsSetup>
+            FTag_VelocityModifier_NeedsSetup,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FTag_VelocityModifier_NeedsSetup;
@@ -106,7 +109,8 @@ namespace ck
             FProcessor_BulkVelocityModifier_Setup,
             FFragment_BulkVelocityModifier_Params,
             FTag_BulkVelocityModifier_GlobalScope,
-            FTag_BulkVelocityModifier_NeedsSetup>
+            FTag_BulkVelocityModifier_NeedsSetup,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FTag_BulkVelocityModifier_NeedsSetup;
@@ -128,7 +132,8 @@ namespace ck
             FProcessor_BulkVelocityModifier_AddNewTargets,
             FFragment_Velocity_Params,
             FFragment_RecordOfVelocityChannels,
-            FTag_EntityJustCreated>
+            FTag_EntityJustCreated,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FTag_EntityJustCreated;
@@ -150,7 +155,8 @@ namespace ck
     class CKPHYSICS_API FProcessor_BulkVelocityModifier_HandleRequests : public TProcessor<
             FProcessor_BulkVelocityModifier_HandleRequests,
             FFragment_BulkVelocityModifier_Params,
-            FFragment_BulkVelocityModifier_Requests>
+            FFragment_BulkVelocityModifier_Requests,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FFragment_BulkVelocityModifier_Requests;
@@ -180,8 +186,11 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKPHYSICS_API FProcessor_Velocity_Replicate
-        : public TProcessor<FProcessor_Velocity_Replicate, FFragment_Velocity_Current, TObjectPtr<UCk_Fragment_Velocity_Rep>>
+    class CKPHYSICS_API FProcessor_Velocity_Replicate : public TProcessor<
+            FProcessor_Velocity_Replicate,
+            FFragment_Velocity_Current,
+            TObjectPtr<UCk_Fragment_Velocity_Rep>,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using TProcessor::TProcessor;

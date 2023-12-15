@@ -16,8 +16,6 @@ class UCk_Utils_ActorModifier_UE;
 
 namespace ck
 {
-    // --------------------------------------------------------------------------------------------------------------------
-
     struct CKACTOR_API FFragment_ActorModifier_SpawnActorRequests
     {
     public:
