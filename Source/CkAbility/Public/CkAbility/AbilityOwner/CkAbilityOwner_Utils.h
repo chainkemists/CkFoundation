@@ -5,6 +5,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Delegates/CkDelegates.h"
+
 #include "CkEcsBasics/CkEcsBasics_Utils.h"
 
 #include "CkRecord/Record/CkRecord_Utils.h"
@@ -12,12 +14,6 @@
 #include "CkSignal/CkSignal_Fragment_Data.h"
 
 #include "CkAbilityOwner_Utils.generated.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-
-DECLARE_DYNAMIC_DELEGATE_OneParam(
-    FCk_Delegate_AbilityOwner_ForEachAbility,
-    FCk_Handle, InAbilityHandle);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -110,7 +106,7 @@ public:
     ForEach_Ability(
         FCk_Handle InAbilityOwnerEntity,
         ECk_AbilityOwner_ForEachAbilityPolicy ForEachAbilityPolicy,
-        const FCk_Delegate_AbilityOwner_ForEachAbility& InDelegate);
+        const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_Ability(
         FCk_Handle InAbilityOwnerEntity,
@@ -126,7 +122,7 @@ public:
         FCk_Handle InAbilityOwnerEntity,
         ECk_Ability_Status InStatus,
         ECk_AbilityOwner_ForEachAbilityPolicy ForEachAbilityPolicy,
-        const FCk_Delegate_AbilityOwner_ForEachAbility& InDelegate);
+        const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_Ability_WithStatus(
         FCk_Handle InAbilityOwnerEntity,
