@@ -1,6 +1,5 @@
 #pragma once
 
-#include "CkCore/SharedValues/CkSharedValues.h"
 #include "CkCore/Enums/CkEnums.h"
 
 #include "CkEcs/Handle/CkHandle.h"
@@ -32,17 +31,5 @@ enum class ECk_Record_EntryHandlingPolicy : uint8
 ENUM_CLASS_FLAGS(ECk_Record_EntryHandlingPolicy)
 ENABLE_ENUM_BITWISE_OPERATORS(ECk_Record_EntryHandlingPolicy);
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Record_EntryHandlingPolicy);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-DECLARE_DYNAMIC_DELEGATE_OneParam(
-    FCk_Lambda_InHandle,
-    FCk_Handle, InHandle);
-
-DECLARE_DYNAMIC_DELEGATE_TwoParams(
-    FCk_Predicate_InHandle_OutResult,
-    FCk_Handle, InHandle,
-    FCk_SharedBool, OutResult);
-
 
 // --------------------------------------------------------------------------------------------------------------------

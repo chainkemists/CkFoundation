@@ -69,7 +69,7 @@ auto
 auto
     UCk_Utils_RecordOfEntities_UE::
     ForEach_ValidEntry(
-        FCk_Handle                 InAbilityOwnerEntity,
+        FCk_Handle InAbilityOwnerEntity,
         const FCk_Lambda_InHandle& InFunc)
     -> TArray<FCk_Handle>
 {
