@@ -121,7 +121,7 @@ auto
     ForEach_Ability(
         FCk_Handle InAbilityOwnerEntity,
         ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
-        const FCk_Delegate_AbilityOwner_ForEachAbility& InDelegate)
+        const FCk_Lambda_InHandle& InDelegate)
     -> TArray<FCk_Handle>
 {
     auto Abilities = TArray<FCk_Handle>{};
@@ -167,7 +167,7 @@ auto
         FCk_Handle InAbilityOwnerEntity,
         ECk_Ability_Status InStatus,
         ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
-        const FCk_Delegate_AbilityOwner_ForEachAbility& InDelegate)
+        const FCk_Lambda_InHandle& InDelegate)
     -> TArray<FCk_Handle>
 {
     auto Abilities = TArray<FCk_Handle>{};
