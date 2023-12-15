@@ -110,12 +110,14 @@ auto
     if (NOT Has_Any(InMarkerOwnerEntity))
     { return {}; }
 
-    const auto& markerEntities = RecordOfMarkers_Utils::Get_AllRecordEntries(InMarkerOwnerEntity);
+    auto AllMarkers = TArray<FGameplayTag>{};
 
-    return ck::algo::Transform<TArray<FGameplayTag>>(markerEntities, [&](FCk_Handle InMarkerEntity)
+    RecordOfMarkers_Utils::ForEach_ValidEntry(InMarkerOwnerEntity, [&](FCk_Handle InMarkerEntity)
     {
-        return UCk_Utils_GameplayLabel_UE::Get_Label(InMarkerEntity);
+        AllMarkers.Emplace(UCk_Utils_GameplayLabel_UE::Get_Label(InMarkerEntity));
     });
+
+    return AllMarkers;
 }
 
 auto
@@ -128,7 +130,7 @@ auto
     if (NOT Has_Any(InHandle))
     { return; }
 
-    RecordOfMarkers_Utils::ForEachEntry(InHandle, [&](FCk_Handle InMarkerEntity)
+    RecordOfMarkers_Utils::ForEach_ValidEntry(InHandle, [&](FCk_Handle InMarkerEntity)
     {
         DoPreviewMarker(InOuter, InMarkerEntity);
     });

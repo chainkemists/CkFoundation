@@ -91,12 +91,14 @@ auto
     if (NOT Has_Any(InAnimAssetOwnerEntity))
     { return {}; }
 
-    const auto& AnimAssetEntities = RecordOfAnimAssets_Utils::Get_AllRecordEntries(InAnimAssetOwnerEntity);
+    auto AllAnimAssets = TArray<FGameplayTag>{};
 
-    return ck::algo::Transform<TArray<FGameplayTag>>(AnimAssetEntities, [&](FCk_Handle InAnimAssetEntity)
+    RecordOfAnimAssets_Utils::ForEach_ValidEntry(InAnimAssetOwnerEntity, [&](const auto& InAnimAssetEntity)
     {
-        return UCk_Utils_GameplayLabel_UE::Get_Label(InAnimAssetEntity);
+        AllAnimAssets.Add(UCk_Utils_GameplayLabel_UE::Get_Label(InAnimAssetEntity));
     });
+
+    return AllAnimAssets;
 }
 
 auto
