@@ -132,9 +132,9 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Direction_2D);
 UENUM(BlueprintType)
 enum class ECk_Direction_3D : uint8
 {
+    Forward,
     Left,
     Right,
-    Forward,
     Back,
     Up,
     Down
