@@ -20,7 +20,7 @@ public:
 
 private:
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Recycling",
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, ValidEnumValues="Recycle"))
     ECk_Ability_RecyclingPolicy _AbilityRecyclingPolicy = ECk_Ability_RecyclingPolicy::Recycle;
 
 public:
