@@ -148,7 +148,7 @@ auto
     if (NOT Ensure_Any(InAbilityOwnerEntity))
     { return; }
 
-    RecordOfAbilities_Utils::ForEachEntry
+    RecordOfAbilities_Utils::ForEach_ValidEntry
     (
         InAbilityOwnerEntity,
         [&](const FCk_Handle& InAbilityEntity)

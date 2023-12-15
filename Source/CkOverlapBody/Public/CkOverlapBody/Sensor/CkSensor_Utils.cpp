@@ -106,12 +106,14 @@ auto
     if (NOT Has_Any(InSensorOwnerEntity))
     { return {}; }
 
-    const auto& SensorEntities = RecordOfSensors_Utils::Get_AllRecordEntries(InSensorOwnerEntity);
+    auto AllSensors = TArray<FGameplayTag>{};
 
-    return ck::algo::Transform<TArray<FGameplayTag>>(SensorEntities, [&](FCk_Handle InSensorEntity)
+    RecordOfSensors_Utils::ForEach_ValidEntry(InSensorOwnerEntity, [&](FCk_Handle InSensorEntity)
     {
-        return UCk_Utils_GameplayLabel_UE::Get_Label(InSensorEntity);
+        AllSensors.Emplace(UCk_Utils_GameplayLabel_UE::Get_Label(InSensorEntity));
     });
+
+    return AllSensors;
 }
 
 auto
@@ -124,7 +126,7 @@ auto
     if (NOT Has_Any(InHandle))
     { return; }
 
-    RecordOfSensors_Utils::ForEachEntry(InHandle, [&](FCk_Handle InSensorEntity)
+    RecordOfSensors_Utils::ForEach_ValidEntry(InHandle, [&](FCk_Handle InSensorEntity)
     {
         DoPreviewSensor(InOuter, InSensorEntity);
     });

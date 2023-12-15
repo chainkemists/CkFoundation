@@ -101,12 +101,14 @@ auto
     if (NOT RecordOfFloatAttributes_Utils::Has(InAttributeOwnerEntity))
     { return {}; }
 
-    const auto& floatAttributeEntities = RecordOfFloatAttributes_Utils::Get_AllRecordEntries(InAttributeOwnerEntity);
+    auto AllAttributes = TArray<FGameplayTag>{};
 
-    return ck::algo::Transform<TArray<FGameplayTag>>(floatAttributeEntities, [&](FCk_Handle InFloatAttributeEntity)
+    RecordOfFloatAttributes_Utils::ForEach_ValidEntry(InAttributeOwnerEntity, [&](FCk_Handle InFloatAttributeEntity)
     {
-        return UCk_Utils_GameplayLabel_UE::Get_Label(InFloatAttributeEntity);
+        AllAttributes.Add(UCk_Utils_GameplayLabel_UE::Get_Label(InFloatAttributeEntity));
     });
+
+    return AllAttributes;
 }
 
 auto

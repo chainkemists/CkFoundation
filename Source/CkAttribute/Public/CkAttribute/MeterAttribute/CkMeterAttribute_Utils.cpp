@@ -193,12 +193,14 @@ auto
     if (NOT RecordOfMeterAttributes_Utils::Has(InAttributeOwnerEntity))
     { return {}; }
 
-    const auto& MeterAttributeEntities = RecordOfMeterAttributes_Utils::Get_AllRecordEntries(InAttributeOwnerEntity);
+    auto AllMeters = TArray<FGameplayTag>{};
 
-    return ck::algo::Transform<TArray<FGameplayTag>>(MeterAttributeEntities, [&](FCk_Handle InMeterAttributeEntity)
+    RecordOfMeterAttributes_Utils::ForEach_ValidEntry(InAttributeOwnerEntity, [&](FCk_Handle InMeterAttributeEntity)
     {
-        return UCk_Utils_GameplayLabel_UE::Get_Label(InMeterAttributeEntity);
+        AllMeters.Add(UCk_Utils_GameplayLabel_UE::Get_Label(InMeterAttributeEntity));
     });
+
+    return AllMeters;
 }
 
 auto

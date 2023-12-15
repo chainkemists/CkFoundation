@@ -153,12 +153,14 @@ auto
     if (NOT Has_Any(InTimerOwnerEntity))
     { return {}; }
 
-    const auto& timerEntities = RecordOfTimers_Utils::Get_AllRecordEntries(InTimerOwnerEntity);
+    auto AllTimers = TArray<FGameplayTag>{};
 
-    return ck::algo::Transform<TArray<FGameplayTag>>(timerEntities, [&](FCk_Handle InTimerEntity)
+    RecordOfTimers_Utils::ForEach_ValidEntry(InTimerOwnerEntity, [&](FCk_Handle InTimerEntity)
     {
-        return UCk_Utils_GameplayLabel_UE::Get_Label(InTimerEntity);
+        AllTimers.Emplace(UCk_Utils_GameplayLabel_UE::Get_Label(InTimerEntity));
     });
+
+    return AllTimers;
 }
 
 auto
