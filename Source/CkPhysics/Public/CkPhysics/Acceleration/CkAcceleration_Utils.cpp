@@ -140,7 +140,7 @@ auto
         FGameplayTag InOtherAccelerationChannel)
     -> bool
 {
-    return RecordOfAccelerationChannels_Utils::Get_HasRecordEntry(InAccelerationOwnerEntity, ck::algo::MatchesGameplayLabel{InOtherAccelerationChannel});
+    return RecordOfAccelerationChannels_Utils::Get_HasValidEntry_If(InAccelerationOwnerEntity, ck::algo::MatchesGameplayLabel{InOtherAccelerationChannel});
 }
 
 auto
@@ -150,7 +150,7 @@ auto
         FGameplayTagContainer InOtherAccelerationChannels)
     -> bool
 {
-    return RecordOfAccelerationChannels_Utils::Get_HasRecordEntry(InAccelerationOwnerEntity, ck::algo::MatchesAnyGameplayLabel{InOtherAccelerationChannels});
+    return RecordOfAccelerationChannels_Utils::Get_HasValidEntry_If(InAccelerationOwnerEntity, ck::algo::MatchesAnyGameplayLabel{InOtherAccelerationChannels});
 }
 
 auto

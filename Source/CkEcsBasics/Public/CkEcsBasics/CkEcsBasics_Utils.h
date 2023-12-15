@@ -152,7 +152,7 @@ auto
     if (NOT T_RecordUtils::Has(InHandle))
     { return {}; }
 
-    return T_RecordUtils::Get_RecordEntryIf(InHandle, Pred);
+    return T_RecordUtils::Get_ValidEntry_If(InHandle, Pred);
 }
 
 template <typename T_ParamType>

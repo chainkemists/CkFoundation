@@ -48,19 +48,19 @@ namespace ck
             FCk_Handle InHandle) -> bool;
 
         static auto
-        Get_RecordEntriesCount(
+        Get_ValidEntriesCount(
             FCk_Handle InRecordHandle) -> int32;
 
     public:
         template <typename T_Predicate>
         static auto
-        Get_HasRecordEntry(
+        Get_HasValidEntry_If(
             FCk_Handle InRecordHandle,
             T_Predicate InPredicate) -> bool;
 
         template <typename T_Predicate>
         static auto
-        Get_RecordEntryIf(
+        Get_ValidEntry_If(
             FCk_Handle InRecordHandle,
             T_Predicate InPredicate) -> FCk_Handle;
 
@@ -133,44 +133,38 @@ namespace ck
     template <typename T_DerivedRecord>
     auto
         TUtils_RecordOfEntities<T_DerivedRecord>::
-        Get_RecordEntriesCount(
+        Get_ValidEntriesCount(
             FCk_Handle InRecordHandle)
         -> int32
     {
         const auto& Fragment = InRecordHandle.Get<RecordType>();
-        return Fragment.Get_RecordEntries().Num();
+        return algo::CountIf(Fragment.Get_RecordEntries(), algo::IsValidEntityHandle{});
     }
 
     template <typename T_DerivedRecord>
     template <typename T_Predicate>
     auto
         TUtils_RecordOfEntities<T_DerivedRecord>::
-        Get_HasRecordEntry(
+        Get_HasValidEntry_If(
             FCk_Handle InRecordHandle,
             T_Predicate InPredicate)
         -> bool
     {
-        const auto& Fragment = InRecordHandle.Get<RecordType>();
-
-        return ck::algo::AnyOf(Fragment.Get_RecordEntries(), [&](RecordEntityType InRecordEntry) -> bool
-        {
-            const auto RecordEntryHandle = ck::MakeHandle(InRecordEntry, InRecordHandle);
-            return InPredicate(RecordEntryHandle);
-        });
+        return ck::IsValid(Get_ValidEntry_If(InRecordHandle, InPredicate));
     }
 
     template <typename T_DerivedRecord>
     template <typename T_Predicate>
     auto
         TUtils_RecordOfEntities<T_DerivedRecord>::
-        Get_RecordEntryIf(
+        Get_ValidEntry_If(
             FCk_Handle InRecordHandle,
             T_Predicate InPredicate)
         -> FCk_Handle
     {
         const auto& Fragment = InRecordHandle.Get<RecordType>();
 
-        for(const auto& RecordEntry : Fragment.Get_RecordEntries())
+        for (const auto& RecordEntry : Fragment.Get_RecordEntries())
         {
             const auto RecordEntryHandle = ck::MakeHandle(RecordEntry, InRecordHandle);
 
@@ -255,11 +249,9 @@ namespace ck
 
             const auto& RecordEntryLabel = UCk_Utils_GameplayLabel_UE::Get_Label(InRecordEntry);
 
-            if (Get_HasRecordEntry(InRecordHandle, ck::algo::MatchesGameplayLabelExact{RecordEntryLabel}))
+            if (ck::IsValid(RecordEntryLabel))
             {
-                const auto ExistingRecordEntry = Get_RecordEntryIf(InRecordHandle, ck::algo::MatchesGameplayLabelExact{RecordEntryLabel});
-
-                CK_ENSURE_IF_NOT(ck::Is_NOT_Valid(ExistingRecordEntry),
+                CK_ENSURE_IF_NOT(NOT Get_HasValidEntry_If(InRecordHandle, ck::algo::MatchesGameplayLabelExact{RecordEntryLabel}),
                     TEXT("Cannot Connect RecordEntry [{}] to Record [{}] because there is already an entry with the GameplayLabel [{}]"),
                     InRecordEntry,
                     InRecordHandle,
@@ -369,14 +361,14 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Record")
     static bool
-    Get_HasRecordEntry(
+    Get_HasValidEntry_If(
         FCk_Handle InRecordHandle,
         FCk_Predicate_InHandle_OutResult InPredicate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Record")
     static FCk_Handle
-    Get_RecordEntryIf(
+    Get_ValidEntry_If(
         FCk_Handle InRecordHandle,
         FCk_Predicate_InHandle_OutResult InPredicate);
 

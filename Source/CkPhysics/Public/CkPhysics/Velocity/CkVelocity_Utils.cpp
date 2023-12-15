@@ -152,7 +152,7 @@ auto
         FGameplayTag InOtherVelocityChannel)
     -> bool
 {
-    return RecordOfVelocityChannels_Utils::Get_HasRecordEntry(InVelocityOwnerEntity, ck::algo::MatchesGameplayLabel{InOtherVelocityChannel});
+    return RecordOfVelocityChannels_Utils::Get_HasValidEntry_If(InVelocityOwnerEntity, ck::algo::MatchesGameplayLabel{InOtherVelocityChannel});
 }
 
 auto
@@ -162,7 +162,7 @@ auto
         FGameplayTagContainer InOtherVelocityChannels)
     -> bool
 {
-    return RecordOfVelocityChannels_Utils::Get_HasRecordEntry(InVelocityOwnerEntity, ck::algo::MatchesAnyGameplayLabel{InOtherVelocityChannels});
+    return RecordOfVelocityChannels_Utils::Get_HasValidEntry_If(InVelocityOwnerEntity, ck::algo::MatchesAnyGameplayLabel{InOtherVelocityChannels});
 }
 
 auto

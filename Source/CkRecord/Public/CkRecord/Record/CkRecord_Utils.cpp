@@ -9,7 +9,8 @@
 
 auto
     UCk_Utils_RecordOfEntities_UE::
-    Add(FCk_Handle InHandle)
+    Add(
+        FCk_Handle InHandle)
     -> void
 {
     UtilsType::AddIfMissing(InHandle);
@@ -17,7 +18,8 @@ auto
 
 auto
     UCk_Utils_RecordOfEntities_UE::
-    Has(FCk_Handle InHandle)
+    Has(
+        FCk_Handle InHandle)
     -> bool
 {
     return UtilsType::Has(InHandle);
@@ -25,7 +27,8 @@ auto
 
 auto
     UCk_Utils_RecordOfEntities_UE::
-    Ensure(FCk_Handle InHandle)
+    Ensure(
+        FCk_Handle InHandle)
     -> bool
 {
     return UtilsType::Ensure(InHandle);
@@ -33,12 +36,12 @@ auto
 
 auto
     UCk_Utils_RecordOfEntities_UE::
-    Get_HasRecordEntry(
+    Get_HasValidEntry_If(
         FCk_Handle InRecordHandle,
         FCk_Predicate_InHandle_OutResult InPredicate)
     -> bool
 {
-    return UtilsType::Get_HasRecordEntry(InRecordHandle, [&](FCk_Handle InHandle) -> bool
+    return UtilsType::Get_HasValidEntry_If(InRecordHandle, [&](FCk_Handle InHandle) -> bool
     {
         const FCk_SharedBool Result;
         InPredicate.Execute(InHandle, Result);
@@ -49,12 +52,12 @@ auto
 
 auto
     UCk_Utils_RecordOfEntities_UE::
-    Get_RecordEntryIf(
+    Get_ValidEntry_If(
         FCk_Handle InRecordHandle,
         FCk_Predicate_InHandle_OutResult InPredicate)
     -> FCk_Handle
 {
-    return UtilsType::Get_RecordEntryIf(InRecordHandle, [&](FCk_Handle InHandle) -> bool
+    return UtilsType::Get_ValidEntry_If(InRecordHandle, [&](FCk_Handle InHandle) -> bool
     {
         const FCk_SharedBool Result;
         InPredicate.Execute(InHandle, Result);
