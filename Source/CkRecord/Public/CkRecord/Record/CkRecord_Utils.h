@@ -252,12 +252,15 @@ namespace ck
 
             const auto& RecordEntryLabel = UCk_Utils_GameplayLabel_UE::Get_Label(InRecordEntry);
 
-            CK_ENSURE_IF_NOT(NOT Get_HasRecordEntry(InRecordHandle, ck::algo::MatchesGameplayLabelExact{RecordEntryLabel}),
-                TEXT("Cannot Connect RecordEntry [{}] to Record [{}] because there is already an entry with the GameplayLabel [{}]"),
-                InRecordEntry,
-                InRecordHandle,
-                RecordEntryLabel)
-            { return; }
+            if (ck::IsValid(RecordEntryLabel))
+            {
+                CK_ENSURE_IF_NOT(NOT Get_HasRecordEntry(InRecordHandle, ck::algo::MatchesGameplayLabelExact{RecordEntryLabel}),
+                    TEXT("Cannot Connect RecordEntry [{}] to Record [{}] because there is already an entry with the GameplayLabel [{}]"),
+                    InRecordEntry,
+                    InRecordHandle,
+                    RecordEntryLabel)
+                { return; }
+            }
         }
 
         RecordFragment._RecordEntries.Emplace(InRecordEntry);
