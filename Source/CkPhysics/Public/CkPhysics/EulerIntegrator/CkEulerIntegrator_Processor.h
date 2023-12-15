@@ -41,7 +41,7 @@ namespace ck
     class CKPHYSICS_API FProcessor_EulerIntegrator_Update : public TProcessor<
             FProcessor_EulerIntegrator_Update,
             TExclude<FTag_EulerIntegrator_DoOnePredictiveUpdate>,
-            FTag_EulerIntegrator_Update,
+            FTag_EulerIntegrator_NeedsUpdate,
             FFragment_EulerIntegrator_Current,
             FFragment_Velocity_Current,
             FFragment_Acceleration_Current>

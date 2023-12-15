@@ -11,7 +11,7 @@ namespace ck
     class CKPROJECTILE_API FProcessor_Projectile_Update : public TProcessor<
             FProcessor_Projectile_Update,
             FFragment_EulerIntegrator_Current,
-            FTag_EulerIntegrator_Update>
+            FTag_EulerIntegrator_NeedsUpdate>
     {
     public:
         using TProcessor::TProcessor;

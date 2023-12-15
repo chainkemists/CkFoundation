@@ -14,7 +14,7 @@ auto
 {
     InHandle.Add<ck::FFragment_AbilityOwner_Params>(InParams);
     InHandle.Add<ck::FFragment_AbilityOwner_Current>();
-    InHandle.Add<ck::FTag_AbilityOwner_Setup>();
+    InHandle.Add<ck::FTag_AbilityOwner_NeedsSetup>();
 }
 
 auto

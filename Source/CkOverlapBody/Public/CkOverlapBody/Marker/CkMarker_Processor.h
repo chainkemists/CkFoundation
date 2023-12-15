@@ -8,10 +8,10 @@
 namespace ck
 {
     class CKOVERLAPBODY_API FProcessor_Marker_Setup
-        : public TProcessor<FProcessor_Marker_Setup, FFragment_Marker_Current, FFragment_Marker_Params, FTag_Marker_Setup>
+        : public TProcessor<FProcessor_Marker_Setup, FFragment_Marker_Current, FFragment_Marker_Params, FTag_Marker_NeedsSetup>
     {
     public:
-        using MarkedDirtyBy = FTag_Marker_Setup;
+        using MarkedDirtyBy = FTag_Marker_NeedsSetup;
 
     public:
         using TProcessor::TProcessor;

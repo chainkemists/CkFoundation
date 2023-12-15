@@ -20,11 +20,11 @@ class UCk_Utils_BulkVelocityModifier_UE;
 
 namespace ck
 {
-    CK_DEFINE_ECS_TAG(FTag_Velocity_Setup);
+    CK_DEFINE_ECS_TAG(FTag_Velocity_NeedsSetup);
     CK_DEFINE_ECS_TAG(FTag_VelocityChannel);
     CK_DEFINE_ECS_TAG(FTag_VelocityModifier);
-    CK_DEFINE_ECS_TAG(FTag_VelocityModifier_Setup);
-    CK_DEFINE_ECS_TAG(FTag_BulkVelocityModifier_Setup);
+    CK_DEFINE_ECS_TAG(FTag_VelocityModifier_NeedsSetup);
+    CK_DEFINE_ECS_TAG(FTag_BulkVelocityModifier_NeedsSetup);
     CK_DEFINE_ECS_TAG(FTag_BulkVelocityModifier_GlobalScope);
 
     // --------------------------------------------------------------------------------------------------------------------

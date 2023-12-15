@@ -13,10 +13,10 @@ namespace ck
             FProcessor_Acceleration_Setup,
             FFragment_Acceleration_Params,
             FFragment_Acceleration_Current,
-            FTag_Acceleration_Setup>
+            FTag_Acceleration_NeedsSetup>
     {
     public:
-        using MarkedDirtyBy = FTag_Acceleration_Setup;
+        using MarkedDirtyBy = FTag_Acceleration_NeedsSetup;
 
     public:
         using TProcessor::TProcessor;
@@ -37,10 +37,10 @@ namespace ck
             FFragment_Acceleration_Current,
             FFragment_Acceleration_Target,
             FTag_AccelerationModifier,
-            FTag_AccelerationModifier_Setup>
+            FTag_AccelerationModifier_NeedsSetup>
     {
     public:
-        using MarkedDirtyBy = FTag_AccelerationModifier_Setup;
+        using MarkedDirtyBy = FTag_AccelerationModifier_NeedsSetup;
 
     public:
         using TProcessor::TProcessor;
@@ -84,10 +84,10 @@ namespace ck
             FProcessor_BulkAccelerationModifier_Setup,
             FFragment_BulkAccelerationModifier_Params,
             FTag_BulkAccelerationModifier_GlobalScope,
-            FTag_BulkAccelerationModifier_Setup>
+            FTag_BulkAccelerationModifier_NeedsSetup>
     {
     public:
-        using MarkedDirtyBy = FTag_BulkAccelerationModifier_Setup;
+        using MarkedDirtyBy = FTag_BulkAccelerationModifier_NeedsSetup;
 
     public:
         using TProcessor::TProcessor;

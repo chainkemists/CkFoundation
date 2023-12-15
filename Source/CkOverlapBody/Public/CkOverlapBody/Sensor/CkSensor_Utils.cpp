@@ -40,7 +40,7 @@ auto
     {
         InSensorEntity.Add<ck::FFragment_Sensor_Params>(ParamsToUse);
         InSensorEntity.Add<ck::FFragment_Sensor_Current>(ParamsToUse.Get_StartingState());
-        InSensorEntity.Add<ck::FTag_Sensor_Setup>();
+        InSensorEntity.Add<ck::FTag_Sensor_NeedsSetup>();
 
         UCk_Utils_GameplayLabel_UE::Add(InSensorEntity, SensorName);
     });

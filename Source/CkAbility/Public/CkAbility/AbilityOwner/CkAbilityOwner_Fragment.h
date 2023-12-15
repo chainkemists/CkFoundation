@@ -16,7 +16,7 @@ class UCk_Utils_AbilityOwner_UE;
 
 namespace ck
 {
-    CK_DEFINE_ECS_TAG(FTag_AbilityOwner_Setup);
+    CK_DEFINE_ECS_TAG(FTag_AbilityOwner_NeedsSetup);
 
     // --------------------------------------------------------------------------------------------------------------------
 

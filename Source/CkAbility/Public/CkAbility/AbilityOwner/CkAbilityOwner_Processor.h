@@ -9,10 +9,10 @@
 namespace ck
 {
     class CKABILITY_API FProcessor_AbilityOwner_Setup
-        : public TProcessor<FProcessor_AbilityOwner_Setup, FFragment_AbilityOwner_Params, FTag_AbilityOwner_Setup>
+        : public TProcessor<FProcessor_AbilityOwner_Setup, FFragment_AbilityOwner_Params, FTag_AbilityOwner_NeedsSetup>
     {
     public:
-        using MarkedDirtyBy = FTag_AbilityOwner_Setup;
+        using MarkedDirtyBy = FTag_AbilityOwner_NeedsSetup;
 
     public:
         using TProcessor::TProcessor;

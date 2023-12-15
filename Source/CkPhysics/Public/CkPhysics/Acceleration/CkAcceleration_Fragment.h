@@ -20,11 +20,11 @@ class UCk_Utils_BulkAccelerationModifier_UE;
 
 namespace ck
 {
-    CK_DEFINE_ECS_TAG(FTag_Acceleration_Setup);
+    CK_DEFINE_ECS_TAG(FTag_Acceleration_NeedsSetup);
     CK_DEFINE_ECS_TAG(FTag_AccelerationChannel);
     CK_DEFINE_ECS_TAG(FTag_AccelerationModifier);
-    CK_DEFINE_ECS_TAG(FTag_AccelerationModifier_Setup);
-    CK_DEFINE_ECS_TAG(FTag_BulkAccelerationModifier_Setup);
+    CK_DEFINE_ECS_TAG(FTag_AccelerationModifier_NeedsSetup);
+    CK_DEFINE_ECS_TAG(FTag_BulkAccelerationModifier_NeedsSetup);
     CK_DEFINE_ECS_TAG(FTag_BulkAccelerationModifier_GlobalScope);
 
     // --------------------------------------------------------------------------------------------------------------------
