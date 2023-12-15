@@ -113,7 +113,7 @@ auto
     if (NOT Ensure_Any(InAbilityOwnerEntity))
     { return {}; }
 
-    return RecordOfAbilities_Utils::Get_RecordEntriesCount(InAbilityOwnerEntity);
+    return RecordOfAbilities_Utils::Get_ValidEntriesCount(InAbilityOwnerEntity);
 }
 
 auto

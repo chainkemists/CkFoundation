@@ -421,7 +421,7 @@ namespace ck
             const FGameplayTag& InAbilityName) const
          -> FCk_Handle
     {
-        const auto& FoundAbilityWithName = UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Get_RecordEntryIf
+        const auto& FoundAbilityWithName = UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Get_ValidEntry_If
         (
             InAbilityOwnerEntity,
             algo::MatchesGameplayLabel{InAbilityName}
@@ -449,7 +449,7 @@ namespace ck
             InAbilityOwnerEntity)
         { return {}; }
 
-        const auto& HasAbilityWithEntity = UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Get_HasRecordEntry
+        const auto& HasAbilityWithEntity = UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Get_HasValidEntry_If
         (
             InAbilityOwnerEntity,
             algo::MatchesEntityHandle{InAbilityEntity}
