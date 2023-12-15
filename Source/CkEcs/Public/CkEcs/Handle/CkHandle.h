@@ -86,6 +86,12 @@ public:
     template <typename T_Fragment>
     auto Get() const -> const T_Fragment&;
 
+    template <typename T_Fragment, typename T_ValidationPolicy>
+    auto Get() -> T_Fragment&;
+
+    template <typename T_Fragment, typename T_ValidationPolicy>
+    auto Get() const -> const T_Fragment&;
+
 public:
     // FCk_Handle is a core concept of this architecture, we are taking some liberties
     // with the operator overloading for the sake of improving readability. Overloading
@@ -427,14 +433,7 @@ auto
     Get()
     -> T_Fragment&
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
-        TEXT("Unable to Get fragment. Handle [{}] does NOT have a valid Registry."), *this)
-    {
-        static T_Fragment Invalid_Fragment;
-        return Invalid_Fragment;
-    }
-
-    return _Registry->Get<T_Fragment>(_Entity);
+    return Get<T_Fragment, ck::IsValid_Policy_Default>();
 }
 
 template <typename T_Fragment>
@@ -443,8 +442,43 @@ auto
     Get() const
     -> const T_Fragment&
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
-        TEXT("Unable to Get fragment. Handle [{}] does NOT have a valid Registry."), *this)
+    return Get<T_Fragment, ck::IsValid_Policy_Default>();
+}
+
+template <typename T_Fragment, typename T_ValidationPolicy>
+auto
+    FCk_Handle::
+    Get()
+    -> T_Fragment&
+{
+    static_assert(std::is_base_of_v<ck::IsValid_Policy, T_ValidationPolicy>,
+        "T_ValidationPolicy must be a ck::IsValid_Policy");
+
+    CK_ENSURE_IF_NOT(IsValid(T_ValidationPolicy{}),
+        TEXT("Unable to Add Fragment [{}]. Handle [{}] does NOT have a valid [{}]."),
+        ck::TypeToString<T_Fragment>, *this,
+        ck::IsValid(_Registry) ? TEXT("Entity") : TEXT("Registry"))
+    {
+        static T_Fragment Invalid_Fragment;
+        return Invalid_Fragment;
+    }
+
+    return _Registry->Get<T_Fragment>(_Entity);
+}
+
+template <typename T_Fragment, typename T_ValidationPolicy>
+auto
+    FCk_Handle::
+    Get() const
+    -> const T_Fragment&
+{
+    static_assert(std::is_base_of_v<ck::IsValid_Policy, T_ValidationPolicy>,
+        "T_ValidationPolicy must be a ck::IsValid_Policy");
+
+    CK_ENSURE_IF_NOT(IsValid(T_ValidationPolicy{}),
+        TEXT("Unable to Add Fragment [{}]. Handle [{}] does NOT have a valid [{}]."),
+        ck::TypeToString<T_Fragment>, *this,
+        ck::IsValid(_Registry) ? TEXT("Entity") : TEXT("Registry"))
     {
         static T_Fragment Invalid_Fragment;
         return Invalid_Fragment;
@@ -477,7 +511,7 @@ auto
     else
     {
         DebugWrapperPtrType Ret = TSharedPtr<TCk_DebugWrapper<T_Fragment>, ESPMode::NotThreadSafe>
-            {new TCk_DebugWrapper<T_Fragment>(&InHandle.Get<T_Fragment>())};
+        { new TCk_DebugWrapper<T_Fragment>(&InHandle.Get<T_Fragment, ck::IsValid_Policy_IncludePendingKill>()) };
         return Ret;
     }
 }

@@ -207,7 +207,7 @@ auto
 
     if (Has<FEntity_FragmentMapper>())
     {
-        _Mapper = &Get<FEntity_FragmentMapper>();
+        _Mapper = &Get<FEntity_FragmentMapper, ck::IsValid_Policy_IncludePendingKill>();
 
         [[maybe_unused]]
         const auto& Names = _Mapper->ProcessAll(*this);
