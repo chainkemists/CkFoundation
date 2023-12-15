@@ -415,7 +415,6 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              Category = "Ck|Config",
               meta = (ExposeOnSpawn, AllowPrivateAccess = true))
     FCk_Fragment_Ability_ParamsData _AbilityParams;
 
