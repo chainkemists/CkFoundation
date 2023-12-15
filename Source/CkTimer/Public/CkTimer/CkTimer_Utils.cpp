@@ -106,9 +106,6 @@ auto
         UCk_Utils_Timer_UE,
         RecordOfTimers_Utils>(InTimerOwnerEntity, InTimerName);
 
-    // TODO: the following disconnect should NOT be needed. Somehow, when we destroy the TimerEntity and when a new Timer is added
-    // TODO: the new timer is not added to the RecordOfTimers_Utils. This is a bug that needs to be fixed.
-    RecordOfTimers_Utils::Request_Disconnect(InTimerOwnerEntity, TimerEntity);
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(TimerEntity, ECk_EntityLifetime_DestructionBehavior::ForceDestroy);
 }
 
