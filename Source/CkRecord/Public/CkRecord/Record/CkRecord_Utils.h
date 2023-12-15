@@ -174,6 +174,9 @@ namespace ck
         {
             const auto RecordEntryHandle = ck::MakeHandle(RecordEntry, InRecordHandle);
 
+            if (ck::Is_NOT_Valid(RecordEntryHandle))
+            { continue; }
+
             if (const auto Result = InPredicate(RecordEntryHandle))
             { return RecordEntryHandle; }
         }
