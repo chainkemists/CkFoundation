@@ -21,6 +21,14 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|Vector3")
+    static FVector
+    Get_LocationFromOriginInDirection(
+        const FVector& InOrigin,
+        const FVector& InDirection,
+        float InDistanceFromOriginInDirection = 500.0f);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Vector3")
     static float
     Get_AngleBetweenVectors(
         const FVector& InA,
@@ -38,13 +46,6 @@ public:
     Get_ClampedLength(
         const FVector& InVector,
         const FCk_FloatRange& InClampRange);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Math|Vector3")
-    static float
-    Get_DistanceBetweenActors(
-        const AActor* InA,
-        const AActor* InB);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|Vector3")
@@ -91,6 +92,47 @@ public:
     Get_IsLengthLessThanOrEqualTo(
         const FVector& InVector,
         float InLength);
+
+    // Assumes +X is Forward, +Y is Right, +Z is Up
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Vector3")
+    static FVector
+    Get_WorldDirection(
+        ECk_Direction_3D InDirection);
+
+    // Assumes +X is Forward, +Y is Right, +Z is Up
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Vector3")
+    static ECk_Direction_3D
+    Get_ClosestWorldDirectionFromVector(
+        const FVector& InVector);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable)
+class CKCORE_API UCk_Utils_ActorVector3_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_Vector3_UE);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Actor")
+    static float
+    Get_DistanceBetweenActors(
+        const AActor* InA,
+        const AActor* InB);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Actor")
+    static FVector
+    Get_LocationFromActorInDirection(
+        const AActor* InActor,
+        ECk_Direction_3D InDirection = ECk_Direction_3D::Forward,
+        float InDistanceFromOriginInDirection = 500.0f);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -104,6 +146,14 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Vector2_UE);
 
 public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Vector2")
+    static FVector2D
+    Get_LocationFromOriginInDirection(
+        const FVector2D& InOrigin,
+        const FVector2D& InDirection,
+        float InDistanceFromOriginInDirection);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|Vector2")
     static float
