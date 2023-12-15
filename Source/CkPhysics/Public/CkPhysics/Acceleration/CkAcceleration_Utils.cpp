@@ -15,7 +15,7 @@ auto
 {
     InHandle.Add<ck::FFragment_Acceleration_Params>(InParams);
     InHandle.Add<ck::FFragment_Acceleration_Current>(InParams.Get_StartingAcceleration());
-    InHandle.Add<ck::FTag_Acceleration_Setup>();
+    InHandle.Add<ck::FTag_Acceleration_NeedsSetup>();
 
     TryAddReplicatedFragment<UCk_Fragment_Acceleration_Rep>(InHandle);
 }
@@ -180,7 +180,7 @@ auto
     const auto NewModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAccelerationOwnerEntity, [&](FCk_Handle InModifierEntity)
     {
         InModifierEntity.Add<ck::FTag_AccelerationModifier>();
-        InModifierEntity.Add<ck::FTag_AccelerationModifier_Setup>();
+        InModifierEntity.Add<ck::FTag_AccelerationModifier_NeedsSetup>();
 
         UCk_Utils_GameplayLabel_UE::Add(InModifierEntity, InModifierName);
         UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Add(InModifierEntity, InAccelerationOwnerEntity);
@@ -261,7 +261,7 @@ auto
     const auto NewModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InModifierEntity)
     {
         InModifierEntity.Add<ck::FFragment_BulkAccelerationModifier_Params>(InParams);
-        InModifierEntity.Add<ck::FTag_BulkAccelerationModifier_Setup>();
+        InModifierEntity.Add<ck::FTag_BulkAccelerationModifier_NeedsSetup>();
 
         if (InParams.Get_ModifierScope() == ECk_ExtentScope::Global)
         {

@@ -13,10 +13,10 @@ namespace ck
             FProcessor_Velocity_Setup,
             FFragment_Velocity_Params,
             FFragment_Velocity_Current,
-            FTag_Velocity_Setup>
+            FTag_Velocity_NeedsSetup>
     {
     public:
-        using MarkedDirtyBy = FTag_Velocity_Setup;
+        using MarkedDirtyBy = FTag_Velocity_NeedsSetup;
 
     public:
         using TProcessor::TProcessor;
@@ -59,10 +59,10 @@ namespace ck
             FFragment_Velocity_Current,
             FFragment_Velocity_Target,
             FTag_VelocityModifier,
-            FTag_VelocityModifier_Setup>
+            FTag_VelocityModifier_NeedsSetup>
     {
     public:
-        using MarkedDirtyBy = FTag_VelocityModifier_Setup;
+        using MarkedDirtyBy = FTag_VelocityModifier_NeedsSetup;
 
     public:
         using TProcessor::TProcessor;
@@ -106,10 +106,10 @@ namespace ck
             FProcessor_BulkVelocityModifier_Setup,
             FFragment_BulkVelocityModifier_Params,
             FTag_BulkVelocityModifier_GlobalScope,
-            FTag_BulkVelocityModifier_Setup>
+            FTag_BulkVelocityModifier_NeedsSetup>
     {
     public:
-        using MarkedDirtyBy = FTag_BulkVelocityModifier_Setup;
+        using MarkedDirtyBy = FTag_BulkVelocityModifier_NeedsSetup;
 
     public:
         using TProcessor::TProcessor;

@@ -15,7 +15,7 @@ auto
 {
     InHandle.Add<ck::FFragment_Velocity_Params>(InParams);
     InHandle.Add<ck::FFragment_Velocity_Current>(InParams.Get_StartingVelocity());
-    InHandle.Add<ck::FTag_Velocity_Setup>();
+    InHandle.Add<ck::FTag_Velocity_NeedsSetup>();
 
     const auto& VelocityMinMax = InParams.Get_VelocityMinMax();
 
@@ -192,7 +192,7 @@ auto
     const auto NewModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InVelocityOwnerEntity, [&](FCk_Handle InModifierEntity)
     {
         InModifierEntity.Add<ck::FTag_VelocityModifier>();
-        InModifierEntity.Add<ck::FTag_VelocityModifier_Setup>();
+        InModifierEntity.Add<ck::FTag_VelocityModifier_NeedsSetup>();
 
         UCk_Utils_GameplayLabel_UE::Add(InModifierEntity, InModifierName);
         UCk_Utils_Velocity_UE::VelocityTarget_Utils::Add(InModifierEntity, InVelocityOwnerEntity);
@@ -273,7 +273,7 @@ auto
     const auto NewModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InModifierEntity)
     {
         InModifierEntity.Add<ck::FFragment_BulkVelocityModifier_Params>(InParams);
-        InModifierEntity.Add<ck::FTag_BulkVelocityModifier_Setup>();
+        InModifierEntity.Add<ck::FTag_BulkVelocityModifier_NeedsSetup>();
 
         if (InParams.Get_ModifierScope() == ECk_ExtentScope::Global)
         {

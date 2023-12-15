@@ -11,7 +11,7 @@ auto
     -> void
 {
     InHandle.Add<ck::FFragment_EulerIntegrator_Current>();
-    InHandle.Add<ck::FTag_EulerIntegrator_Update>();
+    InHandle.Add<ck::FTag_EulerIntegrator_NeedsUpdate>();
     InHandle.Add<ck::FTag_EulerIntegrator_DoOnePredictiveUpdate>();
 }
 
@@ -22,7 +22,7 @@ auto
     -> void
 {
     InHandle.Remove<ck::FFragment_EulerIntegrator_Current>();
-    InHandle.Remove<ck::FTag_EulerIntegrator_Update>();
+    InHandle.Remove<ck::FTag_EulerIntegrator_NeedsUpdate>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
