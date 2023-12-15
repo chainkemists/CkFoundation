@@ -10,7 +10,7 @@
 namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_EulerIntegrator_DoOnePredictiveUpdate);
-    CK_DEFINE_ECS_TAG(FTag_EulerIntegrator_Update);
+    CK_DEFINE_ECS_TAG(FTag_EulerIntegrator_NeedsUpdate);
 
     // --------------------------------------------------------------------------------------------------------------------
 

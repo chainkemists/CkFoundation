@@ -8,10 +8,10 @@
 namespace ck
 {
     class CKOVERLAPBODY_API FProcessor_Sensor_Setup
-        : public TProcessor<FProcessor_Sensor_Setup, FFragment_Sensor_Current, FFragment_Sensor_Params, FTag_Sensor_Setup>
+        : public TProcessor<FProcessor_Sensor_Setup, FFragment_Sensor_Current, FFragment_Sensor_Params, FTag_Sensor_NeedsSetup>
     {
     public:
-        using MarkedDirtyBy = FTag_Sensor_Setup;
+        using MarkedDirtyBy = FTag_Sensor_NeedsSetup;
 
     public:
         using TProcessor::TProcessor;

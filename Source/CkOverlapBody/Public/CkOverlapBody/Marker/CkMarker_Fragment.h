@@ -19,7 +19,7 @@ class UCk_Utils_MarkerAndSensor_UE;
 
 namespace ck
 {
-    CK_DEFINE_ECS_TAG(FTag_Marker_Setup);
+    CK_DEFINE_ECS_TAG(FTag_Marker_NeedsSetup);
     CK_DEFINE_ECS_TAG(FTag_Marker_UpdateTransform);
 
     // --------------------------------------------------------------------------------------------------------------------
