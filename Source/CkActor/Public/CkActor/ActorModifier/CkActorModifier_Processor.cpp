@@ -10,13 +10,11 @@
 
 namespace ck
 {
-    // --------------------------------------------------------------------------------------------------------------------
-
     auto
         FProcessor_ActorModifier_SpawnActor_HandleRequests::
         ForEachEntity(
-            const TimeType&                                InDeltaT,
-            HandleType                                     InHandle,
+            const TimeType& InDeltaT,
+            HandleType InHandle,
             FFragment_ActorModifier_SpawnActorRequests& InRequests) const
         -> void
     {
@@ -121,9 +119,9 @@ namespace ck
     auto
         FProcessor_ActorModifier_AddActorComponent_HandleRequests::
         ForEachEntity(
-            const TimeType&                                    InDeltaT,
-            HandleType                                         InHandle,
-            const FFragment_OwningActor_Current&               InOwningActorComp,
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const FFragment_OwningActor_Current& InOwningActorComp,
             FFragment_ActorModifier_AddActorComponentRequests& InRequests) const
         -> void
     {

@@ -38,7 +38,6 @@ namespace ck
     public:
         auto Tick(TimeType InDeltaT) -> void;
         auto ForEachEntity(TimeType InDeltaT, HandleType InHandle) const -> void;
-
     };
 
     // --------------------------------------------------------------------------------------------------------------------

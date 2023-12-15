@@ -1,14 +1,20 @@
 #pragma once
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
+
 #include "CkOverlapBody/Sensor/CkSensor_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
-    class CKOVERLAPBODY_API FProcessor_Sensor_Setup
-        : public TProcessor<FProcessor_Sensor_Setup, FFragment_Sensor_Current, FFragment_Sensor_Params, FTag_Sensor_NeedsSetup>
+    class CKOVERLAPBODY_API FProcessor_Sensor_Setup : public TProcessor<
+            FProcessor_Sensor_Setup,
+            FFragment_Sensor_Current,
+            FFragment_Sensor_Params,
+            FTag_Sensor_NeedsSetup,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FTag_Sensor_NeedsSetup;
@@ -26,8 +32,12 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKOVERLAPBODY_API FProcessor_Sensor_HandleRequests
-        : public TProcessor<FProcessor_Sensor_HandleRequests, FFragment_Sensor_Current, FFragment_Sensor_Params, FFragment_Sensor_Requests>
+    class CKOVERLAPBODY_API FProcessor_Sensor_HandleRequests : public TProcessor<
+            FProcessor_Sensor_HandleRequests,
+            FFragment_Sensor_Current,
+            FFragment_Sensor_Params,
+            FFragment_Sensor_Requests,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FFragment_Sensor_Requests;
@@ -77,8 +87,12 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKOVERLAPBODY_API FProcessor_Sensor_UpdateTransform
-        : public TProcessor<FProcessor_Sensor_UpdateTransform, FFragment_Sensor_Current, FFragment_Sensor_Params, FTag_Sensor_UpdateTransform>
+    class CKOVERLAPBODY_API FProcessor_Sensor_UpdateTransform : public TProcessor<
+            FProcessor_Sensor_UpdateTransform,
+            FFragment_Sensor_Current,
+            FFragment_Sensor_Params,
+            FTag_Sensor_UpdateTransform,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using TProcessor::TProcessor;

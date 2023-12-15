@@ -13,7 +13,8 @@ namespace ck
             FProcessor_Acceleration_Setup,
             FFragment_Acceleration_Params,
             FFragment_Acceleration_Current,
-            FTag_Acceleration_NeedsSetup>
+            FTag_Acceleration_NeedsSetup,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FTag_Acceleration_NeedsSetup;
@@ -37,7 +38,8 @@ namespace ck
             FFragment_Acceleration_Current,
             FFragment_Acceleration_Target,
             FTag_AccelerationModifier,
-            FTag_AccelerationModifier_NeedsSetup>
+            FTag_AccelerationModifier_NeedsSetup,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FTag_AccelerationModifier_NeedsSetup;
@@ -84,7 +86,8 @@ namespace ck
             FProcessor_BulkAccelerationModifier_Setup,
             FFragment_BulkAccelerationModifier_Params,
             FTag_BulkAccelerationModifier_GlobalScope,
-            FTag_BulkAccelerationModifier_NeedsSetup>
+            FTag_BulkAccelerationModifier_NeedsSetup,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FTag_BulkAccelerationModifier_NeedsSetup;
@@ -106,7 +109,8 @@ namespace ck
             FProcessor_BulkAccelerationModifier_AddNewTargets,
             FFragment_Acceleration_Params,
             FFragment_RecordOfAccelerationChannels,
-            FTag_EntityJustCreated>
+            FTag_EntityJustCreated,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FTag_EntityJustCreated;
@@ -128,7 +132,8 @@ namespace ck
     class CKPHYSICS_API FProcessor_BulkAccelerationModifier_HandleRequests : public TProcessor<
             FProcessor_BulkAccelerationModifier_HandleRequests,
             FFragment_BulkAccelerationModifier_Params,
-            FFragment_BulkAccelerationModifier_Requests>
+            FFragment_BulkAccelerationModifier_Requests,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FFragment_BulkAccelerationModifier_Requests;
@@ -158,8 +163,11 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKPHYSICS_API FProcessor_Acceleration_Replicate
-        : public TProcessor<FProcessor_Acceleration_Replicate, FFragment_Acceleration_Current, TObjectPtr<UCk_Fragment_Acceleration_Rep>>
+    class CKPHYSICS_API FProcessor_Acceleration_Replicate : public TProcessor<
+            FProcessor_Acceleration_Replicate,
+            FFragment_Acceleration_Current,
+            TObjectPtr<UCk_Fragment_Acceleration_Rep>,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using TProcessor::TProcessor;

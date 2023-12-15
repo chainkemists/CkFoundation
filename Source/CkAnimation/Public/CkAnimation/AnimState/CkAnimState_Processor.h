@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkAnimState_Fragment.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
 
@@ -8,9 +9,11 @@
 
 namespace ck
 {
-    class CKANIMATION_API FProcessor_AnimState_HandleRequests
-        : public TProcessor<FProcessor_AnimState_HandleRequests,
-            FFragment_AnimState_Current, FFragment_AnimState_Requests>
+    class CKANIMATION_API FProcessor_AnimState_HandleRequests : public TProcessor<
+            FProcessor_AnimState_HandleRequests,
+            FFragment_AnimState_Current,
+            FFragment_AnimState_Requests,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FFragment_AnimState_Requests;
@@ -53,9 +56,12 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKANIMATION_API FProcessor_AnimState_Replicate
-        : public TProcessor<FProcessor_AnimState_Replicate,
-            FFragment_AnimState_Current, TObjectPtr<UCk_Fragment_AnimState_Rep>, FTag_AnimState_Updated>
+    class CKANIMATION_API FProcessor_AnimState_Replicate : public TProcessor<
+            FProcessor_AnimState_Replicate,
+            FFragment_AnimState_Current,
+            TObjectPtr<UCk_Fragment_AnimState_Rep>,
+            FTag_AnimState_Updated,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FTag_AnimState_Updated;

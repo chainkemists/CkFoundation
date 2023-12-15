@@ -2,15 +2,18 @@
 
 #include "CkCameraShake_Fragment.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
-    class CKCAMERA_API FProcessor_CameraShake_HandleRequests
-        : public TProcessor<FProcessor_CameraShake_HandleRequests,
-            FFragment_CameraShake_Params, FFragment_CameraShake_Requests>
+    class CKCAMERA_API FProcessor_CameraShake_HandleRequests : public TProcessor<
+            FProcessor_CameraShake_HandleRequests,
+            FFragment_CameraShake_Params,
+            FFragment_CameraShake_Requests,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FFragment_CameraShake_Requests;

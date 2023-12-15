@@ -1,6 +1,8 @@
 #pragma once
 
 #include "CkTransform_Fragment.h"
+
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
@@ -9,9 +11,11 @@
 
 namespace ck
 {
-    class CKECSBASICS_API FProcessor_Transform_HandleRequests
-        : public TProcessor<FProcessor_Transform_HandleRequests,
-            FFragment_Transform_Current, FFragment_Transform_Requests>
+    class CKECSBASICS_API FProcessor_Transform_HandleRequests : public TProcessor<
+            FProcessor_Transform_HandleRequests,
+            FFragment_Transform_Current,
+            FFragment_Transform_Requests,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FFragment_Transform_Requests;
@@ -59,9 +63,12 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSBASICS_API FProcessor_Transform_Actor
-        : public TProcessor<FProcessor_Transform_Actor,
-            FFragment_OwningActor_Current, FFragment_Transform_Current, FTag_Transform_Updated>
+    class CKECSBASICS_API FProcessor_Transform_Actor : public TProcessor<
+            FProcessor_Transform_Actor,
+            FFragment_OwningActor_Current,
+            FFragment_Transform_Current,
+            FTag_Transform_Updated,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FTag_Transform_Updated;
@@ -79,9 +86,12 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSBASICS_API FProcessor_Transform_FireSignals
-        : public TProcessor<FProcessor_Transform_FireSignals, FFragment_Signal_TransformUpdate,
-                            FFragment_Transform_Current, FTag_Transform_Updated>
+    class CKECSBASICS_API FProcessor_Transform_FireSignals : public TProcessor<
+            FProcessor_Transform_FireSignals,
+            FFragment_Signal_TransformUpdate,
+            FFragment_Transform_Current,
+            FTag_Transform_Updated,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FTag_Transform_Updated;
@@ -99,9 +109,12 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSBASICS_API FProcessor_Transform_Replicate
-        : public TProcessor<FProcessor_Transform_Replicate,
-            FFragment_Transform_Current, TObjectPtr<UCk_Fragment_Transform_Rep>, FTag_Transform_Updated>
+    class CKECSBASICS_API FProcessor_Transform_Replicate : public TProcessor<
+            FProcessor_Transform_Replicate,
+            FFragment_Transform_Current,
+            TObjectPtr<UCk_Fragment_Transform_Rep>,
+            FTag_Transform_Updated,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FTag_Transform_Updated;
@@ -119,9 +132,12 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSBASICS_API FProcessor_Transform_InterpolateToGoal_Location
-        : public TProcessor<FProcessor_Transform_InterpolateToGoal_Location,
-            FFragment_Transform_Params, FFragment_Transform_Current, FFragment_Transform_NewGoal_Location>
+    class CKECSBASICS_API FProcessor_Transform_InterpolateToGoal_Location : public TProcessor<
+            FProcessor_Transform_InterpolateToGoal_Location,
+            FFragment_Transform_Params,
+            FFragment_Transform_Current,
+            FFragment_Transform_NewGoal_Location,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FFragment_Transform_NewGoal_Location;
@@ -140,9 +156,12 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSBASICS_API FProcessor_Transform_InterpolateToGoal_Rotation
-        : public TProcessor<FProcessor_Transform_InterpolateToGoal_Rotation,
-            FFragment_Transform_Params, FFragment_Transform_Current, FFragment_Transform_NewGoal_Rotation>
+    class CKECSBASICS_API FProcessor_Transform_InterpolateToGoal_Rotation : public TProcessor<
+            FProcessor_Transform_InterpolateToGoal_Rotation,
+            FFragment_Transform_Params,
+            FFragment_Transform_Current,
+            FFragment_Transform_NewGoal_Rotation,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FFragment_Transform_NewGoal_Rotation;
