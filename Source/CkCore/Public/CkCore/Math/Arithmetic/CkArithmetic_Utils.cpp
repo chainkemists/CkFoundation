@@ -94,3 +94,27 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    template <typename T>
+    auto
+        Negate(
+            const T& InValue)
+        -> T
+    {
+        return InValue * T{-1};
+    }
+}
+
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    template auto Negate(const FVector2D&) -> FVector2D;
+    template auto Negate(const FVector&) -> FVector;
+    template auto Negate(const float&) -> float;
+    template auto Negate(const double&) -> double;
+    template auto Negate(const int&) -> int;
+}
