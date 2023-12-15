@@ -139,19 +139,19 @@ auto
 auto
     FCk_Handle::
     IsValid(
-        ck::IsValid_Policy_IncludePendingKill) const
+        ck::IsValid_Policy_Default) const
     -> bool
 {
-    return ck::IsValid(_Registry) && ck::IsValid(*_Registry) && _Registry->IsValid(_Entity);
+    return IsValid(ck::IsValid_Policy_IncludePendingKill{}) && NOT UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(*this);
 }
 
 auto
     FCk_Handle::
     IsValid(
-        ck::IsValid_Policy_Default) const
+        ck::IsValid_Policy_IncludePendingKill) const
     -> bool
 {
-    return IsValid(ck::IsValid_Policy_IncludePendingKill{}) && NOT UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(*this);
+    return ck::IsValid(_Registry) && ck::IsValid(*_Registry) && _Registry->IsValid(_Entity);
 }
 
 auto
