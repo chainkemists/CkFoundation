@@ -4,10 +4,10 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Macros/CkMacros.h"
-
 #include "CkCore/TypeTraits/CkTypeTraits.h"
-
 #include "CkCore/Validation/CkIsValid.h"
+
+#include <Algo/Count.h>
 
 #include <algorithm>
 
@@ -18,7 +18,7 @@ namespace ck::algo
     template <typename T_Container, typename T_PredicateFunction>
     auto
         AllOf(
-            T_Container& InContainer,
+            const T_Container& InContainer,
             T_PredicateFunction InFunc) -> bool
     {
         return AllOf(InContainer.begin(), InContainer.end(), InFunc);
@@ -37,7 +37,7 @@ namespace ck::algo
     template <typename T_Container, typename T_PredicateFunction>
     auto
         AnyOf(
-            T_Container& InContainer,
+            const T_Container& InContainer,
             T_PredicateFunction InFunc) -> bool
     {
         return AnyOf(InContainer.begin(), InContainer.end(), InFunc);
@@ -51,6 +51,16 @@ namespace ck::algo
             T_PredicateFunction InFunc) -> bool
     {
         return std::any_of(InItrBegin, InItrEnd, InFunc);
+    }
+
+    template <typename T_Container, typename T_PredicateFunction>
+    auto
+        CountIf(
+            const T_Container& InContainer,
+            T_PredicateFunction InFunc)
+        -> int32
+    {
+       return Algo::CountIf(InContainer, InFunc);
     }
 
     template <typename T_Container, typename T_UnaryFunction>
