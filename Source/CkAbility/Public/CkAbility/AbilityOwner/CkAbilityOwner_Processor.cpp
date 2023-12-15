@@ -22,6 +22,14 @@ namespace ck
 
         const auto& Params = InAbilityOwnerParams.Get_Params();
 
+        for (const auto& DefaultAbility : Params.Get_DefaultAbilities())
+        {
+            CK_ENSURE_IF_NOT(ck::IsValid(DefaultAbility), TEXT("Entity [{}] has an INVALID default Ability in its Params!"), InHandle)
+            { continue; }
+
+            UCk_Utils_AbilityOwner_UE::Request_GiveAbility(InHandle, FCk_Request_AbilityOwner_GiveAbility{DefaultAbility});
+        }
+
         // If we, as an AbilityOwner, are also an Ability, then we need to Give the contained Ability to ourselves so that
         // we have it as one of the granted abilities
         if (UCk_Utils_Ability_UE::Has(InHandle))
@@ -34,14 +42,6 @@ namespace ck
                 InHandle,
                 InHandle)
             { return; }
-        }
-
-        for (const auto& DefaultAbility : Params.Get_DefaultAbilities())
-        {
-            CK_ENSURE_IF_NOT(ck::IsValid(DefaultAbility), TEXT("Entity [{}] has an INVALID default Ability in its Params!"), InHandle)
-            { continue; }
-
-            UCk_Utils_AbilityOwner_UE::Request_GiveAbility(InHandle, FCk_Request_AbilityOwner_GiveAbility{DefaultAbility});
         }
 
         InHandle.Remove<MarkedDirtyBy>();
