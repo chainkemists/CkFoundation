@@ -145,7 +145,7 @@ auto
     if (NOT RecordOfMeterAttributes_Utils::Has(InAttributeOwnerEntity))
     { return false; }
 
-    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
+    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_ValidEntry_If(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
     return ck::IsValid(FoundEntity);
 }
@@ -277,7 +277,7 @@ auto
         const FCk_Delegate_MeterAttribute_OnValueChanged& InDelegate)
     -> void
 {
-    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
+    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_ValidEntry_If(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
     const auto [MinCapacity, MaxCapacity, Current] = Get_MinMaxAndCurrentAttributeEntities(InAttributeOwnerEntity, InAttributeName);
 
@@ -299,7 +299,7 @@ auto
         const FCk_Delegate_MeterAttribute_OnValueChanged& InDelegate)
     -> void
 {
-    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
+    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_ValidEntry_If(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
     const auto [MinCapacity, MaxCapacity, Current] = Get_MinMaxAndCurrentAttributeEntities(FoundEntity, InAttributeName);
 
@@ -320,7 +320,7 @@ auto
         FGameplayTag InAttributeName)
     -> std::tuple<FCk_Handle, FCk_Handle>
 {
-    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity,
+    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_ValidEntry_If(InAttributeOwnerEntity,
         ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
     CK_ENSURE_IF_NOT(ck::IsValid(FoundEntity), TEXT("Could not find Attribute [{}] in Entity [{}]"),
@@ -343,7 +343,7 @@ auto
         FGameplayTag InAttributeName)
     -> std::tuple<FCk_Handle, FCk_Handle>
 {
-    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity,
+    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_ValidEntry_If(InAttributeOwnerEntity,
         ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
     CK_ENSURE_IF_NOT(ck::IsValid(FoundEntity), TEXT("Could not find Attribute [{}] in Entity [{}]"),
@@ -366,7 +366,7 @@ auto
         FGameplayTag InAttributeName)
     -> std::tuple<FCk_Handle, FCk_Handle, FCk_Handle>
 {
-    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity,
+    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_ValidEntry_If(InAttributeOwnerEntity,
         ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
     CK_ENSURE_IF_NOT(ck::IsValid(FoundEntity), TEXT("Could not find Attribute [{}] in Entity [{}]"),
@@ -483,7 +483,7 @@ auto
             "(MinCapacity, MaxCapacity or CurrentValue)"), InModifierName, InAttributeOwnerEntity)
     { return; }
 
-    auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_RecordEntryIf
+    auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_ValidEntry_If
     (
         InAttributeOwnerEntity,
         ck::algo::MatchesGameplayLabelExact{InParams.Get_TargetAttributeName()}
@@ -559,7 +559,7 @@ auto
         FGameplayTag InModifierName)
     -> bool
 {
-    const auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
+    const auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_ValidEntry_If(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
     const auto& HasMeterModifier_MinCapacity  = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck::FMeterAttribute_Tags::Get_MinCapacity(), InModifierName);
     const auto& HasMeterModifier_MaxCapacity  = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck::FMeterAttribute_Tags::Get_MaxCapacity(), InModifierName);
@@ -590,7 +590,7 @@ auto
         FGameplayTag InModifierName)
     -> void
 {
-    auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_RecordEntryIf(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
+    auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_ValidEntry_If(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
     const auto& HasMeterModifier_MinCapacity  = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck::FMeterAttribute_Tags::Get_MinCapacity(), InModifierName);
     const auto& HasMeterModifier_MaxCapacity  = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck::FMeterAttribute_Tags::Get_MaxCapacity(), InModifierName);
