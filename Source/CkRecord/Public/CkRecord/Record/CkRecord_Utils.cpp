@@ -7,16 +7,12 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCk_Utils_RecordOfEntities_UE::InternalUtils_Type UCk_Utils_RecordOfEntities_UE::_Utils;
-
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     UCk_Utils_RecordOfEntities_UE::
     Add(FCk_Handle InHandle)
     -> void
 {
-    _Utils.AddIfMissing(InHandle);
+    UtilsType::AddIfMissing(InHandle);
 }
 
 auto
@@ -24,7 +20,7 @@ auto
     Has(FCk_Handle InHandle)
     -> bool
 {
-    return _Utils.Has(InHandle);
+    return UtilsType::Has(InHandle);
 }
 
 auto
@@ -32,15 +28,7 @@ auto
     Ensure(FCk_Handle InHandle)
     -> bool
 {
-    return _Utils.Ensure(InHandle);
-}
-
-auto
-    UCk_Utils_RecordOfEntities_UE::
-    Get_AllRecordEntries(FCk_Handle InRecordHandle)
-    -> TArray<FCk_Handle>
-{
-    return _Utils.Get_AllRecordEntries(InRecordHandle);
+    return UtilsType::Ensure(InHandle);
 }
 
 auto
@@ -50,7 +38,7 @@ auto
         FCk_Predicate_InHandle_OutResult InPredicate)
     -> bool
 {
-    return _Utils.Get_HasRecordEntry(InRecordHandle, [&](FCk_Handle InHandle) -> bool
+    return UtilsType::Get_HasRecordEntry(InRecordHandle, [&](FCk_Handle InHandle) -> bool
     {
         const FCk_SharedBool Result;
         InPredicate.Execute(InHandle, Result);
@@ -66,7 +54,7 @@ auto
         FCk_Predicate_InHandle_OutResult InPredicate)
     -> FCk_Handle
 {
-    return _Utils.Get_RecordEntryIf(InRecordHandle, [&](FCk_Handle InHandle) -> bool
+    return UtilsType::Get_RecordEntryIf(InRecordHandle, [&](FCk_Handle InHandle) -> bool
     {
         const FCk_SharedBool Result;
         InPredicate.Execute(InHandle, Result);
@@ -77,29 +65,41 @@ auto
 
 auto
     UCk_Utils_RecordOfEntities_UE::
-    ForEachEntry(
-        FCk_Handle InRecordHandle,
-        FCk_Lambda_InHandle InFunc)
-    -> void
+    ForEach_ValidEntry(
+        FCk_Handle                 InAbilityOwnerEntity,
+        const FCk_Lambda_InHandle& InFunc)
+    -> TArray<FCk_Handle>
 {
-    return _Utils.ForEachEntry(InRecordHandle, [&](FCk_Handle InHandle)
+    auto Entities = TArray<FCk_Handle>{};
+
+    UtilsType::ForEach_ValidEntry(InAbilityOwnerEntity, [&](FCk_Handle InEntity)
     {
-        InFunc.Execute(InHandle);
+        if (InFunc.IsBound())
+        { InFunc.Execute(InEntity); }
+        else
+        { Entities.Emplace(InEntity); }
     });
+
+    return Entities;
 }
 
 auto
     UCk_Utils_RecordOfEntities_UE::
-    ForEachEntryIf(
+    ForEach_ValidEntry_If(
         FCk_Handle InRecordHandle,
-        FCk_Lambda_InHandle InFunc,
-        FCk_Predicate_InHandle_OutResult InPredicate)
-    -> void
+        const FCk_Lambda_InHandle& InFunc,
+        const FCk_Predicate_InHandle_OutResult& InPredicate)
+    -> TArray<FCk_Handle>
 {
-    return _Utils.ForEachEntryIf(InRecordHandle,
+    auto Entities = TArray<FCk_Handle>{};
+
+    UtilsType::ForEach_ValidEntry_If(InRecordHandle,
     [&](FCk_Handle RecordEntryHandle)
     {
-        InFunc.Execute(RecordEntryHandle);
+        if (InFunc.IsBound())
+        { InFunc.Execute(RecordEntryHandle); }
+        else
+        { Entities.Emplace(RecordEntryHandle); }
     },
     [&](FCk_Handle InRecordEntryHandle)
     {
@@ -108,6 +108,8 @@ auto
 
         return *Result;
     });
+
+    return Entities;
 }
 
 auto
@@ -117,7 +119,7 @@ auto
         FCk_Handle InRecordEntry)
     -> void
 {
-    _Utils.Request_Connect(InRecordHandle, InRecordEntry);
+    UtilsType::Request_Connect(InRecordHandle, InRecordEntry);
 }
 
 auto
@@ -127,7 +129,7 @@ auto
         FCk_Handle InRecordEntry)
     -> void
 {
-    _Utils.Request_Disconnect(InRecordHandle, InRecordEntry);
+    UtilsType::Request_Disconnect(InRecordHandle, InRecordEntry);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

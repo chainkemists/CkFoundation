@@ -48,10 +48,6 @@ namespace ck
             FCk_Handle InHandle) -> bool;
 
         static auto
-        Get_AllRecordEntries(
-            FCk_Handle InRecordHandle) -> TArray<FCk_Handle>;
-
-        static auto
         Get_RecordEntriesCount(
             FCk_Handle InRecordHandle) -> int32;
 
@@ -68,15 +64,16 @@ namespace ck
             FCk_Handle InRecordHandle,
             T_Predicate InPredicate) -> FCk_Handle;
 
-        template <typename T_Unary>
+    public:
+        template <typename T_Func>
         static auto
-        ForEachEntry(
-            FCk_Handle InRecordHandle,
-            T_Unary InUnaryFunc) -> void;
+        ForEach_ValidEntry(
+            FCk_Handle InHandle,
+            T_Func InFunc) -> void;
 
         template <typename T_Unary, typename T_Predicate>
         static auto
-        ForEachEntryIf(
+        ForEach_ValidEntry_If(
             FCk_Handle InRecordHandle,
             T_Unary InFunc,
             T_Predicate InPredicate) -> void;
@@ -136,25 +133,6 @@ namespace ck
     template <typename T_DerivedRecord>
     auto
         TUtils_RecordOfEntities<T_DerivedRecord>::
-        Get_AllRecordEntries(
-            FCk_Handle InRecordHandle)
-        -> TArray<FCk_Handle>
-    {
-        const auto& Fragment = InRecordHandle.Get<RecordType>();
-
-        auto RecordEntries = TArray<FCk_Handle>{};
-
-        for(const auto& RecordEntry : Fragment.Get_RecordEntries())
-        {
-            RecordEntries.Emplace(ck::MakeHandle(RecordEntry, InRecordHandle));
-        }
-
-        return RecordEntries;
-    }
-
-    template <typename T_DerivedRecord>
-    auto
-        TUtils_RecordOfEntities<T_DerivedRecord>::
         Get_RecordEntriesCount(
             FCk_Handle InRecordHandle)
         -> int32
@@ -204,20 +182,28 @@ namespace ck
     }
 
     template <typename T_DerivedRecord>
-    template <typename T_Unary>
+    template <typename T_Func>
     auto
         TUtils_RecordOfEntities<T_DerivedRecord>::
-        ForEachEntry(
-            FCk_Handle InRecordHandle,
-            T_Unary InUnaryFunc)
-        -> void
+        ForEach_ValidEntry(
+            FCk_Handle InHandle,
+            T_Func InFunc) -> void
     {
-        const auto& Fragment = InRecordHandle.Get<RecordType>();
+        auto& Fragment = InHandle.Get<RecordType>();
+        auto& RecordEntries = Fragment._RecordEntries;
 
-        for(const auto& RecordEntry : Fragment.Get_RecordEntries())
+        for (auto Index = 0; Index < RecordEntries.Num(); ++Index)
         {
-            const auto RecordEntryHandle = ck::MakeHandle(RecordEntry, InRecordHandle);
-            InUnaryFunc(RecordEntryHandle);
+            const auto RecordEntryHandle = ck::MakeHandle(RecordEntries[Index], InHandle);
+
+            if (ck::Is_NOT_Valid(RecordEntryHandle))
+            {
+                RecordEntries.RemoveAtSwap(Index);
+                --Index;
+                continue;
+            }
+
+            InFunc(RecordEntryHandle);
         }
     }
 
@@ -225,21 +211,17 @@ namespace ck
     template <typename T_Unary, typename T_Predicate>
     auto
         TUtils_RecordOfEntities<T_DerivedRecord>::
-        ForEachEntryIf(
+        ForEach_ValidEntry_If(
             FCk_Handle InRecordHandle,
             T_Unary InFunc,
             T_Predicate InPredicate)
         -> void
     {
-        const auto& Fragment = InRecordHandle.Get<RecordType>();
-
-        for(const auto& RecordEntry : Fragment.Get_RecordEntries())
+        ForEach_ValidEntry(InRecordHandle, [&](FCk_Handle InRecordEntryHandle)
         {
-            const auto RecordEntryHandle = ck::MakeHandle(RecordEntry, InRecordHandle);
-
-            if (const auto Result = InPredicate(RecordEntryHandle))
-            { InFunc(RecordEntryHandle); }
-        }
+            if (InPredicate(InRecordEntryHandle))
+            { InFunc(InRecordEntryHandle); }
+        });
     }
 
     template <typename T_DerivedRecord>
@@ -351,7 +333,7 @@ public:
     friend class UCk_Utils_RecordEntry_UE;
 
 public:
-    using InternalUtils_Type = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfEntities>;
+    using UtilsType = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfEntities>;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -375,12 +357,6 @@ public:
     Ensure(
         FCk_Handle InHandle);
 
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Record")
-    static TArray<FCk_Handle>
-    Get_AllRecordEntries(
-        FCk_Handle InRecordHandle);
-
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Record")
@@ -397,19 +373,23 @@ public:
         FCk_Predicate_InHandle_OutResult InPredicate);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Record")
-    static void
-    ForEachEntry(
+              Category = "Ck|Utils|Record",
+              DisplayName="For Each RecordEntry",
+              meta=(AutoCreateRefTerm="InFunc"))
+    static TArray<FCk_Handle>
+    ForEach_ValidEntry(
         FCk_Handle InRecordHandle,
-        FCk_Lambda_InHandle InFunc);
+        const FCk_Lambda_InHandle& InFunc);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Record")
-    static void
-    ForEachEntryIf(
+              Category = "Ck|Utils|Record",
+              DisplayName="For Each RecordEntry IF",
+              meta=(AutoCreateRefTerm="InFunc"))
+    static TArray<FCk_Handle>
+    ForEach_ValidEntry_If(
         FCk_Handle InRecordHandle,
-        FCk_Lambda_InHandle InFunc,
-        FCk_Predicate_InHandle_OutResult InPredicate);
+        const FCk_Lambda_InHandle& InFunc,
+        const FCk_Predicate_InHandle_OutResult& InPredicate);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -425,10 +405,6 @@ public:
     Request_Disconnect(
         FCk_Handle InRecordHandle,
         FCk_Handle InRecordEntry);
-
-private:
-    static InternalUtils_Type _Utils;
 };
-
 
 // --------------------------------------------------------------------------------------------------------------------

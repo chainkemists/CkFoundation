@@ -92,12 +92,14 @@ auto
     if (NOT Has_Any(InCameraShakeOwnerEntity))
     { return {}; }
 
-    const auto& CameraShakeEntities = RecordOfCameraShakes_Utils::Get_AllRecordEntries(InCameraShakeOwnerEntity);
+    auto AllCameraShakes = TArray<FGameplayTag>{};
 
-    return ck::algo::Transform<TArray<FGameplayTag>>(CameraShakeEntities, [&](FCk_Handle InCameraShakeEntity)
+    RecordOfCameraShakes_Utils::ForEach_ValidEntry(InCameraShakeOwnerEntity, [&](FCk_Handle InCameraShakeEntity)
     {
-        return UCk_Utils_GameplayLabel_UE::Get_Label(InCameraShakeEntity);
+        AllCameraShakes.Emplace(UCk_Utils_GameplayLabel_UE::Get_Label(InCameraShakeEntity));
     });
+
+    return AllCameraShakes;
 }
 
 auto
