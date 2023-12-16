@@ -142,6 +142,8 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Transform_SetRotation, _NewRotation);
 };
 
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKECSBASICS_API FCk_Request_Transform_AddRotationOffset
 {

@@ -251,7 +251,7 @@ auto
 
     if constexpr (std::is_empty_v<T_FragmentType>)
     {
-        static_assert(std::is_base_of_v<ck::FTag<T_FragmentType>, T_FragmentType>, "Tags must derive from ck::FTag (see helper macro)");
+        static_assert(std::is_base_of_v<ck::TTag<T_FragmentType>, T_FragmentType>, "Tags must derive from ck::TTag (see helper macro)");
 
         _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID());
         static T_FragmentType Empty_Tag;
