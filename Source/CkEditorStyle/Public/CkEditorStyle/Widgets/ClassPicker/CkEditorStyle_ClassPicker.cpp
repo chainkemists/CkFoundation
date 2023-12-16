@@ -10,8 +10,6 @@
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Widgets/Layout/SUniformGridPanel.h"
 
-BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
-
 #define LOCTEXT_NAMESPACE "SEditorStyle_AssetClassPicker"
 
 // --------------------------------------------------------------------------------------------------------------------
