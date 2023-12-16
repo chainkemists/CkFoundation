@@ -56,16 +56,16 @@ auto
     if (ck::Is_NOT_Valid(GConfig, ck::IsValid_Policy_NullptrOnly{}))
     { return {}; }
 
-    FString OutProjectVersion;
+    FString ProjectVersion;
     GConfig->GetString
     (
         TEXT("Script/EngineSettings.GeneralProjectSettings"),
         TEXT("ProjectVersion"),
-        OutProjectVersion,
+        ProjectVersion,
         GGameIni
     );
 
-    return OutProjectVersion;
+    return ProjectVersion;
 }
 
 auto
@@ -122,14 +122,23 @@ auto
 {
     const auto& AssetManager = UAssetManager::Get();
 
-    FAssetData OutssetData;
-    const auto& AssetFound = AssetManager.GetAssetDataForPath(InAssetPath, OutssetData);
+    FAssetData AssetData;
+    const auto& AssetFound = AssetManager.GetAssetDataForPath(InAssetPath, AssetData);
 
     const auto AssetInfo = FCk_Utils_IO_AssetInfoFromPath_Result{}
                            .Set_AssetFound(AssetFound)
-                           .Set_AssetData(OutssetData);
+                           .Set_AssetData(AssetData);
 
     return AssetInfo;
+}
+
+auto
+    UCk_Utils_IO_UE::
+    Get_ExtractPath(
+        const FString& InFullPath)
+    -> FString
+{
+    return FPaths::GetPath(InFullPath);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
