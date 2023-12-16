@@ -9,7 +9,7 @@
 
 #include "CkCore/Format/CkFormat.h"
 
-#include "CkActorModifier_Fragment_Params.generated.h"
+#include "CkActorModifier_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
