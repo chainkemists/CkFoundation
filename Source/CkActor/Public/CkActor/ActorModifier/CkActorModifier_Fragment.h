@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkActor/ActorModifier/CkActorModifier_Fragment_Params.h"
+#include "CkActor/ActorModifier/CkActorModifier_Fragment_Data.h"
 
 #include "CkCore/Macros/CkMacros.h"
 

@@ -1,20 +1,18 @@
 #pragma once
 
-#include "CkOverlapBody/CkOverlapBody_Common.h"
-
-#include "CkActor/ActorModifier/CkActorModifier_Fragment_Params.h"
+#include "CkCore/Format/CkFormat.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/OwningActor/CkOwningActor_Fragment_Params.h"
 
-#include "CkCore/Format/CkFormat.h"
+#include "CkNet/CkNet_Common.h"
+
+#include "CkOverlapBody/CkOverlapBody_Common.h"
 
 #include "CkPhysics/CkPhysics_Common.h"
 
 #include <GameplayTagContainer.h>
-#include <Components/ShapeComponent.h>
 
-#include "CkNet/CkNet_Common.h"
 #include "CkMarker_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
