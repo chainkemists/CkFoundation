@@ -98,6 +98,12 @@ public:
     static FCk_Utils_IO_AssetInfoFromPath_Result
     Get_AssetInfoFromPath(
         const FString& InAssetPath);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IO")
+    static FString
+    Get_ExtractPath(
+        const FString& InFullPath);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
