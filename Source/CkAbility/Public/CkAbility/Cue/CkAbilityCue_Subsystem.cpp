@@ -112,7 +112,11 @@ auto
     if (ck::Is_NOT_Valid(Object))
     { return; }
 
-    if (Object->IsA<UCk_EntityBridge_Config_Base_PDA>())
+    if (Object->IsA<UCk_AbilityCue_Aggregator_DA>())
+    {
+        DoAddAggregator(InAssetData);
+    }
+    else if (Object->IsA<UCk_EntityBridge_Config_Base_PDA>())
     {
         const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 
@@ -155,6 +159,7 @@ auto
     TArray<TSoftObjectPtr<UCk_AbilityCue_Aggregator_DA>> Assets;
     AssetRegistryModule.Get().EnumerateAssets(CompiledFilter, [&](const FAssetData& InEnumeratedAssetData)
     {
+        DoAddAggregator(InEnumeratedAssetData);
         Assets.Emplace(TSoftObjectPtr<UCk_AbilityCue_Aggregator_DA>{InEnumeratedAssetData.GetSoftObjectPath()});
         return true;
     });
@@ -174,10 +179,10 @@ auto
 {
     const auto Aggregator = TSoftObjectPtr<UCk_AbilityCue_Aggregator_DA>{InAggregatorData.GetSoftObjectPath()};
 
-    CK_ENSURE_IF_NOT(ck::IsValid(Aggregator),
-        TEXT("Could not load Aggregator using AssetData [{}]. Either the AssetData is incorrect OR there is a redirector involved."),
-        InAggregatorData)
-    { return; }
+    //CK_ENSURE_IF_NOT(ck::IsValid(Aggregator),
+    //    TEXT("Could not load Aggregator using AssetData [{}]. Either the AssetData is incorrect OR there is a redirector involved."),
+    //    InAggregatorData)
+    //{ return; }
 
     _Aggregators.Add(InAggregatorData.PackagePath, Aggregator);
 }
