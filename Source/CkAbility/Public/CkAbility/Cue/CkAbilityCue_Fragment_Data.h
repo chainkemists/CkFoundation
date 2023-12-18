@@ -18,8 +18,10 @@ public:
     CK_GENERATED_BODY(UCk_AbilityCue_Aggregator_DA);
 
 public:
+    auto Request_Populate() -> void;
+
+public:
     auto PreSave(FObjectPreSaveContext ObjectSaveContext) -> void override;
-    auto PostLoad() -> void override;
 
 private:
     UPROPERTY(VisibleAnywhere, meta=(AllowPrivateAccess))
