@@ -122,6 +122,15 @@ CK_DEFINE_CUSTOM_FORMATTER(FGameplayTagContainer, [&]()
     return ck::Format(TEXT("TAG_CONTAINER_NOT_SET"));
 });
 
+CK_DEFINE_CUSTOM_FORMATTER(FAssetData, [&]()
+{
+    return ck::Format
+    (
+        TEXT("AssetPath: [{}]"),
+        InObj.AssetClassPath.ToString()
+    );
+});
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_CUSTOM_FORMATTER(UObject, [&]()

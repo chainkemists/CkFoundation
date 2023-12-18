@@ -24,6 +24,7 @@ CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TSharedPtr, ESPMode::NotThreadSafe);
 CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TUniquePtr);
 
 CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TObjectPtr);
+CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TSoftObjectPtr);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -65,6 +66,11 @@ CK_DEFINE_CUSTOM_IS_VALID(FName, ck::IsValid_Policy_Default, [=](FName InName)
 CK_DEFINE_CUSTOM_IS_VALID(FSoftObjectPath, ck::IsValid_Policy_Default, [=](const FSoftObjectPath& InSoftObject)
 {
     return InSoftObject.IsValid();
+});
+
+CK_DEFINE_CUSTOM_IS_VALID(FSoftObjectPtr, ck::IsValid_Policy_Default, [=](const FSoftObjectPtr& InSoftObjectPtr)
+{
+    return InSoftObjectPtr.IsValid();
 });
 
 CK_DEFINE_CUSTOM_IS_VALID(FKey, ck::IsValid_Policy_Default, [=](const FKey& InKey)
@@ -132,6 +138,11 @@ CK_DEFINE_CUSTOM_IS_VALID_T(T, TUniquePtr<T>, ck::IsValid_Policy_Default, [=](co
 CK_DEFINE_CUSTOM_IS_VALID_T(T, TObjectPtr<T>, ck::IsValid_Policy_Default, [=](const TObjectPtr<T>& InPtr)
 {
     return ck::IsValid(InPtr.Get(), ck::IsValid_Policy_NullptrOnly{});
+});
+
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TSoftObjectPtr<T>, ck::IsValid_Policy_Default, [=](const TSoftObjectPtr<T>& InPtr)
+{
+    return InPtr.IsValid();
 });
 
 // --------------------------------------------------------------------------------------------------------------------
