@@ -5,6 +5,7 @@
 
 #include "CkResourceLoader/CkResourceLoader_Log.h"
 #include "CkResourceLoader/CkResourceLoader_Utils.h"
+#include "CkResourceLoader/Subsystem/CkResourceLoader_Subsystem.h"
 #include "UObject/ObjectSaveContext.h"
 
 #include <Engine/AssetManager.h>
@@ -233,7 +234,6 @@ namespace ck
         });
 
         const auto LoadedObjectBatch = FCk_ResourceLoader_LoadedObjectBatch{LoadedObjects}.Set_StreamableHandle(StreamingHandle);
-
         DoOnObjectBatchLoaded(InHandle, LoadedObjectBatch);
     }
 
@@ -248,7 +248,14 @@ namespace ck
 
         UUtils_Signal_ResourceLoader_OnObjectLoaded::Broadcast(InHandle, MakePayload(InHandle, Payload));
 
-        // TODO: Request Track on Subsystem
+        const auto& ResourceLoaderSubsystem = UCk_Utils_ResourceLoader_Subsystem_UE::Get_Subsystem(nullptr);
+
+        CK_ENSURE_IF_NOT(ck::IsValid(ResourceLoaderSubsystem),
+            TEXT("Could not retrieve Resource Loader subsystem! Unable to Track Loaded Object [{}]"),
+            InObjectLoaded)
+        { return; }
+
+        ResourceLoaderSubsystem->Request_TrackResource(InObjectLoaded);
     }
 
     auto
@@ -262,7 +269,16 @@ namespace ck
 
         UUtils_Signal_ResourceLoader_OnObjectBatchLoaded::Broadcast(InHandle, MakePayload(InHandle, Payload));
 
-        // TODO: Request Track on Subsystem
+        const auto& ResourceLoaderSubsystem = UCk_Utils_ResourceLoader_Subsystem_UE::Get_Subsystem(nullptr);
+
+        CK_ENSURE_IF_NOT(ck::IsValid(ResourceLoaderSubsystem),
+            TEXT("Could not retrieve Resource Loader subsystem! Unable to Track Loaded Object Batch"))
+        { return; }
+
+        for (const auto& LoadedObject : InObjectBatchLoaded.Get_LoadedObjects())
+        {
+            ResourceLoaderSubsystem->Request_TrackResource(LoadedObject);
+        }
     }
 }
 
