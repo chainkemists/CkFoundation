@@ -62,8 +62,8 @@ public:
     auto PreSave(FObjectPreSaveContext ObjectSaveContext) -> void override;
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))
-    TArray<FSoftObjectPath> _AbilityCues;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess, DisplayThumbnail="false"))
+    TMap<FGameplayTag, FSoftObjectPath> _AbilityCues;
 
 public:
     CK_PROPERTY_GET(_AbilityCues);

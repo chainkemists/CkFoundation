@@ -29,15 +29,4 @@ auto
     return RequestEntity;
 }
 
-auto
-    UCk_Utils_AbilityCue_UE::
-    Request_ReplicateLocation(
-        FCk_Handle InAbilityCueRequestEntity,
-        FVector    InLocation)
-    -> void
-{
-    auto& GameplayCueParams = InAbilityCueRequestEntity.AddOrGet<FGameplayCueParameters>();
-    GameplayCueParams.Location = InLocation;
-}
-
 // --------------------------------------------------------------------------------------------------------------------
