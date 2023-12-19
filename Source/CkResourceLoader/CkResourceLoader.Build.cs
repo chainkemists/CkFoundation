@@ -14,6 +14,7 @@ public class CkResourceLoader : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
+            "DeveloperSettings",
 
             "CkCore",
             "CkEcs",

@@ -43,13 +43,6 @@ public:
         const FCk_Request_ResourceLoader_LoadObjectBatch& InRequest,
         const FCk_Delegate_ResourceLoader_OnObjectBatchLoaded& InDelegate);
 
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|ResourceLoader")
-    static void
-    Request_UnloadObject(
-        FCk_Handle InHandle,
-        const FCk_Request_ResourceLoader_UnloadObject& InRequest);
-
 private:
     static auto DoAddPendingObject(
         FCk_Handle InHandle,
@@ -58,17 +51,6 @@ private:
     static auto DoAddPendingObjectBatch(
         FCk_Handle InHandle,
         const FCk_ResourceLoader_PendingObjectBatch& InPendingObjectBatch) -> void;
-
-private:
-    static bool
-    DoGet_IsObjectPending(
-        FCk_Handle InHandle,
-        const FCk_ResourceLoader_PendingObject& InPendingObject);
-
-    static bool
-    DoGet_IsObjectBatchPending(
-        FCk_Handle InHandle,
-        const FCk_ResourceLoader_PendingObjectBatch& InPendingObjectBatch);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
