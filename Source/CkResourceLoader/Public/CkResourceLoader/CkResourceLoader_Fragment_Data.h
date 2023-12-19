@@ -14,7 +14,6 @@
 UENUM(BlueprintType)
 enum class ECk_ResourceLoader_LoadingPolicy : uint8
 {
-    UseDefault UMETA(Hidden),
     Async,
     Synchronous
 };
@@ -216,7 +215,7 @@ protected:
     FCk_ResourceLoader_ObjectReference_Soft _ObjectReference_Soft;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    ECk_ResourceLoader_LoadingPolicy _LoadingPolicy = ECk_ResourceLoader_LoadingPolicy::UseDefault;
+    ECk_ResourceLoader_LoadingPolicy _LoadingPolicy = ECk_ResourceLoader_LoadingPolicy::Async;
 
 public:
     CK_PROPERTY_GET(_ObjectReference_Soft);
@@ -241,7 +240,7 @@ protected:
     TArray<FCk_ResourceLoader_ObjectReference_Soft> _ObjectReferences_Soft;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    ECk_ResourceLoader_LoadingPolicy _LoadingPolicy = ECk_ResourceLoader_LoadingPolicy::UseDefault;
+    ECk_ResourceLoader_LoadingPolicy _LoadingPolicy = ECk_ResourceLoader_LoadingPolicy::Async;
 
 public:
     CK_PROPERTY_GET(_ObjectReferences_Soft);
@@ -249,27 +248,6 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_ResourceLoader_LoadObjectBatch, _ObjectReferences_Soft);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKRESOURCELOADER_API FCk_Request_ResourceLoader_UnloadObject
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_ResourceLoader_UnloadObject);
-
-protected:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FCk_ResourceLoader_ObjectReference_Soft _ObjectReference_Soft;
-
-public:
-    CK_PROPERTY_GET(_ObjectReference_Soft);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_ResourceLoader_UnloadObject, _ObjectReference_Soft);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -313,28 +291,6 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Payload_ResourceLoader_OnObjectBatchLoaded, _LoadedObjectBatch);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKRESOURCELOADER_API FCk_Fragment_ResourceLoader_ParamsData
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Fragment_ResourceLoader_ParamsData);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, InvalidEnumValues = "UseDefault"))
-    ECk_ResourceLoader_LoadingPolicy _DefaultLoadingPolicy = ECk_ResourceLoader_LoadingPolicy::Async;
-
-public:
-    CK_PROPERTY_GET(_DefaultLoadingPolicy);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ResourceLoader_ParamsData, _DefaultLoadingPolicy);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

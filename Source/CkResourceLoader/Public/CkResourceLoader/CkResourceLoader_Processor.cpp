@@ -1,6 +1,7 @@
 #include "CkResourceLoader_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 
 #include "CkResourceLoader/CkResourceLoader_Log.h"
 #include "CkResourceLoader/CkResourceLoader_Utils.h"
@@ -28,22 +29,22 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_ResourceLoader_Params& InParams,
             FFragment_ResourceLoader_Requests& InRequestsComp) const
         -> void
     {
         const auto RequestsCopy = InRequestsComp._Requests;
         InRequestsComp._Requests.Reset();
 
-        algo::ForEachRequest(InRequestsComp._Requests, ck::Visitor(
+        algo::ForEachRequest(RequestsCopy, ck::Visitor(
         [&](const auto& InRequest)
         {
-            DoHandleRequest(InHandle, InParams, InRequest);
-        }));
+            DoHandleRequest(InHandle, InRequest);
+        }), policy::DontResetContainer{});
 
         if (InRequestsComp.Get_Requests().IsEmpty())
         {
             InHandle.Remove<MarkedDirtyBy>();
+            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle, ECk_EntityLifetime_DestructionBehavior::DestroyOnlyIfOrphan);
         }
     }
 
@@ -51,7 +52,6 @@ namespace ck
         FProcessor_ResourceLoader_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_ResourceLoader_Params& InParams,
             const FCk_Request_ResourceLoader_LoadObject& InRequest) const
         -> void
     {
@@ -61,9 +61,7 @@ namespace ck
         { return; }
 
         const auto& ObjectToLoadPath = ObjectToLoadSoftRef.Get_SoftObjectPath();
-        const auto& LoadingPolicy    = InRequest.Get_LoadingPolicy() == ECk_ResourceLoader_LoadingPolicy::UseDefault
-                                        ? InParams.Get_Params().Get_DefaultLoadingPolicy()
-                                        : InRequest.Get_LoadingPolicy();
+        const auto& LoadingPolicy    = InRequest.Get_LoadingPolicy();
 
         resource_loader::VeryVerbose
         (
@@ -77,12 +75,6 @@ namespace ck
             case ECk_ResourceLoader_LoadingPolicy::Async:
             {
                 auto PendingObject = FCk_ResourceLoader_PendingObject{ObjectToLoadSoftRef};
-
-                if (UCk_Utils_ResourceLoader_UE::Get_IsObjectPending(InHandle, PendingObject))
-                {
-                    resource_loader::VeryVerbose(TEXT("Request to LoadObject [{}] made on object already pending to load"), ObjectToLoadPath);
-                    return;
-                }
 
                 const auto& StreamingHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad
                 (
@@ -124,14 +116,11 @@ namespace ck
         FProcessor_ResourceLoader_HandleRequests::
         DoHandleRequest(
             FCk_Handle InHandle,
-            const FFragment_ResourceLoader_Params& InParams,
             const FCk_Request_ResourceLoader_LoadObjectBatch& InRequest) const
         -> void
     {
         const auto& ObjectToLoadSoftRefs = InRequest.Get_ObjectReferences_Soft();
-        const auto& LoadingPolicy        = InRequest.Get_LoadingPolicy() == ECk_ResourceLoader_LoadingPolicy::UseDefault
-                                            ? InParams.Get_Params().Get_DefaultLoadingPolicy()
-                                            : InRequest.Get_LoadingPolicy();
+        const auto& LoadingPolicy        = InRequest.Get_LoadingPolicy();
 
         resource_loader::VeryVerbose
         (
@@ -144,12 +133,6 @@ namespace ck
             case ECk_ResourceLoader_LoadingPolicy::Async:
             {
                 auto PendingObjectBatch = FCk_ResourceLoader_PendingObjectBatch{ObjectToLoadSoftRefs};
-
-                if (UCk_Utils_ResourceLoader_UE::Get_IsObjectBatchPending(InHandle, PendingObjectBatch))
-                {
-                    resource_loader::VeryVerbose(TEXT("Request to LoadObjectBatch made on object batch already pending to load"));
-                    return;
-                }
 
                 const auto ObjectToLoadPaths = algo::Transform<TArray<FSoftObjectPath>>(ObjectToLoadSoftRefs,
                 [](const FCk_ResourceLoader_ObjectReference_Soft& InObjectRefSoft)
@@ -198,17 +181,6 @@ namespace ck
 
     auto
         FProcessor_ResourceLoader_HandleRequests::
-        DoHandleRequest(
-            HandleType InHandle,
-            const FFragment_ResourceLoader_Params& InParams,
-            const FCk_Request_ResourceLoader_UnloadObject& InRequest) const
-        -> void
-    {
-        // TODO: Request Untrack on Subsystem
-    }
-
-    auto
-        FProcessor_ResourceLoader_HandleRequests::
         DoOnPendingObjectStreamed(
             HandleType InHandle,
             FCk_ResourceLoader_ObjectReference_Soft InObjectStreamed) const
@@ -227,8 +199,6 @@ namespace ck
         const auto& LoadedAsset        = StreamingHandle->GetLoadedAsset();
         const auto ObjectToLoadHardRef = FCk_ResourceLoader_ObjectReference_Hard{LoadedAsset};
         const auto LoadedObject        = FCk_ResourceLoader_LoadedObject{InObjectStreamed, ObjectToLoadHardRef}.Set_StreamableHandle(StreamingHandle);
-
-        UCk_Utils_ResourceLoader_UE::DoTryRemovePendingObject(InHandle, FoundPendingObject);
 
         DoOnObjectLoaded(InHandle, LoadedObject);
     }
@@ -263,8 +233,6 @@ namespace ck
         });
 
         const auto LoadedObjectBatch = FCk_ResourceLoader_LoadedObjectBatch{LoadedObjects}.Set_StreamableHandle(StreamingHandle);
-
-        UCk_Utils_ResourceLoader_UE::DoTryRemovePendingObjectBatch(InHandle, FoundPendingObjectBatch);
 
         DoOnObjectBatchLoaded(InHandle, LoadedObjectBatch);
     }

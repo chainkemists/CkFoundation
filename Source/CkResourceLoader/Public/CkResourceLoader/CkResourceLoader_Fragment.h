@@ -14,26 +14,6 @@ class UCk_Utils_ResourceLoader_UE;
 
 namespace ck
 {
-    struct CKRESOURCELOADER_API FFragment_ResourceLoader_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_ResourceLoader_Params);
-
-    public:
-        using ParamsType = FCk_Fragment_ResourceLoader_ParamsData;
-
-    private:
-        ParamsType _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_ResourceLoader_Params, _Params);
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     struct CKRESOURCELOADER_API FFragment_ResourceLoader_PendingObjects
     {
     public:
@@ -82,9 +62,8 @@ namespace ck
     private:
         using LoadObjectRequestType = FCk_Request_ResourceLoader_LoadObject;
         using LoadObjectBatchRequestType = FCk_Request_ResourceLoader_LoadObjectBatch;
-        using UnloadObjectRequestType = FCk_Request_ResourceLoader_UnloadObject;
 
-        using RequestType = std::variant<LoadObjectRequestType, LoadObjectBatchRequestType, UnloadObjectRequestType>;
+        using RequestType = std::variant<LoadObjectRequestType, LoadObjectBatchRequestType>;
         using RequestList = TArray<RequestType>;
 
     private:
