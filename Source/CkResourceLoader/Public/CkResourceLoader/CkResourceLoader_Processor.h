@@ -42,10 +42,6 @@ namespace ck
             FCk_Handle InHandle,
             const FCk_Request_ResourceLoader_LoadObjectBatch& InRequest) const -> void;
 
-        auto DoHandleRequest(
-            FCk_Handle InHandle,
-            const FCk_Request_ResourceLoader_UnloadObject& InRequest) const -> void;
-
     public:
         auto DoOnPendingObjectStreamed(
             HandleType InHandle,
