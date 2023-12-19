@@ -30,6 +30,7 @@ public class CkApp : CkModuleRules
             "CkPhysics",
             "CkProjectile",
             "CkRecord",
+            "CkResourceLoader",
             "CkTimer",
             "CkUnreal",
         });
