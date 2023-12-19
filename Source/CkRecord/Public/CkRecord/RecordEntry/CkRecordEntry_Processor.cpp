@@ -19,11 +19,12 @@ namespace ck
     {
         for (const auto& Kvp : InRecordEntry._DisconnectionFuncs)
         {
-            // if our Record is in the process of getting destroyed, ignore
-            if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InHandle))
+            const auto& RecordEntity = Kvp.Key;
+
+            // If our Record is in the process of getting destroyed, ignore
+            if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(RecordEntity))
             { continue; }
 
-            const auto& RecordEntity = Kvp.Key;
             const auto& RecordEntityHandle = MakeHandle(RecordEntity, InHandle);
 
             if (ck::Is_NOT_Valid(RecordEntityHandle))
