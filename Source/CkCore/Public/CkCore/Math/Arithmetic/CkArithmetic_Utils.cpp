@@ -6,6 +6,20 @@
 
 auto
     UCk_Utils_Arithmetic_UE::
+    Increment_WithWrap(
+        int32& InToIncrement,
+        const FCk_IntRange& InRange)
+    -> void
+{
+    ++InToIncrement;
+    if (InRange.Get_IsWithinExclusive(InToIncrement))
+    {
+        InToIncrement = InRange.Get_Min();
+    }
+}
+
+auto
+    UCk_Utils_Arithmetic_UE::
     Get_LerpFloatWithEasing(
         float InA,
         float InB,
@@ -77,20 +91,13 @@ auto
 
 auto
     UCk_Utils_Arithmetic_UE::
-    Get_WrapAroundModulo(
-        int32 InA,
-        int32 InB)
+    Get_Increment_WithWrap(
+        int32               InToIncrement,
+        const FCk_IntRange& InRange)
     -> int32
 {
-    CK_ENSURE_IF_NOT(InB != 0, TEXT("Cannot do a WrapAroundModulo with a divisor of 0"))
-    { return 0; }
-
-    const auto& result = InA % InB;
-
-    if (result >= 0)
-    { return result; }
-
-    return result + InB;
+    Increment_WithWrap(InToIncrement, InRange);
+    return InToIncrement;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

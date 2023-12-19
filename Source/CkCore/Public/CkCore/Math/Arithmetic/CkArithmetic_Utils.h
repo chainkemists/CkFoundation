@@ -2,6 +2,7 @@
 
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Math/ValueRange/CkValueRange.h"
 
 #include <Kismet/BlueprintFunctionLibrary.h>
 
@@ -16,6 +17,15 @@ class CKCORE_API UCk_Utils_Arithmetic_UE : public UBlueprintFunctionLibrary
 
 public:
     CK_GENERATED_BODY(UCk_Utils_Arithmetic_UE);
+
+public:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Math|Arithmetic",
+        meta=(CompactNodeTitle="++Wrap"))
+    static void
+    Increment_WithWrap(
+        UPARAM(Ref) int32& InToIncrement,
+        const FCk_IntRange& InRange);
 
 public:
     UFUNCTION(BlueprintPure,
@@ -43,11 +53,11 @@ public:
         float InValue);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Math|Arithmetic")
+        Category = "Ck|Utils|Math|Arithmetic")
     static int32
-    Get_WrapAroundModulo(
-        int32 InA,
-        int32 InB);
+    Get_Increment_WithWrap(
+        int32 InToIncrement,
+        const FCk_IntRange& InRange);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
