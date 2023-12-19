@@ -1,9 +1,6 @@
 #include "CkAbilityCue_Subsystem.h"
 
-#include "GameplayCueManager.h"
-
-#include "AssetRegistry/AssetRegistryModule.h"
-
+#include "CkAbility/CkAbility_Log.h"
 #include "CkAbility/Cue/CkAbilityCue_Fragment_Data.h"
 
 #include "CkCore/Actor/CkActor_Utils.h"
@@ -14,6 +11,10 @@
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "CkUnreal/EntityBridge/CkEntityBridge_Fragment_Data.h"
+
+#include <GameplayCueManager.h>
+#include <AssetRegistry/AssetRegistryModule.h>
+#include <GameFramework/GameModeBase.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -27,20 +28,26 @@ ACk_AbilityCueReplicator_UE::
 auto
     ACk_AbilityCueReplicator_UE::
     Server_RequestExecuteAbilityCue_Implementation(
+        FGameplayTag InCueName,
         FGameplayCueParameters InParams)
     -> void
 {
-    Request_ExecuteAbilityCue(InParams);
+    Request_ExecuteAbilityCue(InCueName, InParams);
 }
 
 auto
     ACk_AbilityCueReplicator_UE::
     Request_ExecuteAbilityCue_Implementation(
+        FGameplayTag InCueName,
         FGameplayCueParameters InParams)
     -> void
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InCueName),
+        TEXT("Unable to ExecuteAbilityCue since the CueName is [{}]"), InCueName)
+    { return; }
+
     const auto AbilityCueSubsystem = GEngine->GetEngineSubsystem<UCk_AbilityCue_Subsystem_UE>();
-    const auto Config = AbilityCueSubsystem->Get_AbilityCue(InParams);
+    const auto Config = AbilityCueSubsystem->Get_AbilityCue(InCueName);
 
     if (ck::Is_NOT_Valid(Config))
     { return; }
@@ -58,32 +65,40 @@ auto
 auto
     UCk_AbilityCueReplicator_Subsystem_UE::
     Initialize(
-        FSubsystemCollectionBase& Collection)
+        FSubsystemCollectionBase& InCollection)
     -> void
 {
-    Super::Initialize(Collection);
+    Super::Initialize(InCollection);
 
     if (GetWorld()->IsNetMode(NM_Client))
     { return; }
 
-    for (auto Index = 0; Index < NumberOfReplicators; ++Index)
-    {
-        _AbilityCueReplicators.Emplace
-        (
-            GetWorld()->SpawnActor<ACk_AbilityCueReplicator_UE>()
-            //UCk_Utils_Actor_UE::Request_SpawnActor<ACk_AbilityCueReplicator_UE>
-            //(
-            //    FCk_Utils_Actor_SpawnActor_Params
-            //    {
-            //        GetWorld()->SpawnActor,
-            //        ACk_AbilityCueReplicator_UE::StaticClass()
-            //    }
-            //    .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel)
-            //    .Set_NetworkingType(ECk_Actor_NetworkingType::Replicated),
-            //    [&](AActor* InActor) { }
-            //)
-        );
-    }
+    // We cannot create the replicated Actors right here. We need to wait until BeginPlay
+    _PostLoginDelegateHandle = FGameModeEvents::GameModePostLoginEvent.AddUObject(this, &UCk_AbilityCueReplicator_Subsystem_UE::OnLoginEvent);
+
+    // TODO: GameInstance Subsystems are not ready yet. Investigate what the lifetime of Subsystems is
+    //const auto& GameSessionSubsystem = UCk_Utils_Game_UE::Get_GameInstance(this)->GetSubsystem<UCk_GameSession_Subsystem_UE>();
+
+    //CK_ENSURE_IF_NOT(ck::IsValid(GameSessionSubsystem), TEXT("Failed to retrieve the GameSession Subsystem!"))
+    //{ return; }
+
+    //_PostFireUnbind_Connection = ck::UUtils_Signal_OnLoginEvent_PostFireUnbind::Bind<&ThisType::OnPlayerControllerReady>
+    //(
+    //    this,
+    //    GameSessionSubsystem->Get_SignalHandle(),
+    //    ECk_Signal_BindingPolicy::FireIfPayloadInFlight,
+    //    ECk_Signal_PostFireBehavior::Unbind
+    //);
+}
+
+auto
+    UCk_AbilityCueReplicator_Subsystem_UE::
+    Deinitialize()
+    -> void
+{
+    Super::Deinitialize();
+
+    FGameModeEvents::GameModePostLoginEvent.Remove(_PostLoginDelegateHandle);
 }
 
 auto
@@ -104,13 +119,67 @@ auto
 
     if (GetWorld()->IsNetMode(NM_DedicatedServer))
     {
-        _AbilityCueReplicators[_NextAvailableReplicator]->Request_ExecuteAbilityCue(InRequest);
+        _AbilityCueReplicators[_NextAvailableReplicator]->Request_ExecuteAbilityCue(InRequest.OriginalTag, InRequest);
     }
     else
     {
-        _AbilityCueReplicators[_NextAvailableReplicator]->Server_RequestExecuteAbilityCue(InRequest);
+        _AbilityCueReplicators[_NextAvailableReplicator]->Server_RequestExecuteAbilityCue(InRequest.OriginalTag, InRequest);
     }
 }
+
+auto
+    UCk_AbilityCueReplicator_Subsystem_UE::
+    OnLoginEvent(
+        AGameModeBase* InGameModeBase,
+        APlayerController* InPlayerController)
+    -> void
+{
+    for (auto Index = 0; Index < NumberOfReplicators; ++Index)
+    {
+        _AbilityCueReplicators.Emplace
+        (
+            GetWorld()->SpawnActor<ACk_AbilityCueReplicator_UE>()
+            //UCk_Utils_Actor_UE::Request_SpawnActor<ACk_AbilityCueReplicator_UE>
+            //(
+            //    FCk_Utils_Actor_SpawnActor_Params
+            //    {
+            //        GetWorld()->SpawnActor,
+            //        ACk_AbilityCueReplicator_UE::StaticClass()
+            //    }
+            //    .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel)
+            //    .Set_NetworkingType(ECk_Actor_NetworkingType::Replicated),
+            //    [&](AActor* InActor) { }
+            //)
+        );
+    }
+}
+
+//auto
+//    UCk_AbilityCueReplicator_Subsystem_UE::
+//    OnPlayerControllerReady(
+//        TWeakObjectPtr<APlayerController> InNewPlayerController,
+//        TArray<TWeakObjectPtr<APlayerController>> InAllPlayerControllers)
+//    -> void
+//{
+//    for (auto Index = 0; Index < NumberOfReplicators; ++Index)
+//    {
+//        _AbilityCueReplicators.Emplace
+//        (
+//            GetWorld()->SpawnActor<ACk_AbilityCueReplicator_UE>()
+//            //UCk_Utils_Actor_UE::Request_SpawnActor<ACk_AbilityCueReplicator_UE>
+//            //(
+//            //    FCk_Utils_Actor_SpawnActor_Params
+//            //    {
+//            //        GetWorld()->SpawnActor,
+//            //        ACk_AbilityCueReplicator_UE::StaticClass()
+//            //    }
+//            //    .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel)
+//            //    .Set_NetworkingType(ECk_Actor_NetworkingType::Replicated),
+//            //    [&](AActor* InActor) { }
+//            //)
+//        );
+//    }
+//}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -250,11 +319,16 @@ auto
         return true;
     });
 
-    for (auto& Asset : Assets)
+    ck::algo::ForEach(Assets, [&](const TSoftObjectPtr<class UCk_AbilityCue_Aggregator_PDA>& Asset)
     {
         const auto Aggregator = Asset.LoadSynchronous();
         Aggregator->Request_Populate();
-    }
+
+        for (const auto KeyVal : Aggregator->Get_AbilityCues())
+        {
+            _AbilityCues.Add(KeyVal.Key, KeyVal.Value);
+        }
+    });
 }
 
 auto
@@ -276,10 +350,10 @@ auto
 auto
     UCk_AbilityCue_Subsystem_UE::
     Get_AbilityCue(
-        const FGameplayCueParameters& InParams)
+        const FGameplayTag& InCueName)
     -> UCk_AbilityCue_Config_PDA*
 {
-    const auto Found = _AbilityCues.Find(InParams.OriginalTag);
+    const auto Found = _AbilityCues.Find(InCueName);
 
     if (ck::Is_NOT_Valid(Found, ck::IsValid_Policy_NullptrOnly{}))
     { return {}; }
@@ -287,7 +361,7 @@ auto
     const auto Config = Cast<UCk_AbilityCue_Config_PDA>(Found->ResolveObject());
 
     CK_ENSURE_IF_NOT(ck::IsValid(Config),
-        TEXT("Could not get an AbilityCue Config with tag [{}]"), InParams.OriginalTag)
+        TEXT("Could not get an AbilityCue Config with tag [{}]"), InCueName)
     { return {}; }
 
     return Config;

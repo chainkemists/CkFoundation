@@ -1,5 +1,7 @@
 #pragma once
 
+#include "GameplayEffectTypes.h"
+
 #include "CkAbility/Cue/CkAbilityCue_Fragment_Data.h"
 
 #include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
@@ -27,11 +29,13 @@ public:
     UFUNCTION(Server, Unreliable)
     void
     Server_RequestExecuteAbilityCue(
+        FGameplayTag InCueName,
         FGameplayCueParameters InParams);
 
-    UFUNCTION(NetMulticast, Reliable)
+    UFUNCTION(NetMulticast, Unreliable)
     void
     Request_ExecuteAbilityCue(
+        FGameplayTag InCueName,
         FGameplayCueParameters InParams);
 };
 
@@ -48,7 +52,10 @@ public:
 public:
     auto
     Initialize(
-        FSubsystemCollectionBase& Collection) -> void override;
+        FSubsystemCollectionBase& InCollection) -> void override;
+
+    auto
+    Deinitialize() -> void override;
 
     UFUNCTION(BlueprintCallable)
     void
@@ -56,12 +63,26 @@ public:
         const FGameplayCueParameters& InRequest);
 
 private:
+    auto
+    OnLoginEvent(
+        AGameModeBase* InGameModeBase,
+        APlayerController* InPlayerController) -> void;
+
+    //auto OnPlayerControllerReady(
+    //    TWeakObjectPtr<APlayerController> InNewPlayerController,
+    //    TArray<TWeakObjectPtr<APlayerController>> InAllPlayerControllers) -> void;
+
+private:
     UPROPERTY(Transient)
     TArray<TObjectPtr<ACk_AbilityCueReplicator_UE>> _AbilityCueReplicators;
-    int32 _NextAvailableReplicator = 0;
+    int32                                           _NextAvailableReplicator = 0;
 
     // TODO: drive this through a tuner
     static constexpr int32 NumberOfReplicators = 5;
+
+private:
+    FDelegateHandle                                 _PostLoginDelegateHandle;
+    //ck::UUtils_Signal_OnLoginEvent_PostFireUnbind::ConnectionType _PostFireUnbind_Connection;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -112,7 +133,7 @@ private:
 public:
     auto
     Get_AbilityCue(
-        const FGameplayCueParameters& InParams) -> UCk_AbilityCue_Config_PDA*;
+        const FGameplayTag& InCueName) -> UCk_AbilityCue_Config_PDA*;
 
 private:
     UPROPERTY(Transient)

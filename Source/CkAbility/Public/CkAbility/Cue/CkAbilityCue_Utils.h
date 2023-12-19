@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkAbility/Cue/CkAbilityCue_Fragment_Data.h"
+
 #include "CkEcs/Handle/CkHandle.h"
 
 #include "CkAbilityCue_Utils.generated.h"
@@ -22,15 +24,6 @@ public:
     Request_Spawn_AbilityCue(
         FCk_Handle InHandle,
         const FCk_Request_AbilityCue_Spawn& InRequest);
-
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|AbilityCue",
-        DisplayName="Request Replicate Location")
-    static void
-    Request_ReplicateLocation(
-        FCk_Handle InAbilityCueRequestEntity,
-        FVector InLocation);
-
 };
 
 // --------------------------------------------------------------------------------------------------------------------
