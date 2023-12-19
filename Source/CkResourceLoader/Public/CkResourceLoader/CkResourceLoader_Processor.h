@@ -11,7 +11,6 @@ namespace ck
 {
     class CKRESOURCELOADER_API FProcessor_ResourceLoader_HandleRequests : public TProcessor<
             FProcessor_ResourceLoader_HandleRequests,
-            FFragment_ResourceLoader_Params,
             FFragment_ResourceLoader_Requests,
             CK_IGNORE_PENDING_KILL>
     {
@@ -32,23 +31,19 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_ResourceLoader_Params& InParams,
             FFragment_ResourceLoader_Requests& InRequestsComp) const -> void;
 
     private:
         auto DoHandleRequest(
             FCk_Handle InHandle,
-            const FFragment_ResourceLoader_Params& InParams,
             const FCk_Request_ResourceLoader_LoadObject& InRequest) const -> void;
 
         auto DoHandleRequest(
             FCk_Handle InHandle,
-            const FFragment_ResourceLoader_Params& InParams,
             const FCk_Request_ResourceLoader_LoadObjectBatch& InRequest) const -> void;
 
         auto DoHandleRequest(
             FCk_Handle InHandle,
-            const FFragment_ResourceLoader_Params& InParams,
             const FCk_Request_ResourceLoader_UnloadObject& InRequest) const -> void;
 
     public:
