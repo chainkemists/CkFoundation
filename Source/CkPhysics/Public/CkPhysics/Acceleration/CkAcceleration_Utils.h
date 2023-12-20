@@ -50,7 +50,8 @@ public:
     static void
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_Acceleration_ParamsData& InParams);
+        const FCk_Fragment_Acceleration_ParamsData& InParams,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Acceleration",

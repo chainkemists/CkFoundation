@@ -1,7 +1,10 @@
 #include "CkVelocity_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+
 #include "CkLabel/CkLabel_Utils.h"
+
+#include "CkPhysics/CkPhysics_Log.h"
 #include "CkPhysics/Velocity/CkVelocity_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -10,7 +13,8 @@ auto
     UCk_Utils_Velocity_UE::
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_Velocity_ParamsData& InParams)
+        const FCk_Fragment_Velocity_ParamsData& InParams,
+        ECk_Replication InReplicates)
     -> void
 {
     InHandle.Add<ck::FFragment_Velocity_Params>(InParams);
@@ -27,6 +31,18 @@ auto
     if (VelocityMinMax.Get_HasMinSpeed())
     {
         InHandle.AddOrGet<ck::FFragment_Velocity_MinMax>()._MaxSpeed = VelocityMinMax.Get_MinSpeed();
+    }
+
+    if (InReplicates == ECk_Replication::DoesNotReplicate)
+    {
+        ck::physics::VeryVerbose
+        (
+            TEXT("Skipping creation of Velocity Rep Fragment on Entity [{}] because it's set to [{}]"),
+            InHandle,
+            InReplicates
+        );
+
+        return;
     }
 
     TryAddReplicatedFragment<UCk_Fragment_Velocity_Rep>(InHandle);

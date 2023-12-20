@@ -1,5 +1,6 @@
 #include "CkNumericAttribute_Utils.h"
 
+#include "CkAttribute/CkAttribute_Log.h"
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
 #include "CkAttribute/MeterAttribute/CkMeterAttribute_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
@@ -12,7 +13,8 @@ auto
     UCk_Utils_NumericAttribute_UE::
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_NumericAttribute_ParamsData& InParams)
+        const FCk_Fragment_NumericAttribute_ParamsData& InParams,
+        ECk_Replication InReplicates)
     -> void
 {
     const auto& ConstraintsPolicy = InParams.Get_ConstraintsPolicy();
@@ -47,7 +49,8 @@ auto
                     }
                     .Set_StartingPercentage(FCk_FloatRange_0to1{static_cast<ck::FFragment_FloatAttribute::AttributeDataType>(StartingPercentage)})
                 }
-            }
+            },
+            InReplicates
         );
     }
     else
@@ -60,12 +63,13 @@ auto
     UCk_Utils_NumericAttribute_UE::
     AddMultiple(
         FCk_Handle InHandle,
-        const FCk_Fragment_MultipleNumericAttribute_ParamsData& InParams)
+        const FCk_Fragment_MultipleNumericAttribute_ParamsData& InParams,
+        ECk_Replication InReplicates)
     -> void
 {
-    for (const auto& param : InParams.Get_NumericAttributeParams())
+    for (const auto& Param : InParams.Get_NumericAttributeParams())
     {
-        Add(InHandle, param);
+        Add(InHandle, Param, InReplicates);
     }
 }
 

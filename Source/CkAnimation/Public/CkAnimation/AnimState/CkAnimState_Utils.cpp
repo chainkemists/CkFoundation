@@ -1,5 +1,6 @@
 #include "CkAnimState_Utils.h"
 
+#include "CkAnimation/CkAnimation_Log.h"
 #include "CkAnimation/AnimState/CkAnimState_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -8,10 +9,24 @@ auto
     UCk_Utils_AnimState_UE::
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_AnimState_ParamsData& InParams)
+        const FCk_Fragment_AnimState_ParamsData& InParams,
+        ECk_Replication InReplicates)
     -> void
 {
     InHandle.Add<ck::FFragment_AnimState_Current>(InParams.Get_StartingAnimState());
+
+    if (InReplicates == ECk_Replication::DoesNotReplicate)
+    {
+        ck::animation::VeryVerbose
+        (
+            TEXT("Skipping creation of AnimState Rep Fragment on Entity [{}] because it's set to [{}]"),
+            InHandle,
+            InReplicates
+        );
+
+        return;
+    }
+
     TryAddReplicatedFragment<UCk_Fragment_AnimState_Rep>(InHandle);
 }
 

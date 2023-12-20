@@ -1,7 +1,10 @@
 #include "CkAcceleration_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+
 #include "CkLabel/CkLabel_Utils.h"
+
+#include "CkPhysics/CkPhysics_Log.h"
 #include "CkPhysics/Acceleration/CkAcceleration_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -10,12 +13,25 @@ auto
     UCk_Utils_Acceleration_UE::
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_Acceleration_ParamsData& InParams)
+        const FCk_Fragment_Acceleration_ParamsData& InParams,
+        ECk_Replication InReplicates)
     -> void
 {
     InHandle.Add<ck::FFragment_Acceleration_Params>(InParams);
     InHandle.Add<ck::FFragment_Acceleration_Current>(InParams.Get_StartingAcceleration());
     InHandle.Add<ck::FTag_Acceleration_NeedsSetup>();
+
+    if (InReplicates == ECk_Replication::DoesNotReplicate)
+    {
+        ck::physics::VeryVerbose
+        (
+            TEXT("Skipping creation of Acceleration Rep Fragment on Entity [{}] because it's set to [{}]"),
+            InHandle,
+            InReplicates
+        );
+
+        return;
+    }
 
     TryAddReplicatedFragment<UCk_Fragment_Acceleration_Rep>(InHandle);
 }
@@ -71,23 +87,23 @@ auto
 auto
     UCk_Utils_AccelerationChannel_UE::
     AddMultiple(
-        FCk_Handle            InAccelerationOwnerEntity,
+        FCk_Handle InAccelerationOwnerEntity,
         FGameplayTagContainer InAccelerationChannels)
     -> void
 {
-    TArray<FGameplayTag> outAccelerationChannelTags;
-    InAccelerationChannels.GetGameplayTagArray(outAccelerationChannelTags);
+    TArray<FGameplayTag> AccelerationChannelTags;
+    InAccelerationChannels.GetGameplayTagArray(AccelerationChannelTags);
 
-    for (const auto& velocityChannel : outAccelerationChannelTags)
+    for (const auto& VelocityChannel : AccelerationChannelTags)
     {
-        Add(InAccelerationOwnerEntity, velocityChannel);
+        Add(InAccelerationOwnerEntity, VelocityChannel);
     }
 }
 
 auto
     UCk_Utils_AccelerationChannel_UE::
     Add(
-        FCk_Handle   InAccelerationOwnerEntity,
+        FCk_Handle InAccelerationOwnerEntity,
         FGameplayTag InAccelerationChannel)
     -> void
 {

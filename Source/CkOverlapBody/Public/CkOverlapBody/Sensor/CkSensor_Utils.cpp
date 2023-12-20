@@ -25,8 +25,9 @@ auto
     {
         ck::overlap_body::VeryVerbose
         (
-            TEXT("Skipping creation of Sensor [{}] because it's Replication Type [{}] does NOT match"),
+            TEXT("Skipping creation of Sensor [{}] on Entity [{}] because it's Replication Type [{}] does NOT match"),
             SensorName,
+            InHandle,
             InReplicationType
         );
 
