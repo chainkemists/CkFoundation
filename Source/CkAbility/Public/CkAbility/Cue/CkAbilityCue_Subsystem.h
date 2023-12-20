@@ -30,13 +30,13 @@ public:
     void
     Server_RequestExecuteAbilityCue(
         FGameplayTag InCueName,
-        FGameplayCueParameters InParams);
+        FCk_AbilityCue_Params InParams);
 
     UFUNCTION(NetMulticast, Unreliable)
     void
     Request_ExecuteAbilityCue(
         FGameplayTag InCueName,
-        FGameplayCueParameters InParams);
+        FCk_AbilityCue_Params InParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -60,7 +60,8 @@ public:
     UFUNCTION(BlueprintCallable)
     void
     Request_ExecuteAbilityCue(
-        const FGameplayCueParameters& InRequest);
+        FGameplayTag InCueName,
+        const FCk_AbilityCue_Params& InRequest);
 
 private:
     auto
