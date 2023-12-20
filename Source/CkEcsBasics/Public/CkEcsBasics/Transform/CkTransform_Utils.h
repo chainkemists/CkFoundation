@@ -12,6 +12,7 @@
 #include "CkCore/Actor/CkActor_Utils.h"
 
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
+#include "CkEcsBasics/CkEcsBasics_Log.h"
 #include "CkNet/CkNet_Utils.h"
 
 #include "CkTransform_Utils.generated.h"
@@ -32,7 +33,8 @@ public:
     Add(
         FCk_Handle InHandle,
         FTransform InInitialTransform,
-        FCk_Transform_Interpolation_Settings InSettings) -> void;
+        FCk_Transform_ParamsData InParams,
+        ECk_Replication InReplicates = ECk_Replication::Replicates) -> void;
 
     template <typename T_ConstOrNonConst = void>
     static auto
@@ -160,7 +162,8 @@ private:
     DoAdd(
         FCk_Handle InHandle,
         FTransform InInitialTransform,
-        FCk_Transform_Interpolation_Settings InSettings);
+        FCk_Transform_ParamsData InParams,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Transform",
@@ -186,11 +189,24 @@ auto
     Add(
         FCk_Handle InHandle,
         FTransform InInitialTransform,
-        FCk_Transform_Interpolation_Settings InSettings)
+        FCk_Transform_ParamsData InParams,
+        ECk_Replication InReplicates)
     -> void
 {
     InHandle.Add<ck::TFragment_Transform<T_ConstOrNonConst>>(InInitialTransform);
-    InHandle.Add<ck::FFragment_Transform_Params>(FCk_Transform_ParamsData{}.Set_InterpolationSettings(std::move(InSettings)));
+    InHandle.Add<ck::FFragment_Transform_Params>(InParams);
+
+    if (InReplicates == ECk_Replication::DoesNotReplicate)
+    {
+        ck::ecs_basics::VeryVerbose
+        (
+            TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it's set to [{}]"),
+            InHandle,
+            InReplicates
+        );
+
+        return;
+    }
 
     TryAddReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle);
 }

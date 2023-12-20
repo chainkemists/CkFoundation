@@ -23,14 +23,15 @@ auto
     CK_ENSURE_IF_NOT(UCk_Utils_OwningActor_UE::Has(InHandle), TEXT("Cannot Add a Marker to Entity [{}] because it does NOT have an Owning Actor"), InHandle)
     { return; }
 
-    const auto& markerName = InParams.Get_MarkerName();
+    const auto& MarkerName = InParams.Get_MarkerName();
 
     if (NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InHandle, InReplicationType))
     {
         ck::overlap_body::VeryVerbose
         (
-            TEXT("Skipping creation of Marker [{}] because it's Replication Type [{}] does NOT match"),
-            markerName,
+            TEXT("Skipping creation of Marker [{}] on Entity [{}] because it's Replication Type [{}] does NOT match"),
+            MarkerName,
+            InHandle,
             InReplicationType
         );
 
@@ -46,7 +47,7 @@ auto
         InMarkerEntity.Add<ck::FFragment_Marker_Current>(ParamsToUse.Get_StartingState());
         InMarkerEntity.Add<ck::FTag_Marker_NeedsSetup>();
 
-        UCk_Utils_GameplayLabel_UE::Add(InMarkerEntity, markerName);
+        UCk_Utils_GameplayLabel_UE::Add(InMarkerEntity, MarkerName);
     });
 
     RecordOfMarkers_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);

@@ -1,5 +1,6 @@
 #include "CkFloatAttribute_Utils.h"
 
+#include "CkAttribute/CkAttribute_Log.h"
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 
@@ -13,7 +14,8 @@ auto
     UCk_Utils_FloatAttribute_UE::
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_FloatAttribute_ParamsData& InParams)
+        const FCk_Fragment_FloatAttribute_ParamsData& InParams,
+        ECk_Replication InReplicates)
     -> void
 {
     RecordOfFloatAttributes_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
@@ -30,6 +32,18 @@ auto
 
     AddNewFloatAttributeToEntity(InHandle, InParams.Get_AttributeName(), InParams.Get_AttributeBaseValue());
 
+    if (InReplicates == ECk_Replication::DoesNotReplicate)
+    {
+        ck::attribute::VeryVerbose
+        (
+            TEXT("Skipping creation of Float Attribute Rep Fragment on Entity [{}] because it's set to [{}]"),
+            InHandle,
+            InReplicates
+        );
+
+        return;
+    }
+
     UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_FloatAttribute_Rep>(InHandle);
 }
 
@@ -37,12 +51,13 @@ auto
     UCk_Utils_FloatAttribute_UE::
     AddMultiple(
         FCk_Handle InHandle,
-        const FCk_Fragment_MultipleFloatAttribute_ParamsData& InParams)
+        const FCk_Fragment_MultipleFloatAttribute_ParamsData& InParams,
+        ECk_Replication InReplicates)
     -> void
 {
-    for (const auto& param : InParams.Get_FloatAttributeParams())
+    for (const auto& Param : InParams.Get_FloatAttributeParams())
     {
-        Add(InHandle, param);
+        Add(InHandle, Param, InReplicates);
     }
 }
 

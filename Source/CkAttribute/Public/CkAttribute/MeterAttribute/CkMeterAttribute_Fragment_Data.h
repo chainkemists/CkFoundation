@@ -43,9 +43,13 @@ private:
               meta = (AllowPrivateAccess = true, ForceInlineRow))
     FCk_Meter _AttributeBaseValue;
 
+    UPROPERTY(Transient)
+    ECk_Replication _Replicates = ECk_Replication::Replicates;
+
 public:
     CK_PROPERTY_GET(_AttributeName);
     CK_PROPERTY_GET(_AttributeBaseValue);
+    CK_PROPERTY(_Replicates);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MeterAttribute_ParamsData, _AttributeName, _AttributeBaseValue);

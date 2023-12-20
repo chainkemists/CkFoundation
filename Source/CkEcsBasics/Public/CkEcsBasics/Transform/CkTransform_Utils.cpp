@@ -226,10 +226,11 @@ auto
     DoAdd(
         FCk_Handle InHandle,
         FTransform InInitialTransform,
-        FCk_Transform_Interpolation_Settings InSettings)
+        FCk_Transform_ParamsData InParams,
+        ECk_Replication InReplicates)
     -> void
 {
-    Add<ck::type_traits::NonConst>(InHandle, InInitialTransform, InSettings);
+    Add<ck::type_traits::NonConst>(InHandle, InInitialTransform, InParams, InReplicates);
 }
 
 auto
