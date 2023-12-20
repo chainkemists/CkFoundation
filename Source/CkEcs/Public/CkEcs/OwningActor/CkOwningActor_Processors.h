@@ -11,7 +11,7 @@
 namespace ck
 {
     class CKECS_API FProcessor_OwningActor_Destroy
-        : public TProcessor<FProcessor_OwningActor_Destroy, FFragment_OwningActor_Current, FTag_PendingDestroyEntity>
+        : public TProcessor<FProcessor_OwningActor_Destroy, FFragment_OwningActor_Current, CK_IF_PENDING_KILL>
     {
     public:
         using TProcessor::TProcessor;
@@ -20,7 +20,7 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_OwningActor_Current& InOwningActorComp) const -> void;
+            const FFragment_OwningActor_Current& InOwningActorComp) const -> void;
     };
 }
 

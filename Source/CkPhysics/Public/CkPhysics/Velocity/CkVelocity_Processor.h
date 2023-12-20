@@ -86,10 +86,10 @@ namespace ck
             FFragment_Velocity_Current,
             FFragment_Velocity_Target,
             FTag_VelocityModifier,
-            FTag_PendingDestroyEntity>
+            CK_IF_PENDING_KILL>
     {
     public:
-        using MarkedDirtyBy = FTag_PendingDestroyEntity;
+        using MarkedDirtyBy = CK_IF_PENDING_KILL;
 
     public:
         using TProcessor::TProcessor;

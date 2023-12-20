@@ -163,7 +163,7 @@ namespace ck
             FFragment_AttributeModifierTarget,
             typename T_DerivedAttributeModifier::Tag_AdditiveModification,
             typename T_DerivedAttributeModifier::Tag_IsRevokableModification,
-            FTag_PendingDestroyEntity>
+            CK_IF_PENDING_KILL>
     {
     public:
         using AttributeModifierFragmentType = T_DerivedAttributeModifier;
@@ -173,7 +173,7 @@ namespace ck
         using ModificationType              = typename AttributeModifierFragmentType::Tag_AdditiveModification;
         using IsRevokableModificationType   = typename AttributeModifierFragmentType::Tag_IsRevokableModification;
         using ThisType                      = TProcessor_AttributeModifier_Additive_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, AttributeModifierTargetType, ModificationType, IsRevokableModificationType, FTag_PendingDestroyEntity>;
+        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, AttributeModifierTargetType, ModificationType, IsRevokableModificationType, CK_IF_PENDING_KILL>;
         using HandleType                    = typename Super::HandleType;
         using TimeType                      = typename Super::TimeType;
 
@@ -317,7 +317,7 @@ namespace ck
             FFragment_AttributeModifierTarget,
             typename T_DerivedAttributeModifier::Tag_MultiplicativeModification,
             typename T_DerivedAttributeModifier::Tag_IsRevokableModification,
-            FTag_PendingDestroyEntity>
+            CK_IF_PENDING_KILL>
     {
     public:
         using AttributeModifierFragmentType = T_DerivedAttributeModifier;
@@ -327,7 +327,7 @@ namespace ck
         using ModificationType              = typename AttributeModifierFragmentType::Tag_MultiplicativeModification;
         using IsRevokableModificationType   = typename AttributeModifierFragmentType::Tag_IsRevokableModification;
         using ThisType                      = TProcessor_AttributeModifier_Multiplicative_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, AttributeModifierTargetType, ModificationType, IsRevokableModificationType, FTag_PendingDestroyEntity>;
+        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, AttributeModifierTargetType, ModificationType, IsRevokableModificationType, CK_IF_PENDING_KILL>;
         using HandleType                    = typename Super::HandleType;
         using TimeType                      = typename Super::TimeType;
 
