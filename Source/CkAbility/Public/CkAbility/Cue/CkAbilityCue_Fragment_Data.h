@@ -72,6 +72,52 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_AbilityCue_Params
+{
+	GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_AbilityCue_Params);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
+    FVector_NetQuantize10 _Location;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
+    FVector_NetQuantizeNormal _Normal;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, NotReplicated,
+        meta=(AllowPrivateAccess))
+    FCk_Handle _Instigator;
+    UPROPERTY()
+    TWeakObjectPtr<class UCk_Fragment_EntityReplicationDriver_Rep> _Instigator_RepObj;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, NotReplicated,
+        meta=(AllowPrivateAccess))
+    FCk_Handle _EffectCauser;
+    UPROPERTY()
+    TWeakObjectPtr<class UCk_Fragment_EntityReplicationDriver_Rep> _EffectCauser_RepObj;
+
+public:
+    auto
+    NetSerialize(
+        FArchive& Ar,
+        class UPackageMap* Map,
+        bool& bOutSuccess) -> bool;
+};
+
+template<>
+struct TStructOpsTypeTraits<FCk_AbilityCue_Params> : public TStructOpsTypeTraitsBase2<FCk_AbilityCue_Params>
+{
+	enum
+	{ WithNetSerializer = true };
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKABILITY_API FCk_Request_AbilityCue_Spawn
 {
     GENERATED_BODY()
@@ -88,9 +134,14 @@ private:
         meta=(AllowPrivateAccess))
     TObjectPtr<UObject> _WorldContextObject;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
+    FCk_AbilityCue_Params _ReplicatedParams;
+
 public:
     CK_PROPERTY_GET(_AbilityCueName);
     CK_PROPERTY_GET(_WorldContextObject);
+    CK_PROPERTY_GET(_ReplicatedParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

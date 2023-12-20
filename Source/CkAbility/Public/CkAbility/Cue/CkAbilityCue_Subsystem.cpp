@@ -29,7 +29,7 @@ auto
     ACk_AbilityCueReplicator_UE::
     Server_RequestExecuteAbilityCue_Implementation(
         FGameplayTag InCueName,
-        FGameplayCueParameters InParams)
+        FCk_AbilityCue_Params InParams)
     -> void
 {
     Request_ExecuteAbilityCue(InCueName, InParams);
@@ -39,7 +39,7 @@ auto
     ACk_AbilityCueReplicator_UE::
     Request_ExecuteAbilityCue_Implementation(
         FGameplayTag InCueName,
-        FGameplayCueParameters InParams)
+        FCk_AbilityCue_Params InParams)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InCueName),
@@ -52,10 +52,15 @@ auto
     if (ck::Is_NOT_Valid(Config))
     { return; }
 
+    if (NOT GetWorld()->IsNetMode(NM_DedicatedServer))
+    {
+        ck::ability::Log(TEXT("I am on the client right now"));
+    }
+
     const auto TransientEntity = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>()->Get_TransientEntity();
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity);
-    NewEntity.Add<FGameplayCueParameters>(InParams);
+    NewEntity.Add<FCk_AbilityCue_Params>(InParams);
 
     Config->Get_EntityConfig()->Build(NewEntity);
 }
@@ -104,7 +109,8 @@ auto
 auto
     UCk_AbilityCueReplicator_Subsystem_UE::
     Request_ExecuteAbilityCue(
-        const FGameplayCueParameters& InRequest)
+        FGameplayTag InCueName,
+        const FCk_AbilityCue_Params& InRequest)
     -> void
 {
     CK_ENSURE_IF_NOT(_AbilityCueReplicators.Num() > 0,
@@ -119,11 +125,11 @@ auto
 
     if (GetWorld()->IsNetMode(NM_DedicatedServer))
     {
-        _AbilityCueReplicators[_NextAvailableReplicator]->Request_ExecuteAbilityCue(InRequest.OriginalTag, InRequest);
+        _AbilityCueReplicators[_NextAvailableReplicator]->Request_ExecuteAbilityCue(InCueName, InRequest);
     }
     else
     {
-        _AbilityCueReplicators[_NextAvailableReplicator]->Server_RequestExecuteAbilityCue(InRequest.OriginalTag, InRequest);
+        _AbilityCueReplicators[_NextAvailableReplicator]->Server_RequestExecuteAbilityCue(InCueName, InRequest);
     }
 }
 
