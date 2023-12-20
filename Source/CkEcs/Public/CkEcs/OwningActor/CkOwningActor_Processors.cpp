@@ -11,17 +11,17 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_OwningActor_Current& InOwningActorComp) const
+            const FFragment_OwningActor_Current& InOwningActorComp) const
         -> void
     {
-        const auto& entityOwningActor = InOwningActorComp.Get_EntityOwningActor().Get();
+        const auto& EntityOwningActor = InOwningActorComp.Get_EntityOwningActor().Get();
 
-        if (ck::Is_NOT_Valid(entityOwningActor))
+        if (ck::Is_NOT_Valid(EntityOwningActor))
         { return; }
 
-        ecs::VeryVerbose(TEXT("Destroying Owning Actor [{}] associated with Entity [{}]"), entityOwningActor, InHandle);
+        ecs::VeryVerbose(TEXT("Destroying Owning Actor [{}] associated with Entity [{}]"), EntityOwningActor, InHandle);
 
-        entityOwningActor->Destroy();
+        EntityOwningActor->Destroy();
     }
 }
 
