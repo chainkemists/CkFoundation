@@ -1,5 +1,6 @@
 #include "CkMeterAttribute_Utils.h"
 
+#include "CkAttribute/CkAttribute_Log.h"
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment.h"
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
 #include "CkCore/Algorithms/CkAlgorithms.h"
@@ -82,7 +83,8 @@ auto
                 { ck::FMeterAttribute_Tags::Get_MaxCapacity(), MeterCapacity.Get_MaxCapacity() },
                 { ck::FMeterAttribute_Tags::Get_Current(), MeterCapacity.Get_MaxCapacity() * MeterStartingPercentage.Get_Value() }
             }
-        }
+        },
+        ParamsToUse.Get_Replicates()
     );
 
     // TODO: Adding all 3 tags to the Meter Attribute Entity which may seem redundant. However, this is in preparation
@@ -103,35 +105,37 @@ auto
     UCk_Utils_MeterAttribute_UE::
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_MeterAttribute_ParamsData& InConstructionScriptData)
+        const FCk_Fragment_MeterAttribute_ParamsData& InConstructionScriptData,
+        ECk_Replication InReplicates)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InConstructionScriptData.Get_AttributeName()),
+    auto MeterParamsDataToUse = InConstructionScriptData;
+    MeterParamsDataToUse.Set_Replicates(InReplicates);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(MeterParamsDataToUse.Get_AttributeName()),
         TEXT("Invalid Attribute Name. Unable to add MeterAttribute to Entity [{}]"), InHandle)
     { return; }
 
-    Store_Parameter(InHandle, InConstructionScriptData);
-
-    if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InHandle))
-    { return;}
+    Store_Parameter(InHandle, MeterParamsDataToUse);
 
     // Meter is an Entity that is made up of sub-entities (FloatAttribute) and thus requires us constructing it just like
     // we would an Unreal Entity
     UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(InHandle,
         FCk_EntityReplicationDriver_ConstructionInfo{UCk_MeterAttribute_ConstructionScript_PDA::StaticClass()}
-        .Set_Label(InConstructionScriptData.Get_AttributeName()));
+        .Set_Label(MeterParamsDataToUse.Get_AttributeName()));
 }
 
 auto
     UCk_Utils_MeterAttribute_UE::
     AddMultiple(
         FCk_Handle InHandle,
-        const FCk_Fragment_MultipleMeterAttribute_ParamsData& InParams)
+        const FCk_Fragment_MultipleMeterAttribute_ParamsData& InParams,
+        ECk_Replication InReplicates)
     -> void
 {
     for (const auto& Param : InParams.Get_MeterAttributeParams())
     {
-        Add(InHandle, Param);
+        Add(InHandle, Param, InReplicates);
     }
 }
 

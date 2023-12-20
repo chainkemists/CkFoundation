@@ -98,7 +98,8 @@ public:
     static void
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_MeterAttribute_ParamsData& InConstructionScriptData);
+        const FCk_Fragment_MeterAttribute_ParamsData& InConstructionScriptData,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Meter",
@@ -106,7 +107,8 @@ public:
     static void
     AddMultiple(
         FCk_Handle InHandle,
-        const FCk_Fragment_MultipleMeterAttribute_ParamsData& InParams);
+        const FCk_Fragment_MultipleMeterAttribute_ParamsData& InParams,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Meter",

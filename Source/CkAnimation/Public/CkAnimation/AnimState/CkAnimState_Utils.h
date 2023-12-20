@@ -25,7 +25,8 @@ public:
     static void
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_AnimState_ParamsData& InParams);
+        const FCk_Fragment_AnimState_ParamsData& InParams,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimState",
@@ -33,7 +34,6 @@ public:
     static bool
     Has(
         FCk_Handle InHandle);
-
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimState",

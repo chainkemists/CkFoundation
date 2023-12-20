@@ -37,7 +37,8 @@ public:
     static void
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_FloatAttribute_ParamsData& InParams);
+        const FCk_Fragment_FloatAttribute_ParamsData& InParams,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
@@ -45,7 +46,8 @@ public:
     static void
     AddMultiple(
         FCk_Handle InHandle,
-        const FCk_Fragment_MultipleFloatAttribute_ParamsData& InParams);
+        const FCk_Fragment_MultipleFloatAttribute_ParamsData& InParams,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
