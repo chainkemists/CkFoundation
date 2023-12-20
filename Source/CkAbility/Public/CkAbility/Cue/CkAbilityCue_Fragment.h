@@ -1,4 +1,7 @@
 #pragma once
+
+#include "CkAbility/Cue/CkAbilityCue_Fragment_Data.h"
+
 #include "CkCore/Macros/CkMacros.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -10,12 +13,16 @@ namespace ck
         CK_GENERATED_BODY(FFragment_AbilityCue_SpawnRequest);
 
     private:
+        FGameplayTag _CueName;
         TObjectPtr<UObject> _WorldContextObject;
+        FCk_AbilityCue_Params _ReplicatedParams;
 
     public:
+        CK_PROPERTY_GET(_CueName);
         CK_PROPERTY_GET(_WorldContextObject);
+        CK_PROPERTY_GET(_ReplicatedParams);
 
-        CK_DEFINE_CONSTRUCTORS(FFragment_AbilityCue_SpawnRequest, _WorldContextObject);
+        CK_DEFINE_CONSTRUCTORS(FFragment_AbilityCue_SpawnRequest, _CueName, _WorldContextObject, _ReplicatedParams);
     };
 }
 

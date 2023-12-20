@@ -2,6 +2,7 @@
 
 #include "CkAbility/Ability/CkAbility_Processor.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Processor.h"
+#include "CkAbility/Cue/CkAbilityCue_Processor.h"
 
 #include "CkActor/ActorModifier/CkActorModifier_Processor.h"
 
@@ -130,6 +131,8 @@ namespace ck_world_actor
 
         InWorld.Add<ck::FProcessor_Marker_DebugPreviewAll>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_Sensor_DebugPreviewAll>(InWorld.Get_Registry());
+
+        InWorld.Add<ck::FProcessor_AbilityCue_Spawn>(InWorld.Get_Registry());
 
         // Processors for Replication
         {

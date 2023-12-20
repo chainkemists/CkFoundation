@@ -20,10 +20,18 @@ public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|AbilityCue",
         DisplayName="Request Spawn Ability Cue")
-    static FCk_Handle
+    static void
     Request_Spawn_AbilityCue(
         FCk_Handle InHandle,
         const FCk_Request_AbilityCue_Spawn& InRequest);
+
+public:
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|AbilityCue",
+        DisplayName="Get Ability Cue Params")
+    static FCk_AbilityCue_Params
+    Get_Params(
+        FCk_Handle InAbilityCueEntity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
