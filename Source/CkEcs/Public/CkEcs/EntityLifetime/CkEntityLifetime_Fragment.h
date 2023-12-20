@@ -13,6 +13,9 @@ namespace ck
 #define CK_IGNORE_PENDING_KILL \
     ck::TExclude<ck::FTag_PendingDestroyEntity>, ck::TExclude<ck::FTag_TriggerDestroyEntity>
 
+#define CK_IF_PENDING_KILL \
+    ck::FTag_PendingDestroyEntity
+
     // --------------------------------------------------------------------------------------------------------------------
 
     struct FFragment_LifetimeDependents
