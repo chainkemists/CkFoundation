@@ -13,20 +13,22 @@
 namespace ck
 {
     class CKABILITY_API FProcessor_AbilityCue_Spawn : public TProcessor<FProcessor_AbilityCue_Spawn,
-            FFragment_AbilityCue_SpawnRequest, FGameplayCueParameters, CK_IGNORE_PENDING_KILL>
+            FFragment_AbilityCue_SpawnRequest, CK_IGNORE_PENDING_KILL>
     {
     public:
-        using MarkedDirtyBy = FCk_Request_AbilityCue_Spawn;
+        using MarkedDirtyBy = FFragment_AbilityCue_SpawnRequest;
 
     public:
         using TProcessor::TProcessor;
 
     public:
+        auto Tick(
+            TimeType InDeltaT) -> void;
+
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_AbilityCue_SpawnRequest& InRequest,
-            const FGameplayCueParameters& InParams) const -> void;
+            const FFragment_AbilityCue_SpawnRequest& InRequest) const -> void;
     };
 }
 

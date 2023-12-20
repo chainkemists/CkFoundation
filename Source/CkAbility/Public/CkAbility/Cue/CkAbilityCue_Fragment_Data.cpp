@@ -4,6 +4,10 @@
 
 #include "CkCore/IO/CkIO_Utils.h"
 
+#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
+
+#include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
+
 #include "CkUnreal/EntityBridge/CkEntityBridge_Fragment_Data.h"
 
 #include "Engine/AssetManager.h"
@@ -58,4 +62,68 @@ void
     Request_Populate();
 
     Super::PreSave(ObjectSaveContext);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_AbilityCue_Params::
+    NetSerialize(
+        FArchive& Ar,
+        UPackageMap* Map,
+        bool& bOutSuccess)
+    -> bool
+{
+    enum ERepFlag
+    {
+        Rep_Location = 0,
+        Rep_Normal,
+        Rep_Instigator,
+        Rep_EffectCauser,
+
+        Rep_Max
+    };
+
+    auto RepBits = uint16{0};
+    if (Ar.IsSaving())
+    {
+        if (_Location.IsNearlyZero() == false) { RepBits |= (1 << Rep_Location); }
+        if (_Normal.IsNearlyZero() == false) { RepBits |= (1 << Rep_Normal); }
+        if (ck::IsValid(_Instigator))
+        {
+            if (_Instigator.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
+            {
+                _Instigator_RepObj = _Instigator.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
+                RepBits |= (1 << Rep_Instigator);
+            }
+        }
+        if (ck::IsValid(_EffectCauser))
+        {
+            if (_EffectCauser.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
+            {
+                _EffectCauser_RepObj = _EffectCauser.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
+                RepBits |= (1 << Rep_EffectCauser);
+            }
+        }
+    }
+
+    Ar.SerializeBits(&RepBits, Rep_Max);
+
+    if (RepBits & (1 << Rep_Location)) { Ar << _Location; }
+    if (RepBits & (1 << Rep_Normal)) { Ar << _Normal; }
+    if (RepBits & (1 << Rep_Instigator))
+    {
+        Ar << _Instigator_RepObj;
+        if (NOT Ar.IsSaving())
+        { _Instigator = _Instigator_RepObj->Get_AssociatedEntity(); }
+    }
+    if (RepBits & (1 << Rep_EffectCauser))
+    {
+        Ar << _EffectCauser_RepObj;
+        if (NOT Ar.IsSaving())
+        { _EffectCauser = _EffectCauser_RepObj->Get_AssociatedEntity(); }
+    }
+
+    bOutSuccess = true;
+    return true;
 }
