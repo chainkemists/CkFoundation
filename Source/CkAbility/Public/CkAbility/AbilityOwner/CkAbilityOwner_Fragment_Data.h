@@ -52,10 +52,15 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
+    FCk_Handle _ContextEntity;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
     FInstancedStruct _EventData;
 
 public:
     CK_PROPERTY_GET(_EventName);
+    CK_PROPERTY_GET(_ContextEntity);
     CK_PROPERTY_GET(_EventData);
 };
 
