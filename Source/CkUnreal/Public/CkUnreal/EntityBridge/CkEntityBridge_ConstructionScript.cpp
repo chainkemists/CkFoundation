@@ -181,7 +181,7 @@ auto
                 }.Set_ReplicatedObjects(ReplicatedObjects.Get_ReplicatedObjects()));
         }
 
-        ck::unreal::Log(TEXT("[EntityActorMapping] [{}] -> [{}]"), Entity, OwningActor);
+        ck::unreal::Log(TEXT("[EntityMap] [{}] -> [{}]"), Entity, OwningActor);
 
         // TODO: Invoking this manually although ideally this should be called by ReplicationDriver for the Server
         TryInvoke_OnReplicationComplete(EInvoke_Caller::ReplicationDriver);
@@ -268,7 +268,7 @@ auto
         // TODO: Why are we not calling Build here?
         EntityConfig->Get_EntityConstructionScript()->Construct(NewEntity);
 
-        ck::unreal::Log(TEXT("[EntityActorMapping] [{}] -> [{}]"), NewEntity, OwningActor);
+        ck::unreal::Log(TEXT("[EntityMap] [{}] -> [{}]"), NewEntity, OwningActor);
     }
 
     TryInvoke_OnReplicationComplete(EInvoke_Caller::EntityBridge);
