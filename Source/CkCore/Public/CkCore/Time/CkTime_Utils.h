@@ -86,12 +86,14 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Time")
     static FCk_Time
-    Make_FromSeconds(float InSeconds);
+    Make_FromSeconds(
+        float InSeconds);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Time")
     static FCk_Time
-    Make_FromMilliseconds(float InMilliSeconds);
+    Make_FromMilliseconds(
+        float InMilliSeconds);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Time",
@@ -113,12 +115,21 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Time")
     static FCk_Utils_Time_GetWorldTime_Result
-    Get_WorldTime(const FCk_Utils_Time_GetWorldTime_Params& InParams);
+    Get_WorldTime(
+        const FCk_Utils_Time_GetWorldTime_Params& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Time")
     static float
-    Get_Milliseconds(const FCk_Time& InTime);
+    Get_Milliseconds(
+        const FCk_Time& InTime);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Time",
+              meta = (CompactNodeTitle = "Is Zero"))
+    static bool
+    Get_IsZero(
+        const FCk_Time& InTime);
 
 public:
     UFUNCTION(BlueprintPure,
