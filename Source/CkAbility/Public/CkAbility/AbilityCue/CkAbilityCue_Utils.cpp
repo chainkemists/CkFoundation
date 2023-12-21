@@ -2,14 +2,10 @@
 
 #include "CkAbilityCue_Utils.h"
 
-#include "CkAbility/Cue/CkAbilityCue_Fragment.h"
-#include "CkAbility/Cue/CkAbilityCue_Fragment_Data.h"
-
-#include "CkActor/ActorModifier/CkActorModifier_Fragment.h"
+#include "CkAbility/AbilityCue/CkAbilityCue_Fragment.h"
+#include "CkAbility/AbilityCue/CkAbilityCue_Fragment_Data.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
-
-#include <GameplayEffectTypes.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 

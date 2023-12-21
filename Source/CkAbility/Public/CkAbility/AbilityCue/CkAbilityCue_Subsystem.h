@@ -1,8 +1,6 @@
 #pragma once
 
-#include "GameplayEffectTypes.h"
-
-#include "CkAbility/Cue/CkAbilityCue_Fragment_Data.h"
+#include "CkAbility/AbilityCue/CkAbilityCue_Fragment_Data.h"
 
 #include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
 
