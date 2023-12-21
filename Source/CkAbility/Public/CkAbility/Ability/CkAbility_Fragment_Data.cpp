@@ -87,7 +87,7 @@ auto
     UCk_Ability_Script_PDA::
     Self_Request_ActivateAbility(
         const UCk_Ability_Script_PDA* InScript,
-        const FCk_Ability_ActivationPayload& InActivationPayload)
+        FCk_Ability_ActivationPayload InActivationPayload)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InScript),
@@ -106,7 +106,8 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    Self_Request_DeactivateAbility(const UCk_Ability_Script_PDA* InScript)
+    Self_Request_DeactivateAbility(
+        const UCk_Ability_Script_PDA* InScript)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InScript),
