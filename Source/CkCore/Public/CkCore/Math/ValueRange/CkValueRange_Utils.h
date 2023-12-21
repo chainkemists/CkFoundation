@@ -62,7 +62,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|FloatRange")
-    static int32
+    static float
     Get_RandomValueInRange(
         const FCk_FloatRange& InRange);
 
