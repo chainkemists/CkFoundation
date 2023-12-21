@@ -116,8 +116,8 @@ auto
 auto
     UCk_Utils_ReplicatedObjects_UE::
     Get_ReplicatedObjects(
-        FCk_Handle InHandle)
-    -> FCk_ReplicatedObjects
+        const FCk_Handle& InHandle)
+    -> const FCk_ReplicatedObjects&
 {
     return InHandle.Get<ck::FCk_Fragment_ReplicatedObjects_Params>().Get_ReplicatedObjects();
 }

@@ -50,7 +50,7 @@ public:
 public:
     static auto
     Get_ReplicatedObjects(
-        FCk_Handle InHandle) -> FCk_ReplicatedObjects;
+        const FCk_Handle& InHandle) -> const FCk_ReplicatedObjects&;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
