@@ -15,36 +15,6 @@
 
 auto
     UCk_Utils_Ability_UE::
-    Add(
-        FCk_Handle InHandle,
-        const FCk_Fragment_Ability_ParamsData& InParams)
-    -> void
-{
-    const auto NewAbilityEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle,
-    [&](const FCk_Handle& InNewEntity)
-    {
-        DoAdd(InNewEntity, InParams);
-    });
-
-    RecordOfAbilities_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
-    RecordOfAbilities_Utils::Request_Connect(InHandle, NewAbilityEntity);
-}
-
-auto
-    UCk_Utils_Ability_UE::
-    AddMultiple(
-        FCk_Handle InHandle,
-        const FCk_Fragment_MultipleAbility_ParamsData& InParams)
-    -> void
-{
-    for (const auto& Params : InParams.Get_AbilityParams())
-    {
-        Add(InHandle, Params);
-    }
-}
-
-auto
-    UCk_Utils_Ability_UE::
     Has(
         FCk_Handle InAbilityEntity)
     -> bool
