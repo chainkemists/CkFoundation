@@ -160,15 +160,19 @@ public:
         FCk_Handle InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_RevokeAbility& InRequest);
 
+    // NOTE: This is for development only. Use 'Request_SendEvent' to trigger Activation of Abilities
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Ability|Owner")
+              Category = "Ck|Utils|Ability|Owner",
+              meta = (DevelopmentOnly))
     static void
     Request_TryActivateAbility(
         FCk_Handle InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_ActivateAbility& InRequest);
 
+    // NOTE: This is for development only. Use 'Request_SendEvent' to trigger Deactivation of Abilities
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Ability|Owner")
+              Category = "Ck|Utils|Ability|Owner",
+              meta = (DevelopmentOnly))
     static void
     Request_DeactivateAbility(
         FCk_Handle InAbilityOwnerHandle,
