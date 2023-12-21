@@ -20,7 +20,8 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(
+        auto
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InTimerEntity,
             FFragment_Timer_Current& InCurrentComp,
@@ -28,23 +29,26 @@ namespace ck
             FFragment_Timer_Requests& InRequestsComp) const -> void;
 
     private:
-        auto DoHandleRequest(
+        static auto
+        DoHandleRequest(
             HandleType InHandle,
             FFragment_Timer_Current& InCurrentComp,
             const FFragment_Timer_Params& InParamsComp,
-            const FCk_Request_Timer_Manipulate& InRequest) const -> void;
+            const FCk_Request_Timer_Manipulate& InRequest) -> void;
 
-        auto DoHandleRequest(
+        static auto
+        DoHandleRequest(
             HandleType InHandle,
             FFragment_Timer_Current& InCurrentComp,
             const FFragment_Timer_Params& InParamsComp,
-            const FCk_Request_Timer_Jump& InRequest) const -> void;
+            const FCk_Request_Timer_Jump& InRequest) -> void;
 
-        auto DoHandleRequest(
+        static auto
+        DoHandleRequest(
             HandleType InHandle,
             FFragment_Timer_Current& InCurrentComp,
             const FFragment_Timer_Params& InParamsComp,
-            const FCk_Request_Timer_Consume& InRequest) const -> void;
+            const FCk_Request_Timer_Consume& InRequest) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -60,7 +64,8 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(
+        auto
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InTimerEntity,
             const FFragment_Timer_Params& InParams,
@@ -80,7 +85,8 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(
+        auto
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InTimerEntity,
             const FFragment_Timer_Params& InParams,
