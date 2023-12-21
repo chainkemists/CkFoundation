@@ -318,7 +318,7 @@ private:
     static void
     Self_Request_ActivateAbility(
         const UCk_Ability_Script_PDA* InScript,
-        const FCk_Ability_ActivationPayload& InActivationPayload);
+        FCk_Ability_ActivationPayload InActivationPayload);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
