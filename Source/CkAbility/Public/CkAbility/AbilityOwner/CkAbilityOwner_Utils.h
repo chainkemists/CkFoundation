@@ -203,6 +203,45 @@ public:
     UnbindFrom_OnEvents(
         FCk_Handle InAbilityOwnerHandle,
         const FCk_Delegate_AbilityOwner_Events& InDelegate);
+
+private:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner")
+    static FCk_Request_AbilityOwner_ActivateAbility
+    Make_Request_ActivateAbility_ByName(
+        FGameplayTag InAbilityName,
+        FCk_Ability_Activation_Payload InActivationPayload);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner")
+    static FCk_Request_AbilityOwner_ActivateAbility
+    Make_Request_ActivateAbility_ByEntity(
+        FCk_Handle InAbilityEntity,
+        FCk_Ability_Activation_Payload InActivationPayload);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner")
+    static FCk_Request_AbilityOwner_DeactivateAbility
+    Make_Request_DeactivateAbility_ByName(
+        FGameplayTag InAbilityName);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner")
+    static FCk_Request_AbilityOwner_DeactivateAbility
+    Make_Request_DeactivateAbility_ByEntity(
+        FCk_Handle InAbilityEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner")
+    static FCk_Request_AbilityOwner_RevokeAbility
+    Make_Request_RevokeAbility_ByName(
+        FGameplayTag InAbilityName);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner")
+    static FCk_Request_AbilityOwner_RevokeAbility
+    Make_Request_RevokeAbility_ByEntity(
+        FCk_Handle InAbilityEntity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

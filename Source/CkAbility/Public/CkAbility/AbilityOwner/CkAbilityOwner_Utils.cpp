@@ -324,4 +324,60 @@ auto
     ck::UUtils_Signal_AbilityOwner_Events::Unbind(InAbilityOwnerHandle, InDelegate);
 }
 
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Make_Request_ActivateAbility_ByName(
+        FGameplayTag InAbilityName,
+        const FCk_Ability_Activation_Payload& InActivationPayload)
+    -> FCk_Request_AbilityOwner_ActivateAbility
+{
+    return FCk_Request_AbilityOwner_ActivateAbility{InAbilityName, InActivationPayload};
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Make_Request_ActivateAbility_ByEntity(
+        FCk_Handle InAbilityEntity,
+        const FCk_Ability_Activation_Payload& InActivationPayload)
+    -> FCk_Request_AbilityOwner_ActivateAbility
+{
+    return FCk_Request_AbilityOwner_ActivateAbility{InAbilityEntity, InActivationPayload};
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Make_Request_DeactivateAbility_ByName(
+        FGameplayTag InAbilityName)
+    -> FCk_Request_AbilityOwner_DeactivateAbility
+{
+    return FCk_Request_AbilityOwner_DeactivateAbility{InAbilityName};
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Make_Request_DeactivateAbility_ByEntity(
+        FCk_Handle InAbilityEntity)
+    -> FCk_Request_AbilityOwner_DeactivateAbility
+{
+    return FCk_Request_AbilityOwner_DeactivateAbility{InAbilityEntity};
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Make_Request_RevokeAbility_ByName(
+        FGameplayTag InAbilityName)
+    -> FCk_Request_AbilityOwner_RevokeAbility
+{
+    return FCk_Request_AbilityOwner_RevokeAbility{InAbilityName};
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Make_Request_RevokeAbility_ByEntity(
+        FCk_Handle InAbilityEntity)
+    -> FCk_Request_AbilityOwner_RevokeAbility
+{
+    return FCk_Request_AbilityOwner_RevokeAbility{InAbilityEntity};
+}
+
 // --------------------------------------------------------------------------------------------------------------------
