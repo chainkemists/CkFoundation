@@ -169,13 +169,13 @@ public:
 public:
     FCk_Request_AbilityOwner_ActivateAbility() = default;
 
-    explicit
     FCk_Request_AbilityOwner_ActivateAbility(
-        FGameplayTag InAbilityName);
+        FGameplayTag InAbilityName,
+        FCk_Ability_ActivationPayload InActivationPayload);
 
-    explicit
     FCk_Request_AbilityOwner_ActivateAbility(
-        FCk_Handle InAbilityHandle);
+        FCk_Handle InAbilityHandle,
+        FCk_Ability_ActivationPayload InActivationPayload);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -195,12 +195,13 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Ability_Activation_Payload _ActivationPayload;
+    FCk_Ability_ActivationPayload _ActivationPayload;
 
 public:
     CK_PROPERTY_GET(_SearchPolicy);
     CK_PROPERTY_GET(_AbilityName);
     CK_PROPERTY_GET(_AbilityHandle);
+    CK_PROPERTY_GET(_ActivationPayload);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

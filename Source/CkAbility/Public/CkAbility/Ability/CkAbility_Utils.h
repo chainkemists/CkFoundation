@@ -161,7 +161,8 @@ private:
 private:
     static auto
     DoActivate(
-        FCk_Handle InAbilityEntity) -> void;
+        FCk_Handle InAbilityEntity,
+        const FCk_Ability_ActivationPayload& InActivationPayload) -> void;
 
     static auto
     DoDeactivate(

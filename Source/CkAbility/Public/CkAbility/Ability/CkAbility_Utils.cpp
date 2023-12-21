@@ -154,7 +154,8 @@ auto
 auto
     UCk_Utils_Ability_UE::
     DoActivate(
-        FCk_Handle InAbilityEntity)
+        FCk_Handle InAbilityEntity,
+        const FCk_Ability_ActivationPayload& InActivationPayload)
     -> void
 {
     if (NOT Has(InAbilityEntity))
@@ -168,7 +169,7 @@ auto
     { return; }
 
     AbilityCurrent._Status = ECk_Ability_Status::Active;
-    AbilityCurrent._AbilityScript->OnActivateAbility();
+    AbilityCurrent._AbilityScript->OnActivateAbility(InActivationPayload);
 
     ck::UUtils_Signal_OnAbilityActivated::Broadcast(InAbilityEntity, ck::MakePayload(InAbilityEntity));
 }

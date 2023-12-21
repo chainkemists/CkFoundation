@@ -17,6 +17,7 @@ public class CkAbility : CkModuleRules
             "GameplayTags",
             "GameplayAbilities",
             "DeveloperSettings",
+            "StructUtils",
 
             "CkCore",
             "CkEcs",
