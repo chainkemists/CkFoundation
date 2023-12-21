@@ -442,7 +442,9 @@ auto
     Get() const
     -> const T_Fragment&
 {
-    return Get<T_Fragment, ck::IsValid_Policy_Default>();
+    // const & getter is allowed to get Fragments even if Entity is PendingKill because the Fragment
+    // returned is immutable
+    return Get<T_Fragment, ck::IsValid_Policy_IncludePendingKill>();
 }
 
 template <typename T_Fragment, typename T_ValidationPolicy>
