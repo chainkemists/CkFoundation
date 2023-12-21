@@ -21,7 +21,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Time_WorldTimeType);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, meta = (HasNativeMake))
 struct CKCORE_API FCk_Time
 {
     GENERATED_BODY()
