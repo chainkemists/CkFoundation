@@ -66,23 +66,6 @@ public:
     friend class ck::FProcessor_AbilityOwner_HandleRequests;
 
 public:
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Ability",
-              DisplayName="Add New Ability")
-    static void
-    Add(
-        FCk_Handle InHandle,
-        const FCk_Fragment_Ability_ParamsData& InParams);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Ability",
-              DisplayName="Add Multiple New Abilities")
-    static void
-    AddMultiple(
-        FCk_Handle InHandle,
-        const FCk_Fragment_MultipleAbility_ParamsData& InParams);
-
-public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
               DisplayName="Is Ability")
