@@ -40,11 +40,10 @@ namespace ck
             HandleType InTimerEntity,
             FFragment_Timer_Current& InCurrentComp,
             const FFragment_Timer_Params& InParamsComp,
-            const FCk_Request_Timer_Manipulate& InRequest) const
+            const FCk_Request_Timer_Manipulate& InRequest)
         -> void
     {
         auto& TimerChrono = InCurrentComp._Chrono;
-        const auto& TimerLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InTimerEntity);
 
         switch (const auto& TimeManipulate = InRequest.Get_Manipulate())
         {
@@ -54,14 +53,14 @@ namespace ck
 
                 InTimerEntity.AddOrGet<FTag_Timer_NeedsUpdate>();
 
-                UUtils_Signal_OnTimerReset::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
+                UUtils_Signal_OnTimerReset::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono));
 
                 if (InParamsComp.Get_Params().Get_CountDirection() == ECk_Timer_CountDirection::CountUp)
                 { TimerChrono.Reset(); }
                 else
                 { TimerChrono.Complete(); }
 
-                UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
+                UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono));
 
                 break;
             }
@@ -69,15 +68,15 @@ namespace ck
             {
                 timer::VeryVerbose(TEXT("Handling Complete Request for Timer with Entity [{}]"), InTimerEntity);
 
-                UUtils_Signal_OnTimerReset::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
+                UUtils_Signal_OnTimerReset::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono));
 
                 if (InParamsComp.Get_Params().Get_CountDirection() == ECk_Timer_CountDirection::CountUp)
                 { TimerChrono.Complete(); }
                 else
                 { TimerChrono.Reset(); }
 
-                UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
-                UUtils_Signal_OnTimerDone::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
+                UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono));
+                UUtils_Signal_OnTimerDone::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono));
 
                 break;
             }
@@ -87,11 +86,11 @@ namespace ck
 
                 InTimerEntity.Remove<FTag_Timer_NeedsUpdate>();
 
-                UUtils_Signal_OnTimerStop::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
+                UUtils_Signal_OnTimerStop::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono));
 
                 TimerChrono.Reset();
 
-                UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
+                UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono));
 
                 break;
             }
@@ -100,7 +99,7 @@ namespace ck
                 timer::VeryVerbose(TEXT("Handling Pause Request for Timer with Entity [{}]"), InTimerEntity);
 
                 InTimerEntity.Remove<FTag_Timer_NeedsUpdate>();
-                UUtils_Signal_OnTimerPause::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
+                UUtils_Signal_OnTimerPause::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono));
 
                 break;
             }
@@ -109,7 +108,7 @@ namespace ck
                 timer::VeryVerbose(TEXT("Handling Resume Request for Timer with Entity [{}]"), InTimerEntity);
 
                 InTimerEntity.AddOrGet<FTag_Timer_NeedsUpdate>();
-                UUtils_Signal_OnTimerResume::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
+                UUtils_Signal_OnTimerResume::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono));
 
                 break;
             }
@@ -127,7 +126,7 @@ namespace ck
             HandleType InHandle,
             FFragment_Timer_Current& InCurrentComp,
             const FFragment_Timer_Params& InParamsComp,
-            const FCk_Request_Timer_Jump& InRequest) const
+            const FCk_Request_Timer_Jump& InRequest)
         -> void
     {
         auto& TimerChrono = InCurrentComp._Chrono;
@@ -153,7 +152,7 @@ namespace ck
             HandleType InHandle,
             FFragment_Timer_Current& InCurrentComp,
             const FFragment_Timer_Params& InParamsComp,
-            const FCk_Request_Timer_Consume& InRequest) const
+            const FCk_Request_Timer_Consume& InRequest)
         -> void
     {
         auto& TimerChrono = InCurrentComp._Chrono;
@@ -166,8 +165,7 @@ namespace ck
 
                 if (TimerChrono.Get_IsDepleted())
                 {
-                    UUtils_Signal_OnTimerDepleted::Broadcast(InHandle,
-                        MakePayload(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle), TimerChrono));
+                    UUtils_Signal_OnTimerDepleted::Broadcast(InHandle, MakePayload(InHandle, TimerChrono));
                 }
 
                 break;
@@ -178,8 +176,7 @@ namespace ck
 
                 if (TimerChrono.Get_IsDone())
                 {
-                    UUtils_Signal_OnTimerDepleted::Broadcast(InHandle,
-                        MakePayload(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle), TimerChrono));
+                    UUtils_Signal_OnTimerDepleted::Broadcast(InHandle, MakePayload(InHandle, TimerChrono));
                 }
 
                 break;
@@ -207,9 +204,7 @@ namespace ck
 
         TimerChrono.Tick(InDeltaT);
 
-        const auto& TimerLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InTimerEntity);
-
-        UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
+        UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono));
 
         if (NOT TimerChrono.Get_IsDone())
         { return; }
@@ -226,7 +221,7 @@ namespace ck
                     TimerBehavior
                 );
 
-                UCk_Utils_Timer_UE::Request_Stop(InTimerEntity, UCk_Utils_GameplayLabel_UE::Get_Label(InTimerEntity));
+                UCk_Utils_Timer_UE::Request_Stop(InTimerEntity);
                 break;
             }
             case ECk_Timer_Behavior::ResetOnDone:
@@ -239,7 +234,7 @@ namespace ck
                     TimerBehavior
                 );
 
-                UCk_Utils_Timer_UE::Request_Reset(InTimerEntity, UCk_Utils_GameplayLabel_UE::Get_Label(InTimerEntity));
+                UCk_Utils_Timer_UE::Request_Reset(InTimerEntity);
                 break;
             }
             case ECk_Timer_Behavior::PauseOnDone:
@@ -252,7 +247,7 @@ namespace ck
                     TimerBehavior
                 );
 
-                UCk_Utils_Timer_UE::Request_Pause(InTimerEntity, UCk_Utils_GameplayLabel_UE::Get_Label(InTimerEntity));
+                UCk_Utils_Timer_UE::Request_Pause(InTimerEntity);
                 break;
             }
             default:
@@ -262,7 +257,7 @@ namespace ck
             }
         }
 
-        UUtils_Signal_OnTimerDone::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
+        UUtils_Signal_OnTimerDone::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono));
     }
 
     auto
@@ -283,9 +278,7 @@ namespace ck
 
         TimerChrono.Consume(InDeltaT);
 
-        const auto& TimerLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InTimerEntity);
-
-        UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
+        UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono));
 
         if (NOT TimerChrono.Get_IsDepleted())
         { return; }
@@ -302,7 +295,7 @@ namespace ck
                     TimerBehavior
                 );
 
-                UCk_Utils_Timer_UE::Request_Stop(InTimerEntity, UCk_Utils_GameplayLabel_UE::Get_Label(InTimerEntity));
+                UCk_Utils_Timer_UE::Request_Stop(InTimerEntity);
                 break;
             }
             case ECk_Timer_Behavior::ResetOnDone:
@@ -315,7 +308,7 @@ namespace ck
                     TimerBehavior
                 );
 
-                UCk_Utils_Timer_UE::Request_Reset(InTimerEntity, UCk_Utils_GameplayLabel_UE::Get_Label(InTimerEntity));
+                UCk_Utils_Timer_UE::Request_Reset(InTimerEntity);
                 break;
             }
             case ECk_Timer_Behavior::PauseOnDone:
@@ -328,7 +321,7 @@ namespace ck
                     TimerBehavior
                 );
 
-                UCk_Utils_Timer_UE::Request_Pause(InTimerEntity, UCk_Utils_GameplayLabel_UE::Get_Label(InTimerEntity));
+                UCk_Utils_Timer_UE::Request_Pause(InTimerEntity);
                 break;
             }
             default:
@@ -338,7 +331,7 @@ namespace ck
             }
         }
 
-        UUtils_Signal_OnTimerDone::Broadcast(InTimerEntity, MakePayload(TimerLifetimeOwner, TimerChrono));
+        UUtils_Signal_OnTimerDone::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
