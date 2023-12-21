@@ -37,7 +37,6 @@ private:
         const FString& InCommandOutput);
 };
 
-
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, BlueprintType, DisplayName = "CkSubsystem_ConsoleCommands")
