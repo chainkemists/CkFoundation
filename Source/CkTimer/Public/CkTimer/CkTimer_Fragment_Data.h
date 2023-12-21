@@ -87,17 +87,12 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Timer_State _StartingState = ECk_Timer_State::Paused;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-              meta = (AllowPrivateAccess = true))
-    ECk_Net_ReplicationType _ReplicationType = ECk_Net_ReplicationType::All;
-
 public:
     CK_PROPERTY(_TimerName);
     CK_PROPERTY_GET(_Duration);
     CK_PROPERTY(_CountDirection);
     CK_PROPERTY(_Behavior);
     CK_PROPERTY(_StartingState);
-    CK_PROPERTY(_ReplicationType);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Timer_ParamsData, _Duration);

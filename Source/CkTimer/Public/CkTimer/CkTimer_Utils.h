@@ -35,8 +35,7 @@ public:
     static void
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_Timer_ParamsData& InParams,
-        ECk_Net_ReplicationType InReplicationType = ECk_Net_ReplicationType::All);
+        const FCk_Fragment_Timer_ParamsData& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
