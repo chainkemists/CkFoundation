@@ -210,14 +210,14 @@ private:
     static FCk_Request_AbilityOwner_ActivateAbility
     Make_Request_ActivateAbility_ByName(
         FGameplayTag InAbilityName,
-        FCk_Ability_Activation_Payload InActivationPayload);
+        FCk_Ability_ActivationPayload InActivationPayload);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner")
     static FCk_Request_AbilityOwner_ActivateAbility
     Make_Request_ActivateAbility_ByEntity(
         FCk_Handle InAbilityEntity,
-        FCk_Ability_Activation_Payload InActivationPayload);
+        FCk_Ability_ActivationPayload InActivationPayload);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner")

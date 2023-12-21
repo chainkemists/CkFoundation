@@ -9,7 +9,8 @@
 
 auto
     UCk_Ability_Script_PDA::
-    OnActivateAbility()
+    OnActivateAbility(
+        const FCk_Ability_ActivationPayload& InActivationPayload)
     -> void
 {
     const auto AbilityOwnerEntity = Get_AbilityOwnerHandle();
@@ -20,7 +21,7 @@ auto
         {
             if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AbilityOwnerEntity))
             {
-                DoOnActivateAbility();
+                DoOnActivateAbility(InActivationPayload);
             }
             break;
         }
@@ -29,13 +30,13 @@ auto
             if (UCk_Utils_Net_UE::Get_HasAuthority(AbilityOwnerEntity) ||
                 UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AbilityOwnerEntity))
             {
-                DoOnActivateAbility();
+                DoOnActivateAbility(InActivationPayload);
             }
             break;
         }
         case ECk_Net_NetExecutionPolicy::All:
         {
-            DoOnActivateAbility();
+            DoOnActivateAbility(InActivationPayload);
             break;
         }
         default:
@@ -85,7 +86,8 @@ auto
 auto
     UCk_Ability_Script_PDA::
     Self_Request_ActivateAbility(
-        const UCk_Ability_Script_PDA* InScript)
+        const UCk_Ability_Script_PDA* InScript,
+        const FCk_Ability_ActivationPayload& InActivationPayload)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InScript),
@@ -99,7 +101,7 @@ auto
     { return; }
 
     UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(InScript->Get_AbilityOwnerHandle(),
-        FCk_Request_AbilityOwner_ActivateAbility{InScript->Get_AbilityHandle()});
+        FCk_Request_AbilityOwner_ActivateAbility{InScript->Get_AbilityHandle(), InActivationPayload});
 }
 
 auto
@@ -238,7 +240,8 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    DoOnActivateAbility_Implementation()
+    DoOnActivateAbility_Implementation(
+        const FCk_Ability_ActivationPayload& InActivationPayload)
     -> void
 {
 }

@@ -328,7 +328,7 @@ auto
     UCk_Utils_AbilityOwner_UE::
     Make_Request_ActivateAbility_ByName(
         FGameplayTag InAbilityName,
-        const FCk_Ability_Activation_Payload& InActivationPayload)
+        const FCk_Ability_ActivationPayload& InActivationPayload)
     -> FCk_Request_AbilityOwner_ActivateAbility
 {
     return FCk_Request_AbilityOwner_ActivateAbility{InAbilityName, InActivationPayload};
@@ -338,7 +338,7 @@ auto
     UCk_Utils_AbilityOwner_UE::
     Make_Request_ActivateAbility_ByEntity(
         FCk_Handle InAbilityEntity,
-        const FCk_Ability_Activation_Payload& InActivationPayload)
+        const FCk_Ability_ActivationPayload& InActivationPayload)
     -> FCk_Request_AbilityOwner_ActivateAbility
 {
     return FCk_Request_AbilityOwner_ActivateAbility{InAbilityEntity, InActivationPayload};

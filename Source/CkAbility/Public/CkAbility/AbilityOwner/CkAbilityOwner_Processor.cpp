@@ -153,7 +153,7 @@ namespace ck
             {
                 // TODO: Activation Context Entity for SelfActivating Abilities is the Owner of the Ability
                 UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(InAbilityOwnerEntity,
-                    FCk_Request_AbilityOwner_ActivateAbility{InAbilityEntity});
+                    FCk_Request_AbilityOwner_ActivateAbility{InAbilityEntity, FCk_Ability_ActivationPayload{}.Set_ContextEntity(InAbilityOwnerEntity)});
             }
         };
 
@@ -315,7 +315,7 @@ namespace ck
                 algo::MatchesAnyAbilityActivationCancelledTags{GrantedTags}
             );
 
-            UCk_Utils_Ability_UE::DoActivate(InAbilityToActivateEntity);
+            UCk_Utils_Ability_UE::DoActivate(InAbilityToActivateEntity, InRequest.Get_ActivationPayload());
         };
 
         switch (const auto& SearchPolicy = InRequest.Get_SearchPolicy())
