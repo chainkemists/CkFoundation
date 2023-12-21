@@ -31,6 +31,8 @@ struct CKCORE_API FCk_Utils_Actor_SpawnActor_Params
 {
     GENERATED_BODY()
 
+    friend class UCk_Utils_Actor_UE;
+
 public:
     CK_GENERATED_BODY(FCk_Utils_Actor_SpawnActor_Params);
 
@@ -213,9 +215,10 @@ auto
     UCk_Utils_Actor_UE::
     Request_SpawnActor(
         SpawnActorParamsType InSpawnActorParams,
-        const TFunction<void(T_ActorType*)>& InPreFinishSpawningFunc) -> T_ActorType*
+        const TFunction<void(T_ActorType*)>& InPreFinishSpawningFunc)
+    -> T_ActorType*
 {
-    auto InValue = T_ActorType::StaticClass();
+    InSpawnActorParams._ActorClass = T_ActorType::StaticClass();
     const auto& SpawnedActor = Cast<T_ActorType>(DoRequest_SpawnActor_Begin(InSpawnActorParams));
 
     if (ck::Is_NOT_Valid(SpawnedActor))
@@ -234,7 +237,7 @@ auto
 
 template <typename T_CompType>
 UCk_Utils_Actor_UE::AddNewActorComponent_Params<T_CompType>::
-    AddNewActorComponent_Params(
+AddNewActorComponent_Params(
         AActor* InTargetActor,
         bool InIsUnique)
     : ThisType(InTargetActor, InIsUnique, ck::IsValid(InTargetActor) ? InTargetActor->GetRootComponent() : nullptr, NAME_None)
