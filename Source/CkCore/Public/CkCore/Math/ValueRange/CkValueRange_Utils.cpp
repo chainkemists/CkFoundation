@@ -75,7 +75,7 @@ auto
     UCk_Utils_FloatRange_UE::
     Get_RandomValueInRange(
         const FCk_FloatRange& InRange)
-    -> int32
+    -> float
 {
     return InRange.Get_RandomValueInRange();
 }
