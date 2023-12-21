@@ -2,6 +2,7 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include "CkEcs/CkEcsLog.h"
 #include "CkEcs/Handle/CkHandle.h"
 
 // this is for debugging only
@@ -14,11 +15,15 @@ struct NAME_ConstructionScript
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Entity_ConstructionScript_PDA::Construct(
-        FCk_Handle InHandle) -> void
+    UCk_Entity_ConstructionScript_PDA::
+    Construct(
+        FCk_Handle InHandle)
+    -> void
 {
 
+    const auto& DebugName = UCk_Utils_Debug_UE::Get_DebugName_AsText(this, ECk_DebugName_Verbosity::ShortName);
     InHandle.Add<NAME_ConstructionScript>(UCk_Utils_Debug_UE::Get_DebugName_AsText(this, ECk_DebugName_Verbosity::ShortName));
+    ck::ecs::Log(TEXT("[EntityMap] [{}] -> [{}]"), InHandle, DebugName);
     DoConstruct(InHandle);
 }
 
