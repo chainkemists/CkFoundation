@@ -84,13 +84,15 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Time")
+              Category = "Ck|Utils|Time",
+              meta=(CompactNodeTitle="Seconds"))
     static FCk_Time
     Make_FromSeconds(
         float InSeconds);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Time")
+              Category = "Ck|Utils|Time",
+              meta=(CompactNodeTitle="Milliseconds"))
     static FCk_Time
     Make_FromMilliseconds(
         float InMilliSeconds);
