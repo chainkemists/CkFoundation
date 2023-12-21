@@ -144,14 +144,15 @@ namespace ck
     {
         auto TargetEntity = InAttributeTarget.Get_Entity();
 
+        if (ck::Is_NOT_Valid(TargetEntity))
+        { return; }
+
         attribute::VeryVerbose
         (
             TEXT("Removing REVOKABLE Additive AttributeModifier value of Entity [{}] from Attribute component of target Entity [{}]. Forcing final value calculation again"),
             InHandle,
             TargetEntity
         );
-
-        TUtils_AttributeModifier<AttributeModifierFragmentType>::RecordOfAttributeModifiers_Utils::Request_Disconnect(TargetEntity, InHandle);
 
         TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(TargetEntity);
     }
@@ -248,14 +249,15 @@ namespace ck
     {
         auto TargetEntity = InAttributeTarget.Get_Entity();
 
+        if (ck::Is_NOT_Valid(TargetEntity))
+        { return; }
+
         attribute::VeryVerbose
         (
             TEXT("Removing REVOKABLE Multiplicative AttributeModifier value of Entity [{}] from Attribute component of target Entity [{}]. Forcing final value calculation again"),
             InHandle,
             TargetEntity
         );
-
-        TUtils_AttributeModifier<AttributeModifierFragmentType>::RecordOfAttributeModifiers_Utils::Request_Disconnect(TargetEntity, InHandle);
 
         TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(TargetEntity);
     }
