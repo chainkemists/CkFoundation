@@ -14,36 +14,20 @@ auto
     UCk_Utils_Timer_UE::
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_Timer_ParamsData& InParams,
-        ECk_Net_ReplicationType InReplicationType)
+        const FCk_Fragment_Timer_ParamsData& InParams)
     -> void
 {
-    if (NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InHandle, InReplicationType))
-    {
-        ck::timer::Verbose
-        (
-            TEXT("Skipping creation of Timer [{}] because it's Replication Type [{}] does NOT match"),
-            InParams.Get_TimerName(),
-            InReplicationType
-        );
-
-        return;
-    }
-
-    auto ParamsToUse = InParams;
-    ParamsToUse.Set_ReplicationType(InReplicationType);
-
     const auto NewTimerEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
     {
-        UCk_Utils_GameplayLabel_UE::Add(InNewEntity, ParamsToUse.Get_TimerName());
+        UCk_Utils_GameplayLabel_UE::Add(InNewEntity, InParams.Get_TimerName());
 
-        InNewEntity.Add<ck::FFragment_Timer_Params>(ParamsToUse);
-        InNewEntity.Add<ck::FFragment_Timer_Current>(FCk_Chrono{ParamsToUse.Get_Duration()});
+        InNewEntity.Add<ck::FFragment_Timer_Params>(InParams);
+        InNewEntity.Add<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
 
-        if (ParamsToUse.Get_CountDirection() == ECk_Timer_CountDirection::CountDown)
+        if (InParams.Get_CountDirection() == ECk_Timer_CountDirection::CountDown)
         { InNewEntity.Add<ck::FTag_Timer_Countdown>(); }
 
-        if (ParamsToUse.Get_StartingState() == ECk_Timer_State::Running)
+        if (InParams.Get_StartingState() == ECk_Timer_State::Running)
         {
             InNewEntity.Add<ck::FTag_Timer_NeedsUpdate>();
         }
@@ -56,7 +40,7 @@ auto
 auto
     UCk_Utils_Timer_UE::
     AddOrReplace(
-        FCk_Handle                           InTimerOwnerEntity,
+        FCk_Handle InTimerOwnerEntity,
         const FCk_Fragment_Timer_ParamsData& InParams)
     -> void
 {
@@ -82,7 +66,7 @@ auto
 auto
     UCk_Utils_Timer_UE::
     AddMultiple(
-        FCk_Handle                                   InHandle,
+        FCk_Handle InHandle,
         const FCk_Fragment_MultipleTimer_ParamsData& InParams)
     -> void
 {
