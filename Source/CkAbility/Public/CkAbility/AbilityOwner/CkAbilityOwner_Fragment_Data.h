@@ -6,6 +6,8 @@
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 #include "CkEcs/Handle/CkHandle.h"
 
+#include <InstancedStruct.h>
+
 #include "CkAbilityOwner_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -35,17 +37,6 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_ForEachAbilityPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Blueprintable, BlueprintType)
-class CKABILITY_API UCk_Ability_EventData_UE : public UCk_ReplicatedObject_UE
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_Ability_EventData_UE);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
 USTRUCT(BlueprintType)
 struct CKABILITY_API FCk_AbilityOwner_Event
 {
@@ -56,12 +47,12 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true))
     FGameplayTag _EventName;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCk_Ability_EventData_UE> _EventData;
+              meta = (AllowPrivateAccess = true))
+    FInstancedStruct _EventData;
 
 public:
     CK_PROPERTY_GET(_EventName);
