@@ -24,7 +24,8 @@ auto
 
 auto
     UCk_Utils_Time_UE::
-    Make_FromSeconds(float InSeconds)
+    Make_FromSeconds(
+        float InSeconds)
     -> FCk_Time
 {
     return FCk_Time{InSeconds};
@@ -66,14 +67,15 @@ auto
 
 auto
     UCk_Utils_Time_UE::
-    Get_WorldTime(const FCk_Utils_Time_GetWorldTime_Params& InParams)
+    Get_WorldTime(
+        const FCk_Utils_Time_GetWorldTime_Params& InParams)
     -> FCk_Utils_Time_GetWorldTime_Result
 {
     const auto& IsParamsWorldValid  = IsValid(InParams.Get_World());
     const auto& IsParamsObjectValid = IsValid(InParams.Get_Object());
 
     CK_ENSURE_IF_NOT(IsParamsWorldValid || IsParamsObjectValid, TEXT("The UObject or the UWorld must be valid to get the correct time"))
-    { return {};}
+    { return {}; }
 
     const auto& World = [&]() -> const UWorld*
     {
@@ -96,7 +98,7 @@ auto
             {
                 FCk_Time_Unreal
                 {
-                    FCk_Time(World->GetTimeSeconds()),
+                    FCk_Time{static_cast<float>(World->GetTimeSeconds())},
                     WorldTimeType
                 }
             };
@@ -107,7 +109,7 @@ auto
             {
                 FCk_Time_Unreal
                 {
-                    FCk_Time(World->GetUnpausedTimeSeconds()),
+                    FCk_Time{static_cast<float>(World->GetUnpausedTimeSeconds())},
                     WorldTimeType
                 }
             };
@@ -118,7 +120,7 @@ auto
             {
                 FCk_Time_Unreal
                 {
-                    FCk_Time(World->GetRealTimeSeconds()),
+                    FCk_Time{static_cast<float>(World->GetRealTimeSeconds())},
                     WorldTimeType
                 }
             };
@@ -129,7 +131,7 @@ auto
             {
                 FCk_Time_Unreal
                 {
-                    FCk_Time(World->GetAudioTimeSeconds()),
+                    FCk_Time{static_cast<float>(World->GetAudioTimeSeconds())},
                     WorldTimeType
                 }
             };
@@ -140,7 +142,7 @@ auto
             {
                 FCk_Time_Unreal
                 {
-                    FCk_Time(World->GetDeltaSeconds()),
+                    FCk_Time{World->GetDeltaSeconds()},
                     WorldTimeType
                 }
             };
@@ -155,7 +157,8 @@ auto
 
 auto
     UCk_Utils_Time_UE::
-    Get_Milliseconds(const FCk_Time& InTime)
+    Get_Milliseconds(
+        const FCk_Time& InTime)
     -> float
 {
     return InTime.Get_Milliseconds();
@@ -163,11 +166,18 @@ auto
 
 auto
     UCk_Utils_Time_UE::
-    Add
-    (
+    Get_IsZero(
+        const FCk_Time& InTime)
+    -> bool
+{
+    return InTime == FCk_Time::ZeroSecond();
+}
+
+auto
+    UCk_Utils_Time_UE::
+    Add(
         const FCk_Time& InA,
-        const FCk_Time& InB
-    )
+        const FCk_Time& InB)
     -> FCk_Time
 {
     return InA + InB;
@@ -175,11 +185,9 @@ auto
 
 auto
     UCk_Utils_Time_UE::
-    Subtract
-    (
+    Subtract(
         const FCk_Time& InA,
-        const FCk_Time& InB
-    )
+        const FCk_Time& InB)
     -> FCk_Time
 {
     return InA - InB;
@@ -187,11 +195,9 @@ auto
 
 auto
     UCk_Utils_Time_UE::
-    Divide
-    (
+    Divide(
         const FCk_Time& InA,
-        const FCk_Time& InB
-    )
+        const FCk_Time& InB)
     -> FCk_Time
 {
     return InA / InB;
@@ -199,11 +205,9 @@ auto
 
 auto
     UCk_Utils_Time_UE::
-    Multiply
-    (
+    Multiply(
         const FCk_Time& InA,
-        const FCk_Time& InB
-    )
+        const FCk_Time& InB)
     -> FCk_Time
 {
     return InA * InB;
@@ -211,11 +215,9 @@ auto
 
 auto
     UCk_Utils_Time_UE::
-    Equal
-    (
+    Equal(
         const FCk_Time& InA,
-        const FCk_Time& InB
-    )
+        const FCk_Time& InB)
     -> bool
 {
     return InA == InB;
@@ -223,11 +225,9 @@ auto
 
 auto
     UCk_Utils_Time_UE::
-    NotEqual
-    (
+    NotEqual(
         const FCk_Time& InA,
-        const FCk_Time& InB
-    )
+        const FCk_Time& InB)
     -> bool
 {
     return InA != InB;
