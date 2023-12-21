@@ -30,17 +30,21 @@ FCk_Request_AbilityOwner_RevokeAbility::
 
 FCk_Request_AbilityOwner_ActivateAbility::
     FCk_Request_AbilityOwner_ActivateAbility(
-        FGameplayTag InAbilityName)
+        FGameplayTag InAbilityName,
+        FCk_Ability_ActivationPayload InActivationPayload)
     : _SearchPolicy(ECk_AbilityOwner_AbilitySearchPolicy::SearchByName)
     , _AbilityName(InAbilityName)
+    , _ActivationPayload(InActivationPayload)
 {
 }
 
 FCk_Request_AbilityOwner_ActivateAbility::
     FCk_Request_AbilityOwner_ActivateAbility(
-        FCk_Handle InAbilityHandle)
+        FCk_Handle InAbilityHandle,
+        FCk_Ability_ActivationPayload InActivationPayload)
     : _SearchPolicy(ECk_AbilityOwner_AbilitySearchPolicy::SearchByHandle)
     , _AbilityHandle(InAbilityHandle)
+    , _ActivationPayload(InActivationPayload)
 {
 }
 

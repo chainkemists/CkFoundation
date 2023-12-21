@@ -9,6 +9,8 @@
 
 #include "CkUnreal/Public/CkUnreal/EntityBridge/CkEntityBridge_Fragment_Data.h"
 
+#include <InstancedStruct.h>
+
 #include "CkAbility_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -160,6 +162,30 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Ability_ActivationPayload
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Ability_ActivationPayload);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _ContextEntity;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FInstancedStruct _Data;
+
+public:
+    CK_PROPERTY(_ContextEntity);
+    CK_PROPERTY(_Data);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKABILITY_API FCk_Ability_NetworkSettings
 {
     GENERATED_BODY()
@@ -244,7 +270,8 @@ public:
     OnRevokeAbility() -> void;
 
     auto
-    OnActivateAbility() -> void;
+    OnActivateAbility(
+        const FCk_Ability_ActivationPayload& InActivationPayload) -> void;
 
     auto
     OnDeactivateAbility() -> void;
@@ -257,7 +284,8 @@ protected:
               Category = "Ck|Ability|Script",
               meta     = (DisplayName = "OnActivateAbility"))
     void
-    DoOnActivateAbility();
+    DoOnActivateAbility(
+        const FCk_Ability_ActivationPayload& InActivationPayload);
 
     UFUNCTION(BlueprintNativeEvent,
               Category = "Ck|Ability|Script",
@@ -289,7 +317,8 @@ private:
               meta = (CompactNodeTitle="ACTIVATE_ThisAbility", DefaultToSelf="InScript", HidePin="InScript"))
     static void
     Self_Request_ActivateAbility(
-        const UCk_Ability_Script_PDA* InScript);
+        const UCk_Ability_Script_PDA* InScript,
+        const FCk_Ability_ActivationPayload& InActivationPayload);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
