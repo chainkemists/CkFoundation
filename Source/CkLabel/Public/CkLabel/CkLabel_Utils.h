@@ -44,7 +44,7 @@ public:
               DisplayName="Get GameplayTag Label")
     static FGameplayTag
     Get_Label(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
 public:
     UFUNCTION(BlueprintPure,

@@ -83,7 +83,7 @@ auto
 auto
     UCk_Utils_GameplayLabel_UE::
     Get_Label(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> FGameplayTag
 {
     if (NOT Ensure(InHandle))
