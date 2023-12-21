@@ -275,7 +275,7 @@ namespace ck
             FCk_Handle InValidHandle)
         -> FCk_Handle
     {
-        CK_ENSURE_IF_NOT(ck::IsValid(InValidHandle),
+        CK_ENSURE_IF_NOT(ck::IsValid(InValidHandle, ck::IsValid_Policy_IncludePendingKill{}),
             TEXT("Unable to create handle for Entity [{}] because Handle [{}] is INVALID."), InEntity, InValidHandle)
         { return {}; }
 
@@ -288,7 +288,7 @@ namespace ck
             FCk_Handle InValidHandle)
         -> FCk_Handle
     {
-        CK_ENSURE_IF_NOT(ck::IsValid(InValidHandle),
+        CK_ENSURE_IF_NOT(ck::IsValid(InValidHandle, ck::IsValid_Policy_IncludePendingKill{}),
             TEXT("Unable to create handle for Entity [{}] because Handle [{}] is INVALID."), InEntity, InValidHandle)
         { return {}; }
 
