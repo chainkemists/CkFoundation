@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkAbility/Cue/CkAbilityCue_Fragment_Data.h"
+#include "CkAbility/AbilityCue/CkAbilityCue_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 
