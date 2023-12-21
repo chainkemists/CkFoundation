@@ -115,7 +115,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, meta= (HasNativeMake))
 struct CKABILITY_API FCk_Request_AbilityOwner_RevokeAbility
 {
     GENERATED_BODY()
@@ -158,7 +158,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, meta= (HasNativeMake))
 struct CKABILITY_API FCk_Request_AbilityOwner_ActivateAbility
 {
     GENERATED_BODY()
@@ -184,14 +184,18 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
-                  EditCondition="_SearchPolicy==ECk_GameplayAbilityOwner_AbilitySearchPolicy::SearchByName",
+                  EditCondition="_SearchPolicy == ECk_AbilityOwner_AbilitySearchPolicy::SearchByName",
                   GameplayTagFilter = "GameplayAbility"))
     FGameplayTag _AbilityName = FGameplayTag::EmptyTag;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
-                  EditCondition="_SearchPolicy==ECk_GameplayAbilityOwner_AbilitySearchPolicy::SearchByHandle"))
+                  EditCondition="_SearchPolicy == ECk_AbilityOwner_AbilitySearchPolicy::SearchByHandle"))
     FCk_Handle _AbilityHandle;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Ability_Activation_Payload _ActivationPayload;
 
 public:
     CK_PROPERTY_GET(_SearchPolicy);
@@ -201,7 +205,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, meta= (HasNativeMake))
 struct CKABILITY_API FCk_Request_AbilityOwner_DeactivateAbility
 {
     GENERATED_BODY()
