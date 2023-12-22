@@ -298,12 +298,10 @@ auto
                 UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityCurrent.Get_AbilityScript()->GetWorld())->
                     Request_RemoveAbilityScript(AbilityCurrent.Get_AbilityScript().Get());
 
-                AbilityCurrent._AbilityScript = NewObject<UCk_Ability_Script_PDA>
+                AbilityCurrent._AbilityScript = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_Ability_Script_PDA>
                 (
                     UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAbilityOwnerEntity),
                     AbilityScriptClass,
-                    NAME_None,
-                    RF_NoFlags,
                     nullptr
                 );
 
@@ -367,14 +365,7 @@ auto
 
     const auto& AbilityScriptToUse = InstancingPolicy == ECk_Ability_InstancingPolicy::NotInstanced
                                        ? AbilityScriptCDO
-                                       : NewObject<UCk_Ability_Script_PDA>
-                                         (
-                                             CurrentWorld,
-                                             AbilityScriptClass,
-                                             NAME_None,
-                                             RF_NoFlags,
-                                             nullptr
-                                         );
+                                       : UCk_Utils_Object_UE::Request_CreateNewObject<UCk_Ability_Script_PDA>(CurrentWorld, AbilityScriptClass, nullptr);
 
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptToUse), TEXT("Failed to create instance of Ability Script of Class [{}]"), AbilityScriptClass)
     { return; }

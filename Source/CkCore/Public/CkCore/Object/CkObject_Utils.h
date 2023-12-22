@@ -144,6 +144,13 @@ public:
 
     template<typename T>
     static auto
+    Request_CreateNewObject(
+        UObject* Outer,
+        TSubclassOf<T> InClass,
+        TFunction<void(T*)> InInitFunc) -> T*;
+
+    template<typename T>
+    static auto
     Request_CreateNewObject_TransientPackage(
         TFunction<void(T*)> InFunc) -> T*;
 
@@ -357,6 +364,18 @@ auto
     }
 
     return newObj;
+}
+
+template <typename T>
+auto
+    UCk_Utils_Object_UE::
+    Request_CreateNewObject(
+        UObject* Outer,
+        TSubclassOf<T> InClass,
+        TFunction<void(T*)> InInitFunc)
+    -> T*
+{
+    return Request_CreateNewObject<T>(Outer, InClass, nullptr, InInitFunc);
 }
 
 template<typename T>
