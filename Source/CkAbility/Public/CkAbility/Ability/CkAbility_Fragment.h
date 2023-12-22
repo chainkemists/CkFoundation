@@ -48,12 +48,10 @@ namespace ck
     private:
         TWeakObjectPtr<UCk_Ability_Script_PDA> _AbilityScript = nullptr;
         ECk_Ability_Status _Status = ECk_Ability_Status::NotActive;
-        FCk_Handle _ActivationContextEntity;
 
     public:
         CK_PROPERTY_GET(_AbilityScript);
         CK_PROPERTY_GET(_Status);
-        CK_PROPERTY_GET(_ActivationContextEntity);
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_Ability_Current, _AbilityScript)

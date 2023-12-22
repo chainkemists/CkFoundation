@@ -99,6 +99,70 @@ auto
 
 auto
     UCk_Utils_Ability_UE::
+    Get_CanActivate(
+        FCk_Handle InAbilityEntity)
+    -> ECk_Ability_ActivationRequirementsResult
+{
+    if (NOT Ensure(InAbilityEntity))
+    { return {}; }
+
+    const auto& AbilityParams             = InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params();
+    const auto& AbilityActivationSettings = AbilityParams.Get_Data().Get_ActivationSettings();
+
+    const auto& AbilityCurrent = InAbilityEntity.Get<ck::FFragment_Ability_Current>();
+    const auto& Script         = AbilityCurrent.Get_AbilityScript();
+    const auto& AbilityStatus  = AbilityCurrent.Get_Status();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Script),
+        TEXT("Cannot check if the Ability [{}] can Activate because it does NOT have a valid Script"),
+        InAbilityEntity)
+    { return {}; }
+
+    const auto& AbilityOwner = Script->Get_AbilityOwnerHandle();
+
+    const auto& AbilityOwnerActiveTags = UCk_Utils_AbilityOwner_UE::Get_ActiveTags(AbilityOwner);
+
+    const auto& AreActivationRequirementsMet_OnOwner = [&]() -> bool
+    {
+        const auto ActivationSettingsOnOwner = AbilityActivationSettings.Get_ActivationSettingsOnOwner();
+        const auto ActivationRequirements    = ActivationSettingsOnOwner.Get_RequiredTagsOnAbilityOwner();
+        const auto ActivationBlockers        = ActivationSettingsOnOwner.Get_BlockedByTagsOnAbilityOwner();
+
+
+        return AbilityOwnerActiveTags.HasAllExact(ActivationRequirements) && NOT AbilityOwnerActiveTags.HasAnyExact(ActivationBlockers);
+    }();
+
+    const auto& AreActivationRequirementsMet_OnSelf = [&]()
+    {
+        if (NOT UCk_Utils_AbilityOwner_UE::Has(InAbilityEntity))
+        { return true; }
+
+        const auto ActivationSettingsOnSelf = AbilityActivationSettings.Get_ActivationSettingsOnSelf();
+        const auto ActivationBlockers = ActivationSettingsOnSelf.Get_BlockedByTagsOnSelf();
+
+        return NOT UCk_Utils_AbilityOwner_UE::Get_ActiveTags(InAbilityEntity).HasAnyExact(ActivationBlockers);
+    }();
+
+    // We could be clever, but this is more readable
+    if (AreActivationRequirementsMet_OnOwner && AreActivationRequirementsMet_OnSelf)
+    {
+        if (AbilityStatus == ECk_Ability_Status::NotActive)
+        { return ECk_Ability_ActivationRequirementsResult::RequirementsMet; }
+
+        return ECk_Ability_ActivationRequirementsResult::RequirementsMet_ButAlreadyActive;
+    }
+
+    if (NOT AreActivationRequirementsMet_OnOwner && NOT AreActivationRequirementsMet_OnSelf)
+    { return ECk_Ability_ActivationRequirementsResult::RequirementsNotMet_OnOwnerAndSelf; }
+
+    if (AreActivationRequirementsMet_OnOwner)
+    { return ECk_Ability_ActivationRequirementsResult::RequirementsNotMet_OnOwner; }
+
+    return ECk_Ability_ActivationRequirementsResult::RequirementsNotMet_OnSelf;
+}
+
+auto
+    UCk_Utils_Ability_UE::
     BindTo_OnAbilityActivated(
         FCk_Handle InAbilityHandle,
         ECk_Signal_BindingPolicy InBehavior,
@@ -265,38 +329,19 @@ auto
 
 auto
     UCk_Utils_Ability_UE::
-    DoGet_CanActivate(
-        FCk_Handle InAbilityEntity)
-    -> bool
-{
-    if (NOT Ensure(InAbilityEntity))
-    { return {}; }
-
-    const auto& AbilityCurrent = InAbilityEntity.Get<ck::FFragment_Ability_Current>();
-
-    CK_ENSURE_IF_NOT(ck::IsValid(AbilityCurrent._AbilityScript),
-        TEXT("Cannot check if Ability with Entity [{}] can be Activated because its AbilityScript is INVALID"),
-        InAbilityEntity)
-    { return {}; }
-
-    return AbilityCurrent._AbilityScript->Get_CanActivateAbility();
-}
-
-auto
-    UCk_Utils_Ability_UE::
     DoAdd(
         FCk_Handle InHandle,
         const FCk_Fragment_Ability_ParamsData& InParams)
     -> void
 {
     const auto& AbilityScriptClass = InParams.Get_AbilityScriptClass();
-
-    const auto CurrentWorld = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptClass), TEXT("Invalid Ability Script Class"))
     { return; }
 
     const auto& AbilityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_Script_PDA>(AbilityScriptClass);
+
+    const auto CurrentWorld = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+
     AbilityScriptCDO->Set_CurrentWorld(CurrentWorld);
 
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptCDO), TEXT("Failed to create CDO of Ability Script of Class [{}]"), AbilityScriptClass)
@@ -343,8 +388,6 @@ auto
     InHandle.Add<ck::FFragment_Ability_Current>(AbilityScriptToUse);
 
     UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityScriptToUse->GetWorld())->Request_TrackAbilityScript(AbilityScriptToUse);
-
-    // TODO: Add Rep Fragment
 }
 
 auto

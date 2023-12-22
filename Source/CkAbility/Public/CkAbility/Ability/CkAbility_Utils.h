@@ -116,6 +116,13 @@ public:
     Get_ScriptClass(
         FCk_Handle InAbilityEntity);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability",
+              DisplayName="Get Can Activate Ability")
+    static ECk_Ability_ActivationRequirementsResult
+    Get_CanActivate(
+        FCk_Handle InAbilityEntity);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability",
@@ -168,10 +175,6 @@ private:
     DoDeactivate(
         FCk_Handle InAbilityOwnerEntity,
         FCk_Handle InAbilityEntity) -> void;
-
-    static auto
-    DoGet_CanActivate(
-        FCk_Handle InAbilityEntity) -> bool;
 
     static auto
     DoGive(
