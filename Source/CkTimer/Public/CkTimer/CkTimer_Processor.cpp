@@ -144,6 +144,8 @@ namespace ck
                 break;
             }
         }
+
+        UUtils_Signal_OnTimerUpdate::Broadcast(InHandle, MakePayload(InHandle, TimerChrono));
     }
 
     auto
@@ -182,6 +184,8 @@ namespace ck
                 break;
             }
         }
+
+        UUtils_Signal_OnTimerUpdate::Broadcast(InHandle, MakePayload(InHandle, TimerChrono));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
