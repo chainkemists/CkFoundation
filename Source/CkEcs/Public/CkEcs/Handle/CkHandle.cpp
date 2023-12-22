@@ -16,11 +16,6 @@ FCk_Handle::
         const RegistryType& InRegistry)
     : _Entity(InEntity)
     , _Registry(InRegistry)
-#if WITH_EDITORONLY_DATA
-    , _EntityID(static_cast<int32>(_Entity.Get_ID()))
-    , _EntityNumber(_Entity.Get_EntityNumber())
-    , _EntityVersion(_Entity.Get_VersionNumber())
-#endif
 {
     DoUpdate_MapperAndFragments();
 }
@@ -32,9 +27,6 @@ FCk_Handle::
     , _Registry(std::move(InOther._Registry))
     , _Mapper(std::move(InOther._Mapper))
 #if WITH_EDITORONLY_DATA
-    , _EntityID(std::move(InOther._EntityID))
-    , _EntityNumber(std::move(InOther._EntityNumber))
-    , _EntityVersion(std::move(InOther._EntityVersion))
     , _Fragments(std::move(InOther._Fragments))
 #endif
 {
@@ -49,9 +41,6 @@ FCk_Handle::
     , _Registry(InOther._Registry)
     , _Mapper(InOther._Mapper)
 #if WITH_EDITORONLY_DATA
-    , _EntityID(InOther._EntityID)
-    , _EntityNumber(InOther._EntityNumber)
-    , _EntityVersion(InOther._EntityVersion)
     , _Fragments(InOther._Fragments)
 #endif
 {
@@ -90,9 +79,6 @@ auto
     ::Swap(_Registry, InOther._Registry);
     ::Swap(_Mapper, InOther._Mapper);
 #if WITH_EDITORONLY_DATA
-    ::Swap(_EntityID, InOther._EntityID);
-    ::Swap(_EntityNumber, InOther._EntityNumber);
-    ::Swap(_EntityVersion, InOther._EntityVersion);
     ::Swap(_Fragments, InOther._Fragments);
 #endif
 }

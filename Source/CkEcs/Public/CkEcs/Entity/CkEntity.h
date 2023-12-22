@@ -56,13 +56,13 @@ public:
 
 #if WITH_EDITORONLY_DATA
 private:
-    UPROPERTY(VisibleAnywhere)
+    UPROPERTY()
     int32 _EntityID;
 
-    UPROPERTY(VisibleAnywhere)
+    UPROPERTY()
     int32 _EntityNumber;
 
-    UPROPERTY(VisibleAnywhere)
+    UPROPERTY()
     int32 _EntityVersion;
 #endif
 };
