@@ -329,6 +329,35 @@ private:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
+              meta = (CompactNodeTitle="ApplyCost", DefaultToSelf="InScript", HidePin="InScript"))
+    static void
+    Self_Request_ApplyCost(
+        const UCk_Ability_Script_PDA* InScript);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Ability|Script",
+              meta = (CompactNodeTitle="ApplyCostOnOwner", DefaultToSelf="InScript", HidePin="InScript"))
+    static void
+    Self_Request_ApplyCost_OnOwner(
+        const UCk_Ability_Script_PDA* InScript);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Ability|Script",
+              meta = (CompactNodeTitle="ApplyCooldown", DefaultToSelf="InScript", HidePin="InScript"))
+    static void
+    Self_Request_ApplyCooldown(
+        const UCk_Ability_Script_PDA* InScript);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Ability|Script",
+              meta = (CompactNodeTitle="ApplyCooldownOn_OWNER", DefaultToSelf="InScript", HidePin="InScript"))
+    static void
+    Self_Request_ApplyCooldown_OnOwner(
+        const UCk_Ability_Script_PDA* InScript);
+
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Ability|Script",
               meta = (CompactNodeTitle="TRACK_Task", DefaultToSelf="InScript", HidePin="InScript"))
     static void
     Self_Request_TrackTask(

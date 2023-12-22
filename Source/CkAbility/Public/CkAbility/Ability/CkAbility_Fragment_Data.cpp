@@ -2,6 +2,7 @@
 
 #include "CkAbility/Ability/CkAbility_Utils.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Utils.h"
+#include "CkAbility/Settings/CkAbility_Settings.h"
 
 #include "CkCore/Object/CkObject_Utils.h"
 
@@ -122,6 +123,110 @@ auto
 
     UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(InScript->Get_AbilityOwnerHandle(),
         FCk_Request_AbilityOwner_DeactivateAbility{InScript->Get_AbilityHandle()});
+}
+
+auto
+    UCk_Ability_Script_PDA::
+    Self_Request_ApplyCost(
+        const UCk_Ability_Script_PDA* InScript)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InScript),
+        TEXT("AbilityScript is [{}]. Was this Ability GC'ed and this function is being called in a latent node?"),
+        InScript)
+    { return; }
+
+    const auto& AbilityHandle = InScript->Get_AbilityHandle();
+
+    CK_ENSURE_IF_NOT(UCk_Utils_AbilityOwner_UE::Has(AbilityHandle),
+        TEXT("Ability Entity [{}] with AbilityScript [{}] is NOT an AbiltyOwner itself. Did you forget to add a 'Cost' Ability to the aforementioned?"),
+        AbilityHandle, InScript)
+    { return; }
+
+    UCk_Utils_AbilityOwner_UE::Request_SendEvent(AbilityHandle,
+        FCk_Request_AbilityOwner_SendEvent
+        {
+            FCk_AbilityOwner_Event
+            {
+                UCk_Utils_Ability_ProjectSettings_UE::Get_Default_ApplyCostTag(),
+            }.Set_ContextEntity(AbilityHandle)
+        });
+}
+
+auto
+    UCk_Ability_Script_PDA::
+    Self_Request_ApplyCost_OnOwner(
+        const UCk_Ability_Script_PDA* InScript)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InScript),
+        TEXT("AbilityScript is [{}]. Was this Ability GC'ed and this function is being called in a latent node?"),
+        InScript)
+    { return; }
+
+    const auto& AbilityHandle = InScript->Get_AbilityHandle();
+    const auto& AbilityOwnerHandle = InScript->Get_AbilityOwnerHandle();
+
+    UCk_Utils_AbilityOwner_UE::Request_SendEvent(AbilityOwnerHandle,
+        FCk_Request_AbilityOwner_SendEvent
+        {
+            FCk_AbilityOwner_Event
+            {
+                UCk_Utils_Ability_ProjectSettings_UE::Get_Default_ApplyCostTag(),
+            }.Set_ContextEntity(AbilityHandle)
+        });
+}
+
+auto
+    UCk_Ability_Script_PDA::
+    Self_Request_ApplyCooldown(
+        const UCk_Ability_Script_PDA* InScript)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InScript),
+        TEXT("AbilityScript is [{}]. Was this Ability GC'ed and this function is being called in a latent node?"),
+        InScript)
+    { return; }
+
+    const auto& AbilityHandle = InScript->Get_AbilityHandle();
+
+    CK_ENSURE_IF_NOT(UCk_Utils_AbilityOwner_UE::Has(AbilityHandle),
+        TEXT("Ability Entity [{}] with AbilityScript [{}] is NOT an AbiltyOwner itself. Did you forget to add a 'Cooldown' Ability to the aforementioned?"),
+        AbilityHandle, InScript)
+    { return; }
+
+    UCk_Utils_AbilityOwner_UE::Request_SendEvent(AbilityHandle,
+        FCk_Request_AbilityOwner_SendEvent
+        {
+            FCk_AbilityOwner_Event
+            {
+                UCk_Utils_Ability_ProjectSettings_UE::Get_Default_ApplyCooldownTag(),
+            }.Set_ContextEntity(AbilityHandle)
+        });
+}
+
+auto
+    UCk_Ability_Script_PDA::
+    Self_Request_ApplyCooldown_OnOwner(
+        const UCk_Ability_Script_PDA* InScript)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InScript),
+        TEXT("AbilityScript is [{}]. Was this Ability GC'ed and this function is being called in a latent node?"),
+        InScript)
+    { return; }
+
+    const auto& AbilityHandle = InScript->Get_AbilityHandle();
+    const auto& AbilityOwner = InScript->Get_AbilityOwnerHandle();
+
+    UCk_Utils_AbilityOwner_UE::Request_SendEvent(AbilityOwner,
+        FCk_Request_AbilityOwner_SendEvent
+        {
+            FCk_AbilityOwner_Event
+            {
+                UCk_Utils_Ability_ProjectSettings_UE::Get_Default_ApplyCooldownTag(),
+            }.Set_ContextEntity(AbilityHandle)
+        });
 }
 
 auto
