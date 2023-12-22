@@ -45,7 +45,7 @@ auto
     Get_Default_ConditionsNotMetTag()
     -> FGameplayTag
 {
-    const auto& Tag = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_ProjectSettings_UE>()->Get_ConditionsMetTag();
+    const auto& Tag = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_ProjectSettings_UE>()->Get_ConditionsNotMetTag();
 
     CK_ENSURE_IF_NOT(ck::IsValid(Tag),
         TEXT("Default ConditionsNotMetTag NOT populated in Project Settings. ConditionsNotMet Abilities may not work correctly."))
