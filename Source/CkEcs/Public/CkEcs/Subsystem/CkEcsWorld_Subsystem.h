@@ -30,10 +30,14 @@ public:
     ACk_World_Actor_Base_UE();
 
 protected:
-    virtual auto Tick(float DeltaSeconds) -> void override;
+    auto Tick(
+        float DeltaSeconds) -> void override;
 
 public:
-    virtual auto Initialize(ETickingGroup InTickingGroup) -> void;
+    virtual auto
+    Initialize(
+        const FCk_Registry& InRegistry,
+        ETickingGroup InTickingGroup) -> void;
 
 protected:
     TOptional<EcsWorldType> _EcsWorld;
@@ -53,6 +57,10 @@ public:
     using EcsWorldType = ck::FEcsWorld;
 
 public:
+    auto
+    Initialize(
+        FSubsystemCollectionBase& Collection) -> void override;
+
     /** Called when world is ready to start gameplay before the game mode transitions to the correct state and call BeginPlay on all actors */
     auto OnWorldBeginPlay(UWorld& InWorld) -> void override;
 
@@ -65,6 +73,9 @@ private:
 
     UPROPERTY(Transient)
     TObjectPtr<ACk_World_Actor_Base_UE> _WorldActor;
+
+private:
+    FCk_Registry _Registry;
 
 public:
     CK_PROPERTY_GET(_TransientEntity);

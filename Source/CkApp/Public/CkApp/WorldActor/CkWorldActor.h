@@ -25,7 +25,10 @@ public:
     using EcsWorldType = ck::FEcsWorld;
 
 public:
-    virtual auto Initialize(ETickingGroup InTickingGroup) -> void override;
+    auto
+    Initialize(
+        const FCk_Registry& InRegistry, 
+        ETickingGroup InTickingGroup) -> void override;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

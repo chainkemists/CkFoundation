@@ -160,10 +160,11 @@ namespace ck_world_actor
 auto
     ACk_World_Actor_UE::
     Initialize(
+        const FCk_Registry& InRegistry,
         ETickingGroup InTickingGroup)
     -> void
 {
-    Super::Initialize(InTickingGroup);
+    Super::Initialize(InRegistry, InTickingGroup);
 
     ck_world_actor::InjectAllEcsProcessorsIntoWorld(*_EcsWorld);
 }
