@@ -230,81 +230,92 @@ namespace ck
             const FCk_Request_AbilityOwner_ActivateAbility& InRequest) const
         -> void
     {
-        const auto& DoGet_AreActivationRequirementsMetOnOwner = [&](const FCk_Ability_ActivationSettings_OnOwner& InAbilityActivationSettings)
-        {
-            const auto ActivationRequirements = InAbilityActivationSettings.Get_RequiredTagsOnAbilityOwner();
-            const auto ActivationBlockers = InAbilityActivationSettings.Get_BlockedByTagsOnAbilityOwner();
-
-            const auto& ActivateTags = InAbilityOwnerComp.Get_ActiveTags();
-
-            return ActivateTags.HasAllExact(ActivationRequirements) && NOT ActivateTags.HasAny(ActivationBlockers);
-        };
-
-        const auto& DoGet_AreActivationRequirementsMetOnSelf = [&](FCk_Handle InAbilityHandle,
-            const FCk_Ability_ActivationSettings_OnSelf& InAbilityActivationSettings)
-        {
-            if (NOT UCk_Utils_AbilityOwner_UE::Has(InAbilityHandle))
-            { return true; }
-
-            const auto ActivationBlockers = InAbilityActivationSettings.Get_BlockedByTagsOnSelf();
-
-            const auto& ActivateTags = UCk_Utils_AbilityOwner_UE::Get_ActiveTags(InAbilityHandle);
-
-            return NOT ActivateTags.HasAny(ActivationBlockers);
-        };
-
         const auto& DoTryActivateAbility = [&](const FCk_Handle& InAbilityToActivateEntity, const FGameplayTag& InAbilityToActivateName) -> void
         {
-            if (NOT UCk_Utils_Ability_UE::DoGet_CanActivate(InAbilityToActivateEntity))
-            { return; }
-
             const auto& AbilityActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityToActivateEntity);
-
-            if (NOT DoGet_AreActivationRequirementsMetOnOwner(AbilityActivationSettings.Get_ActivationSettingsOnOwner()))
-            {
-                ability::Verbose
-                (
-                    TEXT("Failed to Activate Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
-                         "because the Activation Requirements on ABILITY OWNER are NOT met"),
-                    InAbilityToActivateName,
-                    InAbilityToActivateEntity,
-                    InAbilityOwnerEntity
-                );
-
-                return;
-            }
-
-            if (NOT DoGet_AreActivationRequirementsMetOnSelf(InAbilityToActivateEntity,
-                AbilityActivationSettings.Get_ActivationSettingsOnSelf()))
-            {
-                ability::Verbose
-                (
-                    TEXT("Failed to Activate Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
-                         "because the Activation Requirements on ABILITY ITSELF are NOT met"),
-                    InAbilityToActivateName,
-                    InAbilityToActivateEntity,
-                    InAbilityOwnerEntity
-                );
-
-                return;
-            }
-
             const auto& GrantedTags = AbilityActivationSettings.Get_ActivationSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
-            InAbilityOwnerComp.AppendTags(GrantedTags);
 
-            ability::Verbose
-            (
-                TEXT("Activating Ability [Name: {} | Entity: {}] on Ability Owner [{}] and Granting Tags [{}]"),
-                InAbilityToActivateName,
-                InAbilityToActivateEntity,
-                InAbilityOwnerEntity,
-                GrantedTags
-            );
+            switch (const auto& CanActivateAbility = UCk_Utils_Ability_UE::Get_CanActivate(InAbilityToActivateEntity))
+            {
+                case ECk_Ability_ActivationRequirementsResult::RequirementsMet:
+                {
+                    ability::Verbose
+                    (
+                        TEXT("Activating Ability [Name: {} | Entity: {}] on Ability Owner [{}] and Granting Tags [{}]"),
+                        InAbilityToActivateName,
+                        InAbilityToActivateEntity,
+                        InAbilityOwnerEntity,
+                        GrantedTags
+                    );
+
+                    InAbilityOwnerComp.AppendTags(GrantedTags);
+
+                    break;
+                }
+                case ECk_Ability_ActivationRequirementsResult::RequirementsMet_ButAlreadyActive:
+                {
+                    ability::Verbose
+                    (
+                        TEXT("Failed to Activate Ability [Name: {} | Entity: {}] on Ability Owner [{}]! "
+                             "The Activation Requirements are met BUT the Ability is ALREADY ACTIVE"),
+                        InAbilityToActivateName,
+                        InAbilityToActivateEntity,
+                        InAbilityOwnerEntity
+                    );
+
+                    return;
+                }
+                case ECk_Ability_ActivationRequirementsResult::RequirementsNotMet_OnOwner:
+                {
+                    ability::Verbose
+                    (
+                        TEXT("Failed to Activate Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
+                             "because the Activation Requirements on ABILITY OWNER are NOT met"),
+                        InAbilityToActivateName,
+                        InAbilityToActivateEntity,
+                        InAbilityOwnerEntity
+                    );
+
+                    return;
+                }
+                case ECk_Ability_ActivationRequirementsResult::RequirementsNotMet_OnSelf:
+                {
+                    ability::Verbose
+                    (
+                        TEXT("Failed to Activate Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
+                             "because the Activation Requirements on ABILITY ITSELF are NOT met"),
+                        InAbilityToActivateName,
+                        InAbilityToActivateEntity,
+                        InAbilityOwnerEntity
+                    );
+
+                    return;
+                }
+                case ECk_Ability_ActivationRequirementsResult::RequirementsNotMet_OnOwnerAndSelf:
+                {
+                    ability::Verbose
+                    (
+                        TEXT("Failed to Activate Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
+                             "because the Activation Requirements on ABILITY OWNER and ABILITY ITSELF are NOT met"),
+                        InAbilityToActivateName,
+                        InAbilityToActivateEntity,
+                        InAbilityOwnerEntity
+                    );
+
+                    return;
+                }
+                default:
+                {
+                    CK_INVALID_ENUM(CanActivateAbility);
+                    return;
+                }
+            }
 
             // Cancel All Abilities that are cancelled by the newly granted tags
-            UCk_Utils_Ability_UE::RecordOfAbilities_Utils::ForEach_ValidEntry_If
+            UCk_Utils_AbilityOwner_UE::ForEach_Ability_If
             (
                 InAbilityOwnerEntity,
+                ECk_AbilityOwner_ForEachAbilityPolicy::IgnoreSelf,
                 [&](const FCk_Handle& InAbilityEntityToCancel)
                 {
                     ability::Verbose

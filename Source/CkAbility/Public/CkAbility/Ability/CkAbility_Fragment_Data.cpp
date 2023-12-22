@@ -58,18 +58,6 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    Get_CanActivateAbility() const
-    -> bool
-{
-    const auto& AbilityHandle = Get_AbilityHandle();
-    if (UCk_Utils_Ability_UE::Get_Status(AbilityHandle) == ECk_Ability_Status::Active)
-    { return false; }
-
-    return DoGet_CanActivateAbility();
-}
-
-auto
-    UCk_Ability_Script_PDA::
     OnGiveAbility()
     -> void
 {
@@ -364,14 +352,6 @@ auto
     DoOnRevokeAbility_Implementation()
     -> void
 {
-}
-
-auto
-    UCk_Ability_Script_PDA::
-    DoGet_CanActivateAbility_Implementation() const
-    -> bool
-{
-    return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
