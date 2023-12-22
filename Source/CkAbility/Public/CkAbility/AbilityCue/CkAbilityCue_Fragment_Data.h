@@ -82,11 +82,15 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))
-    FVector_NetQuantize10 _Location;
+    FVector _Location;
+    UPROPERTY()
+    FVector_NetQuantize10 _QuantizedLocation;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))
-    FVector_NetQuantizeNormal _Normal;
+    FVector _Normal;
+    UPROPERTY()
+    FVector_NetQuantizeNormal _QuantizedNormal;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, NotReplicated,
         meta=(AllowPrivateAccess))
