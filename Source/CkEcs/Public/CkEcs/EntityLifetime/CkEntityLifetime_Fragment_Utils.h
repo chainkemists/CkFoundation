@@ -72,6 +72,11 @@ public:
     Get_TransientEntity(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityLifetime")
+    static UWorld*
+    Get_WorldForEntity(
+        FCk_Handle InHandle);
+
 public:
     template <typename T_Predicate>
     [[nodiscard]]
