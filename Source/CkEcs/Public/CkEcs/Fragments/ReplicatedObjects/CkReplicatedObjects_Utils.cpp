@@ -13,7 +13,7 @@ auto
 {
     auto ReplicatedObjects = InReplicatedObjects;
     ReplicatedObjects.DoRequest_LinkAssociatedEntity(InHandle);
-    InHandle.Add<ck::FCk_Fragment_ReplicatedObjects_Params>(ReplicatedObjects);
+    InHandle.Add<ck::FFragment_ReplicatedObjects_Params>(ReplicatedObjects);
     InHandle.Add<ck::FTag_Replicated>();
 }
 
@@ -23,7 +23,7 @@ auto
         FCk_Handle InHandle)
     -> bool
 {
-    return InHandle.Has<ck::FCk_Fragment_ReplicatedObjects_Params>();
+    return InHandle.Has<ck::FFragment_ReplicatedObjects_Params>();
 }
 
 auto
@@ -54,7 +54,7 @@ auto
         InHandle.Add<ck::FTag_Replicated>();
     }
 
-    InHandle.AddOrGet<ck::FCk_Fragment_ReplicatedObjects_Params>()
+    InHandle.AddOrGet<ck::FFragment_ReplicatedObjects_Params>()
     .Update_ReplicatedObjects([&](FCk_ReplicatedObjects& InReplicatedObjects)
     {
         InReplicatedObjects.Update_ReplicatedObjects([&](TArray<TWeakObjectPtr<UCk_ReplicatedObject_UE>>& InArray)
@@ -119,7 +119,7 @@ auto
         const FCk_Handle& InHandle)
     -> const FCk_ReplicatedObjects&
 {
-    return InHandle.Get<ck::FCk_Fragment_ReplicatedObjects_Params>().Get_ReplicatedObjects();
+    return InHandle.Get<ck::FFragment_ReplicatedObjects_Params>().Get_ReplicatedObjects();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

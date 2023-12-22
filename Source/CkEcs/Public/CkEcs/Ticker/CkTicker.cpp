@@ -2,14 +2,21 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-auto ck::FTicker::
-Tick(FTimeType InDeltaTime) -> void
+namespace ck
 {
-    _ProcessorsRegistry.View<FTickableType>().ForEach(
-    [&](const FEntityType InEntity, FTickableType& InTickable)
+    auto
+        FTicker::
+        Tick(
+            TimeType InDeltaTime)
+        -> void
     {
-        InTickable->Tick(InDeltaTime);
-    });
+        _ProcessorsRegistry.View<TickableType>().ForEach(
+        [&](const EntityType InEntity, TickableType& InTickable)
+        {
+            InTickable->Tick(InDeltaTime);
+        });
+    }
 }
+
 
 // --------------------------------------------------------------------------------------------------------------------
