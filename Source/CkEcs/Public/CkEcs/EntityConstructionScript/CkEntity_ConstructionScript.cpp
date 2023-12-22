@@ -3,6 +3,7 @@
 #include "CkCore/Ensure/CkEnsure.h"
 
 #include "CkEcs/CkEcsLog.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkEcs/Handle/CkHandle.h"
 
 // this is for debugging only
@@ -20,6 +21,7 @@ auto
         FCk_Handle InHandle)
     -> void
 {
+    Set_CurrentWorld(UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle));
 
     const auto& DebugName = UCk_Utils_Debug_UE::Get_DebugName_AsText(this, ECk_DebugName_Verbosity::ShortName);
     InHandle.Add<NAME_ConstructionScript>(UCk_Utils_Debug_UE::Get_DebugName_AsText(this, ECk_DebugName_Verbosity::ShortName));
