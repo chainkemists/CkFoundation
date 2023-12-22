@@ -2,6 +2,7 @@
 
 #include "CkAbility/Ability/CkAbility_Utils.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Fragment.h"
+#include "CkCore/SharedValues/CkSharedValues_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -158,6 +159,71 @@ auto
 
             InFunc(InAbilityEntity);
         }
+    );
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    ForEach_Ability_If(
+        FCk_Handle InAbilityOwnerEntity,
+        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
+        const FCk_Lambda_InHandle& InDelegate,
+        const FCk_Predicate_InHandle_OutResult& InPredicate)
+    -> TArray<FCk_Handle>
+{
+    auto Abilities = TArray<FCk_Handle>{};
+
+    ForEach_Ability_If
+    (
+        InAbilityOwnerEntity,
+        InForEachAbilityPolicy,
+        [&](FCk_Handle InAbility)
+        {
+            if (InDelegate.IsBound())
+            { InDelegate.Execute(InAbility); }
+            else
+            { Abilities.Emplace(InAbility); }
+        },
+        [&](FCk_Handle InAbility)  -> bool
+        {
+            const FCk_SharedBool PredicateResult;
+
+            if (InPredicate.IsBound())
+            {
+                InPredicate.Execute(InAbility, PredicateResult);
+            }
+
+            return *PredicateResult;
+
+        }
+    );
+
+    return Abilities;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    ForEach_Ability_If(
+        FCk_Handle InAbilityOwnerEntity,
+        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
+        const TFunction<void(FCk_Handle)>& InFunc,
+        const TFunction<bool(FCk_Handle)>& InPredicate)
+    -> void
+{
+    if (NOT Ensure_Any(InAbilityOwnerEntity))
+    { return; }
+
+    RecordOfAbilities_Utils::ForEach_ValidEntry_If
+    (
+        InAbilityOwnerEntity,
+        [&](const FCk_Handle& InAbilityEntity)
+        {
+            if (InForEachAbilityPolicy == ECk_AbilityOwner_ForEachAbilityPolicy::IgnoreSelf && InAbilityEntity == InAbilityOwnerEntity)
+            { return; }
+
+            InFunc(InAbilityEntity);
+        },
+        InPredicate
     );
 }
 
