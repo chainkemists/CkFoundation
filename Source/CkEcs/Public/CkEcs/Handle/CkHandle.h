@@ -129,16 +129,7 @@ public:
 
 #if WITH_EDITORONLY_DATA
 private:
-    UPROPERTY(VisibleInstanceOnly)
-    int32 _EntityID = -1;
-
-    UPROPERTY(VisibleInstanceOnly)
-    int32 _EntityNumber = -1;
-
-    UPROPERTY(VisibleInstanceOnly)
-    int32 _EntityVersion = -1;
-
-    UPROPERTY(VisibleInstanceOnly)
+    UPROPERTY()
     TObjectPtr<class UCk_Handle_FragmentsDebug> _Fragments = nullptr;
 #endif
 };
