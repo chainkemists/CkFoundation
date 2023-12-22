@@ -62,7 +62,7 @@ public:
     auto PreSave(FObjectPreSaveContext ObjectSaveContext) -> void override;
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess, DisplayThumbnail="false"))
+    UPROPERTY(EditInstanceOnly, meta=(AllowPrivateAccess, DisplayThumbnail="false", ForceInlineRow))
     TMap<FGameplayTag, FSoftObjectPath> _AbilityCues;
 
 public:
@@ -74,7 +74,7 @@ public:
 USTRUCT(BlueprintType)
 struct CKABILITY_API FCk_AbilityCue_Params
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_AbilityCue_Params);
@@ -111,8 +111,8 @@ public:
 template<>
 struct TStructOpsTypeTraits<FCk_AbilityCue_Params> : public TStructOpsTypeTraitsBase2<FCk_AbilityCue_Params>
 {
-	enum
-	{ WithNetSerializer = true };
+    enum
+    { WithNetSerializer = true };
 };
 
 // --------------------------------------------------------------------------------------------------------------------

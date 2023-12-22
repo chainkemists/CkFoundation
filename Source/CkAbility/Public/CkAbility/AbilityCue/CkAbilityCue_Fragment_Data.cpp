@@ -55,9 +55,12 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-void
-    UCk_AbilityCue_Aggregator_PDA::PreSave(
+
+auto
+    UCk_AbilityCue_Aggregator_PDA::
+    PreSave(
         FObjectPreSaveContext ObjectSaveContext)
+    -> void
 {
     Request_Populate();
 
@@ -127,3 +130,5 @@ auto
     bOutSuccess = true;
     return true;
 }
+
+// --------------------------------------------------------------------------------------------------------------------
