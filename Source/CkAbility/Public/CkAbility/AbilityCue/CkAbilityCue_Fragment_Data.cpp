@@ -90,8 +90,16 @@ auto
     auto RepBits = uint16{0};
     if (Ar.IsSaving())
     {
-        if (_Location.IsNearlyZero() == false) { RepBits |= (1 << Rep_Location); }
-        if (_Normal.IsNearlyZero() == false) { RepBits |= (1 << Rep_Normal); }
+        if (NOT _Location.IsNearlyZero())
+        {
+            _QuantizedLocation = _Location;
+            RepBits |= (1 << Rep_Location);
+        }
+        if (NOT _Normal.IsNearlyZero())
+        {
+            _QuantizedNormal = _Normal;
+            RepBits |= (1 << Rep_Normal);
+        }
         if (ck::IsValid(_Instigator))
         {
             if (_Instigator.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
@@ -112,8 +120,18 @@ auto
 
     Ar.SerializeBits(&RepBits, Rep_Max);
 
-    if (RepBits & (1 << Rep_Location)) { Ar << _Location; }
-    if (RepBits & (1 << Rep_Normal)) { Ar << _Normal; }
+    if (RepBits & (1 << Rep_Location))
+    {
+        Ar << _QuantizedLocation;
+        if (NOT Ar.IsSaving())
+        { _Location = _QuantizedLocation; }
+    }
+    if (RepBits & (1 << Rep_Normal))
+    {
+        Ar << _QuantizedNormal;
+        if (NOT Ar.IsSaving())
+        { _Normal = _QuantizedNormal; }
+    }
     if (RepBits & (1 << Rep_Instigator))
     {
         Ar << _Instigator_RepObj;
