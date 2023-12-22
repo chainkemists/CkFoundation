@@ -110,6 +110,21 @@ auto
 
 auto
     UCk_Utils_EntityLifetime_UE::
+    Get_WorldForEntity(
+        FCk_Handle InHandle)
+    -> UWorld*
+{
+    if (InHandle.Has<TWeakObjectPtr<UWorld>>())
+    {
+        const auto NetMode = InHandle.Get<TWeakObjectPtr<UWorld>>().Get()->GetNetMode();
+        return InHandle.Get<TWeakObjectPtr<UWorld>>().Get();
+    }
+
+    return Get_WorldForEntity(Get_LifetimeOwner(InHandle));
+}
+
+auto
+    UCk_Utils_EntityLifetime_UE::
     Request_CreateEntity(
         FCk_Handle InHandle,
         PostEntityCreatedFunc InFunc)
@@ -120,14 +135,14 @@ auto
 
     const auto NewEntity = Request_CreateEntity(**InHandle, [&](FCk_Handle InNewEntity)
     {
-		InNewEntity.Add<ck::FFragment_LifetimeOwner>(InHandle);
-		InHandle.AddOrGet<ck::FFragment_LifetimeDependents>()._Entities.Emplace(InNewEntity);
+        InNewEntity.Add<ck::FFragment_LifetimeOwner>(InHandle);
+        InHandle.AddOrGet<ck::FFragment_LifetimeDependents>()._Entities.Emplace(InNewEntity);
 
-		if (InFunc)
-		{
-			InFunc(InNewEntity);
+        if (InFunc)
+        {
+            InFunc(InNewEntity);
         }
-	});
+    });
 
     return NewEntity;
 }
