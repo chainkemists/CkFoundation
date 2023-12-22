@@ -258,7 +258,7 @@ auto
     -> T_FragmentType&
 {
     CK_ENSURE_IF_NOT(IsValid(ck::IsValid_Policy_Default{}),
-        TEXT("Unable to Add Fragment [{}]. Handle [{}] does NOT have a valid [{}]."),
+        TEXT("Unable to AddOrGet Fragment [{}]. Handle [{}] does NOT have a valid [{}]."),
         ck::TypeToString<T_FragmentType>, *this,
         ck::IsValid(_Registry) ? TEXT("Entity") : TEXT("Registry"))
     {
@@ -287,7 +287,7 @@ auto
     -> void
 {
     CK_ENSURE_IF_NOT(IsValid(ck::IsValid_Policy_Default{}),
-        TEXT("Unable to Add Fragment [{}]. Handle [{}] does NOT have a valid [{}]."),
+        TEXT("Unable to Transform Fragment [{}]. Handle [{}] does NOT have a valid [{}]."),
         ck::TypeToString<T_FragmentType>, *this,
         ck::IsValid(_Registry) ? TEXT("Entity") : TEXT("Registry"))
     { return; }
@@ -303,7 +303,7 @@ auto
     -> T_FragmentType&
 {
     CK_ENSURE_IF_NOT(IsValid(ck::IsValid_Policy_Default{}),
-        TEXT("Unable to Add Fragment [{}]. Handle [{}] does NOT have a valid [{}]."),
+        TEXT("Unable to Replace Fragment [{}]. Handle [{}] does NOT have a valid [{}]."),
         ck::TypeToString<T_FragmentType>, *this,
         ck::IsValid(_Registry) ? TEXT("Entity") : TEXT("Registry"))
     {
@@ -321,7 +321,7 @@ auto
     -> void
 {
     CK_ENSURE_IF_NOT(IsValid(ck::IsValid_Policy_Default{}),
-        TEXT("Unable to Add Fragment [{}]. Handle [{}] does NOT have a valid [{}]."),
+        TEXT("Unable to Remove Fragment [{}]. Handle [{}] does NOT have a valid [{}]."),
         ck::TypeToString<T_Fragment>, *this,
         ck::IsValid(_Registry) ? TEXT("Entity") : TEXT("Registry"))
     { return; }
@@ -338,7 +338,7 @@ auto
     -> void
 {
     CK_ENSURE_IF_NOT(IsValid(ck::IsValid_Policy_Default{}),
-        TEXT("Unable to Add Fragment [{}]. Handle [{}] does NOT have a valid [{}]."),
+        TEXT("Unable to Remove Fragment [{}]. Handle [{}] does NOT have a valid [{}]."),
         ck::TypeToString<T_Fragment>, *this,
         ck::IsValid(_Registry) ? TEXT("Entity") : TEXT("Registry"))
     { return; }
