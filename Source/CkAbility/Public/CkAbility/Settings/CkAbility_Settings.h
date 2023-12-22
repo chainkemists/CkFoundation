@@ -23,8 +23,24 @@ private:
               meta = (AllowPrivateAccess = true, ValidEnumValues="Recycle"))
     ECk_Ability_RecyclingPolicy _AbilityRecyclingPolicy = ECk_Ability_RecyclingPolicy::Recycle;
 
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Default Tags",
+              meta = (AllowPrivateAccess = true))
+    FGameplayTag _ApplyCooldownTag;
+
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Default Tags",
+              meta = (AllowPrivateAccess = true))
+    FGameplayTag _ApplyCostTag;
+
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Default Tags",
+              meta = (AllowPrivateAccess = true))
+    FGameplayTag _ConditionsMetTag;
+
 public:
     CK_PROPERTY_GET(_AbilityRecyclingPolicy);
+
+    CK_PROPERTY_GET(_ApplyCooldownTag);
+    CK_PROPERTY_GET(_ApplyCostTag);
+    CK_PROPERTY_GET(_ConditionsMetTag);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -33,6 +49,10 @@ class CKABILITY_API UCk_Utils_Ability_ProjectSettings_UE
 {
 public:
     static auto Get_AbilityRecyclingPolicy() -> ECk_Ability_RecyclingPolicy;
+
+    static auto Get_Default_ApplyCooldownTag() -> FGameplayTag;
+    static auto Get_Default_ApplyCostTag() -> FGameplayTag;
+    static auto Get_Default_ConditionsNotMetTag() -> FGameplayTag;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
