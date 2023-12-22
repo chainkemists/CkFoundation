@@ -336,7 +336,7 @@ private:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
-              meta = (CompactNodeTitle="ApplyCostOnOwner", DefaultToSelf="InScript", HidePin="InScript"))
+              meta = (CompactNodeTitle="ApplyCost_OnOwner", DefaultToSelf="InScript", HidePin="InScript"))
     static void
     Self_Request_ApplyCost_OnOwner(
         const UCk_Ability_Script_PDA* InScript);
@@ -350,7 +350,7 @@ private:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
-              meta = (CompactNodeTitle="ApplyCooldownOn_OWNER", DefaultToSelf="InScript", HidePin="InScript"))
+              meta = (CompactNodeTitle="ApplyCooldown_OnOwner", DefaultToSelf="InScript", HidePin="InScript"))
     static void
     Self_Request_ApplyCooldown_OnOwner(
         const UCk_Ability_Script_PDA* InScript);
