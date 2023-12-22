@@ -23,6 +23,15 @@ public:
 
 public:
     auto GetWorld() const -> UWorld* override;
+
+private:
+    static auto GetWorldFromOuterRecursively(UObject* InObject) -> UWorld*;
+
+private:
+    TWeakObjectPtr<UWorld> _CurrentWorld;
+
+public:
+    CK_PROPERTY(_CurrentWorld);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

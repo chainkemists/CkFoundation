@@ -11,6 +11,17 @@ auto
     GetWorld() const
     -> UWorld*
 {
+    if (ck::IsValid(Get_CurrentWorld()))
+    {
+        return Get_CurrentWorld().Get();
+    }
+
+    const auto SuperWorld = GetWorldFromOuterRecursively(GetOuter());
+    if (ck::IsValid(SuperWorld))
+    {
+        return SuperWorld;
+    }
+
     const auto& World = [&]() -> UWorld*
     {
         if (ck::Is_NOT_Valid(GEngine))
@@ -33,6 +44,22 @@ auto
     }();
 
     return World;
+}
+
+auto
+    UCk_DataAsset_PDA::
+    GetWorldFromOuterRecursively(UObject* InObject)
+        -> UWorld*
+{
+    if (ck::Is_NOT_Valid(InObject))
+    { return {}; }
+
+    if (ck::IsValid(Cast<UWorld>(InObject)))
+    {
+        return Cast<UWorld>(InObject);
+    }
+
+    return GetWorldFromOuterRecursively(InObject->GetOuter());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
