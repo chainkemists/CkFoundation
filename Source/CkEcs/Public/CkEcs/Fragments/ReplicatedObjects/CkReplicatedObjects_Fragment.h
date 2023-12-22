@@ -12,20 +12,19 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKECS_API FCk_Fragment_ReplicatedObjects_Params
+    struct CKECS_API FFragment_ReplicatedObjects_Params
     {
     public:
-        CK_GENERATED_BODY(FCk_Fragment_ReplicatedObjects_Params);
-
-    public:
-        FCk_Fragment_ReplicatedObjects_Params() = default;
-        FCk_Fragment_ReplicatedObjects_Params(FCk_ReplicatedObjects InReplicatedObjects);
+        CK_GENERATED_BODY(FFragment_ReplicatedObjects_Params);
 
     private:
         FCk_ReplicatedObjects _ReplicatedObjects;
 
     public:
         CK_PROPERTY(_ReplicatedObjects);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_ReplicatedObjects_Params, _ReplicatedObjects);
     };
 }
 

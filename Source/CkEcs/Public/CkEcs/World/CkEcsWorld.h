@@ -12,12 +12,12 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECS_API FEcsWorld : public ck::FTicker
+    class CKECS_API FEcsWorld : public FTicker
     {
         CK_GENERATED_BODY(FEcsWorld);
 
     private:
-        FRegistryType _Registry;
+        RegistryType _Registry;
 
     public:
         CK_PROPERTY_GET(_Registry);
