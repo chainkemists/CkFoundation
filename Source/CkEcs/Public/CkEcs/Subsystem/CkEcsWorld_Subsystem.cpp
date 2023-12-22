@@ -35,15 +35,29 @@ auto
 
 auto
     ACk_World_Actor_Base_UE::
-    Initialize(ETickingGroup InTickingGroup)
+    Initialize(
+        const FCk_Registry& InRegistry,
+        ETickingGroup InTickingGroup)
     -> void
 {
     SetTickGroup(InTickingGroup);
 
-    _EcsWorld = EcsWorldType{};
+    _EcsWorld = EcsWorldType{InRegistry};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Initialize(
+        FSubsystemCollectionBase& Collection)
+    -> void
+{
+    Super::Initialize(Collection);
+
+    _TransientEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_Registry);
+    _TransientEntity.Add<FTag_NAME_TransientEntity>();
+}
 
 auto
     UCk_EcsWorld_Subsystem_UE::
@@ -75,11 +89,7 @@ auto
             [&](AActor* InActor)
             {
                 const auto WorldActor = Cast<ACk_World_Actor_Base_UE>(InActor);
-                WorldActor->Initialize(EcsWorldTickingGroup);
-
-                auto& Registry = WorldActor->_EcsWorld->Get_Registry();
-                _TransientEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(Registry);
-                _TransientEntity.Add<FTag_NAME_TransientEntity>();
+                WorldActor->Initialize(_Registry, EcsWorldTickingGroup);
             }
         )
     );
