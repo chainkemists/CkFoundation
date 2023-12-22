@@ -105,7 +105,7 @@ public:
     static TArray<FCk_Handle>
     ForEach_Ability(
         FCk_Handle InAbilityOwnerEntity,
-        ECk_AbilityOwner_ForEachAbilityPolicy ForEachAbilityPolicy,
+        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_Ability(
@@ -115,13 +115,30 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
+              DisplayName="For Each Ability If",
+              meta=(AutoCreateRefTerm="InDelegate"))
+    static TArray<FCk_Handle>
+    ForEach_Ability_If(
+        FCk_Handle InAbilityOwnerEntity,
+        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
+        const FCk_Lambda_InHandle& InDelegate,
+        const FCk_Predicate_InHandle_OutResult& InPredicate);
+    static auto
+    ForEach_Ability_If(
+        FCk_Handle InAbilityOwnerEntity,
+        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
+        const TFunction<void(FCk_Handle)>& InFunc,
+        const TFunction<bool(FCk_Handle)>& InPredicate) -> void;
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
               DisplayName="For Each Ability with Status",
               meta=(AutoCreateRefTerm="InDelegate"))
     static TArray<FCk_Handle>
     ForEach_Ability_WithStatus(
         FCk_Handle InAbilityOwnerEntity,
         ECk_Ability_Status InStatus,
-        ECk_AbilityOwner_ForEachAbilityPolicy ForEachAbilityPolicy,
+        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_Ability_WithStatus(
