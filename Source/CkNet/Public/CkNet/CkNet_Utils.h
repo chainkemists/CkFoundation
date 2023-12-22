@@ -31,7 +31,8 @@ public:
     friend class UCk_EcsConstructionScript_ActorComponent_UE;
 
 public:
-    static auto Add(
+    static auto
+    Add(
         FCk_Handle InEntity,
         FCk_Net_ConnectionSettings InConnectionSettings) -> void;
 
@@ -141,7 +142,8 @@ public:
 
 #if CK_BUILD_TEST
 public:
-    static auto Get_PingRangeHistoryEntries() -> TArray<FCk_PlayerState_PingRange_History_Entry>;
+    static auto
+    Get_PingRangeHistoryEntries() -> TArray<FCk_PlayerState_PingRange_History_Entry>;
 #endif
 };
 
@@ -157,10 +159,12 @@ public:
 
 public:
     template <typename T_ReplicatedFragment, typename T_UnaryUpdateFunc>
-    static auto UpdateReplicatedFragment(FCk_Handle InHandle, T_UnaryUpdateFunc InUpdateFunc) -> void;
+    static auto
+    UpdateReplicatedFragment(FCk_Handle InHandle, T_UnaryUpdateFunc InUpdateFunc) -> void;
 
     template <typename T_ReplicatedFragment>
-    static auto TryAddReplicatedFragment(FCk_Handle InHandle, UCk_Ecs_ReplicatedObject_UE* InExistingObject = nullptr) -> ECk_AddedOrNot;
+    static auto
+    TryAddReplicatedFragment(FCk_Handle InHandle, UCk_Ecs_ReplicatedObject_UE* InExistingObject = nullptr) -> ECk_AddedOrNot;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
