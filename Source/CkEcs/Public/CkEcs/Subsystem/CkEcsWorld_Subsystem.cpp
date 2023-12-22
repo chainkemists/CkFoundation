@@ -94,6 +94,8 @@ auto
         )
     );
 
+    _TransientEntity.Add<TWeakObjectPtr<UWorld>>(GetWorld());
+
     CK_ENSURE_IF_NOT(ck::IsValid(_WorldActor), TEXT("Failed to spawn ECS World Actor. ECS Pipeline will NOT work."))
     { return; }
 }
