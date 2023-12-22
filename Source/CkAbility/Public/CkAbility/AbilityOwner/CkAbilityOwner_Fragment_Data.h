@@ -60,8 +60,10 @@ private:
 
 public:
     CK_PROPERTY_GET(_EventName);
-    CK_PROPERTY_GET(_ContextEntity);
-    CK_PROPERTY_GET(_EventData);
+    CK_PROPERTY(_ContextEntity);
+    CK_PROPERTY(_EventData);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_AbilityOwner_Event, _EventName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -260,6 +262,8 @@ private:
 
 public:
     CK_PROPERTY_GET(_Event);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_AbilityOwner_SendEvent, _Event);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
