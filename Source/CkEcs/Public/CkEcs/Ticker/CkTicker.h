@@ -19,38 +19,42 @@ namespace ck
         CK_GENERATED_BODY(FTicker);
 
     public:
-        using FRegistryType = FCk_Registry;
-        using FTimeType = FCk_Time;
-        using FHandleType = FCk_Handle;
-        using FTickableType = concepts::FTickableType;
-        using FEntityType = FCk_Entity;
+        using RegistryType = FCk_Registry;
+        using TimeType     = FCk_Time;
+        using HandleType   = FCk_Handle;
+        using TickableType = concepts::FTickableType;
+        using EntityType   = FCk_Entity;
 
     public:
         template <typename T_Tickable>
-        auto Add(T_Tickable&& InTickable) -> FHandleType;
+        auto Add(T_Tickable&& InTickable) -> HandleType;
 
         template <typename T_Tickable, typename... T_Args>
-        auto Add(T_Args&&... InArgs) -> FHandleType;
+        auto Add(T_Args&&... InArgs) -> HandleType;
 
     public:
-        auto Tick(FTimeType InDeltaTime) -> void;
+        auto Tick(TimeType InDeltaTime) -> void;
 
     private:
         template <typename T_Tickable>
         auto DoSortTickable() -> void;
 
     private:
-        FRegistryType _ProcessorsRegistry;
+        RegistryType _ProcessorsRegistry;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_Tickable>
-    auto FTicker::Add(T_Tickable&& InTickable) -> FHandleType
+    auto
+        FTicker::
+        Add(
+            T_Tickable&& InTickable)
+        -> HandleType
     {
         const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_ProcessorsRegistry, [&](FCk_Handle InEntity)
         {
-            InEntity.Add<FTickableType>(std::forward<T_Tickable>(InTickable));
+            InEntity.Add<TickableType>(std::forward<T_Tickable>(InTickable));
         });
 
         DoSortTickable<T_Tickable>();
@@ -59,24 +63,30 @@ namespace ck
     }
 
     template <typename T_Tickable, typename ... T_Args>
-    auto FTicker::Add(T_Args&&... InArgs) -> FHandleType
+    auto
+        FTicker::
+        Add(
+            T_Args&&... InArgs)
+        -> HandleType
     {
         const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_ProcessorsRegistry, [&](FCk_Handle InEntity)
         {
-            InEntity.Add<FTickableType>(T_Tickable{std::forward<T_Args>(InArgs)...});
+            InEntity.Add<TickableType>(T_Tickable{std::forward<T_Args>(InArgs)...});
         });
 
-        DoSortTickable<FTickableType>();
+        DoSortTickable<TickableType>();
 
         return NewEntity;
     }
 
     template <typename T_Tickable>
-    auto FTicker::
-    DoSortTickable() -> void
+    auto
+        FTicker::
+        DoSortTickable()
+        -> void
     {
         _ProcessorsRegistry.Sort<T_Tickable>(
-        [](const FEntityType InA, const FEntityType InB)
+        [](const EntityType InA, const EntityType InB)
         {
             return InA < InB;
         });
