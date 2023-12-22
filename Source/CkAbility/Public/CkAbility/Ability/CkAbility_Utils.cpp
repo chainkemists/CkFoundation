@@ -234,7 +234,14 @@ auto
                 UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityCurrent.Get_AbilityScript()->GetWorld())->
                     Request_RemoveAbilityScript(AbilityCurrent.Get_AbilityScript().Get());
 
-                AbilityCurrent._AbilityScript = UCk_Utils_Object_UE::Request_CreateNewObject_TransientPackage(AbilityScriptClass);
+                AbilityCurrent._AbilityScript = NewObject<UCk_Ability_Script_PDA>
+                (
+                    UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAbilityOwnerEntity),
+                    AbilityScriptClass,
+                    NAME_None,
+                    RF_NoFlags,
+                    nullptr
+                );
 
                 UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityCurrent.Get_AbilityScript()->GetWorld())->
                     Request_TrackAbilityScript(AbilityCurrent.Get_AbilityScript().Get());
@@ -284,10 +291,13 @@ auto
 {
     const auto& AbilityScriptClass = InParams.Get_AbilityScriptClass();
 
+    const auto CurrentWorld = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptClass), TEXT("Invalid Ability Script Class"))
     { return; }
 
     const auto& AbilityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_Script_PDA>(AbilityScriptClass);
+    AbilityScriptCDO->Set_CurrentWorld(CurrentWorld);
 
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptCDO), TEXT("Failed to create CDO of Ability Script of Class [{}]"), AbilityScriptClass)
     { return; }
@@ -312,7 +322,14 @@ auto
 
     const auto& AbilityScriptToUse = InstancingPolicy == ECk_Ability_InstancingPolicy::NotInstanced
                                        ? AbilityScriptCDO
-                                       : UCk_Utils_Object_UE::Request_CreateNewObject_TransientPackage(AbilityScriptClass);
+                                       : NewObject<UCk_Ability_Script_PDA>
+                                         (
+                                             CurrentWorld,
+                                             AbilityScriptClass,
+                                             NAME_None,
+                                             RF_NoFlags,
+                                             nullptr
+                                         );
 
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptToUse), TEXT("Failed to create instance of Ability Script of Class [{}]"), AbilityScriptClass)
     { return; }
