@@ -78,7 +78,15 @@ namespace ck
         algo::ForEach(RequestsCopy, ck::Visitor([&](const auto& InRequestVariant)
         {
             DoHandleRequest(InHandle, InAbilityOwnerComp, InRequestVariant);
+
+            // TODO: Add formatter for each request and track which one was responsible for destroying entity
         }));
+
+        if (ck::Is_NOT_Valid(InHandle))
+        {
+            ability::Verbose(TEXT("Ability Entity [{}] was Marked Pending Kill during the handling of its requests."));
+            return;
+        }
 
         if (InAbilityRequestsComp.Get_Requests().IsEmpty())
         {
