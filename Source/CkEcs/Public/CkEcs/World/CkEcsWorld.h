@@ -22,6 +22,8 @@ namespace ck
     public:
         CK_PROPERTY_GET(_Registry);
         CK_PROPERTY_GET_NON_CONST(_Registry);
+
+        CK_DEFINE_CONSTRUCTORS(FEcsWorld, _Registry);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
