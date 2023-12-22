@@ -33,14 +33,14 @@ private:
 
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Default Tags",
               meta = (AllowPrivateAccess = true))
-    FGameplayTag _ConditionsMetTag;
+    FGameplayTag _ConditionsNotMetTag;
 
 public:
     CK_PROPERTY_GET(_AbilityRecyclingPolicy);
 
     CK_PROPERTY_GET(_ApplyCooldownTag);
     CK_PROPERTY_GET(_ApplyCostTag);
-    CK_PROPERTY_GET(_ConditionsMetTag);
+    CK_PROPERTY_GET(_ConditionsNotMetTag);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
