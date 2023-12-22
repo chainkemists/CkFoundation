@@ -27,6 +27,27 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_ActivationPolicy);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_Ability_ActivationRequirementsResult : uint8
+{
+    RequirementsMet,
+
+    RequirementsMet_ButAlreadyActive,
+
+    // Requirements were not on the Ability itself
+    RequirementsNotMet_OnSelf,
+
+    // Requirements were not on the Ability Owner
+    RequirementsNotMet_OnOwner,
+
+    // Requirements were not on the Ability Owner and the Ability itself
+    RequirementsNotMet_OnOwnerAndSelf
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_ActivationRequirementsResult);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_Ability_Status : uint8
 {
     NotActive,
@@ -276,9 +297,6 @@ public:
     auto
     OnDeactivateAbility() -> void;
 
-    auto
-    Get_CanActivateAbility() const -> bool;
-
 protected:
     UFUNCTION(BlueprintNativeEvent,
               Category = "Ck|Ability|Script",
@@ -304,12 +322,6 @@ protected:
               meta     = (DisplayName = "OnRevokeAbility"))
     void
     DoOnRevokeAbility();
-
-    UFUNCTION(BlueprintNativeEvent,
-              Category = "Ck|Ability|Script",
-              meta     = (DisplayName = "Get_CanActivateAbility"))
-    bool
-    DoGet_CanActivateAbility() const;
 
 private:
     UFUNCTION(BlueprintCallable,
