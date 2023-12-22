@@ -52,11 +52,6 @@ auto
     if (ck::Is_NOT_Valid(Config))
     { return; }
 
-    if (NOT GetWorld()->IsNetMode(NM_DedicatedServer))
-    {
-        ck::ability::Log(TEXT("I am on the client right now"));
-    }
-
     const auto TransientEntity = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>()->Get_TransientEntity();
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity);
