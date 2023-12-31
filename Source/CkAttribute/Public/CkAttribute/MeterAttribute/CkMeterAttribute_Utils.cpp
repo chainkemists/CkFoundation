@@ -509,7 +509,7 @@ auto
                 ModifierDeltaParams.Get_Capacity().Get_MinCapacity(),
                 ck::FMeterAttribute_Tags::Get_MinCapacity(),
                 InParams.Get_ModifierOperation(),
-                InParams.Get_ModifierOperation_RevokablePolicy()
+                InParams.Get_ModifierOperation_RevocablePolicy()
             }}
         );
     }
@@ -525,7 +525,7 @@ auto
                 ModifierDeltaParams.Get_Capacity().Get_MaxCapacity(),
                 ck::FMeterAttribute_Tags::Get_MaxCapacity(),
                 InParams.Get_ModifierOperation(),
-                InParams.Get_ModifierOperation_RevokablePolicy()
+                InParams.Get_ModifierOperation_RevocablePolicy()
             }}
         );
     }
@@ -550,7 +550,7 @@ auto
                 static_cast<float>(MeterCurrentDelta),
                 ck::FMeterAttribute_Tags::Get_Current(),
                 InParams.Get_ModifierOperation(),
-                InParams.Get_ModifierOperation_RevokablePolicy()
+                InParams.Get_ModifierOperation_RevocablePolicy()
             }}
         );
     }

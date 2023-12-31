@@ -279,13 +279,13 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ModifierOperation);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
-enum class ECk_ModifierOperation_RevokablePolicy : uint8
+enum class ECk_ModifierOperation_RevocablePolicy : uint8
 {
-    NotRevokable,
-    Revokable
+    NotRevocable,
+    Revocable
 };
 
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ModifierOperation_RevokablePolicy);
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ModifierOperation_RevocablePolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
