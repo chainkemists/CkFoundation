@@ -97,7 +97,7 @@ namespace ck
             AttributeDataType InModifierDelta,
             HandleType InTarget,
             ECk_ModifierOperation InModifierOperation,
-            ECk_ModifierOperation_RevokablePolicy InModifierOperationRevokablePolicy) -> void;
+            ECk_ModifierOperation_RevocablePolicy InModifierOperationRevokablePolicy) -> void;
 
         static auto
         Has(
