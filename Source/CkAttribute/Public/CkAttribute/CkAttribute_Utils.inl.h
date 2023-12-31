@@ -103,7 +103,7 @@ namespace ck
             AttributeDataType     InModifierDelta,
             HandleType            InTarget,
             ECk_ModifierOperation InModifierOperation,
-            ECk_ModifierOperation_RevokablePolicy InModifierOperationRevokablePolicy)
+            ECk_ModifierOperation_RevocablePolicy InModifierOperationRevokablePolicy)
         -> void
     {
         CK_ENSURE_IF_NOT(ck::IsValid(InTarget),
@@ -143,7 +143,7 @@ namespace ck
 
         switch (InModifierOperationRevokablePolicy)
         {
-            case ECk_ModifierOperation_RevokablePolicy::NotRevokable:
+            case ECk_ModifierOperation_RevocablePolicy::NotRevocable:
             {
                 InHandle.Add<typename AttributeModifierFragmentType::Tag_IsNotRevokableModification>();
                 Request_ComputeResult(InHandle);
@@ -151,7 +151,7 @@ namespace ck
 
                 break;
             }
-            case ECk_ModifierOperation_RevokablePolicy::Revokable:
+            case ECk_ModifierOperation_RevocablePolicy::Revocable:
             {
                 InHandle.Add<typename AttributeModifierFragmentType::Tag_IsRevokableModification>();
                 RecordOfAttributeModifiers_Utils::AddIfMissing(InTarget, ECk_Record_EntryHandlingPolicy::Default);

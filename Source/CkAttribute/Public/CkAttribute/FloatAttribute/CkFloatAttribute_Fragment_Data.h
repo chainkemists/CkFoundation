@@ -81,7 +81,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_ModifierOperation_RevokablePolicy _ModifierOperation_RevokablePolicy = ECk_ModifierOperation_RevokablePolicy::Revokable;
+    ECk_ModifierOperation_RevocablePolicy _ModifierOperation_RevokablePolicy = ECk_ModifierOperation_RevocablePolicy::Revocable;
 
 public:
     CK_PROPERTY_GET(_ModifierDelta);

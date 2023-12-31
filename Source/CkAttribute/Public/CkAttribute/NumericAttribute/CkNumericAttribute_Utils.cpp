@@ -302,7 +302,7 @@ auto
                 InParams.Get_ModifierDelta().Get_Value().Get_CurrentValue(),
                 InParams.Get_TargetAttributeName(),
                 InParams.Get_ModifierOperation(),
-                InParams.Get_ModifierOperation_RevokablePolicy()
+                InParams.Get_ModifierOperation_RevocablePolicy()
             });
     }
     else if (UCk_Utils_MeterAttribute_UE::Has(InAttributeOwnerEntity, InParams.Get_TargetAttributeName()))
