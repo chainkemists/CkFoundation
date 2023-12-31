@@ -104,14 +104,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_CUSTOM_FORMATTER(FCk_Time, [&]()
-{
-    return ck::Format(TEXT("{:.3f}s"), InObj.Get_Seconds());
-});
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, meta = (HasNativeMake))
 struct CKCORE_API FCk_Time_Unreal
 {
     GENERATED_BODY()
@@ -158,6 +151,26 @@ public:
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Time_Unreal, _Time, _TimeType);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+// IsValid and Formatters
+
+CK_DEFINE_CUSTOM_FORMATTER(FCk_Time, [&]()
+{
+    return ck::Format(TEXT("{:.3f}s"), InObj.Get_Seconds());
+});
+
+CK_DEFINE_CUSTOM_FORMATTER(FCk_WorldTime, [&]()
+{
+    return ck::Format
+    (
+        TEXT("Time: [{}], RealTime: [{}], DeltaT: [{}], FrameNumber: [{}]"),
+        InObj.Get_Time(),
+        InObj.Get_RealTime(),
+        InObj.Get_DeltaT(),
+        InObj.Get_FrameNumber()
+    );
+});
 
 CK_DEFINE_CUSTOM_FORMATTER(FCk_Time_Unreal, [&]()
 {
