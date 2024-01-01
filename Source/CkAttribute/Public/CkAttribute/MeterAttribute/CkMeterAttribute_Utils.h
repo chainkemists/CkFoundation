@@ -18,11 +18,9 @@
 
 namespace ck
 {
+    // ReSharper disable once CppPolymorphicClassWithNonVirtualPublicDestructor
     struct FMeterAttribute_Tags final : public FGameplayTagNativeAdder
     {
-    public:
-        virtual ~FMeterAttribute_Tags() override = default;
-
     protected:
         auto AddTags() -> void override;
 
