@@ -87,7 +87,25 @@ namespace ck
 // type and using IsValid_Executor_IsBaseOf<...> to determine whether the passed types are related or not.
 //
 // USAGE: See usage examples in IsValid_Defaults
-#define CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(_t_type_, ...)                                          \
+#define CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(_t_type_)                                               \
+namespace ck                                                                                           \
+{                                                                                                      \
+    template <typename T_Base, typename T_Derived>                                                     \
+    class IsValid_Executor_IsBaseOf<_t_type_<T_Base>, _t_type_<T_Derived>>                             \
+    {                                                                                                  \
+    public:                                                                                            \
+        enum { value = IsValid_Executor_IsBaseOf<T_Base, T_Derived>::value };                          \
+    };                                                                                                 \
+                                                                                                       \
+    template <typename T_Base, typename T_Derived>                                                     \
+    class IsValid_Executor_IsBaseOf<_t_type_<T_Base>, T_Derived>                                       \
+    {                                                                                                  \
+    public:                                                                                            \
+        enum { value = IsValid_Executor_IsBaseOf<T_Base, T_Derived>::value };                          \
+    };                                                                                                 \
+}
+
+#define CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T_ARGS(_t_type_, ...)                                     \
 namespace ck                                                                                           \
 {                                                                                                      \
     template <typename T_Base, typename T_Derived>                                                     \
