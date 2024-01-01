@@ -177,7 +177,7 @@ inline struct _ ##_LogCategory_## LogMapInjector                                
         ck::log::Get_VerboseMap().Emplace(TEXT(#_LogCategory_), [](const FString& InString) { Verbose(TEXT("{}"), InString); });        \
         ck::log::Get_VeryVerboseMap().Emplace(TEXT(#_LogCategory_), [](const FString& InString) { VeryVerbose(TEXT("{}"), InString); });\
     }                                                                                                                                   \
-} ##_LogCategory_## _LogMapInjector
+} _LogCategory_ ##_LogMapInjector
 
 // --------------------------------------------------------------------------------------------------------------------
 
