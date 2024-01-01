@@ -4,8 +4,6 @@
 
 #include "CkPerception/Hearing/CkHearingPerception_Params.h"
 
-#include <Engine/Classes/Components/ActorComponent.h>
-
 #include "CkHearingPerception_Component.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
