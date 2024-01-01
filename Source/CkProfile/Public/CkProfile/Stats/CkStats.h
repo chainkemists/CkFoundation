@@ -29,16 +29,16 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#define CK_DEFINE_STAT(CounterName, Type, GroupId)      \
-struct FStat_##CounterName : public ck::TStat_Id<Type>  \
+#define CK_DEFINE_STAT(_CounterName_, Type, GroupId)      \
+struct FStat_##_CounterName_ : public ck::TStat_Id<Type>  \
 {                                                       \
     using TGroup = GroupId;                             \
 };                                                      \
-static inline DEFINE_STAT(CounterName)
+static inline DEFINE_STAT(_CounterName_)
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#define CK_STAT(CounterName)\
-    STAT(FScopeCycleCounter TickCounter##CounterName{GET_STATID(##CounterName)});
+#define CK_STAT(_CounterName_)\
+    STAT(FScopeCycleCounter _CounterName_{GET_STATID(_CounterName_)});
 
 // --------------------------------------------------------------------------------------------------------------------
