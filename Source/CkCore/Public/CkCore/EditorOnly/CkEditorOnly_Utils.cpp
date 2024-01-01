@@ -6,10 +6,14 @@
 #include <Logging/TokenizedMessage.h>
 #include <Logging/MessageLog.h>
 #include <Misc/UObjectToken.h>
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 2
 #include <MessageLog/Public/MessageLogModule.h>
 #include <MessageLog/Public/IMessageLogListing.h>
-#include <Editor.h>
-#include <UnrealEd.h>
+#else
+#include "Developer/MessageLog/Public/MessageLogModule.h"
+#endif
+
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
