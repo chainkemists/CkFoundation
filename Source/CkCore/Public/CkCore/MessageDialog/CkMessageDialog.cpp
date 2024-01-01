@@ -8,13 +8,23 @@
 
 namespace ck_message_dialog
 {
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION < 3
     auto
-    DoGet_TitleOrNullptr(const FText& InTitle)
+        DoGet_TitleOrNullptr(
+            const FText& InTitle)
         -> const FText*
     {
         return InTitle.IsEmpty() ? nullptr : &InTitle;
     }
-
+#else
+    auto
+        DoGet_TitleOrNullptr(
+            const FText& InTitle)
+        -> FText
+    {
+        return InTitle;
+    }
+#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------
