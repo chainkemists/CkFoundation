@@ -102,7 +102,7 @@ namespace ck::Private
         ck::Is_NOT_Valid(Object);
 
         // TSubclassOf Validation
-        constexpr TSubclassOf<AActor> SubclassOfActor;
+        const auto SubclassOfActor = TSubclassOf<AActor>{};
         ck::IsValid(SubclassOfActor);
         ck::Is_NOT_Valid(SubclassOfActor);
 
