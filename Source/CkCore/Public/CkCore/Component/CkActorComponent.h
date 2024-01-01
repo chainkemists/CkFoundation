@@ -1,9 +1,8 @@
 #pragma once
 
-#include <Engine/Classes/Components/ActorComponent.h>
-#include <CoreMinimal.h>
-
 #include "CkCore/Macros/CkMacros.h"
+
+#include <CoreMinimal.h>
 
 #include "CkActorComponent.generated.h"
 
