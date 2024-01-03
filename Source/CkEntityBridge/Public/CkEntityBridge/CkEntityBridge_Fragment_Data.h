@@ -10,7 +10,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, BlueprintType, NotBlueprintable, EditInlineNew)
-class CKUNREAL_API UCk_EntityBridge_Config_Base_PDA : public UCk_DataAsset_PDA
+class CKENTITYBRIDGE_API UCk_EntityBridge_Config_Base_PDA : public UCk_DataAsset_PDA
 {
     GENERATED_BODY()
 
@@ -35,7 +35,7 @@ protected:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, BlueprintType, Blueprintable, EditInlineNew)
-class CKUNREAL_API UCk_EntityBridge_Config_PDA : public UCk_EntityBridge_Config_Base_PDA
+class CKENTITYBRIDGE_API UCk_EntityBridge_Config_PDA : public UCk_EntityBridge_Config_Base_PDA
 {
     GENERATED_BODY()
 
@@ -57,7 +57,7 @@ private:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, BlueprintType, Blueprintable, EditInlineNew)
-class CKUNREAL_API UCk_EntityBridge_Config_WithActor_PDA : public UCk_EntityBridge_Config_Base_PDA
+class CKENTITYBRIDGE_API UCk_EntityBridge_Config_WithActor_PDA : public UCk_EntityBridge_Config_Base_PDA
 {
     GENERATED_BODY()
 
@@ -79,7 +79,7 @@ private:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUNREAL_API FCk_Request_EntityBridge_SpawnEntity
+struct CKENTITYBRIDGE_API FCk_Request_EntityBridge_SpawnEntity
 {
     GENERATED_BODY()
 
@@ -124,7 +124,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUNREAL_API FCk_Payload_EntityBridge_EntityCreated
+struct CKENTITYBRIDGE_API FCk_Payload_EntityBridge_EntityCreated
 {
     GENERATED_BODY()
 

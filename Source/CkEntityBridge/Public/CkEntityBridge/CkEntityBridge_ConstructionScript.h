@@ -6,7 +6,7 @@
 #include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 #include "CkEcs/Handle/CkHandle.h"
 
-#include "CkUnreal/EntityBridge/CkEntityBridge_Fragment_Data.h"
+#include "CkEntityBridge/CkEntityBridge_Fragment_Data.h"
 
 #include "CkEcs/OwningActor/CkOwningActor_Fragment_Params.h"
 
@@ -23,7 +23,7 @@ UCLASS(Abstract,
        BlueprintType,
        HideCategories("Replication", "ComponentTick", "Rendering", "Activation", "Tags", "ComponentReplication", "Mobile", "RayTracing",
                       "Collision", "AssetUserData", "Cooking", "Sockets", "Variable", "Navigation", "HLOD", "Physics"))
-class CKUNREAL_API UCk_EntityBridge_ActorComponent_UE : public UCk_EntityBridge_ActorComponent_Base_UE
+class CKENTITYBRIDGE_API UCk_EntityBridge_ActorComponent_UE : public UCk_EntityBridge_ActorComponent_Base_UE
 {
     GENERATED_BODY()
 

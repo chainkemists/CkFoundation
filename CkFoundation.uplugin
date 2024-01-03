@@ -37,6 +37,16 @@
 			]
 		},
 		{
+			"Name": "CkActorProxy",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
 			"Name": "CkAnimation",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
@@ -118,6 +128,16 @@
 		},
 		{
 			"Name": "CkEditorStyle",
+			"Type": "UncookedOnly",
+			"LoadingPhase": "PreDefault",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
+			"Name": "CkEntityBridge",
 			"Type": "UncookedOnly",
 			"LoadingPhase": "PreDefault",
 			"WhitelistPlatforms": [
@@ -318,16 +338,6 @@
 		},
 		{
 			"Name": "CkUI",
-			"Type": "Runtime",
-			"LoadingPhase": "Default",
-			"WhitelistPlatforms": [
-				"Win64",
-				"Mac",
-				"Linux"
-			]
-		},
-		{
-			"Name": "CkUnreal",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
 			"WhitelistPlatforms": [

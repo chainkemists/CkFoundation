@@ -1,9 +1,9 @@
 #include "CkUnrealEntity_ActorProxy.h"
 
+#include "CkActorProxy/CkActorProxy_Log.h"
+
 #include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
-
-#include "CkUnreal/CkUnreal_Log.h"
 
 #include <Engine/World.h>
 
@@ -81,8 +81,8 @@ auto
         .Set_SpawnTransform(GetActorTransform())
     );
 
-    ck::unreal::VeryVerboseIf(ck::IsValid(_SpawnedActor), TEXT("Successfully Spawned Actor [{}].[{}]"), _SpawnedActor, ck::Context(this));
-    ck::unreal::VeryVerboseIf(ck::Is_NOT_Valid(_SpawnedActor), TEXT("Could NOT Spawn Actor of Class [{}].[{}]"), _ActorToSpawn, ck::Context(this));
+    ck::actor_proxy::VeryVerboseIf(ck::IsValid(_SpawnedActor), TEXT("Successfully Spawned Actor [{}].[{}]"), _SpawnedActor, ck::Context(this));
+    ck::actor_proxy::VeryVerboseIf(ck::Is_NOT_Valid(_SpawnedActor), TEXT("Could NOT Spawn Actor of Class [{}].[{}]"), _ActorToSpawn, ck::Context(this));
 }
 
 auto

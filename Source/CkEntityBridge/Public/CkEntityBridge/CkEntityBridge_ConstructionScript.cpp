@@ -15,7 +15,7 @@
 #include "CkNet/CkNet_Utils.h"
 #include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
-#include "CkUnreal/CkUnreal_Log.h"
+#include "CkEntityBridge/CkEntityBridge_Log.h"
 
 #include <Engine/World.h>
 
@@ -181,7 +181,7 @@ auto
                 }.Set_ReplicatedObjects(ReplicatedObjects.Get_ReplicatedObjects()));
         }
 
-        ck::unreal::Log(TEXT("[EntityMap] [{}] -> [{}]"), Entity, OwningActor);
+        ck::entity_bridge::Log(TEXT("[EntityMap] [{}] -> [{}]"), Entity, OwningActor);
 
         // TODO: Invoking this manually although ideally this should be called by ReplicationDriver for the Server
         TryInvoke_OnReplicationComplete(EInvoke_Caller::ReplicationDriver);
@@ -268,7 +268,7 @@ auto
         // TODO: Why are we not calling Build here?
         EntityConfig->Get_EntityConstructionScript()->Construct(NewEntity);
 
-        ck::unreal::Log(TEXT("[EntityMap] [{}] -> [{}]"), NewEntity, OwningActor);
+        ck::entity_bridge::Log(TEXT("[EntityMap] [{}] -> [{}]"), NewEntity, OwningActor);
     }
 
     TryInvoke_OnReplicationComplete(EInvoke_Caller::EntityBridge);
