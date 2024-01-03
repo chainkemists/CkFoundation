@@ -8,7 +8,7 @@
 
 namespace ck
 {
-    struct CKUNREAL_API FFragment_EntityBridge_Requests
+    struct CKENTITYBRIDGE_API FFragment_EntityBridge_Requests
     {
         CK_GENERATED_BODY(FFragment_EntityBridge_Requests);
 

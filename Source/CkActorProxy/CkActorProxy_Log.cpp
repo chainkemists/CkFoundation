@@ -1,12 +1,12 @@
-#include "CkUnreal_Log.h"
+#include "CkActorProxy_Log.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DEFINE_LOG_CATEGORY(CkUnreal);
+DEFINE_LOG_CATEGORY(CkActorProxy);
 
-namespace ck::unreal
+namespace ck::actor_proxy
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkUnreal);
+	CK_REGISTER_LOG_FUNCTIONS(CkActorProxy);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -1,9 +1,9 @@
 using System.IO;
 using UnrealBuildTool;
 
-public class CkApp : CkModuleRules
+public class CkEntityBridge : CkModuleRules
 {
-    public CkApp(ReadOnlyTargetRules Target) : base(Target)
+    public CkEntityBridge(ReadOnlyTargetRules Target) : base(Target)
     {
         PrivateIncludePaths.AddRange(new string[] {
             // ... add other private include paths required here ...
@@ -15,23 +15,14 @@ public class CkApp : CkModuleRules
             "CoreUObject",
             "Engine",
 
-            "CkAbility",
-            "CkActor",
-            "CkAnimation",
-            "CkAttribute",
-            "CkCamera",
             "CkCore",
             "CkEcs",
-            "CkEcsBasics",
-            "CkEntityBridge",
-            "CkIntent",
-            "CkNet",
+            "CkLabel",
             "CkLog",
-            "CkOverlapBody",
-            "CkPhysics",
-            "CkProjectile",
             "CkRecord",
-            "CkTimer",
+            "CkSettings",
+            "CkSignal",
+            "CkNet"
         });
     }
 }

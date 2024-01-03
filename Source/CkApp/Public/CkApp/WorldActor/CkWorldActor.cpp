@@ -36,7 +36,7 @@
 
 #include "CkTimer/CkTimer_Processor.h"
 
-#include "CkUnreal/EntityBridge/CkEntityBridge_Processor.h"
+#include "CkEntityBridge/CkEntityBridge_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

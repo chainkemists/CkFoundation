@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 
-class FCkUnrealModule : public IModuleInterface
+class FCkActorProxyModule : public IModuleInterface
 {
 public:
 
