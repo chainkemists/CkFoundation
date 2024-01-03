@@ -28,7 +28,7 @@ public class CkAbility : CkModuleRules
             "CkSettings",
             "CkSignal",
             "CkNet",
-            "CkUnreal",
+            "CkEntityBridge"
         });
     }
 }

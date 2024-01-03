@@ -7,7 +7,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKUNREAL_API UCk_ActorProxy_Subsystem_UE : public UWorldSubsystem
+class CKACTORPROXY_API UCk_ActorProxy_Subsystem_UE : public UWorldSubsystem
 {
     GENERATED_BODY()
 

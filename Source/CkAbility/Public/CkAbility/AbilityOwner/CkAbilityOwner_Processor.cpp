@@ -4,7 +4,7 @@
 #include "CkAbility/Ability/CkAbility_Utils.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Utils.h"
 
-#include "CkUnreal/EntityBridge/CkEntityBridge_Utils.h"
+#include "CkEntityBridge/CkEntityBridge_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

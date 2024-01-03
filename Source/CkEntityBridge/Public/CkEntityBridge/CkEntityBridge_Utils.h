@@ -4,14 +4,14 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkUnreal/EntityBridge/CkEntityBridge_Fragment_Data.h"
+#include "CkEntityBridge/CkEntityBridge_Fragment_Data.h"
 
 #include "CkEntityBridge_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKUNREAL_API UCk_Utils_EntityBridge_UE : public UBlueprintFunctionLibrary
+class CKENTITYBRIDGE_API UCk_Utils_EntityBridge_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

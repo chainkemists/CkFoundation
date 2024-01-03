@@ -4,13 +4,13 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CKUNREAL_API DECLARE_LOG_CATEGORY_EXTERN(CkUnreal, Log, All);
+CKENTITYBRIDGE_API DECLARE_LOG_CATEGORY_EXTERN(CkEntityBridge, Log, All);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck::unreal
+namespace ck::entity_bridge
 {
-    CK_DEFINE_LOG_FUNCTIONS(CkUnreal);
+    CK_DEFINE_LOG_FUNCTIONS(CkEntityBridge);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

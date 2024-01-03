@@ -2,7 +2,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 
-#include "CkUnreal/CkUnreal_Log.h"
+#include "CkEntityBridge/CkEntityBridge_Log.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -34,7 +34,7 @@ namespace ck
             if (Request.Get_PostSpawnFunc())
             { Request.Get_PostSpawnFunc()(NewEntity); }
 
-            unreal::VeryVerbose(TEXT("[EntityBridge] Built new Entity [{}] from Entity Config PDA [{}] by Request from [{}]"),
+            entity_bridge::VeryVerbose(TEXT("[EntityBridge] Built new Entity [{}] from Entity Config PDA [{}] by Request from [{}]"),
                 NewEntity, EntityConfig, InHandle);
 
             // TODO: Fire signal for new entity created once we have signals

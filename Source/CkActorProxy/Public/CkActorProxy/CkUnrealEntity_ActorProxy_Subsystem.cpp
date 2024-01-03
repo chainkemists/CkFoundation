@@ -1,8 +1,9 @@
 #include "CkUnrealEntity_ActorProxy_Subsystem.h"
 
-#include "CkUnreal/CkUnreal_Log.h"
-#include "CkUnreal/ActorProxy/CkUnrealEntity_ActorProxy.h"
+#include "CkActorProxy/CkActorProxy_Log.h"
+#include "CkActorProxy/CkUnrealEntity_ActorProxy.h"
 
+#include <EngineUtils.h>
 #include <Kismet/GameplayStatics.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -29,17 +30,13 @@ auto
     -> void
 {
 #if WITH_EDITORONLY_DATA
-    TArray<AActor*> FoundActors;
-    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ACk_UnrealEntity_ActorProxy_UE::StaticClass(), FoundActors);
-
-    for (const auto Actor : FoundActors)
+    for (auto ActorItr = TActorIterator<ACk_UnrealEntity_ActorProxy_UE>{GetWorld()}; ActorItr; ++ActorItr)
     {
-        const auto ActorProxy = Cast<ACk_UnrealEntity_ActorProxy_UE>(Actor);
-        ActorProxy->_ChildActorComponent->DestroyChildActor();
-        ActorProxy->_ChildActorComponent->SetChildActorClass(nullptr);
+        ActorItr->_ChildActorComponent->DestroyChildActor();
+        ActorItr->_ChildActorComponent->SetChildActorClass(nullptr);
 
-        ck::unreal::VeryVerbose(TEXT("Destroying ChildActorComponent [{}] of ActorProxy [{}].[{}]"),
-            ActorProxy->_ChildActorComponent->GetChildActor(), ActorProxy, ck::Context(this));
+        ck::actor_proxy::VeryVerbose(TEXT("Destroying ChildActorComponent [{}] of ActorProxy [{}].[{}]"),
+            ActorItr->_ChildActorComponent->GetChildActor(), *ActorItr, ck::Context(this));
     }
 #endif
 }

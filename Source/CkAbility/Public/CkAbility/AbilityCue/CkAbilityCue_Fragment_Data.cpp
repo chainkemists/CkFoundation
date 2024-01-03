@@ -8,7 +8,7 @@
 
 #include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
 
-#include "CkUnreal/EntityBridge/CkEntityBridge_Fragment_Data.h"
+#include "CkEntityBridge/CkEntityBridge_Fragment_Data.h"
 
 #include "Engine/AssetManager.h"
 #include "Engine/ObjectLibrary.h"

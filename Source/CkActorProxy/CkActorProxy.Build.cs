@@ -1,9 +1,9 @@
 using System.IO;
 using UnrealBuildTool;
 
-public class CkUnreal : CkModuleRules
+public class CkActorProxy : CkModuleRules
 {
-    public CkUnreal(ReadOnlyTargetRules Target) : base(Target)
+    public CkActorProxy(ReadOnlyTargetRules Target) : base(Target)
     {
         PrivateIncludePaths.AddRange(new string[] {
             // ... add other private include paths required here ...
@@ -15,12 +15,14 @@ public class CkUnreal : CkModuleRules
             "CoreUObject",
             "Engine",
 
-            "NetworkTimeSync",
-
             "CkCore",
             "CkEcs",
-            "CkNet",
+            "CkLabel",
             "CkLog",
+            "CkRecord",
+            "CkSettings",
+            "CkSignal",
+            "CkEntityBridge",
         });
     }
 }

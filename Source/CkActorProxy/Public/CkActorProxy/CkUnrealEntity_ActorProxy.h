@@ -4,14 +4,14 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkUnreal/EntityBridge/CkEntityBridge_Fragment_Data.h"
+#include "CkEntityBridge/CkEntityBridge_Fragment_Data.h"
 
 #include "CkUnrealEntity_ActorProxy.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, Blueprintable, BlueprintType)
-class CKUNREAL_API ACk_UnrealEntity_ActorProxy_UE : public AActor
+class CKACTORPROXY_API ACk_UnrealEntity_ActorProxy_UE : public AActor
 {
     GENERATED_BODY()
 

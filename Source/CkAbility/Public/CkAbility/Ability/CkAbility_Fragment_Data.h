@@ -7,7 +7,7 @@
 
 #include "CkNet/Public/CkNet/CkNet_Common.h"
 
-#include "CkUnreal/Public/CkUnreal/EntityBridge/CkEntityBridge_Fragment_Data.h"
+#include "CkEntityBridge/CkEntityBridge_Fragment_Data.h"
 
 #include <InstancedStruct.h>
 
