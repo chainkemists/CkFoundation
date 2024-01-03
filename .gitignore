@@ -41,6 +41,9 @@
 *.VC.db
 *.VC.opendb
 
+# misc
+sync.ffs_db
+
 # Precompiled Assets
 SourceArt/**/*.png
 SourceArt/**/*.tga

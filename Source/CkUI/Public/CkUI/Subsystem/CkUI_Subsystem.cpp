@@ -108,7 +108,7 @@ auto
     if (ck::Is_NOT_Valid(_WatermarkWidget))
     { return; }
 
-    const auto& GameInstance = UCk_Utils_Game_UE::Get_GameInstance(nullptr);
+    const auto& GameInstance = GetGameInstance();
 
     if (ck::Is_NOT_Valid(GameInstance))
     { return; }
