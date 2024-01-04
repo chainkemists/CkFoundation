@@ -31,7 +31,7 @@ FCk_Handle::
 #endif
 {
     if (IsValid(ck::IsValid_Policy_Default{}) && UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable)
-    { std::ignore = UCk_Utils_HandleDebugger_Subsystem_UE::Get_Subsystem()->GetOrAdd_FragmentsDebug(*this); }
+    { std::ignore = UCk_Utils_HandleDebugger_Subsystem_UE::GetOrAdd_FragmentsDebug(*this); }
 }
 
 FCk_Handle::
@@ -45,7 +45,7 @@ FCk_Handle::
 #endif
 {
     if (IsValid(ck::IsValid_Policy_Default{}) && UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable)
-    { std::ignore = UCk_Utils_HandleDebugger_Subsystem_UE::Get_Subsystem()->GetOrAdd_FragmentsDebug(*this); }
+    { std::ignore = UCk_Utils_HandleDebugger_Subsystem_UE::GetOrAdd_FragmentsDebug(*this); }
 }
 
 auto
@@ -61,14 +61,11 @@ auto
 FCk_Handle::
     ~FCk_Handle()
 {
-#if WITH_EDITORONLY_DATA
     if (NOT IsValid(ck::IsValid_Policy_IncludePendingKill{}))
     { return; }
 
-    if (IsValid(ck::IsValid_Policy_Default{}) && UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable &&
-        ck::IsValid(GEngine))
-    { UCk_Utils_HandleDebugger_Subsystem_UE::Get_Subsystem()->Remove_FragmentsDebug(*this); }
-#endif
+    if (IsValid(ck::IsValid_Policy_Default{}) && UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable)
+    { UCk_Utils_HandleDebugger_Subsystem_UE::Remove_FragmentsDebug(*this); }
 }
 
 auto
@@ -200,7 +197,7 @@ auto
 
 #if WITH_EDITORONLY_DATA
         if (ck::Is_NOT_Valid(_Fragments))
-        { _Fragments = UCk_Utils_HandleDebugger_Subsystem_UE::Get_Subsystem()->GetOrAdd_FragmentsDebug(*this); }
+        { _Fragments = UCk_Utils_HandleDebugger_Subsystem_UE::GetOrAdd_FragmentsDebug(*this); }
 
         _Fragments->_Names = Names;
 #endif
