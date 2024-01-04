@@ -82,13 +82,13 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))
-    FVector _Location;
+    FVector _Location = FVector::ZeroVector;
     UPROPERTY()
     FVector_NetQuantize10 _QuantizedLocation;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))
-    FVector _Normal;
+    FVector _Normal = FVector::ZAxisVector;
     UPROPERTY()
     FVector_NetQuantizeNormal _QuantizedNormal;
 
