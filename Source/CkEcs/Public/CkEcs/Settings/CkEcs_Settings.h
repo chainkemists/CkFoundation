@@ -28,7 +28,7 @@ public:
 private:
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "ECS World",
               meta = (AllowPrivateAccess = true, AllowAbstract = false))
-    TSoftClassPtr<class ACk_World_Actor_Base_UE> _EcsWorldActorClass;
+    TSoftClassPtr<class UCk_EcsWorld_ProcessorInjector_Base> _ProcessorInjector;
 
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "ECS World",
               meta = (AllowPrivateAccess = true))
@@ -39,7 +39,7 @@ private:
     ECk_Ecs_HandleDebuggerBehavior _HandleDebuggerBehavior = ECk_Ecs_HandleDebuggerBehavior::Disable;
 
 public:
-    CK_PROPERTY_GET(_EcsWorldActorClass);
+    CK_PROPERTY_GET(_ProcessorInjector);
     CK_PROPERTY_GET(_EcsWorldTickingGroup);
     CK_PROPERTY_GET(_HandleDebuggerBehavior);
 };
@@ -49,7 +49,7 @@ public:
 class CKECS_API UCk_Utils_Ecs_ProjectSettings_UE
 {
 public:
-    static auto Get_EcsWorldActorClass() -> TSubclassOf<class ACk_World_Actor_Base_UE>;
+    static auto Get_ProcessorInjector() -> TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base>;
     static auto Get_EcsWorldTickingGroup() -> ETickingGroup;
     static auto Get_HandleDebuggerBehavior() -> ECk_Ecs_HandleDebuggerBehavior;
 };

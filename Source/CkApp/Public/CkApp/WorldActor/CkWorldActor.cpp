@@ -44,7 +44,7 @@ namespace ck_world_actor
 {
     auto
         InjectAllEcsProcessorsIntoWorld(
-            ACk_World_Actor_UE::EcsWorldType& InWorld)
+            UCk_EcsWorld_ProcessorInjector_Base::EcsWorldType& InWorld)
         -> void
     {
         // Always first systems
@@ -158,15 +158,10 @@ namespace ck_world_actor
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    ACk_World_Actor_UE::
-    Initialize(
-        const FCk_Registry& InRegistry,
-        ETickingGroup InTickingGroup)
-    -> void
+    UCk_World_ProcessorInjector::
+    DoInjectProcessors(
+        EcsWorldType& InWorld)
+        -> void
 {
-    Super::Initialize(InRegistry, InTickingGroup);
-
-    ck_world_actor::InjectAllEcsProcessorsIntoWorld(*_EcsWorld);
+    ck_world_actor::InjectAllEcsProcessorsIntoWorld(InWorld);
 }
-
-// --------------------------------------------------------------------------------------------------------------------
