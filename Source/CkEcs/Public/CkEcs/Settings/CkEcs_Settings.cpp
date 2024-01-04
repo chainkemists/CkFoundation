@@ -6,10 +6,10 @@
 
 auto
     UCk_Utils_Ecs_ProjectSettings_UE::
-    Get_EcsWorldActorClass()
-    -> TSubclassOf<ACk_World_Actor_Base_UE>
+    Get_ProcessorInjector()
+    -> TSubclassOf<UCk_EcsWorld_ProcessorInjector_Base>
 {
-    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_ProjectSettings_UE>()->Get_EcsWorldActorClass().LoadSynchronous();
+    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_ProjectSettings_UE>()->Get_ProcessorInjector().LoadSynchronous();
 }
 
 auto

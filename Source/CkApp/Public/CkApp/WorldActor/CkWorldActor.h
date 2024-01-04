@@ -1,7 +1,5 @@
 #pragma once
 
-#include "CkEcs/World/CkEcsWorld.h"
-
 #include <GameFramework/Info.h>
 
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
@@ -11,24 +9,13 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKAPP_API ACk_World_Actor_UE : public ACk_World_Actor_Base_UE
+class CKAPP_API UCk_World_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base
 {
     GENERATED_BODY()
 
-public:
-    CK_GENERATED_BODY(ACk_World_Actor_UE);
-
-public:
-    friend class UCk_EcsWorld_Subsystem_UE;
-
-public:
-    using EcsWorldType = ck::FEcsWorld;
-
-public:
-    auto
-    Initialize(
-        const FCk_Registry& InRegistry, 
-        ETickingGroup InTickingGroup) -> void override;
+protected:
+    auto DoInjectProcessors(
+        EcsWorldType& InWorld) -> void override;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

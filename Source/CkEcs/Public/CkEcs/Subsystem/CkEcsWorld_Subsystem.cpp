@@ -13,15 +13,27 @@ CK_DEFINE_ECS_TAG(FTag_NAME_TransientEntity);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-ACk_World_Actor_Base_UE::
-    ACk_World_Actor_Base_UE()
+auto
+    UCk_EcsWorld_ProcessorInjector_Base::
+    DoInjectProcessors(
+        EcsWorldType& InWorld)
+        -> void
+{
+    CK_TRIGGER_ENSURE(TEXT("ProcessorInjector was NOT overridden in project settings. Using the default injector which has no Processors.{}"),
+        ck::Context(this));
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+ACk_World_Actor_UE::
+    ACk_World_Actor_UE()
 {
     PrimaryActorTick.bCanEverTick = true;
     PrimaryActorTick.bTickEvenWhenPaused = false;
 }
 
 auto
-    ACk_World_Actor_Base_UE::
+    ACk_World_Actor_UE::
     Tick(float DeltaSeconds)
     -> void
 {
@@ -34,7 +46,7 @@ auto
 }
 
 auto
-    ACk_World_Actor_Base_UE::
+    ACk_World_Actor_UE::
     Initialize(
         const FCk_Registry& InRegistry,
         ETickingGroup InTickingGroup)
@@ -43,6 +55,8 @@ auto
     SetTickGroup(InTickingGroup);
 
     _EcsWorld = EcsWorldType{InRegistry};
+    UCk_Utils_Ecs_ProjectSettings_UE::Get_ProcessorInjector()->
+        GetDefaultObject<UCk_EcsWorld_ProcessorInjector_Base>()->DoInjectProcessors(*_EcsWorld);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -74,13 +88,13 @@ auto
     DoSpawnWorldActor()
     -> void
 {
-    const auto& EcsWorldActorClass = UCk_Utils_Ecs_ProjectSettings_UE::Get_EcsWorldActorClass();
+    const auto& EcsWorldActorClass = ACk_World_Actor_UE::StaticClass();
     const auto& EcsWorldTickingGroup = UCk_Utils_Ecs_ProjectSettings_UE::Get_EcsWorldTickingGroup();
 
     CK_ENSURE_IF_NOT(ck::IsValid(EcsWorldActorClass), TEXT("Invalid ECS World Actor class set in the Project Settings! ECS Framework won't work!"))
     { return; }
 
-    _WorldActor = Cast<ACk_World_Actor_Base_UE>
+    _WorldActor = Cast<ACk_World_Actor_UE>
     (
         UCk_Utils_Actor_UE::Request_SpawnActor
         (
@@ -88,7 +102,7 @@ auto
             .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel),
             [&](AActor* InActor)
             {
-                const auto WorldActor = Cast<ACk_World_Actor_Base_UE>(InActor);
+                const auto WorldActor = Cast<ACk_World_Actor_UE>(InActor);
                 WorldActor->Initialize(_Registry, EcsWorldTickingGroup);
             }
         )
