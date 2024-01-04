@@ -4,6 +4,7 @@
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkEcs/CkEcsLog.h"
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Settings/CkEcs_Settings.h"
 
@@ -63,23 +64,64 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_handle_subsystem
+{
+    TSet<FCk_Entity> EntitiesAddedToEarlyToTrack;
+}
+
 auto
     UCk_Utils_HandleDebugger_Subsystem_UE::
-    Get_Subsystem()
-    -> SubsystemType*
+    GetOrAdd_FragmentsDebug(
+        const FCk_Handle& InHandle)
+    -> UCk_Handle_FragmentsDebug*
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(GEngine, ck::IsValid_Policy_NullptrOnly{}),
-        TEXT("GEngine is INVALID. This function is being called too early"))
-    { return nullptr; }
+    using namespace ck_handle_subsystem;
+
+    if (ck::Is_NOT_Valid(GEngine))
+    {
+        ck::ecs::Log(TEXT("Could not add debugging data for Entity [{}] because GEngine is INVALID"), InHandle);
+        EntitiesAddedToEarlyToTrack.Emplace(InHandle.Get_Entity());
+        return nullptr;
+    }
 
     const auto Subsystem = GEngine->GetEngineSubsystem<SubsystemType>();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(Subsystem),
-        TEXT("GEngine is Valid but could NOT get a valid [{}]. This function is being called too early."),
-        ck::TypeToString<SubsystemType>)
-    { return nullptr; }
+    if (ck::Is_NOT_Valid(Subsystem))
+    {
+        ck::ecs::Log(TEXT("Could not add debugging data for Entity [{}] because [{}] could NOT be retrieved from GEngine"),
+            ck::Get_RuntimeTypeToString<SubsystemType>());
+        EntitiesAddedToEarlyToTrack.Emplace(InHandle.Get_Entity());
+        return nullptr;
+    }
 
-    return Subsystem;
+    if (EntitiesAddedToEarlyToTrack.Contains(InHandle.Get_Entity()))
+    {
+        EntitiesAddedToEarlyToTrack.Remove(InHandle.Get_Entity());
+    }
+
+    return Subsystem->GetOrAdd_FragmentsDebug(InHandle);
+}
+
+auto
+    UCk_Utils_HandleDebugger_Subsystem_UE::
+    Remove_FragmentsDebug(
+        const FCk_Handle& InHandle)
+    -> void
+{
+    using namespace ck_handle_subsystem;
+
+    if (EntitiesAddedToEarlyToTrack.Contains(InHandle.Get_Entity()))
+    { return; }
+
+    if (ck::Is_NOT_Valid(GEngine))
+    { return; }
+
+    const auto Subsystem = GEngine->GetEngineSubsystem<SubsystemType>();
+
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return; }
+
+    Subsystem->Remove_FragmentsDebug(InHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

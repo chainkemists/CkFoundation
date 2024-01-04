@@ -65,7 +65,12 @@ public:
 
 public:
     static auto
-    Get_Subsystem() -> SubsystemType*;
+    GetOrAdd_FragmentsDebug(
+        const FCk_Handle& InHandle) -> UCk_Handle_FragmentsDebug*;
+
+    static auto
+    Remove_FragmentsDebug(
+        const FCk_Handle& InHandle) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
