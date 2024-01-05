@@ -1,5 +1,7 @@
 #include "CkHandle_Utils.h"
 
+#include "CkEcs/CkEcsLog.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -47,6 +49,16 @@ auto
     -> FString
 {
     return ck::Format_UE(TEXT("{}"), InHandle);
+}
+
+auto
+    UCk_Utils_Handle_UE::
+    Debug_Handle(
+        const FCk_Handle& InHandle)
+    -> void
+{
+    ck::ecs::Warning(TEXT("Attempting to BREAK into Debugger to debug Handle [{}]"), InHandle);
+    ensureAlways(false);
 }
 
 auto
