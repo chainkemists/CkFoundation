@@ -199,7 +199,8 @@ auto
         if (ck::Is_NOT_Valid(_Fragments))
         { _Fragments = UCk_Utils_HandleDebugger_Subsystem_UE::GetOrAdd_FragmentsDebug(*this); }
 
-        _Fragments->_Names = Names;
+        if (ck::IsValid(_Fragments))
+        { _Fragments->_Names = Names; }
 #endif
     }
 }

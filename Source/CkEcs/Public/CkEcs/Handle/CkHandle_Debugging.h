@@ -167,7 +167,8 @@ auto
     ConceptImpl_GetFragment<T_Fragment>::Get_FragmentName()
     -> FName
 {
-    return FName{ck::TypeToString<T_Fragment>.begin(), ck::TypeToString<T_Fragment>.length()};
+    constexpr auto TypeString = ck::TypeToString<T_Fragment>;
+    return FName{TypeString.begin(), TypeString.length()};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
