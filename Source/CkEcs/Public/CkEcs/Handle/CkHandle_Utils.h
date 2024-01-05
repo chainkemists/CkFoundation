@@ -54,6 +54,14 @@ public:
     Conv_HandleToString(
         const FCk_Handle& InHandle);
 
+public:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Handle",
+        meta = (CompactNodeTitle = "BREAK", DevevelopmentOnly))
+    static void
+    Debug_Handle(
+        const FCk_Handle& InHandle);
+
 private:
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Handle", meta = (NativeBreakFunc))
     static void
