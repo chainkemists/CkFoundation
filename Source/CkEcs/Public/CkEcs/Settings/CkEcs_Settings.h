@@ -12,7 +12,8 @@ UENUM(BlueprintType)
 enum class ECk_Ecs_HandleDebuggerBehavior : uint8
 {
     Disable,
-    Enable
+    Enable,
+    EnableWithBlueprintDebugging
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -34,6 +35,7 @@ private:
               meta = (AllowPrivateAccess = true))
     TEnumAsByte<ETickingGroup> _EcsWorldTickingGroup = TG_PrePhysics;
 
+    // Enabling this will slow down the game's execution
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Debugging",
               meta = (AllowPrivateAccess = true))
     ECk_Ecs_HandleDebuggerBehavior _HandleDebuggerBehavior = ECk_Ecs_HandleDebuggerBehavior::Disable;
