@@ -123,41 +123,68 @@ namespace ck { namespace ck_format_detail {                                     
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#define CK_DEFINE_CUSTOM_FORMATTER_T(_Type_, _Lambda_)                              \
+#if NOT CK_FORMAT_FORCE_DETAILED
+#define CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_TARGS(_TemplateArgs_, _Type_, _Lambda_, _DetailsLambda_)  \
 namespace fmt {                                                                     \
                                                                                     \
-template<typename T>                                                                \
+template<_TemplateArgs_>                                                            \
 struct formatter<_Type_, TCHAR>                                                     \
 {                                                                                   \
+    bool printDetails = false;                                                      \
+                                                                                    \
     template <typename ParseContext>                                                \
     constexpr auto parse(ParseContext& ctx)                                         \
-    { return ctx.begin(); }                                                         \
+    {                                                                               \
+        auto it = ctx.begin(), end = ctx.end();                                     \
+        if (it == end) return it;                                                   \
+        if (*it == 'd')                                                             \
+        { printDetails = true; ++it;}                                               \
+        return it;                                                                  \
+    }                                                                               \
                                                                                     \
     template<typename FormatContext>                                                \
     auto format(const _Type_& InObj, FormatContext& ctx)                            \
     {                                                                               \
-        return fmt::format_to(ctx.out(), TEXT("{}"), _Lambda_());                   \
+        if (NOT printDetails)                                                       \
+        { return fmt::format_to(ctx.out(), TEXT("{}"), _Lambda_()); }               \
+                                                                                    \
+        return fmt::format_to(ctx.out(), TEXT("{}"), _DetailsLambda_());            \
     }                                                                               \
 };                                                                                  \
 }
+#else
+#define CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_TARGS(_TemplateArgs_, _Type_, _Lambda_, _DetailsLambda_)  \
+namespace fmt {                                                                     \
+                                                                                    \
+template<_TemplateArgs_>                                                            \
+struct formatter<_Type_, TCHAR>                                                     \
+{                                                                                   \
+    template <typename ParseContext>                                                \
+    constexpr auto parse(ParseContext& ctx)                                         \
+    {                                                                               \
+        return ctx.begin();                                                         \
+    }                                                                               \
+                                                                                    \
+    template<typename FormatContext>                                                \
+    auto format(const _Type_& InObj, FormatContext& ctx)                            \
+    {                                                                               \
+        return fmt::format_to(ctx.out(), TEXT("{}"), _DetailsLambda_());            \
+    }                                                                               \
+};                                                                                  \
+}
+#endif
+
+#define CK_DEFINE_CUSTOM_FORMATTER_T(_Type_, _Lambda_)                              \
+CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_TARGS(typename T, _Type_, _Lambda_, _Lambda_)
+
+#define CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_T(_Type_, _Lambda_, _DetailsLambda_)\
+CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_TARGS(typename T, _Type_, _Lambda_, _DetailsLambda_)
+
+#define CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(_Type_, _Lambda_, _DetailsLambda_)  \
+CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS_TARGS(,_Type_, _Lambda_, _DetailsLambda_)
 
 #define CK_DEFINE_CUSTOM_FORMATTER(_Type_, _Lambda_)                                \
-namespace fmt {                                                                     \
-                                                                                    \
-template<>                                                                          \
-struct formatter<_Type_, TCHAR>                                                     \
-{                                                                                   \
-    template <typename ParseContext>                                                \
-    constexpr auto parse(ParseContext& ctx)                                         \
-    { return ctx.begin(); }                                                         \
-                                                                                    \
-    template<typename FormatContext>                                                \
-    auto format(const _Type_& InObj, FormatContext& ctx)                            \
-    {                                                                               \
-        return fmt::format_to(ctx.out(), TEXT("{}"), _Lambda_());                   \
-    }                                                                               \
-};                                                                                  \
-}
+CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(_Type_, _Lambda_, _Lambda_)
 
 #define CK_DEFINE_CUSTOM_FORMATTER_ENUM(_Type_)                                     \
 CK_DEFINE_CUSTOM_FORMATTER(_Type_, [&]()                                            \
