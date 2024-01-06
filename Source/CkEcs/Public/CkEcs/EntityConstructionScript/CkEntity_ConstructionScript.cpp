@@ -19,7 +19,7 @@ auto
 #if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
     const auto& DebugName = UCk_Utils_Debug_UE::Get_DebugName_AsText(this, ECk_DebugName_Verbosity::ShortName);
     InHandle.Add<DEBUG_NAME>(UCk_Utils_Debug_UE::Get_DebugName_AsText(this, ECk_DebugName_Verbosity::ShortName));
-    ck::ecs::Log(TEXT("[EntityMap] [{}] -> [{}]"), InHandle, DebugName);
+    ck::ecs::Log(TEXT("[EntityMap] [{}]"), InHandle, DebugName);
 #endif
 
     DoConstruct(InHandle);
