@@ -568,6 +568,9 @@ auto
 {
     const auto FoundEntity = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils::Get_ValidEntry_If(InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
+    CK_ENSURE_IF_NOT(ck::IsValid(FoundEntity), TEXT("Could NOT find Attribute [{}] in Entity [{}]"), InAttributeName, InAttributeOwnerEntity)
+    { return false; }
+
     const auto& HasMeterModifier_MinCapacity  = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck::FMeterAttribute_Tags::Get_MinCapacity(), InModifierName);
     const auto& HasMeterModifier_MaxCapacity  = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck::FMeterAttribute_Tags::Get_MaxCapacity(), InModifierName);
     const auto& HasMeterModifier_CurrentValue = UCk_Utils_FloatAttributeModifier_UE::Has(FoundEntity, ck::FMeterAttribute_Tags::Get_Current(),     InModifierName);
