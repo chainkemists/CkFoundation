@@ -10,6 +10,12 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+struct DEBUG_NAME { FText _Name; };
+#endif
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak="/Script/CkEcs.Ck_Utils_Handle_UE:Break_Handle"))
 struct CKECS_API FCk_Handle
 {
