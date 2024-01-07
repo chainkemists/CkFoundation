@@ -1,4 +1,4 @@
-#include "CkWorldActor.h"
+#include "CkProcessorInjector.h"
 
 #include "CkAbility/Ability/CkAbility_Processor.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Processor.h"
@@ -40,7 +40,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck_world_actor
+namespace ck_world_processor_injector
 {
     auto
         InjectAllEcsProcessorsIntoWorld(
@@ -163,5 +163,7 @@ auto
         EcsWorldType& InWorld)
         -> void
 {
-    ck_world_actor::InjectAllEcsProcessorsIntoWorld(InWorld);
+    ck_world_processor_injector::InjectAllEcsProcessorsIntoWorld(InWorld);
 }
+
+// --------------------------------------------------------------------------------------------------------------------

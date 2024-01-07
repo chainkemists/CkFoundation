@@ -17,7 +17,7 @@ class CKECS_API UCk_EcsWorld_ProcessorInjector_Base : public UObject
 {
     GENERATED_BODY()
 
-    friend class ACk_World_Actor_UE;
+    friend class ACk_EcsWorld_Actor_UE;
 
 public:
     using EcsWorldType = ck::FEcsWorld;
@@ -33,12 +33,12 @@ protected:
 
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKECS_API ACk_World_Actor_UE final : public AInfo
+class CKECS_API ACk_EcsWorld_Actor_UE final : public AInfo
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(ACk_World_Actor_UE);
+    CK_GENERATED_BODY(ACk_EcsWorld_Actor_UE);
 
 public:
     friend class UCk_EcsWorld_Subsystem_UE;
@@ -47,7 +47,7 @@ public:
     using EcsWorldType = ck::FEcsWorld;
 
 public:
-    ACk_World_Actor_UE();
+    ACk_EcsWorld_Actor_UE();
 
 protected:
     auto Tick(
@@ -92,7 +92,7 @@ private:
     FCk_Handle _TransientEntity;
 
     UPROPERTY(Transient)
-    TObjectPtr<ACk_World_Actor_UE> _WorldActor;
+    TObjectPtr<ACk_EcsWorld_Actor_UE> _WorldActor;
 
 private:
     FCk_Registry _Registry;
