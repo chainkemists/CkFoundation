@@ -6,20 +6,20 @@
 
 #include "CkEntityBridge/CkEntityBridge_Fragment_Data.h"
 
-#include "CkUnrealEntity_ActorProxy.generated.h"
+#include "CkActorProxy_Subsystem.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, Blueprintable, BlueprintType)
-class CKACTORPROXY_API ACk_UnrealEntity_ActorProxy_UE : public AActor
+class CKACTORPROXY_API ACk_ActorProxy_UE : public AActor
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(ACk_UnrealEntity_ActorProxy_UE);
+    CK_GENERATED_BODY(ACk_ActorProxy_UE);
 
 public:
-    ACk_UnrealEntity_ActorProxy_UE();
+    ACk_ActorProxy_UE();
 
 protected:
     UFUNCTION(BlueprintImplementableEvent)
@@ -52,6 +52,27 @@ public:
     UPROPERTY(Transient)
     TObjectPtr<UChildActorComponent> _ChildActorComponent;
 #endif
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS()
+class CKACTORPROXY_API UCk_ActorProxy_Subsystem_UE : public UWorldSubsystem
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_ActorProxy_Subsystem_UE);
+
+    void PostInitialize() override;
+    void Initialize(
+        FSubsystemCollectionBase& Collection) override;
+
+    /** Called when world is ready to start gameplay before the game mode transitions to the correct state and call BeginPlay on all actors */
+    auto OnWorldBeginPlay(UWorld& InWorld) -> void override;
+
+private:
+    auto DoDestroyAllActorProxyChildActors() const -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

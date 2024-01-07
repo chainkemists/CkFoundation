@@ -25,15 +25,15 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-ACk_World_Actor_UE::
-    ACk_World_Actor_UE()
+ACk_EcsWorld_Actor_UE::
+    ACk_EcsWorld_Actor_UE()
 {
     PrimaryActorTick.bCanEverTick = true;
     PrimaryActorTick.bTickEvenWhenPaused = false;
 }
 
 auto
-    ACk_World_Actor_UE::
+    ACk_EcsWorld_Actor_UE::
     Tick(float DeltaSeconds)
     -> void
 {
@@ -46,7 +46,7 @@ auto
 }
 
 auto
-    ACk_World_Actor_UE::
+    ACk_EcsWorld_Actor_UE::
     Initialize(
         const FCk_Registry& InRegistry,
         ETickingGroup InTickingGroup)
@@ -88,13 +88,13 @@ auto
     DoSpawnWorldActor()
     -> void
 {
-    const auto& EcsWorldActorClass = ACk_World_Actor_UE::StaticClass();
+    const auto& EcsWorldActorClass = ACk_EcsWorld_Actor_UE::StaticClass();
     const auto& EcsWorldTickingGroup = UCk_Utils_Ecs_ProjectSettings_UE::Get_EcsWorldTickingGroup();
 
     CK_ENSURE_IF_NOT(ck::IsValid(EcsWorldActorClass), TEXT("Invalid ECS World Actor class set in the Project Settings! ECS Framework won't work!"))
     { return; }
 
-    _WorldActor = Cast<ACk_World_Actor_UE>
+    _WorldActor = Cast<ACk_EcsWorld_Actor_UE>
     (
         UCk_Utils_Actor_UE::Request_SpawnActor
         (
@@ -102,7 +102,7 @@ auto
             .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel),
             [&](AActor* InActor)
             {
-                const auto WorldActor = Cast<ACk_World_Actor_UE>(InActor);
+                const auto WorldActor = Cast<ACk_EcsWorld_Actor_UE>(InActor);
                 WorldActor->Initialize(_Registry, EcsWorldTickingGroup);
             }
         )
