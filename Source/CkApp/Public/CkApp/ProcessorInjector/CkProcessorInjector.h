@@ -4,7 +4,7 @@
 
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-#include "CkWorldActor.generated.h"
+#include "CkProcessorInjector.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
