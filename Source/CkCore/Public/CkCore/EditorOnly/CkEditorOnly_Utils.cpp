@@ -7,7 +7,7 @@
 #include <Logging/MessageLog.h>
 #include <Misc/UObjectToken.h>
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION == 2
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
 #include <MessageLog/Public/MessageLogModule.h>
 #include <MessageLog/Public/IMessageLogListing.h>
 #else
