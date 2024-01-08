@@ -4,6 +4,9 @@
 #include <Kismet/BlueprintFunctionLibrary.h>
 #include <functional>
 
+#include <Widgets/Notifications/SNotificationList.h>
+#include <Framework/Notifications/NotificationManager.h>
+
 #include "CkLog_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -101,10 +104,14 @@ auto                                                                            
     ErrorIf(bool      InExpression,                                                                                       \
           const T&  InString,                                                                                             \
           TArgs&&...InArgs)                                                                                               \
-    -> void                                                                                                               \
+    -> ECk_LogResults                                                                                                     \
 {                                                                                                                         \
     if (InExpression)                                                                                                     \
-    { Error(InString, InArgs...); }                                                                                       \
+    {                                                                                                                     \
+        Error(InString, InArgs...);                                                                                       \
+        return ECk_LogResults::Logged;                                                                                    \
+    }                                                                                                                     \
+    return ECk_LogResults::NotLogged;                                                                                     \
 }                                                                                                                         \
                                                                                                                           \
 template <typename T, typename ... TArgs>                                                                                 \
@@ -112,10 +119,14 @@ auto                                                                            
     WarningIf(bool      InExpression,                                                                                     \
             const T&  InString,                                                                                           \
             TArgs&&...InArgs)                                                                                             \
-    -> void                                                                                                               \
+    -> ECk_LogResults                                                                                                     \
 {                                                                                                                         \
     if (InExpression)                                                                                                     \
-    { Warning(InString, InArgs...); }                                                                                     \
+    {                                                                                                                     \
+        Warning(InString, InArgs...);                                                                                     \
+        return ECk_LogResults::Logged;                                                                                    \
+    }                                                                                                                     \
+    return ECk_LogResults::NotLogged;                                                                                     \
 }                                                                                                                         \
                                                                                                                           \
 template <typename T, typename ... TArgs>                                                                                 \
@@ -123,10 +134,14 @@ auto                                                                            
     DisplayIf(bool      InExpression,                                                                                     \
             const T&  InString,                                                                                           \
             TArgs&&...InArgs)                                                                                             \
-    -> void                                                                                                               \
+    -> ECk_LogResults                                                                                                     \
 {                                                                                                                         \
     if (InExpression)                                                                                                     \
-    { Display(InString, InArgs...); }                                                                                     \
+    {                                                                                                                     \
+        Display(InString, InArgs...);                                                                                     \
+        return ECk_LogResults::Logged;                                                                                    \
+    }                                                                                                                     \
+    return ECk_LogResults::NotLogged;                                                                                     \
 }                                                                                                                         \
                                                                                                                           \
 template <typename T, typename ... TArgs>                                                                                 \
@@ -134,10 +149,14 @@ auto                                                                            
     LogIf(bool      InExpression,                                                                                         \
         const T&  InString,                                                                                               \
         TArgs&&...InArgs)                                                                                                 \
-    -> void                                                                                                               \
+    -> ECk_LogResults                                                                                                     \
 {                                                                                                                         \
     if (InExpression)                                                                                                     \
-    { Log(InString, InArgs...); }                                                                                         \
+    {                                                                                                                     \
+        Log(InString, InArgs...);                                                                                         \
+        return ECk_LogResults::Logged;                                                                                    \
+    }                                                                                                                     \
+    return ECk_LogResults::NotLogged;                                                                                     \
 }                                                                                                                         \
                                                                                                                           \
 template <typename T, typename ... TArgs>                                                                                 \
@@ -145,10 +164,14 @@ auto                                                                            
     VerboseIf(bool      InExpression,                                                                                     \
             const T&  InString,                                                                                           \
             TArgs&&...InArgs)                                                                                             \
-    -> void                                                                                                               \
+    -> ECk_LogResults                                                                                                     \
 {                                                                                                                         \
     if (InExpression)                                                                                                     \
-    { Verbose(InString, InArgs...); }                                                                                     \
+    {                                                                                                                     \
+        Verbose(InString, InArgs...);                                                                                     \
+        return ECk_LogResults::Logged;                                                                                    \
+    }                                                                                                                     \
+    return ECk_LogResults::NotLogged;                                                                                     \
 }                                                                                                                         \
                                                                                                                           \
 template <typename T, typename ... TArgs>                                                                                 \
@@ -156,10 +179,14 @@ auto                                                                            
     VeryVerboseIf(bool      InExpression,                                                                                 \
                 const T&  InString,                                                                                       \
                 TArgs&&...InArgs)                                                                                         \
-    -> void                                                                                                               \
+    -> ECk_LogResults                                                                                                     \
 {                                                                                                                         \
     if (InExpression)                                                                                                     \
-    { VeryVerbose(InString, InArgs...); }                                                                                 \
+    {                                                                                                                     \
+        VeryVerbose(InString, InArgs...);                                                                                 \
+        return ECk_LogResults::Logged;                                                                                    \
+    }                                                                                                                     \
+    return ECk_LogResults::NotLogged;                                                                                     \
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -178,6 +205,38 @@ inline struct _ ##_LogCategory_## LogMapInjector                                
         ck::log::Get_VeryVerboseMap().Emplace(TEXT(#_LogCategory_), [](const FString& InString) { VeryVerbose(TEXT("{}"), InString); });\
     }                                                                                                                                   \
 } _LogCategory_ ##_LogMapInjector
+
+// --------------------------------------------------------------------------------------------------------------------
+
+#define CK_LOG_ERROR_IF_NOT(_Namespace_, _Expression_, _Format_, ...)\
+    if (_Namespace_::ErrorIf(NOT _Expression_, _Format_, __VA_ARGS__) == ECk_LogResults::Logged)
+
+#if WITH_EDITOR
+#define CK_LOG_ERROR_NOTIFY_IF_NOT(_Namespace_, _Expression_, _Format_, ...)                    \
+    if ([&]() -> bool                                                                           \
+    {                                                                                           \
+        if (_Expression_)                                                                       \
+        { return false; }                                                                       \
+                                                                                                \
+        const auto& FormattedString = ck::Format_UE(_Format_, __VA_ARGS__);                     \
+        auto Info = FNotificationInfo{FText::FromString(FormattedString)};                      \
+        Info.bFireAndForget = true;                                                             \
+        Info.bUseThrobber = false;                                                              \
+        Info.FadeOutDuration = 0.5f;                                                            \
+        Info.ExpireDuration = 5.0f;                                                             \
+                                                                                                \
+        if (const auto& Notification = FSlateNotificationManager::Get().AddNotification(Info))  \
+        {                                                                                       \
+            Notification->SetCompletionState(SNotificationItem::CS_Fail);                       \
+        }                                                                                       \
+        _Namespace_::Error(TEXT("{}"), FormattedString);                                        \
+                                                                                                \
+        return true;                                                                            \
+    }())
+#else
+#define CK_LOG_ERROR_NOTIFY_IF_NOT(_Namespace_, _Expression_, _Format_, ...)\
+    CK_LOG_ERROR_IF_NOT(_Namespace_, _Expression_, _Format_, ...)
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
 
