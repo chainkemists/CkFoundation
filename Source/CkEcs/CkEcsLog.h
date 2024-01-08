@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkCore/Format/CkFormat.h"
+
 #include "CkLog/CkLog_Utils.h"
 
 #include <CoreMinimal.h>
