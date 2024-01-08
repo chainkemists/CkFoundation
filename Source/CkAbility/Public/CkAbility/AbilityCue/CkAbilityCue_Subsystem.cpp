@@ -52,6 +52,9 @@ auto
     if (ck::Is_NOT_Valid(Config))
     { return; }
 
+    CK_ENSURE_IF_NOT(ck::IsValid(Config->Get_EntityConfig()), TEXT("EntityConfig for Config [{}] is NOT valid."), Config)
+    { return; }
+
     const auto TransientEntity = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>()->Get_TransientEntity();
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity);
