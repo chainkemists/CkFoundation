@@ -7,6 +7,12 @@
 #include <Widgets/Notifications/SNotificationList.h>
 #include <Framework/Notifications/NotificationManager.h>
 
+#if WITH_EDITOR
+#include <Logging/MessageLog.h>
+#include <MessageLog/Public/MessageLogModule.h>
+#include <MessageLog/Public/IMessageLogListing.h>
+#endif
+
 #include "CkLog_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -187,7 +193,8 @@ auto                                                                            
         return ECk_LogResults::Logged;                                                                                    \
     }                                                                                                                     \
     return ECk_LogResults::NotLogged;                                                                                     \
-}
+} \
+static constexpr auto LogCategory = #_LogCategory_
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -212,26 +219,40 @@ inline struct _ ##_LogCategory_## LogMapInjector                                
     if (_Namespace_::ErrorIf(NOT _Expression_, _Format_, __VA_ARGS__) == ECk_LogResults::Logged)
 
 #if WITH_EDITOR
-#define CK_LOG_ERROR_NOTIFY_IF_NOT(_Namespace_, _Expression_, _Format_, ...)                    \
-    if ([&]() -> bool                                                                           \
-    {                                                                                           \
-        if (_Expression_)                                                                       \
-        { return false; }                                                                       \
-                                                                                                \
-        const auto& FormattedString = ck::Format_UE(_Format_, __VA_ARGS__);                     \
-        auto Info = FNotificationInfo{FText::FromString(FormattedString)};                      \
-        Info.bFireAndForget = true;                                                             \
-        Info.bUseThrobber = false;                                                              \
-        Info.FadeOutDuration = 0.5f;                                                            \
-        Info.ExpireDuration = 5.0f;                                                             \
-                                                                                                \
-        if (const auto& Notification = FSlateNotificationManager::Get().AddNotification(Info))  \
-        {                                                                                       \
-            Notification->SetCompletionState(SNotificationItem::CS_Fail);                       \
-        }                                                                                       \
-        _Namespace_::Error(TEXT("{}"), FormattedString);                                        \
-                                                                                                \
-        return true;                                                                            \
+#define CK_LOG_ERROR_NOTIFY_IF_NOT(_Namespace_, _Expression_, _Format_, ...)                                                       \
+    if ([&]() -> bool                                                                                                              \
+    {                                                                                                                              \
+        if (_Expression_)                                                                                                          \
+        { return false; }                                                                                                          \
+                                                                                                                                   \
+        const auto& FormattedString = ck::Format_UE(_Format_, __VA_ARGS__);                                                        \
+        const auto& FormattedText = FText::FromString(FormattedString);                                                            \
+                                                                                                                                   \
+        if (auto& MessageLogModule = FModuleManager::LoadModuleChecked<FMessageLogModule>(TEXT("MessageLog"));                     \
+            MessageLogModule.IsRegisteredLogListing(_Namespace_::LogCategory) == false)                                            \
+        {                                                                                                                          \
+            FMessageLogInitializationOptions InitOptions;                                                                          \
+            InitOptions.bShowFilters = true;                                                                                       \
+                                                                                                                                   \
+            MessageLogModule.RegisterLogListing(_Namespace_::LogCategory, FText::FromName(_Namespace_::LogCategory), InitOptions); \
+        }                                                                                                                          \
+                                                                                                                                   \
+        auto EditorInfo = FMessageLog{_Namespace_::LogCategory};                                                                   \
+        EditorInfo.Error(FormattedText);                                                                                           \
+                                                                                                                                   \
+        auto Info = FNotificationInfo{FormattedText};                                                                              \
+        Info.bFireAndForget = true;                                                                                                \
+        Info.bUseThrobber = false;                                                                                                 \
+        Info.FadeOutDuration = 0.5f;                                                                                               \
+        Info.ExpireDuration = 5.0f;                                                                                                \
+                                                                                                                                   \
+        if (const auto& Notification = FSlateNotificationManager::Get().AddNotification(Info))                                     \
+        {                                                                                                                          \
+            Notification->SetCompletionState(SNotificationItem::CS_Fail);                                                          \
+        }                                                                                                                          \
+        _Namespace_::Error(TEXT("{}"), FormattedString);                                                                           \
+                                                                                                                                   \
+        return true;                                                                                                               \
     }())
 #else
 #define CK_LOG_ERROR_NOTIFY_IF_NOT(_Namespace_, _Expression_, _Format_, ...)\

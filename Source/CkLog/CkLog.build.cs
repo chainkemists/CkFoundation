@@ -23,6 +23,7 @@ public class CkLog : CkModuleRules
 			new string[]
 			{
 				"Core",
+				"MessageLog"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
