@@ -2,6 +2,8 @@
 
 #include "CkCore/Actor/CkActor_Utils.h"
 
+#include "CkEcs/CkEcsLog.h"
+
 #include <Engine/World.h>
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
@@ -55,6 +57,13 @@ auto
     SetTickGroup(InTickingGroup);
 
     _EcsWorld = EcsWorldType{InRegistry};
+
+    const auto ProcessorInjector = UCk_Utils_Ecs_ProjectSettings_UE::Get_ProcessorInjector();
+
+    CK_LOG_ERROR_NOTIFY_IF_NOT(ck::ecs, ck::IsValid(ProcessorInjector),
+        TEXT("No ProcessorInjector added in Project Settings which means that there are NO Ecs Processors added to the Ecs World."))
+    { return; }
+
     UCk_Utils_Ecs_ProjectSettings_UE::Get_ProcessorInjector()->
         GetDefaultObject<UCk_EcsWorld_ProcessorInjector_Base>()->DoInjectProcessors(*_EcsWorld);
 }

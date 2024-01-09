@@ -9,6 +9,7 @@
 #include "CkGameSession/Subsystem/CkGameSession_Subsystem.h"
 #include "CkSignal/Public/CkSignal/CkSignal_Fragment_Data.h"
 
+#include "CkUI/CkUI_Log.h"
 #include "CkUI/CustomWidgets/Watermark/CkWatermark_Widget.h"
 
 #include "CkUI/Settings/CkUI_Settings.h"
@@ -145,7 +146,7 @@ auto
 
     const auto& WatermarkWidgetClass = UCk_Utils_UI_ProjectSettings_UE::Get_WatermarkWidgetClass();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(WatermarkWidgetClass), TEXT("Invalid Watermark Widget setup in the Project Settings!"))
+    CK_LOG_ERROR_NOTIFY_IF_NOT(ck::ui, ck::IsValid(WatermarkWidgetClass), TEXT("Invalid Watermark Widget setup in the Project Settings!"))
     { return; }
 
     const auto& GameInstance = UCk_Utils_Game_UE::Get_GameInstance(this);
