@@ -8,6 +8,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include <Algo/Count.h>
+#include <Algo/Sort.h>
 
 #include <algorithm>
 
@@ -242,11 +243,21 @@ namespace ck::algo
     template <typename T_Container, typename T_PredicateFunction>
     auto
         Filter(
-            T_Container& InContainer,
+            const T_Container& InContainer,
             T_PredicateFunction InFunc)
         -> T_Container
     {
         return InContainer.FilterByPredicate(InFunc);
+    }
+
+    template <typename T_Container, typename T_PredicateFunction>
+    auto
+        Sort(
+            T_Container& InContainer,
+            T_PredicateFunction InFunc)
+        -> void
+    {
+        Algo::Sort(InContainer, InFunc);
     }
 }
 
