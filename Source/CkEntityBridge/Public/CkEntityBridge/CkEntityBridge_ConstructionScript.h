@@ -14,7 +14,9 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCk_Delegate_OnReplicationComplete_MC);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+    FCk_Delegate_OnReplicationComplete_MC,
+    FCk_Handle, InEntity);
 
 // --------------------------------------------------------------------------------------------------------------------
 

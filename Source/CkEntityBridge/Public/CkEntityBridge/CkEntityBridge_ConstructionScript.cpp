@@ -286,7 +286,9 @@ auto
         {
 
             if (_ReplicationComplete_BroadcastStep == EOnReplicationCompleteBroadcastStep::Wait)
-            { _ReplicationComplete_BroadcastStep = EOnReplicationCompleteBroadcastStep::WaitOnConstructionScript; }
+            {
+                _ReplicationComplete_BroadcastStep = EOnReplicationCompleteBroadcastStep::WaitOnConstructionScript;
+            }
             else
             {
                 CK_ENSURE_IF_NOT(_ReplicationComplete_BroadcastStep == EOnReplicationCompleteBroadcastStep::WaitOnReplicationDriver,
@@ -294,7 +296,9 @@ auto
                 { return; }
 
                 _ReplicationComplete_BroadcastStep = EOnReplicationCompleteBroadcastStep::Broadcast;
-                _OnReplicationComplete_MC.Broadcast();
+
+                const auto& AssociatedEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(GetOwner());
+                _OnReplicationComplete_MC.Broadcast(AssociatedEntity);
             }
 
             return;
@@ -302,7 +306,9 @@ auto
         case EInvoke_Caller::EntityBridge:
         {
             if (_ReplicationComplete_BroadcastStep == EOnReplicationCompleteBroadcastStep::Wait)
-            { _ReplicationComplete_BroadcastStep = EOnReplicationCompleteBroadcastStep::WaitOnReplicationDriver; }
+            {
+                _ReplicationComplete_BroadcastStep = EOnReplicationCompleteBroadcastStep::WaitOnReplicationDriver;
+            }
             else
             {
                 CK_ENSURE_IF_NOT(_ReplicationComplete_BroadcastStep == EOnReplicationCompleteBroadcastStep::WaitOnConstructionScript,
@@ -310,7 +316,9 @@ auto
                 { return; }
 
                 _ReplicationComplete_BroadcastStep = EOnReplicationCompleteBroadcastStep::Broadcast;
-                _OnReplicationComplete_MC.Broadcast();
+
+                const auto& AssociatedEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(GetOwner());
+                _OnReplicationComplete_MC.Broadcast(AssociatedEntity);
             }
             break;
         }
