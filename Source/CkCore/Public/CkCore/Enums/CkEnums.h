@@ -378,3 +378,13 @@ enum class ECk_PerformanceRating : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_PerformanceRating);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_DistanceSortingPolicy : uint8
+{
+    ClosestToFarthest,
+    FarthestToClosest,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_DistanceSortingPolicy);
+// --------------------------------------------------------------------------------------------------------------------
