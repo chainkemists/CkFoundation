@@ -88,7 +88,10 @@ namespace ck::algo
     auto Transform(T_ItrType InItrBegin, T_ItrType InItrEnd, TToTransform<T_ReturnContainer> InReturnContainer, T_TransformFunc InFunc) -> void;
 
     template <typename T_Container, typename T_PredicateFunction>
-    auto Filter(T_Container& InContainer, T_PredicateFunction InFunc) -> T_Container;
+    auto Filter(const T_Container& InContainer, T_PredicateFunction InFunc) -> T_Container;
+
+    template <typename T_Container, typename T_PredicateFunction>
+    auto Sort(T_Container& InContainer, T_PredicateFunction InFunc) -> void;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
