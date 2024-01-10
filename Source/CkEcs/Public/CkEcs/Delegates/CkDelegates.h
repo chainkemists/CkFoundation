@@ -25,4 +25,25 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Handle, InHandle,
     FCk_SharedBool, OutResult);
 
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+    FCk_Predicate_In2Handles_OutResult,
+    FCk_Handle, InA,
+    FCk_Handle, InB,
+    FCk_SharedBool, OutResult);
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(
+    FCk_Lambda_InActor,
+    AActor*, InActor);
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Predicate_InActor_OutResult,
+    AActor*, InActor,
+    FCk_SharedBool, OutResult);
+
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+    FCk_Predicate_In2Actors_OutResult,
+    AActor*, InA,
+    AActor*, InB,
+    FCk_SharedBool, OutResult);
+
 // --------------------------------------------------------------------------------------------------------------------
