@@ -116,12 +116,7 @@ namespace ck
             InAbilityOwnerEntity)
         { return; }
 
-        const auto& AbilityParams = AbilityConstructionScript->Get_AbilityParams();
-        CK_ENSURE_IF_NOT(ck::IsValid(AbilityParams),
-            TEXT("Cannot give Ability to Ability Owner [{}] because it has INVALID Params"),
-            InAbilityOwnerEntity)
-        { return; }
-
+        const auto& AbilityParams  = AbilityConstructionScript->Get_AbilityParams();
         const auto ReplicationType = AbilityParams.Get_Data().Get_NetworkSettings().Get_ReplicationType();
 
         if (NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InAbilityOwnerEntity, ReplicationType))
