@@ -381,6 +381,13 @@ auto
         const UObject* InContext)
     -> FCk_Time
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InContext),
+        TEXT("Could not get Average Ping.{}"), ck::Context(InContext))
+    { return {}; }
+
+    if (InContext->GetWorld()->IsNetMode(NM_Standalone))
+    { return {}; }
+
     const auto& PrimaryPlayerState = UCk_Utils_Game_UE::Get_PrimaryPlayerState_AsClient(InContext);
 
     if (ck::Is_NOT_Valid(PrimaryPlayerState))
