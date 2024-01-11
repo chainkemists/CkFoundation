@@ -49,20 +49,20 @@ public:
     CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
 
 public:
-    template <typename T_FragmentType, typename... T_Args>
-    auto Add(T_Args&&... InArgs) -> T_FragmentType&;
+    template <typename T_Fragment, typename... T_Args>
+    auto Add(T_Args&&... InArgs) -> T_Fragment&;
 
-    template <typename T_FragmentType, typename T_ValidationPolicy, typename... T_Args>
-    auto Add(T_Args&&... InArgs) -> T_FragmentType&;
+    template <typename T_Fragment, typename T_ValidationPolicy, typename... T_Args>
+    auto Add(T_Args&&... InArgs) -> T_Fragment&;
 
-    template <typename T_FragmentType, typename... T_Args>
-    auto AddOrGet(T_Args&&... InArgs) -> T_FragmentType&;
+    template <typename T_Fragment, typename... T_Args>
+    auto AddOrGet(T_Args&&... InArgs) -> T_Fragment&;
 
-    template <typename T_FragmentType, typename T_Func>
+    template <typename T_Fragment, typename T_Func>
     auto Try_Transform(T_Func InFunc) -> void;
 
-    template <typename T_FragmentType, typename... T_Args>
-    auto Replace(T_Args&&... InArgs) -> T_FragmentType&;
+    template <typename T_Fragment, typename... T_Args>
+    auto Replace(T_Args&&... InArgs) -> T_Fragment&;
 
     template <typename T_Fragment>
     auto Remove() -> void;
@@ -225,78 +225,98 @@ CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(FCk_Handle,
 
 // --------------------------------------------------------------------------------------------------------------------
 
-template <typename T_FragmentType, typename ... T_Args>
+template <typename T_Fragment, typename ... T_Args>
 auto
     FCk_Handle::
     Add(
         T_Args&&... InArgs)
-    -> T_FragmentType&
+    -> T_Fragment&
 {
-    return Add<T_FragmentType, ck::IsValid_Policy_Default>(std::forward<T_Args>(InArgs)...);
+    return Add<T_Fragment, ck::IsValid_Policy_Default>(std::forward<T_Args>(InArgs)...);
 }
 
-template <typename T_FragmentType, typename T_ValidationPolicy, typename ... T_Args>
+template <typename T_Fragment, typename T_ValidationPolicy, typename ... T_Args>
 auto
     FCk_Handle::
     Add(
         T_Args&&... InArgs)
-    -> T_FragmentType&
+    -> T_Fragment&
 {
     static_assert(std::is_base_of_v<ck::IsValid_Policy, T_ValidationPolicy>,
         "T_ValidationPolicy must be a ck::IsValid_Policy");
 
     CK_ENSURE_IF_NOT(IsValid(T_ValidationPolicy{}),
-        TEXT("Unable to Add Fragment [{}]. Handle [{}] does NOT have a valid [{}]."),
-        ck::TypeToString<T_FragmentType>, *this,
-        ck::IsValid(_Registry) ? TEXT("Entity") : TEXT("Registry"))
+        TEXT("Unable to Add Fragment [{}]. Handle [{}] {}."),
+        ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
+        [&]
+        {
+            if (ck::IsValid(_Registry))
+            {
+                if (_Registry->IsValid(_Entity))
+                { return TEXT("has an Entity that is about to be DESTROYED"); }
+
+                return TEXT("does NOT have a valid Entity");
+            }
+            return TEXT("does NOT have a valid Registry");
+        }())
     {
-        static T_FragmentType Invalid_Fragment;
+        static T_Fragment Invalid_Fragment;
         return Invalid_Fragment;
     }
 
-    if (NOT Has<T_FragmentType>())
+    if (NOT Has<T_Fragment>())
     {
         _Mapper = &_Registry->AddOrGet<FEntity_FragmentMapper>(_Entity);
-        _Mapper->Add_FragmentGetter<T_FragmentType>();
+        _Mapper->Add_FragmentGetter<T_Fragment>();
     }
 
-    auto& NewFragment = _Registry->Add<T_FragmentType>(_Entity, std::forward<T_Args>(InArgs)...);
+    auto& NewFragment = _Registry->Add<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
 
     DoUpdate_MapperAndFragments();
 
     return NewFragment;
 }
 
-template <typename T_FragmentType, typename ... T_Args>
+template <typename T_Fragment, typename ... T_Args>
 auto
     FCk_Handle::
     AddOrGet(
         T_Args&&... InArgs)
-    -> T_FragmentType&
+    -> T_Fragment&
 {
     CK_ENSURE_IF_NOT(IsValid(ck::IsValid_Policy_Default{}),
-        TEXT("Unable to AddOrGet Fragment [{}]. Handle [{}] does NOT have a valid [{}]."),
-        ck::TypeToString<T_FragmentType>, *this,
-        ck::IsValid(_Registry) ? TEXT("Entity") : TEXT("Registry"))
+        TEXT("Unable to AddOrGet Fragment [{}]. Handle [{}] {}."),
+        ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
+        [&]
+        {
+            if (ck::IsValid(_Registry))
+            {
+                if (_Registry->IsValid(_Entity))
+                { return TEXT("has an Entity that is about to be DESTROYED"); }
+
+                return TEXT("does NOT have a valid Entity");
+            }
+            return TEXT("does NOT have a valid Registry");
+        }())
     {
-        static T_FragmentType Invalid_Fragment;
+        static T_Fragment Invalid_Fragment;
         return Invalid_Fragment;
     }
 
-    if (NOT Has<T_FragmentType>())
+    if (NOT Has<T_Fragment>())
     {
         _Mapper = &_Registry->AddOrGet<FEntity_FragmentMapper>(_Entity);
-        _Mapper->Add_FragmentGetter<T_FragmentType>();
+        _Mapper->Add_FragmentGetter<T_Fragment>();
     }
 
-    auto& NewOrExistingFragment = _Registry->AddOrGet<T_FragmentType>(_Entity, std::forward<T_Args>(InArgs)...);
+    auto& NewOrExistingFragment = _Registry->AddOrGet<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
 
     DoUpdate_MapperAndFragments();
 
     return NewOrExistingFragment;
 }
 
-template <typename T_FragmentType, typename T_Func>
+template <typename T_Fragment, typename T_Func>
 auto
     FCk_Handle::
     Try_Transform(
@@ -304,31 +324,51 @@ auto
     -> void
 {
     CK_ENSURE_IF_NOT(IsValid(ck::IsValid_Policy_Default{}),
-        TEXT("Unable to Transform Fragment [{}]. Handle [{}] does NOT have a valid [{}]."),
-        ck::TypeToString<T_FragmentType>, *this,
-        ck::IsValid(_Registry) ? TEXT("Entity") : TEXT("Registry"))
+        TEXT("Unable to Transform Fragment [{}]. Handle [{}] {}."),
+        ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
+        [&]
+        {
+            if (ck::IsValid(_Registry))
+            {
+                if (_Registry->IsValid(_Entity))
+                { return TEXT("has an Entity that is about to be DESTROYED"); }
+
+                return TEXT("does NOT have a valid Entity");
+            }
+            return TEXT("does NOT have a valid Registry");
+        }())
     { return; }
 
-    _Registry->Try_Transform<T_FragmentType>(_Entity, InFunc);
+    _Registry->Try_Transform<T_Fragment>(_Entity, InFunc);
 }
 
-template <typename T_FragmentType, typename ... T_Args>
+template <typename T_Fragment, typename ... T_Args>
 auto
     FCk_Handle::
     Replace(
         T_Args&&... InArgs)
-    -> T_FragmentType&
+    -> T_Fragment&
 {
     CK_ENSURE_IF_NOT(IsValid(ck::IsValid_Policy_Default{}),
-        TEXT("Unable to Replace Fragment [{}]. Handle [{}] does NOT have a valid [{}]."),
-        ck::TypeToString<T_FragmentType>, *this,
-        ck::IsValid(_Registry) ? TEXT("Entity") : TEXT("Registry"))
+        TEXT("Unable to Replace Fragment [{}]. Handle [{}] {}."),
+        ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
+        [&]
+        {
+            if (ck::IsValid(_Registry))
+            {
+                if (_Registry->IsValid(_Entity))
+                { return TEXT("has an Entity that is about to be DESTROYED"); }
+
+                return TEXT("does NOT have a valid Entity");
+            }
+            return TEXT("does NOT have a valid Registry");
+        }())
     {
-        static T_FragmentType Invalid_Fragment;
+        static T_Fragment Invalid_Fragment;
         return Invalid_Fragment;
     }
 
-    return _Registry->Replace<T_FragmentType>(_Entity, std::forward<T_Args>(InArgs)...);
+    return _Registry->Replace<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
 }
 
 template <typename T_Fragment>
@@ -338,9 +378,19 @@ auto
     -> void
 {
     CK_ENSURE_IF_NOT(IsValid(ck::IsValid_Policy_Default{}),
-        TEXT("Unable to Remove Fragment [{}]. Handle [{}] does NOT have a valid [{}]."),
-        ck::TypeToString<T_Fragment>, *this,
-        ck::IsValid(_Registry) ? TEXT("Entity") : TEXT("Registry"))
+        TEXT("Unable to Remove Fragment [{}]. Handle [{}] {}."),
+        ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
+        [&]
+        {
+            if (ck::IsValid(_Registry))
+            {
+                if (_Registry->IsValid(_Entity))
+                { return TEXT("has an Entity that is about to be DESTROYED"); }
+
+                return TEXT("does NOT have a valid Entity");
+            }
+            return TEXT("does NOT have a valid Registry");
+        }())
     { return; }
 
     _Registry->Remove<T_Fragment>(_Entity);
@@ -355,9 +405,19 @@ auto
     -> void
 {
     CK_ENSURE_IF_NOT(IsValid(ck::IsValid_Policy_Default{}),
-        TEXT("Unable to Remove Fragment [{}]. Handle [{}] does NOT have a valid [{}]."),
-        ck::TypeToString<T_Fragment>, *this,
-        ck::IsValid(_Registry) ? TEXT("Entity") : TEXT("Registry"))
+        TEXT("Unable to Remove Fragment [{}]. Handle [{}] {}."),
+        ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
+        [&]
+        {
+            if (ck::IsValid(_Registry))
+            {
+                if (_Registry->IsValid(_Entity))
+                { return TEXT("has an Entity that is about to be DESTROYED"); }
+
+                return TEXT("does NOT have a valid Entity");
+            }
+            return TEXT("does NOT have a valid Registry");
+        }())
     { return; }
 
     _Registry->Try_Remove<T_Fragment>(_Entity);
@@ -403,7 +463,7 @@ auto
 {
     CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
         TEXT("Unable to perform Has query with Fragment [{}]. Handle [{}] does NOT have a valid Registry."),
-        ck::TypeToString<T_Fragment>, *this)
+        ck::Get_RuntimeTypeToString<T_Fragment>(), *this)
     { return {}; }
 
     return _Registry->Has<T_Fragment>(_Entity);
@@ -465,9 +525,19 @@ auto
         "T_ValidationPolicy must be a ck::IsValid_Policy");
 
     CK_ENSURE_IF_NOT(IsValid(T_ValidationPolicy{}),
-        TEXT("Unable to Add Fragment [{}]. Handle [{}] does NOT have a valid [{}]."),
-        ck::TypeToString<T_Fragment>, *this,
-        ck::IsValid(_Registry) ? TEXT("Entity") : TEXT("Registry"))
+        TEXT("Unable to Add Fragment [{}]. Handle [{}] {}."),
+        ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
+        [&]
+        {
+            if (ck::IsValid(_Registry))
+            {
+                if (_Registry->IsValid(_Entity))
+                { return TEXT("has an Entity that is about to be DESTROYED"); }
+
+                return TEXT("does NOT have a valid Entity");
+            }
+            return TEXT("does NOT have a valid Registry");
+        }())
     {
         static T_Fragment Invalid_Fragment;
         return Invalid_Fragment;
@@ -486,9 +556,19 @@ auto
         "T_ValidationPolicy must be a ck::IsValid_Policy");
 
     CK_ENSURE_IF_NOT(IsValid(T_ValidationPolicy{}),
-        TEXT("Unable to Add Fragment [{}]. Handle [{}] does NOT have a valid [{}]."),
-        ck::TypeToString<T_Fragment>, *this,
-        ck::IsValid(_Registry) ? TEXT("Entity") : TEXT("Registry"))
+        TEXT("Unable to Add Fragment [{}]. Handle [{}] {}."),
+        ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
+        [&]
+        {
+            if (ck::IsValid(_Registry))
+            {
+                if (_Registry->IsValid(_Entity))
+                { return TEXT("has an Entity that is about to be DESTROYED"); }
+
+                return TEXT("does NOT have a valid Entity");
+            }
+            return TEXT("does NOT have a valid Registry");
+        }())
     {
         static T_Fragment Invalid_Fragment;
         return Invalid_Fragment;
