@@ -51,15 +51,16 @@ auto
     return ck::Format_UE(TEXT("{}"), InHandle);
 }
 
+UE_DISABLE_OPTIMIZATION_SHIP
 auto
     UCk_Utils_Handle_UE::
     Debug_Handle(
         const FCk_Handle& InHandle)
     -> void
 {
-    ck::ecs::Warning(TEXT("Attempting to BREAK into Debugger to debug Handle [{}]"), InHandle);
-    ensureAlways(false);
+    ck::ecs::Warning(TEXT("Debugging the Handle [{}]"), InHandle);
 }
+UE_ENABLE_OPTIMIZATION_SHIP
 
 auto
     UCk_Utils_Handle_UE::
