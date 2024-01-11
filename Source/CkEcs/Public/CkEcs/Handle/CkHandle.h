@@ -210,14 +210,14 @@ CK_DEFINE_CUSTOM_IS_VALID(FCk_Handle, ck::IsValid_Policy_IncludePendingKill, [&]
 CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(FCk_Handle,
 [&]()
 {
-    if (InObj.Has<DEBUG_NAME>())
+    if (ck::IsValid(InObj) && InObj.Has<DEBUG_NAME>())
     { return ck::Format(TEXT("{}({})"), InObj._Entity, InObj.Get<DEBUG_NAME>()._Name); }
 
     return ck::Format(TEXT("{}"), InObj._Entity);
 },
 [&]()
 {
-    if (InObj.Has<DEBUG_NAME>())
+    if (ck::IsValid(InObj) && InObj.Has<DEBUG_NAME>())
     { return ck::Format(TEXT("{}[{}]({})"), InObj._Entity, InObj._Registry, InObj.Get<DEBUG_NAME>()._Name); }
 
     return ck::Format(TEXT("{}({})"), InObj._Entity, InObj._Registry);
