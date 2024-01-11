@@ -4,11 +4,12 @@
 
 #include <Templates/SubclassOf.h>
 
-#include <GameFramework/Actor.h>
-#include <GameplayTagContainer.h>
 #include <CoreMinimal.h>
+#include <GameplayTagContainer.h>
 #include <InputCoreTypes.h>
+#include <AssetRegistry/AssetData.h>
 #include <Framework/Commands/InputChord.h>
+#include <GameFramework/Actor.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
