@@ -118,7 +118,8 @@ namespace ck
 
         const auto& AbilityParams = AbilityConstructionScript->Get_AbilityParams();
         CK_ENSURE_IF_NOT(ck::IsValid(AbilityParams),
-            TEXT("Cannot give Ability to Ability Owner [{}] because it has INVALID Params"),
+            TEXT("Cannot give Ability [{}] to Ability Owner [{}] because it has an INVALID ABILITY NAME"),
+            AbilityParams.Get_AbilityScriptClass(),
             InAbilityOwnerEntity)
         { return; }
 
