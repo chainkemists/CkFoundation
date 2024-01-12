@@ -46,6 +46,24 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    template <typename T_DerivedProcessor, typename T_DerivedAttribute>
+    auto
+        TProcessor_Attribute_OverrideBaseValue<T_DerivedProcessor, T_DerivedAttribute>::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            AttributeFragmentType& InAttribute,
+            RequestType& InRequest) const
+        -> void
+    {
+        InAttribute._Base = InRequest.Get_NewBaseValue();
+        TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(InHandle);
+
+        InHandle.template Remove<MarkedDirtyBy>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
     auto
         TProcessor_Attribute_RecomputeAll<T_DerivedProcessor, T_AttributeModifierFragment>::
