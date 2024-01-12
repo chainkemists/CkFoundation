@@ -145,6 +145,16 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
+              DisplayName="Request Override Base Float Value")
+    static void
+    Request_Override(
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
+        float InNewBaseValue);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Float",
               DisplayName = "Bind To On Float Attribute Value Changed")
     static void
     BindTo_OnValueChanged(

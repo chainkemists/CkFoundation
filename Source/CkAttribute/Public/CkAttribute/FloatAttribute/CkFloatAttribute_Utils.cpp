@@ -270,6 +270,21 @@ auto
 
 auto
     UCk_Utils_FloatAttribute_UE::
+    Request_Override(
+        FCk_Handle   InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
+        float        InNewBaseValue)
+    -> void
+{
+    auto AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
+    <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+
+    auto& Request = AttributeEntity.AddOrGet<ck::TFragment_Request_AttributeOverride<ck::FFragment_FloatAttribute>>();
+    Request = ck::TFragment_Request_AttributeOverride<ck::FFragment_FloatAttribute>{InNewBaseValue};
+}
+
+auto
+    UCk_Utils_FloatAttribute_UE::
     BindTo_OnValueChanged(
         FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
