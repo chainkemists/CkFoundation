@@ -174,6 +174,16 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Meter",
+              DisplayName="Request Override Base Meter Value")
+    static void
+    Request_Override(
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
+        FCk_Meter InNewBaseValue);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Meter",
               DisplayName = "Bind To On Meter Attribute Value Changed")
     static void
     BindTo_OnValueChanged(
