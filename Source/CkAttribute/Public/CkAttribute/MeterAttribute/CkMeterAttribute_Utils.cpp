@@ -278,6 +278,28 @@ auto
 
 auto
     UCk_Utils_MeterAttribute_UE::
+    Request_Override(
+        FCk_Handle   InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
+        FCk_Meter    InNewBaseValue)
+    -> void
+{
+    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_ValidEntry_If(
+        InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
+
+    CK_ENSURE_IF_NOT(ck::IsValid(FoundEntity), TEXT("Could NOT find Attribute [{}] in Entity [{}]. Unable to OVERRIDE the Meter to [{}]."),
+        InAttributeName, InAttributeOwnerEntity, InNewBaseValue)
+    { return; }
+
+    const auto [MinCapacity, MaxCapacity, Current] = Get_MinMaxAndCurrentAttributeEntities(InAttributeOwnerEntity, InAttributeName);
+
+    FloatAttribute_Utils::Request_OverrideBaseValue(MinCapacity, InNewBaseValue.Get_Params().Get_Capacity().Get_MinCapacity());
+    FloatAttribute_Utils::Request_OverrideBaseValue(MaxCapacity, InNewBaseValue.Get_Params().Get_Capacity().Get_MaxCapacity());
+    FloatAttribute_Utils::Request_OverrideBaseValue(Current, InNewBaseValue.Get_Used().Get_AmountUsed());
+}
+
+auto
+    UCk_Utils_MeterAttribute_UE::
     BindTo_OnValueChanged(
         FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
