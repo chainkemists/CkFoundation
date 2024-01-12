@@ -70,6 +70,21 @@ namespace ck
     template <typename T_DerivedAttribute>
     auto
         TUtils_Attribute<T_DerivedAttribute>::
+        Request_OverrideBaseValue(
+            HandleType InHandle,
+            AttributeDataType InNewBaseValue)
+        -> void
+    {
+        if (NOT Ensure(InHandle))
+        { return; }
+
+        InHandle.AddOrGet<TFragment_Request_AttributeOverride<AttributeFragmentType>>(InNewBaseValue);
+        InHandle.AddOrGet<typename AttributeFragmentType::Tag_RecomputeFinalValue>();
+    }
+
+    template <typename T_DerivedAttribute>
+    auto
+        TUtils_Attribute<T_DerivedAttribute>::
         Request_RecomputeFinalValue(
             HandleType InHandle)
         -> void

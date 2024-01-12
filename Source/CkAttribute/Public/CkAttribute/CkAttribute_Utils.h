@@ -25,6 +25,9 @@ namespace ck
         friend class TUtils_AttributeModifier;
 
         template <typename, typename>
+        friend class TProcessor_Attribute_OverrideBaseValue;
+
+        template <typename, typename>
         friend class TProcessor_Attribute_RecomputeAll;
 
         template <typename, typename>
@@ -54,6 +57,12 @@ namespace ck
         static auto
         Get_FinalValue(
             HandleType InHandle) -> AttributeDataType;
+
+    public:
+        static auto
+        Request_OverrideBaseValue(
+            HandleType InHandle,
+            AttributeDataType InNewBaseValue) -> void;
 
     private:
         static auto
