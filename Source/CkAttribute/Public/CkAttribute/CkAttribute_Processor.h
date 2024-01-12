@@ -40,6 +40,41 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    template <typename T_DerivedProcessor, typename T_DerivedAttribute>
+    class TProcessor_Attribute_OverrideBaseValue : public TProcessor<
+            TProcessor_Attribute_OverrideBaseValue<T_DerivedProcessor, T_DerivedAttribute>,
+            T_DerivedAttribute,
+            TFragment_Request_AttributeOverride<T_DerivedAttribute>,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = TFragment_Request_AttributeOverride<T_DerivedAttribute>;
+
+    public:
+        using AttributeFragmentType = T_DerivedAttribute;
+        using AttributeDataType     = typename AttributeFragmentType::AttributeDataType;
+        using RequestType           = TFragment_Request_AttributeOverride<T_DerivedAttribute>;
+        using ThisType              = TProcessor_Attribute_OverrideBaseValue<T_DerivedProcessor, AttributeFragmentType>;
+        using Super                 = TProcessor<ThisType, AttributeFragmentType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using HandleType            = typename Super::HandleType;
+        using TimeType              = typename Super::TimeType;
+
+    public:
+        using Super::Super;
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            AttributeFragmentType& InAttribute,
+            RequestType& InRequest) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_Attribute_RecomputeAll : public TProcessor<
             TProcessor_Attribute_RecomputeAll<T_DerivedProcessor, T_DerivedAttributeModifier>,
