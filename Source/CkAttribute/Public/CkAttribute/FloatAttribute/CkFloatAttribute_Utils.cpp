@@ -20,7 +20,8 @@ auto
 {
     RecordOfFloatAttributes_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 
-    const auto& AddNewFloatAttributeToEntity = [&](FCk_Handle InAttributeOwner, const FGameplayTag& InAttributeName, float InAttributeBaseValue)
+    const auto& AddNewFloatAttributeToEntity =
+    [&](const FCk_Handle& InAttributeOwner, const FGameplayTag& InAttributeName, float InAttributeBaseValue)
     {
         const auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwner);
 
