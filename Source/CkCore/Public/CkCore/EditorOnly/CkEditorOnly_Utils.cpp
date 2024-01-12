@@ -3,13 +3,13 @@
 #include "CkCore/Ensure/CkEnsure.h"
 
 #if WITH_EDITOR
-#include <Logging/TokenizedMessage.h>
 #include <Logging/MessageLog.h>
+#include <Logging/TokenizedMessage.h>
 #include <Misc/UObjectToken.h>
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 2
-#include <MessageLog/Public/MessageLogModule.h>
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION <= 2
 #include <MessageLog/Public/IMessageLogListing.h>
+#include <MessageLog/Public/MessageLogModule.h>
 #else
 #include "Developer/MessageLog/Public/MessageLogModule.h"
 #endif
