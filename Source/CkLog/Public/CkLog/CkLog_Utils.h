@@ -1,16 +1,19 @@
 #pragma once
 
 #include <CoreMinimal.h>
-#include <Kismet/BlueprintFunctionLibrary.h>
 #include <functional>
+#include <Kismet/BlueprintFunctionLibrary.h>
 
-#include <Widgets/Notifications/SNotificationList.h>
 #include <Framework/Notifications/NotificationManager.h>
+#include <Widgets/Notifications/SNotificationList.h>
 
 #if WITH_EDITOR
-#include <Logging/MessageLog.h>
-#include <MessageLog/Public/MessageLogModule.h>
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION <= 2
 #include <MessageLog/Public/IMessageLogListing.h>
+#include <MessageLog/Public/MessageLogModule.h>
+#else
+#include "Developer/MessageLog/Public/MessageLogModule.h"
+#endif
 #endif
 
 #include "CkLog_Utils.generated.h"
@@ -225,7 +228,7 @@ inline struct _ ##_LogCategory_## LogMapInjector                                
         if (_Expression_)                                                                                                          \
         { return false; }                                                                                                          \
                                                                                                                                    \
-        const auto& FormattedString = ck::Format_UE(_Format_, __VA_ARGS__);                                                        \
+        const auto& FormattedString = ck::Format_UE(_Format_, ##__VA_ARGS__);                                                      \
         const auto& FormattedText = FText::FromString(FormattedString);                                                            \
                                                                                                                                    \
         if (auto& MessageLogModule = FModuleManager::LoadModuleChecked<FMessageLogModule>(TEXT("MessageLog"));                     \
