@@ -54,15 +54,15 @@ public:
               DisplayName="Has Float Attribute")
     static bool
     Has(
-        FCk_Handle InAttributeOwnerEntity,
-        FGameplayTag InAttributeName);
+        const FCk_Handle& InAttributeOwnerEntity,
+        FGameplayTag      InAttributeName);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
               DisplayName="Has Any Float Attribute")
     static bool
     Has_Any(
-        FCk_Handle InAttributeOwnerEntity);
+        const FCk_Handle& InAttributeOwnerEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
@@ -115,7 +115,7 @@ public:
         meta=(DeprecatedFunction, DeprecationMessage="Use the ForEach variants"))
     static TArray<FGameplayTag>
     Get_All(
-        FCk_Handle InAttributeOwnerEntity);
+        const FCk_Handle& InAttributeOwnerEntity);
 
 public:
     UFUNCTION(BlueprintPure,
@@ -202,9 +202,9 @@ public:
               DisplayName="Has Float Attribute Modifier")
     static bool
     Has(
-        FCk_Handle InAttributeOwnerEntity,
-        FGameplayTag InAttributeName,
-        FGameplayTag InModifierName);
+        const FCk_Handle& InAttributeOwnerEntity,
+        FGameplayTag      InAttributeName,
+        FGameplayTag      InModifierName);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AttributeModifier|Float",
