@@ -80,9 +80,39 @@ public:
         FCk_Handle InAttributeOwnerEntity);
 
 public:
-    UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
-              DisplayName="Get All Float Attributes")
+              DisplayName="For Each Float Attribute",
+              meta=(AutoCreateRefTerm="InDelegate"))
+    static TArray<FCk_Handle>
+    ForEach_FloatAttribute(
+        FCk_Handle InAttributeOwner,
+        const FCk_Lambda_InHandle& InDelegate);
+    static auto
+    ForEach_FloatAttribute(
+        const FCk_Handle&                  InAttributeOwner,
+        const TFunction<void(FCk_Handle)>& InFunc) -> void;
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName="For Each Float Attribute If",
+              meta=(AutoCreateRefTerm="InDelegate"))
+    static TArray<FCk_Handle>
+    ForEach_FloatAttribute_If(
+        FCk_Handle InAttributeOwner,
+        const FCk_Lambda_InHandle& InDelegate,
+        const FCk_Predicate_InHandle_OutResult& InPredicate);
+    static auto
+    ForEach_FloatAttribute_If(
+        const FCk_Handle&                  InAttributeOwner,
+        const TFunction<void(FCk_Handle)>& InFunc,
+        const TFunction<bool(FCk_Handle)>& InPredicate) -> void;
+
+public:
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Attribute|Float",
+        DisplayName="Get All Float Attributes",
+        meta=(DeprecatedFunction, DeprecationMessage="Use the ForEach variants"))
     static TArray<FGameplayTag>
     Get_All(
         FCk_Handle InAttributeOwnerEntity);
