@@ -17,8 +17,8 @@ auto
     Set_CurrentWorld(UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle));
 
 #if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
-    const auto& DebugName = UCk_Utils_Debug_UE::Get_DebugName_AsText(this, ECk_DebugName_Verbosity::ShortName);
-    InHandle.Add<DEBUG_NAME>(UCk_Utils_Debug_UE::Get_DebugName_AsText(this, ECk_DebugName_Verbosity::ShortName));
+    const auto& DebugName = UCk_Utils_Debug_UE::Get_DebugName(this, ECk_DebugName_Verbosity::ShortName);
+    InHandle.Add<DEBUG_NAME>(UCk_Utils_Debug_UE::Get_DebugName(this, ECk_DebugName_Verbosity::ShortName));
     ck::ecs::Log(TEXT("[EntityMap] [{}]"), InHandle, DebugName);
 #endif
 
