@@ -250,6 +250,21 @@ auto
 
 auto
     UCk_Utils_ByteAttribute_UE::
+    Request_Override(
+        FCk_Handle   InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
+        uint8        InNewBaseValue)
+        -> void
+{
+    auto AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
+        <ByteAttribute_Utils, RecordOfByteAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+
+    auto& Request = AttributeEntity.AddOrGet<ck::TFragment_Request_AttributeOverride<ck::FFragment_ByteAttribute>>();
+    Request = ck::TFragment_Request_AttributeOverride<ck::FFragment_ByteAttribute>{InNewBaseValue};
+}
+
+auto
+    UCk_Utils_ByteAttribute_UE::
     BindTo_OnValueChanged(
         FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
