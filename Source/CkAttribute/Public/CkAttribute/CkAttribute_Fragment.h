@@ -66,6 +66,9 @@ namespace ck
         friend class TProcessor_Attribute_FireSignals;
 
         template <typename, typename>
+        friend class TProcessor_Attribute_OverrideBaseValue;
+
+        template <typename, typename>
         friend class TProcessor_Attribute_RecomputeAll;
 
         template <typename, typename>
@@ -106,6 +109,25 @@ namespace ck
         CK_PROPERTY_GET(_Final);
 
         CK_DEFINE_CONSTRUCTOR(TFragment_Attribute<T_AttributeType>, _Base, _Final);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedAttribute>
+    struct TFragment_Request_AttributeOverride
+    {
+        CK_GENERATED_BODY(TFragment_Request_AttributeOverride<T_DerivedAttribute>);
+
+    public:
+        using AttributeDataType = typename T_DerivedAttribute::AttributeDataType;
+
+    private:
+        AttributeDataType _NewBaseValue;
+
+    public:
+        CK_PROPERTY_GET(_NewBaseValue);
+
+        CK_DEFINE_CONSTRUCTORS(TFragment_Request_AttributeOverride, _NewBaseValue);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
