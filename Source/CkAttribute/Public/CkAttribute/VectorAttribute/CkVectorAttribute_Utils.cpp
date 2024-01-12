@@ -250,6 +250,21 @@ auto
 
 auto
     UCk_Utils_VectorAttribute_UE::
+    Request_Override(
+        FCk_Handle   InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
+        FVector      InNewBaseValue)
+    -> void
+{
+    auto AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
+        <VectorAttribute_Utils, RecordOfVectorAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+
+    auto& Request = AttributeEntity.AddOrGet<ck::TFragment_Request_AttributeOverride<ck::FFragment_VectorAttribute>>();
+    Request = ck::TFragment_Request_AttributeOverride<ck::FFragment_VectorAttribute>{InNewBaseValue};
+}
+
+auto
+    UCk_Utils_VectorAttribute_UE::
     BindTo_OnValueChanged(
         FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
