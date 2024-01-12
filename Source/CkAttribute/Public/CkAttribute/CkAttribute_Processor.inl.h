@@ -128,6 +128,8 @@ namespace ck
 
         AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Add(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
         AttributeComp._Final = AttributeComp._Base;
+
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -206,6 +208,8 @@ namespace ck
 
         AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Multiply(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
         AttributeComp._Final = AttributeComp._Base;
+
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
     }
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
