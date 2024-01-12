@@ -8,6 +8,7 @@
 
 #include "CkAnimation/AnimState/CkAnimState_Processor.h"
 
+#include "CkAttribute/ByteAttribute/CkByteAttribute_Processor.h"
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Processor.h"
 #include "CkAttribute/MeterAttribute/CkMeterAttribute_Processor.h"
 
@@ -118,9 +119,13 @@ namespace ck_world_processor_injector
         InWorld.Add<ck::FProcessor_FloatAttribute_RecomputeAll>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_FloatAttributeModifier_ComputeAll>(InWorld.Get_Registry());
 
+        InWorld.Add<ck::FProcessor_ByteAttribute_RecomputeAll>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_ByteAttributeModifier_ComputeAll>(InWorld.Get_Registry());
+
         InWorld.Add<ck::FProcessor_Meter_Clamp>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FProcessor_FloatAttribute_FireSignals>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_ByteAttribute_FireSignals>(InWorld.Get_Registry());
 
         InWorld.Add<ck::FProcessor_CameraShake_HandleRequests>(InWorld.Get_Registry());
 
