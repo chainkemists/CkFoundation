@@ -4,9 +4,69 @@
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Utils.h"
 #include "CkAbility/Settings/CkAbility_Settings.h"
 
+#include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
 
+#include <UObject/ObjectSaveContext.h>
+
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Ability_Script_PDA::
+    PreSave(
+        FObjectPreSaveContext InObjectSaveContext)
+    -> void
+{
+    Super::PreSave(InObjectSaveContext);
+
+    if (IsTemplate())
+    {
+        ValidateAssetData();
+    }
+}
+
+auto
+    UCk_Ability_Script_PDA::
+    PostLoad() -> void
+{
+    Super::PostLoad();
+
+    if (IsTemplate())
+    {
+        ValidateAssetData();
+    }
+}
+
+auto
+    UCk_Ability_Script_PDA::
+    ValidateAssetData()
+    -> void
+{
+    if (ck::IsValid(_Data.Get_AbilityName()))
+    { return; }
+
+    if (GetClass()->HasAnyClassFlags(CLASS_Abstract))
+    { return; }
+
+    const auto& Msg = ck::Format_UE(TEXT("INVALID Ability Script Tag Name"));
+
+    UCk_Utils_EditorOnly_UE::Request_PushNewEditorMessage
+    (
+        FCk_Utils_EditorOnly_PushNewEditorMessage_Params
+        {
+            TEXT("CkAbility"),
+            FCk_MessageSegments
+            {
+                {
+                    FCk_TokenizedMessage{Msg}.Set_TargetObject(this)
+                }
+            }
+        }
+        .Set_MessageSeverity(ECk_EditorMessage_Severity::Error)
+        .Set_MessageLogDisplayPolicy(ECk_EditorMessage_MessageLog_DisplayPolicy::DoNotFocus)
+        .Set_ToastNotificationDisplayPolicy(ECk_EditorMessage_ToastNotification_DisplayPolicy::Display)
+    );
+}
 
 auto
     UCk_Ability_Script_PDA::
