@@ -126,7 +126,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
-              DisplayName = "unbind From On Float Attribute Value Changed")
+              DisplayName = "Unbind From On Float Attribute Value Changed")
     static void
     UnbindFrom_OnValueChanged(
         FCk_Handle InAttributeOwnerEntity,
