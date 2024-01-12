@@ -13,6 +13,8 @@ enum class ECk_Ecs_HandleDebuggerBehavior : uint8
 {
     Disable,
     Enable,
+
+    // Stringify a list of all fragments and display it when hovering over a BP Entity/Handle
     EnableWithBlueprintDebugging
 };
 
@@ -48,12 +50,23 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class CKECS_API UCk_Utils_Ecs_ProjectSettings_UE
+UCLASS()
+class CKECS_API UCk_Utils_Ecs_ProjectSettings_UE : public UBlueprintFunctionLibrary
 {
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_Ecs_ProjectSettings_UE);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ecs|Settings")
+    static ECk_Ecs_HandleDebuggerBehavior
+    Get_HandleDebuggerBehavior();
+
 public:
     static auto Get_ProcessorInjector() -> TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base>;
     static auto Get_EcsWorldTickingGroup() -> ETickingGroup;
-    static auto Get_HandleDebuggerBehavior() -> ECk_Ecs_HandleDebuggerBehavior;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
