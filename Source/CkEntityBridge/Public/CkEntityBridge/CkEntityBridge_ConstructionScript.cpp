@@ -5,6 +5,7 @@
 #include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/ObjectReplication/CkObjectReplicatorComponent.h"
+#include "CkEcs/CkEcsLog.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
@@ -297,7 +298,14 @@ auto
 
                 _ReplicationComplete_BroadcastStep = EOnReplicationCompleteBroadcastStep::Broadcast;
 
-                const auto& AssociatedEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(GetOwner());
+                auto AssociatedEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(GetOwner());
+
+#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+                const auto& DebugName = UCk_Utils_Debug_UE::Get_DebugName(this, ECk_DebugName_Verbosity::ShortName);
+                AssociatedEntity.AddOrGet<DEBUG_NAME>()._Name = UCk_Utils_Debug_UE::Get_DebugName(GetOwner(), ECk_DebugName_Verbosity::ShortName);
+                ck::ecs::Log(TEXT("[EntityMap] [{}]"), AssociatedEntity, DebugName);
+#endif
+
                 _OnReplicationComplete_MC.Broadcast(AssociatedEntity);
             }
 
@@ -317,7 +325,14 @@ auto
 
                 _ReplicationComplete_BroadcastStep = EOnReplicationCompleteBroadcastStep::Broadcast;
 
-                const auto& AssociatedEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(GetOwner());
+                auto AssociatedEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(GetOwner());
+
+#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+                const auto& DebugName = UCk_Utils_Debug_UE::Get_DebugName(this, ECk_DebugName_Verbosity::ShortName);
+                AssociatedEntity.AddOrGet<DEBUG_NAME>()._Name = UCk_Utils_Debug_UE::Get_DebugName(GetOwner(), ECk_DebugName_Verbosity::ShortName);
+                ck::ecs::Log(TEXT("[EntityMap] [{}]"), AssociatedEntity, DebugName);
+#endif
+
                 _OnReplicationComplete_MC.Broadcast(AssociatedEntity);
             }
             break;
