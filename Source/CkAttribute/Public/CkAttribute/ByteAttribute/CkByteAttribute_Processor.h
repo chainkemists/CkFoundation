@@ -16,6 +16,14 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class CKATTRIBUTE_API FProcessor_ByteAttribute_OverrideBaseValue : public TProcessor_Attribute_OverrideBaseValue<FProcessor_ByteAttribute_OverrideBaseValue, FFragment_ByteAttribute>
+    {
+    public:
+        using TProcessor_Attribute_OverrideBaseValue::TProcessor_Attribute_OverrideBaseValue;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKATTRIBUTE_API FProcessor_ByteAttribute_RecomputeAll : public TProcessor_Attribute_RecomputeAll<FProcessor_ByteAttribute_RecomputeAll, FFragment_ByteAttributeModifier>
     {
     public:

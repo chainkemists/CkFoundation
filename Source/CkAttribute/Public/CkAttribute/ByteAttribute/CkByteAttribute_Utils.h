@@ -136,6 +136,16 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Byte",
+              DisplayName="Request Override Base Byte Value")
+    static void
+    Request_Override(
+        FCk_Handle InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
+        uint8 InNewBaseValue);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Byte",
               DisplayName = "Bind To On Byte Attribute Value Changed")
     static void
     BindTo_OnValueChanged(
