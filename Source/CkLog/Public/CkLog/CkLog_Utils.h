@@ -259,7 +259,7 @@ inline struct _ ##_LogCategory_## LogMapInjector                                
     }())
 #else
 #define CK_LOG_ERROR_NOTIFY_IF_NOT(_Namespace_, _Expression_, _Format_, ...)\
-    CK_LOG_ERROR_IF_NOT(_Namespace_, _Expression_, _Format_, ...)
+    CK_LOG_ERROR_IF_NOT(_Namespace_, _Expression_, _Format_, __VA_ARGS__)
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
