@@ -60,6 +60,20 @@ auto
 {
     ck::ecs::Warning(TEXT("Debugging the Handle [{}]"), InHandle);
 }
+
+auto
+    UCk_Utils_Handle_UE::
+    Set_DebugName(
+        FCk_Handle InHandle,
+        FName InDebugName)
+    -> void
+{
+#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+    InHandle.AddOrGet<DEBUG_NAME>()._Name = InDebugName;
+    ck::ecs::Log(TEXT("[EntityMap] [{}]"), InHandle, InDebugName);
+#endif
+}
+
 UE_ENABLE_OPTIMIZATION_SHIP
 
 auto
