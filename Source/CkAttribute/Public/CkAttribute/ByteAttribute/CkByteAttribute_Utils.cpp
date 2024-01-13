@@ -256,11 +256,12 @@ auto
         uint8        InNewBaseValue)
         -> void
 {
-    auto AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <ByteAttribute_Utils, RecordOfByteAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+    const auto CurrentBaseValue = Get_BaseValue(InAttributeOwnerEntity, InAttributeName);
+    const uint8 Delta = InNewBaseValue - CurrentBaseValue;
 
-    auto& Request = AttributeEntity.AddOrGet<ck::TFragment_Request_AttributeOverride<ck::FFragment_ByteAttribute>>();
-    Request = ck::TFragment_Request_AttributeOverride<ck::FFragment_ByteAttribute>{InNewBaseValue};
+    UCk_Utils_ByteAttributeModifier_UE::Add(InAttributeOwnerEntity, {},
+        FCk_Fragment_ByteAttributeModifier_ParamsData{
+            Delta, InAttributeName, ECk_ModifierOperation::Additive, ECk_ModifierOperation_RevocablePolicy::NotRevocable});
 }
 
 auto

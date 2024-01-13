@@ -256,11 +256,12 @@ auto
         FVector      InNewBaseValue)
     -> void
 {
-    auto AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <VectorAttribute_Utils, RecordOfVectorAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+    const auto CurrentBaseValue = Get_BaseValue(InAttributeOwnerEntity, InAttributeName);
+    const auto Delta = InNewBaseValue - CurrentBaseValue;
 
-    auto& Request = AttributeEntity.AddOrGet<ck::TFragment_Request_AttributeOverride<ck::FFragment_VectorAttribute>>();
-    Request = ck::TFragment_Request_AttributeOverride<ck::FFragment_VectorAttribute>{InNewBaseValue};
+    UCk_Utils_VectorAttributeModifier_UE::Add(InAttributeOwnerEntity, {},
+        FCk_Fragment_VectorAttributeModifier_ParamsData{
+            Delta, InAttributeName, ECk_ModifierOperation::Additive, ECk_ModifierOperation_RevocablePolicy::NotRevocable});
 }
 
 auto

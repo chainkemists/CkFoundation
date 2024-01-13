@@ -16,14 +16,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKATTRIBUTE_API FProcessor_VectorAttribute_OverrideBaseValue : public TProcessor_Attribute_OverrideBaseValue<FProcessor_VectorAttribute_OverrideBaseValue, FFragment_VectorAttribute>
-    {
-    public:
-        using TProcessor_Attribute_OverrideBaseValue::TProcessor_Attribute_OverrideBaseValue;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     class CKATTRIBUTE_API FProcessor_VectorAttribute_RecomputeAll : public TProcessor_Attribute_RecomputeAll<FProcessor_VectorAttribute_RecomputeAll, FFragment_VectorAttributeModifier>
     {
     public:

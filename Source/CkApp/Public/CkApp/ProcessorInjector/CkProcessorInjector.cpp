@@ -117,15 +117,12 @@ namespace ck_world_processor_injector
         InWorld.Add<ck::FProcessor_Transform_Actor>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_Transform_FireSignals>(InWorld.Get_Registry());
 
-        InWorld.Add<ck::FProcessor_ByteAttribute_OverrideBaseValue>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_ByteAttribute_RecomputeAll>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_ByteAttributeModifier_ComputeAll>(InWorld.Get_Registry());
 
-        InWorld.Add<ck::FProcessor_FloatAttribute_OverrideBaseValue>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_FloatAttribute_RecomputeAll>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_FloatAttributeModifier_ComputeAll>(InWorld.Get_Registry());
 
-        InWorld.Add<ck::FProcessor_VectorAttribute_OverrideBaseValue>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_VectorAttribute_RecomputeAll>(InWorld.Get_Registry());
         InWorld.Add<ck::FProcessor_VectorAttributeModifier_ComputeAll>(InWorld.Get_Registry());
 
