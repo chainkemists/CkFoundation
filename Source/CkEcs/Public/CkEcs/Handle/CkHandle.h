@@ -11,7 +11,18 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 #if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
-struct DEBUG_NAME { FName _Name; };
+struct DEBUG_NAME
+{
+    friend class UCk_Utils_Handle_UE;
+public:
+    CK_GENERATED_BODY(DEBUG_NAME);
+
+private:
+    FName _Name;
+
+public:
+    CK_PROPERTY_GET(_Name);
+};
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -211,14 +222,14 @@ CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(FCk_Handle,
 [&]()
 {
     if (ck::IsValid(InObj) && InObj.Has<DEBUG_NAME>())
-    { return ck::Format(TEXT("{}({})"), InObj._Entity, InObj.Get<DEBUG_NAME>()._Name); }
+    { return ck::Format(TEXT("{}({})"), InObj._Entity, InObj.Get<DEBUG_NAME>().Get_Name()); }
 
     return ck::Format(TEXT("{}"), InObj._Entity);
 },
 [&]()
 {
     if (ck::IsValid(InObj) && InObj.Has<DEBUG_NAME>())
-    { return ck::Format(TEXT("{}[{}]({})"), InObj._Entity, InObj._Registry, InObj.Get<DEBUG_NAME>()._Name); }
+    { return ck::Format(TEXT("{}[{}]({})"), InObj._Entity, InObj._Registry, InObj.Get<DEBUG_NAME>().Get_Name()); }
 
     return ck::Format(TEXT("{}({})"), InObj._Entity, InObj._Registry);
 });
