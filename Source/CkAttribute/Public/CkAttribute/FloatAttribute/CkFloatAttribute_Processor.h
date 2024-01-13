@@ -16,16 +16,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKATTRIBUTE_API FProcessor_FloatAttribute_OverrideBaseValue : public TProcessor_Attribute_OverrideBaseValue<FProcessor_FloatAttribute_OverrideBaseValue, FFragment_FloatAttribute>
-    {
-    public:
-        using TProcessor_Attribute_OverrideBaseValue::TProcessor_Attribute_OverrideBaseValue;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     class CKATTRIBUTE_API FProcessor_FloatAttribute_RecomputeAll : public TProcessor_Attribute_RecomputeAll<FProcessor_FloatAttribute_RecomputeAll, FFragment_FloatAttributeModifier>
     {
     public:

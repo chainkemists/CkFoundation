@@ -62,7 +62,7 @@ auto
         const auto& Modifier = _PendingAddModifiers[Index];
 
         CK_ENSURE_IF_NOT(ck::IsValid(Modifier.Get_Params().Get_TargetAttributeName()),
-            TEXT("Received a AddModifier Request from the SERVER with name [{}].{}"),
+            TEXT("Received a AddModifier Request from the SERVER with ModifierName [{}] for a TargetAttribute with INVALID name.{}"),
             Modifier.Get_ModifierName(),
             ck::Context(this))
         { continue; }
@@ -76,7 +76,7 @@ auto
         const auto& Modifier = _PendingRemoveModifiers[Index];
 
         CK_ENSURE_IF_NOT(ck::IsValid(Modifier.Get_AttributeName()),
-            TEXT("Received a RemoveModifier from the SERVER with name [{}].{}"),
+            TEXT("Received a RemoveModifier from the SERVER with Modifier [{}] for a TargetAttribute with INVALID name.{}"),
             Modifier.Get_ModifierName(),
             ck::Context(this))
         { continue; }
