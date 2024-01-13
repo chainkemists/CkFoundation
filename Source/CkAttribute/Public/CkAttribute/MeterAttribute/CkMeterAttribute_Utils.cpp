@@ -281,7 +281,8 @@ auto
     Request_Override(
         FCk_Handle   InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
-        FCk_Meter    InNewBaseValue)
+        FCk_Meter    InNewBaseValue,
+        FCk_Meter_Mask InMask)
     -> void
 {
     const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_ValidEntry_If(
@@ -291,11 +292,23 @@ auto
         InAttributeName, InAttributeOwnerEntity, InNewBaseValue)
     { return; }
 
-    const auto [MinCapacity, MaxCapacity, Current] = Get_MinMaxAndCurrentAttributeEntities(InAttributeOwnerEntity, InAttributeName);
+    if (EnumHasAnyFlags(InMask.Get_MeterMask(), ECk_Meter_Mask::Min))
+    {
+        UCk_Utils_FloatAttribute_UE::Request_Override(FoundEntity, ck::FMeterAttribute_Tags::Get_MinCapacity(),
+            InNewBaseValue.Get_Params().Get_Capacity().Get_MinCapacity());
+    }
 
-    FloatAttribute_Utils::Request_OverrideBaseValue(MinCapacity, InNewBaseValue.Get_Params().Get_Capacity().Get_MinCapacity());
-    FloatAttribute_Utils::Request_OverrideBaseValue(MaxCapacity, InNewBaseValue.Get_Params().Get_Capacity().Get_MaxCapacity());
-    FloatAttribute_Utils::Request_OverrideBaseValue(Current, InNewBaseValue.Get_Used().Get_AmountUsed());
+    if (EnumHasAnyFlags(InMask.Get_MeterMask(), ECk_Meter_Mask::Max))
+    {
+        UCk_Utils_FloatAttribute_UE::Request_Override(FoundEntity, ck::FMeterAttribute_Tags::Get_MaxCapacity(),
+            InNewBaseValue.Get_Params().Get_Capacity().Get_MaxCapacity());
+    }
+
+    if (EnumHasAnyFlags(InMask.Get_MeterMask(), ECk_Meter_Mask::Current))
+    {
+        UCk_Utils_FloatAttribute_UE::Request_Override(FoundEntity, ck::FMeterAttribute_Tags::Get_Current(),
+            InNewBaseValue.Get_Value().Get_CurrentValue());
+    }
 }
 
 auto
