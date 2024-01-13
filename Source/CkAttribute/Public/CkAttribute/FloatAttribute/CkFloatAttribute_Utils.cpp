@@ -224,7 +224,8 @@ auto
 
     auto AllAttributes = TArray<FGameplayTag>{};
 
-    RecordOfFloatAttributes_Utils::ForEach_ValidEntry(InAttributeOwnerEntity, [&](FCk_Handle InFloatAttributeEntity)
+    RecordOfFloatAttributes_Utils::ForEach_ValidEntry(InAttributeOwnerEntity,
+    [&](const FCk_Handle& InFloatAttributeEntity)
     {
         AllAttributes.Add(UCk_Utils_GameplayLabel_UE::Get_Label(InFloatAttributeEntity));
     });
@@ -291,15 +292,12 @@ auto
         float        InNewBaseValue)
     -> void
 {
-    auto AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+    const auto CurrentBaseValue = Get_BaseValue(InAttributeOwnerEntity, InAttributeName);
+    const auto Delta = InNewBaseValue - CurrentBaseValue;
 
-    CK_ENSURE_IF_NOT(ck::IsValid(AttributeEntity), TEXT("Attribute [{}] does NOT exist on Entity [{}]."),
-        InAttributeName, InAttributeOwnerEntity)
-    { return; }
-
-    auto& Request = AttributeEntity.AddOrGet<ck::TFragment_Request_AttributeOverride<ck::FFragment_FloatAttribute>>();
-    Request = ck::TFragment_Request_AttributeOverride<ck::FFragment_FloatAttribute>{InNewBaseValue};
+    UCk_Utils_FloatAttributeModifier_UE::Add(InAttributeOwnerEntity, {},
+        FCk_Fragment_FloatAttributeModifier_ParamsData{
+            Delta, InAttributeName, ECk_ModifierOperation::Additive, ECk_ModifierOperation_RevocablePolicy::NotRevocable});
 }
 
 auto
@@ -354,6 +352,12 @@ auto
     -> void
 {
     const auto& AttributeName = InParams.Get_TargetAttributeName();
+
+    if (InParams.Get_ModifierDelta() == 0 && InParams.Get_ModifierOperation() == ECk_ModifierOperation::Additive)
+    { return; }
+
+    if (InParams.Get_ModifierDelta() == 1 && InParams.Get_ModifierOperation() == ECk_ModifierOperation::Multiplicative)
+    { return; }
 
     const auto NewModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwnerEntity);
     UCk_Utils_GameplayLabel_UE::Add(NewModifierEntity, InModifierName);

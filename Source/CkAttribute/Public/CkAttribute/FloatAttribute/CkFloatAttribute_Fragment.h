@@ -162,7 +162,6 @@ private:
     void
     OnRep_PendingModifiers();
 
-private:
     UPROPERTY(ReplicatedUsing = OnRep_PendingModifiers)
     TArray<FCk_Fragment_FloatAttribute_PendingModifier> _PendingAddModifiers;
     int32 _NextPendingAddModifier = 0;

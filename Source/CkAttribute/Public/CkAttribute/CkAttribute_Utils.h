@@ -58,12 +58,6 @@ namespace ck
         Get_FinalValue(
             HandleType InHandle) -> AttributeDataType;
 
-    public:
-        static auto
-        Request_OverrideBaseValue(
-            HandleType InHandle,
-            AttributeDataType InNewBaseValue) -> void;
-
     private:
         static auto
         Request_RecomputeFinalValue(
