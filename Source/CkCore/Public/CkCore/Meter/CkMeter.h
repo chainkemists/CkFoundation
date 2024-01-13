@@ -9,6 +9,46 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType, meta = (Bitflags, UseEnumValuesAsMaskValuesInEditor = "true"))
+enum class ECk_Meter_Mask : uint8
+{
+    Min     = 1 << 0,
+    Max     = 1 << 1,
+    Current = 1 << 2,
+
+    None = 0 UMETA(Hidden),
+};
+
+ENUM_CLASS_FLAGS(ECk_Meter_Mask)
+ENABLE_ENUM_BITWISE_OPERATORS(ECk_Meter_Mask);
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Meter_Mask);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKCORE_API FCk_Meter_Mask
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Meter_Mask);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess, Bitmask, BitmaskEnum = "/Script/CkCore.ECk_Meter_Mask"))
+    int32 _MeterMask = 0;
+
+public:
+    auto
+    Get_MeterMask() const -> ECk_Meter_Mask;
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Meter_Mask, _MeterMask);
+
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta = (
     HasNativeMake = "/Script/CkCore.Ck_Utils_Meter_UE:Make_Meter",
     HasNativeBreak = "/Script/CkCore.Ck_Utils_Meter_UE:Break_Meter"))
