@@ -179,7 +179,8 @@ public:
     Request_Override(
         FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
-        FCk_Meter InNewBaseValue);
+        FCk_Meter InNewBaseValue,
+        FCk_Meter_Mask InMask);
 
 public:
     UFUNCTION(BlueprintCallable,
