@@ -5,6 +5,7 @@
 #include "CkEcs/CkEcsLog.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -16,11 +17,7 @@ auto
 {
     Set_CurrentWorld(UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle));
 
-#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
-    const auto& DebugName = UCk_Utils_Debug_UE::Get_DebugName(this, ECk_DebugName_Verbosity::ShortName);
-    InHandle.Add<DEBUG_NAME>(UCk_Utils_Debug_UE::Get_DebugName(this, ECk_DebugName_Verbosity::ShortName));
-    ck::ecs::Log(TEXT("[EntityMap] [{}]"), InHandle, DebugName);
-#endif
+    UCk_Utils_Handle_UE::Set_DebugName(InHandle, UCk_Utils_Debug_UE::Get_DebugName(this, ECk_DebugName_Verbosity::ShortName));
 
     DoConstruct(InHandle);
 }

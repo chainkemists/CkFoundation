@@ -62,6 +62,12 @@ public:
     Debug_Handle(
         const FCk_Handle& InHandle);
 
+public:
+    static auto
+    Set_DebugName(
+        FCk_Handle InHandle,
+        FName InDebugName) -> void;
+
 private:
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Handle", meta = (NativeBreakFunc))
     static void

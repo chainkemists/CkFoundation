@@ -9,6 +9,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
@@ -298,13 +299,10 @@ auto
 
                 _ReplicationComplete_BroadcastStep = EOnReplicationCompleteBroadcastStep::Broadcast;
 
-                auto AssociatedEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(GetOwner());
+                const auto AssociatedEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(GetOwner());
 
-#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
-                const auto& DebugName = UCk_Utils_Debug_UE::Get_DebugName(this, ECk_DebugName_Verbosity::ShortName);
-                AssociatedEntity.AddOrGet<DEBUG_NAME>()._Name = UCk_Utils_Debug_UE::Get_DebugName(GetOwner(), ECk_DebugName_Verbosity::ShortName);
-                ck::ecs::Log(TEXT("[EntityMap] [{}]"), AssociatedEntity, DebugName);
-#endif
+                UCk_Utils_Handle_UE::Set_DebugName(AssociatedEntity,
+                    UCk_Utils_Debug_UE::Get_DebugName(GetOwner(), ECk_DebugName_Verbosity::ShortName));
 
                 _OnReplicationComplete_MC.Broadcast(AssociatedEntity);
             }
@@ -325,13 +323,10 @@ auto
 
                 _ReplicationComplete_BroadcastStep = EOnReplicationCompleteBroadcastStep::Broadcast;
 
-                auto AssociatedEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(GetOwner());
+                const auto AssociatedEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(GetOwner());
 
-#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
-                const auto& DebugName = UCk_Utils_Debug_UE::Get_DebugName(this, ECk_DebugName_Verbosity::ShortName);
-                AssociatedEntity.AddOrGet<DEBUG_NAME>()._Name = UCk_Utils_Debug_UE::Get_DebugName(GetOwner(), ECk_DebugName_Verbosity::ShortName);
-                ck::ecs::Log(TEXT("[EntityMap] [{}]"), AssociatedEntity, DebugName);
-#endif
+                UCk_Utils_Handle_UE::Set_DebugName(AssociatedEntity,
+                    UCk_Utils_Debug_UE::Get_DebugName(GetOwner(), ECk_DebugName_Verbosity::ShortName));
 
                 _OnReplicationComplete_MC.Broadcast(AssociatedEntity);
             }
