@@ -211,6 +211,7 @@ namespace ck
         FProcessor_ResourceLoader_HandleRequests::
         DoOnPendingObjectBatchStreamed(
             HandleType InHandle,
+            // ReSharper disable once CppPassValueParameterByConstReference
             TArray<FCk_ResourceLoader_ObjectReference_Soft> InObjectBatchStreamed) const
         -> void
     {
@@ -224,10 +225,10 @@ namespace ck
         const auto& FoundPendingObjectBatch = AllPendingObjectBatches[FoundPendingObjectBatchIndex];
         const auto& StreamingHandle         = FoundPendingObjectBatch.Get_StreamableHandle();
 
-        auto OutLoadedAssets = TArray<UObject*>{};
-        StreamingHandle->GetLoadedAssets(OutLoadedAssets);
+        auto LoadedAssets = TArray<UObject*>{};
+        StreamingHandle->GetLoadedAssets(LoadedAssets);
 
-        const auto LoadedObjects = algo::Transform<TArray<FCk_ResourceLoader_LoadedObject>>(OutLoadedAssets,
+        const auto LoadedObjects = algo::Transform<TArray<FCk_ResourceLoader_LoadedObject>>(LoadedAssets,
         [&](UObject* InLoadedAsset)
         {
             const auto LoadedObjectSoftRef = FCk_ResourceLoader_ObjectReference_Soft{FSoftObjectPath(InLoadedAsset)};
@@ -251,7 +252,7 @@ namespace ck
 
         UUtils_Signal_ResourceLoader_OnObjectLoaded::Broadcast(InHandle, MakePayload(InHandle, Payload));
 
-        const auto& ResourceLoaderSubsystem = UCk_Utils_ResourceLoader_Subsystem_UE::Get_Subsystem(nullptr);
+        const auto& ResourceLoaderSubsystem = UCk_Utils_ResourceLoader_Subsystem_UE::Get_Subsystem();
 
         CK_ENSURE_IF_NOT(ck::IsValid(ResourceLoaderSubsystem),
             TEXT("Could not retrieve Resource Loader subsystem! Unable to Track Loaded Object [{}]"),
@@ -272,7 +273,7 @@ namespace ck
 
         UUtils_Signal_ResourceLoader_OnObjectBatchLoaded::Broadcast(InHandle, MakePayload(InHandle, Payload));
 
-        const auto& ResourceLoaderSubsystem = UCk_Utils_ResourceLoader_Subsystem_UE::Get_Subsystem(nullptr);
+        const auto& ResourceLoaderSubsystem = UCk_Utils_ResourceLoader_Subsystem_UE::Get_Subsystem();
 
         CK_ENSURE_IF_NOT(ck::IsValid(ResourceLoaderSubsystem),
             TEXT("Could not retrieve Resource Loader subsystem! Unable to Track Loaded Object Batch"))
