@@ -307,16 +307,17 @@ auto
     -> void
 {
     const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    const auto& AssetRegistry       = AssetRegistryModule.Get();
 
     FARFilter Filter;
     Filter.ClassPaths.Add(FTopLevelAssetPath{UCk_AbilityCue_Aggregator_PDA::StaticClass()});
     Filter.bRecursiveClasses = true;
 
     FARCompiledFilter CompiledFilter;
-    IAssetRegistry::Get()->CompileFilter(Filter, CompiledFilter);
+    AssetRegistry.CompileFilter(Filter, CompiledFilter);
 
     TArray<TSoftObjectPtr<UCk_AbilityCue_Aggregator_PDA>> Assets;
-    AssetRegistryModule.Get().EnumerateAssets(CompiledFilter, [&](const FAssetData& InEnumeratedAssetData)
+    AssetRegistry.EnumerateAssets(CompiledFilter, [&](const FAssetData& InEnumeratedAssetData)
     {
         DoAddAggregator(InEnumeratedAssetData);
         Assets.Emplace(TSoftObjectPtr<UCk_AbilityCue_Aggregator_PDA>{InEnumeratedAssetData.GetSoftObjectPath()});

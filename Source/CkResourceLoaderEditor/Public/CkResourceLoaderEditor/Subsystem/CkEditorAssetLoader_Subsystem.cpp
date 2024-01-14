@@ -17,6 +17,9 @@ auto
         FSubsystemCollectionBase& Collection)
     -> void
 {
+    _World.Add<ck::FProcessor_ResourceLoader_HandleRequests>(_World.Get_Registry());
+    _AssetLoaderEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_World.Get_Registry());
+
 #if WITH_EDITOR
     if (GIsRunning)
     {
@@ -28,9 +31,6 @@ auto
         FCoreDelegates::OnFEngineLoopInitComplete.AddUObject(this, &UCk_EditorAssetLoader_SubSystem_UE::DoOnEngineInitComplete);
     }
 #endif
-
-    _World.Add<ck::FProcessor_ResourceLoader_HandleRequests>(_World.Get_Registry());
-    _AssetLoaderEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_World.Get_Registry());
 }
 
 auto
@@ -46,20 +46,29 @@ auto
     Request_RefreshLoadingAssets()
     -> void
 {
+    UCk_Utils_ResourceLoaderEditor_ProjectSettings_UE::Request_ClearAllLoadedObjects();
+
     const auto& ClassesToLoad = UCk_Utils_ResourceLoaderEditor_ProjectSettings_UE::Get_ClassesToLoad();
+
+    if (ClassesToLoad.IsEmpty())
+    { return; }
 
     const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
     const auto& AssetRegistry       = AssetRegistryModule.Get();
 
-    FARFilter Filter;
-    for (auto Class : ClassesToLoad)
+    const auto& ValidClassesToLoad = ck::algo::Filter(ClassesToLoad, [&](const FSoftClassPath& InClass)
     {
-        if (Class.ResolveClass())
-        {
-            const auto ResolvedObject = Class.ResolveObject();
-            Filter.ClassPaths.Add(FTopLevelAssetPath{ResolvedObject->GetPathName()});
-        }
-    }
+        return ck::IsValid(InClass);
+    });
+
+    const auto& ClassPathsToLoad = ck::algo::Transform<TArray<FTopLevelAssetPath>>(ValidClassesToLoad, [&](const FSoftClassPath& InClass)
+    {
+        return InClass.GetAssetPath();
+    });
+
+    FARFilter Filter;
+
+    Filter.ClassPaths.Append(ClassPathsToLoad);
     Filter.bRecursivePaths = true;
     Filter.bRecursiveClasses = true;
 
@@ -67,6 +76,7 @@ auto
     AssetRegistry.CompileFilter(Filter, CompiledFilter);
 
     auto SoftObjectReferences = TArray<FCk_ResourceLoader_ObjectReference_Soft>{};
+
     for (const auto Path : CompiledFilter.ClassPaths)
     {
         const auto& SoftObjPath = FSoftObjectPath{Path};
@@ -74,7 +84,13 @@ auto
         SoftObjectReferences.Emplace(FCk_ResourceLoader_ObjectReference_Soft{SoftObjPath});
     }
 
-    UCk_Utils_ResourceLoader_UE::Request_LoadObjectBatch(_AssetLoaderEntity, FCk_Request_ResourceLoader_LoadObjectBatch{SoftObjectReferences}, {});
+    UCk_Utils_ResourceLoader_UE::Request_LoadObjectBatch
+    (
+        _AssetLoaderEntity,
+        FCk_Request_ResourceLoader_LoadObjectBatch{SoftObjectReferences}.Set_LoadingPolicy(ECk_ResourceLoader_LoadingPolicy::Async),
+        {}
+    );
+
     _World.Tick(FCk_Time::ZeroSecond());
 }
 
@@ -92,3 +108,4 @@ auto
     GEngine->GetEngineSubsystem<UCk_EditorAssetLoader_SubSystem_UE>()->Request_RefreshLoadingAssets();
 }
 
+// --------------------------------------------------------------------------------------------------------------------

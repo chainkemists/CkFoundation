@@ -10,22 +10,22 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#define LOCTEXT_NAMESPACE "EditorStyle_SettingsDetails"
+#define LOCTEXT_NAMESPACE "ResourceLoader_SettingsDetails"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::details
 {
     auto
-        FEditorStyle_ResourceLoaderSettings_ProjectSettings_Details::
+        FResourceLoader_ProjectSettings_Details::
         MakeInstance()
         -> TSharedRef<IDetailCustomization>
     {
-        return MakeShareable(new FEditorStyle_ResourceLoaderSettings_ProjectSettings_Details);
+        return MakeShareable(new FResourceLoader_ProjectSettings_Details);
     }
 
     auto
-        FEditorStyle_ResourceLoaderSettings_ProjectSettings_Details::
+        FResourceLoader_ProjectSettings_Details::
         CustomizeDetails(
             IDetailLayoutBuilder& DetailBuilder) -> void
     {
@@ -54,6 +54,25 @@ namespace ck::details
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#if WITH_EDITOR
+auto
+    UCk_ResourceLoaderEditor_ProjectSettings_UE::
+    PostEditChangeProperty(
+        FPropertyChangedEvent& InPropertyChangedEvent)
+    -> void
+{
+    Super::PostEditChangeProperty(InPropertyChangedEvent);
+
+    if (ck::Is_NOT_Valid(InPropertyChangedEvent.Property))
+    { return; }
+
+    if (InPropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(UCk_ResourceLoaderEditor_ProjectSettings_UE, _ClassesToLoad))
+    {
+        UCk_Utils_EditorAssetLoader_SubSystem_UE::Request_RefreshLoadingAssets();
+    }
+}
+#endif
+
 auto
     UCk_Utils_ResourceLoaderEditor_ProjectSettings_UE::
     Get_ClassesToLoad()
@@ -64,11 +83,28 @@ auto
 
 auto
     UCk_Utils_ResourceLoaderEditor_ProjectSettings_UE::
+    Request_ClearAllLoadedObjects()
+    -> void
+{
+    UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_ResourceLoaderEditor_ProjectSettings_UE>()->_LoadedObjects.Empty();
+}
+
+auto
+    UCk_Utils_ResourceLoaderEditor_ProjectSettings_UE::
     Request_AddLoadedObject(
-        FSoftObjectPath InLoadedObject)
+        const FSoftObjectPath& InLoadedObject)
     -> void
 {
     UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_ResourceLoaderEditor_ProjectSettings_UE>()->_LoadedObjects.Emplace(InLoadedObject);
+}
+
+auto
+    UCk_Utils_ResourceLoaderEditor_ProjectSettings_UE::
+    Request_AddLoadedObjects(
+        const TArray<FSoftObjectPath>& InLoadedObjects)
+    -> void
+{
+    UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_ResourceLoaderEditor_ProjectSettings_UE>()->_LoadedObjects.Append(InLoadedObjects);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
