@@ -40,11 +40,10 @@ auto
 
 auto
     UCk_Utils_ResourceLoader_Subsystem_UE::
-    Get_Subsystem(
-        const UWorld* InWorld)
+    Get_Subsystem()
     -> SubsystemType*
 {
-    return UCk_Utils_Game_UE::Get_GameInstance(InWorld)->GetSubsystem<UCk_ResourceLoader_Subsystem_UE>();
+    return GEngine->GetEngineSubsystem<UCk_ResourceLoader_Subsystem_UE>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
