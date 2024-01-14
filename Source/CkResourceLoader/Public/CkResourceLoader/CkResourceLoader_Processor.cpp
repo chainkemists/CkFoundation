@@ -141,6 +141,9 @@ namespace ck
                     return InObjectRefSoft.Get_SoftObjectPath();
                 });
 
+                if (ObjectToLoadPaths.IsEmpty())
+                { break; }
+
                 const auto& StreamingHandle = UAssetManager::GetStreamableManager().RequestAsyncLoad
                 (
                     ObjectToLoadPaths,
