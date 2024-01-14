@@ -164,6 +164,19 @@ auto
     );
 }
 
+auto
+    UCk_Utils_Actor_UE::
+    Get_HasComponentByClass(
+        AActor* InActor,
+        TSubclassOf<UActorComponent> InComponent)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to Get_HasComponentByClass"))
+    { return {}; }
+
+    return ck::IsValid(InActor->FindComponentByClass(InComponent));
+}
+
 auto UCk_Utils_Actor_UE::
     Request_SpawnActor(
         const SpawnActorParamsType& InSpawnActorParams,
