@@ -15,7 +15,7 @@ auto
     PropertyModule.RegisterCustomClassLayout
     (
         UCk_ResourceLoaderEditor_ProjectSettings_UE::StaticClass()->GetFName(),
-        FOnGetDetailCustomizationInstance::CreateStatic(&ck::details::FEditorStyle_ResourceLoaderSettings_ProjectSettings_Details::MakeInstance)
+        FOnGetDetailCustomizationInstance::CreateStatic(&ck::details::FResourceLoader_ProjectSettings_Details::MakeInstance)
     );
 }
 

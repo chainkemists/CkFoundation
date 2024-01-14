@@ -12,7 +12,7 @@
 
 namespace ck::details
 {
-    class FEditorStyle_ResourceLoaderSettings_ProjectSettings_Details : public IDetailCustomization
+    class FResourceLoader_ProjectSettings_Details : public IDetailCustomization
 {
     public:
         /** Makes a new instance of this detail layout class for a specific detail view requesting it */
@@ -34,6 +34,12 @@ class CKRESOURCELOADEREDITOR_API UCk_ResourceLoaderEditor_ProjectSettings_UE : p
 
 public:
     CK_GENERATED_BODY(UCk_ResourceLoaderEditor_ProjectSettings_UE);
+
+protected:
+#if WITH_EDITOR
+    auto PostEditChangeProperty(
+        FPropertyChangedEvent& InPropertyChangedEvent) -> void override;
+#endif
 
 private:
     UPROPERTY(Config, EditDefaultsOnly, Category = "Asset Loading",
@@ -57,7 +63,15 @@ public:
     Get_ClassesToLoad() -> const TArray<FSoftClassPath>&;
 
     static auto
-    Request_AddLoadedObject(FSoftObjectPath InLoadedObject) -> void;
+    Request_AddLoadedObject(
+        const FSoftObjectPath& InLoadedObject) -> void;
+
+    static auto
+    Request_AddLoadedObjects(
+        const TArray<FSoftObjectPath>& InLoadedObjects) -> void;
+
+    static auto
+    Request_ClearAllLoadedObjects() -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
