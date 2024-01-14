@@ -136,7 +136,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Vector",
-              DisplayName="Request Override Attribute Base Value")
+              DisplayName="Request Override Vector Attribute Base Value")
     static void
     Request_Override(
         FCk_Handle InAttributeOwnerEntity,

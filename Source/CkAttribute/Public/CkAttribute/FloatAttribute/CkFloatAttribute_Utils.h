@@ -145,7 +145,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
-              DisplayName="Request Override Attribute Base Float Value")
+              DisplayName="Request Override Float Attribute Base Value")
     static void
     Request_Override(
         FCk_Handle InAttributeOwnerEntity,
