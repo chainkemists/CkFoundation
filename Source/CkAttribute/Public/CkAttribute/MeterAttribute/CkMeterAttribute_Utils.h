@@ -1,16 +1,19 @@
 #pragma once
 
-#include <GameplayTagContainer.h>
-
 #include "CkAttribute/CkAttribute_Utils.h"
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment.h"
 #include "CkAttribute/MeterAttribute/CkMeterAttribute_Fragment.h"
 #include "CkAttribute/MeterAttribute/CkMeterAttribute_Fragment_Data.h"
 
+#include "CkCore/Meter/CkMeter.h"
+
 #include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 
 #include "CkEcsBasics/CkEcsBasics_Utils.h"
+
 #include "CkSignal/CkSignal_Fragment_Data.h"
+
+#include <GameplayTagContainer.h>
 
 #include "CkMeterAttribute_Utils.generated.h"
 
@@ -174,7 +177,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Meter",
-              DisplayName="Request Override Base Meter Value")
+              DisplayName="Request Override Attribute Base Meter Value")
     static void
     Request_Override(
         FCk_Handle InAttributeOwnerEntity,
