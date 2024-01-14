@@ -147,22 +147,26 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Actor")
     static ALevelScriptActor*
-    Get_PersistentLevelScriptActor(const UObject* InWorldContextObject);
+    Get_PersistentLevelScriptActor(
+        const UObject* InWorldContextObject);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Actor", meta = (DefaultToSelf = "InObject"))
     static APawn*
-    Get_OutermostPawn(UObject* InObject);
+    Get_OutermostPawn(
+        UObject* InObject);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Actor", meta = (DefaultToSelf = "InObject"))
     static AActor*
-    Get_OutermostActor(UObject* InObject);
+    Get_OutermostActor(
+        UObject* InObject);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Actor", meta = (DefaultToSelf = "InObject"))
     static AActor*
-    Get_OutermostActor_RemoteAuthority(UObject* InObject);
+    Get_OutermostActor_RemoteAuthority(
+        UObject* InObject);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Actor",
@@ -174,6 +178,14 @@ public:
         AActor* InActorToClone,
         ESpawnActorCollisionHandlingMethod InCollisionHandlingOverride,
         ECk_Utils_Actor_SpawnActorPolicy InSpawnPolicy);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Actor",
+              meta     = (DefaultToSelf = "InActor"))
+    static bool
+    Get_HasComponentByClass(
+        AActor* InActor,
+        TSubclassOf<UActorComponent> InComponent);
 
 public:
     static auto Request_SpawnActor(
