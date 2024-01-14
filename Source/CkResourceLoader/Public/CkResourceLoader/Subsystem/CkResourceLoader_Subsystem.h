@@ -11,7 +11,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable,NotBlueprintType, DisplayName = "CkSubsystem_ResourceLoader")
-class CKRESOURCELOADER_API UCk_ResourceLoader_Subsystem_UE : public UGameInstanceSubsystem
+class CKRESOURCELOADER_API UCk_ResourceLoader_Subsystem_UE : public UEngineSubsystem
 {
     GENERATED_BODY()
 
@@ -43,8 +43,7 @@ public:
 
 public:
     static auto
-    Get_Subsystem(
-        const UWorld* InWorld) -> SubsystemType*;
+    Get_Subsystem() -> SubsystemType*;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
