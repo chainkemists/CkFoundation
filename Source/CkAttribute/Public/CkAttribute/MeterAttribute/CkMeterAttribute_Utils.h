@@ -177,7 +177,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Meter",
-              DisplayName="Request Override Attribute Base Meter Value")
+              DisplayName="Request Override Meter Attribute Base Value")
     static void
     Request_Override(
         FCk_Handle InAttributeOwnerEntity,
