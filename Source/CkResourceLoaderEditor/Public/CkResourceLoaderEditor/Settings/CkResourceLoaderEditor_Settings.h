@@ -37,7 +37,7 @@ public:
 
 private:
     UPROPERTY(Config, EditDefaultsOnly, Category = "Asset Loading",
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, AllowAbstract = true))
     TArray<FSoftClassPath> _ClassesToLoad;
 
     UPROPERTY(Transient, EditInstanceOnly, Category = "Asset Loading - DEBUG",
