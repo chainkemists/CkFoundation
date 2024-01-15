@@ -129,6 +129,12 @@ struct CKABILITY_API FCk_Request_AbilityCue_Spawn
 public:
     CK_GENERATED_BODY(FCk_Request_AbilityCue_Spawn);
 
+public:
+    FCk_Request_AbilityCue_Spawn() = default;
+    FCk_Request_AbilityCue_Spawn(
+        const FGameplayTag& InAbilityCueName,
+        UObject* InWorldContextObject);
+
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))
@@ -145,7 +151,7 @@ private:
 public:
     CK_PROPERTY_GET(_AbilityCueName);
     CK_PROPERTY_GET(_WorldContextObject);
-    CK_PROPERTY_GET(_ReplicatedParams);
+    CK_PROPERTY(_ReplicatedParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
