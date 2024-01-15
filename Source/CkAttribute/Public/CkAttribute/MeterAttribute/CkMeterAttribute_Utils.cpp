@@ -118,7 +118,7 @@ auto
 
     Store_Parameter(InHandle, MeterParamsDataToUse);
 
-    if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InHandle))
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle))
     { return;}
 
     // Meter is an Entity that is made up of sub-entities (FloatAttribute) and thus requires us constructing it just like

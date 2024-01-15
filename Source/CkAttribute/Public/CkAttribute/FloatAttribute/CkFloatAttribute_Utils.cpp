@@ -378,7 +378,7 @@ auto
     if (NOT InAttributeOwnerEntity.Has<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>())
     { return; }
 
-    if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InAttributeOwnerEntity))
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAttributeOwnerEntity))
     { return; }
 
     InAttributeOwnerEntity.Get<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>()->Broadcast_AddModifier(InModifierName, InParams);
@@ -436,7 +436,7 @@ auto
     if (NOT InAttributeOwnerEntity.Has<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>())
     { return; }
 
-    if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InAttributeOwnerEntity))
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAttributeOwnerEntity))
     { return; }
 
     InAttributeOwnerEntity.Get<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>()->

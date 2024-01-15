@@ -24,7 +24,7 @@ auto
     -> bool
 {
     const auto Entity = Get_AssociatedEntity();
-    if (UCk_Utils_Net_UE::Get_HasAuthority(Entity))
+    if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(Entity))
     { return true; }
 
     return Get_ExpectedNumberOfDependentReplicationDrivers() == _NumSyncedDependentReplicationDrivers;
@@ -146,7 +146,11 @@ auto
     const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(WorldSubsystem->Get_TransientEntity(), [&](FCk_Handle InEntity)
     {
         InEntity.Add<ck::FFragment_OwningActor_Current>(ReplicatedActor);
-        UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Proxy});
+        UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings
+            {
+                ECk_Net_NetModeType::Client,
+                ReplicatedActor->GetLocalRole() == ROLE_AutonomousProxy ? ECk_Net_EntityNetRole::Authority : ECk_Net_EntityNetRole::Proxy
+            });
     });
 
     // TODO: we need the transform
