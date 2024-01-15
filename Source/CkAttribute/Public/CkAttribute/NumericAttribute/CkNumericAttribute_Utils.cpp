@@ -291,7 +291,7 @@ auto
         const FCk_Fragment_NumericAttributeModifier_ParamsData& InParams)
     -> void
 {
-    if (NOT UCk_Utils_Net_UE::Get_HasAuthority(InAttributeOwnerEntity))
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAttributeOwnerEntity))
     { return; }
 
     if (UCk_Utils_FloatAttribute_UE::Has(InAttributeOwnerEntity, InParams.Get_TargetAttributeName()))
