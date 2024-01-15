@@ -340,6 +340,7 @@ private:
 private:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
+              DisplayName = "[AbilityScript] Request Activate This Ability",
               meta = (CompactNodeTitle="ACTIVATE_ThisAbility", DefaultToSelf="InScript", HidePin="InScript"))
     static void
     Self_Request_ActivateAbility(
@@ -348,6 +349,7 @@ private:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
+              DisplayName = "[AbilityScript] Request Deactivate This Ability",
               meta = (CompactNodeTitle="DEACTIVATE_ThisAbility", DefaultToSelf="InScript", HidePin="InScript"))
     static void
     Self_Request_DeactivateAbility(
@@ -355,6 +357,7 @@ private:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
+              DisplayName = "[AbilityScript] Request Apply Cost",
               meta = (CompactNodeTitle="ApplyCost", DefaultToSelf="InScript", HidePin="InScript"))
     static void
     Self_Request_ApplyCost(
@@ -362,6 +365,7 @@ private:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
+              DisplayName = "[AbilityScript] Request Apply Cost On Owner",
               meta = (CompactNodeTitle="ApplyCost_OnOwner", DefaultToSelf="InScript", HidePin="InScript"))
     static void
     Self_Request_ApplyCost_OnOwner(
@@ -369,6 +373,7 @@ private:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
+              DisplayName = "[AbilityScript] Request Apply Cooldown",
               meta = (CompactNodeTitle="ApplyCooldown", DefaultToSelf="InScript", HidePin="InScript"))
     static void
     Self_Request_ApplyCooldown(
@@ -376,6 +381,7 @@ private:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
+              DisplayName = "[AbilityScript] Request Apply Cooldown On Owner",
               meta = (CompactNodeTitle="ApplyCooldown_OnOwner", DefaultToSelf="InScript", HidePin="InScript"))
     static void
     Self_Request_ApplyCooldown_OnOwner(
@@ -383,6 +389,7 @@ private:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
+              DisplayName = "[AbilityScript] Request Track Task",
               meta = (CompactNodeTitle="TRACK_Task", DefaultToSelf="InScript", HidePin="InScript"))
     static void
     Self_Request_TrackTask(
@@ -391,6 +398,7 @@ private:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
+              DisplayName = "[AbilityScript] Request Spawn Ability Cue",
               meta = (CompactNodeTitle="SpawnAbilityCue", DefaultToSelf="InScript", HidePin="InScript"))
     static void
     Self_Request_SpawnAbilityCue(
@@ -401,6 +409,7 @@ private:
 private:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Ability|Script",
+              DisplayName = "[AbilityScript] Get Ability Status",
               meta = (CompactNodeTitle="STATUS_ThisAbility", DefaultToSelf="InScript", HidePin="InScript"))
     static ECk_Ability_Status
     Self_Get_Status(
@@ -408,6 +417,7 @@ private:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Ability|Script",
+              DisplayName = "[AbilityScript] Get Ability Entity",
               meta = (CompactNodeTitle="AbilityEntity", DefaultToSelf="InScript", HidePin="InScript"))
     static FCk_Handle
     Self_Get_AbilityEntity(
@@ -415,6 +425,7 @@ private:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Ability|Script",
+              DisplayName = "[AbilityScript] Get Ability Owner Entity",
               meta = (CompactNodeTitle="AbilityOwnerEntity", DefaultToSelf="InScript", HidePin="InScript"))
     static FCk_Handle
     Self_Get_AbilityOwnerEntity(
