@@ -1,6 +1,7 @@
 #include "CkAbility_Fragment_Data.h"
 
 #include "CkAbility/Ability/CkAbility_Utils.h"
+#include "CkAbility/AbilityCue/CkAbilityCue_Utils.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Utils.h"
 #include "CkAbility/Settings/CkAbility_Settings.h"
 
@@ -191,14 +192,17 @@ auto
         AbilityHandle, InScript)
     { return; }
 
-    UCk_Utils_AbilityOwner_UE::Request_SendEvent(AbilityHandle,
+    const auto& DefaultApplyCostTag = UCk_Utils_Ability_ProjectSettings_UE::Get_Default_ApplyCostTag();
+
+    UCk_Utils_AbilityOwner_UE::Request_SendEvent
+    (
+        AbilityHandle,
         FCk_Request_AbilityOwner_SendEvent
         {
-            FCk_AbilityOwner_Event
-            {
-                UCk_Utils_Ability_ProjectSettings_UE::Get_Default_ApplyCostTag(),
-            }.Set_ContextEntity(AbilityHandle)
-        });
+            FCk_AbilityOwner_Event{DefaultApplyCostTag}
+                .Set_ContextEntity(AbilityHandle)
+        }
+    );
 }
 
 auto
@@ -212,17 +216,19 @@ auto
         InScript)
     { return; }
 
-    const auto& AbilityHandle = InScript->Get_AbilityHandle();
+    const auto& AbilityHandle      = InScript->Get_AbilityHandle();
     const auto& AbilityOwnerHandle = InScript->Get_AbilityOwnerHandle();
+    const auto& DefaultApplyCostTag = UCk_Utils_Ability_ProjectSettings_UE::Get_Default_ApplyCostTag();
 
-    UCk_Utils_AbilityOwner_UE::Request_SendEvent(AbilityOwnerHandle,
+    UCk_Utils_AbilityOwner_UE::Request_SendEvent
+    (
+        AbilityOwnerHandle,
         FCk_Request_AbilityOwner_SendEvent
         {
-            FCk_AbilityOwner_Event
-            {
-                UCk_Utils_Ability_ProjectSettings_UE::Get_Default_ApplyCostTag(),
-            }.Set_ContextEntity(AbilityHandle)
-        });
+            FCk_AbilityOwner_Event{DefaultApplyCostTag}
+                .Set_ContextEntity(AbilityHandle)
+        }
+    );
 }
 
 auto
@@ -243,14 +249,17 @@ auto
         AbilityHandle, InScript)
     { return; }
 
-    UCk_Utils_AbilityOwner_UE::Request_SendEvent(AbilityHandle,
+    const auto& DefaultApplyCooldownTag = UCk_Utils_Ability_ProjectSettings_UE::Get_Default_ApplyCooldownTag();
+
+    UCk_Utils_AbilityOwner_UE::Request_SendEvent
+    (
+        AbilityHandle,
         FCk_Request_AbilityOwner_SendEvent
         {
-            FCk_AbilityOwner_Event
-            {
-                UCk_Utils_Ability_ProjectSettings_UE::Get_Default_ApplyCooldownTag(),
-            }.Set_ContextEntity(AbilityHandle)
-        });
+            FCk_AbilityOwner_Event{DefaultApplyCooldownTag}
+                .Set_ContextEntity(AbilityHandle)
+        }
+    );
 }
 
 auto
@@ -264,17 +273,19 @@ auto
         InScript)
     { return; }
 
-    const auto& AbilityHandle = InScript->Get_AbilityHandle();
-    const auto& AbilityOwner = InScript->Get_AbilityOwnerHandle();
+    const auto& AbilityHandle           = InScript->Get_AbilityHandle();
+    const auto& AbilityOwner            = InScript->Get_AbilityOwnerHandle();
+    const auto& DefaultApplyCooldownTag = UCk_Utils_Ability_ProjectSettings_UE::Get_Default_ApplyCooldownTag();
 
-    UCk_Utils_AbilityOwner_UE::Request_SendEvent(AbilityOwner,
+    UCk_Utils_AbilityOwner_UE::Request_SendEvent
+    (
+        AbilityOwner,
         FCk_Request_AbilityOwner_SendEvent
         {
-            FCk_AbilityOwner_Event
-            {
-                UCk_Utils_Ability_ProjectSettings_UE::Get_Default_ApplyCooldownTag(),
-            }.Set_ContextEntity(AbilityHandle)
-        });
+            FCk_AbilityOwner_Event{DefaultApplyCooldownTag}
+                .Set_ContextEntity(AbilityHandle)
+        }
+    );
 }
 
 auto
@@ -293,6 +304,27 @@ auto
     { return; }
 
     InScript->_Tasks.Emplace(InTask);
+}
+
+auto
+    UCk_Ability_Script_PDA::
+    Self_Request_SpawnAbilityCue(
+        const UCk_Ability_Script_PDA* InScript,
+        const FCk_AbilityCue_Params&  InReplicatedParams,
+        FGameplayTag InAbilityCueName)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InScript),
+        TEXT("AbilityScript is [{}]. Was this Ability GC'ed and this function is being called in a latent node?"),
+        InScript)
+    { return; }
+
+    UCk_Utils_AbilityCue_UE::Request_Spawn_AbilityCue
+    (
+        InScript->Get_AbilityHandle(),
+        FCk_Request_AbilityCue_Spawn{InAbilityCueName, const_cast<UCk_Ability_Script_PDA*>(InScript)}
+            .Set_ReplicatedParams(InReplicatedParams)
+    );
 }
 
 auto

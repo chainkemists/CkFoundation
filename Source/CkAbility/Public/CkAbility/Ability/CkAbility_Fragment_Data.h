@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkAbility/AbilityCue/CkAbilityCue_Fragment_Data.h"
 #include "CkCore/Public/CkCore/Format/CkFormat.h"
 #include "CkCore/Types/DataAsset/CkDataAsset.h"
 
@@ -380,7 +381,6 @@ private:
     Self_Request_ApplyCooldown_OnOwner(
         const UCk_Ability_Script_PDA* InScript);
 
-
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
               meta = (CompactNodeTitle="TRACK_Task", DefaultToSelf="InScript", HidePin="InScript"))
@@ -388,6 +388,15 @@ private:
     Self_Request_TrackTask(
         UCk_Ability_Script_PDA* InScript,
         UObject* InTask);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Ability|Script",
+              meta = (CompactNodeTitle="SpawnAbilityCue", DefaultToSelf="InScript", HidePin="InScript"))
+    static void
+    Self_Request_SpawnAbilityCue(
+        const UCk_Ability_Script_PDA* InScript,
+        const FCk_AbilityCue_Params& InReplicatedParams,
+        FGameplayTag InAbilityCueName);
 
 private:
     UFUNCTION(BlueprintPure,
