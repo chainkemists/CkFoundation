@@ -129,8 +129,9 @@ namespace ck
         {
             ability::Verbose
             (
-                TEXT("Skipping Giving Ability [{}] because ReplicationType [{}] does not match for Entity [{}]"),
+                TEXT("Skipping Giving Ability [{}] with Script [{}] because ReplicationType [{}] does not match for Entity [{}]"),
                 AbilityEntityConfig,
+                AbilityParams.Get_AbilityScriptClass(),
                 ReplicationType,
                 InAbilityOwnerEntity
             );
