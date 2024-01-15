@@ -150,3 +150,14 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+FCk_Request_AbilityCue_Spawn::
+    FCk_Request_AbilityCue_Spawn(
+        const FGameplayTag& InAbilityCueName,
+        UObject* InWorldContextObject)
+    : _AbilityCueName(InAbilityCueName)
+    , _WorldContextObject(InWorldContextObject)
+{
+}
+
+// --------------------------------------------------------------------------------------------------------------------
