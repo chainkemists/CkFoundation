@@ -23,15 +23,6 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintCallable,
-              DisplayName="Declare Bool Variable",
-              Category = "Ck|Utils|Variables")
-    static void
-    Declare(
-        FCk_Handle InHandle,
-        FGameplayTag InVariableName,
-        bool InDefaultValue);
-
     UFUNCTION(BlueprintPure,
               DisplayName="Get Bool Variable",
               Category = "Ck|Utils|Variables")
@@ -65,15 +56,6 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintCallable,
-              DisplayName="Declare Int32 Variable",
-              Category = "Ck|Utils|Variables")
-    static void
-    Declare(
-        FCk_Handle InHandle,
-        FGameplayTag InVariableName,
-        int32 InDefaultValue);
-
     UFUNCTION(BlueprintPure,
               DisplayName="Get Int32 Variable",
               Category = "Ck|Utils|Variables")
@@ -107,15 +89,6 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintCallable,
-              DisplayName="Declare Int64 Variable",
-              Category = "Ck|Utils|Variables")
-    static void
-    Declare(
-        FCk_Handle InHandle,
-        FGameplayTag InVariableName,
-        int64 InDefaultValue);
-
     UFUNCTION(BlueprintPure,
               DisplayName="Get Int64 Variable",
               Category = "Ck|Utils|Variables")
@@ -149,15 +122,6 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintCallable,
-              DisplayName="Declare Float Variable",
-              Category = "Ck|Utils|Variables")
-    static void
-    Declare(
-        FCk_Handle InHandle,
-        FGameplayTag InVariableName,
-        float InDefaultValue);
-
     UFUNCTION(BlueprintPure,
               DisplayName="Get Float Variable",
               Category = "Ck|Utils|Variables")
@@ -191,14 +155,6 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintCallable,
-              DisplayName="Declare Name Variable",
-              Category = "Ck|Utils|Variables")
-    static void Declare(
-        FCk_Handle InHandle,
-        FGameplayTag InVariableName,
-        FName InDefaultValue);
-
     UFUNCTION(BlueprintPure,
               DisplayName="Get Name Variable",
               Category = "Ck|Utils|Variables")
@@ -230,15 +186,6 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintCallable,
-              DisplayName="Declare String Variable",
-              Category = "Ck|Utils|Variables")
-    static void
-    Declare(
-        FCk_Handle InHandle,
-        FGameplayTag InVariableName,
-        const FString& InDefaultValue);
-
     UFUNCTION(BlueprintPure,
               DisplayName="Get String Variable",
               Category = "Ck|Utils|Variables")
@@ -272,15 +219,6 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintCallable,
-              DisplayName="Declare Text Variable",
-              Category = "Ck|Utils|Variables")
-    static void
-    Declare(
-        FCk_Handle InHandle,
-        FGameplayTag InVariableName,
-        FText InDefaultValue);
-
     UFUNCTION(BlueprintPure,
               DisplayName="Get Text Variable",
               Category = "Ck|Utils|Variables")
@@ -314,15 +252,6 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintCallable,
-              DisplayName="Declare Vec3 Variable",
-              Category = "Ck|Utils|Variables")
-    static void
-    Declare(
-        FCk_Handle InHandle,
-        FGameplayTag InVariableName,
-        FVector InDefaultValue);
-
     UFUNCTION(BlueprintPure,
               DisplayName="Get Vec3 Variable",
               Category = "Ck|Utils|Variables")
@@ -356,15 +285,6 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintCallable,
-              DisplayName="Declare Vec2 Variable",
-              Category = "Ck|Utils|Variables")
-    static void
-    Declare(
-        FCk_Handle InHandle,
-        FGameplayTag InVariableName,
-        FVector2D InDefaultValue);
-
     UFUNCTION(BlueprintPure,
               DisplayName="Get Vec2 Variable",
               Category = "Ck|Utils|Variables")
@@ -398,15 +318,6 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintCallable,
-              DisplayName="Declare Rotator Variable",
-              Category = "Ck|Utils|Variables")
-    static void
-    Declare(
-        FCk_Handle InHandle,
-        FGameplayTag InVariableName,
-        FRotator InDefaultValue);
-
     UFUNCTION(BlueprintPure,
               DisplayName="Get Rotator Variable",
               Category = "Ck|Utils|Variables")
@@ -440,15 +351,6 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintCallable,
-              DisplayName="Declare Transform  Variable",
-              Category = "Ck|Utils|Variables")
-    static void
-    Declare(
-        FCk_Handle InHandle,
-        FGameplayTag InVariableName,
-        const FTransform& InDefaultValue);
-
     UFUNCTION(BlueprintPure,
               DisplayName="Get Transform  Variable",
               Category = "Ck|Utils|Variables")
@@ -482,15 +384,6 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintCallable,
-              DisplayName="Declare InstancedStruct Variable",
-              Category = "Ck|Utils|Variables")
-    static void
-    Declare(
-        FCk_Handle InHandle,
-        FGameplayTag InVariableName,
-        const FInstancedStruct& InDefaultValue);
-
     UFUNCTION(BlueprintPure,
               DisplayName="Get InstancedStruct Variable",
               Category = "Ck|Utils|Variables")
@@ -524,15 +417,6 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintCallable,
-              DisplayName="Declare Object Variable",
-              Category = "Ck|Utils|Variables")
-    static void
-    Declare(
-        FCk_Handle InHandle,
-        FGameplayTag InVariableName,
-        UObject* InDefaultValue);
-
     UFUNCTION(BlueprintPure,
               DisplayName="Get Object Variable",
               Category = "Ck|Utils|Variables",
@@ -568,15 +452,6 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintCallable,
-              DisplayName="Declare SubclassOf Variable",
-              Category = "Ck|Utils|Variables")
-    static void
-    Declare(
-        FCk_Handle InHandle,
-        FGameplayTag InVariableName,
-        TSubclassOf<UObject> InDefaultValue);
-
     UFUNCTION(BlueprintPure,
               DisplayName="Get SubclassOf Variable",
               Category = "Ck|Utils|Variables",

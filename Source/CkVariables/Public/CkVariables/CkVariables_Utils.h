@@ -26,17 +26,7 @@ namespace ck
         Has(
             HandleType InHandle) -> bool;
 
-        static auto
-        Ensure(
-            HandleType InHandle) -> bool;
-
     public:
-        static auto
-        Declare(
-            HandleType InHandle,
-            FGameplayTag InVariableName,
-            ArgType InDefaultValue) -> void;
-
         static auto
         Get(
             HandleType InHandle,
