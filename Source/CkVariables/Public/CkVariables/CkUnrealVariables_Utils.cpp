@@ -7,18 +7,6 @@
 #define CK_UTILS_VARIABLES_DEFINITION(_UtilsName_, _Type_)\
 auto\
     _UtilsName_::\
-    Declare(\
-        FCk_Handle InHandle,\
-        FGameplayTag InVariableName,\
-        _Type_ InDefaultValue)\
-    -> void\
-{\
-    UtilsType::Add(InHandle);\
-    UtilsType::Declare(InHandle, InVariableName, InDefaultValue);\
-}\
-\
-auto\
-    _UtilsName_::\
     Get(\
         FCk_Handle InHandle,\
         FGameplayTag InVariableName)\
@@ -57,18 +45,6 @@ CK_UTILS_VARIABLES_DEFINITION(UCk_Utils_Variables_InstancedStruct_UE, const FIns
 
 auto
     UCk_Utils_Variables_UObject_UE::
-    Declare(
-        FCk_Handle InHandle,
-        FGameplayTag InVariableName,
-        UObject* InDefaultValue)
-    -> void
-{
-    UtilsType::Add(InHandle);
-    UtilsType::Declare(InHandle, InVariableName, InDefaultValue);
-}
-
-auto
-    UCk_Utils_Variables_UObject_UE::
     Get(
         FCk_Handle InHandle,
         FGameplayTag InVariableName,
@@ -90,18 +66,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_Variables_UObject_SubclassOf_UE::
-    Declare(
-        FCk_Handle InHandle,
-        FGameplayTag InVariableName,
-        TSubclassOf<UObject> InDefaultValue)
-    -> void
-{
-    UtilsType::Add(InHandle);
-    UtilsType::Declare(InHandle, InVariableName, InDefaultValue);
-}
 
 auto
     UCk_Utils_Variables_UObject_SubclassOf_UE::
