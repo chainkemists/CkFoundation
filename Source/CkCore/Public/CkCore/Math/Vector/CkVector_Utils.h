@@ -10,6 +10,32 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKCORE_API FCk_DirectionAndLength
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_DirectionAndLength);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
+    FVector _Direction;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
+    float _Length;
+
+public:
+    CK_PROPERTY_GET(_Direction);
+    CK_PROPERTY_GET(_Length);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_DirectionAndLength, _Direction, _Length);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable)
 class CKCORE_API UCk_Utils_Vector3_UE : public UBlueprintFunctionLibrary
 {
@@ -106,6 +132,13 @@ public:
     static ECk_Direction_3D
     Get_ClosestWorldDirectionFromVector(
         const FVector& InVector);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Vector3")
+    static FCk_DirectionAndLength
+    Get_DirectionAndLength(
+        const FVector& InTo,
+        const FVector& InFrom);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -128,8 +161,23 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|Actor")
+    static FCk_DirectionAndLength
+    Get_DirectionAndLengthBetweenActors(
+        const AActor* InTo,
+        const AActor* InFrom);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Actor")
     static FVector
     Get_LocationFromActorInDirection(
+        const AActor* InActor,
+        FVector InDirection,
+        float InDistanceFromOriginInDirection = 500.0f);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Actor")
+    static FVector
+    Get_LocationFromActorInFixedDirection(
         const AActor* InActor,
         ECk_Direction_3D InDirection = ECk_Direction_3D::Forward,
         float InDistanceFromOriginInDirection = 500.0f);
