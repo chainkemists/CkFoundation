@@ -1,6 +1,7 @@
 #include "CkFloatAttribute_Fragment.h"
 
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
+#include "CkAttribute/MeterAttribute/CkMeterAttribute_Utils.h"
 
 #include "Net/UnrealNetwork.h"
 #include "Net/Core/PushModel/PushModel.h"
@@ -65,6 +66,8 @@ auto
     if (GetWorld()->IsNetMode(NM_DedicatedServer))
     { return; }
 
+    auto AssociatedEntity = Get_AssociatedEntity();
+
     for (auto Index = _NextPendingAddModifier; Index < _PendingAddModifiers.Num(); ++Index)
     {
         const auto& Modifier = _PendingAddModifiers[Index];
@@ -75,7 +78,7 @@ auto
             ck::Context(this))
         { continue; }
 
-        UCk_Utils_FloatAttributeModifier_UE::Add(Get_AssociatedEntity(), Modifier.Get_ModifierName(), Modifier.Get_Params());
+        UCk_Utils_FloatAttributeModifier_UE::Add(AssociatedEntity, Modifier.Get_ModifierName(), Modifier.Get_Params());
     }
     _NextPendingAddModifier = _PendingAddModifiers.Num();
 
@@ -89,9 +92,13 @@ auto
             ck::Context(this))
         { continue; }
 
-        UCk_Utils_FloatAttributeModifier_UE::Remove(Get_AssociatedEntity(),
+        UCk_Utils_FloatAttributeModifier_UE::Remove(AssociatedEntity,
             _PendingRemoveModifiers[Index].Get_AttributeName(),
             _PendingRemoveModifiers[Index].Get_ModifierName());
     }
     _NextPendingRemoveModifier = _PendingRemoveModifiers.Num();
+
+    // HACK: this is not a great solution i.e. for the FloatAttribute to add the Tag to the Owner if the Owner has a Meter
+    // TODO: We need a better solution
+    AssociatedEntity.AddOrGet<ck::FTag_Meter_RequiresUpdate>();
 }
