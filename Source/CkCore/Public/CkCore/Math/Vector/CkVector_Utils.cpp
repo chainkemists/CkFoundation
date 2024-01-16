@@ -310,6 +310,22 @@ auto
     return FoundDirection->first;
 }
 
+auto
+    UCk_Utils_Vector3_UE::
+    Get_DirectionAndLength(
+        const FVector& InTo,
+        const FVector& InFrom)
+    -> FCk_DirectionAndLength
+{
+    const auto Vec = InTo - InFrom;
+
+    auto Dir = FVector{};
+    auto Length = float{};
+    Vec.ToDirectionAndLength(Dir, Length);
+
+    return FCk_DirectionAndLength{Dir, Length};
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -330,9 +346,25 @@ auto
 
 auto
     UCk_Utils_ActorVector3_UE::
+    Get_DirectionAndLengthBetweenActors(
+        const AActor* InTo,
+        const AActor* InFrom)
+    -> FCk_DirectionAndLength
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InTo) && ck::IsValid(InFrom),
+        TEXT("Unable to calculation direction between Actor [{}] and Actor [{}] because one or both are INVALID"),
+        InTo,
+        InFrom)
+    { return {}; }
+
+    return UCk_Utils_Vector3_UE::Get_DirectionAndLength(InTo->GetActorLocation(), InFrom->GetActorLocation());
+}
+
+auto
+    UCk_Utils_ActorVector3_UE::
     Get_LocationFromActorInDirection(
         const AActor* InActor,
-        ECk_Direction_3D InDirection,
+        FVector InDirection,
         float InDistanceFromOriginInDirection)
     -> FVector
 {
@@ -344,37 +376,49 @@ auto
 
     const auto& ActorLocation = InActor->GetActorLocation();
 
+    return UCk_Utils_Vector3_UE::Get_LocationFromOriginInDirection(
+        ActorLocation, InDirection, InDistanceFromOriginInDirection);
+}
+
+auto
+    UCk_Utils_ActorVector3_UE::
+    Get_LocationFromActorInFixedDirection(
+        const AActor* InActor,
+        ECk_Direction_3D InDirection,
+        float InDistanceFromOriginInDirection)
+    -> FVector
+{
     switch(InDirection)
     {
         case ECk_Direction_3D::Forward:
         {
-            return UCk_Utils_Vector3_UE::Get_LocationFromOriginInDirection(
-                ActorLocation, InActor->GetActorForwardVector(), InDistanceFromOriginInDirection);
+            return Get_LocationFromActorInDirection(
+                InActor, InActor->GetActorForwardVector(), InDistanceFromOriginInDirection);
         }
         case ECk_Direction_3D::Back:
         {
-            return UCk_Utils_Vector3_UE::Get_LocationFromOriginInDirection(
-                ActorLocation, ck::Negate(InActor->GetActorForwardVector()), InDistanceFromOriginInDirection);
+            return Get_LocationFromActorInDirection(
+                InActor, ck::Negate(InActor->GetActorForwardVector()), InDistanceFromOriginInDirection);
         }
         case ECk_Direction_3D::Right:
         {
-            return UCk_Utils_Vector3_UE::Get_LocationFromOriginInDirection(
-                ActorLocation, InActor->GetActorRightVector(), InDistanceFromOriginInDirection);
+            return Get_LocationFromActorInDirection(
+                InActor, InActor->GetActorRightVector(), InDistanceFromOriginInDirection);
         }
         case ECk_Direction_3D::Left:
         {
-            return UCk_Utils_Vector3_UE::Get_LocationFromOriginInDirection(
-                ActorLocation, ck::Negate(InActor->GetActorRightVector()), InDistanceFromOriginInDirection);
+            return Get_LocationFromActorInDirection(
+                InActor, ck::Negate(InActor->GetActorRightVector()), InDistanceFromOriginInDirection);
         }
         case ECk_Direction_3D::Up:
         {
-            return UCk_Utils_Vector3_UE::Get_LocationFromOriginInDirection(
-                ActorLocation, InActor->GetActorUpVector(), InDistanceFromOriginInDirection);
+            return Get_LocationFromActorInDirection(
+                InActor, InActor->GetActorUpVector(), InDistanceFromOriginInDirection);
         }
         case ECk_Direction_3D::Down:
         {
-            return UCk_Utils_Vector3_UE::Get_LocationFromOriginInDirection(
-                ActorLocation, ck::Negate(InActor->GetActorUpVector()), InDistanceFromOriginInDirection);
+            return Get_LocationFromActorInDirection(
+                InActor, ck::Negate(InActor->GetActorUpVector()), InDistanceFromOriginInDirection);
         }
         default:
         {
