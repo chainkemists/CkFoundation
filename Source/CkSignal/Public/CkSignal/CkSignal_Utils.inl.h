@@ -274,16 +274,6 @@ namespace ck
         {
             auto ExistingMulticasts = UnrealMulticast._Multicast;
 
-            CK_ENSURE((UnrealMulticast._Connection && UnrealMulticast._Multicast.IsBound()) ||
-                (NOT UnrealMulticast._Connection && NOT UnrealMulticast._Multicast.IsBound()),
-                TEXT("Expected Connection to be VALID if Multicast is already bound OR Connection to be INVALID "
-                    "if Multicast is empty on Signal [{}] with Unreal Signal [{}] on Entity [{}] with BindingPolicy is [{}]. "
-                    "This ensure hints to a logical problem somewhere in the Signals logic (or this Ensure)."),
-                ck::Get_RuntimeTypeToString<T_DerivedSignal>(),
-                ck::Get_RuntimeTypeToString<T_DerivedSignal_Unreal>(),
-                InHandle,
-                T_PayloadInFlightBehavior);
-
             UnrealMulticast._Multicast.Clear();
             UnrealMulticast._Multicast.AddUnique(InDelegate);
 
@@ -293,9 +283,22 @@ namespace ck
             auto Connection = Super::Bind <&T_DerivedSignal_Unreal::DoBroadcast>(
                 UnrealMulticast, InHandle, T_PayloadInFlightBehavior, T_DerivedSignal_Unreal::PostFireBehavior);
 
-            UnrealMulticast._Multicast = ExistingMulticasts;
-            UnrealMulticast._Connection = Connection;
-            UnrealMulticast._Multicast.Add(InDelegate);
+            if (Connection)
+            {
+                UnrealMulticast._Multicast = ExistingMulticasts;
+                UnrealMulticast._Connection = Connection;
+                UnrealMulticast._Multicast.Add(InDelegate);
+
+                CK_ENSURE((UnrealMulticast._Connection && UnrealMulticast._Multicast.IsBound()) ||
+                    (NOT UnrealMulticast._Connection && NOT UnrealMulticast._Multicast.IsBound()),
+                    TEXT("Expected Connection to be VALID if Multicast is already bound OR Connection to be INVALID "
+                        "if Multicast is empty on Signal [{}] with Unreal Signal [{}] on Entity [{}] with BindingPolicy is [{}]. "
+                        "This ensure hints to a logical problem somewhere in the Signals logic (or this Ensure)."),
+                    ck::Get_RuntimeTypeToString<T_DerivedSignal>(),
+                    ck::Get_RuntimeTypeToString<T_DerivedSignal_Unreal>(),
+                    InHandle,
+                    T_PayloadInFlightBehavior);
+            }
         }
         else
         {
