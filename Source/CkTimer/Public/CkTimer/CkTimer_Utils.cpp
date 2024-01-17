@@ -42,7 +42,7 @@ auto
 auto
     UCk_Utils_Timer_UE::
     AddOrReplace(
-        FCk_Handle                           InTimerOwnerEntity,
+        FCk_Handle InTimerOwnerEntity,
         const FCk_Fragment_Timer_ParamsData& InParams)
     -> FCk_Handle
 {
@@ -71,18 +71,15 @@ auto
 auto
     UCk_Utils_Timer_UE::
     AddMultiple(
-        FCk_Handle                                   InHandle,
+        FCk_Handle InHandle,
         const FCk_Fragment_MultipleTimer_ParamsData& InParams)
     -> TArray<FCk_Handle>
 {
-    auto Timers = TArray<FCk_Handle>{};
-
-    for (const auto& Params : InParams.Get_TimerParams())
+    return ck::algo::Transform<TArray<FCk_Handle>>(InParams.Get_TimerParams(),
+    [&](const FCk_Fragment_Timer_ParamsData& InTimerParams)
     {
-        Timers.Emplace(Add(InHandle, Params));
-    }
-
-    return Timers;
+        return Add(InHandle, InTimerParams);
+    });
 }
 
 auto
