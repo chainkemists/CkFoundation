@@ -7,7 +7,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKECSBASICS_API UCk_EcsBasics_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base
+class CKECSBASICS_API UCk_EcsBasics_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 

@@ -7,7 +7,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKECS_API UCk_Ecs_ProcessorInjector_EntityDestruction : public UCk_EcsWorld_ProcessorInjector_Base
+class CKECS_API UCk_Ecs_ProcessorInjector_EntityDestruction : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 
@@ -20,7 +20,7 @@ protected:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKECS_API UCk_Ecs_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base
+class CKECS_API UCk_Ecs_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 

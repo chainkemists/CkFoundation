@@ -7,7 +7,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKANIMATION_API UCk_Animation_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base
+class CKANIMATION_API UCk_Animation_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 

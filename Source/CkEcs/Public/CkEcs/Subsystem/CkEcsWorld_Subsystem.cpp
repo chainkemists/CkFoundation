@@ -16,7 +16,7 @@ CK_DEFINE_ECS_TAG(FTag_NAME_TransientEntity);
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_EcsWorld_ProcessorInjector_Base::
+    UCk_EcsWorld_ProcessorInjector_Base_UE::
     DoInjectProcessors(
         EcsWorldType& InWorld)
         -> void
@@ -28,7 +28,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_EcsWorld_ProcessorScriptInjector::
+    UCk_EcsWorld_ProcessorScriptInjector_UE::
     DoInjectProcessors(
         EcsWorldType& InWorld)
     -> void

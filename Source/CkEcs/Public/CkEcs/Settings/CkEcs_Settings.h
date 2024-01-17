@@ -34,7 +34,7 @@ private:
     TEnumAsByte<ETickingGroup> _TickingGroup = TG_PrePhysics;
 
     UPROPERTY(EditDefaultsOnly, Instanced, meta=(AllowPrivateAccess))
-    TArray<TObjectPtr<class UCk_EcsWorld_ProcessorInjector_Base>>  _ProcessorInjectors;
+    TArray<TObjectPtr<class UCk_EcsWorld_ProcessorInjector_Base_UE>>  _ProcessorInjectors;
 
 public:
     CK_PROPERTY(_TickingGroup);

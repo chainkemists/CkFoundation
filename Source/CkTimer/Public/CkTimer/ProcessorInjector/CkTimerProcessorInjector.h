@@ -7,7 +7,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKTIMER_API UCk_Timer_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base
+class CKTIMER_API UCk_Timer_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 
