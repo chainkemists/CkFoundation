@@ -10,6 +10,17 @@ namespace ck
 {
     auto
         FProcessor_Acceleration_Setup::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        TProcessor::Tick(InDeltaT);
+
+        _Registry.Clear<MarkedDirtyBy>();
+    }
+
+    auto
+        FProcessor_Acceleration_Setup::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -56,8 +67,6 @@ namespace ck
                 break;
             }
         }
-
-        InHandle.Remove<MarkedDirtyBy>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------

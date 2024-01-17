@@ -19,6 +19,17 @@ namespace ck
 {
     auto
         FProcessor_Sensor_Setup::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        TProcessor::Tick(InDeltaT);
+
+        _Registry.Clear<MarkedDirtyBy>();
+    }
+
+    auto
+        FProcessor_Sensor_Setup::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InSensorEntity,
@@ -26,8 +37,6 @@ namespace ck
             const FFragment_Sensor_Params& InParamsComp) const
         -> void
     {
-        InSensorEntity.Remove<MarkedDirtyBy>();
-
         const auto& SensorLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InSensorEntity);
         const auto& SensorAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(SensorLifetimeOwner);
         const auto& SensorAttachedEntity = SensorAttachedEntityAndActor.Get_Handle();

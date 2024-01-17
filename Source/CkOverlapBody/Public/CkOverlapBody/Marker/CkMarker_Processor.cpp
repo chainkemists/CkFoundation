@@ -19,6 +19,17 @@ namespace ck
 {
     auto
         FProcessor_Marker_Setup::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        TProcessor::Tick(InDeltaT);
+
+        _Registry.Clear<MarkedDirtyBy>();
+    }
+
+    auto
+        FProcessor_Marker_Setup::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InMarkerEntity,
@@ -26,8 +37,6 @@ namespace ck
             const FFragment_Marker_Params& InParamsComp) const
         -> void
     {
-        InMarkerEntity.Remove<MarkedDirtyBy>();
-
         const auto& MarkerLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InMarkerEntity);
         const auto& MarkerAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(MarkerLifetimeOwner);
         const auto& MarkerAttachedEntity = MarkerAttachedEntityAndActor.Get_Handle();

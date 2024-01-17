@@ -12,6 +12,17 @@ namespace ck
 {
     auto
         FProcessor_AbilityOwner_Setup::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        TProcessor::Tick(InDeltaT);
+
+        _Registry.Clear<MarkedDirtyBy>();
+    }
+
+    auto
+        FProcessor_AbilityOwner_Setup::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -43,8 +54,6 @@ namespace ck
                 InHandle)
             { return; }
         }
-
-        InHandle.Remove<MarkedDirtyBy>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
