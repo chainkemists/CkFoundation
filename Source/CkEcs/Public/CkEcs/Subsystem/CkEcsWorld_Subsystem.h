@@ -4,6 +4,7 @@
 #include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
 
 #include "CkEcs/World/CkEcsWorld.h"
+#include "CkEcs/Processor/CkProcessorScript.h"
 
 #include <Subsystems/WorldSubsystem.h>
 #include <GameFramework/Info.h>
@@ -12,7 +13,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract, NotBlueprintable, NotBlueprintType)
+UCLASS(Abstract, NotBlueprintable, NotBlueprintType, EditInlineNew)
 class CKECS_API UCk_EcsWorld_ProcessorInjector_Base : public UObject
 {
     GENERATED_BODY()
@@ -26,7 +27,26 @@ public:
     CK_GENERATED_BODY(UCk_EcsWorld_ProcessorInjector_Base);
 
 protected:
-    virtual auto DoInjectProcessors(EcsWorldType& InWorld) -> void;
+    virtual auto
+    DoInjectProcessors(
+        EcsWorldType& InWorld) -> void;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(Abstract, NotBlueprintable, NotBlueprintType)
+class CKECS_API UCk_EcsWorld_ProcessorScriptInjector : public UCk_EcsWorld_ProcessorInjector_Base
+{
+    GENERATED_BODY()
+
+private:
+    UPROPERTY(EditDefaultsOnly)
+    TSubclassOf<UCk_Ecs_ProcessorScript_Base> _Processor;
+
+private:
+    auto
+    DoInjectProcessors(
+        EcsWorldType& InWorld) -> void override;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -85,20 +105,21 @@ public:
     auto OnWorldBeginPlay(UWorld& InWorld) -> void override;
 
 private:
-    auto DoSpawnWorldActor() -> void;
+    auto DoSpawnWorldActors() -> void;
 
 private:
     UPROPERTY(BlueprintReadOnly, Transient, meta = (AllowPrivateAccess = true))
     FCk_Handle _TransientEntity;
 
     UPROPERTY(Transient)
-    TObjectPtr<ACk_EcsWorld_Actor_UE> _WorldActor;
+    TMap<TEnumAsByte<ETickingGroup>, TObjectPtr<ACk_EcsWorld_Actor_UE>> _WorldActors;
 
 private:
     FCk_Registry _Registry;
 
 public:
     CK_PROPERTY_GET(_TransientEntity);
+    CK_PROPERTY_GET(_Registry);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

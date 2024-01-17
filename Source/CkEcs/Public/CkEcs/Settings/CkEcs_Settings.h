@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Types/DataAsset/CkDataAsset.h"
 
 #include "CkSettings/ProjectSettings/CkProjectSettings.h"
 
@@ -20,6 +21,48 @@ enum class ECk_Ecs_HandleDebuggerBehavior : uint8
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKECS_API FCk_Ecs_ProcessorInjectors_Info
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Ecs_ProcessorInjectors_Info);
+
+private:
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
+    TEnumAsByte<ETickingGroup> _TickingGroup = TG_PrePhysics;
+
+    UPROPERTY(EditDefaultsOnly, Instanced, meta=(AllowPrivateAccess))
+    TArray<TObjectPtr<class UCk_EcsWorld_ProcessorInjector_Base>>  _ProcessorInjectors;
+
+public:
+    CK_PROPERTY(_TickingGroup);
+    CK_PROPERTY_GET(_ProcessorInjectors);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Ecs_ProcessorInjectors_Info, _ProcessorInjectors);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(Blueprintable, EditInlineNew)
+class CKECS_API UCk_Ecs_ProcessorInjectors_PDA : public UCk_DataAsset_PDA
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Ecs_ProcessorInjectors_PDA);
+
+private:
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
+    TArray<FCk_Ecs_ProcessorInjectors_Info> _ProcessorInjectors;
+
+public:
+    CK_PROPERTY_GET(_ProcessorInjectors);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(meta = (DisplayName = "ECS"))
 class CKECS_API UCk_Ecs_ProjectSettings_UE : public UCk_Engine_ProjectSettings_UE
 {
@@ -31,11 +74,7 @@ public:
 private:
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "ECS World",
               meta = (AllowPrivateAccess = true, AllowAbstract = false))
-    TSoftClassPtr<class UCk_EcsWorld_ProcessorInjector_Base> _ProcessorInjector;
-
-    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "ECS World",
-              meta = (AllowPrivateAccess = true))
-    TEnumAsByte<ETickingGroup> _EcsWorldTickingGroup = TG_PrePhysics;
+    TSubclassOf<UCk_Ecs_ProcessorInjectors_PDA> _ProcessorInjectors;
 
     // Enabling this will slow down the game's execution
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Debugging",
@@ -43,8 +82,7 @@ private:
     ECk_Ecs_HandleDebuggerBehavior _HandleDebuggerBehavior = ECk_Ecs_HandleDebuggerBehavior::Disable;
 
 public:
-    CK_PROPERTY_GET(_ProcessorInjector);
-    CK_PROPERTY_GET(_EcsWorldTickingGroup);
+    CK_PROPERTY_GET(_ProcessorInjectors);
     CK_PROPERTY_GET(_HandleDebuggerBehavior);
 };
 
@@ -65,8 +103,7 @@ public:
     Get_HandleDebuggerBehavior();
 
 public:
-    static auto Get_ProcessorInjector() -> TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base>;
-    static auto Get_EcsWorldTickingGroup() -> ETickingGroup;
+    static auto Get_ProcessorInjectors() -> UCk_Ecs_ProcessorInjectors_PDA*;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

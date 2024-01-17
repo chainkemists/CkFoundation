@@ -27,6 +27,17 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    UCk_EcsWorld_ProcessorScriptInjector::
+    DoInjectProcessors(
+        EcsWorldType& InWorld)
+    -> void
+{
+    // InWorld.Add(
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 ACk_EcsWorld_Actor_UE::
     ACk_EcsWorld_Actor_UE()
 {
@@ -58,14 +69,22 @@ auto
 
     _EcsWorld = EcsWorldType{InRegistry};
 
-    const auto ProcessorInjector = UCk_Utils_Ecs_ProjectSettings_UE::Get_ProcessorInjector();
+    const auto ProcessorInjectors = UCk_Utils_Ecs_ProjectSettings_UE::Get_ProcessorInjectors();
 
-    CK_LOG_ERROR_NOTIFY_IF_NOT(ck::ecs, ck::IsValid(ProcessorInjector),
-        TEXT("No ProcessorInjector added in Project Settings which means that there are NO Ecs Processors added to the Ecs World."))
+    CK_LOG_ERROR_NOTIFY_IF_NOT(ck::ecs, ck::IsValid(ProcessorInjectors),
+        TEXT("Could not get a valid instance of ProcessorInjectors PDA. Check ProjectSettings -> Ecs to make sure a valid DataAsset is referenced."))
     { return; }
 
-    UCk_Utils_Ecs_ProjectSettings_UE::Get_ProcessorInjector()->
-        GetDefaultObject<UCk_EcsWorld_ProcessorInjector_Base>()->DoInjectProcessors(*_EcsWorld);
+    for (auto Injectors : ProcessorInjectors->Get_ProcessorInjectors())
+    {
+        if (Injectors.Get_TickingGroup() != InTickingGroup)
+        { continue; }
+
+        for (const auto Injector : Injectors.Get_ProcessorInjectors())
+        {
+            Injector->DoInjectProcessors(*_EcsWorld);
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -89,37 +108,43 @@ auto
 {
     Super::OnWorldBeginPlay(InWorld);
 
-    DoSpawnWorldActor();
+    DoSpawnWorldActors();
 }
 
 auto
     UCk_EcsWorld_Subsystem_UE::
-    DoSpawnWorldActor()
+    DoSpawnWorldActors()
     -> void
 {
     const auto& EcsWorldActorClass = ACk_EcsWorld_Actor_UE::StaticClass();
-    const auto& EcsWorldTickingGroup = UCk_Utils_Ecs_ProjectSettings_UE::Get_EcsWorldTickingGroup();
 
     CK_ENSURE_IF_NOT(ck::IsValid(EcsWorldActorClass), TEXT("Invalid ECS World Actor class set in the Project Settings! ECS Framework won't work!"))
     { return; }
 
-    _WorldActor = Cast<ACk_EcsWorld_Actor_UE>
-    (
-        UCk_Utils_Actor_UE::Request_SpawnActor
+    for (auto TickingGroup = TG_PrePhysics; TickingGroup < ETickingGroup::TG_NewlySpawned;
+        TickingGroup = static_cast<ETickingGroup>(TickingGroup + 1))
+    {
+        auto WorldActor = Cast<ACk_EcsWorld_Actor_UE>
         (
-            FCk_Utils_Actor_SpawnActor_Params{GetWorld(), EcsWorldActorClass}
-            .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel),
-            [&](AActor* InActor)
-            {
-                const auto WorldActor = Cast<ACk_EcsWorld_Actor_UE>(InActor);
-                WorldActor->Initialize(_Registry, EcsWorldTickingGroup);
-            }
-        )
-    );
+            UCk_Utils_Actor_UE::Request_SpawnActor
+            (
+                FCk_Utils_Actor_SpawnActor_Params{GetWorld(), EcsWorldActorClass}
+                .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel),
+                [&](AActor* InActor)
+                {
+                    const auto NewWorldActor = Cast<ACk_EcsWorld_Actor_UE>(InActor);
+                    NewWorldActor->Initialize(_Registry, TickingGroup);
+                }
+            )
+        );
+
+        _WorldActors.Add(TickingGroup, WorldActor);
+    }
 
     _TransientEntity.Add<TWeakObjectPtr<UWorld>>(GetWorld());
 
-    CK_ENSURE_IF_NOT(ck::IsValid(_WorldActor), TEXT("Failed to spawn ECS World Actor. ECS Pipeline will NOT work."))
+    CK_ENSURE_IF_NOT(NOT _WorldActors.IsEmpty(),
+        TEXT("Failed to spawn ANY EcsWorld Actors. ECS Pipeline will NOT work."))
     { return; }
 }
 
