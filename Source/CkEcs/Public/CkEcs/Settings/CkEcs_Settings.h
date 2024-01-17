@@ -73,8 +73,8 @@ public:
 
 private:
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "ECS World",
-              meta = (AllowPrivateAccess = true, AllowAbstract = false))
-    TSubclassOf<UCk_Ecs_ProcessorInjectors_PDA> _ProcessorInjectors;
+              meta = (AllowPrivateAccess = true, AllowAbstract = false, MetaClass = "/Script/CkEcs.Ck_Ecs_ProcessorInjectors_PDA"))
+    FSoftClassPath _ProcessorInjectors;
 
     // Enabling this will slow down the game's execution
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Debugging",
