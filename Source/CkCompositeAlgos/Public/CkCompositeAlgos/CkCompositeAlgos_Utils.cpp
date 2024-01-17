@@ -6,6 +6,52 @@
 
 auto
     UCk_Utils_CompositeAlgos_UE::
+    AnyActors_If(
+        const TArray<AActor*>& InActors,
+        FCk_Predicate_InActor_OutResult InPredicate)
+    -> bool
+{
+    return ck::algo::AnyOf(InActors, [&](AActor* InActor)
+    {
+        if (ck::Is_NOT_Valid(InActor))
+        { return false; }
+
+        const FCk_SharedBool PredicateResult;
+
+        if (InPredicate.IsBound())
+        {
+            InPredicate.Execute(InActor, PredicateResult);
+        }
+
+        return *PredicateResult;
+    });
+}
+
+auto
+    UCk_Utils_CompositeAlgos_UE::
+    AllActors_If(
+        const TArray<AActor*>& InActors,
+        FCk_Predicate_InActor_OutResult InPredicate)
+    -> bool
+{
+    return ck::algo::AllOf(InActors, [&](AActor* InActor)
+    {
+        if (ck::Is_NOT_Valid(InActor))
+        { return false; }
+
+        const FCk_SharedBool PredicateResult;
+
+        if (InPredicate.IsBound())
+        {
+            InPredicate.Execute(InActor, PredicateResult);
+        }
+
+        return *PredicateResult;
+    });
+}
+
+auto
+    UCk_Utils_CompositeAlgos_UE::
     FilterActors_ByPredicate(
         const TArray<AActor*>& InActors,
         FCk_Predicate_InActor_OutResult InPredicate)
