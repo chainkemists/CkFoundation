@@ -21,11 +21,11 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))
-    FVector _Direction;
+    FVector _Direction = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))
-    float _Length;
+    float _Length = 0.0f;
 
 public:
     CK_PROPERTY_GET(_Direction);
