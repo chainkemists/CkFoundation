@@ -10,7 +10,7 @@ auto
         const TSubclassOf<UCk_Ecs_ProcessorScript_Base>& InProcessorScriptClass)
     -> UCk_Ecs_ProcessorScript_Base*
 {
-    auto* ProcessorScript = NewObject<UCk_Ecs_ProcessorScript_Base>(GetTransientPackage(), InProcessorScriptClass);
+    auto* ProcessorScript = NewObject<UCk_Ecs_ProcessorScript_Base>(GetWorld(), InProcessorScriptClass);
     _Processors.Emplace(ProcessorScript);
 
     return ProcessorScript;
