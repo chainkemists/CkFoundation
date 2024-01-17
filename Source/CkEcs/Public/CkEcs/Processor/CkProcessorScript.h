@@ -12,6 +12,15 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_Ecs_ForEach_Policy : uint8
+{
+    OnlyValidEntities,
+    // Include Entities that are pending kill
+    AllEntities
+};
+
+// --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, BlueprintType)
 class CKECS_API UCk_Ecs_ProcessorScript_Base_UE : public UObject
@@ -26,14 +35,23 @@ public:
     using RegistryType = FCk_Registry;
     using HandleType = FCk_Handle;
 
+private:
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
+    ECk_Ecs_ForEach_Policy _ForEachPolicy = ECk_Ecs_ForEach_Policy::OnlyValidEntities;
+
 public:
     virtual auto
     Tick(TimeType InTime) -> void;
 
-    UFUNCTION(BlueprintImplementableEvent)
-    void
-    DoTick(FCk_Time InTime, FCk_Handle InEntity);
+    UFUNCTION(BlueprintNativeEvent)
+    bool
+    ProcessEntity_If(FCk_Handle InEntity) const;
 
 protected:
     TOptional<RegistryType> _Registry;
+
+public:
+    CK_PROPERTY_GET(_ForEachPolicy);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
