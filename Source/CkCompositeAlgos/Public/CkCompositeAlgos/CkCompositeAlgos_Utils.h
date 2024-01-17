@@ -17,6 +17,23 @@ public:
     CK_GENERATED_BODY(UCk_Utils_CompositeAlgos_UE);
 
 public:
+    // Returns if at least one actor satisfies the predicate
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Algos")
+    static bool
+    AnyActors_If(
+        const TArray<AActor*>& InActors,
+        FCk_Predicate_InActor_OutResult InPredicate);
+
+    // Returns if all actors satisfy the predicate
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Algos")
+    static bool
+    AllActors_If(
+        const TArray<AActor*>& InActors,
+        FCk_Predicate_InActor_OutResult InPredicate);
+
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Algos")
     static TArray<AActor*>
@@ -30,6 +47,7 @@ public:
     FilterActors_ByIsValid(
         const TArray<AActor*>& InActors);
 
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Algos")
     static void
