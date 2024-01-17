@@ -139,13 +139,12 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
-                  EditCondition="_SearchPolicy==ECk_AbilityOwner_AbilitySearchPolicy::SearchByName",
-                  GameplayTagFilter = "GameplayAbility"))
+                  EditCondition="_SearchPolicy == ECk_AbilityOwner_AbilitySearchPolicy::SearchByName"))
     FGameplayTag _AbilityName = FGameplayTag::EmptyTag;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
-                  EditCondition="_SearchPolicy==ECk_AbilityOwner_AbilitySearchPolicy::SearchByHandle"))
+                  EditCondition="_SearchPolicy == ECk_AbilityOwner_AbilitySearchPolicy::SearchByHandle"))
     FCk_Handle _AbilityHandle;
 
 public:
@@ -182,8 +181,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
-                  EditCondition="_SearchPolicy == ECk_AbilityOwner_AbilitySearchPolicy::SearchByName",
-                  GameplayTagFilter = "GameplayAbility"))
+                  EditCondition="_SearchPolicy == ECk_AbilityOwner_AbilitySearchPolicy::SearchByName"))
     FGameplayTag _AbilityName = FGameplayTag::EmptyTag;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -230,13 +228,12 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
-                  EditCondition="_SearchPolicy==ECk_AbilityOwner_AbilitySearchPolicy::SearchByName",
-                  GameplayTagFilter = "GameplayAbility"))
+                  EditCondition="_SearchPolicy == ECk_AbilityOwner_AbilitySearchPolicy::SearchByName"))
     FGameplayTag _AbilityName = FGameplayTag::EmptyTag;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
-                  EditCondition="_SearchPolicy==ECk_AbilityOwner_AbilitySearchPolicy::SearchByHandle"))
+                  EditCondition="_SearchPolicy == ECk_AbilityOwner_AbilitySearchPolicy::SearchByHandle"))
     FCk_Handle _AbilityHandle;
 
 public:
@@ -271,13 +268,11 @@ public:
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_AbilityOwner_Events,
     FCk_Handle, InHandle,
-    const TArray<FCk_AbilityOwner_Event>&,
-    InEvents);
+    const TArray<FCk_AbilityOwner_Event>&, InEvents);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_AbilityOwner_Events_MC,
     FCk_Handle, InHandle,
-    const TArray<FCk_AbilityOwner_Event>&,
-    InEvents);
+    const TArray<FCk_AbilityOwner_Event>&, InEvents);
 
 // --------------------------------------------------------------------------------------------------------------------
