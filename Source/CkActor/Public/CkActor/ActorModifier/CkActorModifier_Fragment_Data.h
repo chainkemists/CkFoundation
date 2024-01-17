@@ -85,18 +85,17 @@ struct CKACTOR_API FCk_AddActorComponent_Params
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_SpawnActor_PostSpawn_Params);
+    CK_GENERATED_BODY(FCk_AddActorComponent_Params);
 
-public:
     FCk_AddActorComponent_Params() = default;
-    FCk_AddActorComponent_Params(
-        bool InIsTickEnabled,
-        FCk_Time InTickInterval,
-        ECk_ActorComponent_AttachmentPolicy InAttachmentType,
-        USceneComponent* InParent,
-        FName InAttachmentSocket);
+    explicit FCk_AddActorComponent_Params(
+        USceneComponent* InParent);
 
 private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta=(AllowPrivateAccess = true, EditCondition = "_AttachmentType == ECk_ActorComponent_AttachmentPolicy::Attach"))
+    TObjectPtr<USceneComponent> _Parent;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, InlineEditConditionToggle))
     bool _IsTickEnabled = true;
@@ -111,18 +110,14 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta=(AllowPrivateAccess = true, EditCondition = "_AttachmentType == ECk_ActorComponent_AttachmentPolicy::Attach"))
-    TObjectPtr<USceneComponent> _Parent;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta=(AllowPrivateAccess = true, EditCondition = "_AttachmentType == ECk_ActorComponent_AttachmentPolicy::Attach"))
     FName _AttachmentSocket;
 
 public:
-    CK_PROPERTY_GET(_IsTickEnabled);
-    CK_PROPERTY_GET(_TickInterval);
-    CK_PROPERTY_GET(_AttachmentType);
     CK_PROPERTY_GET(_Parent);
-    CK_PROPERTY_GET(_AttachmentSocket);
+    CK_PROPERTY(_IsTickEnabled);
+    CK_PROPERTY(_TickInterval);
+    CK_PROPERTY(_AttachmentType);
+    CK_PROPERTY(_AttachmentSocket);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -193,14 +188,6 @@ public:
 public:
     using InitializerFuncType = TFunction<void(UActorComponent*)>;
 
-public:
-    FCk_Request_ActorModifier_AddActorComponent() = default;
-    FCk_Request_ActorModifier_AddActorComponent(
-        TSubclassOf<UActorComponent> InComponentToAdd,
-        bool InIsUnique,
-        FCk_AddActorComponent_Params InComponentParams,
-        InitializerFuncType InInitializerFunc = nullptr);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -219,9 +206,12 @@ private:
 
 public:
     CK_PROPERTY_GET(_ComponentToAdd);
-    CK_PROPERTY_GET(_IsUnique);
-    CK_PROPERTY_GET(_ComponentParams);
-    CK_PROPERTY_GET(_InitializerFunc);
+    CK_PROPERTY(_IsUnique);
+    CK_PROPERTY(_ComponentParams);
+    CK_PROPERTY(_InitializerFunc);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_ActorModifier_AddActorComponent, _ComponentToAdd);
 };
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
@@ -244,11 +234,6 @@ struct CKACTOR_API FCk_Request_ActorModifier_AttachActor
 public:
     CK_GENERATED_BODY(FCk_Request_ActorModifier_AttachActor);
 
-public:
-    FCk_Request_ActorModifier_AttachActor() = default;
-    explicit FCk_Request_ActorModifier_AttachActor(
-        FCk_Actor_AttachToActor_Params InParams);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -256,6 +241,9 @@ private:
 
 public:
     CK_PROPERTY_GET(_Params);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_ActorModifier_AttachActor, _Params);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

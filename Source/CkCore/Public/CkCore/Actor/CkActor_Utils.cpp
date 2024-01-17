@@ -15,9 +15,9 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 FCk_Utils_Actor_SpawnActor_Params::
-FCk_Utils_Actor_SpawnActor_Params(
-    TWeakObjectPtr<UObject> InOwnerOrWorld,
-    TSubclassOf<AActor> InActorClass)
+    FCk_Utils_Actor_SpawnActor_Params(
+        TWeakObjectPtr<UObject> InOwnerOrWorld,
+        TSubclassOf<AActor> InActorClass)
     :_OwnerOrWorld(std::move(InOwnerOrWorld))
     , _ActorClass(InActorClass)
 {
@@ -26,12 +26,12 @@ FCk_Utils_Actor_SpawnActor_Params(
 // --------------------------------------------------------------------------------------------------------------------
 
 UCk_Utils_Actor_UE::DeferredSpawnActor_Params::
-DeferredSpawnActor_Params(
-    const TSubclassOf<AActor> InActorClass,
-    const TObjectPtr<AActor> InArchetype,
-    const FTransform& InSpawnTransform,
-    const ESpawnActorCollisionHandlingMethod InCollisionHandlingOverride,
-    TObjectPtr<UObject> InOwnerOrWorld)
+    DeferredSpawnActor_Params(
+        const TSubclassOf<AActor> InActorClass,
+        const TObjectPtr<AActor> InArchetype,
+        const FTransform& InSpawnTransform,
+        const ESpawnActorCollisionHandlingMethod InCollisionHandlingOverride,
+        TObjectPtr<UObject> InOwnerOrWorld)
     : _ActorClass(InActorClass)
     , _Archetype(InArchetype)
     , _SpawnTransform(InSpawnTransform)
@@ -42,7 +42,11 @@ DeferredSpawnActor_Params(
 
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_Utils_Actor_UE::Get_PersistentLevelScriptActor(const UObject* InWorldContextObject) -> ALevelScriptActor*
+auto
+    UCk_Utils_Actor_UE::
+    Get_PersistentLevelScriptActor(
+        const UObject* InWorldContextObject)
+    -> ALevelScriptActor*
 {
     const auto& World = [&]() -> UWorld*
     {
@@ -51,12 +55,12 @@ auto UCk_Utils_Actor_UE::Get_PersistentLevelScriptActor(const UObject* InWorldCo
             return UCk_Utils_Game_UE::Get_WorldForObject(InWorldContextObject);
         }
 
-        const auto& gameInstance = UCk_Utils_Game_UE::Get_GameInstance(nullptr);
+        const auto& GameInstance = UCk_Utils_Game_UE::Get_GameInstance(nullptr);
 
-        if (ck::Is_NOT_Valid(gameInstance))
+        if (ck::Is_NOT_Valid(GameInstance))
         { return {}; }
 
-        return UCk_Utils_Game_UE::Get_WorldForObject(gameInstance);
+        return UCk_Utils_Game_UE::Get_WorldForObject(GameInstance);
     }();
 
     if (ck::Is_NOT_Valid(World))
@@ -67,7 +71,8 @@ auto UCk_Utils_Actor_UE::Get_PersistentLevelScriptActor(const UObject* InWorldCo
 
 auto
     UCk_Utils_Actor_UE::
-    Get_OutermostPawn(UObject* InObject)
+    Get_OutermostPawn(
+        UObject* InObject)
     -> APawn*
 {
     auto OuterObject = InObject;
@@ -87,7 +92,8 @@ auto
 
 auto
     UCk_Utils_Actor_UE::
-    Get_OutermostActor(UObject* InObject)
+    Get_OutermostActor(
+        UObject* InObject)
     -> AActor*
 {
     auto OuterObject = InObject;
@@ -107,7 +113,8 @@ auto
 
 auto
     UCk_Utils_Actor_UE::
-    Get_OutermostActor_RemoteAuthority(UObject* InObject)
+    Get_OutermostActor_RemoteAuthority(
+        UObject* InObject)
     -> AActor*
 {
     auto OuterObject = InObject;
@@ -200,8 +207,8 @@ auto
     DoRequest_BeginDeferredSpawnActor(
         const DeferredSpawnActor_Params& InDeferredSpawnActorParams) -> AActor*
 {
-    const auto& ActorClass              = InDeferredSpawnActorParams.Get_ActorClass();
-    const auto& OwnerOrWorld            = InDeferredSpawnActorParams.Get_OwnerOrWorld();
+    const auto& ActorClass   = InDeferredSpawnActorParams.Get_ActorClass();
+    const auto& OwnerOrWorld = InDeferredSpawnActorParams.Get_OwnerOrWorld();
 
     CK_ENSURE_IF_NOT(ck::IsValid(OwnerOrWorld), TEXT("SpawnActor Request MUST have an Owner OR World. Unable to spawn [{}]."), ActorClass)
     { return {}; }
@@ -335,7 +342,8 @@ auto
     UCk_Utils_Actor_UE::
     DoRequest_SpawnActor_Finish(
         const SpawnActorParamsType& InSpawnActorParams,
-        AActor* InNewlySpawnedActor) -> AActor*
+        AActor* InNewlySpawnedActor)
+    -> AActor*
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InNewlySpawnedActor), TEXT("Newly spawned Actor is [{}]"), InNewlySpawnedActor)
     { return {}; }
@@ -355,7 +363,9 @@ auto
 
 auto
     UCk_Utils_Actor_UE::
-    DoRequest_CopyAllActorComponentProperties(AActor* InSourceActor, AActor* InDestinationActor)
+    DoRequest_CopyAllActorComponentProperties(
+        AActor* InSourceActor,
+        AActor* InDestinationActor)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InSourceActor), TEXT("Source spawned Actor is [{}]"), InSourceActor)
