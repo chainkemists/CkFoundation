@@ -187,6 +187,14 @@ public:
         AActor* InActor,
         TSubclassOf<UActorComponent> InComponent);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Actor",
+              meta     = (DefaultToSelf = "InActor"))
+    static bool
+    Get_DoesBoneExistInSkeletalMesh(
+        AActor* InActor,
+        FName InBoneName);
+
 public:
     static auto Request_SpawnActor(
         const SpawnActorParamsType& InSpawnActorParams,
