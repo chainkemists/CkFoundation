@@ -7,7 +7,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKOVERLAPBODY_API UCk_OverlapBody_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base
+class CKOVERLAPBODY_API UCk_OverlapBody_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 
@@ -20,7 +20,7 @@ protected:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKOVERLAPBODY_API UCk_OverlapBody_ProcessorInjector_UpdateTransformAndDebug : public UCk_EcsWorld_ProcessorInjector_Base
+class CKOVERLAPBODY_API UCk_OverlapBody_ProcessorInjector_UpdateTransformAndDebug : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 

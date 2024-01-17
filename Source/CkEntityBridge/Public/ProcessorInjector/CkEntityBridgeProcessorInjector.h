@@ -7,7 +7,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKENTITYBRIDGE_API UCk_EntityBridge_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base
+class CKENTITYBRIDGE_API UCk_EntityBridge_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 

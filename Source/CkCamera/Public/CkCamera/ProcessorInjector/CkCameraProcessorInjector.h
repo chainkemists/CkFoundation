@@ -7,7 +7,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKCAMERA_API UCk_Camera_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base
+class CKCAMERA_API UCk_Camera_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 

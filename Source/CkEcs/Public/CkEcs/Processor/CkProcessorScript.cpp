@@ -5,7 +5,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Ecs_ProcessorScript_Base::
+    UCk_Ecs_ProcessorScript_Base_UE::
     Tick(
         TimeType InTime)
     -> void

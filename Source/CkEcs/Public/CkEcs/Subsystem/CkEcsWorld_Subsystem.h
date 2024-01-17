@@ -14,7 +14,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, NotBlueprintable, NotBlueprintType, EditInlineNew)
-class CKECS_API UCk_EcsWorld_ProcessorInjector_Base : public UObject
+class CKECS_API UCk_EcsWorld_ProcessorInjector_Base_UE : public UObject
 {
     GENERATED_BODY()
 
@@ -24,7 +24,7 @@ public:
     using EcsWorldType = ck::FEcsWorld;
 
 public:
-    CK_GENERATED_BODY(UCk_EcsWorld_ProcessorInjector_Base);
+    CK_GENERATED_BODY(UCk_EcsWorld_ProcessorInjector_Base_UE);
 
 protected:
     virtual auto
@@ -35,13 +35,13 @@ protected:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, NotBlueprintable, NotBlueprintType)
-class CKECS_API UCk_EcsWorld_ProcessorScriptInjector : public UCk_EcsWorld_ProcessorInjector_Base
+class CKECS_API UCk_EcsWorld_ProcessorScriptInjector_UE : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 
 private:
     UPROPERTY(EditDefaultsOnly)
-    TSubclassOf<UCk_Ecs_ProcessorScript_Base> _Processor;
+    TSubclassOf<UCk_Ecs_ProcessorScript_Base_UE> _Processor;
 
 private:
     auto

@@ -12,12 +12,13 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+
 UCLASS(Abstract, BlueprintType)
-class CKECS_API UCk_Ecs_ProcessorScript_Base : public UObject
+class CKECS_API UCk_Ecs_ProcessorScript_Base_UE : public UObject
 {
     GENERATED_BODY()
 public:
-    CK_GENERATED_BODY(UCk_Ecs_ProcessorScript_Base);
+    CK_GENERATED_BODY(UCk_Ecs_ProcessorScript_Base_UE);
 
 public:
     using TimeType = FCk_Time;

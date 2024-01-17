@@ -7,7 +7,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKRESOURCELOADER_API UCk_ResourceLoader_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base
+class CKRESOURCELOADER_API UCk_ResourceLoader_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 

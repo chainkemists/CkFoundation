@@ -7,7 +7,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKPHYSICS_API UCk_Physics_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base
+class CKPHYSICS_API UCk_Physics_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 
@@ -20,7 +20,7 @@ protected:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKPHYSICS_API UCk_Physics_ProcessorInjector_Orient : public UCk_EcsWorld_ProcessorInjector_Base
+class CKPHYSICS_API UCk_Physics_ProcessorInjector_Orient : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 
