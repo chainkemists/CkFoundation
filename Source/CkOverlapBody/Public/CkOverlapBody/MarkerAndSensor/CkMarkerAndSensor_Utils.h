@@ -331,19 +331,20 @@ auto
 
         static constexpr auto IsComponentTickEnabled = true;
 
-        return FCk_AddActorComponent_Params{ IsComponentTickEnabled, FCk_Time::ZeroSecond(), AttachmentType, ShapeHolderComponent, NAME_None };
+        return FCk_AddActorComponent_Params{ShapeHolderComponent}
+                .Set_IsTickEnabled(IsComponentTickEnabled)
+                .Set_TickInterval(FCk_Time::ZeroSecond())
+                .Set_AttachmentSocket(NAME_None)
+                .Set_AttachmentType(AttachmentType);
     };
 
     UCk_Utils_ActorModifier_UE::Request_AddActorComponent
     (
         InMarkerOrSensorAttachedEntityAndActor.Get_Handle(),
-        FCk_Request_ActorModifier_AddActorComponent
-        {
-            T_MarkerOrSensorCompType::StaticClass(),
-            false,
-            Make_MarkerOrSensor_ComponentParams(),
-            Make_MarkerOrSensor_InitializerFunction<T_MarkerOrSensorCompType, T_MarkerOrSensorParams, T_MarkerOrSensorShapeType>(InMarkerOrSensorEntity, InMarkerOrSensorParams)
-        },
+        FCk_Request_ActorModifier_AddActorComponent{T_MarkerOrSensorCompType::StaticClass()}
+            .Set_ComponentParams(Make_MarkerOrSensor_ComponentParams())
+            .Set_IsUnique(false)
+            .Set_InitializerFunc(Make_MarkerOrSensor_InitializerFunction<T_MarkerOrSensorCompType, T_MarkerOrSensorParams, T_MarkerOrSensorShapeType>(InMarkerOrSensorEntity, InMarkerOrSensorParams)),
         {}
     );
 }
