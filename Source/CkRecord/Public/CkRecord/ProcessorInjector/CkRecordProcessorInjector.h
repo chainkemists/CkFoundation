@@ -7,7 +7,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKRECORD_API UCk_Record_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base
+class CKRECORD_API UCk_Record_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 

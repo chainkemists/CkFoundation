@@ -7,7 +7,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKATTRIBUTE_API UCk_Attribute_ProcessorInjector_Teardown : public UCk_EcsWorld_ProcessorInjector_Base
+class CKATTRIBUTE_API UCk_Attribute_ProcessorInjector_Teardown : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 
@@ -20,7 +20,7 @@ protected:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKATTRIBUTE_API UCk_Attribute_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base
+class CKATTRIBUTE_API UCk_Attribute_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 

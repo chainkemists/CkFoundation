@@ -20,11 +20,11 @@ public:
 public:
     auto
     Request_CreateNewProcessorScript(
-        const TSubclassOf<UCk_Ecs_ProcessorScript_Base>& InProcessorScriptClass) -> UCk_Ecs_ProcessorScript_Base*;
+        const TSubclassOf<UCk_Ecs_ProcessorScript_Base_UE>& InProcessorScriptClass) -> UCk_Ecs_ProcessorScript_Base_UE*;
 
 private:
     UPROPERTY(Transient)
-    TSet<TObjectPtr<UCk_Ecs_ProcessorScript_Base>> _Processors;
+    TSet<TObjectPtr<UCk_Ecs_ProcessorScript_Base_UE>> _Processors;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -41,7 +41,7 @@ public:
     static auto
     Request_CreateNewProcessorScript(
         const UWorld* InWorld,
-        const TSubclassOf<UCk_Ecs_ProcessorScript_Base>& InProcessorScriptClass) -> UCk_Ecs_ProcessorScript_Base*;
+        const TSubclassOf<UCk_Ecs_ProcessorScript_Base_UE>& InProcessorScriptClass) -> UCk_Ecs_ProcessorScript_Base_UE*;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
