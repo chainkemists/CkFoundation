@@ -86,6 +86,9 @@ auto
         const ThisType& InOther) const
     -> bool
 {
+    if (Get_Entity() == InOther.Get_Entity() && Get_Entity().Get_IsTombstone())
+    { return true; }
+
     return Get_Entity() == InOther.Get_Entity() && GetTypeHash(*_Registry) == GetTypeHash(*InOther._Registry);
 }
 
