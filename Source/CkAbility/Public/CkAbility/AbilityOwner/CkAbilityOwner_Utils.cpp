@@ -146,7 +146,7 @@ auto
         const TFunction<void(FCk_Handle)>& InFunc)
     -> void
 {
-    if (NOT Ensure_Any(InAbilityOwnerEntity))
+    if (NOT Has_Any(InAbilityOwnerEntity))
     { return; }
 
     RecordOfAbilities_Utils::ForEach_ValidEntry
@@ -210,7 +210,7 @@ auto
         const TFunction<bool(FCk_Handle)>& InPredicate)
     -> void
 {
-    if (NOT Ensure_Any(InAbilityOwnerEntity))
+    if (NOT Has_Any(InAbilityOwnerEntity))
     { return; }
 
     RecordOfAbilities_Utils::ForEach_ValidEntry_If
