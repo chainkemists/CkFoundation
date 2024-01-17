@@ -247,16 +247,6 @@
 			]
 		},
 		{
-			"Name": "CkOverlapBodyEditor",
-			"Type": "UncookedOnly",
-			"LoadingPhase": "PreDefault",
-			"WhitelistPlatforms": [
-				"Win64",
-				"Mac",
-				"Linux"
-			]
-		},
-		{
 			"Name": "CkPhysics",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
