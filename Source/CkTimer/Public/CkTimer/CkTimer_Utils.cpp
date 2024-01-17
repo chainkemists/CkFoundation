@@ -398,7 +398,6 @@ auto
     if (NOT Ensure(InTimerEntity))
     { return; }
 
-
     ck::UUtils_Signal_OnTimerPause::Bind(InTimerEntity, InDelegate, InBindingPolicy);
 }
 
@@ -412,7 +411,6 @@ auto
 {
     if (NOT Ensure(InTimerEntity))
     { return; }
-
 
     ck::UUtils_Signal_OnTimerResume::Bind(InTimerEntity, InDelegate, InBindingPolicy);
 }
@@ -428,7 +426,6 @@ auto
     if (NOT Ensure(InTimerEntity))
     { return; }
 
-
     ck::UUtils_Signal_OnTimerDone::Bind(InTimerEntity, InDelegate, InBindingPolicy);
 }
 
@@ -442,7 +439,6 @@ auto
 {
     if (NOT Ensure(InTimerEntity))
     { return; }
-
 
     ck::UUtils_Signal_OnTimerDepleted::Bind(InTimerEntity, InDelegate, InBindingPolicy);
 }
@@ -458,7 +454,6 @@ auto
     if (NOT Ensure(InTimerEntity))
     { return; }
 
-
     ck::UUtils_Signal_OnTimerUpdate::Bind(InTimerEntity, InDelegate, InBindingPolicy);
 }
 
@@ -471,7 +466,6 @@ auto
 {
     if (NOT Ensure(InTimerEntity))
     { return; }
-
 
     ck::UUtils_Signal_OnTimerReset::Unbind(InTimerEntity, InDelegate);
 }
@@ -486,7 +480,6 @@ auto
     if (NOT Ensure(InTimerEntity))
     { return; }
 
-
     ck::UUtils_Signal_OnTimerStop::Unbind(InTimerEntity, InDelegate);
 }
 
@@ -499,7 +492,6 @@ auto
 {
     if (NOT Ensure(InTimerEntity))
     { return; }
-
 
     ck::UUtils_Signal_OnTimerPause::Unbind(InTimerEntity, InDelegate);
 }
@@ -514,7 +506,6 @@ auto
     if (NOT Ensure(InTimerEntity))
     { return; }
 
-
     ck::UUtils_Signal_OnTimerResume::Unbind(InTimerEntity, InDelegate);
 }
 
@@ -527,7 +518,6 @@ auto
 {
     if (NOT Ensure(InTimerEntity))
     { return; }
-
 
     ck::UUtils_Signal_OnTimerDone::Unbind(InTimerEntity, InDelegate);
 }
@@ -542,7 +532,6 @@ auto
     if (NOT Ensure(InTimerEntity))
     { return; }
 
-
     ck::UUtils_Signal_OnTimerDepleted::Unbind(InTimerEntity, InDelegate);
 }
 
@@ -555,7 +544,6 @@ auto
 {
     if (NOT Ensure(InTimerEntity))
     { return; }
-
 
     ck::UUtils_Signal_OnTimerUpdate::Unbind(InTimerEntity, InDelegate);
 }
