@@ -184,6 +184,30 @@ auto
     return ck::IsValid(InActor->FindComponentByClass(InComponent));
 }
 
+auto
+    UCk_Utils_Actor_UE::
+    Get_DoesBoneExistInSkeletalMesh(
+        AActor* InActor,
+        FName   InBoneName)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to Get_HasBoneInSkeletonMesh"))
+    { return {}; }
+
+    const auto& SkeletalMeshComp = InActor->FindComponentByClass<USkeletalMeshComponent>();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor),
+        TEXT("Cannot find Bone [{}] on Actor [{}] because it does NOT have a SkeletalMesh Component"),
+        InBoneName,
+        InActor)
+    { return {}; }
+
+    const auto& SocketBoneName = SkeletalMeshComp->GetSocketBoneName(InBoneName);
+    const auto& BoneIndex      = SkeletalMeshComp->GetBoneIndex(SocketBoneName);
+
+    return BoneIndex != INDEX_NONE;
+}
+
 auto UCk_Utils_Actor_UE::
     Request_SpawnActor(
         const SpawnActorParamsType& InSpawnActorParams,
