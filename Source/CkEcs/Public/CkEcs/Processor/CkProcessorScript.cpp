@@ -14,4 +14,13 @@ auto
     { _Registry = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>()->Get_Registry(); }
 }
 
+auto
+    UCk_Ecs_ProcessorScript_Base_UE::
+    ProcessEntity_If_Implementation(
+        FCk_Handle InEntity) const
+    -> bool
+{
+    return true;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
