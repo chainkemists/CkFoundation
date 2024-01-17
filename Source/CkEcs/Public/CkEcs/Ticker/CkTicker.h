@@ -25,6 +25,43 @@ namespace ck
         using TickableType = concepts::FTickableType;
         using EntityType   = FCk_Entity;
 
+    private:
+        template <typename T>
+        struct UObjectTicker
+        {
+            static_assert(std::is_base_of_v<UObject, T>, "UObjectTicker is designed only for UObjects and ones that have Tick(TimeType) function");
+
+            CK_GENERATED_BODY(UObjectTicker<T>);
+
+        public:
+            auto
+            Tick(TimeType InDeltaT) -> void
+            {
+                CK_ENSURE_IF_NOT(ck::IsValid(_Object),
+                    TEXT("Object is [{}], unable to tick it. Either constructed incorrectly OR it may have been destroyed."),
+                    _Object)
+                { return; }
+
+                _Object->Tick(InDeltaT);
+            }
+
+        private:
+            TWeakObjectPtr<T> _Object;
+
+        public:
+            CK_PROPERTY_GET(_Object);
+
+        public:
+            UObjectTicker(T* InObject)
+                : _Object(InObject)
+            {
+                CK_ENSURE_IF_NOT(ck::IsValid(_Object),
+                    TEXT("Object is [{}], unable to add it to the UObjectTicker."),
+                    _Object)
+                { return; }
+            }
+        };
+
     public:
         template <typename T_Tickable>
         auto Add(T_Tickable&& InTickable) -> HandleType;
@@ -52,12 +89,21 @@ namespace ck
             T_Tickable&& InTickable)
         -> HandleType
     {
+        using DecayedType = std::remove_pointer_t<std::remove_cvref_t<T_Tickable>>;
+
         const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_ProcessorsRegistry, [&](FCk_Handle InEntity)
         {
-            InEntity.Add<TickableType>(std::forward<T_Tickable>(InTickable));
+            if constexpr (std::is_base_of_v<UObject, DecayedType>)
+            {
+                InEntity.Add<TickableType>(std::forward<UObjectTicker<DecayedType>>(UObjectTicker<DecayedType>{InTickable}));
+                DoSortTickable<UObjectTicker<DecayedType>>();
+            }
+            else
+            {
+                InEntity.Add<TickableType>(std::forward<T_Tickable>(InTickable));
+                DoSortTickable<T_Tickable>();
+            }
         });
-
-        DoSortTickable<T_Tickable>();
 
         return NewEntity;
     }
