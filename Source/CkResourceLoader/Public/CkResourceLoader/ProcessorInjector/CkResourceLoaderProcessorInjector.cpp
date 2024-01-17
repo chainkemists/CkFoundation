@@ -1,19 +1,16 @@
-#include "CkEcsProcessorInjector.h"
+#include "CkResourceLoaderProcessorInjector.h"
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Processor.h"
-#include "CkEcs/OwningActor/CkOwningActor_Processors.h"
+#include "CkResourceLoader/CkResourceLoader_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Ecs_ProcessorInjector::
+    UCk_ResourceLoader_ProcessorInjector::
     DoInjectProcessors(
         EcsWorldType& InWorld)
         -> void
 {
-    InWorld.Add<ck::FProcessor_OwningActor_Destroy>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_EntityLifetime_EntityJustCreated>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_EntityLifetime_PendingDestroyEntity>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_ResourceLoader_HandleRequests>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

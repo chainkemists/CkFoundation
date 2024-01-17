@@ -1,19 +1,16 @@
-#include "CkEcsProcessorInjector.h"
+#include "CkEntityBridgeProcessorInjector.h"
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Processor.h"
-#include "CkEcs/OwningActor/CkOwningActor_Processors.h"
+#include "CkEntityBridge/CkEntityBridge_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Ecs_ProcessorInjector::
+    UCk_EntityBridge_ProcessorInjector::
     DoInjectProcessors(
         EcsWorldType& InWorld)
         -> void
 {
-    InWorld.Add<ck::FProcessor_OwningActor_Destroy>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_EntityLifetime_EntityJustCreated>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_EntityLifetime_PendingDestroyEntity>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_EntityBridge_HandleRequests>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

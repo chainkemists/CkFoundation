@@ -2,12 +2,12 @@
 
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-#include "CkEcsProcessorInjector.generated.h"
+#include "CkOverlapBodyProcessorInjector.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKECS_API UCk_Ecs_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base
+class CKOVERLAPBODY_API UCk_OverlapBody_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base
 {
     GENERATED_BODY()
 
@@ -18,3 +18,14 @@ protected:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable, NotBlueprintType)
+class CKOVERLAPBODY_API UCk_OverlapBody_ProcessorInjector_UpdateTransformAndDebug : public UCk_EcsWorld_ProcessorInjector_Base
+{
+    GENERATED_BODY()
+
+protected:
+    auto
+    DoInjectProcessors(
+        EcsWorldType& InWorld) -> void override;
+};

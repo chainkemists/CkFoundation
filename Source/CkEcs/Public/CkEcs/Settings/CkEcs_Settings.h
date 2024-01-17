@@ -45,7 +45,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Blueprintable, EditInlineNew)
+UCLASS(Abstract, Blueprintable)
 class CKECS_API UCk_Ecs_ProcessorInjectors_PDA : public UCk_DataAsset_PDA
 {
     GENERATED_BODY()

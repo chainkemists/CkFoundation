@@ -1,12 +1,14 @@
-#include "CkApp_Log.h"
+#include "CkTemplateProcessorInjector.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DEFINE_LOG_CATEGORY(CkApp);
-
-namespace ck::app
+auto
+    UCk_Template_ProcessorInjector::
+    DoInjectProcessors(
+        EcsWorldType& InWorld)
+        -> void
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkApp);
+    // Add Processors here
 }
 
 // --------------------------------------------------------------------------------------------------------------------

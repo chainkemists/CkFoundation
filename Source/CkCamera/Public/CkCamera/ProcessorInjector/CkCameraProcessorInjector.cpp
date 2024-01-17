@@ -1,19 +1,16 @@
-#include "CkEcsProcessorInjector.h"
+#include "CkCameraProcessorInjector.h"
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Processor.h"
-#include "CkEcs/OwningActor/CkOwningActor_Processors.h"
+#include "CkCamera/CameraShake/CkCameraShake_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Ecs_ProcessorInjector::
+    UCk_Camera_ProcessorInjector::
     DoInjectProcessors(
         EcsWorldType& InWorld)
         -> void
 {
-    InWorld.Add<ck::FProcessor_OwningActor_Destroy>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_EntityLifetime_EntityJustCreated>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_EntityLifetime_PendingDestroyEntity>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_CameraShake_HandleRequests>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

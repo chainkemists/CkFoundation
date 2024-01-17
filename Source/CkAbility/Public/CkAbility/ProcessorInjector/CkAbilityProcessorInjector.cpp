@@ -1,19 +1,21 @@
-#include "CkEcsProcessorInjector.h"
+#include "CkAbilityProcessorInjector.h"
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Processor.h"
-#include "CkEcs/OwningActor/CkOwningActor_Processors.h"
+#include "CkAbility/AbilityCue/CkAbilityCue_Processor.h"
+#include "CkAbility/AbilityOwner/CkAbilityOwner_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Ecs_ProcessorInjector::
+    UCk_Ability_ProcessorInjector::
     DoInjectProcessors(
         EcsWorldType& InWorld)
         -> void
 {
-    InWorld.Add<ck::FProcessor_OwningActor_Destroy>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_EntityLifetime_EntityJustCreated>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_EntityLifetime_PendingDestroyEntity>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_AbilityOwner_Setup>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_AbilityOwner_HandleRequests>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_AbilityOwner_HandleEvents>(InWorld.Get_Registry());
+
+    InWorld.Add<ck::FProcessor_AbilityCue_Spawn>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

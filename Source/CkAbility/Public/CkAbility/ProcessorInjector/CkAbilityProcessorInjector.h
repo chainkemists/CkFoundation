@@ -1,13 +1,12 @@
 #pragma once
-
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-#include "CkEcsProcessorInjector.generated.h"
+#include "CkAbilityProcessorInjector.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKECS_API UCk_Ecs_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base
+class CKABILITY_API UCk_Ability_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base
 {
     GENERATED_BODY()
 

@@ -38,7 +38,7 @@ public:
     using SubsystemType = UCk_ProcessorScript_Subsystem_UE;
 
 public:
-    auto
+    static auto
     Request_CreateNewProcessorScript(
         const UWorld* InWorld,
         const TSubclassOf<UCk_Ecs_ProcessorScript_Base>& InProcessorScriptClass) -> UCk_Ecs_ProcessorScript_Base*;

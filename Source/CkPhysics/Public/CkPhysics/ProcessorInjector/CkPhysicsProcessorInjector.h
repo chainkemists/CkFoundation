@@ -2,12 +2,25 @@
 
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-#include "CkEcsProcessorInjector.generated.h"
+#include "CkPhysicsProcessorInjector.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKECS_API UCk_Ecs_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base
+class CKPHYSICS_API UCk_Physics_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base
+{
+    GENERATED_BODY()
+
+protected:
+    auto
+    DoInjectProcessors(
+        EcsWorldType& InWorld) -> void override;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable, NotBlueprintType)
+class CKPHYSICS_API UCk_Physics_ProcessorInjector_Orient : public UCk_EcsWorld_ProcessorInjector_Base
 {
     GENERATED_BODY()
 

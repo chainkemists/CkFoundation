@@ -82,6 +82,10 @@ auto
 
         for (const auto Injector : Injectors.Get_ProcessorInjectors())
         {
+            CK_ENSURE_IF_NOT(ck::IsValid(Injector),
+                TEXT("Encountered an INVALID Injector in ProcessorInjectors Asset [{}].{}"), ProcessorInjectors, ck::Context(this))
+            { continue; }
+
             Injector->DoInjectProcessors(*_EcsWorld);
         }
     }

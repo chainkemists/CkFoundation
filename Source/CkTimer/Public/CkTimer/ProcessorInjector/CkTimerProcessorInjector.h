@@ -2,12 +2,12 @@
 
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-#include "CkEcsProcessorInjector.generated.h"
+#include "CkTimerProcessorInjector.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKECS_API UCk_Ecs_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base
+class CKTIMER_API UCk_Timer_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base
 {
     GENERATED_BODY()
 

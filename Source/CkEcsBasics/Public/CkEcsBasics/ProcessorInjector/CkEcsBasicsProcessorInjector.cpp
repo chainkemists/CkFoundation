@@ -1,19 +1,23 @@
-#include "CkEcsProcessorInjector.h"
+#include "CkEcsBasicsProcessorInjector.h"
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Processor.h"
-#include "CkEcs/OwningActor/CkOwningActor_Processors.h"
+#include "CkEcsBasics/Transform/CkTransform_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Ecs_ProcessorInjector::
+    UCk_EcsBasics_ProcessorInjector::
     DoInjectProcessors(
         EcsWorldType& InWorld)
         -> void
 {
-    InWorld.Add<ck::FProcessor_OwningActor_Destroy>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_EntityLifetime_EntityJustCreated>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_EntityLifetime_PendingDestroyEntity>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Transform_InterpolateToGoal_Location>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Transform_InterpolateToGoal_Rotation>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Transform_HandleRequests>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Transform_Actor>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Transform_FireSignals>(InWorld.Get_Registry());
+
+
+    InWorld.Add<ck::FProcessor_Transform_Replicate>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
