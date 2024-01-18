@@ -93,7 +93,7 @@ namespace ck
 
         if (ck::Is_NOT_Valid(InHandle))
         {
-            ability::Verbose(TEXT("Ability Entity [{}] was Marked Pending Kill during the handling of its requests."));
+            ability::Verbose(TEXT("Ability Entity [{}] was Marked Pending Kill during the handling of its requests."), InHandle);
             return;
         }
 
