@@ -6,8 +6,6 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Registry/CkRegistry.h"
 
-#include "CkProfile/Stats/CkStats.h"
-
 #include "CkProcessorScript.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -22,7 +20,7 @@ enum class ECk_Ecs_ForEach_Policy : uint8
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract, BlueprintType)
+UCLASS(Abstract, BlueprintType, EditInlineNew)
 class CKECS_API UCk_Ecs_ProcessorScript_Base_UE : public UObject
 {
     GENERATED_BODY()

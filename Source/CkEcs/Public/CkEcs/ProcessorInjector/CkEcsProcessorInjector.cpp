@@ -2,6 +2,7 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Processor.h"
 #include "CkEcs/OwningActor/CkOwningActor_Processors.h"
+#include "CkEcs/Processor/CkProcessorScript_Subsystem.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -29,6 +30,21 @@ auto
 #if CK_MEMORY_TRACKING
     InWorld.Add<ck::FProcessor_Memory_Stats>();
 #endif
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Ecs_ProcessorScriptInjector_UE::
+    DoInjectProcessors(
+        EcsWorldType& InWorld)
+    -> void
+{
+    for (auto ProcessorClass : _Processors)
+    {
+        const auto& Processor = UCk_Utils_ProcessorScript_Subsystem_UE::Request_CreateNewProcessorScript(GetWorld(), ProcessorClass);
+        InWorld.Add(Processor);
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

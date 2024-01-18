@@ -31,3 +31,23 @@ protected:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(BlueprintType, EditInlineNew)
+class CKECS_API UCk_Ecs_ProcessorScriptInjector_UE : public UCk_EcsWorld_ProcessorInjector_Base_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Ecs_ProcessorScriptInjector_UE);
+
+protected:
+    auto
+    DoInjectProcessors(
+        EcsWorldType& InWorld) -> void override;
+
+private:
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
+    TArray<TSubclassOf<UCk_Ecs_ProcessorScript_Base_UE>> _Processors;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
