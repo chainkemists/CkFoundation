@@ -1,7 +1,7 @@
 #include "CkSensor_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcsBasics/EntityHolder/CkEntityHolder_Utils.h"
 #include "CkNet/CkNet_Utils.h"
 #include "CkOverlapBody/CkOverlapBody_Log.h"

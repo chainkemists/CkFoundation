@@ -9,7 +9,7 @@
 
 #include <CoreMinimal.h>
 
-#include "CkEntityLifetime_Fragment_Utils.generated.h"
+#include "CkEntityLifetime_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

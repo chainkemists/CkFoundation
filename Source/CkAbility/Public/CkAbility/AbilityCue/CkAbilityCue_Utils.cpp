@@ -5,7 +5,7 @@
 #include "CkAbility/AbilityCue/CkAbilityCue_Fragment.h"
 #include "CkAbility/AbilityCue/CkAbilityCue_Fragment_Data.h"
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

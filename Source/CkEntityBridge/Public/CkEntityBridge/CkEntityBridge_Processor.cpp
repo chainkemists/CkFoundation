@@ -1,6 +1,6 @@
 #include "CkEntityBridge_Processor.h"
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include "CkEntityBridge/CkEntityBridge_Log.h"
 

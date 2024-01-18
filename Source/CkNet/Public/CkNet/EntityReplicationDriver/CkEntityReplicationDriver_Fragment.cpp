@@ -4,7 +4,7 @@
 #include "CkCore/Payload/CkPayload.h"
 
 #include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 

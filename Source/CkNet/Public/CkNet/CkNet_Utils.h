@@ -10,7 +10,7 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Time/CkTime.h"
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include "CkNet/CkNet_Common.h"
 #include "CkNet/CkNet_Fragment_Data.h"

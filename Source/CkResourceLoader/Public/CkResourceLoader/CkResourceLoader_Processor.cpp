@@ -1,7 +1,7 @@
 #include "CkResourceLoader_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include "CkResourceLoader/CkResourceLoader_Log.h"
 #include "CkResourceLoader/CkResourceLoader_Utils.h"
