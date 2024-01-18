@@ -10,16 +10,17 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck::details
+namespace ck::layout
 {
-    class FResourceLoader_ProjectSettings_Details : public IDetailCustomization
+    class FResourceLoaderEditor_ProjectSettings_Details : public IDetailCustomization
 {
     public:
         /** Makes a new instance of this detail layout class for a specific detail view requesting it */
-        static TSharedRef<IDetailCustomization> MakeInstance();
+        static auto MakeInstance() -> TSharedRef<IDetailCustomization>;
 
         /** IDetailCustomization interface */
-        void CustomizeDetails(IDetailLayoutBuilder& DetailBuilder) override;
+        auto CustomizeDetails(
+            IDetailLayoutBuilder& DetailBuilder) -> void override;
     };
 }
 
@@ -36,10 +37,8 @@ public:
     CK_GENERATED_BODY(UCk_ResourceLoaderEditor_ProjectSettings_UE);
 
 protected:
-#if WITH_EDITOR
     auto PostEditChangeProperty(
         FPropertyChangedEvent& InPropertyChangedEvent) -> void override;
-#endif
 
 private:
     UPROPERTY(Config, EditDefaultsOnly, Category = "Asset Loading",

@@ -17,7 +17,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck::details
+namespace ck::layout
 {
     auto
         FEditorStyle_ProjectSettings_Details::

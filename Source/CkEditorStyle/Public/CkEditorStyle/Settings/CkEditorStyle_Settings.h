@@ -13,7 +13,7 @@
 
 enum class ECk_AssetStyleType : uint8;
 
-namespace ck::details
+namespace ck::layout
 {
     class FEditorStyle_ProjectSettings_Details : public IDetailCustomization
 {
