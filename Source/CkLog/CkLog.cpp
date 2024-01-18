@@ -1,5 +1,7 @@
 #include "CkLog.h"
 
+#include <PropertyEditorModule.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 DEFINE_LOG_CATEGORY(CkLogger);
@@ -8,14 +10,18 @@ DEFINE_LOG_CATEGORY(CkLogger);
 
 #define LOCTEXT_NAMESPACE "FCkLogModule"
 
-auto FCkLogModule::StartupModule() -> void
+auto
+    FCkLogModule::
+    StartupModule()
+    -> void
 {
-    return IModuleInterface::StartupModule();
 }
 
-auto FCkLogModule::ShutdownModule() -> void
+auto
+    FCkLogModule::
+    ShutdownModule()
+    -> void
 {
-    return IModuleInterface::ShutdownModule();
 }
 
 IMPLEMENT_MODULE(FCkLogModule, CkLog);

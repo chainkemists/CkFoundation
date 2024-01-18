@@ -1,21 +1,28 @@
-#include "CkLog_Settings.h"
+#include "CkLog_Category.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-auto
-    UCk_Log_Settings_UE::
-    Get_DefaultLoggerName() const
-    -> FName
+FCk_LogCategory::
+    FCk_LogCategory(
+        FName InName)
+    : _Name(InName)
 {
-    return _DefaultLoggerName;
 }
 
 auto
-    UCk_Utils_Log_Settings_UE::
-    Get_DefaultLoggerName()
+    FCk_LogCategory::
+    IsValid() const
+    -> bool
+{
+    return _Name != NAME_None;
+}
+
+auto
+    FCk_LogCategory::
+    Get_Name() const
     -> FName
 {
-    return GetDefault<UCk_Log_Settings_UE>()->Get_DefaultLoggerName();
+    return _Name;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
