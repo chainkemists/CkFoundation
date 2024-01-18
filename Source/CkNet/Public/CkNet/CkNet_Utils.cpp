@@ -3,7 +3,7 @@
 #include "CkNet_Fragment.h"
 #include "CkCore/Time/CkTime_Utils.h"
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment.h"
 #include "Engine/World.h"
 

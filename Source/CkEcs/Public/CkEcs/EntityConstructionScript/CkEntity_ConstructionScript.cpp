@@ -3,7 +3,7 @@
 #include "CkCore/Ensure/CkEnsure.h"
 
 #include "CkEcs/CkEcsLog.h"
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
 

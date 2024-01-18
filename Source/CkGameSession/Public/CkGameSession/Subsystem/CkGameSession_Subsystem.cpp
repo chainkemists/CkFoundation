@@ -4,7 +4,7 @@
 #include "CkCore/Game/CkGame_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include "GameFramework/GameState.h"
 #include "GameFramework/PlayerState.h"

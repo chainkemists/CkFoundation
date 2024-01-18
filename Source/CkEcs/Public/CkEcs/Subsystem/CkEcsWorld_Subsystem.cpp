@@ -6,7 +6,7 @@
 
 #include <Engine/World.h>
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Settings/CkEcs_Settings.h"
 
 // --------------------------------------------------------------------------------------------------------------------

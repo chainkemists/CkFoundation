@@ -1,6 +1,6 @@
 #include "CkRecordEntry_Processor.h"
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
 #include "CkRecord/Record/CkRecord_Utils.h"
