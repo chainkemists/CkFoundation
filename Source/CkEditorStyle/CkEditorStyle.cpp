@@ -19,7 +19,7 @@ auto
     PropertyModule.RegisterCustomClassLayout
     (
         UCk_EditorStyle_ProjectSettings_UE::StaticClass()->GetFName(),
-        FOnGetDetailCustomizationInstance::CreateStatic(&ck::details::FEditorStyle_ProjectSettings_Details::MakeInstance)
+        FOnGetDetailCustomizationInstance::CreateStatic(&ck::layout::FEditorStyle_ProjectSettings_Details::MakeInstance)
     );
 }
 
@@ -28,6 +28,12 @@ auto
     ShutdownModule()
     -> void
 {
+    if (FModuleManager::Get().IsModuleLoaded("PropertyEditor"))
+    {
+        auto& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
+        PropertyModule.UnregisterCustomPropertyTypeLayout(UCk_EditorStyle_ProjectSettings_UE::StaticClass()->GetFName());
+    }
+
     UCk_Utils_EditorStyle_UE::DoUnregister_SlateStyle();
 }
 
