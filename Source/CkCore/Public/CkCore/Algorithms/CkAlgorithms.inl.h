@@ -259,6 +259,15 @@ namespace ck::algo
     {
         Algo::Sort(InContainer, InFunc);
     }
+
+    template <typename T_Container>
+    auto
+        Sort(
+            T_Container& InContainer)
+        -> void
+    {
+        Algo::Sort(InContainer);
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
