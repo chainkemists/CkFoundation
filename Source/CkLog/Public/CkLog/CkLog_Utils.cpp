@@ -1,7 +1,7 @@
 #include "CkLog_Utils.h"
 
-#include "CkLog_Settings.h"
 #include "CkLog/CkLog.h"
+#include "CkLog/CkLog_Category.h"
 
 #include <functional>
 
@@ -47,7 +47,6 @@ namespace ck::log
     {
         static LoggingMapType _FatalMap;
         return _FatalMap;
-
     }
 
     auto
@@ -67,16 +66,13 @@ namespace ck::log
     }
 
     auto
-        Get_LoggerOrDefault(
-            FName InLogger)
-        -> FName
+        Get_AllRegisteredCategories()
+        -> TArray<FName>
     {
-        if (InLogger != NAME_None)
-        {
-            return InLogger;
-        }
+        TArray<FName> OutCategoryNames;
+        Get_LogMap().GetKeys(OutCategoryNames);
 
-        return UCk_Utils_Log_Settings_UE::Get_DefaultLoggerName();
+        return OutCategoryNames;
     }
 
     // NOTE: Copied over from CkDebug_Utils.h to avoid dependency on CkCore
@@ -121,70 +117,70 @@ auto
     UCk_Log_Utils_UE::
     Log_Fatal(
         FText InMsg,
-        FName InLogger)
+       FCk_LogCategory InLogCategory)
     -> void
 {
-    Log_Fatal_If(true, InMsg, InLogger);
+    Log_Fatal_If(true, InMsg, InLogCategory);
 }
 
 auto
     UCk_Log_Utils_UE::
     Log_Error(
         FText InMsg,
-        FName InLogger)
+       FCk_LogCategory InLogCategory)
     -> void
 {
-    Log_Error_If(true, InMsg, InLogger);
+    Log_Error_If(true, InMsg, InLogCategory);
 }
 
 auto
     UCk_Log_Utils_UE::
     Log_Warning(
         FText InMsg,
-        FName InLogger)
+       FCk_LogCategory InLogCategory)
     -> void
 {
-    Log_Warning_If(true, InMsg, InLogger);
+    Log_Warning_If(true, InMsg, InLogCategory);
 }
 
 auto
     UCk_Log_Utils_UE::
     Log_Display(
         FText InMsg,
-        FName InLogger)
+       FCk_LogCategory InLogCategory)
     -> void
 {
-    Log_Display_If(true, InMsg, InLogger);
+    Log_Display_If(true, InMsg, InLogCategory);
 }
 
 auto
     UCk_Log_Utils_UE::
     Log(
         FText InMsg,
-        FName InLogger)
+       FCk_LogCategory InLogCategory)
     -> void
 {
-    Log_If(true, InMsg, InLogger);
+    Log_If(true, InMsg, InLogCategory);
 }
 
 auto
     UCk_Log_Utils_UE::
     Log_Verbose(
         FText InMsg,
-        FName InLogger)
+       FCk_LogCategory InLogCategory)
     -> void
 {
-    Log_Verbose_If(true, InMsg, InLogger);
+    Log_Verbose_If(true, InMsg, InLogCategory);
 }
 
 auto
     UCk_Log_Utils_UE::
     Log_VeryVerbose(
         FText InMsg,
-        FName InLogger)
+       FCk_LogCategory InLogCategory)
     -> void
 {
-    Log_VeryVerbose_If(true, InMsg, InLogger);
+    Log_VeryVerbose_If(true, InMsg, InLogCategory);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -192,14 +188,14 @@ auto
 auto
     UCk_Log_Utils_UE::
     Log_Fatal_If(
-        bool  InExpression,
+        bool InExpression,
         FText InMsg,
-        FName InLogger)
+        FCk_LogCategory InLogCategory)
     -> ECk_LogResults
 {
     if (InExpression)
     {
-        DoInvokeLog(ck::log::Get_FatalMap(), InLogger, InMsg);
+        DoInvokeLog(ck::log::Get_FatalMap(), InLogCategory.Get_Name(), InMsg);
         return ECk_LogResults::Logged;
     }
 
@@ -209,14 +205,14 @@ auto
 auto
     UCk_Log_Utils_UE::
     Log_Error_If(
-        bool  InExpression,
+        bool InExpression,
         FText InMsg,
-        FName InLogger)
+        FCk_LogCategory InLogCategory)
     -> ECk_LogResults
 {
     if (InExpression)
     {
-        DoInvokeLog(ck::log::Get_ErrorMap(), InLogger, InMsg);
+        DoInvokeLog(ck::log::Get_ErrorMap(), InLogCategory.Get_Name(), InMsg);
         return ECk_LogResults::Logged;
     }
 
@@ -226,14 +222,14 @@ auto
 auto
     UCk_Log_Utils_UE::
     Log_Warning_If(
-        bool  InExpression,
+        bool InExpression,
         FText InMsg,
-        FName InLogger)
+        FCk_LogCategory InLogCategory)
     -> ECk_LogResults
 {
     if (InExpression)
     {
-        DoInvokeLog(ck::log::Get_WarningMap(), InLogger, InMsg);
+        DoInvokeLog(ck::log::Get_WarningMap(), InLogCategory.Get_Name(), InMsg);
         return ECk_LogResults::Logged;
     }
 
@@ -243,14 +239,14 @@ auto
 auto
     UCk_Log_Utils_UE::
     Log_Display_If(
-        bool  InExpression,
+        bool InExpression,
         FText InMsg,
-        FName InLogger)
+        FCk_LogCategory InLogCategory)
     -> ECk_LogResults
 {
     if (InExpression)
     {
-        DoInvokeLog(ck::log::Get_DisplayMap(), InLogger, InMsg);
+        DoInvokeLog(ck::log::Get_DisplayMap(), InLogCategory.Get_Name(), InMsg);
         return ECk_LogResults::Logged;
     }
 
@@ -260,14 +256,14 @@ auto
 auto
     UCk_Log_Utils_UE::
     Log_Verbose_If(
-        bool  InExpression,
+        bool InExpression,
         FText InMsg,
-        FName InLogger)
+        FCk_LogCategory InLogCategory)
     -> ECk_LogResults
 {
     if (InExpression)
     {
-        DoInvokeLog(ck::log::Get_VerboseMap(), InLogger, InMsg);
+        DoInvokeLog(ck::log::Get_VerboseMap(), InLogCategory.Get_Name(), InMsg);
         return ECk_LogResults::Logged;
     }
 
@@ -277,14 +273,14 @@ auto
 auto
     UCk_Log_Utils_UE::
     Log_VeryVerbose_If(
-        bool  InExpression,
+        bool InExpression,
         FText InMsg,
-        FName InLogger)
+        FCk_LogCategory InLogCategory)
     -> ECk_LogResults
 {
     if (InExpression)
     {
-        DoInvokeLog(ck::log::Get_VeryVerboseMap(), InLogger, InMsg);
+        DoInvokeLog(ck::log::Get_VeryVerboseMap(), InLogCategory.Get_Name(), InMsg);
         return ECk_LogResults::Logged;
     }
 
@@ -294,14 +290,14 @@ auto
 auto
     UCk_Log_Utils_UE::
     Log_If(
-        bool  InExpression,
+        bool InExpression,
         FText InMsg,
-        FName InLogger)
+        FCk_LogCategory InLogCategory)
     -> ECk_LogResults
 {
     if (InExpression)
     {
-        DoInvokeLog(ck::log::Get_LogMap(), InLogger, InMsg);
+        DoInvokeLog(ck::log::Get_LogMap(), InLogCategory.Get_Name(), InMsg);
         return ECk_LogResults::Logged;
     }
 
@@ -316,7 +312,7 @@ auto
         FText InMsg)
     -> void
 {
-    const auto& LoggerToUse = ck::log::Get_LoggerOrDefault(InLogger);
+    const auto& LoggerToUse = InLogger;
 
     if (InMap.Contains(LoggerToUse) == false)
     {
@@ -326,13 +322,13 @@ auto
 
     // logging the context can be expensive and can optionally be turned off
 #if CK_LOG_NO_CONTEXT
-    const auto& formatted = InMsg.ToString();
+    const auto& Formatted = InMsg.ToString();
 #else
-    const auto& bpContext = ck::log::Get_BlueprintContext();
-    const auto& formatted = FString::Printf(TEXT("%s\n== CONTEXT:[%s] =="), *InMsg.ToString(), *bpContext.Get(TEXT("")));
+    const auto& BpContext = ck::log::Get_BlueprintContext();
+    const auto& Formatted = FString::Printf(TEXT("%s\n== CONTEXT:[%s] =="), *InMsg.ToString(), *BpContext.Get(TEXT("")));
 #endif
 
-    InMap[LoggerToUse](formatted);
+    InMap[LoggerToUse](Formatted);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

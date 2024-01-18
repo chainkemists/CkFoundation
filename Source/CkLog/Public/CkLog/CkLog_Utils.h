@@ -22,6 +22,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+struct FCk_LogCategory;
+
 namespace ck::log
 {
     using LoggingMapType = TMap<FName, TFunction<void(const FString&)>>;
@@ -33,6 +35,8 @@ namespace ck::log
     CKLOG_API auto Get_FatalMap()       -> LoggingMapType&;
     CKLOG_API auto Get_VerboseMap()     -> LoggingMapType&;
     CKLOG_API auto Get_VeryVerboseMap() -> LoggingMapType&;
+
+    CKLOG_API auto Get_AllRegisteredCategories() -> TArray<FName>;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -280,83 +284,119 @@ class CKLOG_API UCk_Log_Utils_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
-public:
+private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Log|Utils")
     static void
-    Log_Fatal(FText InMsg, FName InLogger = NAME_None);
+    Log_Fatal(
+        FText InMsg,
+        FCk_LogCategory InLogCategory);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Log|Utils")
     static void
-    Log_Error(FText InMsg, FName InLogger = NAME_None);
+    Log_Error(
+        FText InMsg,
+        FCk_LogCategory InLogCategory);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Log|Utils")
     static void
-    Log_Warning(FText InMsg, FName InLogger = NAME_None);
+    Log_Warning(
+        FText InMsg,
+        FCk_LogCategory InLogCategory);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Log|Utils")
     static void
-    Log_Display(FText InMsg, FName InLogger = NAME_None);
+    Log_Display(
+        FText InMsg,
+        FCk_LogCategory InLogCategory);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Log|Utils")
     static void
-    Log(FText InMsg, FName InLogger = NAME_None);
+    Log(
+        FText InMsg,
+        FCk_LogCategory InLogCategory);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Log|Utils")
     static void
-    Log_Verbose(FText InMsg, FName InLogger = NAME_None);
+    Log_Verbose(
+        FText InMsg,
+        FCk_LogCategory InLogCategory);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Log|Utils")
     static void
-    Log_VeryVerbose(FText InMsg, FName InLogger = NAME_None);
+    Log_VeryVerbose(
+        FText InMsg,
+        FCk_LogCategory InLogCategory);
 
-public:
+private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Log|Utils")
     static ECk_LogResults
-    Log_Fatal_If(bool InExpression, FText InMsg, FName InLogger = NAME_None);
-
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Log|Utils")
-    static ECk_LogResults
-    Log_Error_If(bool InExpression, FText InMsg, FName InLogger = NAME_None);
-
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Log|Utils")
-    static ECk_LogResults
-    Log_Warning_If(bool InExpression, FText InMsg, FName InLogger = NAME_None);
-
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Log|Utils")
-    static ECk_LogResults
-    Log_Display_If(bool InExpression, FText InMsg, FName InLogger = NAME_None);
-
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Log|Utils")
-    static ECk_LogResults
-    Log_If(bool InExpression, FText InMsg, FName InLogger = NAME_None);
+    Log_Fatal_If(
+        bool InExpression,
+        FText InMsg,
+        FCk_LogCategory InLogCategory);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Log|Utils")
     static ECk_LogResults
-    Log_Verbose_If(bool InExpression, FText InMsg, FName InLogger = NAME_None);
+    Log_Error_If(
+        bool InExpression,
+        FText InMsg,
+        FCk_LogCategory InLogCategory);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Log|Utils")
+    static ECk_LogResults
+    Log_Warning_If(
+        bool InExpression,
+        FText InMsg,
+        FCk_LogCategory InLogCategory);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Log|Utils")
+    static ECk_LogResults
+    Log_Display_If(
+        bool InExpression,
+        FText InMsg,
+        FCk_LogCategory InLogCategory);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Log|Utils")
+    static ECk_LogResults
+    Log_If(
+        bool InExpression,
+        FText InMsg,
+        FCk_LogCategory InLogCategory);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Log|Utils")
+    static ECk_LogResults
+    Log_Verbose_If(
+        bool InExpression,
+        FText InMsg,
+        FCk_LogCategory InLogCategory);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Log|Utils")
     static ECk_LogResults
-    Log_VeryVerbose_If(bool InExpression, FText InMsg, FName InLogger = NAME_None);
+    Log_VeryVerbose_If(
+        bool InExpression,
+        FText InMsg,
+        FCk_LogCategory InLogCategory);
 
 private:
     static auto
-    DoInvokeLog(TMap<FName,
-        TFunction<void(const FString&)>>& InMap,
-        FName InLogger, FText InMsg) -> void;
+    DoInvokeLog(
+        TMap<FName, TFunction<void(const FString&)>>& InMap,
+        FName InLogger,
+        FText InMsg) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
