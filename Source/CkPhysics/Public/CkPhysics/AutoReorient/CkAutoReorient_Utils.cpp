@@ -1,6 +1,6 @@
 #include "CkAutoReorient_Utils.h"
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include "CkPhysics/AutoReorient/CkAutoReorient_Fragment.h"
 #include "CkPhysics/Velocity/CkVelocity_Utils.h"

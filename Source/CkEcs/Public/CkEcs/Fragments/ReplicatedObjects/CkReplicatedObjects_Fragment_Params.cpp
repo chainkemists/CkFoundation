@@ -1,7 +1,7 @@
 #include "CkReplicatedObjects_Fragment_Params.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include <Engine/World.h>
 
