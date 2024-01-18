@@ -37,6 +37,12 @@ public:
     static FCk_FloatRange
     Get_RuntimeFloatCurve_ValueRange(
         const FRuntimeFloatCurve& InFloatCurve);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|FloatCurve")
+    static bool
+    Get_IsValid_RuntimeFloatCurve(
+        const FRuntimeFloatCurve& InFloatCurve);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -11,14 +11,14 @@ auto
         const FCk_Time& InTime)
     -> float
 {
-    const auto& richCurve = InFloatCurve.GetRichCurveConst();
+    const auto& RichCurve = InFloatCurve.GetRichCurveConst();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(richCurve, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(RichCurve, ck::IsValid_Policy_NullptrOnly{}),
         TEXT("Invalid RichCurve for RuntimeFloatCurve"))
     { return {}; }
 
-    const auto& seconds = InTime.Get_Seconds();
-    return richCurve->Eval(seconds);
+    const auto& Seconds = InTime.Get_Seconds();
+    return RichCurve->Eval(Seconds);
 }
 
 auto
@@ -27,17 +27,17 @@ auto
         const FRuntimeFloatCurve& InFloatCurve)
     -> FCk_FloatRange
 {
-    const auto& richCurve = InFloatCurve.GetRichCurveConst();
+    const auto& RichCurve = InFloatCurve.GetRichCurveConst();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(richCurve, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(RichCurve, ck::IsValid_Policy_NullptrOnly{}),
         TEXT("Invalid RichCurve for RuntimeFloatCurve"))
     { return {}; }
 
-    auto outMinTime = 0.0f;
-    auto outMaxTime = 0.0f;
-    richCurve->GetTimeRange(outMinTime, outMaxTime);
+    auto OutMinTime = 0.0f;
+    auto OutMaxTime = 0.0f;
+    RichCurve->GetTimeRange(OutMinTime, OutMaxTime);
 
-    return FCk_FloatRange{ outMinTime, outMaxTime };
+    return FCk_FloatRange{ OutMinTime, OutMaxTime };
 }
 
 auto
@@ -46,17 +46,28 @@ auto
         const FRuntimeFloatCurve& InFloatCurve)
     -> FCk_FloatRange
 {
-    const auto& richCurve = InFloatCurve.GetRichCurveConst();
+    const auto& RichCurve = InFloatCurve.GetRichCurveConst();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(richCurve, ck::IsValid_Policy_NullptrOnly{}),
+    CK_ENSURE_IF_NOT(ck::IsValid(RichCurve, ck::IsValid_Policy_NullptrOnly{}),
         TEXT("Invalid RichCurve for RuntimeFloatCurve"))
     { return {}; }
 
-    auto outMinValue = 0.0f;
-    auto outMaxValue = 0.0f;
-    richCurve->GetValueRange(outMinValue, outMaxValue);
+    auto OutMinValue = 0.0f;
+    auto OutMaxValue = 0.0f;
+    RichCurve->GetValueRange(OutMinValue, OutMaxValue);
 
-    return FCk_FloatRange{ outMinValue, outMaxValue };
+    return FCk_FloatRange{ OutMinValue, OutMaxValue };
+}
+
+auto
+    UCk_Utils_FloatCurve_UE::
+    Get_IsValid_RuntimeFloatCurve(
+        const FRuntimeFloatCurve& InFloatCurve)
+    -> bool
+{
+    const auto& RichCurve = InFloatCurve.GetRichCurveConst();
+
+    return ck::IsValid(RichCurve, ck::IsValid_Policy_NullptrOnly{});
 }
 
 // --------------------------------------------------------------------------------------------------------------------
