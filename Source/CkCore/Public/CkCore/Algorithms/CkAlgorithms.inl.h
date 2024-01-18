@@ -189,7 +189,7 @@ namespace ck::algo
     template <typename T_ReturnContainer, typename T_TransformFunc, typename T_Container>
     auto
         Transform(
-            T_Container& InContainer,
+            const T_Container& InContainer,
             T_TransformFunc InFunc)
         -> T_ReturnContainer
     {
@@ -214,7 +214,7 @@ namespace ck::algo
     template <typename T_ReturnContainer, typename T_TransformFunc, typename T_Container>
     auto
         Transform(
-            T_Container& InContainer,
+            const T_Container& InContainer,
             TToTransform<T_ReturnContainer> InReturnContainer,
             T_TransformFunc InFunc)
         -> void
