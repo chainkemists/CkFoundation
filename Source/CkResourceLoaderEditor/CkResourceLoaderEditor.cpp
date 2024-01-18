@@ -4,7 +4,11 @@
 
 #include "CkResourceLoaderEditor/Settings/CkResourceLoaderEditor_Settings.h"
 
+// --------------------------------------------------------------------------------------------------------------------
+
 #define LOCTEXT_NAMESPACE "FCkResourceLoaderEditorModule"
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     FCkResourceLoaderEditorModule::
@@ -15,7 +19,7 @@ auto
     PropertyModule.RegisterCustomClassLayout
     (
         UCk_ResourceLoaderEditor_ProjectSettings_UE::StaticClass()->GetFName(),
-        FOnGetDetailCustomizationInstance::CreateStatic(&ck::details::FResourceLoader_ProjectSettings_Details::MakeInstance)
+        FOnGetDetailCustomizationInstance::CreateStatic(&ck::layout::FResourceLoaderEditor_ProjectSettings_Details::MakeInstance)
     );
 }
 
@@ -24,8 +28,19 @@ auto
     ShutdownModule()
     -> void
 {
+    if (FModuleManager::Get().IsModuleLoaded("PropertyEditor"))
+    {
+        auto& PropertyModule = FModuleManager::LoadModuleChecked<FPropertyEditorModule>("PropertyEditor");
+        PropertyModule.UnregisterCustomPropertyTypeLayout(UCk_ResourceLoaderEditor_ProjectSettings_UE::StaticClass()->GetFName());
+    }
 }
+
+// --------------------------------------------------------------------------------------------------------------------
 
 #undef LOCTEXT_NAMESPACE
 
+// --------------------------------------------------------------------------------------------------------------------
+
 IMPLEMENT_MODULE(FCkResourceLoaderEditorModule, CkResourceLoaderEditor)
+
+// --------------------------------------------------------------------------------------------------------------------

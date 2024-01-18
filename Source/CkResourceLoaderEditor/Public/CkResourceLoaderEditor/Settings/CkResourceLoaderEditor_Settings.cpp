@@ -14,18 +14,18 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck::details
+namespace ck::layout
 {
     auto
-        FResourceLoader_ProjectSettings_Details::
+        FResourceLoaderEditor_ProjectSettings_Details::
         MakeInstance()
         -> TSharedRef<IDetailCustomization>
     {
-        return MakeShareable(new FResourceLoader_ProjectSettings_Details);
+        return MakeShareable(new FResourceLoaderEditor_ProjectSettings_Details);
     }
 
     auto
-        FResourceLoader_ProjectSettings_Details::
+        FResourceLoaderEditor_ProjectSettings_Details::
         CustomizeDetails(
             IDetailLayoutBuilder& DetailBuilder) -> void
     {
@@ -54,7 +54,6 @@ namespace ck::details
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#if WITH_EDITOR
 auto
     UCk_ResourceLoaderEditor_ProjectSettings_UE::
     PostEditChangeProperty(
@@ -71,7 +70,6 @@ auto
         UCk_Utils_EditorAssetLoader_SubSystem_UE::Request_RefreshLoadingAssets();
     }
 }
-#endif
 
 auto
     UCk_Utils_ResourceLoaderEditor_ProjectSettings_UE::

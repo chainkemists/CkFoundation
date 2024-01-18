@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 
+// --------------------------------------------------------------------------------------------------------------------
+
 class FCkResourceLoaderEditorModule : public IModuleInterface
 {
 public:
@@ -11,3 +13,5 @@ public:
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
 };
+
+// --------------------------------------------------------------------------------------------------------------------
