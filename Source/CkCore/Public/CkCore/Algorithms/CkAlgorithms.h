@@ -92,6 +92,9 @@ namespace ck::algo
 
     template <typename T_Container, typename T_PredicateFunction>
     auto Sort(T_Container& InContainer, T_PredicateFunction InFunc) -> void;
+
+    template <typename T_Container>
+    auto Sort(T_Container& InContainer) -> void;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
