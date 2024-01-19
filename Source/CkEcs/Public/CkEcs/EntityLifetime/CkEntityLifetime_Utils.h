@@ -25,7 +25,7 @@ public:
     using RegistryType          = FCk_Registry;
     using EntityType            = FCk_Entity;
     using HandleType            = FCk_Handle;
-    using PostEntityCreatedFunc = TFunction<void(FCk_Handle)>;
+    using PostEntityCreatedFunc = TFunction<void(FCk_Handle&)>;
 
 public:
     struct EntityIdHint
