@@ -36,7 +36,6 @@ public class CkLog : CkModuleRules
                 "Engine",
                 "Slate",
                 "SlateCore",
-                "PropertyEditor",
                 "GameplayTags",
                 "DeveloperSettings",
 

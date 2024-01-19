@@ -212,6 +212,19 @@ auto
     return BoneIndex != INDEX_NONE;
 }
 
+auto
+    UCk_Utils_Actor_UE::
+    Request_SetActorLabel(
+        AActor* InActor,
+        const FString& InNewActorLabel,
+        bool InMarkDirty)
+    -> void
+{
+#if WITH_EDITOR
+    InActor->SetActorLabel(InNewActorLabel, InMarkDirty);
+#endif
+}
+
 auto UCk_Utils_Actor_UE::
     Request_SpawnActor(
         const SpawnActorParamsType& InSpawnActorParams,
@@ -294,7 +307,7 @@ auto
 
     if (NOT InDeferredSpawnActorParams.Get_Label().IsEmpty())
     {
-        SpawnedActor->SetActorLabel(InDeferredSpawnActorParams.Get_Label());
+        Request_SetActorLabel(SpawnedActor, InDeferredSpawnActorParams.Get_Label());
     }
 
     return SpawnedActor;
