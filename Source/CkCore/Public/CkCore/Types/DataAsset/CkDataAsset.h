@@ -25,7 +25,7 @@ public:
     auto GetWorld() const -> UWorld* override;
 
 private:
-    static auto GetWorldFromOuterRecursively(UObject* InObject) -> UWorld*;
+    static auto Get_WorldFromOuterRecursively(UObject* InObject) -> UWorld*;
 
 private:
     TWeakObjectPtr<UWorld> _CurrentWorld;
