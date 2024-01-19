@@ -1,6 +1,7 @@
 #include "CkWorldContextObject.h"
 
 #include "CkCore/Validation/CkIsValid.h"
+#include "CkCore/World/CkWorld_Utils.h"
 
 #include <Engine/Engine.h>
 
@@ -11,48 +12,12 @@ auto
     GetWorld() const
     -> UWorld*
 {
-    if (ck::IsValid(Get_CurrentWorld()))
-    {
-        return Get_CurrentWorld().Get();
-    }
+    const auto& MaybeWorld = UCk_Utils_World_UE::TryGet_MutableFirstValidWorld(this, [](UWorld*) { return true; });
 
-    const auto SuperWorld = Get_WorldFromOuterRecursively(GetOuter());
-    if (ck::IsValid(SuperWorld))
-    {
-        return SuperWorld;
-    }
+    if (ck::IsValid(MaybeWorld))
+    { return *MaybeWorld; }
 
-    // The following is needed for UObjects in Editor to have access to nodes that require a World.
-    // By default, Unreal does not allow UObjects to have access to functions that require a WorldContext.
-    // Of course, this means that if the inherited UObject does NOT have a valid world, those nodes would
-    // fail to work
-    if (NOT GIsPlayInEditorWorld)
-    {
-        const auto& World = [&]() -> UWorld*
-        {
-            if (ck::Is_NOT_Valid(GEngine))
-            { return {}; }
-
-            for (auto& Context : GEngine->GetWorldContexts())
-            {
-                const auto& ContextWorld = Context.World();
-
-                if (ck::Is_NOT_Valid(ContextWorld))
-                { continue; }
-
-                if (const auto& GameInstance = ContextWorld->GetGameInstance(); ck::IsValid(GameInstance))
-                {
-                    return GameInstance->GetWorld();
-                }
-            }
-
-            return {};
-        }();
-
-        return World;
-    }
-
-    return nullptr;
+    return {};
 }
 
 auto
