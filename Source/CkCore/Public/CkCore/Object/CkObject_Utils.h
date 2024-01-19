@@ -170,6 +170,13 @@ public:
         T_Func InFunc) -> T*;
 
 public:
+    UFUNCTION(BlueprintCallable)
+    static FName
+    Request_GeneratedUniqueName(
+        UObject* InThis,
+        UClass* InObj,
+        FName InBaseName);
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Object")
     static bool
