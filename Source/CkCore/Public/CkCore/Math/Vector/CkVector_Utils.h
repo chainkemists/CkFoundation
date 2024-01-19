@@ -160,6 +160,14 @@ public:
         const AActor* InB);
 
     UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Actor",
+              DisplayName="Distance To/From Actor")
+    static float
+    Get_DistanceFromActor(
+        const AActor* InA,
+        FVector InLocation);
+
+    UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|Actor")
     static FCk_DirectionAndLength
     Get_DirectionAndLengthBetweenActors(
