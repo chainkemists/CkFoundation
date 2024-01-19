@@ -346,6 +346,16 @@ auto
 
 auto
     UCk_Utils_ActorVector3_UE::
+    Get_DistanceFromActor(
+        const AActor* InA,
+        FVector       InLocation)
+    -> float
+{
+    return FVector::Distance(InA->GetActorLocation(), InLocation);
+}
+
+auto
+    UCk_Utils_ActorVector3_UE::
     Get_DirectionAndLengthBetweenActors(
         const AActor* InTo,
         const AActor* InFrom)
