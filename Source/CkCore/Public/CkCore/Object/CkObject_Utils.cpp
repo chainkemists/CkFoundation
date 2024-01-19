@@ -4,6 +4,24 @@
 
 auto
     UCk_Utils_Object_UE::
+    Request_GeneratedUniqueName(
+        UObject* InThis,
+        UClass* InObj,
+        FName InBaseName)
+    -> FName
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InThis),
+        TEXT("Invalid Outer supplied to Process_GenerateUniqueName"))
+    { return NAME_None; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InObj), TEXT("Invalid Object Class supplied to Process_GenerateUniqueName"))
+    { return NAME_None; }
+
+    return MakeUniqueObjectName(InThis, InObj->StaticClass(), InBaseName);
+}
+
+auto
+    UCk_Utils_Object_UE::
     Request_TrySetOuter(
         const FCk_Utils_Object_SetOuter_Params& InParams)
     -> bool
