@@ -32,7 +32,7 @@ protected:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(BlueprintType, EditInlineNew)
+UCLASS(Abstract, Blueprintable, EditInlineNew)
 class CKECS_API UCk_Ecs_ProcessorScriptInjector_UE : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
