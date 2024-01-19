@@ -1,7 +1,5 @@
 #include "CkLog.h"
 
-#include <PropertyEditorModule.h>
-
 // --------------------------------------------------------------------------------------------------------------------
 
 DEFINE_LOG_CATEGORY(CkLogger);
