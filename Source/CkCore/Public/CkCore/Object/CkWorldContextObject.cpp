@@ -11,30 +11,65 @@ auto
     GetWorld() const
     -> UWorld*
 {
-    const auto& world = [&]() -> UWorld*
+    if (ck::IsValid(Get_CurrentWorld()))
     {
-        if (ck::Is_NOT_Valid(GEngine))
-        { return {}; }
+        return Get_CurrentWorld().Get();
+    }
 
-        for (auto& context : GEngine->GetWorldContexts())
+    const auto SuperWorld = Get_WorldFromOuterRecursively(GetOuter());
+    if (ck::IsValid(SuperWorld))
+    {
+        return SuperWorld;
+    }
+
+    // The following is needed for UObjects in Editor to have access to nodes that require a World.
+    // By default, Unreal does not allow UObjects to have access to functions that require a WorldContext.
+    // Of course, this means that if the inherited UObject does NOT have a valid world, those nodes would
+    // fail to work
+    if (NOT GIsPlayInEditorWorld)
+    {
+        const auto& World = [&]() -> UWorld*
         {
-            const auto& contextWorld = context.World();
+            if (ck::Is_NOT_Valid(GEngine))
+            { return {}; }
 
-            if (ck::Is_NOT_Valid(contextWorld))
-            { continue; }
-
-            const auto& gameInstance = contextWorld->GetGameInstance();
-
-            if (ck::IsValid(gameInstance))
+            for (auto& Context : GEngine->GetWorldContexts())
             {
-                return gameInstance->GetWorld();
+                const auto& ContextWorld = Context.World();
+
+                if (ck::Is_NOT_Valid(ContextWorld))
+                { continue; }
+
+                if (const auto& GameInstance = ContextWorld->GetGameInstance(); ck::IsValid(GameInstance))
+                {
+                    return GameInstance->GetWorld();
+                }
             }
-        }
 
-        return {};
-    }();
+            return {};
+        }();
 
-    return world;
+        return World;
+    }
+
+    return nullptr;
+}
+
+auto
+    UCk_GameWorldContextObject_UE::
+    Get_WorldFromOuterRecursively(
+        UObject* InObject)
+    -> UWorld*
+{
+    if (ck::Is_NOT_Valid(InObject))
+    { return {}; }
+
+    if (ck::IsValid(Cast<UWorld>(InObject)))
+    {
+        return Cast<UWorld>(InObject);
+    }
+
+    return Get_WorldFromOuterRecursively(InObject->GetOuter());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
