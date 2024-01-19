@@ -78,6 +78,10 @@ namespace ck
 
     private:
         RegistryType _ProcessorsRegistry;
+
+#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+        TArray<FCk_Handle> _EntitiesToTick;
+#endif
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -91,7 +95,7 @@ namespace ck
     {
         using DecayedType = std::remove_pointer_t<std::remove_cvref_t<T_Tickable>>;
 
-        const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_ProcessorsRegistry, [&](FCk_Handle InEntity)
+        const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_ProcessorsRegistry, [&](FCk_Handle& InEntity)
         {
             if constexpr (std::is_base_of_v<UObject, DecayedType>)
             {
@@ -105,6 +109,10 @@ namespace ck
             }
         });
 
+
+#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+        _EntitiesToTick.Emplace(NewEntity);
+#endif
         return NewEntity;
     }
 
@@ -115,12 +123,16 @@ namespace ck
             T_Args&&... InArgs)
         -> HandleType
     {
-        const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_ProcessorsRegistry, [&](FCk_Handle InEntity)
+        const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_ProcessorsRegistry, [&](FCk_Handle& InEntity)
         {
             InEntity.Add<TickableType>(T_Tickable{std::forward<T_Args>(InArgs)...});
         });
 
         DoSortTickable<TickableType>();
+
+#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+        _EntitiesToTick.Emplace(NewEntity);
+#endif
 
         return NewEntity;
     }
