@@ -11,13 +11,30 @@ auto
         const FCk_IntRange& InRange)
     -> int32
 {
-    ++InToIncrement;
-    if (InRange.Get_IsWithinExclusive(InToIncrement))
-    {
-        InToIncrement = InRange.Get_Min();
-    }
+    return Offset_WithWrap(InToIncrement, 1, InRange);
+}
 
-    return InToIncrement;
+auto
+    UCk_Utils_Arithmetic_UE::
+    Decrement_WithWrap(
+        int32&              InToDecrement,
+        const FCk_IntRange& InRange)
+    -> int32
+{
+    return Offset_WithWrap(InToDecrement, -1, InRange);
+}
+
+auto
+    UCk_Utils_Arithmetic_UE::
+    Offset_WithWrap(
+        int32&              InToJump,
+        int32               InOffset,
+        const FCk_IntRange& InRange)
+    -> int32
+{
+    InToJump = ((InToJump + InOffset)%InRange.Get_Max() + InRange.Get_Max()) % InRange.Get_Max();
+
+    return InToJump;
 }
 
 auto
@@ -98,8 +115,28 @@ auto
         const FCk_IntRange& InRange)
     -> int32
 {
-    Increment_WithWrap(InToIncrement, InRange);
-    return InToIncrement;
+    return Offset_WithWrap(InToIncrement, 1, InRange);
+}
+
+auto
+    UCk_Utils_Arithmetic_UE::
+    Get_Decrement_WithWrap(
+        int32               InToDecrement,
+        const FCk_IntRange& InRange)
+    -> int32
+{
+    return Offset_WithWrap(InToDecrement, -1, InRange);
+}
+
+auto
+    UCk_Utils_Arithmetic_UE::
+    Get_Offset_WithWrap(
+        int32               InToDecrement,
+        int32               InOffset,
+        const FCk_IntRange& InRange)
+    -> int32
+{
+    return Offset_WithWrap(InToDecrement, InOffset, InRange);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
