@@ -33,14 +33,12 @@ private:
     UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
     TEnumAsByte<ETickingGroup> _TickingGroup = TG_PrePhysics;
 
-    UPROPERTY(EditDefaultsOnly, Instanced, meta=(AllowPrivateAccess))
-    TArray<TObjectPtr<class UCk_EcsWorld_ProcessorInjector_Base_UE>>  _ProcessorInjectors;
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
+    TArray<TSubclassOf<UCk_EcsWorld_ProcessorInjector_Base_UE>>  _ProcessorInjectors;
 
 public:
     CK_PROPERTY(_TickingGroup);
     CK_PROPERTY_GET(_ProcessorInjectors);
-
-    CK_DEFINE_CONSTRUCTORS(FCk_Ecs_ProcessorInjectors_Info, _ProcessorInjectors);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

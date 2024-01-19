@@ -1,12 +1,14 @@
 #include "CkEcsWorld_Subsystem.h"
 
 #include "CkCore/Actor/CkActor_Utils.h"
+#include "CkCore/Object/CkObject_Utils.h"
 
 #include "CkEcs/CkEcsLog.h"
 
 #include <Engine/World.h>
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/ProcessorInjector/CkEcsProcessorInjector.h"
 #include "CkEcs/Settings/CkEcs_Settings.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -43,6 +45,8 @@ ACk_EcsWorld_Actor_UE::
 {
     PrimaryActorTick.bCanEverTick = true;
     PrimaryActorTick.bTickEvenWhenPaused = false;
+    bReplicates = false;
+    bAlwaysRelevant = true;
 }
 
 auto
@@ -86,7 +90,9 @@ auto
                 TEXT("Encountered an INVALID Injector in ProcessorInjectors Asset [{}].{}"), ProcessorInjectors, ck::Context(this))
             { continue; }
 
-            Injector->DoInjectProcessors(*_EcsWorld);
+            const auto NewInjector = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_EcsWorld_ProcessorInjector_Base_UE>(this, Injector, nullptr);
+
+            NewInjector->DoInjectProcessors(*_EcsWorld);
         }
     }
 }
@@ -112,12 +118,12 @@ auto
 {
     Super::OnWorldBeginPlay(InWorld);
 
-    DoSpawnWorldActors();
+    DoSpawnWorldActors(InWorld);
 }
 
 auto
     UCk_EcsWorld_Subsystem_UE::
-    DoSpawnWorldActors()
+    DoSpawnWorldActors(UWorld& InWorld)
     -> void
 {
     const auto& EcsWorldActorClass = ACk_EcsWorld_Actor_UE::StaticClass();
@@ -125,14 +131,19 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(EcsWorldActorClass), TEXT("Invalid ECS World Actor class set in the Project Settings! ECS Framework won't work!"))
     { return; }
 
+    _TransientEntity.Add<TWeakObjectPtr<UWorld>>(&InWorld);
+
     for (auto TickingGroup = TG_PrePhysics; TickingGroup < ETickingGroup::TG_NewlySpawned;
         TickingGroup = static_cast<ETickingGroup>(TickingGroup + 1))
     {
+        const auto& ActorName = ck::Format_UE(TEXT("EcsWorld_Actor_{}"), TickingGroup);
+
         auto WorldActor = Cast<ACk_EcsWorld_Actor_UE>
         (
             UCk_Utils_Actor_UE::Request_SpawnActor
             (
-                FCk_Utils_Actor_SpawnActor_Params{GetWorld(), EcsWorldActorClass}
+                FCk_Utils_Actor_SpawnActor_Params{&InWorld, EcsWorldActorClass}
+                .Set_Label(ActorName)
                 .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel),
                 [&](AActor* InActor)
                 {
@@ -144,8 +155,6 @@ auto
 
         _WorldActors.Add(TickingGroup, WorldActor);
     }
-
-    _TransientEntity.Add<TWeakObjectPtr<UWorld>>(GetWorld());
 
     CK_ENSURE_IF_NOT(NOT _WorldActors.IsEmpty(),
         TEXT("Failed to spawn ANY EcsWorld Actors. ECS Pipeline will NOT work."))

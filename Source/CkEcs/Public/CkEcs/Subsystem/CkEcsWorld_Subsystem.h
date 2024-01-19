@@ -105,7 +105,7 @@ public:
     auto OnWorldBeginPlay(UWorld& InWorld) -> void override;
 
 private:
-    auto DoSpawnWorldActors() -> void;
+    auto DoSpawnWorldActors(UWorld& InWorld) -> void;
 
 private:
     UPROPERTY(BlueprintReadOnly, Transient, meta = (AllowPrivateAccess = true))
