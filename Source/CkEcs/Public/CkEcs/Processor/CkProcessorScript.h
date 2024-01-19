@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Object/CkWorldContextObject.h"
 #include "CkCore/Time/CkTime.h"
 
 #include "CkEcs/Handle/CkHandle.h"
@@ -21,7 +22,7 @@ enum class ECk_Ecs_ForEach_Policy : uint8
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, BlueprintType, EditInlineNew)
-class CKECS_API UCk_Ecs_ProcessorScript_Base_UE : public UObject
+class CKECS_API UCk_Ecs_ProcessorScript_Base_UE : public UCk_GameWorldContextObject_UE
 {
     GENERATED_BODY()
 public:
