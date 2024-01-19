@@ -12,6 +12,9 @@ auto
     GetWorld() const
     -> UWorld*
 {
+    if (ck::IsValid(Get_CurrentWorld()))
+    { return Get_CurrentWorld().Get(); }
+
     const auto& MaybeWorld = UCk_Utils_World_UE::TryGet_MutableFirstValidWorld(this, [](UWorld*) { return true; });
 
     if (ck::IsValid(MaybeWorld))
