@@ -16,39 +16,48 @@ auto
         return Get_CurrentWorld().Get();
     }
 
-    const auto SuperWorld = GetWorldFromOuterRecursively(GetOuter());
+    const auto SuperWorld = Get_WorldFromOuterRecursively(GetOuter());
     if (ck::IsValid(SuperWorld))
     {
         return SuperWorld;
     }
 
-    const auto& World = [&]() -> UWorld*
+    // The following is needed for UObjects in Editor to have access to nodes that require a World.
+    // By default, Unreal does not allow UObjects to have access to functions that require a WorldContext.
+    // Of course, this means that if the inherited UObject does NOT have a valid world, those nodes would
+    // fail to work
+    if (NOT GIsPlayInEditorWorld)
     {
-        if (ck::Is_NOT_Valid(GEngine))
-        { return {}; }
-
-        for (auto& Context : GEngine->GetWorldContexts())
+        const auto& World = [&]() -> UWorld*
         {
-            const auto& ContextWorld = Context.World();
+            if (ck::Is_NOT_Valid(GEngine))
+            { return {}; }
 
-            if (ck::Is_NOT_Valid(ContextWorld))
-            { continue; }
-
-            if (const auto& GameInstance = ContextWorld->GetGameInstance(); ck::IsValid(GameInstance))
+            for (auto& Context : GEngine->GetWorldContexts())
             {
-                return GameInstance->GetWorld();
+                const auto& ContextWorld = Context.World();
+
+                if (ck::Is_NOT_Valid(ContextWorld))
+                { continue; }
+
+                if (const auto& GameInstance = ContextWorld->GetGameInstance(); ck::IsValid(GameInstance))
+                {
+                    return GameInstance->GetWorld();
+                }
             }
-        }
 
-        return {};
-    }();
+            return {};
+        }();
 
-    return World;
+        return World;
+    }
+
+    return nullptr;
 }
 
 auto
     UCk_DataAsset_PDA::
-    GetWorldFromOuterRecursively(UObject* InObject)
+    Get_WorldFromOuterRecursively(UObject* InObject)
         -> UWorld*
 {
     if (ck::Is_NOT_Valid(InObject))
@@ -59,7 +68,7 @@ auto
         return Cast<UWorld>(InObject);
     }
 
-    return GetWorldFromOuterRecursively(InObject->GetOuter());
+    return Get_WorldFromOuterRecursively(InObject->GetOuter());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
