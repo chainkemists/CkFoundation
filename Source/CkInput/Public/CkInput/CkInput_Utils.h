@@ -23,6 +23,12 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Input")
     static bool
+    WasInputKeyJustPressed(
+        APlayerController* InPlayerController,
+        const FKey& InInputKey);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Input")
+    static bool
     WasInputKeyJustPressed_WithCustomModifier(
         APlayerController* InPlayerController,
         const FKey& InInputKey,
