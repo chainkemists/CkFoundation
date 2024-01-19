@@ -210,6 +210,21 @@ public:
         FName InBoneName);
 
 public:
+    /**
+     * Assigns a new label to this actor.  Actor labels are only available in development builds.
+     * @param	InNewActorLabel	The new label string to assign to the actor.  If empty, the actor will have a default label.
+     * @param	InMarkDirty		If true the actor's package will be marked dirty for saving.  Otherwise it will not be.  You should pass false for this parameter if dirtying is not allowed (like during loads)
+     */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Actor",
+              meta     = (DefaultToSelf = "InActor"))
+    static void
+    Request_SetActorLabel(
+        AActor* InActor,
+        const FString& InNewActorLabel,
+        bool InMarkDirty = true );
+
+public:
     static auto Request_SpawnActor(
         const SpawnActorParamsType& InSpawnActorParams,
         const TFunction<void (AActor*)>& InPreFinishSpawningFunc = nullptr) -> AActor*;
