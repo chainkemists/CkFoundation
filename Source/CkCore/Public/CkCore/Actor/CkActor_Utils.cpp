@@ -29,11 +29,15 @@ UCk_Utils_Actor_UE::DeferredSpawnActor_Params::
     DeferredSpawnActor_Params(
         const TSubclassOf<AActor> InActorClass,
         const TObjectPtr<AActor> InArchetype,
+        FName InNonUniqueName,
+        FString InLabel,
         const FTransform& InSpawnTransform,
         const ESpawnActorCollisionHandlingMethod InCollisionHandlingOverride,
         TObjectPtr<UObject> InOwnerOrWorld)
     : _ActorClass(InActorClass)
     , _Archetype(InArchetype)
+    , _NonUniqueName(InNonUniqueName)
+    , _Label(InLabel)
     , _SpawnTransform(InSpawnTransform)
     , _CollisionHandlingOverride(InCollisionHandlingOverride)
     , _OwnerOrWorld(InOwnerOrWorld)
@@ -277,10 +281,21 @@ auto
     SpawnInfo.Owner                          = Cast<AActor>(OwnerOrWorld);
     SpawnInfo.bDeferConstruction             = true;
 
+    if (ck::IsValid(InDeferredSpawnActorParams.Get_NonUniqueName()))
+    {
+        SpawnInfo.Name = UCk_Utils_Object_UE::Request_GeneratedUniqueName(
+            OwnerOrWorld, ActorClass, InDeferredSpawnActorParams.Get_NonUniqueName());
+    }
+
     if (ck::Is_NOT_Valid(ActorClass))
     { return {}; }
 
     const auto& SpawnedActor = World->SpawnActor(ActorClass, &InDeferredSpawnActorParams.Get_SpawnTransform(), SpawnInfo);
+
+    if (NOT InDeferredSpawnActorParams.Get_Label().IsEmpty())
+    {
+        SpawnedActor->SetActorLabel(InDeferredSpawnActorParams.Get_Label());
+    }
 
     return SpawnedActor;
 }
@@ -330,6 +345,8 @@ auto
     {
         InSpawnActorParams.Get_ActorClass(),
         InSpawnActorParams.Get_Archetype().Get(),
+        InSpawnActorParams.Get_NonUniqueName(),
+        InSpawnActorParams.Get_Label(),
         InSpawnActorParams.Get_SpawnTransform(),
         InSpawnActorParams.Get_CollisionHandlingOverride(),
         InSpawnActorParams.Get_OwnerOrWorld().Get()
@@ -369,7 +386,8 @@ auto
         AActor* InNewlySpawnedActor)
     -> AActor*
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InNewlySpawnedActor), TEXT("Newly spawned Actor is [{}]"), InNewlySpawnedActor)
+    CK_ENSURE_IF_NOT(ck::IsValid(InNewlySpawnedActor),
+        TEXT("Newly spawned Actor [{}] is INVALID (or about to be destroyed"), InNewlySpawnedActor)
     { return {}; }
 
     const auto& FinishedSpawningActor = UGameplayStatics::FinishSpawningActor(InNewlySpawnedActor, InSpawnActorParams.Get_SpawnTransform());

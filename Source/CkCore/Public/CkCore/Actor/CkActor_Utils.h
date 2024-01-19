@@ -51,6 +51,12 @@ protected:
     TWeakObjectPtr<AActor>                               _Archetype;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FName                                                _NonUniqueName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FString                                              _Label;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FTransform                                           _SpawnTransform            = FTransform::Identity;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -67,6 +73,8 @@ public:
     CK_PROPERTY_GET(_ActorClass);
 
     CK_PROPERTY(_Archetype);
+    CK_PROPERTY(_NonUniqueName);
+    CK_PROPERTY(_Label);
     CK_PROPERTY(_SpawnTransform);
     CK_PROPERTY(_CollisionHandlingOverride);
     CK_PROPERTY(_NetworkingType);
@@ -124,6 +132,8 @@ private:
         DeferredSpawnActor_Params(
             TSubclassOf<AActor> InActorClass,
             TObjectPtr<AActor> InArchetype,
+            FName InNonUniqueName,
+            FString InLabel,
             const FTransform& InSpawnTransform,
             ESpawnActorCollisionHandlingMethod InCollisionHandlingOverride,
             TObjectPtr<UObject> InOwnerOrWorld);
@@ -131,6 +141,8 @@ private:
     private:
         TSubclassOf<AActor>                _ActorClass;
         TObjectPtr<AActor>                 _Archetype = nullptr;
+        FName                              _NonUniqueName = NAME_None;
+        FString                            _Label;
         FTransform                         _SpawnTransform;
         ESpawnActorCollisionHandlingMethod _CollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::Undefined;
         TObjectPtr<UObject>                _OwnerOrWorld = nullptr;
@@ -138,6 +150,8 @@ private:
     public:
         CK_PROPERTY_GET(_ActorClass);
         CK_PROPERTY_GET(_Archetype);
+        CK_PROPERTY_GET(_NonUniqueName);
+        CK_PROPERTY_GET(_Label);
         CK_PROPERTY_GET(_SpawnTransform);
         CK_PROPERTY_GET(_CollisionHandlingOverride);
         CK_PROPERTY_GET(_OwnerOrWorld);
