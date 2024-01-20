@@ -5,7 +5,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_UI_ProjectSettings_UE::
+    UCk_Utils_UI_Settings_UE::
     Get_WatermarkWidgetClass()
     -> TSubclassOf<UCk_Watermark_UserWidget_UE>
 {
@@ -13,7 +13,7 @@ auto
 }
 
 auto
-    UCk_Utils_UI_ProjectSettings_UE::
+    UCk_Utils_UI_Settings_UE::
     Get_WatermarkWidget_ZOrder()
     -> int32
 {

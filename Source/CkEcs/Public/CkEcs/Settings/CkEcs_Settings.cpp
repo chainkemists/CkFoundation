@@ -5,7 +5,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_Ecs_ProjectSettings_UE::
+    UCk_Utils_Ecs_Settings_UE::
     Get_ProcessorInjectors()
     -> UCk_Ecs_ProcessorInjectors_PDA*
 {
@@ -20,11 +20,11 @@ auto
 }
 
 auto
-    UCk_Utils_Ecs_ProjectSettings_UE::
+    UCk_Utils_Ecs_Settings_UE::
     Get_HandleDebuggerBehavior()
     -> ECk_Ecs_HandleDebuggerBehavior
 {
-    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_ProjectSettings_UE>()->Get_HandleDebuggerBehavior();
+    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_UserSettings_UE>()->Get_HandleDebuggerBehavior();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

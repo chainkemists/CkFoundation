@@ -27,11 +27,11 @@ namespace ck::layout
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(meta = (DisplayName = "Resource Loader Editor"))
-class CKRESOURCELOADEREDITOR_API UCk_ResourceLoaderEditor_ProjectSettings_UE : public UCk_Editor_ProjectSettings_UE
+class CKRESOURCELOADEREDITOR_API UCk_ResourceLoaderEditor_ProjectSettings_UE : public UCk_Plugin_ProjectSettings_UE
 {
     GENERATED_BODY()
 
-    friend class UCk_Utils_ResourceLoaderEditor_ProjectSettings_UE;
+    friend class UCk_Utils_ResourceLoaderEditor_Settings_UE;
 
 public:
     CK_GENERATED_BODY(UCk_ResourceLoaderEditor_ProjectSettings_UE);
@@ -55,7 +55,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class CKRESOURCELOADEREDITOR_API UCk_Utils_ResourceLoaderEditor_ProjectSettings_UE
+class CKRESOURCELOADEREDITOR_API UCk_Utils_ResourceLoaderEditor_Settings_UE
 {
 public:
     static auto

@@ -72,7 +72,7 @@ auto
 }
 
 auto
-    UCk_Utils_ResourceLoaderEditor_ProjectSettings_UE::
+    UCk_Utils_ResourceLoaderEditor_Settings_UE::
     Get_ClassesToLoad()
     -> const TArray<FSoftClassPath>&
 {
@@ -80,7 +80,7 @@ auto
 }
 
 auto
-    UCk_Utils_ResourceLoaderEditor_ProjectSettings_UE::
+    UCk_Utils_ResourceLoaderEditor_Settings_UE::
     Request_ClearAllLoadedObjects()
     -> void
 {
@@ -88,7 +88,7 @@ auto
 }
 
 auto
-    UCk_Utils_ResourceLoaderEditor_ProjectSettings_UE::
+    UCk_Utils_ResourceLoaderEditor_Settings_UE::
     Request_AddLoadedObject(
         const FSoftObjectPath& InLoadedObject)
     -> void
@@ -97,7 +97,7 @@ auto
 }
 
 auto
-    UCk_Utils_ResourceLoaderEditor_ProjectSettings_UE::
+    UCk_Utils_ResourceLoaderEditor_Settings_UE::
     Request_AddLoadedObjects(
         const TArray<FSoftObjectPath>& InLoadedObjects)
     -> void

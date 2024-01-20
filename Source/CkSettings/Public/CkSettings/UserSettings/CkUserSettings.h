@@ -7,12 +7,13 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, Config = EditorPerProjectUserSettings)
-class CKSETTINGS_API UCk_EditorPerProject_UserSettings_UE : public UDeveloperSettingsBackedByCVars
+class CKSETTINGS_API UCk_Plugin_UserSettings_UE : public UDeveloperSettingsBackedByCVars
 {
     GENERATED_BODY()
 
 public:
-    explicit UCk_EditorPerProject_UserSettings_UE(const FObjectInitializer& ObjectInitializer);
+    explicit UCk_Plugin_UserSettings_UE(
+        const FObjectInitializer& InObjectInitializer);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

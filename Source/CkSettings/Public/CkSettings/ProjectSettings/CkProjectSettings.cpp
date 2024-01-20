@@ -2,27 +2,9 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCk_Engine_ProjectSettings_UE::
-    UCk_Engine_ProjectSettings_UE(
-        const FObjectInitializer& ObjectInitializer)
-{
-    CategoryName = FName{TEXT("CkFoundation")};
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCk_Editor_ProjectSettings_UE::
-    UCk_Editor_ProjectSettings_UE(
-        const FObjectInitializer& ObjectInitializer)
-{
-    CategoryName = FName{TEXT("CkFoundation")};
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCk_Game_ProjectSettings_UE::
-    UCk_Game_ProjectSettings_UE(
-        const FObjectInitializer& ObjectInitializer)
+UCk_Plugin_ProjectSettings_UE::
+    UCk_Plugin_ProjectSettings_UE(
+        const FObjectInitializer& InObjectInitializer)
 {
     CategoryName = FName{TEXT("CkFoundation")};
 }

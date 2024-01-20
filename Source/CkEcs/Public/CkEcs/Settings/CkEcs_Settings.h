@@ -4,6 +4,7 @@
 #include "CkCore/Types/DataAsset/CkDataAsset.h"
 
 #include "CkSettings/ProjectSettings/CkProjectSettings.h"
+#include "CkSettings/UserSettings/CkUserSettings.h"
 
 #include "CkEcs_Settings.generated.h"
 
@@ -34,7 +35,7 @@ private:
     TEnumAsByte<ETickingGroup> _TickingGroup = TG_PrePhysics;
 
     UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
-    TArray<TSubclassOf<UCk_EcsWorld_ProcessorInjector_Base_UE>>  _ProcessorInjectors;
+    TArray<TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>>  _ProcessorInjectors;
 
 public:
     CK_PROPERTY(_TickingGroup);
@@ -62,7 +63,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(meta = (DisplayName = "ECS"))
-class CKECS_API UCk_Ecs_ProjectSettings_UE : public UCk_Engine_ProjectSettings_UE
+class CKECS_API UCk_Ecs_ProjectSettings_UE : public UCk_Plugin_ProjectSettings_UE
 {
     GENERATED_BODY()
 
@@ -74,25 +75,39 @@ private:
               meta = (AllowPrivateAccess = true, AllowAbstract = false, MetaClass = "/Script/CkEcs.Ck_Ecs_ProcessorInjectors_PDA"))
     FSoftClassPath _ProcessorInjectors;
 
+public:
+    CK_PROPERTY_GET(_ProcessorInjectors);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(meta = (DisplayName = "ECS"))
+class CKECS_API UCk_Ecs_UserSettings_UE : public UCk_Plugin_UserSettings_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Ecs_UserSettings_UE);
+
+private:
     // Enabling this will slow down the game's execution
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Debugging",
               meta = (AllowPrivateAccess = true))
     ECk_Ecs_HandleDebuggerBehavior _HandleDebuggerBehavior = ECk_Ecs_HandleDebuggerBehavior::Disable;
 
 public:
-    CK_PROPERTY_GET(_ProcessorInjectors);
     CK_PROPERTY_GET(_HandleDebuggerBehavior);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKECS_API UCk_Utils_Ecs_ProjectSettings_UE : public UBlueprintFunctionLibrary
+class CKECS_API UCk_Utils_Ecs_Settings_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Utils_Ecs_ProjectSettings_UE);
+    CK_GENERATED_BODY(UCk_Utils_Ecs_Settings_UE);
 
 public:
     UFUNCTION(BlueprintPure,

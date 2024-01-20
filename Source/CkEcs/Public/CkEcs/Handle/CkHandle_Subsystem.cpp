@@ -16,7 +16,7 @@ auto
         const FCk_Handle& InHandle)
     -> UCk_Handle_FragmentsDebug*
 {
-    if (UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() != ECk_Ecs_HandleDebuggerBehavior::EnableWithBlueprintDebugging)
+    if (UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() != ECk_Ecs_HandleDebuggerBehavior::EnableWithBlueprintDebugging)
     { return {}; }
 
     if (ck::Is_NOT_Valid(GetTransientPackage()))
@@ -41,7 +41,7 @@ auto
         const FCk_Handle& InHandle)
     -> void
 {
-    if (UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() != ECk_Ecs_HandleDebuggerBehavior::EnableWithBlueprintDebugging)
+    if (UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() != ECk_Ecs_HandleDebuggerBehavior::EnableWithBlueprintDebugging)
     { return; }
 
     if (ck::Is_NOT_Valid(GetTransientPackage()))

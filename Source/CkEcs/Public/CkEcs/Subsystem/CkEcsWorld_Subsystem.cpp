@@ -73,7 +73,7 @@ auto
 
     _EcsWorld = EcsWorldType{InRegistry};
 
-    const auto ProcessorInjectors = UCk_Utils_Ecs_ProjectSettings_UE::Get_ProcessorInjectors();
+    const auto ProcessorInjectors = UCk_Utils_Ecs_Settings_UE::Get_ProcessorInjectors();
 
     CK_LOG_ERROR_NOTIFY_IF_NOT(ck::ecs, ck::IsValid(ProcessorInjectors),
         TEXT("Could not get a valid instance of ProcessorInjectors PDA. Check ProjectSettings -> Ecs to make sure a valid DataAsset is referenced."))
