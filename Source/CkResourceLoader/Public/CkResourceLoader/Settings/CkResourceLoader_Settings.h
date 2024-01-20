@@ -9,7 +9,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(meta = (DisplayName = "Resource Loader"))
-class CKRESOURCELOADER_API UCk_ResourceLoader_ProjectSettings_UE : public UCk_Game_ProjectSettings_UE
+class CKRESOURCELOADER_API UCk_ResourceLoader_ProjectSettings_UE : public UCk_Plugin_ProjectSettings_UE
 {
     GENERATED_BODY()
 
@@ -27,7 +27,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class CKRESOURCELOADER_API UCk_Utils_ResourceLoader_ProjectSettings_UE
+class CKRESOURCELOADER_API UCk_Utils_ResourceLoader_Settings_UE
 {
 public:
     static auto Get_MaxNumberOfCachedResourcesPerType() -> int32;

@@ -5,7 +5,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_ResourceLoader_ProjectSettings_UE::
+    UCk_Utils_ResourceLoader_Settings_UE::
     Get_MaxNumberOfCachedResourcesPerType()
     -> int32
 {

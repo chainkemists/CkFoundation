@@ -30,7 +30,7 @@ enum class ECk_Core_EnsureDetailsPolicy : uint8
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(meta = (DisplayName = "Core"))
-class CKCORE_API UCk_Core_ProjectSettings_UE : public UCk_Engine_ProjectSettings_UE
+class CKCORE_API UCk_Core_ProjectSettings_UE : public UCk_Plugin_ProjectSettings_UE
 {
     GENERATED_BODY()
 

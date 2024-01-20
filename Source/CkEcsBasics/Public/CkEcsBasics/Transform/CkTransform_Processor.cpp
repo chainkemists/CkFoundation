@@ -263,7 +263,7 @@ namespace ck
             FFragment_Transform_NewGoal_Location& InGoal) const
         -> void
     {
-        if (NOT UCk_Utils_Transform_UserSettings_UE::Get_EnableTransformSmoothing())
+        if (NOT UCk_Utils_Transform_Settings_UE::Get_EnableTransformSmoothing())
         {
             UCk_Utils_Transform_UE::Request_SetLocation
             (
@@ -327,7 +327,7 @@ namespace ck
             FFragment_Transform_NewGoal_Rotation& InGoal) const
         -> void
     {
-        if (NOT UCk_Utils_Transform_UserSettings_UE::Get_EnableTransformSmoothing())
+        if (NOT UCk_Utils_Transform_Settings_UE::Get_EnableTransformSmoothing())
         {
             UCk_Utils_Transform_UE::Request_SetRotation
             (

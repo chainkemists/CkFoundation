@@ -9,7 +9,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(meta = (DisplayName = "UI"))
-class CKUI_API UCk_UI_ProjectSettings_UE : public UCk_Engine_ProjectSettings_UE
+class CKUI_API UCk_UI_ProjectSettings_UE : public UCk_Plugin_ProjectSettings_UE
 {
     GENERATED_BODY()
 
@@ -32,7 +32,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class CKUI_API UCk_Utils_UI_ProjectSettings_UE
+class CKUI_API UCk_Utils_UI_Settings_UE
 {
 public:
     static auto Get_WatermarkWidgetClass() -> TSubclassOf<class UCk_Watermark_UserWidget_UE>;

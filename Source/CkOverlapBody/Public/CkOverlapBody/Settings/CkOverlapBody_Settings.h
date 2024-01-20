@@ -11,7 +11,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(meta = (DisplayName = "OverlapBody"))
-class CKOVERLAPBODY_API UCk_OverlapBody_UserSettings_UE : public UCk_EditorPerProject_UserSettings_UE
+class CKOVERLAPBODY_API UCk_OverlapBody_UserSettings_UE : public UCk_Plugin_UserSettings_UE
 {
     GENERATED_BODY()
 

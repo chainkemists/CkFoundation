@@ -29,7 +29,7 @@ namespace ck::layout
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(meta = (DisplayName = "Editor Style"))
-class CKEDITORSTYLE_API UCk_EditorStyle_ProjectSettings_UE : public UCk_Editor_ProjectSettings_UE
+class CKEDITORSTYLE_API UCk_EditorStyle_ProjectSettings_UE : public UCk_Plugin_ProjectSettings_UE
 {
     GENERATED_BODY()
 

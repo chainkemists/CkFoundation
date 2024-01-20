@@ -192,7 +192,7 @@ auto
         AbilityHandle, InScript)
     { return; }
 
-    const auto& DefaultApplyCostTag = UCk_Utils_Ability_ProjectSettings_UE::Get_Default_ApplyCostTag();
+    const auto& DefaultApplyCostTag = UCk_Utils_Ability_Settings_UE::Get_Default_ApplyCostTag();
 
     UCk_Utils_AbilityOwner_UE::Request_SendEvent
     (
@@ -218,7 +218,7 @@ auto
 
     const auto& AbilityHandle      = InScript->Get_AbilityHandle();
     const auto& AbilityOwnerHandle = InScript->Get_AbilityOwnerHandle();
-    const auto& DefaultApplyCostTag = UCk_Utils_Ability_ProjectSettings_UE::Get_Default_ApplyCostTag();
+    const auto& DefaultApplyCostTag = UCk_Utils_Ability_Settings_UE::Get_Default_ApplyCostTag();
 
     UCk_Utils_AbilityOwner_UE::Request_SendEvent
     (
@@ -249,7 +249,7 @@ auto
         AbilityHandle, InScript)
     { return; }
 
-    const auto& DefaultApplyCooldownTag = UCk_Utils_Ability_ProjectSettings_UE::Get_Default_ApplyCooldownTag();
+    const auto& DefaultApplyCooldownTag = UCk_Utils_Ability_Settings_UE::Get_Default_ApplyCooldownTag();
 
     UCk_Utils_AbilityOwner_UE::Request_SendEvent
     (
@@ -275,7 +275,7 @@ auto
 
     const auto& AbilityHandle           = InScript->Get_AbilityHandle();
     const auto& AbilityOwner            = InScript->Get_AbilityOwnerHandle();
-    const auto& DefaultApplyCooldownTag = UCk_Utils_Ability_ProjectSettings_UE::Get_Default_ApplyCooldownTag();
+    const auto& DefaultApplyCooldownTag = UCk_Utils_Ability_Settings_UE::Get_Default_ApplyCooldownTag();
 
     UCk_Utils_AbilityOwner_UE::Request_SendEvent
     (
