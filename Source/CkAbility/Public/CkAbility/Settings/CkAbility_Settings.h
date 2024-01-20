@@ -11,7 +11,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(meta = (DisplayName = "Ability"))
-class CKABILITY_API UCk_Ability_ProjectSettings_UE : public UCk_Game_ProjectSettings_UE
+class CKABILITY_API UCk_Ability_ProjectSettings_UE : public UCk_Plugin_ProjectSettings_UE
 {
     GENERATED_BODY()
 
@@ -45,7 +45,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class CKABILITY_API UCk_Utils_Ability_ProjectSettings_UE
+class CKABILITY_API UCk_Utils_Ability_Settings_UE
 {
 public:
     static auto Get_AbilityRecyclingPolicy() -> ECk_Ability_RecyclingPolicy;

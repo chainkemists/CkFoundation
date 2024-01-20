@@ -2,9 +2,9 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCk_EditorPerProject_UserSettings_UE::
-    UCk_EditorPerProject_UserSettings_UE(
-        const FObjectInitializer& ObjectInitializer)
+UCk_Plugin_UserSettings_UE::
+    UCk_Plugin_UserSettings_UE(
+        const FObjectInitializer& InObjectInitializer)
 {
     CategoryName = FName{TEXT("CkFoundation")};
 }

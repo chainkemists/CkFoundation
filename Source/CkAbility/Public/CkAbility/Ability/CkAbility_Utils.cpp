@@ -267,7 +267,7 @@ auto
     // the very first time it is activated
     if (AbilityParams.Get_Data().Get_InstancingPolicy() == ECk_Ability_InstancingPolicy::InstancedPerAbilityActivation)
     {
-        switch (const auto& RecyclingPolicy = UCk_Utils_Ability_ProjectSettings_UE::Get_AbilityRecyclingPolicy())
+        switch (const auto& RecyclingPolicy = UCk_Utils_Ability_Settings_UE::Get_AbilityRecyclingPolicy())
         {
             case ECk_Ability_RecyclingPolicy::Recycle:
             {

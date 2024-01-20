@@ -5,7 +5,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_Ability_ProjectSettings_UE::
+    UCk_Utils_Ability_Settings_UE::
     Get_AbilityRecyclingPolicy()
     -> ECk_Ability_RecyclingPolicy
 {
@@ -13,7 +13,7 @@ auto
 }
 
 auto
-    UCk_Utils_Ability_ProjectSettings_UE::
+    UCk_Utils_Ability_Settings_UE::
     Get_Default_ApplyCooldownTag()
     -> FGameplayTag
 {
@@ -27,7 +27,7 @@ auto
 }
 
 auto
-    UCk_Utils_Ability_ProjectSettings_UE::
+    UCk_Utils_Ability_Settings_UE::
     Get_Default_ApplyCostTag()
     -> FGameplayTag
 {
@@ -41,7 +41,7 @@ auto
 }
 
 auto
-    UCk_Utils_Ability_ProjectSettings_UE::
+    UCk_Utils_Ability_Settings_UE::
     Get_Default_ConditionsNotMetTag()
     -> FGameplayTag
 {

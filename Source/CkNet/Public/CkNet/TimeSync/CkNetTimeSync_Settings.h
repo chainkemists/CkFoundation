@@ -3,14 +3,15 @@
 #include <CoreMinimal.h>
 
 #include "CkCore/Macros/CkMacros.h"
-#include "CkSettings/Public/CkSettings/UserSettings/CkUserSettings.h"
+
+#include "CkSettings/ProjectSettings/CkProjectSettings.h"
 
 #include "CkNetTimeSync_Settings.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(meta = (DisplayName = "NetTimeSync"))
-class CKNET_API UCk_NetTimeSync_UserSettings_UE : public UCk_EditorPerProject_UserSettings_UE
+class CKNET_API UCk_NetTimeSync_ProjectSettings_UE : public UCk_Plugin_ProjectSettings_UE
 {
     GENERATED_BODY()
 
@@ -24,7 +25,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class CKNET_API UCk_Utils_NetTimeSync_UserSettings_UE
+class CKNET_API UCk_Utils_NetTimeSync_Settings_UE
 {
 public:
     static auto Get_EnableNetTimeSynchronization() -> bool;

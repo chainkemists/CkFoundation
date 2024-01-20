@@ -7,11 +7,11 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_Transform_UserSettings_UE::
+    UCk_Utils_Transform_Settings_UE::
     Get_EnableTransformSmoothing()
     -> bool
 {
-    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Transform_UserSettings_UE>()->Get_EnableTransformSmoothing();
+    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Transform_ProjectSettings_UE>()->Get_EnableTransformSmoothing();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

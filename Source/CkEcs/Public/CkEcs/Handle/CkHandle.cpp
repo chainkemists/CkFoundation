@@ -30,7 +30,7 @@ FCk_Handle::
     , _Fragments(std::move(InOther._Fragments))
 #endif
 {
-    if (IsValid(ck::IsValid_Policy_Default{}) && UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable)
+    if (IsValid(ck::IsValid_Policy_Default{}) && UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable)
     { std::ignore = UCk_Utils_HandleDebugger_Subsystem_UE::GetOrAdd_FragmentsDebug(*this); }
 }
 
@@ -44,7 +44,7 @@ FCk_Handle::
     , _Fragments(InOther._Fragments)
 #endif
 {
-    if (IsValid(ck::IsValid_Policy_Default{}) && UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable)
+    if (IsValid(ck::IsValid_Policy_Default{}) && UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable)
     { std::ignore = UCk_Utils_HandleDebugger_Subsystem_UE::GetOrAdd_FragmentsDebug(*this); }
 }
 
@@ -64,7 +64,7 @@ FCk_Handle::
     if (NOT IsValid(ck::IsValid_Policy_IncludePendingKill{}))
     { return; }
 
-    if (IsValid(ck::IsValid_Policy_Default{}) && UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable)
+    if (IsValid(ck::IsValid_Policy_Default{}) && UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable)
     { UCk_Utils_HandleDebugger_Subsystem_UE::Remove_FragmentsDebug(*this); }
 }
 
@@ -185,7 +185,7 @@ auto
     DoUpdate_MapperAndFragments()
     -> void
 {
-    if (UCk_Utils_Ecs_ProjectSettings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Disable)
+    if (UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Disable)
     { return; }
 
     if (NOT IsValid(ck::IsValid_Policy_IncludePendingKill{}))

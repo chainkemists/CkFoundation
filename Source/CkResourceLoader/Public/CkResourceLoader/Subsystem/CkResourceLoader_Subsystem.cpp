@@ -19,7 +19,7 @@ auto
     LoadedObjects.AddUnique(InLoadedObject);
     _TrackedResources.Add(InLoadedObject);
 
-    const auto& MaxCacheNumber = UCk_Utils_ResourceLoader_ProjectSettings_UE::Get_MaxNumberOfCachedResourcesPerType();
+    const auto& MaxCacheNumber = UCk_Utils_ResourceLoader_Settings_UE::Get_MaxNumberOfCachedResourcesPerType();
 
     if (LoadedObjects.Num() > MaxCacheNumber)
     {

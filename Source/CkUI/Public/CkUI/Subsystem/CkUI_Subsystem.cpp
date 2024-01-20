@@ -121,7 +121,7 @@ auto
     if (ck::Is_NOT_Valid(ClientGameViewport))
     { return; }
 
-    ClientGameViewport->AddViewportWidgetContent(_WatermarkWidget->TakeWidget(), UCk_Utils_UI_ProjectSettings_UE::Get_WatermarkWidget_ZOrder());
+    ClientGameViewport->AddViewportWidgetContent(_WatermarkWidget->TakeWidget(), UCk_Utils_UI_Settings_UE::Get_WatermarkWidget_ZOrder());
 }
 
 auto
@@ -144,7 +144,7 @@ auto
     if (ck::IsValid(_WatermarkWidget))
     { return; }
 
-    const auto& WatermarkWidgetClass = UCk_Utils_UI_ProjectSettings_UE::Get_WatermarkWidgetClass();
+    const auto& WatermarkWidgetClass = UCk_Utils_UI_Settings_UE::Get_WatermarkWidgetClass();
 
     CK_LOG_ERROR_NOTIFY_IF_NOT(ck::ui, ck::IsValid(WatermarkWidgetClass), TEXT("Invalid Watermark Widget setup in the Project Settings!"))
     { return; }

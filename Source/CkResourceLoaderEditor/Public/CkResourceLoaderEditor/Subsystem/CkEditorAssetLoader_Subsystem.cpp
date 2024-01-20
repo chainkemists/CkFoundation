@@ -46,9 +46,9 @@ auto
     Request_RefreshLoadingAssets()
     -> void
 {
-    UCk_Utils_ResourceLoaderEditor_ProjectSettings_UE::Request_ClearAllLoadedObjects();
+    UCk_Utils_ResourceLoaderEditor_Settings_UE::Request_ClearAllLoadedObjects();
 
-    const auto& ClassesToLoad = UCk_Utils_ResourceLoaderEditor_ProjectSettings_UE::Get_ClassesToLoad();
+    const auto& ClassesToLoad = UCk_Utils_ResourceLoaderEditor_Settings_UE::Get_ClassesToLoad();
 
     if (ClassesToLoad.IsEmpty())
     { return; }
@@ -80,7 +80,7 @@ auto
     for (const auto Path : CompiledFilter.ClassPaths)
     {
         const auto& SoftObjPath = FSoftObjectPath{Path};
-        UCk_Utils_ResourceLoaderEditor_ProjectSettings_UE::Request_AddLoadedObject(SoftObjPath);
+        UCk_Utils_ResourceLoaderEditor_Settings_UE::Request_AddLoadedObject(SoftObjPath);
         SoftObjectReferences.Emplace(FCk_ResourceLoader_ObjectReference_Soft{SoftObjPath});
     }
 
