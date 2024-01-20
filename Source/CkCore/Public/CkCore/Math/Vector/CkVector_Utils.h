@@ -137,6 +137,12 @@ public:
               Category = "Ck|Utils|Math|Vector3")
     static FCk_DirectionAndLength
     Get_DirectionAndLength(
+        const FVector& InVelocity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Vector3")
+    static FCk_DirectionAndLength
+    Get_DirectionAndLengthBetweenVectors(
         const FVector& InTo,
         const FVector& InFrom);
 };
@@ -173,6 +179,20 @@ public:
     Get_DirectionAndLengthBetweenActors(
         const AActor* InTo,
         const AActor* InFrom);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Actor")
+    static FCk_DirectionAndLength
+    Get_DirectionAndLengthFromActor(
+        const FVector& InTo,
+        const AActor* InFrom);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Actor")
+    static FCk_DirectionAndLength
+    Get_DirectionAndLengthToActor(
+        const AActor* InTo,
+        const FVector& InFrom);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|Actor")

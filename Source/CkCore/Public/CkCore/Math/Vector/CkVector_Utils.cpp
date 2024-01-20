@@ -133,7 +133,9 @@ auto
         TEXT("Direciton Vector [{}] is NOT normalized. Normalizing for you but this will NOT work in Shipping."),
         InDirection)
     {
-        return Get_LocationFromOriginInDirection(InOrigin, InDirection.GetSafeNormal(), InDistanceFromOriginInDirection);
+        const auto SafeNormal = InDirection.GetSafeNormal();
+        const auto CorrectedSafeNormal = SafeNormal.IsNearlyZero() ? FVector::ForwardVector : SafeNormal;
+        return Get_LocationFromOriginInDirection(InOrigin, CorrectedSafeNormal, InDistanceFromOriginInDirection);
     }
 
     return InOrigin + (InDirection * InDistanceFromOriginInDirection);
@@ -313,17 +315,26 @@ auto
 auto
     UCk_Utils_Vector3_UE::
     Get_DirectionAndLength(
+        const FVector& InVelocity)
+    -> FCk_DirectionAndLength
+{
+    auto Dir = FVector{};
+    auto Length = float{};
+    InVelocity.ToDirectionAndLength(Dir, Length);
+
+    return FCk_DirectionAndLength{Dir, Length};
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    Get_DirectionAndLengthBetweenVectors(
         const FVector& InTo,
         const FVector& InFrom)
     -> FCk_DirectionAndLength
 {
     const auto Vec = InTo - InFrom;
 
-    auto Dir = FVector{};
-    auto Length = float{};
-    Vec.ToDirectionAndLength(Dir, Length);
-
-    return FCk_DirectionAndLength{Dir, Length};
+    return Get_DirectionAndLength(Vec);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -351,6 +362,9 @@ auto
         FVector       InLocation)
     -> float
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InA), TEXT("Unable to get distance between Actors. Actor InA is [{}]"), InA)
+    { return {}; }
+
     return FVector::Distance(InA->GetActorLocation(), InLocation);
 }
 
@@ -367,7 +381,37 @@ auto
         InFrom)
     { return {}; }
 
-    return UCk_Utils_Vector3_UE::Get_DirectionAndLength(InTo->GetActorLocation(), InFrom->GetActorLocation());
+    return UCk_Utils_Vector3_UE::Get_DirectionAndLengthBetweenVectors(InTo->GetActorLocation(), InFrom->GetActorLocation());
+}
+
+auto
+    UCk_Utils_ActorVector3_UE::
+    Get_DirectionAndLengthFromActor(
+        const FVector& InTo,
+        const AActor*  InFrom)
+    -> FCk_DirectionAndLength
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InFrom),
+        TEXT("Unable to calculation direction between Actor [{}] and Location [{}] because the Actor is INVALID"),
+        InFrom, InTo)
+    { return {}; }
+
+    return UCk_Utils_Vector3_UE::Get_DirectionAndLengthBetweenVectors(InTo, InFrom->GetActorLocation());
+}
+
+auto
+    UCk_Utils_ActorVector3_UE::
+    Get_DirectionAndLengthToActor(
+        const AActor*  InTo,
+        const FVector& InFrom)
+    -> FCk_DirectionAndLength
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InTo),
+        TEXT("Unable to calculation direction between Actor [{}] and Location [{}] because the Actor is INVALID"),
+        InTo, InFrom)
+    { return {}; }
+
+    return UCk_Utils_Vector3_UE::Get_DirectionAndLengthBetweenVectors(InTo->GetActorLocation(), InFrom);
 }
 
 auto
