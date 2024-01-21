@@ -35,30 +35,30 @@ namespace ck
             FFragment_Transform_Requests& InRequestsComp) const -> void;
 
     private:
-        auto DoHandleRequest(
+        static auto DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform_Current& InComp,
-            const FCk_Request_Transform_SetLocation& InRequest) const -> void;
+            const FCk_Request_Transform_SetLocation& InRequest) -> void;
 
-        auto DoHandleRequest(
+        static auto DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform_Current& InComp,
-            const FCk_Request_Transform_AddLocationOffset& InRequest) const -> void;
+            const FCk_Request_Transform_AddLocationOffset& InRequest) -> void;
 
-        auto DoHandleRequest(
+        static auto DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform_Current& InComp,
-            const FCk_Request_Transform_SetRotation& InRequest) const -> void;
+            const FCk_Request_Transform_SetRotation& InRequest) -> void;
 
-        auto DoHandleRequest(
+        static auto DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform_Current& InComp,
-            const FCk_Request_Transform_AddRotationOffset& InRequest) const -> void;
+            const FCk_Request_Transform_AddRotationOffset& InRequest) -> void;
 
-        auto DoHandleRequest(
+        static auto DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform_Current& InComp,
-            const FCk_Request_Transform_SetScale& InRequest) const -> void;
+            const FCk_Request_Transform_SetScale& InRequest) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -1,10 +1,11 @@
 #include "CkTransform_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
 #include "CkEcsBasics/CkEcsBasics_Log.h"
-#include "CkEcsBasics/Transform/CkTransform_Settings.h"
+#include "CkEcsBasics/Settings/CkEcsBasics_Settings.h"
 #include "CkEcsBasics/Transform/CkTransform_Utils.h"
 
 #include "CkNet/CkNet_Utils.h"
@@ -76,22 +77,22 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform_Current& InComp,
-            const FCk_Request_Transform_SetLocation& InRequest) const
+            const FCk_Request_Transform_SetLocation& InRequest)
         -> void
     {
-        const auto& newLocation = InRequest.Get_NewLocation();
+        const auto& NewLocation = InRequest.Get_NewLocation();
 
         if (InRequest.Get_RelativeAbsolute() == ECk_RelativeAbsolute::Relative && UCk_Utils_OwningActor_UE::Has(InHandle))
         {
-            const auto& basicDetails = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(InHandle);
-            basicDetails.Get_Actor()->SetActorRelativeLocation(newLocation);
+            const auto& OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
+            OwningActor->SetActorRelativeLocation(NewLocation);
 
-            InComp._Transform.SetLocation(basicDetails.Get_Actor()->GetActorLocation());
+            InComp._Transform.SetLocation(OwningActor->GetActorLocation());
 
             return;
         }
 
-        InComp._Transform.SetLocation(newLocation);
+        InComp._Transform.SetLocation(NewLocation);
     }
 
     auto
@@ -99,25 +100,25 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform_Current& InComp,
-            const FCk_Request_Transform_AddLocationOffset& InRequest) const
+            const FCk_Request_Transform_AddLocationOffset& InRequest)
         -> void
     {
-        const auto& deltaLocation = InRequest.Get_DeltaLocation();
+        const auto& DeltaLocation = InRequest.Get_DeltaLocation();
 
-        if (deltaLocation.IsZero())
+        if (DeltaLocation.IsZero())
         { return; }
 
         if (InRequest.Get_LocalWorld() == ECk_LocalWorld::Local && UCk_Utils_OwningActor_UE::Has(InHandle))
         {
-            const auto& basicDetails = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(InHandle);
-            basicDetails.Get_Actor()->AddActorLocalOffset(deltaLocation);
+            const auto& OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
+            OwningActor->AddActorLocalOffset(DeltaLocation);
 
-            InComp._Transform.SetLocation(basicDetails.Get_Actor()->GetActorLocation());
+            InComp._Transform.SetLocation(OwningActor->GetActorLocation());
 
             return;
         }
 
-        InComp._Transform.AddToTranslation(deltaLocation);
+        InComp._Transform.AddToTranslation(DeltaLocation);
     }
 
     auto
@@ -125,22 +126,22 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform_Current& InComp,
-            const FCk_Request_Transform_SetRotation& InRequest) const
+            const FCk_Request_Transform_SetRotation& InRequest)
         -> void
     {
-        const auto& newRotation = InRequest.Get_NewRotation();
+        const auto& NewRotation = InRequest.Get_NewRotation();
 
         if (InRequest.Get_RelativeAbsolute() == ECk_RelativeAbsolute::Relative && UCk_Utils_OwningActor_UE::Has(InHandle))
         {
-            const auto& basicDetails = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(InHandle);
-            basicDetails.Get_Actor()->SetActorRelativeRotation(newRotation);
+            const auto& OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
+            OwningActor->SetActorRelativeRotation(NewRotation);
 
-            InComp._Transform.SetRotation(basicDetails.Get_Actor()->GetActorRotation().Quaternion());
+            InComp._Transform.SetRotation(OwningActor->GetActorRotation().Quaternion());
 
             return;
         }
 
-        InComp._Transform.SetRotation(newRotation.Quaternion());
+        InComp._Transform.SetRotation(NewRotation.Quaternion());
     }
 
     auto
@@ -148,25 +149,25 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform_Current& InComp,
-            const FCk_Request_Transform_AddRotationOffset& InRequest) const
+            const FCk_Request_Transform_AddRotationOffset& InRequest)
         -> void
     {
-        const auto& deltaRotation = InRequest.Get_DeltaRotation();
+        const auto& DeltaRotation = InRequest.Get_DeltaRotation();
 
-        if (deltaRotation.IsZero())
+        if (DeltaRotation.IsZero())
         { return; }
 
         if (InRequest.Get_LocalWorld() == ECk_LocalWorld::Local && UCk_Utils_OwningActor_UE::Has(InHandle))
         {
-            const auto& basicDetails = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(InHandle);
-            basicDetails.Get_Actor()->AddActorLocalRotation(deltaRotation);
+            const auto& OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
+            OwningActor->AddActorLocalRotation(DeltaRotation);
 
-            InComp._Transform.SetRotation(basicDetails.Get_Actor()->GetActorRotation().Quaternion());
+            InComp._Transform.SetRotation(OwningActor->GetActorRotation().Quaternion());
 
             return;
         }
 
-        InComp._Transform.ConcatenateRotation(deltaRotation.Quaternion());
+        InComp._Transform.ConcatenateRotation(DeltaRotation.Quaternion());
     }
 
     auto
@@ -174,22 +175,22 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Transform_Current& InComp,
-            const FCk_Request_Transform_SetScale& InRequest) const
+            const FCk_Request_Transform_SetScale& InRequest)
         -> void
     {
-        const auto& newScale = InRequest.Get_NewScale();
+        const auto& NewScale = InRequest.Get_NewScale();
 
         if (InRequest.Get_RelativeAbsolute() == ECk_RelativeAbsolute::Relative && UCk_Utils_OwningActor_UE::Has(InHandle))
         {
-            const auto& basicDetails = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(InHandle);
-            basicDetails.Get_Actor()->SetActorRelativeScale3D(newScale);
+            const auto& OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
+            OwningActor->SetActorRelativeScale3D(NewScale);
 
-            InComp._Transform.SetScale3D(basicDetails.Get_Actor()->GetActorScale3D());
+            InComp._Transform.SetScale3D(OwningActor->GetActorScale3D());
 
             return;
         }
 
-        InComp._Transform.SetScale3D(newScale);
+        InComp._Transform.SetScale3D(NewScale);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -263,7 +264,7 @@ namespace ck
             FFragment_Transform_NewGoal_Location& InGoal) const
         -> void
     {
-        if (NOT UCk_Utils_Transform_Settings_UE::Get_EnableTransformSmoothing())
+        if (NOT UCk_Utils_EcsBasics_Settings_UE::Get_EnableTransformSmoothing())
         {
             UCk_Utils_Transform_UE::Request_SetLocation
             (
@@ -327,7 +328,7 @@ namespace ck
             FFragment_Transform_NewGoal_Rotation& InGoal) const
         -> void
     {
-        if (NOT UCk_Utils_Transform_Settings_UE::Get_EnableTransformSmoothing())
+        if (NOT UCk_Utils_EcsBasics_Settings_UE::Get_EnableTransformSmoothing())
         {
             UCk_Utils_Transform_UE::Request_SetRotation
             (

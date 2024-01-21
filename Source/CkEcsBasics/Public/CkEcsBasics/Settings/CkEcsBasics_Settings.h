@@ -5,17 +5,17 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkSettings/ProjectSettings/CkProjectSettings.h"
 
-#include "CkTransform_Settings.generated.h"
+#include "CkEcsBasics_Settings.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(meta = (DisplayName = "Transform"))
-class CKECSBASICS_API UCk_Transform_ProjectSettings_UE : public UCk_Plugin_ProjectSettings_UE
+UCLASS(meta = (DisplayName = "ECS Basics"))
+class CKECSBASICS_API UCk_EcsBasics_ProjectSettings_UE : public UCk_Plugin_ProjectSettings_UE
 {
     GENERATED_BODY()
 
 private:
-    UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "General", meta = (AllowPrivateAccess = true))
+    UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Transform", meta = (AllowPrivateAccess = true))
     bool _EnableTransformSmoothing = true;
 
 public:
@@ -24,7 +24,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class CKECSBASICS_API UCk_Utils_Transform_Settings_UE
+class CKECSBASICS_API UCk_Utils_EcsBasics_Settings_UE
 {
 public:
     static auto Get_EnableTransformSmoothing() -> bool;
