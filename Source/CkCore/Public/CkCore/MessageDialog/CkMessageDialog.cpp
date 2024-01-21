@@ -50,6 +50,7 @@ auto UCk_Utils_MessageDialog_UE::
 
     switch (res)
     {
+        case EAppReturnType::Cancel:
         case EAppReturnType::No:
         {
             return ECk_MessageDialog_YesNo::No;
@@ -170,6 +171,7 @@ auto UCk_Utils_MessageDialog_UE::
         {
             return ECk_MessageDialog_YesNoYesAllNoAll::Yes;
         }
+        case EAppReturnType::Cancel:
         case EAppReturnType::No:
         {
             return ECk_MessageDialog_YesNoYesAllNoAll::No;
@@ -244,6 +246,7 @@ auto UCk_Utils_MessageDialog_UE::
         {
             return ECk_MessageDialog_YesNoYesAll::Yes;
         }
+        case EAppReturnType::Cancel:
         case EAppReturnType::No:
         {
             return ECk_MessageDialog_YesNoYesAll::No;
