@@ -195,7 +195,6 @@ auto
         FSubsystemCollectionBase& Collection)
     -> void
 {
-#if WITH_EDITOR
     if (GIsRunning)
     {
         // Engine init already completed
@@ -205,7 +204,6 @@ auto
     {
         FCoreDelegates::OnFEngineLoopInitComplete.AddUObject(this, &UCk_AbilityCue_Subsystem_UE::DoOnEngineInitComplete);
     }
-#endif
 }
 
 auto
@@ -221,13 +219,11 @@ auto
     DoOnEngineInitComplete()
     -> void
 {
-#if WITH_EDITOR
     DoPopulateAllAggregators();
     const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
     AssetRegistryModule.Get().OnAssetAdded().AddUObject(this, &UCk_AbilityCue_Subsystem_UE::DoHandleAssetAddedDeleted);
     AssetRegistryModule.Get().OnAssetRemoved().AddUObject(this, &UCk_AbilityCue_Subsystem_UE::DoHandleAssetAddedDeleted);
     AssetRegistryModule.Get().OnAssetRenamed().AddUObject(this, &UCk_AbilityCue_Subsystem_UE::DoHandleRenamed);
-#endif
 }
 
 auto
@@ -360,12 +356,20 @@ auto
         const FGameplayTag& InCueName)
     -> UCk_AbilityCue_Config_PDA*
 {
+    if (_AbilityCues.IsEmpty())
+    { DoPopulateAllAggregators(); }
+
     const auto FoundAbilityCue = _AbilityCues.Find(InCueName);
 
     CK_ENSURE_IF_NOT(ck::IsValid(FoundAbilityCue, ck::IsValid_Policy_NullptrOnly{}), TEXT("Could not find AbilityCue with Name [{}]"), InCueName)
     { return {}; }
 
-    const auto Config = Cast<UCk_AbilityCue_Config_PDA>(FoundAbilityCue->ResolveObject());
+    auto Config = Cast<UCk_AbilityCue_Config_PDA>(FoundAbilityCue->ResolveObject());
+
+    if (ck::Is_NOT_Valid(Config))
+    { FoundAbilityCue->TryLoad(); }
+
+    Config = Cast<UCk_AbilityCue_Config_PDA>(FoundAbilityCue->ResolveObject());
 
     CK_ENSURE_IF_NOT(ck::IsValid(Config),
         TEXT("Failed to Resolve AbilityCue Config object with Name [{}]"), InCueName)
