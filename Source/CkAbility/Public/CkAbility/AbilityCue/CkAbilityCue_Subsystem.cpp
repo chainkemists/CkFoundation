@@ -47,12 +47,14 @@ auto
     { return; }
 
     const auto AbilityCueSubsystem = GEngine->GetEngineSubsystem<UCk_AbilityCue_Subsystem_UE>();
-    const auto Config = AbilityCueSubsystem->Get_AbilityCue(InCueName);
+    const auto AbilityCueConfig = AbilityCueSubsystem->Get_AbilityCue(InCueName);
 
-    if (ck::Is_NOT_Valid(Config))
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityCueConfig), TEXT("Failed to retrieve AbilityCue Config with Name [{}]"), InCueName)
     { return; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(Config->Get_EntityConfig()), TEXT("EntityConfig for Config [{}] is NOT valid."), Config)
+    const auto& AbilityCueEntityConfig = AbilityCueConfig->Get_EntityConfig();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityCueEntityConfig), TEXT("EntityConfig for AbilityCue Config [{}] is NOT valid."), AbilityCueConfig)
     { return; }
 
     const auto TransientEntity = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>()->Get_TransientEntity();
@@ -60,7 +62,7 @@ auto
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity);
     NewEntity.Add<FCk_AbilityCue_Params>(InParams);
 
-    Config->Get_EntityConfig()->Build(NewEntity);
+    AbilityCueEntityConfig->Build(NewEntity);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -358,15 +360,15 @@ auto
         const FGameplayTag& InCueName)
     -> UCk_AbilityCue_Config_PDA*
 {
-    const auto Found = _AbilityCues.Find(InCueName);
+    const auto FoundAbilityCue = _AbilityCues.Find(InCueName);
 
-    if (ck::Is_NOT_Valid(Found, ck::IsValid_Policy_NullptrOnly{}))
+    CK_ENSURE_IF_NOT(ck::IsValid(FoundAbilityCue, ck::IsValid_Policy_NullptrOnly{}), TEXT("Could not find AbilityCue with Name [{}]"), InCueName)
     { return {}; }
 
-    const auto Config = Cast<UCk_AbilityCue_Config_PDA>(Found->ResolveObject());
+    const auto Config = Cast<UCk_AbilityCue_Config_PDA>(FoundAbilityCue->ResolveObject());
 
     CK_ENSURE_IF_NOT(ck::IsValid(Config),
-        TEXT("Could not get an AbilityCue Config with tag [{}]"), InCueName)
+        TEXT("Failed to Resolve AbilityCue Config object with Name [{}]"), InCueName)
     { return {}; }
 
     return Config;
