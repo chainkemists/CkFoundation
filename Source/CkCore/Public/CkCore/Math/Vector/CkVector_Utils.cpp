@@ -442,6 +442,12 @@ auto
         float InDistanceFromOriginInDirection)
     -> FVector
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor),
+        TEXT("Unable to get fixed location from Actor in Direction [{}]. Actor is [{}]"),
+        InDirection,
+        InActor)
+    { return {}; }
+
     switch(InDirection)
     {
         case ECk_Direction_3D::Forward:
