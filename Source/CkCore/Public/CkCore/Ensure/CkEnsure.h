@@ -224,6 +224,7 @@ public:
 #define _DETAILS_CK_ENSURE_LOG_OR_PUSHMESSAGE(_Category_, _Msg_, _ContextObject_)                                                          \
     if (UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDisplayPolicy() == ECk_Core_EnsureDisplayPolicy::LogOnly)                             \
     {                                                                                                                                      \
+        UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLineWithMessage(__FILE__, FText::FromString(_Msg_), __LINE__);                  \
         UE_LOG(CkCore, Error, TEXT("%s"), *_Msg_);                                                                                         \
         return false;                                                                                                                      \
     }
