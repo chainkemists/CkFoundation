@@ -26,10 +26,6 @@ public:
     CK_GENERATED_BODY(FCk_Ensure_IgnoredEntry);
 
 public:
-    FCk_Ensure_IgnoredEntry() = default;
-    FCk_Ensure_IgnoredEntry(FName InName, int32 InLineNumber, const FText& InMessage = FText::GetEmpty());
-
-public:
     auto operator==(const ThisType& InOther) const -> bool;
     CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
 
@@ -46,7 +42,10 @@ protected:
 public:
     CK_PROPERTY_GET(_FileName);
     CK_PROPERTY_GET(_LineNumber);
-    CK_PROPERTY_GET(_Message);
+    CK_PROPERTY(_Message);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Ensure_IgnoredEntry, _FileName, _LineNumber);
 };
 
 auto CKCORE_API GetTypeHash(const FCk_Ensure_IgnoredEntry& InA) -> uint8;
@@ -54,16 +53,12 @@ auto CKCORE_API GetTypeHash(const FCk_Ensure_IgnoredEntry& InA) -> uint8;
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKCORE_API FCk_Ensure_OnEnsureIgnored_Payload
+struct CKCORE_API FCk_Payload_OnEnsureIgnored
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Ensure_OnEnsureIgnored_Payload);
-
-public:
-    FCk_Ensure_OnEnsureIgnored_Payload() = default;
-    explicit FCk_Ensure_OnEnsureIgnored_Payload(const FCk_Ensure_IgnoredEntry& InIgnoredEnsure);
+    CK_GENERATED_BODY(FCk_Payload_OnEnsureIgnored);
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -71,24 +66,27 @@ protected:
 
 public:
     CK_PROPERTY_GET(_IgnoredEnsure);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Payload_OnEnsureIgnored, _IgnoredEnsure);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
+DECLARE_DYNAMIC_DELEGATE_OneParam(
+    FCk_Delegate_OnEnsureIgnored,
+    const FCk_Payload_OnEnsureIgnored&, InPayload);
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
-    FCk_Ensure_OnEnsureIgnored_Delegate_MC,
-    const FCk_Ensure_OnEnsureIgnored_Payload&, InPayload);
+    FCk_Delegate_OnEnsureIgnored_MC,
+    const FCk_Payload_OnEnsureIgnored&, InPayload);
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(
-    FCk_Ensure_OnEnsureIgnored_Delegate,
-    const FCk_Ensure_OnEnsureIgnored_Payload&, InPayload);
-
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
-    FCk_Ensure_OnEnsureCountChanged_Delegate_MC,
+    FCk_Delegate_OnEnsureCountChanged,
     int32, InNewCount);
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(
-    FCk_Ensure_OnEnsureCountChanged_Delegate,
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+    FCk_Delegate_OnEnsureCountChanged_MC,
     int32, InNewCount);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -147,25 +145,25 @@ public:
               Category = "Ck|Utils|Ensure")
     static void
     BindTo_OnEnsureIgnored(
-        const FCk_Ensure_OnEnsureIgnored_Delegate& InDelegate);
+        const FCk_Delegate_OnEnsureIgnored& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ensure")
     static void
     UnbindFrom_OnEnsureIgnored(
-        const FCk_Ensure_OnEnsureIgnored_Delegate& InDelegate);
+        const FCk_Delegate_OnEnsureIgnored& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ensure")
     static void
     BindTo_OnEnsureCountChanged(
-        const FCk_Ensure_OnEnsureCountChanged_Delegate& InDelegate);
+        const FCk_Delegate_OnEnsureCountChanged& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ensure")
     static void
     UnbindFrom_OnEnsureCountChanged(
-        const FCk_Ensure_OnEnsureCountChanged_Delegate& InDelegate);
+        const FCk_Delegate_OnEnsureCountChanged& InDelegate);
 
 public:
     static auto
@@ -224,7 +222,7 @@ public:
 #define _DETAILS_CK_ENSURE_LOG_OR_PUSHMESSAGE(_Category_, _Msg_, _ContextObject_)                                                          \
     if (UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDisplayPolicy() == ECk_Core_EnsureDisplayPolicy::LogOnly)                             \
     {                                                                                                                                      \
-        UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLineWithMessage(__FILE__, FText::FromString(_Msg_), __LINE__);                  \
+        UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLineWithMessage(__FILE__, FText::FromString(_Msg_), __LINE__);                   \
         UE_LOG(CkCore, Error, TEXT("%s"), *_Msg_);                                                                                         \
         return false;                                                                                                                      \
     }
@@ -245,27 +243,26 @@ public:
                                                                                                                                            \
     const auto IsMessageOnly = UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDetailsPolicy() == ECk_Core_EnsureDetailsPolicy::MessageOnly;  \
                                                                                                                                            \
-    const auto& message = ck::Format_UE(InString, ##__VA_ARGS__);                                                                          \
-    const auto& title = ck::Format_UE(TEXT("Ignore and Continue? Frame#[{}] PIE-ID[{}]"), GFrameCounter, GPlayInEditorID - 1);             \
-    const auto& stackTraceWith2Skips = IsMessageOnly ?                                                                                     \
+    const auto& Message = ck::Format_UE(InString, ##__VA_ARGS__);                                                                          \
+    const auto& Title = ck::Format_UE(TEXT("Ignore and Continue? Frame#[{}] PIE-ID[{}]"), GFrameCounter, GPlayInEditorID - 1);             \
+    const auto& StackTraceWith2Skips = IsMessageOnly ?                                                                                     \
         TEXT("[StackTrace DISABLED]") :                                                                                                    \
         UCk_Utils_Debug_StackTrace_UE::Get_StackTrace(2);                                                                                  \
-    const auto& bpStackTrace = IsMessageOnly ?                                                                                             \
+    const auto& BpStackTrace = IsMessageOnly ?                                                                                             \
         TEXT("[BP StackTrace DISABLED]") :                                                                                                 \
         UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::AsString{});                                              \
-    const auto& callstackPlusMessage = ck::Format_UE(                                                                                      \
+    const auto& CallstackPlusMessage = ck::Format_UE(                                                                                      \
         TEXT("{}\nExpression: {}\nMessage: {}\n\n == BP CallStack ==\n{}\n == CallStack ==\n{}\n"),                                        \
-        title,                                                                                                                             \
+        Title,                                                                                                                             \
         TEXT(#InExpression),                                                                                                               \
-        message,                                                                                                                           \
-        bpStackTrace,                                                                                                                      \
-        stackTraceWith2Skips);                                                                                                             \
+        Message,                                                                                                                           \
+        BpStackTrace,                                                                                                                      \
+        StackTraceWith2Skips);                                                                                                             \
                                                                                                                                            \
-    _DETAILS_CK_ENSURE_LOG_OR_PUSHMESSAGE("CkEnsures", callstackPlusMessage, nullptr);                                                     \
+    _DETAILS_CK_ENSURE_LOG_OR_PUSHMESSAGE("CkEnsures", CallstackPlusMessage, nullptr);                                                     \
                                                                                                                                            \
-    const auto& dialogMessage = FText::FromString(callstackPlusMessage);                                                                   \
-    const auto& ans = UCk_Utils_MessageDialog_UE::YesNoYesAll(dialogMessage, FText::FromString(title));                                    \
-    switch(ans)                                                                                                                            \
+    const auto& DialogMessage = FText::FromString(CallstackPlusMessage);                                                                   \
+    switch(const auto& Ans = UCk_Utils_MessageDialog_UE::YesNoYesAll(DialogMessage, FText::FromString(Title)))                             \
     {                                                                                                                                      \
         case ECk_MessageDialog_YesNoYesAll::Yes:                                                                                           \
         {                                                                                                                                  \
@@ -278,12 +275,12 @@ public:
         }                                                                                                                                  \
         case ECk_MessageDialog_YesNoYesAll::YesAll:                                                                                        \
         {                                                                                                                                  \
-            UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLineWithMessage(__FILE__, dialogMessage, __LINE__);                          \
+            UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLineWithMessage(__FILE__, DialogMessage, __LINE__);                          \
             return false;                                                                                                                  \
         }                                                                                                                                  \
         default:                                                                                                                           \
         {                                                                                                                                  \
-            return ensureMsgf(false, TEXT("Encountered an invalid value for Enum [{}]"), ans);                                             \
+            return ensureMsgf(false, TEXT("Encountered an invalid value for Enum [{}]"), Ans);                                             \
         }                                                                                                                                  \
     }                                                                                                                                      \
 }()
