@@ -536,7 +536,7 @@ auto
         "T_ValidationPolicy must be a ck::IsValid_Policy");
 
     CK_ENSURE_IF_NOT(IsValid(T_ValidationPolicy{}),
-        TEXT("Unable to Add Fragment [{}]. Handle [{}] {}."),
+        TEXT("Unable to Get Fragment [{}]. Handle [{}] {}."),
         ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
         [&]
         {
@@ -567,7 +567,7 @@ auto
         "T_ValidationPolicy must be a ck::IsValid_Policy");
 
     CK_ENSURE_IF_NOT(IsValid(T_ValidationPolicy{}),
-        TEXT("Unable to Add Fragment [{}]. Handle [{}] {}."),
+        TEXT("Unable to Get Fragment [{}]. Handle [{}] {}."),
         ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
         [&]
         {
