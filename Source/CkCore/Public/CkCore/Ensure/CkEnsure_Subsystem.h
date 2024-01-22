@@ -43,19 +43,19 @@ public:
 public:
     auto
     BindTo_OnEnsureIgnored(
-        const FCk_Ensure_OnEnsureIgnored_Delegate& InDelegate) -> void;
+        const FCk_Delegate_OnEnsureIgnored& InDelegate) -> void;
 
     auto
     UnbindFrom_OnEnsureIgnored(
-        const FCk_Ensure_OnEnsureIgnored_Delegate& InDelegate) -> void;
+        const FCk_Delegate_OnEnsureIgnored& InDelegate) -> void;
 
     auto
     BindTo_OnEnsureCountChanged(
-        const FCk_Ensure_OnEnsureCountChanged_Delegate& InDelegate) -> void;
+        const FCk_Delegate_OnEnsureCountChanged& InDelegate) -> void;
 
     auto
     UnbindFrom_OnEnsureCountChanged(
-        const FCk_Ensure_OnEnsureCountChanged_Delegate& InDelegate) -> void;
+        const FCk_Delegate_OnEnsureCountChanged& InDelegate) -> void;
 
 public:
     auto
@@ -86,10 +86,10 @@ private:
 
 private:
     UPROPERTY(Transient)
-    FCk_Ensure_OnEnsureIgnored_Delegate_MC      _OnIgnoredEnsure_MC;
+    FCk_Delegate_OnEnsureIgnored_MC      _OnIgnoredEnsure_MC;
 
     UPROPERTY(Transient)
-    FCk_Ensure_OnEnsureCountChanged_Delegate_MC _OnEnsureCountChanged_MC;
+    FCk_Delegate_OnEnsureCountChanged_MC _OnEnsureCountChanged_MC;
 
 private:
     static TWeakObjectPtr<ThisType> _Instance;

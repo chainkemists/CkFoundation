@@ -45,8 +45,7 @@
     _DETAILS_CK_ENSURE_LOG_OR_PUSHMESSAGE("CkEnsure Blueprints", CallstackPlusMessage, InContext);                                             \
                                                                                                                                                \
     const auto& DialogMessage = FText::FromString(CallstackPlusMessage);                                                                       \
-    const auto& _Res = UCk_Utils_MessageDialog_UE::YesNoYesAll(DialogMessage, FText::FromString(Title));                                       \
-    switch(_Res)                                                                                                                               \
+    switch(const auto& Ans = UCk_Utils_MessageDialog_UE::YesNoYesAll(DialogMessage, FText::FromString(Title)))                                 \
     {                                                                                                                                          \
         case ECk_MessageDialog_YesNoYesAll::Yes:                                                                                               \
         {                                                                                                                                      \
@@ -64,34 +63,25 @@
         }                                                                                                                                      \
         default:                                                                                                                               \
         {                                                                                                                                      \
-            return ensureMsgf(false, TEXT("Encountered an invalid value for Enum [{}]"), _Res);                                                \
+            return ensureMsgf(false, TEXT("Encountered an invalid value for Enum [{}]"), Ans);                                                 \
         }                                                                                                                                      \
     }                                                                                                                                          \
 }()
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Ensure_IgnoredEntry::
-    FCk_Ensure_IgnoredEntry(
-        FName InName,
-        int32 InLineNumber,
-        const FText& InMessage)
-    : _FileName  (InName)
-    , _LineNumber(InLineNumber)
-    , _Message   (InMessage)
-{
-}
-
 auto
     FCk_Ensure_IgnoredEntry::
-    operator==(const ThisType& InOther) const
+    operator==(
+        const ThisType& InOther) const
     -> bool
 {
     return Get_LineNumber() == InOther.Get_LineNumber() && Get_FileName().IsEqual(InOther.Get_FileName());
 }
 
 auto
-    GetTypeHash(const FCk_Ensure_IgnoredEntry& InA)
+    GetTypeHash(
+        const FCk_Ensure_IgnoredEntry& InA)
     -> uint8
 {
     return GetTypeHash(InA.Get_LineNumber()) + GetTypeHash(InA.Get_FileName());
@@ -99,21 +89,13 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Ensure_OnEnsureIgnored_Payload::
-    FCk_Ensure_OnEnsureIgnored_Payload(const FCk_Ensure_IgnoredEntry& InIgnoredEnsure)
-    : _IgnoredEnsure(InIgnoredEnsure)
-{
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     UCk_Utils_Ensure_UE::
     EnsureMsgf(
-        const bool        InExpression,
-        const FText       InMsg,
+        const bool InExpression,
+        const FText InMsg,
         ECk_ValidInvalid& OutHitStatus,
-        const UObject*    InContext)
+        const UObject* InContext)
     -> void
 {
     if (NOT CK_ENSURE_BP(InExpression, TEXT("{}.{}"), InMsg.ToString(), ck::Context(InContext)))
@@ -128,10 +110,10 @@ auto
 auto
     UCk_Utils_Ensure_UE::
     EnsureMsgf_IsValid(
-        UObject*          InObject,
-        const FText       InMsg,
+        UObject* InObject,
+        const FText InMsg,
         ECk_ValidInvalid& OutHitStatus,
-        const UObject*    InContext)
+        const UObject* InContext)
     -> void
 {
     if (NOT CK_ENSURE_BP(ck::IsValid(InObject), TEXT("{}.{}"), InMsg.ToString(), ck::Context(InContext)))
@@ -146,7 +128,7 @@ auto
 auto
     UCk_Utils_Ensure_UE::
     TriggerEnsure(
-        FText          InMsg,
+        FText InMsg,
         const UObject* InContext)
     -> void
 {
@@ -194,7 +176,7 @@ auto
 
 auto
     UCk_Utils_Ensure_UE::
-    BindTo_OnEnsureIgnored(const FCk_Ensure_OnEnsureIgnored_Delegate& InDelegate)
+    BindTo_OnEnsureIgnored(const FCk_Delegate_OnEnsureIgnored& InDelegate)
     -> void
 {
     const auto EnsureSubsystem = UCk_Ensure_Subsystem_UE::Get_Instance();
@@ -207,7 +189,7 @@ auto
 
 auto
     UCk_Utils_Ensure_UE::
-    UnbindFrom_OnEnsureIgnored(const FCk_Ensure_OnEnsureIgnored_Delegate& InDelegate)
+    UnbindFrom_OnEnsureIgnored(const FCk_Delegate_OnEnsureIgnored& InDelegate)
     -> void
 {
     const auto EnsureSubsystem = UCk_Ensure_Subsystem_UE::Get_Instance();
@@ -221,7 +203,7 @@ auto
 auto
     UCk_Utils_Ensure_UE::
     BindTo_OnEnsureCountChanged(
-        const FCk_Ensure_OnEnsureCountChanged_Delegate& InDelegate)
+        const FCk_Delegate_OnEnsureCountChanged& InDelegate)
     -> void
 {
     const auto EnsureSubsystem = UCk_Ensure_Subsystem_UE::Get_Instance();
@@ -235,7 +217,7 @@ auto
 auto
     UCk_Utils_Ensure_UE::
     UnbindFrom_OnEnsureCountChanged(
-        const FCk_Ensure_OnEnsureCountChanged_Delegate& InDelegate)
+        const FCk_Delegate_OnEnsureCountChanged& InDelegate)
     -> void
 {
     const auto EnsureSubsystem = UCk_Ensure_Subsystem_UE::Get_Instance();
