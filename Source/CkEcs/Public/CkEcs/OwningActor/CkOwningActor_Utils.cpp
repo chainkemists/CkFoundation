@@ -63,7 +63,7 @@ auto
     constexpr auto EvenIfPendingKill = true;
     return FCk_EntityOwningActor_BasicDetails
     {
-        InHandle.Get<ck::FFragment_OwningActor_Current>().Get_EntityOwningActor().Get(EvenIfPendingKill), InHandle
+        InHandle.Get<ck::FFragment_OwningActor_Current, ck::IsValid_Policy_IncludePendingKill>().Get_EntityOwningActor().Get(EvenIfPendingKill), InHandle
     };
 }
 
