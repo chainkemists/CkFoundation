@@ -99,7 +99,7 @@ auto
 auto
     UCk_Ensure_Subsystem_UE::
     BindTo_OnEnsureIgnored(
-        const FCk_Ensure_OnEnsureIgnored_Delegate& InDelegate)
+        const FCk_Delegate_OnEnsureIgnored& InDelegate)
     -> void
 {
     _OnIgnoredEnsure_MC.Add(InDelegate);
@@ -108,7 +108,7 @@ auto
 auto
     UCk_Ensure_Subsystem_UE::
     UnbindFrom_OnEnsureIgnored(
-        const FCk_Ensure_OnEnsureIgnored_Delegate& InDelegate)
+        const FCk_Delegate_OnEnsureIgnored& InDelegate)
     -> void
 {
     _OnIgnoredEnsure_MC.Remove(InDelegate);
@@ -117,7 +117,7 @@ auto
 auto
     UCk_Ensure_Subsystem_UE::
     BindTo_OnEnsureCountChanged(
-        const FCk_Ensure_OnEnsureCountChanged_Delegate& InDelegate)
+        const FCk_Delegate_OnEnsureCountChanged& InDelegate)
     -> void
 {
     _OnEnsureCountChanged_MC.Add(InDelegate);
@@ -126,7 +126,7 @@ auto
 auto
     UCk_Ensure_Subsystem_UE::
     UnbindFrom_OnEnsureCountChanged(
-        const FCk_Ensure_OnEnsureCountChanged_Delegate& InDelegate)
+        const FCk_Delegate_OnEnsureCountChanged& InDelegate)
     -> void
 {
     _OnEnsureCountChanged_MC.Remove(InDelegate);
@@ -154,16 +154,16 @@ auto
 auto
     UCk_Ensure_Subsystem_UE::
     Request_IgnoreEnsureAtFileAndLineWithMessage(
-        FName        InFile,
+        FName InFile,
         const FText& InMessage,
-        int32        InLine)
+        int32 InLine)
     -> void
 {
     auto& LineSet = _IgnoredEnsures.FindOrAdd(InFile);
-    const auto& IgnoredEnsure = FCk_Ensure_IgnoredEntry{InFile, InLine, InMessage};
+    const auto& IgnoredEnsure = FCk_Ensure_IgnoredEntry{InFile, InLine}.Set_Message(InMessage);
     LineSet.Add(IgnoredEnsure);
 
-    _OnIgnoredEnsure_MC.Broadcast(FCk_Ensure_OnEnsureIgnored_Payload{IgnoredEnsure});
+    _OnIgnoredEnsure_MC.Broadcast(FCk_Payload_OnEnsureIgnored{IgnoredEnsure});
 }
 
 auto
