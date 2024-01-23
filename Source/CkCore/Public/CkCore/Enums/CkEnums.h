@@ -387,4 +387,16 @@ enum class ECk_DistanceSortingPolicy : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_DistanceSortingPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_EntityFragmentRequirementPolicy : uint8
+{
+    EnsureAllFragments,
+    IgnoreIfFragmentMissing,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EntityFragmentRequirementPolicy);
+
 // --------------------------------------------------------------------------------------------------------------------
