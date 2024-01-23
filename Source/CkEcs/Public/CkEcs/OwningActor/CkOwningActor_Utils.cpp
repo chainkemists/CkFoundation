@@ -2,6 +2,7 @@
 
 #include "CkOwningActor_Utils.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
 
 #include "CkEcs/Handle/CkHandle.h"
@@ -37,6 +38,30 @@ auto
     { return false; }
 
     return true;
+}
+
+auto
+    UCk_Utils_OwningActor_UE::
+    Transform_ToActors(
+        const TArray<FCk_EntityOwningActor_BasicDetails>& InEntitiesWithActor)
+    -> TArray<AActor*>
+{
+    return ck::algo::Transform<TArray<AActor*>>(InEntitiesWithActor, [](const FCk_EntityOwningActor_BasicDetails& InBasicDetails)
+    {
+        return InBasicDetails.Get_Actor().Get();
+    });
+}
+
+auto
+    UCk_Utils_OwningActor_UE::
+    Transform_ToEntities(
+        const TArray<FCk_EntityOwningActor_BasicDetails>& InEntitiesWithActor)
+    -> TArray<FCk_Handle>
+{
+    return ck::algo::Transform<TArray<FCk_Handle>>(InEntitiesWithActor, [](const FCk_EntityOwningActor_BasicDetails& InBasicDetails)
+    {
+        return InBasicDetails.Get_Handle();
+    });
 }
 
 auto
