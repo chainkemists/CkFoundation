@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkCore/Meter/CkMeter.h"
 #include "CkCore/Types/DataAsset/CkDataAsset.h"
 
 #include "CkEcs/Handle/CkHandle.h"
@@ -446,6 +447,67 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, meta = (AllowPrivateAccess = true))
     TObjectPtr<UCk_Provider_Transform_PDA>  _Provider;
+
+public:
+    CK_PROPERTY_GET(_Provider)
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+// Meter Provider
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(Abstract, Blueprintable, BlueprintType, EditInlineNew)
+class CKPROVIDER_API UCk_Provider_Meter_PDA : public UCk_Provider_PDA
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Provider_Meter_PDA);
+
+public:
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
+              Category = "Ck|Provider|Meter")
+    FCk_Meter Get_Value(
+        FCk_Handle InOptionalHandle) const;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable)
+class CKPROVIDER_API UCk_Provider_Meter_Literal_PDA : public UCk_Provider_Meter_PDA
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Provider_Meter_Literal_PDA);
+
+private:
+    auto Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const -> FCk_Meter override;
+
+private:
+    UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
+    FCk_Meter _Value;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKPROVIDER_API FCk_Provider_Meter
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Provider_Meter);
+
+public:
+    FCk_Provider_Meter() = default;
+    explicit FCk_Provider_Meter(
+        UCk_Provider_Meter_PDA* InProvider);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, meta = (AllowPrivateAccess = true))
+    TObjectPtr<UCk_Provider_Meter_PDA>  _Provider;
 
 public:
     CK_PROPERTY_GET(_Provider)
