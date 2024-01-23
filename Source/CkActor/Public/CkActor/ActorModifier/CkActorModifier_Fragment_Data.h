@@ -165,14 +165,12 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_TwoParams(
+DECLARE_DYNAMIC_DELEGATE_OneParam(
     FCk_Delegate_ActorModifier_OnActorSpawned,
-    FCk_Handle, InHandle,
     AActor*, InActorSpawned);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
     FCk_Delegate_ActorModifier_OnActorSpawned_MC,
-    FCk_Handle, InHandle,
     AActor*, InActorSpawned);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -216,12 +214,12 @@ public:
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_ActorModifier_OnActorComponentAdded,
-    FCk_Handle, InHandle,
+    AActor*, InOwner,
     UActorComponent*, InActorComponentAdded);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_ActorModifier_OnActorComponentAdded_MC,
-    FCk_Handle, InHandle,
+    AActor*, InOwner,
     UActorComponent*, InActorComponentAdded);
 
 // --------------------------------------------------------------------------------------------------------------------
