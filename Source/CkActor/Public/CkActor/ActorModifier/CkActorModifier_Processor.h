@@ -26,13 +26,18 @@ namespace ck
         auto ForEachEntity(const TimeType& InDeltaT,
             HandleType InHandle,
             FFragment_ActorModifier_SpawnActorRequests& InRequests) const -> void;
+
+    private:
+        static auto
+        DoHandleRequest(
+            HandleType InHandle,
+            const FCk_Request_ActorModifier_SpawnActor& InRequest) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKACTOR_API FProcessor_ActorModifier_AddActorComponent_HandleRequests : public TProcessor<
             FProcessor_ActorModifier_AddActorComponent_HandleRequests,
-            FFragment_OwningActor_Current,
             FFragment_ActorModifier_AddActorComponentRequests,
             CK_IGNORE_PENDING_KILL>
     {
@@ -46,8 +51,13 @@ namespace ck
         auto ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            const FFragment_OwningActor_Current& InOwningActorComp,
             FFragment_ActorModifier_AddActorComponentRequests& InRequests) const -> void;
+
+    private:
+        static auto
+        DoHandleRequest(
+            HandleType InHandle,
+            const FCk_Request_ActorModifier_AddActorComponent& InRequest) -> void;
     };
 }
 
