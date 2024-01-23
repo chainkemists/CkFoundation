@@ -75,9 +75,6 @@ auto
 
     RequestEntity.AddOrGet<ck::FFragment_RenderStatus_Requests>()._Requests.Add(InRequest);
 
-    if (NOT InDelegate.IsBound())
-    { return; }
-
     ck::UUtils_Signal_OnRenderedActorsQueried_PostFireUnbind::Bind(RequestEntity, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
 }
 
