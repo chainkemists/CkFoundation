@@ -17,6 +17,7 @@ public class CkCompositeAlgos : CkModuleRules
 
             "CkCore",
             "CkEcs",
+            "CkEcsBasics",
         });
     }
 }
