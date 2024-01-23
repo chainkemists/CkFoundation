@@ -16,9 +16,6 @@ auto
 
     RequestEntity.AddOrGet<ck::FFragment_ResourceLoader_Requests>()._Requests.Emplace(InRequest);
 
-    if (NOT InDelegate.IsBound())
-    { return; }
-
     ck::UUtils_Signal_ResourceLoader_OnObjectLoaded_PostFireUnbind::Bind(RequestEntity, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
 }
 
@@ -33,9 +30,6 @@ auto
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
 
     RequestEntity.AddOrGet<ck::FFragment_ResourceLoader_Requests>()._Requests.Emplace(InRequest);
-
-    if (NOT InDelegate.IsBound())
-    { return; }
 
     ck::UUtils_Signal_ResourceLoader_OnObjectBatchLoaded_PostFireUnbind::Bind(RequestEntity, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
 }

@@ -256,6 +256,9 @@ namespace ck
             FCk_Handle InHandle,
             UnrealDynamicDelegateType InDelegate)
     {
+        if (NOT InDelegate.IsBound())
+        { return; }
+
         auto& Signal = InHandle.AddOrGet<SignalType>();
         auto& UnrealMulticast = InHandle.AddOrGet<T_DerivedSignal_Unreal>();
 
@@ -292,8 +295,8 @@ namespace ck
                 CK_ENSURE((UnrealMulticast._Connection && UnrealMulticast._Multicast.IsBound()) ||
                     (NOT UnrealMulticast._Connection && NOT UnrealMulticast._Multicast.IsBound()),
                     TEXT("Expected Connection to be VALID if Multicast is already bound OR Connection to be INVALID "
-                        "if Multicast is empty on Signal [{}] with Unreal Signal [{}] on Entity [{}] with BindingPolicy is [{}]. "
-                        "This ensure hints to a logical problem somewhere in the Signals logic (or this Ensure)."),
+                         "if Multicast is empty on Signal [{}] with Unreal Signal [{}] on Entity [{}] with BindingPolicy is [{}]. "
+                         "This ensure hints to a logical problem somewhere in the Signals logic (or this Ensure)."),
                     ck::Get_RuntimeTypeToString<T_DerivedSignal>(),
                     ck::Get_RuntimeTypeToString<T_DerivedSignal_Unreal>(),
                     InHandle,
@@ -321,6 +324,9 @@ namespace ck
             UnrealDynamicDelegateType InDelegate,
             ECk_Signal_BindingPolicy InPayloadInFlightBehavior)
     {
+        if (NOT InDelegate.IsBound())
+        { return; }
+
         switch(InPayloadInFlightBehavior)
         {
             case ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame:
