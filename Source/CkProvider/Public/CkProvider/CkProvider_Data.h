@@ -2,6 +2,8 @@
 
 #include "CkCore/Types/DataAsset/CkDataAsset.h"
 
+#include "CkEcs/Handle/CkHandle.h"
+
 #include <GameplayTagContainer.h>
 
 #include "CkProvider_Data.generated.h"
@@ -34,7 +36,8 @@ public:
 public:
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
               Category = "Ck|Provider|Bool")
-    bool Get_Value() const;
+    bool Get_Value(
+        FCk_Handle InOptionalHandle) const;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -48,7 +51,8 @@ public:
     CK_GENERATED_BODY(UCk_Provider_Bool_Literal_PDA);
 
 private:
-    auto Get_Value_Implementation() const -> bool override;
+    auto Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const -> bool override;
 
 private:
     UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
@@ -93,7 +97,8 @@ public:
 public:
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
               Category = "Ck|Provider|Float")
-    float Get_Value() const;
+    float Get_Value(
+        FCk_Handle InOptionalHandle) const;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -107,7 +112,8 @@ public:
     CK_GENERATED_BODY(UCk_Provider_Float_Literal_PDA);
 
 private:
-    auto Get_Value_Implementation() const -> float override;
+    auto Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const -> float override;
 
 private:
     UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
@@ -152,7 +158,8 @@ public:
 public:
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
               Category = "Ck|Provider|Int")
-    int32 Get_Value() const;
+    int32 Get_Value(
+        FCk_Handle InOptionalHandle) const;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -166,7 +173,8 @@ public:
     CK_GENERATED_BODY(UCk_Provider_Int_Literal_PDA);
 
 private:
-    auto Get_Value_Implementation() const -> int32 override;
+    auto Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const -> int32 override;
 
 private:
     UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
@@ -211,7 +219,8 @@ public:
 public:
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
               Category = "Ck|Provider|Vector3")
-    FVector Get_Value() const;
+    FVector Get_Value(
+        FCk_Handle InOptionalHandle) const;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -225,7 +234,8 @@ public:
     CK_GENERATED_BODY(UCk_Provider_Vector3_Literal_PDA);
 
 private:
-    auto Get_Value_Implementation() const -> FVector override;
+    auto Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const -> FVector override;
 
 private:
     UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
@@ -273,7 +283,8 @@ public:
 public:
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
               Category = "Ck|Provider|Vector2")
-    FVector2D Get_Value() const;
+    FVector2D Get_Value(
+        FCk_Handle InOptionalHandle) const;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -287,7 +298,8 @@ public:
     CK_GENERATED_BODY(UCk_Provider_Vector2_Literal_PDA);
 
 private:
-    auto Get_Value_Implementation() const -> FVector2D override;
+    auto Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const -> FVector2D override;
 
 private:
     UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
@@ -332,7 +344,8 @@ public:
 public:
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
               Category = "Ck|Provider|Rotator")
-    FRotator Get_Value() const;
+    FRotator Get_Value(
+        FCk_Handle InOptionalHandle) const;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -346,7 +359,8 @@ public:
     CK_GENERATED_BODY(UCk_Provider_Rotator_Literal_PDA);
 
 private:
-    auto Get_Value_Implementation() const -> FRotator override;
+    auto Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const -> FRotator override;
 
 private:
     UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
@@ -391,7 +405,8 @@ public:
 public:
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
               Category = "Ck|Provider|Transform")
-    FTransform Get_Value() const;
+    FTransform Get_Value(
+        FCk_Handle InOptionalHandle) const;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -405,7 +420,8 @@ public:
     CK_GENERATED_BODY(UCk_Provider_Transform_Literal_PDA);
 
 private:
-    auto Get_Value_Implementation() const -> FTransform override;
+    auto Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const -> FTransform override;
 
 private:
     UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
@@ -450,7 +466,8 @@ public:
 public:
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
               Category = "Ck|Provider|GameplayTag")
-    FGameplayTag Get_Value() const;
+    FGameplayTag Get_Value(
+        FCk_Handle InOptionalHandle) const;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -464,7 +481,8 @@ public:
     CK_GENERATED_BODY(UCk_Provider_GameplayTag_Literal_PDA);
 
 private:
-    auto Get_Value_Implementation() const -> FGameplayTag override;
+    auto Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const -> FGameplayTag override;
 
 private:
     UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
@@ -509,7 +527,8 @@ public:
 public:
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
               Category = "Ck|Provider|GameplayTagContainer")
-    FGameplayTagContainer Get_Value() const;
+    FGameplayTagContainer Get_Value(
+        FCk_Handle InOptionalHandle) const;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -523,7 +542,8 @@ public:
     CK_GENERATED_BODY(UCk_Provider_GameplayTagContainer_Literal_PDA);
 
 private:
-    auto Get_Value_Implementation() const -> FGameplayTagContainer override;
+    auto Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const -> FGameplayTagContainer override;
 
 private:
     UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))

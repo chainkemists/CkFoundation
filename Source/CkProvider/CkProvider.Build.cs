@@ -17,6 +17,7 @@ public class CkProvider : CkModuleRules
             "GameplayTags",
 
             "CkCore",
+            "CkEcs",
             "CkLog",
         });
     }

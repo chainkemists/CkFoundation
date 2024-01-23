@@ -6,7 +6,8 @@
 
 auto
     UCk_Provider_Bool_PDA::
-    Get_Value_Implementation() const
+    Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const
     -> bool
 {
     return {};
@@ -16,7 +17,8 @@ auto
 
 auto
     UCk_Provider_Bool_Literal_PDA::
-    Get_Value_Implementation() const
+    Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const
     -> bool
 {
     return _Value;
@@ -37,7 +39,8 @@ FCk_Provider_Bool::
 
 auto
     UCk_Provider_Float_PDA::
-    Get_Value_Implementation() const
+    Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const
     -> float
 {
     return {};
@@ -47,7 +50,8 @@ auto
 
 auto
     UCk_Provider_Float_Literal_PDA::
-    Get_Value_Implementation() const
+    Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const
     -> float
 {
     return _Value;
@@ -68,7 +72,8 @@ FCk_Provider_Float::
 
 auto
     UCk_Provider_Int_PDA::
-    Get_Value_Implementation() const
+    Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const
     -> int32
 {
     return {};
@@ -78,7 +83,8 @@ auto
 
 auto
     UCk_Provider_Int_Literal_PDA::
-    Get_Value_Implementation() const
+    Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const
     -> int32
 {
     return _Value;
@@ -99,7 +105,8 @@ FCk_Provider_Int::
 
 auto
     UCk_Provider_Vector3_PDA::
-    Get_Value_Implementation() const
+    Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const
     -> FVector
 {
     return {};
@@ -107,7 +114,8 @@ auto
 
 auto
     UCk_Provider_Vector3_Literal_PDA::
-    Get_Value_Implementation() const
+    Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const
     -> FVector
 {
     return _Value;
@@ -128,7 +136,8 @@ FCk_Provider_Vector3::
 
 auto
     UCk_Provider_Vector2_PDA::
-    Get_Value_Implementation() const
+    Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const
     -> FVector2D
 {
     return {};
@@ -138,7 +147,8 @@ auto
 
 auto
     UCk_Provider_Vector2_Literal_PDA::
-    Get_Value_Implementation() const
+    Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const
     -> FVector2D
 {
     return _Value;
@@ -159,7 +169,8 @@ FCk_Provider_Vector2::
 
 auto
     UCk_Provider_Rotator_PDA::
-    Get_Value_Implementation() const
+    Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const
     -> FRotator
 {
     return {};
@@ -169,7 +180,8 @@ auto
 
 auto
     UCk_Provider_Rotator_Literal_PDA::
-    Get_Value_Implementation() const
+    Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const
     -> FRotator
 {
     return _Value;
@@ -190,7 +202,8 @@ FCk_Provider_Rotator::
 
 auto
     UCk_Provider_Transform_PDA::
-    Get_Value_Implementation() const
+    Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const
     -> FTransform
 {
     return {};
@@ -200,7 +213,8 @@ auto
 
 auto
     UCk_Provider_Transform_Literal_PDA::
-    Get_Value_Implementation() const
+    Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const
     -> FTransform
 {
     return _Value;
@@ -221,7 +235,8 @@ FCk_Provider_Transform::
 
 auto
     UCk_Provider_GameplayTag_Literal_PDA::
-    Get_Value_Implementation() const
+    Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const
     -> FGameplayTag
 {
     return _Value;
@@ -240,7 +255,8 @@ FCk_Provider_GameplayTag::
 
 auto
     UCk_Provider_GameplayTag_PDA::
-    Get_Value_Implementation() const
+    Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const
     -> FGameplayTag
 {
     return {};
@@ -252,7 +268,8 @@ auto
 
 auto
     UCk_Provider_GameplayTagContainer_Literal_PDA::
-    Get_Value_Implementation() const
+    Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const
     -> FGameplayTagContainer
 {
     return _Value;
@@ -271,7 +288,8 @@ FCk_Provider_GameplayTagContainer::
 
 auto
     UCk_Provider_GameplayTagContainer_PDA::
-    Get_Value_Implementation() const
+    Get_Value_Implementation(
+        FCk_Handle InOptionalHandle) const
     -> FGameplayTagContainer
 {
     return {};
