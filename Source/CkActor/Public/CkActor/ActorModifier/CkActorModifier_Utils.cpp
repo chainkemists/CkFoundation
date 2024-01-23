@@ -5,8 +5,6 @@
 #include "CkActorModifier_Fragment.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
-#include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -20,11 +18,7 @@ auto
 {
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
 
-    auto& RequestsComp = RequestEntity.AddOrGet<ck::FFragment_ActorModifier_SpawnActorRequests>();
-    RequestsComp._Requests.Add(InRequest);
-
-    if (NOT InDelegate.IsBound())
-    { return; }
+    RequestEntity.AddOrGet<ck::FFragment_ActorModifier_SpawnActorRequests>()._Requests.Add(InRequest);
 
     ck::UUtils_Signal_OnActorSpawned_PostFireUnbind::Bind(RequestEntity, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
 }
@@ -34,22 +28,16 @@ auto
 auto
     UCk_Utils_ActorModifier_UE::
     Request_AddActorComponent(
-        FCk_Handle                                              InHandle,
-        const FCk_Request_ActorModifier_AddActorComponent&      InRequest,
+        FCk_Handle InHandle,
+        const FCk_Request_ActorModifier_AddActorComponent& InRequest,
         const FCk_Delegate_ActorModifier_OnActorComponentAdded& InDelegate)
     -> void
 {
-    if (NOT UCk_Utils_OwningActor_UE::Ensure(InHandle))
-    { return; }
+    auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
 
-    auto& RequestsComp = InHandle.AddOrGet<ck::FFragment_ActorModifier_AddActorComponentRequests>();
-    RequestsComp._Requests.Add(InRequest);
+    RequestEntity.AddOrGet<ck::FFragment_ActorModifier_AddActorComponentRequests>()._Requests.Add(InRequest);
 
-    if (NOT InDelegate.IsBound())
-    { return; }
-
-
-    // TODO: Allow binding to the internal signal
+    ck::UUtils_Signal_OnActorComponentAdded_PostFireUnbind::Bind(RequestEntity, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
