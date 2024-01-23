@@ -1,7 +1,7 @@
 #pragma once
 
-#include "CkEcs/OwningActor/CkOwningActor_Fragment_Params.h"
-#include <CkCore/Macros/CkMacros.h>
+#include "CkOwningActor_Fragment_Data.h"
+#include "CkCore/Macros/CkMacros.h"
 
 #include <CoreMinimal.h>
 #include <Kismet/BlueprintFunctionLibrary.h>

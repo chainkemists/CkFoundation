@@ -1,10 +1,11 @@
 #pragma once
 
 #include "CkActor/ActorModifier/CkActorModifier_Fragment_Data.h"
+
 #include "CkCore/Format/CkFormat.h"
 
 #include "CkEcs/Handle/CkHandle.h"
-#include "CkEcs/OwningActor/CkOwningActor_Fragment_Params.h"
+#include "CkEcs/OwningActor/CkOwningActor_Fragment_Data.h"
 
 #include "CkNet/CkNet_Common.h"
 

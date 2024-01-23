@@ -9,7 +9,7 @@
 
 #include "CkCore/Component/CkActorComponent.h"
 
-#include "CkOwningActor_Fragment_Params.generated.h"
+#include "CkOwningActor_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
