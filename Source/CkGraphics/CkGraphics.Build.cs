@@ -17,7 +17,8 @@ public class CkGraphics : CkModuleRules
 
             "CkCore",
             "CkEcs",
-            "CkLog"
+            "CkLog",
+            "CkSignal",
         });
     }
 }

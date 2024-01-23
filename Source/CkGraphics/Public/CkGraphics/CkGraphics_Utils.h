@@ -33,14 +33,12 @@ public:
         FColor InColor,
         float InIntensity = 1.0f);
 
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Graphics",
-              meta = (DefaultToSelf = "InWorldContextObject"))
-    static void
-    Request_GatherAllRenderedActors(
-        UObject* InWorldContextObject,
-        FCk_Time InTimeTolerance,
-        FCk_Delegate_OnAllRenderedActorsGathered InDelegate);
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Graphics")
+    static bool
+    Get_WasActorRecentlyRendered(
+        AActor* InActor,
+        FCk_Time InTimeTolerance);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

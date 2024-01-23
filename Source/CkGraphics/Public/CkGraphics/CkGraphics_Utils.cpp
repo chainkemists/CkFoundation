@@ -32,28 +32,15 @@ auto
 
 auto
     UCk_Utils_Graphics_UE::
-    Request_GatherAllRenderedActors(
-        UObject* InWorldContextObject,
-        FCk_Time InTimeTolerance,
-        FCk_Delegate_OnAllRenderedActorsGathered InDelegate)
-    -> void
+    Get_WasActorRecentlyRendered(
+        AActor*  InActor,
+        FCk_Time InTimeTolerance)
+    -> bool
 {
-    TArray<AActor*> AllRenderedActors;
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to Get_WasActorRecentlyRendered"))
+    { return {}; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InWorldContextObject), TEXT("Invalid WorldContextObject"))
-    { return; }
-
-    // TODO: Modify this to return a cached result
-
-    for (auto ActorItr = TActorIterator<AActor>{InWorldContextObject->GetWorld()}; ActorItr; ++ActorItr)
-    {
-        if (ActorItr->WasRecentlyRendered(InTimeTolerance.Get_Seconds()))
-        {
-            AllRenderedActors.Add(*ActorItr);
-        }
-    }
-
-    std::ignore = InDelegate.ExecuteIfBound(AllRenderedActors);
+    return InActor->WasRecentlyRendered(InTimeTolerance.Get_Seconds());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
