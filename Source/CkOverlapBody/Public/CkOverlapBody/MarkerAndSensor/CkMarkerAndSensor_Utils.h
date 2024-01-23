@@ -5,7 +5,7 @@
 #include "CkCore/Enums/CkEnums.h"
 
 #include "CkEcs/Handle/CkHandle.h"
-#include "CkEcs/OwningActor/CkOwningActor_Fragment_Params.h"
+#include "CkEcs/OwningActor/CkOwningActor_Fragment_Data.h"
 
 #include "CkGraphics/CkGraphics_Utils.h"
 

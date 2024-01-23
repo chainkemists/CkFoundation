@@ -3,12 +3,11 @@
 #include "CkCore/Component/CkActorComponent.h"
 #include "CkCore/Enums/CkEnums.h"
 
-#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 #include "CkEcs/Handle/CkHandle.h"
 
 #include "CkEntityBridge/CkEntityBridge_Fragment_Data.h"
 
-#include "CkEcs/OwningActor/CkOwningActor_Fragment_Params.h"
+#include "CkEcs/OwningActor/CkOwningActor_Fragment_Data.h"
 
 #include "CkEntityBridge_ConstructionScript.generated.h"
 
