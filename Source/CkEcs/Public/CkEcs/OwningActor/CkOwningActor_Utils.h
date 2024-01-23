@@ -40,42 +40,59 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|OwningActor")
+              Category = "Ck|Utils|OwningActor",
+              meta = (CompactNodeTitle = "Transform_ToActors"))
+    static TArray<AActor*>
+    Transform_ToActors(
+        const TArray<FCk_EntityOwningActor_BasicDetails>& InEntitiesWithActor);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|OwningActor",
+              meta = (CompactNodeTitle = "Transform_ToEntities"))
+    static TArray<FCk_Handle>
+    Transform_ToEntities(
+        const TArray<FCk_EntityOwningActor_BasicDetails>& InEntitiesWithActor);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|OwningActor",
+              meta = (CompactNodeTitle="EntityToActor"))
     static AActor*
     Get_EntityOwningActor(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|OwningActor")
+              Category = "Ck|Utils|OwningActor",
+              meta = (CompactNodeTitle="EntityBasicDetails"))
     static FCk_EntityOwningActor_BasicDetails
     Get_EntityOwningActorBasicDetails(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|OwningActor")
+              Category = "Ck|Utils|OwningActor",
+              meta = (CompactNodeTitle="ActorBasicDetails"))
     static FCk_EntityOwningActor_BasicDetails
     Get_EntityOwningActorBasicDetails_FromActor(
         const AActor* InActor);
 
     UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|OwningActor",
-        meta=(CompactNodeTitle="ActorEntityHandle"))
+              Category = "Ck|Utils|OwningActor",
+              meta=(CompactNodeTitle="ActorToEntity"))
     static FCk_Handle
     Get_ActorEntityHandle(
         const AActor* InActor);
 
     UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|OwningActor",
-        meta = (DefaultToSelf = "InActor"))
+              Category = "Ck|Utils|OwningActor",
+              meta = (DefaultToSelf = "InActor"))
     static bool
     Get_IsActorEcsReady(
         AActor* InActor);
 
 private:
     UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|OwningActor",
-        meta = (DefaultToSelf = "InActor", HidePin = "InActor",
-            CompactNodeTitle="ActorEntityHandleSelf"))
+              Category = "Ck|Utils|OwningActor",
+              meta = (DefaultToSelf = "InActor", HidePin = "InActor", CompactNodeTitle="ActorToEntity_FromSelf"))
     static FCk_Handle
     Get_ActorEntityHandleFromSelf(
         const AActor* InActor);
