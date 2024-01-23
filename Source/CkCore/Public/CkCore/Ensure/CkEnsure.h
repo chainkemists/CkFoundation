@@ -100,7 +100,7 @@ class CKCORE_API UCk_Utils_Ensure_UE
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ensure",
-              meta     = (ExpandEnumAsExecs = "OutHitStatus", DefaultToSelf = "InContext", HidePin = "InContext"))
+              meta     = (DevelopmentOnly, ExpandEnumAsExecs = "OutHitStatus", DefaultToSelf = "InContext", HidePin = "InContext"))
     static void
     EnsureMsgf(
         bool InExpression,
@@ -110,7 +110,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ensure",
-              meta     = (ExpandEnumAsExecs = "OutHitStatus", DefaultToSelf = "InContext", HidePin = "InContext"))
+              meta     = (DevelopmentOnly, ExpandEnumAsExecs = "OutHitStatus", DefaultToSelf = "InContext", HidePin = "InContext"))
     static void
     EnsureMsgf_IsValid(
         UObject* InObject,
