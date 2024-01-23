@@ -1,6 +1,7 @@
 #include "CkCompositeAlgos_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkEcsBasics/Public/CkEcsBasics/Transform/CkTransform_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -52,6 +53,52 @@ auto
 
 auto
     UCk_Utils_CompositeAlgos_UE::
+    AnyEntities_If(
+        const TArray<FCk_Handle>& InEntities,
+        FCk_Predicate_InHandle_OutResult InPredicate)
+    -> bool
+{
+    return ck::algo::AnyOf(InEntities, [&](const FCk_Handle& InEntity)
+    {
+        if (ck::Is_NOT_Valid(InEntity))
+        { return false; }
+
+        const FCk_SharedBool PredicateResult;
+
+        if (InPredicate.IsBound())
+        {
+            InPredicate.Execute(InEntity, PredicateResult);
+        }
+
+        return *PredicateResult;
+    });
+}
+
+auto
+    UCk_Utils_CompositeAlgos_UE::
+    AllEntities_If(
+        const TArray<FCk_Handle>& InEntities,
+        FCk_Predicate_InHandle_OutResult InPredicate)
+    -> bool
+{
+    return ck::algo::AllOf(InEntities, [&](const FCk_Handle& InEntity)
+    {
+        if (ck::Is_NOT_Valid(InEntity))
+        { return false; }
+
+        const FCk_SharedBool PredicateResult;
+
+        if (InPredicate.IsBound())
+        {
+            InPredicate.Execute(InEntity, PredicateResult);
+        }
+
+        return *PredicateResult;
+    });
+}
+
+auto
+    UCk_Utils_CompositeAlgos_UE::
     FilterActors_ByPredicate(
         const TArray<AActor*>& InActors,
         FCk_Predicate_InActor_OutResult InPredicate)
@@ -82,6 +129,41 @@ auto
     return ck::algo::Filter(InActors, [&](AActor* InActor)
     {
         return ck::IsValid(InActor);
+    });
+}
+
+auto
+    UCk_Utils_CompositeAlgos_UE::
+    FilterEntities_ByPredicate(
+        const TArray<FCk_Handle>& InEntities,
+        FCk_Predicate_InHandle_OutResult InPredicate)
+    -> TArray<FCk_Handle>
+{
+    return ck::algo::Filter(InEntities, [&](const FCk_Handle& InEntity)
+    {
+        if (ck::Is_NOT_Valid(InEntity))
+        { return false; }
+
+        const FCk_SharedBool PredicateResult;
+
+        if (InPredicate.IsBound())
+        {
+            InPredicate.Execute(InEntity, PredicateResult);
+        }
+
+        return *PredicateResult;
+    });
+}
+
+auto
+    UCk_Utils_CompositeAlgos_UE::
+    FilterEntities_ByIsValid(
+        const TArray<FCk_Handle>& InEntities)
+    -> TArray<FCk_Handle>
+{
+    return ck::algo::Filter(InEntities, [&](const FCk_Handle& InEntity)
+    {
+        return ck::IsValid(InEntity);
     });
 }
 
@@ -120,6 +202,94 @@ auto
 
         const auto& DistanceA = FVector::DistSquared(InOrigin, InA->GetActorLocation());
         const auto& DistanceB = FVector::DistSquared(InOrigin, InB->GetActorLocation());
+
+        switch (InSortingPolicy)
+        {
+            case ECk_DistanceSortingPolicy::ClosestToFarthest:
+            {
+                return DistanceA < DistanceB;
+            }
+            case ECk_DistanceSortingPolicy::FarthestToClosest:
+            {
+                return DistanceA > DistanceB;
+            }
+            default:
+            {
+                CK_INVALID_ENUM(InSortingPolicy);
+                return false;
+            }
+        }
+    });
+}
+
+auto
+    UCk_Utils_CompositeAlgos_UE::
+    SortEntities_ByPredicate(
+        TArray<FCk_Handle>& InEntities,
+        FCk_Predicate_In2Handles_OutResult InPredicate)
+    -> void
+{
+    ck::algo::Sort(InEntities, [&](const FCk_Handle& InA, const FCk_Handle& InB) -> bool
+    {
+        const FCk_SharedBool PredicateResult;
+
+        if (InPredicate.IsBound())
+        {
+            InPredicate.Execute(InA, InB, PredicateResult);
+        }
+
+        return *PredicateResult;
+    });
+}
+
+auto
+    UCk_Utils_CompositeAlgos_UE::
+    SortEntities_ByDistance(
+        TArray<FCk_Handle>& InEntities,
+        const FVector& InOrigin,
+        ECk_DistanceSortingPolicy InSortingPolicy,
+        ECk_EntityFragmentRequirementPolicy InFragmentRequirementPolicy)
+    -> void
+{
+    ck::algo::Sort(InEntities, [&](const FCk_Handle& InA, const FCk_Handle& InB) -> bool
+    {
+        if (ck::Is_NOT_Valid(InA) || ck::Is_NOT_Valid(InB))
+        { return false; }
+
+        const auto& HasTransformFragmentA = UCk_Utils_Transform_UE::Has(InA);
+        const auto& HasTransformFragmentB = UCk_Utils_Transform_UE::Has(InB);
+
+        switch (InFragmentRequirementPolicy)
+        {
+            case ECk_EntityFragmentRequirementPolicy::EnsureAllFragments:
+            {
+                CK_ENSURE_IF_NOT(HasTransformFragmentA, TEXT("Entity [{}] is MISSING the required Transform fragment when trying to sort"), InA)
+                { return false; }
+
+                CK_ENSURE_IF_NOT(HasTransformFragmentB, TEXT("Entity [{}] is MISSING the required Transform fragment when trying to sort"), InB)
+                { return true; }
+
+                break;
+            }
+            case ECk_EntityFragmentRequirementPolicy::IgnoreIfFragmentMissing:
+            {
+                if (NOT HasTransformFragmentA)
+                { return false; }
+
+                if (NOT HasTransformFragmentB)
+                { return true; }
+
+                break;
+            }
+            default:
+            {
+                CK_INVALID_ENUM(InFragmentRequirementPolicy);
+                return false;
+            }
+        }
+
+        const auto& DistanceA = FVector::DistSquared(InOrigin, UCk_Utils_Transform_UE::Get_EntityCurrentLocation(InA));
+        const auto& DistanceB = FVector::DistSquared(InOrigin, UCk_Utils_Transform_UE::Get_EntityCurrentLocation(InB));
 
         switch (InSortingPolicy)
         {
