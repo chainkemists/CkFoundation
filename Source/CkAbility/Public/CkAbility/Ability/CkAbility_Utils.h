@@ -68,14 +68,14 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
-              DisplayName="Is Ability")
+              DisplayName="[Ability] Has Feature")
     static bool
     Has(
         FCk_Handle InAbilityEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
-              DisplayName="Ensure Is Ability")
+              DisplayName="[Ability] Ensure Has Feature")
     static bool
     Ensure(
         FCk_Handle InAbilityEntity);
@@ -83,42 +83,43 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
-              meta=(CompactNodeTitle="Info"))
+              DisplayName="[Ability] Get Info",
+              meta=(CompactNodeTitle="AbilityInfo"))
     static FCk_Ability_Info
     Get_Info(
         FCk_Handle InAbilityEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
-              DisplayName="Get Ability Activation Settings")
+              DisplayName="[Ability] Get Activation Settings")
     static FCk_Ability_ActivationSettings
     Get_ActivationSettings(
         FCk_Handle InAbilityEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
-              DisplayName="Get Ability Network Settings")
+              DisplayName="[Ability] Get Network Settings")
     static FCk_Ability_NetworkSettings
     Get_NetworkSettings(
         FCk_Handle InAbilityEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
-              DisplayName="Get Ability Status")
+              DisplayName="[Ability] Get Status")
     static ECk_Ability_Status
     Get_Status(
         FCk_Handle InAbilityEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
-              DisplayName="Get Ability Script Class")
+              DisplayName="[Ability] Get Script Class")
     static TSubclassOf<UCk_Ability_Script_PDA>
     Get_ScriptClass(
         FCk_Handle InAbilityEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
-              DisplayName="Get Can Activate Ability")
+              DisplayName="[Ability] Get Can Activate")
     static ECk_Ability_ActivationRequirementsResult
     Get_CanActivate(
         FCk_Handle InAbilityEntity);
@@ -126,7 +127,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability",
-              DisplayName = "Bind To OnAbilityActivated")
+              DisplayName = "[Ability] Bind To OnActivated")
     static void
     BindTo_OnAbilityActivated(
         FCk_Handle InAbilityHandle,
@@ -135,7 +136,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability",
-              DisplayName = "Unbind From OnAbilityActivated")
+              DisplayName = "[Ability] Unbind From OnActivated")
     static void
     UnbindFrom_OnAbilityActivated(
         FCk_Handle InAbilityHandle,
@@ -143,7 +144,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability",
-              DisplayName = "Bind To OnAbilityDeactivated")
+              DisplayName = "[Ability] Bind To OnDeactivated")
     static void
     BindTo_OnAbilityDeactivated(
         FCk_Handle InAbilityHandle,
@@ -152,7 +153,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability",
-              DisplayName = "Unbind From OnAbilityDeactivated")
+              DisplayName = "[Ability] Unbind From OnDeactivated")
     static void
     UnbindFrom_OnAbilityDeactivated(
         FCk_Handle InAbilityHandle,
