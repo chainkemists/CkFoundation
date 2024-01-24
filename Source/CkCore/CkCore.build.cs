@@ -25,6 +25,7 @@ public class CkCore : CkModuleRules
                 "Core",
                 "GameplayTags",
                 "MessageLog",
+                "StructUtils",
 
                 "CkBuildConfig",
                 "CkLog",
