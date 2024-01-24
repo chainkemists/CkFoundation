@@ -8,6 +8,8 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
+#include "CkVariables/CkUnrealVariables_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -26,7 +28,7 @@ namespace ck
         });
 
         InHandle.Remove<FFragment_ActorModifier_SpawnActorRequests>();
-        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle, ECk_EntityLifetime_DestructionBehavior::DestroyOnlyIfOrphan);
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
     }
 
     auto
@@ -121,7 +123,8 @@ namespace ck
             };
         }
 
-        UUtils_Signal_OnActorSpawned::Broadcast(InHandle, MakePayload(SpawnedActor));
+        UUtils_Signal_OnActorSpawned::Broadcast(InHandle, MakePayload(SpawnedActor,
+            UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag)));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -140,7 +143,7 @@ namespace ck
         });
 
         InHandle.Remove<FFragment_ActorModifier_AddActorComponentRequests>();
-        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle, ECk_EntityLifetime_DestructionBehavior::DestroyOnlyIfOrphan);
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
     }
 
     auto
@@ -207,7 +210,8 @@ namespace ck
             }
         }
 
-        UUtils_Signal_OnActorComponentAdded::Broadcast(InHandle, MakePayload(AddedActorComponent->GetOwner(), AddedActorComponent));
+        UUtils_Signal_OnActorComponentAdded::Broadcast(InHandle, MakePayload(AddedActorComponent->GetOwner(), AddedActorComponent,
+            UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag)));
     }
 }
 
