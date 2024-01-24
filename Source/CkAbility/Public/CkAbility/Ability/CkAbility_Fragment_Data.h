@@ -341,68 +341,60 @@ private:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Request Activate This Ability",
-              meta = (CompactNodeTitle="ACTIVATE_ThisAbility", DefaultToSelf="InScript", HidePin="InScript"))
-    static void
+              meta = (CompactNodeTitle="ACTIVATE_ThisAbility", HideSelfPin = true))
+    void
     Self_Request_ActivateAbility(
-        const UCk_Ability_Script_PDA* InScript,
         FCk_Ability_ActivationPayload InActivationPayload);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Request Deactivate This Ability",
-              meta = (CompactNodeTitle="DEACTIVATE_ThisAbility", DefaultToSelf="InScript", HidePin="InScript"))
-    static void
-    Self_Request_DeactivateAbility(
-        const UCk_Ability_Script_PDA* InScript);
+              meta = (CompactNodeTitle="DEACTIVATE_ThisAbility", HideSelfPin = true))
+    void
+    Self_Request_DeactivateAbility();
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Request Apply Cost",
-              meta = (CompactNodeTitle="ApplyCost", DefaultToSelf="InScript", HidePin="InScript"))
-    static void
-    Self_Request_ApplyCost(
-        const UCk_Ability_Script_PDA* InScript);
+              meta = (CompactNodeTitle="ApplyCost", HideSelfPin = true))
+    void
+    Self_Request_ApplyCost();
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Request Apply Cost On Owner",
-              meta = (CompactNodeTitle="ApplyCost_OnOwner", DefaultToSelf="InScript", HidePin="InScript"))
-    static void
-    Self_Request_ApplyCost_OnOwner(
-        const UCk_Ability_Script_PDA* InScript);
+              meta = (CompactNodeTitle="ApplyCost_OnOwner", HideSelfPin = true))
+    void
+    Self_Request_ApplyCost_OnOwner();
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Request Apply Cooldown",
-              meta = (CompactNodeTitle="ApplyCooldown", DefaultToSelf="InScript", HidePin="InScript"))
-    static void
-    Self_Request_ApplyCooldown(
-        const UCk_Ability_Script_PDA* InScript);
+              meta = (CompactNodeTitle="ApplyCooldown", HideSelfPin = true))
+    void
+    Self_Request_ApplyCooldown();
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Request Apply Cooldown On Owner",
-              meta = (CompactNodeTitle="ApplyCooldown_OnOwner", DefaultToSelf="InScript", HidePin="InScript"))
-    static void
-    Self_Request_ApplyCooldown_OnOwner(
-        const UCk_Ability_Script_PDA* InScript);
+              meta = (CompactNodeTitle="ApplyCooldown_OnOwner", HideSelfPin = true))
+    void
+    Self_Request_ApplyCooldown_OnOwner();
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Request Track Task",
-              meta = (CompactNodeTitle="TRACK_Task", DefaultToSelf="InScript", HidePin="InScript"))
-    static void
+              meta = (CompactNodeTitle="TRACK_Task", HideSelfPin = true))
+    void
     Self_Request_TrackTask(
-        UCk_Ability_Script_PDA* InScript,
         UObject* InTask);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Request Spawn Ability Cue",
-              meta = (CompactNodeTitle="SpawnAbilityCue", DefaultToSelf="InScript", HidePin="InScript"))
-    static void
+              meta = (CompactNodeTitle="SpawnAbilityCue", HideSelfPin = true))
+    void
     Self_Request_SpawnAbilityCue(
-        const UCk_Ability_Script_PDA* InScript,
         const FCk_AbilityCue_Params& InReplicatedParams,
         FGameplayTag InAbilityCueName);
 
@@ -410,26 +402,23 @@ private:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Get Ability Status",
-              meta = (CompactNodeTitle="STATUS_ThisAbility", DefaultToSelf="InScript", HidePin="InScript"))
-    static ECk_Ability_Status
-    Self_Get_Status(
-        const UCk_Ability_Script_PDA* InScript);
+              meta = (CompactNodeTitle="STATUS_ThisAbility", HideSelfPin = true))
+    ECk_Ability_Status
+    Self_Get_Status() const;
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Get Ability Entity",
-              meta = (CompactNodeTitle="AbilityEntity", DefaultToSelf="InScript", HidePin="InScript"))
-    static FCk_Handle
-    Self_Get_AbilityEntity(
-        const UCk_Ability_Script_PDA* InScript);
+              meta = (CompactNodeTitle="AbilityEntity", HideSelfPin = true))
+    FCk_Handle
+    Self_Get_AbilityEntity() const;
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Get Ability Owner Entity",
-              meta = (CompactNodeTitle="AbilityOwnerEntity", DefaultToSelf="InScript", HidePin="InScript"))
-    static FCk_Handle
-    Self_Get_AbilityOwnerEntity(
-        const UCk_Ability_Script_PDA* InScript);
+              meta = (CompactNodeTitle="AbilityOwnerEntity", HideSelfPin = true))
+    FCk_Handle
+    Self_Get_AbilityOwnerEntity() const;
 
 private:
     UPROPERTY(EditDefaultsOnly,
