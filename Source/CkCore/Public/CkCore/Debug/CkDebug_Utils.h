@@ -85,6 +85,9 @@ public:
     static auto Get_StackTrace_Blueprint(ck::type_traits::AsString) -> FString;
 
     static auto Try_BreakInScript(const UObject* InContext) -> void;
+
+private:
+    inline static UObject* _LastStackTraceContextObject = nullptr;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
