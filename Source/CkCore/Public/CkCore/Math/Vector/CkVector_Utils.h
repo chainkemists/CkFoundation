@@ -160,6 +160,13 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|Actor")
+    static FVector
+    Get_DirectionVectorFromActor(
+         const AActor* InActor,
+         ECk_Direction_3D InDirection = ECk_Direction_3D::Forward);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Actor")
     static float
     Get_DistanceBetweenActors(
         const AActor* InA,
