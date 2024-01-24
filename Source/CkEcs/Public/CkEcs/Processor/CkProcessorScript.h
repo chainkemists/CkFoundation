@@ -35,16 +35,20 @@ public:
     using HandleType = FCk_Handle;
 
 private:
-    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
+    UPROPERTY(EditDefaultsOnly,
+              Category = "Config",
+              meta = (AllowPrivateAccess = true))
     ECk_Ecs_ForEach_Policy _ForEachPolicy = ECk_Ecs_ForEach_Policy::OnlyValidEntities;
 
 public:
     virtual auto
-    Tick(TimeType InTime) -> void;
+    Tick(
+        TimeType InTime) -> void;
 
     UFUNCTION(BlueprintNativeEvent)
     bool
-    ProcessEntity_If(FCk_Handle InEntity) const;
+    ProcessEntity_If(
+        FCk_Handle InEntity) const;
 
 protected:
     TOptional<RegistryType> _Registry;

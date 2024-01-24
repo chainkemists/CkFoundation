@@ -3,6 +3,8 @@
 #include "CkEcs/Processor/CkProcessorScript_Subsystem.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
+#include <Engine/World.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
