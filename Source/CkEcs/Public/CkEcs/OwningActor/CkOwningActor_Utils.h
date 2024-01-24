@@ -56,6 +56,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor",
+              DisplayName = "Get Entity To Actor",
               meta = (CompactNodeTitle="EntityToActor"))
     static AActor*
     Get_EntityOwningActor(
@@ -63,6 +64,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor",
+              DisplayName = "Get Entity Basic Details",
               meta = (CompactNodeTitle="EntityBasicDetails"))
     static FCk_EntityOwningActor_BasicDetails
     Get_EntityOwningActorBasicDetails(
@@ -70,6 +72,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor",
+              DisplayName = "Get Actor Basic Details",
               meta = (CompactNodeTitle="ActorBasicDetails"))
     static FCk_EntityOwningActor_BasicDetails
     Get_EntityOwningActorBasicDetails_FromActor(
@@ -77,6 +80,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor",
+              DisplayName = "Get Actor To Entity",
               meta=(CompactNodeTitle="ActorToEntity"))
     static FCk_Handle
     Get_ActorEntityHandle(
@@ -92,6 +96,7 @@ public:
 private:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor",
+              DisplayName = "Get Actor To Entity From Self",
               meta = (DefaultToSelf = "InActor", HidePin = "InActor", CompactNodeTitle="ActorToEntity_FromSelf"))
     static FCk_Handle
     Get_ActorEntityHandleFromSelf(
