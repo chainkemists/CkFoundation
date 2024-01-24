@@ -3,6 +3,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include <InstancedStruct.h>
+
 #include "CkActorModifier_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -23,6 +25,7 @@ public:
     Request_SpawnActor(
         FCk_Handle InHandle,
         const FCk_Request_ActorModifier_SpawnActor& InRequest,
+        FInstancedStruct InOptionalPayload,
         const FCk_Delegate_ActorModifier_OnActorSpawned& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -32,6 +35,7 @@ public:
     Request_AddActorComponent(
         FCk_Handle InHandle,
         const FCk_Request_ActorModifier_AddActorComponent& InRequest,
+        FInstancedStruct InOptionalPayload,
         const FCk_Delegate_ActorModifier_OnActorComponentAdded& InDelegate);
 };
 
