@@ -31,10 +31,10 @@ auto
         ECk_DebugName_Verbosity InNameVerbosity)
     -> FString
 {
-    static const FString invalidName = TEXT("INVALID UObject");
+    static const FString InvalidName = TEXT("INVALID UObject");
 
     if (ck::Is_NOT_Valid(InObject))
-    { return invalidName; }
+    { return InvalidName; }
 
     switch (InNameVerbosity)
     {
@@ -44,7 +44,7 @@ auto
         return InObject->GetName();
     default:
         CK_INVALID_ENUM(InNameVerbosity);
-        return invalidName;
+        return InvalidName;
     }
 }
 
@@ -75,17 +75,17 @@ auto
         int32 InSkipFrames)
     -> FString
 {
-    constexpr auto stackTraceSize = std::numeric_limits<int16>::max();
+    constexpr auto StackTraceSize = std::numeric_limits<int16>::max();
 
-    ANSICHAR stackTrace[stackTraceSize];
-    stackTrace[0] = 0;
+    ANSICHAR StackTrace[StackTraceSize];
+    StackTrace[0] = 0;
 
 #if !CK_DISABLE_STACK_TRACE
-    FPlatformStackWalk::StackWalkAndDump(stackTrace, stackTraceSize, InSkipFrames);
-    stackTrace[stackTraceSize - 1] = 0;
+    FPlatformStackWalk::StackWalkAndDump(StackTrace, StackTraceSize, InSkipFrames);
+    StackTrace[StackTraceSize - 1] = 0;
 #endif
 
-    return FString{stackTrace};
+    return FString{StackTrace};
 }
 
 auto
@@ -110,24 +110,28 @@ auto
         ck::type_traits::AsArray)
     -> TArray<FString>
 {
-    auto stackTrace = TArray<FString>{};
+    _LastStackTraceContextObject = nullptr;
+
+    auto StackTrace = TArray<FString>{};
 
 #if !CK_DISABLE_STACK_TRACE
-    const auto* blueprintExceptionTracker = FBlueprintContextTracker::TryGet();
+    const auto* BlueprintExceptionTracker = FBlueprintContextTracker::TryGet();
 
-    if (ck::Is_NOT_Valid(blueprintExceptionTracker, ck::IsValid_Policy_NullptrOnly{}))
-    { return stackTrace; }
+    if (ck::Is_NOT_Valid(BlueprintExceptionTracker, ck::IsValid_Policy_NullptrOnly{}))
+    { return StackTrace; }
 
-    const auto& rawStack = blueprintExceptionTracker->GetCurrentScriptStack();
-    for (int32 frameIdx = rawStack.Num() - 1; frameIdx >= 0; --frameIdx)
+    const auto& RawStack = BlueprintExceptionTracker->GetCurrentScriptStack();
+    for (int32 FrameIdx = RawStack.Num() - 1; FrameIdx >= 0; --FrameIdx)
     {
-        FStringBuilderBase stringBuilder;
-        rawStack[frameIdx]->GetStackDescription(stringBuilder);
-        stackTrace.Emplace(stringBuilder.ToString());
+        FStringBuilderBase StringBuilder;
+        RawStack[FrameIdx]->GetStackDescription(StringBuilder);
+        StackTrace.Emplace(StringBuilder.ToString());
+
+        _LastStackTraceContextObject = RawStack[FrameIdx]->Object;
     }
 #endif
 
-    return stackTrace;
+    return StackTrace;
 }
 
 auto
@@ -136,27 +140,31 @@ auto
         ck::type_traits::AsString)
     -> FString
 {
-    FString stackTrace;
+    _LastStackTraceContextObject = nullptr;
+
+    auto StackTrace = FString{};
 
 #if !CK_DISABLE_STACK_TRACE
-    const auto* blueprintExceptionTracker = FBlueprintContextTracker::TryGet();
-    if (ck::Is_NOT_Valid(blueprintExceptionTracker, ck::IsValid_Policy_NullptrOnly{}))
-    { return stackTrace; }
+    const auto* BlueprintExceptionTracker = FBlueprintContextTracker::TryGet();
+    if (ck::Is_NOT_Valid(BlueprintExceptionTracker, ck::IsValid_Policy_NullptrOnly{}))
+    { return StackTrace; }
 
-    const TArrayView<const FFrame* const>& rawStack = blueprintExceptionTracker->GetCurrentScriptStack();
-    for (int32 frameIdx = rawStack.Num() - 1; frameIdx >= 0; --frameIdx)
+    const TArrayView<const FFrame* const>& RawStack = BlueprintExceptionTracker->GetCurrentScriptStack();
+    for (int32 FrameIdx = RawStack.Num() - 1; FrameIdx >= 0; --FrameIdx)
     {
-        const auto& stackDescription = rawStack[frameIdx];
-        stackTrace += ck::Format_UE
+        const auto& StackDescription = RawStack[FrameIdx];
+        StackTrace += ck::Format_UE
         (
             TEXT("{}:{}\n"),
-            stackDescription->Node,
-            stackDescription->MostRecentProperty
+            StackDescription->Node,
+            StackDescription->MostRecentProperty
         );
+
+        _LastStackTraceContextObject = RawStack[FrameIdx]->Object;
     }
 #endif
 
-    return stackTrace;
+    return StackTrace;
 }
 
 auto
@@ -166,20 +174,28 @@ auto
     -> void
 {
 #if !CK_DISABLE_STACK_TRACE
-    if (ck::Is_NOT_Valid(InContext))
+    const UObject* Context = [&]() -> const UObject*
+    {
+        if (ck::Is_NOT_Valid(InContext))
+        { return _LastStackTraceContextObject; }
+
+        return InContext;
+    }();
+
+    if (ck::Is_NOT_Valid(Context))
     { return; }
 
-    const auto* blueprintExceptionTracker = FBlueprintContextTracker::TryGet();
-    if (ck::Is_NOT_Valid(blueprintExceptionTracker, ck::IsValid_Policy_NullptrOnly{}))
+    const auto* BlueprintExceptionTracker = FBlueprintContextTracker::TryGet();
+    if (ck::Is_NOT_Valid(BlueprintExceptionTracker, ck::IsValid_Policy_NullptrOnly{}))
     { return; }
 
-    const TArrayView<FFrame* const>& scriptStack = blueprintExceptionTracker->GetCurrentScriptStackWritable();
+    const TArrayView<FFrame* const>& ScriptStack = BlueprintExceptionTracker->GetCurrentScriptStackWritable();
 
-    if (scriptStack.IsEmpty())
+    if (ScriptStack.IsEmpty())
     { return; }
 
-    const FBlueprintExceptionInfo exceptionInfo(EBlueprintExceptionType::Breakpoint);
-    FBlueprintCoreDelegates::ThrowScriptException(InContext, *scriptStack.Last(), exceptionInfo);
+    const FBlueprintExceptionInfo ExceptionInfo(EBlueprintExceptionType::Breakpoint);
+    FBlueprintCoreDelegates::ThrowScriptException(Context, *ScriptStack.Last(), ExceptionInfo);
 #endif
 }
 
