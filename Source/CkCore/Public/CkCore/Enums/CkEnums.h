@@ -15,6 +15,17 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_SelfOrParent : uint8
+{
+    Self,
+    Parent
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SelfOrParent);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_Replication : uint8
 {
     Replicates,
