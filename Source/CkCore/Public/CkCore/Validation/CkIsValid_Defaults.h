@@ -7,6 +7,7 @@
 #include <GameplayTagContainer.h>
 #include <InputCoreTypes.h>
 #include <Framework/Commands/InputChord.h>
+#include <InstancedStruct.h>
 
 #include <type_traits>
 
@@ -96,6 +97,11 @@ CK_DEFINE_CUSTOM_IS_VALID(FGameplayTag, ck::IsValid_Policy_Default, [=](FGamepla
 CK_DEFINE_CUSTOM_IS_VALID(FGameplayTagContainer, ck::IsValid_Policy_Default, [=](FGameplayTagContainer InGameplayTagContainer)
 {
     return InGameplayTagContainer.IsValid();
+});
+
+CK_DEFINE_CUSTOM_IS_VALID(FInstancedStruct, ck::IsValid_Policy_Default, [=](const FInstancedStruct& InInstancedStruct)
+{
+    return InInstancedStruct.IsValid();
 });
 
 // --------------------------------------------------------------------------------------------------------------------
