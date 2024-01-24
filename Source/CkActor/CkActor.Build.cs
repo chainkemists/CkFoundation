@@ -14,11 +14,14 @@ public class CkActor : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
+            "StructUtils",
+            "GameplayTags",
 
             "CkCore",
             "CkEcs",
             "CkLog",
-            "CkSignal"
+            "CkSignal",
+            "CkVariables"
         });
     }
 }

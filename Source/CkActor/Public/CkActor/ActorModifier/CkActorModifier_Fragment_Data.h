@@ -165,13 +165,15 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_ActorModifier_OnActorSpawned,
-    AActor*, InActorSpawned);
+    AActor*, InActorSpawned,
+    const FInstancedStruct&, InOptionalPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_ActorModifier_OnActorSpawned_MC,
-    AActor*, InActorSpawned);
+    AActor*, InActorSpawned,
+    const FInstancedStruct&, InOptionalPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -212,15 +214,17 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_ActorModifier_AddActorComponent, _ComponentToAdd);
 };
 
-DECLARE_DYNAMIC_DELEGATE_TwoParams(
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Delegate_ActorModifier_OnActorComponentAdded,
     AActor*, InOwner,
-    UActorComponent*, InActorComponentAdded);
+    UActorComponent*, InActorComponentAdded,
+    const FInstancedStruct&, InOptionalPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
     FCk_Delegate_ActorModifier_OnActorComponentAdded_MC,
     AActor*, InOwner,
-    UActorComponent*, InActorComponentAdded);
+    UActorComponent*, InActorComponentAdded,
+    const FInstancedStruct&, InOptionalPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
 

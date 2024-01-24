@@ -64,14 +64,16 @@ namespace ck
         CKACTOR_API,
         OnActorSpawned,
         FCk_Delegate_ActorModifier_OnActorSpawned_MC,
-        TWeakObjectPtr<AActor>);
+        TWeakObjectPtr<AActor>,
+        FInstancedStruct);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKACTOR_API,
         OnActorComponentAdded,
         FCk_Delegate_ActorModifier_OnActorComponentAdded_MC,
         TWeakObjectPtr<AActor>,
-        TWeakObjectPtr<UActorComponent>);
+        TWeakObjectPtr<UActorComponent>,
+        FInstancedStruct);
 
 }
 
