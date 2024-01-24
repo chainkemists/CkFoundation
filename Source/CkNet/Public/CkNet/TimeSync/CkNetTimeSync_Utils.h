@@ -20,28 +20,28 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|NetTimeSync",
-              DisplayName = "Add Network Time Sync Replicated Fragment (INTERNAL USE ONLY)")
+              DisplayName = "[NetworkTimeSync] Add Replicated Feature (INTERNAL USE ONLY)")
     static void
     Add_NetTimeSync_Rep(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|NetTimeSync",
-              DisplayName = "Add Network Time Sync Fragment")
+              DisplayName = "[NetworkTimeSync] Add Feature")
     static void
     Add(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|NetTimeSync",
-              DisplayName = "Has Network Time Sync Fragment?")
+              DisplayName = "[NetworkTimeSync] Has Feature")
     static bool
     Has(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|NetTimeSync",
-              DisplayName = "Ensure Has Network Time Sync Fragment")
+              DisplayName = "[NetworkTimeSync] Ensure Has Feature")
     static bool
     Ensure(
         FCk_Handle InHandle);
@@ -54,26 +54,30 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|NetTimeSync")
+              Category = "Ck|Utils|NetTimeSync",
+              DisplayName = "[NetworkTimeSync] Get Round Trip Time")
     static FCk_Time
     Get_RoundTripTime(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|NetTimeSync")
+              Category = "Ck|Utils|NetTimeSync",
+              DisplayName = "[NetworkTimeSync] Get Latency")
     static FCk_Time
     Get_Latency(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|NetTimeSync")
+              Category = "Ck|Utils|NetTimeSync",
+              DisplayName = "[NetworkTimeSync] Get Player Round Trip Time")
     static FCk_Time
     Get_PlayerRoundTripTime(
         APlayerController* InPlayerController,
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|NetTimeSync")
+              Category = "Ck|Utils|NetTimeSync",
+              DisplayName = "[NetworkTimeSync] Get Player Latency")
     static FCk_Time
     Get_PlayerLatency(
         APlayerController* InPlayerController,

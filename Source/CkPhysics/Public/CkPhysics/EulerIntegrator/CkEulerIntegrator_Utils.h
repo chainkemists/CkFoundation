@@ -22,14 +22,14 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EulerIntegrator",
-              DisplayName="Request Start Euler Integration")
+              DisplayName="[EulerIntegration] Request Start")
     static void
     Request_Start(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EulerIntegrator",
-              DisplayName="Request Stop Euler Integration")
+              DisplayName="[EulerIntegration] Request Stop")
     static void
     Request_Stop(
         FCk_Handle InHandle);

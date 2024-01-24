@@ -19,7 +19,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|RenderStatus",
-              DisplayName="Add RenderStatus Group")
+              DisplayName="[RenderStatus] Add Feature")
     static void
     Add(
         FCk_Handle InHandle,
@@ -27,14 +27,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|RenderStatus",
-              DisplayName="Has RenderStatus Group")
+              DisplayName="[RenderStatus] Has Feature")
     static bool
     Has(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|RenderStatus",
-              DisplayName="Ensure Has RenderStatus Group")
+              DisplayName="[RenderStatus] Ensure Has Feature")
     static bool
     Ensure(
         FCk_Handle InHandle);
@@ -42,7 +42,8 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|RenderStatus",
-              meta = (AutoCreateRefTerm = "InOptionalPayload"))
+              meta = (AutoCreateRefTerm = "InOptionalPayload"),
+              DisplayName="[RenderStatus] Request Query Rendered Actors")
     static void
     Request_QueryRenderedActors(
         FCk_Handle InHandle,
