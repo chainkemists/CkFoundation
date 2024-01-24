@@ -183,6 +183,7 @@ auto
     UCk_Utils_Timer_UE::
     ForEach_Timer(
         FCk_Handle                 InTimerOwnerEntity,
+        const FInstancedStruct&    InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
     -> TArray<FCk_Handle>
 {
@@ -191,7 +192,7 @@ auto
     ForEach_Timer(InTimerOwnerEntity, [&](FCk_Handle InTimer)
     {
         if (InDelegate.IsBound())
-        { InDelegate.Execute(InTimer); }
+        { InDelegate.Execute(InTimer, InOptionalPayload); }
         else
         { Timers.Emplace(InTimer); }
     });

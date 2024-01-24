@@ -122,6 +122,7 @@ auto
     ForEach_Ability(
         FCk_Handle InAbilityOwnerEntity,
         ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
+        const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
     -> TArray<FCk_Handle>
 {
@@ -130,7 +131,7 @@ auto
     ForEach_Ability(InAbilityOwnerEntity, InForEachAbilityPolicy, [&](FCk_Handle InAbility)
     {
         if (InDelegate.IsBound())
-        { InDelegate.Execute(InAbility); }
+        { InDelegate.Execute(InAbility, InOptionalPayload); }
         else
         { Abilities.Emplace(InAbility); }
     });
@@ -167,6 +168,7 @@ auto
     ForEach_Ability_If(
         FCk_Handle InAbilityOwnerEntity,
         ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
+        const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate)
     -> TArray<FCk_Handle>
@@ -177,20 +179,20 @@ auto
     (
         InAbilityOwnerEntity,
         InForEachAbilityPolicy,
-        [&](FCk_Handle InAbility)
+        [&](const FCk_Handle& InAbility)
         {
             if (InDelegate.IsBound())
-            { InDelegate.Execute(InAbility); }
+            { InDelegate.Execute(InAbility, InOptionalPayload); }
             else
             { Abilities.Emplace(InAbility); }
         },
-        [&](FCk_Handle InAbility)  -> bool
+        [&](const FCk_Handle& InAbility)  -> bool
         {
             const FCk_SharedBool PredicateResult;
 
             if (InPredicate.IsBound())
             {
-                InPredicate.Execute(InAbility, PredicateResult);
+                InPredicate.Execute(InAbility, PredicateResult, InOptionalPayload);
             }
 
             return *PredicateResult;
@@ -233,6 +235,7 @@ auto
         FCk_Handle InAbilityOwnerEntity,
         ECk_Ability_Status InStatus,
         ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
+        const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
     -> TArray<FCk_Handle>
 {
@@ -241,7 +244,7 @@ auto
     ForEach_Ability_WithStatus(InAbilityOwnerEntity, InStatus, InForEachAbilityPolicy, [&](FCk_Handle InAbility)
     {
         if (InDelegate.IsBound())
-        { InDelegate.Execute(InAbility); }
+        { InDelegate.Execute(InAbility, InOptionalPayload); }
         else
         { Abilities.Emplace(InAbility); }
     });

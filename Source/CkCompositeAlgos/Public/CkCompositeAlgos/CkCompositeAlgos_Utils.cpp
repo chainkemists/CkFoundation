@@ -9,6 +9,7 @@ auto
     UCk_Utils_CompositeAlgos_UE::
     AnyActors_If(
         const TArray<AActor*>& InActors,
+        const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InActor_OutResult InPredicate)
     -> bool
 {
@@ -21,7 +22,7 @@ auto
 
         if (InPredicate.IsBound())
         {
-            InPredicate.Execute(InActor, PredicateResult);
+            InPredicate.Execute(InActor, PredicateResult, InOptionalPayload);
         }
 
         return *PredicateResult;
@@ -32,6 +33,7 @@ auto
     UCk_Utils_CompositeAlgos_UE::
     AllActors_If(
         const TArray<AActor*>& InActors,
+        const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InActor_OutResult InPredicate)
     -> bool
 {
@@ -44,7 +46,7 @@ auto
 
         if (InPredicate.IsBound())
         {
-            InPredicate.Execute(InActor, PredicateResult);
+            InPredicate.Execute(InActor, PredicateResult, InOptionalPayload);
         }
 
         return *PredicateResult;
@@ -55,6 +57,7 @@ auto
     UCk_Utils_CompositeAlgos_UE::
     AnyEntities_If(
         const TArray<FCk_Handle>& InEntities,
+        const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InHandle_OutResult InPredicate)
     -> bool
 {
@@ -67,7 +70,7 @@ auto
 
         if (InPredicate.IsBound())
         {
-            InPredicate.Execute(InEntity, PredicateResult);
+            InPredicate.Execute(InEntity, PredicateResult, InOptionalPayload);
         }
 
         return *PredicateResult;
@@ -78,6 +81,7 @@ auto
     UCk_Utils_CompositeAlgos_UE::
     AllEntities_If(
         const TArray<FCk_Handle>& InEntities,
+        const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InHandle_OutResult InPredicate)
     -> bool
 {
@@ -90,7 +94,7 @@ auto
 
         if (InPredicate.IsBound())
         {
-            InPredicate.Execute(InEntity, PredicateResult);
+            InPredicate.Execute(InEntity, PredicateResult, InOptionalPayload);
         }
 
         return *PredicateResult;
@@ -101,6 +105,7 @@ auto
     UCk_Utils_CompositeAlgos_UE::
     FilterActors_ByPredicate(
         const TArray<AActor*>& InActors,
+        const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InActor_OutResult InPredicate)
     -> TArray<AActor*>
 {
@@ -113,7 +118,7 @@ auto
 
         if (InPredicate.IsBound())
         {
-            InPredicate.Execute(InActor, PredicateResult);
+            InPredicate.Execute(InActor, PredicateResult, InOptionalPayload);
         }
 
         return *PredicateResult;
@@ -136,6 +141,7 @@ auto
     UCk_Utils_CompositeAlgos_UE::
     FilterEntities_ByPredicate(
         const TArray<FCk_Handle>& InEntities,
+        const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InHandle_OutResult InPredicate)
     -> TArray<FCk_Handle>
 {
@@ -148,7 +154,7 @@ auto
 
         if (InPredicate.IsBound())
         {
-            InPredicate.Execute(InEntity, PredicateResult);
+            InPredicate.Execute(InEntity, PredicateResult, InOptionalPayload);
         }
 
         return *PredicateResult;
@@ -171,6 +177,7 @@ auto
     UCk_Utils_CompositeAlgos_UE::
     SortActors_ByPredicate(
         TArray<AActor*>& InActors,
+        const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_In2Actors_OutResult InPredicate)
     -> void
 {
@@ -180,7 +187,7 @@ auto
 
         if (InPredicate.IsBound())
         {
-            InPredicate.Execute(InA, InB, PredicateResult);
+            InPredicate.Execute(InA, InB, PredicateResult, InOptionalPayload);
         }
 
         return *PredicateResult;
@@ -226,6 +233,7 @@ auto
     UCk_Utils_CompositeAlgos_UE::
     SortEntities_ByPredicate(
         TArray<FCk_Handle>& InEntities,
+        const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_In2Handles_OutResult InPredicate)
     -> void
 {
@@ -235,7 +243,7 @@ auto
 
         if (InPredicate.IsBound())
         {
-            InPredicate.Execute(InA, InB, PredicateResult);
+            InPredicate.Execute(InA, InB, PredicateResult, InOptionalPayload);
         }
 
         return *PredicateResult;

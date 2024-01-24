@@ -83,10 +83,11 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Byte",
               DisplayName="For Each Byte Attribute",
-              meta=(AutoCreateRefTerm="InDelegate"))
+              meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle>
     ForEach_ByteAttribute(
         FCk_Handle InAttributeOwner,
+        const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_ByteAttribute(
@@ -96,10 +97,11 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Byte",
               DisplayName="For Each Byte Attribute If",
-              meta=(AutoCreateRefTerm="InDelegate"))
+              meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle>
     ForEach_ByteAttribute_If(
         FCk_Handle InAttributeOwner,
+        const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate);
     static auto

@@ -197,7 +197,7 @@ private:
     FCk_Handle _ContextEntity;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, AutoCreateRefTerm="_Data"))
     FInstancedStruct _Data;
 
 public:

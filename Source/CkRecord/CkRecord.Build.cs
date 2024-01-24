@@ -14,6 +14,7 @@ public class CkRecord : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
+			"StructUtils",
 
             "CkCore",
             "CkEcs",
