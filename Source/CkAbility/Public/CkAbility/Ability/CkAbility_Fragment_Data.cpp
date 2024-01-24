@@ -136,154 +136,110 @@ auto
 auto
     UCk_Ability_Script_PDA::
     Self_Request_ActivateAbility(
-        const UCk_Ability_Script_PDA* InScript,
         FCk_Ability_ActivationPayload InActivationPayload)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InScript),
-        TEXT("AbilityScript is [{}]. Was this Ability GC'ed and this function is being called in a latent node?"),
-        InScript)
-    { return; }
-
-    CK_ENSURE_IF_NOT(ck::IsValid(InScript->_AbilityHandle),
+    CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
         TEXT("AbilityHandle is INVALID. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
-        ck::Context(InScript))
+        ck::Context(this))
     { return; }
 
-    UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(InScript->Get_AbilityOwnerHandle(),
-        FCk_Request_AbilityOwner_ActivateAbility{InScript->Get_AbilityHandle(), InActivationPayload});
+    UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(Get_AbilityOwnerHandle(),
+        FCk_Request_AbilityOwner_ActivateAbility{Get_AbilityHandle(), InActivationPayload});
 }
 
 auto
     UCk_Ability_Script_PDA::
-    Self_Request_DeactivateAbility(
-        const UCk_Ability_Script_PDA* InScript)
+    Self_Request_DeactivateAbility()
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InScript),
-        TEXT("AbilityScript is [{}]. Was this Ability GC'ed and this function is being called in a latent node?"),
-        InScript)
-    { return; }
-
-    CK_ENSURE_IF_NOT(ck::IsValid(InScript->_AbilityHandle),
+    CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
         TEXT("AbilityHandle is INVALID. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
-        ck::Context(InScript))
+        ck::Context(this))
     { return; }
 
-    UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(InScript->Get_AbilityOwnerHandle(),
-        FCk_Request_AbilityOwner_DeactivateAbility{InScript->Get_AbilityHandle()});
+    UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(Get_AbilityOwnerHandle(),
+        FCk_Request_AbilityOwner_DeactivateAbility{Get_AbilityHandle()});
 }
 
 auto
     UCk_Ability_Script_PDA::
-    Self_Request_ApplyCost(
-        const UCk_Ability_Script_PDA* InScript)
+    Self_Request_ApplyCost()
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InScript),
-        TEXT("AbilityScript is [{}]. Was this Ability GC'ed and this function is being called in a latent node?"),
-        InScript)
-    { return; }
-
-    const auto& AbilityHandle = InScript->Get_AbilityHandle();
-
-    CK_ENSURE_IF_NOT(UCk_Utils_AbilityOwner_UE::Has(AbilityHandle),
+    CK_ENSURE_IF_NOT(UCk_Utils_AbilityOwner_UE::Has(Get_AbilityHandle()),
         TEXT("Ability Entity [{}] with AbilityScript [{}] is NOT an AbiltyOwner itself. Did you forget to add a 'Cost' Ability to the aforementioned?"),
-        AbilityHandle, InScript)
+        Get_AbilityHandle(), this)
     { return; }
 
     const auto& DefaultApplyCostTag = UCk_Utils_Ability_Settings_UE::Get_Default_ApplyCostTag();
 
     UCk_Utils_AbilityOwner_UE::Request_SendEvent
     (
-        AbilityHandle,
+        Get_AbilityHandle(),
         FCk_Request_AbilityOwner_SendEvent
         {
             FCk_AbilityOwner_Event{DefaultApplyCostTag}
-                .Set_ContextEntity(AbilityHandle)
+                .Set_ContextEntity(Get_AbilityHandle())
         }
     );
 }
 
 auto
     UCk_Ability_Script_PDA::
-    Self_Request_ApplyCost_OnOwner(
-        const UCk_Ability_Script_PDA* InScript)
+    Self_Request_ApplyCost_OnOwner()
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InScript),
-        TEXT("AbilityScript is [{}]. Was this Ability GC'ed and this function is being called in a latent node?"),
-        InScript)
-    { return; }
-
-    const auto& AbilityHandle      = InScript->Get_AbilityHandle();
-    const auto& AbilityOwnerHandle = InScript->Get_AbilityOwnerHandle();
     const auto& DefaultApplyCostTag = UCk_Utils_Ability_Settings_UE::Get_Default_ApplyCostTag();
 
     UCk_Utils_AbilityOwner_UE::Request_SendEvent
     (
-        AbilityOwnerHandle,
+        Get_AbilityOwnerHandle(),
         FCk_Request_AbilityOwner_SendEvent
         {
             FCk_AbilityOwner_Event{DefaultApplyCostTag}
-                .Set_ContextEntity(AbilityHandle)
+                .Set_ContextEntity(Get_AbilityHandle())
         }
     );
 }
 
 auto
     UCk_Ability_Script_PDA::
-    Self_Request_ApplyCooldown(
-        const UCk_Ability_Script_PDA* InScript)
+    Self_Request_ApplyCooldown()
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InScript),
-        TEXT("AbilityScript is [{}]. Was this Ability GC'ed and this function is being called in a latent node?"),
-        InScript)
-    { return; }
-
-    const auto& AbilityHandle = InScript->Get_AbilityHandle();
-
-    CK_ENSURE_IF_NOT(UCk_Utils_AbilityOwner_UE::Has(AbilityHandle),
+    CK_ENSURE_IF_NOT(UCk_Utils_AbilityOwner_UE::Has(Get_AbilityHandle()),
         TEXT("Ability Entity [{}] with AbilityScript [{}] is NOT an AbiltyOwner itself. Did you forget to add a 'Cooldown' Ability to the aforementioned?"),
-        AbilityHandle, InScript)
+        Get_AbilityHandle(), this)
     { return; }
 
     const auto& DefaultApplyCooldownTag = UCk_Utils_Ability_Settings_UE::Get_Default_ApplyCooldownTag();
 
     UCk_Utils_AbilityOwner_UE::Request_SendEvent
     (
-        AbilityHandle,
+        Get_AbilityHandle(),
         FCk_Request_AbilityOwner_SendEvent
         {
             FCk_AbilityOwner_Event{DefaultApplyCooldownTag}
-                .Set_ContextEntity(AbilityHandle)
+                .Set_ContextEntity(Get_AbilityHandle())
         }
     );
 }
 
 auto
     UCk_Ability_Script_PDA::
-    Self_Request_ApplyCooldown_OnOwner(
-        const UCk_Ability_Script_PDA* InScript)
+    Self_Request_ApplyCooldown_OnOwner()
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InScript),
-        TEXT("AbilityScript is [{}]. Was this Ability GC'ed and this function is being called in a latent node?"),
-        InScript)
-    { return; }
-
-    const auto& AbilityHandle           = InScript->Get_AbilityHandle();
-    const auto& AbilityOwner            = InScript->Get_AbilityOwnerHandle();
     const auto& DefaultApplyCooldownTag = UCk_Utils_Ability_Settings_UE::Get_Default_ApplyCooldownTag();
 
     UCk_Utils_AbilityOwner_UE::Request_SendEvent
     (
-        AbilityOwner,
+        Get_AbilityOwnerHandle(),
         FCk_Request_AbilityOwner_SendEvent
         {
             FCk_AbilityOwner_Event{DefaultApplyCooldownTag}
-                .Set_ContextEntity(AbilityHandle)
+                .Set_ContextEntity(Get_AbilityHandle())
         }
     );
 }
@@ -291,98 +247,67 @@ auto
 auto
     UCk_Ability_Script_PDA::
     Self_Request_TrackTask(
-        UCk_Ability_Script_PDA* InScript,
         UObject* InTask)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InScript),
-        TEXT("AbilityScript is [{}]. Was this Ability GC'ed and this function is being called in a latent node?"),
-        InScript)
-    { return; }
-
     if (ck::Is_NOT_Valid(InTask))
     { return; }
 
-    InScript->_Tasks.Emplace(InTask);
+    _Tasks.Emplace(InTask);
 }
 
 auto
     UCk_Ability_Script_PDA::
     Self_Request_SpawnAbilityCue(
-        const UCk_Ability_Script_PDA* InScript,
         const FCk_AbilityCue_Params&  InReplicatedParams,
         FGameplayTag InAbilityCueName)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InScript),
-        TEXT("AbilityScript is [{}]. Was this Ability GC'ed and this function is being called in a latent node?"),
-        InScript)
-    { return; }
-
     UCk_Utils_AbilityCue_UE::Request_Spawn_AbilityCue
     (
-        InScript->Get_AbilityHandle(),
-        FCk_Request_AbilityCue_Spawn{InAbilityCueName, const_cast<UCk_Ability_Script_PDA*>(InScript)}
+        Get_AbilityHandle(),
+        FCk_Request_AbilityCue_Spawn{InAbilityCueName, this}
             .Set_ReplicatedParams(InReplicatedParams)
     );
 }
 
 auto
     UCk_Ability_Script_PDA::
-    Self_Get_Status(
-        const UCk_Ability_Script_PDA* InScript)
+    Self_Get_Status() const
     -> ECk_Ability_Status
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InScript),
-        TEXT("AbilityScript is [{}]. Was this Ability GC'ed and this function is being called in a latent node?"),
-        InScript)
-    { return {}; }
-
-    CK_ENSURE_IF_NOT(ck::IsValid(InScript->_AbilityHandle),
+    CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
         TEXT("AbilityHandle is INVALID. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
-        ck::Context(InScript))
+        ck::Context(this))
     { return {}; }
 
-    const auto& AbilityHandle = InScript->Get_AbilityHandle();
-    return UCk_Utils_Ability_UE::Get_Status(AbilityHandle);
+    return UCk_Utils_Ability_UE::Get_Status(Get_AbilityHandle());
 }
 
 auto
     UCk_Ability_Script_PDA::
-    Self_Get_AbilityEntity(
-        const UCk_Ability_Script_PDA* InScript)
+    Self_Get_AbilityEntity() const
     -> FCk_Handle
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InScript),
-        TEXT("AbilityScript is [{}]. Was this Ability GC'ed and this function is being called in a latent node?"),
-        InScript)
-    { return {}; }
-
-    CK_ENSURE_IF_NOT(ck::IsValid(InScript->_AbilityHandle),
+    CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
         TEXT("AbilityHandle is INVALID. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
-        ck::Context(InScript))
+        ck::Context(this))
     { return {}; }
 
-    return InScript->_AbilityHandle;
+    return Get_AbilityHandle();
 }
 
 auto
     UCk_Ability_Script_PDA::
-    Self_Get_AbilityOwnerEntity(
-        const UCk_Ability_Script_PDA* InScript)
+    Self_Get_AbilityOwnerEntity() const
     -> FCk_Handle
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InScript),
-        TEXT("AbilityScript is [{}]. Was this Ability GC'ed and this function is being called in a latent node?"),
-        InScript)
-    { return {}; }
-
-    CK_ENSURE_IF_NOT(ck::IsValid(InScript->_AbilityOwnerHandle),
+    CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityOwnerHandle()),
         TEXT("AbilityOwnerHandle is INVALID. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
-        ck::Context(InScript))
+        ck::Context(this))
     { return {}; }
 
-    return InScript->_AbilityOwnerHandle;
+    return Get_AbilityOwnerHandle();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
