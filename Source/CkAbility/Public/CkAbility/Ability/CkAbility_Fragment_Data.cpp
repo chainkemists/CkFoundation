@@ -135,8 +135,8 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    Self_Request_ActivateAbility(
-        FCk_Ability_ActivationPayload InActivationPayload)
+    DoRequest_ActivateAbility(
+        FCk_Ability_ActivationPayload InActivationPayload) const
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
@@ -150,7 +150,7 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    Self_Request_DeactivateAbility()
+    DoRequest_DeactivateAbility() const
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
@@ -164,7 +164,7 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    Self_Request_ApplyCost()
+    DoRequest_ApplyCost() const
     -> void
 {
     CK_ENSURE_IF_NOT(UCk_Utils_AbilityOwner_UE::Has(Get_AbilityHandle()),
@@ -187,7 +187,7 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    Self_Request_ApplyCost_OnOwner()
+    DoRequest_ApplyCost_OnOwner() const
     -> void
 {
     const auto& DefaultApplyCostTag = UCk_Utils_Ability_Settings_UE::Get_Default_ApplyCostTag();
@@ -205,7 +205,7 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    Self_Request_ApplyCooldown()
+    DoRequest_ApplyCooldown() const
     -> void
 {
     CK_ENSURE_IF_NOT(UCk_Utils_AbilityOwner_UE::Has(Get_AbilityHandle()),
@@ -228,7 +228,7 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    Self_Request_ApplyCooldown_OnOwner()
+    DoRequest_ApplyCooldown_OnOwner() const
     -> void
 {
     const auto& DefaultApplyCooldownTag = UCk_Utils_Ability_Settings_UE::Get_Default_ApplyCooldownTag();
@@ -246,7 +246,7 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    Self_Request_TrackTask(
+    DoRequest_TrackTask(
         UObject* InTask)
     -> void
 {
@@ -258,22 +258,22 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    Self_Request_SpawnAbilityCue(
+    DoRequest_SpawnAbilityCue(
         const FCk_AbilityCue_Params&  InReplicatedParams,
-        FGameplayTag InAbilityCueName)
+        FGameplayTag InAbilityCueName) const
     -> void
 {
     UCk_Utils_AbilityCue_UE::Request_Spawn_AbilityCue
     (
         Get_AbilityHandle(),
-        FCk_Request_AbilityCue_Spawn{InAbilityCueName, this}
+        FCk_Request_AbilityCue_Spawn{InAbilityCueName, const_cast<UCk_Ability_Script_PDA*>(this)}
             .Set_ReplicatedParams(InReplicatedParams)
     );
 }
 
 auto
     UCk_Ability_Script_PDA::
-    Self_Get_Status() const
+    DoGet_Status() const
     -> ECk_Ability_Status
 {
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
@@ -286,7 +286,7 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    Self_Get_AbilityEntity() const
+    DoGet_AbilityEntity() const
     -> FCk_Handle
 {
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
@@ -299,7 +299,7 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    Self_Get_AbilityOwnerEntity() const
+    DoGet_AbilityOwnerEntity() const
     -> FCk_Handle
 {
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityOwnerHandle()),

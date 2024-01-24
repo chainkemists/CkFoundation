@@ -339,86 +339,93 @@ private:
 
 private:
     UFUNCTION(BlueprintCallable,
+              BlueprintPure = false,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Request Activate This Ability",
               meta = (CompactNodeTitle="ACTIVATE_ThisAbility", HideSelfPin = true))
     void
-    Self_Request_ActivateAbility(
-        FCk_Ability_ActivationPayload InActivationPayload);
+    DoRequest_ActivateAbility(
+        FCk_Ability_ActivationPayload InActivationPayload) const;
 
     UFUNCTION(BlueprintCallable,
+              BlueprintPure = false,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Request Deactivate This Ability",
               meta = (CompactNodeTitle="DEACTIVATE_ThisAbility", HideSelfPin = true))
     void
-    Self_Request_DeactivateAbility();
+    DoRequest_DeactivateAbility() const;
 
     UFUNCTION(BlueprintCallable,
+              BlueprintPure = false,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Request Apply Cost",
               meta = (CompactNodeTitle="ApplyCost", HideSelfPin = true))
     void
-    Self_Request_ApplyCost();
+    DoRequest_ApplyCost() const;
 
     UFUNCTION(BlueprintCallable,
+              BlueprintPure = false,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Request Apply Cost On Owner",
               meta = (CompactNodeTitle="ApplyCost_OnOwner", HideSelfPin = true))
     void
-    Self_Request_ApplyCost_OnOwner();
+    DoRequest_ApplyCost_OnOwner() const;
 
     UFUNCTION(BlueprintCallable,
+              BlueprintPure = false,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Request Apply Cooldown",
               meta = (CompactNodeTitle="ApplyCooldown", HideSelfPin = true))
     void
-    Self_Request_ApplyCooldown();
+    DoRequest_ApplyCooldown() const;
 
     UFUNCTION(BlueprintCallable,
+              BlueprintPure = false,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Request Apply Cooldown On Owner",
               meta = (CompactNodeTitle="ApplyCooldown_OnOwner", HideSelfPin = true))
     void
-    Self_Request_ApplyCooldown_OnOwner();
+    DoRequest_ApplyCooldown_OnOwner() const;
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Request Track Task",
               meta = (CompactNodeTitle="TRACK_Task", HideSelfPin = true))
     void
-    Self_Request_TrackTask(
+    DoRequest_TrackTask(
         UObject* InTask);
 
     UFUNCTION(BlueprintCallable,
+              BlueprintPure = false,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Request Spawn Ability Cue",
               meta = (CompactNodeTitle="SpawnAbilityCue", HideSelfPin = true))
     void
-    Self_Request_SpawnAbilityCue(
+    DoRequest_SpawnAbilityCue(
         const FCk_AbilityCue_Params& InReplicatedParams,
-        FGameplayTag InAbilityCueName);
+        FGameplayTag InAbilityCueName) const;
 
 private:
-    UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Get Ability Status",
               meta = (CompactNodeTitle="STATUS_ThisAbility", HideSelfPin = true))
     ECk_Ability_Status
-    Self_Get_Status() const;
+    DoGet_Status() const;
 
-    UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Get Ability Entity",
               meta = (CompactNodeTitle="AbilityEntity", HideSelfPin = true))
     FCk_Handle
-    Self_Get_AbilityEntity() const;
+    DoGet_AbilityEntity() const;
 
-    UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Get Ability Owner Entity",
               meta = (CompactNodeTitle="AbilityOwnerEntity", HideSelfPin = true))
     FCk_Handle
-    Self_Get_AbilityOwnerEntity() const;
+    DoGet_AbilityOwnerEntity() const;
 
 private:
     UPROPERTY(EditDefaultsOnly,
