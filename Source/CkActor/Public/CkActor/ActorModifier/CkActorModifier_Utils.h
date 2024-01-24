@@ -20,22 +20,22 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ActorModifier",
-        meta = (AutoCreateRefTerm = "InDelegate"))
+        meta = (AutoCreateRefTerm = "InOptionalPayload, InDelegate"))
     static void
     Request_SpawnActor(
         FCk_Handle InHandle,
         const FCk_Request_ActorModifier_SpawnActor& InRequest,
-        FInstancedStruct InOptionalPayload,
+        const FInstancedStruct& InOptionalPayload,
         const FCk_Delegate_ActorModifier_OnActorSpawned& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ActorModifier",
-        meta = (AutoCreateRefTerm = "InDelegate"))
+        meta = (AutoCreateRefTerm = "InOptionalPayload, InDelegate"))
     static void
     Request_AddActorComponent(
         FCk_Handle InHandle,
         const FCk_Request_ActorModifier_AddActorComponent& InRequest,
-        FInstancedStruct InOptionalPayload,
+        const FInstancedStruct& InOptionalPayload,
         const FCk_Delegate_ActorModifier_OnActorComponentAdded& InDelegate);
 };
 

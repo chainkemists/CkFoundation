@@ -360,35 +360,41 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Record")
+              Category = "Ck|Utils|Record",
+              meta=(AutoCreateRefTerm="InOptionalPayload"))
     static bool
     Get_HasValidEntry_If(
         FCk_Handle InRecordHandle,
+        const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InHandle_OutResult InPredicate);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Record")
+              Category = "Ck|Utils|Record",
+              meta=(AutoCreateRefTerm="InOptionalPayload"))
     static FCk_Handle
     Get_ValidEntry_If(
         FCk_Handle InRecordHandle,
+        const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InHandle_OutResult InPredicate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Record",
               DisplayName="For Each RecordEntry",
-              meta=(AutoCreateRefTerm="InFunc"))
+              meta=(AutoCreateRefTerm="InFunc, InOptionalPayload"))
     static TArray<FCk_Handle>
     ForEach_ValidEntry(
         FCk_Handle InRecordHandle,
+        const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InFunc);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Record",
               DisplayName="For Each RecordEntry IF",
-              meta=(AutoCreateRefTerm="InFunc"))
+              meta=(AutoCreateRefTerm="InOptionalPayload, InFunc"))
     static TArray<FCk_Handle>
     ForEach_ValidEntry_If(
         FCk_Handle InRecordHandle,
+        const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InFunc,
         const FCk_Predicate_InHandle_OutResult& InPredicate);
 

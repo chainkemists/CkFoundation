@@ -128,10 +128,11 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
               DisplayName="For Each Timer",
-              meta=(AutoCreateRefTerm="InDelegate"))
+              meta=(AutoCreateRefTerm="InDelegate, InOptionalPayload"))
     static TArray<FCk_Handle>
     ForEach_Timer(
         FCk_Handle InTimerOwnerEntity,
+        const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_Timer(
