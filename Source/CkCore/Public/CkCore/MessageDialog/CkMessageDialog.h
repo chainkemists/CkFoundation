@@ -107,42 +107,58 @@ public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|MessageDialog")
     static void
-    Ok(FText InMessage, FText InTitle = FText::GetEmpty());
+    Ok(
+        FText InMessage,
+        FText InTitle = FText::GetEmpty());
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|MessageDialog")
     static ECk_MessageDialog_YesNo
-    YesNo(FText InMessage, FText InTitle = FText::GetEmpty());
+    YesNo(
+        FText InMessage,
+        FText InTitle = FText::GetEmpty());
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|MessageDialog")
     static ECk_MessageDialog_OkCancel
-    OkCancel(FText InMessage, FText InTitle = FText::GetEmpty());
+    OkCancel(
+        FText InMessage, 
+        FText InTitle = FText::GetEmpty());
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|MessageDialog")
     static ECk_MessageDialog_YesNoCancel
-    YesNoCancel(FText InMessage, FText InTitle = FText::GetEmpty());
+    YesNoCancel(
+        FText InMessage,
+        FText InTitle = FText::GetEmpty());
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|MessageDialog")
     static ECk_MessageDialog_CancelRetryContinue
-    CancelRetryContinue(FText InMessage, FText InTitle = FText::GetEmpty());
+    CancelRetryContinue(
+        FText InMessage, 
+        FText InTitle = FText::GetEmpty());
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|MessageDialog")
     static ECk_MessageDialog_YesNoYesAllNoAll
-    YesNoYesAllNoAll(FText InMessage, FText InTitle = FText::GetEmpty());
+    YesNoYesAllNoAll(
+        FText InMessage,
+        FText InTitle = FText::GetEmpty());
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|MessageDialog")
     static ECk_MessageDialog_YesNoYesAllNoAllCancel
-    YesNoYesAllNoAllCancel(FText InMessage, FText InTitle = FText::GetEmpty());
+    YesNoYesAllNoAllCancel(
+        FText InMessage,
+        FText InTitle = FText::GetEmpty());
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|MessageDialog")
     static ECk_MessageDialog_YesNoYesAll
-    YesNoYesAll(FText InMessage, FText InTitle = FText::GetEmpty());
+    YesNoYesAll(
+        FText InMessage,
+        FText InTitle = FText::GetEmpty());
 };
 
 // --------------------------------------------------------------------------------------------------------------------
