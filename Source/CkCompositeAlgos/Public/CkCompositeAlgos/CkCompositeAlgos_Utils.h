@@ -19,55 +19,68 @@ public:
 private:
     // Returns true if at least one actor satisfies the predicate
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Algos")
+              Category = "Ck|Utils|Algos",
+              meta=(AutoCreateRefTerm="InOptionalPayload"))
     static bool
     AnyActors_If(
         const TArray<AActor*>& InActors,
+        const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InActor_OutResult InPredicate);
 
     // Returns true if all actors satisfy the predicate
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Algos")
+              Category = "Ck|Utils|Algos",
+              meta=(AutoCreateRefTerm="InOptionalPayload"))
     static bool
     AllActors_If(
         const TArray<AActor*>& InActors,
+        const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InActor_OutResult InPredicate);
 
     // Returns true if at least one entity satisfies the predicate
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Algos")
+              Category = "Ck|Utils|Algos",
+              meta=(AutoCreateRefTerm="InOptionalPayload"))
     static bool
     AnyEntities_If(
         const TArray<FCk_Handle>& InEntities,
+        const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InHandle_OutResult InPredicate);
 
     // Returns true if all entities satisfy the predicate
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Algos")
+              Category = "Ck|Utils|Algos",
+              meta=(AutoCreateRefTerm="InOptionalPayload"))
     static bool
     AllEntities_If(
         const TArray<FCk_Handle>& InEntities,
+        const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InHandle_OutResult InPredicate);
 
 private:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Algos")
+              Category = "Ck|Utils|Algos",
+              meta=(AutoCreateRefTerm="InOptionalPayload"))
     static TArray<AActor*>
     FilterActors_ByPredicate(
         const TArray<AActor*>& InActors,
+        const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InActor_OutResult InPredicate);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Algos")
+              Category = "Ck|Utils|Algos",
+              meta=(AutoCreateRefTerm="InOptionalPayload"))
     static TArray<AActor*>
     FilterActors_ByIsValid(
         const TArray<AActor*>& InActors);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Algos")
+              Category = "Ck|Utils|Algos",
+              meta=(AutoCreateRefTerm="InOptionalPayload"))
     static TArray<FCk_Handle>
     FilterEntities_ByPredicate(
         const TArray<FCk_Handle>& InEntities,
+        const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InHandle_OutResult InPredicate);
 
     UFUNCTION(BlueprintCallable,
@@ -78,10 +91,12 @@ private:
 
 private:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Algos")
+              Category = "Ck|Utils|Algos",
+              meta=(AutoCreateRefTerm="InOptionalPayload"))
     static void
     SortActors_ByPredicate(
         UPARAM(ref) TArray<AActor*>& InActors,
+        const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_In2Actors_OutResult InPredicate);
 
     UFUNCTION(BlueprintCallable,
@@ -93,10 +108,12 @@ private:
         ECk_DistanceSortingPolicy InSortingPolicy);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Algos")
+              Category = "Ck|Utils|Algos",
+              meta=(AutoCreateRefTerm="InOptionalPayload"))
     static void
     SortEntities_ByPredicate(
         UPARAM(ref) TArray<FCk_Handle>& InEntities,
+        const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_In2Handles_OutResult InPredicate);
 
     UFUNCTION(BlueprintCallable,

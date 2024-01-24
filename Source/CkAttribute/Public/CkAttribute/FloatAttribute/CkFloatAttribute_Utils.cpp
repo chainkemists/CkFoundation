@@ -112,6 +112,7 @@ auto
     UCk_Utils_FloatAttribute_UE::
     ForEach_FloatAttribute(
         FCk_Handle                 InAttributeOwner,
+        const FInstancedStruct&    InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
     -> TArray<FCk_Handle>
 {
@@ -120,7 +121,7 @@ auto
     ForEach_FloatAttribute(InAttributeOwner, [&](const FCk_Handle& InAttribute)
     {
         if (InDelegate.IsBound())
-        { InDelegate.Execute(InAttribute); }
+        { InDelegate.Execute(InAttribute, InOptionalPayload); }
         else
         { ToRet.Emplace(InAttribute); }
     });
@@ -155,6 +156,7 @@ auto
     UCk_Utils_FloatAttribute_UE::
     ForEach_FloatAttribute_If(
         FCk_Handle                              InAttributeOwner,
+        const FInstancedStruct&                 InOptionalPayload,
         const FCk_Lambda_InHandle&              InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate)
     -> TArray<FCk_Handle>
@@ -167,7 +169,7 @@ auto
         [&](FCk_Handle InAttribute)
         {
             if (InDelegate.IsBound())
-            { InDelegate.Execute(InAttribute); }
+            { InDelegate.Execute(InAttribute, InOptionalPayload); }
             else
             { ToRet.Emplace(InAttribute); }
         },
@@ -177,7 +179,7 @@ auto
 
             if (InPredicate.IsBound())
             {
-                InPredicate.Execute(InAttribute, PredicateResult);
+                InPredicate.Execute(InAttribute, PredicateResult, InOptionalPayload);
             }
 
             return *PredicateResult;

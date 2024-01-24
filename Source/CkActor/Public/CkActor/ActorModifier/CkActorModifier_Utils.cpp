@@ -15,7 +15,7 @@ auto
     Request_SpawnActor(
         FCk_Handle InHandle,
         const FCk_Request_ActorModifier_SpawnActor& InRequest,
-        FInstancedStruct InOptionalPayload,
+        const FInstancedStruct& InOptionalPayload,
         const FCk_Delegate_ActorModifier_OnActorSpawned& InDelegate)
     -> void
 {
@@ -34,7 +34,7 @@ auto
     Request_AddActorComponent(
         FCk_Handle InHandle,
         const FCk_Request_ActorModifier_AddActorComponent& InRequest,
-        FInstancedStruct InOptionalPayload,
+        const FInstancedStruct& InOptionalPayload,
         const FCk_Delegate_ActorModifier_OnActorComponentAdded& InDelegate)
     -> void
 {

@@ -23,6 +23,7 @@ public class CkEcs : CkModuleRules
 			new string[]
 			{
 				"Core",
+				"StructUtils",
 
 				"CkThirdParty",
 				"CkCore",
