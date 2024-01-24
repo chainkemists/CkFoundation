@@ -46,6 +46,7 @@ public:
     Request_QueryRenderedActors(
         FCk_Handle InHandle,
         const FCk_Request_RenderStatus_QueryRenderedActors& InRequest,
+        FInstancedStruct InOptionalPayload,
         const FCk_Delegate_RenderStatus_OnRenderedActorsQueried& InDelegate);
 };
 

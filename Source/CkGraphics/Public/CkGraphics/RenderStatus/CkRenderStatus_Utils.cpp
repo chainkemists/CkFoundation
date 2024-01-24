@@ -3,6 +3,8 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkGraphics/RenderStatus/CkRenderStatus_Fragment.h"
 
+#include "CkVariables/CkUnrealVariables_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -68,13 +70,14 @@ auto
     Request_QueryRenderedActors(
         FCk_Handle InHandle,
         const FCk_Request_RenderStatus_QueryRenderedActors& InRequest,
+        FInstancedStruct InOptionalPayload,
         const FCk_Delegate_RenderStatus_OnRenderedActorsQueried& InDelegate)
     -> void
 {
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
 
     RequestEntity.AddOrGet<ck::FFragment_RenderStatus_Requests>()._Requests.Add(InRequest);
-
+    UCk_Utils_Variables_InstancedStruct_UE::Set(RequestEntity, FGameplayTag::EmptyTag, InOptionalPayload);
     ck::UUtils_Signal_OnRenderedActorsQueried_PostFireUnbind::Bind(RequestEntity, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
 }
 

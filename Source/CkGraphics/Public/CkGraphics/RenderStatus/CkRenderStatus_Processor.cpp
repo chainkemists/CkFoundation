@@ -7,6 +7,8 @@
 
 #include "CkGraphics/CkGraphics_Utils.h"
 
+#include "CkVariables/CkUnrealVariables_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -36,7 +38,7 @@ namespace ck
         });
 
         InHandle.Remove<MarkedDirtyBy>();
-        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle, ECk_EntityLifetime_DestructionBehavior::DestroyOnlyIfOrphan);
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
     }
 
     auto
@@ -51,7 +53,7 @@ namespace ck
 
         auto RenderedEntityWithActors = TArray<FCk_EntityOwningActor_BasicDetails>{};
 
-        const auto& TryAddToRenderedActorsList = [&](AActor* InActor, FCk_Handle InActorEntity)
+        const auto& TryAddToRenderedActorsList = [&](AActor* InActor, const FCk_Handle& InActorEntity)
         {
             if (ck::Is_NOT_Valid(InActor))
             { return; }
@@ -119,7 +121,8 @@ namespace ck
                                           .Set_RenderGroup(RenderGroup)
                                           .Set_RenderedEntityWithActors(RenderedEntityWithActors);
 
-        UUtils_Signal_OnRenderedActorsQueried::Broadcast(InHandle, MakePayload(RenderedActorsList));
+        UUtils_Signal_OnRenderedActorsQueried::Broadcast(InHandle, MakePayload(RenderedActorsList,
+            UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag)));
     }
 }
 
