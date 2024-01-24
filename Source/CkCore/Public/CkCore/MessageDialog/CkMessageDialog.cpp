@@ -29,8 +29,12 @@ namespace ck_message_dialog
 
 // --------------------------------------------------------------------------------------------------------------------
 
-auto UCk_Utils_MessageDialog_UE::
-    Ok(FText InMessage, FText InTitle) -> void
+auto
+    UCk_Utils_MessageDialog_UE::
+    Ok(
+        FText InMessage,
+        FText InTitle)
+    -> void
 {
     FMessageDialog::Open(
         EAppMsgType::Ok,
@@ -38,17 +42,17 @@ auto UCk_Utils_MessageDialog_UE::
         ck_message_dialog::DoGet_TitleOrNullptr(InTitle));
 }
 
-auto UCk_Utils_MessageDialog_UE::
-    YesNo(FText InMessage, FText InTitle)
-        -> ECk_MessageDialog_YesNo
+auto
+    UCk_Utils_MessageDialog_UE::
+    YesNo(
+        FText InMessage,
+        FText InTitle)
+    -> ECk_MessageDialog_YesNo
 {
-
-    const auto res = FMessageDialog::Open(
+    switch (const auto Res = FMessageDialog::Open(
         EAppMsgType::YesNo,
         InMessage,
-        ck_message_dialog::DoGet_TitleOrNullptr(InTitle));
-
-    switch (res)
+        ck_message_dialog::DoGet_TitleOrNullptr(InTitle)))
     {
         case EAppReturnType::Cancel:
         case EAppReturnType::No:
@@ -61,22 +65,23 @@ auto UCk_Utils_MessageDialog_UE::
         }
         default:
         {
-            CK_INVALID_ENUM(res);
+            CK_INVALID_ENUM(Res);
             return ECk_MessageDialog_YesNo::No;
         }
     }
 }
 
-auto UCk_Utils_MessageDialog_UE::
-    OkCancel(FText InMessage, FText InTitle)
-        -> ECk_MessageDialog_OkCancel
+auto
+    UCk_Utils_MessageDialog_UE::
+    OkCancel(
+        FText InMessage,
+        FText InTitle)
+    -> ECk_MessageDialog_OkCancel
 {
-    const auto res = FMessageDialog::Open(
+    switch (const auto Res = FMessageDialog::Open(
         EAppMsgType::OkCancel,
         InMessage,
-        ck_message_dialog::DoGet_TitleOrNullptr(InTitle));
-
-    switch (res)
+        ck_message_dialog::DoGet_TitleOrNullptr(InTitle)))
     {
         case EAppReturnType::Ok:
         {
@@ -88,22 +93,23 @@ auto UCk_Utils_MessageDialog_UE::
         }
         default:
         {
-            CK_INVALID_ENUM(res);
+            CK_INVALID_ENUM(Res);
             return ECk_MessageDialog_OkCancel::Cancel;
         }
     }
 }
 
-auto UCk_Utils_MessageDialog_UE::
-    YesNoCancel(FText InMessage, FText InTitle)
-        -> ECk_MessageDialog_YesNoCancel
+auto
+    UCk_Utils_MessageDialog_UE::
+    YesNoCancel(
+        FText InMessage,
+        FText InTitle)
+    -> ECk_MessageDialog_YesNoCancel
 {
-    const auto res = FMessageDialog::Open(
+    switch (const auto Res = FMessageDialog::Open(
         EAppMsgType::YesNoCancel,
         InMessage,
-        ck_message_dialog::DoGet_TitleOrNullptr(InTitle));
-
-    switch (res)
+        ck_message_dialog::DoGet_TitleOrNullptr(InTitle)))
     {
         case EAppReturnType::Yes:
         {
@@ -119,22 +125,23 @@ auto UCk_Utils_MessageDialog_UE::
         }
         default:
         {
-            CK_INVALID_ENUM(res);
+            CK_INVALID_ENUM(Res);
             return ECk_MessageDialog_YesNoCancel::Cancel;
         }
     }
 }
 
-auto UCk_Utils_MessageDialog_UE::
-    CancelRetryContinue(FText InMessage, FText InTitle)
-        -> ECk_MessageDialog_CancelRetryContinue
+auto
+    UCk_Utils_MessageDialog_UE::
+    CancelRetryContinue(
+        FText InMessage,
+        FText InTitle)
+    -> ECk_MessageDialog_CancelRetryContinue
 {
-    const auto res = FMessageDialog::Open(
+    switch (const auto Res = FMessageDialog::Open(
         EAppMsgType::CancelRetryContinue,
         InMessage,
-        ck_message_dialog::DoGet_TitleOrNullptr(InTitle));
-
-    switch (res)
+        ck_message_dialog::DoGet_TitleOrNullptr(InTitle)))
     {
         case EAppReturnType::Cancel:
         {
@@ -150,22 +157,23 @@ auto UCk_Utils_MessageDialog_UE::
         }
         default:
         {
-            CK_INVALID_ENUM(res);
+            CK_INVALID_ENUM(Res);
             return ECk_MessageDialog_CancelRetryContinue::Cancel;
         }
     }
 }
 
-auto UCk_Utils_MessageDialog_UE::
-    YesNoYesAllNoAll(FText InMessage, FText InTitle)
-        -> ECk_MessageDialog_YesNoYesAllNoAll
+auto
+    UCk_Utils_MessageDialog_UE::
+    YesNoYesAllNoAll(
+        FText InMessage,
+        FText InTitle)
+    -> ECk_MessageDialog_YesNoYesAllNoAll
 {
-    const auto res = FMessageDialog::Open(
+    switch (const auto Res = FMessageDialog::Open(
         EAppMsgType::YesNoYesAllNoAll,
         InMessage,
-        ck_message_dialog::DoGet_TitleOrNullptr(InTitle));
-
-    switch (res)
+        ck_message_dialog::DoGet_TitleOrNullptr(InTitle)))
     {
         case EAppReturnType::Yes:
         {
@@ -186,22 +194,23 @@ auto UCk_Utils_MessageDialog_UE::
         }
         default:
         {
-            CK_INVALID_ENUM(res);
+            CK_INVALID_ENUM(Res);
             return ECk_MessageDialog_YesNoYesAllNoAll::NoAll;
         }
     }
 }
 
-auto UCk_Utils_MessageDialog_UE::
-    YesNoYesAllNoAllCancel(FText InMessage, FText InTitle)
-        -> ECk_MessageDialog_YesNoYesAllNoAllCancel
+auto
+    UCk_Utils_MessageDialog_UE::
+    YesNoYesAllNoAllCancel(
+        FText InMessage,
+        FText InTitle)
+    -> ECk_MessageDialog_YesNoYesAllNoAllCancel
 {
-    const auto res = FMessageDialog::Open(
+    switch (const auto Res = FMessageDialog::Open(
         EAppMsgType::YesNoYesAllNoAllCancel,
         InMessage,
-        ck_message_dialog::DoGet_TitleOrNullptr(InTitle));
-
-    switch (res)
+        ck_message_dialog::DoGet_TitleOrNullptr(InTitle)))
     {
         case EAppReturnType::Yes:
         {
@@ -225,22 +234,23 @@ auto UCk_Utils_MessageDialog_UE::
         }
         default:
         {
-            CK_INVALID_ENUM(res);
+            CK_INVALID_ENUM(Res);
             return ECk_MessageDialog_YesNoYesAllNoAllCancel::NoAll;
         }
     }
 }
 
-auto UCk_Utils_MessageDialog_UE::
-    YesNoYesAll(FText InMessage, FText InTitle)
-        -> ECk_MessageDialog_YesNoYesAll
+auto
+    UCk_Utils_MessageDialog_UE::
+    YesNoYesAll(
+        FText InMessage,
+        FText InTitle)
+    -> ECk_MessageDialog_YesNoYesAll
 {
-    const auto res = FMessageDialog::Open(
+    switch (const auto Res = FMessageDialog::Open(
         EAppMsgType::YesNoYesAll,
         InMessage,
-        ck_message_dialog::DoGet_TitleOrNullptr(InTitle));
-
-    switch (res)
+        ck_message_dialog::DoGet_TitleOrNullptr(InTitle)))
     {
         case EAppReturnType::Yes:
         {
@@ -257,7 +267,7 @@ auto UCk_Utils_MessageDialog_UE::
         }
         default:
         {
-            CK_INVALID_ENUM(res);
+            CK_INVALID_ENUM(Res);
             return ECk_MessageDialog_YesNoYesAll::No;
         }
     }
