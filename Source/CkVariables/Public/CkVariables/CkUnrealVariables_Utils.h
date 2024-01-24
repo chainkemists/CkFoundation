@@ -24,16 +24,16 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="Get Bool Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[BoolVariable] Get Value",
+              Category = "Ck|Utils|Variables|Bool")
     static bool
     Get(
         FCk_Handle InHandle,
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="Set Bool Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[BoolVariable] Set Value",
+              Category = "Ck|Utils|Variables|Bool")
     static void
     Set(
         FCk_Handle InHandle,
@@ -57,16 +57,16 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="Get Int32 Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[Int32Variable] Get Value",
+              Category = "Ck|Utils|Variables|Int32")
     static int32
     Get(
         FCk_Handle InHandle,
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="Set Int32 Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[Int32Variable] Set Value",
+              Category = "Ck|Utils|Variables|Int32")
     static void
     Set(
         FCk_Handle InHandle,
@@ -90,16 +90,16 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="Get Int64 Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[Int64Variable] Get Value",
+              Category = "Ck|Utils|Variables|Int64")
     static int64
     Get(
         FCk_Handle InHandle,
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="Set Int64 Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[Int64Variable] Set Value",
+              Category = "Ck|Utils|Variables|Int64")
     static void
     Set(
         FCk_Handle InHandle,
@@ -123,16 +123,16 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="Get Float Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[FloatVariable] Get Value",
+              Category = "Ck|Utils|Variables|Float")
     static float
     Get(
         FCk_Handle InHandle,
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="Set Float Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[FloatVariable] Set Value",
+              Category = "Ck|Utils|Variables|Float")
     static void
     Set(
         FCk_Handle InHandle,
@@ -156,16 +156,18 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="Get Name Variable",
-              Category = "Ck|Utils|Variables")
-    static FName Get(
+              DisplayName="[NameVariable] Get Value",
+              Category = "Ck|Utils|Variables|Name")
+    static FName
+    Get(
         FCk_Handle InHandle,
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="Set Name Variable",
-              Category = "Ck|Utils|Variables")
-    static void Set(
+              DisplayName="[NameVariable] Set Value",
+              Category = "Ck|Utils|Variables|Name")
+    static void
+    Set(
         FCk_Handle InHandle,
         FGameplayTag InVariableName,
         FName InValue);
@@ -187,16 +189,16 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="Get String Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[StringVariable] Get Value",
+              Category = "Ck|Utils|Variables|String")
     static const FString&
     Get(
         FCk_Handle InHandle,
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="Set String Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[StringVariable] Set Value",
+              Category = "Ck|Utils|Variables|String")
     static void
     Set(
         FCk_Handle InHandle,
@@ -220,16 +222,16 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="Get Text Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[TextVariable] Get Value",
+              Category = "Ck|Utils|Variables|Text")
     static FText
     Get(
         FCk_Handle InHandle,
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="Set Text Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[TextVariable] Set Value",
+              Category = "Ck|Utils|Variables|Text")
     static void
     Set(
         FCk_Handle InHandle,
@@ -253,16 +255,16 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="Get Vec3 Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[Vec3Variable] Get Value",
+              Category = "Ck|Utils|Variables|Vec3")
     static FVector
     Get(
         FCk_Handle InHandle,
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="Set Vec3 Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[Vec3Variable] Set Value",
+              Category = "Ck|Utils|Variables|Vec3")
     static void
     Set(
         FCk_Handle InHandle,
@@ -286,16 +288,16 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="Get Vec2 Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[Vec2Variable] Get Value",
+              Category = "Ck|Utils|Variables|Vec2")
     static FVector2D
     Get(
         FCk_Handle InHandle,
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="Set Vec2 Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[Vec2Variable] Set Value",
+              Category = "Ck|Utils|Variables|Vec2")
     static void
     Set(
         FCk_Handle InHandle,
@@ -319,16 +321,16 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="Get Rotator Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[RotatorVariable] Get Value",
+              Category = "Ck|Utils|Variables|Rotator")
     static FRotator
-        Get(
+    Get(
         FCk_Handle InHandle,
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="Set Rotator Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[RotatorVariable] Set Value",
+              Category = "Ck|Utils|Variables|Rotator")
     static void
     Set(
         FCk_Handle InHandle,
@@ -352,16 +354,16 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="Get Transform  Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[TransformVariable] Get Value",
+              Category = "Ck|Utils|Variables|Transform")
     static const FTransform&
     Get(
         FCk_Handle InHandle,
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="Set Transform Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[TransformVariable] Set Value",
+              Category = "Ck|Utils|Variables|Transform")
     static void
     Set(
         FCk_Handle InHandle,
@@ -385,16 +387,16 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="Get InstancedStruct Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[InstancedStructVariable] Get Value",
+              Category = "Ck|Utils|Variables|InstancedStruct")
     static const FInstancedStruct&
     Get(
         FCk_Handle InHandle,
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="Set InstancedStruct Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[InstancedStructVariable] Set Value",
+              Category = "Ck|Utils|Variables|InstancedStruct")
     static void
     Set(
         FCk_Handle InHandle,
@@ -418,8 +420,8 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="Get Object Variable",
-              Category = "Ck|Utils|Variables",
+              DisplayName="[UObjectVariable] Get Value",
+              Category = "Ck|Utils|Variables|UObject",
               meta = (DeterminesOutputType = "InObject"))
     static UObject*
     Get(
@@ -428,8 +430,8 @@ public:
         TSubclassOf<UObject> InObject);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="Set Object Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[UObjectVariable] Set Value",
+              Category = "Ck|Utils|Variables|UObject")
     static void
     Set(
         FCk_Handle InHandle,
@@ -453,8 +455,8 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="Get SubclassOf Variable",
-              Category = "Ck|Utils|Variables",
+              DisplayName="[SubclassOfVariable] Get Value",
+              Category = "Ck|Utils|Variables|SubclassOf",
               meta = (DeterminesOutputType = "InObject"))
     static TSubclassOf<UObject>
     Get(
@@ -463,8 +465,8 @@ public:
         TSubclassOf<UObject> InObject);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="Set SubclassOf Variable",
-              Category = "Ck|Utils|Variables")
+              DisplayName="[SubclassOfVariable] Set Value",
+              Category = "Ck|Utils|Variables|SubclassOf")
     static void
     Set(
         FCk_Handle InHandle,
