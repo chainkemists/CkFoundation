@@ -308,26 +308,26 @@ protected:
 
 
 protected:
-    UFUNCTION(BlueprintNativeEvent,
+    UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|Ability|Script",
               meta     = (DisplayName = "OnActivateAbility"))
     void
     DoOnActivateAbility(
         const FCk_Ability_ActivationPayload& InActivationPayload);
 
-    UFUNCTION(BlueprintNativeEvent,
+    UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|Ability|Script",
               meta     = (DisplayName = "OnDeactivateAbility"))
     void
     DoOnDeactivateAbility();
 
-    UFUNCTION(BlueprintNativeEvent,
+    UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|Ability|Script",
               meta     = (DisplayName = "OnGiveAbility"))
     void
     DoOnGiveAbility();
 
-    UFUNCTION(BlueprintNativeEvent,
+    UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|Ability|Script",
               meta     = (DisplayName = "OnRevokeAbility"))
     void

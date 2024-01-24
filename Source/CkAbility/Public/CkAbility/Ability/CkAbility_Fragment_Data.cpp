@@ -341,34 +341,3 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Ability_Script_PDA::
-    DoOnDeactivateAbility_Implementation()
-    -> void
-{
-}
-
-auto
-    UCk_Ability_Script_PDA::
-    DoOnActivateAbility_Implementation(
-        const FCk_Ability_ActivationPayload& InActivationPayload)
-    -> void
-{
-}
-
-auto
-    UCk_Ability_Script_PDA::
-    DoOnGiveAbility_Implementation()
-    -> void
-{
-}
-
-auto
-    UCk_Ability_Script_PDA::
-    DoOnRevokeAbility_Implementation()
-    -> void
-{
-}
-
-// --------------------------------------------------------------------------------------------------------------------
