@@ -270,8 +270,12 @@ public:
         }                                                                                                                                  \
         case ECk_MessageDialog_YesNoYesAll::No:                                                                                            \
         {                                                                                                                                  \
-            const auto& ensureAns = ensureAlwaysMsgf(false, TEXT("[DEBUG BREAK HIT]"));                                                    \
-            return ensureAns;                                                                                                              \
+            const auto& EnsureAns = ensureAlwaysMsgf(false, TEXT("[DEBUG BREAK HIT]"));                                                    \
+                                                                                                                                           \
+            if (NOT BpStackTrace.IsEmpty())                                                                                                \
+            { UCk_Utils_Debug_StackTrace_UE::Try_BreakInScript(nullptr); }                                                                 \
+                                                                                                                                           \
+            return EnsureAns;                                                                                                              \
         }                                                                                                                                  \
         case ECk_MessageDialog_YesNoYesAll::YesAll:                                                                                        \
         {                                                                                                                                  \
