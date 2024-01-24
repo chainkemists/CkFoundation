@@ -14,11 +14,14 @@ public class CkGraphics : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
+            "StructUtils",
+            "GameplayTags",
 
             "CkCore",
             "CkEcs",
             "CkLog",
             "CkSignal",
+            "CkVariables"
         });
     }
 }

@@ -344,8 +344,9 @@ auto
         FCk_Request_ActorModifier_AddActorComponent{T_MarkerOrSensorCompType::StaticClass()}
             .Set_ComponentParams(Make_MarkerOrSensor_ComponentParams())
             .Set_IsUnique(false)
-            .Set_InitializerFunc(Make_MarkerOrSensor_InitializerFunction<T_MarkerOrSensorCompType, T_MarkerOrSensorParams, T_MarkerOrSensorShapeType>(InMarkerOrSensorEntity, InMarkerOrSensorParams)),
-        {}
+            .Set_InitializerFunc(Make_MarkerOrSensor_InitializerFunction<T_MarkerOrSensorCompType, T_MarkerOrSensorParams, T_MarkerOrSensorShapeType>(
+                InMarkerOrSensorEntity, InMarkerOrSensorParams)),
+        {}, {}
     );
 }
 

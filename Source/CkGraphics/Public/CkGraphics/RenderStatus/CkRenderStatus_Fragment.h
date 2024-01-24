@@ -64,7 +64,8 @@ namespace ck
         CKGRAPHICS_API,
         OnRenderedActorsQueried,
         FCk_Delegate_RenderStatus_OnRenderedActorsQueried_MC,
-        FCk_RenderedActorsList);
+        FCk_RenderedActorsList,
+        FInstancedStruct);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
