@@ -287,7 +287,7 @@ auto
         { ECk_Direction_3D::Back,    FCk_FloatRange(0.5f, 1.0f) }
     };
 
-    const auto& FoundDirection = std::find_if
+    const auto& FoundDirection = std::ranges::find_if
     (
         DirectionThresholds.begin(),
         DirectionThresholds.end(),
@@ -335,6 +335,50 @@ auto
     const auto Vec = InTo - InFrom;
 
     return Get_DirectionAndLength(Vec);
+}
+
+auto
+    UCk_Utils_ActorVector3_UE::
+    Get_DirectionVectorFromActor(
+        const AActor*    InActor,
+        ECk_Direction_3D InDirection)
+    -> FVector
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Unable to get direction vector from Actor [{}] because it is INVALID"), InActor)
+    { return {}; }
+
+    switch (InDirection)
+    {
+        case ECk_Direction_3D::Forward:
+        {
+            return InActor->GetActorForwardVector();
+        }
+        case ECk_Direction_3D::Left:
+        {
+            return ck::Negate(InActor->GetActorRightVector());
+        }
+        case ECk_Direction_3D::Right:
+        {
+            return InActor->GetActorRightVector();
+        }
+        case ECk_Direction_3D::Back:
+        {
+            return ck::Negate(InActor->GetActorForwardVector());
+        }
+        case ECk_Direction_3D::Up:
+        {
+            return InActor->GetActorUpVector();
+        }
+        case ECk_Direction_3D::Down:
+        {
+            return ck::Negate(InActor->GetActorUpVector());
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InDirection);
+            return {};
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -498,8 +542,6 @@ auto
         float            InDistanceFromOriginInDirection)
     -> FVector2D
 {
-    // check if FVector2D is normalized
-
     CK_ENSURE_IF_NOT(ck_vector::IsNormalized(InDirection),
         TEXT("Direciton Vector [{}] is NOT normalized. Normalizing for you but this will NOT work in Shipping."),
         InDirection)
