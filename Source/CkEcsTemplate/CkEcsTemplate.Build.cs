@@ -14,6 +14,8 @@ public class CkEcsTemplate : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
+            "StructUtils",
+            "GameplayTags",
 
             "CkCore",
             "CkEcs",
