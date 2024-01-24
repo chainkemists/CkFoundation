@@ -126,9 +126,10 @@ auto
         FStringBuilderBase StringBuilder;
         RawStack[FrameIdx]->GetStackDescription(StringBuilder);
         StackTrace.Emplace(StringBuilder.ToString());
-
-        _LastStackTraceContextObject = RawStack[FrameIdx]->Object;
     }
+
+    if (NOT RawStack.IsEmpty())
+    { _LastStackTraceContextObject = RawStack.Last()->Object; }
 #endif
 
     return StackTrace;
@@ -159,9 +160,10 @@ auto
             StackDescription->Node,
             StackDescription->MostRecentProperty
         );
-
-        _LastStackTraceContextObject = RawStack[FrameIdx]->Object;
     }
+
+    if (NOT RawStack.IsEmpty())
+    { _LastStackTraceContextObject = RawStack.Last()->Object; }
 #endif
 
     return StackTrace;
