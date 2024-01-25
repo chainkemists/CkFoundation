@@ -27,7 +27,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimAsset",
-              DisplayName="Add New Animation")
+              DisplayName="[Ck][AnimAsset] Add New Animation")
     static void
     Add(
         FCk_Handle InHandle,
@@ -35,7 +35,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimAsset",
-              DisplayName="Add Multiple New Animation")
+              DisplayName="[Ck][AnimAsset] Add Multiple New Animations")
     static void
     AddMultiple(
         FCk_Handle InHandle,
@@ -43,7 +43,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimAsset",
-              DisplayName="Has Animation")
+              DisplayName="[Ck][AnimAsset] Has Animation")
     static bool
     Has(
         FCk_Handle InAnimAssetOwnerEntity,
@@ -51,14 +51,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimAsset",
-              DisplayName="Has Any Animation")
+              DisplayName="[Ck][AnimAsset] Has Any Animation")
     static bool
     Has_Any(
         FCk_Handle InAnimAssetOwnerEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimAsset",
-              DisplayName="Ensure Has Animation")
+              DisplayName="[Ck][AnimAsset] Ensure Has Animation")
     static bool
     Ensure(
         FCk_Handle InAnimAssetOwnerEntity,
@@ -66,7 +66,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimAsset",
-              DisplayName="Ensure Has Any Animation")
+              DisplayName="[Ck][AnimAsset] Ensure Has Any Animation")
     static bool
     Ensure_Any(
         FCk_Handle InAnimAssetOwnerEntity);
@@ -74,14 +74,14 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimAsset",
-              DisplayName="Get All Animations")
+              DisplayName="[Ck][AnimAsset] Get All Animations")
     static TArray<FGameplayTag>
     Get_All(
         FCk_Handle InAnimAssetOwnerEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimAsset",
-              DisplayName="Get Animation Asset Info")
+              DisplayName="[Ck][AnimAsset] Get Animation Asset Info")
     static FCk_AnimAsset_Animation
     Get_Animation(
         FCk_Handle InAnimAssetOwnerEntity,

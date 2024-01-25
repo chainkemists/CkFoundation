@@ -33,7 +33,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Byte",
-              DisplayName="Add New Byte Attribute")
+              DisplayName="[Ck][ByteAttribute] Add New Attribute")
     static void
     Add(
         FCk_Handle InHandle,
@@ -42,7 +42,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Byte",
-              DisplayName="Add Multiple New Byte Attributes")
+              DisplayName="[Ck][ByteAttribute] Add Multiple New Attributes")
     static void
     AddMultiple(
         FCk_Handle InHandle,
@@ -51,7 +51,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Byte",
-              DisplayName="Has Byte Attribute")
+              DisplayName="[Ck][ByteAttribute] Has Attribute")
     static bool
     Has(
         FCk_Handle InAttributeOwnerEntity,
@@ -59,14 +59,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Byte",
-              DisplayName="Has Any Byte Attribute")
+              DisplayName="[Ck][ByteAttribute] Has Any Attribute")
     static bool
     Has_Any(
         FCk_Handle InAttributeOwnerEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Byte",
-              DisplayName="Ensure Has Byte Attribute")
+              DisplayName="[Ck][ByteAttribute] Ensure Has Attribute")
     static bool
     Ensure(
         FCk_Handle InAttributeOwnerEntity,
@@ -74,7 +74,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Byte",
-              DisplayName="Ensure Has Any Byte Attribute")
+              DisplayName="[Ck][ByteAttribute] Ensure Has Any Attribute")
     static bool
     Ensure_Any(
         FCk_Handle InAttributeOwnerEntity);
@@ -82,7 +82,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Byte",
-              DisplayName="For Each Byte Attribute",
+              DisplayName="[Ck][ByteAttribute] For Each",
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle>
     ForEach_ByteAttribute(
@@ -96,7 +96,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Byte",
-              DisplayName="For Each Byte Attribute If",
+              DisplayName="[Ck][ByteAttribute] For Each If",
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle>
     ForEach_ByteAttribute_If(
@@ -113,7 +113,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Byte",
-              DisplayName="Get Byte Attribute Base Value")
+              DisplayName="[Ck][ByteAttribute] Get Base Value")
     static uint8
     Get_BaseValue(
         FCk_Handle InAttributeOwnerEntity,
@@ -121,7 +121,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Byte",
-              DisplayName="Get Byte Attribute Bonus Value")
+              DisplayName="[Ck][ByteAttribute] Get Bonus Value")
     static uint8
     Get_BonusValue(
         FCk_Handle InAttributeOwnerEntity,
@@ -129,7 +129,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Byte",
-              DisplayName="Get Byte Attribute Final Value")
+              DisplayName="[Ck][ByteAttribute] Get Final Value")
     static uint8
     Get_FinalValue(
         FCk_Handle InAttributeOwnerEntity,
@@ -138,7 +138,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Byte",
-              DisplayName="Request Override Byte Attribute Base Value")
+              DisplayName="[Ck][ByteAttribute] Request Override Base Value")
     static void
     Request_Override(
         FCk_Handle InAttributeOwnerEntity,
@@ -148,7 +148,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Byte",
-              DisplayName = "Bind To On Byte Attribute Value Changed")
+              DisplayName = "[Ck][ByteAttribute] Bind To OnValueChanged")
     static void
     BindTo_OnValueChanged(
         FCk_Handle InAttributeOwnerEntity,
@@ -159,7 +159,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Byte",
-              DisplayName = "Unbind From On Byte Attribute Value Changed")
+              DisplayName = "[Ck][ByteAttribute] Unbind From OnValueChanged")
     static void
     UnbindFrom_OnValueChanged(
         FCk_Handle InAttributeOwnerEntity,
@@ -183,7 +183,7 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Byte",
-              DisplayName="Add Byte Attribute Modifier")
+              DisplayName="[Ck][ByteAttribute] Add Modifier")
     static void
     Add(
         FCk_Handle InAttributeOwnerEntity,
@@ -192,7 +192,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AttributeModifier|Byte",
-              DisplayName="Has Byte Attribute Modifier")
+              DisplayName="[Ck][ByteAttribute] Has Modifier")
     static bool
     Has(
         FCk_Handle InAttributeOwnerEntity,
@@ -201,7 +201,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AttributeModifier|Byte",
-              DisplayName="Ensure Has Byte Attribute Modifier")
+              DisplayName="[Ck][ByteAttribute] Ensure Has Modifier")
     static bool
     Ensure(
         FCk_Handle InAttributeOwnerEntity,
@@ -210,7 +210,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Byte",
-              DisplayName="Remove Byte Attribute Modifier")
+              DisplayName="[Ck][ByteAttribute] Remove Modifier")
     static void
     Remove(
         FCk_Handle InAttributeOwnerEntity,

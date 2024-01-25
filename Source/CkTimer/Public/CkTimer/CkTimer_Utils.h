@@ -31,7 +31,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="Add New Timer")
+              DisplayName="[Ck][Timer] Add New Timer")
     static UPARAM(DisplayName="Timer Handle") FCk_Handle
     Add(
         FCk_Handle InHandle,
@@ -39,7 +39,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="AddOrReplace Timer")
+              DisplayName="[Ck][Timer] Add Or Replace Timer")
     static UPARAM(DisplayName="Timer Handle") FCk_Handle
     AddOrReplace(
         FCk_Handle InTimerOwnerEntity,
@@ -47,7 +47,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="Add Multiple New Timers")
+              DisplayName="[Ck][Timer] Add Multiple New Timers")
     static TArray<FCk_Handle>
     AddMultiple(
         FCk_Handle InHandle,
@@ -67,14 +67,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Timer",
-              DisplayName="Has Timer")
+              DisplayName="[Ck][Timer] Has Timer")
     static bool
     Has(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Timer",
-              DisplayName="Ensure Has Timer")
+              DisplayName="[Ck][Timer] Ensure Has Timer")
     static bool
     Ensure(
         FCk_Handle InTimer);
@@ -82,7 +82,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Timer",
-              DisplayName="Get Timer Handle")
+              DisplayName="[Ck][Timer] Get Handle")
     static UPARAM(DisplayName="Timer Handle") FCk_Handle
     Get_Timer(
         FCk_Handle InTimerOwnerEntity,
@@ -91,35 +91,35 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Timer",
-              DisplayName="Get Timer Name")
+              DisplayName="[Ck][Timer] Get Name")
     static FGameplayTag
     Get_Name(
         FCk_Handle InTimerEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Timer",
-              DisplayName="Get Timer Current State")
+              DisplayName="[Ck][Timer] Get Current State")
     static ECk_Timer_State
     Get_CurrentState(
         FCk_Handle InTimer);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Timer",
-              DisplayName="Get Timer Count Direction")
+              DisplayName="[Ck][Timer] Get Count Direction")
     static ECk_Timer_CountDirection
     Get_CountDirection(
         FCk_Handle InTimer);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Timer",
-              DisplayName="Get Timer Behavior")
+              DisplayName="[Ck][Timer] Get Behavior")
     static ECk_Timer_Behavior
     Get_Behavior(
         FCk_Handle InTimer);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Timer",
-              DisplayName="Get Timer Current Value")
+              DisplayName="[Ck][Timer] Get Current Value")
     static FCk_Chrono
     Get_CurrentTimerValue(
         FCk_Handle InTimer);
@@ -127,7 +127,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="For Each Timer",
+              DisplayName="[Ck][Timer] For Each",
               meta=(AutoCreateRefTerm="InDelegate, InOptionalPayload"))
     static TArray<FCk_Handle>
     ForEach_Timer(
@@ -142,42 +142,42 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="Request Reset Timer")
+              DisplayName="[Ck][Timer] Request Reset")
     static void
     Request_Reset(
         FCk_Handle InTimer);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="Request Complete Timer")
+              DisplayName="[Ck][Timer] Request Complete")
     static void
     Request_Complete(
         FCk_Handle InTimer);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="Request Stop Timer")
+              DisplayName="[Ck][Timer] Request Stop")
     static void
     Request_Stop(
         FCk_Handle InTimer);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="Request Pause Timer")
+              DisplayName="[Ck][Timer] Request Pause")
     static void
     Request_Pause(
         FCk_Handle InTimer);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="Request Resume Timer")
+              DisplayName="[Ck][Timer] Request Resume")
     static void
     Request_Resume(
         FCk_Handle InTimer);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="Request Jump Timer")
+              DisplayName="[Ck][Timer] Request Jump")
     static void
     Request_Jump(
         FCk_Handle InTimer,
@@ -185,7 +185,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="Request Consume Timer")
+              DisplayName="[Ck][Timer] Request Consume")
     static void
     Request_Consume(
         FCk_Handle InTimer,
@@ -193,7 +193,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="Request Change Count Direction")
+              DisplayName="[Ck][Timer] Request Change Count Direction")
     static void
     Request_ChangeCountDirection(
         FCk_Handle InTimer,
@@ -201,7 +201,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName="Request Reverse Direction")
+              DisplayName="[Ck][Timer] Request Reverse Direction")
     static void
     Request_ReverseDirection(
         FCk_Handle InTimer);
@@ -209,18 +209,18 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName = "Bind To Timer Reset")
+              DisplayName = "[Ck][Timer] Bind To OnReset")
     static void
-    BindTo_OnTimerReset(
+    BindTo_OnReset(
         FCk_Handle InTimerEntity,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName = "Bind To Timer Stop")
+              DisplayName = "[Ck][Timer] Bind To OnStop")
     static void
-    BindTo_OnTimerStop(
+    BindTo_OnStop(
         FCk_Handle InTimerEntity,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate);
@@ -228,45 +228,45 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName = "Bind To Timer Pause")
+              DisplayName = "[Ck][Timer] Bind To OnPause")
     static void
-    BindTo_OnTimerPause(
+    BindTo_OnPause(
         FCk_Handle InTimerEntity,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName = "Bind To Timer Resume")
+              DisplayName = "[Ck][Timer] Bind To OnResume")
     static void
-    BindTo_OnTimerResume(
+    BindTo_OnResume(
         FCk_Handle InTimerEntity,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName = "Bind To Timer Done")
+              DisplayName = "[Ck][Timer] Bind To OnDone")
     static void
-    BindTo_OnTimerDone(
+    BindTo_OnDone(
         FCk_Handle InTimerEntity,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName = "Bind To Timer Depleted")
+              DisplayName = "[Ck][Timer] Bind To OnDepleted")
     static void
-    BindTo_OnTimerDepleted(
+    BindTo_OnDepleted(
         FCk_Handle InTimerEntity,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName = "Bind To Timer Update")
+              DisplayName = "[Ck][Timer] Bind To OnUpdate")
     static void
-    BindTo_OnTimerUpdate(
+    BindTo_OnUpdate(
         FCk_Handle InTimerEntity,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate);
@@ -274,58 +274,58 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName = "Unbind From Timer Reset")
+              DisplayName = "[Ck][Timer] Unbind From OnReset")
     static void
-    UnbindFrom_OnTimerReset(
+    UnbindFrom_OnReset(
         FCk_Handle InTimerEntity,
         const FCk_Delegate_Timer& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName = "Unbind From Timer Stop")
+              DisplayName = "[Ck][Timer] Unbind From OnStop")
     static void
-    UnbindFrom_OnTimerStop(
+    UnbindFrom_OnStop(
         FCk_Handle InTimerEntity,
         const FCk_Delegate_Timer& InDelegate);
 
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName = "Unbind From Timer Pause")
+              DisplayName = "[Ck][Timer] Unbind From OnPause")
     static void
-    UnbindFrom_OnTimerPause(
+    UnbindFrom_OnPause(
         FCk_Handle InTimerEntity,
         const FCk_Delegate_Timer& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName = "Unbind From Timer Resume")
+              DisplayName = "[Ck][Timer] Unbind From OnResume")
     static void
-    UnbindFrom_OnTimerResume(
+    UnbindFrom_OnResume(
         FCk_Handle InTimerEntity,
         const FCk_Delegate_Timer& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName = "Unbind From Timer Done")
+              DisplayName = "[Ck][Timer] Unbind From OnDone")
     static void
-    UnbindFrom_OnTimerDone(
+    UnbindFrom_OnDone(
         FCk_Handle InTimerEntity,
         const FCk_Delegate_Timer& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName = "Unbind From Timer Depleted")
+              DisplayName = "[Ck][Timer] Unbind From OnDepleted")
     static void
-    UnbindFrom_OnTimerDepleted(
+    UnbindFrom_OnDepleted(
         FCk_Handle InTimerEntity,
         const FCk_Delegate_Timer& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
-              DisplayName = "Unbind From Timer Update")
+              DisplayName = "[Ck][Timer] Unbind From OnUpdate")
     static void
-    UnbindFrom_OnTimerUpdate(
+    UnbindFrom_OnUpdate(
         FCk_Handle InTimerEntity,
         const FCk_Delegate_Timer& InDelegate);
 };

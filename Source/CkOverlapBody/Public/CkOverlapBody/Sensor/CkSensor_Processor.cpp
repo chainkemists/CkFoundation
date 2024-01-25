@@ -506,7 +506,7 @@ namespace ck
             const auto& SensorName = InSensorParams.Get_Params().Get_SensorName();
             const auto& OuterForDebugDraw = InSensorCurrent.Get_AttachedEntityAndActor().Get_Actor().Get();
 
-            UCk_Utils_Sensor_UE::PreviewSensor(OuterForDebugDraw, FCk_Handle{ InSensorEntity, _Registry } ,SensorName);
+            UCk_Utils_Sensor_UE::Preview(OuterForDebugDraw, FCk_Handle{ InSensorEntity, _Registry } ,SensorName);
         });
     }
 }

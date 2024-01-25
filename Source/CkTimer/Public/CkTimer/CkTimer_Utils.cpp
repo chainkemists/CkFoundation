@@ -359,7 +359,7 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
-    BindTo_OnTimerReset(
+    BindTo_OnReset(
         FCk_Handle InTimerEntity,
         ECk_Signal_BindingPolicy  InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate)
@@ -373,7 +373,7 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
-    BindTo_OnTimerStop(
+    BindTo_OnStop(
         FCk_Handle InTimerEntity,
         ECk_Signal_BindingPolicy  InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate)
@@ -387,7 +387,7 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
-    BindTo_OnTimerPause(
+    BindTo_OnPause(
         FCk_Handle InTimerEntity,
         ECk_Signal_BindingPolicy  InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate)
@@ -401,7 +401,7 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
-    BindTo_OnTimerResume(
+    BindTo_OnResume(
         FCk_Handle InTimerEntity,
         ECk_Signal_BindingPolicy  InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate)
@@ -415,7 +415,7 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
-    BindTo_OnTimerDone(
+    BindTo_OnDone(
         FCk_Handle InTimerEntity,
         ECk_Signal_BindingPolicy  InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate)
@@ -429,7 +429,7 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
-    BindTo_OnTimerDepleted(
+    BindTo_OnDepleted(
         FCk_Handle                InTimerEntity,
         ECk_Signal_BindingPolicy  InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate)
@@ -443,7 +443,7 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
-    BindTo_OnTimerUpdate(
+    BindTo_OnUpdate(
         FCk_Handle InTimerEntity,
         ECk_Signal_BindingPolicy  InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate)
@@ -457,7 +457,7 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
-    UnbindFrom_OnTimerReset(
+    UnbindFrom_OnReset(
         FCk_Handle InTimerEntity,
         const FCk_Delegate_Timer& InDelegate)
     -> void
@@ -470,7 +470,7 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
-    UnbindFrom_OnTimerStop(
+    UnbindFrom_OnStop(
         FCk_Handle InTimerEntity,
         const FCk_Delegate_Timer& InDelegate)
     -> void
@@ -483,7 +483,7 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
-    UnbindFrom_OnTimerPause(
+    UnbindFrom_OnPause(
         FCk_Handle InTimerEntity,
         const FCk_Delegate_Timer& InDelegate)
     -> void
@@ -496,7 +496,7 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
-    UnbindFrom_OnTimerResume(
+    UnbindFrom_OnResume(
         FCk_Handle InTimerEntity,
         const FCk_Delegate_Timer& InDelegate)
     -> void
@@ -509,7 +509,7 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
-    UnbindFrom_OnTimerDone(
+    UnbindFrom_OnDone(
         FCk_Handle InTimerEntity,
         const FCk_Delegate_Timer& InDelegate)
     -> void
@@ -522,7 +522,7 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
-    UnbindFrom_OnTimerDepleted(
+    UnbindFrom_OnDepleted(
         FCk_Handle                InTimerEntity,
         const FCk_Delegate_Timer& InDelegate)
     -> void
@@ -535,7 +535,7 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
-    UnbindFrom_OnTimerUpdate(
+    UnbindFrom_OnUpdate(
         FCk_Handle InTimerEntity,
         const FCk_Delegate_Timer& InDelegate)
     -> void

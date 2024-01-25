@@ -33,7 +33,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
-              DisplayName="Add New Float Attribute")
+              DisplayName="[Ck][FloatAttribute] Add New Attribute")
     static void
     Add(
         FCk_Handle InHandle,
@@ -42,7 +42,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
-              DisplayName="Add Multiple New Float Attributes")
+              DisplayName="[Ck][FloatAttribute] Add Multiple New Attributes")
     static void
     AddMultiple(
         FCk_Handle InHandle,
@@ -51,7 +51,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
-              DisplayName="Has Float Attribute")
+              DisplayName="[Ck][FloatAttribute] Has Attribute")
     static bool
     Has(
         const FCk_Handle& InAttributeOwnerEntity,
@@ -59,14 +59,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
-              DisplayName="Has Any Float Attribute")
+              DisplayName="[Ck][FloatAttribute] Has Any Attribute")
     static bool
     Has_Any(
         const FCk_Handle& InAttributeOwnerEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
-              DisplayName="Ensure Has Float Attribute")
+              DisplayName="[Ck][FloatAttribute] Ensure Has Attribute")
     static bool
     Ensure(
         FCk_Handle InAttributeOwnerEntity,
@@ -74,7 +74,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
-              DisplayName="Ensure Has Any Float Attribute")
+              DisplayName="[Ck][FloatAttribute] Ensure Has Any Attribute")
     static bool
     Ensure_Any(
         FCk_Handle InAttributeOwnerEntity);
@@ -82,7 +82,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
-              DisplayName="For Each Float Attribute",
+              DisplayName="[Ck][FloatAttribute] For Each",
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle>
     ForEach_FloatAttribute(
@@ -96,7 +96,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
-              DisplayName="For Each Float Attribute If",
+              DisplayName="[Ck][FloatAttribute] For Each If",
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle>
     ForEach_FloatAttribute_If(
@@ -112,17 +112,8 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|Attribute|Float",
-        DisplayName="Get All Float Attributes",
-        meta=(DeprecatedFunction, DeprecationMessage="Use the ForEach variants"))
-    static TArray<FGameplayTag>
-    Get_All(
-        const FCk_Handle& InAttributeOwnerEntity);
-
-public:
-    UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
-              DisplayName="Get Float Attribute Base Value")
+              DisplayName="[Ck][FloatAttribute] Get Base Value")
     static float
     Get_BaseValue(
         FCk_Handle InAttributeOwnerEntity,
@@ -130,7 +121,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
-              DisplayName="Get Float Attribute Bonus Value")
+              DisplayName="[Ck][FloatAttribute] Get Bonus Value")
     static float
     Get_BonusValue(
         FCk_Handle InAttributeOwnerEntity,
@@ -138,7 +129,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
-              DisplayName="Get Float Attribute Final Value")
+              DisplayName="[Ck][FloatAttribute] Get Final Value")
     static float
     Get_FinalValue(
         FCk_Handle InAttributeOwnerEntity,
@@ -147,7 +138,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
-              DisplayName="Request Override Float Attribute Base Value")
+              DisplayName="[Ck][FloatAttribute] Request Override Base Value")
     static void
     Request_Override(
         FCk_Handle InAttributeOwnerEntity,
@@ -157,7 +148,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
-              DisplayName = "Bind To On Float Attribute Value Changed")
+              DisplayName = "[Ck][FloatAttribute] Bind To OnValueChanged")
     static void
     BindTo_OnValueChanged(
         FCk_Handle InAttributeOwnerEntity,
@@ -168,7 +159,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
-              DisplayName = "Unbind From On Float Attribute Value Changed")
+              DisplayName = "[Ck][FloatAttribute] Unbind From OnValueChanged")
     static void
     UnbindFrom_OnValueChanged(
         FCk_Handle InAttributeOwnerEntity,
@@ -192,7 +183,7 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Float",
-              DisplayName="Add Float Attribute Modifier")
+              DisplayName="[Ck][FloatAttribute] Add Modifier")
     static void
     Add(
         FCk_Handle InAttributeOwnerEntity,
@@ -201,7 +192,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AttributeModifier|Float",
-              DisplayName="Has Float Attribute Modifier")
+              DisplayName="[Ck][FloatAttribute] Has Modifier")
     static bool
     Has(
         const FCk_Handle& InAttributeOwnerEntity,
@@ -210,7 +201,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AttributeModifier|Float",
-              DisplayName="Ensure Has Float Attribute Modifier")
+              DisplayName="[Ck][FloatAttribute] Ensure Has Modifier")
     static bool
     Ensure(
         FCk_Handle InAttributeOwnerEntity,
@@ -219,7 +210,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Float",
-              DisplayName="Remove Float Attribute Modifier")
+              DisplayName="[Ck][FloatAttribute] Remove Modifier")
     static void
     Remove(
         FCk_Handle InAttributeOwnerEntity,

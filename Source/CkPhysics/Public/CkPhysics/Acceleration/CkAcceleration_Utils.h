@@ -46,7 +46,7 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Acceleration",
-              DisplayName="[Acceleration] Add Feature")
+              DisplayName="[Ck][Acceleration] Add Feature")
     static void
     Add(
         FCk_Handle InHandle,
@@ -55,21 +55,21 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Acceleration",
-              DisplayName="[Acceleration] Has Feature")
+              DisplayName="[Ck][Acceleration] Has Feature")
     static bool
     Has(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Acceleration",
-              DisplayName="[Acceleration] Ensure Has Feature")
+              DisplayName="[Ck][Acceleration] Ensure Has Feature")
     static bool
     Ensure(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Acceleration",
-              DisplayName="[Acceleration] Get Acceleration")
+              DisplayName="[Ck][Acceleration] Get Acceleration")
     static FVector
     Get_CurrentAcceleration(
         FCk_Handle InHandle);

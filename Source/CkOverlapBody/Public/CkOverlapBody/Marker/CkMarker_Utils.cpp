@@ -104,26 +104,7 @@ auto
 
 auto
     UCk_Utils_Marker_UE::
-    Get_All(
-        FCk_Handle InMarkerOwnerEntity)
-    -> TArray<FGameplayTag>
-{
-    if (NOT Has_Any(InMarkerOwnerEntity))
-    { return {}; }
-
-    auto AllMarkers = TArray<FGameplayTag>{};
-
-    RecordOfMarkers_Utils::ForEach_ValidEntry(InMarkerOwnerEntity, [&](FCk_Handle InMarkerEntity)
-    {
-        AllMarkers.Emplace(UCk_Utils_GameplayLabel_UE::Get_Label(InMarkerEntity));
-    });
-
-    return AllMarkers;
-}
-
-auto
-    UCk_Utils_Marker_UE::
-    PreviewAllMarkers(
+    PreviewAll(
         UObject*   InOuter,
         FCk_Handle InHandle)
     -> void
@@ -139,7 +120,7 @@ auto
 
 auto
     UCk_Utils_Marker_UE::
-    PreviewMarker(
+    Preview(
         UObject*     InOuter,
         FCk_Handle   InMarkerOwnerEntity,
         FGameplayTag InMarkerName)

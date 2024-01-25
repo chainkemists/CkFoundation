@@ -17,7 +17,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AutoReorient",
-              DisplayName="[AutoReorient] Add Feature")
+              DisplayName="[Ck][AutoReorient] Add Feature")
     static void
     Add(
         FCk_Handle InHandle,
@@ -25,14 +25,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AutoReorient",
-              DisplayName="[AutoReorient] Has Feature")
+              DisplayName="[Ck][AutoReorient] Has Feature")
     static bool
     Has(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AutoReorient",
-              DisplayName="[AutoReorient] Ensure Has Feature")
+              DisplayName="[Ck][AutoReorient] Ensure Has Feature")
     static bool
     Ensure(
         FCk_Handle InHandle);
@@ -40,7 +40,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AutoReorient",
-              DisplayName="[AutoReorient] Get Policy")
+              DisplayName="[Ck][AutoReorient] Get Policy")
     static ECk_AutoReorient_Policy
     Get_AutoReorientPolicy(
         FCk_Handle InHandle);
@@ -48,14 +48,14 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AutoReorient",
-              DisplayName="[AutoReorient] Request Start")
+              DisplayName="[Ck][AutoReorient] Request Start")
     static void
     Request_Start(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AutoReorient",
-              DisplayName="[AutoReorient] Request Stop")
+              DisplayName="[Ck][AutoReorient] Request Stop")
     static void
     Request_Stop(
         FCk_Handle InHandle);
