@@ -26,6 +26,49 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SelfOrParent);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_CardinalDirection : uint8
+{
+    North,
+    West,
+    South,
+    East
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CardinalDirection);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_OrdinalDirection : uint8
+{
+    NorthEast,
+    SouthEast,
+    SouthWest,
+    NorthWest
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_OrdinalDirection);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_CardinalAndOrdinalDirection : uint8
+{
+    North,
+    NorthEast,
+    East,
+    SouthEast,
+    South,
+    SouthWest,
+    West,
+    NorthWest
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CardinalAndOrdinalDirection);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_Replication : uint8
 {
     Replicates,
@@ -210,6 +253,20 @@ enum class ECk_Vector_Axis : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Vector_Axis);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Vector_Axis_Swizzle : uint8
+{
+    YXZ,
+    ZYX,
+    XZY,
+    YZX,
+    ZXY
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Vector_Axis_Swizzle);
 
 // --------------------------------------------------------------------------------------------------------------------
 
