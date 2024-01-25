@@ -119,6 +119,20 @@ public:
         const FVector& InVector,
         float InLength);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Vector3")
+    static FVector
+    Get_Swizzle(
+        const FVector& InVector,
+        ECk_Vector_Axis_Swizzle InOrder);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Math|Vector3")
+    static void
+    SwizzleInplace(
+        UPARAM(ref) FVector& InVector,
+        ECk_Vector_Axis_Swizzle InOrder);
+
     // Assumes +X is Forward, +Y is Right, +Z is Up
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|Vector3")
@@ -130,7 +144,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|Vector3")
     static ECk_Direction_3D
-    Get_ClosestWorldDirectionFromVector(
+    Get_ClosestWorldDirection(
         const FVector& InVector);
 
     UFUNCTION(BlueprintPure,
@@ -282,6 +296,60 @@ public:
     Get_IsLengthLessThanOrEqualTo(
         const FVector2D& InVector,
         float InLength);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Vector2")
+    static FVector2D
+    Get_Swizzle(
+        const FVector2D& InVector);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Math|Vector2")
+    static void
+    SwizzleInplace(
+        UPARAM(ref) FVector2D& InVector);
+
+    // Assumes +X is North, +Y is East
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Vector2")
+    static FVector2D
+    Get_CardinalAndOrdinalDirection(
+        ECk_CardinalAndOrdinalDirection InDirection);
+
+    // Assumes +X is North, +Y is East
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Vector2")
+    static FVector2D
+    Get_OrdinalDirection(
+        ECk_OrdinalDirection InDirection);
+
+        // Assumes +X is North, +Y is East
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Vector3")
+    static FVector2D
+    Get_CardinalDirection(
+        ECk_CardinalDirection InDirection);
+
+    // Assumes +X is North, +Y is East
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Vector2")
+    static ECk_CardinalDirection
+    Get_ClosestCardinalDirection(
+        const FVector2D& InVector);
+
+    // Assumes +X is North, +Y is East
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Vector2")
+    static ECk_OrdinalDirection
+    Get_ClosestOrdinalDirection(
+        const FVector2D& InVector);
+
+    // Assumes +X is North, +Y is East
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Math|Vector2")
+    static ECk_CardinalAndOrdinalDirection
+    Get_ClosestCardinalAndOrdinalDirection(
+        const FVector2D& InVector);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

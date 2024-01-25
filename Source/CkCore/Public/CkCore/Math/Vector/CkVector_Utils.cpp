@@ -245,6 +245,53 @@ auto
 
 auto
     UCk_Utils_Vector3_UE::
+    Get_Swizzle(
+        const FVector& InVector,
+        ECk_Vector_Axis_Swizzle InOrder)
+    -> FVector
+{
+    switch (InOrder)
+    {
+        case ECk_Vector_Axis_Swizzle::YXZ:
+        {
+            return FVector{InVector.Y, InVector.X, InVector.Z};
+        }
+        case ECk_Vector_Axis_Swizzle::ZYX:
+        {
+            return FVector{InVector.Z, InVector.Y, InVector.X};
+        }
+        case ECk_Vector_Axis_Swizzle::XZY:
+        {
+            return FVector{InVector.X, InVector.Z, InVector.Y};
+        }
+        case ECk_Vector_Axis_Swizzle::YZX:
+        {
+            return FVector{InVector.Y, InVector.Z, InVector.X};
+        }
+        case ECk_Vector_Axis_Swizzle::ZXY:
+        {
+            return FVector{InVector.Z, InVector.X, InVector.Y};
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InOrder);
+            return InVector;
+        }
+    }
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    SwizzleInplace(
+        FVector& InVector,
+        ECk_Vector_Axis_Swizzle InOrder)
+    -> void
+{
+    InVector = Get_Swizzle(InVector, InOrder);
+}
+
+auto
+    UCk_Utils_Vector3_UE::
     Get_WorldDirection(
         ECk_Direction_3D InDirection)
     -> FVector
@@ -252,26 +299,40 @@ auto
     switch (InDirection)
     {
         case ECk_Direction_3D::Left:
+        {
             return FVector::LeftVector;
+        }
         case ECk_Direction_3D::Right:
+        {
             return FVector::RightVector;
+        }
         case ECk_Direction_3D::Forward:
+        {
             return FVector::ForwardVector;
+        }
         case ECk_Direction_3D::Back:
+        {
             return FVector::BackwardVector;
+        }
         case ECk_Direction_3D::Up:
+        {
             return FVector::UpVector;
+        }
         case ECk_Direction_3D::Down:
+        {
             return FVector::DownVector;
+        }
         default:
+        {
             CK_INVALID_ENUM(InDirection);
             return {};
+        }
     }
 }
 
 auto
     UCk_Utils_Vector3_UE::
-    Get_ClosestWorldDirectionFromVector(
+    Get_ClosestWorldDirection(
         const FVector& InVector)
     -> ECk_Direction_3D
 {
@@ -293,20 +354,16 @@ auto
         DirectionThresholds.end(),
         [&](const std::pair<ECk_Direction_3D, FCk_FloatRange>& InKvp)
         {
-            const auto& Direction3D        = InKvp.first;
+            const auto& Direction          = InKvp.first;
             const auto& DirectionThreshold = InKvp.second;
-            const auto& DotProduct         = FVector::DotProduct
-            (
-                NormalizedVector,
-                Get_WorldDirection(Direction3D)
-            );
+            const auto& DotProduct         = ck_vector::Dot(NormalizedVector, Get_WorldDirection(Direction));
 
             return DirectionThreshold.Get_IsWithinInclusive(DotProduct);
         }
     );
 
     CK_ENSURE_IF_NOT(FoundDirection != DirectionThresholds.end(),
-        TEXT("Failed to find Direction for Vector [{}]"), InVector)
+        TEXT("Failed to find World Direction for Vector [{}]"), InVector)
     { return ECk_Direction_3D::Forward; }
 
     return FoundDirection->first;
@@ -610,6 +667,251 @@ auto
     -> bool
 {
     return ck_vector::Get_IsLengthLessThanOrEqualTo(InVector, InLength);
+}
+
+auto
+    UCk_Utils_Vector2_UE::
+    Get_Swizzle(
+        const FVector2D& InVector)
+    -> FVector2D
+{
+    return FVector2D{InVector.Y, InVector.X};
+}
+
+auto
+    UCk_Utils_Vector2_UE::
+    SwizzleInplace(
+        FVector2D& InVector)
+    -> void
+{
+    InVector = Get_Swizzle(InVector);
+}
+
+auto
+    UCk_Utils_Vector2_UE::
+    Get_CardinalAndOrdinalDirection(
+        ECk_CardinalAndOrdinalDirection InDirection)
+    -> FVector2D
+{
+    switch (InDirection)
+    {
+        case ECk_CardinalAndOrdinalDirection::North:
+        {
+            return FVector2D{1.0f, 0.0f};
+        }
+        case ECk_CardinalAndOrdinalDirection::NorthEast:
+        {
+            return FVector2D{0.5f, 0.5f};
+        }
+        case ECk_CardinalAndOrdinalDirection::East:
+        {
+            return FVector2D{0.0f, 1.0f};
+        }
+        case ECk_CardinalAndOrdinalDirection::SouthEast:
+        {
+            return FVector2D{-0.5f, 0.5f};
+        }
+        case ECk_CardinalAndOrdinalDirection::South:
+        {
+            return FVector2D{-1.0f, 0.0f};
+        }
+        case ECk_CardinalAndOrdinalDirection::SouthWest:
+        {
+            return FVector2D{-0.5f, -0.5f};
+        }
+        case ECk_CardinalAndOrdinalDirection::West:
+        {
+            return FVector2D{0.0f, -1.0f};
+        }
+        case ECk_CardinalAndOrdinalDirection::NorthWest:
+        {
+            return FVector2D{0.5f, -0.5f};
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InDirection);
+            return {};
+        }
+    }
+}
+
+auto
+    UCk_Utils_Vector2_UE::
+    Get_OrdinalDirection(
+        ECk_OrdinalDirection InDirection)
+    -> FVector2D
+{
+    switch (InDirection)
+    {
+        case ECk_OrdinalDirection::NorthEast:
+        {
+            return FVector2D{0.5f, 0.5f};
+        }
+        case ECk_OrdinalDirection::SouthEast:
+        {
+            return FVector2D{-0.5f, 0.5f};
+        }
+        case ECk_OrdinalDirection::SouthWest:
+        {
+            return FVector2D{-0.5f, -0.5f};
+        }
+        case ECk_OrdinalDirection::NorthWest:
+        {
+            return FVector2D{0.5f, -0.5f};
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InDirection);
+            return {};
+        }
+    }
+}
+
+auto
+    UCk_Utils_Vector2_UE::
+    Get_CardinalDirection(
+        ECk_CardinalDirection InDirection)
+    -> FVector2D
+{
+    switch (InDirection)
+    {
+        case ECk_CardinalDirection::North:
+        {
+            return FVector2D{1.0f, 0.0f};
+        }
+        case ECk_CardinalDirection::East:
+        {
+            return FVector2D{0.0f, 1.0f};
+        }
+        case ECk_CardinalDirection::South:
+        {
+            return FVector2D{-1.0f, 0.0f};
+        }
+        case ECk_CardinalDirection::West:
+        {
+            return FVector2D{0.0f, -1.0f};
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InDirection);
+            return {};
+        }
+    }
+}
+
+auto
+    UCk_Utils_Vector2_UE::
+    Get_ClosestCardinalDirection(
+        const FVector2D& InVector)
+    -> ECk_CardinalDirection
+{
+    const auto& NormalizedVector = InVector.GetSafeNormal();
+
+    static const std::map<ECk_CardinalDirection, FCk_FloatRange> DirectionThresholds =
+    {
+        { ECk_CardinalDirection::North, FCk_FloatRange(0.5f, 1.0f) },
+        { ECk_CardinalDirection::East,  FCk_FloatRange(0.5f, 1.0f) },
+        { ECk_CardinalDirection::South, FCk_FloatRange(0.5f, 1.0f) },
+        { ECk_CardinalDirection::West,  FCk_FloatRange(0.5f, 1.0f) },
+    };
+
+    const auto& FoundDirection = std::ranges::find_if
+    (
+        DirectionThresholds.begin(),
+        DirectionThresholds.end(),
+        [&](const std::pair<ECk_CardinalDirection, FCk_FloatRange>& InKvp)
+        {
+            const auto& Direction          = InKvp.first;
+            const auto& DirectionThreshold = InKvp.second;
+            const auto& DotProduct         = ck_vector::Dot(NormalizedVector, Get_CardinalDirection(Direction));
+
+            return DirectionThreshold.Get_IsWithinInclusive(DotProduct);
+        }
+    );
+
+    CK_ENSURE_IF_NOT(FoundDirection != DirectionThresholds.end(),
+        TEXT("Failed to find Cardinal Direction for Vector [{}]"), InVector)
+    { return ECk_CardinalDirection::North; }
+
+    return FoundDirection->first;
+}
+
+auto
+    UCk_Utils_Vector2_UE::
+    Get_ClosestOrdinalDirection(
+        const FVector2D& InVector)
+    -> ECk_OrdinalDirection
+{
+    const auto& NormalizedVector = InVector.GetSafeNormal();
+
+    static const std::map<ECk_OrdinalDirection, FCk_FloatRange> DirectionThresholds =
+    {
+        { ECk_OrdinalDirection::NorthEast, FCk_FloatRange(0.5f, 1.0f) },
+        { ECk_OrdinalDirection::SouthEast, FCk_FloatRange(0.5f, 1.0f) },
+        { ECk_OrdinalDirection::SouthWest, FCk_FloatRange(0.5f, 1.0f) },
+        { ECk_OrdinalDirection::NorthWest, FCk_FloatRange(0.5f, 1.0f) },
+    };
+
+    const auto& FoundDirection = std::ranges::find_if
+    (
+        DirectionThresholds.begin(),
+        DirectionThresholds.end(),
+        [&](const std::pair<ECk_OrdinalDirection, FCk_FloatRange>& InKvp)
+        {
+            const auto& Direction          = InKvp.first;
+            const auto& DirectionThreshold = InKvp.second;
+            const auto& DotProduct         = ck_vector::Dot(NormalizedVector, Get_OrdinalDirection(Direction));
+
+            return DirectionThreshold.Get_IsWithinInclusive(DotProduct);
+        }
+    );
+
+    CK_ENSURE_IF_NOT(FoundDirection != DirectionThresholds.end(),
+        TEXT("Failed to find Ordinal Direction for Vector [{}]"), InVector)
+    { return ECk_OrdinalDirection::NorthEast; }
+
+    return FoundDirection->first;
+}
+
+auto
+    UCk_Utils_Vector2_UE::
+    Get_ClosestCardinalAndOrdinalDirection(
+        const FVector2D& InVector)
+    -> ECk_CardinalAndOrdinalDirection
+{
+    const auto& NormalizedVector = InVector.GetSafeNormal();
+
+    static const std::map<ECk_CardinalAndOrdinalDirection, FCk_FloatRange> DirectionThresholds =
+    {
+        { ECk_CardinalAndOrdinalDirection::North,     FCk_FloatRange(0.5f, 1.0f) },
+        { ECk_CardinalAndOrdinalDirection::NorthEast, FCk_FloatRange(0.5f, 1.0f) },
+        { ECk_CardinalAndOrdinalDirection::East,      FCk_FloatRange(0.5f, 1.0f) },
+        { ECk_CardinalAndOrdinalDirection::SouthEast, FCk_FloatRange(0.5f, 1.0f) },
+        { ECk_CardinalAndOrdinalDirection::South,     FCk_FloatRange(0.5f, 1.0f) },
+        { ECk_CardinalAndOrdinalDirection::SouthWest, FCk_FloatRange(0.5f, 1.0f) },
+        { ECk_CardinalAndOrdinalDirection::West,      FCk_FloatRange(0.5f, 1.0f) },
+        { ECk_CardinalAndOrdinalDirection::NorthWest, FCk_FloatRange(0.5f, 1.0f) },
+    };
+
+    const auto& FoundDirection = std::ranges::find_if
+    (
+        DirectionThresholds.begin(),
+        DirectionThresholds.end(),
+        [&](const std::pair<ECk_CardinalAndOrdinalDirection, FCk_FloatRange>& InKvp)
+        {
+            const auto& Direction          = InKvp.first;
+            const auto& DirectionThreshold = InKvp.second;
+            const auto& DotProduct         = ck_vector::Dot(NormalizedVector, Get_CardinalAndOrdinalDirection(Direction));
+
+            return DirectionThreshold.Get_IsWithinInclusive(DotProduct);
+        }
+    );
+
+    CK_ENSURE_IF_NOT(FoundDirection != DirectionThresholds.end(),
+        TEXT("Failed to find Cardinal and Ordinal Direction for Vector [{}]"), InVector)
+    { return ECk_CardinalAndOrdinalDirection::North; }
+
+    return FoundDirection->first;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
