@@ -354,7 +354,7 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
-    Request_SendEvent(
+    Request_SendAbilityEvent(
         FCk_Handle InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_SendEvent& InRequest)
     -> void

@@ -85,26 +85,7 @@ auto
 
 auto
     UCk_Utils_CameraShake_UE::
-    Get_All(
-        FCk_Handle InCameraShakeOwnerEntity)
-    -> TArray<FGameplayTag>
-{
-    if (NOT Has_Any(InCameraShakeOwnerEntity))
-    { return {}; }
-
-    auto AllCameraShakes = TArray<FGameplayTag>{};
-
-    RecordOfCameraShakes_Utils::ForEach_ValidEntry(InCameraShakeOwnerEntity, [&](FCk_Handle InCameraShakeEntity)
-    {
-        AllCameraShakes.Emplace(UCk_Utils_GameplayLabel_UE::Get_Label(InCameraShakeEntity));
-    });
-
-    return AllCameraShakes;
-}
-
-auto
-    UCk_Utils_CameraShake_UE::
-    Request_PlayCameraShakeOnTarget(
+    Request_PlayOnTarget(
         FCk_Handle InCameraShakeOwnerEntity,
         const FCk_Request_CameraShake_PlayOnTarget& InRequest)
     -> void
@@ -121,7 +102,7 @@ auto
 
 auto
     UCk_Utils_CameraShake_UE::
-    Request_PlayCameraShakeAtLocation(
+    Request_PlayAtLocation(
         FCk_Handle InCameraShakeOwnerEntity,
         const FCk_Request_CameraShake_PlayAtLocation& InRequest)
     -> void

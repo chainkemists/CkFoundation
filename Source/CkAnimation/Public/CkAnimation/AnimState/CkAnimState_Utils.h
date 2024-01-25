@@ -21,7 +21,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimState",
-              DisplayName="[AnimState] Add Feature")
+              DisplayName="[Ck][AnimState] Add Feature")
     static void
     Add(
         FCk_Handle InHandle,
@@ -30,14 +30,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimState",
-              DisplayName="[AnimState] Has Feature")
+              DisplayName="[Ck][AnimState] Has Feature")
     static bool
     Has(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimState",
-              DisplayName="[AnimState] Ensure Has Feature")
+              DisplayName="[Ck][AnimState] Ensure Has Feature")
     static bool
     Ensure(
         FCk_Handle InHandle);
@@ -45,28 +45,28 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimState",
-              DisplayName="[AnimState] Get Goal")
+              DisplayName="[Ck][AnimState] Get Goal")
     static FCk_AnimState_Goal
     Get_AnimGoal(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimState",
-              DisplayName="[AnimState] Get State")
+              DisplayName="[Ck][AnimState] Get State")
     static FCk_AnimState_State
     Get_AnimState(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimState",
-              DisplayName="[AnimState] Get Cluster")
+              DisplayName="[Ck][AnimState] Get Cluster")
     static FCk_AnimState_Cluster
     Get_AnimCluster(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimState",
-              DisplayName="[AnimState] Get Overlay")
+              DisplayName="[Ck][AnimState] Get Overlay")
     static FCk_AnimState_Overlay
     Get_AnimOverlay(
         FCk_Handle InHandle);
@@ -74,7 +74,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimState",
-              DisplayName="[AnimState] Request Set Goal")
+              DisplayName="[Ck][AnimState] Request Set Goal")
     static void
     Request_SetAnimGoal(
         FCk_Handle InHandle,
@@ -82,7 +82,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimState",
-              DisplayName="[AnimState] Request Set State")
+              DisplayName="[Ck][AnimState] Request Set State")
     static void
     Request_SetAnimState(
         FCk_Handle InHandle,
@@ -90,7 +90,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimState",
-              DisplayName="[AnimState] Request Set Cluster")
+              DisplayName="[Ck][AnimState] Request Set Cluster")
     static void
     Request_SetAnimCluster(
         FCk_Handle InHandle,
@@ -98,7 +98,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimState",
-              DisplayName="[AnimState] Request Set Overlay")
+              DisplayName="[Ck][AnimState] Request Set Overlay")
     static void
     Request_SetAnimOverlay(
         FCk_Handle InHandle,
@@ -107,7 +107,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimState",
-              DisplayName = "[AnimState] Bind To OnGoalChanged")
+              DisplayName = "[Ck][AnimState] Bind To OnGoalChanged")
     static void
     BindTo_OnGoalChanged(
         FCk_Handle InHandle,
@@ -116,7 +116,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimState",
-              DisplayName = "[AnimState] Unbind From OnGoalChanged")
+              DisplayName = "[Ck][AnimState] Unbind From OnGoalChanged")
     static void
     UnbindFrom_OnGoalChanged(
         FCk_Handle InHandle,
@@ -124,7 +124,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimState",
-              DisplayName = "[AnimState] Bind To OnStateChanged")
+              DisplayName = "[Ck][AnimState] Bind To OnStateChanged")
     static void
     BindTo_OnStateChanged(
         FCk_Handle InHandle,
@@ -133,7 +133,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimState",
-              DisplayName = "[AnimState] Unbind From OnStateChanged")
+              DisplayName = "[Ck][AnimState] Unbind From OnStateChanged")
     static void
     UnbindFrom_OnStateChanged(
         FCk_Handle InHandle,
@@ -141,7 +141,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimState",
-              DisplayName = "[AnimState] Bind To OnClusterChanged")
+              DisplayName = "[Ck][AnimState] Bind To OnClusterChanged")
     static void
     BindTo_OnClusterChanged(
         FCk_Handle InHandle,
@@ -150,7 +150,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimState",
-              DisplayName = "[AnimState] Unbind From OnClusterChanged")
+              DisplayName = "[Ck][AnimState] Unbind From OnClusterChanged")
     static void
     UnbindFrom_OnClusterChanged(
         FCk_Handle InHandle,
@@ -158,7 +158,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimState",
-              DisplayName = "[AnimState] Bind To OnOverlayChanged")
+              DisplayName = "[Ck][AnimState] Bind To OnOverlayChanged")
     static void
     BindTo_OnOverlayChanged(
         FCk_Handle InHandle,
@@ -167,7 +167,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimState",
-              DisplayName = "[AnimState] Unbind From OnOverlayChanged")
+              DisplayName = "[Ck][AnimState] Unbind From OnOverlayChanged")
     static void
     UnbindFrom_OnOverlayChanged(
         FCk_Handle InHandle,

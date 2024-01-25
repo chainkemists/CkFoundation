@@ -217,26 +217,6 @@ auto
 
 auto
     UCk_Utils_FloatAttribute_UE::
-    Get_All(
-        const FCk_Handle& InAttributeOwnerEntity)
-    -> TArray<FGameplayTag>
-{
-    if (NOT RecordOfFloatAttributes_Utils::Has(InAttributeOwnerEntity))
-    { return {}; }
-
-    auto AllAttributes = TArray<FGameplayTag>{};
-
-    RecordOfFloatAttributes_Utils::ForEach_ValidEntry(InAttributeOwnerEntity,
-    [&](const FCk_Handle& InFloatAttributeEntity)
-    {
-        AllAttributes.Add(UCk_Utils_GameplayLabel_UE::Get_Label(InFloatAttributeEntity));
-    });
-
-    return AllAttributes;
-}
-
-auto
-    UCk_Utils_FloatAttribute_UE::
     Get_BaseValue(
         FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName)

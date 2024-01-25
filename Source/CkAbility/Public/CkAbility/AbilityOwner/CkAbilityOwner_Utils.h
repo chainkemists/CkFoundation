@@ -31,7 +31,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[AbilityOwner] Add Feature")
+              DisplayName="[Ck][AbilityOwner] Add Feature")
     static void
     Add(
         FCk_Handle InHandle,
@@ -39,14 +39,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[AbilityOwner] Has Feature")
+              DisplayName="[Ck][AbilityOwner] Has Feature")
     static bool
     Has(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[AbilityOwner] Ensure Has Feature")
+              DisplayName="[Ck][AbilityOwner] Ensure Has Feature")
     static bool
     Ensure(
         FCk_Handle InHandle);
@@ -54,7 +54,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[AbilityOwner] Has Ability")
+              DisplayName="[Ck][AbilityOwner] Has Ability")
     static bool
     Has_Ability(
         FCk_Handle InAbilityOwnerEntity,
@@ -62,14 +62,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[AbilityOwner] Has Any Ability")
+              DisplayName="[Ck][AbilityOwner] Has Any Ability")
     static bool
     Has_Any(
         FCk_Handle InAbilityOwnerEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[AbilityOwner] Ensure Has Ability")
+              DisplayName="[Ck][AbilityOwner] Ensure Has Ability")
     static bool
     Ensure_Ability(
         FCk_Handle InAbilityOwnerEntity,
@@ -77,14 +77,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[AbilityOwner] Ensure Has Any Ability")
+              DisplayName="[Ck][AbilityOwner] Ensure Has Any Ability")
     static bool
     Ensure_Any(
         FCk_Handle InAbilityOwnerEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[AbilityOwner] Get Ability")
+              DisplayName="[Ck][AbilityOwner] Get Ability")
     static FCk_Handle
     Get_Ability(
         FCk_Handle InAbilityOwnerEntity,
@@ -92,7 +92,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[AbilityOwner] Get Ability Count")
+              DisplayName="[Ck][AbilityOwner] Get Ability Count")
     static int32
     Get_AbilityCount(
         FCk_Handle InAbilityOwnerEntity);
@@ -100,7 +100,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[AbilityOwner] For Each Ability",
+              DisplayName="[Ck][AbilityOwner] For Each Ability",
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle>
     ForEach_Ability(
@@ -116,7 +116,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[AbilityOwner] For Each Ability If",
+              DisplayName="[Ck][AbilityOwner] For Each Ability If",
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle>
     ForEach_Ability_If(
@@ -134,7 +134,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[AbilityOwner] For Each Ability with Status",
+              DisplayName="[Ck][AbilityOwner] For Each Ability with Status",
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle>
     ForEach_Ability_WithStatus(
@@ -153,21 +153,21 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[AbilityOwner] Get Active Tags")
+              DisplayName="[Ck][AbilityOwner] Get Active Tags")
     static FGameplayTagContainer
     Get_ActiveTags(
         FCk_Handle InAbilityOwnerHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[AbilityOwner] Get Active Tags With Count")
+              DisplayName="[Ck][AbilityOwner] Get Active Tags With Count")
     static TMap<FGameplayTag, int32>
     Get_ActiveTagsWithCount(
         FCk_Handle InAbilityOwnerHandle);
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[AbilityOwner] Request Give Ability")
+              DisplayName="[Ck][AbilityOwner] Request Give Ability")
     static void
     Request_GiveAbility(
         FCk_Handle InAbilityOwnerHandle,
@@ -175,7 +175,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[AbilityOwner] Request Revoke Ability")
+              DisplayName="[Ck][AbilityOwner] Request Revoke Ability")
     static void
     Request_RevokeAbility(
         FCk_Handle InAbilityOwnerHandle,
@@ -184,7 +184,7 @@ public:
     // NOTE: This is for development only. Use 'Request_SendEvent' to trigger Activation of Abilities
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[AbilityOwner] Request Try Activate Ability",
+              DisplayName="[Ck][AbilityOwner] Request Try Activate Ability",
               meta = (DevelopmentOnly))
     static void
     Request_TryActivateAbility(
@@ -194,7 +194,7 @@ public:
     // NOTE: This is for development only. Use 'Request_SendEvent' to trigger Deactivation of Abilities
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[AbilityOwner] Request Deactivate Ability",
+              DisplayName="[Ck][AbilityOwner] Request Deactivate Ability",
               meta = (DevelopmentOnly))
     static void
     Request_DeactivateAbility(
@@ -203,16 +203,16 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName = "[AbilityOwner] Request Send Event")
+              DisplayName = "[Ck][AbilityOwner] Request Send Ability Event")
     static void
-    Request_SendEvent(
+    Request_SendAbilityEvent(
         FCk_Handle InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_SendEvent& InRequest);
 
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName = "[AbilityOwner] Bind To OnEvents")
+              DisplayName = "[Ck][AbilityOwner] Bind To OnEvents")
     static void
     BindTo_OnEvents(
         FCk_Handle InAbilityOwnerHandle,
@@ -221,7 +221,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName = "[AbilityOwner] Unbind From OnEvents")
+              DisplayName = "[Ck][AbilityOwner] Unbind From OnEvents")
     static void
     UnbindFrom_OnEvents(
         FCk_Handle InAbilityOwnerHandle,

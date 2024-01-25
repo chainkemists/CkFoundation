@@ -27,7 +27,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CameraShake",
-              DisplayName="Add New Camera Shake")
+              DisplayName="[Ck][CameraShake] Add New Camera Shake")
     static void
     Add(
         FCk_Handle InHandle,
@@ -35,7 +35,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CameraShake",
-              DisplayName="Add Multiple New Camera Shake")
+              DisplayName="[Ck][CameraShake] Add Multiple New Camera Shakes")
     static void
     AddMultiple(
         FCk_Handle InHandle,
@@ -43,7 +43,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|CameraShake",
-              DisplayName="Has Camera Shake")
+              DisplayName="[Ck][CameraShake] Has Camera Shake")
     static bool
     Has(
         FCk_Handle InCameraShakeOwnerEntity,
@@ -51,14 +51,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|CameraShake",
-              DisplayName="Has Any Camera Shake")
+              DisplayName="[Ck][CameraShake] Has Any Camera Shake")
     static bool
     Has_Any(
         FCk_Handle InCameraShakeOwnerEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|CameraShake",
-              DisplayName="Ensure Has Camera Shake")
+              DisplayName="[Ck][CameraShake] Ensure Has Camera Shake")
     static bool
     Ensure(
         FCk_Handle InCameraShakeOwnerEntity,
@@ -66,31 +66,25 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|CameraShake",
-              DisplayName="Ensure Has Any Camera Shake")
+              DisplayName="[Ck][CameraShake] Ensure Has Any Camera Shake")
     static bool
     Ensure_Any(
         FCk_Handle InCameraShakeOwnerEntity);
 
 public:
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|CameraShake",
-              DisplayName="Get All Camera Shakes")
-    static TArray<FGameplayTag>
-    Get_All(
-        FCk_Handle InCameraShakeOwnerEntity);
-
-public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|CameraShake")
+              Category = "Ck|Utils|CameraShake",
+              DisplayName="[Ck][CameraShake] Request Play On Target")
     static void
-    Request_PlayCameraShakeOnTarget(
+    Request_PlayOnTarget(
         FCk_Handle InCameraShakeOwnerEntity,
         const FCk_Request_CameraShake_PlayOnTarget& InRequest);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|CameraShake")
+              Category = "Ck|Utils|CameraShake",
+              DisplayName="[Ck][CameraShake] Request Play At Location")
     static void
-    Request_PlayCameraShakeAtLocation(
+    Request_PlayAtLocation(
         FCk_Handle InCameraShakeOwnerEntity,
         const FCk_Request_CameraShake_PlayAtLocation& InRequest);
 

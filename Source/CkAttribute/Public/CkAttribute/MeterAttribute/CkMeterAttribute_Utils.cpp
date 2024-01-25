@@ -195,25 +195,6 @@ auto
 
 auto
     UCk_Utils_MeterAttribute_UE::
-    Get_All(
-        FCk_Handle InAttributeOwnerEntity)
-    -> TArray<FGameplayTag>
-{
-    if (NOT RecordOfMeterAttributes_Utils::Has(InAttributeOwnerEntity))
-    { return {}; }
-
-    auto AllMeters = TArray<FGameplayTag>{};
-
-    RecordOfMeterAttributes_Utils::ForEach_ValidEntry(InAttributeOwnerEntity, [&](FCk_Handle InMeterAttributeEntity)
-    {
-        AllMeters.Add(UCk_Utils_GameplayLabel_UE::Get_Label(InMeterAttributeEntity));
-    });
-
-    return AllMeters;
-}
-
-auto
-    UCk_Utils_MeterAttribute_UE::
     Get_BaseValue(
         FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName)
