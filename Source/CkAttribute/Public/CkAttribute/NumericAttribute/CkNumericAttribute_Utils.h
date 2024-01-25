@@ -33,7 +33,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Numeric",
-              DisplayName="Add New Numeric Attribute")
+              DisplayName="[Ck][NumericAttribute] Add New Attribute")
     static void
     Add(
         FCk_Handle InHandle,
@@ -42,7 +42,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Numeric",
-              DisplayName="Add Multiple New Numeric Attributes")
+              DisplayName="[Ck][NumericAttribute] Add Multiple New Attributes")
     static void
     AddMultiple(
         FCk_Handle InHandle,
@@ -51,7 +51,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Numeric",
-              DisplayName="Has Numeric Attribute")
+              DisplayName="[Ck][NumericAttribute] Has Attribute")
     static bool
     Has(
         FCk_Handle InAttributeOwnerEntity,
@@ -59,14 +59,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Numeric",
-              DisplayName="Has Any Numeric Attribute")
+              DisplayName="[Ck][NumericAttribute] Has Any Attribute")
     static bool
     Has_Any(
         FCk_Handle InAttributeOwnerEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Numeric",
-              DisplayName="Ensure Has Numeric Attribute")
+              DisplayName="[Ck][NumericAttribute] Ensure Has Attribute")
     static bool
     Ensure(
         FCk_Handle InAttributeOwnerEntity,
@@ -74,7 +74,7 @@ public:
 
         UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Numeric",
-              DisplayName="Ensure Has Any Numeric Attribute")
+              DisplayName="[Ck][NumericAttribute] Ensure Has Any Attribute")
     static bool
     Ensure_Any(
         FCk_Handle InAttributeOwnerEntity);
@@ -82,7 +82,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Numeric",
-              DisplayName="Get Numeric Attribute Current Value")
+              DisplayName="[Ck][NumericAttribute] Get Current Value")
     static float
     Get_CurrentValue(
         FCk_Handle InAttributeOwnerEntity,
@@ -90,7 +90,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Numeric",
-              DisplayName="Get Numeric Attribute Min Value")
+              DisplayName="[Ck][NumericAttribute] Get  Min Value")
     static float
     Get_MinValue(
         FCk_Handle InAttributeOwnerEntity,
@@ -99,7 +99,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Numeric",
-              DisplayName="Get Numeric Attribute Max Value")
+              DisplayName="[Ck][NumericAttribute] Get Max Value")
     static float
     Get_MaxValue(
         FCk_Handle InAttributeOwnerEntity,
@@ -109,7 +109,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Numeric",
-              DisplayName = "Bind To On Numeric Attribute Value Changed")
+              DisplayName = "[Ck][NumericAttribute] Bind To OnValueChanged")
     static void
     BindTo_OnValueChanged(
         FCk_Handle InAttributeOwnerEntity,
@@ -120,7 +120,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Numeric",
-              DisplayName = "unbind From On Numeric Attribute Value Changed")
+              DisplayName = "[Ck][NumericAttribute] Unbind From OnValueChanged")
     static void
     UnbindFrom_OnValueChanged(
         FCk_Handle InAttributeOwnerEntity,
@@ -152,7 +152,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Numeric",
-              DisplayName="Add Numeric Attribute Modifier")
+              DisplayName="[Ck][NumericAttribute] Add Modifier")
     static void
     Add(
         FCk_Handle InAttributeOwnerEntity,

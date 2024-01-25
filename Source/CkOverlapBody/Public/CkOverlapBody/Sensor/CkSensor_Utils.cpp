@@ -100,26 +100,7 @@ auto
 
 auto
     UCk_Utils_Sensor_UE::
-    Get_All(
-        FCk_Handle InSensorOwnerEntity)
-    -> TArray<FGameplayTag>
-{
-    if (NOT Has_Any(InSensorOwnerEntity))
-    { return {}; }
-
-    auto AllSensors = TArray<FGameplayTag>{};
-
-    RecordOfSensors_Utils::ForEach_ValidEntry(InSensorOwnerEntity, [&](FCk_Handle InSensorEntity)
-    {
-        AllSensors.Emplace(UCk_Utils_GameplayLabel_UE::Get_Label(InSensorEntity));
-    });
-
-    return AllSensors;
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    PreviewAllSensors(
+    PreviewAll(
         UObject*   InOuter,
         FCk_Handle InHandle)
     -> void
@@ -135,7 +116,7 @@ auto
 
 auto
     UCk_Utils_Sensor_UE::
-    PreviewSensor(
+    Preview(
         UObject* InOuter,
         FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName)

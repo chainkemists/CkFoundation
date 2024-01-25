@@ -29,7 +29,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ResourceLoader",
-              DisplayName = "[ResourceLoader] Request Load Object")
+              DisplayName = "[Ck][ResourceLoader] Request Load Object")
     static void
     Request_LoadObject(
         FCk_Handle InHandle,
@@ -38,7 +38,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ResourceLoader",
-              DisplayName = "[ResourceLoader] Request Load Object Batch")
+              DisplayName = "[Ck][ResourceLoader] Request Load Object Batch")
     static void
     Request_LoadObjectBatch(
         FCk_Handle InHandle,

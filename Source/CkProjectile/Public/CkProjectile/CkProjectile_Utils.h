@@ -23,7 +23,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Projectile",
-              DisplayName="[Projectile] Add Feature")
+              DisplayName="[Ck][Projectile] Add Feature")
     static void
     Add(
         FCk_Handle InHandle,

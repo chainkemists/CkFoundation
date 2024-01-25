@@ -40,7 +40,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
-              DisplayName="Add New Sensor", meta = (GameplayTagFilter = "Sensor"))
+              DisplayName="[Ck][Sensor] Add New Sensor")
     static void
     Add(
         FCk_Handle InHandle,
@@ -49,17 +49,19 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
+              DisplayName = "[Ck][Sensor] Preview All",
               meta = (DevelopmentOnly, DefaultToSelf = "InOuter"))
     static void
-    PreviewAllSensors(
+    PreviewAll(
         UObject* InOuter,
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
+              DisplayName = "[Ck][Sensor] Preview",
               meta = (DevelopmentOnly, DefaultToSelf = "InOuter"))
     static void
-    PreviewSensor(
+    Preview(
         UObject* InOuter,
         FCk_Handle InSensorOwnerEntity,
         FGameplayTag InSensorName);
@@ -67,7 +69,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
-              DisplayName="Has Sensor")
+              DisplayName="[Ck][Sensor] Has Sensor")
     static bool
     Has(
         FCk_Handle InSensorOwnerEntity,
@@ -75,14 +77,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
-              DisplayName="Has Any Sensor")
+              DisplayName="[Ck][Sensor] Has Any Sensor")
     static bool
     Has_Any(
         FCk_Handle InSensorOwnerEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
-              DisplayName="Ensure Has Sensor")
+              DisplayName="[Ck][Sensor] Ensure Has Sensor")
     static bool
     Ensure(
         FCk_Handle InSensorOwnerEntity,
@@ -90,7 +92,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
-              DisplayName="Ensure Has Any Sensor")
+              DisplayName="[Ck][Sensor] Ensure Has Any Sensor")
     static bool
     Ensure_Any(
         FCk_Handle InSensorOwnerEntity);
@@ -98,15 +100,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
-              DisplayName="Get All Sensors")
-    static TArray<FGameplayTag>
-    Get_All(
-        FCk_Handle InSensorOwnerEntity);
-
-public:
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Sensor",
-              DisplayName = "Get Sensor Replication Type")
+              DisplayName = "[Ck][Sensor] Get Replication Type")
     static ECk_Net_ReplicationType
     Get_ReplicationType(
         FCk_Handle InSensorOwnerEntity,
@@ -114,7 +108,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "Get Sensor Physics Info")
+              DisplayName = "[Ck][Sensor] Get Physics Info")
     static FCk_Sensor_PhysicsInfo
     Get_PhysicsInfo(
         FCk_Handle InSensorOwnerEntity,
@@ -122,7 +116,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "Get Sensor Shape Info")
+              DisplayName = "[Ck][Sensor] Get Shape Info")
     static FCk_Sensor_ShapeInfo
     Get_ShapeInfo(
         FCk_Handle InSensorOwnerEntity,
@@ -130,7 +124,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "Get Sensor Debug Info")
+              DisplayName = "[Ck][Sensor] Get Debug Info")
     static FCk_Sensor_DebugInfo
     Get_DebugInfo(
         FCk_Handle InSensorOwnerEntity,
@@ -138,7 +132,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "Get Sensor Enable Disable")
+              DisplayName = "[Ck][Sensor] Get Enable Disable")
     static ECk_EnableDisable
     Get_EnableDisable(
         FCk_Handle InSensorOwnerEntity,
@@ -146,7 +140,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "Get Sensor Shape Component")
+              DisplayName = "[Ck][Sensor] Get Shape Component")
     static UShapeComponent*
     Get_ShapeComponent(
         FCk_Handle InSensorOwnerEntity,
@@ -154,7 +148,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "Get Sensor Attached Entity And Actor")
+              DisplayName = "[Ck][Sensor] Get Attached Entity And Actor")
     static FCk_EntityOwningActor_BasicDetails
     Get_AttachedEntityAndActor(
         FCk_Handle InSensorOwnerEntity,
@@ -162,7 +156,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "Get Has Sensor Any Marker Overlaps")
+              DisplayName = "[Ck][Sensor] Get Has Any Marker Overlaps")
     static bool
     Get_HasMarkerOverlaps(
         FCk_Handle InSensorOwnerEntity,
@@ -170,8 +164,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "Get All Sensor Marker Overlaps",
-              meta = (AutoCreateRefTerm = "FCk_Handle"))
+              DisplayName = "[Ck][Sensor] Get All Marker Overlaps")
     static FCk_Sensor_MarkerOverlaps
     Get_AllMarkerOverlaps(
         FCk_Handle InSensorOwnerEntity,
@@ -179,7 +172,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "Get Has Sensor Any Non-Marker Overlaps")
+              DisplayName = "[Ck][Sensor] Get Has Any Non-Marker Overlaps")
     static bool
     Get_HasNonMarkerOverlaps(
         FCk_Handle InSensorOwnerEntity,
@@ -187,8 +180,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "Get All Sensor Non-Marker Overlaps",
-              meta = (AutoCreateRefTerm = "FCk_Handle"))
+              DisplayName = "[Ck][Sensor] Get All Non-Marker Overlaps")
     static FCk_Sensor_NonMarkerOverlaps
     Get_AllNonMarkerOverlaps(
         FCk_Handle InSensorOwnerEntity,
@@ -197,7 +189,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "Request Enable Disable Sensor")
+              DisplayName = "[Ck][Sensor] Request Enable/Disable")
     static void
     Request_EnableDisable(
         FCk_Handle InSensorOwnerEntity,
@@ -207,7 +199,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "Bind To Sensor Enable Disable")
+              DisplayName = "[Ck][Sensor] Bind To OnEnableDisable")
     static void
     BindTo_OnEnableDisable(
         FCk_Handle InSensorOwnerEntity,
@@ -217,7 +209,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "Unbind From Sensor Enable Disable")
+              DisplayName = "[Ck][Sensor] Unbind From OnEnableDisable")
     static void
     UnbindFrom_OnEnableDisable(
         FCk_Handle InSensorOwnerEntity,
@@ -226,7 +218,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "Bind To Sensor Begin Overlap")
+              DisplayName = "[Ck][Sensor] Bind To OnBeginOverlap")
     static void
     BindTo_OnBeginOverlap(
         FCk_Handle InSensorOwnerEntity,
@@ -236,7 +228,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "Unbind From Sensor Begin Overlap")
+              DisplayName = "[Ck][Sensor] Unbind From OnBeginOverlap")
     static void
     UnbindFrom_OnBeginOverlap(
         FCk_Handle InSensorOwnerEntity,
@@ -245,7 +237,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "Bind To Sensor End Overlap")
+              DisplayName = "[Ck][Sensor] Bind To OnEndOverlap")
     static void
     BindTo_OnEndOverlap(
         FCk_Handle InSensorOwnerEntity,
@@ -255,7 +247,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "Unbind From Sensor End Overlap")
+              DisplayName = "[Ck][Sensor] Unbind From OnEndOverlap")
     static void
     UnbindFrom_OnEndOverlap(
         FCk_Handle InSensorOwnerEntity,
@@ -264,7 +256,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "Bind To Sensor Begin Overlap Non-Marker")
+              DisplayName = "[Ck][Sensor] Bind To OnBeginOverlap_NonMarker")
     static void
     BindTo_OnBeginOverlap_NonMarker(
         FCk_Handle InSensorOwnerEntity,
@@ -274,7 +266,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "Unbind From Sensor Begin Overlap Non-Marker")
+              DisplayName = "[Ck][Sensor] Unbind From OnBeginOverlap_NonMarker")
     static void
     UnbindFrom_OnBeginOverlap_NonMarker(
         FCk_Handle InSensorOwnerEntity,
@@ -283,7 +275,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "Bind To Sensor End Overlap Non-Marker")
+              DisplayName = "[Ck][Sensor] Bind To OnEndOverlap_NonMarker")
     static void
     BindTo_OnEndOverlap_NonMarker(
         FCk_Handle InSensorOwnerEntity,
@@ -293,7 +285,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
-              DisplayName = "Unbind From Sensor End Overlap Non-Marker")
+              DisplayName = "[Ck][Sensor] Unbind From OnEndOverlap_NonMarker")
     static void
     UnbindFrom_OnEndOverlap_NonMarker(
         FCk_Handle InSensorOwnerEntity,

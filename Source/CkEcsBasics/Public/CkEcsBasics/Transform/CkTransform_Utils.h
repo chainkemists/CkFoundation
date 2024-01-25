@@ -49,7 +49,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Transform] Request Set Location")
+              DisplayName = "[Ck][Transform] Request Set Location")
     static void
     Request_SetLocation(
         FCk_Handle InHandle,
@@ -57,7 +57,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Transform] Request Add Location Offset")
+              DisplayName = "[Ck][Transform] Request Add Location Offset")
     static void
     Request_AddLocationOffset(
         FCk_Handle InHandle,
@@ -65,7 +65,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Transform] Request Set Rotation")
+              DisplayName = "[Ck][Transform] Request Set Rotation")
     static void
     Request_SetRotation(
         FCk_Handle InHandle,
@@ -73,7 +73,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Transform] Request Add Rotation Offset")
+              DisplayName = "[Ck][Transform] Request Add Rotation Offset")
     static void
     Request_AddRotationOffset(
         FCk_Handle InHandle,
@@ -81,7 +81,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Transform] Request Set Scale")
+              DisplayName = "[Ck][Transform] Request Set Scale")
     static void
     Request_SetScale(
         FCk_Handle InHandle,
@@ -89,7 +89,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Transform] Request Set Transform")
+              DisplayName = "[Ck][Transform] Request Set Transform")
     static void
     Request_SetTransform(
         FCk_Handle InHandle,
@@ -97,7 +97,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Transform] Request Set Interpolation Goal [LOCATION]")
+              DisplayName = "[Ck][Transform] Request Set Interpolation Goal [LOCATION]")
     static void
     Request_SetInterpolationGoal_LocationOffset(
         FCk_Handle InHandle,
@@ -105,7 +105,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Transform] Request Set Interpolation Goal [ROTATION]")
+              DisplayName = "[Ck][Transform] Request Set Interpolation Goal [ROTATION]")
     static void
     Request_SetInterpolationGoal_RotationOffset(
         FCk_Handle InHandle,
@@ -114,28 +114,28 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Transform] Get Transform")
+              DisplayName = "[Ck][Transform] Get Transform")
     static FTransform
     Get_EntityCurrentTransform(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Transform] Get Location")
+              DisplayName = "[Ck][Transform] Get Location")
     static FVector
     Get_EntityCurrentLocation(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Transform] Get Rotation")
+              DisplayName = "[Ck][Transform] Get Rotation")
     static FRotator
     Get_EntityCurrentRotation(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Transform] Get Scale")
+              DisplayName = "[Ck][Transform] Get Scale")
     static FVector
     Get_EntityCurrentScale(
         FCk_Handle InHandle);
@@ -143,7 +143,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Transform] Bind To OnUpdate")
+              DisplayName = "[Ck][Transform] Bind To OnUpdate")
     static void
     BindTo_OnUpdate(
         FCk_Handle InHandle,
@@ -152,7 +152,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName = "[Transform] Unbind From OnUpdate")
+              DisplayName = "[Ck][Transform] Unbind From OnUpdate")
     static void
     UnbindFrom_OnUpdate(
         FCk_Handle InHandle,
@@ -161,7 +161,7 @@ public:
 private:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName="[Transform] Add Feature")
+              DisplayName="[Ck][Transform] Add Feature")
     static void
     DoAdd(
         FCk_Handle InHandle,
@@ -171,14 +171,14 @@ private:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Transform",
-              DisplayName="[Transform] Has Feature")
+              DisplayName="[Ck][Transform] Has Feature")
     static bool
     DoHas(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Transform",
-              DisplayName="[Transform] Ensure Has Feature")
+              DisplayName="[Ck][Transform] Ensure Has Feature")
     static bool
     DoEnsure(
         FCk_Handle InHandle);

@@ -19,7 +19,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|AbilityCue",
-        DisplayName="[AbilityCue] Request Spawn")
+        DisplayName="[Ck][AbilityCue] Request Spawn")
     static void
     Request_Spawn_AbilityCue(
         FCk_Handle InHandle,
@@ -28,7 +28,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|AbilityCue",
-        DisplayName="[AbilityCue] Get Params")
+        DisplayName="[Ck][AbilityCue] Get Params")
     static FCk_AbilityCue_Params
     Get_Params(
         FCk_Handle InAbilityCueEntity);

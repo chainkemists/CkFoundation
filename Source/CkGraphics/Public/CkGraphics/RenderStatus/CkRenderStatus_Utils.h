@@ -19,7 +19,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|RenderStatus",
-              DisplayName="[RenderStatus] Add Feature")
+              DisplayName="[Ck][RenderStatus] Add Feature")
     static void
     Add(
         FCk_Handle InHandle,
@@ -27,14 +27,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|RenderStatus",
-              DisplayName="[RenderStatus] Has Feature")
+              DisplayName="[Ck][RenderStatus] Has Feature")
     static bool
     Has(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|RenderStatus",
-              DisplayName="[RenderStatus] Ensure Has Feature")
+              DisplayName="[Ck][RenderStatus] Ensure Has Feature")
     static bool
     Ensure(
         FCk_Handle InHandle);
@@ -43,7 +43,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|RenderStatus",
               meta = (AutoCreateRefTerm = "InOptionalPayload"),
-              DisplayName="[RenderStatus] Request Query Rendered Actors")
+              DisplayName="[Ck][RenderStatus] Request Query Rendered Actors")
     static void
     Request_QueryRenderedActors(
         FCk_Handle InHandle,

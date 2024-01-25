@@ -168,13 +168,13 @@ auto
     -> void
 {
     CK_ENSURE_IF_NOT(UCk_Utils_AbilityOwner_UE::Has(Get_AbilityHandle()),
-        TEXT("Ability Entity [{}] with AbilityScript [{}] is NOT an AbiltyOwner itself. Did you forget to add a 'Cost' Ability to the aforementioned?"),
+        TEXT("Ability Entity [{}] with AbilityScript [{}] is NOT an AbilityOwner itself. Did you forget to add a 'Cost' Ability to the aforementioned?"),
         Get_AbilityHandle(), this)
     { return; }
 
     const auto& DefaultApplyCostTag = UCk_Utils_Ability_Settings_UE::Get_Default_ApplyCostTag();
 
-    UCk_Utils_AbilityOwner_UE::Request_SendEvent
+    UCk_Utils_AbilityOwner_UE::Request_SendAbilityEvent
     (
         Get_AbilityHandle(),
         FCk_Request_AbilityOwner_SendEvent
@@ -192,7 +192,7 @@ auto
 {
     const auto& DefaultApplyCostTag = UCk_Utils_Ability_Settings_UE::Get_Default_ApplyCostTag();
 
-    UCk_Utils_AbilityOwner_UE::Request_SendEvent
+    UCk_Utils_AbilityOwner_UE::Request_SendAbilityEvent
     (
         Get_AbilityOwnerHandle(),
         FCk_Request_AbilityOwner_SendEvent
@@ -209,13 +209,13 @@ auto
     -> void
 {
     CK_ENSURE_IF_NOT(UCk_Utils_AbilityOwner_UE::Has(Get_AbilityHandle()),
-        TEXT("Ability Entity [{}] with AbilityScript [{}] is NOT an AbiltyOwner itself. Did you forget to add a 'Cooldown' Ability to the aforementioned?"),
+        TEXT("Ability Entity [{}] with AbilityScript [{}] is NOT an AbilityOwner itself. Did you forget to add a 'Cooldown' Ability to the aforementioned?"),
         Get_AbilityHandle(), this)
     { return; }
 
     const auto& DefaultApplyCooldownTag = UCk_Utils_Ability_Settings_UE::Get_Default_ApplyCooldownTag();
 
-    UCk_Utils_AbilityOwner_UE::Request_SendEvent
+    UCk_Utils_AbilityOwner_UE::Request_SendAbilityEvent
     (
         Get_AbilityHandle(),
         FCk_Request_AbilityOwner_SendEvent
@@ -233,7 +233,7 @@ auto
 {
     const auto& DefaultApplyCooldownTag = UCk_Utils_Ability_Settings_UE::Get_Default_ApplyCooldownTag();
 
-    UCk_Utils_AbilityOwner_UE::Request_SendEvent
+    UCk_Utils_AbilityOwner_UE::Request_SendAbilityEvent
     (
         Get_AbilityOwnerHandle(),
         FCk_Request_AbilityOwner_SendEvent
