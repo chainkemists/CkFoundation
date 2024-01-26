@@ -37,4 +37,13 @@ auto
     return ColumnNames;
 }
 
+auto
+    UCk_Utils_DataTable_UE::
+    Get_IsValid_RowHandle(
+        const FDataTableRowHandle& InDataTableRowHandle)
+    -> bool
+{
+    return ck::IsValid(InDataTableRowHandle);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
