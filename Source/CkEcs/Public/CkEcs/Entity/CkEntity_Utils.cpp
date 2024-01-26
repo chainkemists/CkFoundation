@@ -4,7 +4,7 @@
 
 auto
     UCk_Utils_Entity_UE::
-    Get_Entity_IsEqual(
+    IsEqual(
         const FCk_Entity& InEntityA,
         const FCk_Entity& InEntityB)
     -> bool
@@ -14,7 +14,7 @@ auto
 
 auto
     UCk_Utils_Entity_UE::
-    Get_Entity_IsNotEqual(
+    IsNotEqual(
         const FCk_Entity& InEntityA,
         const FCk_Entity& InEntityB)
     -> bool

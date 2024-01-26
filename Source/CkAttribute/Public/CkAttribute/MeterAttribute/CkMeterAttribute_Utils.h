@@ -144,6 +144,46 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Meter",
+              DisplayName="[Ck][MeterAttribute] Get All Attributes",
+              meta=(DeprecatedFunction, DeprecationMessage="Use the ForEach variants"))
+    static TArray<FGameplayTag>
+    Get_All(
+        FCk_Handle InAttributeOwnerEntity);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Meter",
+              DisplayName="[Ck][MeterAttribute] For Each",
+              meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
+    static TArray<FCk_Handle>
+    ForEach(
+        FCk_Handle InAttributeOwner,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate);
+    static auto
+    ForEach(
+        const FCk_Handle&                  InAttributeOwner,
+        const TFunction<void(FCk_Handle)>& InFunc) -> void;
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Meter",
+              DisplayName="[Ck][MeterAttribute] For Each If",
+              meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
+    static TArray<FCk_Handle>
+    ForEach_If(
+        FCk_Handle InAttributeOwner,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate,
+        const FCk_Predicate_InHandle_OutResult& InPredicate);
+    static auto
+    ForEach_If(
+        const FCk_Handle&                  InAttributeOwner,
+        const TFunction<void(FCk_Handle)>& InFunc,
+        const TFunction<bool(FCk_Handle)>& InPredicate) -> void;
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Meter",
               DisplayName="[Ck][MeterAttribute] Get Base Value")
     static FCk_Meter
     Get_BaseValue(

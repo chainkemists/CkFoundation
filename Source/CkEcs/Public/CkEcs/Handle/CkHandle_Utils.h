@@ -17,47 +17,53 @@ public:
 
 private:
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Handle Valid",
               Category = "Ck|Utils|Handle",
               meta = (CompactNodeTitle = "IsValid"))
     static bool
-    Get_Handle_IsValid(
+    Get_IsValid(
         const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Handle == Handle",
               Category = "Ck|Utils|Handle",
               meta = (CompactNodeTitle = "==", KeyWords = "==,equal"))
     static bool
-    Get_Handle_IsEqual(
+    IsEqual(
         const FCk_Handle& InHandleA,
         const FCk_Handle& InHandleB);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Handle != Handle",
               Category = "Ck|Utils|Handle",
               meta = (CompactNodeTitle = "!=", KeyWords = "!=,not,equal"))
     static bool
-    Get_Handle_IsNotEqual(
+    IsNotEqual(
         const FCk_Handle& InHandleA,
         const FCk_Handle& InHandleB);
 
 public:
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Handle -> Text",
               Category = "Ck|Utils|Handle",
-              meta = (DisplayName = "Handle To Text", CompactNodeTitle = "->", BlueprintAutocast))
+              meta = (CompactNodeTitle = "->", BlueprintAutocast))
     static FText
     Conv_HandleToText(
         const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Handle -> String",
               Category = "Ck|Utils|Handle",
-              meta = (DisplayName = "Handle To String", CompactNodeTitle = "->", BlueprintAutocast))
+              meta = (CompactNodeTitle = "->", BlueprintAutocast))
     static FString
     Conv_HandleToString(
         const FCk_Handle& InHandle);
 
 public:
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|Handle",
-        meta = (CompactNodeTitle = "BREAK", DevevelopmentOnly))
+              DisplayName = "[Ck] Debug Handle",
+              Category = "Ck|Utils|Handle",
+              meta = (CompactNodeTitle = "BREAK", DevevelopmentOnly))
     static void
     Debug_Handle(
         const FCk_Handle& InHandle);
@@ -69,7 +75,10 @@ public:
         FName InDebugName) -> void;
 
 private:
-    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Handle", meta = (NativeBreakFunc))
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Break Handle",
+              Category = "Ck|Utils|Handle",
+              meta = (NativeBreakFunc))
     static void
     Break_Handle(
         const FCk_Handle& InHandle,

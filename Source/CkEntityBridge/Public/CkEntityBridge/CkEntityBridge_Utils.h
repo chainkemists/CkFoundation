@@ -20,14 +20,16 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|EntityBridge",
-        DisplayName  = "Request Spawn Entity")
+              Category = "Ck|Utils|EntityBridge",
+              DisplayName  = "[Ck] Request Spawn New Entity")
     static void
     Request_Spawn(
         FCk_Handle InHandle,
         const FCk_Request_EntityBridge_SpawnEntity& InRequest);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|EntityBridge")
+    UFUNCTION(BlueprintCallable,
+              DisplayName  = "[Ck] Build Entity",
+              Category = "Ck|Utils|EntityBridge")
     static FCk_Handle
     BuildEntity(
         FCk_Handle InHandle,

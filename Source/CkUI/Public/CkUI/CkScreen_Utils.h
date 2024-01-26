@@ -17,11 +17,13 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Screen_UE);
 
 public:
-    UFUNCTION(BlueprintPure, Category = "Ck|Utils|UI")
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Project World Location To Widget Position Coords",
+              Category = "Ck|Utils|UI")
     static bool
     ProjectWorldLocationToWidgetPositionCoords(
         APlayerController* InPlayerController,
-        const FVector& InWorldLocation, 
+        const FVector& InWorldLocation,
         FVector2D& OutViewportPosition);
 
     /**
@@ -35,6 +37,7 @@ public:
     * @param OutIsOnScreen - True if the specified location is in the camera view (may be obstructed)
     */
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Find Screen Edge Location For World Location",
               Category = "Ck|Utils|UI",
               meta=(WorldContext = "InWorldContextObject", CallableWithoutWorldContext))
     static void

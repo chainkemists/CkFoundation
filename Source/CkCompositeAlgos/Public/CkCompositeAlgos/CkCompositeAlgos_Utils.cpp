@@ -318,4 +318,58 @@ auto
     });
 }
 
+auto
+    UCk_Utils_CompositeAlgos_UE::
+    TransformBasicDetails_ToActors(
+        const TArray<FCk_EntityOwningActor_BasicDetails>& InEntitiesWithActor)
+    -> TArray<AActor*>
+{
+    return ck::algo::Transform<TArray<AActor*>>(InEntitiesWithActor, [](const FCk_EntityOwningActor_BasicDetails& InBasicDetails)
+    {
+        return InBasicDetails.Get_Actor().Get();
+    });
+}
+
+auto
+    UCk_Utils_CompositeAlgos_UE::
+    TransformBasicDetails_ToEntities(
+        const TArray<FCk_EntityOwningActor_BasicDetails>& InEntitiesWithActor)
+    -> TArray<FCk_Handle>
+{
+    return ck::algo::Transform<TArray<FCk_Handle>>(InEntitiesWithActor, [](const FCk_EntityOwningActor_BasicDetails& InBasicDetails)
+    {
+        return InBasicDetails.Get_Handle();
+    });
+}
+
+auto
+    UCk_Utils_CompositeAlgos_UE::
+    TransformActors_ToEntities(
+        const TArray<AActor*>& InActors)
+    -> TArray<FCk_Handle>
+{
+    return ck::algo::Transform<TArray<FCk_Handle>>(InActors, [](AActor* InActor) -> FCk_Handle
+    {
+        CK_ENSURE_IF_NOT(UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(InActor), TEXT("Actor [{}] is NOT Ecs Ready when trying to transform"), InActor)
+        { return {}; }
+
+        return UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(InActor);
+    });
+}
+
+auto
+    UCk_Utils_CompositeAlgos_UE::
+    TransformEntities_ToActors(
+        const TArray<FCk_Handle>& InEntities)
+    -> TArray<AActor*>
+{
+    return ck::algo::Transform<TArray<AActor*>>(InEntities, [](const FCk_Handle& InEntity) -> AActor*
+    {
+        CK_ENSURE_IF_NOT(UCk_Utils_OwningActor_UE::Has(InEntity), TEXT("Entity [{}] is MISSING an OwningActor Fragment when trying to transform"), InEntity)
+        { return {}; }
+
+        return UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InEntity);
+    });
+}
+
 // --------------------------------------------------------------------------------------------------------------------

@@ -21,6 +21,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Math|Arithmetic",
+        DisplayName = "[Ck] Increment With Wrap",
         meta=(CompactNodeTitle="++Wrap"))
     static int32
     Increment_WithWrap(
@@ -29,6 +30,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Math|Arithmetic",
+        DisplayName = "[Ck] Decrement With Wrap",
         meta=(CompactNodeTitle="--Wrap"))
     static int32
     Decrement_WithWrap(
@@ -37,6 +39,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Math|Arithmetic",
+        DisplayName = "[Ck] Offset With Wrap",
         meta=(CompactNodeTitle="++Wrap"))
     static int32
     Offset_WithWrap(
@@ -46,6 +49,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Lerp Float With Easing",
               Category = "Ck|Utils|Math|Arithmetic")
     static float
     Get_LerpFloatWithEasing(
@@ -56,6 +60,7 @@ public:
         ECk_EasingMethod InEasingMethod);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Round Float To Float",
               Category = "Ck|Utils|Math|Arithmetic")
     static float
     Get_RoundFloatToFloat(
@@ -63,6 +68,7 @@ public:
         float InValue);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Round Float To Int",
               Category = "Ck|Utils|Math|Arithmetic")
     static int32
     Get_RoundFloatToInt(
@@ -70,21 +76,24 @@ public:
         float InValue);
 
     UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|Math|Arithmetic")
+              DisplayName = "[Ck] Get Increment With Wrap",
+              Category = "Ck|Utils|Math|Arithmetic")
     static int32
     Get_Increment_WithWrap(
         int32 InToIncrement,
         const FCk_IntRange& InRange);
 
     UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|Math|Arithmetic")
+              DisplayName = "[Ck] Get Decrement With Wrap",
+              Category = "Ck|Utils|Math|Arithmetic")
     static int32
     Get_Decrement_WithWrap(
         int32 InToDecrement,
         const FCk_IntRange& InRange);
 
     UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|Math|Arithmetic")
+              DisplayName = "[Ck] Get Offset With Wrap",
+              Category = "Ck|Utils|Math|Arithmetic")
     static int32
     Get_Offset_WithWrap(
         int32 InToDecrement,

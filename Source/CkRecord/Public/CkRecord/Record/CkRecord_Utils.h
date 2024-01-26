@@ -339,27 +339,28 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Record",
-              DisplayName = "Add Record of Entities")
+              DisplayName = "[Ck][Record] Add Feature")
     static void
     Add(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Record",
-              DisplayName = "Has Record of Entities?")
+              DisplayName = "[Ck][Record] Has Feature")
     static bool
     Has(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Record",
-              DisplayName = "Ensure Has Record of Entities")
+              DisplayName = "[Ck][Record] Ensure Has Feature")
     static bool
     Ensure(
         FCk_Handle InHandle);
 
 public:
     UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck][Record] Get Has Valid Entry If",
               Category = "Ck|Utils|Record",
               meta=(AutoCreateRefTerm="InOptionalPayload"))
     static bool
@@ -369,6 +370,7 @@ public:
         FCk_Predicate_InHandle_OutResult InPredicate);
 
     UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck][Record] Get Valid Entry If",
               Category = "Ck|Utils|Record",
               meta=(AutoCreateRefTerm="InOptionalPayload"))
     static FCk_Handle
@@ -378,8 +380,8 @@ public:
         FCk_Predicate_InHandle_OutResult InPredicate);
 
     UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck][Record] For Each Valid Entry",
               Category = "Ck|Utils|Record",
-              DisplayName="For Each RecordEntry",
               meta=(AutoCreateRefTerm="InFunc, InOptionalPayload"))
     static TArray<FCk_Handle>
     ForEach_ValidEntry(
@@ -388,8 +390,8 @@ public:
         const FCk_Lambda_InHandle& InFunc);
 
     UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck][Record] For Each Valid Entry If",
               Category = "Ck|Utils|Record",
-              DisplayName="For Each RecordEntry IF",
               meta=(AutoCreateRefTerm="InOptionalPayload, InFunc"))
     static TArray<FCk_Handle>
     ForEach_ValidEntry_If(
@@ -400,6 +402,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck][Record] Request Connect",
               Category = "Ck|Utils|Record")
     static void
     Request_Connect(
@@ -407,6 +410,7 @@ public:
         FCk_Handle InRecordEntry);
 
     UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck][Record] Request Disconnect",
               Category = "Ck|Utils|Record")
     static void
     Request_Disconnect(

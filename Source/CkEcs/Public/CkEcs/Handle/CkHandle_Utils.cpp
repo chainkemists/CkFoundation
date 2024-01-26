@@ -6,7 +6,7 @@
 
 auto
     UCk_Utils_Handle_UE::
-    Get_Handle_IsValid(
+    Get_IsValid(
         const FCk_Handle& InHandle)
     -> bool
 {
@@ -15,7 +15,7 @@ auto
 
 auto
     UCk_Utils_Handle_UE::
-    Get_Handle_IsEqual(
+    IsEqual(
         const FCk_Handle& InHandleA,
         const FCk_Handle& InHandleB)
     -> bool
@@ -25,7 +25,7 @@ auto
 
 auto
     UCk_Utils_Handle_UE::
-    Get_Handle_IsNotEqual(
+    IsNotEqual(
         const FCk_Handle& InHandleA,
         const FCk_Handle& InHandleB)
     -> bool

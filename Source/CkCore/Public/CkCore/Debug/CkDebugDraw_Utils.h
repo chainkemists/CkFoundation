@@ -32,7 +32,8 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Debug")
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Create ASCII Progress Bar")
     static FString
     Create_ASCII_ProgressBar(
         const FCk_FloatRange_0to1& InProgressValue,

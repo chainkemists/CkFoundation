@@ -18,6 +18,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck] Request Set Generate Overlap Events",
               Category = "Ck|Utils|Physics",
               meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
     static void
@@ -27,6 +28,7 @@ public:
         const UObject* InContext = nullptr);
 
     UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck] Request Set Collision Detection Type",
               Category = "Ck|Utils|Physics",
               meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
     static void
@@ -36,6 +38,7 @@ public:
         const UObject* InContext = nullptr);
 
     UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck] Request Set Navigation Effects",
               Category = "Ck|Utils|Physics",
               meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
     static void
@@ -45,6 +48,7 @@ public:
         const UObject* InContext = nullptr);
 
     UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck] Request Set Overlap Behavior",
               Category = "Ck|Utils|Physics",
               meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
     static void
@@ -54,6 +58,7 @@ public:
         const UObject* InContext = nullptr);
 
     UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck] Request Set Collision Profile Name",
               Category = "Ck|Utils|Physics",
               meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
     static void
@@ -63,6 +68,7 @@ public:
         const UObject*       InContext = nullptr);
 
     UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck] Request Set Collision Enabled",
               Category = "Ck|Utils|Physics",
               meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
     static void
@@ -73,6 +79,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
+              DisplayName="[Ck] Get Is Valid Collision Profile Name",
               Category = "Ck|Utils|Physics",
               meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
     static bool
@@ -81,6 +88,7 @@ public:
         const UObject* InContext = nullptr);
 
     UFUNCTION(BlueprintPure,
+              DisplayName="[Ck] Get Collision Profile Name",
               Category = "Ck|Utils|Physics",
               meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
     static FName
@@ -90,16 +98,19 @@ public:
 
 private:
     UFUNCTION(BlueprintPure,
+              DisplayName="[Ck] Make Shape Dimensions (Box)",
               Category = "Ck|Utils|Physics")
     static FCk_ShapeDimensions
     Make_BoxShapeDimensions(const FCk_BoxExtents& InBoxExtents);
 
     UFUNCTION(BlueprintPure,
+              DisplayName="[Ck] Make Shape Dimensions (Sphere)",
               Category = "Ck|Utils|Physics")
     static FCk_ShapeDimensions
     Make_SphereShapeDimensions(const FCk_SphereRadius& InSphereRadius);
 
-        UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck] Make Shape Dimensions (Capsule)",
               Category = "Ck|Utils|Physics")
     static FCk_ShapeDimensions
     Make_CapsuleShapeDimensions(const FCk_CapsuleSize& InCapsuleSize);

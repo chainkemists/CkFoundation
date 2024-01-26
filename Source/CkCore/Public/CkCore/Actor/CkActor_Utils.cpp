@@ -16,7 +16,7 @@
 
 FCk_Utils_Actor_SpawnActor_Params::
     FCk_Utils_Actor_SpawnActor_Params(
-        TWeakObjectPtr<UObject> InOwnerOrWorld,
+        UObject* InOwnerOrWorld,
         TSubclassOf<AActor> InActorClass)
     :_OwnerOrWorld(std::move(InOwnerOrWorld))
     , _ActorClass(InActorClass)
@@ -296,7 +296,7 @@ auto
 
     if (ck::IsValid(InDeferredSpawnActorParams.Get_NonUniqueName()))
     {
-        SpawnInfo.Name = UCk_Utils_Object_UE::Request_GeneratedUniqueName(
+        SpawnInfo.Name = UCk_Utils_Object_UE::Get_GeneratedUniqueName(
             OwnerOrWorld, ActorClass, InDeferredSpawnActorParams.Get_NonUniqueName());
     }
 

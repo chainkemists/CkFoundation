@@ -4,7 +4,7 @@
 
 auto
     UCk_Utils_Object_UE::
-    Request_GeneratedUniqueName(
+    Get_GeneratedUniqueName(
         UObject* InThis,
         UClass* InObj,
         FName InBaseName)
@@ -165,6 +165,64 @@ auto
 
 auto
     UCk_Utils_Object_UE::
+    Get_ObjectNativeParentClass(
+        UObject* InObject)
+    -> UClass*
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Invalid Object supplied to Get_ObjectNativeParentClass"))
+    { return {}; }
+
+    const auto& NativeParentClass = [&]() -> UClass*
+    {
+        auto ObjectClass = InObject->GetClass();
+        auto BlueprintGeneratedClass = Cast<UBlueprintGeneratedClass>(ObjectClass);
+
+        while (ck::IsValid(BlueprintGeneratedClass, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            ObjectClass = ObjectClass->GetSuperClass();
+            BlueprintGeneratedClass = Cast<UBlueprintGeneratedClass>(ObjectClass);
+        }
+
+        return ObjectClass;
+    }();
+
+    return NativeParentClass;
+}
+
+auto
+    UCk_Utils_Object_UE::
+    Get_BlueprintGeneratedClass(
+        UObject* InBlueprintObject)
+    -> UClass*
+{
+    const auto& Blueprint = Cast<UBlueprint>(InBlueprintObject);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InBlueprintObject),
+        TEXT("Object [{}] supplied to Get_BlueprintGeneratedClass is Invalid OR is NOT of type UBlueprint!"),
+        InBlueprintObject)
+    { return {}; }
+
+    return Blueprint->GeneratedClass;
+}
+
+auto
+    UCk_Utils_Object_UE::
+    Get_ClassGeneratedByBlueprint(
+        UClass* InBlueprintGeneratedClass)
+    -> UObject*
+{
+    const auto& Bpgc = Cast<UBlueprintGeneratedClass>(InBlueprintGeneratedClass);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Bpgc),
+        TEXT("Class [{}] supplied to Get_ClassGeneratedByBlueprint is Invalid OR is NOT of type UBlueprintGeneratedClass!"),
+        InBlueprintGeneratedClass)
+    { return {}; }
+
+    return Bpgc->ClassGeneratedBy;
+}
+
+auto
+    UCk_Utils_Object_UE::
     DoGet_ClassDefaultObject(
         TSubclassOf<UObject> InObject)
     -> UObject*
@@ -173,6 +231,23 @@ auto
     { return {}; }
 
     return InObject->GetDefaultObject();
+}
+
+auto
+    UCk_Utils_Object_UE::
+    DoGet_ClassDefaultObject_UpToDate(
+        TSubclassOf<UObject> InObject)
+    -> UObject*
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Invalid Class supplied to DoGet_ClassDefaultObject_UpToDate"))
+    { return {}; }
+
+    const auto& DefaultClass = Get_DefaultClass_UpToDate(InObject->GetClass());
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Could not get the Default Class Up-To-Date of Object [{}]"), InObject)
+    { return {}; }
+
+    return DefaultClass->GetDefaultObject();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

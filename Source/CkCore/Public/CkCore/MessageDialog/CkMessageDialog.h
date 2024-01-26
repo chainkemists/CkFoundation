@@ -105,6 +105,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
+        DisplayName = "[Ck] Open Message Dialog (Ok)",
         Category = "Ck|Utils|MessageDialog")
     static void
     Ok(
@@ -112,6 +113,7 @@ public:
         FText InTitle = FText::GetEmpty());
 
     UFUNCTION(BlueprintCallable,
+        DisplayName = "[Ck] Open Message Dialog (Yes/No)",
         Category = "Ck|Utils|MessageDialog")
     static ECk_MessageDialog_YesNo
     YesNo(
@@ -119,13 +121,15 @@ public:
         FText InTitle = FText::GetEmpty());
 
     UFUNCTION(BlueprintCallable,
+        DisplayName = "[Ck] Open Message Dialog (Ok/Cancel)",
         Category = "Ck|Utils|MessageDialog")
     static ECk_MessageDialog_OkCancel
     OkCancel(
-        FText InMessage, 
+        FText InMessage,
         FText InTitle = FText::GetEmpty());
 
     UFUNCTION(BlueprintCallable,
+        DisplayName = "[Ck] Open Message Dialog (Yes/No/Cancel)",
         Category = "Ck|Utils|MessageDialog")
     static ECk_MessageDialog_YesNoCancel
     YesNoCancel(
@@ -133,13 +137,15 @@ public:
         FText InTitle = FText::GetEmpty());
 
     UFUNCTION(BlueprintCallable,
+        DisplayName = "[Ck] Open Message Dialog (Cancel/Retry/Continue)",
         Category = "Ck|Utils|MessageDialog")
     static ECk_MessageDialog_CancelRetryContinue
     CancelRetryContinue(
-        FText InMessage, 
+        FText InMessage,
         FText InTitle = FText::GetEmpty());
 
     UFUNCTION(BlueprintCallable,
+        DisplayName = "[Ck] Open Message Dialog (Yes/No/YesAll/NoAll)",
         Category = "Ck|Utils|MessageDialog")
     static ECk_MessageDialog_YesNoYesAllNoAll
     YesNoYesAllNoAll(
@@ -147,6 +153,7 @@ public:
         FText InTitle = FText::GetEmpty());
 
     UFUNCTION(BlueprintCallable,
+        DisplayName = "[Ck] Open Message Dialog (Yes/No/YesAll/NoAll/Cancel)",
         Category = "Ck|Utils|MessageDialog")
     static ECk_MessageDialog_YesNoYesAllNoAllCancel
     YesNoYesAllNoAllCancel(
@@ -154,6 +161,7 @@ public:
         FText InTitle = FText::GetEmpty());
 
     UFUNCTION(BlueprintCallable,
+        DisplayName = "[Ck] Open Message Dialog (Yes/No/YesAll)",
         Category = "Ck|Utils|MessageDialog")
     static ECk_MessageDialog_YesNoYesAll
     YesNoYesAll(

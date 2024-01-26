@@ -18,11 +18,13 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
+              DisplayName="[Ck] Get FPS",
               Category = "Ck|Utils|Profile|Stats")
     static float
     Get_FPS();
 
     UFUNCTION(BlueprintPure,
+              DisplayName="[Ck] Get Is Stat Enabled",
               Category = "Ck|Utils|Profile|Stats")
     static bool
     Get_IsStatEnabled(

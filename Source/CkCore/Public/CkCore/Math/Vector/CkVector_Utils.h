@@ -46,6 +46,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Location From Origin In Direction (Vec3)",
               Category = "Ck|Utils|Math|Vector3")
     static FVector
     Get_LocationFromOriginInDirection(
@@ -54,6 +55,7 @@ public:
         float InDistanceFromOriginInDirection = 500.0f);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Angle Between Vectors (Vec3)",
               Category = "Ck|Utils|Math|Vector3")
     static float
     Get_AngleBetweenVectors(
@@ -61,12 +63,14 @@ public:
         const FVector& InB);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Heading Angle",
               Category = "Ck|Utils|Math|Vector3")
     static float
     Get_HeadingAngle(
         const FVector& InVector);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Clamped Length (Vec3)",
               Category = "Ck|Utils|Math|Vector3")
     static FVector
     Get_ClampedLength(
@@ -74,6 +78,7 @@ public:
         const FCk_FloatRange& InClampRange);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Flattened",
               Category = "Ck|Utils|Math|Vector3")
     static FVector
     Get_Flattened(
@@ -81,6 +86,7 @@ public:
         ECk_Plane_Axis InAxis);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Flattened And Normalized",
               Category = "Ck|Utils|Math|Vector3")
     static FVector
     Get_FlattenedAndNormalized(
@@ -88,6 +94,7 @@ public:
         ECk_Plane_Axis InAxis);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Length Greater Than (Vec3)",
               Category = "Ck|Utils|Math|Vector3",
               meta     = (KeyWords = ">"))
     static bool
@@ -96,6 +103,7 @@ public:
         float InLength);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Length Less Than (Vec3)",
               Category = "Ck|Utils|Math|Vector3",
               meta     = (KeyWords = "<"))
     static bool
@@ -104,6 +112,7 @@ public:
         float InLength);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Length Greater Than Or Equal To (Vec3)",
               Category = "Ck|Utils|Math|Vector3",
               meta     = (KeyWords = ">="))
     static bool
@@ -112,6 +121,7 @@ public:
         float InLength);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Length Less Than Or Equal To (Vec3)",
               Category = "Ck|Utils|Math|Vector3",
               meta     = (KeyWords = "<="))
     static bool
@@ -120,6 +130,7 @@ public:
         float InLength);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Swizzle (Vec3)",
               Category = "Ck|Utils|Math|Vector3")
     static FVector
     Get_Swizzle(
@@ -127,6 +138,7 @@ public:
         ECk_Vector_Axis_Swizzle InOrder);
 
     UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck] Swizzle Inplace (Vec3)",
               Category = "Ck|Utils|Math|Vector3")
     static void
     SwizzleInplace(
@@ -135,6 +147,7 @@ public:
 
     // Assumes +X is Forward, +Y is Right, +Z is Up
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get World Direction",
               Category = "Ck|Utils|Math|Vector3")
     static FVector
     Get_WorldDirection(
@@ -142,18 +155,21 @@ public:
 
     // Assumes +X is Forward, +Y is Right, +Z is Up
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Closest World Direction",
               Category = "Ck|Utils|Math|Vector3")
     static ECk_Direction_3D
     Get_ClosestWorldDirection(
         const FVector& InVector);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Direction And Length",
               Category = "Ck|Utils|Math|Vector3")
     static FCk_DirectionAndLength
     Get_DirectionAndLength(
         const FVector& InVelocity);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Direction And Length Between Vectors",
               Category = "Ck|Utils|Math|Vector3")
     static FCk_DirectionAndLength
     Get_DirectionAndLengthBetweenVectors(
@@ -173,6 +189,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Direction Vector From Actor",
               Category = "Ck|Utils|Math|Actor")
     static FVector
     Get_DirectionVectorFromActor(
@@ -180,6 +197,7 @@ public:
          ECk_Direction_3D InDirection = ECk_Direction_3D::Forward);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Distance Between Actors",
               Category = "Ck|Utils|Math|Actor")
     static float
     Get_DistanceBetweenActors(
@@ -187,14 +205,15 @@ public:
         const AActor* InB);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Math|Actor",
-              DisplayName="Distance To/From Actor")
+              DisplayName = "[Ck] Get Distance To/From Actor",
+              Category = "Ck|Utils|Math|Actor")
     static float
     Get_DistanceFromActor(
         const AActor* InA,
         FVector InLocation);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Direction And Length (Between Actors)",
               Category = "Ck|Utils|Math|Actor")
     static FCk_DirectionAndLength
     Get_DirectionAndLengthBetweenActors(
@@ -202,6 +221,7 @@ public:
         const AActor* InFrom);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Direction And Length (From Actor)",
               Category = "Ck|Utils|Math|Actor")
     static FCk_DirectionAndLength
     Get_DirectionAndLengthFromActor(
@@ -209,6 +229,7 @@ public:
         const AActor* InFrom);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Direction And Length (To Actor)",
               Category = "Ck|Utils|Math|Actor")
     static FCk_DirectionAndLength
     Get_DirectionAndLengthToActor(
@@ -216,6 +237,7 @@ public:
         const FVector& InFrom);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Location From Actor In Direction",
               Category = "Ck|Utils|Math|Actor")
     static FVector
     Get_LocationFromActorInDirection(
@@ -224,6 +246,7 @@ public:
         float InDistanceFromOriginInDirection = 500.0f);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Location From Actor In Fixed Direction",
               Category = "Ck|Utils|Math|Actor")
     static FVector
     Get_LocationFromActorInFixedDirection(
@@ -244,6 +267,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Location From Origin In Direction (Vec2)",
               Category = "Ck|Utils|Math|Vector2")
     static FVector2D
     Get_LocationFromOriginInDirection(
@@ -252,6 +276,7 @@ public:
         float InDistanceFromOriginInDirection);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Angle Between Vectors (Vec2)",
               Category = "Ck|Utils|Math|Vector2")
     static float
     Get_AngleBetweenVectors(
@@ -259,6 +284,7 @@ public:
         const FVector2D& InB);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Clamped Length (Vec2)",
               Category = "Ck|Utils|Math|Vector2")
     static FVector2D
     Get_ClampedLength(
@@ -266,6 +292,7 @@ public:
         const FCk_FloatRange& InClampRange);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Length Greater Than (Vec2)",
               Category = "Ck|Utils|Math|Vector2",
               meta     = (KeyWords = ">"))
     static bool
@@ -274,6 +301,7 @@ public:
         float InLength);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Length Less Than (Vec2)",
               Category = "Ck|Utils|Math|Vector2",
               meta     = (KeyWords = "<"))
     static bool
@@ -282,6 +310,7 @@ public:
         float InLength);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Length Greater Than Or Equal To (Vec2)",
               Category = "Ck|Utils|Math|Vector2",
               meta     = (KeyWords = ">="))
     static bool
@@ -290,6 +319,7 @@ public:
         float InLength);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Length Less Than Or Equal To (Vec2)",
               Category = "Ck|Utils|Math|Vector2",
               meta     = (KeyWords = "<="))
     static bool
@@ -298,12 +328,14 @@ public:
         float InLength);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Swizzle (Vec2)",
               Category = "Ck|Utils|Math|Vector2")
     static FVector2D
     Get_Swizzle(
         const FVector2D& InVector);
 
     UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck] Swizzle Inplace (Vec2)",
               Category = "Ck|Utils|Math|Vector2")
     static void
     SwizzleInplace(
@@ -311,6 +343,7 @@ public:
 
     // Assumes +X is North, +Y is East
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Cardinal & Ordinal Direction",
               Category = "Ck|Utils|Math|Vector2")
     static FVector2D
     Get_CardinalAndOrdinalDirection(
@@ -318,13 +351,15 @@ public:
 
     // Assumes +X is North, +Y is East
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Ordinal Direction",
               Category = "Ck|Utils|Math|Vector2")
     static FVector2D
     Get_OrdinalDirection(
         ECk_OrdinalDirection InDirection);
 
-        // Assumes +X is North, +Y is East
+    // Assumes +X is North, +Y is East
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Cardinal Direction",
               Category = "Ck|Utils|Math|Vector3")
     static FVector2D
     Get_CardinalDirection(
@@ -332,6 +367,7 @@ public:
 
     // Assumes +X is North, +Y is East
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Closest Cardinal Direction",
               Category = "Ck|Utils|Math|Vector2")
     static ECk_CardinalDirection
     Get_ClosestCardinalDirection(
@@ -339,6 +375,7 @@ public:
 
     // Assumes +X is North, +Y is East
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Closest Ordinal Direction",
               Category = "Ck|Utils|Math|Vector2")
     static ECk_OrdinalDirection
     Get_ClosestOrdinalDirection(
@@ -346,6 +383,7 @@ public:
 
     // Assumes +X is North, +Y is East
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Closest Cardinal & Ordinal Direction",
               Category = "Ck|Utils|Math|Vector2")
     static ECk_CardinalAndOrdinalDirection
     Get_ClosestCardinalAndOrdinalDirection(
