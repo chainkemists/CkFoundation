@@ -4,6 +4,8 @@
 #include "CkAbility/Ability/CkAbility_Utils.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Utils.h"
 
+#include "CkEcs/Handle/CkHandle_Utils.h"
+
 #include "CkEntityBridge/CkEntityBridge_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -126,10 +128,18 @@ namespace ck
         { return; }
 
         const auto& AbilityParams = AbilityConstructionScript->Get_AbilityParams();
+        CK_ENSURE_IF_NOT(ck::IsValid(AbilityParams.Get_AbilityScriptClass()),
+            TEXT("Cannot give Ability to Ability Owner [{}] using Construction Script [{}] because the ScriptClass [{}] is INVALID"),
+            InAbilityOwnerEntity,
+            AbilityConstructionScript,
+            AbilityParams.Get_AbilityScriptClass())
+        { return; }
+
         CK_ENSURE_IF_NOT(ck::IsValid(AbilityParams),
-            TEXT("Cannot give Ability [{}] to Ability Owner [{}] because it has an INVALID ABILITY NAME"),
+            TEXT("Cannot give Ability [{}] to Ability Owner [{}] using Construction Script [{}] because it is INVALID or has an INVALID ABILITY NAME"),
             AbilityParams.Get_AbilityScriptClass(),
-            InAbilityOwnerEntity)
+            InAbilityOwnerEntity,
+            AbilityConstructionScript)
         { return; }
 
         const auto ReplicationType = AbilityParams.Get_Data().Get_NetworkSettings().Get_ReplicationType();
@@ -155,7 +165,8 @@ namespace ck
         CK_ENSURE_IF_NOT(NOT AlreadyHasAbilityWithName, TEXT("Cannot give Ability [{}] to Ability Owner [{}] because it already has it"), AbilityName, InAbilityOwnerEntity)
         { return; }
 
-        const auto PostAbilityCreationFunc = [InAbilityOwnerEntity, AbilityName](const FCk_Handle& InAbilityEntity) -> void
+        const auto PostAbilityCreationFunc =
+        [InAbilityOwnerEntity, AbilityName, &AbilityParams](const FCk_Handle& InAbilityEntity) -> void
         {
             ability::VeryVerbose
             (
@@ -165,6 +176,8 @@ namespace ck
                 InAbilityOwnerEntity
             );
 
+            UCk_Utils_Handle_UE::Set_DebugName(InAbilityEntity,
+                UCk_Utils_Debug_UE::Get_DebugName(AbilityParams.Get_AbilityScriptClass(), ECk_DebugName_Verbosity::ShortName));
             UCk_Utils_Ability_UE::DoGive(InAbilityOwnerEntity, InAbilityEntity);
 
             if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityEntity).Get_ActivationPolicy();
