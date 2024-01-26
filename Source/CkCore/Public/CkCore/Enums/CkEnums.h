@@ -26,6 +26,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SelfOrParent);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_RowFoundOrNot : uint8
+{
+    RowFound,
+    RowNotFound
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_RowFoundOrNot);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_CardinalDirection : uint8
 {
     North,
