@@ -25,6 +25,14 @@ public:
     static TArray<FName>
     Get_ColumnNames(
         UDataTable* InDataTable);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|DataTable",
+              DisplayName = "[Ck] Get Is Valid (DataTableRowHandle)",
+              meta = (CompactNodeTitle = "IsValid"))
+    static bool
+    Get_IsValid_RowHandle(
+        const FDataTableRowHandle& InDataTableRowHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
