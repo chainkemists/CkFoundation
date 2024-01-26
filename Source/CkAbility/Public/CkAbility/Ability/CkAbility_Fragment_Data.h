@@ -582,7 +582,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
 CK_DEFINE_CUSTOM_IS_VALID(FCk_Fragment_Ability_ParamsData, ck::IsValid_Policy_Default,
 [=](const FCk_Fragment_Ability_ParamsData& InAbilityParams)
 {
-    if (ck::Is_NOT_Valid(InAbilityParams.Get_Data().Get_AbilityName()))
+    if (ck::Is_NOT_Valid(InAbilityParams.Get_AbilityScriptClass()) ||
+        ck::Is_NOT_Valid(InAbilityParams.Get_Data().Get_AbilityName()))
     { return false; }
 
     return true;
