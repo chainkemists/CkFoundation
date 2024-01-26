@@ -88,21 +88,48 @@ private:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKCORE_API FCk_SharedVector
+struct CKCORE_API FCk_SharedVec3
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_SharedVector);
+    CK_GENERATED_BODY(FCk_SharedVec3);
 
 public:
     using ValueType = FVector;
     using PtrType = TSharedPtr<ValueType, ESPMode::NotThreadSafe>;
 
 public:
-    FCk_SharedVector();
+    FCk_SharedVec3();
     explicit
-    FCk_SharedVector(ValueType InValue);
+    FCk_SharedVec3(ValueType InValue);
+
+public:
+    auto operator*() const -> ValueType&;
+    auto operator->() const -> ValueType*;
+
+private:
+    PtrType _Ptr;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKCORE_API FCk_SharedVec2
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_SharedVec2);
+
+public:
+    using ValueType = FVector2D;
+    using PtrType = TSharedPtr<ValueType, ESPMode::NotThreadSafe>;
+
+public:
+    FCk_SharedVec2();
+    explicit
+    FCk_SharedVec2(ValueType InValue);
 
 public:
     auto operator*() const -> ValueType&;
@@ -142,6 +169,61 @@ private:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKCORE_API FCk_SharedName
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_SharedName);
+
+public:
+    using ValueType = FName;
+    using PtrType = TSharedPtr<ValueType, ESPMode::NotThreadSafe>;
+
+public:
+    FCk_SharedName();
+    explicit
+    FCk_SharedName(ValueType InValue);
+
+public:
+    auto operator*() const -> ValueType&;
+    auto operator->() const -> ValueType*;
+
+private:
+    PtrType _Ptr;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKCORE_API FCk_SharedText
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_SharedText);
+
+public:
+    using ValueType = FText;
+    using PtrType = TSharedPtr<ValueType, ESPMode::NotThreadSafe>;
+
+public:
+    FCk_SharedText();
+    explicit
+    FCk_SharedText(ValueType InValue);
+
+public:
+    auto operator*() const -> ValueType&;
+    auto operator->() const -> ValueType*;
+
+private:
+    PtrType _Ptr;
+};
+
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKCORE_API FCk_SharedRotator
 {
     GENERATED_BODY()
@@ -157,6 +239,33 @@ public:
     FCk_SharedRotator();
     explicit
     FCk_SharedRotator(ValueType InValue);
+
+public:
+    auto operator*() const -> ValueType&;
+    auto operator->() const -> ValueType*;
+
+private:
+    PtrType _Ptr;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKCORE_API FCk_SharedTransform
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_SharedTransform);
+
+public:
+    using ValueType = FTransform;
+    using PtrType = TSharedPtr<ValueType, ESPMode::NotThreadSafe>;
+
+public:
+    FCk_SharedTransform();
+    explicit
+    FCk_SharedTransform(ValueType InValue);
 
 public:
     auto operator*() const -> ValueType&;

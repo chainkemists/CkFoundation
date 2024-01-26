@@ -358,7 +358,7 @@ private:
     UFUNCTION(BlueprintCallable,
               BlueprintPure = false,
               Category = "Ck|Ability|Script",
-              DisplayName = "[AbilityScript] Request Apply Cost",
+              DisplayName = "[AbilityScript] Request Apply Cost (On Self)",
               meta = (CompactNodeTitle="ApplyCost", HideSelfPin = true))
     void
     DoRequest_ApplyCost() const;
@@ -366,7 +366,7 @@ private:
     UFUNCTION(BlueprintCallable,
               BlueprintPure = false,
               Category = "Ck|Ability|Script",
-              DisplayName = "[AbilityScript] Request Apply Cost On Owner",
+              DisplayName = "[AbilityScript] Request Apply Cost (On Owner)",
               meta = (CompactNodeTitle="ApplyCost_OnOwner", HideSelfPin = true))
     void
     DoRequest_ApplyCost_OnOwner() const;
@@ -374,7 +374,7 @@ private:
     UFUNCTION(BlueprintCallable,
               BlueprintPure = false,
               Category = "Ck|Ability|Script",
-              DisplayName = "[AbilityScript] Request Apply Cooldown",
+              DisplayName = "[AbilityScript] Request Apply Cooldown (On Self)",
               meta = (CompactNodeTitle="ApplyCooldown", HideSelfPin = true))
     void
     DoRequest_ApplyCooldown() const;
@@ -382,7 +382,7 @@ private:
     UFUNCTION(BlueprintCallable,
               BlueprintPure = false,
               Category = "Ck|Ability|Script",
-              DisplayName = "[AbilityScript] Request Apply Cooldown On Owner",
+              DisplayName = "[AbilityScript] Request Apply Cooldown (On Owner)",
               meta = (CompactNodeTitle="ApplyCooldown_OnOwner", HideSelfPin = true))
     void
     DoRequest_ApplyCooldown_OnOwner() const;
@@ -575,18 +575,5 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
     FCk_Delegate_Ability_OnDeactivated_MC,
     FCk_Handle, InAbilityHandle);
-
-// --------------------------------------------------------------------------------------------------------------------
-// Formatters and IsValid
-
-CK_DEFINE_CUSTOM_IS_VALID(FCk_Fragment_Ability_ParamsData, ck::IsValid_Policy_Default,
-[=](const FCk_Fragment_Ability_ParamsData& InAbilityParams)
-{
-    if (ck::Is_NOT_Valid(InAbilityParams.Get_AbilityScriptClass()) ||
-        ck::Is_NOT_Valid(InAbilityParams.Get_Data().Get_AbilityName()))
-    { return false; }
-
-    return true;
-});
 
 // --------------------------------------------------------------------------------------------------------------------

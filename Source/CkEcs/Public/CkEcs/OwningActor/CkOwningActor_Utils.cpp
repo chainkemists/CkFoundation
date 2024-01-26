@@ -42,30 +42,6 @@ auto
 
 auto
     UCk_Utils_OwningActor_UE::
-    Transform_ToActors(
-        const TArray<FCk_EntityOwningActor_BasicDetails>& InEntitiesWithActor)
-    -> TArray<AActor*>
-{
-    return ck::algo::Transform<TArray<AActor*>>(InEntitiesWithActor, [](const FCk_EntityOwningActor_BasicDetails& InBasicDetails)
-    {
-        return InBasicDetails.Get_Actor().Get();
-    });
-}
-
-auto
-    UCk_Utils_OwningActor_UE::
-    Transform_ToEntities(
-        const TArray<FCk_EntityOwningActor_BasicDetails>& InEntitiesWithActor)
-    -> TArray<FCk_Handle>
-{
-    return ck::algo::Transform<TArray<FCk_Handle>>(InEntitiesWithActor, [](const FCk_EntityOwningActor_BasicDetails& InBasicDetails)
-    {
-        return InBasicDetails.Get_Handle();
-    });
-}
-
-auto
-    UCk_Utils_OwningActor_UE::
     Get_EntityOwningActor(
         FCk_Handle InHandle)
     -> AActor*

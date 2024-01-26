@@ -57,50 +57,59 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IO")
+              Category = "Ck|Utils|IO",
+              DisplayName = "[Ck] Get Engine Default Text Font")
     static UFont*
     Get_Engine_DefaultTextFont(
         ECk_Engine_TextFontSize InFontSize);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IO")
+              Category = "Ck|Utils|IO",
+              DisplayName = "[Ck] Get Project Version")
     static FString
     Get_ProjectVersion();
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IO")
+              Category = "Ck|Utils|IO",
+              DisplayName = "[Ck] Get Project Directory")
     static FString
     Get_ProjectDir();
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IO")
+              Category = "Ck|Utils|IO",
+              DisplayName = "[Ck] Get Plugins Directory")
     static FString
-    Get_PluginDir(
+    Get_PluginsDir(
         const FString& InPluginName);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IO")
+              Category = "Ck|Utils|IO",
+              DisplayName = "[Ck] Get Project Content Directory")
     static FString
     Get_ProjectContentDir();
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IO")
+              Category = "Ck|Utils|IO",
+              DisplayName = "[Ck] Get Project Plugins Directory")
     static FString
     Get_ProjectPluginsDir();
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IO")
+              Category = "Ck|Utils|IO",
+              DisplayName = "[Ck] Get Engine Plugins Directory")
     static FString
     Get_EnginePluginsDir();
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IO")
+              Category = "Ck|Utils|IO",
+              DisplayName = "[Ck] Get Asset Info From Path")
     static FCk_Utils_IO_AssetInfoFromPath_Result
     Get_AssetInfoFromPath(
         const FString& InAssetPath);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IO")
+              Category = "Ck|Utils|IO",
+              DisplayName = "[Ck] Get Extract Path")
     static FString
     Get_ExtractPath(
         const FString& InFullPath);

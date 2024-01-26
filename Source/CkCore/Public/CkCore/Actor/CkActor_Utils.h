@@ -38,7 +38,9 @@ public:
 
 public:
     FCk_Utils_Actor_SpawnActor_Params() = default;
-    explicit FCk_Utils_Actor_SpawnActor_Params(TWeakObjectPtr<UObject> InOwnerOrWorld, TSubclassOf<AActor> InActorClass);
+    FCk_Utils_Actor_SpawnActor_Params(
+        UObject* InOwnerOrWorld,
+        TSubclassOf<AActor> InActorClass);
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -159,31 +161,39 @@ private:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Actor")
+              Category = "Ck|Utils|Actor",
+              DisplayName = "[Ck] Get Persistent Level Script Actor")
     static ALevelScriptActor*
     Get_PersistentLevelScriptActor(
         const UObject* InWorldContextObject);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Actor", meta = (DefaultToSelf = "InObject"))
+              Category = "Ck|Utils|Actor",
+              DisplayName = "[Ck] Get Outermost Pawn",
+              meta = (DefaultToSelf = "InObject"))
     static APawn*
     Get_OutermostPawn(
         UObject* InObject);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Actor", meta = (DefaultToSelf = "InObject"))
+              Category = "Ck|Utils|Actor",
+              DisplayName = "[Ck] Get Outermost Actor",
+              meta = (DefaultToSelf = "InObject"))
     static AActor*
     Get_OutermostActor(
         UObject* InObject);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Actor", meta = (DefaultToSelf = "InObject"))
+              Category = "Ck|Utils|Actor",
+              DisplayName = "[Ck] Get Outermost Actor With Remote Authority",
+              meta = (DefaultToSelf = "InObject"))
     static AActor*
     Get_OutermostActor_RemoteAuthority(
         UObject* InObject);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Actor",
+              DisplayName = "[Ck] Request Clone Actor",
               meta = (DefaultToSelf = "InOwner"))
     static AActor*
     Request_CloneActor(
@@ -195,7 +205,8 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Actor",
-              meta     = (DefaultToSelf = "InActor"))
+              DisplayName = "[Ck] Get Has Component By Class",
+              meta = (DefaultToSelf = "InActor"))
     static bool
     Get_HasComponentByClass(
         AActor* InActor,
@@ -203,7 +214,8 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Actor",
-              meta     = (DefaultToSelf = "InActor"))
+              DisplayName = "[Ck] Get Does Bone Exist In Skeletal Mesh",
+              meta = (DefaultToSelf = "InActor"))
     static bool
     Get_DoesBoneExistInSkeletalMesh(
         AActor* InActor,
@@ -217,7 +229,8 @@ public:
      */
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Actor",
-              meta     = (DefaultToSelf = "InActor"))
+              DisplayName = "[Ck] Request Set Actor Label",
+              meta = (DefaultToSelf = "InActor"))
     static void
     Request_SetActorLabel(
         AActor* InActor,
@@ -305,8 +318,13 @@ UCk_Utils_Actor_UE::AddNewActorComponent_Params<T_CompType>::
 }
 
 template <typename T_CompType>
-UCk_Utils_Actor_UE::AddNewActorComponent_Params<T_CompType>::AddNewActorComponent_Params(AActor* InTargetActor,
-    CompClassType InCompClass, bool InIsUnique, USceneComponent* InParent, FName InSocket)
+UCk_Utils_Actor_UE::AddNewActorComponent_Params<T_CompType>::
+    AddNewActorComponent_Params(
+        AActor* InTargetActor,
+        CompClassType InCompClass,
+        bool InIsUnique,
+        USceneComponent* InParent,
+        FName InSocket)
     : _Owner(InTargetActor)
     , _ParentComp(InParent)
     , _CompClass(InCompClass)

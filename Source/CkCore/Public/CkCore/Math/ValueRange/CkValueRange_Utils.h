@@ -19,6 +19,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Within Range (Int)",
               Category = "Ck|Utils|Math|IntRange")
     static bool
     Get_IsWithinRange(
@@ -27,6 +28,7 @@ public:
         ECk_Inclusiveness InInclusiveness);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Random Value In Range (Int)",
               Category = "Ck|Utils|Math|IntRange")
     static int32
     Get_RandomValueInRange(
@@ -35,7 +37,8 @@ public:
 private:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|IntRange",
-              meta = (DisplayName = "ToVector2D", BlueprintAutocast,  CompactNodeTitle = "->"))
+              DisplayName = "[Ck] IntRange -> Vector2",
+              meta = ( BlueprintAutocast,  CompactNodeTitle = "->"))
     static FVector2D
     Conv_IntRangeToVector2D(
         const FCk_IntRange& InRange);
@@ -53,6 +56,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Within Range (Float)",
               Category = "Ck|Utils|Math|FloatRange")
     static bool
     Get_IsWithinRange(
@@ -61,6 +65,7 @@ public:
         ECk_Inclusiveness InInclusiveness);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Random Value In Range (Float)",
               Category = "Ck|Utils|Math|FloatRange")
     static float
     Get_RandomValueInRange(
@@ -69,7 +74,8 @@ public:
 private:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|FloatRange",
-              meta = (DisplayName = "ToVector2D", BlueprintAutocast,  CompactNodeTitle = "->"))
+              DisplayName = "[Ck] FloatRange -> Vector2",
+              meta = (BlueprintAutocast,  CompactNodeTitle = "->"))
     static FVector2D
     Conv_FloatRangeToVector2D(
         const FCk_FloatRange& InRange);
@@ -91,7 +97,7 @@ public:
               meta = (NativeMakeFunc))
     static FCk_FloatRange_0to1
     // ReSharper disable once CppInconsistentNaming
-        Make_FloatRange_0to1(
+    Make_FloatRange_0to1(
         float In0to1);
 };
 

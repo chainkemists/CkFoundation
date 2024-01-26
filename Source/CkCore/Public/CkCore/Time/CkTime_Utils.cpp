@@ -215,7 +215,7 @@ auto
 
 auto
     UCk_Utils_Time_UE::
-    Equal(
+    IsEqual(
         const FCk_Time& InA,
         const FCk_Time& InB)
     -> bool
@@ -225,7 +225,7 @@ auto
 
 auto
     UCk_Utils_Time_UE::
-    NotEqual(
+    IsNotEqual(
         const FCk_Time& InA,
         const FCk_Time& InB)
     -> bool

@@ -100,6 +100,7 @@ class CKCORE_API UCk_Utils_Ensure_UE
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ensure",
+              DisplayName = "[Ck] Ensure",
               meta     = (DevelopmentOnly, ExpandEnumAsExecs = "OutHitStatus", DefaultToSelf = "InContext", HidePin = "InContext"))
     static void
     EnsureMsgf(
@@ -110,6 +111,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ensure",
+              DisplayName = "[Ck] Ensure IsValid",
               meta     = (DevelopmentOnly, ExpandEnumAsExecs = "OutHitStatus", DefaultToSelf = "InContext", HidePin = "InContext"))
     static void
     EnsureMsgf_IsValid(
@@ -119,6 +121,7 @@ public:
         const UObject* InContext = nullptr);
 
     UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck] Trigger Ensure",
               Category = "Ck|Utils|Ensure",
               meta     = (DefaultToSelf = "InContext", HidePin = "InContext"))
     static void
@@ -127,39 +130,46 @@ public:
         const UObject* InContext = nullptr);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get All Ignored Ensures",
               Category = "Ck|Utils|Ensure")
     static TArray<FCk_Ensure_IgnoredEntry>
     Get_AllIgnoredEnsures();
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Ensure Count",
               Category = "Ck|Utils|Ensure")
     static int32
     Get_EnsureCount();
 
     UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck] Request Clear All Ignored Ensures",
               Category = "Ck|Utils|Ensure")
     static void
     Request_ClearAllIgnoredEnsures();
 
     UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck] Bind To OnEnsureIgnored",
               Category = "Ck|Utils|Ensure")
     static void
     BindTo_OnEnsureIgnored(
         const FCk_Delegate_OnEnsureIgnored& InDelegate);
 
     UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck] Unbind From OnEnsureIgnored",
               Category = "Ck|Utils|Ensure")
     static void
     UnbindFrom_OnEnsureIgnored(
         const FCk_Delegate_OnEnsureIgnored& InDelegate);
 
     UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck] Bind To OnEnsureCountChanged",
               Category = "Ck|Utils|Ensure")
     static void
     BindTo_OnEnsureCountChanged(
         const FCk_Delegate_OnEnsureCountChanged& InDelegate);
 
     UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck] Unbind From OnEnsureCountChanged",
               Category = "Ck|Utils|Ensure")
     static void
     UnbindFrom_OnEnsureCountChanged(

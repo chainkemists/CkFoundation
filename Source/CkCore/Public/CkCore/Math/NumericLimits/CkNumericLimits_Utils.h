@@ -16,15 +16,17 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|NumericLimits|Float",
-              DisplayName = "Get Is Float Limit Max")
+              DisplayName = "[Ck]Get Is Numeric Limit Max (Float)")
     static bool
-    Get_IsNumericLimitMax(float InValue);
+    Get_IsNumericLimitMax(
+        float InValue);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|NumericLimits|Float",
-              DisplayName = "Get Is Float Limit Min")
+              DisplayName = "[Ck] Get Is Numeric Limit Min (Float)")
     static bool
-    Get_IsNumericLimitMin(float InValue);
+    Get_IsNumericLimitMin(
+        float InValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -40,15 +42,17 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|NumericLimits|Double",
-              DisplayName = "Get Is Double Limit Max")
+              DisplayName = "[Ck] Get Is Numeric Limit Max (Double)")
     static bool
-    Get_IsNumericLimitMax(double InValue);
+    Get_IsNumericLimitMax(
+        double InValue);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|NumericLimits|Double",
-              DisplayName = "Get Is Double Limit Min")
+              DisplayName = "[Ck] Get Is Numeric Limit Min (Double)")
     static bool
-    Get_IsNumericLimitMin(double InValue);
+    Get_IsNumericLimitMin(
+        double InValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -64,15 +68,17 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|NumericLimits|Int32",
-              DisplayName = "Get Is Int32 Limit Max")
+              DisplayName = "[Ck] Get Is Numeric Limit Max (Int32)")
     static bool
-    Get_IsNumericLimitMax(int32 InValue);
+    Get_IsNumericLimitMax(
+        int32 InValue);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|NumericLimits|Int32",
-              DisplayName = "Get Is Int32 Limit Min")
+              DisplayName = "[Ck] Get Is Numeric Limit Min (Int32)")
     static bool
-    Get_IsNumericLimitMin(int32 InValue);
+    Get_IsNumericLimitMin(
+        int32 InValue);
 };
 
 
@@ -89,15 +95,17 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|NumericLimits|Int64",
-              DisplayName = "Get Is Int64 Limit Max")
+              DisplayName = "[Ck] Get Is Numeric Limit Max (Int64)")
     static bool
-    Get_IsNumericLimitMax(int64 InValue);
+    Get_IsNumericLimitMax(
+        int64 InValue);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Math|NumericLimits|Int64",
-              DisplayName = "Get Is Int64 Limit Min")
+              DisplayName = "[Ck] Get Is Numeric Limit Min (Int64)")
     static bool
-    Get_IsNumericLimitMin(int64 InValue);
+    Get_IsNumericLimitMin(
+        int64 InValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

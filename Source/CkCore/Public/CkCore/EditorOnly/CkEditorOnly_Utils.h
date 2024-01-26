@@ -154,6 +154,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EditorOnly",
+              DisplayName = "[Ck] Request Push New Editor Message",
               meta = (DevelopmentOnly))
     static void
     Request_PushNewEditorMessage(

@@ -80,18 +80,27 @@ public:
         FCk_Handle InAttributeOwnerEntity);
 
 public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName="[Ck][FloatAttribute] Get All Attributes",
+              meta=(DeprecatedFunction, DeprecationMessage="Use the ForEach variants"))
+    static TArray<FGameplayTag>
+    Get_All(
+        const FCk_Handle& InAttributeOwnerEntity);
+
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
               DisplayName="[Ck][FloatAttribute] For Each",
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle>
-    ForEach_FloatAttribute(
+    ForEach(
         FCk_Handle InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
-    ForEach_FloatAttribute(
-        const FCk_Handle&                  InAttributeOwner,
+    ForEach(
+        const FCk_Handle& InAttributeOwner,
         const TFunction<void(FCk_Handle)>& InFunc) -> void;
 
     UFUNCTION(BlueprintCallable,
@@ -99,13 +108,13 @@ public:
               DisplayName="[Ck][FloatAttribute] For Each If",
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle>
-    ForEach_FloatAttribute_If(
+    ForEach_If(
         FCk_Handle InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate);
     static auto
-    ForEach_FloatAttribute_If(
+    ForEach_If(
         const FCk_Handle&                  InAttributeOwner,
         const TFunction<void(FCk_Handle)>& InFunc,
         const TFunction<bool(FCk_Handle)>& InPredicate) -> void;

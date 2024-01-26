@@ -94,18 +94,18 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_SharedVector_UE::
+    UCk_Utils_SharedVec3_UE::
     Get(
-        const FCk_SharedVector& InShared)
+        const FCk_SharedVec3& InShared)
     -> FVector
 {
     return *InShared;
 }
 
 auto
-    UCk_Utils_SharedVector_UE::
+    UCk_Utils_SharedVec3_UE::
     Set(
-        FCk_SharedVector& InShared,
+        FCk_SharedVec3& InShared,
         FVector InValue)
     -> void
 {
@@ -113,12 +113,42 @@ auto
 }
 
 auto
-    UCk_Utils_SharedVector_UE::
+    UCk_Utils_SharedVec3_UE::
     Make(
         FVector InValue)
-    -> FCk_SharedVector
+    -> FCk_SharedVec3
 {
-    return FCk_SharedVector{InValue};
+    return FCk_SharedVec3{InValue};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_SharedVec2_UE::
+    Get(
+        const FCk_SharedVec2& InShared)
+    -> FVector2D
+{
+    return *InShared;
+}
+
+auto
+    UCk_Utils_SharedVec2_UE::
+    Set(
+        FCk_SharedVec2& InShared,
+        FVector2D InValue)
+    -> void
+{
+    *InShared = InValue;
+}
+
+auto
+    UCk_Utils_SharedVec2_UE::
+    Make(
+        FVector2D InValue)
+    -> FCk_SharedVec2
+{
+    return FCk_SharedVec2{InValue};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -154,6 +184,66 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
+    UCk_Utils_SharedName_UE::
+    Get(
+        const FCk_SharedName& InShared)
+    -> FName
+{
+    return *InShared;
+}
+
+auto
+    UCk_Utils_SharedName_UE::
+    Set(
+        FCk_SharedName& InShared,
+        FName InValue)
+    -> void
+{
+    *InShared = InValue;
+}
+
+auto
+    UCk_Utils_SharedName_UE::
+    Make(
+        FName InValue)
+    -> FCk_SharedName
+{
+    return FCk_SharedName{InValue};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_SharedText_UE::
+    Get(
+        const FCk_SharedText& InShared)
+    -> FText
+{
+    return *InShared;
+}
+
+auto
+    UCk_Utils_SharedText_UE::
+    Set(
+        FCk_SharedText& InShared,
+        FText InValue)
+    -> void
+{
+    *InShared = InValue;
+}
+
+auto
+    UCk_Utils_SharedText_UE::
+    Make(
+        FText InValue)
+    -> FCk_SharedText
+{
+    return FCk_SharedText{InValue};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
     UCk_Utils_SharedRotator_UE::
     Get(
         const FCk_SharedRotator& InShared)
@@ -179,6 +269,36 @@ auto
     -> FCk_SharedRotator
 {
     return FCk_SharedRotator{InValue};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_SharedTransform_UE::
+    Get(
+        const FCk_SharedTransform& InShared)
+    -> FTransform
+{
+    return *InShared;
+}
+
+auto
+    UCk_Utils_SharedTransform_UE::
+    Set(
+        FCk_SharedTransform& InShared,
+        FTransform InValue)
+    -> void
+{
+    *InShared = InValue;
+}
+
+auto
+    UCk_Utils_SharedTransform_UE::
+    Make(
+        FTransform InValue)
+    -> FCk_SharedTransform
+{
+    return FCk_SharedTransform{InValue};
 }
 
 // --------------------------------------------------------------------------------------------------------------------

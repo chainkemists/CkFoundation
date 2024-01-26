@@ -110,15 +110,35 @@ auto
 
 auto
     UCk_Utils_FloatAttribute_UE::
-    ForEach_FloatAttribute(
-        FCk_Handle                 InAttributeOwner,
-        const FInstancedStruct&    InOptionalPayload,
+    Get_All(
+        const FCk_Handle& InAttributeOwnerEntity)
+    -> TArray<FGameplayTag>
+{
+    if (NOT RecordOfFloatAttributes_Utils::Has(InAttributeOwnerEntity))
+    { return {}; }
+
+    auto AllAttributes = TArray<FGameplayTag>{};
+
+    RecordOfFloatAttributes_Utils::ForEach_ValidEntry(InAttributeOwnerEntity,
+    [&](const FCk_Handle& InFloatAttributeEntity)
+    {
+        AllAttributes.Add(UCk_Utils_GameplayLabel_UE::Get_Label(InFloatAttributeEntity));
+    });
+
+    return AllAttributes;
+}
+
+auto
+    UCk_Utils_FloatAttribute_UE::
+    ForEach(
+        FCk_Handle InAttributeOwner,
+        const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
     -> TArray<FCk_Handle>
 {
     auto ToRet = TArray<FCk_Handle>{};
 
-    ForEach_FloatAttribute(InAttributeOwner, [&](const FCk_Handle& InAttribute)
+    ForEach(InAttributeOwner, [&](const FCk_Handle& InAttribute)
     {
         if (InDelegate.IsBound())
         { InDelegate.Execute(InAttribute, InOptionalPayload); }
@@ -131,8 +151,8 @@ auto
 
 auto
     UCk_Utils_FloatAttribute_UE::
-    ForEach_FloatAttribute(
-        const FCk_Handle&                  InAttributeOwner,
+    ForEach(
+        const FCk_Handle& InAttributeOwner,
         const TFunction<void(FCk_Handle)>& InFunc)
     -> void
 {
@@ -154,16 +174,16 @@ auto
 
 auto
     UCk_Utils_FloatAttribute_UE::
-    ForEach_FloatAttribute_If(
-        FCk_Handle                              InAttributeOwner,
-        const FInstancedStruct&                 InOptionalPayload,
-        const FCk_Lambda_InHandle&              InDelegate,
+    ForEach_If(
+        FCk_Handle InAttributeOwner,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate)
     -> TArray<FCk_Handle>
 {
     auto ToRet = TArray<FCk_Handle>{};
 
-    ForEach_FloatAttribute_If
+    ForEach_If
     (
         InAttributeOwner,
         [&](FCk_Handle InAttribute)
@@ -192,8 +212,8 @@ auto
 
 auto
     UCk_Utils_FloatAttribute_UE::
-    ForEach_FloatAttribute_If(
-        const FCk_Handle&                  InAttributeOwner,
+    ForEach_If(
+        const FCk_Handle& InAttributeOwner,
         const TFunction<void(FCk_Handle)>& InFunc,
         const TFunction<bool(FCk_Handle)>& InPredicate)
     -> void

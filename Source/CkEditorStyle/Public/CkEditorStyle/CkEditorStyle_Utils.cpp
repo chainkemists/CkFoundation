@@ -26,7 +26,7 @@ auto
     { return; }
 
     _StyleInstance = MakeShareable(new FSlateStyleSet(_StyleSetName));
-    _StyleInstance->SetContentRoot(UCk_Utils_IO_UE::Get_PluginDir(TEXT("CkFoundation")) / TEXT("/Resources/Editor"));
+    _StyleInstance->SetContentRoot(UCk_Utils_IO_UE::Get_PluginsDir(TEXT("CkFoundation")) / TEXT("/Resources/Editor"));
 
     FSlateStyleRegistry::RegisterSlateStyle(*_StyleInstance);
 }

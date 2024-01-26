@@ -12,7 +12,7 @@ FCk_SharedBool::
 FCk_SharedBool::
     FCk_SharedBool(
         ValueType InValue)
-    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}((InValue)))
+    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}(InValue))
 { }
 
 auto
@@ -41,7 +41,7 @@ FCk_SharedInt::
 FCk_SharedInt::
     FCk_SharedInt(
         ValueType InValue)
-    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}((InValue)))
+    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}(InValue))
 { }
 
 auto
@@ -70,7 +70,7 @@ FCk_SharedFloat::
 FCk_SharedFloat::
     FCk_SharedFloat(
         ValueType InValue)
-    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}((InValue)))
+    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}(InValue))
 { }
 
 auto
@@ -91,19 +91,19 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_SharedVector::
-    FCk_SharedVector()
-    : FCk_SharedVector(ValueType{})
+FCk_SharedVec3::
+    FCk_SharedVec3()
+    : FCk_SharedVec3(ValueType{})
 { }
 
-FCk_SharedVector::
-    FCk_SharedVector(
+FCk_SharedVec3::
+    FCk_SharedVec3(
         ValueType InValue)
-    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}((InValue)))
+    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}(InValue))
 { }
 
 auto
-    FCk_SharedVector::
+    FCk_SharedVec3::
     operator*() const
     -> ValueType&
 {
@@ -111,7 +111,36 @@ auto
 }
 
 auto
-    FCk_SharedVector::
+    FCk_SharedVec3::
+    operator->() const
+    -> ValueType*
+{
+    return _Ptr.Get();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+FCk_SharedVec2::
+    FCk_SharedVec2()
+    : FCk_SharedVec2(ValueType{})
+{ }
+
+FCk_SharedVec2::
+    FCk_SharedVec2(
+        ValueType InValue)
+    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}(InValue))
+{ }
+
+auto
+    FCk_SharedVec2::
+    operator*() const
+    -> ValueType&
+{
+    return *_Ptr;
+}
+
+auto
+    FCk_SharedVec2::
     operator->() const
     -> ValueType*
 {
@@ -128,7 +157,7 @@ FCk_SharedString::
 FCk_SharedString::
     FCk_SharedString(
         ValueType InValue)
-    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}((InValue)))
+    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}(InValue))
 { }
 
 auto
@@ -149,6 +178,64 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+FCk_SharedName::
+    FCk_SharedName()
+    : FCk_SharedName(ValueType{})
+{ }
+
+FCk_SharedName::
+    FCk_SharedName(
+        ValueType InValue)
+    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}(InValue))
+{ }
+
+auto
+    FCk_SharedName::
+    operator*() const
+    -> ValueType&
+{
+    return *_Ptr;
+}
+
+auto
+    FCk_SharedName::
+    operator->() const
+    -> ValueType*
+{
+    return _Ptr.Get();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+FCk_SharedText::
+    FCk_SharedText()
+    : FCk_SharedText(ValueType{})
+{ }
+
+FCk_SharedText::
+    FCk_SharedText(
+        ValueType InValue)
+    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}(InValue))
+{ }
+
+auto
+    FCk_SharedText::
+    operator*() const
+    -> ValueType&
+{
+    return *_Ptr;
+}
+
+auto
+    FCk_SharedText::
+    operator->() const
+    -> ValueType*
+{
+    return _Ptr.Get();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 FCk_SharedRotator::
     FCk_SharedRotator()
     : FCk_SharedRotator(ValueType{})
@@ -157,7 +244,7 @@ FCk_SharedRotator::
 FCk_SharedRotator::
     FCk_SharedRotator(
         ValueType InValue)
-    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}((InValue)))
+    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}(InValue))
 { }
 
 auto
@@ -170,6 +257,35 @@ auto
 
 auto
     FCk_SharedRotator::
+    operator->() const
+    -> ValueType*
+{
+    return _Ptr.Get();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+FCk_SharedTransform::
+    FCk_SharedTransform()
+    : FCk_SharedTransform(ValueType{})
+{ }
+
+FCk_SharedTransform::
+    FCk_SharedTransform(
+        ValueType InValue)
+    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}(InValue))
+{ }
+
+auto
+    FCk_SharedTransform::
+    operator*() const
+    -> ValueType&
+{
+    return *_Ptr;
+}
+
+auto
+    FCk_SharedTransform::
     operator->() const
     -> ValueType*
 {

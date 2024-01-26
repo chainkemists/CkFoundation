@@ -26,14 +26,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor",
-              DisplayName = "Has Entity Owning Actor")
+              DisplayName = "[Ck][OwningActor] Has Feature")
     static bool
     Has(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor",
-              DisplayName = "Ensure Has Entity Owning Actor")
+              DisplayName = "[Ck][OwningActor] Ensure Has Feature")
     static bool
     Ensure(
         FCk_Handle InHandle);
@@ -41,22 +41,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor",
-              meta = (CompactNodeTitle = "Transform_ToActors"))
-    static TArray<AActor*>
-    Transform_ToActors(
-        const TArray<FCk_EntityOwningActor_BasicDetails>& InEntitiesWithActor);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|OwningActor",
-              meta = (CompactNodeTitle = "Transform_ToEntities"))
-    static TArray<FCk_Handle>
-    Transform_ToEntities(
-        const TArray<FCk_EntityOwningActor_BasicDetails>& InEntitiesWithActor);
-
-public:
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|OwningActor",
-              DisplayName = "Get Entity To Actor",
+              DisplayName = "[Ck][OwningActor] Get Entity To Actor",
               meta = (CompactNodeTitle="EntityToActor"))
     static AActor*
     Get_EntityOwningActor(
@@ -64,7 +49,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor",
-              DisplayName = "Get Entity Basic Details",
+              DisplayName = "[Ck][OwningActor] Get Basic Details (From Entity)",
               meta = (CompactNodeTitle="EntityBasicDetails"))
     static FCk_EntityOwningActor_BasicDetails
     Get_EntityOwningActorBasicDetails(
@@ -72,7 +57,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor",
-              DisplayName = "Get Actor Basic Details",
+              DisplayName = "[Ck][OwningActor] Get Basic Details (From Actor)",
               meta = (CompactNodeTitle="ActorBasicDetails"))
     static FCk_EntityOwningActor_BasicDetails
     Get_EntityOwningActorBasicDetails_FromActor(
@@ -80,13 +65,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor",
-              DisplayName = "Get Actor To Entity",
+              DisplayName = "[Ck][OwningActor] Get Actor To Entity",
               meta=(CompactNodeTitle="ActorToEntity"))
     static FCk_Handle
     Get_ActorEntityHandle(
         const AActor* InActor);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][OwningActor] Get Is Actor Ecs Ready",
               Category = "Ck|Utils|OwningActor",
               meta = (DefaultToSelf = "InActor"))
     static bool
@@ -96,7 +82,7 @@ public:
 private:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor",
-              DisplayName = "Get Actor To Entity From Self",
+              DisplayName = "[Ck][OwningActor] Get Actor To Entity (From Self)",
               meta = (DefaultToSelf = "InActor", HidePin = "InActor", CompactNodeTitle="ActorToEntity_FromSelf"))
     static FCk_Handle
     Get_ActorEntityHandleFromSelf(
