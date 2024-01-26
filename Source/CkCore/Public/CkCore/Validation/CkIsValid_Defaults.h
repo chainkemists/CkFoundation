@@ -66,6 +66,11 @@ CK_DEFINE_CUSTOM_IS_VALID(FName, ck::IsValid_Policy_Default, [=](FName InName)
     return InName != NAME_None;
 });
 
+CK_DEFINE_CUSTOM_IS_VALID(FRuntimeFloatCurve, ck::IsValid_Policy_Default, [=](FRuntimeFloatCurve InRuntimeFloatCurve)
+{
+    return ck::IsValid(InRuntimeFloatCurve.GetRichCurveConst(), ck::IsValid_Policy_NullptrOnly{});
+});
+
 CK_DEFINE_CUSTOM_IS_VALID(FCurveTableRowHandle, ck::IsValid_Policy_Default, [=](const FCurveTableRowHandle& InCurveTableRowHandle)
 {
     if (InCurveTableRowHandle.IsNull())
