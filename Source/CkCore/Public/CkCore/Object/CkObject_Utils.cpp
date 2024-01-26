@@ -211,6 +211,7 @@ auto
         UClass* InBlueprintGeneratedClass)
     -> UObject*
 {
+#if WITH_EDITOR
     const auto& Bpgc = Cast<UBlueprintGeneratedClass>(InBlueprintGeneratedClass);
 
     CK_ENSURE_IF_NOT(ck::IsValid(Bpgc),
@@ -219,6 +220,9 @@ auto
     { return {}; }
 
     return Bpgc->ClassGeneratedBy;
+#else
+    return nullptr;
+#endif
 }
 
 auto
