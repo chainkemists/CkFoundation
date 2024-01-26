@@ -17,7 +17,7 @@ public:
 
 private:
     UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck] Get Is Handle Valid",
+              DisplayName = "[Ck] Get Is Valid (Handle)",
               Category = "Ck|Utils|Handle",
               meta = (CompactNodeTitle = "IsValid"))
     static bool
