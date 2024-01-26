@@ -8,6 +8,8 @@
 #include <InputCoreTypes.h>
 #include <Framework/Commands/InputChord.h>
 #include <InstancedStruct.h>
+#include <Engine/DataTable.h>
+#include <Engine/CurveTable.h>
 
 #include <type_traits>
 
@@ -62,6 +64,22 @@ CK_DEFINE_CUSTOM_IS_VALID(const AActor*, ck::IsValid_Policy_IncludePendingKill, 
 CK_DEFINE_CUSTOM_IS_VALID(FName, ck::IsValid_Policy_Default, [=](FName InName)
 {
     return InName != NAME_None;
+});
+
+CK_DEFINE_CUSTOM_IS_VALID(FCurveTableRowHandle, ck::IsValid_Policy_Default, [=](const FCurveTableRowHandle& InCurveTableRowHandle)
+{
+    if (InCurveTableRowHandle.IsNull())
+    { return false; }
+
+    return InCurveTableRowHandle.CurveTable->FindCurveUnchecked(InCurveTableRowHandle.RowName) != nullptr;
+});
+
+CK_DEFINE_CUSTOM_IS_VALID(FDataTableRowHandle, ck::IsValid_Policy_Default, [=](const FDataTableRowHandle& InDataTableRowHandle)
+{
+    if (InDataTableRowHandle.IsNull())
+    { return false; }
+
+    return InDataTableRowHandle.DataTable->FindRowUnchecked(InDataTableRowHandle.RowName) != nullptr;
 });
 
 CK_DEFINE_CUSTOM_IS_VALID(FSoftObjectPath, ck::IsValid_Policy_Default, [=](const FSoftObjectPath& InSoftObject)
