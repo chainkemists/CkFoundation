@@ -286,49 +286,56 @@ class CKLOG_API UCk_Log_Utils_UE : public UBlueprintFunctionLibrary
 
 private:
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Log|Utils")
+              DisplayName = "[Ck] Log Fatal",
+              Category = "Ck|Log|Utils")
     static void
     Log_Fatal(
         FText InMsg,
         FCk_LogCategory InLogCategory);
 
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Log|Utils")
+              DisplayName = "[Ck] Log Error",
+              Category = "Ck|Log|Utils")
     static void
     Log_Error(
         FText InMsg,
         FCk_LogCategory InLogCategory);
 
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Log|Utils")
+              DisplayName = "[Ck] Warning",
+              Category = "Ck|Log|Utils")
     static void
     Log_Warning(
         FText InMsg,
         FCk_LogCategory InLogCategory);
 
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Log|Utils")
+              DisplayName = "[Ck] Display",
+              Category = "Ck|Log|Utils")
     static void
     Log_Display(
         FText InMsg,
         FCk_LogCategory InLogCategory);
 
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Log|Utils")
+              DisplayName = "[Ck] Log",
+              Category = "Ck|Log|Utils")
     static void
     Log(
         FText InMsg,
         FCk_LogCategory InLogCategory);
 
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Log|Utils")
+              DisplayName = "[Ck] Verbose",
+              Category = "Ck|Log|Utils")
     static void
     Log_Verbose(
         FText InMsg,
         FCk_LogCategory InLogCategory);
 
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Log|Utils")
+              DisplayName = "[Ck] Log VeryVerbose",
+              Category = "Ck|Log|Utils")
     static void
     Log_VeryVerbose(
         FText InMsg,
@@ -336,7 +343,8 @@ private:
 
 private:
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Log|Utils")
+              DisplayName = "[Ck] Log Fatal If",
+              Category = "Ck|Log|Utils")
     static ECk_LogResults
     Log_Fatal_If(
         bool InExpression,
@@ -344,7 +352,8 @@ private:
         FCk_LogCategory InLogCategory);
 
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Log|Utils")
+              DisplayName = "[Ck] Log Error If",
+              Category = "Ck|Log|Utils")
     static ECk_LogResults
     Log_Error_If(
         bool InExpression,
@@ -352,7 +361,8 @@ private:
         FCk_LogCategory InLogCategory);
 
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Log|Utils")
+              DisplayName = "[Ck] Log Warning If",
+              Category = "Ck|Log|Utils")
     static ECk_LogResults
     Log_Warning_If(
         bool InExpression,
@@ -360,7 +370,8 @@ private:
         FCk_LogCategory InLogCategory);
 
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Log|Utils")
+              DisplayName = "[Ck] Log Display If",
+              Category = "Ck|Log|Utils")
     static ECk_LogResults
     Log_Display_If(
         bool InExpression,
@@ -368,7 +379,8 @@ private:
         FCk_LogCategory InLogCategory);
 
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Log|Utils")
+              DisplayName = "[Ck] Log If",
+              Category = "Ck|Log|Utils")
     static ECk_LogResults
     Log_If(
         bool InExpression,
@@ -376,7 +388,8 @@ private:
         FCk_LogCategory InLogCategory);
 
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Log|Utils")
+              DisplayName = "[Ck] Log Verbose If",
+              Category = "Ck|Log|Utils")
     static ECk_LogResults
     Log_Verbose_If(
         bool InExpression,
@@ -384,6 +397,7 @@ private:
         FCk_LogCategory InLogCategory);
 
     UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck] Log VeryVerbose If",
               Category = "Ck|Log|Utils")
     static ECk_LogResults
     Log_VeryVerbose_If(

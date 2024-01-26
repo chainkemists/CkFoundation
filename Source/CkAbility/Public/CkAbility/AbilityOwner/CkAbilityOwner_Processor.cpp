@@ -117,32 +117,37 @@ namespace ck
     {
         const auto& AbilityEntityConfig = InRequest.Get_AbilityEntityConfig();
         CK_ENSURE_IF_NOT(ck::IsValid(AbilityEntityConfig),
-            TEXT("Cannot give Ability to Ability Owner [{}] because it has an INVALID Entity Config PDA"),
+            TEXT("Cannot GIVE Ability to Ability Owner [{}] because it has an INVALID Entity Config PDA"),
             InAbilityOwnerEntity)
         { return; }
 
         const auto& AbilityConstructionScript = Cast<UCk_Ability_ConstructionScript_PDA>(AbilityEntityConfig->Get_EntityConstructionScript());
         CK_ENSURE_IF_NOT(ck::IsValid(AbilityConstructionScript),
-            TEXT("Cannot give Ability to Ability Owner [{}] because it has an INVALID Construction Script"),
+            TEXT("Cannot GIVE Ability to Ability Owner [{}] because it has an INVALID Construction Script"),
             InAbilityOwnerEntity)
         { return; }
 
         const auto& AbilityParams = AbilityConstructionScript->Get_AbilityParams();
-        CK_ENSURE_IF_NOT(ck::IsValid(AbilityParams.Get_AbilityScriptClass()),
-            TEXT("Cannot give Ability to Ability Owner [{}] using Construction Script [{}] because the ScriptClass [{}] is INVALID"),
+        const auto& AbilityScriptClass = AbilityParams.Get_AbilityScriptClass();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptClass),
+            TEXT("Cannot GIVE Ability to Ability Owner [{}] using Construction Script [{}] because the ScriptClass [{}] is INVALID"),
             InAbilityOwnerEntity,
             AbilityConstructionScript,
-            AbilityParams.Get_AbilityScriptClass())
+            AbilityScriptClass)
         { return; }
 
-        CK_ENSURE_IF_NOT(ck::IsValid(AbilityParams),
-            TEXT("Cannot give Ability [{}] to Ability Owner [{}] using Construction Script [{}] because it is INVALID or has an INVALID ABILITY NAME"),
-            AbilityParams.Get_AbilityScriptClass(),
+        const auto& AbilityData = AbilityParams.Get_Data();
+        const auto& AbilityName = AbilityData.Get_AbilityName();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(AbilityData.Get_AbilityName()),
+            TEXT("Cannot GIVE Ability [{}] to Ability Owner [{}] using Construction Script [{}] because has an INVALID Ability Name"),
+            AbilityScriptClass,
             InAbilityOwnerEntity,
             AbilityConstructionScript)
         { return; }
 
-        const auto ReplicationType = AbilityParams.Get_Data().Get_NetworkSettings().Get_ReplicationType();
+        const auto ReplicationType = AbilityData.Get_NetworkSettings().Get_ReplicationType();
 
         if (NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InAbilityOwnerEntity, ReplicationType))
         {
@@ -150,7 +155,7 @@ namespace ck
             (
                 TEXT("Skipping Giving Ability [{}] with Script [{}] because ReplicationType [{}] does not match for Entity [{}]"),
                 AbilityEntityConfig,
-                AbilityParams.Get_AbilityScriptClass(),
+                AbilityScriptClass,
                 ReplicationType,
                 InAbilityOwnerEntity
             );
@@ -158,11 +163,9 @@ namespace ck
             return;
         }
 
-        const auto& AbilityName = AbilityParams.Get_Data().Get_AbilityName();
-
         const auto& AlreadyHasAbilityWithName = UCk_Utils_AbilityOwner_UE::Has_Ability(InAbilityOwnerEntity, AbilityName);
 
-        CK_ENSURE_IF_NOT(NOT AlreadyHasAbilityWithName, TEXT("Cannot give Ability [{}] to Ability Owner [{}] because it already has it"), AbilityName, InAbilityOwnerEntity)
+        CK_ENSURE_IF_NOT(NOT AlreadyHasAbilityWithName, TEXT("Cannot GIVE Ability [{}] to Ability Owner [{}] because it already has it"), AbilityName, InAbilityOwnerEntity)
         { return; }
 
         const auto PostAbilityCreationFunc =
@@ -265,7 +268,7 @@ namespace ck
                 {
                     ability::Verbose
                     (
-                        TEXT("Activating Ability [Name: {} | Entity: {}] on Ability Owner [{}] and Granting Tags [{}]"),
+                        TEXT("ACTIVATING Ability [Name: {} | Entity: {}] on Ability Owner [{}] and Granting Tags [{}]"),
                         InAbilityToActivateName,
                         InAbilityToActivateEntity,
                         InAbilityOwnerEntity,
@@ -280,7 +283,7 @@ namespace ck
                 {
                     ability::Verbose
                     (
-                        TEXT("Failed to Activate Ability [Name: {} | Entity: {}] on Ability Owner [{}]! "
+                        TEXT("Failed to ACTIVATE Ability [Name: {} | Entity: {}] on Ability Owner [{}]! "
                              "The Activation Requirements are met BUT the Ability is ALREADY ACTIVE"),
                         InAbilityToActivateName,
                         InAbilityToActivateEntity,
@@ -293,7 +296,7 @@ namespace ck
                 {
                     ability::Verbose
                     (
-                        TEXT("Failed to Activate Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
+                        TEXT("Failed to ACTIVATE Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
                              "because the Activation Requirements on ABILITY OWNER are NOT met"),
                         InAbilityToActivateName,
                         InAbilityToActivateEntity,
@@ -306,7 +309,7 @@ namespace ck
                 {
                     ability::Verbose
                     (
-                        TEXT("Failed to Activate Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
+                        TEXT("Failed to ACTIVATE Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
                              "because the Activation Requirements on ABILITY ITSELF are NOT met"),
                         InAbilityToActivateName,
                         InAbilityToActivateEntity,
@@ -319,7 +322,7 @@ namespace ck
                 {
                     ability::Verbose
                     (
-                        TEXT("Failed to Activate Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
+                        TEXT("Failed to ACTIVATE Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
                              "because the Activation Requirements on ABILITY OWNER and ABILITY ITSELF are NOT met"),
                         InAbilityToActivateName,
                         InAbilityToActivateEntity,
@@ -344,7 +347,7 @@ namespace ck
                 {
                     ability::Verbose
                     (
-                        TEXT("Cancelling Ability [Name: {} | Entity: {}] after Activating Ability [Name: {} | Entity: {}] on Ability Owner [{}]"),
+                        TEXT("CANCELLING Ability [Name: {} | Entity: {}] after Activating Ability [Name: {} | Entity: {}] on Ability Owner [{}]"),
                         UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntityToCancel),
                         InAbilityEntityToCancel,
                         InAbilityToActivateName,
@@ -413,7 +416,7 @@ namespace ck
 
             ability::VeryVerbose
             (
-                TEXT("Deactivating Ability [Name: {} | Entity: {}] from Ability Owner [{}] and Remove Tags [{}]"),
+                TEXT("DEACTIVATING Ability [Name: {} | Entity: {}] from Ability Owner [{}] and Removing Tags [{}]"),
                 InAbilityName,
                 InAbilityEntity,
                 InAbilityOwnerEntity,
@@ -487,9 +490,8 @@ namespace ck
          -> FCk_Handle
     {
         CK_ENSURE_IF_NOT(UCk_Utils_Ability_UE::Has(InAbilityEntity),
-            TEXT("Entity [{}] is NOT a Ability"),
-            InAbilityEntity,
-            InAbilityOwnerEntity)
+            TEXT("Entity [{}] is NOT an Ability"),
+            InAbilityEntity)
         { return {}; }
 
         const auto& HasAbilityWithEntity = UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Get_HasValidEntry_If

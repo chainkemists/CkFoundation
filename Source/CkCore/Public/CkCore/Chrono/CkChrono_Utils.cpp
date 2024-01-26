@@ -65,7 +65,7 @@ auto
 
 auto
     UCk_Utils_Chrono_UE::
-    Tick_Chrono(
+    Tick(
         FCk_Chrono&     InChrono,
         const FCk_Time& InDeltaT)
     -> ECk_Chrono_TickState
@@ -75,7 +75,7 @@ auto
 
 auto
     UCk_Utils_Chrono_UE::
-    Consume_Chrono(
+    Consume(
         FCk_Chrono&     InChrono,
         const FCk_Time& InDeltaT)
     -> ECk_Chrono_ConsumeState
@@ -85,7 +85,7 @@ auto
 
 auto
     UCk_Utils_Chrono_UE::
-    Reset_Chrono(
+    Reset(
         FCk_Chrono& InChrono)
     -> void
 {
@@ -94,7 +94,7 @@ auto
 
 void
     UCk_Utils_Chrono_UE::
-    Complete_Chrono(
+    Complete(
         FCk_Chrono& InChrono)
 {
     InChrono.Complete();

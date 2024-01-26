@@ -195,6 +195,132 @@ auto
 
 auto
     UCk_Utils_MeterAttribute_UE::
+    Get_All(
+        FCk_Handle InAttributeOwnerEntity)
+    -> TArray<FGameplayTag>
+{
+    if (NOT RecordOfMeterAttributes_Utils::Has(InAttributeOwnerEntity))
+    { return {}; }
+
+    auto AllMeters = TArray<FGameplayTag>{};
+
+    RecordOfMeterAttributes_Utils::ForEach_ValidEntry(InAttributeOwnerEntity, [&](FCk_Handle InMeterAttributeEntity)
+    {
+        AllMeters.Add(UCk_Utils_GameplayLabel_UE::Get_Label(InMeterAttributeEntity));
+    });
+
+    return AllMeters;
+}
+
+auto
+    UCk_Utils_MeterAttribute_UE::
+    ForEach(
+        FCk_Handle InAttributeOwner,
+        const FInstancedStruct&    InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate)
+    -> TArray<FCk_Handle>
+{
+    auto ToRet = TArray<FCk_Handle>{};
+
+    ForEach(InAttributeOwner, [&](const FCk_Handle& InAttribute)
+    {
+        if (InDelegate.IsBound())
+        { InDelegate.Execute(InAttribute, InOptionalPayload); }
+        else
+        { ToRet.Emplace(InAttribute); }
+    });
+
+    return ToRet;
+}
+
+auto
+    UCk_Utils_MeterAttribute_UE::
+    ForEach(
+        const FCk_Handle& InAttributeOwner,
+        const TFunction<void(FCk_Handle)>& InFunc)
+    -> void
+{
+    if (NOT Ensure_Any(InAttributeOwner))
+    { return; }
+
+    RecordOfMeterAttributes_Utils::ForEach_ValidEntry
+    (
+        InAttributeOwner,
+        [&](const FCk_Handle& InAttribute)
+        {
+            if (InAttribute == InAttributeOwner)
+            { return; }
+
+            InFunc(InAttribute);
+        }
+    );
+}
+
+auto
+    UCk_Utils_MeterAttribute_UE::
+    ForEach_If(
+        FCk_Handle InAttributeOwner,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate,
+        const FCk_Predicate_InHandle_OutResult& InPredicate)
+    -> TArray<FCk_Handle>
+{
+    auto ToRet = TArray<FCk_Handle>{};
+
+    ForEach_If
+    (
+        InAttributeOwner,
+        [&](FCk_Handle InAttribute)
+        {
+            if (InDelegate.IsBound())
+            { InDelegate.Execute(InAttribute, InOptionalPayload); }
+            else
+            { ToRet.Emplace(InAttribute); }
+        },
+        [&](const FCk_Handle& InAttribute)  -> bool
+        {
+            const FCk_SharedBool PredicateResult;
+
+            if (InPredicate.IsBound())
+            {
+                InPredicate.Execute(InAttribute, PredicateResult, InOptionalPayload);
+            }
+
+            return *PredicateResult;
+
+        }
+    );
+
+    return ToRet;
+}
+
+auto
+    UCk_Utils_MeterAttribute_UE::
+    ForEach_If(
+        const FCk_Handle& InAttributeOwner,
+        const TFunction<void(FCk_Handle)>& InFunc,
+        const TFunction<bool(FCk_Handle)>& InPredicate)
+    -> void
+{
+    if (NOT Ensure_Any(InAttributeOwner))
+    { return; }
+
+    RecordOfMeterAttributes_Utils::ForEach_ValidEntry_If
+    (
+        InAttributeOwner,
+        [&](const FCk_Handle& InAttribute)
+        {
+            if (InAttribute == InAttributeOwner)
+            { return; }
+
+            InFunc(InAttribute);
+        },
+        InPredicate
+    );
+}
+
+auto
+    UCk_Utils_MeterAttribute_UE::
     Get_BaseValue(
         FCk_Handle InAttributeOwnerEntity,
         FGameplayTag InAttributeName)

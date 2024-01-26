@@ -18,6 +18,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Comparison True (Int)",
               Category = "Ck|Utils|Math|IntComparison")
     static bool
     Get_IsComparisonTrue(
@@ -25,6 +26,7 @@ public:
         const FCk_Comparison_Int& InComparison);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is In Range (Int)",
               Category = "Ck|Utils|Math|IntComparison")
     static bool
     Get_IsInRange(
@@ -44,6 +46,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Comparison True (Float)",
               Category = "Ck|Utils|Math|FloatComparison")
     static bool
     Get_IsComparisonTrue(
@@ -51,6 +54,7 @@ public:
         const FCk_Comparison_Float& InComparison);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is In Range (Float)",
               Category = "Ck|Utils|Math|FloatComparison")
     static bool
     Get_IsInRange(

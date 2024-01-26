@@ -5,7 +5,9 @@
 // ----------------------------------------------------------------------------------------------------------------
 
 FCk_ActorComponent_DoConstruct_Params::
-FCk_ActorComponent_DoConstruct_Params(TObjectPtr<AActor> InActor, const FTransform& InTransform)
+    FCk_ActorComponent_DoConstruct_Params(
+        AActor* InActor,
+        const FTransform& InTransform)
     : _Actor(InActor)
     , _Transform(InTransform)
 { }
@@ -31,7 +33,8 @@ auto
 
 auto
     UCk_ActorComponent_UE::
-    Do_Construct_Implementation(const FCk_ActorComponent_DoConstruct_Params& InParams)
+    Do_Construct_Implementation(
+        const FCk_ActorComponent_DoConstruct_Params& InParams)
     -> void
 {
     if (IsTemplate())

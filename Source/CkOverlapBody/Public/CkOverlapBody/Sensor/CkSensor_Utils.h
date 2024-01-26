@@ -100,6 +100,14 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
+              DisplayName="[Ck][Sensor] Get All Sensors")
+    static TArray<FGameplayTag>
+    Get_All(
+        FCk_Handle InSensorOwnerEntity);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Sensor",
               DisplayName = "[Ck][Sensor] Get Replication Type")
     static ECk_Net_ReplicationType
     Get_ReplicationType(

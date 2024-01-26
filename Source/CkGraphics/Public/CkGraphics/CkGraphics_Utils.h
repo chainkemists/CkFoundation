@@ -27,13 +27,16 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Graphics_UE);
 
 public:
-    UFUNCTION(BlueprintPure, Category = "Ck|Utils|Graphics")
+    UFUNCTION(BlueprintPure,
+              DisplayName  = "[Ck] Get Modified Color Intensity",
+              Category = "Ck|Utils|Graphics")
     static FColor
     Get_ModifiedColorIntensity(
         FColor InColor,
         float InIntensity = 1.0f);
 
     UFUNCTION(BlueprintPure,
+              DisplayName  = "[Ck] Get Was Actor Recently Rendered",
               Category = "Ck|Utils|Graphics")
     static bool
     Get_WasActorRecentlyRendered(

@@ -30,21 +30,24 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Debug")
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Get Debug Name")
     static FName
     Get_DebugName(
         const UObject* InObject,
         ECk_DebugName_Verbosity InNameVerbosity = ECk_DebugName_Verbosity::FullName);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Debug")
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Get Debug Name (As String)")
     static FString
     Get_DebugName_AsString(
         const UObject* InObject,
         ECk_DebugName_Verbosity InNameVerbosity = ECk_DebugName_Verbosity::FullName);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Debug")
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Get Debug Name (As Text)")
     static FText
     Get_DebugName_AsText(
         const UObject* InObject,
@@ -64,17 +67,20 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Debug")
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Get Stack Trace")
     static FString
     Get_StackTrace(int32 InSkipFrames = 1);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Debug")
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Get Blueprint Stack Trace (As Array)")
     static TArray<FString>
     Get_StackTrace_Blueprint_AsArray();
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Debug")
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Get Blueprint Stack Trace (As String)")
     static FString
     Get_StackTrace_Blueprint_AsString();
 

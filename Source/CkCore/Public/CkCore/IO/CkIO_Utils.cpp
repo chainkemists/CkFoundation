@@ -78,7 +78,7 @@ auto
 
 auto
     UCk_Utils_IO_UE::
-    Get_PluginDir(
+    Get_PluginsDir(
         const FString& InPluginName)
     -> FString
 {

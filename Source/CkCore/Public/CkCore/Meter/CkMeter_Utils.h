@@ -16,15 +16,17 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Meter -> Text",
               Category = "Ck|Utils|Meter",
-              meta = (DisplayName = "Meter To Text", CompactNodeTitle = "->", BlueprintAutocast))
+              meta = (CompactNodeTitle = "->", BlueprintAutocast))
     static FText
     Conv_MeterToText(
         const FCk_Meter& InHandle);
 
     UFUNCTION(BlueprintPure,
+               DisplayName = "[Ck] Meter -> String",
               Category = "Ck|Utils|Meter",
-              meta = (DisplayName = "Meter To String", CompactNodeTitle = "->", BlueprintAutocast))
+              meta = (CompactNodeTitle = "->", BlueprintAutocast))
     static FString
     Conv_MeterToString(
         const FCk_Meter& InHandle);
@@ -50,6 +52,7 @@ private:
 
 private:
     UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck] Consume Meter",
               Category = "Ck|Utils|Meter")
     static FCk_Meter
     Consume_Meter(
@@ -57,6 +60,7 @@ private:
         const FCk_Meter_Consume& InConsume);
 
     UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck] Replenish Meter",
               Category = "Ck|Utils|Meter")
     static FCk_Meter
     Replenish_Meter(
@@ -65,30 +69,35 @@ private:
 
 private:
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Meter Size",
               Category = "Ck|Utils|Meter")
     static FCk_Meter_Size
     Get_MeterSize(
         const FCk_Meter& InMeter);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Meter % Used",
               Category = "Ck|Utils|Meter")
     static FCk_FloatRange_0to1
     Get_MeterPercentageUsed(
         const FCk_Meter& InMeter);
 
         UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Meter % Remaining",
               Category = "Ck|Utils|Meter")
     static FCk_FloatRange_0to1
     Get_MeterPercentageRemaining(
         const FCk_Meter& InMeter);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Meter Full",
               Category = "Ck|Utils|Meter")
     static bool
     Get_IsMeterFull(
         const FCk_Meter& InMeter);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Meter Empty",
               Category = "Ck|Utils|Meter")
     static bool
     Get_IsMeterEmpty(

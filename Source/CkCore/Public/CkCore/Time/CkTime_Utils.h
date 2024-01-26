@@ -69,21 +69,24 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Time To Text",
               Category = "Ck|Utils|Time",
-              meta = (DisplayName = "Time To Text", CompactNodeTitle = "->", BlueprintAutocast))
+              meta = (CompactNodeTitle = "->", BlueprintAutocast))
     static FText
     Conv_TimeToText(
         const FCk_Time& InTime);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Time To String",
               Category = "Ck|Utils|Chrono",
-              meta = (DisplayName = "Time To String", CompactNodeTitle = "->", BlueprintAutocast))
+              meta = (CompactNodeTitle = "->", BlueprintAutocast))
     static FString
     Conv_TimeToString(
         const FCk_Time& InTime);
 
 public:
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Make Time (From Seconds)",
               Category = "Ck|Utils|Time",
               meta=(CompactNodeTitle="Seconds"))
     static FCk_Time
@@ -91,6 +94,7 @@ public:
         float InSeconds);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Make Time (From Milliseconds)",
               Category = "Ck|Utils|Time",
               meta=(CompactNodeTitle="Milliseconds"))
     static FCk_Time
@@ -98,6 +102,7 @@ public:
         float InMilliSeconds);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Make World Time",
               Category = "Ck|Utils|Time",
               meta = (NativeMakeFunc, DefaultToSelf = "InWorldContextObject"))
     static FCk_WorldTime
@@ -105,28 +110,33 @@ public:
         const UObject* InWorldContextObject);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Frame Number",
               Category = "Ck|Utils|Time")
     static int64
     Get_FrameNumber();
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Frame Counter",
               Category = "Ck|Utils|Time")
     static int64
     Get_FrameCounter();
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get World Time",
               Category = "Ck|Utils|Time")
     static FCk_Utils_Time_GetWorldTime_Result
     Get_WorldTime(
         const FCk_Utils_Time_GetWorldTime_Params& InParams);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Milliseconds",
               Category = "Ck|Utils|Time")
     static float
     Get_Milliseconds(
         const FCk_Time& InTime);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Time Zero",
               Category = "Ck|Utils|Time",
               meta = (CompactNodeTitle = "Is Zero"))
     static bool
@@ -135,48 +145,54 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Time + Time",
               Category = "Ck|Utils|Time",
-              meta = (CompactNodeTitle = "+"))
+              meta = (CompactNodeTitle = "+", KeyWords = "add"))
     static FCk_Time
     Add(
         const FCk_Time& InA,
         const FCk_Time& InB);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Time - Time",
               Category = "Ck|Utils|Time",
-              meta = (CompactNodeTitle = "-"))
+              meta = (CompactNodeTitle = "-", KeyWords = "subtract"))
     static FCk_Time
     Subtract(const FCk_Time& InA,
         const FCk_Time& InB);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Time / Time",
               Category = "Ck|Utils|Time",
-              meta = (CompactNodeTitle = "/"))
+              meta = (CompactNodeTitle = "/", KeyWords = "divide"))
     static FCk_Time
     Divide(const FCk_Time& InA,
         const FCk_Time& InB);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Time * Time",
               Category = "Ck|Utils|Time",
-              meta = (CompactNodeTitle = "*"))
+              meta = (CompactNodeTitle = "*", KeyWords = "multiply"))
     static FCk_Time
     Multiply(
         const FCk_Time& InA,
         const FCk_Time& InB);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Time == Time",
               Category = "Ck|Utils|Time",
-              meta = (CompactNodeTitle = "=="))
+              meta = (CompactNodeTitle = "==", KeyWords = "equal"))
     static bool
-    Equal(
+    IsEqual(
         const FCk_Time& InA,
         const FCk_Time& InB);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Time != Time",
               Category = "Ck|Utils|Time",
-              meta = (CompactNodeTitle = "!="))
+              meta = (CompactNodeTitle = "!=", KeyWords = "equal, not"))
     static bool
-    NotEqual(
+    IsNotEqual(
         const FCk_Time& InA,
         const FCk_Time& InB);
 };

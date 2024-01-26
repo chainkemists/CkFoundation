@@ -41,38 +41,52 @@ public:
     };
 
 public:
-    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|EntityLifetime")
+    UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck][Lifetime] Request Destroy Entity",
+              Category = "Ck|Utils|EntityLifetime")
     static void
     Request_DestroyEntity(
         FCk_Handle InHandle,
         ECk_EntityLifetime_DestructionBehavior InDestructionBehavior = ECk_EntityLifetime_DestructionBehavior::ForceDestroy);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|EntityLifetime")
+    UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck][Lifetime] Request Create New Entity",
+              Category = "Ck|Utils|EntityLifetime")
     static FCk_Handle
     Request_CreateEntity(
         FCk_Handle InHandle);
 
 public:
-    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityLifetime")
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Lifetime] Get Entity Lifetime Owner",
+              Category = "Ck|Utils|EntityLifetime")
     static FCk_Handle
     Get_LifetimeOwner(FCk_Handle InHandle);
 
-    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityLifetime")
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Lifetime] Get Entity Lifetime Dependents",
+              Category = "Ck|Utils|EntityLifetime")
     static TArray<FCk_Handle>
     Get_LifetimeDependents(
         FCk_Handle InHandle);
 
-    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityLifetime")
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Lifetime] Get Is Entity Pending Destroy",
+              Category = "Ck|Utils|EntityLifetime")
     static bool
     Get_IsPendingDestroy(
         const FCk_Handle& InHandle);
 
-    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityLifetime")
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Lifetime] Get Transient Entity",
+              Category = "Ck|Utils|EntityLifetime")
     static FCk_Handle
     Get_TransientEntity(
         FCk_Handle InHandle);
 
-    UFUNCTION(BlueprintPure, Category = "Ck|Utils|EntityLifetime")
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Lifetime] Get World For Entity",
+              Category = "Ck|Utils|EntityLifetime")
     static UWorld*
     Get_WorldForEntity(
         FCk_Handle InHandle);

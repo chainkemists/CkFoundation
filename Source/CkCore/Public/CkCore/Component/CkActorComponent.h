@@ -18,11 +18,13 @@ public:
 
 public:
     FCk_ActorComponent_DoConstruct_Params() = default;
-    FCk_ActorComponent_DoConstruct_Params(TObjectPtr<AActor> InActor, const FTransform& InTransform);
+    FCk_ActorComponent_DoConstruct_Params(
+        AActor* InActor,
+        const FTransform& InTransform);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    TWeakObjectPtr<AActor>   _Actor = nullptr;
+    TWeakObjectPtr<AActor>   _Actor;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FTransform               _Transform;
@@ -49,10 +51,14 @@ protected:
     UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|Components",
               meta = (DisplayName = "ConstructionScript"))
-    void Do_Construct (const FCk_ActorComponent_DoConstruct_Params& InParams);
+    void
+    Do_Construct(
+        const FCk_ActorComponent_DoConstruct_Params& InParams);
 
 protected:
-    virtual auto Do_Construct_Implementation(const FCk_ActorComponent_DoConstruct_Params& InParams) -> void;
+    virtual auto
+    Do_Construct_Implementation(
+        const FCk_ActorComponent_DoConstruct_Params& InParams) -> void;
 };
 
 // ----------------------------------------------------------------------------------------------------------------

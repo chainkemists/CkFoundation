@@ -20,6 +20,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Runtime Float Curve Value At Time",
               Category = "Ck|Utils|Math|FloatCurve")
     static float
     Get_RuntimeFloatCurve_ValueAtTime(
@@ -27,18 +28,21 @@ public:
         const FCk_Time& InTime);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Runtime Float Curve Time Range",
               Category = "Ck|Utils|Math|FloatCurve")
     static FCk_FloatRange
     Get_RuntimeFloatCurve_TimeRange(
         const FRuntimeFloatCurve& InFloatCurve);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Runtime Float Curve Value Range",
               Category = "Ck|Utils|Math|FloatCurve")
     static FCk_FloatRange
     Get_RuntimeFloatCurve_ValueRange(
         const FRuntimeFloatCurve& InFloatCurve);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Runtime Float Is Valid",
               Category = "Ck|Utils|Math|FloatCurve")
     static bool
     Get_IsValid_RuntimeFloatCurve(

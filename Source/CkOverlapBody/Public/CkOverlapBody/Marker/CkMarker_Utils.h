@@ -97,6 +97,15 @@ public:
     static bool
     Ensure_Any(
         FCk_Handle InMarkerOwnerEntity);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Marker",
+              DisplayName="[Ck][Marker] Get All Markers")
+    static TArray<FGameplayTag>
+    Get_All(
+        FCk_Handle InMarkerOwnerEntity);
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Marker",
