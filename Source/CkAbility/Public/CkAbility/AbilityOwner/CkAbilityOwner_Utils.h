@@ -58,7 +58,7 @@ public:
     static bool
     Has_Ability(
         FCk_Handle InAbilityOwnerEntity,
-        FGameplayTag InAbilityName);
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
@@ -73,7 +73,7 @@ public:
     static bool
     Ensure_Ability(
         FCk_Handle InAbilityOwnerEntity,
-        FGameplayTag InAbilityName);
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
@@ -84,9 +84,18 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[Ck][AbilityOwner] Get Ability")
+              DisplayName="[Ck][AbilityOwner] Get Ability",
+              meta=(DevelopmentOnly))
     static FCk_Handle
     Get_Ability(
+        FCk_Handle InAbilityOwnerEntity,
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="[Ck][AbilityOwner] Find Ability")
+    static FCk_Handle
+    Find_Ability(
         FCk_Handle InAbilityOwnerEntity,
         FGameplayTag InAbilityName);
 
@@ -231,22 +240,22 @@ private:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner")
     static FCk_Request_AbilityOwner_ActivateAbility
-    Make_Request_ActivateAbility_ByName(
-        FGameplayTag InAbilityName,
+    Make_Request_ActivateAbility_ByClass(
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass,
         FCk_Ability_ActivationPayload InActivationPayload);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner")
     static FCk_Request_AbilityOwner_ActivateAbility
     Make_Request_ActivateAbility_ByEntity(
-        FCk_Handle InAbilityEntity,
+        FCk_Handle                    InAbilityEntity,
         FCk_Ability_ActivationPayload InActivationPayload);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner")
     static FCk_Request_AbilityOwner_DeactivateAbility
-    Make_Request_DeactivateAbility_ByName(
-        FGameplayTag InAbilityName);
+    Make_Request_DeactivateAbility_ByClass(
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner")
@@ -257,8 +266,8 @@ private:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner")
     static FCk_Request_AbilityOwner_RevokeAbility
-    Make_Request_RevokeAbility_ByName(
-        FGameplayTag InAbilityName);
+    Make_Request_RevokeAbility_ByClass(
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner")

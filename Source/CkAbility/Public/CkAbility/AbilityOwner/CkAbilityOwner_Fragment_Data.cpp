@@ -12,9 +12,9 @@ FCk_Request_AbilityOwner_GiveAbility::
 
 FCk_Request_AbilityOwner_RevokeAbility::
     FCk_Request_AbilityOwner_RevokeAbility(
-        FGameplayTag InAbilityName)
-    : _SearchPolicy(ECk_AbilityOwner_AbilitySearchPolicy::SearchByName)
-    , _AbilityName(InAbilityName)
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass)
+    : _SearchPolicy(ECk_AbilityOwner_AbilitySearchPolicy::SearchByClass)
+    , _AbilityClass(InAbilityClass)
 {
 }
 
@@ -30,10 +30,10 @@ FCk_Request_AbilityOwner_RevokeAbility::
 
 FCk_Request_AbilityOwner_ActivateAbility::
     FCk_Request_AbilityOwner_ActivateAbility(
-        FGameplayTag InAbilityName,
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass,
         FCk_Ability_ActivationPayload InActivationPayload)
-    : _SearchPolicy(ECk_AbilityOwner_AbilitySearchPolicy::SearchByName)
-    , _AbilityName(InAbilityName)
+    : _SearchPolicy(ECk_AbilityOwner_AbilitySearchPolicy::SearchByClass)
+    , _AbilityClass(InAbilityClass)
     , _ActivationPayload(InActivationPayload)
 {
 }
@@ -52,9 +52,9 @@ FCk_Request_AbilityOwner_ActivateAbility::
 
 FCk_Request_AbilityOwner_DeactivateAbility::
     FCk_Request_AbilityOwner_DeactivateAbility(
-        FGameplayTag InAbilityName)
-        : _SearchPolicy(ECk_AbilityOwner_AbilitySearchPolicy::SearchByName)
-        , _AbilityName(InAbilityName)
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass)
+        : _SearchPolicy(ECk_AbilityOwner_AbilitySearchPolicy::SearchByClass)
+        , _AbilityClass(InAbilityClass)
 { }
 
 FCk_Request_AbilityOwner_DeactivateAbility::
