@@ -4,6 +4,8 @@
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include <Kismet/KismetSystemLibrary.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -87,6 +89,230 @@ auto
     }
 
     return StringBuilder.ToString();
+}
+
+auto
+    UCk_Utils_DebugDraw_UE::
+    DrawDebugSphere(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector InCenter,
+        float InRadius,
+        int32 InSegments,
+        FLinearColor InLineColor,
+        float InDuration,
+        float InThickness)
+    -> void
+{
+    const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
+
+    if (ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
+    { return; }
+
+    UKismetSystemLibrary::DrawDebugSphere(InWorldContextObject, InCenter, InRadius, InSegments, InLineColor, InDuration, InThickness);
+}
+
+auto
+    UCk_Utils_DebugDraw_UE::
+    DrawDebugLine(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector InLineStart,
+        const FVector InLineEnd,
+        FLinearColor InLineColor,
+        float InDuration,
+        float InThickness)
+    -> void
+{
+    const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
+
+    if (ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
+    { return; }
+
+    UKismetSystemLibrary::DrawDebugLine(InWorldContextObject, InLineStart, InLineEnd, InLineColor, InDuration, InThickness);
+}
+
+auto
+    UCk_Utils_DebugDraw_UE::
+    DrawDebugCircle(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        FVector InCenter,
+        float InRadius,
+        int32 InNumSegments,
+        FLinearColor InLineColor,
+        float InDuration,
+        float InThickness,
+        FVector InYAxis,
+        FVector InZAxis,
+        bool InDrawAxis)
+    -> void
+{
+    const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
+
+    if (ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
+    { return; }
+
+    UKismetSystemLibrary::DrawDebugCircle(InWorldContextObject, InCenter, InRadius, InNumSegments, InLineColor, InDuration, InThickness, InYAxis, InZAxis, InDrawAxis);
+}
+
+auto
+    UCk_Utils_DebugDraw_UE::
+    DrawDebugPoint(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector InPosition,
+        float InSize,
+        FLinearColor InPointColor,
+        float InDuration)
+    -> void
+{
+    const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
+
+    if (ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
+    { return; }
+
+    UKismetSystemLibrary::DrawDebugPoint(InWorldContextObject, InPosition, InSize, InPointColor, InDuration);
+}
+
+auto
+    UCk_Utils_DebugDraw_UE::
+    DrawDebugArrow(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector InLineStart,
+        const FVector InLineEnd,
+        float InArrowSize,
+        FLinearColor InLineColor,
+        float InDuration,
+        float InThickness)
+    -> void
+{
+    const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
+
+    if (ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
+    { return; }
+
+    UKismetSystemLibrary::DrawDebugArrow(InWorldContextObject, InLineStart, InLineEnd, InArrowSize, InLineColor, InDuration, InThickness);
+}
+
+auto
+    UCk_Utils_DebugDraw_UE::
+    DrawDebugBox(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector InCenter,
+        FVector InExtent,
+        FLinearColor InLineColor,
+        const FRotator InRotation,
+        float InDuration,
+        float InThickness)
+    -> void
+{
+    const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
+
+    if (ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
+    { return; }
+
+    UKismetSystemLibrary::DrawDebugBox(InWorldContextObject, InCenter, InExtent, InLineColor, InRotation, InDuration, InThickness);
+}
+
+auto
+    UCk_Utils_DebugDraw_UE::
+    DrawDebugCylinder(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector InStart,
+        const FVector InEnd,
+        float InRadius,
+        int32 InSegments,
+        FLinearColor InLineColor,
+        float InDuration,
+        float InThickness)
+    -> void
+{
+    const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
+
+    if (ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
+    { return; }
+
+    UKismetSystemLibrary::DrawDebugCylinder(InWorldContextObject, InStart, InEnd, InRadius, InSegments, InLineColor, InDuration, InThickness);
+}
+
+auto
+    UCk_Utils_DebugDraw_UE::
+    DrawDebugCone(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector InOrigin,
+        const FVector InDirection,
+        float InLength,
+        float InAngleWidth,
+        float InAngleHeight,
+        int32 InNumSides,
+        FLinearColor InLineColor,
+        float InDuration,
+        float InThickness)
+    -> void
+{
+    const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
+
+    if (ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
+    { return; }
+
+    UKismetSystemLibrary::DrawDebugCone(InWorldContextObject, InOrigin, InDirection, InLength, InAngleWidth, InAngleHeight, InNumSides, InLineColor, InDuration, InThickness);
+}
+
+auto
+    UCk_Utils_DebugDraw_UE::
+    DrawDebugCapsule(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector InCenter,
+        float InHalfHeight,
+        float InRadius,
+        const FRotator InRotation,
+        FLinearColor InLineColor,
+        float InDuration,
+        float InThickness)
+    -> void
+{
+    const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
+
+    if (ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
+    { return; }
+
+    UKismetSystemLibrary::DrawDebugCapsule(InWorldContextObject, InCenter, InHalfHeight, InRadius, InRotation, InLineColor, InDuration, InThickness);
+}
+
+auto
+    UCk_Utils_DebugDraw_UE::
+    DrawDebugString(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector InTextLocation,
+        const FString& InText,
+        AActor* InTestBaseActor,
+        FLinearColor InTextColor,
+        float InDuration)
+    -> void
+{
+    const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
+
+    if (ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
+    { return; }
+
+    UKismetSystemLibrary::DrawDebugString(InWorldContextObject, InTextLocation, InText, InTestBaseActor, InTextColor, InDuration);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
