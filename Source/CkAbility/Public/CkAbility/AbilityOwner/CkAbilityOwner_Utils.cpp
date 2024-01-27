@@ -42,15 +42,15 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     Has_Ability(
-        FCk_Handle   InAbilityOwnerEntity,
-        FGameplayTag InAbilityName)
+        FCk_Handle InAbilityOwnerEntity,
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass)
     -> bool
 {
-    const auto& AbilityEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Ability_UE,
-        RecordOfAbilities_Utils>(InAbilityOwnerEntity, InAbilityName);
-
-    return ck::IsValid(AbilityEntity);
+    return RecordOfAbilities_Utils::Get_HasValidEntry_If(InAbilityOwnerEntity,
+    [InAbilityClass](const FCk_Handle& InHandle)
+    {
+        return UCk_Utils_Ability_UE::Get_ScriptClass(InHandle) == InAbilityClass;
+    });
 }
 
 auto
@@ -65,12 +65,12 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     Ensure_Ability(
-        FCk_Handle   InAbilityOwnerEntity,
-        FGameplayTag InAbilityName)
+        FCk_Handle InAbilityOwnerEntity,
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass)
     -> bool
 {
-    CK_ENSURE_IF_NOT(Has_Ability(InAbilityOwnerEntity, InAbilityName),
-        TEXT("Handle [{}] does NOT have Ability [{}]"), InAbilityOwnerEntity, InAbilityName)
+    CK_ENSURE_IF_NOT(Has_Ability(InAbilityOwnerEntity, InAbilityClass),
+        TEXT("Handle [{}] does NOT have Ability [{}]"), InAbilityOwnerEntity, InAbilityClass)
     { return false; }
 
     return true;
@@ -91,13 +91,30 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     Get_Ability(
+        FCk_Handle                          InAbilityOwnerEntity,
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass)
+    -> FCk_Handle
+{
+    CK_ENSURE_IF_NOT(Has_Ability(InAbilityOwnerEntity, InAbilityClass),
+        TEXT("AbilityOwner [{}] does NOT have the Ability [{}]"), InAbilityOwnerEntity, InAbilityClass)
+    { return {}; }
+
+    auto Handle = RecordOfAbilities_Utils::Get_ValidEntry_If(InAbilityOwnerEntity,
+    [InAbilityClass](const FCk_Handle& InHandle)
+    {
+        return UCk_Utils_Ability_UE::Get_ScriptClass(InHandle) == InAbilityClass;
+    });
+
+    return Handle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Find_Ability(
         FCk_Handle   InAbilityOwnerEntity,
         FGameplayTag InAbilityName)
     -> FCk_Handle
 {
-    if (NOT Ensure_Ability(InAbilityOwnerEntity, InAbilityName))
-    { return {}; }
-
     const auto& AbilityEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Ability_UE,
         RecordOfAbilities_Utils>(InAbilityOwnerEntity, InAbilityName);
@@ -395,18 +412,18 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
-    Make_Request_ActivateAbility_ByName(
-        FGameplayTag InAbilityName,
+    Make_Request_ActivateAbility_ByClass(
+        TSubclassOf<UCk_Ability_Script_PDA>  InAbilityScriptClass,
         FCk_Ability_ActivationPayload InActivationPayload)
     -> FCk_Request_AbilityOwner_ActivateAbility
 {
-    return FCk_Request_AbilityOwner_ActivateAbility{InAbilityName, InActivationPayload};
+    return FCk_Request_AbilityOwner_ActivateAbility{InAbilityScriptClass, InActivationPayload};
 }
 
 auto
     UCk_Utils_AbilityOwner_UE::
     Make_Request_ActivateAbility_ByEntity(
-        FCk_Handle InAbilityEntity,
+        FCk_Handle                    InAbilityEntity,
         FCk_Ability_ActivationPayload InActivationPayload)
     -> FCk_Request_AbilityOwner_ActivateAbility
 {
@@ -415,11 +432,11 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
-    Make_Request_DeactivateAbility_ByName(
-        FGameplayTag InAbilityName)
+    Make_Request_DeactivateAbility_ByClass(
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass)
     -> FCk_Request_AbilityOwner_DeactivateAbility
 {
-    return FCk_Request_AbilityOwner_DeactivateAbility{InAbilityName};
+    return FCk_Request_AbilityOwner_DeactivateAbility{InAbilityScriptClass};
 }
 
 auto
@@ -433,11 +450,11 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
-    Make_Request_RevokeAbility_ByName(
-        FGameplayTag InAbilityName)
+    Make_Request_RevokeAbility_ByClass(
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass)
     -> FCk_Request_AbilityOwner_RevokeAbility
 {
-    return FCk_Request_AbilityOwner_RevokeAbility{InAbilityName};
+    return FCk_Request_AbilityOwner_RevokeAbility{InAbilityScriptClass};
 }
 
 auto

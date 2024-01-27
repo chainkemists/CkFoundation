@@ -138,7 +138,6 @@ namespace ck
         { return; }
 
         const auto& AbilityData = AbilityParams.Get_Data();
-        const auto& AbilityName = AbilityData.Get_AbilityName();
 
         CK_ENSURE_IF_NOT(ck::IsValid(AbilityData.Get_AbilityName()),
             TEXT("Cannot GIVE Ability [{}] to Ability Owner [{}] using Construction Script [{}] because has an INVALID Ability Name"),
@@ -163,18 +162,19 @@ namespace ck
             return;
         }
 
-        const auto& AlreadyHasAbilityWithName = UCk_Utils_AbilityOwner_UE::Has_Ability(InAbilityOwnerEntity, AbilityName);
+        const auto& AlreadyHasAbilityWithName = UCk_Utils_AbilityOwner_UE::Has_Ability(InAbilityOwnerEntity, AbilityScriptClass);
 
-        CK_ENSURE_IF_NOT(NOT AlreadyHasAbilityWithName, TEXT("Cannot GIVE Ability [{}] to Ability Owner [{}] because it already has it"), AbilityName, InAbilityOwnerEntity)
+        CK_ENSURE_IF_NOT(NOT AlreadyHasAbilityWithName, TEXT("Cannot GIVE Ability [{}] to Ability Owner [{}] because it already has it"),
+            AbilityScriptClass, InAbilityOwnerEntity)
         { return; }
 
         const auto PostAbilityCreationFunc =
-        [InAbilityOwnerEntity, AbilityName, &AbilityParams](const FCk_Handle& InAbilityEntity) -> void
+        [InAbilityOwnerEntity, AbilityScriptClass, &AbilityParams](const FCk_Handle& InAbilityEntity) -> void
         {
             ability::VeryVerbose
             (
-                TEXT("Giving Ability [Name: {} | Entity: {}] to Ability Owner [{}]"),
-                AbilityName,
+                TEXT("Giving Ability [Class: {} | Entity: {}] to Ability Owner [{}]"),
+                AbilityScriptClass,
                 InAbilityEntity,
                 InAbilityOwnerEntity
             );
@@ -204,7 +204,7 @@ namespace ck
             const FCk_Request_AbilityOwner_RevokeAbility& InRequest) const
         -> void
     {
-        const auto& DoRevokeAbility = [&](const FCk_Handle& InAbilityEntity, const FGameplayTag& InAbilityName) -> void
+        const auto& DoRevokeAbility = [&](const FCk_Handle& InAbilityEntity, const TSubclassOf<UCk_Ability_Script_PDA>& InAbilityClass) -> void
         {
             ability::VeryVerbose
             (
@@ -219,14 +219,14 @@ namespace ck
 
         switch (const auto& SearchPolicy = InRequest.Get_SearchPolicy())
         {
-            case ECk_AbilityOwner_AbilitySearchPolicy::SearchByName:
+            case ECk_AbilityOwner_AbilitySearchPolicy::SearchByClass:
             {
-                const auto& FoundAbilityEntity = DoFindAbilityByName(InAbilityOwnerEntity, InRequest.Get_AbilityName());
+                const auto& FoundAbilityEntity = DoFindAbilityByClass(InAbilityOwnerEntity, InRequest.Get_AbilityClass());
 
                 if (ck::Is_NOT_Valid(FoundAbilityEntity))
                 { break; }
 
-                DoRevokeAbility(FoundAbilityEntity, InRequest.Get_AbilityName());
+                DoRevokeAbility(FoundAbilityEntity, InRequest.Get_AbilityClass());
 
                 break;
             }
@@ -237,7 +237,7 @@ namespace ck
                 if (ck::Is_NOT_Valid(FoundAbilityEntity))
                 { break; }
 
-                DoRevokeAbility(FoundAbilityEntity, InRequest.Get_AbilityName());
+                DoRevokeAbility(FoundAbilityEntity, InRequest.Get_AbilityClass());
 
                 break;
             }
@@ -406,9 +406,9 @@ namespace ck
 
         switch (const auto& SearchPolicy = InRequest.Get_SearchPolicy())
         {
-            case ECk_AbilityOwner_AbilitySearchPolicy::SearchByName:
+            case ECk_AbilityOwner_AbilitySearchPolicy::SearchByClass:
             {
-                const auto& FoundAbilityEntity = DoFindAbilityByName(InAbilityOwnerEntity, InRequest.Get_AbilityName());
+                const auto& FoundAbilityEntity = DoFindAbilityByClass(InAbilityOwnerEntity, InRequest.Get_AbilityClass());
 
                 if (ck::Is_NOT_Valid(FoundAbilityEntity))
                 { break; }
@@ -444,7 +444,7 @@ namespace ck
             const FCk_Request_AbilityOwner_DeactivateAbility& InRequest) const
         -> void
     {
-        const auto& DoDeactivateAbility = [&](const FCk_Handle& InAbilityEntity, const FGameplayTag& InAbilityName) -> void
+        const auto& DoDeactivateAbility = [&](const FCk_Handle& InAbilityEntity, const TSubclassOf<UCk_Ability_Script_PDA>& InAbilityClass) -> void
         {
             if (UCk_Utils_Ability_UE::Get_Status(InAbilityEntity) == ECk_Ability_Status::NotActive)
             { return; }
@@ -457,7 +457,7 @@ namespace ck
             ability::VeryVerbose
             (
                 TEXT("DEACTIVATING Ability [Name: {} | Entity: {}] from Ability Owner [{}] and Removing Tags [{}]"),
-                InAbilityName,
+                InAbilityClass,
                 InAbilityEntity,
                 InAbilityOwnerEntity,
                 GrantedTags
@@ -468,14 +468,14 @@ namespace ck
 
         switch (const auto& SearchPolicy = InRequest.Get_SearchPolicy())
         {
-            case ECk_AbilityOwner_AbilitySearchPolicy::SearchByName:
+            case ECk_AbilityOwner_AbilitySearchPolicy::SearchByClass:
             {
-                const auto& FoundAbilityEntity = DoFindAbilityByName(InAbilityOwnerEntity, InRequest.Get_AbilityName());
+                const auto& FoundAbilityEntity = DoFindAbilityByClass(InAbilityOwnerEntity, InRequest.Get_AbilityClass());
 
                 if (ck::Is_NOT_Valid(FoundAbilityEntity))
                 { break; }
 
-                DoDeactivateAbility(FoundAbilityEntity, InRequest.Get_AbilityName());
+                DoDeactivateAbility(FoundAbilityEntity, InRequest.Get_AbilityClass());
 
                 break;
             }
@@ -486,7 +486,7 @@ namespace ck
                 if (ck::Is_NOT_Valid(FoundAbilityEntity))
                 { break; }
 
-                DoDeactivateAbility(FoundAbilityEntity, UCk_Utils_GameplayLabel_UE::Get_Label(FoundAbilityEntity));
+                DoDeactivateAbility(FoundAbilityEntity, UCk_Utils_Ability_UE::Get_ScriptClass(FoundAbilityEntity));
 
                 break;
             }
@@ -502,21 +502,22 @@ namespace ck
 
     auto
         FProcessor_AbilityOwner_HandleRequests::
-        DoFindAbilityByName(
+        DoFindAbilityByClass(
             const FCk_Handle& InAbilityOwnerEntity,
-            const FGameplayTag& InAbilityName) const
+            const TSubclassOf<UCk_Ability_Script_PDA>& InAbilityClass) const
          -> FCk_Handle
     {
         const auto& FoundAbilityWithName = UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Get_ValidEntry_If
         (
             InAbilityOwnerEntity,
-            algo::MatchesGameplayLabel{InAbilityName}
+            [InAbilityClass](const FCk_Handle& InHandle)
+            { return UCk_Utils_Ability_UE::Get_ScriptClass(InHandle) == InAbilityClass; }
         );
 
         CK_ENSURE_IF_NOT(ck::IsValid(FoundAbilityWithName),
             TEXT("Ability Owner [{}] does NOT have Ability [{}]"),
             InAbilityOwnerEntity,
-            InAbilityName)
+            InAbilityClass)
         { return {}; }
 
         return FoundAbilityWithName;

@@ -15,7 +15,7 @@
 UENUM(BlueprintType)
 enum class ECk_AbilityOwner_AbilitySearchPolicy : uint8
 {
-    SearchByName,
+    SearchByClass,
     SearchByHandle
 };
 
@@ -126,7 +126,7 @@ public:
 
     explicit
     FCk_Request_AbilityOwner_RevokeAbility(
-        FGameplayTag InAbilityName);
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass);
 
     explicit
     FCk_Request_AbilityOwner_RevokeAbility(
@@ -135,12 +135,12 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_AbilityOwner_AbilitySearchPolicy _SearchPolicy = ECk_AbilityOwner_AbilitySearchPolicy::SearchByName;
+    ECk_AbilityOwner_AbilitySearchPolicy _SearchPolicy = ECk_AbilityOwner_AbilitySearchPolicy::SearchByClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
                   EditCondition="_SearchPolicy == ECk_AbilityOwner_AbilitySearchPolicy::SearchByName"))
-    FGameplayTag _AbilityName = FGameplayTag::EmptyTag;
+    TSubclassOf<UCk_Ability_Script_PDA> _AbilityClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
@@ -149,7 +149,7 @@ private:
 
 public:
     CK_PROPERTY_GET(_SearchPolicy);
-    CK_PROPERTY_GET(_AbilityName);
+    CK_PROPERTY_GET(_AbilityClass);
     CK_PROPERTY_GET(_AbilityHandle);
 };
 
@@ -167,7 +167,7 @@ public:
     FCk_Request_AbilityOwner_ActivateAbility() = default;
 
     FCk_Request_AbilityOwner_ActivateAbility(
-        FGameplayTag InAbilityName,
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass,
         FCk_Ability_ActivationPayload InActivationPayload);
 
     FCk_Request_AbilityOwner_ActivateAbility(
@@ -177,12 +177,12 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_AbilityOwner_AbilitySearchPolicy _SearchPolicy = ECk_AbilityOwner_AbilitySearchPolicy::SearchByName;
+    ECk_AbilityOwner_AbilitySearchPolicy _SearchPolicy = ECk_AbilityOwner_AbilitySearchPolicy::SearchByClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
                   EditCondition="_SearchPolicy == ECk_AbilityOwner_AbilitySearchPolicy::SearchByName"))
-    FGameplayTag _AbilityName = FGameplayTag::EmptyTag;
+    TSubclassOf<UCk_Ability_Script_PDA> _AbilityClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
@@ -195,7 +195,7 @@ private:
 
 public:
     CK_PROPERTY_GET(_SearchPolicy);
-    CK_PROPERTY_GET(_AbilityName);
+    CK_PROPERTY_GET(_AbilityClass);
     CK_PROPERTY_GET(_AbilityHandle);
     CK_PROPERTY_GET(_ActivationPayload);
 };
@@ -215,7 +215,7 @@ public:
 
     explicit
     FCk_Request_AbilityOwner_DeactivateAbility(
-        FGameplayTag InAbilityName);
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass);
 
     explicit
     FCk_Request_AbilityOwner_DeactivateAbility(
@@ -224,12 +224,12 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_AbilityOwner_AbilitySearchPolicy _SearchPolicy = ECk_AbilityOwner_AbilitySearchPolicy::SearchByName;
+    ECk_AbilityOwner_AbilitySearchPolicy _SearchPolicy = ECk_AbilityOwner_AbilitySearchPolicy::SearchByClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
-                  EditCondition="_SearchPolicy == ECk_AbilityOwner_AbilitySearchPolicy::SearchByName"))
-    FGameplayTag _AbilityName = FGameplayTag::EmptyTag;
+                  EditCondition="_SearchPolicy == ECk_AbilityOwner_AbilitySearchPolicy::SearchByClass"))
+    TSubclassOf<UCk_Ability_Script_PDA> _AbilityClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
@@ -238,7 +238,7 @@ private:
 
 public:
     CK_PROPERTY_GET(_SearchPolicy);
-    CK_PROPERTY_GET(_AbilityName);
+    CK_PROPERTY_GET(_AbilityClass);
     CK_PROPERTY_GET(_AbilityHandle);
 };
 

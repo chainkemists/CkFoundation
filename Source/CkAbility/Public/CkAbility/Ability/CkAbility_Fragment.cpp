@@ -13,9 +13,9 @@ namespace ck::algo
             const FCk_Handle& InHandle) const
         -> bool
     {
-        const auto AbilityName = UCk_Utils_GameplayLabel_UE::Get_Label(InHandle);
+        const auto AbilityClass = UCk_Utils_Ability_UE::Get_ScriptClass(InHandle);
 
-        if (NOT UCk_Utils_AbilityOwner_UE::Has_Ability(InHandle, AbilityName))
+        if (UCk_Utils_Ability_UE::Get_ScriptClass(InHandle) != AbilityClass)
         { return false; }
 
         const auto CancelledByTags = [&]()
