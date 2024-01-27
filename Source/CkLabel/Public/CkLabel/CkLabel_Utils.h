@@ -41,7 +41,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Label",
-              DisplayName="[Ck][Label] Get Label Value")
+              DisplayName="[Ck][Label] Get Label Name")
     static FGameplayTag
     Get_Label(
         const FCk_Handle& InHandle);
