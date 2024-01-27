@@ -46,6 +46,7 @@ public class CkCore : CkModuleRules
                 "InputCore",
                 "DeveloperSettings",
 
+                "CkLog",
                 "CkThirdParty",
                 // ... add private dependencies that you statically link with here ...
             }
