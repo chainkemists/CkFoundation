@@ -170,7 +170,7 @@ namespace ck::log
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
     Log_Fatal(
         FText InMsg,
        FCk_LogCategory InLogCategory)
@@ -180,7 +180,7 @@ auto
 }
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
     Log_Error(
         FText InMsg,
        FCk_LogCategory InLogCategory)
@@ -190,7 +190,7 @@ auto
 }
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
     Log_Warning(
         FText InMsg,
        FCk_LogCategory InLogCategory)
@@ -200,7 +200,7 @@ auto
 }
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
     Log_Display(
         FText InMsg,
        FCk_LogCategory InLogCategory)
@@ -210,7 +210,7 @@ auto
 }
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
     Log(
         FText InMsg,
        FCk_LogCategory InLogCategory)
@@ -220,7 +220,7 @@ auto
 }
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
     Log_Verbose(
         FText InMsg,
        FCk_LogCategory InLogCategory)
@@ -230,7 +230,7 @@ auto
 }
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
     Log_VeryVerbose(
         FText InMsg,
        FCk_LogCategory InLogCategory)
@@ -242,7 +242,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
     Log_Fatal_If(
         bool InExpression,
         FText InMsg,
@@ -259,7 +259,7 @@ auto
 }
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
     Log_Error_If(
         bool InExpression,
         FText InMsg,
@@ -276,7 +276,7 @@ auto
 }
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
     Log_Warning_If(
         bool InExpression,
         FText InMsg,
@@ -293,7 +293,7 @@ auto
 }
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
     Log_Display_If(
         bool InExpression,
         FText InMsg,
@@ -310,7 +310,7 @@ auto
 }
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
     Log_Verbose_If(
         bool InExpression,
         FText InMsg,
@@ -327,7 +327,7 @@ auto
 }
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
     Log_VeryVerbose_If(
         bool InExpression,
         FText InMsg,
@@ -344,7 +344,7 @@ auto
 }
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
     Get_Fatal_IsActive(
         FCk_LogCategory InLogCategory)
     -> bool
@@ -353,7 +353,7 @@ auto
 }
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
     Get_Error_IsActive(
         FCk_LogCategory InLogCategory)
     -> bool
@@ -362,7 +362,7 @@ auto
 }
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
     Get_Warning_IsActive(
         FCk_LogCategory InLogCategory)
     -> bool
@@ -371,7 +371,7 @@ auto
 }
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
     Get_Display_IsActive(
         FCk_LogCategory InLogCategory)
     -> bool
@@ -380,7 +380,7 @@ auto
 }
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
     Get_Log_IsActive(
         FCk_LogCategory InLogCategory)
     -> bool
@@ -389,7 +389,7 @@ auto
 }
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
     Get_Verbose_IsActive(
         FCk_LogCategory InLogCategory)
     -> bool
@@ -398,7 +398,7 @@ auto
 }
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
     Get_VeryVerbose_IsActive(
         FCk_LogCategory InLogCategory)
     -> bool
@@ -407,7 +407,51 @@ auto
 }
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
+    Get_IsLogActive_ForVerbosity(
+        const FCk_LogCategory& InLogCategory,
+        ECk_LogVerbosity InVerbosity)
+    -> bool
+{
+    switch (InVerbosity)
+    {
+        case ECk_LogVerbosity::Log:
+        {
+            return Get_Log_IsActive(InLogCategory);
+        }
+        case ECk_LogVerbosity::Display:
+        {
+            return Get_Display_IsActive(InLogCategory);
+        }
+        case ECk_LogVerbosity::Verbose:
+        {
+            return Get_Verbose_IsActive(InLogCategory);
+        }
+        case ECk_LogVerbosity::VeryVerbose:
+        {
+            return Get_VeryVerbose_IsActive(InLogCategory);
+        }
+        case ECk_LogVerbosity::Warning:
+        {
+            return Get_Warning_IsActive(InLogCategory);
+        }
+        case ECk_LogVerbosity::Error:
+        {
+            return Get_Error_IsActive(InLogCategory);
+        }
+        case ECk_LogVerbosity::Fatal:
+        {
+            return Get_Fatal_IsActive(InLogCategory);
+        }
+        default:
+        {
+            return false;
+        }
+    }
+}
+
+auto
+    UCk_Utils_Log_UE::
     Log_If(
         bool InExpression,
         FText InMsg,
@@ -424,7 +468,7 @@ auto
 }
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
     DoInvokeLog(
         const TMap<FName, TFunction<void(const FString&)>>& InMap,
         FName InLogger,
@@ -449,7 +493,7 @@ auto
 }
 
 auto
-    UCk_Log_Utils_UE::
+    UCk_Utils_Log_UE::
     DoGet_IsLogActive(
         const TMap<FName, TFunction<bool()>>& InMap,
         FName InLogger)
