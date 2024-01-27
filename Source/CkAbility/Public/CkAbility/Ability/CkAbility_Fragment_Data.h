@@ -299,15 +299,6 @@ public:
     OnDeactivateAbility() -> void;
 
 protected:
-    auto
-    PreSave(
-        FObjectPreSaveContext InObjectSaveContext) -> void override;
-
-    auto
-    PostLoad() -> void override;
-
-
-protected:
     UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|Ability|Script",
               meta     = (DisplayName = "OnActivateAbility"))
@@ -332,10 +323,6 @@ protected:
               meta     = (DisplayName = "OnRevokeAbility"))
     void
     DoOnRevokeAbility();
-
-private:
-    UFUNCTION(CallInEditor, Category = "Ck|Ability|Validation")
-    void ValidateAssetData();
 
 private:
     UFUNCTION(BlueprintCallable,
