@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkLog/CkLog_Category.h"
+
 #include <CoreMinimal.h>
 #include <functional>
 #include <Kismet/BlueprintFunctionLibrary.h>
@@ -366,9 +368,22 @@ enum class ECk_LogResults : uint8
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+UENUM(BlueprintType)
+enum class ECk_LogVerbosity : uint8
+{
+    Log,
+    Display,
+    Verbose,
+    VeryVerbose,
+    Warning,
+    Error,
+    Fatal
+};
+
+// --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKLOG_API UCk_Log_Utils_UE : public UBlueprintFunctionLibrary
+class CKLOG_API UCk_Utils_Log_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
@@ -542,6 +557,12 @@ public:
     static bool
     Get_VeryVerbose_IsActive(
         FCk_LogCategory InLogCategory);
+
+public:
+    static auto
+    Get_IsLogActive_ForVerbosity(
+        const FCk_LogCategory& InLogCategory,
+        ECk_LogVerbosity InVerbosity) -> bool;
 
 private:
     static auto
