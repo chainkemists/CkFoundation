@@ -361,7 +361,47 @@ namespace ck
                 algo::MatchesAnyAbilityActivationCancelledTags{GrantedTags}
             );
 
+
+            auto& RequestsComp = InAbilityOwnerEntity.Get<FFragment_AbilityOwner_Requests>();
+            const auto NumNewRequests = RequestsComp.Get_Requests().Num();
             UCk_Utils_Ability_UE::DoActivate(InAbilityToActivateEntity, InRequest.Get_ActivationPayload());
+
+            // it's possible that we already have a deactivation request, if yes, process it
+            const auto ProcessPossibleDeactivationRequest = [&]
+            {
+                const auto NewRequestsAfterActivate = RequestsComp.Get_Requests().Num() - NumNewRequests;
+
+                if (NOT NewRequestsAfterActivate)
+                { return; }
+
+                CK_ENSURE_IF_NOT(NewRequestsAfterActivate == 1,
+                    TEXT("This code expects that the Requests Array size, IMMEDIATELY AFTER the Ability [{}] with Owner [{}] is Activated AND "
+                        "WHILE we are potentially processing other requests, is ONE (where ONE means the Ability we just Activated, Deactivated), "
+                        "in the same frame. If this Ensure is firing, this means this assumption is incorrect and this code needs to be rethought."),
+                        InAbilityToActivateEntity, InAbilityOwnerEntity)
+                { return; }
+
+                auto LastRequest = RequestsComp.Get_Requests().Last();
+
+                const auto PendingRequest = std::get_if<FCk_Request_AbilityOwner_DeactivateAbility>(&LastRequest);
+
+                CK_ENSURE_IF_NOT(IsValid(PendingRequest, IsValid_Policy_NullptrOnly{}),
+                    TEXT("Expected the PendingRequest IMMEDIATELY AFTER Activating Ability [{}] with Owner [{}] to be of type DeactivateAbility. "
+                    "Because this not the case, this code needs to be rethought."), InAbilityToActivateEntity, InAbilityOwnerEntity)
+                { return; }
+
+                CK_ENSURE_IF_NOT(PendingRequest->Get_AbilityHandle() == InAbilityToActivateEntity,
+                    TEXT("Expected the PendingRequest IMMEDIATELY AFTER Activating Ability [{}] with Owner [{}] to be for the SAME Ability. "
+                    "Instead the Deactivation Request is for the Ability [{}]."), InAbilityToActivateEntity, InAbilityOwnerEntity,
+                    PendingRequest->Get_AbilityHandle())
+                { return; }
+
+                ability::Verbose(TEXT("Deactivating Ability [{}] on Ability Owner [{}] IMMEDIATELY"),
+                    InAbilityToActivateEntity, InAbilityOwnerEntity);
+
+                RequestsComp._Requests.Reset();
+                DoHandleRequest(InAbilityOwnerEntity, InAbilityOwnerComp, *PendingRequest);
+            }; ProcessPossibleDeactivationRequest();
         };
 
         switch (const auto& SearchPolicy = InRequest.Get_SearchPolicy())
