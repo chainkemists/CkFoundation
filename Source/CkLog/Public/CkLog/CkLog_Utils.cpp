@@ -11,58 +11,114 @@ namespace ck::log
 {
     auto
         Get_LogMap()
-        -> LoggingMapType&
+        -> InvokeLogMapType&
     {
-        static LoggingMapType _LogMap;
-        return _LogMap;
+        static InvokeLogMapType LogMap;
+        return LogMap;
     }
 
     auto
         Get_DisplayMap()
-        -> LoggingMapType&
+        -> InvokeLogMapType&
     {
-        static LoggingMapType _DisplayMap;
-        return _DisplayMap;
+        static InvokeLogMapType DisplayMap;
+        return DisplayMap;
     }
 
     auto
         Get_WarningMap()
-        -> LoggingMapType&
+        -> InvokeLogMapType&
     {
-        static LoggingMapType _WarningMap;
-        return _WarningMap;
+        static InvokeLogMapType WarningMap;
+        return WarningMap;
     }
 
     auto
         Get_ErrorMap()
-        -> LoggingMapType&
+        -> InvokeLogMapType&
     {
-        static LoggingMapType _ErrorMap;
-        return _ErrorMap;
+        static InvokeLogMapType ErrorMap;
+        return ErrorMap;
     }
 
     auto
         Get_FatalMap()
-        -> LoggingMapType&
+        -> InvokeLogMapType&
     {
-        static LoggingMapType _FatalMap;
-        return _FatalMap;
+        static InvokeLogMapType FatalMap;
+        return FatalMap;
     }
 
     auto
         Get_VerboseMap()
-        -> LoggingMapType&
+        -> InvokeLogMapType&
     {
-        static LoggingMapType _VerboseMap;
-        return _VerboseMap;
+        static InvokeLogMapType VerboseMap;
+        return VerboseMap;
     }
 
     auto
         Get_VeryVerboseMap()
-        -> LoggingMapType&
+        -> InvokeLogMapType&
     {
-        static LoggingMapType _VeryVerboseMap;
-        return _VeryVerboseMap;
+        static InvokeLogMapType VeryVerboseMap;
+        return VeryVerboseMap;
+    }
+
+    auto
+        Get_LogMap_IsActive()
+        -> IsLogActiveMapType&
+    {
+        static IsLogActiveMapType LogMap;
+        return LogMap;
+    }
+
+    auto
+        Get_DisplayMap_IsActive()
+        -> IsLogActiveMapType&
+    {
+        static IsLogActiveMapType DisplayMap;
+        return DisplayMap;
+    }
+
+    auto
+        Get_WarningMap_IsActive()
+        -> IsLogActiveMapType&
+    {
+        static IsLogActiveMapType WaningMap;
+        return WaningMap;
+    }
+
+    auto
+        Get_ErrorMap_IsActive()
+        -> IsLogActiveMapType&
+    {
+        static IsLogActiveMapType ErrorMap;
+        return ErrorMap;
+    }
+
+    auto
+        Get_FatalMap_IsActive()
+        -> IsLogActiveMapType&
+    {
+        static IsLogActiveMapType FatalMap;
+        return FatalMap;
+    }
+
+    auto
+        Get_VerboseMap_IsActive()
+        -> IsLogActiveMapType&
+    {
+        static IsLogActiveMapType VerboseMap;
+        return VerboseMap;
+    }
+
+    auto
+        Get_VeryVerboseMap_IsActive()
+        -> IsLogActiveMapType&
+    {
+        static IsLogActiveMapType VeryVerboseMap;
+        return VeryVerboseMap;
     }
 
     auto
@@ -289,6 +345,69 @@ auto
 
 auto
     UCk_Log_Utils_UE::
+    Get_Fatal_IsActive(
+        FCk_LogCategory InLogCategory)
+    -> bool
+{
+    return DoGet_IsLogActive(ck::log::Get_FatalMap_IsActive(), InLogCategory.Get_Name());
+}
+
+auto
+    UCk_Log_Utils_UE::
+    Get_Error_IsActive(
+        FCk_LogCategory InLogCategory)
+    -> bool
+{
+    return DoGet_IsLogActive(ck::log::Get_ErrorMap_IsActive(), InLogCategory.Get_Name());
+}
+
+auto
+    UCk_Log_Utils_UE::
+    Get_Warning_IsActive(
+        FCk_LogCategory InLogCategory)
+    -> bool
+{
+    return DoGet_IsLogActive(ck::log::Get_WarningMap_IsActive(), InLogCategory.Get_Name());
+}
+
+auto
+    UCk_Log_Utils_UE::
+    Get_Display_IsActive(
+        FCk_LogCategory InLogCategory)
+    -> bool
+{
+    return DoGet_IsLogActive(ck::log::Get_DisplayMap_IsActive(), InLogCategory.Get_Name());
+}
+
+auto
+    UCk_Log_Utils_UE::
+    Get_Log_IsActive(
+        FCk_LogCategory InLogCategory)
+    -> bool
+{
+    return DoGet_IsLogActive(ck::log::Get_LogMap_IsActive(), InLogCategory.Get_Name());
+}
+
+auto
+    UCk_Log_Utils_UE::
+    Get_Verbose_IsActive(
+        FCk_LogCategory InLogCategory)
+    -> bool
+{
+    return DoGet_IsLogActive(ck::log::Get_VerboseMap_IsActive(), InLogCategory.Get_Name());
+}
+
+auto
+    UCk_Log_Utils_UE::
+    Get_VeryVerbose_IsActive(
+        FCk_LogCategory InLogCategory)
+    -> bool
+{
+    return DoGet_IsLogActive(ck::log::Get_VeryVerboseMap_IsActive(), InLogCategory.Get_Name());
+}
+
+auto
+    UCk_Log_Utils_UE::
     Log_If(
         bool InExpression,
         FText InMsg,
@@ -307,16 +426,14 @@ auto
 auto
     UCk_Log_Utils_UE::
     DoInvokeLog(
-        TMap<FName, TFunction<void(const FString&)>>& InMap,
+        const TMap<FName, TFunction<void(const FString&)>>& InMap,
         FName InLogger,
         FText InMsg)
     -> void
 {
-    const auto& LoggerToUse = InLogger;
-
-    if (InMap.Contains(LoggerToUse) == false)
+    if (InMap.Contains(InLogger) == false)
     {
-        UE_LOG(CkLogger, Error, TEXT("Could not find the Logger [%s]. Are you sure you have defined it? See CkLog.h for an example."), *LoggerToUse.ToString());
+        UE_LOG(CkLogger, Error, TEXT("Could not find the Logger [%s]. Are you sure you have defined it? See CkLog.h for an example."), *InLogger.ToString());
         return;
     }
 
@@ -328,7 +445,23 @@ auto
     const auto& Formatted = FString::Printf(TEXT("%s\n== CONTEXT:[%s] =="), *InMsg.ToString(), *BpContext.Get(TEXT("")));
 #endif
 
-    InMap[LoggerToUse](Formatted);
+    InMap[InLogger](Formatted);
+}
+
+auto
+    UCk_Log_Utils_UE::
+    DoGet_IsLogActive(
+        const TMap<FName, TFunction<bool()>>& InMap,
+        FName InLogger)
+    -> bool
+{
+    if (InMap.Contains(InLogger) == false)
+    {
+        UE_LOG(CkLogger, Error, TEXT("Could not find the Logger [%s]. Are you sure you have defined it? See CkLog.h for an example."), *InLogger.ToString());
+        return {};
+    }
+
+    return InMap[InLogger]();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
