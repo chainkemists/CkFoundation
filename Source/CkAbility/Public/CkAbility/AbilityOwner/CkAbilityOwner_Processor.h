@@ -93,9 +93,9 @@ namespace ck
             const FCk_Request_AbilityOwner_DeactivateAbility& InRequest) const -> void;
 
     private:
-        auto DoFindAbilityByName(
+        auto DoFindAbilityByClass(
             const FCk_Handle& InAbilityOwnerEntity,
-            const FGameplayTag& InAbilityName) const-> FCk_Handle;
+            const TSubclassOf<UCk_Ability_Script_PDA>& InAbilityClass) const -> FCk_Handle;
 
         auto DoFindAbilityByHandle(
             const FCk_Handle& InAbilityOwnerEntity,
