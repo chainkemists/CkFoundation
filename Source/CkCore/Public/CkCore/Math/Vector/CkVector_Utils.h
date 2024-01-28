@@ -45,6 +45,15 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Vector3_UE);
 
 public:
+    // Assumes +X is Forward, +Y is Right, +Z is Up
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Default Direction If Zero (Vec3)",
+              Category = "Ck|Utils|Math|Vector3")
+    static FVector
+    Get_DefaultWorldDirectionIfZero(
+        const FVector& InPotentiallyZeroVector,
+        ECk_Direction_3D InDirectionToReturnIfZero);
+
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Location From Origin In Direction (Vec3)",
               Category = "Ck|Utils|Math|Vector3")
@@ -190,6 +199,60 @@ public:
     Get_DirectionVector(
         const FRotator& InRotator,
         ECk_Direction_3D InVectorToRotate = ECk_Direction_3D::Forward);
+
+    // Assumes +X is North, +Y is East
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Cardinal & Ordinal Direction",
+              Category = "Ck|Utils|Math|Vector3")
+    static FVector
+    Get_CardinalAndOrdinalDirection(
+        ECk_CardinalAndOrdinalDirection InDirection,
+        ECk_Plane_Axis InAxis = ECk_Plane_Axis::XY);
+
+    // Assumes +X is North, +Y is East
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Ordinal Direction",
+              Category = "Ck|Utils|Math|Vector3")
+    static FVector
+    Get_OrdinalDirection(
+        ECk_OrdinalDirection InDirection,
+        ECk_Plane_Axis InAxis = ECk_Plane_Axis::XY);
+
+    // Assumes +X is North, +Y is East
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Cardinal Direction",
+              Category = "Ck|Utils|Math|Vector3")
+    static FVector
+    Get_CardinalDirection(
+        ECk_CardinalDirection InDirection,
+        ECk_Plane_Axis InAxis = ECk_Plane_Axis::XY);
+
+    // Assumes +X is North, +Y is East
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Closest Cardinal Direction",
+              Category = "Ck|Utils|Math|Vector3")
+    static ECk_CardinalDirection
+    Get_ClosestCardinalDirection(
+        const FVector& InVector,
+        ECk_Plane_Axis InAxis = ECk_Plane_Axis::XY);
+
+    // Assumes +X is North, +Y is East
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Closest Ordinal Direction",
+              Category = "Ck|Utils|Math|Vector3")
+    static ECk_OrdinalDirection
+    Get_ClosestOrdinalDirection(
+        const FVector& InVector,
+        ECk_Plane_Axis InAxis = ECk_Plane_Axis::XY);
+
+    // Assumes +X is North, +Y is East
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Closest Cardinal & Ordinal Direction",
+              Category = "Ck|Utils|Math|Vector3")
+    static ECk_CardinalAndOrdinalDirection
+    Get_ClosestCardinalAndOrdinalDirection(
+        const FVector& InVector,
+        ECk_Plane_Axis InAxis = ECk_Plane_Axis::XY);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -282,6 +345,14 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Default Direction If Zero (Vec2)",
+              Category = "Ck|Utils|Math|Vector2")
+    static FVector2D
+    Get_DefaultDirectionIfZero(
+        const FVector2D& InPotentiallyZeroVector,
+        ECk_Direction_2D InDirectionToReturnIfZero);
+
+    UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Location From Origin In Direction (Vec2)",
               Category = "Ck|Utils|Math|Vector2")
     static FVector2D
@@ -356,6 +427,14 @@ public:
     SwizzleInplace(
         UPARAM(ref) FVector2D& InVector);
 
+    // Assumes +X is Up, +Y is Right
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Screen Direction",
+              Category = "Ck|Utils|Math|Vector2")
+    static FVector2D
+    Get_ScreenDirection(
+        ECk_Direction_2D InDirection);
+
     // Assumes +X is North, +Y is East
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Cardinal & Ordinal Direction",
@@ -375,7 +454,7 @@ public:
     // Assumes +X is North, +Y is East
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Cardinal Direction",
-              Category = "Ck|Utils|Math|Vector3")
+              Category = "Ck|Utils|Math|Vector2")
     static FVector2D
     Get_CardinalDirection(
         ECk_CardinalDirection InDirection);

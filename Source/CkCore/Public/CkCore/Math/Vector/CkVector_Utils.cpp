@@ -125,6 +125,19 @@ namespace ck_vector
 
 auto
     UCk_Utils_Vector3_UE::
+    Get_DefaultWorldDirectionIfZero(
+        const FVector&   InPotentiallyZeroVector,
+        ECk_Direction_3D InDirectionToReturnIfZero)
+    -> FVector
+{
+    if (NOT InPotentiallyZeroVector.IsNearlyZero())
+    { return InPotentiallyZeroVector; }
+
+    return Get_WorldDirection(InDirectionToReturnIfZero);
+}
+
+auto
+    UCk_Utils_Vector3_UE::
     Get_LocationFromOriginInDirection(
         const FVector& InOrigin,
         const FVector& InDirection,
@@ -420,6 +433,114 @@ auto
 }
 
 auto
+    UCk_Utils_Vector3_UE::
+    Get_CardinalAndOrdinalDirection(
+        ECk_CardinalAndOrdinalDirection InDirection,
+        ECk_Plane_Axis                  InAxis)
+    -> FVector
+{
+    const auto& Vec2d = UCk_Utils_Vector2_UE::Get_CardinalAndOrdinalDirection(InDirection);
+
+    switch(InAxis)
+    {
+        case ECk_Plane_Axis::XY: return FVector(Vec2d.X, Vec2d.Y, 0.0f);
+        case ECk_Plane_Axis::XZ: return FVector(Vec2d.X, 0.0f, Vec2d.Y);
+        case ECk_Plane_Axis::YZ: return FVector(0.0f, Vec2d.Y, Vec2d.X);
+    }
+
+    return {};
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    Get_OrdinalDirection(
+        ECk_OrdinalDirection InDirection,
+        ECk_Plane_Axis       InAxis)
+    -> FVector
+{
+    const auto& Vec2d = UCk_Utils_Vector2_UE::Get_OrdinalDirection(InDirection);
+
+    switch(InAxis)
+    {
+        case ECk_Plane_Axis::XY: return FVector(Vec2d.X, Vec2d.Y, 0.0f);
+        case ECk_Plane_Axis::XZ: return FVector(Vec2d.X, 0.0f, Vec2d.Y);
+        case ECk_Plane_Axis::YZ: return FVector(0.0f, Vec2d.Y, Vec2d.X);
+    }
+
+    return {};
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    Get_CardinalDirection(
+        ECk_CardinalDirection InDirection,
+        ECk_Plane_Axis        InAxis)
+    -> FVector
+{
+    const auto& Vec2d = UCk_Utils_Vector2_UE::Get_CardinalDirection(InDirection);
+
+    switch(InAxis)
+    {
+        case ECk_Plane_Axis::XY: return FVector(Vec2d.X, Vec2d.Y, 0.0f);
+        case ECk_Plane_Axis::XZ: return FVector(Vec2d.X, 0.0f, Vec2d.Y);
+        case ECk_Plane_Axis::YZ: return FVector(0.0f, Vec2d.Y, Vec2d.X);
+    }
+
+    return {};
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    Get_ClosestCardinalDirection(
+        const FVector& InVector,
+        ECk_Plane_Axis InAxis)
+    -> ECk_CardinalDirection
+{
+    switch(InAxis)
+    {
+        case ECk_Plane_Axis::XY: return UCk_Utils_Vector2_UE::Get_ClosestCardinalDirection(FVector2D(InVector.X, InVector.Y));
+        case ECk_Plane_Axis::XZ: return UCk_Utils_Vector2_UE::Get_ClosestCardinalDirection(FVector2D(InVector.X, InVector.Z));
+        case ECk_Plane_Axis::YZ: return UCk_Utils_Vector2_UE::Get_ClosestCardinalDirection(FVector2D(InVector.Y, InVector.Z));
+    }
+
+    return {};
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    Get_ClosestOrdinalDirection(
+        const FVector& InVector,
+        ECk_Plane_Axis InAxis)
+    -> ECk_OrdinalDirection
+{
+    switch(InAxis)
+    {
+        case ECk_Plane_Axis::XY: return UCk_Utils_Vector2_UE::Get_ClosestOrdinalDirection(FVector2D(InVector.X, InVector.Y));
+        case ECk_Plane_Axis::XZ: return UCk_Utils_Vector2_UE::Get_ClosestOrdinalDirection(FVector2D(InVector.X, InVector.Z));
+        case ECk_Plane_Axis::YZ: return UCk_Utils_Vector2_UE::Get_ClosestOrdinalDirection(FVector2D(InVector.Y, InVector.Z));
+    }
+
+    return {};
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    Get_ClosestCardinalAndOrdinalDirection(
+        const FVector& InVector,
+        ECk_Plane_Axis InAxis)
+    -> ECk_CardinalAndOrdinalDirection
+{
+    switch(InAxis)
+    {
+        case ECk_Plane_Axis::XY: return UCk_Utils_Vector2_UE::Get_ClosestCardinalAndOrdinalDirection(FVector2D(InVector.X, InVector.Y));
+        case ECk_Plane_Axis::XZ: return UCk_Utils_Vector2_UE::Get_ClosestCardinalAndOrdinalDirection(FVector2D(InVector.X, InVector.Z));
+        case ECk_Plane_Axis::YZ: return UCk_Utils_Vector2_UE::Get_ClosestCardinalAndOrdinalDirection(FVector2D(InVector.Y, InVector.Z));
+    }
+
+    return {};
+}
+
+auto
     UCk_Utils_ActorVector3_UE::
     Get_DirectionVectorFromActor(
         const AActor*    InActor,
@@ -618,6 +739,19 @@ auto
 
 auto
     UCk_Utils_Vector2_UE::
+    Get_DefaultDirectionIfZero(
+        const FVector2D& InPotentiallyZeroVector,
+        ECk_Direction_2D InDirectionToReturnIfZero)
+    -> FVector2D
+{
+    if (NOT InPotentiallyZeroVector.IsNearlyZero())
+    { return InPotentiallyZeroVector; }
+
+    return Get_ScreenDirection(InDirectionToReturnIfZero);
+}
+
+auto
+    UCk_Utils_Vector2_UE::
     Get_LocationFromOriginInDirection(
         const FVector2D& InOrigin,
         const FVector2D& InDirection,
@@ -710,6 +844,23 @@ auto
     -> void
 {
     InVector = Get_Swizzle(InVector);
+}
+
+auto
+    UCk_Utils_Vector2_UE::
+    Get_ScreenDirection(
+        ECk_Direction_2D InDirection)
+    -> FVector2D
+{
+    switch(InDirection)
+    {
+        case ECk_Direction_2D::Left: return FVector2D(0, -1);
+        case ECk_Direction_2D::Right: return FVector2D(0, 1);
+        case ECk_Direction_2D::Up: return FVector2D(1, 0);
+        case ECk_Direction_2D::Down: return FVector2d(-1, 0);
+    }
+
+    return {};
 }
 
 auto
