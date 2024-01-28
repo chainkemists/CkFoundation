@@ -49,6 +49,15 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",
+              DisplayName="[Ck][Sensor] Add Multiple New Sensors")
+    static void
+    AddMultiple(
+        FCk_Handle InHandle,
+        const FCk_Fragment_MultipleSensor_ParamsData& InParams,
+        ECk_Net_ReplicationType InReplicationType = ECk_Net_ReplicationType::All);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Sensor",
               DisplayName = "[Ck][Sensor] Preview All",
               meta = (DevelopmentOnly, DefaultToSelf = "InOuter"))
     static void

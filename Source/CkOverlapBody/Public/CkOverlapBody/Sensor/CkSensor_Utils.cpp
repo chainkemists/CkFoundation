@@ -50,6 +50,22 @@ auto
     RecordOfSensors_Utils::Request_Connect(InHandle, NewSensorEntity);
 }
 
+
+auto
+    UCk_Utils_Sensor_UE::
+    AddMultiple(
+        FCk_Handle InHandle,
+        const FCk_Fragment_MultipleSensor_ParamsData& InParams,
+        ECk_Net_ReplicationType InReplicationType)
+    -> void
+{
+    for (const auto& Params : InParams.Get_SensorParams())
+    {
+        Add(InHandle, Params, InReplicationType);
+    }
+}
+
+
 auto
     UCk_Utils_Sensor_UE::
     Has(

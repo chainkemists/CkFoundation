@@ -56,6 +56,20 @@ auto
 
 auto
     UCk_Utils_Marker_UE::
+    AddMultiple(
+        FCk_Handle InHandle,
+        const FCk_Fragment_MultipleMarker_ParamsData& InParams,
+        ECk_Net_ReplicationType InReplicationType)
+    -> void
+{
+    for (const auto& Params : InParams.Get_MarkerParams())
+    {
+        Add(InHandle, Params, InReplicationType);
+    }
+}
+
+auto
+    UCk_Utils_Marker_UE::
     Has(
         FCk_Handle InMarkerOwnerEntity,
         FGameplayTag InMarkerName)
