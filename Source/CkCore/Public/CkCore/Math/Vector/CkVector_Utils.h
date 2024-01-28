@@ -175,6 +175,21 @@ public:
     Get_DirectionAndLengthBetweenVectors(
         const FVector& InTo,
         const FVector& InFrom);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Rotator",
+              Category = "Ck|Utils|Math|Vector3")
+    static FRotator
+    Get_Rotator(
+        const FVector& InDirectionVector);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Direction Vector",
+              Category = "Ck|Utils|Math|Vector3")
+    static FVector
+    Get_DirectionVector(
+        const FRotator& InRotator,
+        ECk_Direction_3D InVectorToRotate = ECk_Direction_3D::Forward);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

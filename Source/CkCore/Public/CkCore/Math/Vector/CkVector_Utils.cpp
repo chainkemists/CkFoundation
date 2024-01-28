@@ -3,6 +3,8 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
 
+#include <Kismet/KismetMathLibrary.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_vector
@@ -392,6 +394,29 @@ auto
     const auto Vec = InTo - InFrom;
 
     return Get_DirectionAndLength(Vec);
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    Get_Rotator(
+        const FVector& InDirectionVector)
+    -> FRotator
+{
+    if (InDirectionVector.IsNearlyZero())
+    { return {}; }
+
+    return UKismetMathLibrary::FindLookAtRotation(FVector::ZeroVector, InDirectionVector);
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    Get_DirectionVector(
+        const FRotator&  InRotator,
+        ECk_Direction_3D InVectorToRotate)
+    -> FVector
+{
+    const auto& Direction = Get_WorldDirection(InVectorToRotate);
+    return InRotator.RotateVector(Direction);
 }
 
 auto
