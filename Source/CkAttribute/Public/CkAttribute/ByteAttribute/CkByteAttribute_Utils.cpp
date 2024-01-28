@@ -279,6 +279,11 @@ auto
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
         <ByteAttribute_Utils, RecordOfByteAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
 
+    CK_ENSURE_IF_NOT(ck::IsValid(AttributeEntity),
+        TEXT("Could NOT find Attribute [{}] in Entity [{}]. Unable to BIND on ValueChanged the Delegate [{}]"),
+        InAttributeName, InAttributeOwnerEntity, InDelegate.GetFunctionName())
+    { return; }
+
     if (InPostFireBehavior == ECk_Signal_PostFireBehavior::DoNothing)
     { ck::UUtils_Signal_OnByteAttributeValueChanged::Bind(AttributeEntity, InDelegate, InBehavior); }
     else
@@ -295,6 +300,11 @@ auto
 {
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
         <ByteAttribute_Utils, RecordOfByteAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(AttributeEntity),
+        TEXT("Could NOT find Attribute [{}] in Entity [{}]. Unable to BIND on ValueChanged the Delegate [{}]"),
+        InAttributeName, InAttributeOwnerEntity, InDelegate.GetFunctionName())
+    { return; }
 
     ck::UUtils_Signal_OnByteAttributeValueChanged::Unbind(AttributeEntity, InDelegate);
 }
