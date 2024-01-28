@@ -846,6 +846,28 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKOVERLAPBODY_API FCk_Fragment_MultipleSensor_ParamsData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Fragment_MultipleSensor_ParamsData);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<FCk_Fragment_Sensor_ParamsData> _SensorParams;
+
+public:
+    CK_PROPERTY_GET(_SensorParams)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleSensor_ParamsData, _SensorParams);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(BlueprintType)
 class CKOVERLAPBODY_API UCk_Sensor_ActorComponent_Box_UE
     : public UCk_OverlapBody_ActorComponent_Box_UE
