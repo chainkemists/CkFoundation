@@ -50,6 +50,15 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Marker",
+              DisplayName="[Ck][Marker] Add Multiple New Markers")
+    static void
+    AddMultiple(
+        FCk_Handle InHandle,
+        const FCk_Fragment_MultipleMarker_ParamsData& InParams,
+        ECk_Net_ReplicationType InReplicationType = ECk_Net_ReplicationType::All);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Marker",
               DisplayName = "[Ck][Marker] Preview All",
               meta = (DevelopmentOnly, DefaultToSelf = "InOuter"))
     static void
