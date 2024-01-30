@@ -120,7 +120,12 @@ auto
         return InHandle.Get<TWeakObjectPtr<UWorld>>().Get();
     }
 
-    return Get_WorldForEntity(Get_LifetimeOwner(InHandle));
+    const auto& LifeTimeOwner = Get_LifetimeOwner(InHandle);
+
+    if (ck::Is_NOT_Valid(LifeTimeOwner))
+    { return {}; }
+
+    return Get_WorldForEntity(LifeTimeOwner);
 }
 
 auto
