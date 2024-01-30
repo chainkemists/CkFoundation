@@ -20,6 +20,15 @@ enum class ECk_DebugName_Verbosity : uint8
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_StackTraceVerbosityPolicy : uint8
+{
+    Shortened,
+    Verbose
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable)
 class CKCORE_API UCk_Utils_Debug_UE : public UBlueprintFunctionLibrary
 {
@@ -70,7 +79,9 @@ public:
               Category = "Ck|Utils|Debug",
               DisplayName = "[Ck] Get Stack Trace")
     static FString
-    Get_StackTrace(int32 InSkipFrames = 1);
+    Get_StackTrace(
+        int32 InSkipFrames = 1,
+        ECk_StackTraceVerbosityPolicy InVerbosity = ECk_StackTraceVerbosityPolicy::Shortened);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Debug",
@@ -85,12 +96,20 @@ public:
     Get_StackTrace_Blueprint_AsString();
 
 public:
-    static auto Get_BlueprintContext() -> TOptional<FString>;
+    static auto
+    Get_BlueprintContext() -> TOptional<FString>;
 
-    static auto Get_StackTrace_Blueprint(ck::type_traits::AsArray) -> TArray<FString>;
-    static auto Get_StackTrace_Blueprint(ck::type_traits::AsString) -> FString;
+    static auto
+    Get_StackTrace_Blueprint(
+        ck::type_traits::AsArray) -> TArray<FString>;
 
-    static auto Try_BreakInScript(const UObject* InContext) -> void;
+    static auto
+    Get_StackTrace_Blueprint(
+        ck::type_traits::AsString) -> FString;
+
+    static auto
+    Try_BreakInScript(
+        const UObject* InContext) -> void;
 
 private:
     inline static UObject* _LastStackTraceContextObject = nullptr;
