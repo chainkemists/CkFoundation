@@ -88,7 +88,8 @@ auto
     Super::Do_Construct_Implementation(InParams);
 
     CK_ENSURE_IF_NOT(ck::IsValid(EntityConfig),
-        TEXT("EntityConfig is [{}]. Did you forget to set the default value in the component?.[{}]"), EntityConfig, ck::Context(this))
+        TEXT("EntityConfig is [{}]. Did you forget to set the default value in the component?.[{}]"),
+        EntityConfig, ck::Context(this))
     { return; }
 
     CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)
@@ -103,7 +104,8 @@ auto
 
         // TODO: this hits at least once because the BP Subsystem is not loaded. Fix this.
         CK_ENSURE_IF_NOT(ck::IsValid(EcsWorldSubsystem),
-            TEXT("WorldSubsystem is [{}]. Did you forget to set the default value in the component?.[{}]"), EcsWorldSubsystem, ck::Context(this))
+            TEXT("WorldSubsystem is [{}]. Did you forget to set the default value in the component?.[{}]"),
+            EcsWorldSubsystem, ck::Context(this))
         { return; }
 
         auto Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(EcsWorldSubsystem->Get_TransientEntity());
@@ -113,7 +115,8 @@ auto
         // --------------------------------------------------------------------------------------------------------------------
         // Add Net Connection Settings
 
-        UCk_Utils_Net_UE::Add(Entity, FCk_Net_ConnectionSettings{ECk_Net_NetModeType::Host, ECk_Net_EntityNetRole::Authority});
+        UCk_Utils_Net_UE::Add(Entity, FCk_Net_ConnectionSettings{_Replication,
+            ECk_Net_NetModeType::Host, ECk_Net_EntityNetRole::Authority});
 
         // --------------------------------------------------------------------------------------------------------------------
         // LINK TO ACTOR
@@ -238,7 +241,8 @@ auto
                     return UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OuterOwnerEntity, [&](FCk_Handle InEntity)
                     {
                         InEntity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
-                        UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
+                        UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Replication::Replicates,
+                            ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
                     });
                 }
                 case ECk_Replication::DoesNotReplicate:
@@ -248,7 +252,8 @@ auto
                     return UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity, [&](FCk_Handle InEntity)
                     {
                         InEntity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
-                        UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
+                        UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Replication::Replicates,
+                            ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
                     });
                 }
             }

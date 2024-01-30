@@ -148,6 +148,7 @@ auto
         InEntity.Add<ck::FFragment_OwningActor_Current>(ReplicatedActor);
         UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings
             {
+                ECk_Replication::Replicates,
                 ECk_Net_NetModeType::Client,
                 ReplicatedActor->GetLocalRole() == ROLE_AutonomousProxy ? ECk_Net_EntityNetRole::Authority : ECk_Net_EntityNetRole::Proxy
             });

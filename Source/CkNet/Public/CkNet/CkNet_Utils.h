@@ -136,8 +136,8 @@ public:
     UFUNCTION(BlueprintPure,
               DisplayName="[Ck] Get Is Entity Replicated",
               Category = "Ck|Utils|Net")
-    static bool
-    Get_IsEntityReplicated(
+    static ECk_Replication
+    Get_EntityReplication(
         FCk_Handle InHandle);
 
 public:
@@ -230,6 +230,9 @@ auto
     -> ECk_AddedOrNot
 {
     static_assert(std::is_base_of_v<class UCk_Ecs_ReplicatedObject_UE, T_ReplicatedFragment>, "Replicated Fragment MUST derive from UCk_Ecs_ReplicatedObject_UE");
+
+    if (UCk_Utils_Net_UE::Get_EntityReplication(InHandle) == ECk_Replication::DoesNotReplicate)
+    { return ECk_AddedOrNot::NotAdded; }
 
     if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle))
     { return ECk_AddedOrNot::NotAdded; }

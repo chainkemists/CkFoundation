@@ -18,17 +18,17 @@ auto
     if (GetWorld()->IsNetMode(NM_DedicatedServer))
     {
         UCk_Utils_Net_UE::Add(EcsWorldSubsystem->Get_TransientEntity(),
-            FCk_Net_ConnectionSettings{ECk_Net_NetModeType::Server, ECk_Net_EntityNetRole::Authority});
+            FCk_Net_ConnectionSettings{ECk_Replication::DoesNotReplicate, ECk_Net_NetModeType::Server, ECk_Net_EntityNetRole::Authority});
     }
     else if (GetWorld()->IsNetMode(NM_ListenServer) | GetWorld()->IsNetMode(NM_Standalone))
     {
         UCk_Utils_Net_UE::Add(EcsWorldSubsystem->Get_TransientEntity(),
-            FCk_Net_ConnectionSettings{ECk_Net_NetModeType::Host, ECk_Net_EntityNetRole::Authority});
+            FCk_Net_ConnectionSettings{ECk_Replication::DoesNotReplicate, ECk_Net_NetModeType::Host, ECk_Net_EntityNetRole::Authority});
     }
     else
     {
         UCk_Utils_Net_UE::Add(EcsWorldSubsystem->Get_TransientEntity(),
-            FCk_Net_ConnectionSettings{ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
+            FCk_Net_ConnectionSettings{ECk_Replication::DoesNotReplicate, ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
     }
 }
 
