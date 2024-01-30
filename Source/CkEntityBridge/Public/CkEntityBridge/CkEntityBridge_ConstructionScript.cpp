@@ -157,7 +157,8 @@ auto
         }
 
         // Add the replication driver here
-        UCk_Utils_EntityReplicationDriver_UE::Add(Entity);
+        if (_Replication == ECk_Replication::Replicates)
+        { UCk_Utils_EntityReplicationDriver_UE::Add(Entity); }
 
         // --------------------------------------------------------------------------------------------------------------------
         // Build Entity
@@ -193,46 +194,71 @@ auto
         if (OwningActor->bIsEditorOnlyActor)
         { return; }
 
-        const auto OuterOwner = OwningActor->GetOwner();
-
-        CK_ENSURE_IF_NOT(ck::IsValid(OuterOwner),
-            TEXT("Unable to Replicate the Entity Associated with [{}]. Non-replicated Actors with Replicated Entities "
-                "MUST be spawned by a Replicated Actor.{}"),
-            OwningActor,
-            ck::Context(this))
-        { return; }
-
-        CK_ENSURE_IF_NOT(UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(OuterOwner),
-            TEXT("Unable to Replicate the Entity Associated with [{}]. The OuterOwner [{}] is NOT ECS Ready. "
-                "This could happen if you have logic on BeginPlay (use our 'ReplicationComplete' events and Promises instead).{}"),
-            OwningActor,
-            OuterOwner,
-            ck::Context(this))
-        { return; }
-
-        const auto OuterOwnerEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(OuterOwner);
-
-        CK_ENSURE_IF_NOT(UCk_Utils_EntityReplicationDriver_UE::Has(OuterOwnerEntity),
-            TEXT("Unable to Replicate the Entity Associated with [{}]. The OuterOwner [{}] does NOT have a EntityReplicationDriver."
-                "This could happen if you have logic on BeginPlay (use our 'ReplicationComplete' events and Promises instead).{}"),
-            OwningActor,
-            OuterOwner,
-            ck::Context(this))
-        { return; }
-
-        CK_ENSURE_IF_NOT(ck::IsValid(OuterOwner->GetComponentByClass<UCk_ObjectReplicator_ActorComponent_UE>()),
-            TEXT("Unable to Replicate the Entity Associated with [{}]. The Outer [{}] of aforementioned does NOT  have an "
-                "ObjectReplicator ActorComponent.{}"),
-            OwningActor,
-            OuterOwner,
-            ck::Context(this))
-        { return; }
-
-        const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OuterOwnerEntity, [&](FCk_Handle InEntity)
+        const auto NewEntity = [&]() -> FCk_Handle
         {
-            InEntity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
-            UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
-        });
+            switch(_Replication)
+            {
+                case ECk_Replication::Replicates:
+                {
+                    const auto OuterOwner = OwningActor->GetOwner();
+
+                    CK_ENSURE_IF_NOT(ck::IsValid(OuterOwner),
+                        TEXT("Unable to Replicate the Entity Associated with [{}]. Non-replicated Actors with Replicated Entities "
+                            "MUST be spawned by a Replicated Actor.{}"),
+                        OwningActor,
+                        ck::Context(this))
+                    { return {}; }
+
+                    CK_ENSURE_IF_NOT(UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(OuterOwner),
+                        TEXT("Unable to Replicate the Entity Associated with [{}]. The OuterOwner [{}] is NOT ECS Ready. "
+                            "This could happen if you have logic on BeginPlay (use our 'ReplicationComplete' events and Promises instead).{}"),
+                        OwningActor,
+                        OuterOwner,
+                        ck::Context(this))
+                    { return {}; }
+
+                    const auto OuterOwnerEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(OuterOwner);
+
+                    CK_ENSURE_IF_NOT(UCk_Utils_EntityReplicationDriver_UE::Has(OuterOwnerEntity),
+                        TEXT("Unable to Replicate the Entity Associated with [{}]. The OuterOwner [{}] does NOT have a EntityReplicationDriver."
+                            "This could happen if you have logic on BeginPlay (use our 'ReplicationComplete' events and Promises instead).{}"),
+                        OwningActor,
+                        OuterOwner,
+                        ck::Context(this))
+                    { return {}; }
+
+                    CK_ENSURE_IF_NOT(ck::IsValid(OuterOwner->GetComponentByClass<UCk_ObjectReplicator_ActorComponent_UE>()),
+                        TEXT("Unable to Replicate the Entity Associated with [{}]. The Outer [{}] of aforementioned does NOT  have an "
+                            "ObjectReplicator ActorComponent.{}"),
+                        OwningActor,
+                        OuterOwner,
+                        ck::Context(this))
+                    { return {}; }
+
+                    return UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OuterOwnerEntity, [&](FCk_Handle InEntity)
+                    {
+                        InEntity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
+                        UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
+                    });
+                }
+                case ECk_Replication::DoesNotReplicate:
+                {
+                    const auto& TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(GetWorld());
+
+                    return UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity, [&](FCk_Handle InEntity)
+                    {
+                        InEntity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
+                        UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
+                    });
+                }
+            }
+
+            return {};
+        }();
+
+        CK_LOG_ERROR_IF_NOT(ck::entity_bridge, ck::Is_NOT_Valid(NewEntity),
+            TEXT("Could NOT create a NewEntity for Actor [{}] based on previous errors"), OwningActor)
+        { return; }
 
         // TODO: consolidate into a utilty. Other usage in replication driver
         if (const auto EntityOwningActorComponent = OwningActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
