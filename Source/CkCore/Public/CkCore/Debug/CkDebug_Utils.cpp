@@ -72,7 +72,8 @@ auto
 auto
     UCk_Utils_Debug_StackTrace_UE::
     Get_StackTrace(
-        int32 InSkipFrames)
+        int32 InSkipFrames,
+        ECk_StackTraceVerbosityPolicy InVerbosity)
     -> FString
 {
     constexpr auto StackTraceSize = std::numeric_limits<int16>::max();
@@ -84,6 +85,47 @@ auto
     FPlatformStackWalk::StackWalkAndDump(StackTrace, StackTraceSize, InSkipFrames);
     StackTrace[StackTraceSize - 1] = 0;
 #endif
+
+    switch(InVerbosity)
+    {
+        case ECk_StackTraceVerbosityPolicy::Shortened:
+        {
+            const auto StackTraceStr = FString{StackTrace};
+            auto Lines = TArray<FString>{};
+
+            StackTraceStr.ParseIntoArrayLines(Lines, false);
+
+            auto ToRet = FString{};
+            for (const auto& Line : Lines)
+            {
+                auto TrimmedLine = Line.TrimStartAndEnd();
+
+                auto StartIndex = 0;
+                if (TrimmedLine.FindChar('!', StartIndex))
+                {
+                    TrimmedLine.RightChopInline(StartIndex + 1, true);
+                }
+
+                auto LastPathSeparator = 0;
+                if (TrimmedLine.FindLastChar('\\', LastPathSeparator))
+                {
+                    auto FilePathSquareBracket = 0;
+                    if (TrimmedLine.FindChar('[', FilePathSquareBracket))
+                    {
+                        TrimmedLine.RemoveAt(FilePathSquareBracket + 1, LastPathSeparator - FilePathSquareBracket, true);
+                    }
+                }
+
+                TrimmedLine.Shrink();
+
+                ToRet += TrimmedLine + "\n";
+            }
+
+            return ToRet;
+        }
+        case ECk_StackTraceVerbosityPolicy::Verbose:
+            break;
+    }
 
     return FString{StackTrace};
 }
