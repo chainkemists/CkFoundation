@@ -123,3 +123,18 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable)
+class CKECS_API UCk_Utils_EcsWorld_Subsystem_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    using SubsystemType = UCk_EcsWorld_Subsystem_UE;
+
+public:
+    static auto
+    Get_TransientEntity(const UWorld* InWorld) -> FCk_Handle;
+};
+
+// --------------------------------------------------------------------------------------------------------------------

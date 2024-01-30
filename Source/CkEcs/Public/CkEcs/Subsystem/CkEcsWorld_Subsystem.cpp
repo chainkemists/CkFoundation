@@ -162,3 +162,25 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_EcsWorld_Subsystem_UE::
+    Get_TransientEntity(
+        const UWorld* InWorld)
+    -> FCk_Handle
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InWorld),
+        TEXT("Unable to get the EcsSubsystem to get the TransientEntity as the World is [{}]"), InWorld)
+    { return {}; }
+
+    const auto Subsystem = InWorld->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+
+    CK_ENSURE_IF_NOT(Subsystem,
+        TEXT("Unable to get the EcsSubsystem from the World [{}]. It's possible Get_TransientEntity is being called too early"),
+        InWorld)
+    { return {}; }
+
+    return Subsystem->Get_TransientEntity();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
