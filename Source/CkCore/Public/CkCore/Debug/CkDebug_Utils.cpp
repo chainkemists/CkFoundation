@@ -38,6 +38,18 @@ auto
 
     switch (InNameVerbosity)
     {
+        case ECk_DebugName_Verbosity::Default:
+        switch(UCk_Utils_Core_UserSettings_UE::Get_DefaultDebugNameVerbosity())
+        {
+            case ECk_Core_DefaultDebugNameVerbosityPolicy::Compact:
+            {
+                return Get_DebugName_AsString(InObject, ECk_DebugName_Verbosity::ShortName);
+            }
+            case ECk_Core_DefaultDebugNameVerbosityPolicy::Verbose:
+            {
+                return Get_DebugName_AsString(InObject, ECk_DebugName_Verbosity::FullName);
+            }
+        }
     case ECk_DebugName_Verbosity::FullName:
         return InObject->GetPathName(); ;
     case ECk_DebugName_Verbosity::ShortName:
@@ -88,7 +100,7 @@ auto
 
     switch(InVerbosity)
     {
-        case ECk_StackTraceVerbosityPolicy::Shortened:
+        case ECk_StackTraceVerbosityPolicy::Compact:
         {
             const auto StackTraceStr = FString{StackTrace};
             auto Lines = TArray<FString>{};
