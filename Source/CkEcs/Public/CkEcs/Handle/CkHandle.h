@@ -6,6 +6,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Settings/CkEcs_Settings.h"
+
 #include "CkHandle.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -130,7 +132,13 @@ public:
     auto Get_Registry() const -> const FCk_Registry&;
 
 private:
-    auto DoUpdate_MapperAndFragments() -> void;
+    auto DoUpdate_FragmentDebugInfo_Blueprints() -> void;
+
+    template <typename T_Fragment>
+    auto DoAdd_FragmentDebugInfo() -> void;
+
+    template <typename T_Fragment>
+    auto DoRemove_FragmentDebugInfo() -> void;
 
 private:
     UPROPERTY()
@@ -275,15 +283,10 @@ auto
         return Invalid_Fragment;
     }
 
-    if (NOT Has<T_Fragment>())
-    {
-        _Mapper = &_Registry->AddOrGet<FEntity_FragmentMapper>(_Entity);
-        _Mapper->Add_FragmentGetter<T_Fragment>();
-    }
-
     auto& NewFragment = _Registry->Add<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
 
-    DoUpdate_MapperAndFragments();
+    DoAdd_FragmentDebugInfo<T_Fragment>();
+    DoUpdate_FragmentDebugInfo_Blueprints();
 
     return NewFragment;
 }
@@ -314,15 +317,21 @@ auto
         return Invalid_Fragment;
     }
 
-    if (NOT Has<T_Fragment>())
+    auto& NewOrExistingFragment = [&]() -> T_Fragment&
     {
-        _Mapper = &_Registry->AddOrGet<FEntity_FragmentMapper>(_Entity);
-        _Mapper->Add_FragmentGetter<T_Fragment>();
-    }
+        // only add it ONCE in the debugger
+        if (NOT Has<T_Fragment>())
+        {
+            auto& FragmentToReturn = _Registry->AddOrGet<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
 
-    auto& NewOrExistingFragment = _Registry->AddOrGet<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
+            DoAdd_FragmentDebugInfo<T_Fragment>();
+            DoUpdate_FragmentDebugInfo_Blueprints();
 
-    DoUpdate_MapperAndFragments();
+            return FragmentToReturn;
+        }
+
+        return _Registry->AddOrGet<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
+    }();
 
     return NewOrExistingFragment;
 }
@@ -406,7 +415,7 @@ auto
 
     _Registry->Remove<T_Fragment>(_Entity);
 
-    DoUpdate_MapperAndFragments();
+    DoRemove_FragmentDebugInfo<T_Fragment>();
 }
 
 template <typename T_Fragment>
@@ -432,6 +441,8 @@ auto
     { return; }
 
     _Registry->Try_Remove<T_Fragment>(_Entity);
+
+    DoRemove_FragmentDebugInfo<T_Fragment>();
 }
 
 template <typename ... T_Fragment>
@@ -588,33 +599,54 @@ auto
     return _Registry->Get<T_Fragment>(_Entity);
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-
-// FEntity_FragmentMapper::ConceptImpl_GetFragment definition here instead of CkHandle_Debugging.h due to a circular
-// dependency
 template <typename T_Fragment>
 auto
-    FEntity_FragmentMapper::ConceptImpl_GetFragment<T_Fragment>::
-    Get_Fragment(
-        const FCk_Handle& InHandle) const
-    -> DebugWrapperPtrType
+    FCk_Handle::
+    DoAdd_FragmentDebugInfo()
+    -> void
 {
-    if (NOT InHandle.Has<T_Fragment>())
-    {
-        return {};
-    }
+    if (UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Disable)
+    { return; }
 
+    _Mapper = &_Registry->AddOrGet<FEntity_FragmentMapper>(_Entity);
+    _Mapper->Add_FragmentInfo<T_Fragment>(*this);
+}
+
+template <typename T_Fragment>
+auto
+    FCk_Handle::
+    DoRemove_FragmentDebugInfo()
+    -> void
+{
+    if (UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Disable)
+    { return; }
+
+    _Mapper = &_Registry->AddOrGet<FEntity_FragmentMapper>(_Entity);
+    _Mapper->Remove_FragmentInfo<T_Fragment>();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// FEntity_FragmentMapper::Add_FragmentInfo definition here instead of CkHandle_Debugging.h due to a circular dependency
+template <typename T_Fragment>
+auto
+    FEntity_FragmentMapper::
+    Add_FragmentInfo(const FCk_Handle& InHandle) const
+    -> void
+{
+    auto FragmentInfo = DebugWrapperPtrType{};
     if constexpr (std::is_empty_v<T_Fragment>)
     {
-        DebugWrapperPtrType Ret = MakeShared<TCk_DebugWrapper<T_Fragment>, ESPMode::NotThreadSafe>(nullptr);
-        return Ret;
+        FragmentInfo = MakeShared<TCk_DebugWrapper<T_Fragment>, ESPMode::NotThreadSafe>(nullptr);
     }
     else
     {
-        DebugWrapperPtrType Ret = TSharedPtr<TCk_DebugWrapper<T_Fragment>, ESPMode::NotThreadSafe>
+        FragmentInfo = TSharedPtr<TCk_DebugWrapper<T_Fragment>, ESPMode::NotThreadSafe>
         { new TCk_DebugWrapper<T_Fragment>(&InHandle.Get<T_Fragment, ck::IsValid_Policy_IncludePendingKill>()) };
-        return Ret;
     }
+
+    _FragmentNames.Emplace(FragmentInfo->Get_FragmentName());
+    _AllFragments.Emplace(MoveTemp(FragmentInfo));
 }
 
 // --------------------------------------------------------------------------------------------------------------------

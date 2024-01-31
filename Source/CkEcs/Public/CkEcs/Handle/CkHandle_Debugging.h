@@ -5,6 +5,7 @@
 #include "CkEcs/Entity/CkEntity.h"
 #include "CkEcs/Registry/CkRegistry.h"
 
+#include "entt/core/family.hpp"
 #include "entt/poly/poly.hpp"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -19,6 +20,7 @@ struct FCk_DebugWrapper
 
     virtual auto GetHash() -> IdType = 0;
     virtual auto SetFragmentPointer(const void* InFragmentPtr) -> void = 0;
+    virtual auto Get_FragmentName() -> FName = 0;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -31,6 +33,7 @@ public:
 
     auto GetHash() -> IdType override;
     auto SetFragmentPointer(const void* InFragmentPtr) -> void override;
+    auto Get_FragmentName() -> FName override;
 
     auto operator==(const TCk_DebugWrapper& InOther) -> bool;
     auto operator!=(const TCk_DebugWrapper& InOther) -> bool;
@@ -54,40 +57,18 @@ public:
     using DebugWrapperPtrType = TSharedPtr<FCk_DebugWrapper, ESPMode::NotThreadSafe>;
 
 public:
-    struct Concept_GetFragment : entt::type_list<DebugWrapperPtrType(const FCk_Handle&) const, FName()>
-    {
-        template <typename Base>
-        struct type : Base
-        {
-            auto Get_Fragment(const FCk_Handle& InHandle) const -> DebugWrapperPtrType;
-            auto Get_FragmentName() -> FName;
-        };
-
-        template <typename Type>
-        using impl = entt::value_list<&Type::Get_Fragment, &Type::Get_FragmentName>;
-    };
-
-public:
     template <typename T_Fragment>
-    struct ConceptImpl_GetFragment
-    {
-        using ValueType = T_Fragment;
-        auto Get_Fragment(const FCk_Handle& InHandle) const -> DebugWrapperPtrType;
-        auto Get_FragmentName() -> FName;
-    };
+    auto Add_FragmentInfo(const FCk_Handle& InHandle) const -> void;
 
-public:
     template <typename T_Fragment>
-    auto Add_FragmentGetter() const -> void;
-
-    auto ProcessAll(const FCk_Handle& InHandle) const -> TArray<FName>;
-
-public:
-    using Concept_GetFragment_PolyType = entt::poly<Concept_GetFragment>;
+    auto Remove_FragmentInfo() const -> void;
 
 private:
     mutable TArray<DebugWrapperPtrType> _AllFragments;
-    mutable TArray<Concept_GetFragment_PolyType> _GetFragments;
+    mutable TArray<FName> _FragmentNames;
+
+public:
+    CK_PROPERTY_GET(_FragmentNames);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -121,6 +102,16 @@ auto
 template <typename T_Fragment>
 auto
     TCk_DebugWrapper<T_Fragment>::
+    Get_FragmentName()
+    -> FName
+{
+    constexpr auto TypeString = ck::TypeToString<T_Fragment>;
+    return FName{TypeString.begin(), TypeString.length()};
+}
+
+template <typename T_Fragment>
+auto
+    TCk_DebugWrapper<T_Fragment>::
     operator==(const TCk_DebugWrapper<T_Fragment>& InOther)
     -> bool
 {
@@ -138,48 +129,24 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-template <typename Base>
-auto
-    FEntity_FragmentMapper::Concept_GetFragment::type<Base>::
-    Get_Fragment(
-        const FCk_Handle& InHandle) const
-    -> DebugWrapperPtrType
-{
-    return entt::poly_call<0>(*this, InHandle);
-}
-
-template <typename Base>
-auto
-    FEntity_FragmentMapper::Concept_GetFragment::type<Base>::
-    Get_FragmentName()
-    -> FName
-{
-    return entt::poly_call<1>(*this);
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-// Get_Fragment defined in CkHandle.h due to circular dependency
-
 template <typename T_Fragment>
 auto
     FEntity_FragmentMapper::
-    ConceptImpl_GetFragment<T_Fragment>::Get_FragmentName()
-    -> FName
-{
-    constexpr auto TypeString = ck::TypeToString<T_Fragment>;
-    return FName{TypeString.begin(), TypeString.length()};
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-template <typename T_Fragment>
-auto
-    FEntity_FragmentMapper::
-    Add_FragmentGetter() const
+    Remove_FragmentInfo() const
     -> void
 {
-    _GetFragments.Emplace(ConceptImpl_GetFragment<T_Fragment>{});
+    _AllFragments.RemoveAll([&](const DebugWrapperPtrType& InDebugWrapper)
+    {
+        return InDebugWrapper->GetHash() == entt::type_id<T_Fragment>().hash();
+    });
+
+    constexpr auto TypeString = ck::TypeToString<T_Fragment>;
+    const auto NameToCompare = FName{TypeString.begin(), TypeString.length()};
+
+    _FragmentNames.RemoveAll([&](const FName InName)
+    {
+        return InName == NameToCompare;
+    });
 }
 
 // --------------------------------------------------------------------------------------------------------------------

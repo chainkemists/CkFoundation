@@ -17,7 +17,7 @@ FCk_Handle::
     : _Entity(InEntity)
     , _Registry(InRegistry)
 {
-    DoUpdate_MapperAndFragments();
+    DoUpdate_FragmentDebugInfo_Blueprints();
 }
 
 FCk_Handle::
@@ -54,7 +54,6 @@ auto
         ThisType InOther) -> ThisType&
 {
     Swap(InOther);
-    DoUpdate_MapperAndFragments();
     return *this;
 }
 
@@ -65,7 +64,7 @@ FCk_Handle::
     { return; }
 
     if (IsValid(ck::IsValid_Policy_Default{}) && UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable)
-    { UCk_Utils_HandleDebugger_Subsystem_UE::Remove_FragmentsDebug(*this); }
+    { DoUpdate_FragmentDebugInfo_Blueprints(); }
 }
 
 auto
@@ -182,30 +181,24 @@ auto
 
 auto
     FCk_Handle::
-    DoUpdate_MapperAndFragments()
+    DoUpdate_FragmentDebugInfo_Blueprints()
     -> void
 {
-    if (UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Disable)
+    if (UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() != ECk_Ecs_HandleDebuggerBehavior::EnableWithBlueprintDebugging)
     { return; }
 
     if (NOT IsValid(ck::IsValid_Policy_IncludePendingKill{}))
     { return; }
 
-    if (Has<FEntity_FragmentMapper>())
-    {
-        _Mapper = &Get<FEntity_FragmentMapper, ck::IsValid_Policy_IncludePendingKill>();
-
-        [[maybe_unused]]
-        const auto& Names = _Mapper->ProcessAll(*this);
+    _Mapper = &_Registry->AddOrGet<FEntity_FragmentMapper>(_Entity);
 
 #if WITH_EDITORONLY_DATA
-        if (ck::Is_NOT_Valid(_Fragments))
-        { _Fragments = UCk_Utils_HandleDebugger_Subsystem_UE::GetOrAdd_FragmentsDebug(*this); }
+    if (ck::Is_NOT_Valid(_Fragments))
+    { _Fragments = UCk_Utils_HandleDebugger_Subsystem_UE::GetOrAdd_FragmentsDebug(*this); }
 
-        if (ck::IsValid(_Fragments))
-        { _Fragments->_Names = Names; }
+    if (ck::IsValid(_Fragments))
+    { _Fragments->_Names = _Mapper->Get_FragmentNames(); }
 #endif
-    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
