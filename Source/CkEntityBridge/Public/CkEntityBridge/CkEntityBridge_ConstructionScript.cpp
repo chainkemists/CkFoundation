@@ -113,7 +113,8 @@ auto
         // --------------------------------------------------------------------------------------------------------------------
         // Add Net Connection Settings
 
-        UCk_Utils_Net_UE::Add(Entity, FCk_Net_ConnectionSettings{ECk_Net_NetModeType::Host, ECk_Net_EntityNetRole::Authority});
+        UCk_Utils_Net_UE::Add(Entity, FCk_Net_ConnectionSettings{_Replication,
+            ECk_Net_NetModeType::Host, ECk_Net_EntityNetRole::Authority});
 
         // --------------------------------------------------------------------------------------------------------------------
         // LINK TO ACTOR
@@ -238,7 +239,8 @@ auto
                     return UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OuterOwnerEntity, [&](FCk_Handle InEntity)
                     {
                         InEntity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
-                        UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
+                        UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Replication::Replicates,
+                            ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
                     });
                 }
                 case ECk_Replication::DoesNotReplicate:
@@ -248,7 +250,8 @@ auto
                     return UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity, [&](FCk_Handle InEntity)
                     {
                         InEntity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
-                        UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
+                        UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Replication::DoesNotReplicate,
+                            ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
                     });
                 }
             }
