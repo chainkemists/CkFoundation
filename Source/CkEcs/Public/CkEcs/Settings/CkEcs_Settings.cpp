@@ -24,7 +24,12 @@ auto
     Get_HandleDebuggerBehavior()
     -> ECk_Ecs_HandleDebuggerBehavior
 {
-    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_UserSettings_UE>()->Get_HandleDebuggerBehavior();
+    const auto Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_UserSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return ECk_Ecs_HandleDebuggerBehavior::Disable; }
+
+    return Settings->Get_HandleDebuggerBehavior();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
