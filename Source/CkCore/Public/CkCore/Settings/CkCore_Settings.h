@@ -11,30 +11,21 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
-enum class ECk_Core_EnsureDisplayPolicy : uint8
+enum class ECk_EnsureDisplay_Policy : uint8
 {
     ModalDialog,
     LogOnly
 };
 
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Core_EnsureDisplayPolicy);
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EnsureDisplay_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
-enum class ECk_Core_EnsureDetailsPolicy : uint8
+enum class ECk_EnsureDetails_Policy : uint8
 {
     MessageOnly,
     MessageAndStackTrace
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UENUM(BlueprintType)
-enum class ECk_Core_DefaultDebugNameVerbosityPolicy : uint8
-{
-    Compact,
-    Verbose
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -50,21 +41,15 @@ public:
 private:
     UPROPERTY(Config, VisibleAnywhere, BlueprintReadOnly, Category = "Ensures",
               meta = (AllowPrivateAccess = true))
-    ECk_Core_EnsureDisplayPolicy _EnsureDisplayPolicy = ECk_Core_EnsureDisplayPolicy::ModalDialog;
+    ECk_EnsureDisplay_Policy _EnsureDisplayPolicy = ECk_EnsureDisplay_Policy::ModalDialog;
 
     UPROPERTY(Config, VisibleAnywhere, BlueprintReadOnly, Category = "Ensures",
               meta = (AllowPrivateAccess = true))
-    ECk_Core_EnsureDetailsPolicy _EnsureDetailsPolicy = ECk_Core_EnsureDetailsPolicy::MessageAndStackTrace;
-
-public:
-    UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Debug",
-              meta = (AllowPrivateAccess = true))
-    ECk_Core_DefaultDebugNameVerbosityPolicy _DefaultDebugNameVerbosity = ECk_Core_DefaultDebugNameVerbosityPolicy::Compact;
+    ECk_EnsureDetails_Policy _EnsureDetailsPolicy = ECk_EnsureDetails_Policy::MessageAndStackTrace;
 
 public:
     CK_PROPERTY_GET(_EnsureDisplayPolicy);
     CK_PROPERTY_GET(_EnsureDetailsPolicy);
-    CK_PROPERTY_GET(_DefaultDebugNameVerbosity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -79,8 +64,8 @@ public:
 
 private:
     UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Debug",
-              meta = (AllowPrivateAccess = true))
-    ECk_Core_DefaultDebugNameVerbosityPolicy _DefaultDebugNameVerbosity = ECk_Core_DefaultDebugNameVerbosityPolicy::Compact;
+              meta = (AllowPrivateAccess = true, InvalidEnumValues="Default"))
+    ECk_DebugNameVerbosity_Policy _DefaultDebugNameVerbosity = ECk_DebugNameVerbosity_Policy::Compact;
 
 public:
     CK_PROPERTY_GET(_DefaultDebugNameVerbosity);
@@ -91,8 +76,8 @@ public:
 class CKCORE_API UCk_Utils_Core_ProjectSettings_UE
 {
 public:
-    static auto Get_EnsureDisplayPolicy() -> ECk_Core_EnsureDisplayPolicy;
-    static auto Get_EnsureDetailsPolicy() -> ECk_Core_EnsureDetailsPolicy;
+    static auto Get_EnsureDisplayPolicy() -> ECk_EnsureDisplay_Policy;
+    static auto Get_EnsureDetailsPolicy() -> ECk_EnsureDetails_Policy;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -100,7 +85,7 @@ public:
 class CKCORE_API UCk_Utils_Core_UserSettings_UE
 {
 public:
-    static auto Get_DefaultDebugNameVerbosity() -> ECk_Core_DefaultDebugNameVerbosityPolicy;
+    static auto Get_DefaultDebugNameVerbosity() -> ECk_DebugNameVerbosity_Policy;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

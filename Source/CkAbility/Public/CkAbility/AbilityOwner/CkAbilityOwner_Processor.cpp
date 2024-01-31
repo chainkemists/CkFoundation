@@ -172,7 +172,7 @@ namespace ck
             );
 
             UCk_Utils_Handle_UE::Set_DebugName(InAbilityEntity,
-                UCk_Utils_Debug_UE::Get_DebugName(AbilityParams.Get_AbilityScriptClass(), ECk_DebugName_Verbosity::ShortName));
+                UCk_Utils_Debug_UE::Get_DebugName(AbilityParams.Get_AbilityScriptClass(), ECk_DebugNameVerbosity_Policy::Compact));
             UCk_Utils_Ability_UE::DoGive(InAbilityOwnerEntity, InAbilityEntity);
 
             if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityEntity).Get_ActivationPolicy();

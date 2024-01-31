@@ -10,15 +10,15 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_DebugName_Verbosity);
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_DebugNameVerbosity_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_Debug_UE::
     Get_DebugName(
-        const UObject*          InObject,
-        ECk_DebugName_Verbosity InNameVerbosity)
+        const UObject* InObject,
+        ECk_DebugNameVerbosity_Policy InNameVerbosity)
     -> FName
 {
     return FName{Get_DebugName_AsString(InObject, InNameVerbosity)};
@@ -27,8 +27,8 @@ auto
 auto
     UCk_Utils_Debug_UE::
     Get_DebugName_AsString(
-        const UObject*          InObject,
-        ECk_DebugName_Verbosity InNameVerbosity)
+        const UObject* InObject,
+        ECk_DebugNameVerbosity_Policy InNameVerbosity)
     -> FString
 {
     static const FString InvalidName = TEXT("INVALID UObject");
@@ -38,32 +38,31 @@ auto
 
     switch (InNameVerbosity)
     {
-        case ECk_DebugName_Verbosity::Default:
-        switch(UCk_Utils_Core_UserSettings_UE::Get_DefaultDebugNameVerbosity())
+        case ECk_DebugNameVerbosity_Policy::Default:
         {
-            case ECk_Core_DefaultDebugNameVerbosityPolicy::Compact:
-            {
-                return Get_DebugName_AsString(InObject, ECk_DebugName_Verbosity::ShortName);
-            }
-            case ECk_Core_DefaultDebugNameVerbosityPolicy::Verbose:
-            {
-                return Get_DebugName_AsString(InObject, ECk_DebugName_Verbosity::FullName);
-            }
+            return Get_DebugName_AsString(InObject, UCk_Utils_Core_UserSettings_UE::Get_DefaultDebugNameVerbosity());
         }
-    case ECk_DebugName_Verbosity::FullName:
-        return InObject->GetPathName(); ;
-    case ECk_DebugName_Verbosity::ShortName:
-        return InObject->GetName();
-    default:
-        CK_INVALID_ENUM(InNameVerbosity);
-        return InvalidName;
+        case ECk_DebugNameVerbosity_Policy::Verbose:
+        {
+            return InObject->GetPathName();
+        }
+        case ECk_DebugNameVerbosity_Policy::Compact:
+        {
+            return InObject->GetName();
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InNameVerbosity);
+            return InvalidName;
+        }
     }
 }
 
 auto
-    UCk_Utils_Debug_UE::Get_DebugName_AsText(
-        const UObject*          InObject,
-        ECk_DebugName_Verbosity InNameVerbosity)
+    UCk_Utils_Debug_UE::
+    Get_DebugName_AsText(
+        const UObject* InObject,
+        ECk_DebugNameVerbosity_Policy InNameVerbosity)
     -> FText
 {
     return FText::FromString(Get_DebugName_AsString(InObject, InNameVerbosity));
@@ -74,9 +73,9 @@ auto
     Get_BlueprintContext()
     -> TOptional<FString>
 {
-    const auto& trace = Get_StackTrace_Blueprint(ck::type_traits::AsArray{});
+    const auto& Trace = Get_StackTrace_Blueprint(ck::type_traits::AsArray{});
 
-    return trace.Num() > 0 ? trace.Last() : TOptional<FString>{};
+    return Trace.Num() > 0 ? Trace.Last() : TOptional<FString>{};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -85,7 +84,7 @@ auto
     UCk_Utils_Debug_StackTrace_UE::
     Get_StackTrace(
         int32 InSkipFrames,
-        ECk_StackTraceVerbosityPolicy InVerbosity)
+        ECk_StackTraceVerbosity_Policy InVerbosity)
     -> FString
 {
     constexpr auto StackTraceSize = std::numeric_limits<int16>::max();
@@ -100,7 +99,7 @@ auto
 
     switch(InVerbosity)
     {
-        case ECk_StackTraceVerbosityPolicy::Compact:
+        case ECk_StackTraceVerbosity_Policy::Compact:
         {
             const auto StackTraceStr = FString{StackTrace};
             auto Lines = TArray<FString>{};
@@ -112,17 +111,14 @@ auto
             {
                 auto TrimmedLine = Line.TrimStartAndEnd();
 
-                auto StartIndex = 0;
-                if (TrimmedLine.FindChar('!', StartIndex))
+                if (auto StartIndex = 0; TrimmedLine.FindChar('!', StartIndex))
                 {
                     TrimmedLine.RightChopInline(StartIndex + 1, true);
                 }
 
-                auto LastPathSeparator = 0;
-                if (TrimmedLine.FindLastChar('\\', LastPathSeparator))
+                if (auto LastPathSeparator = 0; TrimmedLine.FindLastChar('\\', LastPathSeparator))
                 {
-                    auto FilePathSquareBracket = 0;
-                    if (TrimmedLine.FindChar('[', FilePathSquareBracket))
+                    if (auto FilePathSquareBracket = 0; TrimmedLine.FindChar('[', FilePathSquareBracket))
                     {
                         TrimmedLine.RemoveAt(FilePathSquareBracket + 1, LastPathSeparator - FilePathSquareBracket, true);
                     }
@@ -135,7 +131,7 @@ auto
 
             return ToRet;
         }
-        case ECk_StackTraceVerbosityPolicy::Verbose:
+        case ECk_StackTraceVerbosity_Policy::Verbose:
             break;
     }
 
