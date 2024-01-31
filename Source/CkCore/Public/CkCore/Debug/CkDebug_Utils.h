@@ -12,18 +12,18 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
-enum class ECk_DebugName_Verbosity : uint8
+enum class ECk_DebugNameVerbosity_Policy : uint8
 {
     // Default is set from Project Settings
     Default,
-    FullName,
-    ShortName
+    Verbose,
+    Compact
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
-enum class ECk_StackTraceVerbosityPolicy : uint8
+enum class ECk_StackTraceVerbosity_Policy : uint8
 {
     Compact,
     Verbose
@@ -46,7 +46,7 @@ public:
     static FName
     Get_DebugName(
         const UObject* InObject,
-        ECk_DebugName_Verbosity InNameVerbosity = ECk_DebugName_Verbosity::Default);
+        ECk_DebugNameVerbosity_Policy InNameVerbosity = ECk_DebugNameVerbosity_Policy::Default);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Debug",
@@ -54,7 +54,7 @@ public:
     static FString
     Get_DebugName_AsString(
         const UObject* InObject,
-        ECk_DebugName_Verbosity InNameVerbosity = ECk_DebugName_Verbosity::Default);
+        ECk_DebugNameVerbosity_Policy InNameVerbosity = ECk_DebugNameVerbosity_Policy::Default);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Debug",
@@ -62,8 +62,7 @@ public:
     static FText
     Get_DebugName_AsText(
         const UObject* InObject,
-        ECk_DebugName_Verbosity InNameVerbosity = ECk_DebugName_Verbosity::Default
-    );
+        ECk_DebugNameVerbosity_Policy InNameVerbosity = ECk_DebugNameVerbosity_Policy::Default);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -83,7 +82,7 @@ public:
     static FString
     Get_StackTrace(
         int32 InSkipFrames = 1,
-        ECk_StackTraceVerbosityPolicy InVerbosity = ECk_StackTraceVerbosityPolicy::Compact);
+        ECk_StackTraceVerbosity_Policy InVerbosity = ECk_StackTraceVerbosity_Policy::Compact);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Debug",

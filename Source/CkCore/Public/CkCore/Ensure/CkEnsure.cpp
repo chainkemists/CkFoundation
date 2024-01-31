@@ -21,7 +21,7 @@
                                                                                                                                                \
     UCk_Utils_Ensure_UE::Request_IncrementEnsureCount();                                                                                       \
                                                                                                                                                \
-    const auto IsMessageOnly = UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDetailsPolicy() == ECk_Core_EnsureDetailsPolicy::MessageOnly;      \
+    const auto IsMessageOnly = UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDetailsPolicy() == ECk_EnsureDetails_Policy::MessageOnly;      \
                                                                                                                                                \
     const auto& Message = ck::Format_UE(InString, ##__VA_ARGS__);                                                                              \
     const auto& Title = ck::Format_UE(TEXT("Ignore and Continue? Frame#[{}]"), GFrameCounter);                                                 \

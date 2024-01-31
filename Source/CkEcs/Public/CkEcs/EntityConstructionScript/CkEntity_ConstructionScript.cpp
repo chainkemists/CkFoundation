@@ -17,7 +17,7 @@ auto
 {
     Set_CurrentWorld(UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle));
 
-    UCk_Utils_Handle_UE::Set_DebugName(InHandle, UCk_Utils_Debug_UE::Get_DebugName(this, ECk_DebugName_Verbosity::ShortName));
+    UCk_Utils_Handle_UE::Set_DebugName(InHandle, UCk_Utils_Debug_UE::Get_DebugName(this, ECk_DebugNameVerbosity_Policy::Compact));
 
     DoConstruct(InHandle);
 }
