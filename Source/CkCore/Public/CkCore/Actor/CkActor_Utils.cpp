@@ -28,18 +28,8 @@ FCk_Utils_Actor_SpawnActor_Params::
 UCk_Utils_Actor_UE::DeferredSpawnActor_Params::
     DeferredSpawnActor_Params(
         const TSubclassOf<AActor> InActorClass,
-        const TObjectPtr<AActor> InArchetype,
-        FName InNonUniqueName,
-        FString InLabel,
-        const FTransform& InSpawnTransform,
-        const ESpawnActorCollisionHandlingMethod InCollisionHandlingOverride,
-        TObjectPtr<UObject> InOwnerOrWorld)
+        UObject* InOwnerOrWorld)
     : _ActorClass(InActorClass)
-    , _Archetype(InArchetype)
-    , _NonUniqueName(InNonUniqueName)
-    , _Label(InLabel)
-    , _SpawnTransform(InSpawnTransform)
-    , _CollisionHandlingOverride(InCollisionHandlingOverride)
     , _OwnerOrWorld(InOwnerOrWorld)
 {
 }
@@ -225,10 +215,12 @@ auto
 #endif
 }
 
-auto UCk_Utils_Actor_UE::
+auto
+    UCk_Utils_Actor_UE::
     Request_SpawnActor(
         const SpawnActorParamsType& InSpawnActorParams,
-        const TFunction<void(AActor*)>& InPreFinishSpawningFunc) -> AActor*
+        const TFunction<void(AActor*)>& InPreFinishSpawningFunc)
+    -> AActor*
 {
     const auto& SpawnedActor = DoRequest_SpawnActor_Begin(InSpawnActorParams);
 
@@ -246,7 +238,8 @@ auto UCk_Utils_Actor_UE::
 auto
     UCk_Utils_Actor_UE::
     DoRequest_BeginDeferredSpawnActor(
-        const DeferredSpawnActor_Params& InDeferredSpawnActorParams) -> AActor*
+        const DeferredSpawnActor_Params& InDeferredSpawnActorParams)
+    -> AActor*
 {
     const auto& ActorClass   = InDeferredSpawnActorParams.Get_ActorClass();
     const auto& OwnerOrWorld = InDeferredSpawnActorParams.Get_OwnerOrWorld();
@@ -289,7 +282,7 @@ auto
     }
 
     FActorSpawnParameters SpawnInfo;
-    SpawnInfo.Template                       = Archetype;
+    SpawnInfo.Template                       = Archetype.Get();
     SpawnInfo.SpawnCollisionHandlingOverride = InDeferredSpawnActorParams.Get_CollisionHandlingOverride();
     SpawnInfo.Owner                          = Cast<AActor>(OwnerOrWorld);
     SpawnInfo.bDeferConstruction             = true;
@@ -297,7 +290,7 @@ auto
     if (ck::IsValid(InDeferredSpawnActorParams.Get_NonUniqueName()))
     {
         SpawnInfo.Name = UCk_Utils_Object_UE::Get_GeneratedUniqueName(
-            OwnerOrWorld, ActorClass, InDeferredSpawnActorParams.Get_NonUniqueName());
+            OwnerOrWorld.Get(), ActorClass, InDeferredSpawnActorParams.Get_NonUniqueName());
     }
 
     if (ck::Is_NOT_Valid(ActorClass))
@@ -316,7 +309,8 @@ auto
 auto
     UCk_Utils_Actor_UE::
     DoRequest_SpawnActor_Begin(
-        const SpawnActorParamsType& InSpawnActorParams) -> AActor*
+        const SpawnActorParamsType& InSpawnActorParams)
+    -> AActor*
 {
     const auto& OwnerOrWorld = InSpawnActorParams.Get_OwnerOrWorld().Get();
 
@@ -354,16 +348,13 @@ auto
         { return {}; }
     }
 
-    const auto& DeferredSpawnActorParams = DeferredSpawnActor_Params
-    {
-        InSpawnActorParams.Get_ActorClass(),
-        InSpawnActorParams.Get_Archetype().Get(),
-        InSpawnActorParams.Get_NonUniqueName(),
-        InSpawnActorParams.Get_Label(),
-        InSpawnActorParams.Get_SpawnTransform(),
-        InSpawnActorParams.Get_CollisionHandlingOverride(),
-        InSpawnActorParams.Get_OwnerOrWorld().Get()
-    };
+    const auto& DeferredSpawnActorParams = DeferredSpawnActor_Params{
+        InSpawnActorParams.Get_ActorClass(), InSpawnActorParams.Get_OwnerOrWorld().Get()}
+        .Set_Archetype(InSpawnActorParams.Get_Archetype().Get())
+        .Set_CollisionHandlingOverride(InSpawnActorParams.Get_CollisionHandlingOverride())
+        .Set_Label(InSpawnActorParams.Get_Label())
+        .Set_NonUniqueName(InSpawnActorParams.Get_NonUniqueName())
+        .Set_SpawnTransform(InSpawnActorParams.Get_SpawnTransform());
 
     const auto& SpawningActor = DoRequest_BeginDeferredSpawnActor(DeferredSpawnActorParams);
 
