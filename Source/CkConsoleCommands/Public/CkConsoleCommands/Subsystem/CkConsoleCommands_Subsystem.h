@@ -13,7 +13,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKCONSOLECOMMANDS_API ACk_ConsoleCommandsHelper_UE : public AActor
+class CKCONSOLECOMMANDS_API ACk_ConsoleCommandsHelper_UE : public AInfo
 {
     GENERATED_BODY()
 
