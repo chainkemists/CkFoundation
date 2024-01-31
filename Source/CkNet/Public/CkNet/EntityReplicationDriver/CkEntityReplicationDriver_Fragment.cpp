@@ -106,6 +106,13 @@ auto
 
         auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OwningEntity);
 
+        UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings
+            {
+                ECk_Replication::Replicates,
+                ECk_Net_NetModeType::Client,
+                ECk_Net_EntityNetRole::Proxy
+            });
+
         if (ck::IsValid(ConstructionInfo.Get_Label()))
         { UCk_Utils_GameplayLabel_UE::Add(NewEntity, ConstructionInfo.Get_Label()); }
 
@@ -148,6 +155,7 @@ auto
         InEntity.Add<ck::FFragment_OwningActor_Current>(ReplicatedActor);
         UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings
             {
+                ECk_Replication::Replicates,
                 ECk_Net_NetModeType::Client,
                 ReplicatedActor->GetLocalRole() == ROLE_AutonomousProxy ? ECk_Net_EntityNetRole::Authority : ECk_Net_EntityNetRole::Proxy
             });

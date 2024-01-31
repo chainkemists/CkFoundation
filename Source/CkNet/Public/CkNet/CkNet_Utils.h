@@ -136,8 +136,8 @@ public:
     UFUNCTION(BlueprintPure,
               DisplayName="[Ck] Get Is Entity Replicated",
               Category = "Ck|Utils|Net")
-    static bool
-    Get_IsEntityReplicated(
+    static ECk_Replication
+    Get_EntityReplication(
         FCk_Handle InHandle);
 
 public:
