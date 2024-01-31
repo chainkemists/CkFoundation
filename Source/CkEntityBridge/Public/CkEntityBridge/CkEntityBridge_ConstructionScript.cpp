@@ -177,7 +177,7 @@ auto
 
         EntityConfig->Build(Entity);
 
-        if (OwningActor->GetIsReplicated())
+        if (OwningActor->GetIsReplicated() && _Replication == ECk_Replication::Replicates)
         {
             const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(Entity);
             UCk_Utils_EntityReplicationDriver_UE::Request_ReplicateEntityOnReplicatedActor(Entity,

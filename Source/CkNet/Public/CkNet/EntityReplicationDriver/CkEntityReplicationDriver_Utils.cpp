@@ -177,8 +177,8 @@ auto
         FCk_Handle InHandle)
     -> bool
 {
-    if (NOT Ensure(InHandle))
-    { return false; }
+    if (NOT Has(InHandle))
+    { return true; }
 
     return InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>()->Get_IsReplicationCompleteOnAllDependents();
 }
@@ -190,10 +190,13 @@ auto
         const FCk_Delegate_EntityReplicationDriver_OnReplicationComplete& InDelegate)
     -> void
 {
-    if (NOT Ensure(InEntity))
-    { return; }
+    if (NOT Has(InEntity))
+    {
+        std::ignore = InDelegate.ExecuteIfBound(InEntity);
+        return;
+    }
 
-    ck::UUtils_Signal_OnReplicationComplete::Bind(InEntity, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
+    ck::UUtils_Signal_OnReplicationComplete_PostFireUnbind::Bind(InEntity, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
 }
 
 auto
@@ -203,8 +206,11 @@ auto
         const FCk_Delegate_EntityReplicationDriver_OnReplicationComplete& InDelegate)
     -> void
 {
-    if (NOT Ensure(InEntity))
-    { return; }
+    if (NOT Has(InEntity))
+    {
+        std::ignore = InDelegate.ExecuteIfBound(InEntity);
+        return;
+    }
 
     ck::UUtils_Signal_OnDependentsReplicationComplete_PostFireUnbind::Bind(
         InEntity, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
