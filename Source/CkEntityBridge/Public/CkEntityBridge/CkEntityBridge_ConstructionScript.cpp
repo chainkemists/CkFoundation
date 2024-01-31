@@ -261,7 +261,7 @@ auto
             return {};
         }();
 
-        CK_LOG_ERROR_IF_NOT(ck::entity_bridge, ck::Is_NOT_Valid(NewEntity),
+        CK_LOG_ERROR_IF_NOT(ck::entity_bridge, ck::IsValid(NewEntity),
             TEXT("Could NOT create a NewEntity for Actor [{}] based on previous errors"), OwningActor)
         { return; }
 
@@ -302,6 +302,12 @@ auto
         EntityConfig->Get_EntityConstructionScript()->Construct(NewEntity);
 
         ck::entity_bridge::Log(TEXT("[EntityMap] [{}] -> [{}]"), NewEntity, OwningActor);
+
+        // TODO: this is a HACK due to the way TryInvoke_OnReplicationComplete works. The function assumes that it will be called twice.
+        // Once by the EntityBridge and once by the ReplicationDriver. However, if we don't replicate at all, then there is no ReplicationDriver
+        // and we need to 'spoof' it
+        if (_Replication == ECk_Replication::DoesNotReplicate)
+        { TryInvoke_OnReplicationComplete(EInvoke_Caller::ReplicationDriver); }
     }
 
     TryInvoke_OnReplicationComplete(EInvoke_Caller::EntityBridge);

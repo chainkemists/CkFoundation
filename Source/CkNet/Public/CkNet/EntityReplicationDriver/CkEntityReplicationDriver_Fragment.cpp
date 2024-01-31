@@ -106,6 +106,13 @@ auto
 
         auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OwningEntity);
 
+        UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings
+            {
+                ECk_Replication::Replicates,
+                ECk_Net_NetModeType::Client,
+                ECk_Net_EntityNetRole::Proxy
+            });
+
         if (ck::IsValid(ConstructionInfo.Get_Label()))
         { UCk_Utils_GameplayLabel_UE::Add(NewEntity, ConstructionInfo.Get_Label()); }
 

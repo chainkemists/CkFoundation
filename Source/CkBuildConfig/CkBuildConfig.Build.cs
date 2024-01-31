@@ -12,7 +12,7 @@ public class CkModuleRules : ModuleRules
     void SetBuildConfiguration()
     {
         // override this variable to change the configuration settings on a broad level
-        var BuildConfigurationOverride = BuildConfiguration.MatchWithUnreal;
+        const BuildConfiguration BuildConfigurationOverride = BuildConfiguration.MatchWithUnreal;
 
         // normally, detailed formatting is invoked using {d}, this switch will force detailed formatting (if supported by formatter)
         PublicDefinitions.Add("CK_FORMAT_FORCE_DETAILED=0");
