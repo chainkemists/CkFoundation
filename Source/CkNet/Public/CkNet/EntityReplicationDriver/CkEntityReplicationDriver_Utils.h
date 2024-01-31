@@ -18,7 +18,7 @@ public:
 public:
     static auto
     Add(
-        FCk_Handle InHandle) -> void;
+        FCk_Handle InHandle) -> ECk_AddedOrNot;
 
 public:
     static auto
@@ -27,10 +27,10 @@ public:
 
 public:
     static auto
-    Request_Replicate(
-        FCk_Handle InHandle,
+    Request_TryBuildAndReplicate(
+        FCk_Handle                                          InHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo,
-        std::function<void(FCk_Handle)> InFunc_OnCreateEntityBeforeBuild = nullptr) -> FCk_Handle;
+        const std::function<void(FCk_Handle)>&              InFunc_OnCreateEntityBeforeBuild = nullptr) -> FCk_Handle;
 
     static auto
     Request_ReplicateEntityOnReplicatedActor(
