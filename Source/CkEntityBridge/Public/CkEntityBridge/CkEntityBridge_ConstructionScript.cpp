@@ -88,7 +88,8 @@ auto
     Super::Do_Construct_Implementation(InParams);
 
     CK_ENSURE_IF_NOT(ck::IsValid(EntityConfig),
-        TEXT("EntityConfig is [{}]. Did you forget to set the default value in the component?.[{}]"), EntityConfig, ck::Context(this))
+        TEXT("EntityConfig is [{}]. Did you forget to set the default value in the component?.[{}]"),
+        EntityConfig, ck::Context(this))
     { return; }
 
     CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)
@@ -103,7 +104,8 @@ auto
 
         // TODO: this hits at least once because the BP Subsystem is not loaded. Fix this.
         CK_ENSURE_IF_NOT(ck::IsValid(EcsWorldSubsystem),
-            TEXT("WorldSubsystem is [{}]. Did you forget to set the default value in the component?.[{}]"), EcsWorldSubsystem, ck::Context(this))
+            TEXT("WorldSubsystem is [{}]. Did you forget to set the default value in the component?.[{}]"),
+            EcsWorldSubsystem, ck::Context(this))
         { return; }
 
         auto Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(EcsWorldSubsystem->Get_TransientEntity());
@@ -175,7 +177,7 @@ auto
 
         EntityConfig->Build(Entity);
 
-        if (OwningActor->GetIsReplicated())
+        if (OwningActor->GetIsReplicated() && _Replication == ECk_Replication::Replicates)
         {
             const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(Entity);
             UCk_Utils_EntityReplicationDriver_UE::Request_ReplicateEntityOnReplicatedActor(Entity,
@@ -259,11 +261,11 @@ auto
             return {};
         }();
 
-        CK_LOG_ERROR_IF_NOT(ck::entity_bridge, ck::Is_NOT_Valid(NewEntity),
+        CK_LOG_ERROR_IF_NOT(ck::entity_bridge, ck::IsValid(NewEntity),
             TEXT("Could NOT create a NewEntity for Actor [{}] based on previous errors"), OwningActor)
         { return; }
 
-        // TODO: consolidate into a utilty. Other usage in replication driver
+        // TODO: consolidate into a utility. Other usage in replication driver
         if (const auto EntityOwningActorComponent = OwningActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
             ck::IsValid(EntityOwningActorComponent))
         {
@@ -296,10 +298,78 @@ auto
 
         CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
 
-        // TODO: Why are we not calling Build here?
-        EntityConfig->Get_EntityConstructionScript()->Construct(NewEntity);
+        EntityConfig->Build(NewEntity);
 
         ck::entity_bridge::Log(TEXT("[EntityMap] [{}] -> [{}]"), NewEntity, OwningActor);
+
+        // TODO: this is a HACK due to the way TryInvoke_OnReplicationComplete works. The function assumes that it will be called twice.
+        // Once by the EntityBridge and once by the ReplicationDriver. However, if we don't replicate at all, then there is no ReplicationDriver
+        // and we need to 'spoof' it
+        if (_Replication == ECk_Replication::DoesNotReplicate)
+        { TryInvoke_OnReplicationComplete(EInvoke_Caller::ReplicationDriver); }
+    }
+    else if (OwningActor->GetIsReplicated() && _Replication == ECk_Replication::DoesNotReplicate)
+    {
+        if (OwningActor->bIsEditorOnlyActor)
+        { return; }
+
+        const auto NewEntity = [&]() -> FCk_Handle
+        {
+            const auto& TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(GetWorld());
+
+            return UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity, [&](FCk_Handle InEntity)
+            {
+                InEntity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
+                UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Replication::DoesNotReplicate,
+                    ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
+            });
+        }();
+
+        CK_LOG_ERROR_IF_NOT(ck::entity_bridge, ck::IsValid(NewEntity),
+            TEXT("Could NOT create a NewEntity for Non-Replicated Actor [{}] based on previous errors"), OwningActor)
+        { return; }
+
+        // TODO: consolidate into a utility. Other usage in replication driver
+        if (const auto EntityOwningActorComponent = OwningActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
+            ck::IsValid(EntityOwningActorComponent))
+        {
+            EntityOwningActorComponent->_EntityHandle = NewEntity;
+        }
+        else
+        {
+            UCk_Utils_Actor_UE::Request_AddNewActorComponent<UCk_EntityOwningActor_ActorComponent_UE>
+            (
+                UCk_Utils_Actor_UE::AddNewActorComponent_Params<UCk_EntityOwningActor_ActorComponent_UE>
+                {
+                    OwningActor,
+                    true
+                },
+                [&](UCk_EntityOwningActor_ActorComponent_UE* InComp)
+                {
+                    InComp->_EntityHandle = NewEntity;
+                }
+            );
+        }
+
+        // --------------------------------------------------------------------------------------------------------------------
+
+        const auto CsWithTransform = Cast<UCk_Entity_ConstructionScript_WithTransform_PDA>(EntityConfig->Get_EntityConstructionScript());
+
+        CK_ENSURE_IF_NOT(ck::IsValid(CsWithTransform), TEXT("Entity Construction Script [{}] for Actor [{}] is NOT one with Transform. "
+            "Entity Construction Scripts that have an Actor attached MUST use [{}]."), EntityConfig->Get_EntityConstructionScript(), OwningActor,
+            ck::TypeToString<UCk_Entity_ConstructionScript_WithTransform_PDA>)
+        { return; }
+
+        CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
+
+        EntityConfig->Build(NewEntity);
+
+        ck::entity_bridge::Log(TEXT("[EntityMap] [{}] -> [{}]"), NewEntity, OwningActor);
+
+        // TODO: this is a HACK due to the way TryInvoke_OnReplicationComplete works. The function assumes that it will be called twice.
+        // Once by the EntityBridge and once by the ReplicationDriver. However, if we don't replicate at all, then there is no ReplicationDriver
+        // and we need to 'spoof' it
+        TryInvoke_OnReplicationComplete(EInvoke_Caller::ReplicationDriver);
     }
 
     TryInvoke_OnReplicationComplete(EInvoke_Caller::EntityBridge);
