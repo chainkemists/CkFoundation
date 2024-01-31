@@ -111,11 +111,11 @@ public:
         AddNewActorComponent_Params(AActor* InTargetActor, CompClassType InCompClass, bool InIsUnique, USceneComponent* InParent, FName InSocket);
 
     private:
-        TObjectPtr<AActor>          _Owner = nullptr;
-        TObjectPtr<USceneComponent> _ParentComp = nullptr;
-        CompClassType               _CompClass;
-        bool                        _IsUnique = true;
-        FName                       _Socket;
+        TWeakObjectPtr<AActor>          _Owner;
+        TWeakObjectPtr<USceneComponent> _ParentComp;
+        CompClassType                   _CompClass;
+        bool                            _IsUnique = true;
+        FName                           _Socket;
 
     public:
         CK_PROPERTY_GET(_Owner);
@@ -133,30 +133,25 @@ private:
     public:
         DeferredSpawnActor_Params(
             TSubclassOf<AActor> InActorClass,
-            TObjectPtr<AActor> InArchetype,
-            FName InNonUniqueName,
-            FString InLabel,
-            const FTransform& InSpawnTransform,
-            ESpawnActorCollisionHandlingMethod InCollisionHandlingOverride,
-            TObjectPtr<UObject> InOwnerOrWorld);
+            UObject* InOwnerOrWorld);
 
     private:
         TSubclassOf<AActor>                _ActorClass;
-        TObjectPtr<AActor>                 _Archetype = nullptr;
-        FName                              _NonUniqueName = NAME_None;
+        TWeakObjectPtr<UObject>            _OwnerOrWorld;
+        TWeakObjectPtr<AActor>             _Archetype;
+        FName                              _NonUniqueName;
         FString                            _Label;
         FTransform                         _SpawnTransform;
         ESpawnActorCollisionHandlingMethod _CollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::Undefined;
-        TObjectPtr<UObject>                _OwnerOrWorld = nullptr;
 
     public:
         CK_PROPERTY_GET(_ActorClass);
-        CK_PROPERTY_GET(_Archetype);
-        CK_PROPERTY_GET(_NonUniqueName);
-        CK_PROPERTY_GET(_Label);
-        CK_PROPERTY_GET(_SpawnTransform);
-        CK_PROPERTY_GET(_CollisionHandlingOverride);
         CK_PROPERTY_GET(_OwnerOrWorld);
+        CK_PROPERTY(_Archetype);
+        CK_PROPERTY(_NonUniqueName);
+        CK_PROPERTY(_Label);
+        CK_PROPERTY(_SpawnTransform);
+        CK_PROPERTY(_CollisionHandlingOverride);
     };
 
 public:
@@ -223,48 +218,56 @@ public:
 
 public:
     /**
-     * Assigns a new label to this actor.  Actor labels are only available in development builds.
-     * @param	InNewActorLabel	The new label string to assign to the actor.  If empty, the actor will have a default label.
-     * @param	InMarkDirty		If true the actor's package will be marked dirty for saving.  Otherwise it will not be.  You should pass false for this parameter if dirtying is not allowed (like during loads)
+     * Assigns a new label to this actor. Actor labels are only available in development builds.
+     * @param InActor The target actor to change the label on
+     * @param InNewActorLabel The new label string to assign to the actor.  If empty, the actor will have a default label.
+     * @param InMarkDirty If true the actor's package will be marked dirty for saving.  Otherwise it will not be.  You should pass false for this parameter if dirtying is not allowed (like during loads)
      */
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Actor",
               DisplayName = "[Ck] Request Set Actor Label",
-              meta = (DefaultToSelf = "InActor"))
+              meta = (DefaultToSelf = "InActor", DevelopmentOnly))
     static void
     Request_SetActorLabel(
         AActor* InActor,
         const FString& InNewActorLabel,
-        bool InMarkDirty = true );
+        bool InMarkDirty = true);
 
 public:
-    static auto Request_SpawnActor(
+    static auto
+    Request_SpawnActor(
         const SpawnActorParamsType& InSpawnActorParams,
         const TFunction<void (AActor*)>& InPreFinishSpawningFunc = nullptr) -> AActor*;
 
     template <typename T_ActorType>
-    static auto Request_SpawnActor(
+    static auto
+    Request_SpawnActor(
         SpawnActorParamsType InSpawnActorParams,
         const TFunction<void (T_ActorType*)>& InPreFinishSpawningFunc = nullptr) -> T_ActorType*;
 
 public:
     template <typename T_CompType>
-    static auto Request_AddNewActorComponent(
+    static auto
+    Request_AddNewActorComponent(
         const AddNewActorComponent_Params<T_CompType>& InParams,
         TFunction<void (T_CompType*)> InInitializerFunc = nullptr) -> T_CompType*;
 
 private:
-    static auto DoRequest_BeginDeferredSpawnActor(
+    static auto
+    DoRequest_BeginDeferredSpawnActor(
         const DeferredSpawnActor_Params& InDeferredSpawnActorParams) -> AActor*;
 
-    static auto DoRequest_SpawnActor_Begin(
+    static auto
+    DoRequest_SpawnActor_Begin(
         const SpawnActorParamsType& InSpawnActorParams) -> AActor*;
 
-    static auto DoRequest_SpawnActor_Finish(
+    static auto
+    DoRequest_SpawnActor_Finish(
         const SpawnActorParamsType& InSpawnActorParams,
         AActor* InNewlySpawnedActor) -> AActor*;
 
-    static auto DoRequest_CopyAllActorComponentProperties(
+    static auto
+    DoRequest_CopyAllActorComponentProperties(
         AActor* InSourceActor,
         AActor* InDestinationActor) -> void;
 };
@@ -299,7 +302,7 @@ auto
 
 template <typename T_CompType>
 UCk_Utils_Actor_UE::AddNewActorComponent_Params<T_CompType>::
-AddNewActorComponent_Params(
+    AddNewActorComponent_Params(
         AActor* InTargetActor,
         bool InIsUnique)
     : ThisType(InTargetActor, InIsUnique, ck::IsValid(InTargetActor) ? InTargetActor->GetRootComponent() : nullptr, NAME_None)
@@ -357,7 +360,7 @@ auto
         { return nullptr; }
     }
 
-    auto* Comp = NewObject<T_CompType>(InParams.Get_Owner(), InParams.Get_CompClass());
+    auto* Comp = NewObject<T_CompType>(InParams.Get_Owner().Get(), InParams.Get_CompClass());
 
     if (ck::Is_NOT_Valid(Comp))
     { return Comp; }
