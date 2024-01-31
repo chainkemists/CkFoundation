@@ -11,9 +11,9 @@ auto
     UCk_Utils_EntityReplicationDriver_UE::
     Add(
         const FCk_Handle InHandle)
-    -> void
+    -> ECk_AddedOrNot
 {
-    TryAddReplicatedFragment<UCk_Fragment_EntityReplicationDriver_Rep>(InHandle);
+    return TryAddReplicatedFragment<UCk_Fragment_EntityReplicationDriver_Rep>(InHandle);
 }
 
 auto
@@ -39,12 +39,18 @@ auto
 
 auto
     UCk_Utils_EntityReplicationDriver_UE::
-    Request_Replicate(
-        FCk_Handle InHandle,
+    Request_TryBuildAndReplicate(
+        FCk_Handle                                          InHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo,
-        std::function<void(FCk_Handle)> InFunc_OnCreateEntityBeforeBuild)
+        const std::function<void(FCk_Handle)>&              InFunc_OnCreateEntityBeforeBuild)
     -> FCk_Handle
 {
+    if (UCk_Utils_Net_UE::Get_EntityReplication(InHandle) == ECk_Replication::DoesNotReplicate)
+    { return {}; }
+
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle))
+    { return {};}
+
     CK_ENSURE_IF_NOT(InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>(),
         TEXT("Entity [{}] does NOT have a ReplicationDriver. Unable to proceed with Replication of Entity with ConstructionScript [{}]"),
         InHandle,
@@ -60,24 +66,15 @@ auto
     if (InFunc_OnCreateEntityBeforeBuild)
     { InFunc_OnCreateEntityBeforeBuild(NewEntity); }
 
-    Add(NewEntity);
     UCk_Utils_Net_UE::Copy(InHandle, NewEntity);
+
+    if (Add(NewEntity) == ECk_AddedOrNot::NotAdded)
+    { return {}; }
 
     InConstructionInfo.Get_ConstructionScript()->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(NewEntity);
 
     switch(const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(InHandle))
     {
-        case ECk_Net_NetModeType::Client:
-        {
-            // TODO: remove the 'Client' flow from this function (and rename the function)
-            //const auto& RepDriver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
-            //RepDriver->Request_Replicate_NonReplicatedActor(
-            //    FCk_EntityReplicationDriver_ConstructionInfo_NonReplicatedActor{InConstructionInfo.Get_ConstructionScript(), NewEntity});
-            //    FCk_EntityReplicationDriver_ConstructionInfo{InConstructionInfo.Get_ConstructionScript()}
-            //    .Set_OriginalEntity(InHandle.Get_Entity()).Set_Label(UCk_Utils_GameplayLabel_UE::Get_Label(NewEntity))
-            //);
-            break;
-        }
         case ECk_Net_NetModeType::Host:
         case ECk_Net_NetModeType::Server:
         {
