@@ -138,15 +138,7 @@ namespace ck
         { return; }
 
         const auto& AbilityData = AbilityParams.Get_Data();
-
-        CK_ENSURE_IF_NOT(ck::IsValid(AbilityData.Get_AbilityName()),
-            TEXT("Cannot GIVE Ability [{}] to Ability Owner [{}] using Construction Script [{}] because has an INVALID Ability Name"),
-            AbilityScriptClass,
-            InAbilityOwnerEntity,
-            AbilityConstructionScript)
-        { return; }
-
-        const auto ReplicationType = AbilityData.Get_NetworkSettings().Get_ReplicationType();
+        const auto& ReplicationType = AbilityData.Get_NetworkSettings().Get_ReplicationType();
 
         if (NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InAbilityOwnerEntity, ReplicationType))
         {
