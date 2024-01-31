@@ -340,11 +340,14 @@ auto
 
 auto
     UCk_Utils_Net_UE::
-    Get_IsEntityReplicated(
+    Get_EntityReplication(
         FCk_Handle InHandle)
-    -> bool
+    -> ECk_Replication
 {
-    return InHandle.Has<ck::FTag_Replicated>();
+    if (NOT Ensure(InHandle))
+    { return ECk_Replication::DoesNotReplicate; }
+
+    return InHandle.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings().Get_Replication();
 }
 
 auto
