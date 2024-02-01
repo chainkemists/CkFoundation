@@ -61,9 +61,31 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class CKOVERLAPBODY_API FProcessor_Marker_Teardown : public ck_exp::TProcessor<
+            FProcessor_Marker_Teardown,
+            FCk_Handle_Marker,
+            FFragment_Marker_Current,
+            FFragment_Marker_Params,
+            CK_IF_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = CK_IF_PENDING_KILL;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InMarkerEntity,
+            FFragment_Marker_Current& InCurrentComp,
+            const FFragment_Marker_Params& InParamsComp) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKOVERLAPBODY_API FProcessor_Marker_UpdateTransform : public ck_exp::TProcessor<
             FProcessor_Marker_UpdateTransform,
-            FCk_Handle_Marker,
             FFragment_Marker_Current,
             FFragment_Marker_Params,
             FTag_Marker_UpdateTransform,
