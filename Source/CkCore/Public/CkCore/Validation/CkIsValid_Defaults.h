@@ -3,13 +3,14 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include <CoreMinimal.h>
-#include <UObject/WeakInterfacePtr.h>
 #include <GameplayTagContainer.h>
 #include <InputCoreTypes.h>
-#include <Framework/Commands/InputChord.h>
 #include <InstancedStruct.h>
-#include <Engine/DataTable.h>
+#include <Curves/CurveFloat.h>
 #include <Engine/CurveTable.h>
+#include <Engine/DataTable.h>
+#include <Framework/Commands/InputChord.h>
+#include <UObject/WeakInterfacePtr.h>
 
 #include <type_traits>
 

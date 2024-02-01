@@ -15,7 +15,7 @@ auto
     Add(
         FCk_Handle InHandle,
         const FCk_Fragment_Timer_ParamsData& InParams)
-    -> FCk_Handle
+    -> FCk_Handle_Timer
 {
     const auto NewTimerEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
     {
@@ -36,7 +36,7 @@ auto
     RecordOfTimers_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
     RecordOfTimers_Utils::Request_Connect(InHandle, NewTimerEntity);
 
-    return NewTimerEntity;
+    return Conv_HandleToTimer(NewTimerEntity);
 }
 
 auto
@@ -44,7 +44,7 @@ auto
     AddOrReplace(
         FCk_Handle InTimerOwnerEntity,
         const FCk_Fragment_Timer_ParamsData& InParams)
-    -> FCk_Handle
+    -> FCk_Handle_Timer
 {
     if (const auto& ExistingTimerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<UCk_Utils_Timer_UE,
             RecordOfTimers_Utils>(InTimerOwnerEntity, InParams.Get_TimerName());
@@ -65,7 +65,7 @@ auto
         TimerEntity.AddOrGet<ck::FTag_Timer_NeedsUpdate>();
     }
 
-    return TimerEntity;
+    return Conv_HandleToTimer(TimerEntity);
 }
 
 auto
@@ -73,9 +73,9 @@ auto
     AddMultiple(
         FCk_Handle InHandle,
         const FCk_Fragment_MultipleTimer_ParamsData& InParams)
-    -> TArray<FCk_Handle>
+    -> TArray<FCk_Handle_Timer>
 {
-    return ck::algo::Transform<TArray<FCk_Handle>>(InParams.Get_TimerParams(),
+    return ck::algo::Transform<TArray<FCk_Handle_Timer>>(InParams.Get_TimerParams(),
     [&](const FCk_Fragment_Timer_ParamsData& InTimerParams)
     {
         return Add(InHandle, InTimerParams);
@@ -85,71 +85,80 @@ auto
 auto
     UCk_Utils_Timer_UE::
     Has(
-        FCk_Handle InTimerEntity)
+        const FCk_Handle& InHandle)
     -> bool
 {
-    return InTimerEntity.Has_All<ck::FFragment_Timer_Params, ck::FFragment_Timer_Current>();
+    return InHandle.Has_All<ck::FFragment_Timer_Params, ck::FFragment_Timer_Current>();
 }
 
 auto
     UCk_Utils_Timer_UE::
-    Ensure(
-        FCk_Handle InTimerEntity)
-    -> bool
+    Cast(
+        const FCk_Handle& InHandle,
+        ECk_SucceededFailed& OutResult)
+    -> FCk_Handle_Timer
 {
-    CK_ENSURE_IF_NOT(Has(InTimerEntity), TEXT("Handle [{}] does NOT have a Timer"), InTimerEntity)
-    { return false; }
+    if (Has(InHandle))
+    {
+        OutResult = ECk_SucceededFailed::Failed;
+        return {};
+    }
 
-    return true;
+    OutResult = ECk_SucceededFailed::Succeeded;
+    return ck::Cast<FCk_Handle_Timer>(InHandle);
+}
+
+auto
+    UCk_Utils_Timer_UE::
+    Conv_HandleToTimer(
+        FCk_Handle InTimerEntity)
+    -> FCk_Handle_Timer
+{
+    CK_ENSURE_IF_NOT(Has(InTimerEntity), TEXT("Handle [{}] does NOT have a Timer. Unable to convert Handle."), InTimerEntity)
+    { return {}; }
+
+    return ck::Cast<FCk_Handle_Timer>(InTimerEntity);
 }
 
 auto
     UCk_Utils_Timer_UE::
     Get_Timer(
-        FCk_Handle   InTimerEntity,
+        const FCk_Handle& InTimerEntity,
         FGameplayTag InTimerName)
-    -> FCk_Handle
+    -> FCk_Handle_Timer
 {
     const auto TimerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Timer_UE,
         RecordOfTimers_Utils>(InTimerEntity, InTimerName);
 
-    return TimerEntity;
+    return Conv_HandleToTimer(TimerEntity);
 }
 
 auto
     UCk_Utils_Timer_UE::
     Get_Name(
-        FCk_Handle InTimerEntity)
+        const FCk_Handle_Timer& InTimerEntity)
     -> FGameplayTag
 {
-    if (NOT Ensure(InTimerEntity))
-    { return {}; }
-
-    return UCk_Utils_GameplayLabel_UE::Get_Label(InTimerEntity);
+    // TODO: remove the cast once Label is type-safe as well
+    return UCk_Utils_GameplayLabel_UE::Get_Label(InTimerEntity.Get_RawHandle());
 }
 
 auto
     UCk_Utils_Timer_UE::
     Get_CurrentState(
-        FCk_Handle   InTimerEntity)
+        const FCk_Handle_Timer& InTimerEntity)
     -> ECk_Timer_State
 {
-    if (NOT Ensure(InTimerEntity))
-    { return {}; }
-
     return InTimerEntity.Has<ck::FTag_Timer_NeedsUpdate>() ? ECk_Timer_State::Running : ECk_Timer_State::Paused;
 }
 
 auto
     UCk_Utils_Timer_UE::
     Get_CountDirection(
-        FCk_Handle   InTimerEntity)
+        const FCk_Handle_Timer& InTimerEntity)
     -> ECk_Timer_CountDirection
 {
-    if (NOT Ensure(InTimerEntity))
-    { return {}; }
-
     return InTimerEntity.Has<ck::FTag_Timer_Countdown>() ?
         ECk_Timer_CountDirection::CountDown :
         ECk_Timer_CountDirection::CountUp;
@@ -158,24 +167,18 @@ auto
 auto
     UCk_Utils_Timer_UE::
     Get_Behavior(
-        FCk_Handle   InTimerEntity)
+        const FCk_Handle_Timer& InTimerEntity)
     -> ECk_Timer_Behavior
 {
-    if (NOT Ensure(InTimerEntity))
-    { return {}; }
-
     return InTimerEntity.Get<ck::FFragment_Timer_Params>().Get_Params().Get_Behavior();
 }
 
 auto
     UCk_Utils_Timer_UE::
     Get_CurrentTimerValue(
-        FCk_Handle   InTimerEntity)
+        const FCk_Handle_Timer& InTimerEntity)
     -> FCk_Chrono
 {
-    if (NOT Ensure(InTimerEntity))
-    { return {}; }
-
     return InTimerEntity.Get<ck::FFragment_Timer_Current>().Get_Chrono();
 }
 
@@ -185,14 +188,14 @@ auto
         FCk_Handle                 InTimerOwnerEntity,
         const FInstancedStruct&    InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
-    -> TArray<FCk_Handle>
+    -> TArray<FCk_Handle_Timer>
 {
-    auto Timers = TArray<FCk_Handle>{};
+    auto Timers = TArray<FCk_Handle_Timer>{};
 
-    ForEach_Timer(InTimerOwnerEntity, [&](FCk_Handle InTimer)
+    ForEach_Timer(InTimerOwnerEntity, [&](FCk_Handle_Timer InTimer)
     {
         if (InDelegate.IsBound())
-        { InDelegate.Execute(InTimer, InOptionalPayload); }
+        { InDelegate.Execute(InTimer.Get_RawHandle(), InOptionalPayload); }
         else
         { Timers.Emplace(InTimer); }
     });
@@ -204,7 +207,7 @@ auto
     UCk_Utils_Timer_UE::
     ForEach_Timer(
         FCk_Handle InTimerOwnerEntity,
-        const TFunction<void(FCk_Handle)>& InFunc)
+        const TFunction<void(FCk_Handle_Timer)>& InFunc)
     -> void
 {
     if (NOT RecordOfTimers_Utils::Has(InTimerOwnerEntity))
@@ -215,7 +218,7 @@ auto
         InTimerOwnerEntity,
         [&](const FCk_Handle& InTimerEntity)
         {
-            InFunc(InTimerEntity);
+            InFunc(Conv_HandleToTimer(InTimerEntity));
         }
     );
 }
@@ -225,13 +228,9 @@ auto
 auto
     UCk_Utils_Timer_UE::
     Request_Reset(
-        FCk_Handle InTimerEntity)
+        FCk_Handle_Timer& InTimerEntity)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
-
     InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(
         FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Reset});
 }
@@ -239,12 +238,9 @@ auto
 auto
     UCk_Utils_Timer_UE::
     Request_Complete(
-        FCk_Handle   InTimerEntity)
+        FCk_Handle_Timer& InTimerEntity)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
     InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(
         FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Complete});
 }
@@ -252,12 +248,9 @@ auto
 auto
     UCk_Utils_Timer_UE::
     Request_Stop(
-        FCk_Handle InTimerEntity)
+        FCk_Handle_Timer& InTimerEntity)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
     InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(
         FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Stop});
 }
@@ -265,13 +258,9 @@ auto
 auto
     UCk_Utils_Timer_UE::
     Request_Pause(
-        FCk_Handle InTimerEntity)
+        FCk_Handle_Timer& InTimerEntity)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
-
     InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(
         FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Pause});
 }
@@ -279,52 +268,40 @@ auto
 auto
     UCk_Utils_Timer_UE::
     Request_Resume(
-        FCk_Handle InTimerEntity)
+        FCk_Handle_Timer& InTimerEntity)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
-
-    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Resume});
+    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(
+        FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Resume});
 }
 
 auto
     UCk_Utils_Timer_UE::
     Request_Jump(
-        FCk_Handle             InTimerEntity,
+        FCk_Handle_Timer& InTimerEntity,
         FCk_Request_Timer_Jump InRequest)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
     InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(InRequest);
 }
 
 auto
     UCk_Utils_Timer_UE::
     Request_Consume(
-        FCk_Handle                InTimerEntity,
+        FCk_Handle_Timer& InTimerEntity,
         FCk_Request_Timer_Consume InRequest)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
     InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(InRequest);
 }
 
 auto
     UCk_Utils_Timer_UE::
     Request_ChangeCountDirection(
-        FCk_Handle               InTimerEntity,
+        FCk_Handle_Timer& InTimerEntity,
         ECk_Timer_CountDirection InCountDirection)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
     switch(InCountDirection)
     {
         case ECk_Timer_CountDirection::CountUp:
@@ -343,12 +320,9 @@ auto
 auto
     UCk_Utils_Timer_UE::
     Request_ReverseDirection(
-        FCk_Handle   InTimerEntity)
+        FCk_Handle_Timer& InTimerEntity)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
     if (InTimerEntity.Has<ck::FTag_Timer_Countdown>())
     { InTimerEntity.Remove<ck::FTag_Timer_Countdown>(); }
     else
@@ -360,189 +334,147 @@ auto
 auto
     UCk_Utils_Timer_UE::
     BindTo_OnReset(
-        FCk_Handle InTimerEntity,
-        ECk_Signal_BindingPolicy  InBindingPolicy,
+        FCk_Handle_Timer& InTimerEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
     ck::UUtils_Signal_OnTimerReset::Bind(InTimerEntity, InDelegate, InBindingPolicy);
 }
 
 auto
     UCk_Utils_Timer_UE::
     BindTo_OnStop(
-        FCk_Handle InTimerEntity,
-        ECk_Signal_BindingPolicy  InBindingPolicy,
+        FCk_Handle_Timer& InTimerEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
     ck::UUtils_Signal_OnTimerStop::Bind(InTimerEntity, InDelegate, InBindingPolicy);
 }
 
 auto
     UCk_Utils_Timer_UE::
     BindTo_OnPause(
-        FCk_Handle InTimerEntity,
-        ECk_Signal_BindingPolicy  InBindingPolicy,
+        FCk_Handle_Timer& InTimerEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
     ck::UUtils_Signal_OnTimerPause::Bind(InTimerEntity, InDelegate, InBindingPolicy);
 }
 
 auto
     UCk_Utils_Timer_UE::
     BindTo_OnResume(
-        FCk_Handle InTimerEntity,
-        ECk_Signal_BindingPolicy  InBindingPolicy,
+        FCk_Handle_Timer& InTimerEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
     ck::UUtils_Signal_OnTimerResume::Bind(InTimerEntity, InDelegate, InBindingPolicy);
 }
 
 auto
     UCk_Utils_Timer_UE::
     BindTo_OnDone(
-        FCk_Handle InTimerEntity,
-        ECk_Signal_BindingPolicy  InBindingPolicy,
+        FCk_Handle_Timer& InTimerEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
     ck::UUtils_Signal_OnTimerDone::Bind(InTimerEntity, InDelegate, InBindingPolicy);
 }
 
 auto
     UCk_Utils_Timer_UE::
     BindTo_OnDepleted(
-        FCk_Handle                InTimerEntity,
-        ECk_Signal_BindingPolicy  InBindingPolicy,
+        FCk_Handle_Timer& InTimerEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
     ck::UUtils_Signal_OnTimerDepleted::Bind(InTimerEntity, InDelegate, InBindingPolicy);
 }
 
 auto
     UCk_Utils_Timer_UE::
     BindTo_OnUpdate(
-        FCk_Handle InTimerEntity,
+        FCk_Handle_Timer& InTimerEntity,
         ECk_Signal_BindingPolicy  InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
     ck::UUtils_Signal_OnTimerUpdate::Bind(InTimerEntity, InDelegate, InBindingPolicy);
 }
 
 auto
     UCk_Utils_Timer_UE::
     UnbindFrom_OnReset(
-        FCk_Handle InTimerEntity,
+        FCk_Handle_Timer& InTimerEntity,
         const FCk_Delegate_Timer& InDelegate)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
     ck::UUtils_Signal_OnTimerReset::Unbind(InTimerEntity, InDelegate);
 }
 
 auto
     UCk_Utils_Timer_UE::
     UnbindFrom_OnStop(
-        FCk_Handle InTimerEntity,
+        FCk_Handle_Timer& InTimerEntity,
         const FCk_Delegate_Timer& InDelegate)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
     ck::UUtils_Signal_OnTimerStop::Unbind(InTimerEntity, InDelegate);
 }
 
 auto
     UCk_Utils_Timer_UE::
     UnbindFrom_OnPause(
-        FCk_Handle InTimerEntity,
+        FCk_Handle_Timer& InTimerEntity,
         const FCk_Delegate_Timer& InDelegate)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
     ck::UUtils_Signal_OnTimerPause::Unbind(InTimerEntity, InDelegate);
 }
 
 auto
     UCk_Utils_Timer_UE::
     UnbindFrom_OnResume(
-        FCk_Handle InTimerEntity,
+        FCk_Handle_Timer& InTimerEntity,
         const FCk_Delegate_Timer& InDelegate)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
     ck::UUtils_Signal_OnTimerResume::Unbind(InTimerEntity, InDelegate);
 }
 
 auto
     UCk_Utils_Timer_UE::
     UnbindFrom_OnDone(
-        FCk_Handle InTimerEntity,
+        FCk_Handle_Timer& InTimerEntity,
         const FCk_Delegate_Timer& InDelegate)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
     ck::UUtils_Signal_OnTimerDone::Unbind(InTimerEntity, InDelegate);
 }
 
 auto
     UCk_Utils_Timer_UE::
     UnbindFrom_OnDepleted(
-        FCk_Handle                InTimerEntity,
+        FCk_Handle_Timer& InTimerEntity,
         const FCk_Delegate_Timer& InDelegate)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
     ck::UUtils_Signal_OnTimerDepleted::Unbind(InTimerEntity, InDelegate);
 }
 
 auto
     UCk_Utils_Timer_UE::
     UnbindFrom_OnUpdate(
-        FCk_Handle InTimerEntity,
+        FCk_Handle_Timer& InTimerEntity,
         const FCk_Delegate_Timer& InDelegate)
     -> void
 {
-    if (NOT Ensure(InTimerEntity))
-    { return; }
-
     ck::UUtils_Signal_OnTimerUpdate::Unbind(InTimerEntity, InDelegate);
 }
 

@@ -137,12 +137,16 @@ CK_DEFINE_CUSTOM_FORMATTER(FAssetData, [&]()
 CK_DEFINE_CUSTOM_FORMATTER(UObject, [&]()
 {
     //  TODO: drive the verbosity through an Editor setting
+<<<<<<< Updated upstream
     return UCk_Utils_Debug_UE::Get_DebugName(&InObj, ECk_DebugNameVerbosity_Policy::Compact);
+=======
+    return UCk_Utils_Debug_UE::Get_DebugName(&InObj);
+>>>>>>> Stashed changes
 });
 
-CK_DEFINE_CUSTOM_FORMATTER_PTR_FORWARDER(UObject, []() -> const UObject&
+CK_DEFINE_CUSTOM_FORMATTER_PTR_FORWARDER(UObject, [&]() -> const UObject&
 {
-    return *UObject::StaticClass()->GetDefaultObject<UObject>();
+    return *InObj;
 });
 
 CK_DEFINE_CUSTOM_FORMATTER(UActorComponent, [&]()
@@ -150,9 +154,9 @@ CK_DEFINE_CUSTOM_FORMATTER(UActorComponent, [&]()
     return UCk_Utils_Debug_UE::Get_DebugName(&InObj);
 });
 
-CK_DEFINE_CUSTOM_FORMATTER_PTR_FORWARDER(UActorComponent, []() -> const UActorComponent&
+CK_DEFINE_CUSTOM_FORMATTER_PTR_FORWARDER(UActorComponent, [&]() -> const UActorComponent&
 {
-    return *UActorComponent::StaticClass()->GetDefaultObject<UActorComponent>();
+    return *InObj;
 });
 
 CK_DEFINE_CUSTOM_FORMATTER(AActor, [&]()
@@ -160,9 +164,9 @@ CK_DEFINE_CUSTOM_FORMATTER(AActor, [&]()
     return UCk_Utils_Debug_UE::Get_DebugName(&InObj);
 });
 
-CK_DEFINE_CUSTOM_FORMATTER_PTR_FORWARDER(AActor, []() -> const AActor&
+CK_DEFINE_CUSTOM_FORMATTER_PTR_FORWARDER(AActor, [&]() -> const AActor&
 {
-    return *AActor::StaticClass()->GetDefaultObject<AActor>();
+    return *InObj;
 });
 
 CK_DEFINE_CUSTOM_FORMATTER(UClass, [&]()
@@ -170,9 +174,9 @@ CK_DEFINE_CUSTOM_FORMATTER(UClass, [&]()
     return UCk_Utils_Debug_UE::Get_DebugName(&InObj);
 });
 
-CK_DEFINE_CUSTOM_FORMATTER_PTR_FORWARDER(UClass, []() -> const UClass&
+CK_DEFINE_CUSTOM_FORMATTER_PTR_FORWARDER(UClass, [&]() -> const UClass&
 {
-    return *UClass::StaticClass()->GetDefaultObject<UClass>();
+    return *InObj;
 });
 
 CK_DEFINE_CUSTOM_FORMATTER(UFunction, [&]()
