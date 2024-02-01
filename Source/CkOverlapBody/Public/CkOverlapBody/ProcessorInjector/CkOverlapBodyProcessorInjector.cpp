@@ -15,6 +15,7 @@ auto
     InWorld.Add<ck::FProcessor_Sensor_Setup>(InWorld.Get_Registry());
 
     InWorld.Add<ck::FProcessor_Marker_HandleRequests>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Marker_Teardown>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Sensor_HandleRequests>(InWorld.Get_Registry());
 }
 

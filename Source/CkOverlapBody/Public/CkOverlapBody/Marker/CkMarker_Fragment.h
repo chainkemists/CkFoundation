@@ -52,6 +52,7 @@ namespace ck
     public:
         friend class FProcessor_Marker_Setup;
         friend class FProcessor_Marker_HandleRequests;
+        friend class FProcessor_Marker_Teardown;
         friend class UCk_Utils_Marker_UE;
         friend class UCk_Utils_MarkerAndSensor_UE;
 
