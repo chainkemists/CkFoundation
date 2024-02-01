@@ -51,6 +51,23 @@ auto
 
 auto
     UCk_Utils_Ability_UE::
+    Get_DisplayName(
+        FCk_Handle InAbilityEntity)
+    -> FName
+{
+    if (NOT Ensure(InAbilityEntity))
+    { return {}; }
+
+    const auto& AbilityParams = InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params().Get_Data();
+
+    if (AbilityParams.Get_HasDisplayName())
+    { return AbilityParams.Get_DisplayName(); }
+
+    return AbilityParams.Get_AbilityName().GetTagName();
+}
+
+auto
+    UCk_Utils_Ability_UE::
     Get_ActivationSettings(
         FCk_Handle InAbilityEntity)
     -> FCk_Ability_ActivationSettings
