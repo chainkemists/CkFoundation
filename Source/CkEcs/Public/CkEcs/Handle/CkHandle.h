@@ -49,6 +49,13 @@ public:
     FCk_Handle(ThisType&& InOther) noexcept;
     FCk_Handle(const ThisType& InOther);
 
+    // this is a special hard-coded function that expects the type-safe handle to have a particular function
+    template <typename T_WrappedHandle, class = std::enable_if_t<std::is_base_of_v<FCk_Handle, T_WrappedHandle>>>
+    FCk_Handle(const T_WrappedHandle& InTypeSafeHandle)
+        : FCk_Handle(InTypeSafeHandle.Get_RawHandle())
+    { }
+
+
     auto operator=(ThisType InOther) -> ThisType&;
     // auto operator=(ThisType&& InOther) -> ThisType&; // intentionally not implemented
 
@@ -131,6 +138,10 @@ public:
     auto Get_Registry() -> FCk_Registry&;
     auto Get_Registry() const -> const FCk_Registry&;
 
+    // these functions are pass-throughs and exist to support our type-safe Handles paradigm
+    auto Get_RawHandle() -> ThisType&;
+    auto Get_RawHandle() const -> const ThisType&;
+
 private:
     auto DoUpdate_FragmentDebugInfo_Blueprints() -> void;
 
@@ -177,6 +188,9 @@ namespace ck
 
     auto CKECS_API GetEntity(FCk_Entity InEntity) -> FCk_Entity;
     auto CKECS_API GetEntity(FCk_Handle InEntity) -> FCk_Entity;
+
+    template <typename T_DerivedHandle>
+    auto Cast(const FCk_Handle& InHandle) -> T_DerivedHandle;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -623,6 +637,22 @@ auto
 
     _Mapper = &_Registry->AddOrGet<FEntity_FragmentMapper>(_Entity);
     _Mapper->Remove_FragmentInfo<T_Fragment>();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    template <typename T_DerivedHandle>
+    auto
+        Cast(
+            const FCk_Handle& InHandle) -> T_DerivedHandle
+    {
+        static_assert(requires(const T_DerivedHandle& T) { T.Get_RawHandle(); }, "T_DerivedHandle MUST be type-safe Handle");
+        static_assert(sizeof(T_DerivedHandle) == sizeof(InHandle), "T_DerivedHandle MUST be the same size as FCk_Handle");
+
+        return T_DerivedHandle{};
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

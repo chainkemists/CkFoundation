@@ -19,33 +19,35 @@ namespace ck
         using ConnectionType = typename SignalType::ConnectionType;
 
     public:
-        static auto Has(FCk_Handle InHandle) -> bool;
+        template <typename T_HandleType>
+        static auto Has(const T_HandleType& InHandle) -> bool;
 
-        template <typename... T_Args>
-        static auto Broadcast(FCk_Handle InHandle, TPayload<T_Args...>&& InPayload);
+        template <typename T_HandleType, typename... T_Args>
+        static auto Broadcast(T_HandleType InHandle, TPayload<T_Args...>&& InPayload);
 
-        template <auto T_Candidate, ECk_Signal_BindingPolicy InPayloadInFlightBehavior, ECk_Signal_PostFireBehavior InPostFireBehavior>
+        template <auto T_Candidate, ECk_Signal_BindingPolicy InPayloadInFlightBehavior, ECk_Signal_PostFireBehavior InPostFireBehavior,
+            typename T_HandleType>
         [[nodiscard]]
-        static auto Bind(FCk_Handle InHandle);
+        static auto Bind(T_HandleType InHandle);
 
         template <auto T_Candidate,  ECk_Signal_BindingPolicy InPayloadInFlightBehavior, ECk_Signal_PostFireBehavior InPostFireBehavior,
-            typename T_Instance>
+            typename T_Instance, typename T_HandleType>
         [[nodiscard]]
-        static auto Bind(T_Instance&& InInstance, FCk_Handle InHandle);
+        static auto Bind(T_Instance&& InInstance, T_HandleType InHandle);
 
-        template <auto T_Candidate>
-        static auto Bind(FCk_Handle InHandle, ECk_Signal_BindingPolicy InPayloadInFlightBehavior, ECk_Signal_PostFireBehavior InPostFireBehavior);
+        template <auto T_Candidate, typename T_HandleType>
+        static auto Bind(T_HandleType InHandle, ECk_Signal_BindingPolicy InPayloadInFlightBehavior, ECk_Signal_PostFireBehavior InPostFireBehavior);
 
-        template <auto T_Candidate, typename T_Instance>
+        template <auto T_Candidate, typename T_Instance, typename T_HandleType>
         [[nodiscard]]
-        static auto Bind(T_Instance&& InInstance, FCk_Handle InHandle, ECk_Signal_BindingPolicy InPayloadInFlightBehavior,
+        static auto Bind(T_Instance&& InInstance, T_HandleType InHandle, ECk_Signal_BindingPolicy InPayloadInFlightBehavior,
             ECk_Signal_PostFireBehavior InPostFireBehavior);
 
-        template <auto T_Candidate>
-        static auto Unbind(FCk_Handle InHandle);
+        template <auto T_Candidate, typename T_HandleType>
+        static auto Unbind(T_HandleType InHandle);
 
-        template <auto T_Candidate, typename T_Instance>
-        static auto Unbind(T_Instance&& InInstance, FCk_Handle InHandle);
+        template <auto T_Candidate, typename T_Instance, typename T_HandleType>
+        static auto Unbind(T_Instance&& InInstance, T_HandleType InHandle);
     };
 }
 
@@ -70,21 +72,23 @@ namespace ck
         using Super::Bind;
         using Super::Unbind;
 
-        template <ECk_Signal_BindingPolicy T_PayloadInFlightBehavior>
+        template <ECk_Signal_BindingPolicy T_PayloadInFlightBehavior, typename T_HandleType>
         static auto
         Bind(
-            FCk_Handle InHandle,
+            T_HandleType InHandle,
             UnrealDynamicDelegateType InDelegate);
 
+        template <typename T_HandleType>
         static auto
         Bind(
-            FCk_Handle InHandle,
+            T_HandleType InHandle,
             UnrealDynamicDelegateType InDelegate,
             ECk_Signal_BindingPolicy InPayloadInFlightBehavior);
 
+        template <typename T_HandleType>
         static auto
         Unbind(
-            FCk_Handle InHandle,
+            T_HandleType InHandle,
             UnrealDynamicDelegateType InDelegate);
     };
 

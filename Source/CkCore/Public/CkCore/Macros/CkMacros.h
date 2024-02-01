@@ -142,6 +142,11 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#define CK_USING_BASE_CONSTRUCTORS(_InObject_)\
+    using _InObject_::_InObject_
+
+// --------------------------------------------------------------------------------------------------------------------
+
 #define CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(_InObject_)\
     bool operator !=(_InObject_ const& InOther) const { return NOT (operator==(InOther)); }
 
@@ -149,11 +154,21 @@ namespace ck
     _Template_\
     bool operator !=(_InObject_ const& InOther) const { return NOT (operator==(InOther)); }
 
+#define CK_USING_OPERATORS_EQUAL_NOT_EQUAL(_InObject_)\
+    using _InObject_::operator==;\
+    using _InObject_::operator!=
+
 #define CK_DECL_AND_DEF_OPERATORS(_InObject_)\
     CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(_InObject_)\
     bool operator > (_InObject_ const& InOther) const { return InOther.operator<(*this); }\
     bool operator <=(_InObject_ const& InOther) const { return NOT (operator>(InOther)); }\
     bool operator >=(_InObject_ const& InOther) const { return NOT (operator<(InOther)); }
+
+#define CK_USING_OPERATORS(_InObject_)\
+    CK_USING_OPERATORS_EQUAL_NOT_EQUAL(_InObject_);\
+    using _InObject_::operator>;\
+    using _InObject_::operator<=;\
+    using _InObject_::operator>=
 
 #define CK_DECL_AND_DEF_OPERATORS_T(_Template_, _InObject_)\
     CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL_T(_Template_, _InObject_)\

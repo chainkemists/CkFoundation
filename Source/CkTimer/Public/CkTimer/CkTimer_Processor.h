@@ -10,8 +10,8 @@
 namespace ck
 {
     class CKTIMER_API FProcessor_Timer_HandleRequests
-        : public TProcessor<FProcessor_Timer_HandleRequests, FFragment_Timer_Current, FFragment_Timer_Params, FFragment_Timer_Requests,
-            CK_IGNORE_PENDING_KILL>
+        : public ck_exp::TProcessor<FProcessor_Timer_HandleRequests, FCk_Handle_Timer,
+            FFragment_Timer_Current, FFragment_Timer_Params, FFragment_Timer_Requests, CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FFragment_Timer_Requests;
@@ -54,11 +54,12 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKTIMER_API FProcessor_Timer_Update
-        : public TProcessor<FProcessor_Timer_Update, FFragment_Timer_Params, FFragment_Timer_Current, FTag_Timer_NeedsUpdate,
-            ck::TExclude<FTag_Timer_Countdown>, CK_IGNORE_PENDING_KILL>
+        : public ck_exp::TProcessor<FProcessor_Timer_Update, FCk_Handle_Timer, FFragment_Timer_Params,
+            FFragment_Timer_Current, FTag_Timer_NeedsUpdate, ck::TExclude<FTag_Timer_Countdown>, CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FTag_Timer_NeedsUpdate;
+        using HandleType = FCk_Handle_Timer;
 
     public:
         using TProcessor::TProcessor;
@@ -75,11 +76,12 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKTIMER_API FProcessor_Timer_Update_Countdown
-        : public TProcessor<FProcessor_Timer_Update_Countdown, FFragment_Timer_Params, FFragment_Timer_Current, FTag_Timer_NeedsUpdate,
-            FTag_Timer_Countdown, CK_IGNORE_PENDING_KILL>
+        : public ck_exp::TProcessor<FProcessor_Timer_Update_Countdown, FCk_Handle_Timer, FFragment_Timer_Params,
+            FFragment_Timer_Current, FTag_Timer_NeedsUpdate, FTag_Timer_Countdown, CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FTag_Timer_NeedsUpdate;
+        using HandleType = FCk_Handle_Timer;
 
     public:
         using TProcessor::TProcessor;
