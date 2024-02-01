@@ -442,22 +442,19 @@ namespace ck
             const auto& AttachmentParams = Params.Get_AttachmentParams();
             const auto& BoneName         = AttachmentParams.Get_BoneName();
 
-            const auto& AttachedActorSkeletalMeshComponent = SensorAttachedActor->FindComponentByClass<USkeletalMeshComponent>();
-
-            const auto& SocketBoneName = AttachedActorSkeletalMeshComponent->GetSocketBoneName(BoneName);
-            const auto& BoneIndex      = AttachedActorSkeletalMeshComponent->GetBoneIndex(SocketBoneName);
-
-            CK_ENSURE_IF_NOT(BoneIndex != INDEX_NONE,
+            CK_ENSURE_IF_NOT(UCk_Utils_Actor_UE::Get_DoesBoneExistInSkeletalMesh(SensorAttachedActor.Get(), BoneName),
                 TEXT("Sensor Entity [{}] cannot update its Transform according to Bone [{}] because its Attached Actor [{}] does NOT have it in its Skeletal Mesh"),
                 InSensorEntity,
                 BoneName,
                 SensorAttachedEntityAndActor)
             { return {}; }
 
-            const auto& AttachedActorTransform  = SensorAttachedActor->GetTransform();
-            const auto& AttachmentPolicy = AttachmentParams.Get_AttachmentPolicy();
-
-            auto SkeletonTransform = AttachedActorSkeletalMeshComponent->GetBoneTransform(BoneIndex);
+            const auto& AttachedActorSkeletalMeshComponent = SensorAttachedActor->FindComponentByClass<USkeletalMeshComponent>();
+            const auto& AttachedActorTransform             = SensorAttachedActor->GetTransform();
+            const auto& AttachmentPolicy                   = AttachmentParams.Get_AttachmentPolicy();
+            const auto& SocketBoneName                     = AttachedActorSkeletalMeshComponent->GetSocketBoneName(BoneName);
+            const auto& BoneIndex                          = AttachedActorSkeletalMeshComponent->GetBoneIndex(SocketBoneName);
+            auto SkeletonTransform                         = AttachedActorSkeletalMeshComponent->GetBoneTransform(BoneIndex);
 
             if (NOT EnumHasAnyFlags(AttachmentPolicy, ECk_Sensor_AttachmentPolicy::UseBoneRotation))
             {
