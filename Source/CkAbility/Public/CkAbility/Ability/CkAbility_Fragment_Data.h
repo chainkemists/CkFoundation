@@ -17,13 +17,27 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
-enum class ECk_Ability_ActivationPolicy : uint8
+enum class ECk_Ability_Activation_Policy : uint8
 {
     ActivateManually,
     ActivateOnGranted
 };
 
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_ActivationPolicy);
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_Activation_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Ability_ActivationTrigger_Policy : uint8
+{
+    // Attempt to Activate the Ability based on AbilityEvents received by the Ability Owner
+    TriggeredByEvent,
+
+    // Attempt to Activate the Ability any time tags are added or removed
+    TriggeredAutomatically
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_ActivationTrigger_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -163,7 +177,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_Ability_ActivationPolicy _ActivationPolicy = ECk_Ability_ActivationPolicy::ActivateManually;
+    ECk_Ability_Activation_Policy _ActivationPolicy = ECk_Ability_Activation_Policy::ActivateManually;
 
     // Tags on AbilityOwner that affect this Ability
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

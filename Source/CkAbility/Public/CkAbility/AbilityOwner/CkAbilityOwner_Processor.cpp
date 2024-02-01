@@ -44,7 +44,10 @@ namespace ck
         }
 
         // If we, as an AbilityOwner, are also an Ability, then we need to Give the contained Ability to ourselves so that
-        // we have it as one of the granted abilities
+        // we have it as one of the granted abilities. This should NEVER be exposed as a concept, it's only done here to
+        // simplify the following processors. The reason is that if we expose this as a concept then an ability can live
+        // on 2 'levels', i.e. An entity that is an Ability will have companion abilities (same level) AND will live in
+        // the list of sub-abilities (this is bad)
         if (UCk_Utils_Ability_UE::Has(InHandle))
         {
             UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Request_Connect(InHandle, InHandle);
@@ -176,7 +179,7 @@ namespace ck
             UCk_Utils_Ability_UE::DoGive(InAbilityOwnerEntity, InAbilityEntity);
 
             if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityEntity).Get_ActivationPolicy();
-                ActivationPolicy == ECk_Ability_ActivationPolicy::ActivateOnGranted)
+                ActivationPolicy == ECk_Ability_Activation_Policy::ActivateOnGranted)
             {
                 // TODO: Activation Context Entity for SelfActivating Abilities is the Owner of the Ability
                 UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(InAbilityOwnerEntity,
@@ -211,7 +214,7 @@ namespace ck
 
         switch (const auto& SearchPolicy = InRequest.Get_SearchPolicy())
         {
-            case ECk_AbilityOwner_AbilitySearchPolicy::SearchByClass:
+            case ECk_AbilityOwner_AbilitySearch_Policy::SearchByClass:
             {
                 const auto& FoundAbilityEntity = DoFindAbilityByClass(InAbilityOwnerEntity, InRequest.Get_AbilityClass());
 
@@ -222,7 +225,7 @@ namespace ck
 
                 break;
             }
-            case ECk_AbilityOwner_AbilitySearchPolicy::SearchByHandle:
+            case ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle:
             {
                 const auto& FoundAbilityEntity = DoFindAbilityByHandle(InAbilityOwnerEntity, InRequest.Get_AbilityHandle());
 
@@ -268,6 +271,7 @@ namespace ck
                     );
 
                     InAbilityOwnerComp.AppendTags(GrantedTags);
+                    UUtils_Signal_AbilityOwner_OnTagsUpdated::Broadcast(InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityOwnerComp.Get_ActiveTags()));
 
                     break;
                 }
@@ -334,7 +338,7 @@ namespace ck
             UCk_Utils_AbilityOwner_UE::ForEach_Ability_If
             (
                 InAbilityOwnerEntity,
-                ECk_AbilityOwner_ForEachAbilityPolicy::IgnoreSelf,
+                ECk_AbilityOwner_ForEachAbility_Policy::IncludeSelfIfApplicable,
                 [&](const FCk_Handle& InAbilityEntityToCancel)
                 {
                     ability::Verbose
@@ -398,7 +402,7 @@ namespace ck
 
         switch (const auto& SearchPolicy = InRequest.Get_SearchPolicy())
         {
-            case ECk_AbilityOwner_AbilitySearchPolicy::SearchByClass:
+            case ECk_AbilityOwner_AbilitySearch_Policy::SearchByClass:
             {
                 const auto& FoundAbilityEntity = DoFindAbilityByClass(InAbilityOwnerEntity, InRequest.Get_AbilityClass());
 
@@ -409,7 +413,7 @@ namespace ck
 
                 break;
             }
-            case ECk_AbilityOwner_AbilitySearchPolicy::SearchByHandle:
+            case ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle:
             {
                 const auto& FoundAbilityEntity = DoFindAbilityByHandle(InAbilityOwnerEntity, InRequest.Get_AbilityHandle());
 
@@ -445,6 +449,7 @@ namespace ck
             const auto& GrantedTags = AbilityActivationSettings.Get_ActivationSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
 
             InAbilityOwnerComp.RemoveTags(GrantedTags);
+            UUtils_Signal_AbilityOwner_OnTagsUpdated::Broadcast(InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityOwnerComp.Get_ActiveTags()));
 
             ability::VeryVerbose
             (
@@ -460,7 +465,7 @@ namespace ck
 
         switch (const auto& SearchPolicy = InRequest.Get_SearchPolicy())
         {
-            case ECk_AbilityOwner_AbilitySearchPolicy::SearchByClass:
+            case ECk_AbilityOwner_AbilitySearch_Policy::SearchByClass:
             {
                 const auto& FoundAbilityEntity = DoFindAbilityByClass(InAbilityOwnerEntity, InRequest.Get_AbilityClass());
 
@@ -471,7 +476,7 @@ namespace ck
 
                 break;
             }
-            case ECk_AbilityOwner_AbilitySearchPolicy::SearchByHandle:
+            case ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle:
             {
                 const auto& FoundAbilityEntity = DoFindAbilityByHandle(InAbilityOwnerEntity, InRequest.Get_AbilityHandle());
 
