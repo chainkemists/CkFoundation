@@ -124,7 +124,7 @@ namespace ck
             { return; }
 
             InCurrentComp._EnableDisable = NewEnableDisable;
-            const auto& collisionEnabled = NewEnableDisable == ECk_EnableDisable::Enable
+            const auto& CollisionEnabled = NewEnableDisable == ECk_EnableDisable::Enable
                                              ? ECollisionEnabled::QueryOnly
                                              : ECollisionEnabled::NoCollision;
 
@@ -133,12 +133,36 @@ namespace ck
             const auto& Marker     = InCurrentComp.Get_Marker().Get();
 
             UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(Marker, NewEnableDisable);
-            UCk_Utils_Physics_UE::Request_SetCollisionEnabled(Marker, collisionEnabled);
+            UCk_Utils_Physics_UE::Request_SetCollisionEnabled(Marker, CollisionEnabled);
 
             UUtils_Signal_OnMarkerEnableDisable::Broadcast(InMarkerEntity, MakePayload(InCurrentComp.Get_AttachedEntityAndActor().Get_Handle(), MarkerName, NewEnableDisable));
         });
 
         InMarkerEntity.Remove<MarkedDirtyBy>();
+    }
+
+    auto
+        FProcessor_Marker_Teardown::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InMarkerEntity,
+            FFragment_Marker_Current& InCurrentComp,
+            const FFragment_Marker_Params& InParamsComp) const
+        -> void
+    {
+        if (InCurrentComp.Get_EnableDisable() == ECk_EnableDisable::Disable)
+        { return; }
+
+        InCurrentComp._EnableDisable = ECk_EnableDisable::Disable;
+
+        const auto& Params     = InParamsComp.Get_Params();
+        const auto& MarkerName = Params.Get_MarkerName();
+        const auto& Marker     = InCurrentComp.Get_Marker().Get();
+
+        UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(Marker, ECk_EnableDisable::Disable);
+        UCk_Utils_Physics_UE::Request_SetCollisionEnabled(Marker, ECollisionEnabled::NoCollision);
+
+        UUtils_Signal_OnMarkerEnableDisable::Broadcast(InMarkerEntity, MakePayload(InCurrentComp.Get_AttachedEntityAndActor().Get_Handle(), MarkerName, ECk_EnableDisable::Disable));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -171,22 +195,19 @@ namespace ck
             const auto& AttachmentParams = Params.Get_AttachmentParams();
             const auto& BoneName         = AttachmentParams.Get_BoneName();
 
-            const auto& AttachedActorSkeletalMeshComponent = MarkerAttachedActor->FindComponentByClass<USkeletalMeshComponent>();
-
-            const auto& SocketBoneName = AttachedActorSkeletalMeshComponent->GetSocketBoneName(BoneName);
-            const auto& BoneIndex      = AttachedActorSkeletalMeshComponent->GetBoneIndex(SocketBoneName);
-
-            CK_ENSURE_IF_NOT(BoneIndex != INDEX_NONE,
+            CK_ENSURE_IF_NOT(UCk_Utils_Actor_UE::Get_DoesBoneExistInSkeletalMesh(MarkerAttachedActor.Get(), BoneName),
                 TEXT("Marker Entity [{}] cannot update its Transform according to Bone [{}] because its Attached Actor [{}] does NOT have it in its Skeletal Mesh"),
                 InMarkerEntity,
                 BoneName,
                 MarkerAttachedEntityAndActor)
             { return {}; }
 
-            const auto AttachedActorTransform  = MarkerAttachedActor->GetTransform();
-            auto SkeletonTransform = AttachedActorSkeletalMeshComponent->GetBoneTransform(BoneIndex);
-
-            const auto& AttachmentPolicy = AttachmentParams.Get_AttachmentPolicy();
+            const auto& AttachedActorSkeletalMeshComponent = MarkerAttachedActor->FindComponentByClass<USkeletalMeshComponent>();
+            const auto& SocketBoneName                     = AttachedActorSkeletalMeshComponent->GetSocketBoneName(BoneName);
+            const auto& BoneIndex                          = AttachedActorSkeletalMeshComponent->GetBoneIndex(SocketBoneName);
+            const auto& AttachedActorTransform             = MarkerAttachedActor->GetTransform();
+            const auto& AttachmentPolicy                   = AttachmentParams.Get_AttachmentPolicy();
+            auto SkeletonTransform                         = AttachedActorSkeletalMeshComponent->GetBoneTransform(BoneIndex);
 
             if (NOT EnumHasAnyFlags(AttachmentPolicy, ECk_Marker_AttachmentPolicy::UseBoneRotation))
             {
@@ -232,10 +253,10 @@ namespace ck
             if (ck::Is_NOT_Valid(InMarkerCurrent.Get_Marker()))
             { return; }
 
-            const auto& markerName = InMarkerParams.Get_Params().Get_MarkerName();
-            const auto& outerForDebugDraw = InMarkerCurrent.Get_AttachedEntityAndActor().Get_Actor().Get();
+            const auto& MarkerName = InMarkerParams.Get_Params().Get_MarkerName();
+            const auto& OuterForDebugDraw = InMarkerCurrent.Get_AttachedEntityAndActor().Get_Actor().Get();
 
-            UCk_Utils_Marker_UE::Preview(outerForDebugDraw, FCk_Handle{ InMarkerEntity, _Registry }, markerName);
+            UCk_Utils_Marker_UE::Preview(OuterForDebugDraw, FCk_Handle{ InMarkerEntity, _Registry }, MarkerName);
         });
     }
 }

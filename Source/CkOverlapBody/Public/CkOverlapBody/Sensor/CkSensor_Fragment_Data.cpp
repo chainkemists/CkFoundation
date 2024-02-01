@@ -8,15 +8,15 @@
 
 namespace ck_sensor
 {
-    auto DoGet_OverlapBodyInfo(
-        const UPrimitiveComponent* InComp)
+    auto
+        DoGet_OverlapBodyInfo(
+            const UPrimitiveComponent* InComp)
         -> TTuple<ECk_OverlapBody_Type, const ICk_OverlapBody_Interface*>
     {
-        const auto* componentAsOverlapBody = Cast<ICk_OverlapBody_Interface>(InComp);
-
-        if (ck::IsValid(componentAsOverlapBody, ck::IsValid_Policy_NullptrOnly{}))
+        if (const auto* ComponentAsOverlapBody = Cast<ICk_OverlapBody_Interface>(InComp);
+            ck::IsValid(ComponentAsOverlapBody, ck::IsValid_Policy_NullptrOnly{}))
         {
-            return MakeTuple(componentAsOverlapBody->Get_Type(), componentAsOverlapBody);
+            return MakeTuple(ComponentAsOverlapBody->Get_Type(), ComponentAsOverlapBody);
         }
 
         return MakeTuple(ECk_OverlapBody_Type::Other, nullptr);
@@ -24,61 +24,62 @@ namespace ck_sensor
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    auto DoGet_Sensor_And_MarkerOrOverlapComp(
-        const UPrimitiveComponent* InCompA,
-        const UPrimitiveComponent* InCompB)
+    auto
+        DoGet_Sensor_And_MarkerOrOverlapComp(
+            const UPrimitiveComponent* InCompA,
+            const UPrimitiveComponent* InCompB)
         -> TTuple<const UPrimitiveComponent*, const ICk_OverlapBody_Interface*, const UPrimitiveComponent*, const ICk_OverlapBody_Interface*>
     {
-        const auto& [compA_OverlapBodyType, compA_AsOverlapBody] = DoGet_OverlapBodyInfo(InCompA);
-        const auto& [compB_OverlapBodyType, compB_AsOverlapBody] = DoGet_OverlapBodyInfo(InCompB);
+        const auto& [CompA_OverlapBodyType, CompA_AsOverlapBody] = DoGet_OverlapBodyInfo(InCompA);
+        const auto& [CompB_OverlapBodyType, CompB_AsOverlapBody] = DoGet_OverlapBodyInfo(InCompB);
 
-        CK_ENSURE_IF_NOT(compA_OverlapBodyType != compB_OverlapBodyType,
+        CK_ENSURE_IF_NOT(CompA_OverlapBodyType != CompB_OverlapBodyType,
             TEXT("OverlappedComponent [{}] and OtherComp [{}] both have the same OverlapBody type [{}] during BeginOverlap/EndOverlap event!"),
             InCompA,
             InCompB,
-            compA_OverlapBodyType)
+            CompA_OverlapBodyType)
         { return {}; }
 
-        if (compA_OverlapBodyType == ECk_OverlapBody_Type::Sensor)
+        if (CompA_OverlapBodyType == ECk_OverlapBody_Type::Sensor)
         {
-            const auto& sensorComp          = InCompA;
-            const auto& sensorOverlapBody   = compA_AsOverlapBody;
-            const auto& markerOrOverlapComp = InCompB;
-            const auto& markerOverlapBody   = compB_AsOverlapBody;
+            const auto& SensorComp          = InCompA;
+            const auto& SensorOverlapBody   = CompA_AsOverlapBody;
+            const auto& MarkerOrOverlapComp = InCompB;
+            const auto& MarkerOverlapBody   = CompB_AsOverlapBody;
 
-            if (ck::IsValid(markerOverlapBody, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::IsValid(MarkerOverlapBody, ck::IsValid_Policy_NullptrOnly{}))
             {
                 CK_ENSURE
                 (
-                    compB_OverlapBodyType == ECk_OverlapBody_Type::Marker,
+                    CompB_OverlapBodyType == ECk_OverlapBody_Type::Marker,
                     TEXT("Expected [{}] to be a Marker with the paired Sensor [{}]"),
-                    markerOrOverlapComp,
-                    sensorComp
+                    MarkerOrOverlapComp,
+                    SensorComp
                 );
             }
 
-            return MakeTuple(sensorComp, sensorOverlapBody, markerOrOverlapComp, markerOverlapBody);
+            return MakeTuple(SensorComp, SensorOverlapBody, MarkerOrOverlapComp, MarkerOverlapBody);
         }
 
-        if (compB_OverlapBodyType == ECk_OverlapBody_Type::Sensor)
+        if (CompB_OverlapBodyType == ECk_OverlapBody_Type::Sensor)
         {
-            const auto& sensorComp          = InCompB;
-            const auto& sensorOverlapBody   = compB_AsOverlapBody;
-            const auto& markerOrOverlapComp = InCompA;
-            const auto& markerOverlapBody   = compA_AsOverlapBody;
+            const auto& SensorComp          = InCompB;
+            const auto& SensorOverlapBody   = CompB_AsOverlapBody;
+            const auto& MarkerOrOverlapComp = InCompA;
+            const auto& MarkerOverlapBody   = CompA_AsOverlapBody;
 
-            if (ck::IsValid(markerOverlapBody, ck::IsValid_Policy_NullptrOnly{}))
+            if (ck::IsValid(MarkerOverlapBody, ck::IsValid_Policy_NullptrOnly{}))
             {
                 CK_ENSURE
                 (
-                    compA_OverlapBodyType == ECk_OverlapBody_Type::Marker,
+                    CompA_OverlapBodyType == ECk_OverlapBody_Type::Marker,
                     TEXT("Expected [{}] to be a Marker with the paired Sensor [{}]"),
-                    markerOrOverlapComp,
-                    sensorComp
+                    MarkerOrOverlapComp,
+                    SensorComp
                 );
             }
 
-            return MakeTuple(sensorComp, sensorOverlapBody, markerOrOverlapComp, markerOverlapBody);
+            return MakeTuple(SensorComp, SensorOverlapBody, MarkerOrOverlapComp, MarkerOverlapBody);
         }
 
         CK_TRIGGER_ENSURE(TEXT("BeginOverlap/EndOverlap event between CompA [{}] and CompB [{}] but none of them are Sensors"), InCompA, InCompB);
@@ -87,18 +88,19 @@ namespace ck_sensor
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    auto DoOnBeginOverlap(
-        UPrimitiveComponent* InOverlappedComponent,
-        AActor*              InOtherActor,
-        UPrimitiveComponent* InOtherComp,
-        int32                InOtherBodyIndex,
-        bool                 InFromSweep,
-        const FHitResult&    InHitResult)
-    -> void
+    auto
+        DoOnBeginOverlap(
+            UPrimitiveComponent* InOverlappedComponent,
+            AActor*              InOtherActor,
+            UPrimitiveComponent* InOtherComp,
+            int32                InOtherBodyIndex,
+            bool                 InFromSweep,
+            const FHitResult&    InHitResult)
+        -> void
     {
-        const auto& [sensorComp, sensorOverlapBody, markerOrOverlapComp, markerOverlapBody] = DoGet_Sensor_And_MarkerOrOverlapComp(InOverlappedComponent, InOtherComp);
+        const auto& [SensorComp, SensorOverlapBody, MarkerOrOverlapComp, MarkerOverlapBody] = DoGet_Sensor_And_MarkerOrOverlapComp(InOverlappedComponent, InOtherComp);
 
-        CK_ENSURE_IF_NOT(ck::IsValid(sensorComp) && ck::IsValid(markerOrOverlapComp),
+        CK_ENSURE_IF_NOT(ck::IsValid(SensorComp) && ck::IsValid(MarkerOrOverlapComp),
             TEXT("Failed to get Marker/OverlapComponent and Sensor from BeginOverlap event on Actor [{}] with Actor [{}] and Component [{}] with OtherComp [{}]"),
             InOverlappedComponent->GetOwner(),
             InOtherComp->GetOwner(),
@@ -106,37 +108,37 @@ namespace ck_sensor
             InOtherComp)
         { return; }
 
-        const auto& sensorCompAttachedActor = sensorComp->GetOwner();
-        const auto& markerCompAttachedActor = markerOrOverlapComp->GetOwner();
+        const auto& SensorCompAttachedActor = SensorComp->GetOwner();
+        const auto& MarkerCompAttachedActor = MarkerOrOverlapComp->GetOwner();
 
-        if (sensorComp->MoveIgnoreActors.Contains(markerCompAttachedActor))
+        if (SensorComp->MoveIgnoreActors.Contains(MarkerCompAttachedActor))
         {
-            CK_ENSURE_IF_NOT(sensorCompAttachedActor == markerCompAttachedActor,
+            CK_ENSURE_IF_NOT(SensorCompAttachedActor == MarkerCompAttachedActor,
                 TEXT("Received BeginOverlap on Actor [{}] with Actor [{}] and Component [{}] with OtherComp [{}] "
                      "where OtherComp is set to be ignored."),
-                sensorCompAttachedActor,
-                markerCompAttachedActor,
-                sensorComp,
-                markerOrOverlapComp)
+                SensorCompAttachedActor,
+                MarkerCompAttachedActor,
+                SensorComp,
+                MarkerOrOverlapComp)
             { return; }
         }
 
-        const auto& sensorAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(sensorCompAttachedActor);
-        const auto& sensorOwningEntity           = sensorOverlapBody->Get_OwningEntity();
-        const auto& sensorName                   = UCk_Utils_GameplayLabel_UE::Get_Label(sensorOwningEntity);
+        const auto& SensorAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(SensorCompAttachedActor);
+        const auto& SensorOwningEntity           = SensorOverlapBody->Get_OwningEntity();
+        const auto& SensorName                   = UCk_Utils_GameplayLabel_UE::Get_Label(SensorOwningEntity);
 
-        if (ck::Is_NOT_Valid(markerOverlapBody, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(MarkerOverlapBody, ck::IsValid_Policy_NullptrOnly{}))
         {
             UCk_Utils_Sensor_UE::Request_OnBeginOverlap_NonMarker
             (
-                sensorOwningEntity,
+                SensorOwningEntity,
                 FCk_Request_Sensor_OnBeginOverlap_NonMarker
                 {
                     FCk_Sensor_BasicDetails
                     {
-                        sensorName,
-                        sensorOwningEntity,
-                        sensorAttachedEntityAndActor
+                        SensorName,
+                        SensorOwningEntity,
+                        SensorAttachedEntityAndActor
                     },
                     FCk_Sensor_BeginOverlap_UnrealDetails
                     {
@@ -150,26 +152,26 @@ namespace ck_sensor
             return;
         }
 
-        const auto& markerAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(markerCompAttachedActor);
-        const auto& markerOwningEntity           = markerOverlapBody->Get_OwningEntity();
-        const auto& markerName                   = UCk_Utils_GameplayLabel_UE::Get_Label(markerOwningEntity);
+        const auto& MarkerAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(MarkerCompAttachedActor);
+        const auto& MarkerOwningEntity           = MarkerOverlapBody->Get_OwningEntity();
+        const auto& MarkerName                   = UCk_Utils_GameplayLabel_UE::Get_Label(MarkerOwningEntity);
 
         UCk_Utils_Sensor_UE::Request_OnBeginOverlap
         (
-            sensorOwningEntity,
+            SensorOwningEntity,
             FCk_Request_Sensor_OnBeginOverlap
             {
                 FCk_Marker_BasicDetails
                 {
-                    markerName,
-                    markerOwningEntity,
-                    markerAttachedEntityAndActor
+                    MarkerName,
+                    MarkerOwningEntity,
+                    MarkerAttachedEntityAndActor
                 },
                 FCk_Sensor_BasicDetails
                 {
-                    sensorName,
-                    sensorOwningEntity,
-                    sensorAttachedEntityAndActor
+                    SensorName,
+                    SensorOwningEntity,
+                    SensorAttachedEntityAndActor
                 },
                 FCk_Sensor_BeginOverlap_UnrealDetails
                 {
@@ -183,16 +185,17 @@ namespace ck_sensor
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    auto DoOnEndOverlap(
-        UPrimitiveComponent* InOverlappedComponent,
-        AActor*              InOtherActor,
-        UPrimitiveComponent* InOtherComp,
-        int32                InOtherBodyIndex)
-    -> void
+    auto
+        DoOnEndOverlap(
+            UPrimitiveComponent* InOverlappedComponent,
+            AActor*              InOtherActor,
+            UPrimitiveComponent* InOtherComp,
+            int32                InOtherBodyIndex)
+        -> void
     {
-        const auto& [sensorComp, sensorOverlapBody, markerOrOverlapComp, markerOverlapBody] = DoGet_Sensor_And_MarkerOrOverlapComp(InOverlappedComponent, InOtherComp);
+        const auto& [SensorComp, SensorOverlapBody, MarkerOrOverlapComp, MarkerOverlapBody] = DoGet_Sensor_And_MarkerOrOverlapComp(InOverlappedComponent, InOtherComp);
 
-        CK_ENSURE_IF_NOT(ck::IsValid(sensorComp) && ck::IsValid(markerOrOverlapComp),
+        CK_ENSURE_IF_NOT(ck::IsValid(SensorComp) && ck::IsValid(MarkerOrOverlapComp),
             TEXT("Failed to get Marker/OverlapComponent and Sensor from BeginOverlap event on Actor [{}] with Actor [{}] and Component [{}] with OtherComp [{}]"),
             InOverlappedComponent->GetOwner(),
             InOtherComp->GetOwner(),
@@ -200,37 +203,37 @@ namespace ck_sensor
             InOtherComp)
         { return; }
 
-        const auto& sensorCompAttachedActor = sensorComp->GetOwner();
-        const auto& markerCompAttachedActor = markerOrOverlapComp->GetOwner();
+        const auto& SensorCompAttachedActor = SensorComp->GetOwner();
+        const auto& MarkerCompAttachedActor = MarkerOrOverlapComp->GetOwner();
 
-        if (sensorComp->MoveIgnoreActors.Contains(markerCompAttachedActor))
+        if (SensorComp->MoveIgnoreActors.Contains(MarkerCompAttachedActor))
         {
-            CK_ENSURE_IF_NOT(sensorCompAttachedActor == markerCompAttachedActor,
+            CK_ENSURE_IF_NOT(SensorCompAttachedActor == MarkerCompAttachedActor,
                 TEXT("Received BeginOverlap on Actor [{}] with Actor [{}] and Component [{}] with OtherComp [{}] "
                      "where OtherComp is set to be ignored."),
-                sensorCompAttachedActor,
-                markerCompAttachedActor,
-                sensorComp,
-                markerOrOverlapComp)
+                SensorCompAttachedActor,
+                MarkerCompAttachedActor,
+                SensorComp,
+                MarkerOrOverlapComp)
             { return; }
         }
 
-        const auto& sensorAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(sensorCompAttachedActor);
-        const auto& sensorOwningEntity           = sensorOverlapBody->Get_OwningEntity();
-        const auto& sensorName                   = UCk_Utils_GameplayLabel_UE::Get_Label(sensorOwningEntity);
+        const auto& SensorAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(SensorCompAttachedActor);
+        const auto& SensorOwningEntity           = SensorOverlapBody->Get_OwningEntity();
+        const auto& SensorName                   = UCk_Utils_GameplayLabel_UE::Get_Label(SensorOwningEntity);
 
-        if (ck::Is_NOT_Valid(markerOverlapBody, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(MarkerOverlapBody, ck::IsValid_Policy_NullptrOnly{}))
         {
             UCk_Utils_Sensor_UE::Request_OnEndOverlap_NonMarker
             (
-                sensorOwningEntity,
+                SensorOwningEntity,
                 FCk_Request_Sensor_OnEndOverlap_NonMarker
                 {
                     FCk_Sensor_BasicDetails
                     {
-                        sensorName,
-                        sensorOwningEntity,
-                        sensorAttachedEntityAndActor
+                        SensorName,
+                        SensorOwningEntity,
+                        SensorAttachedEntityAndActor
                     },
                     FCk_Sensor_EndOverlap_UnrealDetails
                     {
@@ -244,26 +247,26 @@ namespace ck_sensor
             return;
         }
 
-        const auto& markerAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(markerCompAttachedActor);
-        const auto& markerOwningEntity           = markerOverlapBody->Get_OwningEntity();
-        const auto& markerName                   = UCk_Utils_GameplayLabel_UE::Get_Label(markerOwningEntity);
+        const auto& MarkerAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(MarkerCompAttachedActor);
+        const auto& MarkerOwningEntity           = MarkerOverlapBody->Get_OwningEntity();
+        const auto& MarkerName                   = UCk_Utils_GameplayLabel_UE::Get_Label(MarkerOwningEntity);
 
         UCk_Utils_Sensor_UE::Request_OnEndOverlap
         (
-            sensorOwningEntity,
+            SensorOwningEntity,
             FCk_Request_Sensor_OnEndOverlap
             {
                 FCk_Marker_BasicDetails
                 {
-                    markerName,
-                    markerOwningEntity,
-                    markerAttachedEntityAndActor
+                    MarkerName,
+                    MarkerOwningEntity,
+                    MarkerAttachedEntityAndActor
                 },
                 FCk_Sensor_BasicDetails
                 {
-                    sensorName,
-                    sensorOwningEntity,
-                    sensorAttachedEntityAndActor
+                    SensorName,
+                    SensorOwningEntity,
+                    SensorAttachedEntityAndActor
                 },
                 FCk_Sensor_EndOverlap_UnrealDetails
                 {
