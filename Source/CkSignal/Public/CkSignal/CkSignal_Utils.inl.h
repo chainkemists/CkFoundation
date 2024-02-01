@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkSignal_Utils.inl.h"
+#include "CkSignal_Utils.h"
 
 #include "CkCore/Time/CkTime_Utils.h"
 
@@ -11,24 +11,25 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedSignal>
+    template <typename T_HandleType>
     auto
         TUtils_Signal<T_DerivedSignal>::
         Has(
-            FCk_Handle InHandle)
+            const T_HandleType& InHandle)
         -> bool
     {
-        return InHandle.Has<SignalType>();
+        return InHandle.template Has<SignalType>();
     }
 
     template <typename T_DerivedSignal>
-    template <typename ... T_Args>
+    template <typename T_HandleType, typename ... T_Args>
     auto
         TUtils_Signal<T_DerivedSignal>::
         Broadcast(
-            FCk_Handle InHandle,
+            T_HandleType InHandle,
             TPayload<T_Args...>&& InPayload)
     {
-        auto& Signal = InHandle.AddOrGet<SignalType>();
+        auto&      Signal  = InHandle.template AddOrGet<SignalType>();
         const auto Invoker = [&Signal](auto&&... InArgs)
         {
             Signal._Invoke_Signal.publish(InArgs...);
@@ -42,15 +43,16 @@ namespace ck
 
         std::apply(Invoker, InPayload.Payload);
 
-        InHandle.AddOrGet<typename SignalType::FTag_PayloadInFlight>();
+        InHandle.template AddOrGet<typename SignalType::FTag_PayloadInFlight>();
     }
 
     template <typename T_DerivedSignal>
-    template <auto T_Candidate, ECk_Signal_BindingPolicy T_PayloadInFlightBehavior, ECk_Signal_PostFireBehavior InPostFireBehavior>
+    template <auto T_Candidate, ECk_Signal_BindingPolicy T_PayloadInFlightBehavior, ECk_Signal_PostFireBehavior InPostFireBehavior,
+        typename T_HandleType>
     auto
         TUtils_Signal<T_DerivedSignal>::
         Bind(
-            FCk_Handle InHandle)
+            T_HandleType InHandle)
     {
         const auto BroadcastIfPayloadInFlight = [&]<typename... T_Args>(std::tuple<T_Args...> InPayload) -> bool
         {
@@ -64,7 +66,7 @@ namespace ck
             return true;
         };
 
-        auto& Signal = InHandle.AddOrGet<SignalType>();
+        auto& Signal = InHandle.template AddOrGet<SignalType>();
         using ReturnType = decltype(Signal._InvokeAndUnbind_Sink.template connect<T_Candidate>());
 
         if (ck::IsValid(Signal._Payload) && (Signal._PayloadFrameNumber == GFrameCounter ||
@@ -83,12 +85,12 @@ namespace ck
 
     template <typename T_DerivedSignal>
     template <auto T_Candidate, ECk_Signal_BindingPolicy T_PayloadInFlightBehavior, ECk_Signal_PostFireBehavior InPostFireBehavior,
-        typename T_Instance>
+        typename T_Instance, typename T_HandleType>
     auto
         TUtils_Signal<T_DerivedSignal>::
         Bind(
             T_Instance&& InInstance,
-            FCk_Handle InHandle)
+            T_HandleType InHandle)
     {
         const auto BroadcastIfPayloadInFlight = [&]<typename... T_Args>(std::tuple<T_Args...> InPayload) -> bool
         {
@@ -103,7 +105,7 @@ namespace ck
             return true;
         };
 
-        auto& Signal = InHandle.AddOrGet<SignalType>();
+        auto& Signal = InHandle.template AddOrGet<SignalType>();
         using ReturnType = decltype(Signal._InvokeAndUnbind_Sink.template connect<T_Candidate>(InInstance));
 
         if (ck::IsValid(Signal._Payload) && (Signal._PayloadFrameNumber == GFrameCounter ||
@@ -121,11 +123,11 @@ namespace ck
     }
 
     template <typename T_DerivedSignal>
-    template <auto T_Candidate>
+    template <auto T_Candidate, typename T_HandleType>
     auto
         TUtils_Signal<T_DerivedSignal>::
         Bind(
-            FCk_Handle InHandle,
+            T_HandleType InHandle,
             ECk_Signal_BindingPolicy InPayloadInFlightBehavior,
             ECk_Signal_PostFireBehavior InPostFireBehavior)
     {
@@ -163,12 +165,12 @@ namespace ck
     }
 
     template <typename T_DerivedSignal>
-    template <auto T_Candidate, typename T_Instance>
+    template <auto T_Candidate, typename T_Instance, typename T_HandleType>
     auto
         TUtils_Signal<T_DerivedSignal>::
         Bind(
             T_Instance&& InInstance,
-            FCk_Handle InHandle,
+            T_HandleType InHandle,
             ECk_Signal_BindingPolicy InPayloadInFlightBehavior,
             ECk_Signal_PostFireBehavior InPostFireBehavior)
     {
@@ -219,25 +221,25 @@ namespace ck
     }
 
     template <typename T_DerivedSignal>
-    template <auto T_Candidate>
+    template <auto T_Candidate, typename T_HandleType>
     auto
         TUtils_Signal<T_DerivedSignal>::
         Unbind(
-            FCk_Handle InHandle)
+            T_HandleType InHandle)
     {
-        auto& Signal = InHandle.Get<SignalType>();
+        auto& Signal = InHandle.template Get<SignalType>();
         Signal._Invoke_Sink.template disconnect<T_Candidate>();
     }
 
     template <typename T_DerivedSignal>
-    template <auto T_Candidate, typename T_Instance>
+    template <auto T_Candidate, typename T_Instance, typename T_HandleType>
     auto
     TUtils_Signal<T_DerivedSignal>::
         Unbind(
             T_Instance&& InInstance,
-            FCk_Handle InHandle)
+            T_HandleType InHandle)
     {
-        auto& Signal = InHandle.Get<SignalType>();
+        auto& Signal = InHandle.template Get<SignalType>();
         Signal._Invoke_Sink.template disconnect<T_Candidate>();
     }
 
@@ -249,18 +251,18 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedSignal, typename T_DerivedSignal_Unreal>
-    template <ECk_Signal_BindingPolicy T_PayloadInFlightBehavior>
+    template <ECk_Signal_BindingPolicy T_PayloadInFlightBehavior, typename T_HandleType>
     auto
         TUtils_Signal_UnrealMulticast<T_DerivedSignal, T_DerivedSignal_Unreal>::
         Bind(
-            FCk_Handle InHandle,
+            T_HandleType InHandle,
             UnrealDynamicDelegateType InDelegate)
     {
         if (NOT InDelegate.IsBound())
         { return; }
 
-        auto& Signal = InHandle.AddOrGet<SignalType>();
-        auto& UnrealMulticast = InHandle.AddOrGet<T_DerivedSignal_Unreal>();
+        auto& Signal          = InHandle.template AddOrGet<SignalType>();
+        auto& UnrealMulticast = InHandle.template AddOrGet<T_DerivedSignal_Unreal>();
 
         CK_ENSURE_IF_NOT(NOT UnrealMulticast._Multicast.Contains(InDelegate),
                          TEXT("The Unreal Multicast already has the Delegate [{}] bound.[{}]"),
@@ -317,10 +319,11 @@ namespace ck
     }
 
     template <typename T_DerivedSignal, typename T_DerivedSignal_Unreal>
+    template <typename T_HandleType>
     auto
         TUtils_Signal_UnrealMulticast<T_DerivedSignal, T_DerivedSignal_Unreal>::
         Bind(
-            FCk_Handle InHandle,
+            T_HandleType InHandle,
             UnrealDynamicDelegateType InDelegate,
             ECk_Signal_BindingPolicy InPayloadInFlightBehavior)
     {
@@ -351,23 +354,24 @@ namespace ck
     }
 
     template <typename T_DerivedSignal, typename T_DerivedSignal_Unreal>
+    template <typename T_HandleType>
     auto
         TUtils_Signal_UnrealMulticast<T_DerivedSignal, T_DerivedSignal_Unreal>::
         Unbind(
-            FCk_Handle InHandle,
+            T_HandleType InHandle,
             UnrealDynamicDelegateType InDelegate)
     {
-        if (NOT InHandle.Has<T_DerivedSignal_Unreal>())
+        if (NOT InHandle.template Has<T_DerivedSignal_Unreal>())
         { return; }
 
-        auto& UnrealMulticast = InHandle.AddOrGet<T_DerivedSignal_Unreal>();
+        auto& UnrealMulticast = InHandle.template AddOrGet<T_DerivedSignal_Unreal>();
         UnrealMulticast._Multicast.Remove(InDelegate);
 
         if (UnrealMulticast._Multicast.IsBound())
         { return; }
 
         UnrealMulticast._Connection.release();
-        InHandle.Remove<T_DerivedSignal_Unreal>();
+        InHandle.template Remove<T_DerivedSignal_Unreal>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
