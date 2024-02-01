@@ -105,8 +105,8 @@ namespace ck
 
     public:
         static auto ForEachEntity(
-            TimeType                        InDeltaT,
-            HandleType                      InSensorEntity,
+            TimeType InDeltaT,
+            HandleType InSensorEntity,
             const FFragment_Sensor_Current& InCurrentComp,
             const FFragment_Sensor_Params&  InParamsComp) -> void;
     };

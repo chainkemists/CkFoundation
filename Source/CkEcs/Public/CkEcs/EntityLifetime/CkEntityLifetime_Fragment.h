@@ -35,6 +35,8 @@ namespace ck
         CK_PROPERTY_GET(_Entities);
     };
 
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct FFragment_LifetimeOwner
     {
         CK_GENERATED_BODY(FFragment_LifetimeOwner);
