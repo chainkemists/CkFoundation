@@ -138,7 +138,7 @@ auto
     UCk_Utils_AbilityOwner_UE::
     ForEach_Ability(
         FCk_Handle InAbilityOwnerEntity,
-        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
+        ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
     -> TArray<FCk_Handle>
@@ -160,7 +160,7 @@ auto
     UCk_Utils_AbilityOwner_UE::
     ForEach_Ability(
         FCk_Handle InAbilityOwnerEntity,
-        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
+        ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
         const TFunction<void(FCk_Handle)>& InFunc)
     -> void
 {
@@ -172,7 +172,7 @@ auto
         InAbilityOwnerEntity,
         [&](const FCk_Handle& InAbilityEntity)
         {
-            if (InForEachAbilityPolicy == ECk_AbilityOwner_ForEachAbilityPolicy::IgnoreSelf && InAbilityEntity == InAbilityOwnerEntity)
+            if (InForEachAbilityPolicy == ECk_AbilityOwner_ForEachAbility_Policy::IgnoreSelf && InAbilityEntity == InAbilityOwnerEntity)
             { return; }
 
             InFunc(InAbilityEntity);
@@ -184,7 +184,7 @@ auto
     UCk_Utils_AbilityOwner_UE::
     ForEach_Ability_If(
         FCk_Handle InAbilityOwnerEntity,
-        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
+        ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate)
@@ -224,7 +224,7 @@ auto
     UCk_Utils_AbilityOwner_UE::
     ForEach_Ability_If(
         FCk_Handle InAbilityOwnerEntity,
-        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
+        ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
         const TFunction<void(FCk_Handle)>& InFunc,
         const TFunction<bool(FCk_Handle)>& InPredicate)
     -> void
@@ -237,7 +237,7 @@ auto
         InAbilityOwnerEntity,
         [&](const FCk_Handle& InAbilityEntity)
         {
-            if (InForEachAbilityPolicy == ECk_AbilityOwner_ForEachAbilityPolicy::IgnoreSelf && InAbilityEntity == InAbilityOwnerEntity)
+            if (InForEachAbilityPolicy == ECk_AbilityOwner_ForEachAbility_Policy::IgnoreSelf && InAbilityEntity == InAbilityOwnerEntity)
             { return; }
 
             InFunc(InAbilityEntity);
@@ -251,7 +251,7 @@ auto
     ForEach_Ability_WithStatus(
         FCk_Handle InAbilityOwnerEntity,
         ECk_Ability_Status InStatus,
-        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
+        ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
     -> TArray<FCk_Handle>
@@ -274,7 +274,7 @@ auto
     ForEach_Ability_WithStatus(
         FCk_Handle InAbilityOwnerEntity,
         ECk_Ability_Status InStatus,
-        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
+        ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
         const TFunction<void(FCk_Handle)>& InFunc)
     -> void
 {
@@ -283,7 +283,7 @@ auto
 
     ForEach_Ability(InAbilityOwnerEntity, InForEachAbilityPolicy, [&](FCk_Handle InAbility)
     {
-        if (InForEachAbilityPolicy == ECk_AbilityOwner_ForEachAbilityPolicy::IgnoreSelf && InAbility == InAbilityOwnerEntity)
+        if (InForEachAbilityPolicy == ECk_AbilityOwner_ForEachAbility_Policy::IgnoreSelf && InAbility == InAbilityOwnerEntity)
         { return; }
 
         if (UCk_Utils_Ability_UE::Get_Status(InAbility) == InStatus)
@@ -408,6 +408,33 @@ auto
     { return; }
 
     ck::UUtils_Signal_AbilityOwner_Events::Unbind(InAbilityOwnerHandle, InDelegate);
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    BindTo_OnTagsUpdated(
+        FCk_Handle InAbilityOwnerHandle,
+        ECk_Signal_BindingPolicy InBehavior,
+        const FCk_Delegate_AbilityOwner_OnTagsUpdated& InDelegate)
+    -> void
+{
+    if (NOT Ensure(InAbilityOwnerHandle))
+    { return; }
+
+    ck::UUtils_Signal_AbilityOwner_OnTagsUpdated::Bind(InAbilityOwnerHandle, InDelegate, InBehavior);
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    UnbindFrom_OnTagsUpdated(
+        FCk_Handle InAbilityOwnerHandle,
+        const FCk_Delegate_AbilityOwner_OnTagsUpdated& InDelegate)
+    -> void
+{
+    if (NOT Ensure(InAbilityOwnerHandle))
+    { return; }
+
+    ck::UUtils_Signal_AbilityOwner_OnTagsUpdated::Unbind(InAbilityOwnerHandle, InDelegate);
 }
 
 auto

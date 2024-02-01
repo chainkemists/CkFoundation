@@ -114,13 +114,13 @@ public:
     static TArray<FCk_Handle>
     ForEach_Ability(
         FCk_Handle InAbilityOwnerEntity,
-        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
+        ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_Ability(
         FCk_Handle InAbilityOwnerEntity,
-        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
+        ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
         const TFunction<void(FCk_Handle)>& InFunc) -> void;
 
     UFUNCTION(BlueprintCallable,
@@ -130,14 +130,14 @@ public:
     static TArray<FCk_Handle>
     ForEach_Ability_If(
         FCk_Handle InAbilityOwnerEntity,
-        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
+        ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate);
     static auto
     ForEach_Ability_If(
         FCk_Handle InAbilityOwnerEntity,
-        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
+        ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
         const TFunction<void(FCk_Handle)>& InFunc,
         const TFunction<bool(FCk_Handle)>& InPredicate) -> void;
 
@@ -149,14 +149,14 @@ public:
     ForEach_Ability_WithStatus(
         FCk_Handle InAbilityOwnerEntity,
         ECk_Ability_Status InStatus,
-        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
+        ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_Ability_WithStatus(
         FCk_Handle InAbilityOwnerEntity,
         ECk_Ability_Status InStatus,
-        ECk_AbilityOwner_ForEachAbilityPolicy InForEachAbilityPolicy,
+        ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
         const TFunction<void(FCk_Handle)>& InFunc) -> void;
 
 public:
@@ -235,6 +235,23 @@ public:
     UnbindFrom_OnEvents(
         FCk_Handle InAbilityOwnerHandle,
         const FCk_Delegate_AbilityOwner_Events& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName = "[Ck][AbilityOwner] Bind To OnTagsUpdated")
+    static void
+    BindTo_OnTagsUpdated(
+        FCk_Handle InAbilityOwnerHandle,
+        ECk_Signal_BindingPolicy InBehavior,
+        const FCk_Delegate_AbilityOwner_OnTagsUpdated& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName = "[Ck][AbilityOwner] Unbind From OnTagsUpdated")
+    static void
+    UnbindFrom_OnTagsUpdated(
+        FCk_Handle InAbilityOwnerHandle,
+        const FCk_Delegate_AbilityOwner_OnTagsUpdated& InDelegate);
 
 private:
     UFUNCTION(BlueprintPure,

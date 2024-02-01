@@ -13,18 +13,18 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
-enum class ECk_AbilityOwner_AbilitySearchPolicy : uint8
+enum class ECk_AbilityOwner_AbilitySearch_Policy : uint8
 {
     SearchByClass,
     SearchByHandle
 };
 
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_AbilitySearchPolicy);
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_AbilitySearch_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
-enum class ECk_AbilityOwner_ForEachAbilityPolicy : uint8
+enum class ECk_AbilityOwner_ForEachAbility_Policy : uint8
 {
     // If the AbilityOwner is also an Ability, SKIP it as when iterating over the list of abilities
     IgnoreSelf,
@@ -33,7 +33,7 @@ enum class ECk_AbilityOwner_ForEachAbilityPolicy : uint8
     IncludeSelfIfApplicable,
 };
 
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_ForEachAbilityPolicy);
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_ForEachAbility_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -135,7 +135,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_AbilityOwner_AbilitySearchPolicy _SearchPolicy = ECk_AbilityOwner_AbilitySearchPolicy::SearchByClass;
+    ECk_AbilityOwner_AbilitySearch_Policy _SearchPolicy = ECk_AbilityOwner_AbilitySearch_Policy::SearchByClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
@@ -177,7 +177,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_AbilityOwner_AbilitySearchPolicy _SearchPolicy = ECk_AbilityOwner_AbilitySearchPolicy::SearchByClass;
+    ECk_AbilityOwner_AbilitySearch_Policy _SearchPolicy = ECk_AbilityOwner_AbilitySearch_Policy::SearchByClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
@@ -224,7 +224,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_AbilityOwner_AbilitySearchPolicy _SearchPolicy = ECk_AbilityOwner_AbilitySearchPolicy::SearchByClass;
+    ECk_AbilityOwner_AbilitySearch_Policy _SearchPolicy = ECk_AbilityOwner_AbilitySearch_Policy::SearchByClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
@@ -274,5 +274,17 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_AbilityOwner_Events_MC,
     FCk_Handle, InHandle,
     const TArray<FCk_AbilityOwner_Event>&, InEvents);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_AbilityOwner_OnTagsUpdated,
+    FCk_Handle, InHandle,
+    const FGameplayTagContainer&, InActiveTags);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FCk_Delegate_AbilityOwner_OnTagsUpdated_MC,
+    FCk_Handle, InHandle,
+    const FGameplayTagContainer&, InActiveTags);
 
 // --------------------------------------------------------------------------------------------------------------------
