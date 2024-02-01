@@ -313,15 +313,6 @@ auto
     const auto& ActorScaleYNearlyZero = FMath::IsNearlyZero(ActorScale.Y);
     const auto& ActorScaleZNearlyZero = FMath::IsNearlyZero(ActorScale.Z);
 
-    CK_ENSURE_IF_NOT(NOT ActorScaleXNearlyZero && NOT ActorScaleYNearlyZero && NOT ActorScaleZNearlyZero,
-        TEXT("Marker/Sensor Owning Actor [{}] has a scale that is too small! Scale: [{}]"),
-        MarkerOrSensorAttachedActor,
-        ActorScale)
-    {
-        const auto& AdjustedShapeHolderScale = FVector::OneVector / ActorScale;
-        ShapeHolderComponent->SetRelativeScale3D(AdjustedShapeHolderScale);
-    }
-
     const auto Make_MarkerOrSensor_ComponentParams = [&]() -> FCk_AddActorComponent_Params
     {
         const auto& AttachmentType = InMarkerOrSensorParams.Get_AttachmentParams().Get_AttachmentType() ==
@@ -415,6 +406,8 @@ auto
 
         MarkerOrSensorComp->SetBoxExtent(BoxExtents);
         MarkerOrSensorComp->AddLocalTransform(InMarkerOrSensorParams.Get_RelativeTransform());
+        // we never want scale to affect our Sensors/Markers
+        MarkerOrSensorComp->SetWorldScale3D(FVector{1, 1, 1});
 
         if (InMarkerOrSensorParams.Get_AttachmentParams().Get_AttachmentType() == ECk_ActorComponent_AttachmentPolicy::DoNotAttach)
         {
