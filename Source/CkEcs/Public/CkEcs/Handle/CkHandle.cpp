@@ -181,6 +181,22 @@ auto
 
 auto
     FCk_Handle::
+    Get_RawHandle()
+    -> ThisType&
+{
+    return *this;
+}
+
+auto
+    FCk_Handle::
+    Get_RawHandle() const
+    -> const ThisType&
+{
+    return *this;
+}
+
+auto
+    FCk_Handle::
     DoUpdate_FragmentDebugInfo_Blueprints()
     -> void
 {
