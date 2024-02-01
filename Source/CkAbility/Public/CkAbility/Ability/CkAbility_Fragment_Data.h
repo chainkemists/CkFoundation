@@ -260,6 +260,16 @@ private:
     FGameplayTag _AbilityName = FGameplayTag::EmptyTag;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              Category = "Name",
+              meta = (AllowPrivateAccess = true, InlineEditConditionToggle))
+    bool _HasDisplayName = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              Category = "Name",
+              meta = (AllowPrivateAccess = true, EditCondition = "_HasDisplayName"))
+    FName _DisplayName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               Category = "Activation",
               meta = (AllowPrivateAccess = true))
     FCk_Ability_ActivationSettings _ActivationSettings;
@@ -276,6 +286,8 @@ private:
 
 public:
     CK_PROPERTY_GET(_AbilityName);
+    CK_PROPERTY(_HasDisplayName);
+    CK_PROPERTY(_DisplayName);
     CK_PROPERTY(_ActivationSettings);
     CK_PROPERTY(_NetworkSettings);
     CK_PROPERTY(_InstancingPolicy);

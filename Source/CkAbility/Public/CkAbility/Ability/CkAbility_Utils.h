@@ -91,6 +91,13 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
+              DisplayName="[Ck][Ability] Get Display Name")
+    static FName
+    Get_DisplayName(
+        FCk_Handle InAbilityEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability",
               DisplayName="[Ck][Ability] Get Activation Settings")
     static FCk_Ability_ActivationSettings
     Get_ActivationSettings(
