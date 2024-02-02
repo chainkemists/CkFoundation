@@ -19,8 +19,7 @@ auto
     -> bool
 {
     return Get_MarkerName() == InOther.Get_MarkerName() &&
-           Get_MarkerEntity() == InOther.Get_MarkerEntity() &&
-           Get_MarkerAttachedEntityAndActor() == InOther.Get_MarkerAttachedEntityAndActor();
+           Get_MarkerEntity() == InOther.Get_MarkerEntity();
 }
 
 auto
@@ -29,8 +28,7 @@ auto
     -> uint32
 {
     return GetTypeHash(InBasicDetails.Get_MarkerName()) +
-           GetTypeHash(InBasicDetails.Get_MarkerEntity()) +
-           GetTypeHash(InBasicDetails.Get_MarkerAttachedEntityAndActor());
+           GetTypeHash(InBasicDetails.Get_MarkerEntity());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
