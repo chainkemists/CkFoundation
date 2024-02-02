@@ -523,7 +523,8 @@ public:
 
 public:
     auto DoConstruct_Implementation(
-        const FCk_Handle& InHandle) -> void override;
+        const FCk_Handle& InHandle,
+        const FInstancedStruct& InOptionalParams) -> void override;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

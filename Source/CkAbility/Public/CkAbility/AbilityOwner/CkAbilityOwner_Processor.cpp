@@ -187,8 +187,8 @@ namespace ck
             }
         };
 
-        UCk_Utils_EntityBridge_UE::Request_Spawn(InAbilityOwnerEntity, FCk_Request_EntityBridge_SpawnEntity
-            {AbilityEntityConfig, [](auto){}, PostAbilityCreationFunc});
+        UCk_Utils_EntityBridge_UE::Request_Spawn(InAbilityOwnerEntity,
+            FCk_Request_EntityBridge_SpawnEntity{AbilityEntityConfig}.Set_PostSpawnFunc(PostAbilityCreationFunc));
     }
 
     auto

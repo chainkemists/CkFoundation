@@ -4,6 +4,8 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
+#include <InstancedStruct.h>
+
 #include "CkEntity_ConstructionScript.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -19,14 +21,16 @@ public:
 public:
     auto
     Construct(
-        FCk_Handle InHandle) -> void;
+        FCk_Handle InHandle,
+        const FInstancedStruct& InOptionalParams) -> void;
 
 protected:
     UFUNCTION(BlueprintNativeEvent,
               DisplayName = "Construct")
     void
     DoConstruct(
-        const FCk_Handle& InHandle);
+        const FCk_Handle& InHandle,
+        const FInstancedStruct& InOptionalParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -14,6 +14,7 @@
 #include "CkSignal/CkSignal_Fragment_Data.h"
 
 #include <GameplayTagContainer.h>
+#include <InstancedStruct.h>
 
 #include "CkMeterAttribute_Utils.generated.h"
 
@@ -63,7 +64,8 @@ public:
     CK_GENERATED_BODY(UCk_MeterAttribute_ConstructionScript_PDA);
 
     auto DoConstruct_Implementation(
-        const FCk_Handle& InHandle) -> void override;
+        const FCk_Handle& InHandle,
+        const FInstancedStruct& InOptionalParams) -> void override;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))

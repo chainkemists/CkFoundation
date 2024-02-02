@@ -14,6 +14,7 @@ public class CkEntityBridge : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
+            "StructUtils",
 
             "CkCore",
             "CkEcs",
@@ -22,7 +23,7 @@ public class CkEntityBridge : CkModuleRules
             "CkRecord",
             "CkSettings",
             "CkSignal",
-            "CkNet"
+            "CkNet",
         });
     }
 }

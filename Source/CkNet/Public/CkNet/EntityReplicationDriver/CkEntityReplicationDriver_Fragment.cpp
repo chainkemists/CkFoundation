@@ -116,7 +116,7 @@ auto
         if (ck::IsValid(ConstructionInfo.Get_Label()))
         { UCk_Utils_GameplayLabel_UE::Add(NewEntity, ConstructionInfo.Get_Label()); }
 
-        ConstructionScript->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(NewEntity);
+        ConstructionScript->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(NewEntity, {});
 
         UCk_Utils_ReplicatedObjects_UE::Add(NewEntity, FCk_ReplicatedObjects{}.
             Set_ReplicatedObjects(ReplicationData.Get_ReplicatedObjectsData().Get_Objects()));
@@ -163,7 +163,10 @@ auto
 
     // TODO: we need the transform
     CsWithTransform->Set_EntityInitialTransform(ReplicatedActor->GetActorTransform());
-    CsWithTransform->Construct(NewEntity);
+
+    const auto& EntityBridgeActorComp = ReplicatedActor->GetComponentByClass<UCk_EntityBridge_ActorComponent_Base_UE>();
+
+    CsWithTransform->Construct(NewEntity, EntityBridgeActorComp->Get_EntityConstructionParamsToInject());
 
     const auto& ReplicatedObjects = _ReplicationData_ReplicatedActor.Get_ReplicatedObjects();
     UCk_Utils_ReplicatedObjects_UE::Add(NewEntity, FCk_ReplicatedObjects{}.Set_ReplicatedObjects(ReplicatedObjects));
@@ -213,8 +216,7 @@ auto
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    ReplicatedActor->GetComponentByClass<UCk_EntityBridge_ActorComponent_Base_UE>()->
-        TryInvoke_OnReplicationComplete(UCk_EntityBridge_ActorComponent_Base_UE::EInvoke_Caller::ReplicationDriver);
+    EntityBridgeActorComp->TryInvoke_OnReplicationComplete(UCk_EntityBridge_ActorComponent_Base_UE::EInvoke_Caller::ReplicationDriver);
 }
 
 auto

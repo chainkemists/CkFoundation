@@ -29,7 +29,7 @@ namespace ck
             if (Request.Get_PreBuildFunc())
             { Request.Get_PreBuildFunc() (NewEntity); }
 
-            EntityConfig->Build(NewEntity);
+            EntityConfig->Build(NewEntity, Request.Get_OptionalParams());
 
             if (Request.Get_PostSpawnFunc())
             { Request.Get_PostSpawnFunc()(NewEntity); }

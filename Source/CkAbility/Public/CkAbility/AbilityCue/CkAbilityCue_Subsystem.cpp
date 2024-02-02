@@ -62,7 +62,7 @@ auto
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity);
     NewEntity.Add<FCk_AbilityCue_Params>(InParams);
 
-    AbilityCueEntityConfig->Build(NewEntity);
+    AbilityCueEntityConfig->Build(NewEntity, {});
 }
 
 // --------------------------------------------------------------------------------------------------------------------

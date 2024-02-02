@@ -175,7 +175,7 @@ auto
 
         CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
 
-        EntityConfig->Build(Entity);
+        EntityConfig->Build(Entity, Get_EntityConstructionParamsToInject());
 
         if (OwningActor->GetIsReplicated() && _Replication == ECk_Replication::Replicates)
         {
@@ -298,7 +298,7 @@ auto
 
         CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
 
-        EntityConfig->Build(NewEntity);
+        EntityConfig->Build(NewEntity, Get_EntityConstructionParamsToInject());
 
         ck::entity_bridge::Log(TEXT("[EntityMap] [{}] -> [{}]"), NewEntity, OwningActor);
 
@@ -362,7 +362,7 @@ auto
 
         CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
 
-        EntityConfig->Build(NewEntity);
+        EntityConfig->Build(NewEntity, Get_EntityConstructionParamsToInject());
 
         ck::entity_bridge::Log(TEXT("[EntityMap] [{}] -> [{}]"), NewEntity, OwningActor);
 
@@ -437,6 +437,17 @@ auto
             return;
         }
     }
+}
+
+auto
+    UCk_EntityBridge_ActorComponent_UE::
+    Get_EntityConstructionParamsToInject() const
+    -> FInstancedStruct
+{
+    const FCk_SharedInstancedStruct ParamsToInject;
+    _OnInjectEntityConstructionParams_MC.Broadcast(ParamsToInject);
+
+    return *ParamsToInject;
 }
 
 auto
