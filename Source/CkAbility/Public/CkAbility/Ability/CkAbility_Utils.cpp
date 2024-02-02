@@ -205,6 +205,7 @@ auto
     -> void
 {
     auto& AbilityCurrent = InAbilityEntity.Get<ck::FFragment_Ability_Current>();
+    const auto& AbilityParams = InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params();
 
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityCurrent._AbilityScript),
         TEXT("Cannot Deactivate Ability with Entity [{}] because its AbilityScript is INVALID"),
@@ -215,8 +216,6 @@ auto
     AbilityCurrent._AbilityScript->OnDeactivateAbility();
 
     ck::UUtils_Signal_OnAbilityDeactivated::Broadcast(InAbilityEntity, ck::MakePayload(InAbilityEntity));
-
-    const auto& AbilityParams = InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params();
 
     // NOTE: If we reset the ability script properties on DEACTIVATE, we are potentially doing a cleanup for nothing
     // if the ability is not activated again. If we do it on ACTIVATE then we are going to perform a cleanup for nothing

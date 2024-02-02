@@ -40,6 +40,11 @@ auto
     }
 
     InHandle.AddOrGet<ck::FTag_TriggerDestroyEntity>();
+
+    for (const auto& LifeTimeDependents : Get_LifetimeDependents(InHandle))
+    {
+        Request_DestroyEntity(LifeTimeDependents, InDestructionBehavior);
+    }
 }
 
 auto
@@ -68,7 +73,7 @@ auto
 auto
     UCk_Utils_EntityLifetime_UE::
     Get_LifetimeDependents(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> TArray<FCk_Handle>
 {
     if (NOT InHandle.Has<ck::FFragment_LifetimeDependents>())

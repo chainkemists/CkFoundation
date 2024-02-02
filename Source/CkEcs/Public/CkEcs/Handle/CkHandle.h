@@ -82,6 +82,9 @@ public:
     template <typename T_Fragment, typename... T_Args>
     auto AddOrGet(T_Args&&... InArgs) -> T_Fragment&;
 
+    template <typename T_Fragment, typename T_ValidationPolicy, typename... T_Args>
+    auto AddOrGet(T_Args&&... InArgs) -> T_Fragment&;
+
     template <typename T_Fragment, typename T_Func>
     auto Try_Transform(T_Func InFunc) -> void;
 
@@ -337,6 +340,50 @@ auto
     DoUpdate_FragmentDebugInfo_Blueprints();
 
     return NewFragment;
+}
+
+template <typename T_Fragment, typename T_ValidationPolicy, typename ... T_Args>
+auto
+    FCk_Handle::
+    AddOrGet(
+        T_Args&&... InArgs)
+    -> T_Fragment&
+{
+    CK_ENSURE_IF_NOT(IsValid(T_ValidationPolicy{}),
+        TEXT("Unable to AddOrGet Fragment [{}]. Handle [{}] {}."),
+        ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
+        [&]
+        {
+            if (ck::Is_NOT_Valid(_Registry))
+            { return TEXT("does NOT have a valid Registry"); }
+
+            if (NOT _Registry->IsValid(_Entity))
+            { return TEXT("does NOT have a valid Entity"); }
+
+            return TEXT("");
+        }())
+    {
+        static T_Fragment Invalid_Fragment;
+        return Invalid_Fragment;
+    }
+
+    auto& NewOrExistingFragment = [&]() -> T_Fragment&
+    {
+        // only add it ONCE in the debugger
+        if (NOT Has<T_Fragment>())
+        {
+            auto& FragmentToReturn = _Registry->AddOrGet<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
+
+            DoAdd_FragmentDebugInfo<T_Fragment>();
+            DoUpdate_FragmentDebugInfo_Blueprints();
+
+            return FragmentToReturn;
+        }
+
+        return _Registry->AddOrGet<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
+    }();
+
+    return NewOrExistingFragment;
 }
 
 template <typename T_Fragment, typename ... T_Args>

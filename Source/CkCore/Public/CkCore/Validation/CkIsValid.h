@@ -183,16 +183,20 @@ namespace ck::algo
 
     template <typename T>
     auto
-        IsValid::operator()(
-            const T& InObject) const -> bool
+        IsValid::
+        operator()(
+            const T& InObject) const
+        -> bool
     {
         return ck::IsValid(InObject);
     }
 
     template <typename T>
     auto
-        Is_NOT_Valid::operator()(
-            const T& InObject) const -> bool
+        Is_NOT_Valid::
+        operator()(
+            const T& InObject) const
+        -> bool
     {
         return ck::Is_NOT_Valid(InObject);
     }

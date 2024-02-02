@@ -61,14 +61,15 @@ public:
               DisplayName = "[Ck][Lifetime] Get Entity Lifetime Owner",
               Category = "Ck|Utils|EntityLifetime")
     static FCk_Handle
-    Get_LifetimeOwner(FCk_Handle InHandle);
+    Get_LifetimeOwner(
+        FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][Lifetime] Get Entity Lifetime Dependents",
               Category = "Ck|Utils|EntityLifetime")
     static TArray<FCk_Handle>
     Get_LifetimeDependents(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][Lifetime] Get Is Entity Pending Destroy",
