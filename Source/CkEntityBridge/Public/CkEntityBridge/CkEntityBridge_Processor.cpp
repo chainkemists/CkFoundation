@@ -24,7 +24,7 @@ namespace ck
                 TEXT("EntityConfig is INVALID. Unable to handle Request for [{}]"), InHandle)
             { return; }
 
-            const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
+            auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
 
             if (Request.Get_PreBuildFunc())
             { Request.Get_PreBuildFunc() (NewEntity); }
