@@ -293,3 +293,32 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+FCk_SharedInstancedStruct::
+    FCk_SharedInstancedStruct()
+    : FCk_SharedInstancedStruct(ValueType{})
+{ }
+
+FCk_SharedInstancedStruct::
+    FCk_SharedInstancedStruct(
+        ValueType InValue)
+    : _Ptr(ck::type_traits::MakeNewPtr<PtrType>{}(InValue))
+{ }
+
+auto
+    FCk_SharedInstancedStruct::
+    operator*() const
+    -> ValueType&
+{
+    return *_Ptr;
+}
+
+auto
+    FCk_SharedInstancedStruct::
+    operator->() const
+    -> ValueType*
+{
+    return _Ptr.Get();
+}
+
+// --------------------------------------------------------------------------------------------------------------------

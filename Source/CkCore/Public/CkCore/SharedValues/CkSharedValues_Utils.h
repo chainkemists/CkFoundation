@@ -397,3 +397,41 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable)
+class CKCORE_API UCk_Utils_SharedInstancedStruct_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_SharedInstancedStruct_UE);
+
+public:
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get SharedValue [InstancedStruct]",
+              Category = "Ck|Utils|SharedInstancedStruct",
+              meta     = (CompactNodeTitle = "Get"))
+    static FInstancedStruct
+    Get(
+        const FCk_SharedInstancedStruct& InShared);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck] Set SharedValue [InstancedStruct]",
+              Category = "Ck|Utils|SharedInstancedStruct",
+              meta     = (CompactNodeTitle = "Set"))
+    static void
+    Set(
+        UPARAM(ref) FCk_SharedInstancedStruct& InShared,
+        const FInstancedStruct& InValue);
+public:
+    UFUNCTION(BlueprintCallable,
+              DisplayName = "[Ck] Make SharedValue [InstancedStruct]",
+              Category = "Ck|Utils|SharedInstancedStruct",
+              meta     = (CompactNodeTitle = "Make"))
+    static FCk_SharedInstancedStruct
+    Make(
+        const FInstancedStruct& InValue);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
