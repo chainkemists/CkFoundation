@@ -29,7 +29,7 @@ namespace ck
             T_HandleType InHandle,
             TPayload<T_Args...>&& InPayload)
     {
-        auto&      Signal  = InHandle.template AddOrGet<SignalType>();
+        auto&      Signal  = InHandle.template AddOrGet<SignalType, ck::IsValid_Policy_IncludePendingKill>();
         const auto Invoker = [&Signal](auto&&... InArgs)
         {
             Signal._Invoke_Signal.publish(InArgs...);
@@ -43,7 +43,7 @@ namespace ck
 
         std::apply(Invoker, InPayload.Payload);
 
-        InHandle.template AddOrGet<typename SignalType::FTag_PayloadInFlight>();
+        InHandle.template AddOrGet<typename SignalType::FTag_PayloadInFlight, ck::IsValid_Policy_IncludePendingKill>();
     }
 
     template <typename T_DerivedSignal>
