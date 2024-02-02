@@ -26,14 +26,6 @@ public:
     Request_Spawn(
         FCk_Handle InHandle,
         const FCk_Request_EntityBridge_SpawnEntity& InRequest);
-
-    UFUNCTION(BlueprintCallable,
-              DisplayName  = "[Ck] Build Entity",
-              Category = "Ck|Utils|EntityBridge")
-    static FCk_Handle
-    BuildEntity(
-        FCk_Handle InHandle,
-        const UCk_EntityBridge_Config_Base_PDA* InEntityConfig);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
