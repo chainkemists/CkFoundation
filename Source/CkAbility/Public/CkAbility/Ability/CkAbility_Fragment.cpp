@@ -10,9 +10,11 @@ namespace ck::algo
     auto
         MatchesAnyAbilityActivationCancelledTags::
         operator()(
-            const FCk_Handle& InHandle) const
+            const FCk_Handle& InTypeUnsafeHandle) const
         -> bool
     {
+        const auto InHandle = UCk_Utils_Ability_UE::Conv_HandleToAbility(InTypeUnsafeHandle);
+
         const auto AbilityClass = UCk_Utils_Ability_UE::Get_ScriptClass(InHandle);
 
         if (UCk_Utils_Ability_UE::Get_ScriptClass(InHandle) != AbilityClass)
