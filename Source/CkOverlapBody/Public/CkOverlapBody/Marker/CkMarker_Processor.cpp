@@ -171,8 +171,8 @@ namespace ck
     auto
         FProcessor_Marker_UpdateTransform::
         ForEachEntity(
-            TimeType                        InDeltaT,
-            HandleType                      InMarkerEntity,
+            TimeType InDeltaT,
+            HandleType InMarkerEntity,
             const FFragment_Marker_Current& InCurrentComp,
             const FFragment_Marker_Params&  InParamsComp) const
         -> void

@@ -86,6 +86,7 @@ namespace ck
 
     class CKOVERLAPBODY_API FProcessor_Marker_UpdateTransform : public ck_exp::TProcessor<
             FProcessor_Marker_UpdateTransform,
+            FCk_Handle_Marker,
             FFragment_Marker_Current,
             FFragment_Marker_Params,
             FTag_Marker_UpdateTransform,
@@ -96,8 +97,8 @@ namespace ck
 
     public:
         auto ForEachEntity(
-            TimeType                        InDeltaT,
-            HandleType                      InMarkerEntity,
+            TimeType InDeltaT,
+            HandleType InMarkerEntity,
             const FFragment_Marker_Current& InCurrentComp,
             const FFragment_Marker_Params&  InParamsComp) const -> void;
     };

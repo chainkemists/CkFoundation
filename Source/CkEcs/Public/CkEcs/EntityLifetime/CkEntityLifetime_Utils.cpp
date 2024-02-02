@@ -15,8 +15,7 @@ auto
         ECk_EntityLifetime_DestructionBehavior InDestructionBehavior)
     -> void
 {
-    // TODO: Fix for singleplayer
-    if (UCk_Utils_ReplicatedObjects_UE::Get_NetRole(InHandle) != ROLE_Authority)
+    if (Get_IsPendingDestroy(InHandle))
     { return; }
 
     switch(InDestructionBehavior)
@@ -99,7 +98,8 @@ auto
 
 auto
     UCk_Utils_EntityLifetime_UE::
-    Get_IsPendingDestroy(const FCk_Handle& InHandle)
+    Get_IsPendingDestroy(
+        const FCk_Handle& InHandle)
     -> bool
 {
     return InHandle.Has_Any<ck::FTag_TriggerDestroyEntity, ck::FTag_PendingDestroyEntity>();
@@ -107,7 +107,8 @@ auto
 
 auto
     UCk_Utils_EntityLifetime_UE::
-    Get_TransientEntity( FCk_Handle InHandle)
+    Get_TransientEntity(
+        FCk_Handle InHandle)
     -> FCk_Handle
 {
     return Get_TransientEntity(**InHandle);
