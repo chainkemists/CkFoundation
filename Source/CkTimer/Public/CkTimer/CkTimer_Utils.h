@@ -87,7 +87,7 @@ public:
         meta = (CompactNodeTitle = "As TimerHandle", BlueprintAutocast))
     static FCk_Handle_Timer
     Conv_HandleToTimer(
-        FCk_Handle InTimer);
+        const FCk_Handle& InHandle);
 
 public:
     UFUNCTION(BlueprintPure,
