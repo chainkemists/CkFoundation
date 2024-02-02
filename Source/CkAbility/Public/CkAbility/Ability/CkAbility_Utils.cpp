@@ -238,6 +238,7 @@ auto
     -> void
 {
     auto& AbilityCurrent = InAbilityEntity.Get<ck::FFragment_Ability_Current>();
+    const auto& AbilityParams = InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params();
     auto Script = AbilityCurrent.Get_AbilityScript();
 
     CK_ENSURE_IF_NOT(ck::IsValid(Script),
@@ -245,7 +246,6 @@ auto
         InAbilityEntity)
     { return; }
 
-    const auto& AbilityParams = InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params();
     AbilityCurrent._Status = ECk_Ability_Status::NotActive;
     Script->OnDeactivateAbility();
 
