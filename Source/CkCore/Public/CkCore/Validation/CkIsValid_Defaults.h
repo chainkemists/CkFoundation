@@ -192,6 +192,11 @@ CK_DEFINE_CUSTOM_IS_VALID_T(T, TWeakObjectPtr<T>, ck::IsValid_Policy_Default, [=
     return ck::IsValid(InObj.Get());
 });
 
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TWeakObjectPtr<T>, ck::IsValid_Policy_IncludePendingKill, [=](const TWeakObjectPtr<T>& InObj)
+{
+    return ck::IsValid(InObj.Get(true), ck::IsValid_Policy_IncludePendingKill{});
+});
+
 CK_DEFINE_CUSTOM_IS_VALID_T(T, TWeakObjectPtr<T>, ck::IsValid_Policy_NullptrOnly, [=](const TWeakObjectPtr<T>& InObj)
 {
     return ck::IsValid(InObj.Get(), ck::IsValid_Policy_NullptrOnly{});
