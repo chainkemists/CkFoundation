@@ -2,7 +2,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include <CoreMinimal.h>
+#include <Components/ActorComponent.h>
 
 #include "CkActorComponent.generated.h"
 
