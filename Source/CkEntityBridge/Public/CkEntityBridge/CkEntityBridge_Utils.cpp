@@ -10,7 +10,8 @@ auto
     UCk_Utils_EntityBridge_UE::
     Request_Spawn(
         FCk_Handle InHandle,
-        const FCk_Request_EntityBridge_SpawnEntity& InRequest) -> void
+        const FCk_Request_EntityBridge_SpawnEntity& InRequest)
+    -> void
 {
     // TODO: Same treatment as the SpawnActor
     auto& RequestComp = InHandle.AddOrGet<ck::FFragment_EntityBridge_Requests>();

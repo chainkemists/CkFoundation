@@ -47,43 +47,25 @@ auto
 auto
     UCk_EntityBridge_Config_Base_PDA::
     Build(
-        FCk_Handle InEntity) const
+        FCk_Handle InEntity,
+        const FInstancedStruct& InOptionalParams) const
     -> void
 {
-    DoBuild(InEntity);
+    DoBuild(InEntity, InOptionalParams);
 }
 
 auto
     UCk_EntityBridge_Config_Base_PDA::
     DoBuild(
-        FCk_Handle InHandle) const
+        FCk_Handle InHandle,
+        const FInstancedStruct& InOptionalParams) const
     -> void
 {
     const auto& EntityConstructionScript = Get_EntityConstructionScript();
     CK_ENSURE_IF_NOT(ck::IsValid(EntityConstructionScript), TEXT("INVALID ConstructionScript in EntityConfig [{}]"), GetPathName())
     { return; }
 
-    EntityConstructionScript->Construct(InHandle);
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-FCk_Request_EntityBridge_SpawnEntity::
-    FCk_Request_EntityBridge_SpawnEntity(
-        const UCk_EntityBridge_Config_Base_PDA* InEntityConfig)
-    : ThisType{InEntityConfig, [](auto InHandle){}, [](auto InHandle){}}
-{
-}
-
-FCk_Request_EntityBridge_SpawnEntity::
-    FCk_Request_EntityBridge_SpawnEntity(
-        const UCk_EntityBridge_Config_Base_PDA* InEntityConfig,
-        PreBuildFunc InPreBuildFunc,
-        PostSpawnFunc InPostSpawnFunc)
-    : _EntityConfig(InEntityConfig)
-    , _PreBuildFunc(InPreBuildFunc)
-    , _PostSpawnFunc(InPostSpawnFunc)
-{
+    EntityConstructionScript->Construct(InHandle, InOptionalParams);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
