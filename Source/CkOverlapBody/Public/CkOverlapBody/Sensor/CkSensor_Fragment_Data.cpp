@@ -342,8 +342,7 @@ auto
     -> bool
 {
     return Get_SensorName() == InOther.Get_SensorName() &&
-           Get_SensorEntity() == InOther.Get_SensorEntity() &&
-           Get_SensorAttachedEntityAndActor() == InOther.Get_SensorAttachedEntityAndActor();
+           Get_SensorEntity() == InOther.Get_SensorEntity();
 }
 
 auto
@@ -352,8 +351,7 @@ auto
     -> uint32
 {
     return GetTypeHash(InBasicDetails.Get_SensorName()) +
-           GetTypeHash(InBasicDetails.Get_SensorEntity()) +
-           GetTypeHash(InBasicDetails.Get_SensorAttachedEntityAndActor());
+           GetTypeHash(InBasicDetails.Get_SensorEntity());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
