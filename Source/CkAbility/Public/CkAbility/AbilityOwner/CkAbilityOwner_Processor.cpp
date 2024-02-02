@@ -50,7 +50,8 @@ namespace ck
         // the list of sub-abilities (this is bad)
         if (UCk_Utils_Ability_UE::Has(InHandle))
         {
-            UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Request_Connect(InHandle, InHandle);
+            auto AbilityHandle = UCk_Utils_Ability_UE::Conv_HandleToAbility(InHandle);
+            UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Request_Connect(InHandle, AbilityHandle);
             const auto Script = InHandle.Get<ck::FFragment_Ability_Current>().Get_AbilityScript();
 
             CK_ENSURE_IF_NOT(ck::IsValid(Script),

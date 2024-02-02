@@ -19,14 +19,14 @@ public:
 public:
     auto
     Construct(
-        FCk_Handle InHandle) -> void;
+        FCk_Handle& InHandle) -> void;
 
 protected:
     UFUNCTION(BlueprintNativeEvent,
               DisplayName = "Construct")
     void
     DoConstruct(
-        const FCk_Handle& InHandle);
+        UPARAM(ref) FCk_Handle& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

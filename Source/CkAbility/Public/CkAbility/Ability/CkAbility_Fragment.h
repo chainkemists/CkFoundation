@@ -59,10 +59,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FFragment_RecordOfAbilities : public FFragment_RecordOfEntities
-    {
-        using FFragment_RecordOfEntities::FFragment_RecordOfEntities;
-    };
+    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfAbilities, FCk_Handle_Ability);
 
     // --------------------------------------------------------------------------------------------------------------------
 

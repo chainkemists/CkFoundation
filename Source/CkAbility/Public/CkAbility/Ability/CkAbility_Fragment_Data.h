@@ -103,7 +103,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_InstancingPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType) struct CKABILITY_API FCk_Handle_Ability : public FCk_Handle_TypeSafe { GENERATED_BODY() };
+USTRUCT(BlueprintType) struct CKABILITY_API FCk_Handle_Ability : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATE_BODY_HANDLE_TYPESAFE(FCk_Handle_Ability); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Ability);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -529,7 +529,7 @@ public:
 
 public:
     auto DoConstruct_Implementation(
-        const FCk_Handle& InHandle) -> void override;
+        FCk_Handle& InHandle) -> void override;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

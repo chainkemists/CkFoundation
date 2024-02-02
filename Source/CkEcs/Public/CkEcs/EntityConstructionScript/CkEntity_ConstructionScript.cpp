@@ -12,7 +12,7 @@
 auto
     UCk_Entity_ConstructionScript_PDA::
     Construct(
-        FCk_Handle InHandle)
+        FCk_Handle& InHandle)
     -> void
 {
     Set_CurrentWorld(UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle));
@@ -25,7 +25,7 @@ auto
 auto
     UCk_Entity_ConstructionScript_PDA::
     DoConstruct_Implementation(
-        const FCk_Handle& InHandle)
+        FCk_Handle& InHandle)
     -> void
 {
 }

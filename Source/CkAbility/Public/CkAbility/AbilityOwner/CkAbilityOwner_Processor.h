@@ -8,9 +8,8 @@
 
 namespace ck
 {
-    class CKABILITY_API FProcessor_AbilityOwner_Setup : public ck_exp::TProcessor<
+    class CKABILITY_API FProcessor_AbilityOwner_Setup : public ck::TProcessor<
             FProcessor_AbilityOwner_Setup,
-            FCk_Handle_Ability,
             FFragment_AbilityOwner_Params,
             FTag_AbilityOwner_NeedsSetup,
             CK_IGNORE_PENDING_KILL>

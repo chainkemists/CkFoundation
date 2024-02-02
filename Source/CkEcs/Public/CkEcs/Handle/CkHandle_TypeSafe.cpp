@@ -3,6 +3,33 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
+    FCk_Handle_TypeSafe::
+    operator==(
+        const FCk_Handle& InOther) const
+        -> bool
+{
+    return InOther.operator==(*this);
+}
+
+auto
+    FCk_Handle_TypeSafe::
+    operator!=(
+        const FCk_Handle& InOther) const
+        -> bool
+{
+    return InOther.operator==(*this);
+}
+
+auto
+    FCk_Handle_TypeSafe::
+    operator==(
+        const ThisType& InOther) const
+        -> bool
+{
+    return ck::Cast<FCk_Handle>(*this) == ck::Cast<FCk_Handle>(InOther);
+}
+
+auto
     FCk_Handle_TypeSafe::operator*()
         -> TOptional<FCk_Registry>
 { return _RawHandle.operator*(); }

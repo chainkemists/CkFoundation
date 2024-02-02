@@ -17,21 +17,24 @@ auto
         const FCk_Fragment_Timer_ParamsData& InParams)
     -> FCk_Handle_Timer
 {
-    const auto NewTimerEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
-    {
-        UCk_Utils_GameplayLabel_UE::Add(InNewEntity, InParams.Get_TimerName());
-
-        InNewEntity.Add<ck::FFragment_Timer_Params>(InParams);
-        InNewEntity.Add<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
-
-        if (InParams.Get_CountDirection() == ECk_Timer_CountDirection::CountDown)
-        { InNewEntity.Add<ck::FTag_Timer_Countdown>(); }
-
-        if (InParams.Get_StartingState() == ECk_Timer_State::Running)
+    auto NewTimerEntity = Conv_HandleToTimer
+    (
+        UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
         {
-            InNewEntity.Add<ck::FTag_Timer_NeedsUpdate>();
-        }
-    });
+            UCk_Utils_GameplayLabel_UE::Add(InNewEntity, InParams.Get_TimerName());
+
+            InNewEntity.Add<ck::FFragment_Timer_Params>(InParams);
+            InNewEntity.Add<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
+
+            if (InParams.Get_CountDirection() == ECk_Timer_CountDirection::CountDown)
+            { InNewEntity.Add<ck::FTag_Timer_Countdown>(); }
+
+            if (InParams.Get_StartingState() == ECk_Timer_State::Running)
+            {
+                InNewEntity.Add<ck::FTag_Timer_NeedsUpdate>();
+            }
+        })
+    );
 
     RecordOfTimers_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
     RecordOfTimers_Utils::Request_Connect(InHandle, NewTimerEntity);
@@ -82,7 +85,37 @@ auto
     });
 }
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Timer, UCk_Utils_Timer_UE, FCk_Handle_Timer, ck::FFragment_Timer_Params, ck::FFragment_Timer_Current);
+auto
+    UCk_Utils_Timer_UE::Has(
+        const FCk_Handle& InAbilityEntity)
+        -> bool { return InAbilityEntity.Has_All<ck::FFragment_Timer_Params, ck::FFragment_Timer_Current>(); }
+
+auto
+    UCk_Utils_Timer_UE::Cast(
+        const FCk_Handle&    InHandle,
+        ECk_SucceededFailed& OutResult)
+        -> FCk_Handle_Timer
+{
+    if (Has(InHandle))
+    {
+        OutResult = ECk_SucceededFailed::Failed;
+        return {};
+    }
+    OutResult = ECk_SucceededFailed::Succeeded;
+    return ck::Cast<FCk_Handle_Timer>(InHandle);
+}
+
+auto
+    UCk_Utils_Timer_UE::Conv_HandleToTimer(
+        const FCk_Handle& InHandle)
+        -> FCk_Handle_Timer
+{
+    CK_ENSURE_IF_NOT(Has(InHandle),
+        TEXT("Handle [{}] does NOT have a {}. Unable to convert Handle."),
+        InHandle,
+        TEXT("Timer")) { return {}; }
+    return ck::Cast<FCk_Handle_Timer>(InHandle);
+};
 
 auto
     UCk_Utils_Timer_UE::
