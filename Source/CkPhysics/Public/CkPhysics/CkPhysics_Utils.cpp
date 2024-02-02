@@ -17,7 +17,7 @@ auto
         const UObject* InContext)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InComp),
+    CK_ENSURE_IF_NOT(ck::IsValid(InComp, ck::IsValid_Policy_IncludePendingKill{}),
         TEXT("Cannot set Generate Overlap Events on component because it is invalid![{}]"), ck::Context(InContext))
     { return; }
 
@@ -51,7 +51,7 @@ auto
         const UObject* InContext)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InComp),
+    CK_ENSURE_IF_NOT(ck::IsValid(InComp, ck::IsValid_Policy_IncludePendingKill{}),
         TEXT("Cannot set Collision Detection Type on component because it is invalid![{}]"), ck::Context(InContext))
     { return; }
 
@@ -94,7 +94,7 @@ auto
         const UObject* InContext)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InComp),
+    CK_ENSURE_IF_NOT(ck::IsValid(InComp, ck::IsValid_Policy_IncludePendingKill{}),
         TEXT("Cannot set Navigation Effect on component because it is invalid![{}]"), ck::Context(InContext))
     { return; }
 
@@ -126,7 +126,7 @@ auto
         const UObject* InContext)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InComp),
+    CK_ENSURE_IF_NOT(ck::IsValid(InComp, ck::IsValid_Policy_IncludePendingKill{}),
         TEXT("Cannot set Overlap Behavior on component because it is invalid![{}]"), ck::Context(InContext))
     { return; }
 
@@ -157,7 +157,7 @@ auto
         const UObject*       InContext)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InComp),
+    CK_ENSURE_IF_NOT(ck::IsValid(InComp, ck::IsValid_Policy_IncludePendingKill{}),
         TEXT("Cannot set Collision Profile Name on component because it is invalid![{}]"), ck::Context(InContext))
     { return; }
 
@@ -178,11 +178,11 @@ auto
         const UObject* InContext)
     -> bool
 {
-    TArray<TSharedPtr<FName>> outExistingProfileNames;
+    TArray<TSharedPtr<FName>> OutExistingProfileNames;
 
-    UCollisionProfile::GetProfileNames(outExistingProfileNames);
+    UCollisionProfile::GetProfileNames(OutExistingProfileNames);
 
-    return outExistingProfileNames.ContainsByPredicate([&](TSharedPtr<FName> InProfileName) -> bool
+    return OutExistingProfileNames.ContainsByPredicate([&](TSharedPtr<FName> InProfileName) -> bool
     {
         return ck::IsValid(InProfileName) && InProfileName->IsEqual(InCollisionProfileName);
     });
@@ -195,7 +195,7 @@ auto
         const UObject*             InContext)
     -> FName
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InComp),
+    CK_ENSURE_IF_NOT(ck::IsValid(InComp, ck::IsValid_Policy_IncludePendingKill{}),
         TEXT("Cannot get Collision Profile Name of component because it is invalid![{}]"), ck::Context(InContext))
     { return {}; }
 
@@ -210,7 +210,7 @@ auto
         const UObject*                       InContext)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InComp),
+    CK_ENSURE_IF_NOT(ck::IsValid(InComp, ck::IsValid_Policy_IncludePendingKill{}),
         TEXT("Cannot set Collision Enabled on component because it is invalid![{}]"), ck::Context(InContext))
     { return; }
 
