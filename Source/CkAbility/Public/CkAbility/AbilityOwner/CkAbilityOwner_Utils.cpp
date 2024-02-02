@@ -49,7 +49,7 @@ auto
     return RecordOfAbilities_Utils::Get_HasValidEntry_If(InAbilityOwnerEntity,
     [InAbilityClass](const FCk_Handle& InHandle)
     {
-        return UCk_Utils_Ability_UE::Get_ScriptClass(InHandle) == InAbilityClass;
+        return UCk_Utils_Ability_UE::Get_ScriptClass(UCk_Utils_Ability_UE::Conv_HandleToAbility(InHandle)) == InAbilityClass;
     });
 }
 
@@ -102,7 +102,7 @@ auto
     auto Handle = RecordOfAbilities_Utils::Get_ValidEntry_If(InAbilityOwnerEntity,
     [InAbilityClass](const FCk_Handle& InHandle)
     {
-        return UCk_Utils_Ability_UE::Get_ScriptClass(InHandle) == InAbilityClass;
+        return UCk_Utils_Ability_UE::Get_ScriptClass(UCk_Utils_Ability_UE::Conv_HandleToAbility(InHandle)) == InAbilityClass;
     });
 
     return Handle;
@@ -286,7 +286,7 @@ auto
         if (InForEachAbilityPolicy == ECk_AbilityOwner_ForEachAbility_Policy::IgnoreSelf && InAbility == InAbilityOwnerEntity)
         { return; }
 
-        if (UCk_Utils_Ability_UE::Get_Status(InAbility) == InStatus)
+        if (UCk_Utils_Ability_UE::Get_Status(UCk_Utils_Ability_UE::Conv_HandleToAbility(InAbility)) == InStatus)
         {
             InFunc(InAbility);
         }

@@ -8,8 +8,9 @@
 
 namespace ck
 {
-    class CKABILITY_API FProcessor_AbilityOwner_Setup : public TProcessor<
+    class CKABILITY_API FProcessor_AbilityOwner_Setup : public ck_exp::TProcessor<
             FProcessor_AbilityOwner_Setup,
+            FCk_Handle_Ability,
             FFragment_AbilityOwner_Params,
             FTag_AbilityOwner_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
@@ -26,7 +27,7 @@ namespace ck
 
         auto ForEachEntity(
             TimeType InDeltaT,
-            HandleType InHandle,
+            HandleType& InHandle,
             const FFragment_AbilityOwner_Params& InAbilityOwnerParams) const -> void;
     };
 
@@ -46,7 +47,7 @@ namespace ck
     public:
         auto ForEachEntity(
             TimeType InDeltaT,
-            HandleType InHandle,
+            HandleType& InHandle,
             const FFragment_AbilityOwner_Events&  InAbilityOwnerEvents) const -> void;
     };
 
@@ -65,41 +66,50 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(
+        auto
+        ForEachEntity(
             TimeType InDeltaT,
-            HandleType InHandle,
+            HandleType& InHandle,
             FFragment_AbilityOwner_Current& InAbilityOwnerComp,
             FFragment_AbilityOwner_Requests& InAbilityRequestsComp) const -> void;
 
     private:
-        auto DoHandleRequest(
-            HandleType InAbilityOwnerEntity,
+        auto
+        DoHandleRequest(
+            HandleType& InAbilityOwnerEntity,
             FFragment_AbilityOwner_Current& InAbilityOwnerComp,
             const FCk_Request_AbilityOwner_GiveAbility& InRequest) const -> void;
 
-        auto DoHandleRequest(
-            HandleType InAbilityOwnerEntity,
+        auto
+        DoHandleRequest(
+            HandleType& InAbilityOwnerEntity,
             FFragment_AbilityOwner_Current& InAbilityOwnerComp,
             const FCk_Request_AbilityOwner_RevokeAbility& InRequest) const -> void;
 
-        auto DoHandleRequest(
+        auto
+        DoHandleRequest(
             HandleType InAbilityOwnerEntity,
             FFragment_AbilityOwner_Current& InAbilityOwnerComp,
             const FCk_Request_AbilityOwner_ActivateAbility& InRequest) const -> void;
 
-        auto DoHandleRequest(
+        auto
+        DoHandleRequest(
             HandleType InAbilityOwnerEntity,
             FFragment_AbilityOwner_Current& InAbilityOwnerComp,
             const FCk_Request_AbilityOwner_DeactivateAbility& InRequest) const -> void;
 
     private:
-        auto DoFindAbilityByClass(
-            const FCk_Handle& InAbilityOwnerEntity,
-            const TSubclassOf<UCk_Ability_Script_PDA>& InAbilityClass) const -> FCk_Handle;
+        static auto
+        DoFindAbilityByClass(
+            FCk_Handle& InAbilityOwnerEntity,
+            const TSubclassOf<UCk_Ability_Script_PDA>& InAbilityClass)
+            -> FCk_Handle_Ability;
 
-        auto DoFindAbilityByHandle(
+        static auto
+        DoFindAbilityByHandle(
             const FCk_Handle& InAbilityOwnerEntity,
-            const FCk_Handle& InAbilityEntity) const-> FCk_Handle;
+            const FCk_Handle& InAbilityEntity)
+            -> FCk_Handle_Ability;
     };
 }
 

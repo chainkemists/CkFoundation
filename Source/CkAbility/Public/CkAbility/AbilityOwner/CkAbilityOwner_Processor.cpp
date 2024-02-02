@@ -27,7 +27,7 @@ namespace ck
         FProcessor_AbilityOwner_Setup::
         ForEachEntity(
             TimeType InDeltaT,
-            HandleType InHandle,
+            HandleType& InHandle,
             const FFragment_AbilityOwner_Params& InAbilityOwnerParams) const
         -> void
     {
@@ -67,7 +67,7 @@ namespace ck
         FProcessor_AbilityOwner_HandleEvents::
         ForEachEntity(
             TimeType InDeltaT,
-            HandleType InHandle,
+            HandleType& InHandle,
             const FFragment_AbilityOwner_Events&  InAbilityOwnerEvents) const
         -> void
     {
@@ -81,7 +81,7 @@ namespace ck
         FProcessor_AbilityOwner_HandleRequests::
         ForEachEntity(
             TimeType InDeltaT,
-            HandleType InHandle,
+            HandleType& InHandle,
             FFragment_AbilityOwner_Current&  InAbilityOwnerComp,
             FFragment_AbilityOwner_Requests& InAbilityRequestsComp) const
         -> void
@@ -113,7 +113,7 @@ namespace ck
     auto
         FProcessor_AbilityOwner_HandleRequests::
         DoHandleRequest(
-            HandleType InAbilityOwnerEntity,
+            HandleType& InAbilityOwnerEntity,
             FFragment_AbilityOwner_Current& InAbilityOwnerComp,
             const FCk_Request_AbilityOwner_GiveAbility& InRequest) const
         -> void
@@ -164,7 +164,7 @@ namespace ck
         { return; }
 
         const auto PostAbilityCreationFunc =
-        [InAbilityOwnerEntity, AbilityScriptClass, &AbilityParams](const FCk_Handle& InAbilityEntity) -> void
+        [InAbilityOwnerEntity, AbilityScriptClass, &AbilityParams](FCk_Handle& InAbilityEntity) -> void
         {
             ability::VeryVerbose
             (
@@ -176,9 +176,11 @@ namespace ck
 
             UCk_Utils_Handle_UE::Set_DebugName(InAbilityEntity,
                 UCk_Utils_Debug_UE::Get_DebugName(AbilityParams.Get_AbilityScriptClass(), ECk_DebugNameVerbosity_Policy::Compact));
-            UCk_Utils_Ability_UE::DoGive(InAbilityOwnerEntity, InAbilityEntity);
 
-            if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityEntity).Get_ActivationPolicy();
+            auto AbilityHandle = UCk_Utils_Ability_UE::Conv_HandleToAbility(InAbilityEntity);
+            UCk_Utils_Ability_UE::DoGive(InAbilityOwnerEntity, AbilityHandle);
+
+            if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(AbilityHandle).Get_ActivationPolicy();
                 ActivationPolicy == ECk_Ability_Activation_Policy::ActivateOnGranted)
             {
                 // TODO: Activation Context Entity for SelfActivating Abilities is the Owner of the Ability
@@ -194,12 +196,12 @@ namespace ck
     auto
         FProcessor_AbilityOwner_HandleRequests::
         DoHandleRequest(
-            HandleType InAbilityOwnerEntity,
+            HandleType& InAbilityOwnerEntity,
             FFragment_AbilityOwner_Current& InAbilityOwnerComp,
             const FCk_Request_AbilityOwner_RevokeAbility& InRequest) const
         -> void
     {
-        const auto& DoRevokeAbility = [&](const FCk_Handle& InAbilityEntity, const TSubclassOf<UCk_Ability_Script_PDA>& InAbilityClass) -> void
+        const auto& DoRevokeAbility = [&](FCk_Handle_Ability& InAbilityEntity, const TSubclassOf<UCk_Ability_Script_PDA>& InAbilityClass) -> void
         {
             ability::VeryVerbose
             (
@@ -216,7 +218,7 @@ namespace ck
         {
             case ECk_AbilityOwner_AbilitySearch_Policy::SearchByClass:
             {
-                const auto& FoundAbilityEntity = DoFindAbilityByClass(InAbilityOwnerEntity, InRequest.Get_AbilityClass());
+                auto FoundAbilityEntity = DoFindAbilityByClass(InAbilityOwnerEntity, InRequest.Get_AbilityClass());
 
                 if (ck::Is_NOT_Valid(FoundAbilityEntity))
                 { break; }
@@ -227,7 +229,7 @@ namespace ck
             }
             case ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle:
             {
-                const auto& FoundAbilityEntity = DoFindAbilityByHandle(InAbilityOwnerEntity, InRequest.Get_AbilityHandle());
+                auto FoundAbilityEntity = DoFindAbilityByHandle(InAbilityOwnerEntity, InRequest.Get_AbilityHandle());
 
                 if (ck::Is_NOT_Valid(FoundAbilityEntity))
                 { break; }
@@ -252,7 +254,7 @@ namespace ck
             const FCk_Request_AbilityOwner_ActivateAbility& InRequest) const
         -> void
     {
-        const auto& DoTryActivateAbility = [&](const FCk_Handle& InAbilityToActivateEntity, const FGameplayTag& InAbilityToActivateName) -> void
+        const auto& DoTryActivateAbility = [&](FCk_Handle_Ability& InAbilityToActivateEntity, const FGameplayTag& InAbilityToActivateName) -> void
         {
             const auto& AbilityActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityToActivateEntity);
             const auto& GrantedTags = AbilityActivationSettings.Get_ActivationSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
@@ -404,7 +406,7 @@ namespace ck
         {
             case ECk_AbilityOwner_AbilitySearch_Policy::SearchByClass:
             {
-                const auto& FoundAbilityEntity = DoFindAbilityByClass(InAbilityOwnerEntity, InRequest.Get_AbilityClass());
+                auto FoundAbilityEntity = DoFindAbilityByClass(InAbilityOwnerEntity, InRequest.Get_AbilityClass());
 
                 if (ck::Is_NOT_Valid(FoundAbilityEntity))
                 { break; }
@@ -415,7 +417,7 @@ namespace ck
             }
             case ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle:
             {
-                const auto& FoundAbilityEntity = DoFindAbilityByHandle(InAbilityOwnerEntity, InRequest.Get_AbilityHandle());
+                auto FoundAbilityEntity = DoFindAbilityByHandle(InAbilityOwnerEntity, InRequest.Get_AbilityHandle());
 
                 if (ck::Is_NOT_Valid(FoundAbilityEntity))
                 { break; }
@@ -440,7 +442,7 @@ namespace ck
             const FCk_Request_AbilityOwner_DeactivateAbility& InRequest) const
         -> void
     {
-        const auto& DoDeactivateAbility = [&](const FCk_Handle& InAbilityEntity, const TSubclassOf<UCk_Ability_Script_PDA>& InAbilityClass) -> void
+        const auto& DoDeactivateAbility = [&](FCk_Handle_Ability& InAbilityEntity, const TSubclassOf<UCk_Ability_Script_PDA>& InAbilityClass) -> void
         {
             if (UCk_Utils_Ability_UE::Get_Status(InAbilityEntity) == ECk_Ability_Status::NotActive)
             { return; }
@@ -467,7 +469,7 @@ namespace ck
         {
             case ECk_AbilityOwner_AbilitySearch_Policy::SearchByClass:
             {
-                const auto& FoundAbilityEntity = DoFindAbilityByClass(InAbilityOwnerEntity, InRequest.Get_AbilityClass());
+                auto FoundAbilityEntity = DoFindAbilityByClass(InAbilityOwnerEntity, InRequest.Get_AbilityClass());
 
                 if (ck::Is_NOT_Valid(FoundAbilityEntity))
                 { break; }
@@ -478,7 +480,7 @@ namespace ck
             }
             case ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle:
             {
-                const auto& FoundAbilityEntity = DoFindAbilityByHandle(InAbilityOwnerEntity, InRequest.Get_AbilityHandle());
+                auto FoundAbilityEntity = DoFindAbilityByHandle(InAbilityOwnerEntity, InRequest.Get_AbilityHandle());
 
                 if (ck::Is_NOT_Valid(FoundAbilityEntity))
                 { break; }
@@ -500,15 +502,16 @@ namespace ck
     auto
         FProcessor_AbilityOwner_HandleRequests::
         DoFindAbilityByClass(
-            const FCk_Handle& InAbilityOwnerEntity,
-            const TSubclassOf<UCk_Ability_Script_PDA>& InAbilityClass) const
-         -> FCk_Handle
+            FCk_Handle& InAbilityOwnerEntity,
+            const TSubclassOf<UCk_Ability_Script_PDA>& InAbilityClass)
+        -> FCk_Handle_Ability
     {
         const auto& FoundAbilityWithName = UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Get_ValidEntry_If
         (
             InAbilityOwnerEntity,
             [InAbilityClass](const FCk_Handle& InHandle)
-            { return UCk_Utils_Ability_UE::Get_ScriptClass(InHandle) == InAbilityClass; }
+            // TODO: remove conv when RecordOfAbilities is fully templated
+            { return UCk_Utils_Ability_UE::Get_ScriptClass(UCk_Utils_Ability_UE::Conv_HandleToAbility(InHandle)) == InAbilityClass; }
         );
 
         CK_ENSURE_IF_NOT(ck::IsValid(FoundAbilityWithName),
@@ -517,15 +520,16 @@ namespace ck
             InAbilityClass)
         { return {}; }
 
-        return FoundAbilityWithName;
+        // TODO: remove conv when RecordOfAbilities is fully templated
+        return UCk_Utils_Ability_UE::Conv_HandleToAbility(FoundAbilityWithName);
     }
 
     auto
         FProcessor_AbilityOwner_HandleRequests::
         DoFindAbilityByHandle(
             const FCk_Handle& InAbilityOwnerEntity,
-            const FCk_Handle& InAbilityEntity) const
-         -> FCk_Handle
+            const FCk_Handle& InAbilityEntity)
+        -> FCk_Handle_Ability
     {
         CK_ENSURE_IF_NOT(UCk_Utils_Ability_UE::Has(InAbilityEntity),
             TEXT("Entity [{}] is NOT an Ability"),
@@ -544,7 +548,8 @@ namespace ck
             InAbilityEntity)
         { return {}; }
 
-        return InAbilityEntity;
+        // TODO: remove conv when RecordOfAbilities is fully templated
+        return UCk_Utils_Ability_UE::Conv_HandleToAbility(InAbilityEntity);
     }
 }
 

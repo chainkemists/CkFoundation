@@ -137,11 +137,7 @@ CK_DEFINE_CUSTOM_FORMATTER(FAssetData, [&]()
 CK_DEFINE_CUSTOM_FORMATTER(UObject, [&]()
 {
     //  TODO: drive the verbosity through an Editor setting
-<<<<<<< Updated upstream
-    return UCk_Utils_Debug_UE::Get_DebugName(&InObj, ECk_DebugNameVerbosity_Policy::Compact);
-=======
     return UCk_Utils_Debug_UE::Get_DebugName(&InObj);
->>>>>>> Stashed changes
 });
 
 CK_DEFINE_CUSTOM_FORMATTER_PTR_FORWARDER(UObject, [&]() -> const UObject&
