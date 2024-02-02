@@ -71,11 +71,11 @@ auto
 {
     auto OuterObject = InObject;
 
-    while (ck::IsValid(OuterObject))
+    while (ck::IsValid(OuterObject, ck::IsValid_Policy_IncludePendingKill{}))
     {
         auto MaybePawn = Cast<APawn>(OuterObject);
 
-        if (ck::IsValid(MaybePawn))
+        if (ck::IsValid(MaybePawn, ck::IsValid_Policy_IncludePendingKill{}))
         { return MaybePawn; }
 
         OuterObject = OuterObject->GetOuter();
@@ -92,11 +92,11 @@ auto
 {
     auto OuterObject = InObject;
 
-    while (ck::IsValid(OuterObject))
+    while (ck::IsValid(OuterObject, ck::IsValid_Policy_IncludePendingKill{}))
     {
         auto MaybeActor = Cast<AActor>(OuterObject);
 
-        if (ck::IsValid(MaybeActor))
+        if (ck::IsValid(MaybeActor, ck::IsValid_Policy_IncludePendingKill{}))
         { return MaybeActor; }
 
         OuterObject = OuterObject->GetOuter();
@@ -113,11 +113,11 @@ auto
 {
     auto OuterObject = InObject;
 
-    while (ck::IsValid(OuterObject))
+    while (ck::IsValid(OuterObject, ck::IsValid_Policy_IncludePendingKill{}))
     {
         auto MaybeActor = Cast<AActor>(OuterObject);
 
-        if (ck::IsValid(MaybeActor))
+        if (ck::IsValid(MaybeActor, ck::IsValid_Policy_IncludePendingKill{}))
         {
             if (MaybeActor->GetRemoteRole() != ROLE_None)
             {

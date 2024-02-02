@@ -285,7 +285,7 @@ namespace ck
         const auto& SensorName           = InRequest.Get_SensorDetails().Get_SensorName();
         const auto& SensorFilteringInfo  = InParamsComp.Get_Params().Get_FilteringParams().Get_MarkerNames();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(OverlappedMarkerEntity),
+        CK_ENSURE_IF_NOT(ck::IsValid(OverlappedMarkerEntity, ck::IsValid_Policy_IncludePendingKill{}),
             TEXT("Sensor [Name: {} | Entity: {}] received EndOverlap with Marker [{}] that has an INVALID Entity"),
             SensorName,
             InSensorEntity,

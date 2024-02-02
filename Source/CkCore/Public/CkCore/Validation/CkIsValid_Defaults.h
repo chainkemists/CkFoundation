@@ -57,9 +57,9 @@ CK_DEFINE_CUSTOM_IS_VALID(const UObject*, ck::IsValid_Policy_Default, [=](const 
     return ::IsValid(InObj);
 });
 
-CK_DEFINE_CUSTOM_IS_VALID(const AActor*, ck::IsValid_Policy_IncludePendingKill, [=](const AActor* InActor)
+CK_DEFINE_CUSTOM_IS_VALID(const UObject*, ck::IsValid_Policy_IncludePendingKill, [=](const UObject* InObj)
 {
-    return InActor != nullptr;
+    return InObj != nullptr;
 });
 
 CK_DEFINE_CUSTOM_IS_VALID(FName, ck::IsValid_Policy_Default, [=](FName InName)
