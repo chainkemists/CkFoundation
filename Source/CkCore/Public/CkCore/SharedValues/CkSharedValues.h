@@ -2,6 +2,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include <InstancedStruct.h>
+
 #include "CkSharedValues.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -266,6 +268,33 @@ public:
     FCk_SharedTransform();
     explicit
     FCk_SharedTransform(ValueType InValue);
+
+public:
+    auto operator*() const -> ValueType&;
+    auto operator->() const -> ValueType*;
+
+private:
+    PtrType _Ptr;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKCORE_API FCk_SharedInstancedStruct
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_SharedInstancedStruct);
+
+public:
+    using ValueType = FInstancedStruct;
+    using PtrType = TSharedPtr<ValueType, ESPMode::NotThreadSafe>;
+
+public:
+    FCk_SharedInstancedStruct();
+    explicit
+    FCk_SharedInstancedStruct(ValueType InValue);
 
 public:
     auto operator*() const -> ValueType&;

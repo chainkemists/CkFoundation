@@ -302,3 +302,33 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_SharedInstancedStruct_UE::
+    Get(
+        const FCk_SharedInstancedStruct& InShared)
+    -> FInstancedStruct
+{
+    return *InShared;
+}
+
+auto
+    UCk_Utils_SharedInstancedStruct_UE::
+    Set(
+        FCk_SharedInstancedStruct& InShared,
+        const FInstancedStruct& InValue)
+    -> void
+{
+    *InShared = InValue;
+}
+
+auto
+    UCk_Utils_SharedInstancedStruct_UE::
+    Make(
+        const FInstancedStruct& InValue)
+    -> FCk_SharedInstancedStruct
+{
+    return FCk_SharedInstancedStruct{InValue};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
