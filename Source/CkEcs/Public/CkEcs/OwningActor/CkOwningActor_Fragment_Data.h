@@ -9,6 +9,8 @@
 
 #include "CkCore/Component/CkActorComponent.h"
 
+#include <InstancedStruct.h>
+
 #include "CkOwningActor_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -90,6 +92,8 @@ private:
 
 private:
     virtual auto TryInvoke_OnReplicationComplete(EInvoke_Caller) -> void {}
+
+    virtual auto Get_EntityConstructionParamsToInject() const -> FInstancedStruct { return {}; };
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -2,6 +2,7 @@
 
 #include "CkCore/Component/CkActorComponent.h"
 #include "CkCore/Enums/CkEnums.h"
+#include "CkCore/SharedValues/CkSharedValues.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 
@@ -16,6 +17,10 @@
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
     FCk_Delegate_OnReplicationComplete_MC,
     FCk_Handle, InEntity);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+    FCk_Delegate_OnInjectEntityConstructionParams_MC,
+    FCk_SharedInstancedStruct, InParamsToInject);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -45,6 +50,7 @@ protected:
 
 private:
     auto TryInvoke_OnReplicationComplete(EInvoke_Caller InCaller) -> void override;
+    auto Get_EntityConstructionParamsToInject() const -> FInstancedStruct override;
 
 public:
     UFUNCTION(BlueprintCallable)
@@ -63,6 +69,10 @@ private:
     UPROPERTY(BlueprintAssignable, Category = "Public", DisplayName = "On Replication Complete",
         meta = (AllowPrivateAccess))
     FCk_Delegate_OnReplicationComplete_MC _OnReplicationComplete_MC;
+
+    UPROPERTY(BlueprintAssignable, Category = "Public", DisplayName = "On Inject Entity Construction Params",
+        meta = (AllowPrivateAccess))
+    FCk_Delegate_OnInjectEntityConstructionParams_MC _OnInjectEntityConstructionParams_MC;
 
 private:
     enum class EOnReplicationCompleteBroadcastStep

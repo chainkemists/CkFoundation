@@ -5,6 +5,8 @@
 #include "CkCore/Types/DataAsset/CkDataAsset.h"
 #include "CkEcs/Registry/CkRegistry.h"
 
+#include <InstancedStruct.h>
+
 #include "CkEntityBridge_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -20,13 +22,17 @@ public:
     CK_GENERATED_BODY(UCk_EntityBridge_Config_Base_PDA);
 
 public:
-    auto Build(FCk_Handle InEntity) const -> void;
+    auto Build(
+        FCk_Handle InEntity,
+        const FInstancedStruct& InOptionalParams) const -> void;
 
     [[nodiscard]]
     auto Get_EntityConstructionScript() const -> class UCk_Entity_ConstructionScript_PDA*;
 
 protected:
-    virtual auto DoBuild(FCk_Handle InHandle) const -> void;
+    virtual auto DoBuild(
+        FCk_Handle InHandle,
+        const FInstancedStruct& InOptionalParams) const -> void;
 
     [[nodiscard]]
     virtual auto DoGet_EntityConstructionScript() const -> class UCk_Entity_ConstructionScript_PDA*;
@@ -90,21 +96,14 @@ public:
     using PreBuildFunc = TFunction<void(const FCk_Handle&)>;
     using PostSpawnFunc = TFunction<void(const FCk_Handle&)>;
 
-public:
-    FCk_Request_EntityBridge_SpawnEntity() = default;
-
-    explicit FCk_Request_EntityBridge_SpawnEntity(
-        const UCk_EntityBridge_Config_Base_PDA* InEntity);
-
-    FCk_Request_EntityBridge_SpawnEntity(
-        const UCk_EntityBridge_Config_Base_PDA* InEntity,
-        PreBuildFunc InPreBuildFunc,
-        PostSpawnFunc InPostSpawnFunc);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
               meta = (AllowPrivateAccess = true))
     const UCk_EntityBridge_Config_Base_PDA* _EntityConfig = nullptr;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FInstancedStruct _OptionalParams;
 
     // TODO:
     // - add an owner
@@ -117,8 +116,12 @@ private:
 
 public:
     CK_PROPERTY_GET(_EntityConfig);
-    CK_PROPERTY_GET(_PreBuildFunc);
-    CK_PROPERTY_GET(_PostSpawnFunc);
+    CK_PROPERTY(_OptionalParams);
+    CK_PROPERTY(_PreBuildFunc);
+    CK_PROPERTY(_PostSpawnFunc);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_EntityBridge_SpawnEntity, _EntityConfig);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

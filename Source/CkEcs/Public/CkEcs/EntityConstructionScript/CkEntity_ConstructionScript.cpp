@@ -12,20 +12,22 @@
 auto
     UCk_Entity_ConstructionScript_PDA::
     Construct(
-        FCk_Handle InHandle)
+        FCk_Handle InHandle,
+        const FInstancedStruct& InOptionalParams)
     -> void
 {
     Set_CurrentWorld(UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle));
 
     UCk_Utils_Handle_UE::Set_DebugName(InHandle, UCk_Utils_Debug_UE::Get_DebugName(this, ECk_DebugNameVerbosity_Policy::Compact));
 
-    DoConstruct(InHandle);
+    DoConstruct(InHandle, InOptionalParams);
 }
 
 auto
     UCk_Entity_ConstructionScript_PDA::
     DoConstruct_Implementation(
-        const FCk_Handle& InHandle)
+        const FCk_Handle& InHandle,
+        const FInstancedStruct& InOptionalParams)
     -> void
 {
 }
