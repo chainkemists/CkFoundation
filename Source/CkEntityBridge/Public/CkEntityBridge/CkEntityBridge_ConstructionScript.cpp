@@ -54,6 +54,8 @@ auto
         {
             const auto OwningEntity = EntityOwningActorComponent->Get_EntityHandle();
 
+            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(OwningEntity);
+
             if (NOT UCk_Utils_ReplicatedObjects_UE::Has(OwningEntity))
             { return; }
 
