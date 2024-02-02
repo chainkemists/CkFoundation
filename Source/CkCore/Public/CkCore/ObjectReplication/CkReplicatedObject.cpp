@@ -10,7 +10,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 #define CK_ENSURE_OUTER_IS_VALID_OR_RETURN()\
-    CK_ENSURE_IF_NOT(ck::IsValid(GetOwningActor()), TEXT("Outer is [{}]. A ReplicatedObject MUST have an owner that is an Actor."),\
+    CK_ENSURE_IF_NOT(ck::IsValid(GetOwningActor(), ck::IsValid_Policy_IncludePendingKill{}), TEXT("Outer is [{}]. A ReplicatedObject MUST have an owner that is an Actor."),\
         GetOwningActor(), ck::Context(this))\
     {\
         return {};\
