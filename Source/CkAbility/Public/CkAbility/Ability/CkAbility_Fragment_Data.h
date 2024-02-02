@@ -5,6 +5,7 @@
 #include "CkCore/Types/DataAsset/CkDataAsset.h"
 
 #include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
+#include "CkEcs/Handle/CkHandle_Typesafe.h"
 
 #include "CkNet/Public/CkNet/CkNet_Common.h"
 
@@ -99,6 +100,11 @@ enum class ECk_Ability_InstancingPolicy : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_InstancingPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType) struct CKABILITY_API FCk_Handle_Ability : public FCk_Handle_TypeSafe { GENERATED_BODY() };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Ability);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -447,7 +453,7 @@ private:
 
 private:
     UPROPERTY(Transient)
-    FCk_Handle _AbilityHandle;
+    FCk_Handle_Ability _AbilityHandle;
 
     UPROPERTY(Transient)
     FCk_Handle _AbilityOwnerHandle;

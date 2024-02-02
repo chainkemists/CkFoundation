@@ -71,14 +71,24 @@ public:
               DisplayName="[Ck][Ability] Has Feature")
     static bool
     Has(
-        FCk_Handle InAbilityEntity);
+        const FCk_Handle& InAbilityEntity);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Ability",
-              DisplayName="[Ck][Ability] Ensure Has Feature")
-    static bool
-    Ensure(
-        FCk_Handle InAbilityEntity);
+        Category = "Ck|Utils|Ability",
+        DisplayName="[Ck][Ability] Cast",
+        meta = (ExpandEnumAsExecs = "OutResult"))
+    static FCk_Handle_Ability
+    Cast(
+        const FCk_Handle&    InHandle,
+        ECk_SucceededFailed& OutResult);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Ability",
+        DisplayName="[Ck][Ability] Handle -> Ability Handle",
+        meta = (CompactNodeTitle = "As AbilityHandle", BlueprintAutocast))
+    static FCk_Handle_Ability
+    Conv_HandleToAbility(
+        const FCk_Handle& InHandle);
 
 public:
     UFUNCTION(BlueprintPure,
@@ -87,49 +97,49 @@ public:
               meta=(CompactNodeTitle="AbilityInfo"))
     static FCk_Ability_Info
     Get_Info(
-        FCk_Handle InAbilityEntity);
+        const FCk_Handle_Ability& InAbilityEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
               DisplayName="[Ck][Ability] Get Display Name")
     static FName
     Get_DisplayName(
-        FCk_Handle InAbilityEntity);
+        const FCk_Handle_Ability& InAbilityEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
               DisplayName="[Ck][Ability] Get Activation Settings")
     static FCk_Ability_ActivationSettings
     Get_ActivationSettings(
-        FCk_Handle InAbilityEntity);
+        const FCk_Handle_Ability& InAbilityEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
               DisplayName="[Ck][Ability] Get Network Settings")
     static FCk_Ability_NetworkSettings
     Get_NetworkSettings(
-        FCk_Handle InAbilityEntity);
+        const FCk_Handle_Ability& InAbilityEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
               DisplayName="[Ck][Ability] Get Status")
     static ECk_Ability_Status
     Get_Status(
-        FCk_Handle InAbilityEntity);
+        const FCk_Handle_Ability& InAbilityEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
               DisplayName="[Ck][Ability] Get Script Class")
     static TSubclassOf<UCk_Ability_Script_PDA>
     Get_ScriptClass(
-        FCk_Handle InAbilityEntity);
+        const FCk_Handle_Ability& InAbilityEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
               DisplayName="[Ck][Ability] Get Can Activate")
     static ECk_Ability_ActivationRequirementsResult
     Get_CanActivate(
-        FCk_Handle InAbilityEntity);
+        const FCk_Handle_Ability& InAbilityEntity);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -137,7 +147,7 @@ public:
               DisplayName = "[Ck][Ability] Bind To OnActivated")
     static void
     BindTo_OnAbilityActivated(
-        FCk_Handle InAbilityHandle,
+        UPARAM(ref) FCk_Handle_Ability& InAbilityHandle,
         ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_Ability_OnActivated& InDelegate);
 
@@ -146,7 +156,7 @@ public:
               DisplayName = "[Ck][Ability] Unbind From OnActivated")
     static void
     UnbindFrom_OnAbilityActivated(
-        FCk_Handle InAbilityHandle,
+        UPARAM(ref) FCk_Handle_Ability& InAbilityHandle,
         const FCk_Delegate_Ability_OnActivated& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -154,7 +164,7 @@ public:
               DisplayName = "[Ck][Ability] Bind To OnDeactivated")
     static void
     BindTo_OnAbilityDeactivated(
-        FCk_Handle InAbilityHandle,
+        UPARAM(ref) FCk_Handle_Ability& InAbilityHandle,
         ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_Ability_OnDeactivated& InDelegate);
 
@@ -163,7 +173,7 @@ public:
               DisplayName = "[Ck][Ability] Unbind From OnDeactivated")
     static void
     UnbindFrom_OnAbilityDeactivated(
-        FCk_Handle InAbilityHandle,
+        UPARAM(ref) FCk_Handle_Ability& InAbilityHandle,
         const FCk_Delegate_Ability_OnDeactivated& InDelegate);
 
 private:
@@ -176,23 +186,23 @@ private:
 private:
     static auto
     DoActivate(
-        FCk_Handle InAbilityEntity,
+        FCk_Handle_Ability& InAbilityEntity,
         const FCk_Ability_ActivationPayload& InActivationPayload) -> void;
 
     static auto
     DoDeactivate(
         FCk_Handle InAbilityOwnerEntity,
-        FCk_Handle InAbilityEntity) -> void;
+        FCk_Handle_Ability& InAbilityEntity) -> void;
 
     static auto
     DoGive(
         FCk_Handle InAbilityOwner,
-        FCk_Handle InAbility) -> void;
+        FCk_Handle_Ability& InAbility) -> void;
 
     static auto
     DoRevoke(
         FCk_Handle InAbilityOwner,
-        FCk_Handle InAbility) -> void;
+        FCk_Handle_Ability& InAbility) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
