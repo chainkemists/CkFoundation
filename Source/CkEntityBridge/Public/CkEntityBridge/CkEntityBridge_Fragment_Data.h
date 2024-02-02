@@ -93,8 +93,8 @@ public:
     CK_GENERATED_BODY(FCk_Request_EntityBridge_SpawnEntity);
 
 public:
-    using PreBuildFunc = TFunction<void(const FCk_Handle&)>;
-    using PostSpawnFunc = TFunction<void(const FCk_Handle&)>;
+    using PreBuildFunc = TFunction<void(FCk_Handle&)>;
+    using PostSpawnFunc = TFunction<void(FCk_Handle&)>;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
