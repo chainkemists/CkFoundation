@@ -15,6 +15,17 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_PendingKill_Policy : uint8
+{
+    ExcludePendingKill,
+    IncludePendingKill,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_PendingKill_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_SelfOrParent : uint8
 {
     Self,
