@@ -155,9 +155,10 @@ namespace ck
 
         InCurrentComp._EnableDisable = ECk_EnableDisable::Disable;
 
+        // Since we are in the teardown, we are ok if the marker object is pending kill
         const auto& Params     = InParamsComp.Get_Params();
         const auto& MarkerName = Params.Get_MarkerName();
-        const auto& Marker     = InCurrentComp.Get_Marker().Get();
+        const auto& Marker     = InCurrentComp.Get_Marker().Get(true);
 
         UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(Marker, ECk_EnableDisable::Disable);
         UCk_Utils_Physics_UE::Request_SetCollisionEnabled(Marker, ECollisionEnabled::NoCollision);
