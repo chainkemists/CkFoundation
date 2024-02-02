@@ -62,7 +62,7 @@ auto
         InConstructionInfo.Get_ConstructionScript())
     { return {}; }
 
-    const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
     if (InFunc_OnCreateEntityBeforeBuild)
     { InFunc_OnCreateEntityBeforeBuild(NewEntity); }
 

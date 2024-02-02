@@ -62,6 +62,13 @@ public:
     auto Swap(ThisType& InOther) -> void;
 
 public:
+    // this is a special hard-coded function that expects the type-safe handle to have a particular function
+    template <typename T_WrappedHandle, class = std::enable_if_t<std::is_base_of_v<struct FCk_Handle_TypeSafe, T_WrappedHandle>>>
+    auto operator==(const T_WrappedHandle& InOther) const -> bool;
+
+    template <typename T_WrappedHandle, class = std::enable_if_t<std::is_base_of_v<struct FCk_Handle_TypeSafe, T_WrappedHandle>>>
+    auto operator!=(const T_WrappedHandle& InOther) const -> bool;
+
     auto operator==(const ThisType& InOther) const -> bool;
     CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
 
@@ -261,6 +268,26 @@ FCk_Handle::
         const T_WrappedHandle& InTypeSafeHandle)
     : FCk_Handle(InTypeSafeHandle.Get_RawHandle())
 { }
+
+template <typename T_WrappedHandle, class>
+auto
+    FCk_Handle::
+    operator==(
+        const T_WrappedHandle& InOther) const
+    -> bool
+{
+    return ck::Cast<FCk_Handle>(InOther) == *this;
+}
+
+template <typename T_WrappedHandle, class>
+auto
+    FCk_Handle::
+    operator!=(
+        const T_WrappedHandle& InOther) const
+    -> bool
+{
+    return Cast<FCk_Handle>(InOther) != *this;
+}
 
 template <typename T_Fragment, typename ... T_Args>
 auto
@@ -655,7 +682,7 @@ namespace ck
         static_assert(requires(const T_DerivedHandle& T) { T.Get_RawHandle(); }, "T_DerivedHandle MUST be type-safe Handle");
         static_assert(sizeof(T_DerivedHandle) == sizeof(InHandle), "T_DerivedHandle MUST be the same size as FCk_Handle");
 
-        return T_DerivedHandle{};
+        return T_DerivedHandle{InHandle};
     }
 }
 

@@ -41,7 +41,7 @@ auto
     auto ParamsToUse = InParams;
     ParamsToUse.Set_ReplicationType(InReplicationType);
 
-    const auto NewMarkerEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InMarkerEntity)
+    auto NewMarkerEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InMarkerEntity)
     {
         InMarkerEntity.Add<ck::FFragment_Marker_Params>(ParamsToUse);
         InMarkerEntity.Add<ck::FFragment_Marker_Current>(ParamsToUse.Get_StartingState());
