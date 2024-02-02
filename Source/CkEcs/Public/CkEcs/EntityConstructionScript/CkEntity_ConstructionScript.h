@@ -21,7 +21,7 @@ public:
 public:
     auto
     Construct(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FInstancedStruct& InOptionalParams) -> void;
 
 protected:
@@ -29,7 +29,7 @@ protected:
               DisplayName = "Construct")
     void
     DoConstruct(
-        const FCk_Handle& InHandle,
+        FCk_Handle& InHandle,
         const FInstancedStruct& InOptionalParams);
 };
 

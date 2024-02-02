@@ -173,10 +173,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FFragment_RecordOfAttributeModifiers : public FFragment_RecordOfEntities
-    {
-        using FFragment_RecordOfEntities::FFragment_RecordOfEntities;
-    };
+    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfAttributeModifiers, FCk_Handle);
 
     // --------------------------------------------------------------------------------------------------------------------
 

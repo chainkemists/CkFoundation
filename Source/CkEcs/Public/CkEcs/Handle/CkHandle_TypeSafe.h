@@ -23,6 +23,13 @@ public:
     CK_GENERATED_BODY(FCk_Handle_TypeSafe);
 
 public:
+    auto operator==(const FCk_Handle& InOther) const -> bool;
+    auto operator!=(const FCk_Handle& InOther) const -> bool;
+
+    auto operator==(const ThisType& InOther) const -> bool;
+    CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
+
+public:
     template <typename T_Fragment, typename... T_Args>
     auto Add(T_Args&&... InArgs) -> T_Fragment& ;
 
@@ -97,19 +104,30 @@ private:
 public:
     CK_PROPERTY_GET(_RawHandle);
     CK_PROPERTY_GET_NON_CONST(_RawHandle);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Handle_TypeSafe, _RawHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
-template <typename T_WrappedHandle, class = std::enable_if_t<std::is_base_of_v<FCk_Handle_TypeSafe, T_WrappedHandle>>>
-auto
-    operator==(const FCk_Handle& InHandle, const T_WrappedHandle& InHandle_TypeSafe) -> bool
-{ return InHandle == InHandle_TypeSafe.Get_RawHandle(); }
+#define CK_GENERATE_BODY_HANDLE_TYPESAFE(_ClassType_)\
+    CK_GENERATED_BODY(_ClassType_);\
+    using FCk_Handle_TypeSafe::FCk_Handle_TypeSafe;\
+    using FCk_Handle_TypeSafe::operator==;\
+    using FCk_Handle_TypeSafe::operator!=
 
-template <typename T_WrappedHandle, class = std::enable_if_t<std::is_base_of_v<FCk_Handle_TypeSafe, T_WrappedHandle>>>
-auto
-    operator==(const T_WrappedHandle& InHandle_TypeSafe, const FCk_Handle& InHandle) -> bool
-{ return InHandle_TypeSafe.Get_RawHandle() == InHandle; }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+//template <typename T_WrappedHandle, class = std::enable_if_t<std::is_base_of_v<FCk_Handle_TypeSafe, T_WrappedHandle>>>
+//auto
+//    operator==(const FCk_Handle& InHandle, const T_WrappedHandle& InHandle_TypeSafe) -> bool
+//{ return InHandle == InHandle_TypeSafe.Get_RawHandle(); }
+//
+//template <typename T_WrappedHandle, class = std::enable_if_t<std::is_base_of_v<FCk_Handle_TypeSafe, T_WrappedHandle>>>
+//auto
+//    operator==(const T_WrappedHandle& InHandle_TypeSafe, const FCk_Handle& InHandle) -> bool
+//{ return InHandle_TypeSafe.Get_RawHandle() == InHandle; }
 
 // --------------------------------------------------------------------------------------------------------------------
 

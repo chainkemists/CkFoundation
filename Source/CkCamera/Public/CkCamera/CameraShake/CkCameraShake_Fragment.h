@@ -58,10 +58,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FFragment_RecordOfCameraShakes : public FFragment_RecordOfEntities
-    {
-        using FFragment_RecordOfEntities::FFragment_RecordOfEntities;
-    };
+    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfCameraShakes, FCk_Handle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

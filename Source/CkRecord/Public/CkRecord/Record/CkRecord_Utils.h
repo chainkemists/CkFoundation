@@ -27,8 +27,8 @@ namespace ck
         friend class UCk_Utils_RecordEntry_UE;
 
     public:
-        using HandleType            = FCk_Handle;
         using RecordType            = T_DerivedRecord;
+        using HandleType            = typename T_DerivedRecord::HandleType;
         using RecordEntityType      = typename T_DerivedRecord::EntityType;
         using RecordEntryEntityType = typename T_DerivedRecord::EntityType;
         using RecordEntryHandleType = HandleType;
@@ -37,58 +37,71 @@ namespace ck
     public:
         static auto
         AddIfMissing(
-            FCk_Handle InHandle,
+            FCk_Handle& InHandle,
             ECk_Record_EntryHandlingPolicy _EntryHandlingPolicy = ECk_Record_EntryHandlingPolicy::Default) -> void;
 
         static auto
         Has(
-            FCk_Handle InHandle) -> bool;
+            const FCk_Handle& InHandle) -> bool;
 
         static auto
         Ensure(
-            FCk_Handle InHandle) -> bool;
+            const FCk_Handle& InHandle) -> bool;
 
         static auto
         Get_ValidEntriesCount(
-            FCk_Handle InRecordHandle) -> int32;
+            const FCk_Handle& InRecordHandle) -> int32;
 
     public:
         template <typename T_Predicate>
         static auto
         Get_HasValidEntry_If(
-            FCk_Handle InRecordHandle,
+            const FCk_Handle& InRecordHandle,
             T_Predicate InPredicate) -> bool;
 
         template <typename T_Predicate>
         static auto
         Get_ValidEntry_If(
-            FCk_Handle InRecordHandle,
-            T_Predicate InPredicate) -> FCk_Handle;
+            const FCk_Handle& InRecordHandle,
+            T_Predicate InPredicate) -> HandleType;
 
     public:
         template <typename T_Func>
         static auto
         ForEach_ValidEntry(
-            FCk_Handle InHandle,
+            FCk_Handle& InHandle,
+            T_Func InFunc) -> void;
+
+        template <typename T_Func>
+        static auto
+        ForEach_ValidEntry(
+            const FCk_Handle& InHandle,
             T_Func InFunc) -> void;
 
         template <typename T_Unary, typename T_Predicate>
         static auto
         ForEach_ValidEntry_If(
-            FCk_Handle InRecordHandle,
+            FCk_Handle& InRecordHandle,
+            T_Unary InFunc,
+            T_Predicate InPredicate) -> void;
+
+        template <typename T_Unary, typename T_Predicate>
+        static auto
+        ForEach_ValidEntry_If(
+            const FCk_Handle& InRecordHandle,
             T_Unary InFunc,
             T_Predicate InPredicate) -> void;
 
     public:
         static auto
         Request_Connect(
-            FCk_Handle InRecordHandle,
-            FCk_Handle InRecordEntry) -> void;
+            FCk_Handle& InRecordHandle,
+            HandleType& InRecordEntry) -> void;
 
         static auto
         Request_Disconnect(
-            FCk_Handle InRecordHandle,
-            FCk_Handle InRecordEntry) -> void;
+            FCk_Handle& InRecordHandle,
+            HandleType& InRecordEntry) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -97,11 +110,11 @@ namespace ck
     auto
         TUtils_RecordOfEntities<T_DerivedRecord>::
         AddIfMissing(
-            FCk_Handle InHandle,
+            FCk_Handle& InHandle,
             ECk_Record_EntryHandlingPolicy _EntryHandlingPolicy)
         -> void
     {
-        const auto& Record = InHandle.AddOrGet<RecordType>(_EntryHandlingPolicy);
+        const auto& Record = InHandle.template AddOrGet<RecordType>(_EntryHandlingPolicy);
         CK_ENSURE_IF_NOT(Record.Get_EntryHandlingPolicy() == _EntryHandlingPolicy,
             TEXT("Trying to Add a Record with a different EntryHandlingPolicy to Entity [{}]"),
             InHandle)
@@ -112,17 +125,17 @@ namespace ck
     auto
         TUtils_RecordOfEntities<T_DerivedRecord>::
         Has(
-            FCk_Handle InHandle)
+            const FCk_Handle& InHandle)
         -> bool
     {
-        return InHandle.Has<RecordType>();
+        return InHandle.template Has<RecordType>();
     }
 
     template <typename T_DerivedRecord>
     auto
         TUtils_RecordOfEntities<T_DerivedRecord>::
         Ensure(
-            FCk_Handle InHandle)
+            const FCk_Handle& InHandle)
         -> bool
     {
         CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have [{}]"), InHandle, ck::TypeToString<RecordType>)
@@ -135,10 +148,10 @@ namespace ck
     auto
         TUtils_RecordOfEntities<T_DerivedRecord>::
         Get_ValidEntriesCount(
-            FCk_Handle InRecordHandle)
+            const FCk_Handle& InRecordHandle)
         -> int32
     {
-        const auto& Fragment = InRecordHandle.Get<RecordType>();
+        const auto& Fragment = InRecordHandle.template Get<RecordType>();
         return algo::CountIf(Fragment.Get_RecordEntries(), algo::IsValidEntityHandle{});
     }
 
@@ -147,7 +160,7 @@ namespace ck
     auto
         TUtils_RecordOfEntities<T_DerivedRecord>::
         Get_HasValidEntry_If(
-            FCk_Handle InRecordHandle,
+            const FCk_Handle& InRecordHandle,
             T_Predicate InPredicate)
         -> bool
     {
@@ -159,11 +172,11 @@ namespace ck
     auto
         TUtils_RecordOfEntities<T_DerivedRecord>::
         Get_ValidEntry_If(
-            FCk_Handle InRecordHandle,
+            const FCk_Handle& InRecordHandle,
             T_Predicate InPredicate)
-        -> FCk_Handle
+        -> HandleType
     {
-        const auto& Fragment = InRecordHandle.Get<RecordType>();
+        const auto& Fragment = InRecordHandle.template Get<RecordType>();
 
         for (const auto& RecordEntry : Fragment.Get_RecordEntries())
         {
@@ -173,7 +186,7 @@ namespace ck
             { continue; }
 
             if (const auto Result = InPredicate(RecordEntryHandle))
-            { return RecordEntryHandle; }
+            { return ck::Cast<HandleType>(RecordEntryHandle); }
         }
 
         return {};
@@ -184,10 +197,10 @@ namespace ck
     auto
         TUtils_RecordOfEntities<T_DerivedRecord>::
         ForEach_ValidEntry(
-            FCk_Handle InHandle,
+            FCk_Handle& InHandle,
             T_Func InFunc) -> void
     {
-        auto& Fragment = InHandle.Get<RecordType>();
+        auto& Fragment      = InHandle.template Get<RecordType>();
         auto& RecordEntries = Fragment._RecordEntries;
 
         for (auto Index = 0; Index < RecordEntries.Num(); ++Index)
@@ -206,11 +219,39 @@ namespace ck
     }
 
     template <typename T_DerivedRecord>
+    template <typename T_Func>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        ForEach_ValidEntry(
+            const FCk_Handle& InHandle,
+            T_Func InFunc)
+        -> void
+    {
+        const auto& Fragment      = InHandle.template Get<RecordType>();
+        const auto& RecordEntries = Fragment._RecordEntries;
+
+        for (auto Index = 0; Index < RecordEntries.Num(); ++Index)
+        {
+            const auto RecordEntryHandle = ck::MakeHandle(RecordEntries[Index], InHandle);
+
+            if (ck::Is_NOT_Valid(RecordEntryHandle))
+            {
+                // not using RecordEntries local variable to keep mutability
+                Fragment._RecordEntries.RemoveAtSwap(Index);
+                --Index;
+                continue;
+            }
+
+            InFunc(RecordEntryHandle);
+        }
+    }
+
+    template <typename T_DerivedRecord>
     template <typename T_Unary, typename T_Predicate>
     auto
         TUtils_RecordOfEntities<T_DerivedRecord>::
         ForEach_ValidEntry_If(
-            FCk_Handle InRecordHandle,
+            FCk_Handle& InRecordHandle,
             T_Unary InFunc,
             T_Predicate InPredicate)
         -> void
@@ -223,11 +264,28 @@ namespace ck
     }
 
     template <typename T_DerivedRecord>
+    template <typename T_Unary, typename T_Predicate>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        ForEach_ValidEntry_If(
+            const FCk_Handle& InRecordHandle,
+            T_Unary InFunc,
+            T_Predicate InPredicate)
+        -> void
+    {
+        ForEach_ValidEntry(InRecordHandle, [&](const FCk_Handle& InRecordEntryHandle)
+        {
+            if (InPredicate(InRecordEntryHandle))
+            { InFunc(InRecordEntryHandle); }
+        });
+    }
+
+    template <typename T_DerivedRecord>
     auto
         TUtils_RecordOfEntities<T_DerivedRecord>::
         Request_Connect(
-            FCk_Handle InRecordHandle,
-            FCk_Handle InRecordEntry)
+            FCk_Handle& InRecordHandle,
+            HandleType& InRecordEntry)
         -> void
     {
         if (NOT Ensure(InRecordHandle))
@@ -272,7 +330,7 @@ namespace ck
         RecordEntryFragment._DisconnectionFuncs.Add(InRecordHandle,
         [](FCk_Handle InRecordEntity, FCk_Handle InRecordEntryEntity)
         {
-            InRecordEntity.Get<T_DerivedRecord>()._RecordEntries.Remove(InRecordEntryEntity);
+            InRecordEntity.Get<T_DerivedRecord>()._RecordEntries.Remove(ck::Cast<HandleType>(InRecordEntryEntity));
         });
     }
 
@@ -280,8 +338,8 @@ namespace ck
     auto
         TUtils_RecordOfEntities<T_DerivedRecord>::
         Request_Disconnect(
-            FCk_Handle InRecordHandle,
-            FCk_Handle InRecordEntry)
+            FCk_Handle& InRecordHandle,
+            HandleType& InRecordEntry)
         -> void
     {
         if (NOT Ensure(InRecordHandle))
@@ -334,7 +392,7 @@ public:
     friend class UCk_Utils_RecordEntry_UE;
 
 public:
-    using UtilsType = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfEntities>;
+    using UtilsType = ck::TUtils_RecordOfEntities<ck::TFragment_RecordOfEntities<FCk_Handle>>;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -385,7 +443,7 @@ public:
               meta=(AutoCreateRefTerm="InFunc, InOptionalPayload"))
     static TArray<FCk_Handle>
     ForEach_ValidEntry(
-        FCk_Handle InRecordHandle,
+        FCk_Handle& InRecordHandle,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InFunc);
 
@@ -395,7 +453,7 @@ public:
               meta=(AutoCreateRefTerm="InOptionalPayload, InFunc"))
     static TArray<FCk_Handle>
     ForEach_ValidEntry_If(
-        FCk_Handle InRecordHandle,
+        FCk_Handle& InRecordHandle,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InFunc,
         const FCk_Predicate_InHandle_OutResult& InPredicate);

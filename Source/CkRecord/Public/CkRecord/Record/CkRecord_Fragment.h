@@ -2,6 +2,7 @@
 
 #include "CkEcs/Entity/CkEntity.h"
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
 #include "CkRecord/Record/CkRecord_Fragment_Data.h"
 
@@ -13,13 +14,14 @@ class UCk_Utils_RecordOfEntities_UE;
 
 namespace ck
 {
-    // TODO: refactor this to take in a T_HandleType for type-safe handles to work with records
-
-    struct FFragment_RecordOfEntities
+    template <typename T_HandleType>
+    struct TFragment_RecordOfEntities
     {
+        static_assert(std::is_same_v<FCk_Handle, T_HandleType> || std::is_base_of_v<FCk_Handle_TypeSafe, T_HandleType>,
+            "RecordOfEntities T_HandleType MUST be a FCk_Handle or a derived type-safe FCk_Handle_TypeSafe");
 
     public:
-        CK_GENERATED_BODY(FFragment_RecordOfEntities);
+        CK_GENERATED_BODY(TFragment_RecordOfEntities<T_HandleType>);
 
     public:
         friend class UCk_Utils_RecordOfEntities_UE;
@@ -30,12 +32,14 @@ namespace ck
         friend class TUtils_RecordOfEntities;
 
     public:
+        using HandleType = T_HandleType;
         // TODO: Use FCk_DebuggableEntity when available [OBS-845]
-        using EntityType = FCk_Handle;
+        using EntityType = HandleType;
         using RecordEntriesType = TArray<EntityType>;
 
     private:
-        RecordEntriesType _RecordEntries;
+        // mutable because we lazily remove entries when performing a ForEach
+        mutable RecordEntriesType _RecordEntries;
         ECk_Record_EntryHandlingPolicy _EntryHandlingPolicy = ECk_Record_EntryHandlingPolicy::Default;
 
     private:
@@ -43,8 +47,14 @@ namespace ck
         CK_PROPERTY(_EntryHandlingPolicy);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_RecordOfEntities, _EntryHandlingPolicy);
+        CK_DEFINE_CONSTRUCTORS(TFragment_RecordOfEntities, _EntryHandlingPolicy);
     };
+}
+
+#define CK_DEFINE_RECORD_OF_ENTITIES(_NameOfRecord_, _HandleType_)     \
+struct _NameOfRecord_ : public TFragment_RecordOfEntities<_HandleType_>\
+{                                                                      \
+    using TFragment_RecordOfEntities::TFragment_RecordOfEntities;      \
 }
 
 // --------------------------------------------------------------------------------------------------------------------

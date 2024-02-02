@@ -20,9 +20,10 @@ auto
 {
     RecordOfVectorAttributes_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 
-    const auto& AddNewVectorAttributeToEntity = [&](FCk_Handle InAttributeOwner, const FGameplayTag& InAttributeName, FVector InAttributeBaseValue)
+    const auto& AddNewVectorAttributeToEntity = [&](FCk_Handle InAttributeOwner, const FGameplayTag& InAttributeName,
+        const FVector& InAttributeBaseValue)
     {
-        const auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwner);
+        auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwner);
 
         VectorAttribute_Utils::Add(NewAttributeEntity, InAttributeBaseValue);
         UCk_Utils_GameplayLabel_UE::Add(NewAttributeEntity, InAttributeName);

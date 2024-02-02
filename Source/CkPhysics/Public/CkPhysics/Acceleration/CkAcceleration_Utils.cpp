@@ -112,7 +112,7 @@ auto
         InAccelerationOwnerEntity)
     { return; }
 
-    const auto NewChannelEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAccelerationOwnerEntity, [&](FCk_Handle InChannelEntity)
+    auto NewChannelEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAccelerationOwnerEntity, [&](FCk_Handle InChannelEntity)
     {
         InChannelEntity.Add<ck::FTag_AccelerationChannel>();
         UCk_Utils_GameplayLabel_UE::Add(InChannelEntity, InAccelerationChannel);
@@ -193,7 +193,7 @@ auto
         InAccelerationOwnerEntity)
     { return {}; }
 
-    const auto NewModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAccelerationOwnerEntity, [&](FCk_Handle InModifierEntity)
+    auto NewModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAccelerationOwnerEntity, [&](FCk_Handle InModifierEntity)
     {
         InModifierEntity.Add<ck::FTag_AccelerationModifier>();
         InModifierEntity.Add<ck::FTag_AccelerationModifier_NeedsSetup>();
@@ -274,7 +274,7 @@ auto
         const FCk_Fragment_BulkAccelerationModifier_ParamsData& InParams)
     -> FCk_Handle
 {
-    const auto NewModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InModifierEntity)
+    auto NewModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InModifierEntity)
     {
         InModifierEntity.Add<ck::FFragment_BulkAccelerationModifier_Params>(InParams);
         InModifierEntity.Add<ck::FTag_BulkAccelerationModifier_NeedsSetup>();

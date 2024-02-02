@@ -64,7 +64,7 @@ public:
     CK_GENERATED_BODY(UCk_MeterAttribute_ConstructionScript_PDA);
 
     auto DoConstruct_Implementation(
-        const FCk_Handle& InHandle,
+        FCk_Handle& InHandle,
         const FInstancedStruct& InOptionalParams) -> void override;
 
 private:

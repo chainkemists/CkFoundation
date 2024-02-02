@@ -11,7 +11,7 @@ auto
         const FCk_Fragment_AnimAsset_ParamsData& InParams)
     -> void
 {
-    const auto NewAnimAssetEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InAnimAssetEntity)
+    auto NewAnimAssetEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InAnimAssetEntity)
     {
         InAnimAssetEntity.Add<ck::FFragment_AnimAsset_Params>(InParams);
         UCk_Utils_GameplayLabel_UE::Add(InAnimAssetEntity, InParams.Get_AnimationAsset().Get_ID());

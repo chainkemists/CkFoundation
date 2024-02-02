@@ -38,14 +38,14 @@ namespace ck
 auto
     UCk_MeterAttribute_ConstructionScript_PDA::
     DoConstruct_Implementation(
-        const FCk_Handle& InHandle,
+        FCk_Handle& InHandle,
         const FInstancedStruct& InOptionalParams)
     -> void
 {
     using RecordOfMeterAttributes_Utils = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils;
 
     // Our owner may be storing the starting Parameters for us. In which case, initialize using those parameters
-    const auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+    auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
     const auto& ParamsToUse = [&]
     {

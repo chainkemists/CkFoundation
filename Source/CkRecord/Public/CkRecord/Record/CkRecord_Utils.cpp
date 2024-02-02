@@ -71,7 +71,7 @@ auto
 auto
     UCk_Utils_RecordOfEntities_UE::
     ForEach_ValidEntry(
-        FCk_Handle InAbilityOwnerEntity,
+        FCk_Handle& InAbilityOwnerEntity,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InFunc)
     -> TArray<FCk_Handle>
@@ -92,7 +92,7 @@ auto
 auto
     UCk_Utils_RecordOfEntities_UE::
     ForEach_ValidEntry_If(
-        FCk_Handle InRecordHandle,
+        FCk_Handle& InRecordHandle,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InFunc,
         const FCk_Predicate_InHandle_OutResult& InPredicate)

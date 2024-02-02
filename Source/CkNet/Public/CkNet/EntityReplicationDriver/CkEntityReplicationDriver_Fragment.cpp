@@ -150,7 +150,7 @@ auto
     { return; }
 
     const auto WorldSubsystem = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
-    const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(WorldSubsystem->Get_TransientEntity(), [&](FCk_Handle InEntity)
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(WorldSubsystem->Get_TransientEntity(), [&](FCk_Handle InEntity)
     {
         InEntity.Add<ck::FFragment_OwningActor_Current>(ReplicatedActor);
         UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings
