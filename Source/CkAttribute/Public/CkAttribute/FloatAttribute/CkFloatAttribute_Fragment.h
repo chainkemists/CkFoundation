@@ -28,10 +28,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FFragment_RecordOfFloatAttributes : public FFragment_RecordOfEntities
-    {
-        using FFragment_RecordOfEntities::FFragment_RecordOfEntities;
-    };
+    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfFloatAttributes, FCk_Handle);
 
     // --------------------------------------------------------------------------------------------------------------------
 

@@ -37,7 +37,7 @@ auto
     auto ParamsToUse = InParams;
     ParamsToUse.Set_ReplicationType(InReplicationType);
 
-    const auto NewSensorEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InSensorEntity)
+    auto NewSensorEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InSensorEntity)
     {
         InSensorEntity.Add<ck::FFragment_Sensor_Params>(ParamsToUse);
         InSensorEntity.Add<ck::FFragment_Sensor_Current>(ParamsToUse.Get_StartingState());

@@ -124,24 +124,15 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FFragment_RecordOfAccelerationModifiers : public FFragment_RecordOfEntities
-    {
-        using FFragment_RecordOfEntities::FFragment_RecordOfEntities;
-    };
+    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfAccelerationModifiers, FCk_Handle);
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FFragment_RecordOfBulkAccelerationModifiers : public FFragment_RecordOfEntities
-    {
-        using FFragment_RecordOfEntities::FFragment_RecordOfEntities;
-    };
+    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfBulkAccelerationModifiers, FCk_Handle);
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FFragment_RecordOfAccelerationChannels : public FFragment_RecordOfEntities
-    {
-        using FFragment_RecordOfEntities::FFragment_RecordOfEntities;
-    };
+    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfAccelerationChannels, FCk_Handle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

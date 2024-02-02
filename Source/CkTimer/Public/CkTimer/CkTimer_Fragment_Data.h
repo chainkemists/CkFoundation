@@ -60,7 +60,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Timer_CountDirection);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType) struct CKTIMER_API FCk_Handle_Timer : public FCk_Handle_TypeSafe { GENERATED_BODY() };
+USTRUCT(BlueprintType) struct CKTIMER_API FCk_Handle_Timer : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATE_BODY_HANDLE_TYPESAFE(FCk_Handle_Timer); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Timer);
 
 // --------------------------------------------------------------------------------------------------------------------

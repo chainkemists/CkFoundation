@@ -11,7 +11,7 @@ auto
         const FCk_Fragment_CameraShake_ParamsData& InParams)
     -> void
 {
-    const auto NewCameraShakeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InCameraShakeEntity)
+    auto NewCameraShakeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InCameraShakeEntity)
     {
         InCameraShakeEntity.Add<ck::FFragment_CameraShake_Params>(InParams);
 

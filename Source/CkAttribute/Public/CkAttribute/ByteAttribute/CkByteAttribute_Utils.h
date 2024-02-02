@@ -91,7 +91,7 @@ public:
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_ByteAttribute(
-        const FCk_Handle&                  InAttributeOwner,
+        FCk_Handle& InAttributeOwner,
         const TFunction<void(FCk_Handle)>& InFunc) -> void;
 
     UFUNCTION(BlueprintCallable,
