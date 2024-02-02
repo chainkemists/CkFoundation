@@ -75,9 +75,9 @@ auto
 
     auto RoleToReturn = ENetRole::ROLE_None;
 
-    OnFirstValidReplicatedObject(InHandle, [&](const TWeakObjectPtr<UCk_ReplicatedObject_UE>& InRO)
+    OnFirstValidReplicatedObject(InHandle, ECk_PendingKill_Policy::IncludePendingKill, [&](const TWeakObjectPtr<UCk_ReplicatedObject_UE>& InRO)
     {
-        const auto& ReplicatedObjectAsActor = Cast<AActor>(InRO->GetOuter());
+        const auto& ReplicatedObjectAsActor = Cast<AActor>(InRO.Get(true)->GetOuter());
 
         CK_ENSURE_IF_NOT(ck::IsValid(ReplicatedObjectAsActor, ck::IsValid_Policy_NullptrOnly{}),
             TEXT("Outer of Replicated Object [{}] for Entity [{}] is NOT an Actor when expected it to be"), InRO, InHandle)
@@ -93,6 +93,7 @@ auto
     UCk_Utils_ReplicatedObjects_UE::
     OnFirstValidReplicatedObject(
         FCk_Handle InHandle,
+        ECk_PendingKill_Policy InPendingKillPolicy,
         const std::function<void(const TWeakObjectPtr<UCk_ReplicatedObject_UE>& InRO)>& InFunc)
     -> void
 {
@@ -101,9 +102,14 @@ auto
 
     const auto ReplicatedObjects = Get_ReplicatedObjects(InHandle).Get_ReplicatedObjects();
 
-    const auto& ReplicatedObjectToUse = ReplicatedObjects.FindByPredicate([&](const TWeakObjectPtr<UCk_ReplicatedObject_UE>& InRO)
+    const auto& ReplicatedObjectToUse = ReplicatedObjects.FindByPredicate([&](const TWeakObjectPtr<UCk_ReplicatedObject_UE>& InRO) -> bool
     {
-        return ck::IsValid(InRO);
+        switch (InPendingKillPolicy)
+        {
+            case ECk_PendingKill_Policy::ExcludePendingKill: return ck::IsValid(InRO);
+            case ECk_PendingKill_Policy::IncludePendingKill: return ck::IsValid(InRO, ck::IsValid_Policy_IncludePendingKill{});
+            default: return {};
+        }
     });
 
     CK_ENSURE_IF_NOT(ck::IsValid(ReplicatedObjectToUse, ck::IsValid_Policy_NullptrOnly{}),
