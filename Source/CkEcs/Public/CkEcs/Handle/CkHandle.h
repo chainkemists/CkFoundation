@@ -50,11 +50,8 @@ public:
     FCk_Handle(const ThisType& InOther);
 
     // this is a special hard-coded function that expects the type-safe handle to have a particular function
-    template <typename T_WrappedHandle, class = std::enable_if_t<std::is_base_of_v<FCk_Handle, T_WrappedHandle>>>
-    FCk_Handle(const T_WrappedHandle& InTypeSafeHandle)
-        : FCk_Handle(InTypeSafeHandle.Get_RawHandle())
-    { }
-
+    template <typename T_WrappedHandle, class = std::enable_if_t<std::is_base_of_v<struct FCk_Handle_TypeSafe, T_WrappedHandle>>>
+    FCk_Handle(const T_WrappedHandle& InTypeSafeHandle);
 
     auto operator=(ThisType InOther) -> ThisType&;
     // auto operator=(ThisType&& InOther) -> ThisType&; // intentionally not implemented
@@ -257,6 +254,13 @@ CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(FCk_Handle,
 });
 
 // --------------------------------------------------------------------------------------------------------------------
+
+template <typename T_WrappedHandle, class>
+FCk_Handle::
+    FCk_Handle(
+        const T_WrappedHandle& InTypeSafeHandle)
+    : FCk_Handle(InTypeSafeHandle.Get_RawHandle())
+{ }
 
 template <typename T_Fragment, typename ... T_Args>
 auto
