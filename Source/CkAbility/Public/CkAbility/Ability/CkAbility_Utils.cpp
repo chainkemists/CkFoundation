@@ -13,38 +13,16 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-auto
-    UCk_Utils_Ability_UE::
-    Has(
-        FCk_Handle InAbilityEntity)
-    -> bool
-{
-    return InAbilityEntity.Has_All<ck::FFragment_Ability_Params, ck::FFragment_Ability_Current>();
-}
-
-auto
-    UCk_Utils_Ability_UE::
-    Ensure(
-        FCk_Handle InAbilityEntity)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(Has(InAbilityEntity), TEXT("Handle [{}] does NOT have an Ability"), InAbilityEntity)
-    { return false; }
-
-    return true;
-}
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Ability, UCk_Utils_Ability_UE, FCk_Handle_Ability, ck::FFragment_Ability_Params, ck::FFragment_Ability_Current);
 
 auto
     UCk_Utils_Ability_UE::
     Get_Info(
-        FCk_Handle InAbilityEntity)
+        const FCk_Handle_Ability& InAbilityEntity)
     -> FCk_Ability_Info
 {
-    if (NOT Ensure(InAbilityEntity))
-    { return {}; }
-
-    const auto& Label = UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntity);
-    const auto& AbilityOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityEntity);
+    const auto& Label = UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntity.Get_RawHandle());
+    const auto& AbilityOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityEntity.Get_RawHandle());
 
     return FCk_Ability_Info{Label, AbilityOwner};
 }
@@ -52,12 +30,9 @@ auto
 auto
     UCk_Utils_Ability_UE::
     Get_DisplayName(
-        FCk_Handle InAbilityEntity)
+        const FCk_Handle_Ability& InAbilityEntity)
     -> FName
 {
-    if (NOT Ensure(InAbilityEntity))
-    { return {}; }
-
     const auto& AbilityParams = InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params().Get_Data();
 
     if (AbilityParams.Get_HasDisplayName())
@@ -69,60 +44,45 @@ auto
 auto
     UCk_Utils_Ability_UE::
     Get_ActivationSettings(
-        FCk_Handle InAbilityEntity)
+        const FCk_Handle_Ability& InAbilityEntity)
     -> FCk_Ability_ActivationSettings
 {
-    if (NOT Ensure(InAbilityEntity))
-    { return {}; }
-
     return InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params().Get_Data().Get_ActivationSettings();
 }
 
 auto
     UCk_Utils_Ability_UE::
     Get_NetworkSettings(
-        FCk_Handle InAbilityEntity)
+        const FCk_Handle_Ability& InAbilityEntity)
     -> FCk_Ability_NetworkSettings
 {
-    if (NOT Ensure(InAbilityEntity))
-    { return {}; }
-
     return InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params().Get_Data().Get_NetworkSettings();
 }
 
 auto
     UCk_Utils_Ability_UE::
     Get_Status(
-        FCk_Handle InAbilityEntity)
+        const FCk_Handle_Ability& InAbilityEntity)
     -> ECk_Ability_Status
 {
-    if (NOT Ensure(InAbilityEntity))
-    { return {}; }
-
     return InAbilityEntity.Get<ck::FFragment_Ability_Current>().Get_Status();
 }
 
 auto
     UCk_Utils_Ability_UE::
     Get_ScriptClass(
-        FCk_Handle InAbilityEntity)
+        const FCk_Handle_Ability& InAbilityEntity)
     -> TSubclassOf<UCk_Ability_Script_PDA>
 {
-    if (NOT Ensure(InAbilityEntity))
-    { return {}; }
-
     return InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params().Get_AbilityScriptClass();
 }
 
 auto
     UCk_Utils_Ability_UE::
     Get_CanActivate(
-        FCk_Handle InAbilityEntity)
+        const FCk_Handle_Ability& InAbilityEntity)
     -> ECk_Ability_ActivationRequirementsResult
 {
-    if (NOT Ensure(InAbilityEntity))
-    { return {}; }
-
     const auto& AbilityParams             = InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params();
     const auto& AbilityActivationSettings = AbilityParams.Get_Data().Get_ActivationSettings();
 
@@ -151,13 +111,13 @@ auto
 
     const auto& AreActivationRequirementsMet_OnSelf = [&]()
     {
-        if (NOT UCk_Utils_AbilityOwner_UE::Has(InAbilityEntity))
+        if (NOT UCk_Utils_AbilityOwner_UE::Has(InAbilityEntity.Get_RawHandle()))
         { return true; }
 
         const auto ActivationSettingsOnSelf = AbilityActivationSettings.Get_ActivationSettingsOnSelf();
         const auto ActivationBlockers = ActivationSettingsOnSelf.Get_BlockedByTagsOnSelf();
 
-        return NOT UCk_Utils_AbilityOwner_UE::Get_ActiveTags(InAbilityEntity).HasAnyExact(ActivationBlockers);
+        return NOT UCk_Utils_AbilityOwner_UE::Get_ActiveTags(InAbilityEntity.Get_RawHandle()).HasAnyExact(ActivationBlockers);
     }();
 
     // We could be clever, but this is more readable
@@ -181,67 +141,52 @@ auto
 auto
     UCk_Utils_Ability_UE::
     BindTo_OnAbilityActivated(
-        FCk_Handle InAbilityHandle,
+        FCk_Handle_Ability& InAbilityHandle,
         ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_Ability_OnActivated& InDelegate)
     -> void
 {
-    if (NOT Ensure(InAbilityHandle))
-    { return; }
-
     ck::UUtils_Signal_OnAbilityActivated::Bind(InAbilityHandle, InDelegate, InBehavior);
 }
 
 auto
     UCk_Utils_Ability_UE::
     UnbindFrom_OnAbilityActivated(
-        FCk_Handle InAbilityHandle,
+        FCk_Handle_Ability& InAbilityHandle,
         const FCk_Delegate_Ability_OnActivated& InDelegate)
     -> void
 {
-    if (NOT Ensure(InAbilityHandle))
-    { return; }
-
     ck::UUtils_Signal_OnAbilityActivated::Unbind(InAbilityHandle, InDelegate);
 }
 
 auto
     UCk_Utils_Ability_UE::
     BindTo_OnAbilityDeactivated(
-        FCk_Handle InAbilityHandle,
+        FCk_Handle_Ability& InAbilityHandle,
         ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_Ability_OnDeactivated& InDelegate)
     -> void
 {
-    if (NOT Ensure(InAbilityHandle))
-    { return; }
-
     ck::UUtils_Signal_OnAbilityDeactivated::Bind(InAbilityHandle, InDelegate, InBehavior);
 }
 
 auto
     UCk_Utils_Ability_UE::
     UnbindFrom_OnAbilityDeactivated(
-        FCk_Handle InAbilityHandle,
+        FCk_Handle_Ability& InAbilityHandle,
         const FCk_Delegate_Ability_OnDeactivated& InDelegate)
     -> void
 {
-    if (NOT Ensure(InAbilityHandle))
-    { return; }
-
     ck::UUtils_Signal_OnAbilityDeactivated::Unbind(InAbilityHandle, InDelegate);
 }
 
 auto
     UCk_Utils_Ability_UE::
     DoActivate(
-        FCk_Handle InAbilityEntity,
+        FCk_Handle_Ability& InAbilityEntity,
         const FCk_Ability_ActivationPayload& InActivationPayload)
     -> void
 {
-    if (NOT Has(InAbilityEntity))
-    { return; }
-
     auto& AbilityCurrent = InAbilityEntity.Get<ck::FFragment_Ability_Current>();
 
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityCurrent._AbilityScript),
@@ -259,12 +204,9 @@ auto
     UCk_Utils_Ability_UE::
     DoDeactivate(
         FCk_Handle InAbilityOwnerEntity,
-        FCk_Handle InAbilityEntity)
+        FCk_Handle_Ability& InAbilityEntity)
     -> void
 {
-    if (NOT Has(InAbilityEntity))
-    { return; }
-
     auto& AbilityCurrent = InAbilityEntity.Get<ck::FFragment_Ability_Current>();
 
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityCurrent._AbilityScript),
@@ -402,12 +344,9 @@ auto
     UCk_Utils_Ability_UE::
     DoGive(
         FCk_Handle InAbilityOwner,
-        FCk_Handle InAbility)
+        FCk_Handle_Ability& InAbility)
     -> void
 {
-    if (NOT Ensure(InAbility))
-    { return; }
-
     RecordOfAbilities_Utils::Request_Connect(InAbilityOwner, InAbility);
     const auto Script = InAbility.Get<ck::FFragment_Ability_Current>().Get_AbilityScript();
 
@@ -427,12 +366,9 @@ auto
     UCk_Utils_Ability_UE::
     DoRevoke(
         FCk_Handle InAbilityOwner,
-        FCk_Handle InAbility)
+        FCk_Handle_Ability& InAbility)
     -> void
 {
-    if (NOT Ensure(InAbility))
-    { return; }
-
     const auto& Current = InAbility.Get<ck::FFragment_Ability_Current>();
     if (Current.Get_Status() == ECk_Ability_Status::Active)
     {

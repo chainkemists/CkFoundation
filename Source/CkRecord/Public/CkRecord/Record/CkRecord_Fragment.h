@@ -13,6 +13,8 @@ class UCk_Utils_RecordOfEntities_UE;
 
 namespace ck
 {
+    // TODO: refactor this to take in a T_HandleType for type-safe handles to work with records
+
     struct FFragment_RecordOfEntities
     {
 
