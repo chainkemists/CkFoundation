@@ -248,16 +248,16 @@ CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(FCk_Handle,
 [&]()
 {
     if (ck::IsValid(InObj) && InObj.Has<DEBUG_NAME>())
-    { return ck::Format(TEXT("{}({})"), InObj._Entity, InObj.Get<DEBUG_NAME>().Get_Name()); }
+    { return ck::Format(TEXT("{}({})"), InObj.Get_Entity(), InObj.Get<DEBUG_NAME>().Get_Name()); }
 
-    return ck::Format(TEXT("{}"), InObj._Entity);
+    return ck::Format(TEXT("{}"), InObj.Get_Entity());
 },
 [&]()
 {
     if (ck::IsValid(InObj) && InObj.Has<DEBUG_NAME>())
-    { return ck::Format(TEXT("{}[{}]({})"), InObj._Entity, InObj._Registry, InObj.Get<DEBUG_NAME>().Get_Name()); }
+    { return ck::Format(TEXT("{}[{}]({})"), InObj._Entity, InObj.Get_Registry(), InObj.Get<DEBUG_NAME>().Get_Name()); }
 
-    return ck::Format(TEXT("{}({})"), InObj._Entity, InObj._Registry);
+    return ck::Format(TEXT("{}({})"), InObj._Entity, InObj.Get_Registry());
 });
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -266,7 +266,7 @@ template <typename T_WrappedHandle, class>
 FCk_Handle::
     FCk_Handle(
         const T_WrappedHandle& InTypeSafeHandle)
-    : FCk_Handle(InTypeSafeHandle.Get_RawHandle())
+    : FCk_Handle(InTypeSafeHandle.Get_Entity(), **InTypeSafeHandle)
 { }
 
 template <typename T_WrappedHandle, class>
