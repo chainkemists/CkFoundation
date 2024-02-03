@@ -51,6 +51,7 @@ auto
     return ck::Format_UE(TEXT("{}"), InHandle);
 }
 
+// --------------------------------------------------------------------------------------------------------------------
 UE_DISABLE_OPTIMIZATION_SHIP
 auto
     UCk_Utils_Handle_UE::
@@ -60,6 +61,8 @@ auto
 {
     ck::ecs::Warning(TEXT("Debugging the Handle [{}]"), InHandle);
 }
+UE_ENABLE_OPTIMIZATION_SHIP
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_Handle_UE::
@@ -84,6 +87,30 @@ auto
     -> void
 {
    OutEntity = InHandle.Get_Entity();
+}
+
+auto
+    UCk_Utils_Handle_UE::
+    Conv_HandleTypeSafeToHandle(
+        UStruct*,
+        FCk_Handle&)
+        -> void
+{
+	// We should never hit this! stubs to avoid NoExport on the class.
+	checkNoEntry();
+}
+
+DEFINE_FUNCTION(UCk_Utils_Handle_UE::execConv_HandleTypeSafeToHandle)
+{
+    ON_SCOPE_EXIT
+    {
+        P_FINISH
+    };
+
+    P_GET_STRUCT(FCk_Handle, InHandle);
+    P_GET_STRUCT_REF(FCk_Handle, OutHandle);
+
+    OutHandle = InHandle;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
