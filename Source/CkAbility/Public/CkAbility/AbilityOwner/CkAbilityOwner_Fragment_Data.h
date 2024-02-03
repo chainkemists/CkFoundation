@@ -90,6 +90,8 @@ private:
 
 public:
     CK_PROPERTY_GET(_DefaultAbilities);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_AbilityOwner_ParamsData, _DefaultAbilities);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

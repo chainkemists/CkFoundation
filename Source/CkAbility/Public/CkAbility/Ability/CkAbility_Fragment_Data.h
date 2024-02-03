@@ -492,11 +492,16 @@ public:
 
 private:
     UPROPERTY(Transient)
-    bool _ShowAbilityParamsInVariablesWindow = false;
+    bool _ShowPropertyInVariablesWindow = false;
 
     UPROPERTY(BlueprintReadWrite,
               meta = (ExposeOnSpawn = true, EditConditionHides = true,
-                      EditCondition = "_ShowAbilityParamsInVariablesWindow", AllowPrivateAccess = true))
+                      EditCondition = "_ShowPropertyInVariablesWindow", AllowPrivateAccess = true))
+    TArray<const class UCk_Ability_EntityConfig_PDA*> _DefaultAbilityEntityConfigs;
+
+    UPROPERTY(BlueprintReadWrite,
+              meta = (ExposeOnSpawn = true, EditConditionHides = true,
+                      EditCondition = "_ShowPropertyInVariablesWindow", AllowPrivateAccess = true))
     FCk_Fragment_Ability_ParamsData _AbilityParams;
 
 public:
