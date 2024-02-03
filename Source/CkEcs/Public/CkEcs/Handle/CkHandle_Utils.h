@@ -79,11 +79,22 @@ private:
               DisplayName = "[Ck] Break Handle",
               Category = "Ck|Utils|Handle",
               meta = (NativeBreakFunc))
+
     static void
     Break_Handle(
         const FCk_Handle& InHandle,
         FCk_Entity& OutEntity);
 
+    UFUNCTION(BlueprintPure,
+        CustomThunk,
+        DisplayName = "[Ck] Handle_TypeSafe",
+        Category = "Ck|Utils|Handle",
+        meta=(CompactNodeTitle="ToHandle", NativeBreakFunc, CustomStructureParam = "InHandle"))
+    static void
+    Conv_HandleTypeSafeToHandle(
+        UStruct* InHandle,
+        FCk_Handle& OutHandle);
+    DECLARE_FUNCTION(execConv_HandleTypeSafeToHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
