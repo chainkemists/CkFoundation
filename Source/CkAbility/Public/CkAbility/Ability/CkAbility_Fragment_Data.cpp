@@ -27,6 +27,11 @@ auto
     -> void
 {
     UCk_Utils_Ability_UE::DoAdd(InHandle, Get_AbilityParams());
+
+    if (NOT _DefaultAbilityEntityConfigs.IsEmpty())
+    {
+        UCk_Utils_AbilityOwner_UE::Add(InHandle, FCk_Fragment_AbilityOwner_ParamsData{_DefaultAbilityEntityConfigs});
+    }
 }
 
 auto
