@@ -17,6 +17,42 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UINTERFACE(Blueprintable)
+class UCk_Ability_Cost_Interface : public UInterface { GENERATED_BODY() };
+class CKABILITY_API ICk_Ability_Cost_Interface
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(ICk_Ability_Cost_Interface);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UINTERFACE(Blueprintable)
+class UCk_Ability_Cooldown_Interface : public UInterface { GENERATED_BODY() };
+class CKABILITY_API ICk_Ability_Cooldown_Interface
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(ICk_Ability_Cooldown_Interface);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UINTERFACE(Blueprintable)
+class UCk_Ability_Condition_Interface : public UInterface { GENERATED_BODY() };
+class CKABILITY_API ICk_Ability_Condition_Interface
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(ICk_Ability_Condition_Interface);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UENUM(BlueprintType)
 enum class ECk_Ability_Activation_Policy : uint8
 {
@@ -368,8 +404,12 @@ public:
         const FInstancedStruct& InOptionalParams) -> void override;
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (ExposeOnSpawn, AllowPrivateAccess = true))
+    UPROPERTY(Transient)
+    bool _ShowAbilityParamsInVariablesWindow = false;
+
+    UPROPERTY(BlueprintReadWrite,
+              meta = (ExposeOnSpawn = true, EditConditionHides = true,
+                      EditCondition = "_ShowAbilityParamsInVariablesWindow", AllowPrivateAccess = true))
     FCk_Fragment_Ability_ParamsData _AbilityParams;
 
 public:
