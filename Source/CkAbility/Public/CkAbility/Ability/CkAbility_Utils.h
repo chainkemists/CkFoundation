@@ -94,14 +94,6 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
-              DisplayName="[Ck][Ability] Get Info",
-              meta=(CompactNodeTitle="AbilityInfo"))
-    static FCk_Ability_Info
-    Get_Info(
-        const FCk_Handle_Ability& InAbilityEntity);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Ability",
               DisplayName="[Ck][Ability] Get Display Name")
     static FName
     Get_DisplayName(
