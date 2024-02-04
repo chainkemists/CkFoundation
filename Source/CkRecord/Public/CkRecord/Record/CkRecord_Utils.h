@@ -232,7 +232,7 @@ namespace ck
 
         for (auto Index = 0; Index < RecordEntries.Num(); ++Index)
         {
-            const auto RecordEntryHandle = ck::MakeHandle(RecordEntries[Index], InHandle);
+            const auto RecordEntryHandle = ck::Cast<HandleType>(ck::MakeHandle(RecordEntries[Index], InHandle));
 
             if (ck::Is_NOT_Valid(RecordEntryHandle))
             {
@@ -273,7 +273,7 @@ namespace ck
             T_Predicate InPredicate)
         -> void
     {
-        ForEach_ValidEntry(InRecordHandle, [&](const FCk_Handle& InRecordEntryHandle)
+        ForEach_ValidEntry(InRecordHandle, [&](const HandleType& InRecordEntryHandle)
         {
             if (InPredicate(InRecordEntryHandle))
             { InFunc(InRecordEntryHandle); }
