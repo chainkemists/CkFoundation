@@ -20,18 +20,6 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Ability, UCk_Utils_Ability_UE, FCk_Handl
 
 auto
     UCk_Utils_Ability_UE::
-    Get_Info(
-        const FCk_Handle_Ability& InAbilityEntity)
-    -> FCk_Ability_Info
-{
-    const auto& Label = UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntity.Get_RawHandle());
-    const auto& AbilityOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityEntity.Get_RawHandle());
-
-    return FCk_Ability_Info{Label, AbilityOwner};
-}
-
-auto
-    UCk_Utils_Ability_UE::
     Get_DisplayName(
         const FCk_Handle_Ability& InAbilityEntity)
     -> FName
@@ -114,13 +102,13 @@ auto
 
     const auto& AreActivationRequirementsMet_OnSelf = [&]()
     {
-        if (NOT UCk_Utils_AbilityOwner_UE::Has(InAbilityEntity.Get_RawHandle()))
+        if (NOT UCk_Utils_AbilityOwner_UE::Has(InAbilityEntity))
         { return true; }
 
         const auto ActivationSettingsOnSelf = AbilityActivationSettings.Get_ActivationSettingsOnSelf();
         const auto ActivationBlockers = ActivationSettingsOnSelf.Get_BlockedByTagsOnSelf();
 
-        return NOT UCk_Utils_AbilityOwner_UE::Get_ActiveTags(InAbilityEntity.Get_RawHandle()).HasAnyExact(ActivationBlockers);
+        return NOT UCk_Utils_AbilityOwner_UE::Get_ActiveTags(InAbilityEntity).HasAnyExact(ActivationBlockers);
     }();
 
     // We could be clever, but this is more readable
