@@ -1,6 +1,7 @@
 #include "CkAbility_Utils.h"
 
 #include "CkAbility/CkAbility_Log.h"
+#include "CkAbility/Ability/CkAbility_Script.h"
 #include "CkAbility/Subsystem/CkAbility_Subsystem.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Utils.h"
 #include "CkAbility/Settings/CkAbility_Settings.h"
@@ -10,6 +11,8 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcsBasics/EntityHolder/CkEntityHolder_Utils.h"
+
+#include <Engine/World.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -144,9 +147,10 @@ auto
         FCk_Handle_Ability& InAbilityHandle,
         ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_Ability_OnActivated& InDelegate)
-    -> void
+    -> FCk_Handle_Ability
 {
     ck::UUtils_Signal_OnAbilityActivated::Bind(InAbilityHandle, InDelegate, InBehavior);
+    return InAbilityHandle;
 }
 
 auto
@@ -154,9 +158,10 @@ auto
     UnbindFrom_OnAbilityActivated(
         FCk_Handle_Ability& InAbilityHandle,
         const FCk_Delegate_Ability_OnActivated& InDelegate)
-    -> void
+    -> FCk_Handle_Ability
 {
     ck::UUtils_Signal_OnAbilityActivated::Unbind(InAbilityHandle, InDelegate);
+    return InAbilityHandle;
 }
 
 auto
@@ -165,9 +170,10 @@ auto
         FCk_Handle_Ability& InAbilityHandle,
         ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_Ability_OnDeactivated& InDelegate)
-    -> void
+    -> FCk_Handle_Ability
 {
     ck::UUtils_Signal_OnAbilityDeactivated::Bind(InAbilityHandle, InDelegate, InBehavior);
+    return InAbilityHandle;
 }
 
 auto
@@ -175,9 +181,10 @@ auto
     UnbindFrom_OnAbilityDeactivated(
         FCk_Handle_Ability& InAbilityHandle,
         const FCk_Delegate_Ability_OnDeactivated& InDelegate)
-    -> void
+    -> FCk_Handle_Ability
 {
     ck::UUtils_Signal_OnAbilityDeactivated::Unbind(InAbilityHandle, InDelegate);
+    return InAbilityHandle;
 }
 
 auto
@@ -203,7 +210,7 @@ auto
 auto
     UCk_Utils_Ability_UE::
     DoDeactivate(
-        FCk_Handle InAbilityOwnerEntity,
+        FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         FCk_Handle_Ability& InAbilityEntity)
     -> void
 {
@@ -343,7 +350,7 @@ auto
 auto
     UCk_Utils_Ability_UE::
     DoGive(
-        FCk_Handle InAbilityOwner,
+        FCk_Handle_AbilityOwner& InAbilityOwner,
         FCk_Handle_Ability& InAbility)
     -> void
 {
@@ -365,7 +372,7 @@ auto
 auto
     UCk_Utils_Ability_UE::
     DoRevoke(
-        FCk_Handle InAbilityOwner,
+        FCk_Handle_AbilityOwner& InAbilityOwner,
         FCk_Handle_Ability& InAbility)
     -> void
 {
