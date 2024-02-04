@@ -1,11 +1,12 @@
 #include "CkAbility_Subsystem.h"
 
 #include "CkAbility/CkAbility_Log.h"
+#include "CkAbility/Ability/CkAbility_Script.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
-#include "CkEcs/Handle/CkHandle.h"
+#include <Engine/World.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
