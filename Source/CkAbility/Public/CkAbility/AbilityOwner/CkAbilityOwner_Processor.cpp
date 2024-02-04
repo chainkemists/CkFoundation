@@ -1,6 +1,7 @@
 #include "CkAbilityOwner_Processor.h"
 
 #include "CkAbility/CkAbility_Log.h"
+#include "CkAbility/Ability/CkAbility_Script.h"
 #include "CkAbility/Ability/CkAbility_Utils.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Utils.h"
 
@@ -165,7 +166,7 @@ namespace ck
         { return; }
 
         const auto PostAbilityCreationFunc =
-        [InAbilityOwnerEntity, AbilityScriptClass, &AbilityParams](FCk_Handle& InAbilityEntity) -> void
+        [&InAbilityOwnerEntity, AbilityScriptClass, &AbilityParams](FCk_Handle& InAbilityEntity) -> void
         {
             ability::VeryVerbose
             (
