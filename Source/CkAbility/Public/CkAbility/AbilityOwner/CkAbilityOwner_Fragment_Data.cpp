@@ -40,7 +40,7 @@ FCk_Request_AbilityOwner_ActivateAbility::
 
 FCk_Request_AbilityOwner_ActivateAbility::
     FCk_Request_AbilityOwner_ActivateAbility(
-        FCk_Handle InAbilityHandle,
+        const FCk_Handle_Ability& InAbilityHandle,
         FCk_Ability_ActivationPayload InActivationPayload)
     : _SearchPolicy(ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle)
     , _AbilityHandle(InAbilityHandle)
@@ -59,7 +59,7 @@ FCk_Request_AbilityOwner_DeactivateAbility::
 
 FCk_Request_AbilityOwner_DeactivateAbility::
     FCk_Request_AbilityOwner_DeactivateAbility(
-        FCk_Handle InAbilityHandle)
+        const FCk_Handle_Ability& InAbilityHandle)
         : _SearchPolicy(ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle)
         , _AbilityHandle(InAbilityHandle)
 { }

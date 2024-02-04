@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkAbility/Ability/CkAbility_Fragment.h"
+#include "CkAbility/AbilityOwner/CkAbilityOwner_Fragment_Data.h"
 
 #include "CkEcsBasics/CkEcsBasics_Utils.h"
 
@@ -130,7 +131,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
               DisplayName="[Ck][Ability] Get Script Class")
-    static TSubclassOf<UCk_Ability_Script_PDA>
+    static TSubclassOf<class UCk_Ability_Script_PDA>
     Get_ScriptClass(
         const FCk_Handle_Ability& InAbilityEntity);
 
@@ -145,7 +146,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability",
               DisplayName = "[Ck][Ability] Bind To OnActivated")
-    static void
+    static FCk_Handle_Ability
     BindTo_OnAbilityActivated(
         UPARAM(ref) FCk_Handle_Ability& InAbilityHandle,
         ECk_Signal_BindingPolicy InBehavior,
@@ -154,7 +155,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability",
               DisplayName = "[Ck][Ability] Unbind From OnActivated")
-    static void
+    static FCk_Handle_Ability
     UnbindFrom_OnAbilityActivated(
         UPARAM(ref) FCk_Handle_Ability& InAbilityHandle,
         const FCk_Delegate_Ability_OnActivated& InDelegate);
@@ -162,7 +163,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability",
               DisplayName = "[Ck][Ability] Bind To OnDeactivated")
-    static void
+    static FCk_Handle_Ability
     BindTo_OnAbilityDeactivated(
         UPARAM(ref) FCk_Handle_Ability& InAbilityHandle,
         ECk_Signal_BindingPolicy InBehavior,
@@ -171,7 +172,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability",
               DisplayName = "[Ck][Ability] Unbind From OnDeactivated")
-    static void
+    static FCk_Handle_Ability
     UnbindFrom_OnAbilityDeactivated(
         UPARAM(ref) FCk_Handle_Ability& InAbilityHandle,
         const FCk_Delegate_Ability_OnDeactivated& InDelegate);
@@ -191,17 +192,17 @@ private:
 
     static auto
     DoDeactivate(
-        FCk_Handle InAbilityOwnerEntity,
+        FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         FCk_Handle_Ability& InAbilityEntity) -> void;
 
     static auto
     DoGive(
-        FCk_Handle InAbilityOwner,
+        FCk_Handle_AbilityOwner& InAbilityOwner,
         FCk_Handle_Ability& InAbility) -> void;
 
     static auto
     DoRevoke(
-        FCk_Handle InAbilityOwner,
+        FCk_Handle_AbilityOwner& InAbilityOwner,
         FCk_Handle_Ability& InAbility) -> void;
 };
 

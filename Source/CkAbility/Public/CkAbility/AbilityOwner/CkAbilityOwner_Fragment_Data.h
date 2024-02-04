@@ -1,4 +1,5 @@
 #pragma once
+
 #include "CkAbility/Ability/CkAbility_Fragment_Data.h"
 
 #include "CkCore/Format/CkFormat.h"
@@ -34,6 +35,12 @@ enum class ECk_AbilityOwner_ForEachAbility_Policy : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_ForEachAbility_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak="/Script/CkEcs.Ck_Utils_Handle_UE:Conv_HandleTypeSafeToHandle"))
+struct CKABILITY_API FCk_Handle_AbilityOwner : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_AbilityOwner); };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_AbilityOwner);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -145,7 +152,7 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
                   EditCondition="_SearchPolicy == ECk_AbilityOwner_AbilitySearchPolicy::SearchByHandle"))
-    FCk_Handle _AbilityHandle;
+    FCk_Handle_Ability _AbilityHandle;
 
 public:
     CK_PROPERTY_GET(_SearchPolicy);
@@ -171,7 +178,7 @@ public:
         FCk_Ability_ActivationPayload InActivationPayload);
 
     FCk_Request_AbilityOwner_ActivateAbility(
-        FCk_Handle InAbilityHandle,
+        const FCk_Handle_Ability& InAbilityHandle,
         FCk_Ability_ActivationPayload InActivationPayload);
 
 private:
@@ -187,7 +194,7 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
                   EditCondition="_SearchPolicy == ECk_AbilityOwner_AbilitySearchPolicy::SearchByHandle"))
-    FCk_Handle _AbilityHandle;
+    FCk_Handle_AbilityOwner _AbilityHandle;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -219,7 +226,7 @@ public:
 
     explicit
     FCk_Request_AbilityOwner_DeactivateAbility(
-        FCk_Handle InAbilityHandle);
+        const FCk_Handle_Ability& InAbilityHandle);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

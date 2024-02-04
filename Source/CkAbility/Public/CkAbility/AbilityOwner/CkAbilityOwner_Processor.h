@@ -8,8 +8,9 @@
 
 namespace ck
 {
-    class CKABILITY_API FProcessor_AbilityOwner_Setup : public ck::TProcessor<
+    class CKABILITY_API FProcessor_AbilityOwner_Setup : public ck_exp::TProcessor<
             FProcessor_AbilityOwner_Setup,
+            FCk_Handle_AbilityOwner,
             FFragment_AbilityOwner_Params,
             FTag_AbilityOwner_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
@@ -32,8 +33,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKABILITY_API FProcessor_AbilityOwner_HandleEvents : public TProcessor<
+    class CKABILITY_API FProcessor_AbilityOwner_HandleEvents : public ck_exp::TProcessor<
             FProcessor_AbilityOwner_HandleEvents,
+            FCk_Handle_AbilityOwner,
             FFragment_AbilityOwner_Events,
             CK_IGNORE_PENDING_KILL>
     {
@@ -52,8 +54,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKABILITY_API FProcessor_AbilityOwner_HandleRequests : public TProcessor<
+    class CKABILITY_API FProcessor_AbilityOwner_HandleRequests : public ck_exp::TProcessor<
             FProcessor_AbilityOwner_HandleRequests,
+            FCk_Handle_AbilityOwner,
             FFragment_AbilityOwner_Current,
             FFragment_AbilityOwner_Requests,
             CK_IGNORE_PENDING_KILL>
