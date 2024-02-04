@@ -1,5 +1,6 @@
 #include "CkAbilityOwner_Utils.h"
 
+#include "CkAbility/Ability/CkAbility_Script.h"
 #include "CkAbility/Ability/CkAbility_Utils.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Fragment.h"
 #include "CkCore/SharedValues/CkSharedValues_Utils.h"
@@ -9,40 +10,23 @@
 auto
     UCk_Utils_AbilityOwner_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_AbilityOwner_ParamsData& InParams)
-    -> void
+    -> FCk_Handle_AbilityOwner
 {
     InHandle.Add<ck::FFragment_AbilityOwner_Params>(InParams);
     InHandle.Add<ck::FFragment_AbilityOwner_Current>();
     InHandle.Add<ck::FTag_AbilityOwner_NeedsSetup>();
+
+    return Conv_HandleToAbilityOwner(InHandle);
 }
 
-auto
-    UCk_Utils_AbilityOwner_UE::
-    Has(
-        FCk_Handle InHandle)
-    -> bool
-{
-    return InHandle.Has_All<ck::FFragment_AbilityOwner_Current, ck::FFragment_AbilityOwner_Params>();
-}
-
-auto
-    UCk_Utils_AbilityOwner_UE::
-    Ensure(
-        FCk_Handle InHandle)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have an Ability Owner"), InHandle)
-    { return false; }
-
-    return true;
-}
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(AbilityOwner, UCk_Utils_AbilityOwner_UE, FCk_Handle_AbilityOwner, ck::FFragment_AbilityOwner_Current, ck::FFragment_AbilityOwner_Params);
 
 auto
     UCk_Utils_AbilityOwner_UE::
     Has_Ability(
-        FCk_Handle InAbilityOwnerEntity,
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass)
     -> bool
 {
@@ -56,7 +40,7 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     Has_Any(
-        FCk_Handle InAbilityOwnerEntity)
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity)
     -> bool
 {
     return RecordOfAbilities_Utils::Has(InAbilityOwnerEntity);
@@ -65,7 +49,7 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     Ensure_Ability(
-        FCk_Handle InAbilityOwnerEntity,
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass)
     -> bool
 {
@@ -79,7 +63,7 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     Ensure_Any(
-        FCk_Handle InAbilityOwnerEntity)
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity)
     -> bool
 {
     CK_ENSURE_IF_NOT(Has_Any(InAbilityOwnerEntity), TEXT("Handle [{}] does NOT have any Ability"), InAbilityOwnerEntity)
@@ -91,15 +75,15 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     Get_Ability(
-        FCk_Handle                          InAbilityOwnerEntity,
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass)
-    -> FCk_Handle
+    -> FCk_Handle_Ability
 {
     CK_ENSURE_IF_NOT(Has_Ability(InAbilityOwnerEntity, InAbilityClass),
         TEXT("AbilityOwner [{}] does NOT have the Ability [{}]"), InAbilityOwnerEntity, InAbilityClass)
     { return {}; }
 
-    auto Handle = RecordOfAbilities_Utils::Get_ValidEntry_If(InAbilityOwnerEntity,
+    const auto& Handle = RecordOfAbilities_Utils::Get_ValidEntry_If(InAbilityOwnerEntity,
     [InAbilityClass](const FCk_Handle& InHandle)
     {
         return UCk_Utils_Ability_UE::Get_ScriptClass(UCk_Utils_Ability_UE::Conv_HandleToAbility(InHandle)) == InAbilityClass;
@@ -111,9 +95,9 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     Find_Ability(
-        FCk_Handle   InAbilityOwnerEntity,
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         FGameplayTag InAbilityName)
-    -> FCk_Handle
+    -> FCk_Handle_Ability
 {
     const auto& AbilityEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Ability_UE,
@@ -125,7 +109,7 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     Get_AbilityCount(
-        FCk_Handle InAbilityOwnerEntity)
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity)
     -> int32
 {
     if (NOT Ensure_Any(InAbilityOwnerEntity))
@@ -137,15 +121,15 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     ForEach_Ability(
-        FCk_Handle InAbilityOwnerEntity,
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
-    -> TArray<FCk_Handle>
+    -> TArray<FCk_Handle_Ability>
 {
-    auto Abilities = TArray<FCk_Handle>{};
+    auto Abilities = TArray<FCk_Handle_Ability>{};
 
-    ForEach_Ability(InAbilityOwnerEntity, InForEachAbilityPolicy, [&](FCk_Handle InAbility)
+    ForEach_Ability(InAbilityOwnerEntity, InForEachAbilityPolicy, [&](FCk_Handle_Ability& InAbility)
     {
         if (InDelegate.IsBound())
         { InDelegate.Execute(InAbility, InOptionalPayload); }
@@ -159,9 +143,9 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     ForEach_Ability(
-        FCk_Handle InAbilityOwnerEntity,
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
-        const TFunction<void(FCk_Handle)>& InFunc)
+        const TFunction<void(FCk_Handle_Ability&)>& InFunc)
     -> void
 {
     if (NOT Has_Any(InAbilityOwnerEntity))
@@ -170,7 +154,7 @@ auto
     RecordOfAbilities_Utils::ForEach_ValidEntry
     (
         InAbilityOwnerEntity,
-        [&](const FCk_Handle& InAbilityEntity)
+        [&](FCk_Handle_Ability InAbilityEntity)
         {
             if (InForEachAbilityPolicy == ECk_AbilityOwner_ForEachAbility_Policy::IgnoreSelf && InAbilityEntity == InAbilityOwnerEntity)
             { return; }
@@ -183,27 +167,27 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     ForEach_Ability_If(
-        FCk_Handle InAbilityOwnerEntity,
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate)
-    -> TArray<FCk_Handle>
+    -> TArray<FCk_Handle_Ability>
 {
-    auto Abilities = TArray<FCk_Handle>{};
+    auto Abilities = TArray<FCk_Handle_Ability>{};
 
     ForEach_Ability_If
     (
         InAbilityOwnerEntity,
         InForEachAbilityPolicy,
-        [&](const FCk_Handle& InAbility)
+        [&](const FCk_Handle_Ability& InAbility)
         {
             if (InDelegate.IsBound())
             { InDelegate.Execute(InAbility, InOptionalPayload); }
             else
             { Abilities.Emplace(InAbility); }
         },
-        [&](const FCk_Handle& InAbility)  -> bool
+        [&](const FCk_Handle_Ability& InAbility)  -> bool
         {
             const FCk_SharedBool PredicateResult;
 
@@ -223,10 +207,10 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     ForEach_Ability_If(
-        FCk_Handle InAbilityOwnerEntity,
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
-        const TFunction<void(FCk_Handle)>& InFunc,
-        const TFunction<bool(FCk_Handle)>& InPredicate)
+        const TFunction<void(FCk_Handle_Ability)>& InFunc,
+        const TFunction<bool(FCk_Handle_Ability)>& InPredicate)
     -> void
 {
     if (NOT Has_Any(InAbilityOwnerEntity))
@@ -235,7 +219,7 @@ auto
     RecordOfAbilities_Utils::ForEach_ValidEntry_If
     (
         InAbilityOwnerEntity,
-        [&](const FCk_Handle& InAbilityEntity)
+        [&](FCk_Handle_Ability InAbilityEntity)
         {
             if (InForEachAbilityPolicy == ECk_AbilityOwner_ForEachAbility_Policy::IgnoreSelf && InAbilityEntity == InAbilityOwnerEntity)
             { return; }
@@ -249,16 +233,16 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     ForEach_Ability_WithStatus(
-        FCk_Handle InAbilityOwnerEntity,
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         ECk_Ability_Status InStatus,
         ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
-    -> TArray<FCk_Handle>
+    -> TArray<FCk_Handle_Ability>
 {
-    auto Abilities = TArray<FCk_Handle>{};
+    auto Abilities = TArray<FCk_Handle_Ability>{};
 
-    ForEach_Ability_WithStatus(InAbilityOwnerEntity, InStatus, InForEachAbilityPolicy, [&](FCk_Handle InAbility)
+    ForEach_Ability_WithStatus(InAbilityOwnerEntity, InStatus, InForEachAbilityPolicy, [&](FCk_Handle_Ability InAbility)
     {
         if (InDelegate.IsBound())
         { InDelegate.Execute(InAbility, InOptionalPayload); }
@@ -272,16 +256,16 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     ForEach_Ability_WithStatus(
-        FCk_Handle InAbilityOwnerEntity,
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         ECk_Ability_Status InStatus,
         ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
-        const TFunction<void(FCk_Handle)>& InFunc)
+        const TFunction<void(FCk_Handle_Ability)>& InFunc)
     -> void
 {
     if (NOT Ensure_Any(InAbilityOwnerEntity))
     { return; }
 
-    ForEach_Ability(InAbilityOwnerEntity, InForEachAbilityPolicy, [&](FCk_Handle InAbility)
+    ForEach_Ability(InAbilityOwnerEntity, InForEachAbilityPolicy, [&](FCk_Handle_Ability InAbility)
     {
         if (InForEachAbilityPolicy == ECk_AbilityOwner_ForEachAbility_Policy::IgnoreSelf && InAbility == InAbilityOwnerEntity)
         { return; }
@@ -296,145 +280,122 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     Get_ActiveTags(
-        FCk_Handle InAbilityOwnerHandle)
+        const FCk_Handle_AbilityOwner& InAbilityOwnerHandle)
     -> FGameplayTagContainer
 {
-    if (NOT Ensure(InAbilityOwnerHandle))
-    { return {}; }
-
     return InAbilityOwnerHandle.Get<ck::FFragment_AbilityOwner_Current>().Get_ActiveTags();
 }
 
 auto
     UCk_Utils_AbilityOwner_UE::
     Get_ActiveTagsWithCount(
-        FCk_Handle InAbilityOwnerHandle)
+        const FCk_Handle_AbilityOwner& InAbilityOwnerHandle)
     -> TMap<FGameplayTag, int32>
 {
-    if (NOT Ensure(InAbilityOwnerHandle))
-    { return {}; }
-
     return InAbilityOwnerHandle.Get<ck::FFragment_AbilityOwner_Current>().Get_ActiveTagsWithCount();
 }
 
 auto
     UCk_Utils_AbilityOwner_UE::
     Request_GiveAbility(
-        FCk_Handle InAbilityOwnerHandle,
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_GiveAbility& InRequest)
-    -> void
+    -> FCk_Handle_AbilityOwner
 {
-    if (NOT Ensure(InAbilityOwnerHandle))
-    { return; }
-
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
+    return InAbilityOwnerHandle;
 }
 
 auto
     UCk_Utils_AbilityOwner_UE::
     Request_RevokeAbility(
-        FCk_Handle InAbilityOwnerHandle,
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_RevokeAbility& InRequest)
-    -> void
+    -> FCk_Handle_AbilityOwner
 {
-    if (NOT Ensure(InAbilityOwnerHandle))
-    { return; }
-
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
+    return InAbilityOwnerHandle;
 }
 
 auto
     UCk_Utils_AbilityOwner_UE::
     Request_TryActivateAbility(
-        FCk_Handle InAbilityOwnerHandle,
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_ActivateAbility& InRequest)
-    -> void
+    -> FCk_Handle_AbilityOwner
 {
-    if (NOT Ensure(InAbilityOwnerHandle))
-    { return; }
-
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
+    return InAbilityOwnerHandle;
 }
 
 auto
     UCk_Utils_AbilityOwner_UE::
     Request_DeactivateAbility(
-        FCk_Handle InAbilityOwnerHandle,
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_DeactivateAbility& InRequest)
-    -> void
+    -> FCk_Handle_AbilityOwner
 {
-    if (NOT Ensure(InAbilityOwnerHandle))
-    { return; }
-
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
+    return InAbilityOwnerHandle;
 }
 
 auto
     UCk_Utils_AbilityOwner_UE::
     Request_SendAbilityEvent(
-        FCk_Handle InAbilityOwnerHandle,
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_SendEvent& InRequest)
-    -> void
+    -> FCk_Handle_AbilityOwner
 {
-    if (NOT Ensure(InAbilityOwnerHandle))
-    { return; }
-
     auto& Events = InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Events>();
     Events._Events.Emplace(InRequest.Get_Event());
+
+    return InAbilityOwnerHandle;
 }
 
 auto
     UCk_Utils_AbilityOwner_UE::
     BindTo_OnEvents(
-        FCk_Handle InAbilityOwnerHandle,
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_AbilityOwner_Events& InDelegate)
-    -> void
+    -> FCk_Handle_AbilityOwner
 {
-    if (NOT Ensure(InAbilityOwnerHandle))
-    { return; }
-
     ck::UUtils_Signal_AbilityOwner_Events::Bind(InAbilityOwnerHandle, InDelegate, InBehavior);
+    return InAbilityOwnerHandle;
 }
 
 auto
     UCk_Utils_AbilityOwner_UE::
     UnbindFrom_OnEvents(
-        FCk_Handle InAbilityOwnerHandle,
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Delegate_AbilityOwner_Events& InDelegate)
-    -> void
+    -> FCk_Handle_AbilityOwner
 {
-    if (NOT Ensure(InAbilityOwnerHandle))
-    { return; }
-
     ck::UUtils_Signal_AbilityOwner_Events::Unbind(InAbilityOwnerHandle, InDelegate);
+    return InAbilityOwnerHandle;
 }
 
 auto
     UCk_Utils_AbilityOwner_UE::
     BindTo_OnTagsUpdated(
-        FCk_Handle InAbilityOwnerHandle,
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_AbilityOwner_OnTagsUpdated& InDelegate)
-    -> void
+    -> FCk_Handle_AbilityOwner
 {
-    if (NOT Ensure(InAbilityOwnerHandle))
-    { return; }
-
     ck::UUtils_Signal_AbilityOwner_OnTagsUpdated::Bind(InAbilityOwnerHandle, InDelegate, InBehavior);
+    return InAbilityOwnerHandle;
 }
 
 auto
     UCk_Utils_AbilityOwner_UE::
     UnbindFrom_OnTagsUpdated(
-        FCk_Handle InAbilityOwnerHandle,
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Delegate_AbilityOwner_OnTagsUpdated& InDelegate)
-    -> void
+    -> FCk_Handle_AbilityOwner
 {
-    if (NOT Ensure(InAbilityOwnerHandle))
-    { return; }
-
     ck::UUtils_Signal_AbilityOwner_OnTagsUpdated::Unbind(InAbilityOwnerHandle, InDelegate);
+    return InAbilityOwnerHandle;
 }
 
 auto
@@ -450,7 +411,7 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     Make_Request_ActivateAbility_ByEntity(
-        FCk_Handle                    InAbilityEntity,
+        const FCk_Handle_Ability& InAbilityEntity,
         FCk_Ability_ActivationPayload InActivationPayload)
     -> FCk_Request_AbilityOwner_ActivateAbility
 {
@@ -469,7 +430,7 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     Make_Request_DeactivateAbility_ByEntity(
-        FCk_Handle InAbilityEntity)
+        const FCk_Handle_Ability& InAbilityEntity)
     -> FCk_Request_AbilityOwner_DeactivateAbility
 {
     return FCk_Request_AbilityOwner_DeactivateAbility{InAbilityEntity};
@@ -487,7 +448,7 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     Make_Request_RevokeAbility_ByEntity(
-        FCk_Handle InAbilityEntity)
+        const FCk_Handle_Ability& InAbilityEntity)
     -> FCk_Request_AbilityOwner_RevokeAbility
 {
     return FCk_Request_AbilityOwner_RevokeAbility{InAbilityEntity};
