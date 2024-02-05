@@ -34,9 +34,7 @@ namespace ck
     {
         UCk_Utils_Ability_UE::RecordOfAbilities_Utils::AddIfMissing(InHandle);
 
-        const auto& Params = InAbilityOwnerParams.Get_Params();
-
-        for (const auto& DefaultAbility : Params.Get_DefaultAbilities())
+        for (const auto& Params = InAbilityOwnerParams.Get_Params(); const auto& DefaultAbility : Params.Get_DefaultAbilities())
         {
             CK_ENSURE_IF_NOT(ck::IsValid(DefaultAbility), TEXT("Entity [{}] has an INVALID default Ability in its Params!"), InHandle)
             { continue; }
@@ -120,10 +118,19 @@ namespace ck
             const FCk_Request_AbilityOwner_GiveAbility& InRequest) const
         -> void
     {
-        const auto& AbilityEntityConfig = InRequest.Get_AbilityEntityConfig();
-        CK_ENSURE_IF_NOT(ck::IsValid(AbilityEntityConfig),
-            TEXT("Cannot GIVE Ability to Ability Owner [{}] because it has an INVALID Entity Config PDA"),
+        const auto& AbilityScriptClass = InRequest.Get_AbilityScriptClass();
+        CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptClass),
+            TEXT("Cannot GIVE Ability to Ability Owner [{}] because it has an INVALID Ability Script Class"),
             InAbilityOwnerEntity)
+        { return; }
+
+        const auto& AbilityEntityConfig = UCk_Utils_Ability_UE::Create_AbilityEntityConfig(
+            UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAbilityOwnerEntity), AbilityScriptClass);
+
+        CK_ENSURE_IF_NOT(ck::IsValid(AbilityEntityConfig),
+            TEXT("Cannot GIVE Ability to Ability Owner [{}] because the created Ability Entity Config for [{}] is INVALID"),
+            InAbilityOwnerEntity,
+            AbilityScriptClass)
         { return; }
 
         const auto& AbilityConstructionScript = Cast<UCk_Ability_ConstructionScript_PDA>(AbilityEntityConfig->Get_EntityConstructionScript());
@@ -133,7 +140,6 @@ namespace ck
         { return; }
 
         const auto& AbilityParams = AbilityConstructionScript->Get_AbilityParams();
-        const auto& AbilityScriptClass = AbilityParams.Get_AbilityScriptClass();
 
         CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptClass),
             TEXT("Cannot GIVE Ability to Ability Owner [{}] using Construction Script [{}] because the ScriptClass [{}] is INVALID"),
