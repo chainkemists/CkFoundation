@@ -84,9 +84,9 @@ public:
     CK_GENERATED_BODY(FCk_Fragment_AbilityOwner_ParamsData);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TArray<const class UCk_Ability_EntityConfig_PDA*> _DefaultAbilities;
+    TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _DefaultAbilities;
 
 public:
     CK_PROPERTY_GET(_DefaultAbilities);
@@ -104,20 +104,16 @@ struct CKABILITY_API FCk_Request_AbilityOwner_GiveAbility
 public:
     CK_GENERATED_BODY(FCk_Request_AbilityOwner_GiveAbility);
 
-public:
-    FCk_Request_AbilityOwner_GiveAbility() = default;
-
-    explicit
-    FCk_Request_AbilityOwner_GiveAbility(
-        const UCk_Ability_EntityConfig_PDA* InAbilityEntityConfig);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<const UCk_Ability_EntityConfig_PDA> _AbilityEntityConfig;
+    TSubclassOf<class UCk_Ability_Script_PDA> _AbilityScriptClass;
 
 public:
-    CK_PROPERTY_GET(_AbilityEntityConfig)
+    CK_PROPERTY_GET(_AbilityScriptClass)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_AbilityOwner_GiveAbility, _AbilityScriptClass);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
