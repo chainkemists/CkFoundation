@@ -397,12 +397,13 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               Category = "Advanced",
               meta = (AllowPrivateAccess = true, InlineEditConditionToggle))
-    bool _HasCustomConstructionScript = false;
+    bool _OverrideAbilityConstructionScript = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               Category = "Advanced",
-              meta = (AllowPrivateAccess = true, EditCondition = "_HasCustomConstructionScript", AllowAbstract = false))
-    TSubclassOf<class UCk_Ability_ConstructionScript_PDA> _CustomConstructionScript;
+              DisplayName = "Overriden Ability Construction Script",
+              meta = (AllowPrivateAccess = true, EditCondition = "_OverrideAbilityConstructionScript", AllowAbstract = false))
+    TSubclassOf<class UCk_Ability_ConstructionScript_PDA> _AbilityConstructionScript;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               Category = "Advanced",
@@ -419,8 +420,8 @@ public:
     CK_PROPERTY(_CooldownSettings);
     CK_PROPERTY(_NetworkSettings);
     CK_PROPERTY(_InstancingPolicy);
-    CK_PROPERTY(_HasCustomConstructionScript);
-    CK_PROPERTY(_CustomConstructionScript);
+    CK_PROPERTY(_OverrideAbilityConstructionScript);
+    CK_PROPERTY(_AbilityConstructionScript);
 
     CK_DEFINE_CONSTRUCTORS(FCk_Ability_Script_Data, _AbilityName);
 };
@@ -486,37 +487,38 @@ public:
     CK_GENERATED_BODY(UCk_Ability_ConstructionScript_PDA);
 
 public:
+    friend class UCk_Utils_Ability_UE;
+
+public:
     auto DoConstruct_Implementation(
         FCk_Handle InHandle,
         const FInstancedStruct& InOptionalParams) -> void override;
 
 private:
     UPROPERTY(Transient)
-    bool _ShowPropertyInVariablesWindow = false;
+    TArray<class UCk_Ability_EntityConfig_PDA*> _DefaultAbilityEntityConfigs;
 
-    UPROPERTY(BlueprintReadWrite,
-              meta = (ExposeOnSpawn = true, EditConditionHides = true,
-                      EditCondition = "_ShowPropertyInVariablesWindow", AllowPrivateAccess = true))
-    TArray<const class UCk_Ability_EntityConfig_PDA*> _DefaultAbilityEntityConfigs;
-
-    UPROPERTY(BlueprintReadWrite,
-              meta = (ExposeOnSpawn = true, EditConditionHides = true,
-                      EditCondition = "_ShowPropertyInVariablesWindow", AllowPrivateAccess = true))
+    UPROPERTY(Transient)
     FCk_Fragment_Ability_ParamsData _AbilityParams;
 
 public:
-    CK_PROPERTY_GET(_AbilityParams);
+    CK_PROPERTY(_DefaultAbilityEntityConfigs);
+    CK_PROPERTY(_AbilityParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract, EditInlineNew, Blueprintable, BlueprintType)
+// NOTE: Class is NOT Abstract by design since we need to create an instance of it inside UCk_Utils_Ability_UE::Create_AbilityEntityConfig
+UCLASS(EditInlineNew, Blueprintable, BlueprintType)
 class CKABILITY_API UCk_Ability_EntityConfig_PDA : public UCk_EntityBridge_Config_Base_PDA
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(UCk_Ability_EntityConfig_PDA);
+
+public:
+    friend class UCk_Utils_Ability_UE;
 
 private:
     auto
