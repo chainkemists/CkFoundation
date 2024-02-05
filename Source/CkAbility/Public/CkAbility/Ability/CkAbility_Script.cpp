@@ -7,6 +7,47 @@
 
 #include "CkNet/CkNet_Utils.h"
 
+#include <NativeGameplayTags.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    // ReSharper disable once CppPolymorphicClassWithNonVirtualPublicDestructor
+    struct FAbility_Tags final : public FGameplayTagNativeAdder
+    {
+    protected:
+        auto AddTags() -> void override
+        {
+            auto& Manager = UGameplayTagsManager::Get();
+
+            _Cooldown  = Manager.AddNativeGameplayTag(TEXT("Ck.AbilityTrigger.ApplyCooldown"));
+            _Cost      = Manager.AddNativeGameplayTag(TEXT("Ck.AbilityTrigger.ApplyCost"));
+            _Condition = Manager.AddNativeGameplayTag(TEXT("Ck.Ability.Condition"));
+
+            Manager.AddNativeGameplayTag(TEXT("Ck.Ability.CooldownInProgress"));
+            Manager.AddNativeGameplayTag(TEXT("Ck.Ability.CostsNotMet"));
+            Manager.AddNativeGameplayTag(TEXT("Ck.Ability.ConditionsNotMet"));
+
+            Manager.AddNativeGameplayTag(TEXT("Ck.AbilityTrigger.ApplyCostsNotMet"));
+        }
+
+    private:
+        FGameplayTag _Cooldown;
+        FGameplayTag _Cost;
+        FGameplayTag _Condition;
+
+        static FAbility_Tags _Tags;
+
+    public:
+        static auto Get_Cooldown()  -> FGameplayTag { return _Tags._Cooldown; }
+        static auto Get_Cost()      -> FGameplayTag { return _Tags._Cost; }
+        static auto Get_Condition() -> FGameplayTag { return _Tags._Condition; }
+    };
+
+    FAbility_Tags FAbility_Tags::_Tags;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -107,12 +148,19 @@ auto
     DoRequest_ApplyCost()
     -> void
 {
+    DoRequest_ApplyCustomCost(ck::FAbility_Tags::Get_Cost());
+}
+
+auto
+    UCk_Ability_Script_PDA::
+    DoRequest_ApplyCustomCost(
+        FGameplayTag InAbilityCostTag)
+    -> void
+{
     CK_ENSURE_IF_NOT(UCk_Utils_AbilityOwner_UE::Has(Get_AbilityHandle()),
         TEXT("Ability Entity [{}] with AbilityScript [{}] is NOT an AbilityOwner itself. Did you forget to add a 'Cost' Ability to the aforementioned?"),
         Get_AbilityHandle(), this)
     { return; }
-
-    const auto& DefaultApplyCostTag = UCk_Utils_Ability_Settings_UE::Get_Default_ApplyCostTag();
 
     auto AbilityAsAbilityOwner = UCk_Utils_AbilityOwner_UE::Conv_HandleToAbilityOwner(_AbilityHandle);
     UCk_Utils_AbilityOwner_UE::Request_SendAbilityEvent
@@ -120,7 +168,7 @@ auto
         AbilityAsAbilityOwner,
         FCk_Request_AbilityOwner_SendEvent
         {
-            FCk_AbilityOwner_Event{DefaultApplyCostTag}
+            FCk_AbilityOwner_Event{InAbilityCostTag}
                 .Set_ContextEntity(Get_AbilityHandle())
         }
     );
@@ -131,14 +179,21 @@ auto
     DoRequest_ApplyCost_OnOwner()
     -> void
 {
-    const auto& DefaultApplyCostTag = UCk_Utils_Ability_Settings_UE::Get_Default_ApplyCostTag();
+    DoRequest_ApplyCustomCost_OnOwner(ck::FAbility_Tags::Get_Cost());
+}
 
+auto
+    UCk_Ability_Script_PDA::
+    DoRequest_ApplyCustomCost_OnOwner(
+        FGameplayTag InAbilityCostTag)
+    -> void
+{
     UCk_Utils_AbilityOwner_UE::Request_SendAbilityEvent
     (
         _AbilityOwnerHandle,
         FCk_Request_AbilityOwner_SendEvent
         {
-            FCk_AbilityOwner_Event{DefaultApplyCostTag}
+            FCk_AbilityOwner_Event{InAbilityCostTag}
                 .Set_ContextEntity(Get_AbilityHandle())
         }
     );
@@ -149,12 +204,19 @@ auto
     DoRequest_ApplyCooldown()
     -> void
 {
+    DoRequest_ApplyCustomCooldown(ck::FAbility_Tags::Get_Cooldown());
+}
+
+auto
+    UCk_Ability_Script_PDA::
+    DoRequest_ApplyCustomCooldown(
+        FGameplayTag InAbilityCooldownTag)
+    -> void
+{
     CK_ENSURE_IF_NOT(UCk_Utils_AbilityOwner_UE::Has(Get_AbilityHandle()),
         TEXT("Ability Entity [{}] with AbilityScript [{}] is NOT an AbilityOwner itself. Did you forget to add a 'Cooldown' Ability to the aforementioned?"),
         Get_AbilityHandle(), this)
     { return; }
-
-    const auto& DefaultApplyCooldownTag = UCk_Utils_Ability_Settings_UE::Get_Default_ApplyCooldownTag();
 
     auto AbilityAsAbilityOwner = UCk_Utils_AbilityOwner_UE::Conv_HandleToAbilityOwner(_AbilityHandle);
     UCk_Utils_AbilityOwner_UE::Request_SendAbilityEvent
@@ -162,7 +224,7 @@ auto
         AbilityAsAbilityOwner,
         FCk_Request_AbilityOwner_SendEvent
         {
-            FCk_AbilityOwner_Event{DefaultApplyCooldownTag}
+            FCk_AbilityOwner_Event{InAbilityCooldownTag}
                 .Set_ContextEntity(Get_AbilityHandle())
         }
     );
@@ -173,14 +235,21 @@ auto
     DoRequest_ApplyCooldown_OnOwner()
     -> void
 {
-    const auto& DefaultApplyCooldownTag = UCk_Utils_Ability_Settings_UE::Get_Default_ApplyCooldownTag();
+    DoRequest_ApplyCustomCooldown_OnOwner(ck::FAbility_Tags::Get_Cooldown());
+}
 
+auto
+    UCk_Ability_Script_PDA::
+    DoRequest_ApplyCustomCooldown_OnOwner(
+        FGameplayTag InAbilityCooldownTag)
+    -> void
+{
     UCk_Utils_AbilityOwner_UE::Request_SendAbilityEvent
     (
         _AbilityOwnerHandle,
         FCk_Request_AbilityOwner_SendEvent
         {
-            FCk_AbilityOwner_Event{DefaultApplyCooldownTag}
+            FCk_AbilityOwner_Event{InAbilityCooldownTag}
                 .Set_ContextEntity(Get_AbilityHandle())
         }
     );

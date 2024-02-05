@@ -63,26 +63,23 @@ protected:
 
 private:
     UFUNCTION(BlueprintCallable,
-              BlueprintPure = false,
               Category = "Ck|Ability|Script",
-              DisplayName = "[AbilityScript] Request Activate This Ability",
-              meta = (CompactNodeTitle="ACTIVATE_ThisAbility", HideSelfPin = true))
+              DisplayName = "[Ck][AbilityScript] Request Activate This Ability",
+              meta = (CompactNodeTitle="TRYACTIVATE_ThisAbility", HideSelfPin = true))
     void
     DoRequest_ActivateAbility(
         FCk_Ability_ActivationPayload InActivationPayload);
 
     UFUNCTION(BlueprintCallable,
-              BlueprintPure = false,
               Category = "Ck|Ability|Script",
-              DisplayName = "[AbilityScript] Request Deactivate This Ability",
+              DisplayName = "[Ck][AbilityScript] Request Deactivate This Ability",
               meta = (CompactNodeTitle="DEACTIVATE_ThisAbility", HideSelfPin = true))
     void
     DoRequest_DeactivateAbility();
 
     UFUNCTION(BlueprintCallable,
-              BlueprintPure = false,
               Category = "Ck|Ability|Script",
-              DisplayName = "[AbilityScript] Request Apply Cost (On Self)",
+              DisplayName = "[Ck][AbilityScript] Request Apply Cost (On Self)",
               meta = (CompactNodeTitle="ApplyCost", HideSelfPin = true))
     void
     DoRequest_ApplyCost();
@@ -90,30 +87,60 @@ private:
     UFUNCTION(BlueprintCallable,
               BlueprintPure = false,
               Category = "Ck|Ability|Script",
-              DisplayName = "[AbilityScript] Request Apply Cost (On Owner)",
+              DisplayName = "[Ck][AbilityScript] Request Apply Custom Cost (On Self)",
+              meta = (CompactNodeTitle="ApplyCustomCost", HideSelfPin = true))
+    void
+    DoRequest_ApplyCustomCost(
+        FGameplayTag InAbilityCostTag);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Ability|Script",
+              DisplayName = "[Ck][AbilityScript] Request Apply Cost (On Owner)",
               meta = (CompactNodeTitle="ApplyCost_OnOwner", HideSelfPin = true))
     void
     DoRequest_ApplyCost_OnOwner();
 
     UFUNCTION(BlueprintCallable,
-              BlueprintPure = false,
               Category = "Ck|Ability|Script",
-              DisplayName = "[AbilityScript] Request Apply Cooldown (On Self)",
+              DisplayName = "[Ck][AbilityScript] Request Apply Custom Cost (On Owner)",
+              meta = (CompactNodeTitle="ApplyCustomCost_OnOwner", HideSelfPin = true))
+    void
+    DoRequest_ApplyCustomCost_OnOwner(
+        FGameplayTag InAbilityCostTag);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Ability|Script",
+              DisplayName = "[Ck][AbilityScript] Request Apply Cooldown (On Self)",
               meta = (CompactNodeTitle="ApplyCooldown", HideSelfPin = true))
     void
     DoRequest_ApplyCooldown();
 
     UFUNCTION(BlueprintCallable,
-              BlueprintPure = false,
               Category = "Ck|Ability|Script",
-              DisplayName = "[AbilityScript] Request Apply Cooldown (On Owner)",
+              DisplayName = "[Ck][AbilityScript] Request Apply Custom Cooldown (On Self)",
+              meta = (CompactNodeTitle="ApplyCustomCooldown", HideSelfPin = true))
+    void
+    DoRequest_ApplyCustomCooldown(
+        FGameplayTag InAbilityCooldownTag);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Ability|Script",
+              DisplayName = "[Ck][AbilityScript] Request Apply Cooldown (On Owner)",
               meta = (CompactNodeTitle="ApplyCooldown_OnOwner", HideSelfPin = true))
     void
     DoRequest_ApplyCooldown_OnOwner();
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
-              DisplayName = "[AbilityScript] Request Track Task",
+              DisplayName = "[Ck][AbilityScript] Request Apply CustomCooldown (On Owner)",
+              meta = (CompactNodeTitle="ApplyCustomCooldown_OnOwner", HideSelfPin = true))
+    void
+    DoRequest_ApplyCustomCooldown_OnOwner(
+        FGameplayTag InAbilityCooldownTag);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Ability|Script",
+              DisplayName = "[Ck][AbilityScript] Request Track Task",
               meta = (CompactNodeTitle="TRACK_Task", HideSelfPin = true))
     void
     DoRequest_TrackTask(
@@ -122,7 +149,7 @@ private:
     UFUNCTION(BlueprintCallable,
               BlueprintPure = false,
               Category = "Ck|Ability|Script",
-              DisplayName = "[AbilityScript] Request Spawn Ability Cue",
+              DisplayName = "[Ck][AbilityScript] Request Spawn Ability Cue",
               meta = (CompactNodeTitle="SpawnAbilityCue", HideSelfPin = true))
     void
     DoRequest_SpawnAbilityCue(
@@ -132,21 +159,21 @@ private:
 private:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
-              DisplayName = "[AbilityScript] Get Ability Status",
+              DisplayName = "[Ck][AbilityScript] Get Ability Status",
               meta = (CompactNodeTitle="STATUS_ThisAbility", HideSelfPin = true))
     ECk_Ability_Status
     DoGet_Status() const;
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
-              DisplayName = "[AbilityScript] Get Ability Entity",
+              DisplayName = "[Ck][AbilityScript] Get Ability Entity",
               meta = (CompactNodeTitle="AbilityEntity", HideSelfPin = true))
     FCk_Handle_Ability
     DoGet_AbilityEntity() const;
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
-              DisplayName = "[AbilityScript] Get Ability Owner Entity",
+              DisplayName = "[Ck][AbilityScript] Get Ability Owner Entity",
               meta = (CompactNodeTitle="AbilityOwnerEntity", HideSelfPin = true))
     FCk_Handle_AbilityOwner
     DoGet_AbilityOwnerEntity() const;
