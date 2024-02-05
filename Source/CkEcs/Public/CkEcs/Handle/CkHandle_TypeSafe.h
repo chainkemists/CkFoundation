@@ -81,7 +81,7 @@ auto                                                                            
         ECk_SucceededFailed& OutResult)                                                                                                 \
     -> _HandleType_                                                                                                                     \
 {                                                                                                                                       \
-    if (Has(InHandle))                                                                                                                  \
+    if (NOT Has(InHandle))                                                                                                              \
     {                                                                                                                                   \
         OutResult = ECk_SucceededFailed::Failed;                                                                                        \
         return {};                                                                                                                      \
