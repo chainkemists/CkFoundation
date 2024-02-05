@@ -23,32 +23,6 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
-struct CKABILITY_API FCk_Ability_Info
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Ability_Info);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FGameplayTag _AbilityName = FGameplayTag::EmptyTag;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FCk_Handle _AbilityOwnerEntity;
-
-public:
-    CK_PROPERTY_GET(_AbilityName);
-    CK_PROPERTY_GET(_AbilityOwnerEntity);
-
-    CK_DEFINE_CONSTRUCTORS(FCk_Ability_Info, _AbilityName, _AbilityOwnerEntity);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
 UCLASS(NotBlueprintable)
 class CKABILITY_API UCk_Utils_Ability_UE : public UCk_Utils_Ecs_Base_UE
 {
@@ -111,8 +85,6 @@ public:
         const TArray<TSubclassOf<UCk_Ability_Script_PDA>> InAbilityScriptClasses);
 
 public:
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Ability",
               DisplayName="[Ck][Ability] Get Display Name")
     static FName
     Get_DisplayName(
