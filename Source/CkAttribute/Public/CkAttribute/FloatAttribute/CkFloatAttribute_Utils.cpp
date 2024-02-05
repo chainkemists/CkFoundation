@@ -16,7 +16,7 @@ auto
         FCk_Handle& InHandle,
         const FCk_Fragment_FloatAttribute_ParamsData& InParams,
         ECk_Replication InReplicates)
-    -> FCk_Handle_FloatAttributeOwner
+    -> FCk_Handle
 {
     RecordOfFloatAttributes_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 
@@ -46,7 +46,7 @@ auto
         UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_FloatAttribute_Rep>(InHandle);
     }
 
-    return Conv_HandleToFloatAttributeOwner(InHandle);
+    return InHandle;
 }
 
 auto
@@ -55,20 +55,20 @@ auto
         FCk_Handle& InHandle,
         const FCk_Fragment_MultipleFloatAttribute_ParamsData& InParams,
         ECk_Replication InReplicates)
-    -> FCk_Handle_FloatAttributeOwner
+    -> FCk_Handle
 {
     for (const auto& Param : InParams.Get_FloatAttributeParams())
     {
         Add(InHandle, Param, InReplicates);
     }
 
-    return Conv_HandleToFloatAttributeOwner(InHandle);
+    return InHandle;
 }
 
 auto
     UCk_Utils_FloatAttribute_UE::
     Has_Attribute(
-        const FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
+        const FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName)
     -> bool
 {
@@ -80,7 +80,7 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     Has_Any_Attribute(
-        const FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity)
+        const FCk_Handle& InAttributeOwnerEntity)
     -> bool
 {
     return RecordOfFloatAttributes_Utils::Has(InAttributeOwnerEntity);
@@ -88,14 +88,10 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(FloatAttributeOwner, UCk_Utils_FloatAttribute_UE, FCk_Handle_FloatAttributeOwner, RecordOfFloatAttributes_Utils::RecordType);
-
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     UCk_Utils_FloatAttribute_UE::
     ForEach_FloatAttribute(
-        FCk_Handle_FloatAttributeOwner& InAttributeOwner,
+        FCk_Handle& InAttributeOwner,
         const FInstancedStruct&    InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
     -> TArray<FCk_Handle>
@@ -116,7 +112,7 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     ForEach_FloatAttribute(
-        FCk_Handle_FloatAttributeOwner& InAttributeOwner,
+        FCk_Handle& InAttributeOwner,
         const TFunction<void(FCk_Handle_FloatAttribute)>& InFunc)
     -> void
 {
@@ -136,7 +132,7 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     ForEach_FloatAttribute_If(
-        FCk_Handle_FloatAttributeOwner& InAttributeOwner,
+        FCk_Handle& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate)
@@ -174,7 +170,7 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     ForEach_FloatAttribute_If(
-        FCk_Handle_FloatAttributeOwner& InAttributeOwner,
+        FCk_Handle& InAttributeOwner,
         const TFunction<void(FCk_Handle_FloatAttribute)>& InFunc,
         const TFunction<bool(FCk_Handle_FloatAttribute)>& InPredicate)
     -> void
@@ -196,7 +192,7 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     Get_BaseValue(
-        const FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
+        const FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName)
     -> float
 {
@@ -213,7 +209,7 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     Get_BonusValue(
-        const FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
+        const FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName)
     -> float
 {
@@ -230,7 +226,7 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     Get_FinalValue(
-        const FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
+        const FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName)
     -> float
 {
@@ -247,7 +243,7 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     Request_Override(
-        FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
+        FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         float InNewBaseValue)
         -> void
@@ -263,7 +259,7 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     BindTo_OnValueChanged(
-        FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
+        FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         ECk_Signal_BindingPolicy InBehavior,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
@@ -287,7 +283,7 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     UnbindFrom_OnValueChanged(
-        FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
+        FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate)
     -> void
@@ -308,7 +304,7 @@ auto
 auto
     UCk_Utils_FloatAttributeModifier_UE::
     Add(
-        FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
+        FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InModifierName,
         const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams)
     -> void
@@ -349,7 +345,7 @@ auto
 auto
     UCk_Utils_FloatAttributeModifier_UE::
     Has(
-        const FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
+        const FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         FGameplayTag InModifierName)
     -> bool
@@ -367,7 +363,7 @@ auto
 auto
     UCk_Utils_FloatAttributeModifier_UE::
     Remove(
-        FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
+        FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         FGameplayTag InModifierName)
     -> void

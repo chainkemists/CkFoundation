@@ -18,12 +18,6 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_FloatAttribute
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak="/Script/CkEcs.Ck_Utils_Handle_UE:Conv_HandleTypeSafeToHandle"))
-struct CKATTRIBUTE_API FCk_Handle_FloatAttributeOwner : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_FloatAttributeOwner); };
-CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_FloatAttributeOwner);
-
-// --------------------------------------------------------------------------------------------------------------------
-
 USTRUCT(BlueprintType)
 struct CKATTRIBUTE_API FCk_Fragment_FloatAttribute_ParamsData
 {

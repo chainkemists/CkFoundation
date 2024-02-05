@@ -74,6 +74,13 @@ public:
         UObject* InOuter,
         const FCk_Handle_Sensor& InSensorEntity);
 
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Sensor",
+        DisplayName="[Ck][Sensor] Has Any Sensors")
+    static bool
+    Has_Any(
+        const FCk_Handle& InHandle);
+
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Sensor",
@@ -102,13 +109,20 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
-              DisplayName="[Ck][Sensor] Get Handle")
+              DisplayName="[Ck][Sensor] Try Get Sensor")
     static FCk_Handle_Sensor
     TryGet_Sensor(
         const FCk_Handle& InSensorOwnerEntity,
         FGameplayTag      InSensorName);
 
 public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Sensor",
+              DisplayName="[Ck][Sensor] Get Name")
+    static FGameplayTag
+    Get_Name(
+        const FCk_Handle_Sensor& InSensorEntity);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
               DisplayName="[Ck][Sensor] Get All Sensors")

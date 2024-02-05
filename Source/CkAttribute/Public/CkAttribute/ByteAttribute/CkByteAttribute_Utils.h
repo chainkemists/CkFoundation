@@ -34,7 +34,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Byte",
               DisplayName="[Ck][ByteAttribute] Add New Attribute")
-    static FCk_Handle_ByteAttributeOwner
+    static FCk_Handle
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_ByteAttribute_ParamsData& InParams,
@@ -43,9 +43,9 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Byte",
               DisplayName="[Ck][ByteAttribute] Add Multiple New Attributes")
-    static FCk_Handle_ByteAttributeOwner
+    static FCk_Handle
     AddMultiple(
-        FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_MultipleByteAttribute_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
@@ -65,43 +65,18 @@ public:
         const FCk_Handle& InAttributeOwnerEntity);
 
 public:
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Attribute|Byte",
-              DisplayName="[Ck][ByteAttribute] Has Feature")
-    static bool
-    Has(
-        const FCk_Handle& InEntity);
-
-    UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|Attribute|Byte",
-        DisplayName="[Ck][ByteAttribute] Cast",
-        meta = (ExpandEnumAsExecs = "OutResult"))
-    static FCk_Handle_ByteAttributeOwner
-    Cast(
-        const FCk_Handle&    InHandle,
-        ECk_SucceededFailed& OutResult);
-
-    UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|Attribute|Byte",
-        DisplayName="[Ck][ByteAttribute] Handle -> ByteAttributeOwner Handle",
-        meta = (CompactNodeTitle = "As ByteAttributeOwner", BlueprintAutocast))
-    static FCk_Handle_ByteAttributeOwner
-    Conv_HandleToByteAttributeOwner(
-        const FCk_Handle& InHandle);
-
-public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Byte",
               DisplayName="[Ck][ByteAttribute] For Each",
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle>
     ForEach_ByteAttribute(
-        UPARAM(ref) FCk_Handle_ByteAttributeOwner& InAttributeOwner,
+        UPARAM(ref) FCk_Handle& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_ByteAttribute(
-        UPARAM(ref) FCk_Handle_ByteAttributeOwner& InAttributeOwner,
+        UPARAM(ref) FCk_Handle& InAttributeOwner,
         const TFunction<void(FCk_Handle_ByteAttribute)>& InFunc) -> void;
 
     UFUNCTION(BlueprintCallable,
@@ -110,13 +85,13 @@ public:
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle_ByteAttribute>
     ForEach_ByteAttribute_If(
-        UPARAM(ref) FCk_Handle_ByteAttributeOwner& InAttributeOwner,
+        UPARAM(ref) FCk_Handle& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate);
     static auto
     ForEach_ByteAttribute_If(
-        UPARAM(ref) FCk_Handle_ByteAttributeOwner& InAttributeOwner,
+        UPARAM(ref) FCk_Handle& InAttributeOwner,
         const TFunction<void(FCk_Handle_ByteAttribute)>& InFunc,
         const TFunction<bool(FCk_Handle_ByteAttribute)>& InPredicate) -> void;
 
@@ -126,7 +101,7 @@ public:
               DisplayName="[Ck][ByteAttribute] Get Base Value")
     static uint8
     Get_BaseValue(
-        const FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
+        const FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName);
 
     UFUNCTION(BlueprintPure,
@@ -134,7 +109,7 @@ public:
               DisplayName="[Ck][ByteAttribute] Get Bonus Value")
     static uint8
     Get_BonusValue(
-        const FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
+        const FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName);
 
     UFUNCTION(BlueprintPure,
@@ -142,7 +117,7 @@ public:
               DisplayName="[Ck][ByteAttribute] Get Final Value")
     static uint8
     Get_FinalValue(
-        const FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
+        const FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName);
 
 public:
@@ -151,7 +126,7 @@ public:
               DisplayName="[Ck][ByteAttribute] Request Override Base Value")
     static void
     Request_Override(
-        UPARAM(ref) FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
+        UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         uint8 InNewBaseValue);
 
@@ -161,7 +136,7 @@ public:
               DisplayName = "[Ck][ByteAttribute] Bind To OnValueChanged")
     static void
     BindTo_OnValueChanged(
-        UPARAM(ref) FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
+        UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         ECk_Signal_BindingPolicy InBehavior,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
@@ -172,7 +147,7 @@ public:
               DisplayName = "[Ck][ByteAttribute] Unbind From OnValueChanged")
     static void
     UnbindFrom_OnValueChanged(
-        UPARAM(ref) FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
+        UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         const FCk_Delegate_ByteAttribute_OnValueChanged& InDelegate);
 };
@@ -196,7 +171,7 @@ public:
               DisplayName="[Ck][ByteAttribute] Add Modifier")
     static void
     Add(
-        UPARAM(ref) FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
+        UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InModifierName,
         const FCk_Fragment_ByteAttributeModifier_ParamsData& InParams);
 
@@ -205,7 +180,7 @@ public:
               DisplayName="[Ck][ByteAttribute] Has Modifier")
     static bool
     Has(
-        const FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
+        const FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         FGameplayTag InModifierName);
 
@@ -214,7 +189,7 @@ public:
               DisplayName="[Ck][ByteAttribute] Remove Modifier")
     static void
     Remove(
-        UPARAM(ref) FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
+        UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         FGameplayTag InModifierName);
 };
