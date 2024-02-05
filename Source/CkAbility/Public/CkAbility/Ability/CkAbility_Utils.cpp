@@ -106,21 +106,6 @@ auto
 
 auto
     UCk_Utils_Ability_UE::
-    Get_Info(
-        FCk_Handle InAbilityEntity)
-    -> FCk_Ability_Info
-{
-    if (NOT Ensure(InAbilityEntity))
-    { return {}; }
-
-    const auto& Label = UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntity);
-    const auto& AbilityOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityEntity);
-
-    return FCk_Ability_Info{Label, AbilityOwner};
-}
-
-auto
-    UCk_Utils_Ability_UE::
     Get_DisplayName(
         FCk_Handle InAbilityEntity)
     -> FName
