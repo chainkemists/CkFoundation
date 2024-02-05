@@ -5,10 +5,10 @@
 FCk_Marker_BasicDetails::
     FCk_Marker_BasicDetails(
         FGameplayTag InMarkerName,
-        FCk_Handle InMarkerEntity,
+        FCk_Handle_Marker InMarkerEntity,
         FCk_EntityOwningActor_BasicDetails InMarkerAttachedEntityAndActor)
     : _MarkerName(InMarkerName)
-    , _MarkerEntity(InMarkerEntity)
+    , _MarkerEntity(MoveTemp(InMarkerEntity))
     , _MarkerAttachedEntityAndActor(InMarkerAttachedEntityAndActor)
 {
 }

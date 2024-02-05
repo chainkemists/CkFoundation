@@ -41,19 +41,19 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Marker",
-              DisplayName="[Ck][Marker] Add New Marker")
-    static void
+              DisplayName="[Ck][Marker] Try Add New Marker")
+    static FCk_Handle_Marker
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_Marker_ParamsData& InParams,
         ECk_Net_ReplicationType InReplicationType = ECk_Net_ReplicationType::All);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Marker",
               DisplayName="[Ck][Marker] Add Multiple New Markers")
-    static void
+    static TArray<FCk_Handle_Marker>
     AddMultiple(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_MultipleMarker_ParamsData& InParams,
         ECk_Net_ReplicationType InReplicationType = ECk_Net_ReplicationType::All);
 
@@ -64,7 +64,7 @@ public:
     static void
     PreviewAll(
         UObject* InOuter,
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Marker",
@@ -73,45 +73,54 @@ public:
     static void
     Preview(
         UObject* InOuter,
-        FCk_Handle InMarkerOwnerEntity,
-        FGameplayTag InMarkerName);
+        const FCk_Handle_Marker& InMarkerEntity);
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Marker",
-              DisplayName="[Ck][Marker] Has Marker")
+        Category = "Ck|Utils|Marker",
+        DisplayName="[Ck][Marker] Has Marker")
     static bool
     Has(
-        FCk_Handle InMarkerOwnerEntity,
-        FGameplayTag InMarkerName);
+        const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Marker",
-              DisplayName="[Ck][Marker] Has Any Marker")
-    static bool
-    Has_Any(
-        FCk_Handle InMarkerOwnerEntity);
+        Category = "Ck|Utils|Marker",
+        DisplayName="[Ck][Marker] Cast",
+        meta = (ExpandEnumAsExecs = "OutResult"))
+    static FCk_Handle_Marker
+    Cast(
+        const FCk_Handle&    InHandle,
+        ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Marker",
-              DisplayName="[Ck][Marker] Ensure Has Marker")
-    static bool
-    Ensure(
-        FCk_Handle InMarkerOwnerEntity,
-        FGameplayTag InMarkerName);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Marker",
-              DisplayName="[Ck][Marker] Ensure Has Any Marker")
-    static bool
-    Ensure_Any(
-        FCk_Handle InMarkerOwnerEntity);
+        Category = "Ck|Utils|Marker",
+        DisplayName="[Ck][Marker] Handle -> Marker Handle",
+        meta = (CompactNodeTitle = "As MarkerHandle", BlueprintAutocast))
+    static FCk_Handle_Marker
+    Conv_HandleToMarker(
+        const FCk_Handle& InHandle);
 
 public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Marker",
+              DisplayName="[Ck][Marker] Get Handle")
+    static FCk_Handle_Marker
+    TryGet_Marker(
+        const FCk_Handle& InMarkerOwnerEntity,
+        FGameplayTag      InMarkerName);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Marker",
+              DisplayName="[Ck][Marker] Get Name")
+    static FGameplayTag
+    Get_Name(
+        const FCk_Handle_Marker& InMarkerEntity);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Marker",
               DisplayName="[Ck][Marker] Get All Markers")
-    static TArray<FGameplayTag>
+    static TArray<FCk_Handle_Marker>
     Get_All(
         FCk_Handle InMarkerOwnerEntity);
 
@@ -121,65 +130,57 @@ public:
               DisplayName = "[Ck][Marker] Get Physics Info")
     static FCk_Marker_PhysicsInfo
     Get_PhysicsInfo(
-        FCk_Handle InMarkerOwnerEntity,
-        FGameplayTag InMarkerName);
+        const FCk_Handle_Marker& InMarkerEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Marker",
               DisplayName = "[Ck][Marker] Get Shape Info")
     static FCk_Marker_ShapeInfo
     Get_ShapeInfo(
-        FCk_Handle InMarkerOwnerEntity,
-        FGameplayTag InMarkerName);
+        const FCk_Handle_Marker& InMarkerEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Marker",
               DisplayName = "[Ck][Marker] Get Debug Info")
     static FCk_Marker_DebugInfo
     Get_DebugInfo(
-        FCk_Handle InMarkerOwnerEntity,
-        FGameplayTag InMarkerName);
+        const FCk_Handle_Marker& InMarkerEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Marker",
               DisplayName = "[Ck][Marker] Get Replication Type")
     static ECk_Net_ReplicationType
     Get_ReplicationType(
-        FCk_Handle InMarkerOwnerEntity,
-        FGameplayTag InMarkerName);
+        const FCk_Handle_Marker& InMarkerEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Marker",
               DisplayName = "[Ck][Marker] Get Enable Disable")
     static ECk_EnableDisable
     Get_EnableDisable(
-        FCk_Handle InMarkerOwnerEntity,
-        FGameplayTag InMarkerName);
+        const FCk_Handle_Marker& InMarkerEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Marker",
               DisplayName = "[Ck][Marker] Get Shape Component")
     static UShapeComponent*
     Get_ShapeComponent(
-        FCk_Handle InMarkerOwnerEntity,
-        FGameplayTag InMarkerName);
+        const FCk_Handle_Marker& InMarkerEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Marker",
               DisplayName = "[Ck][Marker] Get Attached Entity And Actor")
     static FCk_EntityOwningActor_BasicDetails
     Get_AttachedEntityAndActor(
-        FCk_Handle InMarkerOwnerEntity,
-        FGameplayTag InMarkerName);
+        const FCk_Handle_Marker& InMarkerEntity);
 
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Marker",
               DisplayName = "[Ck][Marker] Request Enable/Disable")
-    static void
+    static FCk_Handle_Marker
     Request_EnableDisable(
-        FCk_Handle InMarkerOwnerEntity,
-        FGameplayTag InMarkerName,
+        FCk_Handle_Marker& InMarkerEntity,
         const FCk_Request_Marker_EnableDisable& InRequest);
 
 public:
@@ -188,8 +189,7 @@ public:
               DisplayName = "[Ck][Marker] Bind To OnEnableDisable")
     static void
     BindTo_OnEnableDisable(
-        FCk_Handle InMarkerOwnerEntity,
-        FGameplayTag InMarkerName,
+        FCk_Handle_Marker& InMarkerEntity,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Marker_OnEnableDisable& InDelegate);
 
@@ -198,23 +198,18 @@ public:
               DisplayName = "[Ck][Marker] Unbind From OnEnableDisable")
     static void
     UnbindFrom_OnEnableDisable(
-        FCk_Handle InMarkerOwnerEntity,
-        FGameplayTag InMarkerName,
+        FCk_Handle_Marker& InMarkerEntity,
         const FCk_Delegate_Marker_OnEnableDisable& InDelegate);
 
 private:
     static auto
-    Has(
-        FCk_Handle InHandle) -> bool;
-
-    static auto
     DoPreviewMarker(
         UObject* InOuter,
-        FCk_Handle InHandle) -> void;
+        const FCk_Handle_Marker& InMarkerEntity) -> void;
 
     static auto
     Request_MarkMarker_AsNeedToUpdateTransform(
-        FCk_Handle InMarkerHandle) -> void;
+        FCk_Handle_Marker& InMarkerEntity) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

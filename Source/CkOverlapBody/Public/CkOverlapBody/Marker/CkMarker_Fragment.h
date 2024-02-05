@@ -93,7 +93,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfMarkers, FCk_Handle);
+    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfMarkers, FCk_Handle_Marker);
 
     // --------------------------------------------------------------------------------------------------------------------
 
