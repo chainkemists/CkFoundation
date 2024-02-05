@@ -45,7 +45,7 @@ public:
     Has(
         const FCk_Handle& InHandle);
 
-    UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|AbilityOwner",
         DisplayName="[Ck][AbilityOwner] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
