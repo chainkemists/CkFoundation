@@ -36,7 +36,7 @@ public:
               DisplayName="[Ck][FloatAttribute] Add New Attribute")
     static FCk_Handle_FloatAttributeOwner
     Add(
-        FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_FloatAttribute_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
@@ -96,12 +96,12 @@ public:
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle>
     ForEach_FloatAttribute(
-        FCk_Handle_FloatAttributeOwner& InAttributeOwner,
+        UPARAM(ref) FCk_Handle_FloatAttributeOwner& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_FloatAttribute(
-        FCk_Handle_FloatAttributeOwner& InAttributeOwner,
+        UPARAM(ref) FCk_Handle_FloatAttributeOwner& InAttributeOwner,
         const TFunction<void(FCk_Handle_FloatAttribute)>& InFunc) -> void;
 
     UFUNCTION(BlueprintCallable,
@@ -110,13 +110,13 @@ public:
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle_FloatAttribute>
     ForEach_FloatAttribute_If(
-        FCk_Handle_FloatAttributeOwner& InAttributeOwner,
+        UPARAM(ref) FCk_Handle_FloatAttributeOwner& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate);
     static auto
     ForEach_FloatAttribute_If(
-        FCk_Handle_FloatAttributeOwner& InAttributeOwner,
+        UPARAM(ref) FCk_Handle_FloatAttributeOwner& InAttributeOwner,
         const TFunction<void(FCk_Handle_FloatAttribute)>& InFunc,
         const TFunction<bool(FCk_Handle_FloatAttribute)>& InPredicate) -> void;
 
@@ -151,7 +151,7 @@ public:
               DisplayName="[Ck][FloatAttribute] Request Override Base Value")
     static void
     Request_Override(
-        FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
+        UPARAM(ref) FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         float InNewBaseValue);
 
@@ -161,7 +161,7 @@ public:
               DisplayName = "[Ck][FloatAttribute] Bind To OnValueChanged")
     static void
     BindTo_OnValueChanged(
-        FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
+        UPARAM(ref) FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         ECk_Signal_BindingPolicy InBehavior,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
@@ -172,7 +172,7 @@ public:
               DisplayName = "[Ck][FloatAttribute] Unbind From OnValueChanged")
     static void
     UnbindFrom_OnValueChanged(
-        FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
+        UPARAM(ref) FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate);
 };
@@ -196,7 +196,7 @@ public:
               DisplayName="[Ck][FloatAttribute] Add Modifier")
     static void
     Add(
-        FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
+        UPARAM(ref) FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InModifierName,
         const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams);
 
@@ -214,7 +214,7 @@ public:
               DisplayName="[Ck][FloatAttribute] Remove Modifier")
     static void
     Remove(
-        FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
+        UPARAM(ref) FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         FGameplayTag InModifierName);
 };

@@ -44,7 +44,7 @@ public:
               DisplayName="[Ck][Marker] Try Add New Marker")
     static FCk_Handle_Marker
     Add(
-        FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_Marker_ParamsData& InParams,
         ECk_Net_ReplicationType InReplicationType = ECk_Net_ReplicationType::All);
 
@@ -180,7 +180,7 @@ public:
               DisplayName = "[Ck][Marker] Request Enable/Disable")
     static FCk_Handle_Marker
     Request_EnableDisable(
-        FCk_Handle_Marker& InMarkerEntity,
+        UPARAM(ref) FCk_Handle_Marker& InMarkerEntity,
         const FCk_Request_Marker_EnableDisable& InRequest);
 
 public:
@@ -189,7 +189,7 @@ public:
               DisplayName = "[Ck][Marker] Bind To OnEnableDisable")
     static void
     BindTo_OnEnableDisable(
-        FCk_Handle_Marker& InMarkerEntity,
+        UPARAM(ref) FCk_Handle_Marker& InMarkerEntity,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Marker_OnEnableDisable& InDelegate);
 
@@ -198,7 +198,7 @@ public:
               DisplayName = "[Ck][Marker] Unbind From OnEnableDisable")
     static void
     UnbindFrom_OnEnableDisable(
-        FCk_Handle_Marker& InMarkerEntity,
+        UPARAM(ref) FCk_Handle_Marker& InMarkerEntity,
         const FCk_Delegate_Marker_OnEnableDisable& InDelegate);
 
 private:
@@ -209,7 +209,7 @@ private:
 
     static auto
     Request_MarkMarker_AsNeedToUpdateTransform(
-        FCk_Handle_Marker& InMarkerEntity) -> void;
+        UPARAM(ref) FCk_Handle_Marker& InMarkerEntity) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

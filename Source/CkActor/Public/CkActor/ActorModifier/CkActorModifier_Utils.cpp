@@ -13,7 +13,7 @@
 auto
     UCk_Utils_ActorModifier_UE::
     Request_SpawnActor(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         const FCk_Request_ActorModifier_SpawnActor& InRequest,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Delegate_ActorModifier_OnActorSpawned& InDelegate)
@@ -32,7 +32,7 @@ auto
 auto
     UCk_Utils_ActorModifier_UE::
     Request_AddActorComponent(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         const FCk_Request_ActorModifier_AddActorComponent& InRequest,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Delegate_ActorModifier_OnActorComponentAdded& InDelegate)

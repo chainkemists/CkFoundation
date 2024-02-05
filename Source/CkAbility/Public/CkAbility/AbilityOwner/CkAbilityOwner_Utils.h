@@ -34,7 +34,7 @@ public:
               DisplayName="[Ck][AbilityOwner] Add Feature")
     static FCk_Handle_AbilityOwner
     Add(
-        FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_AbilityOwner_ParamsData& InParams);
 
 public:
@@ -132,7 +132,7 @@ public:
     ForEach_Ability(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
-        const TFunction<void(FCk_Handle_Ability&)>& InFunc) -> void;
+        const TFunction<void(UPARAM(ref) FCk_Handle_Ability&)>& InFunc) -> void;
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
@@ -190,7 +190,7 @@ public:
               DisplayName="[Ck][AbilityOwner] Request Give Ability")
     static FCk_Handle_AbilityOwner
     Request_GiveAbility(
-        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_GiveAbility& InRequest);
 
     UFUNCTION(BlueprintCallable,
@@ -198,7 +198,7 @@ public:
               DisplayName="[Ck][AbilityOwner] Request Revoke Ability")
     static FCk_Handle_AbilityOwner
     Request_RevokeAbility(
-        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_RevokeAbility& InRequest);
 
     // NOTE: This is for development only. Use 'Request_SendEvent' to trigger Activation of Abilities
@@ -208,7 +208,7 @@ public:
               meta = (DevelopmentOnly))
     static FCk_Handle_AbilityOwner
     Request_TryActivateAbility(
-        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_ActivateAbility& InRequest);
 
     // NOTE: This is for development only. Use 'Request_SendEvent' to trigger Deactivation of Abilities
@@ -218,7 +218,7 @@ public:
               meta = (DevelopmentOnly))
     static FCk_Handle_AbilityOwner
     Request_DeactivateAbility(
-        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_DeactivateAbility& InRequest);
 
     UFUNCTION(BlueprintCallable,
@@ -226,7 +226,7 @@ public:
               DisplayName = "[Ck][AbilityOwner] Request Send Ability Event")
     static FCk_Handle_AbilityOwner
     Request_SendAbilityEvent(
-        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_SendEvent& InRequest);
 
 public:
@@ -235,7 +235,7 @@ public:
               DisplayName = "[Ck][AbilityOwner] Bind To OnEvents")
     static FCk_Handle_AbilityOwner
     BindTo_OnEvents(
-        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_AbilityOwner_Events& InDelegate);
 
@@ -244,7 +244,7 @@ public:
               DisplayName = "[Ck][AbilityOwner] Unbind From OnEvents")
     static FCk_Handle_AbilityOwner
     UnbindFrom_OnEvents(
-        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Delegate_AbilityOwner_Events& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -252,7 +252,7 @@ public:
               DisplayName = "[Ck][AbilityOwner] Bind To OnTagsUpdated")
     static FCk_Handle_AbilityOwner
     BindTo_OnTagsUpdated(
-        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_AbilityOwner_OnTagsUpdated& InDelegate);
 
@@ -261,7 +261,7 @@ public:
               DisplayName = "[Ck][AbilityOwner] Unbind From OnTagsUpdated")
     static FCk_Handle_AbilityOwner
     UnbindFrom_OnTagsUpdated(
-        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Delegate_AbilityOwner_OnTagsUpdated& InDelegate);
 
 private:

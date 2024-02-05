@@ -43,7 +43,7 @@ public:
               DisplayName="[Ck][Sensor] Try Add New Sensor")
     static FCk_Handle_Sensor
     Add(
-        FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_Sensor_ParamsData& InParams,
         ECk_Net_ReplicationType InReplicationType = ECk_Net_ReplicationType::All);
 
@@ -200,7 +200,7 @@ public:
               DisplayName = "[Ck][Sensor] Request Enable/Disable")
     static FCk_Handle_Sensor
     Request_EnableDisable(
-        FCk_Handle_Sensor& InSensorEntity,
+        UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
         const FCk_Request_Sensor_EnableDisable& InRequest);
 
 public:
@@ -209,7 +209,7 @@ public:
               DisplayName = "[Ck][Sensor] Bind To OnEnableDisable")
     static FCk_Handle_Sensor
     BindTo_OnEnableDisable(
-        FCk_Handle_Sensor& InSensorEntity,
+        UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Sensor_OnEnableDisable& InDelegate);
 
@@ -218,7 +218,7 @@ public:
               DisplayName = "[Ck][Sensor] Unbind From OnEnableDisable")
     static FCk_Handle_Sensor
     UnbindFrom_OnEnableDisable(
-        FCk_Handle_Sensor& InSensorEntity,
+        UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
         const FCk_Delegate_Sensor_OnEnableDisable& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -226,7 +226,7 @@ public:
               DisplayName = "[Ck][Sensor] Bind To OnBeginOverlap")
     static FCk_Handle_Sensor
     BindTo_OnBeginOverlap(
-        FCk_Handle_Sensor& InSensorEntity,
+        UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Sensor_OnBeginOverlap& InDelegate);
 
@@ -235,7 +235,7 @@ public:
               DisplayName = "[Ck][Sensor] Unbind From OnBeginOverlap")
     static FCk_Handle_Sensor
     UnbindFrom_OnBeginOverlap(
-        FCk_Handle_Sensor& InSensorEntity,
+        UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
         const FCk_Delegate_Sensor_OnBeginOverlap& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -243,7 +243,7 @@ public:
               DisplayName = "[Ck][Sensor] Bind To OnEndOverlap")
     static FCk_Handle_Sensor
     BindTo_OnEndOverlap(
-        FCk_Handle_Sensor& InSensorEntity,
+        UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Sensor_OnEndOverlap& InDelegate);
 
@@ -252,7 +252,7 @@ public:
               DisplayName = "[Ck][Sensor] Unbind From OnEndOverlap")
     static FCk_Handle_Sensor
     UnbindFrom_OnEndOverlap(
-        FCk_Handle_Sensor& InSensorEntity,
+        UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
         const FCk_Delegate_Sensor_OnEndOverlap& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -260,7 +260,7 @@ public:
               DisplayName = "[Ck][Sensor] Bind To OnBeginOverlap_NonMarker")
     static FCk_Handle_Sensor
     BindTo_OnBeginOverlap_NonMarker(
-        FCk_Handle_Sensor& InSensorEntity,
+        UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Sensor_OnBeginOverlap_NonMarker& InDelegate);
 
@@ -269,7 +269,7 @@ public:
               DisplayName = "[Ck][Sensor] Unbind From OnBeginOverlap_NonMarker")
     static FCk_Handle_Sensor
     UnbindFrom_OnBeginOverlap_NonMarker(
-        FCk_Handle_Sensor& InSensorEntity,
+        UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
         const FCk_Delegate_Sensor_OnBeginOverlap_NonMarker& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -277,7 +277,7 @@ public:
               DisplayName = "[Ck][Sensor] Bind To OnEndOverlap_NonMarker")
     static FCk_Handle_Sensor
     BindTo_OnEndOverlap_NonMarker(
-        FCk_Handle_Sensor& InSensorEntity,
+        UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Sensor_OnEndOverlap_NonMarker& InDelegate);
 
@@ -286,28 +286,28 @@ public:
               DisplayName = "[Ck][Sensor] Unbind From OnEndOverlap_NonMarker")
     static FCk_Handle_Sensor
     UnbindFrom_OnEndOverlap_NonMarker(
-        FCk_Handle_Sensor& InSensorEntity,
+        UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
         const FCk_Delegate_Sensor_OnEndOverlap_NonMarker& InDelegate);
 
 public:
     static auto
     Request_OnBeginOverlap(
-        FCk_Handle_Sensor& InSensorEntity,
+        UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
         const FCk_Request_Sensor_OnBeginOverlap& InRequest) -> void;
 
     static auto
     Request_OnEndOverlap(
-        FCk_Handle_Sensor& InSensorEntity,
+        UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
         const FCk_Request_Sensor_OnEndOverlap& InRequest) -> void;
 
     static auto
     Request_OnBeginOverlap_NonMarker(
-        FCk_Handle_Sensor& InSensorEntity,
+        UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
         const FCk_Request_Sensor_OnBeginOverlap_NonMarker& InRequest) -> void;
 
     static auto
     Request_OnEndOverlap_NonMarker(
-        FCk_Handle_Sensor& InSensorEntity,
+        UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
         const FCk_Request_Sensor_OnEndOverlap_NonMarker& InRequest) -> void;
 
 private:
@@ -318,7 +318,7 @@ private:
 
     static auto
     Request_MarkSensor_AsNeedToUpdateTransform(
-        FCk_Handle_Sensor& InSensorHandle) -> void;
+        UPARAM(ref) FCk_Handle_Sensor& InSensorHandle) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

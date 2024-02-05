@@ -49,7 +49,7 @@ public:
               DisplayName="[Ck][Velocity] Add Feature")
     static void
     Add(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle InHandle,
         const FCk_Fragment_Velocity_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
@@ -232,7 +232,7 @@ public:
               DisplayName="Add New Bulk Velocity Modifier")
     static UPARAM(DisplayName = "Bulk Velocity Modifier Handle") FCk_Handle
     Add(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle InHandle,
         FGameplayTag InModifierName,
         const FCk_Fragment_BulkVelocityModifier_ParamsData& InParams);
 
