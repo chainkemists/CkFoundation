@@ -74,7 +74,7 @@ public:
     Has(
         const FCk_Handle& InAbilityEntity);
 
-    UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Ability",
         DisplayName="[Ck][Ability] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))

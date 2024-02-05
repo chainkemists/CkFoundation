@@ -72,7 +72,7 @@ public:
     Has(
         const FCk_Handle& InHandle);
 
-    UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Timer",
         DisplayName="[Ck][Timer] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
