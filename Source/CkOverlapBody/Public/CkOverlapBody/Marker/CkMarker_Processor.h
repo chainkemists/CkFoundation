@@ -9,8 +9,9 @@
 
 namespace ck
 {
-    class CKOVERLAPBODY_API FProcessor_Marker_Setup : public TProcessor<
+    class CKOVERLAPBODY_API FProcessor_Marker_Setup : public ck_exp::TProcessor<
             FProcessor_Marker_Setup,
+            FCk_Handle_Marker,
             FFragment_Marker_Current,
             FFragment_Marker_Params,
             FTag_Marker_NeedsSetup,
@@ -35,8 +36,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKOVERLAPBODY_API FProcessor_Marker_HandleRequests : public TProcessor<
+    class CKOVERLAPBODY_API FProcessor_Marker_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Marker_HandleRequests,
+            FCk_Handle_Marker,
             FFragment_Marker_Current,
             FFragment_Marker_Params,
             FFragment_Marker_Requests,
@@ -59,8 +61,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKOVERLAPBODY_API FProcessor_Marker_UpdateTransform : public TProcessor<
+    class CKOVERLAPBODY_API FProcessor_Marker_UpdateTransform : public ck_exp::TProcessor<
             FProcessor_Marker_UpdateTransform,
+            FCk_Handle_Marker,
             FFragment_Marker_Current,
             FFragment_Marker_Params,
             FTag_Marker_UpdateTransform,
@@ -71,10 +74,10 @@ namespace ck
 
     public:
         auto ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InMarkerEntity,
-            FFragment_Marker_Current& InCurrentComp,
-            const FFragment_Marker_Params& InParamsComp) const -> void;
+            TimeType                        InDeltaT,
+            HandleType                      InMarkerEntity,
+            const FFragment_Marker_Current& InCurrentComp,
+            const FFragment_Marker_Params&  InParamsComp) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -83,7 +86,7 @@ namespace ck
     {
     public:
         explicit FProcessor_Marker_DebugPreviewAll(
-            FCk_Registry& InRegistry);
+            const FCk_Registry& InRegistry);
 
     public:
         auto Tick(FCk_Time) -> void;

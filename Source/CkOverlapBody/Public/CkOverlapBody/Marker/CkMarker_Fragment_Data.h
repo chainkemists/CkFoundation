@@ -5,6 +5,7 @@
 #include "CkCore/Format/CkFormat.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/OwningActor/CkOwningActor_Fragment_Data.h"
 
 #include "CkNet/CkNet_Common.h"
@@ -37,6 +38,12 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Marker_AttachmentPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak="/Script/CkEcs.Ck_Utils_Handle_UE:Conv_HandleTypeSafeToHandle"))
+struct CKOVERLAPBODY_API FCk_Handle_Marker : public FCk_Handle_TypeSafe { GENERATED_BODY()  CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Marker); };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Marker);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKOVERLAPBODY_API FCk_Marker_BasicDetails
 {
@@ -49,7 +56,7 @@ public:
     FCk_Marker_BasicDetails() = default;
     FCk_Marker_BasicDetails(
         FGameplayTag InMarkerName,
-        FCk_Handle InMarkerEntity,
+        FCk_Handle_Marker InMarkerEntity,
         FCk_EntityOwningActor_BasicDetails InMarkerAttachedEntityAndActor);
 
 public:
@@ -62,7 +69,7 @@ private:
     FGameplayTag _MarkerName;
 
     UPROPERTY(Transient, meta = (AllowPrivateAccess = true))
-    FCk_Handle _MarkerEntity;
+    FCk_Handle_Marker _MarkerEntity;
 
     // Represents the Entity/Actor that the Marker ActorComp is attached to. Different from the Marker Entity itself
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
