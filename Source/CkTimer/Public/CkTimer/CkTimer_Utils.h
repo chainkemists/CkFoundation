@@ -94,7 +94,7 @@ public:
               Category = "Ck|Utils|Timer",
               DisplayName="[Ck][Timer] Get Handle")
     static FCk_Handle_Timer
-    Get_Timer(
+    TryGet_Timer(
         const FCk_Handle& InTimerOwnerEntity,
         FGameplayTag      InTimerName);
 

@@ -142,10 +142,6 @@ public:
     auto Get_Registry() -> FCk_Registry&;
     auto Get_Registry() const -> const FCk_Registry&;
 
-    // these functions are pass-throughs and exist to support our type-safe Handles paradigm
-    auto Get_RawHandle() -> ThisType&;
-    auto Get_RawHandle() const -> const ThisType&;
-
 private:
     auto DoUpdate_FragmentDebugInfo_Blueprints() -> void;
 
@@ -679,7 +675,7 @@ namespace ck
         Cast(
             const FCk_Handle& InHandle) -> T_DerivedHandle
     {
-        static_assert(requires(const T_DerivedHandle& T) { T.Get_RawHandle(); }, "T_DerivedHandle MUST be type-safe Handle");
+        static_assert(std::is_base_of_v<FCk_Handle, T_DerivedHandle>, "T_DerivedHandle MUST be type-safe Handle");
         static_assert(sizeof(T_DerivedHandle) == sizeof(InHandle), "T_DerivedHandle MUST be the same size as FCk_Handle");
 
         return T_DerivedHandle{InHandle};
