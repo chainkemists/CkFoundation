@@ -31,6 +31,31 @@ namespace ck
         _MaxCapacity = Manager.AddNativeGameplayTag(TEXT("Ck.Attribute.Meter.MaxCapacity"));
         _Current     = Manager.AddNativeGameplayTag(TEXT("Ck.Attribute.Meter.Current"));
     }
+
+    auto
+        FMeterAttribute_Tags::
+        Get_MinCapacity()
+        -> FGameplayTag
+    {
+        return _Tags._MinCapacity;
+    }
+
+    auto
+        FMeterAttribute_Tags::
+        Get_MaxCapacity()
+        -> FGameplayTag
+    {
+        return _Tags._MaxCapacity;
+    }
+
+    auto
+        FMeterAttribute_Tags::
+        Get_Current()
+        -> FGameplayTag
+    {
+        return _Tags._Current;
+    }
+
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -38,7 +63,7 @@ namespace ck
 auto
     UCk_MeterAttribute_ConstructionScript_PDA::
     DoConstruct_Implementation(
-        FCk_Handle& InHandle)
+         FCk_Handle& InHandle)
     -> void
 {
     using RecordOfMeterAttributes_Utils = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils;
@@ -73,7 +98,7 @@ auto
     const auto& MeterCapacity = MeterParams.Get_Capacity();
     const auto& MeterStartingPercentage = MeterParams.Get_StartingPercentage();
 
-    UCk_Utils_FloatAttribute_UE::AddMultiple
+    auto FloatAttributeOwner = UCk_Utils_FloatAttribute_UE::AddMultiple
     (
         InHandle,
         FCk_Fragment_MultipleFloatAttribute_ParamsData
@@ -89,16 +114,15 @@ auto
 
     // TODO: Adding all 3 tags to the Meter Attribute Entity which may seem redundant. However, this is in preparation
     // for when we have OPTIONAL min/max
-    auto ModifiableHandle = InHandle;
-    ModifiableHandle.AddOrGet<ck::FTag_Meter_MinValue>();
-    ModifiableHandle.AddOrGet<ck::FTag_Meter_MaxValue>();
-    ModifiableHandle.AddOrGet<ck::FTag_Meter_CurrentValue>();
+    FloatAttributeOwner.AddOrGet<ck::FTag_Meter_MinValue>();
+    FloatAttributeOwner.AddOrGet<ck::FTag_Meter_MaxValue>();
+    FloatAttributeOwner.AddOrGet<ck::FTag_Meter_CurrentValue>();
 
-    UCk_Utils_GameplayLabel_UE::Add(InHandle, ParamsToUse.Get_AttributeName());
+    UCk_Utils_GameplayLabel_UE::Add(FloatAttributeOwner, ParamsToUse.Get_AttributeName());
 
     RecordOfMeterAttributes_Utils::AddIfMissing(
         LifetimeOwner, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
-    RecordOfMeterAttributes_Utils::Request_Connect(LifetimeOwner, InHandle);
+    RecordOfMeterAttributes_Utils::Request_Connect(LifetimeOwner, FloatAttributeOwner);
 }
 
 auto
@@ -389,7 +413,7 @@ auto
         FCk_Meter_Mask InMask)
     -> void
 {
-    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_ValidEntry_If(
+    auto FoundEntity = RecordOfMeterAttributes_Utils::Get_ValidEntry_If(
         InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
     CK_ENSURE_IF_NOT(ck::IsValid(FoundEntity), TEXT("Could NOT find Attribute [{}] in Entity [{}]. Unable to OVERRIDE the Meter to [{}]."),
@@ -425,7 +449,7 @@ auto
         const FCk_Delegate_MeterAttribute_OnValueChanged& InDelegate)
     -> void
 {
-    const auto FoundEntity = RecordOfMeterAttributes_Utils::Get_ValidEntry_If(
+    auto FoundEntity = RecordOfMeterAttributes_Utils::Get_ValidEntry_If(
         InAttributeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAttributeName});
 
     CK_ENSURE_IF_NOT(ck::IsValid(FoundEntity), TEXT("Could NOT find Attribute [{}] in Entity [{}]. Unable to BIND on ValueChanged the Delegate [{}]"),

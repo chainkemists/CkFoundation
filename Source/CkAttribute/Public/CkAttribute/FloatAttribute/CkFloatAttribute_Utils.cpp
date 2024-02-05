@@ -13,15 +13,14 @@
 auto
     UCk_Utils_FloatAttribute_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_FloatAttribute_ParamsData& InParams,
         ECk_Replication InReplicates)
-    -> void
+    -> FCk_Handle_FloatAttributeOwner
 {
     RecordOfFloatAttributes_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 
-    const auto& AddNewFloatAttributeToEntity =
-    [&](FCk_Handle& InAttributeOwner, const FGameplayTag& InAttributeName, float InAttributeBaseValue)
+    const auto& AddNewFloatAttributeToEntity = [&](FCk_Handle InAttributeOwner, const FGameplayTag& InAttributeName, float InAttributeBaseValue)
     {
         auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwner);
 
@@ -41,32 +40,36 @@ auto
             InHandle,
             InReplicates
         );
-
-        return;
+    }
+    else
+    {
+        UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_FloatAttribute_Rep>(InHandle);
     }
 
-    UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_FloatAttribute_Rep>(InHandle);
+    return Conv_HandleToFloatAttributeOwner(InHandle);
 }
 
 auto
     UCk_Utils_FloatAttribute_UE::
     AddMultiple(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_MultipleFloatAttribute_ParamsData& InParams,
         ECk_Replication InReplicates)
-    -> void
+    -> FCk_Handle_FloatAttributeOwner
 {
     for (const auto& Param : InParams.Get_FloatAttributeParams())
     {
         Add(InHandle, Param, InReplicates);
     }
+
+    return Conv_HandleToFloatAttributeOwner(InHandle);
 }
 
 auto
     UCk_Utils_FloatAttribute_UE::
-    Has(
-        const FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag      InAttributeName)
+    Has_Attribute(
+        const FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
+        FGameplayTag InAttributeName)
     -> bool
 {
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
@@ -76,69 +79,30 @@ auto
 
 auto
     UCk_Utils_FloatAttribute_UE::
-    Has_Any(
-        const FCk_Handle& InAttributeOwnerEntity)
+    Has_Any_Attribute(
+        const FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity)
     -> bool
 {
     return RecordOfFloatAttributes_Utils::Has(InAttributeOwnerEntity);
 }
 
-auto
-    UCk_Utils_FloatAttribute_UE::
-    Ensure(
-        FCk_Handle InAttributeOwnerEntity,
-        FGameplayTag InAttributeName)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(Has(InAttributeOwnerEntity, InAttributeName), TEXT("Handle [{}] does NOT have a Float Attribute [{}]"), InAttributeOwnerEntity, InAttributeName)
-    { return false; }
+// --------------------------------------------------------------------------------------------------------------------
 
-    return true;
-}
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(FloatAttributeOwner, UCk_Utils_FloatAttribute_UE, FCk_Handle_FloatAttributeOwner, RecordOfFloatAttributes_Utils::RecordType);
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_FloatAttribute_UE::
-    Ensure_Any(
-        FCk_Handle InAttributeOwnerEntity)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(Has_Any(InAttributeOwnerEntity), TEXT("Handle [{}] does NOT have any Float Attribute"), InAttributeOwnerEntity)
-    { return false; }
-
-    return true;
-}
-
-auto
-    UCk_Utils_FloatAttribute_UE::
-    Get_All(
-        const FCk_Handle& InAttributeOwnerEntity)
-    -> TArray<FGameplayTag>
-{
-    if (NOT RecordOfFloatAttributes_Utils::Has(InAttributeOwnerEntity))
-    { return {}; }
-
-    auto AllAttributes = TArray<FGameplayTag>{};
-
-    RecordOfFloatAttributes_Utils::ForEach_ValidEntry(InAttributeOwnerEntity,
-    [&](const FCk_Handle& InFloatAttributeEntity)
-    {
-        AllAttributes.Add(UCk_Utils_GameplayLabel_UE::Get_Label(InFloatAttributeEntity));
-    });
-
-    return AllAttributes;
-}
-
-auto
-    UCk_Utils_FloatAttribute_UE::
-    ForEach(
-        FCk_Handle InAttributeOwner,
-        const FInstancedStruct& InOptionalPayload,
+    ForEach_FloatAttribute(
+        FCk_Handle_FloatAttributeOwner& InAttributeOwner,
+        const FInstancedStruct&    InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
     -> TArray<FCk_Handle>
 {
     auto ToRet = TArray<FCk_Handle>{};
 
-    ForEach(InAttributeOwner, [&](const FCk_Handle& InAttribute)
+    ForEach_FloatAttribute(InAttributeOwner, [&](const FCk_Handle_FloatAttribute& InAttribute)
     {
         if (InDelegate.IsBound())
         { InDelegate.Execute(InAttribute, InOptionalPayload); }
@@ -151,18 +115,15 @@ auto
 
 auto
     UCk_Utils_FloatAttribute_UE::
-    ForEach(
-        const FCk_Handle& InAttributeOwner,
-        const TFunction<void(FCk_Handle)>& InFunc)
+    ForEach_FloatAttribute(
+        FCk_Handle_FloatAttributeOwner& InAttributeOwner,
+        const TFunction<void(FCk_Handle_FloatAttribute)>& InFunc)
     -> void
 {
-    if (NOT Ensure_Any(InAttributeOwner))
-    { return; }
-
     RecordOfFloatAttributes_Utils::ForEach_ValidEntry
     (
         InAttributeOwner,
-        [&](const FCk_Handle& InAttribute)
+        [&](const FCk_Handle_FloatAttribute& InAttribute)
         {
             if (InAttribute == InAttributeOwner)
             { return; }
@@ -174,19 +135,19 @@ auto
 
 auto
     UCk_Utils_FloatAttribute_UE::
-    ForEach_If(
-        FCk_Handle InAttributeOwner,
+    ForEach_FloatAttribute_If(
+        FCk_Handle_FloatAttributeOwner& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate)
-    -> TArray<FCk_Handle>
+    -> TArray<FCk_Handle_FloatAttribute>
 {
-    auto ToRet = TArray<FCk_Handle>{};
+    auto ToRet = TArray<FCk_Handle_FloatAttribute>{};
 
-    ForEach_If
+    ForEach_FloatAttribute_If
     (
         InAttributeOwner,
-        [&](FCk_Handle InAttribute)
+        [&](FCk_Handle_FloatAttribute InAttribute)
         {
             if (InDelegate.IsBound())
             { InDelegate.Execute(InAttribute, InOptionalPayload); }
@@ -212,19 +173,16 @@ auto
 
 auto
     UCk_Utils_FloatAttribute_UE::
-    ForEach_If(
-        const FCk_Handle& InAttributeOwner,
-        const TFunction<void(FCk_Handle)>& InFunc,
-        const TFunction<bool(FCk_Handle)>& InPredicate)
+    ForEach_FloatAttribute_If(
+        FCk_Handle_FloatAttributeOwner& InAttributeOwner,
+        const TFunction<void(FCk_Handle_FloatAttribute)>& InFunc,
+        const TFunction<bool(FCk_Handle_FloatAttribute)>& InPredicate)
     -> void
 {
-    if (NOT Ensure_Any(InAttributeOwner))
-    { return; }
-
     RecordOfFloatAttributes_Utils::ForEach_ValidEntry_If
     (
         InAttributeOwner,
-        [&](const FCk_Handle& InAttribute)
+        [&](const FCk_Handle_FloatAttribute& InAttribute)
         {
             if (InAttribute == InAttributeOwner)
             { return; }
@@ -238,16 +196,16 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     Get_BaseValue(
-        FCk_Handle InAttributeOwnerEntity,
+        const FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName)
     -> float
 {
-    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
-
-    CK_ENSURE_IF_NOT(ck::IsValid(AttributeEntity), TEXT("Attribute [{}] does NOT exist on Entity [{}]."),
+    CK_ENSURE_IF_NOT(Has_Attribute(InAttributeOwnerEntity, InAttributeName), TEXT("Attribute [{}] does NOT exist on Entity [{}]."),
         InAttributeName, InAttributeOwnerEntity)
     { return {}; }
+
+    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
+        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
 
     return FloatAttribute_Utils::Get_BaseValue(AttributeEntity);
 }
@@ -255,16 +213,16 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     Get_BonusValue(
-        FCk_Handle InAttributeOwnerEntity,
+        const FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName)
     -> float
 {
-    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
-
-    CK_ENSURE_IF_NOT(ck::IsValid(AttributeEntity), TEXT("Attribute [{}] does NOT exist on Entity [{}]."),
+    CK_ENSURE_IF_NOT(Has_Attribute(InAttributeOwnerEntity, InAttributeName), TEXT("Attribute [{}] does NOT exist on Entity [{}]."),
         InAttributeName, InAttributeOwnerEntity)
     { return {}; }
+
+    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
+        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
 
     return FloatAttribute_Utils::Get_FinalValue(AttributeEntity) - FloatAttribute_Utils::Get_BaseValue(AttributeEntity);
 }
@@ -272,16 +230,16 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     Get_FinalValue(
-        FCk_Handle InAttributeOwnerEntity,
+        const FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName)
     -> float
 {
-    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
-
-    CK_ENSURE_IF_NOT(ck::IsValid(AttributeEntity), TEXT("Attribute [{}] does NOT exist on Entity [{}]."),
+    CK_ENSURE_IF_NOT(Has_Attribute(InAttributeOwnerEntity, InAttributeName), TEXT("Attribute [{}] does NOT exist on Entity [{}]."),
         InAttributeName, InAttributeOwnerEntity)
     { return {}; }
+
+    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
+        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
 
     return FloatAttribute_Utils::Get_FinalValue(AttributeEntity);
 }
@@ -289,10 +247,10 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     Request_Override(
-        FCk_Handle   InAttributeOwnerEntity,
+        FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
-        float        InNewBaseValue)
-    -> void
+        float InNewBaseValue)
+        -> void
 {
     const auto CurrentBaseValue = Get_BaseValue(InAttributeOwnerEntity, InAttributeName);
     const auto Delta = InNewBaseValue - CurrentBaseValue;
@@ -305,7 +263,7 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     BindTo_OnValueChanged(
-        FCk_Handle InAttributeOwnerEntity,
+        FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         ECk_Signal_BindingPolicy InBehavior,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
@@ -315,8 +273,9 @@ auto
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
         <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(AttributeEntity), TEXT("Attribute [{}] does NOT exist on Entity [{}]."),
-        InAttributeName, InAttributeOwnerEntity)
+    CK_ENSURE_IF_NOT(ck::IsValid(AttributeEntity),
+        TEXT("Could NOT find Attribute [{}] in Entity [{}]. Unable to BIND on ValueChanged the Delegate [{}]"),
+        InAttributeName, InAttributeOwnerEntity, InDelegate.GetFunctionName())
     { return; }
 
     if (InPostFireBehavior == ECk_Signal_PostFireBehavior::DoNothing)
@@ -328,7 +287,7 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     UnbindFrom_OnValueChanged(
-        FCk_Handle InAttributeOwnerEntity,
+        FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate)
     -> void
@@ -336,8 +295,9 @@ auto
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
         <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(AttributeEntity), TEXT("Attribute [{}] does NOT exist on Entity [{}]."),
-        InAttributeName, InAttributeOwnerEntity)
+    CK_ENSURE_IF_NOT(ck::IsValid(AttributeEntity),
+        TEXT("Could NOT find Attribute [{}] in Entity [{}]. Unable to BIND on ValueChanged the Delegate [{}]"),
+        InAttributeName, InAttributeOwnerEntity, InDelegate.GetFunctionName())
     { return; }
 
     ck::UUtils_Signal_OnFloatAttributeValueChanged::Unbind(AttributeEntity, InDelegate);
@@ -348,7 +308,7 @@ auto
 auto
     UCk_Utils_FloatAttributeModifier_UE::
     Add(
-        FCk_Handle InAttributeOwnerEntity,
+        FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InModifierName,
         const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams)
     -> void
@@ -389,9 +349,9 @@ auto
 auto
     UCk_Utils_FloatAttributeModifier_UE::
     Has(
-        const FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag      InAttributeName,
-        FGameplayTag      InModifierName)
+        const FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
+        FGameplayTag InAttributeName,
+        FGameplayTag InModifierName)
     -> bool
 {
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
@@ -406,22 +366,8 @@ auto
 
 auto
     UCk_Utils_FloatAttributeModifier_UE::
-    Ensure(
-        FCk_Handle InAttributeOwnerEntity,
-        FGameplayTag InAttributeName,
-        FGameplayTag InModifierName)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(Has(InAttributeOwnerEntity, InAttributeName, InModifierName), TEXT("Handle [{}] does NOT have a Float Attribute Modifier with name [{}]"), InAttributeOwnerEntity, InModifierName)
-    { return false; }
-
-    return true;
-}
-
-auto
-    UCk_Utils_FloatAttributeModifier_UE::
     Remove(
-        FCk_Handle InAttributeOwnerEntity,
+        FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         FGameplayTag InModifierName)
     -> void

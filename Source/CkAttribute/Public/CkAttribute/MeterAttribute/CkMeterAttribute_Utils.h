@@ -35,20 +35,9 @@ namespace ck
         static FMeterAttribute_Tags _Tags;
 
     public:
-        static auto Get_MinCapacity() -> FGameplayTag
-        {
-            return _Tags._MinCapacity;
-        }
-
-        static auto Get_MaxCapacity() -> FGameplayTag
-        {
-            return _Tags._MaxCapacity;
-        }
-
-        static auto Get_Current() -> FGameplayTag
-        {
-            return _Tags._Current;
-        }
+        static auto Get_MinCapacity() -> FGameplayTag;
+        static auto Get_MaxCapacity() -> FGameplayTag;
+        static auto Get_Current() -> FGameplayTag;
     };
 }
 

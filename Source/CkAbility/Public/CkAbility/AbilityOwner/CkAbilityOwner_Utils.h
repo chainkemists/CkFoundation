@@ -37,6 +37,7 @@ public:
         FCk_Handle& InHandle,
         const FCk_Fragment_AbilityOwner_ParamsData& InParams);
 
+public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
               DisplayName="[Ck][AbilityOwner] Has Feature")
