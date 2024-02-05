@@ -16,7 +16,7 @@ auto
         FCk_Handle& InHandle,
         const FCk_Fragment_ByteAttribute_ParamsData& InParams,
         ECk_Replication InReplicates)
-    -> FCk_Handle_ByteAttributeOwner
+    -> FCk_Handle
 {
     RecordOfByteAttributes_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 
@@ -46,7 +46,7 @@ auto
         UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_ByteAttribute_Rep>(InHandle);
     }
 
-    return Conv_HandleToByteAttributeOwner(InHandle);
+    return InHandle;
 }
 
 auto
@@ -55,14 +55,14 @@ auto
         FCk_Handle& InHandle,
         const FCk_Fragment_MultipleByteAttribute_ParamsData& InParams,
         ECk_Replication InReplicates)
-    -> FCk_Handle_ByteAttributeOwner
+    -> FCk_Handle
 {
     for (const auto& Param : InParams.Get_ByteAttributeParams())
     {
         Add(InHandle, Param, InReplicates);
     }
 
-    return Conv_HandleToByteAttributeOwner(InHandle);
+    return InHandle;
 }
 
 auto
@@ -88,14 +88,10 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(ByteAttributeOwner, UCk_Utils_ByteAttribute_UE, FCk_Handle_ByteAttributeOwner, RecordOfByteAttributes_Utils::RecordType);
-
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     UCk_Utils_ByteAttribute_UE::
     ForEach_ByteAttribute(
-        FCk_Handle_ByteAttributeOwner& InAttributeOwner,
+        FCk_Handle& InAttributeOwner,
         const FInstancedStruct&    InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
     -> TArray<FCk_Handle>
@@ -116,7 +112,7 @@ auto
 auto
     UCk_Utils_ByteAttribute_UE::
     ForEach_ByteAttribute(
-        FCk_Handle_ByteAttributeOwner& InAttributeOwner,
+        FCk_Handle& InAttributeOwner,
         const TFunction<void(FCk_Handle_ByteAttribute)>& InFunc)
     -> void
 {
@@ -136,7 +132,7 @@ auto
 auto
     UCk_Utils_ByteAttribute_UE::
     ForEach_ByteAttribute_If(
-        FCk_Handle_ByteAttributeOwner& InAttributeOwner,
+        FCk_Handle& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate)
@@ -174,7 +170,7 @@ auto
 auto
     UCk_Utils_ByteAttribute_UE::
     ForEach_ByteAttribute_If(
-        FCk_Handle_ByteAttributeOwner& InAttributeOwner,
+        FCk_Handle& InAttributeOwner,
         const TFunction<void(FCk_Handle_ByteAttribute)>& InFunc,
         const TFunction<bool(FCk_Handle_ByteAttribute)>& InPredicate)
     -> void
@@ -196,7 +192,7 @@ auto
 auto
     UCk_Utils_ByteAttribute_UE::
     Get_BaseValue(
-        const FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
+        const FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName)
     -> uint8
 {
@@ -212,7 +208,7 @@ auto
 auto
     UCk_Utils_ByteAttribute_UE::
     Get_BonusValue(
-        const FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
+        const FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName)
     -> uint8
 {
@@ -228,7 +224,7 @@ auto
 auto
     UCk_Utils_ByteAttribute_UE::
     Get_FinalValue(
-        const FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
+        const FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName)
     -> uint8
 {
@@ -244,7 +240,7 @@ auto
 auto
     UCk_Utils_ByteAttribute_UE::
     Request_Override(
-        FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
+        FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         uint8 InNewBaseValue)
         -> void
@@ -260,7 +256,7 @@ auto
 auto
     UCk_Utils_ByteAttribute_UE::
     BindTo_OnValueChanged(
-        FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
+        FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         ECk_Signal_BindingPolicy InBehavior,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
@@ -284,7 +280,7 @@ auto
 auto
     UCk_Utils_ByteAttribute_UE::
     UnbindFrom_OnValueChanged(
-        FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
+        FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         const FCk_Delegate_ByteAttribute_OnValueChanged& InDelegate)
     -> void
@@ -305,7 +301,7 @@ auto
 auto
     UCk_Utils_ByteAttributeModifier_UE::
     Add(
-        FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
+        FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InModifierName,
         const FCk_Fragment_ByteAttributeModifier_ParamsData& InParams)
     -> void
@@ -346,7 +342,7 @@ auto
 auto
     UCk_Utils_ByteAttributeModifier_UE::
     Has(
-        const FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
+        const FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         FGameplayTag InModifierName)
     -> bool
@@ -364,7 +360,7 @@ auto
 auto
     UCk_Utils_ByteAttributeModifier_UE::
     Remove(
-        FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
+        FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         FGameplayTag InModifierName)
     -> void

@@ -176,7 +176,7 @@ namespace ck_exp
         {
             CK_STAT(STAT_ForEachEntity);
 
-            auto Handle = ck::Cast<HandleType>(FCk_Handle{InEntity, _Registry});
+            auto Handle = HandleType{InEntity, _Registry};
             This()->ForEachEntity(InDeltaT, Handle, InComponents...);
         });
     }

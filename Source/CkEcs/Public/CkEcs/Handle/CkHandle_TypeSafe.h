@@ -14,24 +14,32 @@ public:
     CK_GENERATED_BODY(FCk_Handle_TypeSafe);
 
 public:
-    using FCk_Handle::FCk_Handle;
     using FCk_Handle::operator==;
     using FCk_Handle::operator!=;
 
 public:
-    FCk_Handle_TypeSafe(const FCk_Handle_TypeSafe& InHandle);
+    FCk_Handle_TypeSafe() = default;
+    FCk_Handle_TypeSafe(EntityType InEntity, const RegistryType& InRegistry);
+
+    FCk_Handle_TypeSafe(ThisType&& InOther) noexcept;
+    FCk_Handle_TypeSafe(const ThisType& InHandle);
     FCk_Handle_TypeSafe(const FCk_Handle& InHandle);
+
+    auto operator=(ThisType InOther) -> ThisType&;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#define CK_GENERATED_BODY_HANDLE_TYPESAFE(_ClassType_)\
-    CK_GENERATED_BODY(_ClassType_);\
-    using FCk_Handle_TypeSafe::FCk_Handle_TypeSafe;\
-    using FCk_Handle_TypeSafe::operator==;\
-    using FCk_Handle_TypeSafe::operator!=;\
-    _ClassType_(const FCk_Handle& InHandle) : Super(InHandle) {}\
-    _ClassType_(const _ClassType_& InHandle) : Super(InHandle) {}\
+#define CK_GENERATED_BODY_HANDLE_TYPESAFE(_ClassType_)                                                              \
+    CK_GENERATED_BODY(_ClassType_);                                                                                 \
+    using FCk_Handle_TypeSafe::operator==;                                                                          \
+    using FCk_Handle_TypeSafe::operator!=;                                                                          \
+    _ClassType_() = default;                                                                                        \
+    _ClassType_(EntityType InEntity, const RegistryType& InRegistry) : FCk_Handle_TypeSafe(InEntity, InRegistry) { }\
+    _ClassType_(ThisType&& InOther) noexcept : FCk_Handle_TypeSafe(MoveTemp(InOther)) { }                           \
+    _ClassType_(const ThisType& InHandle) : FCk_Handle_TypeSafe(InHandle) { }                                       \
+    _ClassType_(const FCk_Handle& InHandle) : FCk_Handle_TypeSafe(InHandle) { }                                     \
+    auto operator=( ThisType InOther) -> ThisType& { Swap(InOther); return *this; }
 
 // --------------------------------------------------------------------------------------------------------------------
 

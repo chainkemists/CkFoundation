@@ -141,14 +141,14 @@ private:
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Get Ability Entity",
               meta = (CompactNodeTitle="AbilityEntity", HideSelfPin = true))
-    FCk_Handle
+    FCk_Handle_Ability
     DoGet_AbilityEntity() const;
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
               DisplayName = "[AbilityScript] Get Ability Owner Entity",
               meta = (CompactNodeTitle="AbilityOwnerEntity", HideSelfPin = true))
-    FCk_Handle
+    FCk_Handle_AbilityOwner
     DoGet_AbilityOwnerEntity() const;
 
 private:

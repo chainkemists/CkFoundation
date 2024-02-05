@@ -80,9 +80,7 @@ auto
         FGameplayTag InAttributeName)
     -> bool
 {
-    auto FloatAttributeOwner = UCk_Utils_FloatAttribute_UE::Conv_HandleToFloatAttributeOwner(InAttributeOwnerEntity);
-
-    return UCk_Utils_FloatAttribute_UE::Has_Attribute(FloatAttributeOwner, InAttributeName) ||
+    return UCk_Utils_FloatAttribute_UE::Has_Attribute(InAttributeOwnerEntity, InAttributeName) ||
         UCk_Utils_MeterAttribute_UE::Has(InAttributeOwnerEntity, InAttributeName);
 }
 
@@ -130,9 +128,7 @@ auto
     if (NOT Ensure(InAttributeOwnerEntity, InAttributeName))
     { return {}; }
 
-    auto FloatAttributeOwner = UCk_Utils_FloatAttribute_UE::Conv_HandleToFloatAttributeOwner(InAttributeOwnerEntity);
-
-    if (UCk_Utils_FloatAttribute_UE::Has_Attribute(FloatAttributeOwner, InAttributeName))
+    if (UCk_Utils_FloatAttribute_UE::Has_Attribute(InAttributeOwnerEntity, InAttributeName))
     { return UCk_Utils_FloatAttribute_UE::Get_FinalValue(InAttributeOwnerEntity, InAttributeName); }
 
     return UCk_Utils_MeterAttribute_UE::Get_FinalValue(InAttributeOwnerEntity, InAttributeName).Get_Value().Get_CurrentValue();
@@ -301,9 +297,7 @@ auto
 
     if (UCk_Utils_FloatAttribute_UE::Has_Attribute(InAttributeOwnerEntity, InParams.Get_TargetAttributeName()))
     {
-        auto FloatAttributeOwner = UCk_Utils_FloatAttribute_UE::Conv_HandleToFloatAttributeOwner(InAttributeOwnerEntity);
-
-        UCk_Utils_FloatAttributeModifier_UE::Add(FloatAttributeOwner, InModifierName,
+        UCk_Utils_FloatAttributeModifier_UE::Add(InAttributeOwnerEntity, InModifierName,
             FCk_Fragment_FloatAttributeModifier_ParamsData
             {
                 InParams.Get_ModifierDelta().Get_Value().Get_CurrentValue(),

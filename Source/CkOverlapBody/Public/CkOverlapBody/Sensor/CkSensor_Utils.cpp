@@ -90,10 +90,22 @@ auto
 
 auto
     UCk_Utils_Sensor_UE::
+    Get_Name(
+        const FCk_Handle_Sensor& InSensorEntity)
+    -> FGameplayTag
+{
+    return UCk_Utils_GameplayLabel_UE::Get_Label(InSensorEntity);
+}
+
+auto
+    UCk_Utils_Sensor_UE::
     Get_All(
         const FCk_Handle& InSensorOwnerEntity)
     -> TArray<FCk_Handle_Sensor>
 {
+    if (NOT Has_Any(InSensorOwnerEntity))
+    { return {}; }
+
     auto AllSensors = TArray<FCk_Handle_Sensor>{};
 
     RecordOfSensors_Utils::ForEach_ValidEntry(InSensorOwnerEntity, [&](FCk_Handle InSensorEntity)
@@ -111,6 +123,9 @@ auto
         const FCk_Handle& InHandle)
     -> void
 {
+    if (NOT Has_Any(InHandle))
+    { return; }
+
     RecordOfSensors_Utils::ForEach_ValidEntry(InHandle, [&](const FCk_Handle& InSensorEntity)
     {
         DoPreviewSensor(InOuter, InSensorEntity);
@@ -125,6 +140,15 @@ auto
     -> void
 {
     DoPreviewSensor(InOuter, InSensorEntity);
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    Has_Any(
+        const FCk_Handle& InHandle)
+    -> bool
+{
+    return RecordOfSensors_Utils::Has(InHandle);
 }
 
 auto
