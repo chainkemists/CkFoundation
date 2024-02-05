@@ -66,25 +66,6 @@ public:
         const FCk_Handle& InHandle);
 
 public:
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Ability",
-              DisplayName="[Ck][Ability] Create Ability Entity Config",
-              meta = (AllowAbstract = false, DefaultToSelf = "InOuter"))
-    static UCk_Ability_EntityConfig_PDA*
-    Create_AbilityEntityConfig(
-        UObject* InOuter,
-        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Ability",
-              DisplayName="[Ck][Ability] Create Multiple Ability Entity Config",
-              meta = (AllowAbstract = false, DefaultToSelf = "InOuter"))
-    static TArray<UCk_Ability_EntityConfig_PDA*>
-    Create_MultipleAbilityEntityConfigs(
-        UObject* InOuter,
-        const TArray<TSubclassOf<UCk_Ability_Script_PDA>> InAbilityScriptClasses);
-
-public:
               DisplayName="[Ck][Ability] Get Display Name")
     static FName
     Get_DisplayName(
@@ -187,6 +168,17 @@ private:
     DoRevoke(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwner,
         UPARAM(ref) FCk_Handle_Ability& InAbility) -> void;
+
+private:
+    static UCk_Ability_EntityConfig_PDA*
+    DoCreate_AbilityEntityConfig(
+        UObject* InOuter,
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass);
+
+    static TArray<UCk_Ability_EntityConfig_PDA*>
+    DoCreate_MultipleAbilityEntityConfigs(
+        UObject* InOuter,
+        const TArray<TSubclassOf<UCk_Ability_Script_PDA>> InAbilityScriptClasses);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

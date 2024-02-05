@@ -1,5 +1,6 @@
 #pragma once
 
+#include "NativeGameplayTags.h"
 #include "CkAbility/AbilityCue/CkAbilityCue_Fragment_Data.h"
 #include "CkCore/Public/CkCore/Format/CkFormat.h"
 #include "CkCore/Types/DataAsset/CkDataAsset.h"
@@ -299,10 +300,10 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true, AllowAbstract = false, MustImplement = "/Script/CkAbility.Ck_Ability_Condition_Interface"))
-     TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _AbilityConditions;
+     TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _ConditionAbilities;
 
 public:
-    CK_PROPERTY(_AbilityConditions);
+    CK_PROPERTY(_ConditionAbilities);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -318,10 +319,10 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true, AllowAbstract = false, MustImplement = "/Script/CkAbility.Ck_Ability_Cooldown_Interface"))
-     TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _AbilityCooldowns;
+     TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _CooldownAbilities;
 
 public:
-    CK_PROPERTY(_AbilityCooldowns);
+    CK_PROPERTY(_CooldownAbilities);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -337,10 +338,10 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true, AllowAbstract = false, MustImplement = "/Script/CkAbility.Ck_Ability_Cost_Interface"))
-     TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _AbilityCosts;
+     TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _CostAbilities;
 
 public:
-    CK_PROPERTY(_AbilityCosts);
+    CK_PROPERTY(_CostAbilities);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -375,17 +376,20 @@ private:
     FCk_Ability_ActivationSettings _ActivationSettings;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              Category = "Condition",
+              Category = "SubAbilities",
+              DisplayName = "Conditions",
               meta = (AllowPrivateAccess = true))
     FCk_Ability_ConditionSettings _ConditionSettings;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              Category = "Cost",
+              Category = "SubAbilities",
+              DisplayName = "Costs",
               meta = (AllowPrivateAccess = true))
     FCk_Ability_CostSettings _CostSettings;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              Category = "Cooldown",
+              Category = "SubAbilities",
+              DisplayName = "Cooldowns",
               meta = (AllowPrivateAccess = true))
     FCk_Ability_CooldownSettings _CooldownSettings;
 
@@ -496,13 +500,13 @@ public:
 
 private:
     UPROPERTY(Transient)
-    TArray<class UCk_Ability_EntityConfig_PDA*> _DefaultAbilityEntityConfigs;
+    TArray<TSubclassOf<UCk_Ability_Script_PDA>> _DefaultAbilities;
 
     UPROPERTY(Transient)
     FCk_Fragment_Ability_ParamsData _AbilityParams;
 
 public:
-    CK_PROPERTY(_DefaultAbilityEntityConfigs);
+    CK_PROPERTY(_DefaultAbilities);
     CK_PROPERTY(_AbilityParams);
 };
 

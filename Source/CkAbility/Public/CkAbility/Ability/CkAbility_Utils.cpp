@@ -67,19 +67,13 @@ auto
         InAbilityScriptClass)
     { return {}; }
 
-    const auto& ConditionAbilityEntityConfigs = Create_MultipleAbilityEntityConfigs(InOuter, ConditionSettings.Get_AbilityConditions());
-    const auto& CostAbilityEntityConfigs      = Create_MultipleAbilityEntityConfigs(InOuter, CostSettings.Get_AbilityCosts());
-    const auto& CooldownAbilityEntityConfigs  = Create_MultipleAbilityEntityConfigs(InOuter, CooldownSettings.Get_AbilityCooldowns());
-
-    auto AllSubAbilityEntityConfigs = TArray<UCk_Ability_EntityConfig_PDA*>{};
-    AllSubAbilityEntityConfigs.Append(ConditionAbilityEntityConfigs);
-    AllSubAbilityEntityConfigs.Append(CostAbilityEntityConfigs);
-    AllSubAbilityEntityConfigs.Append(CooldownAbilityEntityConfigs);
-
     auto NewAbilityCtorScript = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_Ability_ConstructionScript_PDA>(InOuter, AbilityCtorScript,
     [&](UCk_Ability_ConstructionScript_PDA* InAbilityCtorScript) -> void
     {
-        InAbilityCtorScript->_DefaultAbilityEntityConfigs = AllSubAbilityEntityConfigs;
+        InAbilityCtorScript->_DefaultAbilities.Append(ConditionSettings.Get_ConditionAbilities());
+        InAbilityCtorScript->_DefaultAbilities.Append(CostSettings.Get_CostAbilities());
+        InAbilityCtorScript->_DefaultAbilities.Append(CooldownSettings.Get_CooldownAbilities());
+
         InAbilityCtorScript->_AbilityParams = FCk_Fragment_Ability_ParamsData{InAbilityScriptClass};
     });
 

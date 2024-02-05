@@ -2,14 +2,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Request_AbilityOwner_GiveAbility::
-    FCk_Request_AbilityOwner_GiveAbility(
-        const UCk_Ability_EntityConfig_PDA* InAbilityEntityConfig)
-    : _AbilityEntityConfig(InAbilityEntityConfig)
-{ }
-
-// --------------------------------------------------------------------------------------------------------------------
-
 FCk_Request_AbilityOwner_RevokeAbility::
     FCk_Request_AbilityOwner_RevokeAbility(
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass)
