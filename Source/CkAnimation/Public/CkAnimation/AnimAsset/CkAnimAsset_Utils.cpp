@@ -7,9 +7,9 @@
 auto
     UCk_Utils_AnimAsset_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_AnimAsset_ParamsData& InParams)
-    -> void
+    -> FCk_Handle_AnimAsset
 {
     auto NewAnimAssetEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InAnimAssetEntity)
     {
@@ -19,83 +19,68 @@ auto
 
     RecordOfAnimAssets_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
     RecordOfAnimAssets_Utils::Request_Connect(InHandle, NewAnimAssetEntity);
+
+    return Conv_HandleToAnimAsset(NewAnimAssetEntity);
 }
 
 auto
     UCk_Utils_AnimAsset_UE::
     AddMultiple(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_MultipleAnimAsset_ParamsData& InParams)
-    -> void
+    -> FCk_Handle_AnimAsset
 {
     for (const auto& params : InParams.Get_AnimAssetParams())
     {
         Add(InHandle, params);
     }
+
+    return Conv_HandleToAnimAsset(InHandle);
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(AnimAsset, UCk_Utils_AnimAsset_UE, FCk_Handle_AnimAsset, ck::FFragment_AnimAsset_Params);
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_AnimAsset_UE::
-    Has(
-        FCk_Handle InAnimAssetOwnerEntity,
-        FGameplayTag InAnimAssetName)
-    -> bool
+    TryGet_AnimAsset(
+        const FCk_Handle& InAnimAssetOwnerEntity,
+        FGameplayTag      InAnimAssetName)
+    -> FCk_Handle_AnimAsset
 {
-    const auto& AnimAssetEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+    const auto FoundEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_AnimAsset_UE,
         RecordOfAnimAssets_Utils>(InAnimAssetOwnerEntity, InAnimAssetName);
 
-    return ck::IsValid(AnimAssetEntity);
+    if (ck::Is_NOT_Valid(FoundEntity))
+    { return {}; }
+
+    return Conv_HandleToAnimAsset(FoundEntity);
 }
 
 auto
     UCk_Utils_AnimAsset_UE::
-    Has_Any(
-        FCk_Handle InAnimAssetOwnerEntity)
-    -> bool
+    Get_Name(
+        const FCk_Handle_AnimAsset& InAnimAssetEntity)
+    -> FGameplayTag
 {
-    return RecordOfAnimAssets_Utils::Has(InAnimAssetOwnerEntity);
-}
-
-auto
-    UCk_Utils_AnimAsset_UE::
-    Ensure(
-        FCk_Handle InAnimAssetOwnerEntity,
-        FGameplayTag InAnimAssetName)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(Has(InAnimAssetOwnerEntity, InAnimAssetName), TEXT("Handle [{}] does NOT have AnimAsset [{}]"), InAnimAssetOwnerEntity, InAnimAssetName)
-    { return false; }
-
-    return true;
-}
-
-auto
-    UCk_Utils_AnimAsset_UE::
-    Ensure_Any(
-        FCk_Handle InAnimAssetOwnerEntity)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(Has_Any(InAnimAssetOwnerEntity), TEXT("Handle [{}] does NOT have any AnimAsset [{}]"), InAnimAssetOwnerEntity)
-    { return false; }
-
-    return true;
+    return UCk_Utils_GameplayLabel_UE::Get_Label(InAnimAssetEntity);
 }
 
 auto
     UCk_Utils_AnimAsset_UE::
     Get_All(
-        FCk_Handle InAnimAssetOwnerEntity)
-    -> TArray<FGameplayTag>
+        const FCk_Handle& InAnimAssetOwnerEntity)
+    -> TArray<FCk_Handle_AnimAsset>
 {
-    if (NOT Has_Any(InAnimAssetOwnerEntity))
-    { return {}; }
-
-    auto AllAnimAssets = TArray<FGameplayTag>{};
+    auto AllAnimAssets = TArray<FCk_Handle_AnimAsset>{};
 
     RecordOfAnimAssets_Utils::ForEach_ValidEntry(InAnimAssetOwnerEntity, [&](const auto& InAnimAssetEntity)
     {
-        AllAnimAssets.Add(UCk_Utils_GameplayLabel_UE::Get_Label(InAnimAssetEntity));
+        AllAnimAssets.Add(InAnimAssetEntity);
     });
 
     return AllAnimAssets;
@@ -104,28 +89,12 @@ auto
 auto
     UCk_Utils_AnimAsset_UE::
     Get_Animation(
-        FCk_Handle   InAnimAssetOwnerEntity,
-        FGameplayTag InAnimName)
+        const FCk_Handle_AnimAsset& InAnimAssetEntity)
     -> FCk_AnimAsset_Animation
 {
-    if (NOT Ensure(InAnimAssetOwnerEntity, InAnimName))
-    { return {}; }
-
-    const auto& AnimAssetEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <UCk_Utils_AnimAsset_UE, RecordOfAnimAssets_Utils>(InAnimAssetOwnerEntity, InAnimName);
-
-    const auto& AnimAssetParams = AnimAssetEntity.Get<ck::FFragment_AnimAsset_Params>().Get_Params();
+    const auto& AnimAssetParams = InAnimAssetEntity.Get<ck::FFragment_AnimAsset_Params>().Get_Params();
 
     return AnimAssetParams.Get_AnimationAsset();
-}
-
-auto
-    UCk_Utils_AnimAsset_UE::
-    Has(
-        FCk_Handle InHandle)
-    -> bool
-{
-    return InHandle.Has_All<ck::FFragment_AnimAsset_Params>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
