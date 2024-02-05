@@ -1,7 +1,6 @@
 #include "CkAbility_Utils.h"
 
 #include "CkAbility/CkAbility_Log.h"
-#include "CkAbility/Ability/CkAbility_Script.h"
 #include "CkAbility/Subsystem/CkAbility_Subsystem.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Utils.h"
 #include "CkAbility/Settings/CkAbility_Settings.h"
@@ -12,20 +11,123 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcsBasics/EntityHolder/CkEntityHolder_Utils.h"
 
-#include <Engine/World.h>
-
-// --------------------------------------------------------------------------------------------------------------------
-
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Ability, UCk_Utils_Ability_UE, FCk_Handle_Ability, ck::FFragment_Ability_Params, ck::FFragment_Ability_Current);
-
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_Ability_UE::
+    Has(
+        FCk_Handle InAbilityEntity)
+    -> bool
+{
+    return InAbilityEntity.Has_All<ck::FFragment_Ability_Params, ck::FFragment_Ability_Current>();
+}
+
+auto
+    UCk_Utils_Ability_UE::
+    Ensure(
+        FCk_Handle InAbilityEntity)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(Has(InAbilityEntity), TEXT("Handle [{}] does NOT have an Ability"), InAbilityEntity)
+    { return false; }
+
+    return true;
+}
+
+auto
+    UCk_Utils_Ability_UE::
+    Create_AbilityEntityConfig(
+        UObject* InOuter,
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass)
+    -> UCk_Ability_EntityConfig_PDA*
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InOuter),
+        TEXT("INVALID Outer! Cannot create Ability Entity Config"))
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InAbilityScriptClass),
+        TEXT("INVALID Ability Script Class! Cannot create Ability Entity Config"))
+    { return {}; }
+
+    const auto& AbilityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_Script_PDA>(InAbilityScriptClass);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptCDO),
+        TEXT("Cannot get valid CDO for Ability Script [{}]. Cannot create Ability Entity Config"),
+        InAbilityScriptClass)
+    { return {}; }
+
+    const auto& AbilityScriptData = AbilityScriptCDO->Get_Data();
+    const auto& ConditionSettings = AbilityScriptData.Get_ConditionSettings();
+    const auto& CostSettings      = AbilityScriptData.Get_CostSettings();
+    const auto& CooldownSettings  = AbilityScriptData.Get_CooldownSettings();
+    const auto& AbilityCtorScript = AbilityScriptData.Get_AbilityConstructionScript();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityCtorScript),
+        TEXT("Ability Script [{}] specifies an INVALID Ability ConstructionScript. Cannot create Ability Entity Config"),
+        InAbilityScriptClass)
+    { return {}; }
+
+    const auto& ConditionAbilityEntityConfigs = Create_MultipleAbilityEntityConfigs(InOuter, ConditionSettings.Get_AbilityConditions());
+    const auto& CostAbilityEntityConfigs      = Create_MultipleAbilityEntityConfigs(InOuter, CostSettings.Get_AbilityCosts());
+    const auto& CooldownAbilityEntityConfigs  = Create_MultipleAbilityEntityConfigs(InOuter, CooldownSettings.Get_AbilityCooldowns());
+
+    auto AllSubAbilityEntityConfigs = TArray<UCk_Ability_EntityConfig_PDA*>{};
+    AllSubAbilityEntityConfigs.Append(ConditionAbilityEntityConfigs);
+    AllSubAbilityEntityConfigs.Append(CostAbilityEntityConfigs);
+    AllSubAbilityEntityConfigs.Append(CooldownAbilityEntityConfigs);
+
+    auto NewAbilityCtorScript = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_Ability_ConstructionScript_PDA>(InOuter, AbilityCtorScript,
+    [&](UCk_Ability_ConstructionScript_PDA* InAbilityCtorScript) -> void
+    {
+        InAbilityCtorScript->_DefaultAbilityEntityConfigs = AllSubAbilityEntityConfigs;
+        InAbilityCtorScript->_AbilityParams = FCk_Fragment_Ability_ParamsData{InAbilityScriptClass};
+    });
+
+    return UCk_Utils_Object_UE::Request_CreateNewObject<UCk_Ability_EntityConfig_PDA>(InOuter, nullptr,
+    [&](UCk_Ability_EntityConfig_PDA* InAbilityCtorScript) -> void
+    {
+        InAbilityCtorScript->_EntityConstructionScript = NewAbilityCtorScript;
+    });
+}
+
+auto
+    UCk_Utils_Ability_UE::
+    Create_MultipleAbilityEntityConfigs(
+        UObject* InOuter,
+        const TArray<TSubclassOf<UCk_Ability_Script_PDA>> InAbilityScriptClasses)
+    -> TArray<UCk_Ability_EntityConfig_PDA*>
+{
+    return ck::algo::Transform<TArray<UCk_Ability_EntityConfig_PDA*>>(InAbilityScriptClasses,
+    [&](TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass)
+    {
+        return Create_AbilityEntityConfig(InOuter, InAbilityScriptClass);
+    });
+}
+
+auto
+    UCk_Utils_Ability_UE::
+    Get_Info(
+        FCk_Handle InAbilityEntity)
+    -> FCk_Ability_Info
+{
+    if (NOT Ensure(InAbilityEntity))
+    { return {}; }
+
+    const auto& Label = UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntity);
+    const auto& AbilityOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityEntity);
+
+    return FCk_Ability_Info{Label, AbilityOwner};
+}
+
+auto
+    UCk_Utils_Ability_UE::
     Get_DisplayName(
-        const FCk_Handle_Ability& InAbilityEntity)
+        FCk_Handle InAbilityEntity)
     -> FName
 {
+    if (NOT Ensure(InAbilityEntity))
+    { return {}; }
+
     const auto& AbilityParams = InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params().Get_Data();
 
     if (AbilityParams.Get_HasDisplayName())
@@ -37,45 +139,60 @@ auto
 auto
     UCk_Utils_Ability_UE::
     Get_ActivationSettings(
-        const FCk_Handle_Ability& InAbilityEntity)
+        FCk_Handle InAbilityEntity)
     -> FCk_Ability_ActivationSettings
 {
+    if (NOT Ensure(InAbilityEntity))
+    { return {}; }
+
     return InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params().Get_Data().Get_ActivationSettings();
 }
 
 auto
     UCk_Utils_Ability_UE::
     Get_NetworkSettings(
-        const FCk_Handle_Ability& InAbilityEntity)
+        FCk_Handle InAbilityEntity)
     -> FCk_Ability_NetworkSettings
 {
+    if (NOT Ensure(InAbilityEntity))
+    { return {}; }
+
     return InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params().Get_Data().Get_NetworkSettings();
 }
 
 auto
     UCk_Utils_Ability_UE::
     Get_Status(
-        const FCk_Handle_Ability& InAbilityEntity)
+        FCk_Handle InAbilityEntity)
     -> ECk_Ability_Status
 {
+    if (NOT Ensure(InAbilityEntity))
+    { return {}; }
+
     return InAbilityEntity.Get<ck::FFragment_Ability_Current>().Get_Status();
 }
 
 auto
     UCk_Utils_Ability_UE::
     Get_ScriptClass(
-        const FCk_Handle_Ability& InAbilityEntity)
+        FCk_Handle InAbilityEntity)
     -> TSubclassOf<UCk_Ability_Script_PDA>
 {
+    if (NOT Ensure(InAbilityEntity))
+    { return {}; }
+
     return InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params().Get_AbilityScriptClass();
 }
 
 auto
     UCk_Utils_Ability_UE::
     Get_CanActivate(
-        const FCk_Handle_Ability& InAbilityEntity)
+        FCk_Handle InAbilityEntity)
     -> ECk_Ability_ActivationRequirementsResult
 {
+    if (NOT Ensure(InAbilityEntity))
+    { return {}; }
+
     const auto& AbilityParams             = InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params();
     const auto& AbilityActivationSettings = AbilityParams.Get_Data().Get_ActivationSettings();
 
@@ -134,56 +251,67 @@ auto
 auto
     UCk_Utils_Ability_UE::
     BindTo_OnAbilityActivated(
-        FCk_Handle_Ability& InAbilityHandle,
+        FCk_Handle InAbilityHandle,
         ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_Ability_OnActivated& InDelegate)
-    -> FCk_Handle_Ability
+    -> void
 {
+    if (NOT Ensure(InAbilityHandle))
+    { return; }
+
     ck::UUtils_Signal_OnAbilityActivated::Bind(InAbilityHandle, InDelegate, InBehavior);
-    return InAbilityHandle;
 }
 
 auto
     UCk_Utils_Ability_UE::
     UnbindFrom_OnAbilityActivated(
-        FCk_Handle_Ability& InAbilityHandle,
+        FCk_Handle InAbilityHandle,
         const FCk_Delegate_Ability_OnActivated& InDelegate)
-    -> FCk_Handle_Ability
+    -> void
 {
+    if (NOT Ensure(InAbilityHandle))
+    { return; }
+
     ck::UUtils_Signal_OnAbilityActivated::Unbind(InAbilityHandle, InDelegate);
-    return InAbilityHandle;
 }
 
 auto
     UCk_Utils_Ability_UE::
     BindTo_OnAbilityDeactivated(
-        FCk_Handle_Ability& InAbilityHandle,
+        FCk_Handle InAbilityHandle,
         ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_Ability_OnDeactivated& InDelegate)
-    -> FCk_Handle_Ability
+    -> void
 {
+    if (NOT Ensure(InAbilityHandle))
+    { return; }
+
     ck::UUtils_Signal_OnAbilityDeactivated::Bind(InAbilityHandle, InDelegate, InBehavior);
-    return InAbilityHandle;
 }
 
 auto
     UCk_Utils_Ability_UE::
     UnbindFrom_OnAbilityDeactivated(
-        FCk_Handle_Ability& InAbilityHandle,
+        FCk_Handle InAbilityHandle,
         const FCk_Delegate_Ability_OnDeactivated& InDelegate)
-    -> FCk_Handle_Ability
+    -> void
 {
+    if (NOT Ensure(InAbilityHandle))
+    { return; }
+
     ck::UUtils_Signal_OnAbilityDeactivated::Unbind(InAbilityHandle, InDelegate);
-    return InAbilityHandle;
 }
 
 auto
     UCk_Utils_Ability_UE::
     DoActivate(
-        FCk_Handle_Ability& InAbilityEntity,
+        FCk_Handle InAbilityEntity,
         const FCk_Ability_ActivationPayload& InActivationPayload)
     -> void
 {
+    if (NOT Has(InAbilityEntity))
+    { return; }
+
     auto& AbilityCurrent = InAbilityEntity.Get<ck::FFragment_Ability_Current>();
 
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityCurrent._AbilityScript),
@@ -200,10 +328,13 @@ auto
 auto
     UCk_Utils_Ability_UE::
     DoDeactivate(
-        FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
-        FCk_Handle_Ability& InAbilityEntity)
+        FCk_Handle InAbilityOwnerEntity,
+        FCk_Handle InAbilityEntity)
     -> void
 {
+    if (NOT Has(InAbilityEntity))
+    { return; }
+
     auto& AbilityCurrent = InAbilityEntity.Get<ck::FFragment_Ability_Current>();
 
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityCurrent._AbilityScript),
@@ -284,7 +415,7 @@ auto
 auto
     UCk_Utils_Ability_UE::
     DoAdd(
-        FCk_Handle& InHandle,
+        FCk_Handle InHandle,
         const FCk_Fragment_Ability_ParamsData& InParams)
     -> void
 {
@@ -340,10 +471,13 @@ auto
 auto
     UCk_Utils_Ability_UE::
     DoGive(
-        FCk_Handle_AbilityOwner& InAbilityOwner,
-        FCk_Handle_Ability& InAbility)
+        FCk_Handle InAbilityOwner,
+        FCk_Handle InAbility)
     -> void
 {
+    if (NOT Ensure(InAbility))
+    { return; }
+
     RecordOfAbilities_Utils::Request_Connect(InAbilityOwner, InAbility);
     const auto Script = InAbility.Get<ck::FFragment_Ability_Current>().Get_AbilityScript();
 
@@ -362,10 +496,13 @@ auto
 auto
     UCk_Utils_Ability_UE::
     DoRevoke(
-        FCk_Handle_AbilityOwner& InAbilityOwner,
-        FCk_Handle_Ability& InAbility)
+        FCk_Handle InAbilityOwner,
+        FCk_Handle InAbility)
     -> void
 {
+    if (NOT Ensure(InAbility))
+    { return; }
+
     const auto& Current = InAbility.Get<ck::FFragment_Ability_Current>();
     if (Current.Get_Status() == ECk_Ability_Status::Active)
     {
