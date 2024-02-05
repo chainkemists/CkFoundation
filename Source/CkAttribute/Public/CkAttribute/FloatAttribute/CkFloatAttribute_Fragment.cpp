@@ -67,7 +67,8 @@ auto
             ck::Context(this))
         { continue; }
 
-        UCk_Utils_FloatAttributeModifier_UE::Add(Get_AssociatedEntity(), Modifier.Get_ModifierName(), Modifier.Get_Params());
+        auto AttributeOwnerEntity = UCk_Utils_FloatAttribute_UE::Conv_HandleToFloatAttributeOwner(Get_AssociatedEntity());
+        UCk_Utils_FloatAttributeModifier_UE::Add(AttributeOwnerEntity, Modifier.Get_ModifierName(), Modifier.Get_Params());
     }
     _NextPendingAddModifier = _PendingAddModifiers.Num();
 
@@ -81,7 +82,8 @@ auto
             ck::Context(this))
         { continue; }
 
-        UCk_Utils_FloatAttributeModifier_UE::Remove(Get_AssociatedEntity(),
+        auto AttributeOwnerEntity = UCk_Utils_FloatAttribute_UE::Conv_HandleToFloatAttributeOwner(Get_AssociatedEntity());
+        UCk_Utils_FloatAttributeModifier_UE::Remove(AttributeOwnerEntity,
             _PendingRemoveModifiers[Index].Get_AttributeName(),
             _PendingRemoveModifiers[Index].Get_ModifierName());
     }

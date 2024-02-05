@@ -13,15 +13,14 @@
 auto
     UCk_Utils_VectorAttribute_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_VectorAttribute_ParamsData& InParams,
         ECk_Replication InReplicates)
-    -> void
+    -> FCk_Handle_VectorAttributeOwner
 {
     RecordOfVectorAttributes_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 
-    const auto& AddNewVectorAttributeToEntity = [&](FCk_Handle InAttributeOwner, const FGameplayTag& InAttributeName,
-        const FVector& InAttributeBaseValue)
+    const auto& AddNewVectorAttributeToEntity = [&](FCk_Handle InAttributeOwner, const FGameplayTag& InAttributeName, FVector InAttributeBaseValue)
     {
         auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwner);
 
@@ -41,32 +40,36 @@ auto
             InHandle,
             InReplicates
         );
-
-        return;
+    }
+    else
+    {
+        UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_VectorAttribute_Rep>(InHandle);
     }
 
-    UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_VectorAttribute_Rep>(InHandle);
+    return Conv_HandleToVectorAttributeOwner(InHandle);
 }
 
 auto
     UCk_Utils_VectorAttribute_UE::
     AddMultiple(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_MultipleVectorAttribute_ParamsData& InParams,
         ECk_Replication InReplicates)
-    -> void
+    -> FCk_Handle_VectorAttributeOwner
 {
     for (const auto& Param : InParams.Get_VectorAttributeParams())
     {
         Add(InHandle, Param, InReplicates);
     }
+
+    return Conv_HandleToVectorAttributeOwner(InHandle);
 }
 
 auto
     UCk_Utils_VectorAttribute_UE::
-    Has(
-        FCk_Handle InAttributeOwnerEntity,
-        FGameplayTag InAttributeName)
+    Has_Attribute(
+        const FCk_Handle& InAttributeOwnerEntity,
+        FGameplayTag      InAttributeName)
     -> bool
 {
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
@@ -76,49 +79,30 @@ auto
 
 auto
     UCk_Utils_VectorAttribute_UE::
-    Has_Any(
-        FCk_Handle InAttributeOwnerEntity)
+    Has_Any_Attribute(
+        const FCk_Handle& InAttributeOwnerEntity)
     -> bool
 {
     return RecordOfVectorAttributes_Utils::Has(InAttributeOwnerEntity);
 }
 
-auto
-    UCk_Utils_VectorAttribute_UE::
-    Ensure(
-        FCk_Handle InAttributeOwnerEntity,
-        FGameplayTag InAttributeName)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(Has(InAttributeOwnerEntity, InAttributeName), TEXT("Handle [{}] does NOT have a Vector Attribute [{}]"), InAttributeOwnerEntity, InAttributeName)
-    { return false; }
+// --------------------------------------------------------------------------------------------------------------------
 
-    return true;
-}
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(VectorAttributeOwner, UCk_Utils_VectorAttribute_UE, FCk_Handle_VectorAttributeOwner, RecordOfVectorAttributes_Utils::RecordType);
 
-auto
-    UCk_Utils_VectorAttribute_UE::
-    Ensure_Any(
-        FCk_Handle InAttributeOwnerEntity)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(Has_Any(InAttributeOwnerEntity), TEXT("Handle [{}] does NOT have any Vector Attribute"), InAttributeOwnerEntity)
-    { return false; }
-
-    return true;
-}
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_VectorAttribute_UE::
     ForEach_VectorAttribute(
-        FCk_Handle                 InAttributeOwner,
+        FCk_Handle_VectorAttributeOwner& InAttributeOwner,
         const FInstancedStruct&    InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
     -> TArray<FCk_Handle>
 {
     auto ToRet = TArray<FCk_Handle>{};
 
-    ForEach_VectorAttribute(InAttributeOwner, [&](const FCk_Handle& InAttribute)
+    ForEach_VectorAttribute(InAttributeOwner, [&](const FCk_Handle_VectorAttribute& InAttribute)
     {
         if (InDelegate.IsBound())
         { InDelegate.Execute(InAttribute, InOptionalPayload); }
@@ -132,17 +116,14 @@ auto
 auto
     UCk_Utils_VectorAttribute_UE::
     ForEach_VectorAttribute(
-        const FCk_Handle&                  InAttributeOwner,
-        const TFunction<void(FCk_Handle)>& InFunc)
+        FCk_Handle_VectorAttributeOwner& InAttributeOwner,
+        const TFunction<void(FCk_Handle_VectorAttribute)>& InFunc)
     -> void
 {
-    if (NOT Ensure_Any(InAttributeOwner))
-    { return; }
-
     RecordOfVectorAttributes_Utils::ForEach_ValidEntry
     (
         InAttributeOwner,
-        [&](const FCk_Handle& InAttribute)
+        [&](const FCk_Handle_VectorAttribute& InAttribute)
         {
             if (InAttribute == InAttributeOwner)
             { return; }
@@ -155,18 +136,18 @@ auto
 auto
     UCk_Utils_VectorAttribute_UE::
     ForEach_VectorAttribute_If(
-        FCk_Handle                              InAttributeOwner,
-        const FInstancedStruct&                 InOptionalPayload,
-        const FCk_Lambda_InHandle&              InDelegate,
+        FCk_Handle_VectorAttributeOwner& InAttributeOwner,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate)
-    -> TArray<FCk_Handle>
+    -> TArray<FCk_Handle_VectorAttribute>
 {
-    auto ToRet = TArray<FCk_Handle>{};
+    auto ToRet = TArray<FCk_Handle_VectorAttribute>{};
 
     ForEach_VectorAttribute_If
     (
         InAttributeOwner,
-        [&](FCk_Handle InAttribute)
+        [&](FCk_Handle_VectorAttribute InAttribute)
         {
             if (InDelegate.IsBound())
             { InDelegate.Execute(InAttribute, InOptionalPayload); }
@@ -193,18 +174,15 @@ auto
 auto
     UCk_Utils_VectorAttribute_UE::
     ForEach_VectorAttribute_If(
-        FCk_Handle InAttributeOwner,
-        const TFunction<void(FCk_Handle)>& InFunc,
-        const TFunction<bool(FCk_Handle)>& InPredicate)
+        FCk_Handle_VectorAttributeOwner& InAttributeOwner,
+        const TFunction<void(FCk_Handle_VectorAttribute)>& InFunc,
+        const TFunction<bool(FCk_Handle_VectorAttribute)>& InPredicate)
     -> void
 {
-    if (NOT Ensure_Any(InAttributeOwner))
-    { return; }
-
     RecordOfVectorAttributes_Utils::ForEach_ValidEntry_If
     (
         InAttributeOwner,
-        [&](const FCk_Handle& InAttribute)
+        [&](const FCk_Handle_VectorAttribute& InAttribute)
         {
             if (InAttribute == InAttributeOwner)
             { return; }
@@ -218,10 +196,14 @@ auto
 auto
     UCk_Utils_VectorAttribute_UE::
     Get_BaseValue(
-        FCk_Handle InAttributeOwnerEntity,
+        const FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName)
     -> FVector
 {
+    CK_ENSURE_IF_NOT(Has_Attribute(InAttributeOwnerEntity, InAttributeName), TEXT("Attribute [{}] does NOT exist on Entity [{}]."),
+        InAttributeName, InAttributeOwnerEntity)
+    { return {}; }
+
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
         <VectorAttribute_Utils, RecordOfVectorAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
     return VectorAttribute_Utils::Get_BaseValue(AttributeEntity);
@@ -230,10 +212,14 @@ auto
 auto
     UCk_Utils_VectorAttribute_UE::
     Get_BonusValue(
-        FCk_Handle InAttributeOwnerEntity,
+        const FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName)
     -> FVector
 {
+    CK_ENSURE_IF_NOT(Has_Attribute(InAttributeOwnerEntity, InAttributeName), TEXT("Attribute [{}] does NOT exist on Entity [{}]."),
+        InAttributeName, InAttributeOwnerEntity)
+    { return {}; }
+
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
         <VectorAttribute_Utils, RecordOfVectorAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
     return VectorAttribute_Utils::Get_FinalValue(AttributeEntity) - VectorAttribute_Utils::Get_BaseValue(AttributeEntity);
@@ -242,10 +228,14 @@ auto
 auto
     UCk_Utils_VectorAttribute_UE::
     Get_FinalValue(
-        FCk_Handle InAttributeOwnerEntity,
+        const FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName)
     -> FVector
 {
+    CK_ENSURE_IF_NOT(Has_Attribute(InAttributeOwnerEntity, InAttributeName), TEXT("Attribute [{}] does NOT exist on Entity [{}]."),
+        InAttributeName, InAttributeOwnerEntity)
+    { return {}; }
+
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
         <VectorAttribute_Utils, RecordOfVectorAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
     return VectorAttribute_Utils::Get_FinalValue(AttributeEntity);
@@ -254,10 +244,10 @@ auto
 auto
     UCk_Utils_VectorAttribute_UE::
     Request_Override(
-        FCk_Handle   InAttributeOwnerEntity,
+        FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
-        FVector      InNewBaseValue)
-    -> void
+        FVector InNewBaseValue)
+        -> void
 {
     const auto CurrentBaseValue = Get_BaseValue(InAttributeOwnerEntity, InAttributeName);
     const auto Delta = InNewBaseValue - CurrentBaseValue;
@@ -270,7 +260,7 @@ auto
 auto
     UCk_Utils_VectorAttribute_UE::
     BindTo_OnValueChanged(
-        FCk_Handle InAttributeOwnerEntity,
+        FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         ECk_Signal_BindingPolicy InBehavior,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
@@ -294,7 +284,7 @@ auto
 auto
     UCk_Utils_VectorAttribute_UE::
     UnbindFrom_OnValueChanged(
-        FCk_Handle InAttributeOwnerEntity,
+        FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         const FCk_Delegate_VectorAttribute_OnValueChanged& InDelegate)
     -> void
@@ -315,12 +305,18 @@ auto
 auto
     UCk_Utils_VectorAttributeModifier_UE::
     Add(
-        FCk_Handle InAttributeOwnerEntity,
+        FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InModifierName,
         const FCk_Fragment_VectorAttributeModifier_ParamsData& InParams)
     -> void
 {
     const auto& AttributeName = InParams.Get_TargetAttributeName();
+
+    if (InParams.Get_ModifierDelta().IsNearlyZero() && InParams.Get_ModifierOperation() == ECk_ModifierOperation::Additive)
+    { return; }
+
+    if (InParams.Get_ModifierDelta() == FVector::OneVector && InParams.Get_ModifierOperation() == ECk_ModifierOperation::Multiplicative)
+    { return; }
 
     const auto NewModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwnerEntity);
     UCk_Utils_GameplayLabel_UE::Add(NewModifierEntity, InModifierName);
@@ -350,7 +346,7 @@ auto
 auto
     UCk_Utils_VectorAttributeModifier_UE::
     Has(
-        FCk_Handle InAttributeOwnerEntity,
+        const FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         FGameplayTag InModifierName)
     -> bool
@@ -367,22 +363,8 @@ auto
 
 auto
     UCk_Utils_VectorAttributeModifier_UE::
-    Ensure(
-        FCk_Handle InAttributeOwnerEntity,
-        FGameplayTag InAttributeName,
-        FGameplayTag InModifierName)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(Has(InAttributeOwnerEntity, InAttributeName, InModifierName), TEXT("Handle [{}] does NOT have a Vector Attribute Modifier with name [{}]"), InAttributeOwnerEntity, InModifierName)
-    { return false; }
-
-    return true;
-}
-
-auto
-    UCk_Utils_VectorAttributeModifier_UE::
     Remove(
-        FCk_Handle InAttributeOwnerEntity,
+        FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         FGameplayTag InModifierName)
     -> void
