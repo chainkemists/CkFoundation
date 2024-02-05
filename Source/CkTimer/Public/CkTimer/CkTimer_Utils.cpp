@@ -85,50 +85,27 @@ auto
     });
 }
 
-auto
-    UCk_Utils_Timer_UE::Has(
-        const FCk_Handle& InAbilityEntity)
-        -> bool { return InAbilityEntity.Has_All<ck::FFragment_Timer_Params, ck::FFragment_Timer_Current>(); }
+// --------------------------------------------------------------------------------------------------------------------
 
-auto
-    UCk_Utils_Timer_UE::Cast(
-        const FCk_Handle&    InHandle,
-        ECk_SucceededFailed& OutResult)
-        -> FCk_Handle_Timer
-{
-    if (Has(InHandle))
-    {
-        OutResult = ECk_SucceededFailed::Failed;
-        return {};
-    }
-    OutResult = ECk_SucceededFailed::Succeeded;
-    return ck::Cast<FCk_Handle_Timer>(InHandle);
-}
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Timer, UCk_Utils_Timer_UE, FCk_Handle_Timer, ck::FFragment_Timer_Params, ck::FFragment_Timer_Current);
 
-auto
-    UCk_Utils_Timer_UE::Conv_HandleToTimer(
-        const FCk_Handle& InHandle)
-        -> FCk_Handle_Timer
-{
-    CK_ENSURE_IF_NOT(Has(InHandle),
-        TEXT("Handle [{}] does NOT have a {}. Unable to convert Handle."),
-        InHandle,
-        TEXT("Timer")) { return {}; }
-    return ck::Cast<FCk_Handle_Timer>(InHandle);
-};
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_Timer_UE::
-    Get_Timer(
-        const FCk_Handle& InTimerEntity,
+    TryGet_Timer(
+        const FCk_Handle& InTimerOwnerEntity,
         FGameplayTag InTimerName)
     -> FCk_Handle_Timer
 {
-    const auto TimerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+    const auto FoundEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Timer_UE,
-        RecordOfTimers_Utils>(InTimerEntity, InTimerName);
+        RecordOfTimers_Utils>(InTimerOwnerEntity, InTimerName);
 
-    return Conv_HandleToTimer(TimerEntity);
+    if (ck::Is_NOT_Valid(FoundEntity))
+    { return {}; }
+
+    return Conv_HandleToTimer(FoundEntity);
 }
 
 auto
@@ -137,8 +114,7 @@ auto
         const FCk_Handle_Timer& InTimerEntity)
     -> FGameplayTag
 {
-    // TODO: remove the cast once Label is type-safe as well
-    return UCk_Utils_GameplayLabel_UE::Get_Label(InTimerEntity.Get_RawHandle());
+    return UCk_Utils_GameplayLabel_UE::Get_Label(InTimerEntity);
 }
 
 auto
@@ -192,7 +168,7 @@ auto
     ForEach_Timer(InTimerOwnerEntity, [&](FCk_Handle_Timer InTimer)
     {
         if (InDelegate.IsBound())
-        { InDelegate.Execute(InTimer.Get_RawHandle(), InOptionalPayload); }
+        { InDelegate.Execute(InTimer, InOptionalPayload); }
         else
         { Timers.Emplace(InTimer); }
     });
@@ -521,4 +497,5 @@ auto
     return InTimerEntity;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
+//w
+//--------------------------------------------------------------------------------------------------------------------
