@@ -66,6 +66,8 @@ public:
         const FCk_Handle& InHandle);
 
 public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability",
               DisplayName="[Ck][Ability] Get Display Name")
     static FName
     Get_DisplayName(

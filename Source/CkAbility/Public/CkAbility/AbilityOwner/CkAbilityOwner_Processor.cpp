@@ -124,7 +124,7 @@ namespace ck
             InAbilityOwnerEntity)
         { return; }
 
-        const auto& AbilityEntityConfig = UCk_Utils_Ability_UE::Create_AbilityEntityConfig(
+        const auto& AbilityEntityConfig = UCk_Utils_Ability_UE::DoCreate_AbilityEntityConfig(
             UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAbilityOwnerEntity), AbilityScriptClass);
 
         CK_ENSURE_IF_NOT(ck::IsValid(AbilityEntityConfig),
