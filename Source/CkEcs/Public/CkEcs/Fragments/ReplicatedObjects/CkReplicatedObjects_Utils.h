@@ -20,7 +20,7 @@ public:
 public:
     static auto
     Add(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle InHandle,
         const FCk_ReplicatedObjects& InReplicatedObjects) -> void;
 
     static auto

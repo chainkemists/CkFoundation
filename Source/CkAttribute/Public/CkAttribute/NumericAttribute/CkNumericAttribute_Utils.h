@@ -36,7 +36,7 @@ public:
               DisplayName="[Ck][NumericAttribute] Add New Attribute")
     static void
     Add(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle InHandle,
         const FCk_Fragment_NumericAttribute_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 

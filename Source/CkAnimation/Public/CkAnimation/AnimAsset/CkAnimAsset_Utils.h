@@ -30,7 +30,7 @@ public:
               DisplayName="[Ck][AnimAsset] Add New Animation")
     static FCk_Handle_AnimAsset
     Add(
-        FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_AnimAsset_ParamsData& InParams);
 
     UFUNCTION(BlueprintCallable,

@@ -26,7 +26,7 @@ public:
               DisplayName="[Ck][Projectile] Add Feature")
     static void
     Add(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle InHandle,
         const FCk_Fragment_Projectile_ParamsData& InParams);
 };
 

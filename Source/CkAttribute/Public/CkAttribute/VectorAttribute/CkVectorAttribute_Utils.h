@@ -36,7 +36,7 @@ public:
               DisplayName="[Ck][VectorAttribute] Add New Attribute")
     static FCk_Handle_VectorAttributeOwner
     Add(
-        FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_VectorAttribute_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
@@ -96,12 +96,12 @@ public:
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle>
     ForEach_VectorAttribute(
-        FCk_Handle_VectorAttributeOwner& InAttributeOwner,
+        UPARAM(ref) FCk_Handle_VectorAttributeOwner& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_VectorAttribute(
-        FCk_Handle_VectorAttributeOwner& InAttributeOwner,
+        UPARAM(ref) FCk_Handle_VectorAttributeOwner& InAttributeOwner,
         const TFunction<void(FCk_Handle_VectorAttribute)>& InFunc) -> void;
 
     UFUNCTION(BlueprintCallable,
@@ -110,13 +110,13 @@ public:
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle_VectorAttribute>
     ForEach_VectorAttribute_If(
-        FCk_Handle_VectorAttributeOwner& InAttributeOwner,
+        UPARAM(ref) FCk_Handle_VectorAttributeOwner& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate);
     static auto
     ForEach_VectorAttribute_If(
-        FCk_Handle_VectorAttributeOwner& InAttributeOwner,
+        UPARAM(ref) FCk_Handle_VectorAttributeOwner& InAttributeOwner,
         const TFunction<void(FCk_Handle_VectorAttribute)>& InFunc,
         const TFunction<bool(FCk_Handle_VectorAttribute)>& InPredicate) -> void;
 
@@ -151,7 +151,7 @@ public:
               DisplayName="[Ck][VectorAttribute] Request Override Base Value")
     static void
     Request_Override(
-        FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
+        UPARAM(ref) FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         FVector InNewBaseValue);
 
@@ -161,7 +161,7 @@ public:
               DisplayName = "[Ck][VectorAttribute] Bind To OnValueChanged")
     static void
     BindTo_OnValueChanged(
-        FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
+        UPARAM(ref) FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         ECk_Signal_BindingPolicy InBehavior,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
@@ -172,7 +172,7 @@ public:
               DisplayName = "[Ck][VectorAttribute] Unbind From OnValueChanged")
     static void
     UnbindFrom_OnValueChanged(
-        FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
+        UPARAM(ref) FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         const FCk_Delegate_VectorAttribute_OnValueChanged& InDelegate);
 };
@@ -196,7 +196,7 @@ public:
               DisplayName="[Ck][VectorAttribute] Add Modifier")
     static void
     Add(
-        FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
+        UPARAM(ref) FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InModifierName,
         const FCk_Fragment_VectorAttributeModifier_ParamsData& InParams);
 
@@ -214,7 +214,7 @@ public:
               DisplayName="[Ck][VectorAttribute] Remove Modifier")
     static void
     Remove(
-        FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
+        UPARAM(ref) FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         FGameplayTag InModifierName);
 };

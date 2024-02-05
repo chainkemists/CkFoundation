@@ -34,7 +34,7 @@ public:
               DisplayName="[Ck][Timer] Add New Timer")
     static FCk_Handle_Timer
     Add(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle InHandle,
         const FCk_Fragment_Timer_ParamsData& InParams);
 
     UFUNCTION(BlueprintCallable,
