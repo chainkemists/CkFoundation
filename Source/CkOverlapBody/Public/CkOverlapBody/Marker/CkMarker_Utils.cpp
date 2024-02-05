@@ -106,6 +106,9 @@ auto
         FCk_Handle InMarkerOwnerEntity)
     -> TArray<FCk_Handle_Marker>
 {
+    if (NOT Has_Any(InMarkerOwnerEntity))
+    { return {}; }
+
     auto AllMarkers = TArray<FCk_Handle_Marker>{};
 
     RecordOfMarkers_Utils::ForEach_ValidEntry(InMarkerOwnerEntity, [&](FCk_Handle InMarkerEntity)
@@ -123,6 +126,9 @@ auto
         const FCk_Handle& InHandle)
     -> void
 {
+    if (NOT Has_Any(InHandle))
+    { return; }
+
     RecordOfMarkers_Utils::ForEach_ValidEntry(InHandle, [&](const FCk_Handle& InMarkerEntity)
     {
         DoPreviewMarker(InOuter, InMarkerEntity);
@@ -137,6 +143,15 @@ auto
     -> void
 {
     DoPreviewMarker(InOuter, InMarkerEntity);
+}
+
+auto
+    UCk_Utils_Marker_UE::
+    Has_Any(
+        const FCk_Handle& InHandle)
+    -> bool
+{
+    return RecordOfMarkers_Utils::Has(InHandle);
 }
 
 auto

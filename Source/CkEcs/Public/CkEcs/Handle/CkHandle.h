@@ -151,7 +151,7 @@ private:
     template <typename T_Fragment>
     auto DoRemove_FragmentDebugInfo() -> void;
 
-private:
+protected:
     UPROPERTY()
     FCk_Entity _Entity;
 
@@ -261,9 +261,16 @@ CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(FCk_Handle,
 template <typename T_WrappedHandle, class>
 FCk_Handle::
     FCk_Handle(
-        const T_WrappedHandle& InTypeSafeHandle)
-    : FCk_Handle(InTypeSafeHandle.Get_Entity(), **InTypeSafeHandle)
-{ }
+        const T_WrappedHandle& InOther)
+    : _Entity(InOther._Entity)
+    , _Registry(InOther._Registry)
+    , _Mapper(InOther._Mapper)
+#if WITH_EDITORONLY_DATA
+    , _Fragments(InOther._Fragments)
+#endif
+{
+    DoUpdate_FragmentDebugInfo_Blueprints();
+}
 
 template <typename T_WrappedHandle, class>
 auto

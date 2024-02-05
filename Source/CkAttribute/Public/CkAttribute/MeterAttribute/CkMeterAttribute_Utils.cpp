@@ -63,7 +63,7 @@ namespace ck
 auto
     UCk_MeterAttribute_ConstructionScript_PDA::
     DoConstruct_Implementation(
-        FCk_Handle& InHandle,
+        FCk_Handle InHandle,
         const FInstancedStruct& InOptionalParams)
     -> void
 {
@@ -153,7 +153,7 @@ auto
 auto
     UCk_Utils_MeterAttribute_UE::
     AddMultiple(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_MultipleMeterAttribute_ParamsData& InParams,
         ECk_Replication InReplicates)
     -> void
