@@ -21,7 +21,11 @@ auto
     return Conv_HandleToAbilityOwner(InHandle);
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(AbilityOwner, UCk_Utils_AbilityOwner_UE, FCk_Handle_AbilityOwner, ck::FFragment_AbilityOwner_Current, ck::FFragment_AbilityOwner_Params);
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_AbilityOwner_UE::

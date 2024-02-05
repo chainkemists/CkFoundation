@@ -13,10 +13,10 @@
 auto
     UCk_Utils_ByteAttribute_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_ByteAttribute_ParamsData& InParams,
         ECk_Replication InReplicates)
-    -> void
+    -> FCk_Handle_ByteAttributeOwner
 {
     RecordOfByteAttributes_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 
@@ -40,32 +40,36 @@ auto
             InHandle,
             InReplicates
         );
-
-        return;
+    }
+    else
+    {
+        UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_ByteAttribute_Rep>(InHandle);
     }
 
-    UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_ByteAttribute_Rep>(InHandle);
+    return Conv_HandleToByteAttributeOwner(InHandle);
 }
 
 auto
     UCk_Utils_ByteAttribute_UE::
     AddMultiple(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_MultipleByteAttribute_ParamsData& InParams,
         ECk_Replication InReplicates)
-    -> void
+    -> FCk_Handle_ByteAttributeOwner
 {
     for (const auto& Param : InParams.Get_ByteAttributeParams())
     {
         Add(InHandle, Param, InReplicates);
     }
+
+    return Conv_HandleToByteAttributeOwner(InHandle);
 }
 
 auto
     UCk_Utils_ByteAttribute_UE::
-    Has(
-        FCk_Handle InAttributeOwnerEntity,
-        FGameplayTag InAttributeName)
+    Has_Attribute(
+        const FCk_Handle& InAttributeOwnerEntity,
+        FGameplayTag      InAttributeName)
     -> bool
 {
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
@@ -75,49 +79,30 @@ auto
 
 auto
     UCk_Utils_ByteAttribute_UE::
-    Has_Any(
-        FCk_Handle InAttributeOwnerEntity)
+    Has_Any_Attribute(
+        const FCk_Handle& InAttributeOwnerEntity)
     -> bool
 {
     return RecordOfByteAttributes_Utils::Has(InAttributeOwnerEntity);
 }
 
-auto
-    UCk_Utils_ByteAttribute_UE::
-    Ensure(
-        FCk_Handle InAttributeOwnerEntity,
-        FGameplayTag InAttributeName)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(Has(InAttributeOwnerEntity, InAttributeName), TEXT("Handle [{}] does NOT have a Byte Attribute [{}]"), InAttributeOwnerEntity, InAttributeName)
-    { return false; }
+// --------------------------------------------------------------------------------------------------------------------
 
-    return true;
-}
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(ByteAttributeOwner, UCk_Utils_ByteAttribute_UE, FCk_Handle_ByteAttributeOwner, RecordOfByteAttributes_Utils::RecordType);
 
-auto
-    UCk_Utils_ByteAttribute_UE::
-    Ensure_Any(
-        FCk_Handle InAttributeOwnerEntity)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(Has_Any(InAttributeOwnerEntity), TEXT("Handle [{}] does NOT have any Byte Attribute"), InAttributeOwnerEntity)
-    { return false; }
-
-    return true;
-}
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_ByteAttribute_UE::
     ForEach_ByteAttribute(
-        FCk_Handle                 InAttributeOwner,
+        FCk_Handle_ByteAttributeOwner& InAttributeOwner,
         const FInstancedStruct&    InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
     -> TArray<FCk_Handle>
 {
     auto ToRet = TArray<FCk_Handle>{};
 
-    ForEach_ByteAttribute(InAttributeOwner, [&](const FCk_Handle& InAttribute)
+    ForEach_ByteAttribute(InAttributeOwner, [&](const FCk_Handle_ByteAttribute& InAttribute)
     {
         if (InDelegate.IsBound())
         { InDelegate.Execute(InAttribute, InOptionalPayload); }
@@ -131,17 +116,14 @@ auto
 auto
     UCk_Utils_ByteAttribute_UE::
     ForEach_ByteAttribute(
-        FCk_Handle& InAttributeOwner,
-        const TFunction<void(FCk_Handle)>& InFunc)
+        FCk_Handle_ByteAttributeOwner& InAttributeOwner,
+        const TFunction<void(FCk_Handle_ByteAttribute)>& InFunc)
     -> void
 {
-    if (NOT Ensure_Any(InAttributeOwner))
-    { return; }
-
     RecordOfByteAttributes_Utils::ForEach_ValidEntry
     (
         InAttributeOwner,
-        [&](const FCk_Handle& InAttribute)
+        [&](const FCk_Handle_ByteAttribute& InAttribute)
         {
             if (InAttribute == InAttributeOwner)
             { return; }
@@ -154,18 +136,18 @@ auto
 auto
     UCk_Utils_ByteAttribute_UE::
     ForEach_ByteAttribute_If(
-        FCk_Handle                              InAttributeOwner,
-        const FInstancedStruct&                 InOptionalPayload,
-        const FCk_Lambda_InHandle&              InDelegate,
+        FCk_Handle_ByteAttributeOwner& InAttributeOwner,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate)
-    -> TArray<FCk_Handle>
+    -> TArray<FCk_Handle_ByteAttribute>
 {
-    auto ToRet = TArray<FCk_Handle>{};
+    auto ToRet = TArray<FCk_Handle_ByteAttribute>{};
 
     ForEach_ByteAttribute_If
     (
         InAttributeOwner,
-        [&](FCk_Handle InAttribute)
+        [&](FCk_Handle_ByteAttribute InAttribute)
         {
             if (InDelegate.IsBound())
             { InDelegate.Execute(InAttribute, InOptionalPayload); }
@@ -192,18 +174,15 @@ auto
 auto
     UCk_Utils_ByteAttribute_UE::
     ForEach_ByteAttribute_If(
-        FCk_Handle InAttributeOwner,
-        const TFunction<void(FCk_Handle)>& InFunc,
-        const TFunction<bool(FCk_Handle)>& InPredicate)
+        FCk_Handle_ByteAttributeOwner& InAttributeOwner,
+        const TFunction<void(FCk_Handle_ByteAttribute)>& InFunc,
+        const TFunction<bool(FCk_Handle_ByteAttribute)>& InPredicate)
     -> void
 {
-    if (NOT Ensure_Any(InAttributeOwner))
-    { return; }
-
     RecordOfByteAttributes_Utils::ForEach_ValidEntry_If
     (
         InAttributeOwner,
-        [&](const FCk_Handle& InAttribute)
+        [&](const FCk_Handle_ByteAttribute& InAttribute)
         {
             if (InAttribute == InAttributeOwner)
             { return; }
@@ -217,10 +196,14 @@ auto
 auto
     UCk_Utils_ByteAttribute_UE::
     Get_BaseValue(
-        FCk_Handle InAttributeOwnerEntity,
+        const FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName)
     -> uint8
 {
+    CK_ENSURE_IF_NOT(Has_Attribute(InAttributeOwnerEntity, InAttributeName), TEXT("Attribute [{}] does NOT exist on Entity [{}]."),
+        InAttributeName, InAttributeOwnerEntity)
+    { return {}; }
+
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
         <ByteAttribute_Utils, RecordOfByteAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
     return ByteAttribute_Utils::Get_BaseValue(AttributeEntity);
@@ -229,10 +212,14 @@ auto
 auto
     UCk_Utils_ByteAttribute_UE::
     Get_BonusValue(
-        FCk_Handle InAttributeOwnerEntity,
+        const FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName)
     -> uint8
 {
+    CK_ENSURE_IF_NOT(Has_Attribute(InAttributeOwnerEntity, InAttributeName), TEXT("Attribute [{}] does NOT exist on Entity [{}]."),
+        InAttributeName, InAttributeOwnerEntity)
+    { return {}; }
+
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
         <ByteAttribute_Utils, RecordOfByteAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
     return ByteAttribute_Utils::Get_FinalValue(AttributeEntity) - ByteAttribute_Utils::Get_BaseValue(AttributeEntity);
@@ -241,10 +228,14 @@ auto
 auto
     UCk_Utils_ByteAttribute_UE::
     Get_FinalValue(
-        FCk_Handle InAttributeOwnerEntity,
+        const FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName)
     -> uint8
 {
+    CK_ENSURE_IF_NOT(Has_Attribute(InAttributeOwnerEntity, InAttributeName), TEXT("Attribute [{}] does NOT exist on Entity [{}]."),
+        InAttributeName, InAttributeOwnerEntity)
+    { return {}; }
+
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
         <ByteAttribute_Utils, RecordOfByteAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
     return ByteAttribute_Utils::Get_FinalValue(AttributeEntity);
@@ -253,9 +244,9 @@ auto
 auto
     UCk_Utils_ByteAttribute_UE::
     Request_Override(
-        FCk_Handle   InAttributeOwnerEntity,
+        FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
-        uint8        InNewBaseValue)
+        uint8 InNewBaseValue)
         -> void
 {
     const auto CurrentBaseValue = Get_BaseValue(InAttributeOwnerEntity, InAttributeName);
@@ -269,7 +260,7 @@ auto
 auto
     UCk_Utils_ByteAttribute_UE::
     BindTo_OnValueChanged(
-        FCk_Handle InAttributeOwnerEntity,
+        FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         ECk_Signal_BindingPolicy InBehavior,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
@@ -293,7 +284,7 @@ auto
 auto
     UCk_Utils_ByteAttribute_UE::
     UnbindFrom_OnValueChanged(
-        FCk_Handle InAttributeOwnerEntity,
+        FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         const FCk_Delegate_ByteAttribute_OnValueChanged& InDelegate)
     -> void
@@ -314,12 +305,18 @@ auto
 auto
     UCk_Utils_ByteAttributeModifier_UE::
     Add(
-        FCk_Handle InAttributeOwnerEntity,
+        FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InModifierName,
         const FCk_Fragment_ByteAttributeModifier_ParamsData& InParams)
     -> void
 {
     const auto& AttributeName = InParams.Get_TargetAttributeName();
+
+    if (InParams.Get_ModifierDelta() == 0 && InParams.Get_ModifierOperation() == ECk_ModifierOperation::Additive)
+    { return; }
+
+    if (InParams.Get_ModifierDelta() == 1 && InParams.Get_ModifierOperation() == ECk_ModifierOperation::Multiplicative)
+    { return; }
 
     const auto NewModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwnerEntity);
     UCk_Utils_GameplayLabel_UE::Add(NewModifierEntity, InModifierName);
@@ -349,7 +346,7 @@ auto
 auto
     UCk_Utils_ByteAttributeModifier_UE::
     Has(
-        FCk_Handle InAttributeOwnerEntity,
+        const FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         FGameplayTag InModifierName)
     -> bool
@@ -366,22 +363,8 @@ auto
 
 auto
     UCk_Utils_ByteAttributeModifier_UE::
-    Ensure(
-        FCk_Handle InAttributeOwnerEntity,
-        FGameplayTag InAttributeName,
-        FGameplayTag InModifierName)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(Has(InAttributeOwnerEntity, InAttributeName, InModifierName), TEXT("Handle [{}] does NOT have a Byte Attribute Modifier with name [{}]"), InAttributeOwnerEntity, InModifierName)
-    { return false; }
-
-    return true;
-}
-
-auto
-    UCk_Utils_ByteAttributeModifier_UE::
     Remove(
-        FCk_Handle InAttributeOwnerEntity,
+        FCk_Handle_ByteAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         FGameplayTag InModifierName)
     -> void

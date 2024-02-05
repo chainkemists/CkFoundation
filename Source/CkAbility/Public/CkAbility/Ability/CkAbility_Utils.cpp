@@ -18,6 +18,8 @@
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Ability, UCk_Utils_Ability_UE, FCk_Handle_Ability, ck::FFragment_Ability_Params, ck::FFragment_Ability_Current);
 
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_Ability_UE::
     Get_DisplayName(

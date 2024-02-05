@@ -34,18 +34,18 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
               DisplayName="[Ck][FloatAttribute] Add New Attribute")
-    static void
+    static FCk_Handle_FloatAttributeOwner
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_FloatAttribute_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
               DisplayName="[Ck][FloatAttribute] Add Multiple New Attributes")
-    static void
+    static FCk_Handle_FloatAttributeOwner
     AddMultiple(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_MultipleFloatAttribute_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
@@ -53,40 +53,41 @@ public:
               Category = "Ck|Utils|Attribute|Float",
               DisplayName="[Ck][FloatAttribute] Has Attribute")
     static bool
-    Has(
-        const FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag      InAttributeName);
+    Has_Attribute(
+        const FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
+        FGameplayTag InAttributeName);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
               DisplayName="[Ck][FloatAttribute] Has Any Attribute")
     static bool
-    Has_Any(
-        const FCk_Handle& InAttributeOwnerEntity);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Attribute|Float",
-              DisplayName="[Ck][FloatAttribute] Ensure Has Attribute")
-    static bool
-    Ensure(
-        FCk_Handle InAttributeOwnerEntity,
-        FGameplayTag InAttributeName);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Attribute|Float",
-              DisplayName="[Ck][FloatAttribute] Ensure Has Any Attribute")
-    static bool
-    Ensure_Any(
-        FCk_Handle InAttributeOwnerEntity);
+    Has_Any_Attribute(
+        const FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity);
 
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
-              DisplayName="[Ck][FloatAttribute] Get All Attributes",
-              meta=(DeprecatedFunction, DeprecationMessage="Use the ForEach variants"))
-    static TArray<FGameplayTag>
-    Get_All(
-        const FCk_Handle& InAttributeOwnerEntity);
+              DisplayName="[Ck][FloatAttribute] Has Feature")
+    static bool
+    Has(
+        const FCk_Handle& InEntity);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Attribute|Float",
+        DisplayName="[Ck][FloatAttribute] Cast",
+        meta = (ExpandEnumAsExecs = "OutResult"))
+    static FCk_Handle_FloatAttributeOwner
+    Cast(
+        const FCk_Handle&    InHandle,
+        ECk_SucceededFailed& OutResult);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Attribute|Float",
+        DisplayName="[Ck][FloatAttribute] Handle -> FloatAttributeOwner Handle",
+        meta = (CompactNodeTitle = "As FloatAttributeOwner", BlueprintAutocast))
+    static FCk_Handle_FloatAttributeOwner
+    Conv_HandleToFloatAttributeOwner(
+        const FCk_Handle& InHandle);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -94,30 +95,30 @@ public:
               DisplayName="[Ck][FloatAttribute] For Each",
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle>
-    ForEach(
-        FCk_Handle InAttributeOwner,
+    ForEach_FloatAttribute(
+        FCk_Handle_FloatAttributeOwner& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
-    ForEach(
-        const FCk_Handle& InAttributeOwner,
-        const TFunction<void(FCk_Handle)>& InFunc) -> void;
+    ForEach_FloatAttribute(
+        FCk_Handle_FloatAttributeOwner& InAttributeOwner,
+        const TFunction<void(FCk_Handle_FloatAttribute)>& InFunc) -> void;
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
               DisplayName="[Ck][FloatAttribute] For Each If",
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
-    static TArray<FCk_Handle>
-    ForEach_If(
-        FCk_Handle InAttributeOwner,
+    static TArray<FCk_Handle_FloatAttribute>
+    ForEach_FloatAttribute_If(
+        FCk_Handle_FloatAttributeOwner& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate);
     static auto
-    ForEach_If(
-        const FCk_Handle&                  InAttributeOwner,
-        const TFunction<void(FCk_Handle)>& InFunc,
-        const TFunction<bool(FCk_Handle)>& InPredicate) -> void;
+    ForEach_FloatAttribute_If(
+        FCk_Handle_FloatAttributeOwner& InAttributeOwner,
+        const TFunction<void(FCk_Handle_FloatAttribute)>& InFunc,
+        const TFunction<bool(FCk_Handle_FloatAttribute)>& InPredicate) -> void;
 
 public:
     UFUNCTION(BlueprintPure,
@@ -125,7 +126,7 @@ public:
               DisplayName="[Ck][FloatAttribute] Get Base Value")
     static float
     Get_BaseValue(
-        FCk_Handle InAttributeOwnerEntity,
+        const FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName);
 
     UFUNCTION(BlueprintPure,
@@ -133,7 +134,7 @@ public:
               DisplayName="[Ck][FloatAttribute] Get Bonus Value")
     static float
     Get_BonusValue(
-        FCk_Handle InAttributeOwnerEntity,
+        const FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName);
 
     UFUNCTION(BlueprintPure,
@@ -141,7 +142,7 @@ public:
               DisplayName="[Ck][FloatAttribute] Get Final Value")
     static float
     Get_FinalValue(
-        FCk_Handle InAttributeOwnerEntity,
+        const FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName);
 
 public:
@@ -150,7 +151,7 @@ public:
               DisplayName="[Ck][FloatAttribute] Request Override Base Value")
     static void
     Request_Override(
-        FCk_Handle InAttributeOwnerEntity,
+        FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         float InNewBaseValue);
 
@@ -160,7 +161,7 @@ public:
               DisplayName = "[Ck][FloatAttribute] Bind To OnValueChanged")
     static void
     BindTo_OnValueChanged(
-        FCk_Handle InAttributeOwnerEntity,
+        FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         ECk_Signal_BindingPolicy InBehavior,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
@@ -171,7 +172,7 @@ public:
               DisplayName = "[Ck][FloatAttribute] Unbind From OnValueChanged")
     static void
     UnbindFrom_OnValueChanged(
-        FCk_Handle InAttributeOwnerEntity,
+        FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate);
 };
@@ -195,7 +196,7 @@ public:
               DisplayName="[Ck][FloatAttribute] Add Modifier")
     static void
     Add(
-        FCk_Handle InAttributeOwnerEntity,
+        FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InModifierName,
         const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams);
 
@@ -204,16 +205,7 @@ public:
               DisplayName="[Ck][FloatAttribute] Has Modifier")
     static bool
     Has(
-        const FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag      InAttributeName,
-        FGameplayTag      InModifierName);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|AttributeModifier|Float",
-              DisplayName="[Ck][FloatAttribute] Ensure Has Modifier")
-    static bool
-    Ensure(
-        FCk_Handle InAttributeOwnerEntity,
+        const FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         FGameplayTag InModifierName);
 
@@ -222,7 +214,7 @@ public:
               DisplayName="[Ck][FloatAttribute] Remove Modifier")
     static void
     Remove(
-        FCk_Handle InAttributeOwnerEntity,
+        FCk_Handle_FloatAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         FGameplayTag InModifierName);
 };

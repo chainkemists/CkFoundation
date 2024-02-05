@@ -34,18 +34,18 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Vector",
               DisplayName="[Ck][VectorAttribute] Add New Attribute")
-    static void
+    static FCk_Handle_VectorAttributeOwner
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_VectorAttribute_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Vector",
               DisplayName="[Ck][VectorAttribute] Add Multiple New Attributes")
-    static void
+    static FCk_Handle_VectorAttributeOwner
     AddMultiple(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_MultipleVectorAttribute_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
@@ -53,31 +53,41 @@ public:
               Category = "Ck|Utils|Attribute|Vector",
               DisplayName="[Ck][VectorAttribute] Has Attribute")
     static bool
-    Has(
-        FCk_Handle InAttributeOwnerEntity,
-        FGameplayTag InAttributeName);
+    Has_Attribute(
+        const FCk_Handle& InAttributeOwnerEntity,
+        FGameplayTag      InAttributeName);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Vector",
               DisplayName="[Ck][VectorAttribute] Has Any Attribute")
     static bool
-    Has_Any(
-        FCk_Handle InAttributeOwnerEntity);
+    Has_Any_Attribute(
+        const FCk_Handle& InAttributeOwnerEntity);
 
+public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Vector",
-              DisplayName="[Ck][VectorAttribute] Ensure Has Attribute")
+              DisplayName="[Ck][VectorAttribute] Has Feature")
     static bool
-    Ensure(
-        FCk_Handle InAttributeOwnerEntity,
-        FGameplayTag InAttributeName);
+    Has(
+        const FCk_Handle& InEntity);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Attribute|Vector",
-              DisplayName="[Ck][VectorAttribute] Ensure Has Any Attribute")
-    static bool
-    Ensure_Any(
-        FCk_Handle InAttributeOwnerEntity);
+        Category = "Ck|Utils|Attribute|Vector",
+        DisplayName="[Ck][VectorAttribute] Cast",
+        meta = (ExpandEnumAsExecs = "OutResult"))
+    static FCk_Handle_VectorAttributeOwner
+    Cast(
+        const FCk_Handle&    InHandle,
+        ECk_SucceededFailed& OutResult);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Attribute|Vector",
+        DisplayName="[Ck][VectorAttribute] Handle -> VectorAttributeOwner Handle",
+        meta = (CompactNodeTitle = "As VectorAttributeOwner", BlueprintAutocast))
+    static FCk_Handle_VectorAttributeOwner
+    Conv_HandleToVectorAttributeOwner(
+        const FCk_Handle& InHandle);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -86,29 +96,29 @@ public:
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle>
     ForEach_VectorAttribute(
-        FCk_Handle InAttributeOwner,
+        FCk_Handle_VectorAttributeOwner& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_VectorAttribute(
-        const FCk_Handle&                  InAttributeOwner,
-        const TFunction<void(FCk_Handle)>& InFunc) -> void;
+        FCk_Handle_VectorAttributeOwner& InAttributeOwner,
+        const TFunction<void(FCk_Handle_VectorAttribute)>& InFunc) -> void;
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Vector",
               DisplayName="[Ck][VectorAttribute] For Each If",
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
-    static TArray<FCk_Handle>
+    static TArray<FCk_Handle_VectorAttribute>
     ForEach_VectorAttribute_If(
-        FCk_Handle InAttributeOwner,
+        FCk_Handle_VectorAttributeOwner& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate);
     static auto
     ForEach_VectorAttribute_If(
-        FCk_Handle InAttributeOwner,
-        const TFunction<void(FCk_Handle)>& InFunc,
-        const TFunction<bool(FCk_Handle)>& InPredicate) -> void;
+        FCk_Handle_VectorAttributeOwner& InAttributeOwner,
+        const TFunction<void(FCk_Handle_VectorAttribute)>& InFunc,
+        const TFunction<bool(FCk_Handle_VectorAttribute)>& InPredicate) -> void;
 
 public:
     UFUNCTION(BlueprintPure,
@@ -116,7 +126,7 @@ public:
               DisplayName="[Ck][VectorAttribute] Get Base Value")
     static FVector
     Get_BaseValue(
-        FCk_Handle InAttributeOwnerEntity,
+        const FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName);
 
     UFUNCTION(BlueprintPure,
@@ -124,7 +134,7 @@ public:
               DisplayName="[Ck][VectorAttribute] Get Bonus Value")
     static FVector
     Get_BonusValue(
-        FCk_Handle InAttributeOwnerEntity,
+        const FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName);
 
     UFUNCTION(BlueprintPure,
@@ -132,7 +142,7 @@ public:
               DisplayName="[Ck][VectorAttribute] Get Final Value")
     static FVector
     Get_FinalValue(
-        FCk_Handle InAttributeOwnerEntity,
+        const FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName);
 
 public:
@@ -141,10 +151,9 @@ public:
               DisplayName="[Ck][VectorAttribute] Request Override Base Value")
     static void
     Request_Override(
-        FCk_Handle InAttributeOwnerEntity,
+        FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         FVector InNewBaseValue);
-
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -152,7 +161,7 @@ public:
               DisplayName = "[Ck][VectorAttribute] Bind To OnValueChanged")
     static void
     BindTo_OnValueChanged(
-        FCk_Handle InAttributeOwnerEntity,
+        FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         ECk_Signal_BindingPolicy InBehavior,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
@@ -163,7 +172,7 @@ public:
               DisplayName = "[Ck][VectorAttribute] Unbind From OnValueChanged")
     static void
     UnbindFrom_OnValueChanged(
-        FCk_Handle InAttributeOwnerEntity,
+        FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         const FCk_Delegate_VectorAttribute_OnValueChanged& InDelegate);
 };
@@ -187,7 +196,7 @@ public:
               DisplayName="[Ck][VectorAttribute] Add Modifier")
     static void
     Add(
-        FCk_Handle InAttributeOwnerEntity,
+        FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InModifierName,
         const FCk_Fragment_VectorAttributeModifier_ParamsData& InParams);
 
@@ -196,16 +205,7 @@ public:
               DisplayName="[Ck][VectorAttribute] Has Modifier")
     static bool
     Has(
-        FCk_Handle InAttributeOwnerEntity,
-        FGameplayTag InAttributeName,
-        FGameplayTag InModifierName);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|AttributeModifier|Vector",
-              DisplayName="[Ck][VectorAttribute] Ensure Has Modifier")
-    static bool
-    Ensure(
-        FCk_Handle InAttributeOwnerEntity,
+        const FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         FGameplayTag InModifierName);
 
@@ -214,7 +214,7 @@ public:
               DisplayName="[Ck][VectorAttribute] Remove Modifier")
     static void
     Remove(
-        FCk_Handle InAttributeOwnerEntity,
+        FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         FGameplayTag InModifierName);
 };
