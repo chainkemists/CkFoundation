@@ -67,8 +67,7 @@ auto
             ck::Context(this))
         { continue; }
 
-        auto AttributeOwnerEntity = UCk_Utils_ByteAttribute_UE::Conv_HandleToByteAttributeOwner(Get_AssociatedEntity());
-        UCk_Utils_ByteAttributeModifier_UE::Add(AttributeOwnerEntity, Modifier.Get_ModifierName(), Modifier.Get_Params());
+        UCk_Utils_ByteAttributeModifier_UE::Add(_AssociatedEntity, Modifier.Get_ModifierName(), Modifier.Get_Params());
     }
     _NextPendingAddModifier = _PendingAddModifiers.Num();
 
@@ -82,8 +81,7 @@ auto
             ck::Context(this))
         { continue; }
 
-        auto AttributeOwnerEntity = UCk_Utils_ByteAttribute_UE::Conv_HandleToByteAttributeOwner(Get_AssociatedEntity());
-        UCk_Utils_ByteAttributeModifier_UE::Remove(AttributeOwnerEntity,
+        UCk_Utils_ByteAttributeModifier_UE::Remove(_AssociatedEntity,
             _PendingRemoveModifiers[Index].Get_AttributeName(),
             _PendingRemoveModifiers[Index].Get_ModifierName());
     }

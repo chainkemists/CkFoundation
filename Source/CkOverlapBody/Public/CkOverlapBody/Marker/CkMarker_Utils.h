@@ -75,6 +75,13 @@ public:
         UObject* InOuter,
         const FCk_Handle_Marker& InMarkerEntity);
 
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Marker",
+        DisplayName="[Ck][Marker] Has Any Markers")
+    static bool
+    Has_Any(
+        const FCk_Handle& InHandle);
+
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Marker",
@@ -103,7 +110,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Marker",
-              DisplayName="[Ck][Marker] Get Handle")
+              DisplayName="[Ck][Marker] Try Get Marker")
     static FCk_Handle_Marker
     TryGet_Marker(
         const FCk_Handle& InMarkerOwnerEntity,

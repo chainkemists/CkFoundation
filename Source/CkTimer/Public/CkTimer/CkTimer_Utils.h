@@ -92,7 +92,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Timer",
-              DisplayName="[Ck][Timer] Get Handle")
+              DisplayName="[Ck][Timer] Try Get Timer")
     static FCk_Handle_Timer
     TryGet_Timer(
         const FCk_Handle& InTimerOwnerEntity,

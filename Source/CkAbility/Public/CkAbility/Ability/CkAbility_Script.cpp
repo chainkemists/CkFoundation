@@ -229,7 +229,7 @@ auto
 auto
     UCk_Ability_Script_PDA::
     DoGet_AbilityEntity() const
-    -> FCk_Handle
+    -> FCk_Handle_Ability
 {
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
         TEXT("AbilityHandle is INVALID. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
@@ -242,7 +242,7 @@ auto
 auto
     UCk_Ability_Script_PDA::
     DoGet_AbilityOwnerEntity() const
-    -> FCk_Handle
+    -> FCk_Handle_AbilityOwner
 {
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityOwnerHandle()),
         TEXT("AbilityOwnerHandle is INVALID. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),

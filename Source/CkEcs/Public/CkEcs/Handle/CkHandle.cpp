@@ -30,8 +30,7 @@ FCk_Handle::
     , _Fragments(std::move(InOther._Fragments))
 #endif
 {
-    if (IsValid(ck::IsValid_Policy_Default{}) && UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable)
-    { std::ignore = UCk_Utils_HandleDebugger_Subsystem_UE::GetOrAdd_FragmentsDebug(*this); }
+    DoUpdate_FragmentDebugInfo_Blueprints();
 }
 
 FCk_Handle::
@@ -44,8 +43,7 @@ FCk_Handle::
     , _Fragments(InOther._Fragments)
 #endif
 {
-    if (IsValid(ck::IsValid_Policy_Default{}) && UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable)
-    { std::ignore = UCk_Utils_HandleDebugger_Subsystem_UE::GetOrAdd_FragmentsDebug(*this); }
+    DoUpdate_FragmentDebugInfo_Blueprints();
 }
 
 auto
@@ -62,9 +60,6 @@ FCk_Handle::
 {
     if (NOT IsValid(ck::IsValid_Policy_IncludePendingKill{}))
     { return; }
-
-    if (IsValid(ck::IsValid_Policy_Default{}) && UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Enable)
-    { DoUpdate_FragmentDebugInfo_Blueprints(); }
 }
 
 auto
@@ -184,13 +179,17 @@ auto
     DoUpdate_FragmentDebugInfo_Blueprints()
     -> void
 {
-    if (UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() != ECk_Ecs_HandleDebuggerBehavior::EnableWithBlueprintDebugging)
+    if (UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Disable)
     { return; }
 
     if (NOT IsValid(ck::IsValid_Policy_IncludePendingKill{}))
     { return; }
 
-    _Mapper = &_Registry->AddOrGet<FEntity_FragmentMapper>(_Entity);
+    if (ck::Is_NOT_Valid(_Mapper, ck::IsValid_Policy_NullptrOnly{}))
+    { _Mapper = &_Registry->AddOrGet<FEntity_FragmentMapper>(_Entity); }
+
+    if (UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() != ECk_Ecs_HandleDebuggerBehavior::EnableWithBlueprintDebugging)
+    { return; }
 
 #if WITH_EDITORONLY_DATA
     if (ck::Is_NOT_Valid(_Fragments))

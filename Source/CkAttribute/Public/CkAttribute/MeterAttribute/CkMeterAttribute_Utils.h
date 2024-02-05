@@ -53,7 +53,7 @@ public:
     CK_GENERATED_BODY(UCk_MeterAttribute_ConstructionScript_PDA);
 
     auto DoConstruct_Implementation(
-        FCk_Handle& InHandle,
+        FCk_Handle InHandle,
         const FInstancedStruct& InOptionalParams) -> void override;
 
 private:
@@ -98,7 +98,7 @@ public:
               DisplayName="[Ck][MeterAttribute] Add Multiple New Attributes")
     static void
     AddMultiple(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_MultipleMeterAttribute_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 

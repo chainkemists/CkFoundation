@@ -18,12 +18,6 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_VectorAttribut
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak="/Script/CkEcs.Ck_Utils_Handle_UE:Conv_HandleTypeSafeToHandle"))
-struct CKATTRIBUTE_API FCk_Handle_VectorAttributeOwner : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_VectorAttributeOwner); };
-CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_VectorAttributeOwner);
-
-// --------------------------------------------------------------------------------------------------------------------
-
 USTRUCT(BlueprintType)
 struct CKATTRIBUTE_API FCk_Fragment_VectorAttribute_ParamsData
 {

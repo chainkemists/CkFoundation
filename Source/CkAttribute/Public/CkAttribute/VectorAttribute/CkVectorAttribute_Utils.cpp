@@ -16,7 +16,7 @@ auto
         FCk_Handle& InHandle,
         const FCk_Fragment_VectorAttribute_ParamsData& InParams,
         ECk_Replication InReplicates)
-    -> FCk_Handle_VectorAttributeOwner
+    -> FCk_Handle
 {
     RecordOfVectorAttributes_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 
@@ -46,7 +46,7 @@ auto
         UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_VectorAttribute_Rep>(InHandle);
     }
 
-    return Conv_HandleToVectorAttributeOwner(InHandle);
+    return InHandle;
 }
 
 auto
@@ -55,14 +55,14 @@ auto
         FCk_Handle& InHandle,
         const FCk_Fragment_MultipleVectorAttribute_ParamsData& InParams,
         ECk_Replication InReplicates)
-    -> FCk_Handle_VectorAttributeOwner
+    -> FCk_Handle
 {
     for (const auto& Param : InParams.Get_VectorAttributeParams())
     {
         Add(InHandle, Param, InReplicates);
     }
 
-    return Conv_HandleToVectorAttributeOwner(InHandle);
+    return InHandle;
 }
 
 auto
@@ -88,14 +88,10 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(VectorAttributeOwner, UCk_Utils_VectorAttribute_UE, FCk_Handle_VectorAttributeOwner, RecordOfVectorAttributes_Utils::RecordType);
-
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     UCk_Utils_VectorAttribute_UE::
     ForEach_VectorAttribute(
-        FCk_Handle_VectorAttributeOwner& InAttributeOwner,
+        FCk_Handle& InAttributeOwner,
         const FInstancedStruct&    InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
     -> TArray<FCk_Handle>
@@ -116,7 +112,7 @@ auto
 auto
     UCk_Utils_VectorAttribute_UE::
     ForEach_VectorAttribute(
-        FCk_Handle_VectorAttributeOwner& InAttributeOwner,
+        FCk_Handle& InAttributeOwner,
         const TFunction<void(FCk_Handle_VectorAttribute)>& InFunc)
     -> void
 {
@@ -136,7 +132,7 @@ auto
 auto
     UCk_Utils_VectorAttribute_UE::
     ForEach_VectorAttribute_If(
-        FCk_Handle_VectorAttributeOwner& InAttributeOwner,
+        FCk_Handle& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate)
@@ -174,7 +170,7 @@ auto
 auto
     UCk_Utils_VectorAttribute_UE::
     ForEach_VectorAttribute_If(
-        FCk_Handle_VectorAttributeOwner& InAttributeOwner,
+        FCk_Handle& InAttributeOwner,
         const TFunction<void(FCk_Handle_VectorAttribute)>& InFunc,
         const TFunction<bool(FCk_Handle_VectorAttribute)>& InPredicate)
     -> void
@@ -196,7 +192,7 @@ auto
 auto
     UCk_Utils_VectorAttribute_UE::
     Get_BaseValue(
-        const FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
+        const FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName)
     -> FVector
 {
@@ -212,7 +208,7 @@ auto
 auto
     UCk_Utils_VectorAttribute_UE::
     Get_BonusValue(
-        const FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
+        const FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName)
     -> FVector
 {
@@ -228,7 +224,7 @@ auto
 auto
     UCk_Utils_VectorAttribute_UE::
     Get_FinalValue(
-        const FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
+        const FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName)
     -> FVector
 {
@@ -244,7 +240,7 @@ auto
 auto
     UCk_Utils_VectorAttribute_UE::
     Request_Override(
-        FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
+        FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         FVector InNewBaseValue)
         -> void
@@ -260,7 +256,7 @@ auto
 auto
     UCk_Utils_VectorAttribute_UE::
     BindTo_OnValueChanged(
-        FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
+        FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         ECk_Signal_BindingPolicy InBehavior,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
@@ -284,7 +280,7 @@ auto
 auto
     UCk_Utils_VectorAttribute_UE::
     UnbindFrom_OnValueChanged(
-        FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
+        FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         const FCk_Delegate_VectorAttribute_OnValueChanged& InDelegate)
     -> void
@@ -305,7 +301,7 @@ auto
 auto
     UCk_Utils_VectorAttributeModifier_UE::
     Add(
-        FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
+        FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InModifierName,
         const FCk_Fragment_VectorAttributeModifier_ParamsData& InParams)
     -> void
@@ -346,7 +342,7 @@ auto
 auto
     UCk_Utils_VectorAttributeModifier_UE::
     Has(
-        const FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
+        const FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         FGameplayTag InModifierName)
     -> bool
@@ -364,7 +360,7 @@ auto
 auto
     UCk_Utils_VectorAttributeModifier_UE::
     Remove(
-        FCk_Handle_VectorAttributeOwner& InAttributeOwnerEntity,
+        FCk_Handle& InAttributeOwnerEntity,
         FGameplayTag InAttributeName,
         FGameplayTag InModifierName)
     -> void

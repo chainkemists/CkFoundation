@@ -166,28 +166,30 @@ namespace ck
         { return; }
 
         const auto PostAbilityCreationFunc =
-        [&InAbilityOwnerEntity, AbilityScriptClass, &AbilityParams](FCk_Handle& InAbilityEntity) -> void
+        [InAbilityOwnerEntity, AbilityScriptClass, AbilityParams](FCk_Handle& InAbilityEntity) -> void
         {
+            auto AbilityOwnerEntity = InAbilityOwnerEntity;
+
             ability::VeryVerbose
             (
                 TEXT("Giving Ability [Class: {} | Entity: {}] to Ability Owner [{}]"),
                 AbilityScriptClass,
                 InAbilityEntity,
-                InAbilityOwnerEntity
+                AbilityOwnerEntity
             );
 
             UCk_Utils_Handle_UE::Set_DebugName(InAbilityEntity,
                 UCk_Utils_Debug_UE::Get_DebugName(AbilityParams.Get_AbilityScriptClass(), ECk_DebugNameVerbosity_Policy::Compact));
 
             auto AbilityHandle = UCk_Utils_Ability_UE::Conv_HandleToAbility(InAbilityEntity);
-            UCk_Utils_Ability_UE::DoGive(InAbilityOwnerEntity, AbilityHandle);
+            UCk_Utils_Ability_UE::DoGive(AbilityOwnerEntity, AbilityHandle);
 
             if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(AbilityHandle).Get_ActivationPolicy();
                 ActivationPolicy == ECk_Ability_Activation_Policy::ActivateOnGranted)
             {
                 // TODO: Activation Context Entity for SelfActivating Abilities is the Owner of the Ability
-                UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(InAbilityOwnerEntity,
-                    FCk_Request_AbilityOwner_ActivateAbility{InAbilityEntity, FCk_Ability_ActivationPayload{}.Set_ContextEntity(InAbilityOwnerEntity)});
+                UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(AbilityOwnerEntity,
+                    FCk_Request_AbilityOwner_ActivateAbility{InAbilityEntity, FCk_Ability_ActivationPayload{}.Set_ContextEntity(AbilityOwnerEntity)});
             }
         };
 
