@@ -2,12 +2,21 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkCore/Macros/CkMacros.h"
+
+#include "CkEcs/Handle/CkHandle_TypeSafe.h"
+
 #include "CkProvider/Public/CkProvider/CkProvider_Data.h"
 
 #include <GameplayTagContainer.h>
 #include <Animation/AnimationAsset.h>
 
 #include "CkAnimAsset_Fragment_Data.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak="/Script/CkEcs.Ck_Utils_Handle_UE:Conv_HandleTypeSafeToHandle"))
+struct CKANIMATION_API FCk_Handle_AnimAsset : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_AnimAsset); };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_AnimAsset);
 
 // --------------------------------------------------------------------------------------------------------------------
 
