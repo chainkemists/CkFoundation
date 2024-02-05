@@ -235,7 +235,7 @@ namespace ck
         { return; }
 
         const auto& OverlappedMarkerEnableDisable = UCk_Utils_Marker_UE::
-            Get_EnableDisable(OverlappedMarkerEntity, OverlappedMarkerName);
+            Get_EnableDisable(OverlappedMarkerEntity);
 
         CK_ENSURE_IF_NOT(OverlappedMarkerEnableDisable == ECk_EnableDisable::Enable,
             TEXT("Sensor [Name: {} | Entity: {}] received BeginOverlap with Marker [Name: {} | Entity: {}] that is DISABLED"),
@@ -298,7 +298,7 @@ namespace ck
         if (NOT InCurrentComp._CurrentMarkerOverlaps.Get_HasOverlapWithMarker(OverlappedMarkerDetails))
         { return; }
 
-        const auto& OverlappedMarkerEnableDisable = UCk_Utils_Marker_UE::Get_EnableDisable(OverlappedMarkerEntity, OverlappedMarkerName);
+        const auto& OverlappedMarkerEnableDisable = UCk_Utils_Marker_UE::Get_EnableDisable(OverlappedMarkerEntity);
 
         CK_ENSURE_IF_NOT(OverlappedMarkerEnableDisable == ECk_EnableDisable::Enable,
             TEXT("Sensor [Name: {} | Entity: {}] received EndOverlap with Marker [Name: {} | Entity: {}] that is DISABLED"),
