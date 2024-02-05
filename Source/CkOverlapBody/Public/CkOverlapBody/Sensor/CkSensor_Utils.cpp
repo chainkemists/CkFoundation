@@ -11,13 +11,14 @@
 auto
     UCk_Utils_Sensor_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_Sensor_ParamsData& InParams,
         ECk_Net_ReplicationType InReplicationType)
-    -> void
+    -> FCk_Handle_Sensor
 {
-    CK_ENSURE_IF_NOT(UCk_Utils_OwningActor_UE::Has(InHandle), TEXT("Cannot Add a Sensor to Entity [{}] because it does NOT have an Owning Actor"), InHandle)
-    { return; }
+    CK_ENSURE_IF_NOT(UCk_Utils_OwningActor_UE::Has(InHandle),
+        TEXT("Cannot Add a Sensor to Entity [{}] because it does NOT have an Owning Actor"), InHandle)
+    { return {}; }
 
     const auto& SensorName = InParams.Get_SensorName();
 
@@ -31,90 +32,73 @@ auto
             InReplicationType
         );
 
-        return;
+        return {};
     }
 
     auto ParamsToUse = InParams;
     ParamsToUse.Set_ReplicationType(InReplicationType);
 
-    auto NewSensorEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InSensorEntity)
+    auto NewSensorEntity = Conv_HandleToSensor(UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle,
+    [&](FCk_Handle InSensorEntity)
     {
         InSensorEntity.Add<ck::FFragment_Sensor_Params>(ParamsToUse);
         InSensorEntity.Add<ck::FFragment_Sensor_Current>(ParamsToUse.Get_StartingState());
         InSensorEntity.Add<ck::FTag_Sensor_NeedsSetup>();
 
         UCk_Utils_GameplayLabel_UE::Add(InSensorEntity, SensorName);
-    });
+    }));
 
     RecordOfSensors_Utils::AddIfMissing(InHandle ,ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
     RecordOfSensors_Utils::Request_Connect(InHandle, NewSensorEntity);
+
+    return NewSensorEntity;
 }
 
 
 auto
     UCk_Utils_Sensor_UE::
     AddMultiple(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_MultipleSensor_ParamsData& InParams,
         ECk_Net_ReplicationType InReplicationType)
-    -> void
+    -> TArray<FCk_Handle_Sensor>
 {
-    for (const auto& Params : InParams.Get_SensorParams())
+    return ck::algo::Transform<TArray<FCk_Handle_Sensor>>(InParams.Get_SensorParams(),
+    [&](const FCk_Fragment_Sensor_ParamsData& InSensorParams)
     {
-        Add(InHandle, Params, InReplicationType);
-    }
+        return Add(InHandle, InSensorParams, InReplicationType);
+    });
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Sensor, UCk_Utils_Sensor_UE, FCk_Handle_Sensor, ck::FFragment_Sensor_Params, ck::FFragment_Sensor_Current);
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_Sensor_UE::
-    Has(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName)
-    -> bool
+    TryGet_Sensor(
+        const FCk_Handle& InSensorOwnerEntity,
+        FGameplayTag      InSensorName)
+    -> FCk_Handle_Sensor
 {
-    const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+    return Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Sensor_UE,
         RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
-
-    return ck::IsValid(SensorEntity);
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    Has_Any(
-        FCk_Handle InSensorOwnerEntity)
-    -> bool
-{
-    return RecordOfSensors_Utils::Has(InSensorOwnerEntity);
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    Ensure_Any(
-        FCk_Handle InSensorOwnerEntity)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(Has_Any(InSensorOwnerEntity), TEXT("Handle [{}] does NOT have any Sensor"), InSensorOwnerEntity)
-    { return false; }
-
-    return true;
 }
 
 auto
     UCk_Utils_Sensor_UE::
     Get_All(
-        FCk_Handle InSensorOwnerEntity)
-    -> TArray<FGameplayTag>
+        const FCk_Handle& InSensorOwnerEntity)
+    -> TArray<FCk_Handle_Sensor>
 {
-    if (NOT Has_Any(InSensorOwnerEntity))
-    { return {}; }
-
-    auto AllSensors = TArray<FGameplayTag>{};
+    auto AllSensors = TArray<FCk_Handle_Sensor>{};
 
     RecordOfSensors_Utils::ForEach_ValidEntry(InSensorOwnerEntity, [&](FCk_Handle InSensorEntity)
     {
-        AllSensors.Emplace(UCk_Utils_GameplayLabel_UE::Get_Label(InSensorEntity));
+        AllSensors.Emplace(InSensorEntity);
     });
 
     return AllSensors;
@@ -122,28 +106,12 @@ auto
 
 auto
     UCk_Utils_Sensor_UE::
-    Ensure(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(Has(InSensorOwnerEntity ,InSensorName), TEXT("Handle [{}] does NOT have a Sensor with Name [{}]"), InSensorOwnerEntity, InSensorName)
-    { return false; }
-
-    return true;
-}
-
-auto
-    UCk_Utils_Sensor_UE::
     PreviewAll(
-        UObject*   InOuter,
-        FCk_Handle InHandle)
+        UObject* InOuter,
+        const FCk_Handle& InHandle)
     -> void
 {
-    if (NOT Has_Any(InHandle))
-    { return; }
-
-    RecordOfSensors_Utils::ForEach_ValidEntry(InHandle, [&](FCk_Handle InSensorEntity)
+    RecordOfSensors_Utils::ForEach_ValidEntry(InHandle, [&](const FCk_Handle& InSensorEntity)
     {
         DoPreviewSensor(InOuter, InSensorEntity);
     });
@@ -153,25 +121,297 @@ auto
     UCk_Utils_Sensor_UE::
     Preview(
         UObject* InOuter,
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName)
+        const FCk_Handle_Sensor& InSensorEntity)
     -> void
 {
-    if (NOT Ensure(InSensorOwnerEntity, InSensorName))
-    { return; }
+    DoPreviewSensor(InOuter, InSensorEntity);
+}
 
-    const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
+auto
+    UCk_Utils_Sensor_UE::
+    Get_ReplicationType(
+        const FCk_Handle_Sensor& InSensorEntity)
+    -> ECk_Net_ReplicationType
+{
+    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_ReplicationType();
+}
 
-    DoPreviewSensor(InOuter, SensorEntity);
+auto
+    UCk_Utils_Sensor_UE::
+    Get_PhysicsInfo(
+        const FCk_Handle_Sensor& InSensorEntity)
+    -> FCk_Sensor_PhysicsInfo
+{
+    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_PhysicsParams();
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    Get_ShapeInfo(
+        const FCk_Handle_Sensor& InSensorEntity)
+    -> FCk_Sensor_ShapeInfo
+{
+    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_ShapeParams();
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    Get_DebugInfo(
+        const FCk_Handle_Sensor& InSensorEntity)
+    -> FCk_Sensor_DebugInfo
+{
+    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_DebugParams();
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    Get_EnableDisable(
+        const FCk_Handle_Sensor& InSensorEntity)
+    -> ECk_EnableDisable
+{
+    return InSensorEntity.Get<ck::FFragment_Sensor_Current>().Get_EnableDisable();
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    Get_AllMarkerOverlaps(
+        const FCk_Handle_Sensor& InSensorEntity)
+    -> FCk_Sensor_MarkerOverlaps
+{
+    return InSensorEntity.Get<ck::FFragment_Sensor_Current>().Get_CurrentMarkerOverlaps();
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    Get_HasMarkerOverlaps(
+        const FCk_Handle_Sensor& InSensorEntity)
+    -> bool
+{
+    return NOT Get_AllMarkerOverlaps(InSensorEntity).Get_Overlaps().IsEmpty();
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    Get_AllNonMarkerOverlaps(
+        const FCk_Handle_Sensor& InSensorEntity)
+    -> FCk_Sensor_NonMarkerOverlaps
+{
+    return InSensorEntity.Get<ck::FFragment_Sensor_Current>().Get_CurrentNonMarkerOverlaps();
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    Get_HasNonMarkerOverlaps(
+        const FCk_Handle_Sensor& InSensorEntity)
+    -> bool
+{
+    return NOT Get_AllNonMarkerOverlaps(InSensorEntity).Get_Overlaps().IsEmpty();
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    Get_ShapeComponent(
+        const FCk_Handle_Sensor& InSensorEntity)
+    -> UShapeComponent*
+{
+    return InSensorEntity.Get<ck::FFragment_Sensor_Current>().Get_Sensor().Get();
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    Get_AttachedEntityAndActor(
+        const FCk_Handle_Sensor& InSensorEntity)
+    -> FCk_EntityOwningActor_BasicDetails
+{
+    return InSensorEntity.Get<ck::FFragment_Sensor_Current>().Get_AttachedEntityAndActor();
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    Request_EnableDisable(
+        FCk_Handle_Sensor& InSensorEntity,
+        const FCk_Request_Sensor_EnableDisable& InRequest)
+    -> FCk_Handle_Sensor
+{
+    InSensorEntity.AddOrGet<ck::FFragment_Sensor_Requests>()._EnableDisableRequest = InRequest;
+
+    return InSensorEntity;
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    BindTo_OnEnableDisable(
+        FCk_Handle_Sensor& InSensorEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        const FCk_Delegate_Sensor_OnEnableDisable& InDelegate)
+    -> FCk_Handle_Sensor
+{
+    ck::UUtils_Signal_OnSensorEnableDisable::Bind(InSensorEntity, InDelegate, InBindingPolicy);
+
+    return InSensorEntity;
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    UnbindFrom_OnEnableDisable(
+        FCk_Handle_Sensor& InSensorEntity,
+        const FCk_Delegate_Sensor_OnEnableDisable& InDelegate)
+    -> FCk_Handle_Sensor
+{
+    ck::UUtils_Signal_OnSensorEnableDisable::Unbind(InSensorEntity, InDelegate);
+
+    return InSensorEntity;
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    BindTo_OnBeginOverlap(
+        FCk_Handle_Sensor& InSensorEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        const FCk_Delegate_Sensor_OnBeginOverlap& InDelegate)
+    -> FCk_Handle_Sensor
+{
+    ck::UUtils_Signal_OnSensorBeginOverlap::Bind(InSensorEntity, InDelegate, InBindingPolicy);
+
+    return InSensorEntity;
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    UnbindFrom_OnBeginOverlap(
+        FCk_Handle_Sensor& InSensorEntity,
+        const FCk_Delegate_Sensor_OnBeginOverlap& InDelegate)
+    -> FCk_Handle_Sensor
+{
+    ck::UUtils_Signal_OnSensorBeginOverlap::Unbind(InSensorEntity, InDelegate);
+
+    return InSensorEntity;
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    BindTo_OnEndOverlap(
+        FCk_Handle_Sensor& InSensorEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        const FCk_Delegate_Sensor_OnEndOverlap& InDelegate)
+    -> FCk_Handle_Sensor
+{
+    ck::UUtils_Signal_OnSensorEndOverlap::Bind(InSensorEntity, InDelegate, InBindingPolicy);
+
+    return InSensorEntity;
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    UnbindFrom_OnEndOverlap(
+        FCk_Handle_Sensor& InSensorEntity,
+        const FCk_Delegate_Sensor_OnEndOverlap& InDelegate)
+    -> FCk_Handle_Sensor
+{
+    ck::UUtils_Signal_OnSensorEndOverlap::Unbind(InSensorEntity, InDelegate);
+
+    return InSensorEntity;
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    BindTo_OnBeginOverlap_NonMarker(
+        FCk_Handle_Sensor& InSensorEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        const FCk_Delegate_Sensor_OnBeginOverlap_NonMarker& InDelegate)
+    -> FCk_Handle_Sensor
+{
+    ck::UUtils_Signal_OnSensorBeginOverlap_NonMarker::Bind(InSensorEntity, InDelegate, InBindingPolicy);
+
+    return InSensorEntity;
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    UnbindFrom_OnBeginOverlap_NonMarker(
+        FCk_Handle_Sensor& InSensorEntity,
+        const FCk_Delegate_Sensor_OnBeginOverlap_NonMarker& InDelegate)
+    -> FCk_Handle_Sensor
+{
+    ck::UUtils_Signal_OnSensorBeginOverlap_NonMarker::Unbind(InSensorEntity, InDelegate);
+
+    return InSensorEntity;
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    BindTo_OnEndOverlap_NonMarker(
+        FCk_Handle_Sensor& InSensorEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        const FCk_Delegate_Sensor_OnEndOverlap_NonMarker& InDelegate)
+    -> FCk_Handle_Sensor
+{
+    ck::UUtils_Signal_OnSensorEndOverlap_NonMarker::Bind(InSensorEntity, InDelegate, InBindingPolicy);
+
+    return InSensorEntity;
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    UnbindFrom_OnEndOverlap_NonMarker(
+        FCk_Handle_Sensor& InSensorEntity,
+        const FCk_Delegate_Sensor_OnEndOverlap_NonMarker& InDelegate)
+    -> FCk_Handle_Sensor
+{
+    ck::UUtils_Signal_OnSensorEndOverlap_NonMarker::Unbind(InSensorEntity, InDelegate);
+
+    return InSensorEntity;
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    Request_OnBeginOverlap(
+        FCk_Handle_Sensor& InSensorHandle,
+        const FCk_Request_Sensor_OnBeginOverlap& InRequest)
+    -> void
+{
+    auto& RequestsComp = InSensorHandle.AddOrGet<ck::FFragment_Sensor_Requests>();
+    RequestsComp._BeginOrEndOverlapRequests.Emplace(InRequest);
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    Request_OnEndOverlap(
+        FCk_Handle_Sensor& InSensorHandle,
+        const FCk_Request_Sensor_OnEndOverlap& InRequest)
+    -> void
+{
+    auto& RequestsComp = InSensorHandle.AddOrGet<ck::FFragment_Sensor_Requests>();
+    RequestsComp._BeginOrEndOverlapRequests.Emplace(InRequest);
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    Request_OnBeginOverlap_NonMarker(
+        FCk_Handle_Sensor& InSensorHandle,
+        const FCk_Request_Sensor_OnBeginOverlap_NonMarker& InRequest)
+    -> void
+{
+    auto& RequestsComp = InSensorHandle.AddOrGet<ck::FFragment_Sensor_Requests>();
+    RequestsComp._BeginOrEndOverlapRequests.Emplace(InRequest);
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    Request_OnEndOverlap_NonMarker(
+        FCk_Handle_Sensor& InSensorHandle,
+        const FCk_Request_Sensor_OnEndOverlap_NonMarker& InRequest)
+    -> void
+{
+    auto& RequestsComp = InSensorHandle.AddOrGet<ck::FFragment_Sensor_Requests>();
+    RequestsComp._BeginOrEndOverlapRequests.Emplace(InRequest);
 }
 
 auto
     UCk_Utils_Sensor_UE::
     DoPreviewSensor(
         UObject* InOuter,
-        FCk_Handle InHandle)
+        const FCk_Handle_Sensor& InHandle)
     -> void
 {
     const auto& Params = InHandle.Get<ck::FFragment_Sensor_Params>();
@@ -180,456 +420,13 @@ auto
     UCk_Utils_MarkerAndSensor_UE::Draw_Sensor_DebugLines(InOuter, Current, Params.Get_Params());
 }
 
-auto
-    UCk_Utils_Sensor_UE::
-    Get_ReplicationType(
-        FCk_Handle   InSensorOwnerEntity,
-        FGameplayTag InSensorName)
-    -> ECk_Net_ReplicationType
-{
-    if (NOT Ensure(InSensorOwnerEntity, InSensorName))
-    { return {}; }
-
-    const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
-
-    return SensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_ReplicationType();
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    Get_PhysicsInfo(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName)
-    -> FCk_Sensor_PhysicsInfo
-{
-    if (NOT Ensure(InSensorOwnerEntity, InSensorName))
-    { return {}; }
-
-    const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
-
-    return SensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_PhysicsParams();
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    Get_ShapeInfo(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName)
-    -> FCk_Sensor_ShapeInfo
-{
-    if (NOT Ensure(InSensorOwnerEntity, InSensorName))
-    { return {}; }
-
-    const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
-
-    return SensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_ShapeParams();
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    Get_DebugInfo(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName)
-    -> FCk_Sensor_DebugInfo
-{
-    if (NOT Ensure(InSensorOwnerEntity, InSensorName))
-    { return {}; }
-
-    const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
-
-    return SensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_DebugParams();
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    Get_EnableDisable(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName)
-    -> ECk_EnableDisable
-{
-    if (NOT Ensure(InSensorOwnerEntity, InSensorName))
-    { return {}; }
-
-    const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
-
-    return SensorEntity.Get<ck::FFragment_Sensor_Current>().Get_EnableDisable();
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    Get_AllMarkerOverlaps(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName)
-    -> FCk_Sensor_MarkerOverlaps
-{
-    if (NOT Ensure(InSensorOwnerEntity, InSensorName))
-    { return {}; }
-
-    const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
-
-    return SensorEntity.Get<ck::FFragment_Sensor_Current>().Get_CurrentMarkerOverlaps();
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    Get_HasMarkerOverlaps(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName)
-    -> bool
-{
-    return NOT Get_AllMarkerOverlaps(InSensorOwnerEntity, InSensorName).Get_Overlaps().IsEmpty();
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    Get_AllNonMarkerOverlaps(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName)
-    -> FCk_Sensor_NonMarkerOverlaps
-{
-    if (NOT Ensure(InSensorOwnerEntity, InSensorName))
-    { return {}; }
-
-    const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
-
-    return SensorEntity.Get<ck::FFragment_Sensor_Current>().Get_CurrentNonMarkerOverlaps();
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    Get_HasNonMarkerOverlaps(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName)
-    -> bool
-{
-    return NOT Get_AllNonMarkerOverlaps(InSensorOwnerEntity, InSensorName).Get_Overlaps().IsEmpty();
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    Get_ShapeComponent(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName)
-    -> UShapeComponent*
-{
-    if (NOT Ensure(InSensorOwnerEntity, InSensorName))
-    { return {}; }
-
-    const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
-
-    return SensorEntity.Get<ck::FFragment_Sensor_Current>().Get_Sensor().Get();
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    Get_AttachedEntityAndActor(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName)
-    -> FCk_EntityOwningActor_BasicDetails
-{
-    if (NOT Ensure(InSensorOwnerEntity, InSensorName))
-    { return {}; }
-
-    const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
-
-    return SensorEntity.Get<ck::FFragment_Sensor_Current>().Get_AttachedEntityAndActor();
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    Request_EnableDisable(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName,
-        const FCk_Request_Sensor_EnableDisable& InRequest)
-    -> void
-{
-    if (NOT Ensure(InSensorOwnerEntity, InSensorName))
-    { return; }
-
-    auto SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
-
-    SensorEntity.AddOrGet<ck::FFragment_Sensor_Requests>()._EnableDisableRequest = InRequest;
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    BindTo_OnEnableDisable(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Sensor_OnEnableDisable& InDelegate)
-    -> void
-{
-    if (NOT Ensure(InSensorOwnerEntity, InSensorName))
-    { return; }
-
-    const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
-
-    ck::UUtils_Signal_OnSensorEnableDisable::Bind(SensorEntity, InDelegate, InBindingPolicy);
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    UnbindFrom_OnEnableDisable(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName,
-        const FCk_Delegate_Sensor_OnEnableDisable& InDelegate)
-    -> void
-{
-    if (NOT Ensure(InSensorOwnerEntity, InSensorName))
-    { return; }
-
-    const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
-
-    ck::UUtils_Signal_OnSensorEnableDisable::Unbind(SensorEntity, InDelegate);
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    BindTo_OnBeginOverlap(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Sensor_OnBeginOverlap& InDelegate)
-    -> void
-{
-    if (NOT Ensure(InSensorOwnerEntity, InSensorName))
-    { return; }
-
-    const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
-
-    ck::UUtils_Signal_OnSensorBeginOverlap::Bind(SensorEntity, InDelegate, InBindingPolicy);
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    UnbindFrom_OnBeginOverlap(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName,
-        const FCk_Delegate_Sensor_OnBeginOverlap& InDelegate)
-    -> void
-{
-    if (NOT Ensure(InSensorOwnerEntity, InSensorName))
-    { return; }
-
-    const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
-
-    ck::UUtils_Signal_OnSensorBeginOverlap::Unbind(SensorEntity, InDelegate);
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    BindTo_OnEndOverlap(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Sensor_OnEndOverlap& InDelegate)
-    -> void
-{
-    if (NOT Ensure(InSensorOwnerEntity, InSensorName))
-    { return; }
-
-    const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
-
-    ck::UUtils_Signal_OnSensorEndOverlap::Bind(SensorEntity, InDelegate, InBindingPolicy);
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    UnbindFrom_OnEndOverlap(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName,
-        const FCk_Delegate_Sensor_OnEndOverlap& InDelegate)
-    -> void
-{
-    if (NOT Ensure(InSensorOwnerEntity, InSensorName))
-    { return; }
-
-    const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
-
-    ck::UUtils_Signal_OnSensorEndOverlap::Unbind(SensorEntity, InDelegate);
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    BindTo_OnBeginOverlap_NonMarker(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Sensor_OnBeginOverlap_NonMarker& InDelegate)
-    -> void
-{
-    if (NOT Ensure(InSensorOwnerEntity, InSensorName))
-    { return; }
-
-    const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
-
-    ck::UUtils_Signal_OnSensorBeginOverlap_NonMarker::Bind(SensorEntity, InDelegate, InBindingPolicy);
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    UnbindFrom_OnBeginOverlap_NonMarker(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName,
-        const FCk_Delegate_Sensor_OnBeginOverlap_NonMarker& InDelegate)
-    -> void
-{
-    if (NOT Ensure(InSensorOwnerEntity, InSensorName))
-    { return; }
-
-    const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
-
-    ck::UUtils_Signal_OnSensorBeginOverlap_NonMarker::Unbind(SensorEntity, InDelegate);
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    BindTo_OnEndOverlap_NonMarker(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName,
-        ECk_Signal_BindingPolicy InBindingPolicy,
-        const FCk_Delegate_Sensor_OnEndOverlap_NonMarker& InDelegate)
-    -> void
-{
-    if (NOT Ensure(InSensorOwnerEntity, InSensorName))
-    { return; }
-
-    const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
-
-    ck::UUtils_Signal_OnSensorEndOverlap_NonMarker::Bind(SensorEntity, InDelegate, InBindingPolicy);
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    UnbindFrom_OnEndOverlap_NonMarker(
-        FCk_Handle InSensorOwnerEntity,
-        FGameplayTag InSensorName,
-        const FCk_Delegate_Sensor_OnEndOverlap_NonMarker& InDelegate)
-    -> void
-{
-    if (NOT Ensure(InSensorOwnerEntity, InSensorName))
-    { return; }
-
-    const auto& SensorEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
-
-    ck::UUtils_Signal_OnSensorEndOverlap_NonMarker::Unbind(SensorEntity, InDelegate);
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    Request_OnBeginOverlap(
-        FCk_Handle InSensorHandle,
-        const FCk_Request_Sensor_OnBeginOverlap& InRequest)
-    -> void
-{
-    if (NOT Ensure(InSensorHandle, UCk_Utils_GameplayLabel_UE::Get_Label(InSensorHandle)))
-    { return; }
-
-    auto& requestsComp = InSensorHandle.AddOrGet<ck::FFragment_Sensor_Requests>();
-    requestsComp._BeginOrEndOverlapRequests.Emplace(InRequest);
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    Request_OnEndOverlap(
-        FCk_Handle InSensorHandle,
-        const FCk_Request_Sensor_OnEndOverlap& InRequest)
-    -> void
-{
-    if (NOT Ensure(InSensorHandle, UCk_Utils_GameplayLabel_UE::Get_Label(InSensorHandle)))
-    { return; }
-
-    auto& requestsComp = InSensorHandle.AddOrGet<ck::FFragment_Sensor_Requests>();
-    requestsComp._BeginOrEndOverlapRequests.Emplace(InRequest);
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    Request_OnBeginOverlap_NonMarker(
-        FCk_Handle InSensorHandle,
-        const FCk_Request_Sensor_OnBeginOverlap_NonMarker& InRequest)
-    -> void
-{
-    if (NOT Ensure(InSensorHandle, UCk_Utils_GameplayLabel_UE::Get_Label(InSensorHandle)))
-    { return; }
-
-    auto& requestsComp = InSensorHandle.AddOrGet<ck::FFragment_Sensor_Requests>();
-    requestsComp._BeginOrEndOverlapRequests.Emplace(InRequest);
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    Request_OnEndOverlap_NonMarker(
-        FCk_Handle InSensorHandle,
-        const FCk_Request_Sensor_OnEndOverlap_NonMarker& InRequest)
-    -> void
-{
-    if (NOT Ensure(InSensorHandle, UCk_Utils_GameplayLabel_UE::Get_Label(InSensorHandle)))
-    { return; }
-
-    auto& requestsComp = InSensorHandle.AddOrGet<ck::FFragment_Sensor_Requests>();
-    requestsComp._BeginOrEndOverlapRequests.Emplace(InRequest);
-}
-
-auto
-    UCk_Utils_Sensor_UE::
-    Has(
-        FCk_Handle InHandle)
-    -> bool
-{
-    return InHandle.Has_All<ck::FFragment_Sensor_Params, ck::FFragment_Sensor_Current>();
-}
 
 auto
     UCk_Utils_Sensor_UE::
     Request_MarkSensor_AsNeedToUpdateTransform(
-        FCk_Handle InSensorHandle)
+        FCk_Handle_Sensor& InSensorHandle)
     -> void
 {
-    if (NOT Ensure(InSensorHandle, UCk_Utils_GameplayLabel_UE::Get_Label(InSensorHandle)))
-    { return; }
-
     InSensorHandle.Add<ck::FTag_Sensor_UpdateTransform>();
 }
 
