@@ -33,6 +33,12 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Sensor_AttachmentPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak="/Script/CkEcs.Ck_Utils_Handle_UE:Conv_HandleTypeSafeToHandle"))
+struct CKOVERLAPBODY_API FCk_Handle_Sensor : public FCk_Handle_TypeSafe { GENERATED_BODY()  CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Sensor); };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Sensor);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKOVERLAPBODY_API FCk_Sensor_BeginOverlap_UnrealDetails
 {
@@ -199,7 +205,7 @@ public:
 public:
     FCk_Sensor_NonMarkerOverlapInfo() = default;
     explicit FCk_Sensor_NonMarkerOverlapInfo(
-        FCk_Sensor_BeginOverlap_UnrealDetails InOverlapDetails);
+        const FCk_Sensor_BeginOverlap_UnrealDetails& InOverlapDetails);
 
 public:
     auto operator==(const ThisType& InOther) const -> bool;
@@ -233,7 +239,7 @@ public:
 public:
     FCk_Sensor_MarkerOverlaps() = default;
     explicit FCk_Sensor_MarkerOverlaps(
-        SensorOverlapInfoList InOverlaps);
+        const SensorOverlapInfoList& InOverlaps);
 
 public:
     auto Process_Add(
@@ -274,7 +280,7 @@ public:
 public:
     FCk_Sensor_NonMarkerOverlaps() = default;
     explicit FCk_Sensor_NonMarkerOverlaps(
-        SensorOverlapInfoList InOverlaps);
+        const SensorOverlapInfoList& InOverlaps);
 
 public:
     auto Process_Add(
@@ -409,7 +415,7 @@ public:
 public:
     FCk_Sensor_ShapeInfo() = default;
     explicit FCk_Sensor_ShapeInfo(
-        FCk_ShapeDimensions InShapeDimensions);
+        const FCk_ShapeDimensions& InShapeDimensions);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -432,7 +438,8 @@ public:
 
 public:
     FCk_Sensor_FilteringInfo() = default;
-    explicit FCk_Sensor_FilteringInfo(TArray<FGameplayTag> InMarkerNames);
+    explicit FCk_Sensor_FilteringInfo(
+        const TArray<FGameplayTag>& InMarkerNames);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
