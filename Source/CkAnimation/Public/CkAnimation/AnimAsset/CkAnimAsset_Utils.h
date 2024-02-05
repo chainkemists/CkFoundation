@@ -28,69 +28,74 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimAsset",
               DisplayName="[Ck][AnimAsset] Add New Animation")
-    static void
+    static FCk_Handle_AnimAsset
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_AnimAsset_ParamsData& InParams);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimAsset",
               DisplayName="[Ck][AnimAsset] Add Multiple New Animations")
-    static void
+    static FCk_Handle_AnimAsset
     AddMultiple(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_MultipleAnimAsset_ParamsData& InParams);
 
+public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|AnimAsset",
-              DisplayName="[Ck][AnimAsset] Has Animation")
+        Category = "Ck|Utils|AnimAsset",
+        DisplayName="[Ck][AnimAsset] Has AnimAsset")
     static bool
     Has(
-        FCk_Handle InAnimAssetOwnerEntity,
-        FGameplayTag InAnimAssetName);
+        const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|AnimAsset",
-              DisplayName="[Ck][AnimAsset] Has Any Animation")
-    static bool
-    Has_Any(
-        FCk_Handle InAnimAssetOwnerEntity);
+        Category = "Ck|Utils|AnimAsset",
+        DisplayName="[Ck][AnimAsset] Cast",
+        meta = (ExpandEnumAsExecs = "OutResult"))
+    static FCk_Handle_AnimAsset
+    Cast(
+        const FCk_Handle&    InHandle,
+        ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|AnimAsset",
-              DisplayName="[Ck][AnimAsset] Ensure Has Animation")
-    static bool
-    Ensure(
-        FCk_Handle InAnimAssetOwnerEntity,
-        FGameplayTag InAnimAssetName);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|AnimAsset",
-              DisplayName="[Ck][AnimAsset] Ensure Has Any Animation")
-    static bool
-    Ensure_Any(
-        FCk_Handle InAnimAssetOwnerEntity);
+        Category = "Ck|Utils|AnimAsset",
+        DisplayName="[Ck][AnimAsset] Handle -> AnimAsset Handle",
+        meta = (CompactNodeTitle = "As AnimAssetHandle", BlueprintAutocast))
+    static FCk_Handle_AnimAsset
+    Conv_HandleToAnimAsset(
+        const FCk_Handle& InHandle);
 
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimAsset",
+              DisplayName="[Ck][AnimAsset] Get Handle")
+    static FCk_Handle_AnimAsset
+    TryGet_AnimAsset(
+        const FCk_Handle& InAnimAssetOwnerEntity,
+        FGameplayTag      InAnimAssetName);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|AnimAsset",
               DisplayName="[Ck][AnimAsset] Get All Animations")
-    static TArray<FGameplayTag>
+    static TArray<FCk_Handle_AnimAsset>
     Get_All(
-        FCk_Handle InAnimAssetOwnerEntity);
+        const FCk_Handle& InAnimAssetOwnerEntity);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|AnimAsset",
+              DisplayName="[Ck][AnimAsset] Get AnimAsset Name")
+    static FGameplayTag
+    Get_Name(
+        const FCk_Handle_AnimAsset& InAnimAssetEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimAsset",
               DisplayName="[Ck][AnimAsset] Get Animation Asset Info")
     static FCk_AnimAsset_Animation
     Get_Animation(
-        FCk_Handle InAnimAssetOwnerEntity,
-        FGameplayTag InAnimName);
-
-private:
-    static auto
-    Has(
-        FCk_Handle InHandle) -> bool;
+        const FCk_Handle_AnimAsset& InAnimAssetEntity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
