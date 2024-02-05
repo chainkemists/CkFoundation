@@ -124,7 +124,7 @@ namespace ck
             { return; }
 
             InCurrentComp._EnableDisable = NewEnableDisable;
-            const auto& collisionEnabled = NewEnableDisable == ECk_EnableDisable::Enable
+            const auto& CollisionEnabled = NewEnableDisable == ECk_EnableDisable::Enable
                                              ? ECollisionEnabled::QueryOnly
                                              : ECollisionEnabled::NoCollision;
 
@@ -133,7 +133,7 @@ namespace ck
             const auto& Marker     = InCurrentComp.Get_Marker().Get();
 
             UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(Marker, NewEnableDisable);
-            UCk_Utils_Physics_UE::Request_SetCollisionEnabled(Marker, collisionEnabled);
+            UCk_Utils_Physics_UE::Request_SetCollisionEnabled(Marker, CollisionEnabled);
 
             UUtils_Signal_OnMarkerEnableDisable::Broadcast(InMarkerEntity, MakePayload(InCurrentComp.Get_AttachedEntityAndActor().Get_Handle(), MarkerName, NewEnableDisable));
         });
@@ -146,10 +146,10 @@ namespace ck
     auto
         FProcessor_Marker_UpdateTransform::
         ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InMarkerEntity,
-            FFragment_Marker_Current& InCurrentComp,
-            const FFragment_Marker_Params& InParamsComp) const
+            TimeType                        InDeltaT,
+            HandleType                      InMarkerEntity,
+            const FFragment_Marker_Current& InCurrentComp,
+            const FFragment_Marker_Params&  InParamsComp) const
         -> void
     {
         // TODO: Extract this in a common function to avoid code duplication between similar system for Sensor
@@ -212,7 +212,7 @@ namespace ck
 
     FProcessor_Marker_DebugPreviewAll::
         FProcessor_Marker_DebugPreviewAll(
-            FCk_Registry& InRegistry)
+        const FCk_Registry& InRegistry)
         : _Registry(InRegistry)
     {
     }
@@ -226,16 +226,15 @@ namespace ck
         if (NOT UCk_Utils_OverlapBody_UserSettings_UE::Get_DebugPreviewAllMarkers())
         { return; }
 
-        _Registry.View<FFragment_Marker_Current, FFragment_Marker_Params>().ForEach(
-        [&](FCk_Entity InMarkerEntity, const FFragment_Marker_Current& InMarkerCurrent, const FFragment_Marker_Params& InMarkerParams)
+        _Registry.View<FFragment_Marker_Current>().ForEach(
+        [&](FCk_Entity InMarkerEntity, const FFragment_Marker_Current& InMarkerCurrent)
         {
             if (ck::Is_NOT_Valid(InMarkerCurrent.Get_Marker()))
             { return; }
 
-            const auto& markerName = InMarkerParams.Get_Params().Get_MarkerName();
-            const auto& outerForDebugDraw = InMarkerCurrent.Get_AttachedEntityAndActor().Get_Actor().Get();
+            const auto& OuterForDebugDraw = InMarkerCurrent.Get_AttachedEntityAndActor().Get_Actor().Get();
 
-            UCk_Utils_Marker_UE::Preview(outerForDebugDraw, FCk_Handle{ InMarkerEntity, _Registry }, markerName);
+            UCk_Utils_Marker_UE::Preview(OuterForDebugDraw, FCk_Handle_Marker{ InMarkerEntity, _Registry });
         });
     }
 }

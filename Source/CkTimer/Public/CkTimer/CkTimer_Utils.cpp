@@ -98,14 +98,9 @@ auto
         FGameplayTag InTimerName)
     -> FCk_Handle_Timer
 {
-    const auto FoundEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+    return Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Timer_UE,
         RecordOfTimers_Utils>(InTimerOwnerEntity, InTimerName);
-
-    if (ck::Is_NOT_Valid(FoundEntity))
-    { return {}; }
-
-    return Conv_HandleToTimer(FoundEntity);
 }
 
 auto
