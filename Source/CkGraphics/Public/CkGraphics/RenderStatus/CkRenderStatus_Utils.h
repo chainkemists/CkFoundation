@@ -22,7 +22,7 @@ public:
               DisplayName="[Ck][RenderStatus] Add Feature")
     static void
     Add(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle InHandle,
         const FCk_Fragment_RenderStatus_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,

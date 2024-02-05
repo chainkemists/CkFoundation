@@ -29,7 +29,7 @@ protected:
               DisplayName = "Construct")
     void
     DoConstruct(
-        FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FInstancedStruct& InOptionalParams);
 };
 

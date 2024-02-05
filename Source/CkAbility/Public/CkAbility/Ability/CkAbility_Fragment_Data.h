@@ -364,7 +364,7 @@ public:
 
 public:
     auto DoConstruct_Implementation(
-        FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FInstancedStruct& InOptionalParams) -> void override;
 
 private:

@@ -49,7 +49,7 @@ public:
               DisplayName="[Ck][Acceleration] Add Feature")
     static void
     Add(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle InHandle,
         const FCk_Fragment_Acceleration_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
@@ -232,7 +232,7 @@ public:
               DisplayName="Add New Bulk Acceleration Modifier")
     static UPARAM(DisplayName = "Bulk Acceleration Modifier Handle") FCk_Handle
     Add(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle InHandle,
         FGameplayTag InModifierName,
         const FCk_Fragment_BulkAccelerationModifier_ParamsData& InParams);
 

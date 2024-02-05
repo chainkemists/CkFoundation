@@ -30,7 +30,7 @@ public:
               DisplayName="[Ck][CameraShake] Add New Camera Shake")
     static void
     Add(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle InHandle,
         const FCk_Fragment_CameraShake_ParamsData& InParams);
 
     UFUNCTION(BlueprintCallable,

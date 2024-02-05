@@ -12,7 +12,7 @@
 auto
     UCk_Utils_AbilityCue_UE::
     Request_Spawn_AbilityCue(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         const FCk_Request_AbilityCue_Spawn& InRequest)
     -> void
 {
@@ -24,7 +24,7 @@ auto
 auto
     UCk_Utils_AbilityCue_UE::
     Get_Params(
-        FCk_Handle InAbilityCueEntity)
+        const FCk_Handle& InAbilityCueEntity)
     -> FCk_AbilityCue_Params
 {
     return InAbilityCueEntity.Get<FCk_AbilityCue_Params>();

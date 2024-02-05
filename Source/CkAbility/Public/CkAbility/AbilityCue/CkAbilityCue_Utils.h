@@ -22,7 +22,7 @@ public:
         DisplayName="[Ck][AbilityCue] Request Spawn")
     static void
     Request_Spawn_AbilityCue(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         const FCk_Request_AbilityCue_Spawn& InRequest);
 
 public:
@@ -31,7 +31,7 @@ public:
         DisplayName="[Ck][AbilityCue] Get Params")
     static FCk_AbilityCue_Params
     Get_Params(
-        FCk_Handle InAbilityCueEntity);
+        const FCk_Handle& InAbilityCueEntity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

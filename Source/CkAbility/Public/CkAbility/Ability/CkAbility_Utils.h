@@ -172,30 +172,30 @@ public:
 private:
     static auto
     DoAdd(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_Ability_ParamsData& InParams) -> void;
 
 // TODO: Move these back to the processor ?
 private:
     static auto
     DoActivate(
-        FCk_Handle_Ability& InAbilityEntity,
+        UPARAM(ref) FCk_Handle_Ability& InAbilityEntity,
         const FCk_Ability_ActivationPayload& InActivationPayload) -> void;
 
     static auto
     DoDeactivate(
-        FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
-        FCk_Handle_Ability& InAbilityEntity) -> void;
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        UPARAM(ref) FCk_Handle_Ability& InAbilityEntity) -> void;
 
     static auto
     DoGive(
-        FCk_Handle_AbilityOwner& InAbilityOwner,
-        FCk_Handle_Ability& InAbility) -> void;
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwner,
+        UPARAM(ref) FCk_Handle_Ability& InAbility) -> void;
 
     static auto
     DoRevoke(
-        FCk_Handle_AbilityOwner& InAbilityOwner,
-        FCk_Handle_Ability& InAbility) -> void;
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwner,
+        UPARAM(ref) FCk_Handle_Ability& InAbility) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

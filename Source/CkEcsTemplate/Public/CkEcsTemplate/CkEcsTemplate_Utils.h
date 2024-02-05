@@ -24,7 +24,7 @@ public:
               DisplayName="Add EcsTemplate")
     static void
     Add(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle InHandle,
         const FCk_Fragment_EcsTemplate_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
