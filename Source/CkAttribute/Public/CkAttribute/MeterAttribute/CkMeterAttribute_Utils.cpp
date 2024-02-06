@@ -486,7 +486,7 @@ auto
         InAttributeName, InAttributeOwnerEntity, InDelegate.GetFunctionName())
     { return; }
 
-    const auto [MinCapacity, MaxCapacity, Current] = Get_MinMaxAndCurrentAttributeEntities(FoundEntity, InAttributeName);
+    const auto [MinCapacity, MaxCapacity, Current] = Get_MinMaxAndCurrentAttributeEntities(InAttributeOwnerEntity, InAttributeName);
 
     if (ck::Is_NOT_Valid(MinCapacity) || ck::Is_NOT_Valid(MaxCapacity) || ck::Is_NOT_Valid(Current))
     { return; }
