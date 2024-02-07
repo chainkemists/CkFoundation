@@ -495,8 +495,8 @@ public:
 
 public:
     auto DoConstruct_Implementation(
-        FCk_Handle InHandle,
-        const FInstancedStruct& InOptionalParams) -> void override;
+        FCk_Handle& InHandle,
+        const FInstancedStruct& InOptionalParams) const -> void override;
 
 private:
     UPROPERTY(Transient)
