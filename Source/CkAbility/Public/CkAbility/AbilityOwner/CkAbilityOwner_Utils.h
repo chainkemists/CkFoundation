@@ -31,7 +31,8 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[Ck][AbilityOwner] Add Feature")
+              DisplayName="[Ck][AbilityOwner] Add Feature",
+              meta=(BlueprintInternalUseOnly=true))
     static FCk_Handle_AbilityOwner
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -181,7 +182,8 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[Ck][AbilityOwner] Request Give Ability")
+              DisplayName="[Ck][AbilityOwner] Request Give Ability",
+              meta=(BlueprintInternalUseOnly=true))
     static FCk_Handle_AbilityOwner
     Request_GiveAbility(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
@@ -189,7 +191,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[Ck][AbilityOwner] Request Revoke Ability")
+              DisplayName="[Ck][AbilityOwner] Request Revoke Ability",
+              meta=(BlueprintInternalUseOnly=true))
     static FCk_Handle_AbilityOwner
     Request_RevokeAbility(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
@@ -199,7 +202,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
               DisplayName="[Ck][AbilityOwner] Request Try Activate Ability",
-              meta = (DevelopmentOnly))
+              meta = (DevelopmentOnly, BlueprintInternalUseOnly=true))
     static FCk_Handle_AbilityOwner
     Request_TryActivateAbility(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
@@ -209,7 +212,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
               DisplayName="[Ck][AbilityOwner] Request Deactivate Ability",
-              meta = (DevelopmentOnly))
+              meta = (DevelopmentOnly, BlueprintInternalUseOnly=true))
     static FCk_Handle_AbilityOwner
     Request_DeactivateAbility(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
@@ -217,7 +220,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName = "[Ck][AbilityOwner] Request Send Ability Event")
+              DisplayName = "[Ck][AbilityOwner] Request Send Ability Event",
+              meta=(BlueprintInternalUseOnly=true))
     static FCk_Handle_AbilityOwner
     Request_SendAbilityEvent(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
