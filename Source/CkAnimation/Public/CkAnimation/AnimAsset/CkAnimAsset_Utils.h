@@ -6,6 +6,8 @@
 
 #include "CkRecord/Record/CkRecord_Utils.h"
 
+#include <InstancedStruct.h>
+
 #include "CkAnimAsset_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -31,6 +33,12 @@ public:
     static FCk_Handle_AnimAsset
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
+        FGameplayTag InAnimationID,
+        class UAnimationAsset* InAnimationAsset);
+
+    static FCk_Handle_AnimAsset
+    Add(
+        FCk_Handle& InHandle,
         const FCk_Fragment_AnimAsset_ParamsData& InParams);
 
     UFUNCTION(BlueprintCallable,
@@ -69,18 +77,27 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimAsset",
-              DisplayName="[Ck][AnimAsset] Get Handle")
+              DisplayName="[Ck][AnimAsset] Try Get AnimAsset (By Name)")
     static FCk_Handle_AnimAsset
     TryGet_AnimAsset(
         const FCk_Handle& InAnimAssetOwnerEntity,
         FGameplayTag      InAnimAssetName);
 
-    UFUNCTION(BlueprintPure,
+public:
+    UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimAsset",
-              DisplayName="[Ck][AnimAsset] Get All Animations")
+              DisplayName="[Ck][AnimAsset] For Each",
+              meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle_AnimAsset>
-    Get_All(
-        const FCk_Handle& InAnimAssetOwnerEntity);
+    ForEach_AnimAsset(
+        const FCk_Handle& InHandle,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate);
+
+    static auto
+    ForEach_AnimAsset(
+        const FCk_Handle& InHandle,
+        const TFunction<void(UPARAM(ref) FCk_Handle_AnimAsset&)>& InFunc) -> void;
 
 public:
     UFUNCTION(BlueprintPure,
@@ -92,9 +109,16 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimAsset",
-              DisplayName="[Ck][AnimAsset] Get Animation Asset Info")
-    static FCk_AnimAsset_Animation
+              DisplayName="[Ck][AnimAsset] Get AnimAsset Animation")
+    static class UAnimationAsset*
     Get_Animation(
+        const FCk_Handle_AnimAsset& InAnimAssetEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|AnimAsset",
+              DisplayName="[Ck][AnimAsset] Get AnimAsset Info")
+    static FCk_AnimAsset_Animation
+    Get_Info(
         const FCk_Handle_AnimAsset& InAnimAssetEntity);
 };
 
