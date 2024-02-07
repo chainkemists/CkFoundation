@@ -45,7 +45,7 @@ auto
 auto
     UCk_Utils_Timer_UE::
     AddOrReplace(
-        FCk_Handle InTimerOwnerEntity,
+        FCk_Handle& InTimerOwnerEntity,
         const FCk_Fragment_Timer_ParamsData& InParams)
     -> FCk_Handle_Timer
 {
