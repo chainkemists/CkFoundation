@@ -23,7 +23,8 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Projectile",
-              DisplayName="[Ck][Projectile] Add Feature")
+              DisplayName="[Ck][Projectile] Add Feature",
+              meta=(BlueprintInternalUseOnly=true))
     static void
     Add(
         UPARAM(ref) FCk_Handle InHandle,
