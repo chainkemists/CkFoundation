@@ -13,7 +13,7 @@
 auto
     UCk_Utils_Timer_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_Timer_ParamsData& InParams)
     -> FCk_Handle_Timer
 {
@@ -45,7 +45,7 @@ auto
 auto
     UCk_Utils_Timer_UE::
     AddOrReplace(
-        FCk_Handle InTimerOwnerEntity,
+        FCk_Handle& InTimerOwnerEntity,
         const FCk_Fragment_Timer_ParamsData& InParams)
     -> FCk_Handle_Timer
 {
@@ -69,6 +69,61 @@ auto
     }
 
     return Conv_HandleToTimer(TimerEntity);
+}
+
+auto
+    UCk_Utils_Timer_UE::
+    Get_CurrentTimerValue(
+        const FCk_Handle_Timer& InTimerEntity)
+    -> FCk_Chrono
+{
+    return InTimerEntity.Get<ck::FFragment_Timer_Current>().Get_Chrono();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Timer_UE::
+    AddNewTimer(
+        FCk_Handle& InHandle,
+        float InSeconds,
+        FGameplayTag InOptionalName,
+        ECk_Timer_Behavior InBehavior,
+        ECk_Timer_State InStartingState,
+        ECk_Timer_CountDirection InCountDirection)
+        -> FCk_Handle_Timer
+{
+    return Add
+    (
+        InHandle,
+        FCk_Fragment_Timer_ParamsData{FCk_Time{InSeconds}}
+        .Set_TimerName(InOptionalName)
+        .Set_Behavior(InBehavior)
+        .Set_StartingState(InStartingState)
+        .Set_CountDirection(InCountDirection)
+    );
+}
+
+auto
+    UCk_Utils_Timer_UE::
+    AddOrReplaceTimer(
+        FCk_Handle&              InHandle,
+        float                    InSeconds,
+        FGameplayTag             InName,
+        ECk_Timer_Behavior       InBehavior,
+        ECk_Timer_State          InStartingState,
+        ECk_Timer_CountDirection InCountDirection)
+    -> FCk_Handle_Timer
+{
+    return AddOrReplace
+    (
+        InHandle,
+        FCk_Fragment_Timer_ParamsData{FCk_Time{InSeconds}}
+        .Set_TimerName(InName)
+        .Set_Behavior(InBehavior)
+        .Set_StartingState(InStartingState)
+        .Set_CountDirection(InCountDirection)
+    );
 }
 
 auto
@@ -143,11 +198,31 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
-    Get_CurrentTimerValue(
-        const FCk_Handle_Timer& InTimerEntity)
-    -> FCk_Chrono
+    Get_TimeElapsed(
+        const FCk_Handle_Timer& InTimer,
+        ECk_NormalizationPolicy InNormalizationPolicy)
+    -> float
 {
-    return InTimerEntity.Get<ck::FFragment_Timer_Current>().Get_Chrono();
+    return Get_CurrentTimerValue(InTimer).Get_TimeElapsed(InNormalizationPolicy).Get_Seconds();
+}
+
+auto
+    UCk_Utils_Timer_UE::
+    Get_TimeRemaining(
+        const FCk_Handle_Timer& InTimer,
+        ECk_NormalizationPolicy InNormalizationPolicy)
+    -> float
+{
+    return Get_CurrentTimerValue(InTimer).Get_TimeRemaining(InNormalizationPolicy).Get_Seconds();
+}
+
+auto
+    UCk_Utils_Timer_UE::
+    Get_TimeGoal(
+        const FCk_Handle_Timer& InTimer)
+    -> float
+{
+    return Get_CurrentTimerValue(InTimer).Get_GoalValue().Get_Seconds();
 }
 
 auto
@@ -257,10 +332,10 @@ auto
     UCk_Utils_Timer_UE::
     Request_Jump(
         FCk_Handle_Timer& InTimerEntity,
-        FCk_Request_Timer_Jump InRequest)
+        float InSeconds)
     -> FCk_Handle_Timer
 {
-    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(InRequest);
+    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(FCk_Request_Timer_Jump{FCk_Time{InSeconds}});
 
     return InTimerEntity;
 }
@@ -269,10 +344,10 @@ auto
     UCk_Utils_Timer_UE::
     Request_Consume(
         FCk_Handle_Timer& InTimerEntity,
-        FCk_Request_Timer_Consume InRequest)
+        float InSeconds)
     -> FCk_Handle_Timer
 {
-    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(InRequest);
+    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(FCk_Request_Timer_Consume{FCk_Time{InSeconds}});
 
     return InTimerEntity;
 }

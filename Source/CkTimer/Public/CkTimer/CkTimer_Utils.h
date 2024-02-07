@@ -29,22 +29,48 @@ public:
     friend class UCk_Utils_Ecs_Base_UE;
 
 public:
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Timer",
-              DisplayName="[Ck][Timer] Add New Timer")
-    static FCk_Handle_Timer
+    static auto
     Add(
-        UPARAM(ref) FCk_Handle InHandle,
-        const FCk_Fragment_Timer_ParamsData& InParams);
+        FCk_Handle& InHandle,
+        const FCk_Fragment_Timer_ParamsData& InParams) -> FCk_Handle_Timer;
+
+    static auto
+    AddOrReplace(
+        FCk_Handle& InTimerOwnerEntity,
+        const FCk_Fragment_Timer_ParamsData& InParams) -> FCk_Handle_Timer;
+
+    static auto
+    Get_CurrentTimerValue(
+        const FCk_Handle_Timer& InTimer) -> FCk_Chrono;
+
+public:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Timer",
+        DisplayName="[Ck][Timer] Add New Timer",
+        meta = (AdvancedDisplay="3"))
+    static FCk_Handle_Timer
+    AddNewTimer(
+        UPARAM(ref) FCk_Handle& InHandle,
+        float InSeconds,
+        FGameplayTag InOptionalName,
+        ECk_Timer_Behavior InBehavior = ECk_Timer_Behavior::PauseOnDone,
+        ECk_Timer_State InStartingState = ECk_Timer_State::Running,
+        ECk_Timer_CountDirection InCountDirection = ECk_Timer_CountDirection::CountUp);
+
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Timer",
-              DisplayName="[Ck][Timer] Add Or Replace Timer")
+        Category = "Ck|Utils|Timer",
+        DisplayName="[Ck][Timer] Add Or Replace Timer",
+        meta = (AdvancedDisplay="3"))
     static FCk_Handle_Timer
-    AddOrReplace(
-        FCk_Handle InTimerOwnerEntity,
-        const FCk_Fragment_Timer_ParamsData& InParams);
-
+    AddOrReplaceTimer(
+        UPARAM(ref) FCk_Handle& InHandle,
+        float InSeconds,
+        FGameplayTag InName,
+        ECk_Timer_Behavior InBehavior = ECk_Timer_Behavior::PauseOnDone,
+        ECk_Timer_State InStartingState = ECk_Timer_State::Running,
+        ECk_Timer_CountDirection InCountDirection = ECk_Timer_CountDirection::CountUp);
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
               DisplayName="[Ck][Timer] Add Multiple New Timers")
@@ -129,9 +155,27 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Timer",
-              DisplayName="[Ck][Timer] Get Current Value")
-    static FCk_Chrono
-    Get_CurrentTimerValue(
+              DisplayName="[Ck][Timer] Get Time Elapsed",
+              meta = (AdvancedDisplay="1"))
+    static UPARAM(DisplayName="Seconds") float
+    Get_TimeElapsed(
+        const FCk_Handle_Timer& InTimer,
+        ECk_NormalizationPolicy InNormalizationPolicy);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Timer",
+              DisplayName="[Ck][Timer] Get Time Remaining",
+              meta = (AdvancedDisplay="1"))
+    static UPARAM(DisplayName="Seconds") float
+    Get_TimeRemaining(
+        const FCk_Handle_Timer& InTimer,
+        ECk_NormalizationPolicy InNormalizationPolicy);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Timer",
+              DisplayName="[Ck][Timer] Get Timer Goal")
+    static UPARAM(DisplayName="Seconds") float
+    Get_TimeGoal(
         const FCk_Handle_Timer& InTimer);
 
 public:
@@ -185,22 +229,26 @@ public:
     Request_Resume(
         UPARAM(ref) FCk_Handle_Timer& InTimer);
 
+public:
+    // Jump ahead this many seconds. For Count Down Timers, we're jumping in reverse.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
               DisplayName="[Ck][Timer] Request Jump")
     static FCk_Handle_Timer
     Request_Jump(
         UPARAM(ref) FCk_Handle_Timer& InTimer,
-        FCk_Request_Timer_Jump InRequest);
+        float InSeconds);
 
+    // Consume this many seconds. For Count Down Timers we consume in reverse.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
               DisplayName="[Ck][Timer] Request Consume")
     static FCk_Handle_Timer
     Request_Consume(
         UPARAM(ref) FCk_Handle_Timer& InTimer,
-        FCk_Request_Timer_Consume InRequest);
+        float InSeconds);
 
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
               DisplayName="[Ck][Timer] Request Change Count Direction")
