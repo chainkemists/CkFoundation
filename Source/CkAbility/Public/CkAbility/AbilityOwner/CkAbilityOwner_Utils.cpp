@@ -18,6 +18,8 @@ auto
     InHandle.Add<ck::FFragment_AbilityOwner_Current>();
     InHandle.Add<ck::FTag_AbilityOwner_NeedsSetup>();
 
+    UCk_Utils_Ability_UE::RecordOfAbilities_Utils::AddIfMissing(InHandle);
+
     return Conv_HandleToAbilityOwner(InHandle);
 }
 
@@ -29,16 +31,22 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(AbilityOwner, UCk_Utils_AbilityOwner_UE,
 
 auto
     UCk_Utils_AbilityOwner_UE::
-    Has_Ability(
+    Has_AbilityByClass(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass)
     -> bool
 {
-    return RecordOfAbilities_Utils::Get_HasValidEntry_If(InAbilityOwnerEntity,
-    [InAbilityClass](const FCk_Handle& InHandle)
-    {
-        return UCk_Utils_Ability_UE::Get_ScriptClass(UCk_Utils_Ability_UE::Conv_HandleToAbility(InHandle)) == InAbilityClass;
-    });
+    return ck::IsValid(TryGet_AbilityByClass(InAbilityOwnerEntity, InAbilityClass));
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Has_AbilityByName(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        FGameplayTag InAbilityName)
+    -> bool
+{
+    return ck::IsValid(TryGet_AbilityByName(InAbilityOwnerEntity, InAbilityName));
 }
 
 auto
@@ -47,67 +55,35 @@ auto
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity)
     -> bool
 {
-    return RecordOfAbilities_Utils::Has(InAbilityOwnerEntity);
+    return Get_AbilityCount(InAbilityOwnerEntity) > 0;
 }
 
 auto
     UCk_Utils_AbilityOwner_UE::
-    Ensure_Ability(
-        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
-        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(Has_Ability(InAbilityOwnerEntity, InAbilityClass),
-        TEXT("Handle [{}] does NOT have Ability [{}]"), InAbilityOwnerEntity, InAbilityClass)
-    { return false; }
-
-    return true;
-}
-
-auto
-    UCk_Utils_AbilityOwner_UE::
-    Ensure_Any(
-        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(Has_Any(InAbilityOwnerEntity), TEXT("Handle [{}] does NOT have any Ability"), InAbilityOwnerEntity)
-    { return false; }
-
-    return true;
-}
-
-auto
-    UCk_Utils_AbilityOwner_UE::
-    Get_Ability(
+    TryGet_AbilityByClass(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass)
     -> FCk_Handle_Ability
 {
-    CK_ENSURE_IF_NOT(Has_Ability(InAbilityOwnerEntity, InAbilityClass),
-        TEXT("AbilityOwner [{}] does NOT have the Ability [{}]"), InAbilityOwnerEntity, InAbilityClass)
-    { return {}; }
-
-    const auto& Handle = RecordOfAbilities_Utils::Get_ValidEntry_If(InAbilityOwnerEntity,
+    return RecordOfAbilities_Utils::Get_ValidEntry_If(InAbilityOwnerEntity,
     [InAbilityClass](const FCk_Handle& InHandle)
     {
         return UCk_Utils_Ability_UE::Get_ScriptClass(UCk_Utils_Ability_UE::Conv_HandleToAbility(InHandle)) == InAbilityClass;
     });
-
-    return Handle;
 }
 
 auto
     UCk_Utils_AbilityOwner_UE::
-    Find_Ability(
+    TryGet_AbilityByName(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         FGameplayTag InAbilityName)
     -> FCk_Handle_Ability
 {
-    const auto& AbilityEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Ability_UE,
-        RecordOfAbilities_Utils>(InAbilityOwnerEntity, InAbilityName);
-
-    return AbilityEntity;
+    return RecordOfAbilities_Utils::Get_ValidEntry_If(InAbilityOwnerEntity,
+    [InAbilityName](const FCk_Handle& InHandle)
+    {
+        return UCk_Utils_GameplayLabel_UE::Get_Label(UCk_Utils_Ability_UE::Conv_HandleToAbility(InHandle)) == InAbilityName;
+    });
 }
 
 auto
@@ -116,9 +92,6 @@ auto
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity)
     -> int32
 {
-    if (NOT Ensure_Any(InAbilityOwnerEntity))
-    { return {}; }
-
     return RecordOfAbilities_Utils::Get_ValidEntriesCount(InAbilityOwnerEntity);
 }
 
@@ -266,7 +239,7 @@ auto
         const TFunction<void(FCk_Handle_Ability)>& InFunc)
     -> void
 {
-    if (NOT Ensure_Any(InAbilityOwnerEntity))
+    if (NOT Has_Any(InAbilityOwnerEntity))
     { return; }
 
     ForEach_Ability(InAbilityOwnerEntity, InForEachAbilityPolicy, [&](FCk_Handle_Ability InAbility)
