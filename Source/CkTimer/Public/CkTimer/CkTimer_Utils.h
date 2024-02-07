@@ -30,7 +30,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Timer",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][Timer] Add New Timer")
     static FCk_Handle_Timer
     Add(
@@ -38,11 +38,11 @@ public:
         const FCk_Fragment_Timer_ParamsData& InParams);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Timer",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][Timer] Add Or Replace Timer")
     static FCk_Handle_Timer
     AddOrReplace(
-        FCk_Handle InTimerOwnerEntity,
+        UPARAM(ref) FCk_Handle& InTimerOwnerEntity,
         const FCk_Fragment_Timer_ParamsData& InParams);
 
     UFUNCTION(BlueprintCallable,
@@ -128,7 +128,7 @@ public:
         const FCk_Handle_Timer& InTimer);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Timer",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][Timer] Get Current Value")
     static FCk_Chrono
     Get_CurrentTimerValue(
@@ -186,7 +186,7 @@ public:
         UPARAM(ref) FCk_Handle_Timer& InTimer);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Timer",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][Timer] Request Jump")
     static FCk_Handle_Timer
     Request_Jump(
@@ -194,7 +194,7 @@ public:
         FCk_Request_Timer_Jump InRequest);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Timer",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][Timer] Request Consume")
     static FCk_Handle_Timer
     Request_Consume(
