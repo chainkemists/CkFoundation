@@ -20,7 +20,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ActorModifier",
-        meta = (AutoCreateRefTerm = "InOptionalPayload, InDelegate"),
+        meta = (AutoCreateRefTerm = "InOptionalPayload, InDelegate", BlueprintInternalUseOnly = true),
         DisplayName = "[Ck][ActorModifier] Request Spawn Actor")
     static void
     Request_SpawnActor(
@@ -31,7 +31,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ActorModifier",
-        meta = (AutoCreateRefTerm = "InOptionalPayload, InDelegate"),
+        meta = (AutoCreateRefTerm = "InOptionalPayload, InDelegate", BlueprintInternalUseOnly = true),
         DisplayName = "[Ck][ActorModifier] Request Add Actor Component")
     static void
     Request_AddActorComponent(
