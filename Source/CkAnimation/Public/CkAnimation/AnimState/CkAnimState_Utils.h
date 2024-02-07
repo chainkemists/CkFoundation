@@ -25,6 +25,15 @@ public:
     static void
     Add(
         FCk_Handle InHandle,
+        FGameplayTag InStartingAnimGoal,
+        FGameplayTag InStartingAnimCluster,
+        FGameplayTag InStartingAnimState,
+        FGameplayTag InStartingAnimOverlay,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
+
+    static void
+    Add(
+        FCk_Handle InHandle,
         const FCk_Fragment_AnimState_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
@@ -46,27 +55,46 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimState",
               DisplayName="[Ck][AnimState] Get Goal")
+    static FGameplayTag
+    Get_AnimGoalTag(
+        FCk_Handle InHandle);
+
     static FCk_AnimState_Goal
     Get_AnimGoal(
         FCk_Handle InHandle);
 
+public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimState",
               DisplayName="[Ck][AnimState] Get State")
+    static FGameplayTag
+    Get_AnimStateTag(
+        FCk_Handle InHandle);
+
     static FCk_AnimState_State
     Get_AnimState(
         FCk_Handle InHandle);
 
+public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimState",
               DisplayName="[Ck][AnimState] Get Cluster")
+    static FGameplayTag
+    Get_AnimClusterTag(
+        FCk_Handle InHandle);
+
     static FCk_AnimState_Cluster
     Get_AnimCluster(
         FCk_Handle InHandle);
 
+public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimState",
               DisplayName="[Ck][AnimState] Get Overlay")
+    static FGameplayTag
+    Get_AnimOverlayTag(
+        FCk_Handle InHandle);
+
     static FCk_AnimState_Overlay
     Get_AnimOverlay(
         FCk_Handle InHandle);
@@ -78,27 +106,50 @@ public:
     static void
     Request_SetAnimGoal(
         FCk_Handle InHandle,
+        FGameplayTag InNewAnimGoal);
+
+    static void
+    Request_SetAnimGoal(
+        FCk_Handle InHandle,
         const FCk_Request_AnimState_SetGoal& InRequest);
 
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimState",
               DisplayName="[Ck][AnimState] Request Set State")
     static void
     Request_SetAnimState(
         FCk_Handle InHandle,
+        FGameplayTag InNewAnimState);
+
+    static void
+    Request_SetAnimState(
+        FCk_Handle InHandle,
         const FCk_Request_AnimState_SetState& InRequest);
 
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimState",
               DisplayName="[Ck][AnimState] Request Set Cluster")
     static void
     Request_SetAnimCluster(
         FCk_Handle InHandle,
+        FGameplayTag InNewAnimCluster);
+
+    static void
+    Request_SetAnimCluster(
+        FCk_Handle InHandle,
         const FCk_Request_AnimState_SetCluster& InRequest);
 
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimState",
               DisplayName="[Ck][AnimState] Request Set Overlay")
+    static void
+    Request_SetAnimOverlay(
+        FCk_Handle InHandle,
+        FGameplayTag InNewAnimOverlay);
+
     static void
     Request_SetAnimOverlay(
         FCk_Handle InHandle,

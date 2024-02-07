@@ -416,10 +416,10 @@ private:
     FCk_AnimState_Overlay _AnimOverlay;
 
 public:
-    CK_PROPERTY_GET(_AnimGoal);
-    CK_PROPERTY_GET(_AnimCluster);
-    CK_PROPERTY_GET(_AnimState);
-    CK_PROPERTY_GET(_AnimOverlay);
+    CK_PROPERTY(_AnimGoal);
+    CK_PROPERTY(_AnimCluster);
+    CK_PROPERTY(_AnimState);
+    CK_PROPERTY(_AnimOverlay);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_AnimState_Current, _AnimGoal, _AnimCluster, _AnimState, _AnimOverlay);

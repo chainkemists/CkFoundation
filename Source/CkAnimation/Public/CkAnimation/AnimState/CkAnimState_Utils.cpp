@@ -9,6 +9,29 @@ auto
     UCk_Utils_AnimState_UE::
     Add(
         FCk_Handle InHandle,
+        FGameplayTag InStartingAnimGoal,
+        FGameplayTag InStartingAnimCluster,
+        FGameplayTag InStartingAnimState,
+        FGameplayTag InStartingAnimOverlay,
+        ECk_Replication InReplicates)
+    -> void
+{
+    const auto Params = FCk_Fragment_AnimState_ParamsData
+    {
+        FCk_AnimState_Current{}
+        .Set_AnimGoal(FCk_AnimState_Goal{InStartingAnimGoal})
+        .Set_AnimCluster(FCk_AnimState_Cluster{InStartingAnimCluster})
+        .Set_AnimState(FCk_AnimState_State{InStartingAnimState})
+        .Set_AnimOverlay(FCk_AnimState_Overlay{InStartingAnimOverlay})
+    };
+
+    Add(InHandle, Params, InReplicates);
+}
+
+auto
+    UCk_Utils_AnimState_UE::
+    Add(
+        FCk_Handle InHandle,
         const FCk_Fragment_AnimState_ParamsData& InParams,
         ECk_Replication InReplicates)
     -> void
@@ -53,6 +76,15 @@ auto
 
 auto
     UCk_Utils_AnimState_UE::
+    Get_AnimGoalTag(
+        FCk_Handle InHandle)
+    -> FGameplayTag
+{
+    return Get_AnimGoal(InHandle).Get_AnimGoal();
+}
+
+auto
+    UCk_Utils_AnimState_UE::
     Get_AnimGoal(
         FCk_Handle InHandle)
     -> FCk_AnimState_Goal
@@ -61,6 +93,15 @@ auto
     { return {}; }
 
     return InHandle.Get<ck::FFragment_AnimState_Current>().Get_AnimGoal();
+}
+
+auto
+    UCk_Utils_AnimState_UE::
+    Get_AnimStateTag(
+        FCk_Handle InHandle)
+    -> FGameplayTag
+{
+    return Get_AnimState(InHandle).Get_AnimState();
 }
 
 auto
@@ -77,6 +118,15 @@ auto
 
 auto
     UCk_Utils_AnimState_UE::
+    Get_AnimClusterTag(
+        FCk_Handle InHandle)
+    -> FGameplayTag
+{
+    return Get_AnimCluster(InHandle).Get_AnimCluster();
+}
+
+auto
+    UCk_Utils_AnimState_UE::
     Get_AnimCluster(
         FCk_Handle InHandle)
     -> FCk_AnimState_Cluster
@@ -89,6 +139,15 @@ auto
 
 auto
     UCk_Utils_AnimState_UE::
+    Get_AnimOverlayTag(
+        FCk_Handle InHandle)
+    -> FGameplayTag
+{
+    return Get_AnimOverlay(InHandle).Get_AnimOverlay();
+}
+
+auto
+    UCk_Utils_AnimState_UE::
     Get_AnimOverlay(
         FCk_Handle InHandle)
     -> FCk_AnimState_Overlay
@@ -97,6 +156,16 @@ auto
     { return {}; }
 
     return InHandle.Get<ck::FFragment_AnimState_Current>().Get_AnimOverlay();
+}
+
+auto
+    UCk_Utils_AnimState_UE::
+    Request_SetAnimGoal(
+        FCk_Handle InHandle,
+        FGameplayTag InNewAnimGoal)
+    -> void
+{
+    Request_SetAnimGoal(InHandle, FCk_Request_AnimState_SetGoal{FCk_AnimState_Goal{InNewAnimGoal}});
 }
 
 auto
@@ -116,6 +185,16 @@ auto
     UCk_Utils_AnimState_UE::
     Request_SetAnimState(
         FCk_Handle InHandle,
+        FGameplayTag InNewAnimState)
+    -> void
+{
+    Request_SetAnimState(InHandle, FCk_Request_AnimState_SetState{FCk_AnimState_State{InNewAnimState}});
+}
+
+auto
+    UCk_Utils_AnimState_UE::
+    Request_SetAnimState(
+        FCk_Handle InHandle,
         const FCk_Request_AnimState_SetState& InRequest)
     -> void
 {
@@ -129,6 +208,16 @@ auto
     UCk_Utils_AnimState_UE::
     Request_SetAnimCluster(
         FCk_Handle InHandle,
+        FGameplayTag InNewAnimCluster)
+    -> void
+{
+    Request_SetAnimCluster(InHandle, FCk_Request_AnimState_SetCluster{FCk_AnimState_Cluster{InNewAnimCluster}});
+}
+
+auto
+    UCk_Utils_AnimState_UE::
+    Request_SetAnimCluster(
+        FCk_Handle InHandle,
         const FCk_Request_AnimState_SetCluster& InRequest)
     -> void
 {
@@ -136,6 +225,16 @@ auto
     { return; }
 
     InHandle.AddOrGet<ck::FFragment_AnimState_Requests>()._SetClusterRequest = InRequest;
+}
+
+auto
+    UCk_Utils_AnimState_UE::
+    Request_SetAnimOverlay(
+        FCk_Handle InHandle,
+        FGameplayTag InNewAnimOverlay)
+    -> void
+{
+    Request_SetAnimOverlay(InHandle, FCk_Request_AnimState_SetOverlay{FCk_AnimState_Overlay{InNewAnimOverlay}});
 }
 
 auto
