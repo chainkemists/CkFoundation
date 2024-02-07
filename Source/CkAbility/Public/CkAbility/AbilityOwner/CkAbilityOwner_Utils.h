@@ -65,11 +65,20 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[Ck][AbilityOwner] Has Ability")
+              DisplayName="[Ck][AbilityOwner] Has Ability (By Class)",
+              meta=(DevelopmentOnly))
     static bool
-    Has_Ability(
+    Has_AbilityByClass(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="[Ck][AbilityOwner] Has Ability (By Name)")
+    static bool
+    Has_AbilityByName(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        FGameplayTag InAbilityName);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
@@ -80,33 +89,18 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[Ck][AbilityOwner] Ensure Has Ability")
-    static bool
-    Ensure_Ability(
-        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
-        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[Ck][AbilityOwner] Ensure Has Any Ability")
-    static bool
-    Ensure_Any(
-        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[Ck][AbilityOwner] Get Ability",
+              DisplayName="[Ck][AbilityOwner] Try Get Ability (By Class)",
               meta=(DevelopmentOnly))
     static FCk_Handle_Ability
-    Get_Ability(
+    TryGet_AbilityByClass(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[Ck][AbilityOwner] Find Ability")
+              DisplayName="[Ck][AbilityOwner] Try Get Ability (By Name)")
     static FCk_Handle_Ability
-    Find_Ability(
+    TryGet_AbilityByName(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         FGameplayTag InAbilityName);
 

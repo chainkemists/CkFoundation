@@ -32,8 +32,6 @@ namespace ck
             const FFragment_AbilityOwner_Params& InAbilityOwnerParams) const
         -> void
     {
-        UCk_Utils_Ability_UE::RecordOfAbilities_Utils::AddIfMissing(InHandle);
-
         for (const auto& Params = InAbilityOwnerParams.Get_Params(); const auto& DefaultAbility : Params.Get_DefaultAbilities())
         {
             CK_ENSURE_IF_NOT(ck::IsValid(DefaultAbility), TEXT("Entity [{}] has an INVALID default Ability in its Params!"), InHandle)
@@ -140,7 +138,6 @@ namespace ck
         { return; }
 
         const auto& AbilityParams = AbilityConstructionScript->Get_AbilityParams();
-
         CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptClass),
             TEXT("Cannot GIVE Ability to Ability Owner [{}] using Construction Script [{}] because the ScriptClass [{}] is INVALID"),
             InAbilityOwnerEntity,
@@ -165,9 +162,9 @@ namespace ck
             return;
         }
 
-        const auto& AlreadyHasAbilityWithName = UCk_Utils_AbilityOwner_UE::Has_Ability(InAbilityOwnerEntity, AbilityScriptClass);
+        const auto& AlreadyHasAbilityWithScript = UCk_Utils_AbilityOwner_UE::Has_AbilityByClass(InAbilityOwnerEntity, AbilityScriptClass);
 
-        CK_ENSURE_IF_NOT(NOT AlreadyHasAbilityWithName, TEXT("Cannot GIVE Ability [{}] to Ability Owner [{}] because it already has it"),
+        CK_ENSURE_IF_NOT(NOT AlreadyHasAbilityWithScript, TEXT("Cannot GIVE Ability [{}] to Ability Owner [{}] because it already has it"),
             AbilityScriptClass, InAbilityOwnerEntity)
         { return; }
 
