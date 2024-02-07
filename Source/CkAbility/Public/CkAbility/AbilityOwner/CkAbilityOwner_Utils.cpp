@@ -11,6 +11,26 @@ auto
     UCk_Utils_AbilityOwner_UE::
     Add(
         FCk_Handle& InHandle,
+        const TArray<TSubclassOf<UCk_Ability_Script_PDA>>& InDefaultAbilities)
+    -> FCk_Handle_AbilityOwner
+{
+    return Add(InHandle, FCk_Fragment_AbilityOwner_ParamsData{InDefaultAbilities});
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Add_SingleAbility(
+        FCk_Handle& InHandle,
+        TSubclassOf<UCk_Ability_Script_PDA> InDefaultAbility)
+    -> FCk_Handle_AbilityOwner
+{
+    return Add(InHandle, FCk_Fragment_AbilityOwner_ParamsData{{InDefaultAbility}});
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Add(
+        FCk_Handle& InHandle,
         const FCk_Fragment_AbilityOwner_ParamsData& InParams)
     -> FCk_Handle_AbilityOwner
 {
@@ -276,11 +296,41 @@ auto
     UCk_Utils_AbilityOwner_UE::
     Request_GiveAbility(
         FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass)
+    -> FCk_Handle_AbilityOwner
+{
+    return Request_GiveAbility(InAbilityOwnerHandle, FCk_Request_AbilityOwner_GiveAbility{InAbilityScriptClass});
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Request_GiveAbility(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_GiveAbility& InRequest)
     -> FCk_Handle_AbilityOwner
 {
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
     return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Request_RevokeAbility_ByEntity(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        FCk_Handle InAbilityHandle)
+    -> FCk_Handle_AbilityOwner
+{
+    return Request_RevokeAbility(InAbilityOwnerHandle, FCk_Request_AbilityOwner_RevokeAbility{InAbilityHandle});
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Request_RevokeAbility_ByClass(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass)
+    -> FCk_Handle_AbilityOwner
+{
+    return Request_RevokeAbility(InAbilityOwnerHandle, FCk_Request_AbilityOwner_RevokeAbility{InAbilityClass});
 }
 
 auto
@@ -296,6 +346,30 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
+    Request_TryActivateAbility_ByEntity(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        FCk_Handle InAbilityHandle,
+        FCk_Ability_ActivationPayload InOptionalActivationPayload)
+    -> FCk_Handle_AbilityOwner
+{
+    return Request_TryActivateAbility(InAbilityOwnerHandle,
+        FCk_Request_AbilityOwner_ActivateAbility{InAbilityHandle ,InOptionalActivationPayload});
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Request_TryActivateAbility_ByClass(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass,
+        FCk_Ability_ActivationPayload InOptionalActivationPayload)
+    -> FCk_Handle_AbilityOwner
+{
+    return Request_TryActivateAbility(InAbilityOwnerHandle,
+        FCk_Request_AbilityOwner_ActivateAbility{InAbilityClass ,InOptionalActivationPayload});
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
     Request_TryActivateAbility(
         FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_ActivateAbility& InRequest)
@@ -303,6 +377,26 @@ auto
 {
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
     return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Request_DeactivateAbility_ByEntity(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        FCk_Handle InAbilityHandle)
+    -> FCk_Handle_AbilityOwner
+{
+    return Request_DeactivateAbility(InAbilityOwnerHandle, FCk_Request_AbilityOwner_DeactivateAbility{InAbilityHandle});
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Request_DeactivateAbility_ByClass(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass)
+    -> FCk_Handle_AbilityOwner
+{
+    return Request_DeactivateAbility(InAbilityOwnerHandle, FCk_Request_AbilityOwner_DeactivateAbility{InAbilityClass});
 }
 
 auto
@@ -320,12 +414,25 @@ auto
     UCk_Utils_AbilityOwner_UE::
     Request_SendAbilityEvent(
         FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        FGameplayTag InEventName,
+        FCk_Handle InContextEntity,
+        FInstancedStruct InEventData)
+    -> FCk_Handle_AbilityOwner
+{
+    return Request_SendAbilityEvent(InAbilityOwnerHandle,
+        FCk_Request_AbilityOwner_SendEvent{FCk_AbilityOwner_Event{InEventName}
+            .Set_ContextEntity(InContextEntity)
+            .Set_EventData(InEventData)});
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Request_SendAbilityEvent(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_SendEvent& InRequest)
     -> FCk_Handle_AbilityOwner
 {
-    auto& Events = InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Events>();
-    Events._Events.Emplace(InRequest.Get_Event());
-
+    InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Events>()._Events.Emplace(InRequest.Get_Event());
     return InAbilityOwnerHandle;
 }
 
@@ -373,62 +480,6 @@ auto
 {
     ck::UUtils_Signal_AbilityOwner_OnTagsUpdated::Unbind(InAbilityOwnerHandle, InDelegate);
     return InAbilityOwnerHandle;
-}
-
-auto
-    UCk_Utils_AbilityOwner_UE::
-    Make_Request_ActivateAbility_ByClass(
-        TSubclassOf<UCk_Ability_Script_PDA>  InAbilityScriptClass,
-        FCk_Ability_ActivationPayload InActivationPayload)
-    -> FCk_Request_AbilityOwner_ActivateAbility
-{
-    return FCk_Request_AbilityOwner_ActivateAbility{InAbilityScriptClass, InActivationPayload};
-}
-
-auto
-    UCk_Utils_AbilityOwner_UE::
-    Make_Request_ActivateAbility_ByEntity(
-        const FCk_Handle_Ability& InAbilityEntity,
-        FCk_Ability_ActivationPayload InActivationPayload)
-    -> FCk_Request_AbilityOwner_ActivateAbility
-{
-    return FCk_Request_AbilityOwner_ActivateAbility{InAbilityEntity, InActivationPayload};
-}
-
-auto
-    UCk_Utils_AbilityOwner_UE::
-    Make_Request_DeactivateAbility_ByClass(
-        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass)
-    -> FCk_Request_AbilityOwner_DeactivateAbility
-{
-    return FCk_Request_AbilityOwner_DeactivateAbility{InAbilityScriptClass};
-}
-
-auto
-    UCk_Utils_AbilityOwner_UE::
-    Make_Request_DeactivateAbility_ByEntity(
-        const FCk_Handle_Ability& InAbilityEntity)
-    -> FCk_Request_AbilityOwner_DeactivateAbility
-{
-    return FCk_Request_AbilityOwner_DeactivateAbility{InAbilityEntity};
-}
-
-auto
-    UCk_Utils_AbilityOwner_UE::
-    Make_Request_RevokeAbility_ByClass(
-        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass)
-    -> FCk_Request_AbilityOwner_RevokeAbility
-{
-    return FCk_Request_AbilityOwner_RevokeAbility{InAbilityScriptClass};
-}
-
-auto
-    UCk_Utils_AbilityOwner_UE::
-    Make_Request_RevokeAbility_ByEntity(
-        const FCk_Handle_Ability& InAbilityEntity)
-    -> FCk_Request_AbilityOwner_RevokeAbility
-{
-    return FCk_Request_AbilityOwner_RevokeAbility{InAbilityEntity};
 }
 
 // --------------------------------------------------------------------------------------------------------------------

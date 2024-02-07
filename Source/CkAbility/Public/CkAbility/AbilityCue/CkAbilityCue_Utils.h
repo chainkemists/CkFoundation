@@ -19,7 +19,15 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|AbilityCue",
-        DisplayName="[Ck][AbilityCue] Request Spawn")
+        DisplayName="[Ck][AbilityCue] Request Spawn",
+        meta = (DefaultToSelf = "InWorldContextObject", HidePin = "InWorldContextObject"))
+    static void
+    Request_Spawn_AbilityCue(
+        const FCk_Handle& InHandle,
+        FGameplayTag InAbilityCueName,
+        FCk_AbilityCue_Params InReplicatedParams,
+        UObject* InWorldContextObject);
+
     static void
     Request_Spawn_AbilityCue(
         const FCk_Handle& InHandle,

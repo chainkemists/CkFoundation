@@ -35,6 +35,19 @@ public:
     static FCk_Handle_AbilityOwner
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
+        const TArray<TSubclassOf<class UCk_Ability_Script_PDA>>& InDefaultAbilities);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="[Ck][AbilityOwner] Add Feature (Single Ability)")
+    static FCk_Handle_AbilityOwner
+    Add_SingleAbility(
+        UPARAM(ref) FCk_Handle& InHandle,
+        TSubclassOf<class UCk_Ability_Script_PDA> InDefaultAbility);
+
+    static FCk_Handle_AbilityOwner
+    Add(
+        FCk_Handle& InHandle,
         const FCk_Fragment_AbilityOwner_ParamsData& InParams);
 
 public:
@@ -185,42 +198,103 @@ public:
     static FCk_Handle_AbilityOwner
     Request_GiveAbility(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        TSubclassOf<class UCk_Ability_Script_PDA> InAbilityScriptClass);
+
+    static FCk_Handle_AbilityOwner
+    Request_GiveAbility(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_GiveAbility& InRequest);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="[Ck][AbilityOwner] Request Revoke Ability (By Entity)")
+    static FCk_Handle_AbilityOwner
+    Request_RevokeAbility_ByEntity(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        FCk_Handle InAbilityHandle);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[Ck][AbilityOwner] Request Revoke Ability")
+              DisplayName="[Ck][AbilityOwner] Request Revoke Ability (By Class)",
+              meta = (DevelopmentOnly))
+    static FCk_Handle_AbilityOwner
+    Request_RevokeAbility_ByClass(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass);
+
     static FCk_Handle_AbilityOwner
     Request_RevokeAbility(
-        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_RevokeAbility& InRequest);
+
+public:
+    // NOTE: This is for development only. Use 'Request_SendEvent' to trigger Activation of Abilities
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="[Ck][AbilityOwner] Request Try Activate Ability (By Entity)",
+              meta = (DevelopmentOnly))
+    static FCk_Handle_AbilityOwner
+    Request_TryActivateAbility_ByEntity(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        FCk_Handle InAbilityHandle,
+        FCk_Ability_ActivationPayload InOptionalActivationPayload);
 
     // NOTE: This is for development only. Use 'Request_SendEvent' to trigger Activation of Abilities
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[Ck][AbilityOwner] Request Try Activate Ability",
+              DisplayName="[Ck][AbilityOwner] Request Try Activate Ability (By Class)",
               meta = (DevelopmentOnly))
     static FCk_Handle_AbilityOwner
-    Request_TryActivateAbility(
+    Request_TryActivateAbility_ByClass(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass,
+        FCk_Ability_ActivationPayload InOptionalActivationPayload);
+
+    static FCk_Handle_AbilityOwner
+    Request_TryActivateAbility(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_ActivateAbility& InRequest);
+public:
+    // NOTE: This is for development only. Use 'Request_SendEvent' to trigger Deactivation of Abilities
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="[Ck][AbilityOwner] Request Deactivate Ability (By Entity)",
+              meta = (DevelopmentOnly))
+    static FCk_Handle_AbilityOwner
+    Request_DeactivateAbility_ByEntity(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        FCk_Handle InAbilityHandle);
 
     // NOTE: This is for development only. Use 'Request_SendEvent' to trigger Deactivation of Abilities
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[Ck][AbilityOwner] Request Deactivate Ability",
+              DisplayName="[Ck][AbilityOwner] Request Deactivate Ability (By Class)",
               meta = (DevelopmentOnly))
     static FCk_Handle_AbilityOwner
-    Request_DeactivateAbility(
+    Request_DeactivateAbility_ByClass(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass);
+
+    static FCk_Handle_AbilityOwner
+    Request_DeactivateAbility(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_DeactivateAbility& InRequest);
 
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
               DisplayName = "[Ck][AbilityOwner] Request Send Ability Event")
     static FCk_Handle_AbilityOwner
     Request_SendAbilityEvent(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        FGameplayTag InEventName,
+        FCk_Handle InContextEntity,
+        FInstancedStruct InEventData);
+
+    static FCk_Handle_AbilityOwner
+    Request_SendAbilityEvent(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_SendEvent& InRequest);
 
 public:
@@ -257,45 +331,6 @@ public:
     UnbindFrom_OnTagsUpdated(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Delegate_AbilityOwner_OnTagsUpdated& InDelegate);
-
-private:
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Ability|Owner")
-    static FCk_Request_AbilityOwner_ActivateAbility
-    Make_Request_ActivateAbility_ByClass(
-        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass,
-        FCk_Ability_ActivationPayload InActivationPayload);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Ability|Owner")
-    static FCk_Request_AbilityOwner_ActivateAbility
-    Make_Request_ActivateAbility_ByEntity(
-        const FCk_Handle_Ability& InAbilityEntity,
-        FCk_Ability_ActivationPayload InActivationPayload);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Ability|Owner")
-    static FCk_Request_AbilityOwner_DeactivateAbility
-    Make_Request_DeactivateAbility_ByClass(
-        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Ability|Owner")
-    static FCk_Request_AbilityOwner_DeactivateAbility
-    Make_Request_DeactivateAbility_ByEntity(
-        const FCk_Handle_Ability& InAbilityEntity);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Ability|Owner")
-    static FCk_Request_AbilityOwner_RevokeAbility
-    Make_Request_RevokeAbility_ByClass(
-        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Ability|Owner")
-    static FCk_Request_AbilityOwner_RevokeAbility
-    Make_Request_RevokeAbility_ByEntity(
-        const FCk_Handle_Ability& InAbilityEntity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

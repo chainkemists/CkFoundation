@@ -13,6 +13,19 @@ auto
     UCk_Utils_AbilityCue_UE::
     Request_Spawn_AbilityCue(
         const FCk_Handle& InHandle,
+        FGameplayTag InAbilityCueName,
+        FCk_AbilityCue_Params InReplicatedParams,
+        UObject* InWorldContextObject)
+    -> void
+{
+    Request_Spawn_AbilityCue(InHandle,
+        FCk_Request_AbilityCue_Spawn{InAbilityCueName, InWorldContextObject}.Set_ReplicatedParams(InReplicatedParams));
+}
+
+auto
+    UCk_Utils_AbilityCue_UE::
+    Request_Spawn_AbilityCue(
+        const FCk_Handle& InHandle,
         const FCk_Request_AbilityCue_Spawn& InRequest)
     -> void
 {
