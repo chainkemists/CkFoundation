@@ -52,9 +52,10 @@ class CKATTRIBUTE_API UCk_MeterAttribute_ConstructionScript_PDA final : public U
 public:
     CK_GENERATED_BODY(UCk_MeterAttribute_ConstructionScript_PDA);
 
-    auto DoConstruct_Implementation(
-        FCk_Handle InHandle,
-        const FInstancedStruct& InOptionalParams) -> void override;
+    auto
+    DoConstruct_Implementation(
+        FCk_Handle& InHandle,
+        const FInstancedStruct& InOptionalParams) const -> void override;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess))

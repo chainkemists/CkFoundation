@@ -22,15 +22,15 @@ public:
     auto
     Construct(
         FCk_Handle& InHandle,
-        const FInstancedStruct& InOptionalParams) -> void;
+        const FInstancedStruct& InOptionalParams) const -> void;
 
 protected:
     UFUNCTION(BlueprintNativeEvent,
               DisplayName = "Construct")
     void
     DoConstruct(
-        FCk_Handle InHandle,
-        const FInstancedStruct& InOptionalParams);
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FInstancedStruct& InOptionalParams) const;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

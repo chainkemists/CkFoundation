@@ -63,8 +63,8 @@ namespace ck
 auto
     UCk_MeterAttribute_ConstructionScript_PDA::
     DoConstruct_Implementation(
-        FCk_Handle InHandle,
-        const FInstancedStruct& InOptionalParams)
+        FCk_Handle& InHandle,
+        const FInstancedStruct& InOptionalParams) const
     -> void
 {
     using RecordOfMeterAttributes_Utils = UCk_Utils_MeterAttribute_UE::RecordOfMeterAttributes_Utils;
