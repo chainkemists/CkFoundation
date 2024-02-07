@@ -59,8 +59,7 @@ public:
 
 public:
     FCk_SpawnActor_PostSpawn_Params() = default;
-    FCk_SpawnActor_PostSpawn_Params(
-        ECk_SpawnActor_PostSpawnPolicy InPostSpawnPolicy,
+    explicit FCk_SpawnActor_PostSpawn_Params(
         FCk_Actor_AttachToActor_Params InParams);
 
 private:
@@ -133,13 +132,6 @@ public:
 public:
     using PreFinishSpawnFuncType = TFunction<void(AActor*)>;
 
-public:
-    FCk_Request_ActorModifier_SpawnActor() = default;
-    FCk_Request_ActorModifier_SpawnActor(
-        FCk_Utils_Actor_SpawnActor_Params InSpawnParams,
-        FCk_SpawnActor_PostSpawn_Params InPostSpawnParams,
-        PreFinishSpawnFuncType InPreFinishSpawnFunc = nullptr);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -158,9 +150,12 @@ private:
 
 public:
     CK_PROPERTY_GET(_SpawnParams);
-    CK_PROPERTY_GET(_PostSpawnParams);
-    CK_PROPERTY_GET(_PreFinishSpawnFunc);
-    CK_PROPERTY_GET(_SpawnPolicy);
+    CK_PROPERTY(_PostSpawnParams);
+    CK_PROPERTY(_PreFinishSpawnFunc);
+    CK_PROPERTY(_SpawnPolicy);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_ActorModifier_SpawnActor, _SpawnParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
