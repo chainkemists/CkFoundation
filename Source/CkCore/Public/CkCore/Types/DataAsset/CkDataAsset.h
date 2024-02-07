@@ -27,8 +27,8 @@ public:
 private:
     static auto Get_WorldFromOuterRecursively(UObject* InObject) -> UWorld*;
 
-private:
-    TWeakObjectPtr<UWorld> _CurrentWorld;
+protected:
+    mutable TWeakObjectPtr<UWorld> _CurrentWorld;
 
 public:
     CK_PROPERTY(_CurrentWorld);
