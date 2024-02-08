@@ -39,7 +39,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Sensor",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][Sensor] Try Add New Sensor")
     static FCk_Handle_Sensor
     Add(
@@ -146,7 +146,7 @@ public:
         const FCk_Handle_Sensor& InSensorEntity);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Sensor",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName = "[Ck][Sensor] Get Shape Info")
     static FCk_Sensor_ShapeInfo
     Get_ShapeInfo(
@@ -174,7 +174,7 @@ public:
         const FCk_Handle_Sensor& InSensorEntity);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Sensor",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName = "[Ck][Sensor] Get Attached Entity And Actor")
     static FCk_EntityOwningActor_BasicDetails
     Get_AttachedEntityAndActor(
@@ -188,7 +188,7 @@ public:
         const FCk_Handle_Sensor& InSensorEntity);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Sensor",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName = "[Ck][Sensor] Get All Marker Overlaps")
     static FCk_Sensor_MarkerOverlaps
     Get_AllMarkerOverlaps(
@@ -202,7 +202,7 @@ public:
         const FCk_Handle_Sensor& InSensorEntity);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Sensor",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName = "[Ck][Sensor] Get All Non-Marker Overlaps")
     static FCk_Sensor_NonMarkerOverlaps
     Get_AllNonMarkerOverlaps(
