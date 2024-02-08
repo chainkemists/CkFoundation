@@ -40,7 +40,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Marker",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][Marker] Try Add New Marker")
     static FCk_Handle_Marker
     Add(
@@ -140,7 +140,7 @@ public:
         const FCk_Handle_Marker& InMarkerEntity);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Marker",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName = "[Ck][Marker] Get Shape Info")
     static FCk_Marker_ShapeInfo
     Get_ShapeInfo(
@@ -175,7 +175,7 @@ public:
         const FCk_Handle_Marker& InMarkerEntity);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Marker",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName = "[Ck][Marker] Get Attached Entity And Actor")
     static FCk_EntityOwningActor_BasicDetails
     Get_AttachedEntityAndActor(
