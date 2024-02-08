@@ -86,7 +86,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Attribute|Meter",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][MeterAttribute] Add New Attribute")
     static void
     Add(
@@ -175,7 +175,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Attribute|Meter",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][MeterAttribute] Get Base Value")
     static FCk_Meter
     Get_BaseValue(
@@ -183,7 +183,7 @@ public:
         FGameplayTag InAttributeName);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Attribute|Meter",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][MeterAttribute] Get Bonus Value")
     static FCk_Meter
     Get_BonusValue(
@@ -191,7 +191,7 @@ public:
         FGameplayTag InAttributeName);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Attribute|Meter",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][MeterAttribute] Get Final Value")
     static FCk_Meter
     Get_FinalValue(
@@ -278,7 +278,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|AttributeModifier|Meter",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][MeterAttribute] Add Modifier")
     static void
     Add(
