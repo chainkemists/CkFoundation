@@ -330,11 +330,24 @@ namespace ck
                 }
             }
 
+            // Try Deactivate our own Ability if we have one
+            if (UCk_Utils_Ability_UE::Has(InAbilityOwnerEntity))
+            {
+                if (const auto Condition = algo::MatchesAnyAbilityActivationCancelledTags{GrantedTags};
+                    Condition(InAbilityOwnerEntity))
+                {
+                    auto MyOwner = UCk_Utils_AbilityOwner_UE::Conv_HandleToAbilityOwner(
+                            UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityOwnerEntity));
+
+                    UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(MyOwner,
+                        FCk_Request_AbilityOwner_DeactivateAbility{InAbilityOwnerEntity});
+                }
+            }
+
             // Cancel All Abilities that are cancelled by the newly granted tags
             UCk_Utils_AbilityOwner_UE::ForEach_Ability_If
             (
                 InAbilityOwnerEntity,
-                ECk_AbilityOwner_ForEachAbility_Policy::IncludeSelfIfApplicable,
                 [&](const FCk_Handle& InAbilityEntityToCancel)
                 {
                     ability::Verbose
@@ -352,20 +365,6 @@ namespace ck
                 },
                 algo::MatchesAnyAbilityActivationCancelledTags{GrantedTags}
             );
-
-            if (UCk_Utils_Ability_UE::Has(InAbilityOwnerEntity))
-            {
-                const auto Condition = algo::MatchesAnyAbilityActivationCancelledTags{GrantedTags};
-
-                if (Condition(InAbilityOwnerEntity))
-                {
-                    auto MyOwner = UCk_Utils_AbilityOwner_UE::Conv_HandleToAbilityOwner(
-                            UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityOwnerEntity));
-
-                    UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(MyOwner,
-                        FCk_Request_AbilityOwner_DeactivateAbility{InAbilityOwnerEntity});
-                }
-            }
 
             auto& RequestsComp = InAbilityOwnerEntity.Get<FFragment_AbilityOwner_Requests>();
             const auto NumNewRequests = RequestsComp.Get_Requests().Num();
