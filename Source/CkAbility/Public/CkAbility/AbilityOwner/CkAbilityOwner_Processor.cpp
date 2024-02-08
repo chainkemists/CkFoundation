@@ -279,8 +279,13 @@ namespace ck
                         GrantedTags
                     );
 
+                    const auto PreviousActiveTags = InAbilityOwnerComp.Get_ActiveTags();
                     InAbilityOwnerComp.AppendTags(GrantedTags);
-                    UUtils_Signal_AbilityOwner_OnTagsUpdated::Broadcast(InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityOwnerComp.Get_ActiveTags()));
+
+                    if (PreviousActiveTags != InAbilityOwnerComp.Get_ActiveTags())
+                    {
+                        UUtils_Signal_AbilityOwner_OnTagsUpdated::Broadcast(InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityOwnerComp.Get_ActiveTags()));
+                    }
 
                     break;
                 }
@@ -457,8 +462,13 @@ namespace ck
             const auto& AbilityActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityEntity);
             const auto& GrantedTags = AbilityActivationSettings.Get_ActivationSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
 
+            const auto PreviousActiveTags = InAbilityOwnerComp.Get_ActiveTags();
             InAbilityOwnerComp.RemoveTags(GrantedTags);
-            UUtils_Signal_AbilityOwner_OnTagsUpdated::Broadcast(InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityOwnerComp.Get_ActiveTags()));
+
+            if (PreviousActiveTags != InAbilityOwnerComp.Get_ActiveTags())
+            {
+                UUtils_Signal_AbilityOwner_OnTagsUpdated::Broadcast(InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityOwnerComp.Get_ActiveTags()));
+            }
 
             ability::VeryVerbose
             (
