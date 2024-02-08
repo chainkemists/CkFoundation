@@ -119,13 +119,11 @@ public:
     static TArray<FCk_Handle_Ability>
     ForEach_Ability(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
-        ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_Ability(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
-        ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
         const TFunction<void(UPARAM(ref) FCk_Handle_Ability&)>& InFunc) -> void;
 
     UFUNCTION(BlueprintCallable,
@@ -135,14 +133,12 @@ public:
     static TArray<FCk_Handle_Ability>
     ForEach_Ability_If(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
-        ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate);
     static auto
     ForEach_Ability_If(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
-        ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
         const TFunction<void(FCk_Handle_Ability)>& InFunc,
         const TFunction<bool(FCk_Handle_Ability)>& InPredicate) -> void;
 
@@ -154,14 +150,12 @@ public:
     ForEach_Ability_WithStatus(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         ECk_Ability_Status InStatus,
-        ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_Ability_WithStatus(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         ECk_Ability_Status InStatus,
-        ECk_AbilityOwner_ForEachAbility_Policy InForEachAbilityPolicy,
         const TFunction<void(FCk_Handle_Ability)>& InFunc) -> void;
 
 public:
