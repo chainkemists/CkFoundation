@@ -32,7 +32,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Attribute|Float",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][FloatAttribute] Add New Attribute")
     static FCk_Handle
     Add(
@@ -167,7 +167,7 @@ private:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|AttributeModifier|Float",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][FloatAttribute] Add Modifier")
     static void
     Add(
