@@ -24,11 +24,29 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class CKATTRIBUTE_API FProcessor_FloatAttribute_MinClamp : public TProcessor_Attribute_MinClamp<
+        FProcessor_FloatAttribute_MinClamp, FFragment_FloatAttribute>
+    {
+    public:
+        CK_USING_BASE_CONSTRUCTORS(TProcessor_Attribute_MinClamp);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKATTRIBUTE_API FProcessor_FloatAttribute_MaxClamp : public TProcessor_Attribute_MaxClamp<
+        FProcessor_FloatAttribute_MaxClamp, FFragment_FloatAttribute>
+    {
+    public:
+        CK_USING_BASE_CONSTRUCTORS(TProcessor_Attribute_MaxClamp);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKATTRIBUTE_API FProcessor_FloatAttributeModifier_Additive_Teardown
         : public TProcessor_AttributeModifier_Additive_Teardown<FProcessor_FloatAttributeModifier_Additive_Teardown, FFragment_FloatAttributeModifier>
     {
     public:
-        using TProcessor_AttributeModifier_Additive_Teardown::TProcessor_AttributeModifier_Additive_Teardown;
+        CK_USING_BASE_CONSTRUCTORS(TProcessor_AttributeModifier_Additive_Teardown);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

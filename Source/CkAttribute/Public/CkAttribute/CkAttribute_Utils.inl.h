@@ -12,10 +12,34 @@ namespace ck
         TUtils_Attribute<T_DerivedAttribute>::
         Add(
             HandleType InHandle,
-            AttributeDataType InBaseValue)
+            const AttributeDataType& InBaseValue)
         -> void
     {
         InHandle.Add<AttributeFragmentType>(InBaseValue);
+    }
+
+    template <typename T_DerivedAttribute>
+    auto
+        TUtils_Attribute<T_DerivedAttribute>::
+        Add_Min(
+            HandleType InHandle,
+            const AttributeDataType& InMinValue)
+        -> void
+    {
+        InHandle.Get<AttributeFragmentType>().Set_Min(InMinValue);
+        InHandle.Add<typename T_DerivedAttribute::FTag_MinValue>();
+    }
+
+    template <typename T_DerivedAttribute>
+    auto
+        TUtils_Attribute<T_DerivedAttribute>::
+        Add_Max(
+            HandleType InHandle,
+            const AttributeDataType& InMaxValue)
+        -> void
+    {
+        InHandle.Get<AttributeFragmentType>().Set_Max(InMaxValue);
+        InHandle.Add<typename T_DerivedAttribute::FTag_MaxValue>();
     }
 
     template <typename T_DerivedAttribute>
@@ -65,6 +89,40 @@ namespace ck
         { return {}; }
 
         return InHandle.Get<AttributeFragmentType>().Get_Final();
+    }
+
+    template <typename T_DerivedAttribute>
+    auto
+        TUtils_Attribute<T_DerivedAttribute>::
+        Get_MinValue(
+            HandleType InHandle)
+        -> AttributeDataType
+    {
+        if (NOT Ensure(InHandle))
+        { return {}; }
+
+        CK_ENSURE_IF_NOT(InHandle.Has<typename AttributeFragmentType::FTag_MinValue>(),
+            TEXT("Attribute [{}] does NOT have a Min Value (Clamp)"), InHandle)
+        { return {}; }
+
+        return InHandle.Get<AttributeFragmentType>().Get_Min();
+    }
+
+    template <typename T_DerivedAttribute>
+    auto
+        TUtils_Attribute<T_DerivedAttribute>::
+        Get_MaxValue(
+            HandleType InHandle)
+        -> AttributeDataType
+    {
+        if (NOT Ensure(InHandle))
+        { return {}; }
+
+        CK_ENSURE_IF_NOT(InHandle.Has<typename AttributeFragmentType::FTag_MaxValue>(),
+            TEXT("Attribute [{}] does NOT have a Max Value (Clamp)"), InHandle)
+        { return {}; }
+
+        return InHandle.Get<AttributeFragmentType>().Get_Max();
     }
 
     template <typename T_DerivedAttribute>

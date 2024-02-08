@@ -14,6 +14,16 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
+    FCk_Fragment_FloatAttribute_ParamsData::
+    Get_MinMaxMask () const
+    -> ECk_MinMax_Mask
+{
+    return static_cast<ECk_MinMax_Mask>(_OptionalMinMax);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
     UCk_Provider_FloatAttribute_ParamsData_Literal_PDA::
     Get_Value_Implementation(
         FCk_Handle InHandle) const

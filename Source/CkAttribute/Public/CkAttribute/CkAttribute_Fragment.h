@@ -66,6 +66,12 @@ namespace ck
         friend class TProcessor_Attribute_FireSignals;
 
         template <typename, typename>
+        friend class TProcessor_Attribute_MinClamp;
+
+        template <typename, typename>
+        friend class TProcessor_Attribute_MaxClamp;
+
+        template <typename, typename>
         friend class TProcessor_Attribute_OverrideBaseValue;
 
         template <typename, typename>
@@ -90,6 +96,10 @@ namespace ck
         CK_DEFINE_ECS_TAG(Tag_RecomputeFinalValue);
         CK_DEFINE_ECS_TAG(Tag_FireSignals);
 
+        CK_DEFINE_ECS_TAG(FTag_MinValue);
+        CK_DEFINE_ECS_TAG(FTag_MaxValue);
+        CK_DEFINE_ECS_TAG(FTag_RequiresUpdate);
+
     public:
         using AttributeDataType = T_AttributeType;
         using ThisType          = TFragment_Attribute<AttributeDataType>;
@@ -104,9 +114,14 @@ namespace ck
         AttributeDataType _Base;
         AttributeDataType _Final;
 
+        AttributeDataType _Min;
+        AttributeDataType _Max;
+
     public:
         CK_PROPERTY_GET(_Base);
         CK_PROPERTY_GET(_Final);
+        CK_PROPERTY(_Min);
+        CK_PROPERTY(_Max);
 
         CK_DEFINE_CONSTRUCTOR(TFragment_Attribute<T_AttributeType>, _Base, _Final);
     };

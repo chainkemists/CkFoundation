@@ -28,19 +28,37 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, ForceInlineRow))
-    FGameplayTag _AttributeName;
+              meta = (AllowPrivateAccess = true))
+    FGameplayTag _Name;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, ForceInlineRow))
-    float _AttributeBaseValue = 0.0f;
+              meta = (AllowPrivateAccess = true))
+    float _BaseValue = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess, Bitmask, BitmaskEnum = "/Script/CkCore.ECk_MinMax_Mask"))
+    int32 _OptionalMinMax = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditCondition = "_OptionalMinMax & 1"))
+    float _MinValue = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditCondition = "_OptionalMinMax & 2"))
+    float _MaxValue = 0.0f;
 
 public:
-    CK_PROPERTY_GET(_AttributeName);
-    CK_PROPERTY_GET(_AttributeBaseValue);
+    auto
+    Get_MinMaxMask() const -> ECk_MinMax_Mask;
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttribute_ParamsData, _AttributeName, _AttributeBaseValue);
+    CK_PROPERTY_GET(_Name);
+    CK_PROPERTY_GET(_BaseValue);
+    CK_PROPERTY_GET(_MinValue);
+    CK_PROPERTY_GET(_MaxValue);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttribute_ParamsData, _Name, _BaseValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

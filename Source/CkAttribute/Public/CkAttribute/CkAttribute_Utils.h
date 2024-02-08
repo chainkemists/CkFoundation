@@ -40,7 +40,17 @@ namespace ck
         static auto
         Add(
             HandleType InHandle,
-            AttributeDataType InBaseValue) -> void;
+            const AttributeDataType& InBaseValue) -> void;
+
+        static auto
+        Add_Min(
+            HandleType InHandle,
+            const AttributeDataType& InMinValue) -> void;
+
+        static auto
+        Add_Max(
+            HandleType InHandle,
+            const AttributeDataType& InMaxValue) -> void;
 
         static auto
         Has(
@@ -56,6 +66,14 @@ namespace ck
 
         static auto
         Get_FinalValue(
+            HandleType InHandle) -> AttributeDataType;
+
+        static auto
+        Get_MinValue(
+            HandleType InHandle) -> AttributeDataType;
+
+        static auto
+        Get_MaxValue(
             HandleType InHandle) -> AttributeDataType;
 
     private:

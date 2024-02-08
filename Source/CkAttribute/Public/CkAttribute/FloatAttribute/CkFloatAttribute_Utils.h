@@ -36,7 +36,7 @@ public:
               DisplayName="[Ck][FloatAttribute] Add New Attribute")
     static FCk_Handle
     Add(
-        UPARAM(ref) FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
         const FCk_Fragment_FloatAttribute_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
@@ -45,7 +45,7 @@ public:
               DisplayName="[Ck][FloatAttribute] Add Multiple New Attributes")
     static FCk_Handle
     AddMultiple(
-        UPARAM(ref) FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
         const FCk_Fragment_MultipleFloatAttribute_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 

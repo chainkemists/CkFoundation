@@ -40,6 +40,72 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    template <typename T_DerivedProcessor, typename T_DerivedAttribute>
+    class TProcessor_Attribute_MinClamp : public TProcessor<
+            TProcessor_Attribute_MinClamp<T_DerivedProcessor, T_DerivedAttribute>,
+            T_DerivedAttribute,
+            typename T_DerivedAttribute::FTag_MinValue,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = typename T_DerivedAttribute::FTag_MinValue;
+
+    public:
+        using AttributeFragmentType = T_DerivedAttribute;
+        using AttributeDataType     = typename AttributeFragmentType::AttributeDataType;
+        using ThisType              = TProcessor_Attribute_MinClamp<T_DerivedProcessor, AttributeFragmentType>;
+        using Super                 = TProcessor<ThisType, AttributeFragmentType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using HandleType            = typename Super::HandleType;
+        using TimeType              = typename Super::TimeType;
+
+    public:
+        using Super::Super;
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            AttributeFragmentType& InAttribute) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttribute>
+    class TProcessor_Attribute_MaxClamp : public TProcessor<
+            TProcessor_Attribute_MaxClamp<T_DerivedProcessor, T_DerivedAttribute>,
+            T_DerivedAttribute,
+            typename T_DerivedAttribute::FTag_MaxValue,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = typename T_DerivedAttribute::FTag_MaxValue;
+
+    public:
+        using AttributeFragmentType = T_DerivedAttribute;
+        using AttributeDataType     = typename AttributeFragmentType::AttributeDataType;
+        using ThisType              = TProcessor_Attribute_MaxClamp<T_DerivedProcessor, AttributeFragmentType>;
+        using Super                 = TProcessor<ThisType, AttributeFragmentType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using HandleType            = typename Super::HandleType;
+        using TimeType              = typename Super::TimeType;
+
+    public:
+        using Super::Super;
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            AttributeFragmentType& InAttribute) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_Attribute_RecomputeAll : public TProcessor<
             TProcessor_Attribute_RecomputeAll<T_DerivedProcessor, T_DerivedAttributeModifier>,
@@ -272,6 +338,7 @@ namespace ck
     public:
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
+
 
     // --------------------------------------------------------------------------------------------------------------------
 

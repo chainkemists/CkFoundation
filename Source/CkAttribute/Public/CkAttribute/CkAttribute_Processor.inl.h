@@ -46,6 +46,46 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    template <typename T_DerivedProcessor, typename T_DerivedAttribute>
+    auto
+        TProcessor_Attribute_MinClamp<T_DerivedProcessor, T_DerivedAttribute>::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            AttributeFragmentType& InAttribute) const
+        -> void
+    {
+        const auto BaseValue = InAttribute._Base;
+        const auto FinalValue = InAttribute._Final;
+
+        const auto FinalValue_Min = InAttribute._Min;
+
+        InAttribute._Base = FMath::Max(BaseValue, FinalValue_Min);
+        InAttribute._Final = FMath::Max(FinalValue, FinalValue_Min);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttribute>
+    auto
+        TProcessor_Attribute_MaxClamp<T_DerivedProcessor, T_DerivedAttribute>::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            AttributeFragmentType& InAttribute) const
+        -> void
+    {
+        const auto BaseValue = InAttribute._Base;
+        const auto FinalValue = InAttribute._Final;
+
+        const auto FinalValue_Max = InAttribute._Max;
+
+        InAttribute._Base = FMath::Max(BaseValue, FinalValue_Max);
+        InAttribute._Final = FMath::Max(FinalValue, FinalValue_Max);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
     auto
         TProcessor_Attribute_RecomputeAll<T_DerivedProcessor, T_AttributeModifierFragment>::

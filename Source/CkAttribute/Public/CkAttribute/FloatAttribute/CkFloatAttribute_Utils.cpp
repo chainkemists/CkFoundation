@@ -13,42 +13,41 @@
 auto
     UCk_Utils_FloatAttribute_UE::
     Add(
-        FCk_Handle& InHandle,
+        FCk_Handle& InAttributeOwnerEntity,
         const FCk_Fragment_FloatAttribute_ParamsData& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle
 {
-    RecordOfFloatAttributes_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
+    RecordOfFloatAttributes_Utils::AddIfMissing(InAttributeOwnerEntity, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 
-    const auto& AddNewFloatAttributeToEntity = [&](FCk_Handle InAttributeOwner, const FGameplayTag& InAttributeName, float InAttributeBaseValue)
-    {
-        auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwner);
+    // TODO: Attribute<T> should be taking Handle by ref and this NewAttributeEntity variable should NOT be const
+    auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwnerEntity);
 
-        FloatAttribute_Utils::Add(NewAttributeEntity, InAttributeBaseValue);
-        UCk_Utils_GameplayLabel_UE::Add(NewAttributeEntity, InAttributeName);
+    FloatAttribute_Utils::Add(NewAttributeEntity, InParams.Get_BaseValue());
 
-        // TODO: Remove this Cast once we have type-safe API instead of GameplayTags
-        auto FloatAttributeEntity = ck::StaticCast<FCk_Handle_FloatAttribute>(NewAttributeEntity);
-        RecordOfFloatAttributes_Utils::Request_Connect(InAttributeOwner, FloatAttributeEntity);
-    };
+    if (EnumHasAnyFlags(InParams.Get_MinMaxMask(), ECk_MinMax_Mask::Min))
+    { FloatAttribute_Utils::Add_Min(NewAttributeEntity, InParams.Get_MinValue()); }
 
-    AddNewFloatAttributeToEntity(InHandle, InParams.Get_AttributeName(), InParams.Get_AttributeBaseValue());
+    if (EnumHasAnyFlags(InParams.Get_MinMaxMask(), ECk_MinMax_Mask::Max))
+    { FloatAttribute_Utils::Add_Max(NewAttributeEntity, InParams.Get_MaxValue()); }
+
+    UCk_Utils_GameplayLabel_UE::Add(NewAttributeEntity, InParams.Get_Name());
 
     if (InReplicates == ECk_Replication::DoesNotReplicate)
     {
         ck::attribute::VeryVerbose
         (
             TEXT("Skipping creation of Float Attribute Rep Fragment on Entity [{}] because it's set to [{}]"),
-            InHandle,
+            InAttributeOwnerEntity,
             InReplicates
         );
     }
     else
     {
-        UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_FloatAttribute_Rep>(InHandle);
+        UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_FloatAttribute_Rep>(InAttributeOwnerEntity);
     }
 
-    return InHandle;
+    return InAttributeOwnerEntity;
 }
 
 auto
@@ -162,7 +161,6 @@ auto
             }
 
             return *PredicateResult;
-
         }
     );
 
