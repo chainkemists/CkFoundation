@@ -20,7 +20,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|AnimState",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][AnimState] Add Feature")
     static void
     Add(
@@ -44,28 +44,28 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|AnimState",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][AnimState] Get Goal")
     static FCk_AnimState_Goal
     Get_AnimGoal(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|AnimState",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][AnimState] Get State")
     static FCk_AnimState_State
     Get_AnimState(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|AnimState",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][AnimState] Get Cluster")
     static FCk_AnimState_Cluster
     Get_AnimCluster(
         FCk_Handle InHandle);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|AnimState",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][AnimState] Get Overlay")
     static FCk_AnimState_Overlay
     Get_AnimOverlay(
@@ -73,7 +73,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|AnimState",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][AnimState] Request Set Goal")
     static void
     Request_SetAnimGoal(
@@ -81,7 +81,7 @@ public:
         const FCk_Request_AnimState_SetGoal& InRequest);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|AnimState",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][AnimState] Request Set State")
     static void
     Request_SetAnimState(
@@ -89,7 +89,7 @@ public:
         const FCk_Request_AnimState_SetState& InRequest);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|AnimState",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][AnimState] Request Set Cluster")
     static void
     Request_SetAnimCluster(
@@ -97,7 +97,7 @@ public:
         const FCk_Request_AnimState_SetCluster& InRequest);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|AnimState",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][AnimState] Request Set Overlay")
     static void
     Request_SetAnimOverlay(
