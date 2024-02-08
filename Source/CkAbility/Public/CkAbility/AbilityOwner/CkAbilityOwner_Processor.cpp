@@ -39,24 +39,6 @@ namespace ck
 
             UCk_Utils_AbilityOwner_UE::Request_GiveAbility(InHandle, FCk_Request_AbilityOwner_GiveAbility{DefaultAbility});
         }
-
-        // If we, as an AbilityOwner, are also an Ability, then we need to Give the contained Ability to ourselves so that
-        // we have it as one of the granted abilities. This should NEVER be exposed as a concept, it's only done here to
-        // simplify the following processors. The reason is that if we expose this as a concept then an ability can live
-        // on 2 'levels', i.e. An entity that is an Ability will have companion abilities (same level) AND will live in
-        // the list of sub-abilities (this is bad)
-        if (UCk_Utils_Ability_UE::Has(InHandle))
-        {
-            auto AbilityHandle = UCk_Utils_Ability_UE::Conv_HandleToAbility(InHandle);
-            UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Request_Connect(InHandle, AbilityHandle);
-            const auto Script = InHandle.Get<ck::FFragment_Ability_Current>().Get_AbilityScript();
-
-            CK_ENSURE_IF_NOT(ck::IsValid(Script),
-                TEXT("AbilityScript for Handle [{}] with AbilityOwner [{}] is INVALID. Unable to GIVE the Ability properly"),
-                InHandle,
-                InHandle)
-            { return; }
-        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -371,6 +353,19 @@ namespace ck
                 algo::MatchesAnyAbilityActivationCancelledTags{GrantedTags}
             );
 
+            if (UCk_Utils_Ability_UE::Has(InAbilityOwnerEntity))
+            {
+                const auto Condition = algo::MatchesAnyAbilityActivationCancelledTags{GrantedTags};
+
+                if (Condition(InAbilityOwnerEntity))
+                {
+                    auto MyOwner = UCk_Utils_AbilityOwner_UE::Conv_HandleToAbilityOwner(
+                            UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityOwnerEntity));
+
+                    UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(MyOwner,
+                        FCk_Request_AbilityOwner_DeactivateAbility{InAbilityOwnerEntity});
+                }
+            }
 
             auto& RequestsComp = InAbilityOwnerEntity.Get<FFragment_AbilityOwner_Requests>();
             const auto NumNewRequests = RequestsComp.Get_Requests().Num();
