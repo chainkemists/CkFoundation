@@ -12,7 +12,7 @@ namespace ck
         TUtils_Attribute<T_DerivedAttribute>::
         Add(
             HandleType InHandle,
-            AttributeDataType InBaseValue)
+            const AttributeDataType& InBaseValue)
         -> void
     {
         InHandle.Add<AttributeFragmentType>(InBaseValue);
@@ -77,7 +77,7 @@ namespace ck
         if (NOT Ensure(InHandle))
         { return; }
 
-        InHandle.AddOrGet<typename AttributeFragmentType::Tag_RecomputeFinalValue>();
+        InHandle.AddOrGet<typename AttributeFragmentType::FTag_RecomputeFinalValue>();
     }
 
     template <typename T_DerivedAttribute>
@@ -90,7 +90,7 @@ namespace ck
         if (NOT Ensure(InHandle))
         { return; }
 
-        InHandle.Add<typename AttributeFragmentType::Tag_FireSignals>();
+        InHandle.Add<typename AttributeFragmentType::FTag_FireSignals>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -101,37 +101,37 @@ namespace ck
         Add(
             HandleType            InHandle,
             AttributeDataType     InModifierDelta,
-            HandleType            InTarget,
             ECk_ModifierOperation InModifierOperation,
             ECk_ModifierOperation_RevocablePolicy InModifierOperationRevokablePolicy)
         -> void
     {
-        CK_ENSURE_IF_NOT(ck::IsValid(InTarget),
+        // Attribute fragments live on Entity (A) and AttributeModifiers live on Entities UNDER Entity (A)
+        // Here LifetimeOwner is Entity (A)
+        auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        CK_ENSURE_IF_NOT(ck::IsValid(LifetimeOwner),
             TEXT("Target Entity [{}] is NOT a valid Entity when adding AttributeModifier to Handle [{}]"),
-            InTarget,
+            LifetimeOwner,
             InHandle)
         { return; }
 
-        CK_ENSURE_IF_NOT(TUtils_Attribute<AttributeFragmentType>::Has(InTarget),
+        CK_ENSURE_IF_NOT(TUtils_Attribute<AttributeFragmentType>::Has(LifetimeOwner),
             TEXT("AttributeModifier Entity [{}] is targeting Entity [{}] who does NOT have an Attribute component!"),
             InHandle,
-            InTarget)
+            LifetimeOwner)
         { return; }
 
-        InHandle.Add<AttributeModifierFragmentType>(InModifierDelta);
-
-        AttributeModifierTarget_Utils::Add(InHandle, InTarget);
+        InHandle.template Add<AttributeModifierFragmentType>(InModifierDelta);
 
         switch (InModifierOperation)
         {
             case ECk_ModifierOperation::Additive:
             {
-                InHandle.Add<typename AttributeModifierFragmentType::Tag_AdditiveModification>();
+                InHandle.template Add<typename AttributeModifierFragmentType::FTag_AdditiveModification>();
                 break;
             }
             case ECk_ModifierOperation::Multiplicative:
             {
-                InHandle.Add<typename AttributeModifierFragmentType::Tag_MultiplicativeModification>();
+                InHandle.template Add<typename AttributeModifierFragmentType::FTag_MultiplicativeModification>();
                 break;
             }
             default:
@@ -145,16 +145,16 @@ namespace ck
         {
             case ECk_ModifierOperation_RevocablePolicy::NotRevocable:
             {
-                InHandle.Add<typename AttributeModifierFragmentType::Tag_IsNotRevokableModification>();
+                InHandle.template Add<typename AttributeModifierFragmentType::FTag_IsNotRevokableModification>();
                 Request_ComputeResult(InHandle);
 
                 break;
             }
             case ECk_ModifierOperation_RevocablePolicy::Revocable:
             {
-                InHandle.Add<typename AttributeModifierFragmentType::Tag_IsRevokableModification>();
-                RecordOfAttributeModifiers_Utils::AddIfMissing(InTarget, ECk_Record_EntryHandlingPolicy::Default);
-                RecordOfAttributeModifiers_Utils::Request_Connect(InTarget, InHandle);
+                InHandle.template Add<typename AttributeModifierFragmentType::FTag_IsRevokableModification>();
+                RecordOfAttributeModifiers_Utils::AddIfMissing(LifetimeOwner, ECk_Record_EntryHandlingPolicy::Default);
+                RecordOfAttributeModifiers_Utils::Request_Connect(LifetimeOwner, InHandle);
 
                 break;
             }
@@ -165,7 +165,7 @@ namespace ck
             }
         }
 
-        TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(InTarget);
+        TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(LifetimeOwner);
     }
 
     template <typename T_DerivedAttributeModifier>
@@ -175,7 +175,7 @@ namespace ck
             HandleType InHandle)
         -> bool
     {
-        return InHandle.Has<AttributeModifierFragmentType>();
+        return InHandle.template Has<AttributeModifierFragmentType>();
     }
 
     template <typename T_DerivedAttributeModifier>
@@ -198,7 +198,7 @@ namespace ck
             HandleType InHandle)
         -> const AttributeDataType&
     {
-        return InHandle.Get<AttributeModifierFragmentType>().Get_ModifierDelta();
+        return InHandle.template Get<AttributeModifierFragmentType>().Get_ModifierDelta();
     }
 
     template <typename T_DerivedAttributeModifier>
@@ -211,7 +211,7 @@ namespace ck
         if (NOT Ensure(InHandle))
         { return; }
 
-        InHandle.Add<typename AttributeModifierFragmentType::Tag_ComputeResult>();
+        InHandle.template Add<typename AttributeModifierFragmentType::FTag_ComputeResult>();
     }
 }
 
