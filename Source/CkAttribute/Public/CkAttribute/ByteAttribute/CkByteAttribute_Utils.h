@@ -32,7 +32,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Attribute|Byte",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][ByteAttribute] Add New Attribute")
     static FCk_Handle
     Add(
@@ -167,7 +167,7 @@ private:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|AttributeModifier|Byte",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][ByteAttribute] Add Modifier")
     static void
     Add(
