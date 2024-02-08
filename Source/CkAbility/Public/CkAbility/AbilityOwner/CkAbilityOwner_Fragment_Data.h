@@ -24,20 +24,6 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_AbilitySearch_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UENUM(BlueprintType)
-enum class ECk_AbilityOwner_ForEachAbility_Policy : uint8
-{
-    // If the AbilityOwner is also an Ability, SKIP it as when iterating over the list of abilities
-    IgnoreSelf,
-
-    // If the AbilityOwner is also an Ability, INCLUDE it as when iterating over the list of abilities
-    IncludeSelfIfApplicable,
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_ForEachAbility_Policy);
-
-// --------------------------------------------------------------------------------------------------------------------
-
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak="/Script/CkEcs.Ck_Utils_Handle_UE:Conv_HandleTypeSafeToHandle"))
 struct CKABILITY_API FCk_Handle_AbilityOwner : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_AbilityOwner); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_AbilityOwner);
