@@ -17,8 +17,21 @@ namespace ck
     template <typename T_DerivedAttributeModifier>
     class TUtils_AttributeModifier;
 
+}
+
+namespace ck::detail
+{
     template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_MulticastType>
     class TProcessor_Attribute_FireSignals;
+
+    template <typename, typename, typename>
+    class TProcessor_Attribute_MinClamp;
+
+    template <typename, typename, typename>
+    class TProcessor_Attribute_MaxClamp;
+
+    template <typename, typename, typename>
+    class TProcessor_Attribute_OverrideBaseValue;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_Attribute_RecomputeAll;
@@ -55,7 +68,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_AttributeType>
+    template <typename T_HandleType, typename T_AttributeType, ECk_MinMaxCurrent T_ComponentTag>
     struct TFragment_Attribute
     {
     public:
@@ -63,37 +76,45 @@ namespace ck
         friend class TUtils_Attribute;
 
         template <typename, typename, typename>
-        friend class TProcessor_Attribute_FireSignals;
+        friend class detail::TProcessor_Attribute_FireSignals;
+
+        template <typename, typename, typename>
+        friend class detail::TProcessor_Attribute_MinClamp;
+
+        template <typename, typename, typename>
+        friend class detail::TProcessor_Attribute_MaxClamp;
+
+        template <typename, typename, typename>
+        friend class detail::TProcessor_Attribute_OverrideBaseValue;
 
         template <typename, typename>
-        friend class TProcessor_Attribute_OverrideBaseValue;
+        friend class detail::TProcessor_Attribute_RecomputeAll;
 
         template <typename, typename>
-        friend class TProcessor_Attribute_RecomputeAll;
+        friend class detail::TProcessor_AttributeModifier_RevokableAdditive_Compute;
 
         template <typename, typename>
-        friend class TProcessor_AttributeModifier_RevokableAdditive_Compute;
+        friend class detail::TProcessor_AttributeModifier_NotRevokableAdditive_Compute;
 
         template <typename, typename>
-        friend class TProcessor_AttributeModifier_NotRevokableAdditive_Compute;
+        friend class detail::TProcessor_AttributeModifier_RevokableMultiplicative_Compute;
 
         template <typename, typename>
-        friend class TProcessor_AttributeModifier_RevokableMultiplicative_Compute;
-
-        template <typename, typename>
-        friend class TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute;
+        friend class detail::TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute;
 
     public:
-        CK_GENERATED_BODY(TFragment_Attribute<T_AttributeType>);
+        CK_GENERATED_BODY(TFragment_Attribute<T_HandleType COMMA T_AttributeType COMMA T_ComponentTag>);
 
     public:
-        CK_DEFINE_ECS_TAG(Tag_RecomputeFinalValue);
-        CK_DEFINE_ECS_TAG(Tag_FireSignals);
+        CK_DEFINE_ECS_TAG(FTag_RecomputeFinalValue);
+        CK_DEFINE_ECS_TAG(FTag_FireSignals);
+        CK_DEFINE_ECS_TAG(FTag_RequiresUpdate);
 
     public:
         using AttributeDataType = T_AttributeType;
-        using ThisType          = TFragment_Attribute<AttributeDataType>;
-        using HandleType        = FCk_Handle;
+        using HandleType        = T_HandleType;
+
+        static constexpr auto ComponentTagType  = T_ComponentTag;
 
     public:
         TFragment_Attribute() = default;
@@ -108,8 +129,19 @@ namespace ck
         CK_PROPERTY_GET(_Base);
         CK_PROPERTY_GET(_Final);
 
-        CK_DEFINE_CONSTRUCTOR(TFragment_Attribute<T_AttributeType>, _Base, _Final);
+        CK_DEFINE_CONSTRUCTOR(TFragment_Attribute, _Base, _Final);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_HandleType, typename T_AttributeType>
+    using TFragment_Attribute_Current = TFragment_Attribute<T_HandleType, T_AttributeType, ECk_MinMaxCurrent::Current>;
+
+    template <typename T_HandleType, typename T_AttributeType>
+    using TFragment_Attribute_Min = TFragment_Attribute<T_HandleType, T_AttributeType, ECk_MinMaxCurrent::Min>;
+
+    template <typename T_HandleType, typename T_AttributeType>
+    using TFragment_Attribute_Max = TFragment_Attribute<T_HandleType, T_AttributeType, ECk_MinMaxCurrent::Max>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -132,7 +164,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedAttribute>
+    template <typename T_HandleType, typename T_DerivedAttribute>
     struct TFragment_AttributeModifier
     {
     public:
@@ -140,17 +172,17 @@ namespace ck
         friend class TUtils_AttributeModifier;
 
     public:
-        CK_DEFINE_ECS_TAG(Tag_AdditiveModification);
-        CK_DEFINE_ECS_TAG(Tag_MultiplicativeModification);
-        CK_DEFINE_ECS_TAG(Tag_IsRevokableModification);
-        CK_DEFINE_ECS_TAG(Tag_IsNotRevokableModification);
-        CK_DEFINE_ECS_TAG(Tag_ComputeResult);
+        CK_DEFINE_ECS_TAG(FTag_AdditiveModification);
+        CK_DEFINE_ECS_TAG(FTag_MultiplicativeModification);
+        CK_DEFINE_ECS_TAG(FTag_IsRevokableModification);
+        CK_DEFINE_ECS_TAG(FTag_IsNotRevokableModification);
+        CK_DEFINE_ECS_TAG(FTag_ComputeResult);
 
     public:
         using AttributeFragmentType = T_DerivedAttribute;
-        using ThisType              = TFragment_AttributeModifier<AttributeFragmentType>;
+        using ThisType              = TFragment_AttributeModifier<T_HandleType, AttributeFragmentType>;
         using AttributeDataType     = typename AttributeFragmentType::AttributeDataType;
-        using HandleType            = FCk_Handle;
+        using HandleType            = T_HandleType;
 
     public:
         TFragment_AttributeModifier() = default;
@@ -166,14 +198,11 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FFragment_AttributeModifierTarget : public FFragment_EntityHolder
+    template <typename T_Handle>
+    struct TFragment_RecordOfAttributeModifiers : public TFragment_RecordOfEntities<T_Handle>
     {
-        using FFragment_EntityHolder::FFragment_EntityHolder;
+        using TFragment_RecordOfEntities<T_Handle>::TFragment_RecordOfEntities;
     };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfAttributeModifiers, FCk_Handle);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -183,7 +212,7 @@ namespace ck
         using AttributeFragmentType   = T_DerivedAttribute;
         using ThisType                = TPayload_Attribute_OnValueChanged<AttributeFragmentType>;
         using AttributeDataType       = typename AttributeFragmentType::AttributeDataType;
-        using HandleType              = FCk_Handle;
+        using HandleType              = typename AttributeFragmentType::HandleType;
 
     public:
         TPayload_Attribute_OnValueChanged(
@@ -208,7 +237,7 @@ namespace ck
     template<typename T_DerivedAttribute>
     struct TFragment_Signal_OnAttributeValueChanged : public TFragment_Signal
     <
-        FCk_Handle,
+        typename T_DerivedAttribute::HandleType,
         TPayload_Attribute_OnValueChanged<T_DerivedAttribute>
     > {};
 
@@ -247,10 +276,9 @@ namespace ck
         TFragment_Signal_OnAttributeValueChanged<T_DerivedAttribute>,
         TFragment_Signal_UnrealMulticast_OnAttributeValueChanged_PostFireUnbind<T_DerivedAttribute, T_Multicast>
     > {};
-
-    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// ReSharper disable once CppUnusedIncludeDirective
 #include "CkAttribute_Fragment.inl.h"
