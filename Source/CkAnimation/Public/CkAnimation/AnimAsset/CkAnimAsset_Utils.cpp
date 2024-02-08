@@ -72,18 +72,40 @@ auto
 
 auto
     UCk_Utils_AnimAsset_UE::
-    Get_All(
-        const FCk_Handle& InAnimAssetOwnerEntity)
+    ForEach_AnimAsset(
+        const FCk_Handle& InHandle,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate)
     -> TArray<FCk_Handle_AnimAsset>
 {
-    auto AllAnimAssets = TArray<FCk_Handle_AnimAsset>{};
+    auto AnimAsset = TArray<FCk_Handle_AnimAsset>{};
 
-    RecordOfAnimAssets_Utils::ForEach_ValidEntry(InAnimAssetOwnerEntity, [&](const auto& InAnimAssetEntity)
+    ForEach_AnimAsset(InHandle, [&](FCk_Handle_AnimAsset& InAnimAsset)
     {
-        AllAnimAssets.Add(InAnimAssetEntity);
+        if (InDelegate.IsBound())
+        { InDelegate.Execute(InAnimAsset, InOptionalPayload); }
+        else
+        { AnimAsset.Emplace(InAnimAsset); }
     });
 
-    return AllAnimAssets;
+    return AnimAsset;
+}
+
+auto
+    UCk_Utils_AnimAsset_UE::
+    ForEach_AnimAsset(
+        const FCk_Handle& InHandle,
+        const TFunction<void(FCk_Handle_AnimAsset&)>& InFunc)
+    -> void
+{
+    RecordOfAnimAssets_Utils::ForEach_ValidEntry
+    (
+        InHandle,
+        [&](FCk_Handle_AnimAsset InAnimAsset)
+        {
+            InFunc(InAnimAsset);
+        }
+    );
 }
 
 auto
