@@ -32,7 +32,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Attribute|Vector",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][VectorAttribute] Add New Attribute")
     static FCk_Handle
     Add(
