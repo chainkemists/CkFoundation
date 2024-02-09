@@ -123,7 +123,7 @@ namespace ck_sensor
         }
 
         const auto& SensorAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(SensorCompAttachedActor);
-        auto SensorOwningEntity           = UCk_Utils_Sensor_UE::Conv_HandleToSensor(SensorOverlapBody->Get_OwningEntity());
+        auto SensorOwningEntity                  = UCk_Utils_Sensor_UE::Conv_HandleToSensor(SensorOverlapBody->Get_OwningEntity());
         const auto& SensorName                   = UCk_Utils_GameplayLabel_UE::Get_Label(SensorOwningEntity);
 
         if (ck::Is_NOT_Valid(MarkerOverlapBody, ck::IsValid_Policy_NullptrOnly{}))
