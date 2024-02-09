@@ -368,7 +368,7 @@ namespace ck
 
             auto& RequestsComp = InAbilityOwnerEntity.Get<FFragment_AbilityOwner_Requests>();
             const auto NumNewRequests = RequestsComp.Get_Requests().Num();
-            UCk_Utils_Ability_UE::DoActivate(InAbilityToActivateEntity, InRequest.Get_ActivationPayload());
+            UCk_Utils_Ability_UE::DoActivate(InAbilityOwnerEntity, InAbilityToActivateEntity, InRequest.Get_ActivationPayload());
 
             // it's possible that we already have a deactivation request, if yes, process it
             const auto ProcessPossibleDeactivationRequest = [&]
