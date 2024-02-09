@@ -117,6 +117,16 @@
 			]
 		},
 		{
+			"Name": "CkEcsNodes",
+			"Type": "UncookedOnly",
+			"LoadingPhase": "PreDefault",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
 			"Name": "CkEcsBasics",
 			"Type": "Runtime",
 			"LoadingPhase": "PreDefault",
@@ -148,7 +158,7 @@
 		},
 		{
 			"Name": "CkEntityBridge",
-			"Type": "UncookedOnly",
+			"Type": "Runtime",
 			"LoadingPhase": "PreDefault",
 			"WhitelistPlatforms": [
 				"Win64",

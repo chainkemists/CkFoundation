@@ -91,17 +91,47 @@ auto
 
 auto
     UCk_Utils_Handle_UE::
-    Conv_HandleTypeSafeToHandle(
+    Get_RawHandle(
         UStruct*,
         FCk_Handle&)
         -> void
 {
-	// We should never hit this! stubs to avoid NoExport on the class.
-	checkNoEntry();
+    // We should never hit this! stubs to avoid NoExport on the class.
+    checkNoEntry();
 }
 
-DEFINE_FUNCTION(UCk_Utils_Handle_UE::execConv_HandleTypeSafeToHandle)
+DEFINE_FUNCTION(UCk_Utils_Handle_UE::execGet_RawHandle)
 {
+    //// Read wildcard Value input.
+    //Stack.MostRecentPropertyAddress = nullptr;
+    //Stack.MostRecentPropertyContainer = nullptr;
+    //Stack.StepCompiledIn<FStructProperty>(nullptr);
+
+    //const FStructProperty* ValueProp = CastField<FStructProperty>(Stack.MostRecentProperty);
+    //const void* ValuePtr = Stack.MostRecentPropertyAddress;
+
+    //P_FINISH;
+
+    //if (!ValueProp || !ValuePtr)
+    //{
+    //    FBlueprintExceptionInfo ExceptionInfo(
+    //        EBlueprintExceptionType::AbortExecution,
+    //        LOCTEXT("InstancedStruct_MakeInvalidValueWarning", "Failed to resolve the Value for Make Instanced Struct")
+    //    );
+
+    //    FBlueprintCoreDelegates::ThrowScriptException(P_THIS, Stack, ExceptionInfo);
+
+    //    P_NATIVE_BEGIN;
+    //    (*(FInstancedStruct*)RESULT_PARAM).Reset();
+    //    P_NATIVE_END;
+    //}
+    //else
+    //{
+    //    P_NATIVE_BEGIN;
+    //    (*(FCk_Handle*)RESULT_PARAM).InitializeAs(ValueProp->Struct, (const uint8*)ValuePtr);
+    //    P_NATIVE_END;
+    //}
+
     ON_SCOPE_EXIT
     {
         P_FINISH
