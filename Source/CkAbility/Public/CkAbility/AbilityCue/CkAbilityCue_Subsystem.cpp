@@ -62,6 +62,8 @@ auto
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity);
     NewEntity.Add<FCk_AbilityCue_Params>(InParams);
 
+    ck::ability::Verbose(TEXT("Executing AbilityCue Config [{}] with created Entity [{}]") ,AbilityCueConfig, NewEntity);
+
     AbilityCueEntityConfig->Build(NewEntity, {});
 }
 
