@@ -180,19 +180,52 @@ auto
 auto
     UCk_Utils_Ability_UE::
     DoActivate(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         FCk_Handle_Ability& InAbilityEntity,
         const FCk_Ability_ActivationPayload& InActivationPayload)
     -> void
 {
     auto& AbilityCurrent = InAbilityEntity.Get<ck::FFragment_Ability_Current>();
+    const auto Script = AbilityCurrent.Get_AbilityScript();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(AbilityCurrent._AbilityScript),
+    CK_ENSURE_IF_NOT(ck::IsValid(Script),
         TEXT("Cannot Activate Ability with Entity [{}] because its AbilityScript is INVALID"),
         InAbilityEntity)
     { return; }
 
+    const auto& AbilityParams = InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params();
+    const auto& AbilityInstancingPolicy = AbilityParams.Get_Data().Get_InstancingPolicy();
     AbilityCurrent._Status = ECk_Ability_Status::Active;
-    AbilityCurrent._AbilityScript->OnActivateAbility(InActivationPayload);
+
+    CK_ENSURE_IF_NOT([&]
+    {
+        if (AbilityInstancingPolicy == ECk_Ability_InstancingPolicy::NotInstanced)
+        { return true; }
+
+        const auto IsSameAbilityEntity      = Script->_AbilityHandle == InAbilityEntity;
+        const auto IsSameAbilityOwnerEntity = Script->_AbilityOwnerHandle == InAbilityOwnerEntity;
+
+        return IsSameAbilityEntity && IsSameAbilityOwnerEntity;
+    }(),
+    TEXT("Ability Script [{}] that is NOT a CDO was GIVEN with {} [{}] and {} [{}] but ACTIVATED with Ability [{}] and Ability Owner [{}]\n"
+         "This is supported/expected on a CDO, but NOT for instanced Abilities"),
+         Script,
+         ck::IsValid(Script->_AbilityHandle) ? TEXT("VALID Ability") : TEXT("INVALID Ability"),
+         Script->_AbilityHandle,
+         ck::IsValid(Script->_AbilityOwnerHandle) ? TEXT("VALID Ability Owner") : TEXT("INVALID Ability Owner"),
+         Script->_AbilityOwnerHandle,
+         InAbilityEntity,
+         InAbilityOwnerEntity)
+    {}
+
+    // It is possible that between Give and Activate, the Ability Owning & Handle were changed
+    // if the Ability is a CDO AND multiple activate/deactivate requests happened in the same frame.
+    // This is partly due to the fact that we process deactivation requests immediately after activation
+    // IFF activation + deactivation happened in the same frame
+    Script->_AbilityHandle = InAbilityEntity;
+    Script->_AbilityOwnerHandle = InAbilityOwnerEntity;
+
+    Script->OnActivateAbility(InActivationPayload);
 
     ck::UUtils_Signal_OnAbilityActivated::Broadcast(InAbilityEntity, ck::MakePayload(InAbilityEntity));
 }
@@ -205,18 +238,18 @@ auto
     -> void
 {
     auto& AbilityCurrent = InAbilityEntity.Get<ck::FFragment_Ability_Current>();
+    auto Script = AbilityCurrent.Get_AbilityScript();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(AbilityCurrent._AbilityScript),
+    CK_ENSURE_IF_NOT(ck::IsValid(Script),
         TEXT("Cannot Deactivate Ability with Entity [{}] because its AbilityScript is INVALID"),
         InAbilityEntity)
     { return; }
 
+    const auto& AbilityParams = InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params();
     AbilityCurrent._Status = ECk_Ability_Status::NotActive;
-    AbilityCurrent._AbilityScript->OnDeactivateAbility();
+    Script->OnDeactivateAbility();
 
     ck::UUtils_Signal_OnAbilityDeactivated::Broadcast(InAbilityEntity, ck::MakePayload(InAbilityEntity));
-
-    const auto& AbilityParams = InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params();
 
     // NOTE: If we reset the ability script properties on DEACTIVATE, we are potentially doing a cleanup for nothing
     // if the ability is not activated again. If we do it on ACTIVATE then we are going to perform a cleanup for nothing
@@ -230,12 +263,12 @@ auto
                 ck::ability::VeryVerbose
                 (
                     TEXT("Recycling Ability Script [{}] with Entity [{}] for Ability Owner [{}]"),
-                    AbilityCurrent._AbilityScript,
+                    Script,
                     InAbilityEntity,
                     InAbilityOwnerEntity
                 );
 
-                UCk_Utils_Object_UE::Request_ResetAllPropertiesToDefault(AbilityCurrent._AbilityScript.Get());
+                UCk_Utils_Object_UE::Request_ResetAllPropertiesToDefault(Script.Get());
 
                 break;
             }
@@ -244,7 +277,7 @@ auto
                 ck::ability::VeryVerbose
                 (
                     TEXT("Instancing new Ability Script [{}] with Entity [{}] for Ability Owner [{}]"),
-                    AbilityCurrent._AbilityScript,
+                    Script,
                     InAbilityEntity,
                     InAbilityOwnerEntity
                 );
@@ -254,7 +287,7 @@ auto
                 UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityCurrent.Get_AbilityScript()->GetWorld())->
                     Request_RemoveAbilityScript(AbilityCurrent.Get_AbilityScript().Get());
 
-                AbilityCurrent._AbilityScript = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_Ability_Script_PDA>
+                Script = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_Ability_Script_PDA>
                 (
                     UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAbilityOwnerEntity),
                     AbilityScriptClass,
@@ -273,10 +306,10 @@ auto
             }
         }
 
-        if (ck::IsValid(AbilityCurrent._AbilityScript))
+        if (ck::IsValid(Script))
         {
-            AbilityCurrent._AbilityScript->_AbilityHandle = InAbilityEntity;
-            AbilityCurrent._AbilityScript->_AbilityOwnerHandle = InAbilityOwnerEntity;
+            Script->_AbilityHandle = InAbilityEntity;
+            Script->_AbilityOwnerHandle = InAbilityOwnerEntity;
         }
     }
 }
