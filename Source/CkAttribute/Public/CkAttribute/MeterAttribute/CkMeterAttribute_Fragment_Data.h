@@ -92,7 +92,7 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Meter _ModifierDelta;
 
-    UPROPERTY(BlueprintReadWrite,
+    UPROPERTY(BlueprintReadWrite, EditAnywhere,
               meta = (AllowPrivateAccess = true))
     FGameplayTag _TargetAttributeName;
 
