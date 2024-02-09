@@ -153,23 +153,24 @@ private:
 private:
     static auto
     DoActivate(
-        UPARAM(ref) FCk_Handle_Ability& InAbilityEntity,
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        FCk_Handle_Ability& InAbilityEntity,
         const FCk_Ability_ActivationPayload& InActivationPayload) -> void;
 
     static auto
     DoDeactivate(
-        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
-        UPARAM(ref) FCk_Handle_Ability& InAbilityEntity) -> void;
+        FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        FCk_Handle_Ability& InAbilityEntity) -> void;
 
     static auto
     DoGive(
-        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwner,
-        UPARAM(ref) FCk_Handle_Ability& InAbility) -> void;
+        FCk_Handle_AbilityOwner& InAbilityOwner,
+        FCk_Handle_Ability& InAbility) -> void;
 
     static auto
     DoRevoke(
-        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwner,
-        UPARAM(ref) FCk_Handle_Ability& InAbility) -> void;
+        FCk_Handle_AbilityOwner& InAbilityOwner,
+        FCk_Handle_Ability& InAbility) -> void;
 
 private:
     static UCk_Ability_EntityConfig_PDA*
