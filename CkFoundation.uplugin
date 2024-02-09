@@ -197,6 +197,16 @@
 			]
 		},
 		{
+			"Name": "CkK2Nodes",
+			"Type": "UncookedOnly",
+			"LoadingPhase": "PreDefault",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
 			"Name": "CkLabel",
 			"Type": "Runtime",
 			"LoadingPhase": "PreDefault",
