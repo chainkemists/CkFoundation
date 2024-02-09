@@ -242,12 +242,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKABILITY_API FCk_Ability_ActivationPayload
+struct CKABILITY_API FCk_Ability_Payload_OnActivate
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Ability_ActivationPayload);
+    CK_GENERATED_BODY(FCk_Ability_Payload_OnActivate);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -255,7 +255,31 @@ private:
     FCk_Handle _ContextEntity;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, AutoCreateRefTerm="_Data"))
+              meta = (AllowPrivateAccess = true))
+    FInstancedStruct _Data;
+
+public:
+    CK_PROPERTY(_ContextEntity);
+    CK_PROPERTY(_Data);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Ability_Payload_OnGranted
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Ability_Payload_OnGranted);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _ContextEntity;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
     FInstancedStruct _Data;
 
 public:

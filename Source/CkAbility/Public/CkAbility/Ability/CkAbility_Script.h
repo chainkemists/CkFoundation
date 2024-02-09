@@ -23,14 +23,15 @@ public:
 
 public:
     auto
-    OnGiveAbility() -> void;
+    OnGiveAbility(
+        const FCk_Ability_Payload_OnGranted& InOptionalPayload) -> void;
 
     auto
     OnRevokeAbility() -> void;
 
     auto
     OnActivateAbility(
-        const FCk_Ability_ActivationPayload& InActivationPayload) -> void;
+        const FCk_Ability_Payload_OnActivate& InOptionalPayload) -> void;
 
     auto
     OnDeactivateAbility() -> void;
@@ -41,7 +42,7 @@ protected:
               meta     = (DisplayName = "OnActivateAbility"))
     void
     DoOnActivateAbility(
-        const FCk_Ability_ActivationPayload& InActivationPayload);
+        const FCk_Ability_Payload_OnActivate& InActivationPayload);
 
     UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|Ability|Script",
@@ -53,7 +54,8 @@ protected:
               Category = "Ck|Ability|Script",
               meta     = (DisplayName = "OnGiveAbility"))
     void
-    DoOnGiveAbility();
+    DoOnGiveAbility(
+        const FCk_Ability_Payload_OnGranted& InOptionalPayload);
 
     UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|Ability|Script",
@@ -68,7 +70,7 @@ private:
               meta = (CompactNodeTitle="TRYACTIVATE_ThisAbility", HideSelfPin = true))
     void
     DoRequest_ActivateAbility(
-        FCk_Ability_ActivationPayload InActivationPayload);
+        FCk_Ability_Payload_OnActivate InActivationPayload);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
