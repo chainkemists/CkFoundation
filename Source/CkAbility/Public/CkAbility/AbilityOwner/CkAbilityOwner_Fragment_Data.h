@@ -24,10 +24,13 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_AbilitySearch_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, Atomic)
 struct CKABILITY_API FCk_BaseHandle
 {
     GENERATED_BODY()
+
+    FCk_BaseHandle();
+    FCk_BaseHandle(const struct FMyStruct& Other);
 
     UPROPERTY(BlueprintReadWrite)
     float _Value = 0;

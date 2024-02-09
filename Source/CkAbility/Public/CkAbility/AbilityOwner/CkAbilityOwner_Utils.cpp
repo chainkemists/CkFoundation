@@ -394,6 +394,18 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
+    MakeMyStruct(
+        float Value)
+    -> FMyStruct
+{
+    FMyStruct S;
+    S._Value = Value;
+
+    return S;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
     Make_Request_ActivateAbility_ByClass(
         TSubclassOf<UCk_Ability_Script_PDA>  InAbilityScriptClass,
         FCk_Ability_ActivationPayload InActivationPayload)

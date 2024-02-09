@@ -251,11 +251,8 @@ public:
         const FCk_Delegate_AbilityOwner_OnTagsUpdated& InDelegate);
 
 public:
-    UFUNCTION(BlueprintPure)
-    static FMyStruct MakeMyStruct(float Value)
-    {
-        return FMyStruct{Value};
-    }
+    UFUNCTION(BlueprintCallable)
+    static FMyStruct MakeMyStruct(float Value);
 
 private:
     UFUNCTION(BlueprintPure,

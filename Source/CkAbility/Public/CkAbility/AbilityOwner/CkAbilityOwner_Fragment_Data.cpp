@@ -2,6 +2,17 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+FCk_BaseHandle::FCk_BaseHandle()
+{
+    int i = 0;
+}
+
+FCk_BaseHandle::FCk_BaseHandle(
+    const FMyStruct& Other)
+        : _Value(Other._Value)
+{
+}
+
 FCk_Handle_AbilityOwner::FCk_Handle_AbilityOwner(
     EntityType InEntity,
     const RegistryType& InRegistry): FCk_Handle_TypeSafe(InEntity,
