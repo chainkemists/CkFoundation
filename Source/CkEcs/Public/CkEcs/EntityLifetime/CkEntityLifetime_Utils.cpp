@@ -102,14 +102,6 @@ auto
 
 auto
     UCk_Utils_EntityLifetime_UE::
-    Get_TransientEntity( FCk_Handle InHandle)
-    -> FCk_Handle
-{
-    return Get_TransientEntity(**InHandle);
-}
-
-auto
-    UCk_Utils_EntityLifetime_UE::
     Get_WorldForEntity(
         FCk_Handle InHandle)
     -> UWorld*
@@ -191,15 +183,6 @@ auto
     }
 
     return NewEntityHandle;
-}
-
-auto
-    UCk_Utils_EntityLifetime_UE::
-    Get_TransientEntity(
-        const RegistryType& InRegistry)
-    -> HandleType
-{
-    return HandleType{InRegistry.Get_TransientEntity(), InRegistry};
 }
 
 // --------------------------------------------------------------------------------------------------------------------

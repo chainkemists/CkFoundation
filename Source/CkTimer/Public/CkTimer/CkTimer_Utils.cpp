@@ -98,9 +98,9 @@ auto
         FGameplayTag InTimerName)
     -> FCk_Handle_Timer
 {
-    return Get_EntityOrRecordEntry_WithFragmentAndLabel<
+    return FCk_Handle_Timer{Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Timer_UE,
-        RecordOfTimers_Utils>(InTimerOwnerEntity, InTimerName);
+        RecordOfTimers_Utils>(InTimerOwnerEntity, InTimerName)};
 }
 
 auto

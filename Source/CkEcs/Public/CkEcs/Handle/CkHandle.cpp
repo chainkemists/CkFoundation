@@ -49,9 +49,24 @@ FCk_Handle::
 auto
     FCk_Handle::
     operator=(
-        ThisType InOther) -> ThisType&
+        const ThisType& InOther) -> ThisType&
 {
-    Swap(InOther);
+    auto Other = ThisType{InOther};
+    Swap(Other);
+    return *this;
+}
+
+auto
+    FCk_Handle::
+    operator=(
+        ThisType&& InOther) noexcept
+        -> ThisType&
+{
+    _Entity = InOther._Entity;
+    _Registry = InOther._Registry;
+    _Mapper = InOther._Mapper;
+    _Fragments = InOther._Fragments;
+
     return *this;
 }
 

@@ -214,7 +214,7 @@ namespace ck
                 continue;
             }
 
-            InFunc(RecordEntryHandle);
+            InFunc(HandleType{RecordEntryHandle});
         }
     }
 
@@ -242,7 +242,7 @@ namespace ck
                 continue;
             }
 
-            InFunc(RecordEntryHandle);
+            InFunc(HandleType{RecordEntryHandle});
         }
     }
 
@@ -258,8 +258,8 @@ namespace ck
     {
         ForEach_ValidEntry(InRecordHandle, [&](FCk_Handle InRecordEntryHandle)
         {
-            if (InPredicate(InRecordEntryHandle))
-            { InFunc(InRecordEntryHandle); }
+            if (InPredicate(HandleType{InRecordEntryHandle}))
+            { InFunc(HandleType{InRecordEntryHandle}); }
         });
     }
 

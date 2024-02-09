@@ -197,10 +197,6 @@ public:
 
 public:
     ck::TPtrWrapper<InternalRegistryPtrType> _InternalRegistry;
-    EntityType _TransientEntity;
-
-private:
-    CK_PROPERTY(_TransientEntity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

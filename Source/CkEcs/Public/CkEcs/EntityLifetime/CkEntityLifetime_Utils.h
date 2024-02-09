@@ -78,13 +78,6 @@ public:
         const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck][Lifetime] Get Transient Entity",
-              Category = "Ck|Utils|EntityLifetime")
-    static FCk_Handle
-    Get_TransientEntity(
-        FCk_Handle InHandle);
-
-    UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][Lifetime] Get World For Entity",
               Category = "Ck|Utils|EntityLifetime")
     static UWorld*
@@ -118,12 +111,6 @@ public:
         RegistryType& InRegistry,
         const EntityIdHint& InEntityHint,
         PostEntityCreatedFunc InFunc = PostEntityCreatedFunc{}) -> HandleType;
-
-public:
-    [[nodiscard]]
-    static auto
-    Get_TransientEntity(
-        const RegistryType& InRegistry) -> HandleType;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

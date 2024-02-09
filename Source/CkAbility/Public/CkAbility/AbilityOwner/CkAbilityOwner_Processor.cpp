@@ -174,7 +174,7 @@ namespace ck
             {
                 // TODO: Activation Context Entity for SelfActivating Abilities is the Owner of the Ability
                 UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(AbilityOwnerEntity,
-                    FCk_Request_AbilityOwner_ActivateAbility{InAbilityEntity, FCk_Ability_ActivationPayload{}.Set_ContextEntity(AbilityOwnerEntity)});
+                    FCk_Request_AbilityOwner_ActivateAbility{FCk_Handle_Ability{InAbilityEntity}, FCk_Ability_ActivationPayload{}.Set_ContextEntity(AbilityOwnerEntity)});
             }
         };
 
@@ -340,7 +340,7 @@ namespace ck
                             UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityOwnerEntity));
 
                     UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(MyOwner,
-                        FCk_Request_AbilityOwner_DeactivateAbility{InAbilityOwnerEntity});
+                        FCk_Request_AbilityOwner_DeactivateAbility{FCk_Handle_Ability{InAbilityOwnerEntity}});
                 }
             }
 
@@ -361,7 +361,7 @@ namespace ck
                     );
 
                     UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(InAbilityOwnerEntity,
-                        FCk_Request_AbilityOwner_DeactivateAbility{InAbilityEntityToCancel});
+                        FCk_Request_AbilityOwner_DeactivateAbility{FCk_Handle_Ability{InAbilityEntityToCancel}});
                 },
                 algo::MatchesAnyAbilityActivationCancelledTags{GrantedTags}
             );

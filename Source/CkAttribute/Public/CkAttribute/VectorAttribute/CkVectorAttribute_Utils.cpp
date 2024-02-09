@@ -22,7 +22,7 @@ auto
 
     const auto& AddNewVectorAttributeToEntity = [&](FCk_Handle InAttributeOwner, const FGameplayTag& InAttributeName, FVector InAttributeBaseValue)
     {
-        auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwner);
+        auto NewAttributeEntity = FCk_Handle_VectorAttribute{UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwner)};
 
         VectorAttribute_Utils::Add(NewAttributeEntity, InAttributeBaseValue);
         UCk_Utils_GameplayLabel_UE::Add(NewAttributeEntity, InAttributeName);

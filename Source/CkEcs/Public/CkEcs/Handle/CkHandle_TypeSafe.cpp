@@ -32,10 +32,32 @@ FCk_Handle_TypeSafe::
 auto
     FCk_Handle_TypeSafe::
     operator=(
-        ThisType InOther)
+        const ThisType& InOther)
     -> ThisType&
 {
-    Swap(InOther);
+    Super::operator=(InOther);
+    return *this;
+}
+
+auto
+    FCk_Handle_TypeSafe::
+    operator=(
+        ThisType&& InOther) noexcept
+        -> ThisType&
+{
+    _Entity = InOther._Entity;
+    _Registry = InOther._Registry;
+    _Mapper = InOther._Mapper;
+    return *this;
+}
+
+auto
+    FCk_Handle_TypeSafe::
+    operator=(
+        const FCk_Handle& InOther)
+        -> ThisType&
+{
+    Super::operator=(InOther);
     return *this;
 }
 

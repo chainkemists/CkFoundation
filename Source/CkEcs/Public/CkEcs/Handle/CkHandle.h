@@ -49,12 +49,12 @@ public:
     FCk_Handle(ThisType&& InOther) noexcept;
     FCk_Handle(const ThisType& InOther);
 
-    // this is a special hard-coded function that expects the type-safe handle to have a particular function
     template <typename T_WrappedHandle, class = std::enable_if_t<std::is_base_of_v<struct FCk_Handle_TypeSafe, T_WrappedHandle>>>
     FCk_Handle(const T_WrappedHandle& InTypeSafeHandle);
 
-    auto operator=(ThisType InOther) -> ThisType&;
-    // auto operator=(ThisType&& InOther) -> ThisType&; // intentionally not implemented
+    auto operator=(const ThisType& InOther) -> ThisType&;
+    auto operator=(ThisType&& InOther) noexcept
+        -> ThisType&; // intentionally not implemented
 
     ~FCk_Handle();
 
@@ -62,7 +62,6 @@ public:
     auto Swap(ThisType& InOther) -> void;
 
 public:
-    // this is a special hard-coded function that expects the type-safe handle to have a particular function
     template <typename T_WrappedHandle, class = std::enable_if_t<std::is_base_of_v<struct FCk_Handle_TypeSafe, T_WrappedHandle>>>
     auto operator==(const T_WrappedHandle& InOther) const -> bool;
 

@@ -46,7 +46,7 @@ public:
     static auto Tombstone() -> FCk_Entity;
 
 private:
-    IdType _ID;
+    IdType _ID = static_cast<IdType>(int32{-1});
 
 private:
     static FCk_Entity _Tombstone;
@@ -57,13 +57,13 @@ public:
 #if WITH_EDITORONLY_DATA
 private:
     UPROPERTY()
-    int32 _EntityID;
+    int32 _EntityID = -1;
 
     UPROPERTY()
-    int32 _EntityNumber;
+    int32 _EntityNumber = -1;
 
     UPROPERTY()
-    int32 _EntityVersion;
+    int32 _EntityVersion = -1;
 #endif
 };
 

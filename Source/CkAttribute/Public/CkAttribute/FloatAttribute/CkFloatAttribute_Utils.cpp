@@ -22,7 +22,7 @@ auto
 
     const auto& AddNewFloatAttributeToEntity = [&](FCk_Handle InAttributeOwner, const FGameplayTag& InAttributeName, float InAttributeBaseValue)
     {
-        auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwner);
+        auto NewAttributeEntity = FCk_Handle_FloatAttribute{UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwner)};
 
         FloatAttribute_Utils::Add(NewAttributeEntity, InAttributeBaseValue);
         UCk_Utils_GameplayLabel_UE::Add(NewAttributeEntity, InAttributeName);

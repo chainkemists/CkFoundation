@@ -24,8 +24,60 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_AbilitySearch_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_BaseHandle
+{
+    GENERATED_BODY()
+
+    UPROPERTY(BlueprintReadWrite)
+    float _Value = 0;
+};
+
+USTRUCT(BlueprintType)
+struct FMyStruct : public FCk_BaseHandle
+{
+    GENERATED_BODY()
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak="/Script/CkEcs.Ck_Utils_Handle_UE:Conv_HandleTypeSafeToHandle"))
-struct CKABILITY_API FCk_Handle_AbilityOwner : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_AbilityOwner); };
+struct CKABILITY_API FCk_Handle_AbilityOwner : public FCk_Handle_TypeSafe
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(FCk_Handle_AbilityOwner);
+    using FCk_Handle_TypeSafe::operator==;
+    using FCk_Handle_TypeSafe::operator!=;
+    FCk_Handle_AbilityOwner() = default;
+
+    FCk_Handle_AbilityOwner(
+        EntityType          InEntity,
+        const RegistryType& InRegistry);
+
+    FCk_Handle_AbilityOwner(
+        ThisType&& InOther) noexcept;
+
+    FCk_Handle_AbilityOwner(
+        const ThisType& InHandle);
+
+    explicit FCk_Handle_AbilityOwner(
+        const FCk_Handle& InHandle);
+
+    auto operator=(
+        const ThisType& InOther)
+        -> ThisType&
+    ;
+
+    auto operator=(
+        ThisType&& InOther) noexcept
+        -> ThisType&
+    ;
+
+    auto operator=(
+        const FCk_Handle& InOther)
+        -> ThisType&
+    ;;
+};
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_AbilityOwner);
 
 // --------------------------------------------------------------------------------------------------------------------

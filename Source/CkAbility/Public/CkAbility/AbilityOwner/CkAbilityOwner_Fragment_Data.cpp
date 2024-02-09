@@ -2,6 +2,57 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+FCk_Handle_AbilityOwner::FCk_Handle_AbilityOwner(
+    EntityType InEntity,
+    const RegistryType& InRegistry): FCk_Handle_TypeSafe(InEntity,
+    InRegistry)
+{
+}
+
+FCk_Handle_AbilityOwner::FCk_Handle_AbilityOwner(
+    ThisType&& InOther) noexcept: FCk_Handle_TypeSafe(MoveTemp(InOther))
+{
+}
+
+FCk_Handle_AbilityOwner::FCk_Handle_AbilityOwner(
+    const ThisType& InHandle): FCk_Handle_TypeSafe(InHandle)
+{
+}
+
+FCk_Handle_AbilityOwner::FCk_Handle_AbilityOwner(
+    const FCk_Handle& InHandle): FCk_Handle_TypeSafe(InHandle)
+{
+}
+
+auto
+    FCk_Handle_AbilityOwner::operator=(
+        const ThisType& InOther)
+        -> ThisType&
+{
+    Super::operator=(InOther);
+    return *this;
+}
+
+auto
+    FCk_Handle_AbilityOwner::operator=(
+        ThisType&& InOther) noexcept
+        -> ThisType&
+{
+    _Entity   = InOther._Entity;
+    _Registry = InOther._Registry;
+    _Mapper   = InOther._Mapper;
+    return *this;
+}
+
+auto
+    FCk_Handle_AbilityOwner::operator=(
+        const FCk_Handle& InOther)
+        -> ThisType&
+{
+    Super::operator=(InOther);
+    return *this;
+}
+
 FCk_Request_AbilityOwner_RevokeAbility::
     FCk_Request_AbilityOwner_RevokeAbility(
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass)

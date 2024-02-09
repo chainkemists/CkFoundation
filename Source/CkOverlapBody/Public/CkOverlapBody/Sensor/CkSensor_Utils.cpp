@@ -83,9 +83,9 @@ auto
         FGameplayTag      InSensorName)
     -> FCk_Handle_Sensor
 {
-    return Get_EntityOrRecordEntry_WithFragmentAndLabel<
+    return FCk_Handle_Sensor{Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
+        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName)};
 }
 
 auto
@@ -128,7 +128,7 @@ auto
 
     RecordOfSensors_Utils::ForEach_ValidEntry(InHandle, [&](const FCk_Handle& InSensorEntity)
     {
-        DoPreviewSensor(InOuter, InSensorEntity);
+        DoPreviewSensor(InOuter, FCk_Handle_Sensor{InSensorEntity});
     });
 }
 

@@ -20,9 +20,9 @@ auto
 {
     RecordOfByteAttributes_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 
-    const auto& AddNewByteAttributeToEntity = [&](FCk_Handle InAttributeOwner, const FGameplayTag& InAttributeName, uint8 InAttributeBaseValue)
+    auto AddNewByteAttributeToEntity = [&](FCk_Handle InAttributeOwner, const FGameplayTag& InAttributeName, uint8 InAttributeBaseValue)
     {
-        auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwner);
+            auto NewAttributeEntity = FCk_Handle_ByteAttribute{UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwner)};
 
         ByteAttribute_Utils::Add(NewAttributeEntity, InAttributeBaseValue);
         UCk_Utils_GameplayLabel_UE::Add(NewAttributeEntity, InAttributeName);

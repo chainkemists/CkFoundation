@@ -25,7 +25,40 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(AbilityOwner, UCk_Utils_AbilityOwner_UE, FCk_Handle_AbilityOwner, ck::FFragment_AbilityOwner_Current, ck::FFragment_AbilityOwner_Params);
+auto
+    UCk_Utils_AbilityOwner_UE::Has(
+        const FCk_Handle& InAbilityEntity)
+        -> bool
+{
+    return InAbilityEntity.Has_All<ck::FFragment_AbilityOwner_Current, ck::FFragment_AbilityOwner_Params>();
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::Cast(
+        const FCk_Handle&    InHandle,
+        ECk_SucceededFailed& OutResult)
+        -> FCk_Handle_AbilityOwner
+{
+    if (NOT Has(InHandle))
+    {
+        OutResult = ECk_SucceededFailed::Failed;
+        return {};
+    }
+    OutResult = ECk_SucceededFailed::Succeeded;
+    return ck::Cast<FCk_Handle_AbilityOwner>(InHandle);
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::Conv_HandleToAbilityOwner(
+        const FCk_Handle& InHandle)
+        -> FCk_Handle_AbilityOwner
+{
+    CK_ENSURE_IF_NOT(Has(InHandle),
+        TEXT("Handle [{}] does NOT have a [{}]. Unable to convert Handle."),
+        InHandle,
+        TEXT("AbilityOwner")) { return {}; }
+    return ck::Cast<FCk_Handle_AbilityOwner>(InHandle);
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 

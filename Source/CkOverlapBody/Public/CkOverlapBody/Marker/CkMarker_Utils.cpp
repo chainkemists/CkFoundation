@@ -86,9 +86,9 @@ auto
         FGameplayTag      InMarkerName)
     -> FCk_Handle_Marker
 {
-    return Get_EntityOrRecordEntry_WithFragmentAndLabel<
+    return FCk_Handle_Marker{Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_Marker_UE,
-        RecordOfMarkers_Utils>(InMarkerOwnerEntity, InMarkerName);
+        RecordOfMarkers_Utils>(InMarkerOwnerEntity, InMarkerName)};
 }
 
 auto
@@ -131,7 +131,7 @@ auto
 
     RecordOfMarkers_Utils::ForEach_ValidEntry(InHandle, [&](const FCk_Handle& InMarkerEntity)
     {
-        DoPreviewMarker(InOuter, InMarkerEntity);
+        DoPreviewMarker(InOuter, FCk_Handle_Marker{InMarkerEntity});
     });
 }
 

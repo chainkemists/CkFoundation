@@ -5,7 +5,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT()
+USTRUCT(BlueprintType)
 struct CKECS_API FCk_Handle_TypeSafe : public FCk_Handle
 {
     GENERATED_BODY()
@@ -23,9 +23,11 @@ public:
 
     FCk_Handle_TypeSafe(ThisType&& InOther) noexcept;
     FCk_Handle_TypeSafe(const ThisType& InHandle);
-    FCk_Handle_TypeSafe(const FCk_Handle& InHandle);
+    explicit FCk_Handle_TypeSafe(const FCk_Handle& InHandle);
 
-    auto operator=(ThisType InOther) -> ThisType&;
+    auto operator=(const ThisType& InOther) -> ThisType&;
+    auto operator=(ThisType&& InOther) noexcept -> ThisType&;
+    auto operator=(const FCk_Handle& InOther) -> ThisType&;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -38,8 +40,10 @@ public:
     _ClassType_(EntityType InEntity, const RegistryType& InRegistry) : FCk_Handle_TypeSafe(InEntity, InRegistry) { }\
     _ClassType_(ThisType&& InOther) noexcept : FCk_Handle_TypeSafe(MoveTemp(InOther)) { }                           \
     _ClassType_(const ThisType& InHandle) : FCk_Handle_TypeSafe(InHandle) { }                                       \
-    _ClassType_(const FCk_Handle& InHandle) : FCk_Handle_TypeSafe(InHandle) { }                                     \
-    auto operator=( ThisType InOther) -> ThisType& { Swap(InOther); return *this; }
+    explicit _ClassType_(const FCk_Handle& InHandle) : FCk_Handle_TypeSafe(InHandle) { }                            \
+    auto operator=(const ThisType& InOther) -> ThisType& { Super::operator=(InOther); return *this; } \
+    auto operator=(ThisType&& InOther) noexcept -> ThisType& { _Entity = InOther._Entity; _Registry = InOther._Registry; _Mapper = InOther._Mapper; return *this; } \
+    auto operator=(const FCk_Handle& InOther) -> ThisType& { Super::operator=(InOther); return *this; }
 
 // --------------------------------------------------------------------------------------------------------------------
 

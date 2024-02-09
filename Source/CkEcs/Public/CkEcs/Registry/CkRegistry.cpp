@@ -5,7 +5,7 @@
 FCk_Registry::
     FCk_Registry()
 {
-    CreateEntity();
+    // CreateEntity();
 }
 
 auto

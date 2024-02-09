@@ -250,6 +250,13 @@ public:
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Delegate_AbilityOwner_OnTagsUpdated& InDelegate);
 
+public:
+    UFUNCTION(BlueprintPure)
+    static FMyStruct MakeMyStruct(float Value)
+    {
+        return FMyStruct{Value};
+    }
+
 private:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner")
