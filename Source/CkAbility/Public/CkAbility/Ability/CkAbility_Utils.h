@@ -155,7 +155,7 @@ private:
     DoActivate(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         FCk_Handle_Ability& InAbilityEntity,
-        const FCk_Ability_ActivationPayload& InActivationPayload) -> void;
+        const FCk_Ability_Payload_OnActivate& InOptionalPayload) -> void;
 
     static auto
     DoDeactivate(
@@ -165,7 +165,8 @@ private:
     static auto
     DoGive(
         FCk_Handle_AbilityOwner& InAbilityOwner,
-        FCk_Handle_Ability& InAbility) -> void;
+        FCk_Handle_Ability& InAbility,
+        const FCk_Ability_Payload_OnGranted& InOptionalPayload) -> void;
 
     static auto
     DoRevoke(

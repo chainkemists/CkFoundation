@@ -53,7 +53,7 @@ namespace ck
 auto
     UCk_Ability_Script_PDA::
     OnActivateAbility(
-        const FCk_Ability_ActivationPayload& InActivationPayload)
+        const FCk_Ability_Payload_OnActivate& InActivationPayload)
     -> void
 {
     const auto AbilityOwnerEntity = Get_AbilityOwnerHandle();
@@ -100,10 +100,11 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    OnGiveAbility()
+    OnGiveAbility(
+        const FCk_Ability_Payload_OnGranted& InOptionalPayload)
     -> void
 {
-    DoOnGiveAbility();
+    DoOnGiveAbility(InOptionalPayload);
 }
 
 auto
@@ -117,7 +118,7 @@ auto
 auto
     UCk_Ability_Script_PDA::
     DoRequest_ActivateAbility(
-        FCk_Ability_ActivationPayload InActivationPayload)
+        FCk_Ability_Payload_OnActivate InOptionalPayload)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
@@ -126,7 +127,7 @@ auto
     { return; }
 
     UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(_AbilityOwnerHandle,
-        FCk_Request_AbilityOwner_ActivateAbility{Get_AbilityHandle(), InActivationPayload});
+        FCk_Request_AbilityOwner_ActivateAbility{Get_AbilityHandle()}.Set_OptionalPayload(InOptionalPayload));
 }
 
 auto
