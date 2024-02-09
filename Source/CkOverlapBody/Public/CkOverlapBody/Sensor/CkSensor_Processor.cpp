@@ -298,16 +298,6 @@ namespace ck
         if (NOT InCurrentComp._CurrentMarkerOverlaps.Get_HasOverlapWithMarker(OverlappedMarkerDetails))
         { return; }
 
-        const auto& OverlappedMarkerEnableDisable = UCk_Utils_Marker_UE::Get_EnableDisable(OverlappedMarkerEntity);
-
-        CK_ENSURE_IF_NOT(OverlappedMarkerEnableDisable == ECk_EnableDisable::Enable,
-            TEXT("Sensor [Name: {} | Entity: {}] received EndOverlap with Marker [Name: {} | Entity: {}] that is DISABLED"),
-            SensorName,
-            InSensorEntity,
-            OverlappedMarkerName,
-            OverlappedMarkerEntity)
-        { return; }
-
         overlap_body::VeryVerbose
         (
             TEXT("Sensor [Name: {} | Entity: {}] EndOverlap with Marker [Name: {} | Entity: {}]"),
