@@ -91,16 +91,16 @@ auto
 
 auto
     UCk_Utils_Handle_UE::
-    Conv_HandleTypeSafeToHandle(
-        UStruct*,
-        FCk_Handle&)
-        -> void
+    Get_RawHandle(
+        UStruct*)
+        -> FCk_Handle
 {
-	// We should never hit this! stubs to avoid NoExport on the class.
-	checkNoEntry();
+    // We should never hit this! stubs to avoid NoExport on the class.
+    checkNoEntry();
+    return {};
 }
 
-DEFINE_FUNCTION(UCk_Utils_Handle_UE::execConv_HandleTypeSafeToHandle)
+DEFINE_FUNCTION(UCk_Utils_Handle_UE::execGet_RawHandle)
 {
     ON_SCOPE_EXIT
     {
@@ -108,9 +108,8 @@ DEFINE_FUNCTION(UCk_Utils_Handle_UE::execConv_HandleTypeSafeToHandle)
     };
 
     P_GET_STRUCT(FCk_Handle, InHandle);
-    P_GET_STRUCT_REF(FCk_Handle, OutHandle);
 
-    OutHandle = InHandle;
+    *static_cast<FCk_Handle*>(RESULT_PARAM) = InHandle;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
