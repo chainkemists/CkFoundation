@@ -95,8 +95,13 @@ private:
               meta = (AllowPrivateAccess = true))
     TSubclassOf<class UCk_Ability_Script_PDA> _AbilityScriptClass;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Ability_Payload_OnGranted _OptionalPayload;
+
 public:
     CK_PROPERTY_GET(_AbilityScriptClass)
+    CK_PROPERTY(_OptionalPayload)
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_AbilityOwner_GiveAbility, _AbilityScriptClass);
@@ -157,13 +162,11 @@ public:
 public:
     FCk_Request_AbilityOwner_ActivateAbility() = default;
 
-    FCk_Request_AbilityOwner_ActivateAbility(
-        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass,
-        FCk_Ability_ActivationPayload InActivationPayload);
+    explicit FCk_Request_AbilityOwner_ActivateAbility(
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass);
 
-    FCk_Request_AbilityOwner_ActivateAbility(
-        const FCk_Handle_Ability& InAbilityHandle,
-        FCk_Ability_ActivationPayload InActivationPayload);
+    explicit FCk_Request_AbilityOwner_ActivateAbility(
+        const FCk_Handle_Ability& InAbilityHandle);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -182,13 +185,13 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Ability_ActivationPayload _ActivationPayload;
+    FCk_Ability_Payload_OnActivate _OptionalPayload;
 
 public:
     CK_PROPERTY_GET(_SearchPolicy);
     CK_PROPERTY_GET(_AbilityClass);
     CK_PROPERTY_GET(_AbilityHandle);
-    CK_PROPERTY_GET(_ActivationPayload);
+    CK_PROPERTY(_OptionalPayload);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -182,7 +182,7 @@ auto
     DoActivate(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         FCk_Handle_Ability& InAbilityEntity,
-        const FCk_Ability_ActivationPayload& InActivationPayload)
+        const FCk_Ability_Payload_OnActivate& InOptionalPayload)
     -> void
 {
     auto& AbilityCurrent = InAbilityEntity.Get<ck::FFragment_Ability_Current>();
@@ -225,7 +225,7 @@ auto
     Script->_AbilityHandle = InAbilityEntity;
     Script->_AbilityOwnerHandle = InAbilityOwnerEntity;
 
-    Script->OnActivateAbility(InActivationPayload);
+    Script->OnActivateAbility(InOptionalPayload);
 
     ck::UUtils_Signal_OnAbilityActivated::Broadcast(InAbilityEntity, ck::MakePayload(InAbilityEntity));
 }
@@ -374,7 +374,8 @@ auto
     UCk_Utils_Ability_UE::
     DoGive(
         FCk_Handle_AbilityOwner& InAbilityOwner,
-        FCk_Handle_Ability& InAbility)
+        FCk_Handle_Ability& InAbility,
+        const FCk_Ability_Payload_OnGranted& InOptionalPayload)
     -> void
 {
     RecordOfAbilities_Utils::Request_Connect(InAbilityOwner, InAbility);
@@ -389,7 +390,7 @@ auto
     Script->_AbilityOwnerHandle = InAbilityOwner;
     Script->_AbilityHandle = InAbility;
 
-    Script->OnGiveAbility();
+    Script->OnGiveAbility(InOptionalPayload);
 }
 
 auto

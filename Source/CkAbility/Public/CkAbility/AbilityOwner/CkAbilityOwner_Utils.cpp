@@ -362,21 +362,21 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     Make_Request_ActivateAbility_ByClass(
-        TSubclassOf<UCk_Ability_Script_PDA>  InAbilityScriptClass,
-        FCk_Ability_ActivationPayload InActivationPayload)
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass,
+        FCk_Ability_Payload_OnActivate InOptionalPayload)
     -> FCk_Request_AbilityOwner_ActivateAbility
 {
-    return FCk_Request_AbilityOwner_ActivateAbility{InAbilityScriptClass, InActivationPayload};
+    return FCk_Request_AbilityOwner_ActivateAbility{InAbilityScriptClass}.Set_OptionalPayload(InOptionalPayload);
 }
 
 auto
     UCk_Utils_AbilityOwner_UE::
     Make_Request_ActivateAbility_ByEntity(
         const FCk_Handle_Ability& InAbilityEntity,
-        FCk_Ability_ActivationPayload InActivationPayload)
+        FCk_Ability_Payload_OnActivate InOptionalPayload)
     -> FCk_Request_AbilityOwner_ActivateAbility
 {
-    return FCk_Request_AbilityOwner_ActivateAbility{InAbilityEntity, InActivationPayload};
+    return FCk_Request_AbilityOwner_ActivateAbility{InAbilityEntity}.Set_OptionalPayload(InOptionalPayload);
 }
 
 auto

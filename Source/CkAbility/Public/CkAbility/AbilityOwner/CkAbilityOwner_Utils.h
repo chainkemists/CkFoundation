@@ -256,14 +256,14 @@ private:
     static FCk_Request_AbilityOwner_ActivateAbility
     Make_Request_ActivateAbility_ByClass(
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass,
-        FCk_Ability_ActivationPayload InActivationPayload);
+        FCk_Ability_Payload_OnActivate InOptionalPayload);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner")
     static FCk_Request_AbilityOwner_ActivateAbility
     Make_Request_ActivateAbility_ByEntity(
         const FCk_Handle_Ability& InAbilityEntity,
-        FCk_Ability_ActivationPayload InActivationPayload);
+        FCk_Ability_Payload_OnActivate InOptionalPayload);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner")
