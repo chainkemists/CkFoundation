@@ -19,6 +19,7 @@ class CKANIMATION_API UCk_Utils_AnimAsset_UE : public UCk_Utils_Ecs_Base_UE
 
 public:
     CK_GENERATED_BODY(UCk_Utils_AnimAsset_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_AnimAsset);
 
 private:
     struct RecordOfAnimAssets_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfAnimAssets> {};
@@ -38,7 +39,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimAsset",
               DisplayName="[Ck][AnimAsset] Add Multiple New Animations")
-    static FCk_Handle_AnimAsset
+    static TArray<FCk_Handle_AnimAsset>
     AddMultiple(
         FCk_Handle& InHandle,
         const FCk_Fragment_MultipleAnimAsset_ParamsData& InParams);
@@ -51,24 +52,23 @@ public:
     Has(
         const FCk_Handle& InHandle);
 
+private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|AnimAsset",
         DisplayName="[Ck][AnimAsset] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_AnimAsset
-    Cast(
+    DoCast(
         FCk_Handle InHandle,
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|AnimAsset",
         DisplayName="[Ck][AnimAsset] Handle -> AnimAsset Handle",
-        meta = (CompactNodeTitle = "As AnimAssetHandle", BlueprintAutocast))
+        meta = (CompactNodeTitle = "<AsAnimAsset>", BlueprintAutocast))
     static FCk_Handle_AnimAsset
-    Conv_HandleToAnimAsset(
+    DoCastChecked(
         FCk_Handle InHandle);
-
-    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_AnimAsset);
 
 public:
     UFUNCTION(BlueprintPure,

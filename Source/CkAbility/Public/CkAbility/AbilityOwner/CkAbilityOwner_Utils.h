@@ -27,6 +27,7 @@ public:
 
 public:
     CK_GENERATED_BODY(UCk_Utils_AbilityOwner_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_AbilityOwner);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -45,24 +46,23 @@ public:
     Has(
         const FCk_Handle& InHandle);
 
+private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|AbilityOwner",
         DisplayName="[Ck][AbilityOwner] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_AbilityOwner
-    Cast(
+    DoCast(
         FCk_Handle InHandle,
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|AbilityOwner",
         DisplayName="[Ck][AbilityOwner] Handle -> AbilityOwner Handle",
-        meta = (CompactNodeTitle = "AsAbilityOwner", BlueprintAutocast))
+        meta = (CompactNodeTitle = "<AsAbilityOwner>", BlueprintAutocast))
     static FCk_Handle_AbilityOwner
-    Conv_HandleToAbilityOwner(
+    DoCastChecked(
         FCk_Handle InHandle);
-
-    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_AbilityOwner);
 
 public:
     UFUNCTION(BlueprintPure,

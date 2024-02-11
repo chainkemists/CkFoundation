@@ -29,6 +29,7 @@ class CKOVERLAPBODY_API UCk_Utils_Sensor_UE : public UCk_Utils_Ecs_Base_UE
 
 public:
     CK_GENERATED_BODY(UCk_Utils_Sensor_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Sensor);
 
 private:
     struct RecordOfSensors_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfSensors> {};
@@ -89,24 +90,23 @@ public:
     Has(
         const FCk_Handle& InHandle);
 
+private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Sensor",
         DisplayName="[Ck][Sensor] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_Sensor
-    Cast(
+    DoCast(
         FCk_Handle InHandle,
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Sensor",
         DisplayName="[Ck][Sensor] Handle -> Sensor Handle",
-        meta = (CompactNodeTitle = "As SensorHandle", BlueprintAutocast))
+        meta = (CompactNodeTitle = "<AsSensor>", BlueprintAutocast))
     static FCk_Handle_Sensor
-    Conv_HandleToSensor(
+    DoCastChecked(
         FCk_Handle InHandle);
-
-    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Sensor);
 
 public:
     UFUNCTION(BlueprintPure,

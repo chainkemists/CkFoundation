@@ -29,7 +29,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak="/Script/CkEcs.Ck_Utils_Handle_UE:Break_Handle"))
+USTRUCT(BlueprintType, meta=(NoImplicitConversion, HasNativeMake, HasNativeBreak="/Script/CkEcs.Ck_Utils_Handle_UE:Break_Handle"))
 struct CKECS_API FCk_Handle
 {
     GENERATED_BODY()

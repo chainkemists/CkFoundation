@@ -153,9 +153,9 @@ namespace ck
         const auto& OptionalPayload = InRequest.Get_OptionalPayload();
 
         const auto PostAbilityCreationFunc =
-        [InAbilityOwnerEntity, AbilityScriptClass, AbilityParams, OptionalPayload](FCk_Handle& InAbilityEntity) -> void
+        [InAbilityOwnerEntity, AbilityScriptClass, AbilityParams, OptionalPayload](FCk_Handle& InEntity) -> void
         {
-            auto AbilityEntity = UCk_Utils_Ability_UE::Conv_HandleToAbility(InAbilityEntity);
+            auto AbilityEntity = UCk_Utils_Ability_UE::CastChecked(InEntity);
 
             auto AbilityOwnerEntity = InAbilityOwnerEntity;
 
@@ -170,7 +170,7 @@ namespace ck
             UCk_Utils_Handle_UE::Set_DebugName(AbilityEntity,
                 UCk_Utils_Debug_UE::Get_DebugName(AbilityParams.Get_AbilityScriptClass(), ECk_DebugNameVerbosity_Policy::Compact));
 
-            auto AbilityHandle = UCk_Utils_Ability_UE::Conv_HandleToAbility(AbilityEntity);
+            auto AbilityHandle = UCk_Utils_Ability_UE::CastChecked(AbilityEntity);
             UCk_Utils_Ability_UE::DoGive(AbilityOwnerEntity, AbilityHandle, OptionalPayload);
 
             if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(AbilityHandle).Get_ActivationPolicy();
@@ -343,7 +343,7 @@ namespace ck
                 {
                     auto MyOwner = UCk_Utils_AbilityOwner_UE::CastChecked(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityOwnerEntity));
 
-                    const auto AbilityOwnerAsAbility = UCk_Utils_Ability_UE::Conv_HandleToAbility(InAbilityOwnerEntity);
+                    const auto AbilityOwnerAsAbility = UCk_Utils_Ability_UE::CastChecked(InAbilityOwnerEntity);
                     UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(MyOwner,
                         FCk_Request_AbilityOwner_DeactivateAbility{AbilityOwnerAsAbility});
                 }
@@ -355,7 +355,7 @@ namespace ck
                 InAbilityOwnerEntity,
                 [&](const FCk_Handle& InAbilityEntityToCancel)
                 {
-                    const auto AbilityEntityToCancel = UCk_Utils_Ability_UE::Conv_HandleToAbility(InAbilityOwnerEntity);
+                    const auto AbilityEntityToCancel = UCk_Utils_Ability_UE::CastChecked(InAbilityOwnerEntity);
 
                     ability::Verbose
                     (

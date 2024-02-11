@@ -30,6 +30,7 @@ class CKOVERLAPBODY_API UCk_Utils_Marker_UE : public UCk_Utils_Ecs_Base_UE
 
 public:
     CK_GENERATED_BODY(UCk_Utils_Marker_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Marker);
 
 private:
     struct RecordOfMarkers_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfMarkers> {};
@@ -90,24 +91,23 @@ public:
     Has(
         const FCk_Handle& InHandle);
 
+private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Marker",
         DisplayName="[Ck][Marker] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_Marker
-    Cast(
+    DoCast(
         FCk_Handle InHandle,
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Marker",
         DisplayName="[Ck][Marker] Handle -> Marker Handle",
-        meta = (CompactNodeTitle = "As MarkerHandle", BlueprintAutocast))
+        meta = (CompactNodeTitle = "<AsMarker>", BlueprintAutocast))
     static FCk_Handle_Marker
-    Conv_HandleToMarker(
+    DoCastChecked(
         FCk_Handle InHandle);
-
-    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Marker);
 
 public:
     UFUNCTION(BlueprintPure,
