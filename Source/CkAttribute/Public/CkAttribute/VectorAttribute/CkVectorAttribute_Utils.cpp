@@ -27,7 +27,9 @@ auto
         VectorAttribute_Utils::Add(NewAttributeEntity, InAttributeBaseValue);
         UCk_Utils_GameplayLabel_UE::Add(NewAttributeEntity, InAttributeName);
 
-        RecordOfVectorAttributes_Utils::Request_Connect(InAttributeOwner, NewAttributeEntity);
+        // TODO: Remove this Cast once we have type-safe API instead of GameplayTags
+        auto VectorAttributeEntity = ck::Cast<FCk_Handle_VectorAttribute>(NewAttributeEntity);
+        RecordOfVectorAttributes_Utils::Request_Connect(InAttributeOwner, VectorAttributeEntity);
     };
 
     AddNewVectorAttributeToEntity(InHandle, InParams.Get_AttributeName(), InParams.Get_AttributeBaseValue());

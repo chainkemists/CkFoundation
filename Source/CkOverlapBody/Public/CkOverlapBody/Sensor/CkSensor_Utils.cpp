@@ -83,9 +83,9 @@ auto
         FGameplayTag      InSensorName)
     -> FCk_Handle_Sensor
 {
-    return Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Sensor_UE,
-        RecordOfSensors_Utils>(InSensorOwnerEntity, InSensorName);
+    ECk_SucceededFailed Unused;
+    return Cast(Get_EntityOrRecordEntry_WithFragmentAndLabel<UCk_Utils_Sensor_UE, RecordOfSensors_Utils>(
+        InSensorOwnerEntity, InSensorName), Unused);
 }
 
 auto
@@ -108,7 +108,7 @@ auto
 
     auto AllSensors = TArray<FCk_Handle_Sensor>{};
 
-    RecordOfSensors_Utils::ForEach_ValidEntry(InSensorOwnerEntity, [&](FCk_Handle InSensorEntity)
+    RecordOfSensors_Utils::ForEach_ValidEntry(InSensorOwnerEntity, [&](FCk_Handle_Sensor InSensorEntity)
     {
         AllSensors.Emplace(InSensorEntity);
     });
@@ -126,7 +126,7 @@ auto
     if (NOT Has_Any(InHandle))
     { return; }
 
-    RecordOfSensors_Utils::ForEach_ValidEntry(InHandle, [&](const FCk_Handle& InSensorEntity)
+    RecordOfSensors_Utils::ForEach_ValidEntry(InHandle, [&](const FCk_Handle_Sensor& InSensorEntity)
     {
         DoPreviewSensor(InOuter, InSensorEntity);
     });

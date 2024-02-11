@@ -96,7 +96,7 @@ public:
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_Marker
     Cast(
-        const FCk_Handle&    InHandle,
+        FCk_Handle    InHandle,
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
@@ -105,7 +105,7 @@ public:
         meta = (CompactNodeTitle = "As MarkerHandle", BlueprintAutocast))
     static FCk_Handle_Marker
     Conv_HandleToMarker(
-        const FCk_Handle& InHandle);
+        FCk_Handle InHandle);
 
 public:
     UFUNCTION(BlueprintPure,

@@ -12,9 +12,9 @@ FCk_Request_AbilityOwner_RevokeAbility::
 
 FCk_Request_AbilityOwner_RevokeAbility::
     FCk_Request_AbilityOwner_RevokeAbility(
-        FCk_Handle InAbilityHandle)
+        FCk_Handle_Ability InAbilityHandle)
     : _SearchPolicy(ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle)
-    , _AbilityHandle(InAbilityHandle)
+    , _AbilityHandle(std::move(InAbilityHandle))
 {
 }
 
@@ -30,9 +30,9 @@ FCk_Request_AbilityOwner_ActivateAbility::
 
 FCk_Request_AbilityOwner_ActivateAbility::
     FCk_Request_AbilityOwner_ActivateAbility(
-        const FCk_Handle_Ability& InAbilityHandle)
+        FCk_Handle_Ability InAbilityHandle)
     : _SearchPolicy(ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle)
-    , _AbilityHandle(InAbilityHandle)
+    , _AbilityHandle(std::move(InAbilityHandle))
 {
 }
 
@@ -47,9 +47,9 @@ FCk_Request_AbilityOwner_DeactivateAbility::
 
 FCk_Request_AbilityOwner_DeactivateAbility::
     FCk_Request_AbilityOwner_DeactivateAbility(
-        const FCk_Handle_Ability& InAbilityHandle)
+        FCk_Handle_Ability InAbilityHandle)
         : _SearchPolicy(ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle)
-        , _AbilityHandle(InAbilityHandle)
+        , _AbilityHandle(std::move(InAbilityHandle))
 { }
 
 // --------------------------------------------------------------------------------------------------------------------

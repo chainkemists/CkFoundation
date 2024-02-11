@@ -28,7 +28,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfByteAttributes, FCk_Handle);
+    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfByteAttributes, FCk_Handle_ByteAttribute);
 
     // --------------------------------------------------------------------------------------------------------------------
 

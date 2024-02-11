@@ -188,9 +188,6 @@ namespace ck
 
     auto CKECS_API GetEntity(FCk_Entity InEntity) -> FCk_Entity;
     auto CKECS_API GetEntity(FCk_Handle InEntity) -> FCk_Entity;
-
-    template <typename T_DerivedHandle>
-    auto Cast(const FCk_Handle& InHandle) -> T_DerivedHandle;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -279,7 +276,7 @@ auto
         const T_WrappedHandle& InOther) const
     -> bool
 {
-    return ck::Cast<FCk_Handle>(InOther) == *this;
+    return InOther == *this;
 }
 
 template <typename T_WrappedHandle, class>
@@ -289,7 +286,7 @@ auto
         const T_WrappedHandle& InOther) const
     -> bool
 {
-    return Cast<FCk_Handle>(InOther) != *this;
+    return InOther != *this;
 }
 
 template <typename T_Fragment, typename ... T_Args>
@@ -671,22 +668,6 @@ auto
 
     _Mapper = &_Registry->AddOrGet<FEntity_FragmentMapper>(_Entity);
     _Mapper->Remove_FragmentInfo<T_Fragment>();
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace ck
-{
-    template <typename T_DerivedHandle>
-    auto
-        Cast(
-            const FCk_Handle& InHandle) -> T_DerivedHandle
-    {
-        static_assert(std::is_base_of_v<FCk_Handle, T_DerivedHandle>, "T_DerivedHandle MUST be type-safe Handle");
-        static_assert(sizeof(T_DerivedHandle) == sizeof(InHandle), "T_DerivedHandle MUST be the same size as FCk_Handle");
-
-        return T_DerivedHandle{InHandle};
-    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

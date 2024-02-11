@@ -256,7 +256,7 @@ namespace ck
             T_Predicate InPredicate)
         -> void
     {
-        ForEach_ValidEntry(InRecordHandle, [&](FCk_Handle InRecordEntryHandle)
+        ForEach_ValidEntry(InRecordHandle, [&](HandleType InRecordEntryHandle)
         {
             if (InPredicate(InRecordEntryHandle))
             { InFunc(InRecordEntryHandle); }

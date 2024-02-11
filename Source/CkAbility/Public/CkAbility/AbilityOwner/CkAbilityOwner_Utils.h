@@ -51,16 +51,16 @@ public:
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_AbilityOwner
     Cast(
-        const FCk_Handle&    InHandle,
+        FCk_Handle    InHandle,
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|AbilityOwner",
         DisplayName="[Ck][AbilityOwner] Handle -> AbilityOwner Handle",
-        meta = (CompactNodeTitle = "As AbilityOwnerHandle", BlueprintAutocast))
+        meta = (CompactNodeTitle = "AsAbilityOwner", BlueprintAutocast))
     static FCk_Handle_AbilityOwner
     Conv_HandleToAbilityOwner(
-        const FCk_Handle& InHandle);
+        FCk_Handle InHandle);
 
 public:
     UFUNCTION(BlueprintPure,
