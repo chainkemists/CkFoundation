@@ -28,7 +28,7 @@ auto
         UCk_Utils_GameplayLabel_UE::Add(NewAttributeEntity, InAttributeName);
 
         // TODO: Remove this Cast once we have type-safe API instead of GameplayTags
-        auto FloatAttributeEntity = ck::Cast<FCk_Handle_FloatAttribute>(NewAttributeEntity);
+        auto FloatAttributeEntity = ck::StaticCast<FCk_Handle_FloatAttribute>(NewAttributeEntity);
         RecordOfFloatAttributes_Utils::Request_Connect(InAttributeOwner, FloatAttributeEntity);
     };
 

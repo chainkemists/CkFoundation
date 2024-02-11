@@ -114,7 +114,7 @@ namespace ck
             ECk_Record_EntryHandlingPolicy _EntryHandlingPolicy)
         -> void
     {
-        const auto& Record = InHandle.template AddOrGet<RecordType>(_EntryHandlingPolicy);
+        const auto& Record = InHandle.AddOrGet<RecordType>(_EntryHandlingPolicy);
         CK_ENSURE_IF_NOT(Record.Get_EntryHandlingPolicy() == _EntryHandlingPolicy,
             TEXT("Trying to Add a Record with a different EntryHandlingPolicy to Entity [{}]"),
             InHandle)
@@ -128,7 +128,7 @@ namespace ck
             const FCk_Handle& InHandle)
         -> bool
     {
-        return InHandle.template Has<RecordType>();
+        return InHandle.Has<RecordType>();
     }
 
     template <typename T_DerivedRecord>
@@ -151,7 +151,7 @@ namespace ck
             const FCk_Handle& InRecordHandle)
         -> int32
     {
-        const auto& Fragment = InRecordHandle.template Get<RecordType>();
+        const auto& Fragment = InRecordHandle.Get<RecordType>();
         return algo::CountIf(Fragment.Get_RecordEntries(), algo::IsValidEntityHandle{});
     }
 
@@ -176,17 +176,17 @@ namespace ck
             T_Predicate InPredicate)
         -> HandleType
     {
-        const auto& Fragment = InRecordHandle.template Get<RecordType>();
+        const auto& Fragment = InRecordHandle.Get<RecordType>();
 
         for (const auto& RecordEntry : Fragment.Get_RecordEntries())
         {
-            const auto RecordEntryHandle = ck::MakeHandle(RecordEntry, InRecordHandle);
+            auto RecordEntryHandle = ck::MakeHandle(RecordEntry, InRecordHandle);
 
             if (ck::Is_NOT_Valid(RecordEntryHandle))
             { continue; }
 
             if (const auto Result = InPredicate(RecordEntryHandle))
-            { return ck::Cast<HandleType>(RecordEntryHandle); }
+            { return ck::StaticCast<HandleType>(RecordEntryHandle); }
         }
 
         return {};
@@ -200,7 +200,7 @@ namespace ck
             FCk_Handle& InHandle,
             T_Func InFunc) -> void
     {
-        auto& Fragment      = InHandle.template Get<RecordType>();
+        auto& Fragment      = InHandle.Get<RecordType>();
         auto& RecordEntries = Fragment._RecordEntries;
 
         for (auto Index = 0; Index < RecordEntries.Num(); ++Index)
@@ -227,12 +227,12 @@ namespace ck
             T_Func InFunc)
         -> void
     {
-        const auto& Fragment      = InHandle.template Get<RecordType>();
+        const auto& Fragment      = InHandle.Get<RecordType>();
         const auto& RecordEntries = Fragment._RecordEntries;
 
         for (auto Index = 0; Index < RecordEntries.Num(); ++Index)
         {
-            const auto RecordEntryHandle = ck::Cast<HandleType>(ck::MakeHandle(RecordEntries[Index], InHandle));
+            const auto RecordEntryHandle = ck::StaticCast<const HandleType>(ck::MakeHandle(RecordEntries[Index], InHandle));
 
             if (ck::Is_NOT_Valid(RecordEntryHandle))
             {
@@ -324,13 +324,13 @@ namespace ck
         if (NOT UCk_Utils_RecordEntry_UE::Has(InRecordEntry))
         { UCk_Utils_RecordEntry_UE::Add(InRecordEntry); }
 
-        auto& RecordEntryFragment = InRecordEntry.Get<ck::FFragment_RecordEntry>();
+        auto& RecordEntryFragment = InRecordEntry.template Get<ck::FFragment_RecordEntry>();
         RecordEntryFragment._Records.Emplace(InRecordHandle);
 
         RecordEntryFragment._DisconnectionFuncs.Add(InRecordHandle,
         [](FCk_Handle InRecordEntity, FCk_Handle InRecordEntryEntity)
         {
-            InRecordEntity.Get<T_DerivedRecord>()._RecordEntries.Remove(ck::Cast<HandleType>(InRecordEntryEntity));
+            InRecordEntity.Get<T_DerivedRecord>()._RecordEntries.Remove(ck::StaticCast<HandleType>(InRecordEntryEntity));
         });
     }
 
@@ -363,8 +363,8 @@ namespace ck
         }
 
         {
-            auto& RecordEntryFragment = InRecordEntry.Get<ck::FFragment_RecordEntry>();
-            const auto& RemovalSuccess = RecordEntryFragment._Records.Remove(InRecordHandle);
+            auto&       RecordEntryFragment = InRecordEntry.template Get<ck::FFragment_RecordEntry>();
+            const auto& RemovalSuccess      = RecordEntryFragment._Records.Remove(InRecordHandle);
 
             RecordEntryFragment._DisconnectionFuncs.Remove(InRecordHandle);
 
