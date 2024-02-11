@@ -38,7 +38,7 @@ auto
     auto ParamsToUse = InParams;
     ParamsToUse.Set_ReplicationType(InReplicationType);
 
-    auto NewSensorEntity = Conv_HandleToSensor(UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle,
+    auto NewSensorEntity = CastChecked(UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle,
     [&](FCk_Handle InSensorEntity)
     {
         InSensorEntity.Add<ck::FFragment_Sensor_Params>(ParamsToUse);
@@ -83,9 +83,8 @@ auto
         FGameplayTag      InSensorName)
     -> FCk_Handle_Sensor
 {
-    ECk_SucceededFailed Unused;
     return Cast(Get_EntityOrRecordEntry_WithFragmentAndLabel<UCk_Utils_Sensor_UE, RecordOfSensors_Utils>(
-        InSensorOwnerEntity, InSensorName), Unused);
+        InSensorOwnerEntity, InSensorName));
 }
 
 auto

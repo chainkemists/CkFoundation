@@ -363,8 +363,8 @@ namespace ck
         }
 
         {
-            auto&       RecordEntryFragment = InRecordEntry.template Get<ck::FFragment_RecordEntry>();
-            const auto& RemovalSuccess      = RecordEntryFragment._Records.Remove(InRecordHandle);
+            auto& RecordEntryFragment = InRecordEntry.template Get<ck::FFragment_RecordEntry>();
+            const auto& RemovalSuccess = RecordEntryFragment._Records.Remove(InRecordHandle);
 
             RecordEntryFragment._DisconnectionFuncs.Remove(InRecordHandle);
 

@@ -95,7 +95,7 @@ public:
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_Sensor
     Cast(
-        FCk_Handle    InHandle,
+        FCk_Handle InHandle,
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
@@ -105,6 +105,8 @@ public:
     static FCk_Handle_Sensor
     Conv_HandleToSensor(
         FCk_Handle InHandle);
+
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Sensor);
 
 public:
     UFUNCTION(BlueprintPure,
