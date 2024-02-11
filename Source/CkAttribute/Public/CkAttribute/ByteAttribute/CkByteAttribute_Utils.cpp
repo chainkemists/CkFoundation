@@ -28,7 +28,7 @@ auto
         UCk_Utils_GameplayLabel_UE::Add(NewAttributeEntity, InAttributeName);
 
         // TODO: Remove this Cast once we have type-safe API instead of GameplayTags
-        auto ByteAttributeEntity = ck::Cast<FCk_Handle_ByteAttribute>(NewAttributeEntity);
+        auto ByteAttributeEntity = ck::StaticCast<FCk_Handle_ByteAttribute>(NewAttributeEntity);
         RecordOfByteAttributes_Utils::Request_Connect(InAttributeOwner, ByteAttributeEntity);
     };
 
