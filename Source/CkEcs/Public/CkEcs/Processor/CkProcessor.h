@@ -2,7 +2,7 @@
 
 #include "CkCore/Time/CkTime.h"
 
-#include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Registry/CkRegistry.h"
 
 #include "CkProfile/Stats/CkStats.h"
@@ -176,7 +176,7 @@ namespace ck_exp
         {
             CK_STAT(STAT_ForEachEntity);
 
-            auto Handle = HandleType{InEntity, _Registry};
+            auto Handle = ck::Cast<HandleType>(FCk_Handle{InEntity, _Registry});
             This()->ForEachEntity(InDeltaT, Handle, InComponents...);
         });
     }

@@ -86,9 +86,9 @@ auto
         FGameplayTag      InMarkerName)
     -> FCk_Handle_Marker
 {
-    return Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Marker_UE,
-        RecordOfMarkers_Utils>(InMarkerOwnerEntity, InMarkerName);
+    ECk_SucceededFailed Unused;
+    return Cast(Get_EntityOrRecordEntry_WithFragmentAndLabel<UCk_Utils_Marker_UE, RecordOfMarkers_Utils>(
+        InMarkerOwnerEntity, InMarkerName), Unused);
 }
 
 auto
@@ -111,7 +111,7 @@ auto
 
     auto AllMarkers = TArray<FCk_Handle_Marker>{};
 
-    RecordOfMarkers_Utils::ForEach_ValidEntry(InMarkerOwnerEntity, [&](FCk_Handle InMarkerEntity)
+    RecordOfMarkers_Utils::ForEach_ValidEntry(InMarkerOwnerEntity, [&](FCk_Handle_Marker InMarkerEntity)
     {
         AllMarkers.Emplace(InMarkerEntity);
     });
@@ -129,7 +129,7 @@ auto
     if (NOT Has_Any(InHandle))
     { return; }
 
-    RecordOfMarkers_Utils::ForEach_ValidEntry(InHandle, [&](const FCk_Handle& InMarkerEntity)
+    RecordOfMarkers_Utils::ForEach_ValidEntry(InHandle, [&](const FCk_Handle_Marker& InMarkerEntity)
     {
         DoPreviewMarker(InOuter, InMarkerEntity);
     });

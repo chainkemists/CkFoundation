@@ -54,7 +54,7 @@ public:
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_Ability
     Cast(
-        const FCk_Handle&    InHandle,
+        FCk_Handle    InHandle,
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
@@ -63,7 +63,7 @@ public:
         meta = (CompactNodeTitle = "As AbilityHandle", BlueprintAutocast))
     static FCk_Handle_Ability
     Conv_HandleToAbility(
-        const FCk_Handle& InHandle);
+        FCk_Handle InHandle);
 
 public:
     UFUNCTION(BlueprintPure,

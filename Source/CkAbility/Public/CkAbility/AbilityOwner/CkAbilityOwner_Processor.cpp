@@ -155,20 +155,22 @@ namespace ck
         const auto PostAbilityCreationFunc =
         [InAbilityOwnerEntity, AbilityScriptClass, AbilityParams, OptionalPayload](FCk_Handle& InAbilityEntity) -> void
         {
+            auto AbilityEntity = UCk_Utils_Ability_UE::Conv_HandleToAbility(InAbilityEntity);
+
             auto AbilityOwnerEntity = InAbilityOwnerEntity;
 
             ability::VeryVerbose
             (
                 TEXT("Giving Ability [Class: {} | Entity: {}] to Ability Owner [{}]"),
                 AbilityScriptClass,
-                InAbilityEntity,
+                AbilityEntity,
                 AbilityOwnerEntity
             );
 
-            UCk_Utils_Handle_UE::Set_DebugName(InAbilityEntity,
+            UCk_Utils_Handle_UE::Set_DebugName(AbilityEntity,
                 UCk_Utils_Debug_UE::Get_DebugName(AbilityParams.Get_AbilityScriptClass(), ECk_DebugNameVerbosity_Policy::Compact));
 
-            auto AbilityHandle = UCk_Utils_Ability_UE::Conv_HandleToAbility(InAbilityEntity);
+            auto AbilityHandle = UCk_Utils_Ability_UE::Conv_HandleToAbility(AbilityEntity);
             UCk_Utils_Ability_UE::DoGive(AbilityOwnerEntity, AbilityHandle, OptionalPayload);
 
             if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(AbilityHandle).Get_ActivationPolicy();
@@ -176,7 +178,7 @@ namespace ck
             {
                 // TODO: Activation Context Entity for SelfActivating Abilities is the Owner of the Ability
                 UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(AbilityOwnerEntity,
-                    FCk_Request_AbilityOwner_ActivateAbility{InAbilityEntity}
+                    FCk_Request_AbilityOwner_ActivateAbility{AbilityEntity}
                     .Set_OptionalPayload(FCk_Ability_Payload_OnActivate{}.Set_ContextEntity(AbilityOwnerEntity)));
             }
         };
@@ -342,8 +344,9 @@ namespace ck
                     auto MyOwner = UCk_Utils_AbilityOwner_UE::Conv_HandleToAbilityOwner(
                             UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityOwnerEntity));
 
+                    const auto AbilityOwnerAsAbility = UCk_Utils_Ability_UE::Conv_HandleToAbility(InAbilityOwnerEntity);
                     UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(MyOwner,
-                        FCk_Request_AbilityOwner_DeactivateAbility{InAbilityOwnerEntity});
+                        FCk_Request_AbilityOwner_DeactivateAbility{AbilityOwnerAsAbility});
                 }
             }
 
@@ -353,6 +356,8 @@ namespace ck
                 InAbilityOwnerEntity,
                 [&](const FCk_Handle& InAbilityEntityToCancel)
                 {
+                    const auto AbilityEntityToCancel = UCk_Utils_Ability_UE::Conv_HandleToAbility(InAbilityOwnerEntity);
+
                     ability::Verbose
                     (
                         TEXT("CANCELLING Ability [Name: {} | Entity: {}] after Activating Ability [Name: {} | Entity: {}] on Ability Owner [{}]"),
@@ -364,7 +369,7 @@ namespace ck
                     );
 
                     UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(InAbilityOwnerEntity,
-                        FCk_Request_AbilityOwner_DeactivateAbility{InAbilityEntityToCancel});
+                        FCk_Request_AbilityOwner_DeactivateAbility{AbilityEntityToCancel});
                 },
                 algo::MatchesAnyAbilityActivationCancelledTags{GrantedTags}
             );
@@ -516,7 +521,7 @@ namespace ck
     auto
         FProcessor_AbilityOwner_HandleRequests::
         DoFindAbilityByClass(
-            FCk_Handle& InAbilityOwnerEntity,
+            FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
             const TSubclassOf<UCk_Ability_Script_PDA>& InAbilityClass)
         -> FCk_Handle_Ability
     {
@@ -541,8 +546,8 @@ namespace ck
     auto
         FProcessor_AbilityOwner_HandleRequests::
         DoFindAbilityByHandle(
-            const FCk_Handle& InAbilityOwnerEntity,
-            const FCk_Handle& InAbilityEntity)
+            const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+            const FCk_Handle_Ability& InAbilityEntity)
         -> FCk_Handle_Ability
     {
         CK_ENSURE_IF_NOT(UCk_Utils_Ability_UE::Has(InAbilityEntity),

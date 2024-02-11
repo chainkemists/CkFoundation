@@ -126,7 +126,7 @@ public:
 
     explicit
     FCk_Request_AbilityOwner_RevokeAbility(
-        FCk_Handle InAbilityHandle);
+        FCk_Handle_Ability InAbilityHandle);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -166,7 +166,7 @@ public:
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass);
 
     explicit FCk_Request_AbilityOwner_ActivateAbility(
-        const FCk_Handle_Ability& InAbilityHandle);
+        FCk_Handle_Ability InAbilityHandle);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -181,7 +181,7 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
                   EditCondition="_SearchPolicy == ECk_AbilityOwner_AbilitySearchPolicy::SearchByHandle"))
-    FCk_Handle_AbilityOwner _AbilityHandle;
+    FCk_Handle_Ability _AbilityHandle;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -213,7 +213,7 @@ public:
 
     explicit
     FCk_Request_AbilityOwner_DeactivateAbility(
-        const FCk_Handle_Ability& InAbilityHandle);
+        FCk_Handle_Ability InAbilityHandle);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -228,7 +228,7 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true,
                   EditCondition="_SearchPolicy == ECk_AbilityOwner_AbilitySearchPolicy::SearchByHandle"))
-    FCk_Handle _AbilityHandle;
+    FCk_Handle_Ability _AbilityHandle;
 
 public:
     CK_PROPERTY_GET(_SearchPolicy);
