@@ -78,7 +78,7 @@ public:
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_Timer
     Cast(
-        const FCk_Handle&    InHandle,
+        FCk_Handle    InHandle,
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
@@ -87,7 +87,7 @@ public:
         meta = (CompactNodeTitle = "As TimerHandle", BlueprintAutocast))
     static FCk_Handle_Timer
     Conv_HandleToTimer(
-        const FCk_Handle& InHandle);
+        FCk_Handle InHandle);
 
 public:
     UFUNCTION(BlueprintPure,

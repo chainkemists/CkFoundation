@@ -257,7 +257,7 @@ namespace ck_sensor
                 FCk_Marker_BasicDetails
                 {
                     MarkerName,
-                    MarkerOwningEntity,
+                    UCk_Utils_Marker_UE::Conv_HandleToMarker(MarkerOwningEntity),
                     MarkerAttachedEntityAndActor
                 },
                 FCk_Sensor_BasicDetails

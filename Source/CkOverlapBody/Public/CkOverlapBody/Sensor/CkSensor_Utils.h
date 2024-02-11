@@ -95,7 +95,7 @@ public:
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_Sensor
     Cast(
-        const FCk_Handle&    InHandle,
+        FCk_Handle    InHandle,
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
@@ -104,7 +104,7 @@ public:
         meta = (CompactNodeTitle = "As SensorHandle", BlueprintAutocast))
     static FCk_Handle_Sensor
     Conv_HandleToSensor(
-        const FCk_Handle& InHandle);
+        FCk_Handle InHandle);
 
 public:
     UFUNCTION(BlueprintPure,

@@ -103,13 +103,13 @@ namespace ck
     private:
         static auto
         DoFindAbilityByClass(
-            FCk_Handle& InAbilityOwnerEntity,
+            FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
             const TSubclassOf<UCk_Ability_Script_PDA>& InAbilityClass) -> FCk_Handle_Ability;
 
         static auto
         DoFindAbilityByHandle(
-            const FCk_Handle& InAbilityOwnerEntity,
-            const FCk_Handle& InAbilityEntity) -> FCk_Handle_Ability;
+            const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+            const FCk_Handle_Ability& InAbilityEntity) -> FCk_Handle_Ability;
     };
 }
 

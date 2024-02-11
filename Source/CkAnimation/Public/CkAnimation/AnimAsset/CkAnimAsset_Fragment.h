@@ -31,7 +31,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfAnimAssets, FCk_Handle);
+    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfAnimAssets, FCk_Handle_AnimAsset);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
