@@ -78,7 +78,7 @@ public:
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_Timer
     Cast(
-        FCk_Handle    InHandle,
+        FCk_Handle InHandle,
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
@@ -89,6 +89,8 @@ public:
     Conv_HandleToTimer(
         FCk_Handle InHandle);
 
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Timer);
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Timer",
@@ -96,7 +98,7 @@ public:
     static FCk_Handle_Timer
     TryGet_Timer(
         const FCk_Handle& InTimerOwnerEntity,
-        FGameplayTag      InTimerName);
+        FGameplayTag InTimerName);
 
 public:
     UFUNCTION(BlueprintPure,

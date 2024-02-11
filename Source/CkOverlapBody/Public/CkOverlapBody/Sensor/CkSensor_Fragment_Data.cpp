@@ -123,8 +123,8 @@ namespace ck_sensor
         }
 
         const auto& SensorAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(SensorCompAttachedActor);
-        auto SensorOwningEntity           = UCk_Utils_Sensor_UE::Conv_HandleToSensor(sensorOverlapBody->Get_OwningEntity());
-        const auto& SensorName                   = UCk_Utils_GameplayLabel_UE::Get_Label(SensorOwningEntity);
+        auto SensorOwningEntity = UCk_Utils_Sensor_UE::CastChecked(sensorOverlapBody->Get_OwningEntity());
+        const auto& SensorName = UCk_Utils_GameplayLabel_UE::Get_Label(SensorOwningEntity);
 
         if (ck::Is_NOT_Valid(markerOverlapBody, ck::IsValid_Policy_NullptrOnly{}))
         {
@@ -152,8 +152,8 @@ namespace ck_sensor
         }
 
         const auto& MarkerAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(MarkerCompAttachedActor);
-        const auto& MarkerOwningEntity           = UCk_Utils_Marker_UE::Conv_HandleToMarker(markerOverlapBody->Get_OwningEntity());
-        const auto& MarkerName                   = UCk_Utils_GameplayLabel_UE::Get_Label(MarkerOwningEntity);
+        const auto& MarkerOwningEntity = UCk_Utils_Marker_UE::CastChecked(markerOverlapBody->Get_OwningEntity());
+        const auto& MarkerName = UCk_Utils_GameplayLabel_UE::Get_Label(MarkerOwningEntity);
 
         UCk_Utils_Sensor_UE::Request_OnBeginOverlap
         (
@@ -217,7 +217,7 @@ namespace ck_sensor
         }
 
         const auto& SensorAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(SensorCompAttachedActor);
-        auto SensorOwningEntity                  = UCk_Utils_Sensor_UE::Conv_HandleToSensor(sensorOverlapBody->Get_OwningEntity());
+        auto SensorOwningEntity                  = UCk_Utils_Sensor_UE::CastChecked(sensorOverlapBody->Get_OwningEntity());
         const auto& SensorName                   = UCk_Utils_GameplayLabel_UE::Get_Label(SensorOwningEntity);
 
         if (ck::Is_NOT_Valid(markerOverlapBody, ck::IsValid_Policy_NullptrOnly{}))
@@ -257,7 +257,7 @@ namespace ck_sensor
                 FCk_Marker_BasicDetails
                 {
                     MarkerName,
-                    UCk_Utils_Marker_UE::Conv_HandleToMarker(MarkerOwningEntity),
+                    UCk_Utils_Marker_UE::CastChecked(MarkerOwningEntity),
                     MarkerAttachedEntityAndActor
                 },
                 FCk_Sensor_BasicDetails

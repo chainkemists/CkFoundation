@@ -68,7 +68,7 @@ auto
     return RecordOfAbilities_Utils::Get_ValidEntry_If(InAbilityOwnerEntity,
     [InAbilityClass](const FCk_Handle& InHandle)
     {
-        return UCk_Utils_Ability_UE::Get_ScriptClass(UCk_Utils_Ability_UE::Conv_HandleToAbility(InHandle)) == InAbilityClass;
+        return UCk_Utils_Ability_UE::Get_ScriptClass(UCk_Utils_Ability_UE::CastChecked(InHandle)) == InAbilityClass;
     });
 }
 
@@ -82,7 +82,7 @@ auto
     return RecordOfAbilities_Utils::Get_ValidEntry_If(InAbilityOwnerEntity,
     [InAbilityName](const FCk_Handle& InHandle)
     {
-        return UCk_Utils_GameplayLabel_UE::Get_Label(UCk_Utils_Ability_UE::Conv_HandleToAbility(InHandle)) == InAbilityName;
+        return UCk_Utils_GameplayLabel_UE::Get_Label(UCk_Utils_Ability_UE::CastChecked(InHandle)) == InAbilityName;
     });
 }
 
@@ -231,7 +231,7 @@ auto
 
     ForEach_Ability(InAbilityOwnerEntity, [&](const FCk_Handle_Ability& InAbility)
     {
-        if (UCk_Utils_Ability_UE::Get_Status(UCk_Utils_Ability_UE::Conv_HandleToAbility(InAbility)) == InStatus)
+        if (UCk_Utils_Ability_UE::Get_Status(UCk_Utils_Ability_UE::CastChecked(InAbility)) == InStatus)
         {
             InFunc(InAbility);
         }

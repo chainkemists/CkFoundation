@@ -42,7 +42,7 @@ auto
     auto ParamsToUse = InParams;
     ParamsToUse.Set_ReplicationType(InReplicationType);
 
-    auto NewMarkerEntity = Conv_HandleToMarker(UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle,
+    auto NewMarkerEntity = CastChecked(UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle,
     [&](FCk_Handle InMarkerEntity)
     {
         InMarkerEntity.Add<ck::FFragment_Marker_Params>(ParamsToUse);
@@ -86,9 +86,8 @@ auto
         FGameplayTag      InMarkerName)
     -> FCk_Handle_Marker
 {
-    ECk_SucceededFailed Unused;
     return Cast(Get_EntityOrRecordEntry_WithFragmentAndLabel<UCk_Utils_Marker_UE, RecordOfMarkers_Utils>(
-        InMarkerOwnerEntity, InMarkerName), Unused);
+        InMarkerOwnerEntity, InMarkerName));
 }
 
 auto

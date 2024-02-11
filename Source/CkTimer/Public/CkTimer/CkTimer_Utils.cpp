@@ -17,24 +17,23 @@ auto
         const FCk_Fragment_Timer_ParamsData& InParams)
     -> FCk_Handle_Timer
 {
-    auto NewTimerEntity = Conv_HandleToTimer
-    (
-        UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
+     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
+     {
+        UCk_Utils_GameplayLabel_UE::Add(InNewEntity, InParams.Get_TimerName());
+
+        InNewEntity.Add<ck::FFragment_Timer_Params>(InParams);
+        InNewEntity.Add<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
+
+        if (InParams.Get_CountDirection() == ECk_Timer_CountDirection::CountDown)
+        { InNewEntity.Add<ck::FTag_Timer_Countdown>(); }
+
+        if (InParams.Get_StartingState() == ECk_Timer_State::Running)
         {
-            UCk_Utils_GameplayLabel_UE::Add(InNewEntity, InParams.Get_TimerName());
+            InNewEntity.Add<ck::FTag_Timer_NeedsUpdate>();
+        }
+    });
 
-            InNewEntity.Add<ck::FFragment_Timer_Params>(InParams);
-            InNewEntity.Add<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
-
-            if (InParams.Get_CountDirection() == ECk_Timer_CountDirection::CountDown)
-            { InNewEntity.Add<ck::FTag_Timer_Countdown>(); }
-
-            if (InParams.Get_StartingState() == ECk_Timer_State::Running)
-            {
-                InNewEntity.Add<ck::FTag_Timer_NeedsUpdate>();
-            }
-        })
-    );
+    auto NewTimerEntity = CastChecked(NewEntity);
 
     RecordOfTimers_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
     RecordOfTimers_Utils::Request_Connect(InHandle, NewTimerEntity);
@@ -98,9 +97,8 @@ auto
         FGameplayTag InTimerName)
     -> FCk_Handle_Timer
 {
-    return Conv_HandleToTimer(Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Timer_UE,
-        RecordOfTimers_Utils>(InTimerOwnerEntity, InTimerName));
+    return CastChecked(Get_EntityOrRecordEntry_WithFragmentAndLabel<UCk_Utils_Timer_UE, RecordOfTimers_Utils>(
+        InTimerOwnerEntity, InTimerName));
 }
 
 auto
@@ -186,7 +184,7 @@ auto
         InTimerOwnerEntity,
         [&](const FCk_Handle& InTimerEntity)
         {
-            InFunc(Conv_HandleToTimer(InTimerEntity));
+            InFunc(CastChecked(InTimerEntity));
         }
     );
 }

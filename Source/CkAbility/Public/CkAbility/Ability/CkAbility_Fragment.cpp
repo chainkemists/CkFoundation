@@ -13,16 +13,11 @@ namespace ck::algo
             const FCk_Handle& InTypeUnsafeHandle) const
         -> bool
     {
-        const auto InHandle = UCk_Utils_Ability_UE::Conv_HandleToAbility(InTypeUnsafeHandle);
-
-        const auto AbilityClass = UCk_Utils_Ability_UE::Get_ScriptClass(InHandle);
-
-        if (UCk_Utils_Ability_UE::Get_ScriptClass(InHandle) != AbilityClass)
-        { return false; }
+        const auto& Handle = UCk_Utils_Ability_UE::CastChecked(InTypeUnsafeHandle);
 
         const auto CancelledByTags = [&]()
         {
-            const auto& ActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InHandle);
+            const auto& ActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(Handle);
             auto Tags = ActivationSettings.Get_ActivationSettingsOnOwner().Get_CancelledByTagsOnAbilityOwner();
             Tags.AppendTags(ActivationSettings.Get_ActivationSettingsOnSelf().Get_CancelledByTagsOnSelf());
 

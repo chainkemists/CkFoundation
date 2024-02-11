@@ -57,7 +57,7 @@ public:
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_AnimAsset
     Cast(
-        FCk_Handle    InHandle,
+        FCk_Handle InHandle,
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
@@ -67,6 +67,8 @@ public:
     static FCk_Handle_AnimAsset
     Conv_HandleToAnimAsset(
         FCk_Handle InHandle);
+
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_AnimAsset);
 
 public:
     UFUNCTION(BlueprintPure,

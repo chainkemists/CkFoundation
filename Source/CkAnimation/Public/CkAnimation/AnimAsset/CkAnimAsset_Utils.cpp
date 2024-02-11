@@ -11,7 +11,7 @@ auto
         const FCk_Fragment_AnimAsset_ParamsData& InParams)
     -> FCk_Handle_AnimAsset
 {
-    auto NewAnimAssetEntity = Conv_HandleToAnimAsset(UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InAnimAssetEntity)
+    auto NewAnimAssetEntity = CastChecked(UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InAnimAssetEntity)
     {
         InAnimAssetEntity.Add<ck::FFragment_AnimAsset_Params>(InParams);
         UCk_Utils_GameplayLabel_UE::Add(InAnimAssetEntity, InParams.Get_AnimationAsset().Get_ID());
@@ -30,9 +30,9 @@ auto
         const FCk_Fragment_MultipleAnimAsset_ParamsData& InParams)
     -> FCk_Handle_AnimAsset
 {
-    for (const auto& params : InParams.Get_AnimAssetParams())
+    for (const auto& Params : InParams.Get_AnimAssetParams())
     {
-        Add(InHandle, params);
+        Add(InHandle, Params);
     }
 
     return Conv_HandleToAnimAsset(InHandle);
@@ -58,7 +58,7 @@ auto
     if (ck::Is_NOT_Valid(FoundEntity))
     { return {}; }
 
-    return Conv_HandleToAnimAsset(FoundEntity);
+    return CastChecked(FoundEntity);
 }
 
 auto
