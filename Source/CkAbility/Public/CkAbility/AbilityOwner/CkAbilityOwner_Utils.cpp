@@ -20,7 +20,7 @@ auto
 
     UCk_Utils_Ability_UE::RecordOfAbilities_Utils::AddIfMissing(InHandle);
 
-    return Conv_HandleToAbilityOwner(InHandle);
+    return Cast(InHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

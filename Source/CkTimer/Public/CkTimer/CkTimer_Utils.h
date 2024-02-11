@@ -21,6 +21,7 @@ class CKTIMER_API UCk_Utils_Timer_UE : public UCk_Utils_Ecs_Base_UE
 
 public:
     CK_GENERATED_BODY(UCk_Utils_Timer_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Timer);
 
 private:
     struct RecordOfTimers_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfTimers> {};
@@ -72,24 +73,23 @@ public:
     Has(
         const FCk_Handle& InHandle);
 
+private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Timer",
         DisplayName="[Ck][Timer] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_Timer
-    Cast(
+    DoCast(
         FCk_Handle InHandle,
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Timer",
         DisplayName="[Ck][Timer] Handle -> Timer Handle",
-        meta = (CompactNodeTitle = "As TimerHandle", BlueprintAutocast))
+        meta = (CompactNodeTitle = "<AsTimer>", BlueprintAutocast))
     static FCk_Handle_Timer
-    Conv_HandleToTimer(
+    DoCastChecked(
         FCk_Handle InHandle);
-
-    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Timer);
 
 public:
     UFUNCTION(BlueprintPure,

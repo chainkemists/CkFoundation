@@ -28,14 +28,13 @@ auto
     AddMultiple(
         FCk_Handle& InHandle,
         const FCk_Fragment_MultipleAnimAsset_ParamsData& InParams)
-    -> FCk_Handle_AnimAsset
+    -> TArray<FCk_Handle_AnimAsset>
 {
-    for (const auto& Params : InParams.Get_AnimAssetParams())
+    return ck::algo::Transform<TArray<FCk_Handle_AnimAsset>>(InParams.Get_AnimAssetParams(),
+    [&](const FCk_Fragment_AnimAsset_ParamsData& InAnimAssetParams)
     {
-        Add(InHandle, Params);
-    }
-
-    return Conv_HandleToAnimAsset(InHandle);
+        return Add(InHandle, InAnimAssetParams);
+    });
 }
 
 // --------------------------------------------------------------------------------------------------------------------

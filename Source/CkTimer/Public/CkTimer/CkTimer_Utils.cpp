@@ -38,7 +38,7 @@ auto
     RecordOfTimers_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
     RecordOfTimers_Utils::Request_Connect(InHandle, NewTimerEntity);
 
-    return Conv_HandleToTimer(NewTimerEntity);
+    return Cast(NewTimerEntity);
 }
 
 auto
@@ -67,7 +67,7 @@ auto
         TimerEntity.AddOrGet<ck::FTag_Timer_NeedsUpdate>();
     }
 
-    return Conv_HandleToTimer(TimerEntity);
+    return Cast(TimerEntity);
 }
 
 auto
