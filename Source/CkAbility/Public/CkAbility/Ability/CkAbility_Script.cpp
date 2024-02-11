@@ -163,7 +163,7 @@ auto
         Get_AbilityHandle(), this)
     { return; }
 
-    auto AbilityAsAbilityOwner = UCk_Utils_AbilityOwner_UE::Conv_HandleToAbilityOwner(_AbilityHandle);
+    auto AbilityAsAbilityOwner = UCk_Utils_AbilityOwner_UE::CastChecked(_AbilityHandle);
     UCk_Utils_AbilityOwner_UE::Request_SendAbilityEvent
     (
         AbilityAsAbilityOwner,
@@ -219,7 +219,7 @@ auto
         Get_AbilityHandle(), this)
     { return; }
 
-    auto AbilityAsAbilityOwner = UCk_Utils_AbilityOwner_UE::Conv_HandleToAbilityOwner(_AbilityHandle);
+    auto AbilityAsAbilityOwner = UCk_Utils_AbilityOwner_UE::CastChecked(_AbilityHandle);
     UCk_Utils_AbilityOwner_UE::Request_SendAbilityEvent
     (
         AbilityAsAbilityOwner,

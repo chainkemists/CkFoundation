@@ -48,23 +48,25 @@ public:
     Has(
         const FCk_Handle& InAbilityEntity);
 
+private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Ability",
         DisplayName="[Ck][Ability] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_Ability
-    Cast(
+    DoCast(
         FCk_Handle InHandle,
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Ability",
         DisplayName="[Ck][Ability] Handle -> Ability Handle",
-        meta = (CompactNodeTitle = "As AbilityHandle", BlueprintAutocast))
+        meta = (CompactNodeTitle = "<AsAbility>", BlueprintAutocast))
     static FCk_Handle_Ability
-    Conv_HandleToAbility(
+    DoCastChecked(
         FCk_Handle InHandle);
 
+public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Ability);
 
 public:

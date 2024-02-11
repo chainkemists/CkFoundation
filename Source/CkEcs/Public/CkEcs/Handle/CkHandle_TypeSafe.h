@@ -92,6 +92,33 @@ static_assert
 #define CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(_HandleType_)                                                 \
 static auto                                                                                              \
     CastChecked(                                                                                         \
+        FCk_Handle& InHandle)                                                                            \
+    -> _HandleType_&                                                                                     \
+{                                                                                                        \
+    if (ck::Is_NOT_Valid(InHandle))                                                                      \
+    { static _HandleType_ Invalid; return Invalid; }                                                     \
+                                                                                                         \
+    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have a [{}]. Unable to convert Handle."), \
+        InHandle, ck::Get_RuntimeTypeToString<_HandleType_>())                                           \
+    { static _HandleType_ Invalid; return Invalid; }                                                     \
+                                                                                                         \
+    return ck::StaticCast<_HandleType_>(InHandle);                                                       \
+}                                                                                                        \
+static auto                                                                                              \
+    Cast(                                                                                                \
+        FCk_Handle& InHandle)                                                                            \
+    -> _HandleType_&                                                                                     \
+{                                                                                                        \
+    if (ck::Is_NOT_Valid(InHandle))                                                                      \
+    { static _HandleType_ Invalid; return Invalid; }                                                     \
+                                                                                                         \
+    if (NOT Has(InHandle))                                                                               \
+    { static _HandleType_ Invalid; return Invalid; }                                                     \
+                                                                                                         \
+    return ck::StaticCast<_HandleType_>(InHandle);                                                       \
+}                                                                                                        \
+static auto                                                                                              \
+    CastChecked(                                                                                         \
         const FCk_Handle& InHandle)                                                                      \
     -> const _HandleType_&                                                                               \
 {                                                                                                        \
@@ -133,7 +160,7 @@ auto                                                                            
                                                                                                          \
 auto                                                                                                     \
     _ClassType_::                                                                                        \
-    Cast(                                                                                                \
+    DoCast(                                                                                              \
         FCk_Handle InHandle,                                                                             \
         ECk_SucceededFailed& OutResult)                                                                  \
     -> _HandleType_                                                                                      \
@@ -156,7 +183,7 @@ auto                                                                            
                                                                                                          \
 auto                                                                                                     \
     _ClassType_::                                                                                        \
-    Conv_HandleTo ##_FeatureName_(                                                                       \
+    DoCastChecked(                                                                                       \
         FCk_Handle InHandle)                                                                             \
     -> _HandleType_                                                                                      \
 {                                                                                                        \
