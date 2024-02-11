@@ -107,7 +107,7 @@ auto
 {
     Super::Initialize(Collection);
 
-    _TransientEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_Registry);
+    _TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(_Registry);
     _TransientEntity.Add<FTag_NAME_TransientEntity>();
 }
 

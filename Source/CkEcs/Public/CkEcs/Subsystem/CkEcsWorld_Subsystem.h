@@ -134,7 +134,8 @@ public:
 
 public:
     static auto
-    Get_TransientEntity(const UWorld* InWorld) -> FCk_Handle;
+    Get_TransientEntity(
+        const UWorld* InWorld) -> FCk_Handle;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
