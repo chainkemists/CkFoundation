@@ -87,37 +87,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-auto
-    UCk_Utils_Timer_UE::Has(
-        const FCk_Handle& InAbilityEntity)
-        -> bool { return InAbilityEntity.Has_All<ck::FFragment_Timer_Params, ck::FFragment_Timer_Current>(); }
-
-auto
-    UCk_Utils_Timer_UE::Cast(
-        FCk_Handle    InHandle,
-        ECk_SucceededFailed& OutResult)
-        -> FCk_Handle_Timer
-{
-    if (NOT Has(InHandle))
-    {
-        OutResult = ECk_SucceededFailed::Failed;
-        return {};
-    }
-    OutResult = ECk_SucceededFailed::Succeeded;
-    return ck::Cast<FCk_Handle_Timer>(InHandle);
-}
-
-auto
-    UCk_Utils_Timer_UE::Conv_HandleToTimer(
-        FCk_Handle InHandle)
-        -> FCk_Handle_Timer
-{
-    CK_ENSURE_IF_NOT(Has(InHandle),
-        TEXT("Handle [{}] does NOT have a [{}]. Unable to convert Handle."),
-        InHandle,
-        ck::Get_RuntimeTypeToString<FCk_Handle_Timer>()) { return {}; }
-    return ck::Cast<FCk_Handle_Timer>(InHandle);
-};
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Timer, UCk_Utils_Timer_UE, FCk_Handle_Timer, ck::FFragment_Timer_Params, ck::FFragment_Timer_Current);
 
 // --------------------------------------------------------------------------------------------------------------------
 

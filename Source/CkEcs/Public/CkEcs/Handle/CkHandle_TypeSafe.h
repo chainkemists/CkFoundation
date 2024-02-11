@@ -9,8 +9,13 @@ namespace ck
 {
     template <typename T_DerivedHandle>
     auto
-        Cast(
-            FCk_Handle InHandle) -> T_DerivedHandle;
+        StaticCast(
+            const FCk_Handle& InHandle) -> const T_DerivedHandle&;
+
+    template <typename T_DerivedHandle>
+    auto
+        StaticCast(
+            FCk_Handle& InHandle) -> T_DerivedHandle&;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -115,7 +120,7 @@ auto                                                                            
     }                                                                                                    \
                                                                                                          \
     OutResult = ECk_SucceededFailed::Succeeded;                                                          \
-    return ck::Cast<_HandleType_>(InHandle);                                                             \
+    return ck::StaticCast<_HandleType_>(InHandle);                                                       \
 }                                                                                                        \
                                                                                                          \
 auto                                                                                                     \
@@ -131,7 +136,7 @@ auto                                                                            
         InHandle, ck::Get_RuntimeTypeToString<_HandleType_>())                                           \
     { return {}; }                                                                                       \
                                                                                                          \
-    return ck::Cast<_HandleType_>(InHandle);                                                             \
+    return ck::StaticCast<_HandleType_>(InHandle);                                                       \
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -153,11 +158,23 @@ namespace ck
 
     template <typename T_DerivedHandle>
     auto
-        Cast(
-            FCk_Handle InHandle) -> T_DerivedHandle
+        StaticCast(
+            const FCk_Handle& InHandle) -> const T_DerivedHandle&
     {
-        static_assert(std::is_base_of_v<FCk_Handle_TypeSafe, std::remove_cvref_t<T_DerivedHandle>> || std::is_same_v<T_DerivedHandle, FCk_Handle>,
-            "T_DerivedHandle MUST be type-safe Handle");
+        static_assert(std::is_base_of_v<FCk_Handle_TypeSafe, std::remove_cvref_t<T_DerivedHandle>> ||
+            std::is_same_v<std::remove_cvref_t<T_DerivedHandle>, FCk_Handle>, "T_DerivedHandle MUST be type-safe Handle");
+        static_assert(sizeof(T_DerivedHandle) == sizeof(FCk_Handle), "T_DerivedHandle MUST be the same size as FCk_Handle");
+
+        return *static_cast<T_DerivedHandle*>(&InHandle);
+    }
+
+    template <typename T_DerivedHandle>
+    auto
+        StaticCast(
+            FCk_Handle& InHandle) -> T_DerivedHandle&
+    {
+        static_assert(std::is_base_of_v<FCk_Handle_TypeSafe, std::remove_cvref_t<T_DerivedHandle>> ||
+            std::is_same_v<std::remove_cvref_t<T_DerivedHandle>, FCk_Handle>, "T_DerivedHandle MUST be type-safe Handle");
         static_assert(sizeof(T_DerivedHandle) == sizeof(FCk_Handle), "T_DerivedHandle MUST be the same size as FCk_Handle");
 
         return *static_cast<T_DerivedHandle*>(&InHandle);

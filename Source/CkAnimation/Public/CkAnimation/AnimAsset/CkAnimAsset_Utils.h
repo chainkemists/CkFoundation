@@ -57,7 +57,7 @@ public:
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_AnimAsset
     Cast(
-        const FCk_Handle&    InHandle,
+        FCk_Handle    InHandle,
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
@@ -66,7 +66,7 @@ public:
         meta = (CompactNodeTitle = "As AnimAssetHandle", BlueprintAutocast))
     static FCk_Handle_AnimAsset
     Conv_HandleToAnimAsset(
-        const FCk_Handle& InHandle);
+        FCk_Handle InHandle);
 
 public:
     UFUNCTION(BlueprintPure,
