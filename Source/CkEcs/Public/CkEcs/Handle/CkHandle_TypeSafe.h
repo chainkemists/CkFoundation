@@ -89,7 +89,38 @@ static_assert
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// the ... are the Fragments for the Has check (see other usages)
+#define CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(_HandleType_)                                                 \
+static auto                                                                                              \
+    CastChecked(                                                                                         \
+        const FCk_Handle& InHandle)                                                                      \
+    -> const _HandleType_&                                                                               \
+{                                                                                                        \
+    if (ck::Is_NOT_Valid(InHandle))                                                                      \
+    { static _HandleType_ Invalid; return Invalid; }                                                     \
+                                                                                                         \
+    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have a [{}]. Unable to convert Handle."), \
+        InHandle, ck::Get_RuntimeTypeToString<_HandleType_>())                                           \
+    { static _HandleType_ Invalid; return Invalid; }                                                     \
+                                                                                                         \
+    return ck::StaticCast<const _HandleType_>(InHandle);                                                 \
+}                                                                                                        \
+static auto                                                                                              \
+    Cast(                                                                                                \
+        const FCk_Handle& InHandle)                                                                      \
+    -> const _HandleType_&                                                                               \
+{                                                                                                        \
+    if (ck::Is_NOT_Valid(InHandle))                                                                      \
+    { static _HandleType_ Invalid; return Invalid; }                                                     \
+                                                                                                         \
+    if (NOT Has(InHandle))                                                                               \
+    { static _HandleType_ Invalid; return Invalid; }                                                     \
+                                                                                                         \
+    return ck::StaticCast<const _HandleType_>(InHandle);                                                 \
+}
+
+// NOTES:
+// - the ... are the Fragments for the Has check (see other usages)
+// - the FCk_Handle _should_ be passed by ref but isn't because passing by ref makes BlueprintAutoCast to not work
 #define CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(_FeatureName_, _ClassType_, _HandleType_, ...)           \
 auto                                                                                                     \
     _ClassType_::                                                                                        \

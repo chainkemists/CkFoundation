@@ -110,7 +110,7 @@ auto
         const auto ActivationSettingsOnSelf = AbilityActivationSettings.Get_ActivationSettingsOnSelf();
         const auto ActivationBlockers = ActivationSettingsOnSelf.Get_BlockedByTagsOnSelf();
 
-        const auto AbilityAsAbilityOwner = UCk_Utils_AbilityOwner_UE::Conv_HandleToAbilityOwner(InAbilityEntity);
+        const auto AbilityAsAbilityOwner = UCk_Utils_AbilityOwner_UE::CastChecked(InAbilityEntity);
         return NOT UCk_Utils_AbilityOwner_UE::Get_ActiveTags(AbilityAsAbilityOwner).HasAnyExact(ActivationBlockers);
     }();
 

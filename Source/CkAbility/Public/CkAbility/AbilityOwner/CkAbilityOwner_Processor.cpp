@@ -341,8 +341,7 @@ namespace ck
                 if (const auto Condition = algo::MatchesAnyAbilityActivationCancelledTags{GrantedTags};
                     Condition(InAbilityOwnerEntity))
                 {
-                    auto MyOwner = UCk_Utils_AbilityOwner_UE::Conv_HandleToAbilityOwner(
-                            UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityOwnerEntity));
+                    auto MyOwner = UCk_Utils_AbilityOwner_UE::CastChecked(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityOwnerEntity));
 
                     const auto AbilityOwnerAsAbility = UCk_Utils_Ability_UE::Conv_HandleToAbility(InAbilityOwnerEntity);
                     UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(MyOwner,
@@ -530,7 +529,7 @@ namespace ck
             InAbilityOwnerEntity,
             [InAbilityClass](const FCk_Handle& InHandle)
             // TODO: remove conv when RecordOfAbilities is fully templated
-            { return UCk_Utils_Ability_UE::Get_ScriptClass(UCk_Utils_Ability_UE::Conv_HandleToAbility(InHandle)) == InAbilityClass; }
+            { return UCk_Utils_Ability_UE::Get_ScriptClass(UCk_Utils_Ability_UE::CastChecked(InHandle)) == InAbilityClass; }
         );
 
         CK_ENSURE_IF_NOT(ck::IsValid(FoundAbilityWithName),
@@ -540,7 +539,7 @@ namespace ck
         { return {}; }
 
         // TODO: remove conv when RecordOfAbilities is fully templated
-        return UCk_Utils_Ability_UE::Conv_HandleToAbility(FoundAbilityWithName);
+        return UCk_Utils_Ability_UE::CastChecked(FoundAbilityWithName);
     }
 
     auto
@@ -568,7 +567,7 @@ namespace ck
         { return {}; }
 
         // TODO: remove conv when RecordOfAbilities is fully templated
-        return UCk_Utils_Ability_UE::Conv_HandleToAbility(InAbilityEntity);
+        return UCk_Utils_Ability_UE::CastChecked(InAbilityEntity);
     }
 }
 
