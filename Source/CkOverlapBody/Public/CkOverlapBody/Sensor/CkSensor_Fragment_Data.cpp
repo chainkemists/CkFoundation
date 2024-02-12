@@ -688,7 +688,7 @@ auto
 auto
     UCk_Sensor_ActorComponent_Box_UE::
     Get_OwningEntity() const
-    -> FCk_Handle
+    -> const FCk_Handle&
 {
     return _OwningEntity;
 }
@@ -757,7 +757,7 @@ auto
 auto
     UCk_Sensor_ActorComponent_Sphere_UE::
     Get_OwningEntity() const
-    -> FCk_Handle
+    -> const FCk_Handle&
 {
     return _OwningEntity;
 }
@@ -826,7 +826,7 @@ auto
 auto
     UCk_Sensor_ActorComponent_Capsule_UE::
     Get_OwningEntity() const
-    -> FCk_Handle
+    -> const FCk_Handle&
 {
     return _OwningEntity;
 }

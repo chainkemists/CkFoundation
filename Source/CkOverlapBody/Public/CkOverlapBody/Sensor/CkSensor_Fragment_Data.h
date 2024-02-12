@@ -889,7 +889,7 @@ public:
 
 public:
     auto Get_Type() const -> ECk_OverlapBody_Type override;
-    auto Get_OwningEntity() const -> FCk_Handle override;
+    auto Get_OwningEntity() const -> const FCk_Handle& override;
 
 private:
     auto InitializeComponent() -> void override;
@@ -932,7 +932,7 @@ public:
 
 public:
     auto Get_Type() const -> ECk_OverlapBody_Type override;
-    auto Get_OwningEntity() const -> FCk_Handle override;
+    auto Get_OwningEntity() const -> const FCk_Handle& override;
 
 private:
     auto InitializeComponent() -> void override;
@@ -975,7 +975,7 @@ public:
 
 public:
     auto Get_Type() const -> ECk_OverlapBody_Type override;
-    auto Get_OwningEntity() const -> FCk_Handle override;
+    auto Get_OwningEntity() const -> const FCk_Handle& override;
 
 private:
     auto InitializeComponent() -> void override;
