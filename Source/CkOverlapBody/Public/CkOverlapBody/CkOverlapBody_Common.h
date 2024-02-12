@@ -33,10 +33,14 @@ public:
 
 public:
     virtual auto Get_Type() const -> ECk_OverlapBody_Type
-    PURE_VIRTUAL(ICk_OverlapBody_Interface::Get_Type, return ECk_OverlapBody_Type::Other;);
+    PURE_VIRTUAL(ICk_OverlapBody_Interface::Get_Type, return ECk_OverlapBody_Type::Other; );
 
-    virtual auto Get_OwningEntity() const -> FCk_Handle
-    PURE_VIRTUAL(ICk_OverlapBody_Interface::Get_OwningEntity, return {};);
+    virtual auto Get_OwningEntity() const -> const FCk_Handle&
+    PURE_VIRTUAL(ICk_OverlapBody_Interface::Get_OwningEntity,
+    {
+        static FCk_Handle InvalidEntity;
+        return InvalidEntity;
+    });
 };
 
 // --------------------------------------------------------------------------------------------------------------------
