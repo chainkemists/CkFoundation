@@ -412,21 +412,18 @@ auto
     if (ParamsToUse.Get_ModifierDelta() == 1 && ParamsToUse.Get_ModifierOperation() == ECk_ModifierOperation::Multiplicative)
     { return {}; }
 
-    auto NewModifierEntity = ck::StaticCast<FCk_Handle_FloatAttributeModifier>(UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttribute));
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttribute);
+    auto NewModifierEntity = ck::StaticCast<FCk_Handle_FloatAttributeModifier>(NewEntity);
     UCk_Utils_GameplayLabel_UE::Add(NewModifierEntity, InModifierName);
 
     switch (ParamsToUse.Get_Component())
     {
         case ECk_MinMaxCurrent::Min:
         {
-            RecordOfFloatAttributeModifiers_Utils_Min::AddIfMissing(InAttribute);
-            RecordOfFloatAttributeModifiers_Utils_Min::Request_Connect(InAttribute, NewModifierEntity);
-
             FloatAttributeModifier_Utils_Min::Add
             (
                 NewModifierEntity,
                 ParamsToUse.Get_ModifierDelta(),
-                InAttribute,
                 ParamsToUse.Get_ModifierOperation(),
                 ParamsToUse.Get_ModifierOperation_RevocablePolicy()
             );
@@ -435,14 +432,10 @@ auto
         }
         case ECk_MinMaxCurrent::Max:
         {
-            RecordOfFloatAttributeModifiers_Utils_Max::AddIfMissing(InAttribute);
-            RecordOfFloatAttributeModifiers_Utils_Max::Request_Connect(InAttribute, NewModifierEntity);
-
             FloatAttributeModifier_Utils_Max::Add
             (
                 NewModifierEntity,
                 ParamsToUse.Get_ModifierDelta(),
-                InAttribute,
                 ParamsToUse.Get_ModifierOperation(),
                 ParamsToUse.Get_ModifierOperation_RevocablePolicy()
             );
@@ -451,20 +444,15 @@ auto
         }
         case ECk_MinMaxCurrent::Current:
         {
-            RecordOfFloatAttributeModifiers_Utils_Current::AddIfMissing(InAttribute);
-            RecordOfFloatAttributeModifiers_Utils_Current::Request_Connect(InAttribute, NewModifierEntity);
-
             FloatAttributeModifier_Utils_Current::Add
             (
                 NewModifierEntity,
                 ParamsToUse.Get_ModifierDelta(),
-                InAttribute,
                 ParamsToUse.Get_ModifierOperation(),
                 ParamsToUse.Get_ModifierOperation_RevocablePolicy()
             );
 
             break;
-
         }
     }
 

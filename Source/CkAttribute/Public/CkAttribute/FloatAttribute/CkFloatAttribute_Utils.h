@@ -215,9 +215,9 @@ private:
     class FloatAttributeModifier_Utils_Min : public ck::TUtils_AttributeModifier<ck::FFragment_FloatAttributeModifier_Min> {};
     class FloatAttributeModifier_Utils_Max : public ck::TUtils_AttributeModifier<ck::FFragment_FloatAttributeModifier_Max> {};
 
-    class RecordOfFloatAttributeModifiers_Utils_Current : public ck::TUtils_RecordOfEntities<ck::FFragment_FloatAttributeModifier_Current> {};
-    class RecordOfFloatAttributeModifiers_Utils_Min : public ck::TUtils_RecordOfEntities<ck::FFragment_FloatAttributeModifier_Min> {};
-    class RecordOfFloatAttributeModifiers_Utils_Max : public ck::TUtils_RecordOfEntities<ck::FFragment_FloatAttributeModifier_Max> {};
+    class RecordOfFloatAttributeModifiers_Utils_Current : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfFloatAttributeModifiers> {};
+    class RecordOfFloatAttributeModifiers_Utils_Min : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfFloatAttributeModifiers> {};
+    class RecordOfFloatAttributeModifiers_Utils_Max : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfFloatAttributeModifiers> {};
 
 public:
     UFUNCTION(BlueprintCallable,

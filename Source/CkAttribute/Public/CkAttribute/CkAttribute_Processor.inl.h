@@ -7,7 +7,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck
+namespace ck::detail
 {
     template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_MulticastType>
     auto
@@ -244,11 +244,11 @@ namespace ck
     TProcessor_AttributeModifier_ComputeAll<T_DerivedProcessor, T_DerivedAttributeModifier>::
         TProcessor_AttributeModifier_ComputeAll(
             RegistryType InRegistry)
-                : _NotRevokableAdditive_Compute(InRegistry)
-                , _NotRevokableMultiplicative_Compute(InRegistry)
-                , _RevokableAdditive_Compute(InRegistry)
-                , _RevokableMultiplicative_Compute(InRegistry)
-                , _Registry(InRegistry)
+        : _NotRevokableAdditive_Compute(InRegistry)
+        , _NotRevokableMultiplicative_Compute(InRegistry)
+        , _RevokableAdditive_Compute(InRegistry)
+        , _RevokableMultiplicative_Compute(InRegistry)
+        , _Registry(InRegistry)
     {
     }
 
@@ -287,6 +287,150 @@ namespace ck
             "Forcing final value calculation again"), InHandle, TargetEntity);
 
         TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(TargetEntity);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    TProcessor_AttributeModifier_TeardownAll<T_DerivedProcessor, T_DerivedAttributeModifier>::
+        TProcessor_AttributeModifier_TeardownAll(
+            RegistryType InRegistry)
+        : _Additive_Teardown(InRegistry)
+        , _Multiplicative_Teardown(InRegistry)
+    {
+    }
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    auto
+        TProcessor_AttributeModifier_TeardownAll<T_DerivedProcessor, T_DerivedAttributeModifier>::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        _Additive_Teardown.Tick(InDeltaT);
+        _Multiplicative_Teardown.Tick(InDeltaT);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttribute, typename
+        T_MulticastType>
+    TProcessor_Attribute_FireSignals_CurrentMinMax<T_DerivedAttribute, T_MulticastType>::
+        TProcessor_Attribute_FireSignals_CurrentMinMax(
+            RegistryType InRegistry)
+        : _Current(InRegistry)
+        , _Min(InRegistry)
+        , _Max(InRegistry)
+    {
+    }
+
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttribute, typename T_MulticastType>
+    auto
+        TProcessor_Attribute_FireSignals_CurrentMinMax<T_DerivedAttribute, T_MulticastType>::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        _Current.Tick(InDeltaT);
+        _Min.Tick(InDeltaT);
+        _Max.Tick(InDeltaT);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttribute>
+    TProcessor_Attribute_MinMaxClamp<T_DerivedAttribute>::
+        TProcessor_Attribute_MinMaxClamp(
+            RegistryType InRegistry)
+        : _MinClamp(InRegistry)
+        , _MaxClamp(InRegistry)
+    {
+    }
+
+    template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttribute>
+    auto
+        TProcessor_Attribute_MinMaxClamp<T_DerivedAttribute>::Tick(
+            TimeType InDeltaT)
+            -> void
+    {
+        _MinClamp.Tick(InDeltaT);
+        _MaxClamp.Tick(InDeltaT);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
+    TProcessor_Attribute_RecomputeAll_CurrentMinMax<T_DerivedAttributeModifier>::
+        TProcessor_Attribute_RecomputeAll_CurrentMinMax(
+            RegistryType InRegistry)
+        : _Current(InRegistry)
+        , _Min(InRegistry)
+        , _Max(InRegistry)
+    {
+    }
+
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
+    auto
+        TProcessor_Attribute_RecomputeAll_CurrentMinMax<T_DerivedAttributeModifier>::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        _Current.Tick(InDeltaT);
+        _Min.Tick(InDeltaT);
+        _Max.Tick(InDeltaT);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
+    TProcessor_AttributeModifier_ComputeAll_CurrentMinMax<T_DerivedAttributeModifier>::
+        TProcessor_AttributeModifier_ComputeAll_CurrentMinMax(
+            RegistryType InRegistry)
+        : _Current(InRegistry)
+        , _Min(InRegistry)
+        , _Max(InRegistry)
+    {
+    }
+
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
+    auto
+        TProcessor_AttributeModifier_ComputeAll_CurrentMinMax<T_DerivedAttributeModifier>::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        _Current.Tick(InDeltaT);
+        _Min.Tick(InDeltaT);
+        _Max.Tick(InDeltaT);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
+    TProcessor_AttributeModifier_TeardownAll_CurrentMinMax<T_DerivedAttributeModifier>::
+        TProcessor_AttributeModifier_TeardownAll_CurrentMinMax(
+            RegistryType InRegistry)
+        : _Current(InRegistry)
+        , _Min(InRegistry)
+        , _Max(InRegistry)
+    {
+    }
+
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
+    auto
+        TProcessor_AttributeModifier_TeardownAll_CurrentMinMax<T_DerivedAttributeModifier>::Tick(
+            TimeType InDeltaT)
+            -> void
+    {
+        _Current.Tick(InDeltaT);
+        _Min.Tick(InDeltaT);
+        _Max.Tick(InDeltaT);
     }
 }
 

@@ -14,44 +14,34 @@
 
 namespace ck
 {
-    struct CKATTRIBUTE_API FFragment_FloatAttribute_Current : public TFragment_Attribute<FCk_Handle_FloatAttribute, float, FTag_Current>
+    template <ECk_MinMaxCurrent T_Component>
+    struct CKATTRIBUTE_API TFragment_FloatAttribute : public TFragment_Attribute<FCk_Handle_FloatAttribute, float, T_Component>
     {
-        using TFragment_Attribute::TFragment_Attribute;
+        using TFragment_Attribute<FCk_Handle_FloatAttribute, float, T_Component>::TFragment_Attribute;
     };
 
-    struct CKATTRIBUTE_API FFragment_FloatAttribute_Min : public TFragment_Attribute<FCk_Handle_FloatAttribute, float, FTag_Min>
-    {
-        using TFragment_Attribute::TFragment_Attribute;
-    };
-
-    struct CKATTRIBUTE_API FFragment_FloatAttribute_Max : public TFragment_Attribute<FCk_Handle_FloatAttribute, float, FTag_Max>
-    {
-        using TFragment_Attribute::TFragment_Attribute;
-    };
+    using FFragment_FloatAttribute_Current = TFragment_FloatAttribute<ECk_MinMaxCurrent::Current>;
+    using FFragment_FloatAttribute_Min = TFragment_FloatAttribute<ECk_MinMaxCurrent::Min>;
+    using FFragment_FloatAttribute_Max = TFragment_FloatAttribute<ECk_MinMaxCurrent::Max>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKATTRIBUTE_API FFragment_FloatAttributeModifier_Current : public TFragment_AttributeModifier<
-        FCk_Handle_FloatAttributeModifier, FFragment_FloatAttribute_Current>
+    template <ECk_MinMaxCurrent T_Component>
+    struct CKATTRIBUTE_API TFragment_FloatAttributeModifier : public TFragment_AttributeModifier<
+        FCk_Handle_FloatAttributeModifier, TFragment_FloatAttribute<T_Component>>
     {
-        using TFragment_AttributeModifier::TFragment_AttributeModifier;
+        using TFragment_AttributeModifier<FCk_Handle_FloatAttributeModifier, TFragment_FloatAttribute<T_Component>>::TFragment_AttributeModifier;
     };
 
-    struct CKATTRIBUTE_API FFragment_FloatAttributeModifier_Min : public TFragment_AttributeModifier<
-        FCk_Handle_FloatAttributeModifier, FFragment_FloatAttribute_Min>
-    {
-        using TFragment_AttributeModifier::TFragment_AttributeModifier;
-    };
-
-    struct CKATTRIBUTE_API FFragment_FloatAttributeModifier_Max : public TFragment_AttributeModifier<
-        FCk_Handle_FloatAttributeModifier, FFragment_FloatAttribute_Max>
-    {
-        using TFragment_AttributeModifier::TFragment_AttributeModifier;
-    };
+    using FFragment_FloatAttributeModifier_Current = TFragment_FloatAttributeModifier<ECk_MinMaxCurrent::Current>;
+    using FFragment_FloatAttributeModifier_Min = TFragment_FloatAttributeModifier<ECk_MinMaxCurrent::Min>;
+    using FFragment_FloatAttributeModifier_Max = TFragment_FloatAttributeModifier<ECk_MinMaxCurrent::Max>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfFloatAttributes, FCk_Handle_FloatAttribute);
+
+    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfFloatAttributeModifiers, FCk_Handle_FloatAttributeModifier);
 
     // --------------------------------------------------------------------------------------------------------------------
 

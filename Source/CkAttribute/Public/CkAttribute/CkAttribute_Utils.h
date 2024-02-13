@@ -24,7 +24,7 @@ namespace ck
         template <typename>
         friend class TUtils_AttributeModifier;
 
-        template <typename, typename>
+        template <typename, typename, typename>
         friend class TProcessor_Attribute_OverrideBaseValue;
 
         template <typename, typename>
@@ -75,9 +75,9 @@ namespace ck
     {
     public:
         using AttributeModifierFragmentType = T_DerivedAttributeModifier;
-        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType_Current;
+        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
         using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
-        using HandleType                    = FCk_Handle;
+        using HandleType                    = typename AttributeModifierFragmentType::HandleType;
 
     public:
         template <typename, typename>
@@ -90,14 +90,13 @@ namespace ck
         friend class TProcessor_AttributeModifier_Multiplicative_Teardown;
 
     public:
-        struct RecordOfAttributeModifiers_Utils : TUtils_RecordOfEntities<FFragment_RecordOfAttributeModifiers>{};
+        struct RecordOfAttributeModifiers_Utils : TUtils_RecordOfEntities<TFragment_RecordOfAttributeModifiers<HandleType>>{};
 
     public:
         static auto
         Add(
             HandleType InHandle,
             AttributeDataType InModifierDelta,
-            HandleType InTarget,
             ECk_ModifierOperation InModifierOperation,
             ECk_ModifierOperation_RevocablePolicy InModifierOperationRevokablePolicy) -> void;
 

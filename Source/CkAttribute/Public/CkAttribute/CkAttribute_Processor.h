@@ -5,7 +5,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck
+namespace ck::detail
 {
     template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_MulticastType>
     class TProcessor_Attribute_FireSignals : public TProcessor<
@@ -54,7 +54,7 @@ namespace ck
         using AttributeFragmentType_Current = T_DerivedAttributeCurrent;
         using AttributeFragmentType_Min     = T_DerivedAttributeMin;
         using AttributeDataType             = typename AttributeFragmentType_Current::AttributeDataType;
-        using ThisType                      = TProcessor_Attribute_MinClamp<T_DerivedProcessor, AttributeFragmentType_Current>;
+        using ThisType                      = TProcessor_Attribute_MinClamp<T_DerivedProcessor, AttributeFragmentType_Current, AttributeFragmentType_Min>;
         using Super                         = TProcessor<ThisType, AttributeFragmentType_Current, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
         using HandleType                    = typename Super::HandleType;
         using TimeType                      = typename Super::TimeType;
@@ -89,7 +89,7 @@ namespace ck
         using AttributeFragmentType_Current = T_DerivedAttributeCurrent;
         using AttributeFragmentType_Max     = T_DerivedAttributeMax;
         using AttributeDataType             = typename AttributeFragmentType_Current::AttributeDataType;
-        using ThisType                      = TProcessor_Attribute_MaxClamp<T_DerivedProcessor, AttributeFragmentType_Current>;
+        using ThisType                      = TProcessor_Attribute_MaxClamp<T_DerivedProcessor, AttributeFragmentType_Current, AttributeFragmentType_Max>;
         using Super                         = TProcessor<ThisType, AttributeFragmentType_Current, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
         using HandleType                    = typename Super::HandleType;
         using TimeType                      = typename Super::TimeType;
@@ -221,40 +221,6 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_Additive_Teardown : public TProcessor<
-            TProcessor_AttributeModifier_Additive_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>,
-            T_DerivedAttributeModifier,
-            typename T_DerivedAttributeModifier::Tag_AdditiveModification,
-            typename T_DerivedAttributeModifier::Tag_IsRevokableModification,
-            CK_IF_PENDING_KILL>
-    {
-    public:
-        using AttributeModifierFragmentType = T_DerivedAttributeModifier;
-        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
-        using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
-        using ModificationType              = typename AttributeModifierFragmentType::Tag_AdditiveModification;
-        using IsRevokableModificationType   = typename AttributeModifierFragmentType::Tag_IsRevokableModification;
-        using ThisType                      = TProcessor_AttributeModifier_Additive_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, ModificationType, IsRevokableModificationType, CK_IF_PENDING_KILL>;
-        using HandleType                    = typename Super::HandleType;
-        using TimeType                      = typename Super::TimeType;
-
-    public:
-        using Super::Super;
-
-    public:
-        auto ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier) const -> void;
-
-    public:
-        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_RevokableMultiplicative_Compute : public TProcessor<
             TProcessor_AttributeModifier_RevokableMultiplicative_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
             T_DerivedAttributeModifier,
@@ -290,7 +256,7 @@ namespace ck
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
 
-        // --------------------------------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute : public TProcessor<
@@ -328,7 +294,6 @@ namespace ck
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
 
-
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
@@ -348,20 +313,51 @@ namespace ck
             TimeType InDeltaT) -> void;
 
     private:
-        TProcessor_AttributeModifier_NotRevokableAdditive_Compute<TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier>
-        _NotRevokableAdditive_Compute;
-
-        TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute<TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier>
-        _NotRevokableMultiplicative_Compute;
-
-        TProcessor_AttributeModifier_RevokableAdditive_Compute<TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier>
-        _RevokableAdditive_Compute;
-
-        TProcessor_AttributeModifier_RevokableMultiplicative_Compute<TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier>
-        _RevokableMultiplicative_Compute;
+        TProcessor_AttributeModifier_NotRevokableAdditive_Compute<
+            TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier> _NotRevokableAdditive_Compute;
+        TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute<
+            TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier> _NotRevokableMultiplicative_Compute;
+        TProcessor_AttributeModifier_RevokableAdditive_Compute<
+            TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier> _RevokableAdditive_Compute;
+        TProcessor_AttributeModifier_RevokableMultiplicative_Compute<
+            TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier> _RevokableMultiplicative_Compute;
 
     private:
         RegistryType _Registry;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_Additive_Teardown : public TProcessor<
+            TProcessor_AttributeModifier_Additive_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>,
+            T_DerivedAttributeModifier,
+            typename T_DerivedAttributeModifier::Tag_AdditiveModification,
+            typename T_DerivedAttributeModifier::Tag_IsRevokableModification,
+            CK_IF_PENDING_KILL>
+    {
+    public:
+        using AttributeModifierFragmentType = T_DerivedAttributeModifier;
+        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
+        using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
+        using ModificationType              = typename AttributeModifierFragmentType::Tag_AdditiveModification;
+        using IsRevokableModificationType   = typename AttributeModifierFragmentType::Tag_IsRevokableModification;
+        using ThisType                      = TProcessor_AttributeModifier_Additive_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>;
+        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, ModificationType, IsRevokableModificationType, CK_IF_PENDING_KILL>;
+        using HandleType                    = typename Super::HandleType;
+        using TimeType                      = typename Super::TimeType;
+
+    public:
+        using Super::Super;
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const AttributeModifierFragmentType& InAttributeModifier) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -397,6 +393,195 @@ namespace ck
     public:
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_TeardownAll
+    {
+    public:
+        using TimeType     = FCk_Time;
+        using RegistryType = FCk_Registry;
+        using MarkedDirtyBy = typename T_DerivedAttributeModifier::Tag_ComputeResult;
+
+    public:
+        explicit
+        TProcessor_AttributeModifier_TeardownAll(RegistryType InRegistry);
+
+    public:
+        auto Tick(
+            TimeType InDeltaT) -> void;
+
+    private:
+        TProcessor_AttributeModifier_Additive_Teardown<
+            T_DerivedProcessor, T_DerivedAttributeModifier> _Additive_Teardown;
+        TProcessor_AttributeModifier_Multiplicative_Teardown<
+            T_DerivedProcessor, T_DerivedAttributeModifier> _Multiplicative_Teardown;
+
+    private:
+        RegistryType _Registry;
+    };
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // the second argument is the templated derived fragment from which we can deduce all Fragment types i.e. Current/Min/Max
+    template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttribute, typename T_MulticastType>
+    class TProcessor_Attribute_FireSignals_CurrentMinMax
+    {
+    public:
+        using TimeType     = FCk_Time;
+        using RegistryType = FCk_Registry;
+
+        template <ECk_MinMaxCurrent T_Component>
+        using TInternalProcessorType = TProcessor_Attribute_FireSignals<
+            TProcessor_Attribute_FireSignals_CurrentMinMax, T_DerivedAttribute<T_Component>, T_MulticastType>;
+
+    public:
+        explicit
+        TProcessor_Attribute_FireSignals_CurrentMinMax(RegistryType InRegistry);
+
+    public:
+        auto Tick(
+            TimeType InDeltaT) -> void;
+
+    private:
+        TInternalProcessorType<ECk_MinMaxCurrent::Current> _Current;
+        TInternalProcessorType<ECk_MinMaxCurrent::Min> _Min;
+        TInternalProcessorType<ECk_MinMaxCurrent::Max> _Max;
+
+    private:
+        RegistryType _Registry;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // the second argument is the templated derived fragment from which we can deduce all Fragment types i.e. Current/Min/Max
+    template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttribute>
+    class TProcessor_Attribute_MinMaxClamp
+    {
+    public:
+        using TimeType     = FCk_Time;
+        using RegistryType = FCk_Registry;
+
+    public:
+        explicit
+        TProcessor_Attribute_MinMaxClamp(RegistryType InRegistry);
+
+    public:
+        auto Tick(
+            TimeType InDeltaT) -> void;
+
+    private:
+        TProcessor_Attribute_MinClamp<TProcessor_Attribute_MinMaxClamp,
+            T_DerivedAttribute<ECk_MinMaxCurrent::Current>, T_DerivedAttribute<ECk_MinMaxCurrent::Min>> _MinClamp;
+
+        TProcessor_Attribute_MinClamp<TProcessor_Attribute_MinMaxClamp,
+            T_DerivedAttribute<ECk_MinMaxCurrent::Current>, T_DerivedAttribute<ECk_MinMaxCurrent::Max>> _MaxClamp;
+
+    private:
+        RegistryType _Registry;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // the second argument is the templated derived fragment from which we can deduce all Fragment types i.e. Current/Min/Max
+    template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttributeModifier>
+    class TProcessor_Attribute_RecomputeAll_CurrentMinMax
+    {
+    public:
+        using TimeType     = FCk_Time;
+        using RegistryType = FCk_Registry;
+
+        template <ECk_MinMaxCurrent T_Component>
+        using TInternalProcessorType = TProcessor_Attribute_RecomputeAll<
+            TProcessor_Attribute_RecomputeAll_CurrentMinMax, T_DerivedAttributeModifier<T_Component>>;
+
+    public:
+        explicit
+        TProcessor_Attribute_RecomputeAll_CurrentMinMax(RegistryType InRegistry);
+
+    public:
+        auto Tick(
+            TimeType InDeltaT) -> void;
+
+    private:
+        TInternalProcessorType<ECk_MinMaxCurrent::Current> _Current;
+        TInternalProcessorType<ECk_MinMaxCurrent::Min> _Min;
+        TInternalProcessorType<ECk_MinMaxCurrent::Max> _Max;
+
+    private:
+        RegistryType _Registry;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // the second argument is the templated derived fragment from which we can deduce all Fragment types i.e. Current/Min/Max
+    template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_ComputeAll_CurrentMinMax
+    {
+    public:
+        using TimeType     = FCk_Time;
+        using RegistryType = FCk_Registry;
+
+        template <ECk_MinMaxCurrent T_Component>
+        using TInternalProcessorType = detail::TProcessor_AttributeModifier_ComputeAll<
+            TProcessor_AttributeModifier_ComputeAll_CurrentMinMax, T_DerivedAttributeModifier<T_Component>>;
+
+    public:
+        explicit
+        TProcessor_AttributeModifier_ComputeAll_CurrentMinMax(RegistryType InRegistry);
+
+    public:
+        auto Tick(
+            TimeType InDeltaT) -> void;
+
+    private:
+        TInternalProcessorType<ECk_MinMaxCurrent::Current> _Current;
+        TInternalProcessorType<ECk_MinMaxCurrent::Min> _Min;
+        TInternalProcessorType<ECk_MinMaxCurrent::Max> _Max;
+
+    private:
+        RegistryType _Registry;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // the second argument is the templated derived fragment from which we can deduce all Fragment types i.e. Current/Min/Max
+    template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_TeardownAll_CurrentMinMax
+    {
+    public:
+        using TimeType     = FCk_Time;
+        using RegistryType = FCk_Registry;
+
+        template <ECk_MinMaxCurrent T_Component>
+        using TInternalProcessorType = detail::TProcessor_AttributeModifier_TeardownAll<
+            TProcessor_AttributeModifier_TeardownAll_CurrentMinMax, T_DerivedAttributeModifier<T_Component>>;
+
+    public:
+        explicit
+        TProcessor_AttributeModifier_TeardownAll_CurrentMinMax(RegistryType InRegistry);
+
+    public:
+        auto Tick(
+            TimeType InDeltaT) -> void;
+
+    private:
+        TInternalProcessorType<ECk_MinMaxCurrent::Current> _Current;
+        TInternalProcessorType<ECk_MinMaxCurrent::Min> _Min;
+        TInternalProcessorType<ECk_MinMaxCurrent::Max> _Max;
+
+    private:
+        RegistryType _Registry;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------

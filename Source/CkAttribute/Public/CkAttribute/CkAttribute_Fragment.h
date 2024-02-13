@@ -55,7 +55,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_HandleType, typename T_AttributeType, ECk_MinMaxCurrent T_ComponentTag = ECk_MinMaxCurrent::Current>
+    template <typename T_HandleType, typename T_AttributeType, ECk_MinMaxCurrent T_ComponentTag>
     struct TFragment_Attribute
     {
     public:
@@ -93,7 +93,7 @@ namespace ck
         CK_GENERATED_BODY(TFragment_Attribute<T_HandleType COMMA T_AttributeType COMMA T_ComponentTag>);
 
     public:
-        CK_DEFINE_ECS_TAG(FTag_ReomputeFinalValue);
+        CK_DEFINE_ECS_TAG(FTag_RecomputeFinalValue);
         CK_DEFINE_ECS_TAG(FTag_FireSignals);
         CK_DEFINE_ECS_TAG(FTag_RequiresUpdate);
 
@@ -116,7 +116,7 @@ namespace ck
         CK_PROPERTY_GET(_Base);
         CK_PROPERTY_GET(_Final);
 
-        CK_DEFINE_CONSTRUCTOR(TFragment_Attribute<T_AttributeType>, _Base, _Final);
+        CK_DEFINE_CONSTRUCTOR(TFragment_Attribute, _Base, _Final);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -167,7 +167,7 @@ namespace ck
 
     public:
         using AttributeFragmentType = T_DerivedAttribute;
-        using ThisType              = TFragment_AttributeModifier<AttributeFragmentType>;
+        using ThisType              = TFragment_AttributeModifier<T_HandleType, AttributeFragmentType>;
         using AttributeDataType     = typename AttributeFragmentType::AttributeDataType;
         using HandleType            = T_HandleType;
 
@@ -267,4 +267,5 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// ReSharper disable once CppUnusedIncludeDirective
 #include "CkAttribute_Fragment.inl.h"

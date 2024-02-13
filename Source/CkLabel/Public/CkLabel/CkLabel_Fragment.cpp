@@ -1,7 +1,6 @@
 #include "CkLabel_Fragment.h"
 
 #include "CkCore/Functional/CkFunctional.h"
-#include "CkLabel/CkLabel_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
