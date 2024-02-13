@@ -12,9 +12,15 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak="/Script/CkEcs.Ck_Utils_Handle_UE:Conv_HandleTypeSafeToHandle"))
 struct CKATTRIBUTE_API FCk_Handle_FloatAttribute : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_FloatAttribute); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_FloatAttribute);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak="/Script/CkEcs.Ck_Utils_Handle_UE:Conv_HandleTypeSafeToHandle"))
+struct CKATTRIBUTE_API FCk_Handle_FloatAttributeModifier : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_FloatAttributeModifier); };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_FloatAttributeModifier);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -28,19 +34,36 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, ForceInlineRow))
-    FGameplayTag _AttributeName;
+              meta = (AllowPrivateAccess = true))
+    FGameplayTag _Name;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, ForceInlineRow))
-    float _AttributeBaseValue = 0.0f;
+              meta = (AllowPrivateAccess = true))
+    float _BaseValue = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess, Bitmask, BitmaskEnum = "/Script/CkCore.ECk_MinMax"))
+    ECk_MinMax _Component = ECk_MinMax::None;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditCondition = "_MinMax == ECk_MinMax::Min || _MinMax == ECk_MinMax::MinMax"))
+    float _MinValue = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditCondition = "_MinMax == ECk_MinMax::Max || _MinMax == ECk_MinMax::MinMax"))
+    float _MaxValue = 0.0f;
 
 public:
-    CK_PROPERTY_GET(_AttributeName);
-    CK_PROPERTY_GET(_AttributeBaseValue);
+    auto Get_MinValue() const -> float;
+    auto Get_MaxValue() const -> float;
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttribute_ParamsData, _AttributeName, _AttributeBaseValue);
+    CK_PROPERTY_GET(_Name);
+    CK_PROPERTY_GET(_BaseValue);
+    CK_PROPERTY_GET(_Component);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttribute_ParamsData, _Name, _BaseValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -80,8 +103,7 @@ private:
               meta = (AllowPrivateAccess = true))
     float _ModifierDelta = 0.0f;
 
-    UPROPERTY(BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+    UPROPERTY()
     FGameplayTag _TargetAttributeName;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -90,17 +112,22 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_ModifierOperation_RevocablePolicy _ModifierOperation_RevokablePolicy = ECk_ModifierOperation_RevocablePolicy::Revocable;
+    ECk_ModifierOperation_RevocablePolicy _ModifierOperation_RevocablePolicy = ECk_ModifierOperation_RevocablePolicy::Revocable;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_MinMaxCurrent _Component = ECk_MinMaxCurrent::Current;
 
 public:
     CK_PROPERTY_GET(_ModifierDelta);
-    CK_PROPERTY_GET(_TargetAttributeName);
+    CK_PROPERTY(_TargetAttributeName);
     CK_PROPERTY_GET(_ModifierOperation);
-    CK_PROPERTY_GET(_ModifierOperation_RevokablePolicy);
+    CK_PROPERTY_GET(_ModifierOperation_RevocablePolicy);
+    CK_PROPERTY_GET(_Component);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttributeModifier_ParamsData, _ModifierDelta, _TargetAttributeName,
-        _ModifierOperation, _ModifierOperation_RevokablePolicy);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttributeModifier_ParamsData, _ModifierDelta,
+        _ModifierOperation, _ModifierOperation_RevocablePolicy, _Component);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -226,7 +253,7 @@ public:
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-    FCk_Handle  _Handle;
+    FCk_Handle_FloatAttribute  _AttributeHandle;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     float  _BaseValue = 0.0f;
@@ -235,12 +262,12 @@ private:
     float  _FinalValue = 0.0f;
 
 public:
-    CK_PROPERTY_GET(_Handle);
+    CK_PROPERTY_GET(_AttributeHandle);
     CK_PROPERTY_GET(_BaseValue);
     CK_PROPERTY_GET(_FinalValue);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Payload_FloatAttribute_OnValueChanged, _Handle, _BaseValue, _FinalValue);
+    CK_DEFINE_CONSTRUCTORS(FCk_Payload_FloatAttribute_OnValueChanged, _AttributeHandle, _BaseValue, _FinalValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
