@@ -188,18 +188,31 @@ public:
 
 public:
     template <typename T_ReplicatedFragment, typename T_UnaryUpdateFunc>
+    requires(std::is_base_of_v<class UCk_Ecs_ReplicatedObject_UE, T_ReplicatedFragment>)
     static auto
-    UpdateReplicatedFragment(FCk_Handle InHandle, T_UnaryUpdateFunc InUpdateFunc) -> void;
+    UpdateReplicatedFragment(
+        FCk_Handle InHandle,
+        T_UnaryUpdateFunc InUpdateFunc) -> void;
 
     template <typename T_ReplicatedFragment>
+    requires(std::is_base_of_v<class UCk_Ecs_ReplicatedObject_UE, T_ReplicatedFragment>)
     static auto
-    TryAddReplicatedFragment(FCk_Handle InHandle, UCk_Ecs_ReplicatedObject_UE* InExistingObject = nullptr) -> ECk_AddedOrNot;
+    Get_HasReplicatedFragment(
+        const FCk_Handle& InHandle) -> bool;
+
+    template <typename T_ReplicatedFragment>
+    requires(std::is_base_of_v<class UCk_Ecs_ReplicatedObject_UE, T_ReplicatedFragment>)
+    static auto
+    TryAddReplicatedFragment(
+        FCk_Handle InHandle,
+        UCk_Ecs_ReplicatedObject_UE* InExistingObject = nullptr) -> ECk_AddedOrNot;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 // Definitions
 
 template <typename T_ReplicatedFragment, typename T_UnaryUpdateFunc>
+requires(std::is_base_of_v<class UCk_Ecs_ReplicatedObject_UE, T_ReplicatedFragment>)
 auto
     UCk_Utils_Ecs_Net_UE::
     UpdateReplicatedFragment(
@@ -207,8 +220,6 @@ auto
         T_UnaryUpdateFunc InUpdateFunc)
     -> void
 {
-    static_assert(std::is_base_of_v<class UCk_Ecs_ReplicatedObject_UE, T_ReplicatedFragment>, "Replicated Fragment MUST derive from UCk_Ecs_ReplicatedObject_UE");
-
     if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle))
     { return; }
 
@@ -222,6 +233,18 @@ auto
 }
 
 template <typename T_ReplicatedFragment>
+requires(std::is_base_of_v<class UCk_Ecs_ReplicatedObject_UE, T_ReplicatedFragment>)
+auto
+    UCk_Utils_Ecs_Net_UE::
+    Get_HasReplicatedFragment(
+        const FCk_Handle& InHandle)
+    -> bool
+{
+    return InHandle.Has<TObjectPtr<T_ReplicatedFragment>>();
+}
+
+template <typename T_ReplicatedFragment>
+requires(std::is_base_of_v<class UCk_Ecs_ReplicatedObject_UE, T_ReplicatedFragment>)
 auto
     UCk_Utils_Ecs_Net_UE::
     TryAddReplicatedFragment(
@@ -229,8 +252,6 @@ auto
         UCk_Ecs_ReplicatedObject_UE* InExistingObject)
     -> ECk_AddedOrNot
 {
-    static_assert(std::is_base_of_v<class UCk_Ecs_ReplicatedObject_UE, T_ReplicatedFragment>, "Replicated Fragment MUST derive from UCk_Ecs_ReplicatedObject_UE");
-
     if (UCk_Utils_Net_UE::Get_EntityReplication(InHandle) == ECk_Replication::DoesNotReplicate)
     { return ECk_AddedOrNot::NotAdded; }
 
