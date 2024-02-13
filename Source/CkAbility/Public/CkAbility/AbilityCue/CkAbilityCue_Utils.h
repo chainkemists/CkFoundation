@@ -18,6 +18,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
+        BlueprintAuthorityOnly,
         Category = "Ck|Utils|AbilityCue",
         DisplayName="[Ck][AbilityCue] Request Spawn")
     static void
