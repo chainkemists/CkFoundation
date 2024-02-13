@@ -36,7 +36,8 @@ public:
     static FCk_Handle_AbilityOwner
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_AbilityOwner_ParamsData& InParams);
+        const FCk_Fragment_AbilityOwner_ParamsData& InParams,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
 
 public:
     UFUNCTION(BlueprintPure,
@@ -180,6 +181,15 @@ public:
               DisplayName="[Ck][AbilityOwner] Request Give Ability")
     static FCk_Handle_AbilityOwner
     Request_GiveAbility(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Request_AbilityOwner_GiveAbility& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              BlueprintAuthorityOnly,
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              DisplayName="[Ck][AbilityOwner] Request Give Ability (Replicated)")
+    static FCk_Handle_AbilityOwner
+    Request_GiveAbility_Replicated(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_GiveAbility& InRequest);
 

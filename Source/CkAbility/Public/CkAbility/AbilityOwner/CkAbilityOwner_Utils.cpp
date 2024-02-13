@@ -1,8 +1,10 @@
 #include "CkAbilityOwner_Utils.h"
 
+#include "CkAbility/CkAbility_Log.h"
 #include "CkAbility/Ability/CkAbility_Script.h"
 #include "CkAbility/Ability/CkAbility_Utils.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Fragment.h"
+
 #include "CkCore/SharedValues/CkSharedValues_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -11,7 +13,8 @@ auto
     UCk_Utils_AbilityOwner_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_AbilityOwner_ParamsData& InParams)
+        const FCk_Fragment_AbilityOwner_ParamsData& InParams,
+        ECk_Replication InReplicates)
     -> FCk_Handle_AbilityOwner
 {
     InHandle.Add<ck::FFragment_AbilityOwner_Params>(InParams);
@@ -19,6 +22,20 @@ auto
     InHandle.Add<ck::FTag_AbilityOwner_NeedsSetup>();
 
     UCk_Utils_Ability_UE::RecordOfAbilities_Utils::AddIfMissing(InHandle);
+
+    if (InReplicates == ECk_Replication::DoesNotReplicate)
+    {
+        ck::ability::VeryVerbose
+        (
+            TEXT("Skipping creation of Ability Owner Rep Fragment on Entity [{}] because it's set to [{}]"),
+            InHandle,
+            InReplicates
+        );
+    }
+    else
+    {
+        UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InHandle);
+    }
 
     return Cast(InHandle);
 }
@@ -264,6 +281,34 @@ auto
     -> FCk_Handle_AbilityOwner
 {
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Request_GiveAbility_Replicated(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Request_AbilityOwner_GiveAbility& InRequest)
+    -> FCk_Handle_AbilityOwner
+{
+    Request_GiveAbility(InAbilityOwnerHandle, InRequest);
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAbilityOwnerHandle),
+        TEXT("Cannot Give a REPLICATED Ability to Entity [{}] because it is NOT a Host"),
+        InAbilityOwnerHandle)
+    { return InAbilityOwnerHandle; }
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InAbilityOwnerHandle),
+        TEXT("Cannot Give a REPLICATED Ability to Entity [{}] because it's missing the AbilityOwner Replicated Fragment"),
+        InAbilityOwnerHandle)
+    { return InAbilityOwnerHandle; }
+
+    UCk_Utils_Ecs_Net_UE::UpdateReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(
+        InAbilityOwnerHandle, [&](UCk_Fragment_AbilityOwner_Rep* InRepComp)
+    {
+        InRepComp->_PendingGiveAbilityRequests.Emplace(InRequest);
+    });
+
     return InAbilityOwnerHandle;
 }
 
