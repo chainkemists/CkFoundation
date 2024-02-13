@@ -1,5 +1,7 @@
 #include "CkAbilityOwner_Fragment.h"
 
+#include "CkAbility/AbilityOwner/CkAbilityOwner_Utils.h"
+
 #include <Net/UnrealNetwork.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -81,28 +83,35 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Fragment_AbilityOwner_Events_Rep::
+    UCk_Fragment_AbilityOwner_Rep::
     GetLifetimeReplicatedProps(
         TArray<FLifetimeProperty>& OutLifetimeProps) const
     -> void
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    DOREPLIFETIME(ThisType, _Events);
+    DOREPLIFETIME(ThisType, _PendingGiveAbilityRequests);
 }
 
 auto
-    UCk_Fragment_AbilityOwner_Events_Rep::
-    OnRep_NewEvents()
+    UCk_Fragment_AbilityOwner_Rep::
+    OnRep_PendingGiveAbilityRequests()
     -> void
 {
     if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
     { return; }
 
-    for (auto Index = _NextEventToProcess; Index < _Events.Num(); ++Index)
+    if (GetWorld()->IsNetMode(NM_DedicatedServer))
+    { return; }
+
+    auto AssociatedEntityAbilityOwner = ck::StaticCast<FCk_Handle_AbilityOwner>(_AssociatedEntity);
+
+    for (auto Index = _NextPendingGiveAbilityRequests; Index < _PendingGiveAbilityRequests.Num(); ++Index)
     {
-        // TODO: Fire the event here
+        const auto& GiveAbilityRequest = _PendingGiveAbilityRequests[Index];
+        UCk_Utils_AbilityOwner_UE::Request_GiveAbility(AssociatedEntityAbilityOwner, GiveAbilityRequest);
     }
+    _NextPendingGiveAbilityRequests = _PendingGiveAbilityRequests.Num();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
