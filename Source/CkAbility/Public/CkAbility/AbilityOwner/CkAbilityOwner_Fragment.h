@@ -119,30 +119,28 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck { class FProcessor_AbilityOwner_Events_Replicate; }
-
 UCLASS(Blueprintable)
-class CKABILITY_API UCk_Fragment_AbilityOwner_Events_Rep : public UCk_Ecs_ReplicatedObject_UE
+class CKABILITY_API UCk_Fragment_AbilityOwner_Rep : public UCk_Ecs_ReplicatedObject_UE
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_AbilityOwner_Events_Rep);
+    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_AbilityOwner_Rep);
 
 public:
-    friend class ck::FProcessor_AbilityOwner_Events_Replicate;
+    friend class UCk_Utils_AbilityOwner_UE;
 
 public:
     auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
 
-public:
-    UFUNCTION()
-    void OnRep_NewEvents();
-
 private:
-    UPROPERTY(ReplicatedUsing = OnRep_NewEvents)
-    TArray<FCk_AbilityOwner_Event> _Events;
-    int32 _NextEventToProcess = 0;
+    UFUNCTION()
+    void
+    OnRep_PendingGiveAbilityRequests();
+
+    UPROPERTY(ReplicatedUsing = OnRep_PendingGiveAbilityRequests)
+    TArray<FCk_Request_AbilityOwner_GiveAbility> _PendingGiveAbilityRequests;
+    int32 _NextPendingGiveAbilityRequests = 0;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
