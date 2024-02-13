@@ -23,13 +23,31 @@ auto
     // TODO: Attribute<T> should be taking Handle by ref and this NewAttributeEntity variable should NOT be const
     auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwnerEntity);
 
-    FloatAttribute_Utils::Add(NewAttributeEntity, InParams.Get_BaseValue());
+    FloatAttribute_Utils_Current::Add(NewAttributeEntity, InParams.Get_BaseValue());
 
-    if (EnumHasAnyFlags(InParams.Get_MinMaxMask(), ECk_MinMax_Mask::Min))
-    { FloatAttribute_Utils::Add_Min(NewAttributeEntity, InParams.Get_MinValue()); }
-
-    if (EnumHasAnyFlags(InParams.Get_MinMaxMask(), ECk_MinMax_Mask::Max))
-    { FloatAttribute_Utils::Add_Max(NewAttributeEntity, InParams.Get_MaxValue()); }
+    switch (InParams.Get_Component())
+    {
+        case ECk_MinMax_Mask::None:
+        {
+            break;
+        }
+        case ECk_MinMax_Mask::Min:
+        {
+            FloatAttribute_Utils_Min::Add(NewAttributeEntity, InParams.Get_BaseValue());
+            break;
+        }
+        case ECk_MinMax_Mask::Max:
+        {
+            FloatAttribute_Utils_Max::Add(NewAttributeEntity, InParams.Get_BaseValue());
+            break;
+        }
+        case ECk_MinMax_Mask::MinMax:
+        {
+            FloatAttribute_Utils_Min::Add(NewAttributeEntity, InParams.Get_BaseValue());
+            FloatAttribute_Utils_Max::Add(NewAttributeEntity, InParams.Get_BaseValue());
+            break;
+        }
+    }
 
     UCk_Utils_GameplayLabel_UE::Add(NewAttributeEntity, InParams.Get_Name());
 
@@ -66,26 +84,10 @@ auto
     return InHandle;
 }
 
-auto
-    UCk_Utils_FloatAttribute_UE::
-    Has_Attribute(
-        const FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName)
-    -> bool
-{
-    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
-    return ck::IsValid(AttributeEntity);
-}
+// --------------------------------------------------------------------------------------------------------------------
 
-auto
-    UCk_Utils_FloatAttribute_UE::
-    Has_Any_Attribute(
-        const FCk_Handle& InAttributeOwnerEntity)
-    -> bool
-{
-    return RecordOfFloatAttributes_Utils::Has(InAttributeOwnerEntity);
-}
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(FloatAttribute, UCk_Utils_FloatAttribute_UE,
+    FCk_Handle_FloatAttribute, UCk_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils::RecordType);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -93,11 +95,11 @@ auto
     UCk_Utils_FloatAttribute_UE::
     ForEach_FloatAttribute(
         FCk_Handle& InAttributeOwner,
-        const FInstancedStruct&    InOptionalPayload,
+        const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
-    -> TArray<FCk_Handle>
+    -> TArray<FCk_Handle_FloatAttribute>
 {
-    auto ToRet = TArray<FCk_Handle>{};
+    auto ToRet = TArray<FCk_Handle_FloatAttribute>{};
 
     ForEach_FloatAttribute(InAttributeOwner, [&](const FCk_Handle_FloatAttribute& InAttribute)
     {
@@ -192,111 +194,201 @@ auto
 auto
     UCk_Utils_FloatAttribute_UE::
     Get_BaseValue(
-        const FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName)
+        const FCk_Handle_FloatAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent)
     -> float
 {
-    CK_ENSURE_IF_NOT(Has_Attribute(InAttributeOwnerEntity, InAttributeName), TEXT("Attribute [{}] does NOT exist on Entity [{}]."),
-        InAttributeName, InAttributeOwnerEntity)
-    { return {}; }
+    switch (InAttributeComponent)
+    {
+        case ECk_MinMaxCurrent::Min:
+        {
+            CK_ENSURE_IF_NOT(Has_BaseValue(InAttribute, InAttributeComponent),
+                TEXT("Float Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
+                InAttribute,
+                UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute), InAttributeComponent)
+            { return {}; }
 
-    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+            return FloatAttribute_Utils_Min::Get_BaseValue(InAttribute);
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            CK_ENSURE_IF_NOT(Has_BaseValue(InAttribute, InAttributeComponent),
+                TEXT("Float Attribute [{}] with Owner [{}] does NOT have a MAX component"),
+                InAttribute,
+                UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute))
+            { return {}; }
 
-    return FloatAttribute_Utils::Get_BaseValue(AttributeEntity);
+            return FloatAttribute_Utils_Max::Get_BaseValue(InAttribute);
+        }
+        case ECk_MinMaxCurrent::Current:
+        {
+            return FloatAttribute_Utils_Current::Get_BaseValue(InAttribute);
+        }
+        default:
+            return {};
+
+    }
 }
 
 auto
     UCk_Utils_FloatAttribute_UE::
     Get_BonusValue(
-        const FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName)
+        const FCk_Handle_FloatAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent)
     -> float
 {
-    CK_ENSURE_IF_NOT(Has_Attribute(InAttributeOwnerEntity, InAttributeName), TEXT("Attribute [{}] does NOT exist on Entity [{}]."),
-        InAttributeName, InAttributeOwnerEntity)
-    { return {}; }
+    switch (InAttributeComponent)
+    {
+        case ECk_MinMaxCurrent::Min:
+        {
+            CK_ENSURE_IF_NOT(Has_BaseValue(InAttribute, InAttributeComponent),
+                TEXT("Float Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
+                InAttribute,
+                UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute), InAttributeComponent)
+            { return {}; }
 
-    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+            return FloatAttribute_Utils_Min::Get_FinalValue(InAttribute) - FloatAttribute_Utils_Min::Get_BaseValue(InAttribute);
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            CK_ENSURE_IF_NOT(Has_BaseValue(InAttribute, InAttributeComponent),
+                TEXT("Float Attribute [{}] with Owner [{}] does NOT have a MAX component"),
+                InAttribute,
+                UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute))
+            { return {}; }
 
-    return FloatAttribute_Utils::Get_FinalValue(AttributeEntity) - FloatAttribute_Utils::Get_BaseValue(AttributeEntity);
+            return FloatAttribute_Utils_Max::Get_FinalValue(InAttribute) - FloatAttribute_Utils_Max::Get_BaseValue(InAttribute);
+        }
+        case ECk_MinMaxCurrent::Current:
+        {
+            return FloatAttribute_Utils_Current::Get_FinalValue(InAttribute) - FloatAttribute_Utils_Current::Get_BaseValue(InAttribute);
+        }
+        default:
+            return {};
+    }
 }
 
 auto
     UCk_Utils_FloatAttribute_UE::
     Get_FinalValue(
-        const FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName)
+        const FCk_Handle_FloatAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent)
     -> float
 {
-    CK_ENSURE_IF_NOT(Has_Attribute(InAttributeOwnerEntity, InAttributeName), TEXT("Attribute [{}] does NOT exist on Entity [{}]."),
-        InAttributeName, InAttributeOwnerEntity)
-    { return {}; }
+    switch (InAttributeComponent)
+    {
+        case ECk_MinMaxCurrent::Min:
+        {
+            CK_ENSURE_IF_NOT(Has_BaseValue(InAttribute, InAttributeComponent),
+                TEXT("Float Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
+                InAttribute,
+                UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute), InAttributeComponent)
+            { return {}; }
 
-    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+            return FloatAttribute_Utils_Min::Get_FinalValue(InAttribute);
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            CK_ENSURE_IF_NOT(Has_BaseValue(InAttribute, InAttributeComponent),
+                TEXT("Float Attribute [{}] with Owner [{}] does NOT have a MAX component"),
+                InAttribute,
+                UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute))
+            { return {}; }
 
-    return FloatAttribute_Utils::Get_FinalValue(AttributeEntity);
+            return FloatAttribute_Utils_Max::Get_FinalValue(InAttribute);
+        }
+        case ECk_MinMaxCurrent::Current:
+        {
+            return FloatAttribute_Utils_Current::Get_FinalValue(InAttribute);
+        }
+        default:
+            return {};
+    }
 }
 
 auto
     UCk_Utils_FloatAttribute_UE::
     Request_Override(
-        FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName,
+        UPARAM(ref) FCk_Handle_FloatAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent,
         float InNewBaseValue)
-        -> void
+    -> FCk_Handle_FloatAttribute
 {
-    const auto CurrentBaseValue = Get_BaseValue(InAttributeOwnerEntity, InAttributeName);
+    const auto CurrentBaseValue = Get_BaseValue(InAttribute, InAttributeComponent);
     const auto Delta = InNewBaseValue - CurrentBaseValue;
 
-    UCk_Utils_FloatAttributeModifier_UE::Add(InAttributeOwnerEntity, {},
-        FCk_Fragment_FloatAttributeModifier_ParamsData{
-            Delta, InAttributeName, ECk_ModifierOperation::Additive, ECk_ModifierOperation_RevocablePolicy::NotRevocable});
+    CK_ENSURE_IF_NOT(Has_BaseValue(InAttribute, InAttributeComponent),
+        TEXT("Float Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
+        InAttribute,
+        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute), InAttributeComponent)
+    { return {}; }
+
+    UCk_Utils_FloatAttributeModifier_UE::Add(InAttribute, {}, FCk_Fragment_FloatAttributeModifier_ParamsData{
+        Delta, ECk_ModifierOperation::Additive, ECk_ModifierOperation_RevocablePolicy::NotRevocable, InAttributeComponent});
+
+    return InAttribute;
 }
 
 auto
     UCk_Utils_FloatAttribute_UE::
     BindTo_OnValueChanged(
-        FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName,
+        FCk_Handle_FloatAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent,
         ECk_Signal_BindingPolicy InBehavior,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate)
-    -> void
+    -> FCk_Handle_FloatAttribute
 {
-    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+    switch(InAttributeComponent)
+    {
+        case ECk_MinMaxCurrent::Min:
+        {
+            CK_SIGNAL_BIND(InAttribute, InDelegate, ck::UUtils_Signal_OnFloatAttributeValueChanged_Min, InBehavior, InPostFireBehavior);
+            break;
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            CK_SIGNAL_BIND(InAttribute, InDelegate, ck::UUtils_Signal_OnFloatAttributeValueChanged_Max, InBehavior, InPostFireBehavior);
+            break;
+        }
+        case ECk_MinMaxCurrent::Current:
+        {
+            CK_SIGNAL_BIND(InAttribute, InDelegate, ck::UUtils_Signal_OnFloatAttributeValueChanged_Current, InBehavior, InPostFireBehavior);
+            break;
+        }
+    };
 
-    CK_ENSURE_IF_NOT(ck::IsValid(AttributeEntity),
-        TEXT("Could NOT find Attribute [{}] in Entity [{}]. Unable to BIND on ValueChanged the Delegate [{}]"),
-        InAttributeName, InAttributeOwnerEntity, InDelegate.GetFunctionName())
-    { return; }
-
-    if (InPostFireBehavior == ECk_Signal_PostFireBehavior::DoNothing)
-    { ck::UUtils_Signal_OnFloatAttributeValueChanged::Bind(AttributeEntity, InDelegate, InBehavior); }
-    else
-    { ck::UUtils_Signal_OnFloatAttributeValueChanged_PostFireUnbind::Bind(AttributeEntity, InDelegate, InBehavior); }
+    return InAttribute;
 }
 
 auto
     UCk_Utils_FloatAttribute_UE::
     UnbindFrom_OnValueChanged(
-        FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName,
+        FCk_Handle_FloatAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent,
         const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate)
-    -> void
+    -> FCk_Handle_FloatAttribute
 {
-    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <FloatAttribute_Utils, RecordOfFloatAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+    switch(InAttributeComponent)
+    {
+        case ECk_MinMaxCurrent::Min:
+        {
+            CK_SIGNAL_UNBIND(InAttribute, InDelegate, ck::UUtils_Signal_OnFloatAttributeValueChanged_Min);
+            break;
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            CK_SIGNAL_UNBIND(InAttribute, InDelegate, ck::UUtils_Signal_OnFloatAttributeValueChanged_Max);
+            break;
+        }
+        case ECk_MinMaxCurrent::Current:
+        {
+            CK_SIGNAL_UNBIND(InAttribute, InDelegate, ck::UUtils_Signal_OnFloatAttributeValueChanged_Current);
+            break;
+        }
+    };
 
-    CK_ENSURE_IF_NOT(ck::IsValid(AttributeEntity),
-        TEXT("Could NOT find Attribute [{}] in Entity [{}]. Unable to BIND on ValueChanged the Delegate [{}]"),
-        InAttributeName, InAttributeOwnerEntity, InDelegate.GetFunctionName())
-    { return; }
-
-    ck::UUtils_Signal_OnFloatAttributeValueChanged::Unbind(AttributeEntity, InDelegate);
+    return InAttribute;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -304,87 +396,134 @@ auto
 auto
     UCk_Utils_FloatAttributeModifier_UE::
     Add(
-        FCk_Handle& InAttributeOwnerEntity,
+        FCk_Handle_FloatAttribute& InAttribute,
         FGameplayTag InModifierName,
         const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams)
-    -> void
+    -> FCk_Handle_FloatAttributeModifier
 {
-    const auto& AttributeName = InParams.Get_TargetAttributeName();
+    auto ParamsToUse = InParams;
+    ParamsToUse.Set_TargetAttributeName(UCk_Utils_GameplayLabel_UE::Get_Label(InAttribute));
 
-    if (InParams.Get_ModifierDelta() == 0 && InParams.Get_ModifierOperation() == ECk_ModifierOperation::Additive)
-    { return; }
+    const auto& LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute);
 
-    if (InParams.Get_ModifierDelta() == 1 && InParams.Get_ModifierOperation() == ECk_ModifierOperation::Multiplicative)
-    { return; }
+    if (ParamsToUse.Get_ModifierDelta() == 0 && ParamsToUse.Get_ModifierOperation() == ECk_ModifierOperation::Additive)
+    { return {}; }
 
-    const auto NewModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwnerEntity);
+    if (ParamsToUse.Get_ModifierDelta() == 1 && ParamsToUse.Get_ModifierOperation() == ECk_ModifierOperation::Multiplicative)
+    { return {}; }
+
+    auto NewModifierEntity = ck::StaticCast<FCk_Handle_FloatAttributeModifier>(UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttribute));
     UCk_Utils_GameplayLabel_UE::Add(NewModifierEntity, InModifierName);
 
-    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <UCk_Utils_FloatAttribute_UE::FloatAttribute_Utils, UCk_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils>(
-            InAttributeOwnerEntity, AttributeName);
+    switch (ParamsToUse.Get_Component())
+    {
+        case ECk_MinMaxCurrent::Min:
+        {
+            RecordOfFloatAttributeModifiers_Utils_Min::AddIfMissing(InAttribute);
+            RecordOfFloatAttributeModifiers_Utils_Min::Request_Connect(InAttribute, NewModifierEntity);
 
-    FloatAttributeModifier_Utils::Add
-    (
-        NewModifierEntity,
-        InParams.Get_ModifierDelta(),
-        AttributeEntity,
-        InParams.Get_ModifierOperation(),
-        InParams.Get_ModifierOperation_RevokablePolicy()
-    );
+            FloatAttributeModifier_Utils_Min::Add
+            (
+                NewModifierEntity,
+                ParamsToUse.Get_ModifierDelta(),
+                InAttribute,
+                ParamsToUse.Get_ModifierOperation(),
+                ParamsToUse.Get_ModifierOperation_RevocablePolicy()
+            );
 
-    if (NOT InAttributeOwnerEntity.Has<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>())
-    { return; }
+            break;
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            RecordOfFloatAttributeModifiers_Utils_Max::AddIfMissing(InAttribute);
+            RecordOfFloatAttributeModifiers_Utils_Max::Request_Connect(InAttribute, NewModifierEntity);
 
-    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAttributeOwnerEntity))
-    { return; }
+            FloatAttributeModifier_Utils_Max::Add
+            (
+                NewModifierEntity,
+                ParamsToUse.Get_ModifierDelta(),
+                InAttribute,
+                ParamsToUse.Get_ModifierOperation(),
+                ParamsToUse.Get_ModifierOperation_RevocablePolicy()
+            );
 
-    InAttributeOwnerEntity.Get<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>()->Broadcast_AddModifier(InModifierName, InParams);
+            break;
+        }
+        case ECk_MinMaxCurrent::Current:
+        {
+            RecordOfFloatAttributeModifiers_Utils_Current::AddIfMissing(InAttribute);
+            RecordOfFloatAttributeModifiers_Utils_Current::Request_Connect(InAttribute, NewModifierEntity);
+
+            FloatAttributeModifier_Utils_Current::Add
+            (
+                NewModifierEntity,
+                ParamsToUse.Get_ModifierDelta(),
+                InAttribute,
+                ParamsToUse.Get_ModifierOperation(),
+                ParamsToUse.Get_ModifierOperation_RevocablePolicy()
+            );
+
+            break;
+
+        }
+    }
+
+    if (NOT LifetimeOwner.Has<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>())
+    { return NewModifierEntity; }
+
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(LifetimeOwner))
+    { return NewModifierEntity; }
+
+    LifetimeOwner.Get<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>()->Broadcast_AddModifier(InModifierName, ParamsToUse);
+    return NewModifierEntity;
 }
 
 auto
     UCk_Utils_FloatAttributeModifier_UE::
-    Has(
-        const FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName,
-        FGameplayTag InModifierName)
-    -> bool
+    TryGet(
+        const FCk_Handle_FloatAttribute& InAttribute,
+        FGameplayTag InModifierName,
+        ECk_MinMaxCurrent _Component)
+    -> FCk_Handle_FloatAttributeModifier
 {
-    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <UCk_Utils_FloatAttribute_UE::FloatAttribute_Utils, UCk_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils>(
-            InAttributeOwnerEntity, InAttributeName);
-    const auto& AttributeModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <FloatAttributeModifier_Utils, FloatAttributeModifier_Utils::RecordOfAttributeModifiers_Utils>(
-            AttributeEntity, InModifierName);
-
-    return ck::IsValid(AttributeModifierEntity);
+    switch(_Component)
+    {
+        case ECk_MinMaxCurrent::Min:
+            return RecordOfFloatAttributeModifiers_Utils_Min::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
+        case ECk_MinMaxCurrent::Max:
+            return RecordOfFloatAttributeModifiers_Utils_Max::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
+        case ECk_MinMaxCurrent::Current:
+            return RecordOfFloatAttributeModifiers_Utils_Current::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
+        default:
+            return {};
+    }
 }
 
 auto
     UCk_Utils_FloatAttributeModifier_UE::
     Remove(
-        FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName,
-        FGameplayTag InModifierName)
-    -> void
+        FCk_Handle_FloatAttributeModifier& InAttributeModifierEntity)
+    -> FCk_Handle_FloatAttribute
 {
-    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <UCk_Utils_FloatAttribute_UE::FloatAttribute_Utils, UCk_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils>(
-            InAttributeOwnerEntity, InAttributeName);
-    const auto& AttributeModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <FloatAttributeModifier_Utils, FloatAttributeModifier_Utils::RecordOfAttributeModifiers_Utils>(
-            AttributeEntity, InModifierName);
+    const auto& AttributeEntity = UCk_Utils_FloatAttribute_UE::CastChecked(
+        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttributeModifierEntity));
+    const auto& AttributeOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(AttributeEntity);
 
-    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(AttributeModifierEntity);
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAttributeModifierEntity);
 
-    if (NOT InAttributeOwnerEntity.Has<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>())
-    { return; }
+    if (NOT AttributeOwnerEntity.Has<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>())
+    { return AttributeEntity; }
 
-    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAttributeOwnerEntity))
-    { return; }
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AttributeOwnerEntity))
+    { return AttributeEntity; }
 
-    InAttributeOwnerEntity.Get<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>()->
-        Broadcast_RemoveModifier(InModifierName, InAttributeName);
+    AttributeOwnerEntity.Get<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>()->Broadcast_RemoveModifier
+    (
+        UCk_Utils_GameplayLabel_UE::Get_Label(InAttributeModifierEntity),
+            UCk_Utils_GameplayLabel_UE::Get_Label(AttributeEntity)
+    );
+
+    return AttributeEntity;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -14,14 +14,37 @@
 
 namespace ck
 {
-    struct CKATTRIBUTE_API FFragment_FloatAttribute : public TFragment_Attribute<float>
+    struct CKATTRIBUTE_API FFragment_FloatAttribute_Current : public TFragment_Attribute<FCk_Handle_FloatAttribute, float, FTag_Current>
+    {
+        using TFragment_Attribute::TFragment_Attribute;
+    };
+
+    struct CKATTRIBUTE_API FFragment_FloatAttribute_Min : public TFragment_Attribute<FCk_Handle_FloatAttribute, float, FTag_Min>
+    {
+        using TFragment_Attribute::TFragment_Attribute;
+    };
+
+    struct CKATTRIBUTE_API FFragment_FloatAttribute_Max : public TFragment_Attribute<FCk_Handle_FloatAttribute, float, FTag_Max>
     {
         using TFragment_Attribute::TFragment_Attribute;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKATTRIBUTE_API FFragment_FloatAttributeModifier : public TFragment_AttributeModifier<FFragment_FloatAttribute>
+    struct CKATTRIBUTE_API FFragment_FloatAttributeModifier_Current : public TFragment_AttributeModifier<
+        FCk_Handle_FloatAttributeModifier, FFragment_FloatAttribute_Current>
+    {
+        using TFragment_AttributeModifier::TFragment_AttributeModifier;
+    };
+
+    struct CKATTRIBUTE_API FFragment_FloatAttributeModifier_Min : public TFragment_AttributeModifier<
+        FCk_Handle_FloatAttributeModifier, FFragment_FloatAttribute_Min>
+    {
+        using TFragment_AttributeModifier::TFragment_AttributeModifier;
+    };
+
+    struct CKATTRIBUTE_API FFragment_FloatAttributeModifier_Max : public TFragment_AttributeModifier<
+        FCk_Handle_FloatAttributeModifier, FFragment_FloatAttribute_Max>
     {
         using TFragment_AttributeModifier::TFragment_AttributeModifier;
     };
@@ -49,9 +72,9 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <>
-    struct TTypeConverter<TPayload_Attribute_OnValueChanged<FFragment_FloatAttribute>, TypeConverterPolicy::TypeToUnreal>
+    struct TTypeConverter<TPayload_Attribute_OnValueChanged<FFragment_FloatAttribute_Current>, TypeConverterPolicy::TypeToUnreal>
     {
-        auto operator()(const TPayload_Attribute_OnValueChanged<FFragment_FloatAttribute>& InPayload) const
+        auto operator()(const TPayload_Attribute_OnValueChanged<FFragment_FloatAttribute_Current>& InPayload) const
         {
             return FCk_Payload_FloatAttribute_OnValueChanged
             {
@@ -64,11 +87,56 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using UUtils_Signal_OnFloatAttributeValueChanged = TUtils_Signal_OnAttributeValueChanged<
-        FFragment_FloatAttribute, FCk_Delegate_FloatAttribute_OnValueChanged_MC>;
+    template <>
+    struct TTypeConverter<TPayload_Attribute_OnValueChanged<FFragment_FloatAttribute_Min>, TypeConverterPolicy::TypeToUnreal>
+    {
+        auto operator()(const TPayload_Attribute_OnValueChanged<FFragment_FloatAttribute_Min>& InPayload) const
+        {
+            return FCk_Payload_FloatAttribute_OnValueChanged
+            {
+                InPayload.Get_Handle(),
+                InPayload.Get_BaseValue(),
+                InPayload.Get_FinalValue()
+            };
+        }
+    };
 
-    using UUtils_Signal_OnFloatAttributeValueChanged_PostFireUnbind = TUtils_Signal_OnAttributeValueChanged_PostFireUnbind<
-        FFragment_FloatAttribute, FCk_Delegate_FloatAttribute_OnValueChanged_MC>;
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <>
+    struct TTypeConverter<TPayload_Attribute_OnValueChanged<FFragment_FloatAttribute_Max>, TypeConverterPolicy::TypeToUnreal>
+    {
+        auto operator()(const TPayload_Attribute_OnValueChanged<FFragment_FloatAttribute_Max>& InPayload) const
+        {
+            return FCk_Payload_FloatAttribute_OnValueChanged
+            {
+                InPayload.Get_Handle(),
+                InPayload.Get_BaseValue(),
+                InPayload.Get_FinalValue()
+            };
+        }
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    using UUtils_Signal_OnFloatAttributeValueChanged_Current = TUtils_Signal_OnAttributeValueChanged<
+        FFragment_FloatAttribute_Current, FCk_Delegate_FloatAttribute_OnValueChanged_MC>;
+
+    using UUtils_Signal_OnFloatAttributeValueChanged_Current_PostFireUnbind = TUtils_Signal_OnAttributeValueChanged_PostFireUnbind<
+        FFragment_FloatAttribute_Current, FCk_Delegate_FloatAttribute_OnValueChanged_MC>;
+
+    using UUtils_Signal_OnFloatAttributeValueChanged_Min = TUtils_Signal_OnAttributeValueChanged<
+        FFragment_FloatAttribute_Min, FCk_Delegate_FloatAttribute_OnValueChanged_MC>;
+
+    using UUtils_Signal_OnFloatAttributeValueChanged_Min_PostFireUnbind = TUtils_Signal_OnAttributeValueChanged_PostFireUnbind<
+        FFragment_FloatAttribute_Min, FCk_Delegate_FloatAttribute_OnValueChanged_MC>;
+
+    using UUtils_Signal_OnFloatAttributeValueChanged_Max = TUtils_Signal_OnAttributeValueChanged<
+        FFragment_FloatAttribute_Max, FCk_Delegate_FloatAttribute_OnValueChanged_MC>;
+
+    using UUtils_Signal_OnFloatAttributeValueChanged_Max_PostFireUnbind = TUtils_Signal_OnAttributeValueChanged_PostFireUnbind<
+        FFragment_FloatAttribute_Max, FCk_Delegate_FloatAttribute_OnValueChanged_MC>;
+
 
     // --------------------------------------------------------------------------------------------------------------------
 

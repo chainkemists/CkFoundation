@@ -19,12 +19,16 @@ class CKATTRIBUTE_API UCk_Utils_FloatAttribute_UE : public UCk_Utils_Ecs_Base_UE
 
 public:
     CK_GENERATED_BODY(UCk_Utils_FloatAttribute_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_FloatAttribute);
 
 public:
     friend class UCk_Utils_FloatAttributeModifier_UE;
 
 private:
-    class FloatAttribute_Utils : public ck::TUtils_Attribute<ck::FFragment_FloatAttribute> {};
+    class FloatAttribute_Utils_Current : public ck::TUtils_Attribute<ck::FFragment_FloatAttribute_Current> {};
+    class FloatAttribute_Utils_Min : public ck::TUtils_Attribute<ck::FFragment_FloatAttribute_Min> {};
+    class FloatAttribute_Utils_Max : public ck::TUtils_Attribute<ck::FFragment_FloatAttribute_Max> {};
+
     class RecordOfFloatAttributes_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfFloatAttributes> {};
 
 public:
@@ -49,34 +53,54 @@ public:
         const FCk_Fragment_MultipleFloatAttribute_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Attribute|Float",
-              DisplayName="[Ck][FloatAttribute] Has Attribute")
-    static bool
-    Has_Attribute(
-        const FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName);
-
+public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
               DisplayName="[Ck][FloatAttribute] Has Any Attribute")
     static bool
-    Has_Any_Attribute(
+    Has(
         const FCk_Handle& InAttributeOwnerEntity);
+
+private:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|FloatAttribute",
+        DisplayName="[Ck][FloatAttribute] Cast",
+        meta = (ExpandEnumAsExecs = "OutResult"))
+    static FCk_Handle_FloatAttribute
+    DoCast(
+        FCk_Handle InHandle,
+        ECk_SucceededFailed& OutResult);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|FloatAttribute",
+        DisplayName="[Ck][FloatAttribute] Handle -> FloatAttribute Handle",
+        meta = (CompactNodeTitle = "<AsFloatAttribute>", BlueprintAutocast))
+    static FCk_Handle_FloatAttribute
+    DoCastChecked(
+        FCk_Handle InHandle);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName="[Ck][FloatAttribute] Try Get Attribute")
+    static FCk_Handle_FloatAttribute
+    TryGet(
+        const FCk_Handle& InAttributeOwnerEntity,
+        FGameplayTag InAttributeName);
 
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
               DisplayName="[Ck][FloatAttribute] For Each",
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
-    static TArray<FCk_Handle>
+    static TArray<FCk_Handle_FloatAttribute>
     ForEach_FloatAttribute(
         UPARAM(ref) FCk_Handle& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_FloatAttribute(
-        UPARAM(ref) FCk_Handle& InAttributeOwner,
+        FCk_Handle& InAttributeOwner,
         const TFunction<void(FCk_Handle_FloatAttribute)>& InFunc) -> void;
 
     UFUNCTION(BlueprintCallable,
@@ -91,53 +115,77 @@ public:
         const FCk_Predicate_InHandle_OutResult& InPredicate);
     static auto
     ForEach_FloatAttribute_If(
-        UPARAM(ref) FCk_Handle& InAttributeOwner,
+        FCk_Handle& InAttributeOwner,
         const TFunction<void(FCk_Handle_FloatAttribute)>& InFunc,
         const TFunction<bool(FCk_Handle_FloatAttribute)>& InPredicate) -> void;
 
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
+              DisplayName="[Ck][FloatAttribute] Has Base Value")
+    static float
+    Has_BaseValue(
+        const FCk_Handle_FloatAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName="[Ck][FloatAttribute] Has Bonus Value")
+    static float
+    Has_BonusValue(
+        const FCk_Handle_FloatAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName="[Ck][FloatAttribute] Has Final Value")
+    static float
+    Has_FinalValue(
+        const FCk_Handle_FloatAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Float",
               DisplayName="[Ck][FloatAttribute] Get Base Value")
     static float
     Get_BaseValue(
-        const FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName);
+        const FCk_Handle_FloatAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
               DisplayName="[Ck][FloatAttribute] Get Bonus Value")
     static float
     Get_BonusValue(
-        const FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName);
+        const FCk_Handle_FloatAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
               DisplayName="[Ck][FloatAttribute] Get Final Value")
     static float
     Get_FinalValue(
-        const FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName);
+        const FCk_Handle_FloatAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent);
 
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
               DisplayName="[Ck][FloatAttribute] Request Override Base Value")
-    static void
+    static FCk_Handle_FloatAttribute
     Request_Override(
-        UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName,
+        UPARAM(ref) FCk_Handle_FloatAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent,
         float InNewBaseValue);
 
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
               DisplayName = "[Ck][FloatAttribute] Bind To OnValueChanged")
-    static void
+    static FCk_Handle_FloatAttribute
     BindTo_OnValueChanged(
-        UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName,
+        UPARAM(ref) FCk_Handle_FloatAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent,
         ECk_Signal_BindingPolicy InBehavior,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate);
@@ -145,10 +193,10 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
               DisplayName = "[Ck][FloatAttribute] Unbind From OnValueChanged")
-    static void
+    static FCk_Handle_FloatAttribute
     UnbindFrom_OnValueChanged(
-        UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName,
+        UPARAM(ref) FCk_Handle_FloatAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent,
         const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate);
 };
 
@@ -163,35 +211,39 @@ public:
     CK_GENERATED_BODY(UCk_Utils_FloatAttributeModifier_UE);
 
 private:
-    class FloatAttributeModifier_Utils : public ck::TUtils_AttributeModifier<ck::FFragment_FloatAttributeModifier> {};
+    class FloatAttributeModifier_Utils_Current : public ck::TUtils_AttributeModifier<ck::FFragment_FloatAttributeModifier_Current> {};
+    class FloatAttributeModifier_Utils_Min : public ck::TUtils_AttributeModifier<ck::FFragment_FloatAttributeModifier_Min> {};
+    class FloatAttributeModifier_Utils_Max : public ck::TUtils_AttributeModifier<ck::FFragment_FloatAttributeModifier_Max> {};
+
+    class RecordOfFloatAttributeModifiers_Utils_Current : public ck::TUtils_RecordOfEntities<ck::FFragment_FloatAttributeModifier_Current> {};
+    class RecordOfFloatAttributeModifiers_Utils_Min : public ck::TUtils_RecordOfEntities<ck::FFragment_FloatAttributeModifier_Min> {};
+    class RecordOfFloatAttributeModifiers_Utils_Max : public ck::TUtils_RecordOfEntities<ck::FFragment_FloatAttributeModifier_Max> {};
 
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][FloatAttribute] Add Modifier")
-    static void
+    static FCk_Handle_FloatAttributeModifier
     Add(
-        UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
+        UPARAM(ref) FCk_Handle_FloatAttribute& InAttribute,
         FGameplayTag InModifierName,
         const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AttributeModifier|Float",
-              DisplayName="[Ck][FloatAttribute] Has Modifier")
-    static bool
-    Has(
-        const FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName,
-        FGameplayTag InModifierName);
+              DisplayName="[Ck][FloatAttribute] Try Get Modifier")
+    static FCk_Handle_FloatAttributeModifier
+    TryGet(
+        const FCk_Handle_FloatAttribute& InAttribute,
+        FGameplayTag InModifierName,
+        ECk_MinMaxCurrent _Component = ECk_MinMaxCurrent::Current);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Float",
               DisplayName="[Ck][FloatAttribute] Remove Modifier")
-    static void
+    static FCk_Handle_FloatAttribute
     Remove(
-        UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName,
-        FGameplayTag InModifierName);
+        UPARAM(ref) FCk_Handle_FloatAttributeModifier& InAttributeOwnerEntity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

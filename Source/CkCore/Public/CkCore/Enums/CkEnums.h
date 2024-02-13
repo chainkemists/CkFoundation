@@ -480,17 +480,27 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EntityFragmentRequirementPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UENUM(BlueprintType, meta = (Bitflags, UseEnumValuesAsMaskValuesInEditor = "true"))
+UENUM(BlueprintType)
 enum class ECk_MinMax_Mask : uint8
 {
-    Min     = 1 << 0,
-    Max     = 1 << 1,
-
-    None = 0 UMETA(Hidden),
+    None,
+    Min,
+    Max,
+    MinMax
 };
 
-ENUM_CLASS_FLAGS(ECk_MinMax_Mask)
-ENABLE_ENUM_BITWISE_OPERATORS(ECk_MinMax_Mask);
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_MinMax_Mask);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_MinMaxCurrent : uint8
+{
+    Min,
+    Max,
+    Current
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_MinMaxCurrent);
 
 // --------------------------------------------------------------------------------------------------------------------

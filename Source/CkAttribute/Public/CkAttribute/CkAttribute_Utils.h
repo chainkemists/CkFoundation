@@ -43,16 +43,6 @@ namespace ck
             const AttributeDataType& InBaseValue) -> void;
 
         static auto
-        Add_Min(
-            HandleType InHandle,
-            const AttributeDataType& InMinValue) -> void;
-
-        static auto
-        Add_Max(
-            HandleType InHandle,
-            const AttributeDataType& InMaxValue) -> void;
-
-        static auto
         Has(
             HandleType InHandle) -> bool;
 
@@ -66,14 +56,6 @@ namespace ck
 
         static auto
         Get_FinalValue(
-            HandleType InHandle) -> AttributeDataType;
-
-        static auto
-        Get_MinValue(
-            HandleType InHandle) -> AttributeDataType;
-
-        static auto
-        Get_MaxValue(
             HandleType InHandle) -> AttributeDataType;
 
     private:
@@ -93,7 +75,7 @@ namespace ck
     {
     public:
         using AttributeModifierFragmentType = T_DerivedAttributeModifier;
-        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
+        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType_Current;
         using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
         using HandleType                    = FCk_Handle;
 
@@ -108,7 +90,6 @@ namespace ck
         friend class TProcessor_AttributeModifier_Multiplicative_Teardown;
 
     public:
-        struct AttributeModifierTarget_Utils : TUtils_EntityHolder<FFragment_AttributeModifierTarget> {};
         struct RecordOfAttributeModifiers_Utils : TUtils_RecordOfEntities<FFragment_RecordOfAttributeModifiers>{};
 
     public:

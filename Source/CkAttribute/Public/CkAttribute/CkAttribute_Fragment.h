@@ -55,7 +55,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_AttributeType>
+    template <typename T_HandleType, typename T_AttributeType, ECk_MinMaxCurrent T_ComponentTag = ECk_MinMaxCurrent::Current>
     struct TFragment_Attribute
     {
     public:
@@ -65,13 +65,13 @@ namespace ck
         template <typename, typename, typename>
         friend class TProcessor_Attribute_FireSignals;
 
-        template <typename, typename>
+        template <typename, typename, typename>
         friend class TProcessor_Attribute_MinClamp;
 
-        template <typename, typename>
+        template <typename, typename, typename>
         friend class TProcessor_Attribute_MaxClamp;
 
-        template <typename, typename>
+        template <typename, typename, typename>
         friend class TProcessor_Attribute_OverrideBaseValue;
 
         template <typename, typename>
@@ -90,20 +90,18 @@ namespace ck
         friend class TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute;
 
     public:
-        CK_GENERATED_BODY(TFragment_Attribute<T_AttributeType>);
+        CK_GENERATED_BODY(TFragment_Attribute<T_HandleType COMMA T_AttributeType COMMA T_ComponentTag>);
 
     public:
-        CK_DEFINE_ECS_TAG(Tag_RecomputeFinalValue);
-        CK_DEFINE_ECS_TAG(Tag_FireSignals);
-
-        CK_DEFINE_ECS_TAG(FTag_MinValue);
-        CK_DEFINE_ECS_TAG(FTag_MaxValue);
+        CK_DEFINE_ECS_TAG(FTag_ReomputeFinalValue);
+        CK_DEFINE_ECS_TAG(FTag_FireSignals);
         CK_DEFINE_ECS_TAG(FTag_RequiresUpdate);
 
     public:
         using AttributeDataType = T_AttributeType;
-        using ThisType          = TFragment_Attribute<AttributeDataType>;
-        using HandleType        = FCk_Handle;
+        using HandleType        = T_HandleType;
+
+        static constexpr auto ComponentTagType  = T_ComponentTag;
 
     public:
         TFragment_Attribute() = default;
@@ -114,17 +112,23 @@ namespace ck
         AttributeDataType _Base;
         AttributeDataType _Final;
 
-        AttributeDataType _Min;
-        AttributeDataType _Max;
-
     public:
         CK_PROPERTY_GET(_Base);
         CK_PROPERTY_GET(_Final);
-        CK_PROPERTY(_Min);
-        CK_PROPERTY(_Max);
 
         CK_DEFINE_CONSTRUCTOR(TFragment_Attribute<T_AttributeType>, _Base, _Final);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_HandleType, typename T_AttributeType>
+    using TFragment_Attribute_Current = TFragment_Attribute<T_HandleType, T_AttributeType, ECk_MinMaxCurrent::Current>;
+
+    template <typename T_HandleType, typename T_AttributeType>
+    using TFragment_Attribute_Min = TFragment_Attribute<T_HandleType, T_AttributeType, ECk_MinMaxCurrent::Min>;
+
+    template <typename T_HandleType, typename T_AttributeType>
+    using TFragment_Attribute_Max = TFragment_Attribute<T_HandleType, T_AttributeType, ECk_MinMaxCurrent::Max>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -147,7 +151,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedAttribute>
+    template <typename T_HandleType, typename T_DerivedAttribute>
     struct TFragment_AttributeModifier
     {
     public:
@@ -165,7 +169,7 @@ namespace ck
         using AttributeFragmentType = T_DerivedAttribute;
         using ThisType              = TFragment_AttributeModifier<AttributeFragmentType>;
         using AttributeDataType     = typename AttributeFragmentType::AttributeDataType;
-        using HandleType            = FCk_Handle;
+        using HandleType            = T_HandleType;
 
     public:
         TFragment_AttributeModifier() = default;
@@ -181,14 +185,11 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct FFragment_AttributeModifierTarget : public FFragment_EntityHolder
+    template <typename T_Handle>
+    struct TFragment_RecordOfAttributeModifiers : public TFragment_RecordOfEntities<T_Handle>
     {
-        using FFragment_EntityHolder::FFragment_EntityHolder;
+        using TFragment_RecordOfEntities<T_Handle>::TFragment_RecordOfEntities;
     };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfAttributeModifiers, FCk_Handle);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -262,8 +263,6 @@ namespace ck
         TFragment_Signal_OnAttributeValueChanged<T_DerivedAttribute>,
         TFragment_Signal_UnrealMulticast_OnAttributeValueChanged_PostFireUnbind<T_DerivedAttribute, T_Multicast>
     > {};
-
-    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------

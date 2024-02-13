@@ -46,42 +46,44 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttribute>
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeMin>
     auto
-        TProcessor_Attribute_MinClamp<T_DerivedProcessor, T_DerivedAttribute>::
+        TProcessor_Attribute_MinClamp<T_DerivedProcessor, T_DerivedAttributeCurrent, T_DerivedAttributeMin>::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            AttributeFragmentType& InAttribute) const
+            AttributeFragmentType_Current& InAttributeCurrent,
+            const AttributeFragmentType_Min& InAttributeMin) const
         -> void
     {
-        const auto BaseValue = InAttribute._Base;
-        const auto FinalValue = InAttribute._Final;
+        const auto BaseValue = InAttributeCurrent._Base;
+        const auto FinalValue = InAttributeCurrent._Final;
 
-        const auto FinalValue_Min = InAttribute._Min;
+        const auto FinalValue_Min = InAttributeMin._Final;
 
-        InAttribute._Base = FMath::Max(BaseValue, FinalValue_Min);
-        InAttribute._Final = FMath::Max(FinalValue, FinalValue_Min);
+        InAttributeCurrent._Base = FMath::Max(BaseValue, FinalValue_Min);
+        InAttributeCurrent._Final = FMath::Max(FinalValue, FinalValue_Min);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttribute>
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeCurrent, typename T_DerivedAttributeMax>
     auto
-        TProcessor_Attribute_MaxClamp<T_DerivedProcessor, T_DerivedAttribute>::
+        TProcessor_Attribute_MaxClamp<T_DerivedProcessor, T_DerivedAttributeCurrent, T_DerivedAttributeMax>::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            AttributeFragmentType& InAttribute) const
+            AttributeFragmentType_Current& InAttributeCurrent,
+            const AttributeFragmentType_Max& InAttributeMax) const
         -> void
     {
-        const auto BaseValue = InAttribute._Base;
-        const auto FinalValue = InAttribute._Final;
+        const auto BaseValue = InAttributeCurrent._Base;
+        const auto FinalValue = InAttributeCurrent._Final;
 
-        const auto FinalValue_Max = InAttribute._Max;
+        const auto FinalValue_Max = InAttributeMax._Final;
 
-        InAttribute._Base = FMath::Max(BaseValue, FinalValue_Max);
-        InAttribute._Final = FMath::Max(FinalValue, FinalValue_Max);
+        InAttributeCurrent._Base = FMath::Min(BaseValue, FinalValue_Max);
+        InAttributeCurrent._Final = FMath::Min(FinalValue, FinalValue_Max);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -126,14 +128,13 @@ namespace ck
     auto
         TProcessor_AttributeModifier_RevokableAdditive_Compute<T_DerivedProcessor ,T_AttributeModifierFragment>::
         ForEachEntity(
-            const TimeType&,
+            const TimeType& InDeltaT,
             HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier,
-            const AttributeModifierTargetType& InAttributeTarget) const
+            const AttributeModifierFragmentType& InAttributeModifier) const
         -> void
     {
-        auto TargetEntity = InAttributeTarget.Get_Entity();
-        auto& AttributeComp = TargetEntity.Get<AttributeFragmentType>();
+        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
 
         attribute::VeryVerbose
         (
@@ -153,11 +154,10 @@ namespace ck
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier,
-            const AttributeModifierTargetType& InAttributeTarget) const -> void
+            const AttributeModifierFragmentType& InAttributeModifier) const -> void
     {
-        auto TargetEntity = InAttributeTarget.Get_Entity();
-        auto& AttributeComp = TargetEntity.Get<AttributeFragmentType>();
+        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
 
         attribute::VeryVerbose
         (
@@ -167,6 +167,9 @@ namespace ck
         );
 
         AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Add(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
+
+        // TODO: move this to the Tick() of TProcessor_AttributeModifier_RevokableAdditive_Compute
+        // technically, the follow is 'correct' but it's confusing as to why we are resetting the Final in this processor
         AttributeComp._Final = AttributeComp._Base;
 
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
@@ -180,21 +183,16 @@ namespace ck
         ForEachEntity(
             const TimeType&,
             HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier,
-            const AttributeModifierTargetType& InAttributeTarget) const
+            const AttributeModifierFragmentType& InAttributeModifier) const
         -> void
     {
-        auto TargetEntity = InAttributeTarget.Get_Entity();
+        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
         if (ck::Is_NOT_Valid(TargetEntity))
         { return; }
 
-        attribute::VeryVerbose
-        (
-            TEXT("Removing REVOKABLE Additive AttributeModifier value of Entity [{}] from Attribute component of target Entity [{}]. Forcing final value calculation again"),
-            InHandle,
-            TargetEntity
-        );
+        attribute::VeryVerbose(TEXT("Removing REVOKABLE Additive AttributeModifier value of Entity [{}] from Attribute component of Target Entity [{}]. "
+            "Forcing final value calculation again"), InHandle, TargetEntity);
 
         TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(TargetEntity);
     }
@@ -207,19 +205,14 @@ namespace ck
         ForEachEntity(
             const TimeType&,
             HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier,
-            const AttributeModifierTargetType& InAttributeTarget) const
+            const AttributeModifierFragmentType& InAttributeModifier) const
         -> void
     {
-        auto TargetEntity = InAttributeTarget.Get_Entity();
-        auto& AttributeComp = TargetEntity.Get<AttributeFragmentType>();
+        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
 
-        attribute::VeryVerbose
-        (
-            TEXT("Computing REVOKABLE Multiplicative AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
-            InHandle,
-            TargetEntity
-        );
+        attribute::VeryVerbose(TEXT("Computing REVOKABLE Multiplicative AttributeModifier for Entity [{}] to Attribute component of Target Entity [{}]"),
+            InHandle, TargetEntity);
 
         AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Multiply(AttributeComp._Final, InAttributeModifier.Get_ModifierDelta());
     }
@@ -232,19 +225,14 @@ namespace ck
         ForEachEntity(
             const TimeType&,
             HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier,
-            const AttributeModifierTargetType& InAttributeTarget) const
+            const AttributeModifierFragmentType& InAttributeModifier) const
         -> void
     {
-        auto TargetEntity = InAttributeTarget.Get_Entity();
-        auto& AttributeComp = TargetEntity.Get<AttributeFragmentType>();
+        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
 
-        attribute::VeryVerbose
-        (
-            TEXT("Computing NOT REVOKABLE Multiplicative AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
-            InHandle,
-            TargetEntity
-        );
+        attribute::VeryVerbose(TEXT("Computing NOT REVOKABLE Multiplicative AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
+            InHandle, TargetEntity);
 
         AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Multiply(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
         AttributeComp._Final = AttributeComp._Base;
@@ -287,21 +275,16 @@ namespace ck
         ForEachEntity(
             const TimeType&,
             HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier,
-            const AttributeModifierTargetType& InAttributeTarget) const
+            const AttributeModifierFragmentType& InAttributeModifier) const
         -> void
     {
-        auto TargetEntity = InAttributeTarget.Get_Entity();
+        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
 
         if (ck::Is_NOT_Valid(TargetEntity))
         { return; }
 
-        attribute::VeryVerbose
-        (
-            TEXT("Removing REVOKABLE Multiplicative AttributeModifier value of Entity [{}] from Attribute component of target Entity [{}]. Forcing final value calculation again"),
-            InHandle,
-            TargetEntity
-        );
+        attribute::VeryVerbose(TEXT("Removing REVOKABLE Multiplicative AttributeModifier value of Entity [{}] from Attribute component of target Entity [{}]. "
+            "Forcing final value calculation again"), InHandle, TargetEntity);
 
         TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(TargetEntity);
     }

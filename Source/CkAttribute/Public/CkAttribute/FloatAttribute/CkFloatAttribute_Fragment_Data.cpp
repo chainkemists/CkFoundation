@@ -1,5 +1,7 @@
 #include "CkFloatAttribute_Fragment_Data.h"
 
+#include "CkAttribute/CkAttribute_Log.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -15,10 +17,28 @@ auto
 
 auto
     FCk_Fragment_FloatAttribute_ParamsData::
-    Get_MinMaxMask () const
-    -> ECk_MinMax_Mask
+    Get_MinValue() const
+    -> float
 {
-    return static_cast<ECk_MinMax_Mask>(_OptionalMinMax);
+    ck::attribute::ErrorIf(NOT (_MinMax == ECk_MinMax_Mask::Min || _MinMax == ECk_MinMax_Mask::MinMax),
+        TEXT("Attempting to get a Min value of Attribute [{}] where MinMax is set to [{}]. Please address this."),
+         _MinMax,
+         _Name);
+
+    return _MinValue;
+}
+
+auto
+    FCk_Fragment_FloatAttribute_ParamsData::
+    Get_MaxValue() const
+    -> float
+{
+    ck::attribute::ErrorIf(NOT (_MinMax == ECk_MinMax_Mask::Max || _MinMax == ECk_MinMax_Mask::MinMax),
+        TEXT("Attempting to get a Max value Attribute [{}] where MinMax is set to [{}]. Please address this."),
+         _MinMax,
+         _Name);
+
+    return _MaxValue;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
