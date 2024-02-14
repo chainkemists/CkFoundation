@@ -61,7 +61,9 @@ public:
               DisplayName = "[Ck][Lifetime] Get Entity Lifetime Owner",
               Category = "Ck|Utils|EntityLifetime")
     static FCk_Handle
-    Get_LifetimeOwner(FCk_Handle InHandle);
+    Get_LifetimeOwner(
+        FCk_Handle InHandle,
+        ECk_PendingKill_Policy InPendingKillPolicy = ECk_PendingKill_Policy::ExcludePendingKill);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][Lifetime] Get Entity Lifetime Dependents",
@@ -97,7 +99,8 @@ public:
     static auto
     Get_LifetimeOwnerIf(
         FCk_Handle  InHandle,
-        T_Predicate T_Func) -> FCk_Handle;
+        T_Predicate T_Func,
+        ECk_PendingKill_Policy InPendingKillPolicy = ECk_PendingKill_Policy::ExcludePendingKill) -> FCk_Handle;
 
 public:
     [[nodiscard]]
@@ -133,7 +136,8 @@ auto
     UCk_Utils_EntityLifetime_UE::
     Get_LifetimeOwnerIf(
         FCk_Handle InHandle,
-        T_Predicate T_Func)
+        T_Predicate T_Func,
+        ECk_PendingKill_Policy InPendingKillPolicy)
     -> FCk_Handle
 {
     auto CurrentHandle = InHandle;
@@ -144,7 +148,7 @@ auto
             return CurrentHandle;
         }
 
-        CurrentHandle = Get_LifetimeOwner(CurrentHandle);
+        CurrentHandle = Get_LifetimeOwner(CurrentHandle, InPendingKillPolicy);
     }
 
     return {};
