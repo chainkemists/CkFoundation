@@ -479,3 +479,28 @@ enum class ECk_EntityFragmentRequirementPolicy : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EntityFragmentRequirementPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_MinMax : uint8
+{
+    None,
+    Min,
+    Max,
+    MinMax
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_MinMax);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_MinMaxCurrent : uint8
+{
+    Min,
+    Max,
+    Current
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_MinMaxCurrent);
+
+// --------------------------------------------------------------------------------------------------------------------
