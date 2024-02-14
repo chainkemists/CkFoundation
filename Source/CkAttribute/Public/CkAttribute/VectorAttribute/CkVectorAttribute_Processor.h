@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkCore/Math/Vector/CkVector_Utils.h"
 #include "CkAttribute/CkAttribute_Processor.h"
 
 #include "CkAttribute/VectorAttribute/CkVectorAttribute_Fragment.h"
@@ -8,46 +9,31 @@
 
 namespace ck
 {
-    class CKATTRIBUTE_API FProcessor_VectorAttribute_FireSignals : public TProcessor_Attribute_FireSignals<FProcessor_VectorAttribute_FireSignals, FFragment_VectorAttribute, FCk_Delegate_VectorAttribute_OnValueChanged_MC>
-    {
-    public:
-        using TProcessor_Attribute_FireSignals::TProcessor_Attribute_FireSignals;
-    };
+    // --------------------------------------------------------------------------------------------------------------------
+
+    using FProcessor_VectorAttribute_FireSignals = TProcessor_Attribute_FireSignals_CurrentMinMax<
+        TFragment_VectorAttribute, FCk_Delegate_VectorAttribute_OnValueChanged_MC>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKATTRIBUTE_API FProcessor_VectorAttribute_RecomputeAll : public TProcessor_Attribute_RecomputeAll<FProcessor_VectorAttribute_RecomputeAll, FFragment_VectorAttributeModifier>
-    {
-    public:
-        using TProcessor_Attribute_RecomputeAll::TProcessor_Attribute_RecomputeAll;
-    };
+    using FProcessor_VectorAttribute_MinMaxClamp = TProcessor_Attribute_MinMaxClamp<TFragment_VectorAttribute>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKATTRIBUTE_API FProcessor_VectorAttributeModifier_Additive_Teardown
-        : public TProcessor_AttributeModifier_Additive_Teardown<FProcessor_VectorAttributeModifier_Additive_Teardown, FFragment_VectorAttributeModifier>
-    {
-    public:
-        using TProcessor_AttributeModifier_Additive_Teardown::TProcessor_AttributeModifier_Additive_Teardown;
-    };
+    using FProcessor_VectorAttribute_RecomputeAll = TProcessor_Attribute_RecomputeAll_CurrentMinMax<
+        TFragment_VectorAttributeModifier>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKATTRIBUTE_API FProcessor_VectorAttributeModifier_ComputeAll
-        : public TProcessor_AttributeModifier_ComputeAll<FProcessor_VectorAttributeModifier_ComputeAll, FFragment_VectorAttributeModifier>
-    {
-    public:
-        using TProcessor_AttributeModifier_ComputeAll::TProcessor_AttributeModifier_ComputeAll;
-    };
+    using FProcessor_VectorAttributeModifier_ComputeAll = TProcessor_AttributeModifier_ComputeAll_CurrentMinMax<
+        TFragment_VectorAttributeModifier>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKATTRIBUTE_API FProcessor_VectorAttributeModifier_Multiplicative_Teardown
-        : public TProcessor_AttributeModifier_Multiplicative_Teardown<FProcessor_VectorAttributeModifier_Multiplicative_Teardown, FFragment_VectorAttributeModifier>
-    {
-    public:
-        using TProcessor_AttributeModifier_Multiplicative_Teardown::TProcessor_AttributeModifier_Multiplicative_Teardown;
-    };
+    using FProcessor_VectorAttributeModifier_TeardownAll = TProcessor_AttributeModifier_TeardownAll_CurrentMinMax<
+        TFragment_VectorAttributeModifier>;
+
+    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------
