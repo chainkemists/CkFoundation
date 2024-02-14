@@ -38,7 +38,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][ByteAttribute] Add New Attribute")
-    static FCk_Handle
+    static FCk_Handle_ByteAttribute
     Add(
         UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
         const FCk_Fragment_ByteAttribute_ParamsData& InParams,
@@ -47,7 +47,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Byte",
               DisplayName="[Ck][ByteAttribute] Add Multiple New Attributes")
-    static FCk_Handle
+    static TArray<FCk_Handle_ByteAttribute>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
         const FCk_Fragment_MultipleByteAttribute_ParamsData& InParams,
