@@ -20,9 +20,9 @@ auto
     Get_MinValue() const
     -> uint8
 {
-    ck::attribute::ErrorIf(NOT (_Component == ECk_MinMax::Min || _Component == ECk_MinMax::MinMax),
+    ck::attribute::ErrorIf(NOT (_MinMax == ECk_MinMax::Min || _MinMax == ECk_MinMax::MinMax),
         TEXT("Attempting to get a Min value of Attribute [{}] where MinMax is set to [{}]. Please address this."),
-         _Component,
+         _MinMax,
          _Name);
 
     return _MinValue;
@@ -33,9 +33,9 @@ auto
     Get_MaxValue() const
     -> uint8
 {
-    ck::attribute::ErrorIf(NOT (_Component == ECk_MinMax::Max || _Component == ECk_MinMax::MinMax),
+    ck::attribute::ErrorIf(NOT (_MinMax == ECk_MinMax::Max || _MinMax == ECk_MinMax::MinMax),
         TEXT("Attempting to get a Max value Attribute [{}] where MinMax is set to [{}]. Please address this."),
-         _Component,
+         _MinMax,
          _Name);
 
     return _MaxValue;
