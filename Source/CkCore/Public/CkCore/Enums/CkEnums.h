@@ -507,9 +507,9 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_MinMax);
 UENUM(BlueprintType)
 enum class ECk_MinMaxCurrent : uint8
 {
+    Current,
     Min,
     Max,
-    Current
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_MinMaxCurrent);
