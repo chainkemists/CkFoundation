@@ -119,7 +119,8 @@ public:
     static FCk_Handle_Ability
     BindTo_OnAbilityActivated(
         UPARAM(ref) FCk_Handle_Ability& InAbilityHandle,
-        ECk_Signal_BindingPolicy InBehavior,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_Ability_OnActivated& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -136,7 +137,8 @@ public:
     static FCk_Handle_Ability
     BindTo_OnAbilityDeactivated(
         UPARAM(ref) FCk_Handle_Ability& InAbilityHandle,
-        ECk_Signal_BindingPolicy InBehavior,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_Ability_OnDeactivated& InDelegate);
 
     UFUNCTION(BlueprintCallable,

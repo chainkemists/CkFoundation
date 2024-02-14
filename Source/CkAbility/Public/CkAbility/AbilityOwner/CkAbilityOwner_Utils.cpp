@@ -362,11 +362,12 @@ auto
     UCk_Utils_AbilityOwner_UE::
     BindTo_OnEvents(
         FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        ECk_Signal_BindingPolicy InBehavior,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_AbilityOwner_Events& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
-    ck::UUtils_Signal_AbilityOwner_Events::Bind(InAbilityOwnerHandle, InDelegate, InBehavior);
+    CK_SIGNAL_BIND(ck::UUtils_Signal_AbilityOwner_Events, InAbilityOwnerHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
     return InAbilityOwnerHandle;
 }
 
@@ -377,7 +378,7 @@ auto
         const FCk_Delegate_AbilityOwner_Events& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
-    ck::UUtils_Signal_AbilityOwner_Events::Unbind(InAbilityOwnerHandle, InDelegate);
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_AbilityOwner_Events, InAbilityOwnerHandle, InDelegate);
     return InAbilityOwnerHandle;
 }
 
@@ -385,11 +386,12 @@ auto
     UCk_Utils_AbilityOwner_UE::
     BindTo_OnTagsUpdated(
         FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        ECk_Signal_BindingPolicy InBehavior,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_AbilityOwner_OnTagsUpdated& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
-    ck::UUtils_Signal_AbilityOwner_OnTagsUpdated::Bind(InAbilityOwnerHandle, InDelegate, InBehavior);
+    CK_SIGNAL_BIND(ck::UUtils_Signal_AbilityOwner_OnTagsUpdated, InAbilityOwnerHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
     return InAbilityOwnerHandle;
 }
 
@@ -400,7 +402,7 @@ auto
         const FCk_Delegate_AbilityOwner_OnTagsUpdated& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
-    ck::UUtils_Signal_AbilityOwner_OnTagsUpdated::Unbind(InAbilityOwnerHandle, InDelegate);
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_AbilityOwner_OnTagsUpdated, InAbilityOwnerHandle, InDelegate);
     return InAbilityOwnerHandle;
 }
 
