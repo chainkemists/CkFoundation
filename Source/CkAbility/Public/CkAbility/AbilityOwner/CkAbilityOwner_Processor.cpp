@@ -181,7 +181,6 @@ namespace ck
             if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(AbilityHandle).Get_ActivationPolicy();
                 ActivationPolicy == ECk_Ability_Activation_Policy::ActivateOnGranted)
             {
-                // TODO: Activation Context Entity for SelfActivating Abilities is the Owner of the Ability
                 UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(AbilityOwnerEntity,
                     FCk_Request_AbilityOwner_ActivateAbility{AbilityEntity}
                     .Set_OptionalPayload(FCk_Ability_Payload_OnActivate{}.Set_ContextEntity(AbilityOwnerEntity)));
@@ -545,8 +544,7 @@ namespace ck
             InAbilityClass)
         { return {}; }
 
-        // TODO: remove conv when RecordOfAbilities is fully templated
-        return UCk_Utils_Ability_UE::CastChecked(FoundAbilityWithName);
+        return FoundAbilityWithName;
     }
 
     auto
@@ -573,8 +571,7 @@ namespace ck
             InAbilityEntity)
         { return {}; }
 
-        // TODO: remove conv when RecordOfAbilities is fully templated
-        return UCk_Utils_Ability_UE::CastChecked(InAbilityEntity);
+        return InAbilityEntity;
     }
 }
 
