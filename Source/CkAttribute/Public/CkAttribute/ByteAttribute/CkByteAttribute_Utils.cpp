@@ -16,11 +16,10 @@ auto
         FCk_Handle& InAttributeOwnerEntity,
         const FCk_Fragment_ByteAttribute_ParamsData& InParams,
         ECk_Replication InReplicates)
-    -> FCk_Handle
+    -> FCk_Handle_ByteAttribute
 {
     RecordOfByteAttributes_Utils::AddIfMissing(InAttributeOwnerEntity, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 
-    // TODO: Attribute<T> should be taking Handle by ref and this NewAttributeEntity variable should NOT be const
     auto NewAttributeEntity = [&]
     {
         auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwnerEntity);
@@ -70,7 +69,7 @@ auto
         UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_ByteAttribute_Rep>(InAttributeOwnerEntity);
     }
 
-    return InAttributeOwnerEntity;
+    return NewAttributeEntity;
 }
 
 auto
@@ -79,14 +78,13 @@ auto
         FCk_Handle& InHandle,
         const FCk_Fragment_MultipleByteAttribute_ParamsData& InParams,
         ECk_Replication InReplicates)
-    -> FCk_Handle
+    -> TArray<FCk_Handle_ByteAttribute>
 {
-    for (const auto& Param : InParams.Get_ByteAttributeParams())
+    return ck::algo::Transform<TArray<FCk_Handle_ByteAttribute>>(
+        InParams.Get_ByteAttributeParams(), [&](const FCk_Fragment_ByteAttribute_ParamsData& InParam)
     {
-        Add(InHandle, Param, InReplicates);
-    }
-
-    return InHandle;
+        return Add(InHandle, InParam, InReplicates);
+    });
 }
 
 // --------------------------------------------------------------------------------------------------------------------
