@@ -33,10 +33,10 @@ namespace ck::detail
             InHandle,
             ck::MakePayload
             (
-                AttributeLifetimeOwner,
+                InHandle,
                 TPayload_Attribute_OnValueChanged<T_DerivedAttribute>
                 {
-                    AttributeLifetimeOwner,
+                    InHandle,
                     InAttribute._Base,
                     InAttribute._Final
                 }
@@ -186,7 +186,8 @@ namespace ck::detail
             const AttributeModifierFragmentType& InAttributeModifier) const
         -> void
     {
-        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        // even though WE as a Modifier are dying, our Owner may not be
+        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle, ECk_PendingKill_Policy::IncludePendingKill);
 
         if (ck::Is_NOT_Valid(TargetEntity))
         { return; }

@@ -25,16 +25,16 @@ namespace ck
         friend class TUtils_AttributeModifier;
 
         template <typename, typename, typename>
-        friend class TProcessor_Attribute_OverrideBaseValue;
+        friend class detail::TProcessor_Attribute_OverrideBaseValue;
 
         template <typename, typename>
-        friend class TProcessor_Attribute_RecomputeAll;
+        friend class detail::TProcessor_Attribute_RecomputeAll;
 
         template <typename, typename>
-        friend class TProcessor_AttributeModifier_Additive_Teardown;
+        friend class detail::TProcessor_AttributeModifier_Additive_Teardown;
 
         template <typename, typename>
-        friend class TProcessor_AttributeModifier_Multiplicative_Teardown;
+        friend class detail::TProcessor_AttributeModifier_Multiplicative_Teardown;
 
     public:
         static auto
@@ -81,13 +81,13 @@ namespace ck
 
     public:
         template <typename, typename>
-        friend class TProcessor_Attribute_RecomputeAll;
+        friend class detail::TProcessor_Attribute_RecomputeAll;
 
         template <typename, typename>
-        friend class TProcessor_AttributeModifier_Additive_Teardown;
+        friend class detail::TProcessor_AttributeModifier_Additive_Teardown;
 
         template <typename, typename>
-        friend class TProcessor_AttributeModifier_Multiplicative_Teardown;
+        friend class detail::TProcessor_AttributeModifier_Multiplicative_Teardown;
 
     public:
         struct RecordOfAttributeModifiers_Utils : TUtils_RecordOfEntities<TFragment_RecordOfAttributeModifiers<HandleType>>{};

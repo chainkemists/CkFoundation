@@ -126,12 +126,12 @@ namespace ck
         {
             case ECk_ModifierOperation::Additive:
             {
-                InHandle.template Add<typename AttributeModifierFragmentType::Tag_AdditiveModification>();
+                InHandle.template Add<typename AttributeModifierFragmentType::FTag_AdditiveModification>();
                 break;
             }
             case ECk_ModifierOperation::Multiplicative:
             {
-                InHandle.template Add<typename AttributeModifierFragmentType::Tag_MultiplicativeModification>();
+                InHandle.template Add<typename AttributeModifierFragmentType::FTag_MultiplicativeModification>();
                 break;
             }
             default:
@@ -145,14 +145,14 @@ namespace ck
         {
             case ECk_ModifierOperation_RevocablePolicy::NotRevocable:
             {
-                InHandle.template Add<typename AttributeModifierFragmentType::Tag_IsNotRevokableModification>();
+                InHandle.template Add<typename AttributeModifierFragmentType::FTag_IsNotRevokableModification>();
                 Request_ComputeResult(InHandle);
 
                 break;
             }
             case ECk_ModifierOperation_RevocablePolicy::Revocable:
             {
-                InHandle.template Add<typename AttributeModifierFragmentType::Tag_IsRevokableModification>();
+                InHandle.template Add<typename AttributeModifierFragmentType::FTag_IsRevokableModification>();
                 RecordOfAttributeModifiers_Utils::AddIfMissing(LifetimeOwner, ECk_Record_EntryHandlingPolicy::Default);
                 RecordOfAttributeModifiers_Utils::Request_Connect(LifetimeOwner, InHandle);
 
@@ -211,7 +211,7 @@ namespace ck
         if (NOT Ensure(InHandle))
         { return; }
 
-        InHandle.template Add<typename AttributeModifierFragmentType::Tag_ComputeResult>();
+        InHandle.template Add<typename AttributeModifierFragmentType::FTag_ComputeResult>();
     }
 }
 

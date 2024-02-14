@@ -17,8 +17,21 @@ namespace ck
     template <typename T_DerivedAttributeModifier>
     class TUtils_AttributeModifier;
 
+}
+
+namespace ck::detail
+{
     template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_MulticastType>
     class TProcessor_Attribute_FireSignals;
+
+    template <typename, typename, typename>
+    class TProcessor_Attribute_MinClamp;
+
+    template <typename, typename, typename>
+    class TProcessor_Attribute_MaxClamp;
+
+    template <typename, typename, typename>
+    class TProcessor_Attribute_OverrideBaseValue;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_Attribute_RecomputeAll;
@@ -63,31 +76,31 @@ namespace ck
         friend class TUtils_Attribute;
 
         template <typename, typename, typename>
-        friend class TProcessor_Attribute_FireSignals;
+        friend class detail::TProcessor_Attribute_FireSignals;
 
         template <typename, typename, typename>
-        friend class TProcessor_Attribute_MinClamp;
+        friend class detail::TProcessor_Attribute_MinClamp;
 
         template <typename, typename, typename>
-        friend class TProcessor_Attribute_MaxClamp;
+        friend class detail::TProcessor_Attribute_MaxClamp;
 
         template <typename, typename, typename>
-        friend class TProcessor_Attribute_OverrideBaseValue;
+        friend class detail::TProcessor_Attribute_OverrideBaseValue;
 
         template <typename, typename>
-        friend class TProcessor_Attribute_RecomputeAll;
+        friend class detail::TProcessor_Attribute_RecomputeAll;
 
         template <typename, typename>
-        friend class TProcessor_AttributeModifier_RevokableAdditive_Compute;
+        friend class detail::TProcessor_AttributeModifier_RevokableAdditive_Compute;
 
         template <typename, typename>
-        friend class TProcessor_AttributeModifier_NotRevokableAdditive_Compute;
+        friend class detail::TProcessor_AttributeModifier_NotRevokableAdditive_Compute;
 
         template <typename, typename>
-        friend class TProcessor_AttributeModifier_RevokableMultiplicative_Compute;
+        friend class detail::TProcessor_AttributeModifier_RevokableMultiplicative_Compute;
 
         template <typename, typename>
-        friend class TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute;
+        friend class detail::TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute;
 
     public:
         CK_GENERATED_BODY(TFragment_Attribute<T_HandleType COMMA T_AttributeType COMMA T_ComponentTag>);
@@ -159,11 +172,11 @@ namespace ck
         friend class TUtils_AttributeModifier;
 
     public:
-        CK_DEFINE_ECS_TAG(Tag_AdditiveModification);
-        CK_DEFINE_ECS_TAG(Tag_MultiplicativeModification);
-        CK_DEFINE_ECS_TAG(Tag_IsRevokableModification);
-        CK_DEFINE_ECS_TAG(Tag_IsNotRevokableModification);
-        CK_DEFINE_ECS_TAG(Tag_ComputeResult);
+        CK_DEFINE_ECS_TAG(FTag_AdditiveModification);
+        CK_DEFINE_ECS_TAG(FTag_MultiplicativeModification);
+        CK_DEFINE_ECS_TAG(FTag_IsRevokableModification);
+        CK_DEFINE_ECS_TAG(FTag_IsNotRevokableModification);
+        CK_DEFINE_ECS_TAG(FTag_ComputeResult);
 
     public:
         using AttributeFragmentType = T_DerivedAttribute;
@@ -199,7 +212,7 @@ namespace ck
         using AttributeFragmentType   = T_DerivedAttribute;
         using ThisType                = TPayload_Attribute_OnValueChanged<AttributeFragmentType>;
         using AttributeDataType       = typename AttributeFragmentType::AttributeDataType;
-        using HandleType              = FCk_Handle;
+        using HandleType              = typename AttributeFragmentType::HandleType;
 
     public:
         TPayload_Attribute_OnValueChanged(
@@ -224,7 +237,7 @@ namespace ck
     template<typename T_DerivedAttribute>
     struct TFragment_Signal_OnAttributeValueChanged : public TFragment_Signal
     <
-        FCk_Handle,
+        typename T_DerivedAttribute::HandleType,
         TPayload_Attribute_OnValueChanged<T_DerivedAttribute>
     > {};
 
