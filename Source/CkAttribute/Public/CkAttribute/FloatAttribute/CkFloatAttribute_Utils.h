@@ -38,7 +38,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][FloatAttribute] Add New Attribute")
-    static FCk_Handle
+    static FCk_Handle_FloatAttribute
     Add(
         UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
         const FCk_Fragment_FloatAttribute_ParamsData& InParams,
@@ -47,7 +47,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Float",
               DisplayName="[Ck][FloatAttribute] Add Multiple New Attributes")
-    static FCk_Handle
+    static TArray<FCk_Handle_FloatAttribute>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
         const FCk_Fragment_MultipleFloatAttribute_ParamsData& InParams,
