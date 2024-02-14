@@ -481,13 +481,18 @@ auto
         }
     }
 
-    if (NOT LifetimeOwner.Has<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>())
+    if (NOT UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_FloatAttribute_Rep>(LifetimeOwner))
     { return NewModifierEntity; }
 
     if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(LifetimeOwner))
     { return NewModifierEntity; }
 
-    LifetimeOwner.Get<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>()->Broadcast_AddModifier(InModifierName, ParamsToUse);
+    UCk_Utils_Ecs_Net_UE::UpdateReplicatedFragment<UCk_Fragment_FloatAttribute_Rep>(
+        LifetimeOwner, [&](UCk_Fragment_FloatAttribute_Rep* InRepComp)
+    {
+        InRepComp->Broadcast_AddModifier(InModifierName, ParamsToUse);
+    });
+
     return NewModifierEntity;
 }
 
