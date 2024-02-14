@@ -234,7 +234,8 @@ public:
     static FCk_Handle_AbilityOwner
     BindTo_OnEvents(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        ECk_Signal_BindingPolicy InBehavior,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_AbilityOwner_Events& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -251,7 +252,8 @@ public:
     static FCk_Handle_AbilityOwner
     BindTo_OnTagsUpdated(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        ECk_Signal_BindingPolicy InBehavior,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_AbilityOwner_OnTagsUpdated& InDelegate);
 
     UFUNCTION(BlueprintCallable,
