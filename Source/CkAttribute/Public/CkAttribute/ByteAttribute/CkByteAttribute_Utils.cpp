@@ -29,7 +29,7 @@ auto
 
     ByteAttribute_Utils_Current::Add(NewAttributeEntity, InParams.Get_BaseValue());
 
-    switch (InParams.Get_Component())
+    switch (InParams.Get_MinMax())
     {
         case ECk_MinMax::None:
         {
