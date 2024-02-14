@@ -31,21 +31,21 @@ auto
 
     switch (InParams.Get_Component())
     {
-        case ECk_MinMax_Mask::None:
+        case ECk_MinMax::None:
         {
             break;
         }
-        case ECk_MinMax_Mask::Min:
+        case ECk_MinMax::Min:
         {
             FloatAttribute_Utils_Min::Add(NewAttributeEntity, InParams.Get_MinValue());
             break;
         }
-        case ECk_MinMax_Mask::Max:
+        case ECk_MinMax::Max:
         {
             FloatAttribute_Utils_Max::Add(NewAttributeEntity, InParams.Get_MaxValue());
             break;
         }
-        case ECk_MinMax_Mask::MinMax:
+        case ECk_MinMax::MinMax:
         {
             FloatAttribute_Utils_Min::Add(NewAttributeEntity, InParams.Get_MinValue());
             FloatAttribute_Utils_Max::Add(NewAttributeEntity, InParams.Get_MaxValue());
@@ -431,10 +431,10 @@ auto
 
     const auto& LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute);
 
-    if (ParamsToUse.Get_ModifierDelta() == 0 && ParamsToUse.Get_ModifierOperation() == ECk_ModifierOperation::Additive)
+    if (FMath::IsNearlyZero(ParamsToUse.Get_ModifierDelta()) && ParamsToUse.Get_ModifierOperation() == ECk_ModifierOperation::Additive)
     { return {}; }
 
-    if (ParamsToUse.Get_ModifierDelta() == 1 && ParamsToUse.Get_ModifierOperation() == ECk_ModifierOperation::Multiplicative)
+    if (FMath::IsNearlyEqual(ParamsToUse.Get_ModifierDelta(), 1.0f) && ParamsToUse.Get_ModifierOperation() == ECk_ModifierOperation::Multiplicative)
     { return {}; }
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttribute);

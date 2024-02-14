@@ -42,8 +42,8 @@ private:
     float _BaseValue = 0.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess, Bitmask, BitmaskEnum = "/Script/CkCore.ECk_MinMax_Mask"))
-    ECk_MinMax_Mask _Component = ECk_MinMax_Mask::None;
+        meta=(AllowPrivateAccess, Bitmask, BitmaskEnum = "/Script/CkCore.ECk_MinMax"))
+    ECk_MinMax _Component = ECk_MinMax::None;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, EditCondition = "_MinMax == ECk_MinMax::Min || _MinMax == ECk_MinMax::MinMax"))

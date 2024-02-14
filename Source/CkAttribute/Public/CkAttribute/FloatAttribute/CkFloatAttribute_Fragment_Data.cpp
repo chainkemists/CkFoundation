@@ -20,7 +20,7 @@ auto
     Get_MinValue() const
     -> float
 {
-    ck::attribute::ErrorIf(NOT (_Component == ECk_MinMax_Mask::Min || _Component == ECk_MinMax_Mask::MinMax),
+    ck::attribute::ErrorIf(NOT (_Component == ECk_MinMax::Min || _Component == ECk_MinMax::MinMax),
         TEXT("Attempting to get a Min value of Attribute [{}] where MinMax is set to [{}]. Please address this."),
          _Component,
          _Name);
@@ -33,7 +33,7 @@ auto
     Get_MaxValue() const
     -> float
 {
-    ck::attribute::ErrorIf(NOT (_Component == ECk_MinMax_Mask::Max || _Component == ECk_MinMax_Mask::MinMax),
+    ck::attribute::ErrorIf(NOT (_Component == ECk_MinMax::Max || _Component == ECk_MinMax::MinMax),
         TEXT("Attempting to get a Max value Attribute [{}] where MinMax is set to [{}]. Please address this."),
          _Component,
          _Name);
