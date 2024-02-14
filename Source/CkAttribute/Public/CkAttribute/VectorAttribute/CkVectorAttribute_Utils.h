@@ -38,7 +38,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][VectorAttribute] Add New Attribute")
-    static FCk_Handle
+    static FCk_Handle_VectorAttribute
     Add(
         UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
         const FCk_Fragment_VectorAttribute_ParamsData& InParams,
@@ -47,7 +47,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Vector",
               DisplayName="[Ck][VectorAttribute] Add Multiple New Attributes")
-    static FCk_Handle
+    static TArray<FCk_Handle_VectorAttribute>
     AddMultiple(
         UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
         const FCk_Fragment_MultipleVectorAttribute_ParamsData& InParams,
