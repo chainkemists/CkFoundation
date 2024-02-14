@@ -1,5 +1,6 @@
 #include "CkByteAttribute_Fragment.h"
 
+#include "CkAttribute/CkAttribute_Log.h"
 #include "CkAttribute/ByteAttribute/CkByteAttribute_Utils.h"
 
 #include "Net/UnrealNetwork.h"
@@ -61,13 +62,20 @@ auto
     {
         const auto& Modifier = _PendingAddModifiers[Index];
 
-        CK_ENSURE_IF_NOT(ck::IsValid(Modifier.Get_Params().Get_TargetAttributeName()),
-            TEXT("Received a AddModifier Request from the SERVER with name [{}].{}"),
-            Modifier.Get_ModifierName(),
-            ck::Context(this))
+        CK_LOG_ERROR_IF_NOT(ck::attribute, ck::IsValid(Modifier.Get_Params().Get_TargetAttributeName()),
+            TEXT("Received a AddModifier Request from the SERVER with ModifierName [{}] for a TargetAttribute with INVALID name.{}"),
+            Modifier.Get_ModifierName(), ck::Context(this))
         { continue; }
 
-        UCk_Utils_ByteAttributeModifier_UE::Add(_AssociatedEntity, Modifier.Get_ModifierName(), Modifier.Get_Params());
+        const auto& AttributeName = Modifier.Get_Params().Get_TargetAttributeName();
+        auto Attribute = UCk_Utils_ByteAttribute_UE::TryGet(_AssociatedEntity, AttributeName);
+
+        CK_LOG_ERROR_IF_NOT(ck::attribute, ck::IsValid(Modifier.Get_Params().Get_TargetAttributeName()),
+            TEXT("Received a AddModifier Request from the SERVER with ModifierName [{}] for a TargetAttribute with INVALID name.{}"),
+            Modifier.Get_ModifierName(), ck::Context(this))
+        { continue; }
+
+        UCk_Utils_ByteAttributeModifier_UE::Add(Attribute, Modifier.Get_ModifierName(), Modifier.Get_Params());
     }
     _NextPendingAddModifier = _PendingAddModifiers.Num();
 
@@ -75,15 +83,32 @@ auto
     {
         const auto& Modifier = _PendingRemoveModifiers[Index];
 
-        CK_ENSURE_IF_NOT(ck::IsValid(Modifier.Get_AttributeName()),
-            TEXT("Received a RemoveModifier from the SERVER with name [{}].{}"),
+        CK_LOG_ERROR_IF_NOT(ck::attribute, ck::IsValid(Modifier.Get_AttributeName()),
+            TEXT("Received a RemoveModifier from the SERVER with Modifier [{}] for a TargetAttribute with INVALID name.{}"),
             Modifier.Get_ModifierName(),
             ck::Context(this))
         { continue; }
 
-        UCk_Utils_ByteAttributeModifier_UE::Remove(_AssociatedEntity,
-            _PendingRemoveModifiers[Index].Get_AttributeName(),
-            _PendingRemoveModifiers[Index].Get_ModifierName());
+        const auto& AttributeName = Modifier.Get_AttributeName();
+        auto Attribute = UCk_Utils_ByteAttribute_UE::TryGet(_AssociatedEntity, AttributeName);
+
+        CK_LOG_ERROR_IF_NOT(ck::attribute, ck::IsValid(Attribute),
+            TEXT("Received a AddModifier Request from the SERVER with ModifierName [{}] for a TargetAttribute with name [{}] "
+                "but could NOT find that Attribute on [{}]"),
+            Modifier.Get_ModifierName(), AttributeName, Get_AssociatedEntity())
+        { continue; }
+
+        const auto& ModifierName = _PendingRemoveModifiers[Index].Get_ModifierName();
+        const auto& Component = _PendingRemoveModifiers[Index].Get_Component();
+
+        auto ModifierEntity = UCk_Utils_ByteAttributeModifier_UE::TryGet(Attribute, ModifierName, Component);
+
+        CK_LOG_ERROR_IF_NOT(ck::attribute, ck::IsValid(ModifierEntity),
+            TEXT("Received a AddModifier Request from the SERVER with ModifierName [{}] for a TargetAttribute [{}] but the Modifier does NOT exist.{}"),
+            ModifierName, AttributeName, Modifier.Get_ModifierName(), ck::Context(Get_AssociatedEntity()))
+        { continue; }
+
+        UCk_Utils_ByteAttributeModifier_UE::Remove(ModifierEntity);
     }
     _NextPendingRemoveModifier = _PendingRemoveModifiers.Num();
 }
