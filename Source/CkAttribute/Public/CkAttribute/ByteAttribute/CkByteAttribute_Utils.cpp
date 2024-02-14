@@ -13,42 +13,64 @@
 auto
     UCk_Utils_ByteAttribute_UE::
     Add(
-        FCk_Handle& InHandle,
+        FCk_Handle& InAttributeOwnerEntity,
         const FCk_Fragment_ByteAttribute_ParamsData& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle
 {
-    RecordOfByteAttributes_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
+    RecordOfByteAttributes_Utils::AddIfMissing(InAttributeOwnerEntity, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 
-    const auto& AddNewByteAttributeToEntity = [&](FCk_Handle InAttributeOwner, const FGameplayTag& InAttributeName, uint8 InAttributeBaseValue)
+    // TODO: Attribute<T> should be taking Handle by ref and this NewAttributeEntity variable should NOT be const
+    auto NewAttributeEntity = [&]
     {
-        auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwner);
+        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwnerEntity);
+        return ck::StaticCast<FCk_Handle_ByteAttribute>(NewEntity);
+    }();
 
-        ByteAttribute_Utils::Add(NewAttributeEntity, InAttributeBaseValue);
-        UCk_Utils_GameplayLabel_UE::Add(NewAttributeEntity, InAttributeName);
+    ByteAttribute_Utils_Current::Add(NewAttributeEntity, InParams.Get_BaseValue());
 
-        // TODO: Remove this Cast once we have type-safe API instead of GameplayTags
-        auto ByteAttributeEntity = ck::StaticCast<FCk_Handle_ByteAttribute>(NewAttributeEntity);
-        RecordOfByteAttributes_Utils::Request_Connect(InAttributeOwner, ByteAttributeEntity);
-    };
+    switch (InParams.Get_Component())
+    {
+        case ECk_MinMax::None:
+        {
+            break;
+        }
+        case ECk_MinMax::Min:
+        {
+            ByteAttribute_Utils_Min::Add(NewAttributeEntity, InParams.Get_MinValue());
+            break;
+        }
+        case ECk_MinMax::Max:
+        {
+            ByteAttribute_Utils_Max::Add(NewAttributeEntity, InParams.Get_MaxValue());
+            break;
+        }
+        case ECk_MinMax::MinMax:
+        {
+            ByteAttribute_Utils_Min::Add(NewAttributeEntity, InParams.Get_MinValue());
+            ByteAttribute_Utils_Max::Add(NewAttributeEntity, InParams.Get_MaxValue());
+            break;
+        }
+    }
 
-    AddNewByteAttributeToEntity(InHandle, InParams.Get_AttributeName(), InParams.Get_AttributeBaseValue());
+    UCk_Utils_GameplayLabel_UE::Add(NewAttributeEntity, InParams.Get_Name());
+    RecordOfByteAttributes_Utils::Request_Connect(InAttributeOwnerEntity, NewAttributeEntity);
 
     if (InReplicates == ECk_Replication::DoesNotReplicate)
     {
         ck::attribute::VeryVerbose
         (
             TEXT("Skipping creation of Byte Attribute Rep Fragment on Entity [{}] because it's set to [{}]"),
-            InHandle,
+            InAttributeOwnerEntity,
             InReplicates
         );
     }
     else
     {
-        UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_ByteAttribute_Rep>(InHandle);
+        UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_ByteAttribute_Rep>(InAttributeOwnerEntity);
     }
 
-    return InHandle;
+    return InAttributeOwnerEntity;
 }
 
 auto
@@ -67,38 +89,32 @@ auto
     return InHandle;
 }
 
-auto
-    UCk_Utils_ByteAttribute_UE::
-    Has_Attribute(
-        const FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag      InAttributeName)
-    -> bool
-{
-    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <ByteAttribute_Utils, RecordOfByteAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
-    return ck::IsValid(AttributeEntity);
-}
+// --------------------------------------------------------------------------------------------------------------------
 
-auto
-    UCk_Utils_ByteAttribute_UE::
-    Has_Any_Attribute(
-        const FCk_Handle& InAttributeOwnerEntity)
-    -> bool
-{
-    return RecordOfByteAttributes_Utils::Has(InAttributeOwnerEntity);
-}
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(ByteAttribute, UCk_Utils_ByteAttribute_UE, FCk_Handle_ByteAttribute, ck::FFragment_ByteAttribute_Current);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_ByteAttribute_UE::
+    TryGet(
+        const FCk_Handle& InAttributeOwnerEntity,
+        FGameplayTag      InAttributeName)
+    -> FCk_Handle_ByteAttribute
+{
+    return RecordOfByteAttributes_Utils::Get_ValidEntry_If(InAttributeOwnerEntity,
+        ck::algo::MatchesGameplayLabelExact{InAttributeName});
+}
+
+auto
+    UCk_Utils_ByteAttribute_UE::
     ForEach_ByteAttribute(
         FCk_Handle& InAttributeOwner,
-        const FInstancedStruct&    InOptionalPayload,
+        const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
-    -> TArray<FCk_Handle>
+    -> TArray<FCk_Handle_ByteAttribute>
 {
-    auto ToRet = TArray<FCk_Handle>{};
+    auto ToRet = TArray<FCk_Handle_ByteAttribute>{};
 
     ForEach_ByteAttribute(InAttributeOwner, [&](const FCk_Handle_ByteAttribute& InAttribute)
     {
@@ -162,7 +178,6 @@ auto
             }
 
             return *PredicateResult;
-
         }
     );
 
@@ -193,109 +208,212 @@ auto
 
 auto
     UCk_Utils_ByteAttribute_UE::
+    Has_Component(
+        const FCk_Handle_ByteAttribute& InAttribute,
+        ECk_MinMaxCurrent                InAttributeComponent)
+    -> bool
+{
+    switch (InAttributeComponent)
+    {
+        case ECk_MinMaxCurrent::Min:
+        {
+            return ByteAttribute_Utils_Min::Has(InAttribute);
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            return ByteAttribute_Utils_Max::Has(InAttribute);
+        }
+        case ECk_MinMaxCurrent::Current:
+        {
+            return ByteAttribute_Utils_Current::Has(InAttribute);
+        }
+        default:
+            return {};
+
+    }
+}
+
+auto
+    UCk_Utils_ByteAttribute_UE::
     Get_BaseValue(
-        const FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName)
+        const FCk_Handle_ByteAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent)
     -> uint8
 {
-    CK_ENSURE_IF_NOT(Has_Attribute(InAttributeOwnerEntity, InAttributeName), TEXT("Attribute [{}] does NOT exist on Entity [{}]."),
-        InAttributeName, InAttributeOwnerEntity)
+    CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
+        TEXT("Byte Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
+        InAttribute,
+        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute), InAttributeComponent)
     { return {}; }
 
-    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <ByteAttribute_Utils, RecordOfByteAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
-    return ByteAttribute_Utils::Get_BaseValue(AttributeEntity);
+    switch (InAttributeComponent)
+    {
+        case ECk_MinMaxCurrent::Min:
+        {
+            return ByteAttribute_Utils_Min::Get_BaseValue(InAttribute);
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            return ByteAttribute_Utils_Max::Get_BaseValue(InAttribute);
+        }
+        case ECk_MinMaxCurrent::Current:
+        {
+            return ByteAttribute_Utils_Current::Get_BaseValue(InAttribute);
+        }
+        default:
+            return {};
+
+    }
 }
 
 auto
     UCk_Utils_ByteAttribute_UE::
     Get_BonusValue(
-        const FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName)
+        const FCk_Handle_ByteAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent)
     -> uint8
 {
-    CK_ENSURE_IF_NOT(Has_Attribute(InAttributeOwnerEntity, InAttributeName), TEXT("Attribute [{}] does NOT exist on Entity [{}]."),
-        InAttributeName, InAttributeOwnerEntity)
+    CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
+        TEXT("Byte Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
+        InAttribute,
+        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute), InAttributeComponent)
     { return {}; }
 
-    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <ByteAttribute_Utils, RecordOfByteAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
-    return ByteAttribute_Utils::Get_FinalValue(AttributeEntity) - ByteAttribute_Utils::Get_BaseValue(AttributeEntity);
+    switch (InAttributeComponent)
+    {
+        case ECk_MinMaxCurrent::Min:
+        {
+            return ByteAttribute_Utils_Min::Get_FinalValue(InAttribute) - ByteAttribute_Utils_Min::Get_BaseValue(InAttribute);
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            return ByteAttribute_Utils_Max::Get_FinalValue(InAttribute) - ByteAttribute_Utils_Max::Get_BaseValue(InAttribute);
+        }
+        case ECk_MinMaxCurrent::Current:
+        {
+            return ByteAttribute_Utils_Current::Get_FinalValue(InAttribute) - ByteAttribute_Utils_Current::Get_BaseValue(InAttribute);
+        }
+        default:
+            return {};
+    }
 }
 
 auto
     UCk_Utils_ByteAttribute_UE::
     Get_FinalValue(
-        const FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName)
+        const FCk_Handle_ByteAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent)
     -> uint8
 {
-    CK_ENSURE_IF_NOT(Has_Attribute(InAttributeOwnerEntity, InAttributeName), TEXT("Attribute [{}] does NOT exist on Entity [{}]."),
-        InAttributeName, InAttributeOwnerEntity)
+    CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
+        TEXT("Byte Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
+        InAttribute,
+        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute), InAttributeComponent)
     { return {}; }
 
-    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <ByteAttribute_Utils, RecordOfByteAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
-    return ByteAttribute_Utils::Get_FinalValue(AttributeEntity);
+
+    switch (InAttributeComponent)
+    {
+        case ECk_MinMaxCurrent::Min:
+        {
+            return ByteAttribute_Utils_Min::Get_FinalValue(InAttribute);
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            return ByteAttribute_Utils_Max::Get_FinalValue(InAttribute);
+        }
+        case ECk_MinMaxCurrent::Current:
+        {
+            return ByteAttribute_Utils_Current::Get_FinalValue(InAttribute);
+        }
+        default:
+            return {};
+    }
 }
 
 auto
     UCk_Utils_ByteAttribute_UE::
     Request_Override(
-        FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName,
-        uint8 InNewBaseValue)
-        -> void
+        UPARAM(ref) FCk_Handle_ByteAttribute& InAttribute,
+        uint8 InNewBaseValue,
+        ECk_MinMaxCurrent InAttributeComponent)
+    -> FCk_Handle_ByteAttribute
 {
-    const auto CurrentBaseValue = Get_BaseValue(InAttributeOwnerEntity, InAttributeName);
+    const auto CurrentBaseValue = Get_BaseValue(InAttribute, InAttributeComponent);
     const uint8 Delta = InNewBaseValue - CurrentBaseValue;
 
-    UCk_Utils_ByteAttributeModifier_UE::Add(InAttributeOwnerEntity, {},
-        FCk_Fragment_ByteAttributeModifier_ParamsData{
-            Delta, InAttributeName, ECk_ModifierOperation::Additive, ECk_ModifierOperation_RevocablePolicy::NotRevocable});
+    CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
+        TEXT("Byte Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
+        InAttribute,
+        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute), InAttributeComponent)
+    { return {}; }
+
+    UCk_Utils_ByteAttributeModifier_UE::Add(InAttribute, {}, FCk_Fragment_ByteAttributeModifier_ParamsData{
+        Delta, ECk_ModifierOperation::Additive, ECk_ModifierOperation_RevocablePolicy::NotRevocable, InAttributeComponent});
+
+    return InAttribute;
 }
 
 auto
     UCk_Utils_ByteAttribute_UE::
     BindTo_OnValueChanged(
-        FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName,
+        FCk_Handle_ByteAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent,
         ECk_Signal_BindingPolicy InBehavior,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_ByteAttribute_OnValueChanged& InDelegate)
-    -> void
+    -> FCk_Handle_ByteAttribute
 {
-    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <ByteAttribute_Utils, RecordOfByteAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+    switch(InAttributeComponent)
+    {
+        case ECk_MinMaxCurrent::Min:
+        {
+            CK_SIGNAL_BIND(ck::UUtils_Signal_OnByteAttributeValueChanged_Min, InAttribute, InDelegate, InBehavior, InPostFireBehavior);
+            break;
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            CK_SIGNAL_BIND(ck::UUtils_Signal_OnByteAttributeValueChanged_Max, InAttribute, InDelegate, InBehavior, InPostFireBehavior);
+            break;
+        }
+        case ECk_MinMaxCurrent::Current:
+        {
+            CK_SIGNAL_BIND(ck::UUtils_Signal_OnByteAttributeValueChanged_Current, InAttribute, InDelegate, InBehavior, InPostFireBehavior);
+            break;
+        }
+    };
 
-    CK_ENSURE_IF_NOT(ck::IsValid(AttributeEntity),
-        TEXT("Could NOT find Attribute [{}] in Entity [{}]. Unable to BIND on ValueChanged the Delegate [{}]"),
-        InAttributeName, InAttributeOwnerEntity, InDelegate.GetFunctionName())
-    { return; }
-
-    if (InPostFireBehavior == ECk_Signal_PostFireBehavior::DoNothing)
-    { ck::UUtils_Signal_OnByteAttributeValueChanged::Bind(AttributeEntity, InDelegate, InBehavior); }
-    else
-    { ck::UUtils_Signal_OnByteAttributeValueChanged_PostFireUnbind::Bind(AttributeEntity, InDelegate, InBehavior); }
+    return InAttribute;
 }
 
 auto
     UCk_Utils_ByteAttribute_UE::
     UnbindFrom_OnValueChanged(
-        FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName,
+        FCk_Handle_ByteAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent,
         const FCk_Delegate_ByteAttribute_OnValueChanged& InDelegate)
-    -> void
+    -> FCk_Handle_ByteAttribute
 {
-    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <ByteAttribute_Utils, RecordOfByteAttributes_Utils>(InAttributeOwnerEntity, InAttributeName);
+    switch(InAttributeComponent)
+    {
+        case ECk_MinMaxCurrent::Min:
+        {
+            CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnByteAttributeValueChanged_Min, InAttribute, InDelegate);
+            break;
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnByteAttributeValueChanged_Max, InAttribute, InDelegate);
+            break;
+        }
+        case ECk_MinMaxCurrent::Current:
+        {
+            CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnByteAttributeValueChanged_Current, InAttribute, InDelegate);
+            break;
+        }
+    };
 
-    CK_ENSURE_IF_NOT(ck::IsValid(AttributeEntity),
-        TEXT("Could NOT find Attribute [{}] in Entity [{}]. Unable to BIND on ValueChanged the Delegate [{}]"),
-        InAttributeName, InAttributeOwnerEntity, InDelegate.GetFunctionName())
-    { return; }
-
-    ck::UUtils_Signal_OnByteAttributeValueChanged::Unbind(AttributeEntity, InDelegate);
+    return InAttribute;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -303,87 +421,127 @@ auto
 auto
     UCk_Utils_ByteAttributeModifier_UE::
     Add(
-        FCk_Handle& InAttributeOwnerEntity,
+        FCk_Handle_ByteAttribute& InAttribute,
         FGameplayTag InModifierName,
         const FCk_Fragment_ByteAttributeModifier_ParamsData& InParams)
-    -> void
+    -> FCk_Handle_ByteAttributeModifier
 {
-    const auto& AttributeName = InParams.Get_TargetAttributeName();
+    auto ParamsToUse = InParams;
+    ParamsToUse.Set_TargetAttributeName(UCk_Utils_GameplayLabel_UE::Get_Label(InAttribute));
 
-    if (InParams.Get_ModifierDelta() == 0 && InParams.Get_ModifierOperation() == ECk_ModifierOperation::Additive)
-    { return; }
+    const auto& LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute);
 
-    if (InParams.Get_ModifierDelta() == 1 && InParams.Get_ModifierOperation() == ECk_ModifierOperation::Multiplicative)
-    { return; }
+    if (ParamsToUse.Get_ModifierDelta() == 0 && ParamsToUse.Get_ModifierOperation() == ECk_ModifierOperation::Additive)
+    { return {}; }
 
-    auto NewModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwnerEntity);
+    if (ParamsToUse.Get_ModifierDelta() == 1 && ParamsToUse.Get_ModifierOperation() == ECk_ModifierOperation::Multiplicative)
+    { return {}; }
+
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttribute);
+    auto NewModifierEntity = ck::StaticCast<FCk_Handle_ByteAttributeModifier>(NewEntity);
     UCk_Utils_GameplayLabel_UE::Add(NewModifierEntity, InModifierName);
 
-    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <UCk_Utils_ByteAttribute_UE::ByteAttribute_Utils, UCk_Utils_ByteAttribute_UE::RecordOfByteAttributes_Utils>(
-            InAttributeOwnerEntity, AttributeName);
+    switch (ParamsToUse.Get_Component())
+    {
+        case ECk_MinMaxCurrent::Min:
+        {
+            ByteAttributeModifier_Utils_Min::Add
+            (
+                NewModifierEntity,
+                ParamsToUse.Get_ModifierDelta(),
+                ParamsToUse.Get_ModifierOperation(),
+                ParamsToUse.Get_ModifierOperation_RevocablePolicy()
+            );
 
-    ByteAttributeModifier_Utils::Add
-    (
-        NewModifierEntity,
-        InParams.Get_ModifierDelta(),
-        AttributeEntity,
-        InParams.Get_ModifierOperation(),
-        InParams.Get_ModifierOperation_RevokablePolicy()
-    );
+            break;
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            ByteAttributeModifier_Utils_Max::Add
+            (
+                NewModifierEntity,
+                ParamsToUse.Get_ModifierDelta(),
+                ParamsToUse.Get_ModifierOperation(),
+                ParamsToUse.Get_ModifierOperation_RevocablePolicy()
+            );
 
-    if (NOT InAttributeOwnerEntity.Has<TObjectPtr<UCk_Fragment_ByteAttribute_Rep>>())
-    { return; }
+            break;
+        }
+        case ECk_MinMaxCurrent::Current:
+        {
+            ByteAttributeModifier_Utils_Current::Add
+            (
+                NewModifierEntity,
+                ParamsToUse.Get_ModifierDelta(),
+                ParamsToUse.Get_ModifierOperation(),
+                ParamsToUse.Get_ModifierOperation_RevocablePolicy()
+            );
 
-    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAttributeOwnerEntity))
-    { return; }
+            break;
+        }
+    }
 
-    InAttributeOwnerEntity.Get<TObjectPtr<UCk_Fragment_ByteAttribute_Rep>>()->Broadcast_AddModifier(InModifierName, InParams);
+    if (NOT UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_ByteAttribute_Rep>(LifetimeOwner))
+    { return NewModifierEntity; }
+
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(LifetimeOwner))
+    { return NewModifierEntity; }
+
+    UCk_Utils_Ecs_Net_UE::UpdateReplicatedFragment<UCk_Fragment_ByteAttribute_Rep>(
+        LifetimeOwner, [&](UCk_Fragment_ByteAttribute_Rep* InRepComp)
+    {
+        InRepComp->Broadcast_AddModifier(InModifierName, ParamsToUse);
+    });
+
+    return NewModifierEntity;
 }
 
 auto
     UCk_Utils_ByteAttributeModifier_UE::
-    Has(
-        const FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName,
-        FGameplayTag InModifierName)
-    -> bool
+    TryGet(
+        const FCk_Handle_ByteAttribute& InAttribute,
+        FGameplayTag InModifierName,
+        ECk_MinMaxCurrent _Component)
+    -> FCk_Handle_ByteAttributeModifier
 {
-    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <UCk_Utils_ByteAttribute_UE::ByteAttribute_Utils, UCk_Utils_ByteAttribute_UE::RecordOfByteAttributes_Utils>(
-            InAttributeOwnerEntity, InAttributeName);
-    const auto& AttributeModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <ByteAttributeModifier_Utils, ByteAttributeModifier_Utils::RecordOfAttributeModifiers_Utils>(
-            AttributeEntity, InModifierName);
-
-    return ck::IsValid(AttributeModifierEntity);
+    switch(_Component)
+    {
+        case ECk_MinMaxCurrent::Min:
+            return RecordOfByteAttributeModifiers_Utils_Min::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
+        case ECk_MinMaxCurrent::Max:
+            return RecordOfByteAttributeModifiers_Utils_Max::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
+        case ECk_MinMaxCurrent::Current:
+            return RecordOfByteAttributeModifiers_Utils_Current::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
+        default:
+            return {};
+    }
 }
 
 auto
     UCk_Utils_ByteAttributeModifier_UE::
     Remove(
-        FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName,
-        FGameplayTag InModifierName)
-    -> void
+        FCk_Handle_ByteAttributeModifier& InAttributeModifierEntity)
+    -> FCk_Handle_ByteAttribute
 {
-    const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <UCk_Utils_ByteAttribute_UE::ByteAttribute_Utils, UCk_Utils_ByteAttribute_UE::RecordOfByteAttributes_Utils>(
-            InAttributeOwnerEntity, InAttributeName);
-    const auto& AttributeModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
-        <ByteAttributeModifier_Utils, ByteAttributeModifier_Utils::RecordOfAttributeModifiers_Utils>(
-            AttributeEntity, InModifierName);
+    auto AttributeEntity = UCk_Utils_ByteAttribute_UE::CastChecked(
+        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttributeModifierEntity));
+    auto AttributeOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(AttributeEntity);
 
-    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(AttributeModifierEntity);
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAttributeModifierEntity);
 
-    if (NOT InAttributeOwnerEntity.Has<TObjectPtr<UCk_Fragment_ByteAttribute_Rep>>())
-    { return; }
+    if (NOT AttributeOwnerEntity.Has<TObjectPtr<UCk_Fragment_ByteAttribute_Rep>>())
+    { return AttributeEntity; }
 
-    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAttributeOwnerEntity))
-    { return; }
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AttributeOwnerEntity))
+    { return AttributeEntity; }
 
-    InAttributeOwnerEntity.Get<TObjectPtr<UCk_Fragment_ByteAttribute_Rep>>()->
-        Broadcast_RemoveModifier(InModifierName, InAttributeName);
+    AttributeOwnerEntity.Get<TObjectPtr<UCk_Fragment_ByteAttribute_Rep>>()->Broadcast_RemoveModifier
+    (
+        UCk_Utils_GameplayLabel_UE::Get_Label(InAttributeModifierEntity),
+            UCk_Utils_GameplayLabel_UE::Get_Label(AttributeEntity)
+    );
+
+    return AttributeEntity;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

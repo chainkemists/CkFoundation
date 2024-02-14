@@ -1,8 +1,8 @@
 #pragma once
 
 #include "CkCore/Enums/CkEnums.h"
-#include "CkEcs/Handle/CkHandle.h"
 #include "CkCore/Macros/CkMacros.h"
+#include "CkEcs/Handle/CkHandle.h"
 
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
@@ -18,6 +18,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_ByteAttribute)
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
+struct CKATTRIBUTE_API FCk_Handle_ByteAttributeModifier : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_ByteAttributeModifier); };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_ByteAttributeModifier);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKATTRIBUTE_API FCk_Fragment_ByteAttribute_ParamsData
 {
@@ -28,19 +34,36 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, ForceInlineRow))
-    FGameplayTag _AttributeName;
+              meta = (AllowPrivateAccess = true))
+    FGameplayTag _Name;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, ForceInlineRow))
-    uint8 _AttributeBaseValue = 0;
+              meta = (AllowPrivateAccess = true))
+    uint8 _BaseValue = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess, Bitmask, BitmaskEnum = "/Script/CkCore.ECk_MinMax"))
+    ECk_MinMax _Component = ECk_MinMax::None;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditCondition = "_MinMax == ECk_MinMax::Min || _MinMax == ECk_MinMax::MinMax"))
+    uint8 _MinValue = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditCondition = "_MinMax == ECk_MinMax::Max || _MinMax == ECk_MinMax::MinMax"))
+    uint8 _MaxValue = 0;
 
 public:
-    CK_PROPERTY_GET(_AttributeName);
-    CK_PROPERTY_GET(_AttributeBaseValue);
+    auto Get_MinValue() const -> uint8;
+    auto Get_MaxValue() const -> uint8;
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ByteAttribute_ParamsData, _AttributeName, _AttributeBaseValue);
+    CK_PROPERTY_GET(_Name);
+    CK_PROPERTY_GET(_BaseValue);
+    CK_PROPERTY_GET(_Component);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ByteAttribute_ParamsData, _Name, _BaseValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -80,8 +103,7 @@ private:
               meta = (AllowPrivateAccess = true))
     uint8 _ModifierDelta = 0;
 
-    UPROPERTY(BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+    UPROPERTY()
     FGameplayTag _TargetAttributeName;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -90,17 +112,22 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_ModifierOperation_RevocablePolicy _ModifierOperation_RevokablePolicy = ECk_ModifierOperation_RevocablePolicy::Revocable;
+    ECk_ModifierOperation_RevocablePolicy _ModifierOperation_RevocablePolicy = ECk_ModifierOperation_RevocablePolicy::Revocable;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_MinMaxCurrent _Component = ECk_MinMaxCurrent::Current;
 
 public:
     CK_PROPERTY_GET(_ModifierDelta);
-    CK_PROPERTY_GET(_TargetAttributeName);
+    CK_PROPERTY(_TargetAttributeName);
     CK_PROPERTY_GET(_ModifierOperation);
-    CK_PROPERTY_GET(_ModifierOperation_RevokablePolicy);
+    CK_PROPERTY_GET(_ModifierOperation_RevocablePolicy);
+    CK_PROPERTY_GET(_Component);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ByteAttributeModifier_ParamsData, _ModifierDelta, _TargetAttributeName,
-        _ModifierOperation, _ModifierOperation_RevokablePolicy);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ByteAttributeModifier_ParamsData, _ModifierDelta,
+        _ModifierOperation, _ModifierOperation_RevocablePolicy, _Component);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -226,7 +253,7 @@ public:
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-    FCk_Handle  _Handle;
+    FCk_Handle_ByteAttribute  _AttributeHandle;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     uint8  _BaseValue = 0;
@@ -235,12 +262,12 @@ private:
     uint8  _FinalValue = 0;
 
 public:
-    CK_PROPERTY_GET(_Handle);
+    CK_PROPERTY_GET(_AttributeHandle);
     CK_PROPERTY_GET(_BaseValue);
     CK_PROPERTY_GET(_FinalValue);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Payload_ByteAttribute_OnValueChanged, _Handle, _BaseValue, _FinalValue);
+    CK_DEFINE_CONSTRUCTORS(FCk_Payload_ByteAttribute_OnValueChanged, _AttributeHandle, _BaseValue, _FinalValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

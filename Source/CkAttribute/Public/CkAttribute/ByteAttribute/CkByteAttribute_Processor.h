@@ -8,46 +8,31 @@
 
 namespace ck
 {
-    class CKATTRIBUTE_API FProcessor_ByteAttribute_FireSignals : public TProcessor_Attribute_FireSignals<FProcessor_ByteAttribute_FireSignals, FFragment_ByteAttribute, FCk_Delegate_ByteAttribute_OnValueChanged_MC>
-    {
-    public:
-        using TProcessor_Attribute_FireSignals::TProcessor_Attribute_FireSignals;
-    };
+    // --------------------------------------------------------------------------------------------------------------------
+
+    using FProcessor_ByteAttribute_FireSignals = TProcessor_Attribute_FireSignals_CurrentMinMax<
+        TFragment_ByteAttribute, FCk_Delegate_ByteAttribute_OnValueChanged_MC>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKATTRIBUTE_API FProcessor_ByteAttribute_RecomputeAll : public TProcessor_Attribute_RecomputeAll<FProcessor_ByteAttribute_RecomputeAll, FFragment_ByteAttributeModifier>
-    {
-    public:
-        using TProcessor_Attribute_RecomputeAll::TProcessor_Attribute_RecomputeAll;
-    };
+    using FProcessor_ByteAttribute_MinMaxClamp = TProcessor_Attribute_MinMaxClamp<TFragment_ByteAttribute>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKATTRIBUTE_API FProcessor_ByteAttributeModifier_Additive_Teardown
-        : public TProcessor_AttributeModifier_Additive_Teardown<FProcessor_ByteAttributeModifier_Additive_Teardown, FFragment_ByteAttributeModifier>
-    {
-    public:
-        using TProcessor_AttributeModifier_Additive_Teardown::TProcessor_AttributeModifier_Additive_Teardown;
-    };
+    using FProcessor_ByteAttribute_RecomputeAll = TProcessor_Attribute_RecomputeAll_CurrentMinMax<
+        TFragment_ByteAttributeModifier>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKATTRIBUTE_API FProcessor_ByteAttributeModifier_ComputeAll
-        : public TProcessor_AttributeModifier_ComputeAll<FProcessor_ByteAttributeModifier_ComputeAll, FFragment_ByteAttributeModifier>
-    {
-    public:
-        using TProcessor_AttributeModifier_ComputeAll::TProcessor_AttributeModifier_ComputeAll;
-    };
+    using FProcessor_ByteAttributeModifier_ComputeAll = TProcessor_AttributeModifier_ComputeAll_CurrentMinMax<
+        TFragment_ByteAttributeModifier>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKATTRIBUTE_API FProcessor_ByteAttributeModifier_Multiplicative_Teardown
-        : public TProcessor_AttributeModifier_Multiplicative_Teardown<FProcessor_ByteAttributeModifier_Multiplicative_Teardown, FFragment_ByteAttributeModifier>
-    {
-    public:
-        using TProcessor_AttributeModifier_Multiplicative_Teardown::TProcessor_AttributeModifier_Multiplicative_Teardown;
-    };
+    using FProcessor_ByteAttributeModifier_TeardownAll = TProcessor_AttributeModifier_TeardownAll_CurrentMinMax<
+        TFragment_ByteAttributeModifier>;
+
+    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------
