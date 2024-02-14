@@ -41,7 +41,7 @@ namespace ck_label
 auto
     UCk_Utils_GameplayLabel_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FGameplayTag& InLabel)
     -> void
 {

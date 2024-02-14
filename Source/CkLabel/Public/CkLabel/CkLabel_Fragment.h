@@ -40,7 +40,15 @@ namespace ck::algo
     struct CKLABEL_API MatchesGameplayLabelExact
     {
     public:
-        auto operator()(const FCk_Handle& InHandle) const -> bool;
+        template <typename T_Handle>
+        requires(std::is_base_of_v<FCk_Handle, T_Handle>)
+        auto operator()(const T_Handle& InHandle) const -> bool
+        {
+            if (NOT UCk_Utils_GameplayLabel_UE::Has(InHandle))
+            { return false; }
+
+            return UCk_Utils_GameplayLabel_UE::MatchesExact(InHandle, _Name);
+        }
 
     private:
         FGameplayTag _Name;
@@ -54,7 +62,15 @@ namespace ck::algo
     struct CKLABEL_API MatchesGameplayLabel
     {
     public:
-        auto operator()(const FCk_Handle& InHandle) const -> bool;
+        template <typename T_Handle>
+        requires(std::is_base_of_v<FCk_Handle, T_Handle>)
+        auto operator()(const T_Handle& InHandle) const -> bool
+        {
+            if (NOT UCk_Utils_GameplayLabel_UE::Has(InHandle))
+            { return false; }
+
+            return UCk_Utils_GameplayLabel_UE::Matches(InHandle, _Name);
+        }
 
     private:
         FGameplayTag _Name;
@@ -68,7 +84,15 @@ namespace ck::algo
     struct CKLABEL_API MatchesAnyGameplayLabel
     {
     public:
-        auto operator()(const FCk_Handle& InHandle) const -> bool;
+        template <typename T_Handle>
+        requires(std::is_base_of_v<FCk_Handle, T_Handle>)
+        auto operator()(const T_Handle& InHandle) const -> bool
+        {
+            if (NOT UCk_Utils_GameplayLabel_UE::Has(InHandle))
+            { return false; }
+
+            return UCk_Utils_GameplayLabel_UE::MatchesAny(InHandle, _Names);
+        }
 
     private:
         FGameplayTagContainer _Names;
@@ -82,7 +106,15 @@ namespace ck::algo
     struct CKLABEL_API MatchesAnyGameplayLabelExact
     {
     public:
-        auto operator()(const FCk_Handle& InHandle) const -> bool;
+        template <typename T_Handle>
+        requires(std::is_base_of_v<FCk_Handle, T_Handle>)
+        auto operator()(const T_Handle& InHandle) const -> bool
+        {
+            if (NOT UCk_Utils_GameplayLabel_UE::Has(InHandle))
+            { return false; }
+
+            return UCk_Utils_GameplayLabel_UE::MatchesAnyExact(InHandle, _Names);
+        }
 
     private:
         FGameplayTagContainer _Names;
