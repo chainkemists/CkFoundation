@@ -40,8 +40,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfFloatAttributes, FCk_Handle_FloatAttribute);
-
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfFloatAttributeModifiers, FCk_Handle_FloatAttributeModifier);
+    using FFragment_RecordOfFloatAttributeModifiers = TFragment_RecordOfAttributeModifiers<FCk_Handle_FloatAttributeModifier>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -168,9 +167,13 @@ private:
     UPROPERTY()
     FGameplayTag _ModifierName;
 
+    UPROPERTY()
+    ECk_MinMaxCurrent _Component = ECk_MinMaxCurrent::Current;
+
 public:
     CK_PROPERTY_GET(_AttributeName);
     CK_PROPERTY_GET(_ModifierName);
+    CK_PROPERTY_GET(_Component);
 
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttribute_RemovePendingModifier, _AttributeName, _ModifierName);
 };

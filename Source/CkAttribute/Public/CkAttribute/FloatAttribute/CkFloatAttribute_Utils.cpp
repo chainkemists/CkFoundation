@@ -21,7 +21,11 @@ auto
     RecordOfFloatAttributes_Utils::AddIfMissing(InAttributeOwnerEntity, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 
     // TODO: Attribute<T> should be taking Handle by ref and this NewAttributeEntity variable should NOT be const
-    auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwnerEntity);
+    auto NewAttributeEntity = [&]
+    {
+        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwnerEntity);
+        return ck::StaticCast<FCk_Handle_FloatAttribute>(NewEntity);
+    }();
 
     FloatAttribute_Utils_Current::Add(NewAttributeEntity, InParams.Get_BaseValue());
 
@@ -33,23 +37,24 @@ auto
         }
         case ECk_MinMax_Mask::Min:
         {
-            FloatAttribute_Utils_Min::Add(NewAttributeEntity, InParams.Get_BaseValue());
+            FloatAttribute_Utils_Min::Add(NewAttributeEntity, InParams.Get_MinValue());
             break;
         }
         case ECk_MinMax_Mask::Max:
         {
-            FloatAttribute_Utils_Max::Add(NewAttributeEntity, InParams.Get_BaseValue());
+            FloatAttribute_Utils_Max::Add(NewAttributeEntity, InParams.Get_MaxValue());
             break;
         }
         case ECk_MinMax_Mask::MinMax:
         {
-            FloatAttribute_Utils_Min::Add(NewAttributeEntity, InParams.Get_BaseValue());
-            FloatAttribute_Utils_Max::Add(NewAttributeEntity, InParams.Get_BaseValue());
+            FloatAttribute_Utils_Min::Add(NewAttributeEntity, InParams.Get_MinValue());
+            FloatAttribute_Utils_Max::Add(NewAttributeEntity, InParams.Get_MaxValue());
             break;
         }
     }
 
     UCk_Utils_GameplayLabel_UE::Add(NewAttributeEntity, InParams.Get_Name());
+    RecordOfFloatAttributes_Utils::Request_Connect(InAttributeOwnerEntity, NewAttributeEntity);
 
     if (InReplicates == ECk_Replication::DoesNotReplicate)
     {
@@ -86,10 +91,20 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(FloatAttribute, UCk_Utils_FloatAttribute_UE,
-    FCk_Handle_FloatAttribute, UCk_Utils_FloatAttribute_UE::RecordOfFloatAttributes_Utils::RecordType);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(FloatAttribute, UCk_Utils_FloatAttribute_UE, FCk_Handle_FloatAttribute, ck::FFragment_FloatAttribute_Current);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_FloatAttribute_UE::
+    TryGet(
+        const FCk_Handle& InAttributeOwnerEntity,
+        FGameplayTag      InAttributeName)
+    -> FCk_Handle_FloatAttribute
+{
+    return RecordOfFloatAttributes_Utils::Get_ValidEntry_If(InAttributeOwnerEntity,
+        ck::algo::MatchesGameplayLabelExact{InAttributeName});
+}
 
 auto
     UCk_Utils_FloatAttribute_UE::
@@ -193,31 +208,52 @@ auto
 
 auto
     UCk_Utils_FloatAttribute_UE::
-    Get_BaseValue(
+    Has_Component(
         const FCk_Handle_FloatAttribute& InAttribute,
-        ECk_MinMaxCurrent InAttributeComponent)
-    -> float
+        ECk_MinMaxCurrent                InAttributeComponent)
+    -> bool
 {
     switch (InAttributeComponent)
     {
         case ECk_MinMaxCurrent::Min:
         {
-            CK_ENSURE_IF_NOT(Has_BaseValue(InAttribute, InAttributeComponent),
-                TEXT("Float Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
-                InAttribute,
-                UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute), InAttributeComponent)
-            { return {}; }
+            return FloatAttribute_Utils_Min::Has(InAttribute);
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            return FloatAttribute_Utils_Max::Has(InAttribute);
+        }
+        case ECk_MinMaxCurrent::Current:
+        {
+            return FloatAttribute_Utils_Current::Has(InAttribute);
+        }
+        default:
+            return {};
 
+    }
+}
+
+auto
+    UCk_Utils_FloatAttribute_UE::
+    Get_BaseValue(
+        const FCk_Handle_FloatAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent)
+    -> float
+{
+    CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
+        TEXT("Float Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
+        InAttribute,
+        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute), InAttributeComponent)
+    { return {}; }
+
+    switch (InAttributeComponent)
+    {
+        case ECk_MinMaxCurrent::Min:
+        {
             return FloatAttribute_Utils_Min::Get_BaseValue(InAttribute);
         }
         case ECk_MinMaxCurrent::Max:
         {
-            CK_ENSURE_IF_NOT(Has_BaseValue(InAttribute, InAttributeComponent),
-                TEXT("Float Attribute [{}] with Owner [{}] does NOT have a MAX component"),
-                InAttribute,
-                UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute))
-            { return {}; }
-
             return FloatAttribute_Utils_Max::Get_BaseValue(InAttribute);
         }
         case ECk_MinMaxCurrent::Current:
@@ -237,26 +273,20 @@ auto
         ECk_MinMaxCurrent InAttributeComponent)
     -> float
 {
+    CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
+        TEXT("Float Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
+        InAttribute,
+        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute), InAttributeComponent)
+    { return {}; }
+
     switch (InAttributeComponent)
     {
         case ECk_MinMaxCurrent::Min:
         {
-            CK_ENSURE_IF_NOT(Has_BaseValue(InAttribute, InAttributeComponent),
-                TEXT("Float Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
-                InAttribute,
-                UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute), InAttributeComponent)
-            { return {}; }
-
             return FloatAttribute_Utils_Min::Get_FinalValue(InAttribute) - FloatAttribute_Utils_Min::Get_BaseValue(InAttribute);
         }
         case ECk_MinMaxCurrent::Max:
         {
-            CK_ENSURE_IF_NOT(Has_BaseValue(InAttribute, InAttributeComponent),
-                TEXT("Float Attribute [{}] with Owner [{}] does NOT have a MAX component"),
-                InAttribute,
-                UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute))
-            { return {}; }
-
             return FloatAttribute_Utils_Max::Get_FinalValue(InAttribute) - FloatAttribute_Utils_Max::Get_BaseValue(InAttribute);
         }
         case ECk_MinMaxCurrent::Current:
@@ -275,26 +305,21 @@ auto
         ECk_MinMaxCurrent InAttributeComponent)
     -> float
 {
+    CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
+        TEXT("Float Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
+        InAttribute,
+        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute), InAttributeComponent)
+    { return {}; }
+
+
     switch (InAttributeComponent)
     {
         case ECk_MinMaxCurrent::Min:
         {
-            CK_ENSURE_IF_NOT(Has_BaseValue(InAttribute, InAttributeComponent),
-                TEXT("Float Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
-                InAttribute,
-                UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute), InAttributeComponent)
-            { return {}; }
-
             return FloatAttribute_Utils_Min::Get_FinalValue(InAttribute);
         }
         case ECk_MinMaxCurrent::Max:
         {
-            CK_ENSURE_IF_NOT(Has_BaseValue(InAttribute, InAttributeComponent),
-                TEXT("Float Attribute [{}] with Owner [{}] does NOT have a MAX component"),
-                InAttribute,
-                UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute))
-            { return {}; }
-
             return FloatAttribute_Utils_Max::Get_FinalValue(InAttribute);
         }
         case ECk_MinMaxCurrent::Current:
@@ -310,14 +335,14 @@ auto
     UCk_Utils_FloatAttribute_UE::
     Request_Override(
         UPARAM(ref) FCk_Handle_FloatAttribute& InAttribute,
-        ECk_MinMaxCurrent InAttributeComponent,
-        float InNewBaseValue)
+        float InNewBaseValue,
+        ECk_MinMaxCurrent InAttributeComponent)
     -> FCk_Handle_FloatAttribute
 {
     const auto CurrentBaseValue = Get_BaseValue(InAttribute, InAttributeComponent);
     const auto Delta = InNewBaseValue - CurrentBaseValue;
 
-    CK_ENSURE_IF_NOT(Has_BaseValue(InAttribute, InAttributeComponent),
+    CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Float Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
         UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute), InAttributeComponent)
@@ -343,17 +368,17 @@ auto
     {
         case ECk_MinMaxCurrent::Min:
         {
-            CK_SIGNAL_BIND(InAttribute, InDelegate, ck::UUtils_Signal_OnFloatAttributeValueChanged_Min, InBehavior, InPostFireBehavior);
+            CK_SIGNAL_BIND(ck::UUtils_Signal_OnFloatAttributeValueChanged_Min, InAttribute, InDelegate, InBehavior, InPostFireBehavior);
             break;
         }
         case ECk_MinMaxCurrent::Max:
         {
-            CK_SIGNAL_BIND(InAttribute, InDelegate, ck::UUtils_Signal_OnFloatAttributeValueChanged_Max, InBehavior, InPostFireBehavior);
+            CK_SIGNAL_BIND(ck::UUtils_Signal_OnFloatAttributeValueChanged_Max, InAttribute, InDelegate, InBehavior, InPostFireBehavior);
             break;
         }
         case ECk_MinMaxCurrent::Current:
         {
-            CK_SIGNAL_BIND(InAttribute, InDelegate, ck::UUtils_Signal_OnFloatAttributeValueChanged_Current, InBehavior, InPostFireBehavior);
+            CK_SIGNAL_BIND(ck::UUtils_Signal_OnFloatAttributeValueChanged_Current, InAttribute, InDelegate, InBehavior, InPostFireBehavior);
             break;
         }
     };
@@ -373,17 +398,17 @@ auto
     {
         case ECk_MinMaxCurrent::Min:
         {
-            CK_SIGNAL_UNBIND(InAttribute, InDelegate, ck::UUtils_Signal_OnFloatAttributeValueChanged_Min);
+            CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnFloatAttributeValueChanged_Min, InAttribute, InDelegate);
             break;
         }
         case ECk_MinMaxCurrent::Max:
         {
-            CK_SIGNAL_UNBIND(InAttribute, InDelegate, ck::UUtils_Signal_OnFloatAttributeValueChanged_Max);
+            CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnFloatAttributeValueChanged_Max, InAttribute, InDelegate);
             break;
         }
         case ECk_MinMaxCurrent::Current:
         {
-            CK_SIGNAL_UNBIND(InAttribute, InDelegate, ck::UUtils_Signal_OnFloatAttributeValueChanged_Current);
+            CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnFloatAttributeValueChanged_Current, InAttribute, InDelegate);
             break;
         }
     };
@@ -493,9 +518,9 @@ auto
         FCk_Handle_FloatAttributeModifier& InAttributeModifierEntity)
     -> FCk_Handle_FloatAttribute
 {
-    const auto& AttributeEntity = UCk_Utils_FloatAttribute_UE::CastChecked(
+    auto AttributeEntity = UCk_Utils_FloatAttribute_UE::CastChecked(
         UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttributeModifierEntity));
-    const auto& AttributeOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(AttributeEntity);
+    auto AttributeOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(AttributeEntity);
 
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAttributeModifierEntity);
 

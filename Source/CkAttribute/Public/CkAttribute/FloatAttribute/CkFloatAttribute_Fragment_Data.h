@@ -253,7 +253,7 @@ public:
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-    FCk_Handle  _Handle;
+    FCk_Handle_FloatAttribute  _AttributeHandle;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     float  _BaseValue = 0.0f;
@@ -262,12 +262,12 @@ private:
     float  _FinalValue = 0.0f;
 
 public:
-    CK_PROPERTY_GET(_Handle);
+    CK_PROPERTY_GET(_AttributeHandle);
     CK_PROPERTY_GET(_BaseValue);
     CK_PROPERTY_GET(_FinalValue);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Payload_FloatAttribute_OnValueChanged, _Handle, _BaseValue, _FinalValue);
+    CK_DEFINE_CONSTRUCTORS(FCk_Payload_FloatAttribute_OnValueChanged, _AttributeHandle, _BaseValue, _FinalValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

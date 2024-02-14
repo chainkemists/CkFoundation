@@ -25,9 +25,9 @@ public:
     friend class UCk_Utils_FloatAttributeModifier_UE;
 
 private:
-    class FloatAttribute_Utils_Current : public ck::TUtils_Attribute<ck::FFragment_FloatAttribute_Current> {};
     class FloatAttribute_Utils_Min : public ck::TUtils_Attribute<ck::FFragment_FloatAttribute_Min> {};
     class FloatAttribute_Utils_Max : public ck::TUtils_Attribute<ck::FFragment_FloatAttribute_Max> {};
+    class FloatAttribute_Utils_Current : public ck::TUtils_Attribute<ck::FFragment_FloatAttribute_Current> {};
 
     class RecordOfFloatAttributes_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfFloatAttributes> {};
 
@@ -123,26 +123,10 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
               DisplayName="[Ck][FloatAttribute] Has Base Value")
-    static float
-    Has_BaseValue(
+    static bool
+    Has_Component(
         const FCk_Handle_FloatAttribute& InAttribute,
-        ECk_MinMaxCurrent InAttributeComponent);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Attribute|Float",
-              DisplayName="[Ck][FloatAttribute] Has Bonus Value")
-    static float
-    Has_BonusValue(
-        const FCk_Handle_FloatAttribute& InAttribute,
-        ECk_MinMaxCurrent InAttributeComponent);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Attribute|Float",
-              DisplayName="[Ck][FloatAttribute] Has Final Value")
-    static float
-    Has_FinalValue(
-        const FCk_Handle_FloatAttribute& InAttribute,
-        ECk_MinMaxCurrent InAttributeComponent);
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Min);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
@@ -150,7 +134,7 @@ public:
     static float
     Get_BaseValue(
         const FCk_Handle_FloatAttribute& InAttribute,
-        ECk_MinMaxCurrent InAttributeComponent);
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
@@ -158,7 +142,7 @@ public:
     static float
     Get_BonusValue(
         const FCk_Handle_FloatAttribute& InAttribute,
-        ECk_MinMaxCurrent InAttributeComponent);
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
@@ -166,7 +150,7 @@ public:
     static float
     Get_FinalValue(
         const FCk_Handle_FloatAttribute& InAttribute,
-        ECk_MinMaxCurrent InAttributeComponent);
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -175,8 +159,8 @@ public:
     static FCk_Handle_FloatAttribute
     Request_Override(
         UPARAM(ref) FCk_Handle_FloatAttribute& InAttribute,
-        ECk_MinMaxCurrent InAttributeComponent,
-        float InNewBaseValue);
+        float InNewBaseValue,
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -243,7 +227,7 @@ public:
               DisplayName="[Ck][FloatAttribute] Remove Modifier")
     static FCk_Handle_FloatAttribute
     Remove(
-        UPARAM(ref) FCk_Handle_FloatAttributeModifier& InAttributeOwnerEntity);
+        UPARAM(ref) FCk_Handle_FloatAttributeModifier& InAttributeModifierEntity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
