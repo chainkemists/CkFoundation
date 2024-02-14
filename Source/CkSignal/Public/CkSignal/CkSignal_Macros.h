@@ -47,13 +47,13 @@ if (_PromiseDelegate_.IsBound())\
     _SignalUtils_##::Bind(_Handle_, _PromiseDelegate_, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);\
 }
 
-#define CK_SIGNAL_BIND(_Handle_, _Delegate_, _SignalUtils_, _BindingPolicy_, _PostFireBehavior_)\
+#define CK_SIGNAL_BIND(_SignalUtils_, _Handle_, _Delegate_, _BindingPolicy_, _PostFireBehavior_)\
 if (_PostFireBehavior_ == ECk_Signal_PostFireBehavior::DoNothing) \
 { _SignalUtils_::Bind(_Handle_, _Delegate_, _BindingPolicy_); } \
 else\
 { _SignalUtils_##_PostFireUnbind::Bind(_Handle_, _Delegate_, _BindingPolicy_); }
 
-#define CK_SIGNAL_UNBIND(_Handle_, _Delegate_, _SignalUtils_)\
+#define CK_SIGNAL_UNBIND(_SignalUtils_, _Handle_, _Delegate_)\
 _SignalUtils_::Unbind(_Handle_, _Delegate_)
 
 // --------------------------------------------------------------------------------------------------------------------
