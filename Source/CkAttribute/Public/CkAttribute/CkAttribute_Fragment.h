@@ -59,6 +59,20 @@ namespace ck::detail
 
 namespace ck
 {
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T>
+    struct TAttributeMinMax
+    {
+        static auto Min(T A, T B) -> T
+        { return (A < B) ? A : B; }
+
+        static auto Max(T A, T B) -> T
+        { return (B < A) ? A : B; }
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T>
     struct TAttributeModifierOperators
     {
