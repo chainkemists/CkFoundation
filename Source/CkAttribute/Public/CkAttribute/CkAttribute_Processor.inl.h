@@ -61,8 +61,8 @@ namespace ck::detail
 
         const auto FinalValue_Min = InAttributeMin._Final;
 
-        InAttributeCurrent._Base = FMath::Max(BaseValue, FinalValue_Min);
-        InAttributeCurrent._Final = FMath::Max(FinalValue, FinalValue_Min);
+        InAttributeCurrent._Base = TAttributeMinMax<AttributeDataType>::Max(BaseValue, FinalValue_Min);
+        InAttributeCurrent._Final = TAttributeMinMax<AttributeDataType>::Max(FinalValue, FinalValue_Min);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -82,8 +82,8 @@ namespace ck::detail
 
         const auto FinalValue_Max = InAttributeMax._Final;
 
-        InAttributeCurrent._Base = FMath::Min(BaseValue, FinalValue_Max);
-        InAttributeCurrent._Final = FMath::Min(FinalValue, FinalValue_Max);
+        InAttributeCurrent._Base = TAttributeMinMax<AttributeDataType>::Min(BaseValue, FinalValue_Max);
+        InAttributeCurrent._Final = TAttributeMinMax<AttributeDataType>::Min(FinalValue, FinalValue_Max);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
