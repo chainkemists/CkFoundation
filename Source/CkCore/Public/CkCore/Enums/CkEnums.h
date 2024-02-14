@@ -495,9 +495,9 @@ UENUM(BlueprintType)
 enum class ECk_MinMax : uint8
 {
     None,
-    Min,
-    Max,
-    MinMax
+    Min UMETA(DisplayName = "Has Min"),
+    Max UMETA(DisplayName = "Has Max"),
+    MinMax UMETA(DisplayName = "Has Min & Max")
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_MinMax);
