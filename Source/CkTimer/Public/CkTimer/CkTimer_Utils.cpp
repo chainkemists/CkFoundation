@@ -33,12 +33,12 @@ auto
         }
     });
 
-    auto NewTimerEntity = CastChecked(NewEntity);
+    auto NewTimerEntity = ck::StaticCast<FCk_Handle_Timer>(NewEntity);
 
     RecordOfTimers_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
     RecordOfTimers_Utils::Request_Connect(InHandle, NewTimerEntity);
 
-    return Cast(NewTimerEntity);
+    return NewTimerEntity;
 }
 
 auto
@@ -67,7 +67,7 @@ auto
         TimerEntity.AddOrGet<ck::FTag_Timer_NeedsUpdate>();
     }
 
-    return Cast(TimerEntity);
+    return ck::StaticCast<FCk_Handle_Timer>(TimerEntity);
 }
 
 auto
@@ -97,8 +97,7 @@ auto
         FGameplayTag InTimerName)
     -> FCk_Handle_Timer
 {
-    return CastChecked(Get_EntityOrRecordEntry_WithFragmentAndLabel<UCk_Utils_Timer_UE, RecordOfTimers_Utils>(
-        InTimerOwnerEntity, InTimerName));
+    return RecordOfTimers_Utils::Get_ValidEntry_If(InTimerOwnerEntity, ck::algo::MatchesGameplayLabelExact{InTimerName});
 }
 
 auto
@@ -182,9 +181,9 @@ auto
     RecordOfTimers_Utils::ForEach_ValidEntry
     (
         InTimerOwnerEntity,
-        [&](const FCk_Handle& InTimerEntity)
+        [&](const FCk_Handle_Timer& InTimerEntity)
         {
-            InFunc(CastChecked(InTimerEntity));
+            InFunc(InTimerEntity);
         }
     );
 }
