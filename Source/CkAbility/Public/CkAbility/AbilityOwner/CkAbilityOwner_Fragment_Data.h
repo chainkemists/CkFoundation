@@ -261,24 +261,24 @@ public:
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_AbilityOwner_Events,
-    FCk_Handle, InHandle,
+    FCk_Handle_AbilityOwner, InHandle,
     const TArray<FCk_AbilityOwner_Event>&, InEvents);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_AbilityOwner_Events_MC,
-    FCk_Handle, InHandle,
+    FCk_Handle_AbilityOwner, InHandle,
     const TArray<FCk_AbilityOwner_Event>&, InEvents);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_AbilityOwner_OnTagsUpdated,
-    FCk_Handle, InHandle,
+    FCk_Handle_AbilityOwner, InHandle,
     const FGameplayTagContainer&, InActiveTags);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_AbilityOwner_OnTagsUpdated_MC,
-    FCk_Handle, InHandle,
+    FCk_Handle_AbilityOwner, InHandle,
     const FGameplayTagContainer&, InActiveTags);
 
 // --------------------------------------------------------------------------------------------------------------------
