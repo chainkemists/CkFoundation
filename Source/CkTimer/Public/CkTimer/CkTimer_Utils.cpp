@@ -86,7 +86,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Timer, UCk_Utils_Timer_UE, FCk_Handle_Timer, ck::FFragment_Timer_Params, ck::FFragment_Timer_Current);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Timer, UCk_Utils_Timer_UE, FCk_Handle_Timer, UCk_Utils_Timer_UE::RecordOfTimers_Utils::RecordType);
 
 // --------------------------------------------------------------------------------------------------------------------
 
