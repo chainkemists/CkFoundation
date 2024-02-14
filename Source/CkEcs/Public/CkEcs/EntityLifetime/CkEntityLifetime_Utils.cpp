@@ -54,7 +54,8 @@ auto
 auto
     UCk_Utils_EntityLifetime_UE::
     Get_LifetimeOwner(
-        FCk_Handle InHandle)
+        FCk_Handle InHandle,
+        ECk_PendingKill_Policy InPendingKillPolicy)
     -> FCk_Handle
 {
     CK_ENSURE_IF_NOT(InHandle.Has<ck::FFragment_LifetimeOwner>(),
@@ -62,7 +63,19 @@ auto
         InHandle)
     { return {}; }
 
-    return InHandle.Get<ck::FFragment_LifetimeOwner>().Get_Entity();
+    switch(InPendingKillPolicy)
+    {
+        case ECk_PendingKill_Policy::ExcludePendingKill:
+        {
+            return InHandle.Get<ck::FFragment_LifetimeOwner>().Get_Entity();
+        }
+        case ECk_PendingKill_Policy::IncludePendingKill:
+        {
+            return InHandle.Get<ck::FFragment_LifetimeOwner, ck::IsValid_Policy_IncludePendingKill>().Get_Entity();
+        }
+    }
+
+    return {};
 }
 
 auto
