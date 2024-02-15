@@ -70,27 +70,31 @@ namespace ck
         static auto
         ForEach_ValidEntry(
             FCk_Handle& InHandle,
-            T_Func InFunc) -> void;
+            T_Func InFunc,
+            ECk_Record_ForEach_Policy InPolicy = ECk_Record_ForEach_Policy::EnsureRecordExists) -> void;
 
         template <typename T_Func>
         static auto
         ForEach_ValidEntry(
             const FCk_Handle& InHandle,
-            T_Func InFunc) -> void;
+            T_Func InFunc,
+            ECk_Record_ForEach_Policy InPolicy = ECk_Record_ForEach_Policy::EnsureRecordExists) -> void;
 
         template <typename T_Unary, typename T_Predicate>
         static auto
         ForEach_ValidEntry_If(
             FCk_Handle& InRecordHandle,
             T_Unary InFunc,
-            T_Predicate InPredicate) -> void;
+            T_Predicate InPredicate,
+            ECk_Record_ForEach_Policy InPolicy = ECk_Record_ForEach_Policy::EnsureRecordExists) -> void;
 
         template <typename T_Unary, typename T_Predicate>
         static auto
         ForEach_ValidEntry_If(
             const FCk_Handle& InRecordHandle,
             T_Unary InFunc,
-            T_Predicate InPredicate) -> void;
+            T_Predicate InPredicate,
+            ECk_Record_ForEach_Policy InPolicy = ECk_Record_ForEach_Policy::EnsureRecordExists) -> void;
 
     public:
         static auto
@@ -198,8 +202,16 @@ namespace ck
         TUtils_RecordOfEntities<T_DerivedRecord>::
         ForEach_ValidEntry(
             FCk_Handle& InHandle,
-            T_Func InFunc) -> void
+            T_Func InFunc,
+            ECk_Record_ForEach_Policy InPolicy)
+        -> void
     {
+        if (InPolicy == ECk_Record_ForEach_Policy::IgnoreRecordMissing)
+        {
+            if (NOT InHandle.Has<RecordType>())
+            { return; }
+        }
+
         auto& Fragment      = InHandle.Get<RecordType>();
         auto& RecordEntries = Fragment._RecordEntries;
 
@@ -224,9 +236,16 @@ namespace ck
         TUtils_RecordOfEntities<T_DerivedRecord>::
         ForEach_ValidEntry(
             const FCk_Handle& InHandle,
-            T_Func InFunc)
+            T_Func InFunc,
+            ECk_Record_ForEach_Policy InPolicy)
         -> void
     {
+        if (InPolicy == ECk_Record_ForEach_Policy::IgnoreRecordMissing)
+        {
+            if (NOT InHandle.Has<RecordType>())
+            { return; }
+        }
+
         const auto& Fragment      = InHandle.Get<RecordType>();
         const auto& RecordEntries = Fragment._RecordEntries;
 
@@ -253,14 +272,15 @@ namespace ck
         ForEach_ValidEntry_If(
             FCk_Handle& InRecordHandle,
             T_Unary InFunc,
-            T_Predicate InPredicate)
+            T_Predicate InPredicate,
+            ECk_Record_ForEach_Policy InPolicy)
         -> void
     {
         ForEach_ValidEntry(InRecordHandle, [&](HandleType InRecordEntryHandle)
         {
             if (InPredicate(InRecordEntryHandle))
             { InFunc(InRecordEntryHandle); }
-        });
+        }, InPolicy);
     }
 
     template <typename T_DerivedRecord>
@@ -270,14 +290,15 @@ namespace ck
         ForEach_ValidEntry_If(
             const FCk_Handle& InRecordHandle,
             T_Unary InFunc,
-            T_Predicate InPredicate)
+            T_Predicate InPredicate,
+            ECk_Record_ForEach_Policy InPolicy)
         -> void
     {
         ForEach_ValidEntry(InRecordHandle, [&](const HandleType& InRecordEntryHandle)
         {
             if (InPredicate(InRecordEntryHandle))
             { InFunc(InRecordEntryHandle); }
-        });
+        }, InPolicy);
     }
 
     template <typename T_DerivedRecord>
