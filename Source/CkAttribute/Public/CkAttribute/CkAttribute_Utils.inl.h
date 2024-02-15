@@ -126,7 +126,7 @@ namespace ck
         {
             case ECk_ArithmeticOperations_Basic::Add:
             {
-                InHandle.template Add<typename AttributeModifierFragmentType::FTag_AdditiveModification>();
+                InHandle.template Add<typename AttributeModifierFragmentType::FTag_ModifyAdd>();
                 break;
             }
             case ECk_ArithmeticOperations_Basic::Subtract:
@@ -135,7 +135,7 @@ namespace ck
                 break;
             }
             case ECk_ArithmeticOperations_Basic::Multiply:
-                InHandle.template Add<typename AttributeModifierFragmentType::FTag_MultiplicativeModification>();
+                InHandle.template Add<typename AttributeModifierFragmentType::FTag_ModifyMultiply>();
                 break;
             case ECk_ArithmeticOperations_Basic::Divide:
                 InHandle.template Add<typename AttributeModifierFragmentType::FTag_ModifyDivide>();

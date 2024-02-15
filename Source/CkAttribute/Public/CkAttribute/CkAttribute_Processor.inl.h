@@ -130,7 +130,7 @@ namespace ck::detail
 
     template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
     auto
-        TProcessor_AttributeModifier_RevocableAdditive_Compute<T_DerivedProcessor ,T_AttributeModifierFragment>::
+        TProcessor_AttributeModifier_RevocableAdd_Compute<T_DerivedProcessor ,T_AttributeModifierFragment>::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
@@ -178,7 +178,7 @@ namespace ck::detail
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     auto
-        TProcessor_AttributeModifier_NotRevocableAdditive_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
+        TProcessor_AttributeModifier_NotRevocableAdd_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
@@ -236,7 +236,7 @@ namespace ck::detail
 
     template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
     auto
-        TProcessor_AttributeModifier_RevocableMultiplicative_Compute<T_DerivedProcessor, T_AttributeModifierFragment>::
+        TProcessor_AttributeModifier_RevocableMultiply_Compute<T_DerivedProcessor, T_AttributeModifierFragment>::
         ForEachEntity(
             const TimeType&,
             HandleType InHandle,
@@ -276,7 +276,7 @@ namespace ck::detail
 
     template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
     auto
-        TProcessor_AttributeModifier_NotRevocableMultiplicative_Compute<T_DerivedProcessor, T_AttributeModifierFragment>::
+        TProcessor_AttributeModifier_NotRevocableMultiply_Compute<T_DerivedProcessor, T_AttributeModifierFragment>::
         ForEachEntity(
             const TimeType&,
             HandleType InHandle,
@@ -324,13 +324,13 @@ namespace ck::detail
     TProcessor_AttributeModifier_ComputeAll<T_DerivedProcessor, T_DerivedAttributeModifier>::
         TProcessor_AttributeModifier_ComputeAll(
             RegistryType InRegistry)
-        : _NotRevocableAdditive_Compute(InRegistry)
+        : _NotRevocableAdd_Compute(InRegistry)
         , _NotRevocableSubtract_Compute(InRegistry)
-        , _NotRevocableMultiplicative_Compute(InRegistry)
+        , _NotRevocableMultiply_Compute(InRegistry)
         , _NotRevocableDivide_Compute(InRegistry)
-        , _RevocableAdditive_Compute(InRegistry)
+        , _RevocableAdd_Compute(InRegistry)
         , _RevocableSubtract_Compute(InRegistry)
-        , _RevocableMultiplicative_Compute(InRegistry)
+        , _RevocableMultiply_Compute(InRegistry)
         , _RevocableDivide_Compute(InRegistry)
         , _Registry(InRegistry)
     {
@@ -343,14 +343,14 @@ namespace ck::detail
             TimeType InDeltaT)
         -> void
     {
-        _NotRevocableAdditive_Compute.Tick(InDeltaT);
+        _NotRevocableAdd_Compute.Tick(InDeltaT);
         _NotRevocableSubtract_Compute.Tick(InDeltaT);
-        _NotRevocableMultiplicative_Compute.Tick(InDeltaT);
+        _NotRevocableMultiply_Compute.Tick(InDeltaT);
         _NotRevocableDivide_Compute.Tick(InDeltaT);
 
-        _RevocableAdditive_Compute.Tick(InDeltaT);
+        _RevocableAdd_Compute.Tick(InDeltaT);
         _RevocableSubtract_Compute.Tick(InDeltaT);
-        _RevocableMultiplicative_Compute.Tick(InDeltaT);
+        _RevocableMultiply_Compute.Tick(InDeltaT);
         _RevocableDivide_Compute.Tick(InDeltaT);
 
         this->_Registry.template Clear<MarkedDirtyBy>();

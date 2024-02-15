@@ -37,25 +37,25 @@ namespace ck::detail
     class TProcessor_Attribute_RecomputeAll;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_RevocableAdditive_Compute;
+    class TProcessor_AttributeModifier_RevocableAdd_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_RevocableSubtract_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_RevocableMultiplicative_Compute;
+    class TProcessor_AttributeModifier_RevocableMultiply_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_RevocableDivide_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_NotRevocableAdditive_Compute;
+    class TProcessor_AttributeModifier_NotRevocableAdd_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_NotRevocableSubtract_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_NotRevocableMultiplicative_Compute;
+    class TProcessor_AttributeModifier_NotRevocableMultiply_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_NotRevocableDivide_Compute;
@@ -113,25 +113,25 @@ namespace ck
         friend class detail::TProcessor_Attribute_RecomputeAll;
 
         template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_RevocableAdditive_Compute;
+        friend class detail::TProcessor_AttributeModifier_RevocableAdd_Compute;
 
         template <typename, typename>
         friend class detail::TProcessor_AttributeModifier_RevocableSubtract_Compute;
 
         template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_RevocableMultiplicative_Compute;
+        friend class detail::TProcessor_AttributeModifier_RevocableMultiply_Compute;
 
         template <typename, typename>
         friend class detail::TProcessor_AttributeModifier_RevocableDivide_Compute;
 
         template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_NotRevocableAdditive_Compute;
+        friend class detail::TProcessor_AttributeModifier_NotRevocableAdd_Compute;
 
         template <typename, typename>
         friend class detail::TProcessor_AttributeModifier_NotRevocableSubtract_Compute;
 
         template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_NotRevocableMultiplicative_Compute;
+        friend class detail::TProcessor_AttributeModifier_NotRevocableMultiply_Compute;
 
         template <typename, typename>
         friend class detail::TProcessor_AttributeModifier_NotRevocableDivide_Compute;
@@ -206,9 +206,9 @@ namespace ck
         friend class TUtils_AttributeModifier;
 
     public:
-        CK_DEFINE_ECS_TAG(FTag_AdditiveModification);
+        CK_DEFINE_ECS_TAG(FTag_ModifyAdd);
         CK_DEFINE_ECS_TAG(FTag_ModifySubtract);
-        CK_DEFINE_ECS_TAG(FTag_MultiplicativeModification);
+        CK_DEFINE_ECS_TAG(FTag_ModifyMultiply);
         CK_DEFINE_ECS_TAG(FTag_ModifyDivide);
         CK_DEFINE_ECS_TAG(FTag_IsRevocableModification);
         CK_DEFINE_ECS_TAG(FTag_IsNotRevocableModification);
