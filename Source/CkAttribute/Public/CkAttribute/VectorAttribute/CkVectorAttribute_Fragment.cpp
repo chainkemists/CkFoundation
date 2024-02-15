@@ -37,9 +37,11 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-void
-    UCk_Fragment_VectorAttribute_Rep::GetLifetimeReplicatedProps(
+auto
+    UCk_Fragment_VectorAttribute_Rep::
+    GetLifetimeReplicatedProps(
         TArray<FLifetimeProperty>& OutLifetimeProps) const
+    -> void
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
@@ -52,7 +54,7 @@ auto
     OnRep_PendingModifiers()
     -> void
 {
-    if (NOT ck::IsValid(Get_AssociatedEntity()))
+    if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
     { return; }
 
     if (GetWorld()->IsNetMode(NM_DedicatedServer))
@@ -70,7 +72,7 @@ auto
         const auto& AttributeName = Modifier.Get_Params().Get_TargetAttributeName();
         auto Attribute = UCk_Utils_VectorAttribute_UE::TryGet(_AssociatedEntity, AttributeName);
 
-        CK_LOG_ERROR_IF_NOT(ck::attribute, ck::IsValid(Modifier.Get_Params().Get_TargetAttributeName()),
+        CK_LOG_ERROR_IF_NOT(ck::attribute, ck::IsValid(Attribute),
             TEXT("Received a AddModifier Request from the SERVER with ModifierName [{}] for a TargetAttribute with INVALID name.{}"),
             Modifier.Get_ModifierName(), ck::Context(this))
         { continue; }
@@ -112,3 +114,5 @@ auto
     }
     _NextPendingRemoveModifier = _PendingRemoveModifiers.Num();
 }
+
+// --------------------------------------------------------------------------------------------------------------------
