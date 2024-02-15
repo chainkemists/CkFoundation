@@ -63,7 +63,7 @@ public:
 
 private:
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|ByteAttribute",
+        Category = "Ck|Utils|Attribute|Byte",
         DisplayName="[Ck][ByteAttribute] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_ByteAttribute
@@ -72,7 +72,7 @@ private:
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|ByteAttribute",
+        Category = "Ck|Utils|Attribute|Byte",
         DisplayName="[Ck][ByteAttribute] Handle -> ByteAttribute Handle",
         meta = (CompactNodeTitle = "<AsByteAttribute>", BlueprintAutocast))
     static FCk_Handle_ByteAttribute

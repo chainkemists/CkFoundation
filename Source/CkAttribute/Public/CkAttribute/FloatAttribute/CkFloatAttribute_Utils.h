@@ -63,7 +63,7 @@ public:
 
 private:
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|FloatAttribute",
+        Category = "Ck|Utils|Attribute|Float",
         DisplayName="[Ck][FloatAttribute] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_FloatAttribute
@@ -72,7 +72,7 @@ private:
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|FloatAttribute",
+        Category = "Ck|Utils|Attribute|Float",
         DisplayName="[Ck][FloatAttribute] Handle -> FloatAttribute Handle",
         meta = (CompactNodeTitle = "<AsFloatAttribute>", BlueprintAutocast))
     static FCk_Handle_FloatAttribute

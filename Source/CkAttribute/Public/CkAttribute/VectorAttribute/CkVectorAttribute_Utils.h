@@ -63,7 +63,7 @@ public:
 
 private:
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|VectorAttribute",
+        Category = "Ck|Utils|Attribute|Vector",
         DisplayName="[Ck][VectorAttribute] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_VectorAttribute
@@ -72,7 +72,7 @@ private:
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|VectorAttribute",
+        Category = "Ck|Utils|Attribute|Vector",
         DisplayName="[Ck][VectorAttribute] Handle -> VectorAttribute Handle",
         meta = (CompactNodeTitle = "<AsVectorAttribute>", BlueprintAutocast))
     static FCk_Handle_VectorAttribute
