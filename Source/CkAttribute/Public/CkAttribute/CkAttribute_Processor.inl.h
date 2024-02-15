@@ -107,17 +107,21 @@ namespace ck::detail
 
         InAttribute._Final = InAttribute._Base;
 
-        if (TUtils_AttributeModifier<AttributeModifierFragmentType>::RecordOfAttributeModifiers_Utils::Has(InHandle))
-        {
-            TUtils_AttributeModifier<AttributeModifierFragmentType>::RecordOfAttributeModifiers_Utils::ForEach_ValidEntry
-            (
-                InHandle,
-                [&](auto InAttributeModifier) -> void
-                {
-                    TUtils_AttributeModifier<AttributeModifierFragmentType>::Request_ComputeResult(InAttributeModifier);
-                }
-            );
-        }
+        TUtils_AttributeModifier<AttributeModifierFragmentType>::RecordOfAttributeModifiers_Utils::ForEach_ValidEntry
+        (
+            InHandle,
+            [&](auto InAttributeModifier) -> void
+            {
+                // This is necessary since all 3 types of attribute components (Min/Max/Current) are stored in the same Record.
+                // Since this processor is specialized for one of them, we need to skip over the modifiers that does NOT match it
+                // to avoid triggering an ensure.
+                if (NOT TUtils_AttributeModifier<AttributeModifierFragmentType>::Has(InAttributeModifier))
+                { return; }
+
+                TUtils_AttributeModifier<AttributeModifierFragmentType>::Request_ComputeResult(InAttributeModifier);
+            },
+            ECk_Record_ForEach_Policy::IgnoreRecordMissing
+        );
 
         TUtils_Attribute<AttributeFragmentType>::Request_FireSignals(InHandle);
     }
