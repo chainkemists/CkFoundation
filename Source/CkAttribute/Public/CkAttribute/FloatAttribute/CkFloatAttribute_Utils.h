@@ -122,7 +122,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
-              DisplayName="[Ck][FloatAttribute] Has Base Value")
+              DisplayName="[Ck][FloatAttribute] Has Component")
     static bool
     Has_Component(
         const FCk_Handle_FloatAttribute& InAttribute,
