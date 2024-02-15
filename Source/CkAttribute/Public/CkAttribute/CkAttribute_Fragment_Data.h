@@ -38,3 +38,15 @@ enum class ECk_AttributeModifier_ExistMissing
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AttributeModifier_ExistMissing);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Attribute_BaseBonusFinal
+{
+    Base,
+    Bonus,
+    Final
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Attribute_BaseBonusFinal);
+
+// --------------------------------------------------------------------------------------------------------------------
