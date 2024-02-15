@@ -56,9 +56,16 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Byte",
-              DisplayName="[Ck][ByteAttribute] Has Any Attribute")
+              DisplayName="[Ck][ByteAttribute] Has Feature")
     static bool
     Has(
+        const FCk_Handle& InAttributeOwnerEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Byte",
+              DisplayName="[Ck][ByteAttribute] Has Any Attribute")
+    static bool
+    Has_Any(
         const FCk_Handle& InAttributeOwnerEntity);
 
 private:
