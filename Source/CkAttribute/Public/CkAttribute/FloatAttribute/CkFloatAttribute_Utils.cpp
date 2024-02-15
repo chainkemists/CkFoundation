@@ -497,12 +497,27 @@ auto
 {
     switch(InComponent)
     {
-        case ECk_MinMaxCurrent::Min:
-            return RecordOfFloatAttributeModifiers_Utils_Min::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
-        case ECk_MinMaxCurrent::Max:
-            return RecordOfFloatAttributeModifiers_Utils_Max::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
         case ECk_MinMaxCurrent::Current:
+        {
+            if (NOT RecordOfFloatAttributeModifiers_Utils_Current::Has(InAttribute))
+            { return {}; }
+
             return RecordOfFloatAttributeModifiers_Utils_Current::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
+        }
+        case ECk_MinMaxCurrent::Min:
+        {
+            if (NOT RecordOfFloatAttributeModifiers_Utils_Min::Has(InAttribute))
+            { return {}; }
+
+            return RecordOfFloatAttributeModifiers_Utils_Min::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            if (NOT RecordOfFloatAttributeModifiers_Utils_Max::Has(InAttribute))
+            { return {}; }
+
+            return RecordOfFloatAttributeModifiers_Utils_Max::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
+        }
         default:
             return {};
     }
