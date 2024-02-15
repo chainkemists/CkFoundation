@@ -122,7 +122,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Vector",
-              DisplayName="[Ck][VectorAttribute] Has Base Value")
+              DisplayName="[Ck][VectorAttribute] Has Component")
     static bool
     Has_Component(
         const FCk_Handle_VectorAttribute& InAttribute,

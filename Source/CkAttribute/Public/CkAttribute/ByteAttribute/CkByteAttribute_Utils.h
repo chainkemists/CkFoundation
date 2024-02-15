@@ -122,7 +122,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Byte",
-              DisplayName="[Ck][ByteAttribute] Has Base Value")
+              DisplayName="[Ck][ByteAttribute] Has Component")
     static bool
     Has_Component(
         const FCk_Handle_ByteAttribute& InAttribute,

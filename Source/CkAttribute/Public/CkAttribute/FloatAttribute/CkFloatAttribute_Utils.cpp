@@ -208,7 +208,7 @@ auto
     UCk_Utils_FloatAttribute_UE::
     Has_Component(
         const FCk_Handle_FloatAttribute& InAttribute,
-        ECk_MinMaxCurrent                InAttributeComponent)
+        ECk_MinMaxCurrent InAttributeComponent)
     -> bool
 {
     switch (InAttributeComponent)
@@ -226,8 +226,10 @@ auto
             return FloatAttribute_Utils_Current::Has(InAttribute);
         }
         default:
+        {
+            CK_INVALID_ENUM(InAttributeComponent);
             return {};
-
+        }
     }
 }
 
