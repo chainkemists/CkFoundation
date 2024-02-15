@@ -87,6 +87,15 @@ auto
     });
 }
 
+auto
+    UCk_Utils_ByteAttribute_UE::
+    Has_Any(
+        const FCk_Handle& InAttributeOwnerEntity)
+    -> bool
+{
+    return RecordOfByteAttributes_Utils::Has(InAttributeOwnerEntity);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(ByteAttribute, UCk_Utils_ByteAttribute_UE, FCk_Handle_ByteAttribute, ck::FFragment_ByteAttribute_Current);
@@ -140,7 +149,8 @@ auto
     RecordOfByteAttributes_Utils::ForEach_ValidEntry
     (
         InAttributeOwner,
-        InFunc
+        InFunc,
+        ECk_Record_ForEach_Policy::IgnoreRecordMissing
     );
 }
 
@@ -193,7 +203,8 @@ auto
     (
         InAttributeOwner,
         InFunc,
-        InPredicate
+        InPredicate,
+        ECk_Record_ForEach_Policy::IgnoreRecordMissing
     );
 }
 
@@ -534,8 +545,8 @@ auto
         FCk_Handle_ByteAttributeModifier& InAttributeModifierEntity)
     -> FCk_Handle_ByteAttribute
 {
-    auto AttributeEntity = UCk_Utils_ByteAttribute_UE::CastChecked(
-        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttributeModifierEntity));
+    auto AttributeModifierOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttributeModifierEntity);
+    auto AttributeEntity = UCk_Utils_ByteAttribute_UE::CastChecked(AttributeModifierOwnerEntity);
     auto AttributeOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(AttributeEntity);
 
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAttributeModifierEntity);

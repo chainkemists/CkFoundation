@@ -87,6 +87,15 @@ auto
     });
 }
 
+auto
+    UCk_Utils_VectorAttribute_UE::
+    Has_Any(
+        const FCk_Handle& InAttributeOwnerEntity)
+    -> bool
+{
+    return RecordOfVectorAttributes_Utils::Has(InAttributeOwnerEntity);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(VectorAttribute, UCk_Utils_VectorAttribute_UE, FCk_Handle_VectorAttribute, ck::FFragment_VectorAttribute_Current);
@@ -140,13 +149,8 @@ auto
     RecordOfVectorAttributes_Utils::ForEach_ValidEntry
     (
         InAttributeOwner,
-        [&](const FCk_Handle_VectorAttribute& InAttribute)
-        {
-            if (InAttribute == InAttributeOwner)
-            { return; }
-
-            InFunc(InAttribute);
-        }
+        InFunc,
+        ECk_Record_ForEach_Policy::IgnoreRecordMissing
     );
 }
 
@@ -198,14 +202,9 @@ auto
     RecordOfVectorAttributes_Utils::ForEach_ValidEntry_If
     (
         InAttributeOwner,
-        [&](const FCk_Handle_VectorAttribute& InAttribute)
-        {
-            if (InAttribute == InAttributeOwner)
-            { return; }
-
-            InFunc(InAttribute);
-        },
-        InPredicate
+        InFunc,
+        InPredicate,
+        ECk_Record_ForEach_Policy::IgnoreRecordMissing
     );
 }
 
@@ -546,8 +545,8 @@ auto
         FCk_Handle_VectorAttributeModifier& InAttributeModifierEntity)
     -> FCk_Handle_VectorAttribute
 {
-    auto AttributeEntity = UCk_Utils_VectorAttribute_UE::CastChecked(
-        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttributeModifierEntity));
+    auto AttributeModifierOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttributeModifierEntity);
+    auto AttributeEntity = UCk_Utils_VectorAttribute_UE::CastChecked(AttributeModifierOwnerEntity);
     auto AttributeOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(AttributeEntity);
 
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAttributeModifierEntity);
