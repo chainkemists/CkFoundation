@@ -91,6 +91,9 @@ auto
         FGameplayTag InTimerName)
     -> FCk_Handle_Timer
 {
+    if (NOT RecordOfTimers_Utils::Has(InTimerOwnerEntity))
+    { return {}; }
+
     return RecordOfTimers_Utils::Get_ValidEntry_If(InTimerOwnerEntity, ck::algo::MatchesGameplayLabelExact{InTimerName});
 }
 
