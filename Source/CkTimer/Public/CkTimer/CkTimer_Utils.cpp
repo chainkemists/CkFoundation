@@ -48,26 +48,20 @@ auto
         const FCk_Fragment_Timer_ParamsData& InParams)
     -> FCk_Handle_Timer
 {
-    if (const auto& ExistingTimerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<UCk_Utils_Timer_UE,
-            RecordOfTimers_Utils>(InTimerOwnerEntity, InParams.Get_TimerName());
-        ck::Is_NOT_Valid(ExistingTimerEntity))
-    {
-        return Add(InTimerOwnerEntity, InParams);
-    }
+    auto MaybeExistingTimerEntity = TryGet_Timer(InTimerOwnerEntity, InParams.Get_TimerName());
 
-    auto TimerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Timer_UE,
-        RecordOfTimers_Utils>(InTimerOwnerEntity, InParams.Get_TimerName());
+    if (ck::Is_NOT_Valid(MaybeExistingTimerEntity))
+    { return Add(InTimerOwnerEntity, InParams); }
 
-    TimerEntity.Replace<ck::FFragment_Timer_Params>(InParams);
-    TimerEntity.Replace<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
+    MaybeExistingTimerEntity.Replace<ck::FFragment_Timer_Params>(InParams);
+    MaybeExistingTimerEntity.Replace<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
 
     if (InParams.Get_StartingState() == ECk_Timer_State::Running)
     {
-        TimerEntity.AddOrGet<ck::FTag_Timer_NeedsUpdate>();
+        MaybeExistingTimerEntity.AddOrGet<ck::FTag_Timer_NeedsUpdate>();
     }
 
-    return ck::StaticCast<FCk_Handle_Timer>(TimerEntity);
+    return ck::StaticCast<FCk_Handle_Timer>(MaybeExistingTimerEntity);
 }
 
 auto
