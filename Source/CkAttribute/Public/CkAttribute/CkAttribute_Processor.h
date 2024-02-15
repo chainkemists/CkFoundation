@@ -27,7 +27,7 @@ namespace ck::detail
         using TimeType              = typename Super::TimeType;
 
     public:
-        using Super::Super;
+        CK_USING_BASE_CONSTRUCTORS(Super);
 
     public:
         auto ForEachEntity(
@@ -61,7 +61,7 @@ namespace ck::detail
         using TimeType                      = typename Super::TimeType;
 
     public:
-        using Super::Super;
+        CK_USING_BASE_CONSTRUCTORS(Super);
 
     public:
         auto ForEachEntity(
@@ -96,7 +96,7 @@ namespace ck::detail
         using TimeType                      = typename Super::TimeType;
 
     public:
-        using Super::Super;
+        CK_USING_BASE_CONSTRUCTORS(Super);
 
     public:
         auto ForEachEntity(
@@ -131,7 +131,7 @@ namespace ck::detail
         using TimeType                      = typename Super::TimeType;
 
     public:
-        using Super::Super;
+        CK_USING_BASE_CONSTRUCTORS(Super);
 
     public:
         auto ForEachEntity(
@@ -169,7 +169,7 @@ namespace ck::detail
         using TimeType                      = typename Super::TimeType;
 
     public:
-        using Super::Super;
+        CK_USING_BASE_CONSTRUCTORS(Super);
 
     public:
         auto ForEachEntity(
@@ -207,7 +207,7 @@ namespace ck::detail
         using TimeType                      = typename Super::TimeType;
 
     public:
-        using Super::Super;
+        CK_USING_BASE_CONSTRUCTORS(Super);
 
     public:
         auto ForEachEntity(
@@ -245,7 +245,7 @@ namespace ck::detail
         using TimeType                       = typename Super::TimeType;
 
     public:
-        using Super::Super;
+        CK_USING_BASE_CONSTRUCTORS(Super);
 
     public:
         auto ForEachEntity(
@@ -283,7 +283,7 @@ namespace ck::detail
         using TimeType                       = typename Super::TimeType;
 
     public:
-        using Super::Super;
+        CK_USING_BASE_CONSTRUCTORS(Super);
 
     public:
         auto ForEachEntity(
@@ -321,7 +321,7 @@ namespace ck::detail
         using TimeType                      = typename Super::TimeType;
 
     public:
-        using Super::Super;
+        CK_USING_BASE_CONSTRUCTORS(Super);
 
     public:
         auto ForEachEntity(
@@ -359,7 +359,7 @@ namespace ck::detail
         using TimeType                      = typename Super::TimeType;
 
     public:
-        using Super::Super;
+        CK_USING_BASE_CONSTRUCTORS(Super);
 
     public:
         auto ForEachEntity(
@@ -397,7 +397,7 @@ namespace ck::detail
         using TimeType                       = typename Super::TimeType;
 
     public:
-        using Super::Super;
+        CK_USING_BASE_CONSTRUCTORS(Super);
 
     public:
         auto ForEachEntity(
@@ -435,7 +435,7 @@ namespace ck::detail
         using TimeType                       = typename Super::TimeType;
 
     public:
-        using Super::Super;
+        CK_USING_BASE_CONSTRUCTORS(Super);
 
     public:
         auto ForEachEntity(
@@ -508,7 +508,7 @@ namespace ck::detail
         using TimeType                      = typename Super::TimeType;
 
     public:
-        using Super::Super;
+        CK_USING_BASE_CONSTRUCTORS(Super);
 
     public:
         auto ForEachEntity(
