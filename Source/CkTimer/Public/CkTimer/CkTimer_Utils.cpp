@@ -78,9 +78,18 @@ auto
     });
 }
 
+auto
+    UCk_Utils_Timer_UE::
+    Has_Any(
+        const FCk_Handle& InAttributeOwnerEntity)
+    -> bool
+{
+    return RecordOfTimers_Utils::Has(InAttributeOwnerEntity);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Timer, UCk_Utils_Timer_UE, FCk_Handle_Timer, UCk_Utils_Timer_UE::RecordOfTimers_Utils::RecordType);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Timer, UCk_Utils_Timer_UE, FCk_Handle_Timer, ck::FFragment_Timer_Current, ck::FFragment_Timer_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -172,16 +181,11 @@ auto
         const TFunction<void(FCk_Handle_Timer)>& InFunc)
     -> void
 {
-    if (NOT RecordOfTimers_Utils::Has(InTimerOwnerEntity))
-    { return; }
-
     RecordOfTimers_Utils::ForEach_ValidEntry
     (
         InTimerOwnerEntity,
-        [&](const FCk_Handle_Timer& InTimerEntity)
-        {
-            InFunc(InTimerEntity);
-        }
+        InFunc,
+        ECk_Record_ForEach_Policy::IgnoreRecordMissing
     );
 }
 
