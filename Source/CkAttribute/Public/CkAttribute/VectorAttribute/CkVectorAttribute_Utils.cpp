@@ -504,10 +504,10 @@ auto
     TryGet(
         const FCk_Handle_VectorAttribute& InAttribute,
         FGameplayTag InModifierName,
-        ECk_MinMaxCurrent _Component)
+        ECk_MinMaxCurrent InComponent)
     -> FCk_Handle_VectorAttributeModifier
 {
-    switch(_Component)
+    switch(InComponent)
     {
         case ECk_MinMaxCurrent::Min:
             return RecordOfVectorAttributeModifiers_Utils_Min::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});

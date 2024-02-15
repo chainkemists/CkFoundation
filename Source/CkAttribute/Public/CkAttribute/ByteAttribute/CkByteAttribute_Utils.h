@@ -220,7 +220,7 @@ public:
     TryGet(
         const FCk_Handle_ByteAttribute& InAttribute,
         FGameplayTag InModifierName,
-        ECk_MinMaxCurrent _Component = ECk_MinMaxCurrent::Current);
+        ECk_MinMaxCurrent InComponent = ECk_MinMaxCurrent::Current);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Byte",

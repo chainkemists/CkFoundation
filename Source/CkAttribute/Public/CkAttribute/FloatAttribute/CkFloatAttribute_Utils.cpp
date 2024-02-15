@@ -492,10 +492,10 @@ auto
     TryGet(
         const FCk_Handle_FloatAttribute& InAttribute,
         FGameplayTag InModifierName,
-        ECk_MinMaxCurrent _Component)
+        ECk_MinMaxCurrent InComponent)
     -> FCk_Handle_FloatAttributeModifier
 {
-    switch(_Component)
+    switch(InComponent)
     {
         case ECk_MinMaxCurrent::Min:
             return RecordOfFloatAttributeModifiers_Utils_Min::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
