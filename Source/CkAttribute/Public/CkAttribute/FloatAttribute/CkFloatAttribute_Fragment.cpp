@@ -37,9 +37,11 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-void
-    UCk_Fragment_FloatAttribute_Rep::GetLifetimeReplicatedProps(
+auto
+    UCk_Fragment_FloatAttribute_Rep::
+    GetLifetimeReplicatedProps(
         TArray<FLifetimeProperty>& OutLifetimeProps) const
+    -> void
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
@@ -52,7 +54,7 @@ auto
     OnRep_PendingModifiers()
     -> void
 {
-    if (NOT ck::IsValid(Get_AssociatedEntity()))
+    if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
     { return; }
 
     if (GetWorld()->IsNetMode(NM_DedicatedServer))
@@ -71,9 +73,8 @@ auto
         auto Attribute = UCk_Utils_FloatAttribute_UE::TryGet(_AssociatedEntity, AttributeName);
 
         CK_LOG_ERROR_IF_NOT(ck::attribute, ck::IsValid(Attribute),
-            TEXT("Received a AddModifier Request from the SERVER with ModifierName [{}] for a TargetAttribute with name [{}] "
-                "but could NOT find that Attribute on [{}]"),
-            Modifier.Get_ModifierName(), AttributeName, Get_AssociatedEntity())
+            TEXT("Received a AddModifier Request from the SERVER with ModifierName [{}] for a TargetAttribute with INVALID name.{}"),
+            Modifier.Get_ModifierName(), ck::Context(this))
         { continue; }
 
         UCk_Utils_FloatAttributeModifier_UE::Add(Attribute, Modifier.Get_ModifierName(), Modifier.Get_Params());
@@ -113,3 +114,5 @@ auto
     }
     _NextPendingRemoveModifier = _PendingRemoveModifiers.Num();
 }
+
+// --------------------------------------------------------------------------------------------------------------------
