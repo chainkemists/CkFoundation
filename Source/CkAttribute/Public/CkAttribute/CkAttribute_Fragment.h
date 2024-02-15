@@ -40,19 +40,28 @@ namespace ck::detail
     class TProcessor_AttributeModifier_RevokableAdditive_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_NotRevokableAdditive_Compute;
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_Additive_Teardown;
+    class TProcessor_AttributeModifier_RevokableSubtract_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_RevokableMultiplicative_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_RevokableDivide_Compute;
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_NotRevokableAdditive_Compute;
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_NotRevokableSubtract_Compute;
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_Multiplicative_Teardown;
+    class TProcessor_AttributeModifier_NotRevokableDivide_Compute;
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_Teardown;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -64,11 +73,8 @@ namespace ck
     template <typename T>
     struct TAttributeMinMax
     {
-        static auto Min(T A, T B) -> T
-        { return (A < B) ? A : B; }
-
-        static auto Max(T A, T B) -> T
-        { return (B < A) ? A : B; }
+        static auto Min(T A, T B) -> T { return (A < B) ? A : B; }
+        static auto Max(T A, T B) -> T { return (B < A) ? A : B; }
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -76,8 +82,10 @@ namespace ck
     template <typename T>
     struct TAttributeModifierOperators
     {
-        static auto Add(T, T) -> T = delete;
-        static auto Multiply(T, T) -> T = delete;
+        static auto Add(T A, T B) -> T { return A + B; }
+        static auto Sub(T A, T B) -> T { return A - B; }
+        static auto Mul(T A, T B) -> T { return A * B; }
+        static auto Div(T A, T B) -> T { return A / B; }
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -108,13 +116,25 @@ namespace ck
         friend class detail::TProcessor_AttributeModifier_RevokableAdditive_Compute;
 
         template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_NotRevokableAdditive_Compute;
+        friend class detail::TProcessor_AttributeModifier_RevokableSubtract_Compute;
 
         template <typename, typename>
         friend class detail::TProcessor_AttributeModifier_RevokableMultiplicative_Compute;
 
         template <typename, typename>
+        friend class detail::TProcessor_AttributeModifier_RevokableDivide_Compute;
+
+        template <typename, typename>
+        friend class detail::TProcessor_AttributeModifier_NotRevokableAdditive_Compute;
+
+        template <typename, typename>
+        friend class detail::TProcessor_AttributeModifier_NotRevokableSubtract_Compute;
+
+        template <typename, typename>
         friend class detail::TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute;
+
+        template <typename, typename>
+        friend class detail::TProcessor_AttributeModifier_NotRevokableDivide_Compute;
 
     public:
         CK_GENERATED_BODY(TFragment_Attribute<T_HandleType COMMA T_AttributeType COMMA T_ComponentTag>);
@@ -187,7 +207,9 @@ namespace ck
 
     public:
         CK_DEFINE_ECS_TAG(FTag_AdditiveModification);
+        CK_DEFINE_ECS_TAG(FTag_ModifySubtract);
         CK_DEFINE_ECS_TAG(FTag_MultiplicativeModification);
+        CK_DEFINE_ECS_TAG(FTag_ModifyDivide);
         CK_DEFINE_ECS_TAG(FTag_IsRevokableModification);
         CK_DEFINE_ECS_TAG(FTag_IsNotRevokableModification);
         CK_DEFINE_ECS_TAG(FTag_ComputeResult);
