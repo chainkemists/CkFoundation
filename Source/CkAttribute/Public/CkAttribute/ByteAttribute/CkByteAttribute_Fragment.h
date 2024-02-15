@@ -45,22 +45,6 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <>
-    struct TAttributeModifierOperators<uint8>
-    {
-        static auto Add(uint8 InA, uint8 InB) -> uint8
-        {
-            return InA + InB;
-        };
-
-        static auto Multiply(uint8 InA, uint8 InB) -> uint8
-        {
-            return InA * InB;
-        };
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <>
     struct TTypeConverter<TPayload_Attribute_OnValueChanged<FFragment_ByteAttribute_Current>, TypeConverterPolicy::TypeToUnreal>
     {
         auto operator()(const TPayload_Attribute_OnValueChanged<FFragment_ByteAttribute_Current>& InPayload) const
