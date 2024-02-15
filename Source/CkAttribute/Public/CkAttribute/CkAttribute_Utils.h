@@ -31,10 +31,7 @@ namespace ck
         friend class detail::TProcessor_Attribute_RecomputeAll;
 
         template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_Additive_Teardown;
-
-        template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_Multiplicative_Teardown;
+        friend class detail::TProcessor_AttributeModifier_Teardown;
 
     public:
         static auto
@@ -84,10 +81,7 @@ namespace ck
         friend class detail::TProcessor_Attribute_RecomputeAll;
 
         template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_Additive_Teardown;
-
-        template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_Multiplicative_Teardown;
+        friend class detail::TProcessor_AttributeModifier_Teardown;
 
     public:
         struct RecordOfAttributeModifiers_Utils : TUtils_RecordOfEntities<TFragment_RecordOfAttributeModifiers<HandleType>>{};
@@ -97,7 +91,7 @@ namespace ck
         Add(
             HandleType InHandle,
             AttributeDataType InModifierDelta,
-            ECk_ModifierOperation InModifierOperation,
+            ECk_ArithmeticOperations_Basic InModifierOperation,
             ECk_ModifierOperation_RevocablePolicy InModifierOperationRevokablePolicy) -> void;
 
         static auto

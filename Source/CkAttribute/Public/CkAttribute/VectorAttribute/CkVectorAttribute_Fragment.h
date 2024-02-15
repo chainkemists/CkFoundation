@@ -69,22 +69,6 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <>
-    struct TAttributeModifierOperators<FVector>
-    {
-        static auto Add(FVector InA, FVector InB) -> FVector
-        {
-            return InA + InB;
-        };
-
-        static auto Multiply(FVector InA, FVector InB) -> FVector
-        {
-            return InA * InB;
-        };
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <>
     struct TTypeConverter<TPayload_Attribute_OnValueChanged<FFragment_VectorAttribute_Current>, TypeConverterPolicy::TypeToUnreal>
     {
         auto operator()(const TPayload_Attribute_OnValueChanged<FFragment_VectorAttribute_Current>& InPayload) const

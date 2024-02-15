@@ -138,12 +138,36 @@ namespace ck::detail
 
         attribute::VeryVerbose
         (
-            TEXT("Computing REVOKABLE Additive AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
+            TEXT("Computing REVOKABLE (ADD) AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
             InHandle,
             TargetEntity
         );
 
         AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Add(AttributeComp._Final, InAttributeModifier.Get_ModifierDelta());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
+    auto
+        TProcessor_AttributeModifier_RevokableSubtract_Compute<T_DerivedProcessor ,T_AttributeModifierFragment>::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const AttributeModifierFragmentType& InAttributeModifier) const
+        -> void
+    {
+        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
+
+        attribute::VeryVerbose
+        (
+            TEXT("Computing REVOKABLE (SUBTRACT) AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
+            InHandle,
+            TargetEntity
+        );
+
+        AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Sub(AttributeComp._Final, InAttributeModifier.Get_ModifierDelta());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -161,7 +185,7 @@ namespace ck::detail
 
         attribute::VeryVerbose
         (
-            TEXT("Computing NOT REVOKABLE Additive AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
+            TEXT("Computing NOT REVOKABLE (ADD) AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
             InHandle,
             TargetEntity
         );
@@ -177,25 +201,31 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     auto
-        TProcessor_AttributeModifier_Additive_Teardown<T_DerivedProcessor, T_AttributeModifierFragment>::
+        TProcessor_AttributeModifier_NotRevokableSubtract_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
         ForEachEntity(
-            const TimeType&,
+            const TimeType& InDeltaT,
             HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier) const
-        -> void
+            const AttributeModifierFragmentType& InAttributeModifier) const -> void
     {
-        // even though WE as a Modifier are dying, our Owner may not be
-        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle, ECk_PendingKill_Policy::IncludePendingKill);
+        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
 
-        if (ck::Is_NOT_Valid(TargetEntity))
-        { return; }
+        attribute::VeryVerbose
+        (
+            TEXT("Computing NOT REVOKABLE (SUBTRACT) AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
+            InHandle,
+            TargetEntity
+        );
 
-        attribute::VeryVerbose(TEXT("Removing REVOKABLE Additive AttributeModifier value of Entity [{}] from Attribute component of Target Entity [{}]. "
-            "Forcing final value calculation again"), InHandle, TargetEntity);
+        AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Sub(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
 
-        TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(TargetEntity);
+        // TODO: move this to the Tick() of TProcessor_AttributeModifier_RevokableAdditive_Compute
+        // technically, the follow is 'correct' but it's confusing as to why we are resetting the Final in this processor
+        AttributeComp._Final = AttributeComp._Base;
+
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -212,10 +242,30 @@ namespace ck::detail
         auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
 
-        attribute::VeryVerbose(TEXT("Computing REVOKABLE Multiplicative AttributeModifier for Entity [{}] to Attribute component of Target Entity [{}]"),
+        attribute::VeryVerbose(TEXT("Computing REVOKABLE (MULTIPLY) AttributeModifier for Entity [{}] to Attribute component of Target Entity [{}]"),
             InHandle, TargetEntity);
 
-        AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Multiply(AttributeComp._Final, InAttributeModifier.Get_ModifierDelta());
+        AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Mul(AttributeComp._Final, InAttributeModifier.Get_ModifierDelta());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    auto
+        TProcessor_AttributeModifier_RevokableDivide_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const AttributeModifierFragmentType& InAttributeModifier) const
+            -> void
+    {
+        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
+
+        attribute::VeryVerbose(TEXT("Computing REVOKABLE (DIVIDE) AttributeModifier for Entity [{}] to Attribute component of Target Entity [{}]"),
+            InHandle, TargetEntity);
+
+        AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Div(AttributeComp._Final, InAttributeModifier.Get_ModifierDelta());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -232,23 +282,52 @@ namespace ck::detail
         auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
 
-        attribute::VeryVerbose(TEXT("Computing NOT REVOKABLE Multiplicative AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
+        attribute::VeryVerbose(TEXT("Computing NOT REVOKABLE (MULTIPLY) AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
             InHandle, TargetEntity);
 
-        AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Multiply(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
+        AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Mul(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
         AttributeComp._Final = AttributeComp._Base;
 
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    auto
+        TProcessor_AttributeModifier_NotRevokableDivide_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const AttributeModifierFragmentType& InAttributeModifier) const
+        -> void
+    {
+        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
+
+        attribute::VeryVerbose(TEXT("Computing NOT REVOKABLE (DIVIDE) AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
+            InHandle, TargetEntity);
+
+        AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Div(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
+        AttributeComp._Final = AttributeComp._Base;
+
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     TProcessor_AttributeModifier_ComputeAll<T_DerivedProcessor, T_DerivedAttributeModifier>::
         TProcessor_AttributeModifier_ComputeAll(
             RegistryType InRegistry)
         : _NotRevokableAdditive_Compute(InRegistry)
+        , _NotRevokableSubtract_Compute(InRegistry)
         , _NotRevokableMultiplicative_Compute(InRegistry)
+        , _NotRevokableDivide_Compute(InRegistry)
         , _RevokableAdditive_Compute(InRegistry)
+        , _RevokableSubtract_Compute(InRegistry)
         , _RevokableMultiplicative_Compute(InRegistry)
+        , _RevokableDivide_Compute(InRegistry)
         , _Registry(InRegistry)
     {
     }
@@ -261,9 +340,14 @@ namespace ck::detail
         -> void
     {
         _NotRevokableAdditive_Compute.Tick(InDeltaT);
+        _NotRevokableSubtract_Compute.Tick(InDeltaT);
         _NotRevokableMultiplicative_Compute.Tick(InDeltaT);
+        _NotRevokableDivide_Compute.Tick(InDeltaT);
+
         _RevokableAdditive_Compute.Tick(InDeltaT);
+        _RevokableSubtract_Compute.Tick(InDeltaT);
         _RevokableMultiplicative_Compute.Tick(InDeltaT);
+        _RevokableDivide_Compute.Tick(InDeltaT);
 
         this->_Registry.template Clear<MarkedDirtyBy>();
     }
@@ -272,45 +356,27 @@ namespace ck::detail
 
     template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
     auto
-        TProcessor_AttributeModifier_Multiplicative_Teardown<T_DerivedProcessor, T_AttributeModifierFragment>::
+        TProcessor_AttributeModifier_Teardown<T_DerivedProcessor, T_AttributeModifierFragment>::
         ForEachEntity(
             const TimeType&,
             HandleType InHandle,
             const AttributeModifierFragmentType& InAttributeModifier) const
         -> void
     {
-        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        // even though WE as a Modifier are dying, our Owner may not be
+        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle, ECk_PendingKill_Policy::IncludePendingKill);
 
         if (ck::Is_NOT_Valid(TargetEntity))
         { return; }
 
-        attribute::VeryVerbose(TEXT("Removing REVOKABLE Multiplicative AttributeModifier value of Entity [{}] from Attribute component of target Entity [{}]. "
+        attribute::VeryVerbose(TEXT("Removing REVOKABLE ({}) AttributeModifier value of Entity [{}] from Attribute component of Target Entity [{}]. "
             "Forcing final value calculation again"), InHandle, TargetEntity);
 
         TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(TargetEntity);
     }
 
+
     // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    TProcessor_AttributeModifier_TeardownAll<T_DerivedProcessor, T_DerivedAttributeModifier>::
-        TProcessor_AttributeModifier_TeardownAll(
-            RegistryType InRegistry)
-        : _Additive_Teardown(InRegistry)
-        , _Multiplicative_Teardown(InRegistry)
-    {
-    }
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    auto
-        TProcessor_AttributeModifier_TeardownAll<T_DerivedProcessor, T_DerivedAttributeModifier>::
-        Tick(
-            TimeType InDeltaT)
-        -> void
-    {
-        _Additive_Teardown.Tick(InDeltaT);
-        _Multiplicative_Teardown.Tick(InDeltaT);
-    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

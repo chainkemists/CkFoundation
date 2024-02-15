@@ -184,6 +184,44 @@ namespace ck::detail
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_RevokableSubtract_Compute : public TProcessor<
+            TProcessor_AttributeModifier_RevokableSubtract_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
+            T_DerivedAttributeModifier,
+            typename T_DerivedAttributeModifier::FTag_ModifySubtract,
+            typename T_DerivedAttributeModifier::FTag_IsRevokableModification,
+            typename T_DerivedAttributeModifier::FTag_ComputeResult,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = typename T_DerivedAttributeModifier::FTag_ComputeResult;
+
+    public:
+        using AttributeModifierFragmentType = T_DerivedAttributeModifier;
+        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
+        using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
+        using ModificationType              = typename AttributeModifierFragmentType::FTag_ModifySubtract;
+        using IsRevokableModificationType   = typename AttributeModifierFragmentType::FTag_IsRevokableModification;
+        using ThisType                      = TProcessor_AttributeModifier_RevokableSubtract_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
+        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, ModificationType, IsRevokableModificationType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using HandleType                    = typename Super::HandleType;
+        using TimeType                      = typename Super::TimeType;
+
+    public:
+        using Super::Super;
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const AttributeModifierFragmentType& InAttributeModifier) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_NotRevokableAdditive_Compute : public TProcessor<
             TProcessor_AttributeModifier_NotRevokableAdditive_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
             T_DerivedAttributeModifier,
@@ -202,6 +240,44 @@ namespace ck::detail
         using ModificationType               = typename AttributeModifierFragmentType::FTag_AdditiveModification;
         using IsNotRevokableModificationType = typename AttributeModifierFragmentType::FTag_IsNotRevokableModification;
         using ThisType                       = TProcessor_AttributeModifier_NotRevokableAdditive_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
+        using Super                          = TProcessor<ThisType, AttributeModifierFragmentType, ModificationType, IsNotRevokableModificationType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using HandleType                     = typename Super::HandleType;
+        using TimeType                       = typename Super::TimeType;
+
+    public:
+        using Super::Super;
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const AttributeModifierFragmentType& InAttributeModifier) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_NotRevokableSubtract_Compute : public TProcessor<
+            TProcessor_AttributeModifier_NotRevokableSubtract_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
+            T_DerivedAttributeModifier,
+            typename T_DerivedAttributeModifier::FTag_ModifySubtract,
+            typename T_DerivedAttributeModifier::FTag_IsNotRevokableModification,
+            typename T_DerivedAttributeModifier::FTag_ComputeResult,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = typename T_DerivedAttributeModifier::FTag_ComputeResult;
+
+    public:
+        using AttributeModifierFragmentType  = T_DerivedAttributeModifier;
+        using AttributeFragmentType          = typename AttributeModifierFragmentType::AttributeFragmentType;
+        using AttributeDataType              = typename AttributeFragmentType::AttributeDataType;
+        using ModificationType               = typename AttributeModifierFragmentType::FTag_ModifySubtract;
+        using IsNotRevokableModificationType = typename AttributeModifierFragmentType::FTag_IsNotRevokableModification;
+        using ThisType                       = TProcessor_AttributeModifier_NotRevokableSubtract_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
         using Super                          = TProcessor<ThisType, AttributeModifierFragmentType, ModificationType, IsNotRevokableModificationType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
         using HandleType                     = typename Super::HandleType;
         using TimeType                       = typename Super::TimeType;
@@ -260,6 +336,44 @@ namespace ck::detail
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_RevokableDivide_Compute : public TProcessor<
+            TProcessor_AttributeModifier_RevokableDivide_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
+            T_DerivedAttributeModifier,
+            typename T_DerivedAttributeModifier::FTag_ModifyDivide,
+            typename T_DerivedAttributeModifier::FTag_IsRevokableModification,
+            typename T_DerivedAttributeModifier::FTag_ComputeResult,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = typename T_DerivedAttributeModifier::FTag_ComputeResult;
+
+    public:
+        using AttributeModifierFragmentType = T_DerivedAttributeModifier;
+        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
+        using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
+        using ModificationType              = typename AttributeModifierFragmentType::FTag_ModifyDivide;
+        using IsRevokableModificationType   = typename AttributeModifierFragmentType::FTag_IsRevokableModification;
+        using ThisType                      = TProcessor_AttributeModifier_RevokableDivide_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
+        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, ModificationType, IsRevokableModificationType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using HandleType                    = typename Super::HandleType;
+        using TimeType                      = typename Super::TimeType;
+
+    public:
+        using Super::Super;
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const AttributeModifierFragmentType& InAttributeModifier) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute : public TProcessor<
             TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
             T_DerivedAttributeModifier,
@@ -298,6 +412,44 @@ namespace ck::detail
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_NotRevokableDivide_Compute : public TProcessor<
+            TProcessor_AttributeModifier_NotRevokableDivide_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
+            T_DerivedAttributeModifier,
+            typename T_DerivedAttributeModifier::FTag_ModifyDivide,
+            typename T_DerivedAttributeModifier::FTag_IsNotRevokableModification,
+            typename T_DerivedAttributeModifier::FTag_ComputeResult,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = typename T_DerivedAttributeModifier::FTag_ComputeResult;
+
+    public:
+        using AttributeModifierFragmentType  = T_DerivedAttributeModifier;
+        using AttributeFragmentType          = typename AttributeModifierFragmentType::AttributeFragmentType;
+        using AttributeDataType              = typename AttributeFragmentType::AttributeDataType;
+        using ModificationType               = typename AttributeModifierFragmentType::FTag_ModifyDivide;
+        using IsNotRevokableModificationType = typename AttributeModifierFragmentType::FTag_IsNotRevokableModification;
+        using ThisType                       = TProcessor_AttributeModifier_NotRevokableDivide_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
+        using Super                          = TProcessor<ThisType, AttributeModifierFragmentType, ModificationType, IsNotRevokableModificationType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using HandleType                     = typename Super::HandleType;
+        using TimeType                       = typename Super::TimeType;
+
+    public:
+        using Super::Super;
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const AttributeModifierFragmentType& InAttributeModifier) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_ComputeAll
     {
     public:
@@ -316,12 +468,21 @@ namespace ck::detail
     private:
         TProcessor_AttributeModifier_NotRevokableAdditive_Compute<
             TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier> _NotRevokableAdditive_Compute;
+        TProcessor_AttributeModifier_NotRevokableSubtract_Compute<
+            TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier> _NotRevokableSubtract_Compute;
         TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute<
             TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier> _NotRevokableMultiplicative_Compute;
+        TProcessor_AttributeModifier_NotRevokableDivide_Compute<
+            TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier> _NotRevokableDivide_Compute;
+
         TProcessor_AttributeModifier_RevokableAdditive_Compute<
             TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier> _RevokableAdditive_Compute;
+        TProcessor_AttributeModifier_RevokableSubtract_Compute<
+            TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier> _RevokableSubtract_Compute;
         TProcessor_AttributeModifier_RevokableMultiplicative_Compute<
             TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier> _RevokableMultiplicative_Compute;
+        TProcessor_AttributeModifier_RevokableDivide_Compute<
+            TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier> _RevokableDivide_Compute;
 
     private:
         RegistryType _Registry;
@@ -330,10 +491,9 @@ namespace ck::detail
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_Additive_Teardown : public TProcessor<
-            TProcessor_AttributeModifier_Additive_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>,
+    class TProcessor_AttributeModifier_Teardown : public TProcessor<
+            TProcessor_AttributeModifier_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>,
             T_DerivedAttributeModifier,
-            typename T_DerivedAttributeModifier::FTag_AdditiveModification,
             typename T_DerivedAttributeModifier::FTag_IsRevokableModification,
             CK_IF_PENDING_KILL>
     {
@@ -341,10 +501,9 @@ namespace ck::detail
         using AttributeModifierFragmentType = T_DerivedAttributeModifier;
         using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
         using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
-        using ModificationType              = typename AttributeModifierFragmentType::FTag_AdditiveModification;
         using IsRevokableModificationType   = typename AttributeModifierFragmentType::FTag_IsRevokableModification;
-        using ThisType                      = TProcessor_AttributeModifier_Additive_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, ModificationType, IsRevokableModificationType, CK_IF_PENDING_KILL>;
+        using ThisType                      = TProcessor_AttributeModifier_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>;
+        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, IsRevokableModificationType, CK_IF_PENDING_KILL>;
         using HandleType                    = typename Super::HandleType;
         using TimeType                      = typename Super::TimeType;
 
@@ -362,66 +521,6 @@ namespace ck::detail
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_Multiplicative_Teardown : public TProcessor<
-            TProcessor_AttributeModifier_Multiplicative_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>,
-            T_DerivedAttributeModifier,
-            typename T_DerivedAttributeModifier::FTag_MultiplicativeModification,
-            typename T_DerivedAttributeModifier::FTag_IsRevokableModification,
-            CK_IF_PENDING_KILL>
-    {
-    public:
-        using AttributeModifierFragmentType = T_DerivedAttributeModifier;
-        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
-        using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
-        using ModificationType              = typename AttributeModifierFragmentType::FTag_MultiplicativeModification;
-        using IsRevokableModificationType   = typename AttributeModifierFragmentType::FTag_IsRevokableModification;
-        using ThisType                      = TProcessor_AttributeModifier_Multiplicative_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, ModificationType, IsRevokableModificationType, CK_IF_PENDING_KILL>;
-        using HandleType                    = typename Super::HandleType;
-        using TimeType                      = typename Super::TimeType;
-
-    public:
-        using Super::Super;
-
-    public:
-        auto ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier) const -> void;
-
-    public:
-        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_TeardownAll
-    {
-    public:
-        using TimeType     = FCk_Time;
-        using RegistryType = FCk_Registry;
-        using MarkedDirtyBy = typename T_DerivedAttributeModifier::FTag_ComputeResult;
-
-    public:
-        explicit
-        TProcessor_AttributeModifier_TeardownAll(RegistryType InRegistry);
-
-    public:
-        auto Tick(
-            TimeType InDeltaT) -> void;
-
-    private:
-        TProcessor_AttributeModifier_Additive_Teardown<
-            T_DerivedProcessor, T_DerivedAttributeModifier> _Additive_Teardown;
-        TProcessor_AttributeModifier_Multiplicative_Teardown<
-            T_DerivedProcessor, T_DerivedAttributeModifier> _Multiplicative_Teardown;
-
-    private:
-        RegistryType _Registry;
-    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -562,7 +661,7 @@ namespace ck
         using RegistryType = FCk_Registry;
 
         template <ECk_MinMaxCurrent T_Component>
-        using TInternalProcessorType = detail::TProcessor_AttributeModifier_TeardownAll<
+        using TInternalProcessorType = detail::TProcessor_AttributeModifier_Teardown<
             TProcessor_AttributeModifier_TeardownAll_CurrentMinMax, T_DerivedAttributeModifier<T_Component>>;
 
     public:
