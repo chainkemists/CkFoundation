@@ -102,7 +102,7 @@ namespace ck
             HandleType            InHandle,
             AttributeDataType     InModifierDelta,
             ECk_ArithmeticOperations_Basic InModifierOperation,
-            ECk_ModifierOperation_RevocablePolicy InModifierOperationRevokablePolicy)
+            ECk_ModifierOperation_RevocablePolicy InModifierOperationRevocablePolicy)
         -> void
     {
         // Attribute fragments live on Entity (A) and AttributeModifiers live on Entities UNDER Entity (A)
@@ -147,18 +147,18 @@ namespace ck
             }
         }
 
-        switch (InModifierOperationRevokablePolicy)
+        switch (InModifierOperationRevocablePolicy)
         {
             case ECk_ModifierOperation_RevocablePolicy::NotRevocable:
             {
-                InHandle.template Add<typename AttributeModifierFragmentType::FTag_IsNotRevokableModification>();
+                InHandle.template Add<typename AttributeModifierFragmentType::FTag_IsNotRevocableModification>();
                 Request_ComputeResult(InHandle);
 
                 break;
             }
             case ECk_ModifierOperation_RevocablePolicy::Revocable:
             {
-                InHandle.template Add<typename AttributeModifierFragmentType::FTag_IsRevokableModification>();
+                InHandle.template Add<typename AttributeModifierFragmentType::FTag_IsRevocableModification>();
                 RecordOfAttributeModifiers_Utils::AddIfMissing(LifetimeOwner, ECk_Record_EntryHandlingPolicy::Default);
                 RecordOfAttributeModifiers_Utils::Request_Connect(LifetimeOwner, InHandle);
 

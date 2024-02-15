@@ -130,7 +130,7 @@ namespace ck::detail
 
     template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
     auto
-        TProcessor_AttributeModifier_RevokableAdditive_Compute<T_DerivedProcessor ,T_AttributeModifierFragment>::
+        TProcessor_AttributeModifier_RevocableAdditive_Compute<T_DerivedProcessor ,T_AttributeModifierFragment>::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
@@ -154,7 +154,7 @@ namespace ck::detail
 
     template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
     auto
-        TProcessor_AttributeModifier_RevokableSubtract_Compute<T_DerivedProcessor ,T_AttributeModifierFragment>::
+        TProcessor_AttributeModifier_RevocableSubtract_Compute<T_DerivedProcessor ,T_AttributeModifierFragment>::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
@@ -178,7 +178,7 @@ namespace ck::detail
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     auto
-        TProcessor_AttributeModifier_NotRevokableAdditive_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
+        TProcessor_AttributeModifier_NotRevocableAdditive_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
@@ -196,7 +196,7 @@ namespace ck::detail
 
         AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Add(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
 
-        // TODO: move this to the Tick() of TProcessor_AttributeModifier_RevokableAdditive_Compute
+        // TODO: move this to the Tick() of TProcessor_AttributeModifier_RevocableAdditive_Compute
         // technically, the follow is 'correct' but it's confusing as to why we are resetting the Final in this processor
         AttributeComp._Final = AttributeComp._Base;
 
@@ -207,7 +207,7 @@ namespace ck::detail
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     auto
-        TProcessor_AttributeModifier_NotRevokableSubtract_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
+        TProcessor_AttributeModifier_NotRevocableSubtract_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
@@ -225,7 +225,7 @@ namespace ck::detail
 
         AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Sub(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
 
-        // TODO: move this to the Tick() of TProcessor_AttributeModifier_RevokableAdditive_Compute
+        // TODO: move this to the Tick() of TProcessor_AttributeModifier_RevocableAdditive_Compute
         // technically, the follow is 'correct' but it's confusing as to why we are resetting the Final in this processor
         AttributeComp._Final = AttributeComp._Base;
 
@@ -236,7 +236,7 @@ namespace ck::detail
 
     template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
     auto
-        TProcessor_AttributeModifier_RevokableMultiplicative_Compute<T_DerivedProcessor, T_AttributeModifierFragment>::
+        TProcessor_AttributeModifier_RevocableMultiplicative_Compute<T_DerivedProcessor, T_AttributeModifierFragment>::
         ForEachEntity(
             const TimeType&,
             HandleType InHandle,
@@ -256,7 +256,7 @@ namespace ck::detail
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     auto
-        TProcessor_AttributeModifier_RevokableDivide_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
+        TProcessor_AttributeModifier_RevocableDivide_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
@@ -276,7 +276,7 @@ namespace ck::detail
 
     template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
     auto
-        TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute<T_DerivedProcessor, T_AttributeModifierFragment>::
+        TProcessor_AttributeModifier_NotRevocableMultiplicative_Compute<T_DerivedProcessor, T_AttributeModifierFragment>::
         ForEachEntity(
             const TimeType&,
             HandleType InHandle,
@@ -299,7 +299,7 @@ namespace ck::detail
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     auto
-        TProcessor_AttributeModifier_NotRevokableDivide_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
+        TProcessor_AttributeModifier_NotRevocableDivide_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
@@ -324,14 +324,14 @@ namespace ck::detail
     TProcessor_AttributeModifier_ComputeAll<T_DerivedProcessor, T_DerivedAttributeModifier>::
         TProcessor_AttributeModifier_ComputeAll(
             RegistryType InRegistry)
-        : _NotRevokableAdditive_Compute(InRegistry)
-        , _NotRevokableSubtract_Compute(InRegistry)
-        , _NotRevokableMultiplicative_Compute(InRegistry)
-        , _NotRevokableDivide_Compute(InRegistry)
-        , _RevokableAdditive_Compute(InRegistry)
-        , _RevokableSubtract_Compute(InRegistry)
-        , _RevokableMultiplicative_Compute(InRegistry)
-        , _RevokableDivide_Compute(InRegistry)
+        : _NotRevocableAdditive_Compute(InRegistry)
+        , _NotRevocableSubtract_Compute(InRegistry)
+        , _NotRevocableMultiplicative_Compute(InRegistry)
+        , _NotRevocableDivide_Compute(InRegistry)
+        , _RevocableAdditive_Compute(InRegistry)
+        , _RevocableSubtract_Compute(InRegistry)
+        , _RevocableMultiplicative_Compute(InRegistry)
+        , _RevocableDivide_Compute(InRegistry)
         , _Registry(InRegistry)
     {
     }
@@ -343,15 +343,15 @@ namespace ck::detail
             TimeType InDeltaT)
         -> void
     {
-        _NotRevokableAdditive_Compute.Tick(InDeltaT);
-        _NotRevokableSubtract_Compute.Tick(InDeltaT);
-        _NotRevokableMultiplicative_Compute.Tick(InDeltaT);
-        _NotRevokableDivide_Compute.Tick(InDeltaT);
+        _NotRevocableAdditive_Compute.Tick(InDeltaT);
+        _NotRevocableSubtract_Compute.Tick(InDeltaT);
+        _NotRevocableMultiplicative_Compute.Tick(InDeltaT);
+        _NotRevocableDivide_Compute.Tick(InDeltaT);
 
-        _RevokableAdditive_Compute.Tick(InDeltaT);
-        _RevokableSubtract_Compute.Tick(InDeltaT);
-        _RevokableMultiplicative_Compute.Tick(InDeltaT);
-        _RevokableDivide_Compute.Tick(InDeltaT);
+        _RevocableAdditive_Compute.Tick(InDeltaT);
+        _RevocableSubtract_Compute.Tick(InDeltaT);
+        _RevocableMultiplicative_Compute.Tick(InDeltaT);
+        _RevocableDivide_Compute.Tick(InDeltaT);
 
         this->_Registry.template Clear<MarkedDirtyBy>();
     }
