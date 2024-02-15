@@ -37,28 +37,28 @@ namespace ck::detail
     class TProcessor_Attribute_RecomputeAll;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_RevokableAdditive_Compute;
+    class TProcessor_AttributeModifier_RevocableAdd_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_RevokableSubtract_Compute;
+    class TProcessor_AttributeModifier_RevocableSubtract_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_RevokableMultiplicative_Compute;
+    class TProcessor_AttributeModifier_RevocableMultiply_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_RevokableDivide_Compute;
+    class TProcessor_AttributeModifier_RevocableDivide_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_NotRevokableAdditive_Compute;
+    class TProcessor_AttributeModifier_NotRevocableAdd_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_NotRevokableSubtract_Compute;
+    class TProcessor_AttributeModifier_NotRevocableSubtract_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute;
+    class TProcessor_AttributeModifier_NotRevocableMultiply_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_NotRevokableDivide_Compute;
+    class TProcessor_AttributeModifier_NotRevocableDivide_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_Teardown;
@@ -113,28 +113,28 @@ namespace ck
         friend class detail::TProcessor_Attribute_RecomputeAll;
 
         template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_RevokableAdditive_Compute;
+        friend class detail::TProcessor_AttributeModifier_RevocableAdd_Compute;
 
         template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_RevokableSubtract_Compute;
+        friend class detail::TProcessor_AttributeModifier_RevocableSubtract_Compute;
 
         template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_RevokableMultiplicative_Compute;
+        friend class detail::TProcessor_AttributeModifier_RevocableMultiply_Compute;
 
         template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_RevokableDivide_Compute;
+        friend class detail::TProcessor_AttributeModifier_RevocableDivide_Compute;
 
         template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_NotRevokableAdditive_Compute;
+        friend class detail::TProcessor_AttributeModifier_NotRevocableAdd_Compute;
 
         template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_NotRevokableSubtract_Compute;
+        friend class detail::TProcessor_AttributeModifier_NotRevocableSubtract_Compute;
 
         template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_NotRevokableMultiplicative_Compute;
+        friend class detail::TProcessor_AttributeModifier_NotRevocableMultiply_Compute;
 
         template <typename, typename>
-        friend class detail::TProcessor_AttributeModifier_NotRevokableDivide_Compute;
+        friend class detail::TProcessor_AttributeModifier_NotRevocableDivide_Compute;
 
     public:
         CK_GENERATED_BODY(TFragment_Attribute<T_HandleType COMMA T_AttributeType COMMA T_ComponentTag>);
@@ -206,12 +206,12 @@ namespace ck
         friend class TUtils_AttributeModifier;
 
     public:
-        CK_DEFINE_ECS_TAG(FTag_AdditiveModification);
+        CK_DEFINE_ECS_TAG(FTag_ModifyAdd);
         CK_DEFINE_ECS_TAG(FTag_ModifySubtract);
-        CK_DEFINE_ECS_TAG(FTag_MultiplicativeModification);
+        CK_DEFINE_ECS_TAG(FTag_ModifyMultiply);
         CK_DEFINE_ECS_TAG(FTag_ModifyDivide);
-        CK_DEFINE_ECS_TAG(FTag_IsRevokableModification);
-        CK_DEFINE_ECS_TAG(FTag_IsNotRevokableModification);
+        CK_DEFINE_ECS_TAG(FTag_IsRevocableModification);
+        CK_DEFINE_ECS_TAG(FTag_IsNotRevocableModification);
         CK_DEFINE_ECS_TAG(FTag_ComputeResult);
 
     public:
