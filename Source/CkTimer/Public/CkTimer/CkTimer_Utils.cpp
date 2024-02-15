@@ -48,26 +48,20 @@ auto
         const FCk_Fragment_Timer_ParamsData& InParams)
     -> FCk_Handle_Timer
 {
-    if (const auto& ExistingTimerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<UCk_Utils_Timer_UE,
-            RecordOfTimers_Utils>(InTimerOwnerEntity, InParams.Get_TimerName());
-        ck::Is_NOT_Valid(ExistingTimerEntity))
-    {
-        return Add(InTimerOwnerEntity, InParams);
-    }
+    auto MaybeExistingTimerEntity = TryGet_Timer(InTimerOwnerEntity, InParams.Get_TimerName());
 
-    auto TimerEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_Timer_UE,
-        RecordOfTimers_Utils>(InTimerOwnerEntity, InParams.Get_TimerName());
+    if (ck::Is_NOT_Valid(MaybeExistingTimerEntity))
+    { return Add(InTimerOwnerEntity, InParams); }
 
-    TimerEntity.Replace<ck::FFragment_Timer_Params>(InParams);
-    TimerEntity.Replace<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
+    MaybeExistingTimerEntity.Replace<ck::FFragment_Timer_Params>(InParams);
+    MaybeExistingTimerEntity.Replace<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
 
     if (InParams.Get_StartingState() == ECk_Timer_State::Running)
     {
-        TimerEntity.AddOrGet<ck::FTag_Timer_NeedsUpdate>();
+        MaybeExistingTimerEntity.AddOrGet<ck::FTag_Timer_NeedsUpdate>();
     }
 
-    return ck::StaticCast<FCk_Handle_Timer>(TimerEntity);
+    return ck::StaticCast<FCk_Handle_Timer>(MaybeExistingTimerEntity);
 }
 
 auto
@@ -84,9 +78,18 @@ auto
     });
 }
 
+auto
+    UCk_Utils_Timer_UE::
+    Has_Any(
+        const FCk_Handle& InAttributeOwnerEntity)
+    -> bool
+{
+    return RecordOfTimers_Utils::Has(InAttributeOwnerEntity);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Timer, UCk_Utils_Timer_UE, FCk_Handle_Timer, UCk_Utils_Timer_UE::RecordOfTimers_Utils::RecordType);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Timer, UCk_Utils_Timer_UE, FCk_Handle_Timer, ck::FFragment_Timer_Current, ck::FFragment_Timer_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -97,6 +100,9 @@ auto
         FGameplayTag InTimerName)
     -> FCk_Handle_Timer
 {
+    if (NOT RecordOfTimers_Utils::Has(InTimerOwnerEntity))
+    { return {}; }
+
     return RecordOfTimers_Utils::Get_ValidEntry_If(InTimerOwnerEntity, ck::algo::MatchesGameplayLabelExact{InTimerName});
 }
 
@@ -175,16 +181,11 @@ auto
         const TFunction<void(FCk_Handle_Timer)>& InFunc)
     -> void
 {
-    if (NOT RecordOfTimers_Utils::Has(InTimerOwnerEntity))
-    { return; }
-
     RecordOfTimers_Utils::ForEach_ValidEntry
     (
         InTimerOwnerEntity,
-        [&](const FCk_Handle_Timer& InTimerEntity)
-        {
-            InFunc(InTimerEntity);
-        }
+        InFunc,
+        ECk_Record_ForEach_Policy::IgnoreRecordMissing
     );
 }
 

@@ -68,9 +68,16 @@ public:
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Timer",
-        DisplayName="[Ck][Timer] Has Any Timer")
+        DisplayName="[Ck][Timer] Has Feature")
     static bool
     Has(
+        const FCk_Handle& InHandle);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Timer",
+        DisplayName="[Ck][Timer] Has Any Timer")
+    static bool
+    Has_Any(
         const FCk_Handle& InHandle);
 
 private:
