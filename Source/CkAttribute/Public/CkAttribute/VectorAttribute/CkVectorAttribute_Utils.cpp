@@ -106,7 +106,7 @@ auto
 
 auto
     UCk_Utils_VectorAttribute_UE::
-    ForEach_VectorAttribute(
+    ForEach(
         FCk_Handle& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
@@ -114,7 +114,7 @@ auto
 {
     auto ToRet = TArray<FCk_Handle_VectorAttribute>{};
 
-    ForEach_VectorAttribute(InAttributeOwner, [&](const FCk_Handle_VectorAttribute& InAttribute)
+    ForEach(InAttributeOwner, [&](const FCk_Handle_VectorAttribute& InAttribute)
     {
         if (InDelegate.IsBound())
         { InDelegate.Execute(InAttribute, InOptionalPayload); }
@@ -127,7 +127,7 @@ auto
 
 auto
     UCk_Utils_VectorAttribute_UE::
-    ForEach_VectorAttribute(
+    ForEach(
         FCk_Handle& InAttributeOwner,
         const TFunction<void(FCk_Handle_VectorAttribute)>& InFunc)
     -> void
@@ -147,7 +147,7 @@ auto
 
 auto
     UCk_Utils_VectorAttribute_UE::
-    ForEach_VectorAttribute_If(
+    ForEach_If(
         FCk_Handle& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate,
@@ -156,7 +156,7 @@ auto
 {
     auto ToRet = TArray<FCk_Handle_VectorAttribute>{};
 
-    ForEach_VectorAttribute_If
+    ForEach_If
     (
         InAttributeOwner,
         [&](FCk_Handle_VectorAttribute InAttribute)
@@ -184,7 +184,7 @@ auto
 
 auto
     UCk_Utils_VectorAttribute_UE::
-    ForEach_VectorAttribute_If(
+    ForEach_If(
         FCk_Handle& InAttributeOwner,
         const TFunction<void(FCk_Handle_VectorAttribute)>& InFunc,
         const TFunction<bool(FCk_Handle_VectorAttribute)>& InPredicate)
@@ -349,7 +349,7 @@ auto
     { return {}; }
 
     UCk_Utils_VectorAttributeModifier_UE::Add(InAttribute, {}, FCk_Fragment_VectorAttributeModifier_ParamsData{
-        Delta, ECk_ModifierOperation::Additive, ECk_ModifierOperation_RevocablePolicy::NotRevocable, InAttributeComponent});
+        Delta, ECk_ArithmeticOperations_Basic::Add, ECk_ModifierOperation_RevocablePolicy::NotRevocable, InAttributeComponent});
 
     return InAttribute;
 }
@@ -430,11 +430,14 @@ auto
     ParamsToUse.Set_TargetAttributeName(UCk_Utils_GameplayLabel_UE::Get_Label(InAttribute));
 
     const auto& LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute);
+    const auto ModifierOperation = ParamsToUse.Get_ModifierOperation();
 
-    if (ParamsToUse.Get_ModifierDelta().IsNearlyZero() && ParamsToUse.Get_ModifierOperation() == ECk_ModifierOperation::Additive)
+    if (ParamsToUse.Get_ModifierDelta().IsNearlyZero() &&
+        (ModifierOperation == ECk_ArithmeticOperations_Basic::Add || ModifierOperation  == ECk_ArithmeticOperations_Basic::Subtract))
     { return {}; }
 
-    if (ParamsToUse.Get_ModifierDelta().Equals(FVector::OneVector) && ParamsToUse.Get_ModifierOperation() == ECk_ModifierOperation::Multiplicative)
+    if (ParamsToUse.Get_ModifierDelta().Equals(FVector::OneVector) &&
+        (ModifierOperation == ECk_ArithmeticOperations_Basic::Add || ModifierOperation  == ECk_ArithmeticOperations_Basic::Subtract))
     { return {}; }
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttribute);
@@ -501,10 +504,10 @@ auto
     TryGet(
         const FCk_Handle_VectorAttribute& InAttribute,
         FGameplayTag InModifierName,
-        ECk_MinMaxCurrent _Component)
+        ECk_MinMaxCurrent InComponent)
     -> FCk_Handle_VectorAttributeModifier
 {
-    switch(_Component)
+    switch(InComponent)
     {
         case ECk_MinMaxCurrent::Min:
             return RecordOfVectorAttributeModifiers_Utils_Min::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
@@ -529,19 +532,171 @@ auto
 
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAttributeModifierEntity);
 
-    if (NOT AttributeOwnerEntity.Has<TObjectPtr<UCk_Fragment_VectorAttribute_Rep>>())
+    if (NOT UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_VectorAttribute_Rep>(AttributeOwnerEntity))
     { return AttributeEntity; }
 
     if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AttributeOwnerEntity))
     { return AttributeEntity; }
 
-    AttributeOwnerEntity.Get<TObjectPtr<UCk_Fragment_VectorAttribute_Rep>>()->Broadcast_RemoveModifier
-    (
-        UCk_Utils_GameplayLabel_UE::Get_Label(InAttributeModifierEntity),
-            UCk_Utils_GameplayLabel_UE::Get_Label(AttributeEntity)
-    );
+    UCk_Utils_Ecs_Net_UE::UpdateReplicatedFragment<UCk_Fragment_VectorAttribute_Rep>(AttributeOwnerEntity,
+    [&](UCk_Fragment_VectorAttribute_Rep* InRepComp)
+    {
+        InRepComp->Broadcast_RemoveModifier(UCk_Utils_GameplayLabel_UE::Get_Label(InAttributeModifierEntity),
+            UCk_Utils_GameplayLabel_UE::Get_Label(AttributeEntity));
+    });
 
     return AttributeEntity;
+}
+
+auto
+    UCk_Utils_VectorAttributeModifier_UE::
+    ForEach(
+        FCk_Handle_VectorAttribute& InAttributeOwner,
+        const FInstancedStruct&    InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate,
+        ECk_MinMaxCurrent InAttributeComponent)
+    -> TArray<FCk_Handle_VectorAttributeModifier>
+{
+    auto ToRet = TArray<FCk_Handle_VectorAttributeModifier>{};
+
+    ForEach(InAttributeOwner, [&](const FCk_Handle_VectorAttributeModifier& InAttribute)
+    {
+        if (InDelegate.IsBound())
+        { InDelegate.Execute(InAttribute, InOptionalPayload); }
+        else
+        { ToRet.Emplace(InAttribute); }
+    }, InAttributeComponent);
+
+    return ToRet;
+}
+
+auto
+    UCk_Utils_VectorAttributeModifier_UE::
+    ForEach(
+        FCk_Handle_VectorAttribute& InAttribute,
+        const TFunction<void(FCk_Handle_VectorAttributeModifier)>& InFunc,
+        ECk_MinMaxCurrent InAttributeComponent)
+    -> void
+{
+    switch(InAttributeComponent)
+    {
+        case ECk_MinMaxCurrent::Current:
+        {
+            RecordOfVectorAttributeModifiers_Utils_Current::ForEach_ValidEntry
+            (
+                InAttribute,
+                InFunc,
+                ECk_Record_ForEach_Policy::IgnoreRecordMissing
+            );
+            break;
+        }
+        case ECk_MinMaxCurrent::Min:
+        {
+            RecordOfVectorAttributeModifiers_Utils_Min::ForEach_ValidEntry
+            (
+                InAttribute,
+                InFunc,
+                ECk_Record_ForEach_Policy::IgnoreRecordMissing
+            );
+            break;
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            RecordOfVectorAttributeModifiers_Utils_Max::ForEach_ValidEntry
+            (
+                InAttribute,
+                InFunc,
+                ECk_Record_ForEach_Policy::IgnoreRecordMissing
+            );
+            break;
+        }
+    }
+}
+
+auto
+    UCk_Utils_VectorAttributeModifier_UE::
+    ForEach_If(
+        FCk_Handle_VectorAttribute& InAttributeOwner,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate,
+        const FCk_Predicate_InHandle_OutResult& InPredicate,
+        ECk_MinMaxCurrent InAttributeComponent)
+    -> TArray<FCk_Handle_VectorAttributeModifier>
+{
+    auto ToRet = TArray<FCk_Handle_VectorAttributeModifier>{};
+
+    ForEach_If
+    (
+        InAttributeOwner,
+        [&](FCk_Handle_VectorAttributeModifier InAttribute)
+        {
+            if (InDelegate.IsBound())
+            { InDelegate.Execute(InAttribute, InOptionalPayload); }
+            else
+            { ToRet.Emplace(InAttribute); }
+        },
+        [&](const FCk_Handle& InAttribute)  -> bool
+        {
+            const FCk_SharedBool PredicateResult;
+
+            if (InPredicate.IsBound())
+            {
+                InPredicate.Execute(InAttribute, PredicateResult, InOptionalPayload);
+            }
+
+            return *PredicateResult;
+        },
+        InAttributeComponent
+    );
+
+    return ToRet;
+}
+
+auto
+    UCk_Utils_VectorAttributeModifier_UE::
+    ForEach_If(
+        FCk_Handle_VectorAttribute& InAttribute,
+        const TFunction<void(FCk_Handle_VectorAttributeModifier)>& InFunc,
+        const TFunction<bool(FCk_Handle_VectorAttributeModifier)>& InPredicate,
+        ECk_MinMaxCurrent InAttributeComponent)
+    -> void
+{
+    switch(InAttributeComponent)
+    {
+        case ECk_MinMaxCurrent::Current:
+        {
+            RecordOfVectorAttributeModifiers_Utils_Current::ForEach_ValidEntry_If
+            (
+                InAttribute,
+                InFunc,
+                InPredicate,
+                ECk_Record_ForEach_Policy::IgnoreRecordMissing
+            );
+            break;
+        }
+        case ECk_MinMaxCurrent::Min:
+        {
+            RecordOfVectorAttributeModifiers_Utils_Min::ForEach_ValidEntry_If
+            (
+                InAttribute,
+                InFunc,
+                InPredicate,
+                ECk_Record_ForEach_Policy::IgnoreRecordMissing
+            );
+            break;
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            RecordOfVectorAttributeModifiers_Utils_Max::ForEach_ValidEntry_If
+            (
+                InAttribute,
+                InFunc,
+                InPredicate,
+                ECk_Record_ForEach_Policy::IgnoreRecordMissing
+            );
+            break;
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

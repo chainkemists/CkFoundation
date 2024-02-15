@@ -63,7 +63,7 @@ public:
 
 private:
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|ByteAttribute",
+        Category = "Ck|Utils|Attribute|Byte",
         DisplayName="[Ck][ByteAttribute] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_ByteAttribute
@@ -72,7 +72,7 @@ private:
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|ByteAttribute",
+        Category = "Ck|Utils|Attribute|Byte",
         DisplayName="[Ck][ByteAttribute] Handle -> ByteAttribute Handle",
         meta = (CompactNodeTitle = "<AsByteAttribute>", BlueprintAutocast))
     static FCk_Handle_ByteAttribute
@@ -94,12 +94,12 @@ public:
               DisplayName="[Ck][ByteAttribute] For Each",
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle_ByteAttribute>
-    ForEach_ByteAttribute(
+    ForEach(
         UPARAM(ref) FCk_Handle& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
-    ForEach_ByteAttribute(
+    ForEach(
         FCk_Handle& InAttributeOwner,
         const TFunction<void(FCk_Handle_ByteAttribute)>& InFunc) -> void;
 
@@ -108,13 +108,13 @@ public:
               DisplayName="[Ck][ByteAttribute] For Each If",
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle_ByteAttribute>
-    ForEach_ByteAttribute_If(
+    ForEach_If(
         UPARAM(ref) FCk_Handle& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate);
     static auto
-    ForEach_ByteAttribute_If(
+    ForEach_If(
         FCk_Handle& InAttributeOwner,
         const TFunction<void(FCk_Handle_ByteAttribute)>& InFunc,
         const TFunction<bool(FCk_Handle_ByteAttribute)>& InPredicate) -> void;
@@ -220,7 +220,7 @@ public:
     TryGet(
         const FCk_Handle_ByteAttribute& InAttribute,
         FGameplayTag InModifierName,
-        ECk_MinMaxCurrent _Component = ECk_MinMaxCurrent::Current);
+        ECk_MinMaxCurrent InComponent = ECk_MinMaxCurrent::Current);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Byte",
@@ -228,6 +228,41 @@ public:
     static FCk_Handle_ByteAttribute
     Remove(
         UPARAM(ref) FCk_Handle_ByteAttributeModifier& InAttributeModifierEntity);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AttributeModifier|Byte",
+              DisplayName="[Ck][ByteAttribute] For Each Modifier",
+              meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
+    static TArray<FCk_Handle_ByteAttributeModifier>
+    ForEach(
+        UPARAM(ref) FCk_Handle_ByteAttribute& InAttribute,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate,
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
+    static auto
+    ForEach(
+        FCk_Handle_ByteAttribute& InAttribute,
+        const TFunction<void(FCk_Handle_ByteAttributeModifier)>& InFunc,
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current) -> void;
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AttributeModifier|Byte",
+              DisplayName="[Ck][ByteAttribute] For Each Modifier If",
+              meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
+    static TArray<FCk_Handle_ByteAttributeModifier>
+    ForEach_If(
+        UPARAM(ref) FCk_Handle_ByteAttribute& InAttribute,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate,
+        const FCk_Predicate_InHandle_OutResult& InPredicate,
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
+    static auto
+    ForEach_If(
+        FCk_Handle_ByteAttribute& InAttribute,
+        const TFunction<void(FCk_Handle_ByteAttributeModifier)>& InFunc,
+        const TFunction<bool(FCk_Handle_ByteAttributeModifier)>& InPredicate,
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

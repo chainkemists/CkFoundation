@@ -63,7 +63,7 @@ public:
 
 private:
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|VectorAttribute",
+        Category = "Ck|Utils|Attribute|Vector",
         DisplayName="[Ck][VectorAttribute] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_VectorAttribute
@@ -72,7 +72,7 @@ private:
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|VectorAttribute",
+        Category = "Ck|Utils|Attribute|Vector",
         DisplayName="[Ck][VectorAttribute] Handle -> VectorAttribute Handle",
         meta = (CompactNodeTitle = "<AsVectorAttribute>", BlueprintAutocast))
     static FCk_Handle_VectorAttribute
@@ -94,12 +94,12 @@ public:
               DisplayName="[Ck][VectorAttribute] For Each",
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle_VectorAttribute>
-    ForEach_VectorAttribute(
+    ForEach(
         UPARAM(ref) FCk_Handle& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
-    ForEach_VectorAttribute(
+    ForEach(
         FCk_Handle& InAttributeOwner,
         const TFunction<void(FCk_Handle_VectorAttribute)>& InFunc) -> void;
 
@@ -108,13 +108,13 @@ public:
               DisplayName="[Ck][VectorAttribute] For Each If",
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle_VectorAttribute>
-    ForEach_VectorAttribute_If(
+    ForEach_If(
         UPARAM(ref) FCk_Handle& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate);
     static auto
-    ForEach_VectorAttribute_If(
+    ForEach_If(
         FCk_Handle& InAttributeOwner,
         const TFunction<void(FCk_Handle_VectorAttribute)>& InFunc,
         const TFunction<bool(FCk_Handle_VectorAttribute)>& InPredicate) -> void;
@@ -220,7 +220,7 @@ public:
     TryGet(
         const FCk_Handle_VectorAttribute& InAttribute,
         FGameplayTag InModifierName,
-        ECk_MinMaxCurrent _Component = ECk_MinMaxCurrent::Current);
+        ECk_MinMaxCurrent InComponent = ECk_MinMaxCurrent::Current);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Vector",
@@ -228,6 +228,41 @@ public:
     static FCk_Handle_VectorAttribute
     Remove(
         UPARAM(ref) FCk_Handle_VectorAttributeModifier& InAttributeModifierEntity);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AttributeModifier|Vector",
+              DisplayName="[Ck][VectorAttribute] For Each Modifier",
+              meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
+    static TArray<FCk_Handle_VectorAttributeModifier>
+    ForEach(
+        UPARAM(ref) FCk_Handle_VectorAttribute& InAttribute,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate,
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
+    static auto
+    ForEach(
+        FCk_Handle_VectorAttribute& InAttribute,
+        const TFunction<void(FCk_Handle_VectorAttributeModifier)>& InFunc,
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current) -> void;
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AttributeModifier|Vector",
+              DisplayName="[Ck][VectorAttribute] For Each Modifier If",
+              meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
+    static TArray<FCk_Handle_VectorAttributeModifier>
+    ForEach_If(
+        UPARAM(ref) FCk_Handle_VectorAttribute& InAttribute,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate,
+        const FCk_Predicate_InHandle_OutResult& InPredicate,
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
+    static auto
+    ForEach_If(
+        FCk_Handle_VectorAttribute& InAttribute,
+        const TFunction<void(FCk_Handle_VectorAttributeModifier)>& InFunc,
+        const TFunction<bool(FCk_Handle_VectorAttributeModifier)>& InPredicate,
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
