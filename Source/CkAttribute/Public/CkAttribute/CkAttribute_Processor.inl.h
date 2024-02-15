@@ -425,7 +425,8 @@ namespace ck
 
     template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttribute>
     auto
-        TProcessor_Attribute_MinMaxClamp<T_DerivedAttribute>::Tick(
+        TProcessor_Attribute_MinMaxClamp<T_DerivedAttribute>::
+        Tick(
             TimeType InDeltaT)
             -> void
     {
@@ -495,7 +496,8 @@ namespace ck
 
     template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
     auto
-        TProcessor_AttributeModifier_TeardownAll_CurrentMinMax<T_DerivedAttributeModifier>::Tick(
+        TProcessor_AttributeModifier_TeardownAll_CurrentMinMax<T_DerivedAttributeModifier>::
+        Tick(
             TimeType InDeltaT)
             -> void
     {

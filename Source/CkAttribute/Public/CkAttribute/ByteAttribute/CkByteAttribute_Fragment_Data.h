@@ -253,7 +253,7 @@ public:
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-    FCk_Handle_ByteAttribute  _AttributeHandle;
+    FCk_Handle_ByteAttribute  _AttributeEntity;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     uint8  _BaseValue = 0;
@@ -262,24 +262,24 @@ private:
     uint8  _FinalValue = 0;
 
 public:
-    CK_PROPERTY_GET(_AttributeHandle);
+    CK_PROPERTY_GET(_AttributeEntity);
     CK_PROPERTY_GET(_BaseValue);
     CK_PROPERTY_GET(_FinalValue);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Payload_ByteAttribute_OnValueChanged, _AttributeHandle, _BaseValue, _FinalValue);
+    CK_DEFINE_CONSTRUCTORS(FCk_Payload_ByteAttribute_OnValueChanged, _AttributeEntity, _BaseValue, _FinalValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_ByteAttribute_OnValueChanged,
-    FCk_Handle, InHandle,
+    FCk_Handle, InAttributeOwnerEntity,
     FCk_Payload_ByteAttribute_OnValueChanged, InPayload);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_ByteAttribute_OnValueChanged_MC,
-    FCk_Handle, InHandle,
+    FCk_Handle, InAttributeOwnerEntity,
     FCk_Payload_ByteAttribute_OnValueChanged, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
