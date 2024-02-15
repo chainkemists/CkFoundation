@@ -70,9 +70,10 @@ auto
         const auto& AttributeName = Modifier.Get_Params().Get_TargetAttributeName();
         auto Attribute = UCk_Utils_FloatAttribute_UE::TryGet(_AssociatedEntity, AttributeName);
 
-        CK_LOG_ERROR_IF_NOT(ck::attribute, ck::IsValid(Modifier.Get_Params().Get_TargetAttributeName()),
-            TEXT("Received a AddModifier Request from the SERVER with ModifierName [{}] for a TargetAttribute with INVALID name.{}"),
-            Modifier.Get_ModifierName(), ck::Context(this))
+        CK_LOG_ERROR_IF_NOT(ck::attribute, ck::IsValid(Attribute),
+            TEXT("Received a AddModifier Request from the SERVER with ModifierName [{}] for a TargetAttribute with name [{}] "
+                "but could NOT find that Attribute on [{}]"),
+            Modifier.Get_ModifierName(), AttributeName, Get_AssociatedEntity())
         { continue; }
 
         UCk_Utils_FloatAttributeModifier_UE::Add(Attribute, Modifier.Get_ModifierName(), Modifier.Get_Params());
