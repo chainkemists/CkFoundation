@@ -94,12 +94,12 @@ public:
               DisplayName="[Ck][FloatAttribute] For Each",
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle_FloatAttribute>
-    ForEach_FloatAttribute(
+    ForEach(
         UPARAM(ref) FCk_Handle& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
-    ForEach_FloatAttribute(
+    ForEach(
         FCk_Handle& InAttributeOwner,
         const TFunction<void(FCk_Handle_FloatAttribute)>& InFunc) -> void;
 
@@ -108,13 +108,13 @@ public:
               DisplayName="[Ck][FloatAttribute] For Each If",
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle_FloatAttribute>
-    ForEach_FloatAttribute_If(
+    ForEach_If(
         UPARAM(ref) FCk_Handle& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate);
     static auto
-    ForEach_FloatAttribute_If(
+    ForEach_If(
         FCk_Handle& InAttributeOwner,
         const TFunction<void(FCk_Handle_FloatAttribute)>& InFunc,
         const TFunction<bool(FCk_Handle_FloatAttribute)>& InPredicate) -> void;
@@ -228,6 +228,41 @@ public:
     static FCk_Handle_FloatAttribute
     Remove(
         UPARAM(ref) FCk_Handle_FloatAttributeModifier& InAttributeModifierEntity);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AttributeModifier|Float",
+              DisplayName="[Ck][FloatAttribute] For Each Modifier",
+              meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
+    static TArray<FCk_Handle_FloatAttributeModifier>
+    ForEach(
+        UPARAM(ref) FCk_Handle_FloatAttribute& InAttribute,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate,
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
+    static auto
+    ForEach(
+        FCk_Handle_FloatAttribute& InAttribute,
+        const TFunction<void(FCk_Handle_FloatAttributeModifier)>& InFunc,
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current) -> void;
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AttributeModifier|Float",
+              DisplayName="[Ck][FloatAttribute] For Each Modifier If",
+              meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
+    static TArray<FCk_Handle_FloatAttributeModifier>
+    ForEach_If(
+        UPARAM(ref) FCk_Handle_FloatAttribute& InAttribute,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate,
+        const FCk_Predicate_InHandle_OutResult& InPredicate,
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
+    static auto
+    ForEach_If(
+        FCk_Handle_FloatAttribute& InAttribute,
+        const TFunction<void(FCk_Handle_FloatAttributeModifier)>& InFunc,
+        const TFunction<bool(FCk_Handle_FloatAttributeModifier)>& InPredicate,
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
