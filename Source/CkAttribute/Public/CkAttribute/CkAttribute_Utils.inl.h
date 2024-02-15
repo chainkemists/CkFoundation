@@ -101,7 +101,7 @@ namespace ck
         Add(
             HandleType            InHandle,
             AttributeDataType     InModifierDelta,
-            ECk_ModifierOperation InModifierOperation,
+            ECk_ArithmeticOperations_Basic InModifierOperation,
             ECk_ModifierOperation_RevocablePolicy InModifierOperationRevokablePolicy)
         -> void
     {
@@ -124,16 +124,22 @@ namespace ck
 
         switch (InModifierOperation)
         {
-            case ECk_ModifierOperation::Additive:
+            case ECk_ArithmeticOperations_Basic::Add:
             {
                 InHandle.template Add<typename AttributeModifierFragmentType::FTag_AdditiveModification>();
                 break;
             }
-            case ECk_ModifierOperation::Multiplicative:
+            case ECk_ArithmeticOperations_Basic::Subtract:
             {
-                InHandle.template Add<typename AttributeModifierFragmentType::FTag_MultiplicativeModification>();
+                InHandle.template Add<typename AttributeModifierFragmentType::FTag_ModifySubtract>();
                 break;
             }
+            case ECk_ArithmeticOperations_Basic::Multiply:
+                InHandle.template Add<typename AttributeModifierFragmentType::FTag_MultiplicativeModification>();
+                break;
+            case ECk_ArithmeticOperations_Basic::Divide:
+                InHandle.template Add<typename AttributeModifierFragmentType::FTag_ModifyDivide>();
+                break;
             default:
             {
                 CK_INVALID_ENUM(InModifierOperation);

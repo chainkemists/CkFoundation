@@ -45,22 +45,6 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <>
-    struct TAttributeModifierOperators<float>
-    {
-        static auto Add(float InA, float InB) -> float
-        {
-            return InA + InB;
-        };
-
-        static auto Multiply(float InA, float InB) -> float
-        {
-            return InA * InB;
-        };
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <>
     struct TTypeConverter<TPayload_Attribute_OnValueChanged<FFragment_FloatAttribute_Current>, TypeConverterPolicy::TypeToUnreal>
     {
         auto operator()(const TPayload_Attribute_OnValueChanged<FFragment_FloatAttribute_Current>& InPayload) const
