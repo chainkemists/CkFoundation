@@ -56,9 +56,16 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Vector",
-              DisplayName="[Ck][VectorAttribute] Has Any Attribute")
+              DisplayName="[Ck][VectorAttribute] Has Feature")
     static bool
     Has(
+        const FCk_Handle& InAttributeOwnerEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Vector",
+              DisplayName="[Ck][VectorAttribute] Has Any Attribute")
+    static bool
+    Has_Any(
         const FCk_Handle& InAttributeOwnerEntity);
 
 private:
