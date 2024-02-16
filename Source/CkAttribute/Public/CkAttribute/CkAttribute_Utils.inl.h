@@ -99,8 +99,8 @@ namespace ck
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Add(
-            HandleType            InHandle,
-            AttributeDataType     InModifierDelta,
+            HandleType InHandle,
+            AttributeDataType InModifierDelta,
             ECk_ArithmeticOperations_Basic InModifierOperation,
             ECk_ModifierOperation_RevocablePolicy InModifierOperationRevocablePolicy)
         -> void
