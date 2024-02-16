@@ -6,6 +6,8 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
+#include "CkLabel/CkLabel_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
