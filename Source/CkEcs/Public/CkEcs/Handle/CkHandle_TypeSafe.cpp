@@ -25,4 +25,10 @@ auto
     return *this;
 }
 
+FCk_Handle_TypeSafe::
+    FCk_Handle_TypeSafe(
+        const FCk_Handle& InOther)
+    : FCk_Handle(InOther)
+{ }
+
 // --------------------------------------------------------------------------------------------------------------------
