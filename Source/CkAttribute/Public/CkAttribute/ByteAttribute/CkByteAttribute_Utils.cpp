@@ -316,7 +316,7 @@ auto
     if (InParams.Get_ModifierDelta() == 1 && InParams.Get_ModifierOperation() == ECk_ModifierOperation::Multiplicative)
     { return; }
 
-    const auto NewModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwnerEntity);
+    auto NewModifierEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwnerEntity);
     UCk_Utils_GameplayLabel_UE::Add(NewModifierEntity, InModifierName);
 
     const auto& AttributeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel
