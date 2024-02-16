@@ -368,6 +368,12 @@ auto
         const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate)
     -> FCk_Handle_FloatAttribute
 {
+    CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
+        TEXT("Float Attribute [{}] does NOT have a [{}] component. Cannot BIND to OnValueChanged"),
+        InAttribute,
+        InAttributeComponent)
+    { return InAttribute; }
+
     switch(InAttributeComponent)
     {
         case ECk_MinMaxCurrent::Min:
@@ -398,6 +404,12 @@ auto
         const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate)
     -> FCk_Handle_FloatAttribute
 {
+    CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
+        TEXT("Float Attribute [{}] does NOT have a [{}] component. Cannot UNBIND from OnValueChanged"),
+        InAttribute,
+        InAttributeComponent)
+    { return InAttribute; }
+
     switch(InAttributeComponent)
     {
         case ECk_MinMaxCurrent::Min:
@@ -434,7 +446,15 @@ auto
     ParamsToUse.Set_TargetAttributeName(UCk_Utils_GameplayLabel_UE::Get_Label(InAttribute));
 
     const auto& LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute);
-    const auto ModifierOperation = ParamsToUse.Get_ModifierOperation();
+    const auto& ModifierOperation = ParamsToUse.Get_ModifierOperation();
+    const auto& AttributeComponent = ParamsToUse.Get_Component();
+
+    CK_ENSURE_IF_NOT(UCk_Utils_FloatAttribute_UE::Has_Component(InAttribute, AttributeComponent),
+        TEXT("Float Attribute [{}] with Owner [{}] does NOT have a [{}] component. Cannot Add Modifier"),
+        InAttribute,
+        LifetimeOwner,
+        AttributeComponent)
+    { return {}; }
 
     if (FMath::IsNearlyZero(ParamsToUse.Get_ModifierDelta()) &&
         (ModifierOperation == ECk_ArithmeticOperations_Basic::Add || ModifierOperation  == ECk_ArithmeticOperations_Basic::Subtract))
@@ -448,7 +468,7 @@ auto
     auto NewModifierEntity = ck::StaticCast<FCk_Handle_FloatAttributeModifier>(NewEntity);
     UCk_Utils_GameplayLabel_UE::Add(NewModifierEntity, InModifierName);
 
-    switch (ParamsToUse.Get_Component())
+    switch (AttributeComponent)
     {
         case ECk_MinMaxCurrent::Min:
         {
