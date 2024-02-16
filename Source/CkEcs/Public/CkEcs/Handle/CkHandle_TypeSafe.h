@@ -7,18 +7,12 @@
 
 namespace ck
 {
-    template <typename T_DerivedHandle>
+    template <typename T_DerivedHandle, typename T_HandleType>
+    requires(std::is_base_of_v<FCk_Handle, std::remove_cvref_t<T_HandleType>>)
     auto
         StaticCast(
-            const FCk_Handle& InHandle) -> const T_DerivedHandle&;
-
-    template <typename T_DerivedHandle>
-    auto
-        StaticCast(
-            FCk_Handle& InHandle) -> T_DerivedHandle&;
+            T_HandleType&& InHandle) -> T_DerivedHandle;
 }
-
-// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT()
 struct CKECS_API FCk_Handle_TypeSafe : public FCk_Handle
@@ -38,6 +32,9 @@ public:
     FCk_Handle_TypeSafe(const ThisType& InHandle);
 
     auto operator=(ThisType InOther) -> ThisType&;
+
+protected:
+    FCk_Handle_TypeSafe(const FCk_Handle& InOther);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -52,13 +49,20 @@ static_assert
 // --------------------------------------------------------------------------------------------------------------------
 
 #define CK_GENERATED_BODY_HANDLE_TYPESAFE(_ClassType_)                                                              \
+    template <typename T_DerivedHandle, typename T_HandleType>                                                      \
+    requires(std::is_base_of_v<FCk_Handle, std::remove_cvref_t<T_HandleType>>)                                      \
+    friend auto                                                                                                     \
+        ck::StaticCast(                                                                                             \
+            T_HandleType&& InHandle) -> T_DerivedHandle;                                                            \
     CK_GENERATED_BODY(_ClassType_);                                                                                 \
     using FCk_Handle_TypeSafe::operator==;                                                                          \
     using FCk_Handle_TypeSafe::operator!=;                                                                          \
     _ClassType_() = default;                                                                                        \
     _ClassType_(ThisType&& InOther) noexcept : FCk_Handle_TypeSafe(MoveTemp(InOther)) { }                           \
     _ClassType_(const ThisType& InHandle) : FCk_Handle_TypeSafe(InHandle) { }                                       \
-    auto operator=( ThisType InOther) -> ThisType& { Swap(InOther); return *this; }
+    auto operator=( ThisType InOther) -> ThisType& { Swap(InOther); return *this; }                                 \
+    private:                                                                                                        \
+    _ClassType_(const FCk_Handle& InOther) : FCk_Handle_TypeSafe(InOther) { }
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -90,60 +94,36 @@ static_assert
 // --------------------------------------------------------------------------------------------------------------------
 
 #define CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(_HandleType_)                                                 \
-static auto                                                                                              \
-    CastChecked(                                                                                         \
-        FCk_Handle& InHandle)                                                                            \
-    -> _HandleType_&                                                                                     \
-{                                                                                                        \
-    if (ck::Is_NOT_Valid(InHandle))                                                                      \
-    { static _HandleType_ Invalid; return Invalid; }                                                     \
+    template <typename T>                                                                                \
+    static auto CastChecked(                                                                             \
+        T&& InHandle)                                                                                    \
+        -> _HandleType_                                                                                  \
+    {                                                                                                    \
+        if (ck::Is_NOT_Valid(InHandle, ck::IsValid_Policy_IncludePendingKill{}))                         \
+        { return {}; }                                                                                   \
                                                                                                          \
-    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have a [{}]. Unable to convert Handle."), \
-        InHandle, ck::Get_RuntimeTypeToString<_HandleType_>())                                           \
-    { static _HandleType_ Invalid; return Invalid; }                                                     \
+        CK_ENSURE_IF_NOT(Has(InHandle),                                                                  \
+            TEXT("Handle [{}] does NOT have a [{}]. Unable to convert Handle."),                         \
+            InHandle,                                                                                    \
+            ck::Get_RuntimeTypeToString<_HandleType_>())                                                 \
+        { return {}; }                                                                                   \
                                                                                                          \
-    return ck::StaticCast<_HandleType_>(InHandle);                                                       \
-}                                                                                                        \
-static auto                                                                                              \
-    Cast(                                                                                                \
-        FCk_Handle& InHandle)                                                                            \
-    -> _HandleType_&                                                                                     \
-{                                                                                                        \
-    if (ck::Is_NOT_Valid(InHandle))                                                                      \
-    { static _HandleType_ Invalid; return Invalid; }                                                     \
+        return ck::StaticCast<_HandleType_>(std::forward<T>(InHandle));                                  \
+    }                                                                                                    \
                                                                                                          \
-    if (NOT Has(InHandle))                                                                               \
-    { static _HandleType_ Invalid; return Invalid; }                                                     \
+    template <typename T>                                                                                \
+    static auto Cast(                                                                                    \
+        T&& InHandle)                                                                                    \
+        -> _HandleType_                                                                                  \
+    {                                                                                                    \
+        if (ck::Is_NOT_Valid(InHandle, ck::IsValid_Policy_IncludePendingKill{}))                         \
+        { return {}; }                                                                                   \
                                                                                                          \
-    return ck::StaticCast<_HandleType_>(InHandle);                                                       \
-}                                                                                                        \
-static auto                                                                                              \
-    CastChecked(                                                                                         \
-        const FCk_Handle& InHandle)                                                                      \
-    -> const _HandleType_&                                                                               \
-{                                                                                                        \
-    if (ck::Is_NOT_Valid(InHandle))                                                                      \
-    { static _HandleType_ Invalid; return Invalid; }                                                     \
+        if (NOT Has(InHandle))                                                                           \
+        { return {}; }                                                                                   \
                                                                                                          \
-    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have a [{}]. Unable to convert Handle."), \
-        InHandle, ck::Get_RuntimeTypeToString<_HandleType_>())                                           \
-    { static _HandleType_ Invalid; return Invalid; }                                                     \
-                                                                                                         \
-    return ck::StaticCast<const _HandleType_>(InHandle);                                                 \
-}                                                                                                        \
-static auto                                                                                              \
-    Cast(                                                                                                \
-        const FCk_Handle& InHandle)                                                                      \
-    -> const _HandleType_&                                                                               \
-{                                                                                                        \
-    if (ck::Is_NOT_Valid(InHandle))                                                                      \
-    { static _HandleType_ Invalid; return Invalid; }                                                     \
-                                                                                                         \
-    if (NOT Has(InHandle))                                                                               \
-    { static _HandleType_ Invalid; return Invalid; }                                                     \
-                                                                                                         \
-    return ck::StaticCast<const _HandleType_>(InHandle);                                                 \
-}
+        return ck::StaticCast<_HandleType_>(std::forward<T>(InHandle));                                  \
+    }                                                                                                    \
 
 // NOTES:
 // - the ... are the Fragments for the Has check (see other usages)
@@ -201,6 +181,37 @@ auto                                                                            
 
 namespace ck
 {
+    namespace details
+    {
+        template <typename T_DerivedHandle>
+        auto
+            StaticCast(
+                const FCk_Handle& InHandle) -> const T_DerivedHandle&
+        {
+            static_assert(std::is_base_of_v<FCk_Handle_TypeSafe, std::remove_cvref_t<T_DerivedHandle>> ||
+                std::is_same_v<std::remove_cvref_t<T_DerivedHandle>, FCk_Handle>, "T_DerivedHandle MUST be type-safe Handle");
+            static_assert(sizeof(T_DerivedHandle) == sizeof(FCk_Handle), "T_DerivedHandle MUST be the same size as FCk_Handle");
+
+            return *static_cast<const T_DerivedHandle*>(&InHandle);
+        }
+
+        template <typename T_DerivedHandle>
+        auto
+            StaticCast(
+                FCk_Handle& InHandle) -> T_DerivedHandle&
+        {
+            static_assert(std::is_lvalue_reference_v<T_DerivedHandle&&>, "Only lvalue references are allowed");
+            static_assert(std::is_base_of_v<FCk_Handle_TypeSafe, std::remove_cvref_t<T_DerivedHandle>> ||
+                std::is_same_v<std::remove_cvref_t<T_DerivedHandle>, FCk_Handle>, "T_DerivedHandle MUST be type-safe Handle");
+            static_assert(sizeof(T_DerivedHandle) == sizeof(FCk_Handle), "T_DerivedHandle MUST be the same size as FCk_Handle");
+
+            return *static_cast<T_DerivedHandle*>(&InHandle);
+        }
+
+        template <typename T_DerivedHandle, typename T_Handle>
+        using StaticCastReturnType = decltype(StaticCast<T_DerivedHandle>(T_Handle{}));
+    }
+
     template <typename T_DerivedHandle>
     auto
         MakeHandle(
@@ -214,28 +225,17 @@ namespace ck
         return InEntity;
     }
 
-    template <typename T_DerivedHandle>
+    template <typename T_DerivedHandle, typename T_HandleType>
+    requires(std::is_base_of_v<FCk_Handle, std::remove_cvref_t<T_HandleType>>)
     auto
         StaticCast(
-            const FCk_Handle& InHandle) -> const T_DerivedHandle&
+            T_HandleType&& InHandle) -> T_DerivedHandle
     {
         static_assert(std::is_base_of_v<FCk_Handle_TypeSafe, std::remove_cvref_t<T_DerivedHandle>> ||
             std::is_same_v<std::remove_cvref_t<T_DerivedHandle>, FCk_Handle>, "T_DerivedHandle MUST be type-safe Handle");
         static_assert(sizeof(T_DerivedHandle) == sizeof(FCk_Handle), "T_DerivedHandle MUST be the same size as FCk_Handle");
 
-        return *static_cast<T_DerivedHandle*>(&InHandle);
-    }
-
-    template <typename T_DerivedHandle>
-    auto
-        StaticCast(
-            FCk_Handle& InHandle) -> T_DerivedHandle&
-    {
-        static_assert(std::is_base_of_v<FCk_Handle_TypeSafe, std::remove_cvref_t<T_DerivedHandle>> ||
-            std::is_same_v<std::remove_cvref_t<T_DerivedHandle>, FCk_Handle>, "T_DerivedHandle MUST be type-safe Handle");
-        static_assert(sizeof(T_DerivedHandle) == sizeof(FCk_Handle), "T_DerivedHandle MUST be the same size as FCk_Handle");
-
-        return *static_cast<T_DerivedHandle*>(&InHandle);
+        return T_DerivedHandle{InHandle};
     }
 }
 

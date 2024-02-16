@@ -176,8 +176,7 @@ namespace ck_exp
         {
             CK_STAT(STAT_ForEachEntity);
 
-            auto RegularHandle = FCk_Handle{InEntity, _Registry};
-            auto& TypeSafeHandle = ck::StaticCast<HandleType>(RegularHandle);
+            auto TypeSafeHandle = ck::StaticCast<HandleType>(FCk_Handle{InEntity, _Registry});
             This()->ForEachEntity(InDeltaT, TypeSafeHandle, InComponents...);
         });
     }
