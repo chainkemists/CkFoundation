@@ -11,8 +11,8 @@ auto
     UCk_Ecs_ReplicatedObject_UE::
     Setup(
         UCk_Ecs_ReplicatedObject_UE* InExistingReplicatedObject,
-        AActor*                      InTopmostOwningActor,
-        const FCk_Handle&            InAssociatedEntity)
+        AActor* InTopmostOwningActor,
+        const FCk_Handle& InAssociatedEntity)
     -> UCk_Ecs_ReplicatedObject_UE*
 {
     InExistingReplicatedObject->_AssociatedEntity = InAssociatedEntity;
@@ -105,7 +105,7 @@ auto
     if (NOT ck::IsValid(Get_AssociatedEntity()))
     { return; }
 
-    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(Get_AssociatedEntity());
+    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(_AssociatedEntity);
 }
 
 auto
