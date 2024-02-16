@@ -11,7 +11,7 @@
 auto
     UCk_Utils_EntityLifetime_UE::
     Request_DestroyEntity(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         ECk_EntityLifetime_DestructionBehavior InDestructionBehavior)
     -> void
 {
@@ -40,7 +40,7 @@ auto
 
     InHandle.AddOrGet<ck::FTag_TriggerDestroyEntity>();
 
-    for (const auto& LifeTimeDependents : Get_LifetimeDependents(InHandle))
+    for (auto& LifeTimeDependents : Get_LifetimeDependents(InHandle))
     {
         Request_DestroyEntity(LifeTimeDependents, InDestructionBehavior);
     }
@@ -49,7 +49,7 @@ auto
 auto
     UCk_Utils_EntityLifetime_UE::
     Request_CreateEntity(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> FCk_Handle
 {
     return Request_CreateEntity(InHandle, PostEntityCreatedFunc{});
@@ -58,7 +58,7 @@ auto
 auto
     UCk_Utils_EntityLifetime_UE::
     Get_LifetimeOwner(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         ECk_PendingKill_Policy InPendingKillPolicy)
     -> FCk_Handle
 {
@@ -121,7 +121,7 @@ auto
 auto
     UCk_Utils_EntityLifetime_UE::
     Get_TransientEntity(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> FCk_Handle
 {
     return Get_TransientEntity(**InHandle);
@@ -130,7 +130,7 @@ auto
 auto
     UCk_Utils_EntityLifetime_UE::
     Get_WorldForEntity(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> UWorld*
 {
     if (InHandle.Has<TWeakObjectPtr<UWorld>>())
@@ -150,7 +150,7 @@ auto
 auto
     UCk_Utils_EntityLifetime_UE::
     Request_CreateEntity(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         PostEntityCreatedFunc InFunc)
     -> HandleType
 {
@@ -160,7 +160,10 @@ auto
     const auto NewEntity = Request_CreateEntity(**InHandle, [&](FCk_Handle InNewEntity)
     {
         InNewEntity.Add<ck::FFragment_LifetimeOwner>(InHandle);
-        InHandle.AddOrGet<ck::FFragment_LifetimeDependents>()._Entities.Emplace(InNewEntity);
+        // Not doing something like this because it is undefined behavior: *const_cast<FCk_Handle*>(&InHandle)
+        auto NonConstHandle = InHandle;
+
+        NonConstHandle.AddOrGet<ck::FFragment_LifetimeDependents>()._Entities.Emplace(InNewEntity);
 
         if (InFunc)
         {

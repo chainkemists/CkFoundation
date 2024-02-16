@@ -115,14 +115,14 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     ForEach_Ability(
-        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
     -> TArray<FCk_Handle_Ability>
 {
     auto Abilities = TArray<FCk_Handle_Ability>{};
 
-    ForEach_Ability(InAbilityOwnerEntity, [&](FCk_Handle_Ability& InAbility)
+    ForEach_Ability(InAbilityOwnerEntity, [&](FCk_Handle_Ability InAbility)
     {
         if (InDelegate.IsBound())
         { InDelegate.Execute(InAbility, InOptionalPayload); }
@@ -136,27 +136,22 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     ForEach_Ability(
-        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
-        const TFunction<void(FCk_Handle_Ability&)>& InFunc)
+        FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        const TFunction<void(FCk_Handle_Ability)>& InFunc)
     -> void
 {
-    if (NOT Has_Any(InAbilityOwnerEntity))
-    { return; }
-
     RecordOfAbilities_Utils::ForEach_ValidEntry
     (
         InAbilityOwnerEntity,
-        [&](FCk_Handle_Ability InAbilityEntity)
-        {
-            InFunc(InAbilityEntity);
-        }
+        InFunc,
+        ECk_Record_ForEach_Policy::IgnoreRecordMissing
     );
 }
 
 auto
     UCk_Utils_AbilityOwner_UE::
     ForEach_Ability_If(
-        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate)
@@ -184,7 +179,6 @@ auto
             }
 
             return *PredicateResult;
-
         }
     );
 
@@ -194,29 +188,24 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     ForEach_Ability_If(
-        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         const TFunction<void(FCk_Handle_Ability)>& InFunc,
         const TFunction<bool(FCk_Handle_Ability)>& InPredicate)
     -> void
 {
-    if (NOT Has_Any(InAbilityOwnerEntity))
-    { return; }
-
     RecordOfAbilities_Utils::ForEach_ValidEntry_If
     (
         InAbilityOwnerEntity,
-        [&](const FCk_Handle_Ability& InAbilityEntity)
-        {
-            InFunc(InAbilityEntity);
-        },
-        InPredicate
+        InFunc,
+        InPredicate,
+        ECk_Record_ForEach_Policy::IgnoreRecordMissing
     );
 }
 
 auto
     UCk_Utils_AbilityOwner_UE::
     ForEach_Ability_WithStatus(
-        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         ECk_Ability_Status InStatus,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
@@ -238,14 +227,11 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     ForEach_Ability_WithStatus(
-        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         ECk_Ability_Status InStatus,
         const TFunction<void(FCk_Handle_Ability)>& InFunc)
     -> void
 {
-    if (NOT Has_Any(InAbilityOwnerEntity))
-    { return; }
-
     ForEach_Ability(InAbilityOwnerEntity, [&](const FCk_Handle_Ability& InAbility)
     {
         if (UCk_Utils_Ability_UE::Get_Status(UCk_Utils_Ability_UE::CastChecked(InAbility)) == InStatus)

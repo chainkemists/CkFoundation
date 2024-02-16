@@ -121,13 +121,13 @@ public:
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle_Ability>
     ForEach_Ability(
-        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_Ability(
-        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
-        const TFunction<void(UPARAM(ref) FCk_Handle_Ability&)>& InFunc) -> void;
+        FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        const TFunction<void(FCk_Handle_Ability)>& InFunc) -> void;
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
@@ -135,13 +135,13 @@ public:
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle_Ability>
     ForEach_Ability_If(
-        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate,
         const FCk_Predicate_InHandle_OutResult& InPredicate);
     static auto
     ForEach_Ability_If(
-        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         const TFunction<void(FCk_Handle_Ability)>& InFunc,
         const TFunction<bool(FCk_Handle_Ability)>& InPredicate) -> void;
 
@@ -151,13 +151,13 @@ public:
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle_Ability>
     ForEach_Ability_WithStatus(
-        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         ECk_Ability_Status InStatus,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_Ability_WithStatus(
-        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         ECk_Ability_Status InStatus,
         const TFunction<void(FCk_Handle_Ability)>& InFunc) -> void;
 

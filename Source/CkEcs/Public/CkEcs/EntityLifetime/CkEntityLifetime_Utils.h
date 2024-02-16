@@ -43,62 +43,62 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck][Lifetime] Request Destroy Entity",
-              Category = "Ck|Utils|EntityLifetime")
+              Category = "Ck|Utils|Lifetime")
     static void
     Request_DestroyEntity(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         ECk_EntityLifetime_DestructionBehavior InDestructionBehavior = ECk_EntityLifetime_DestructionBehavior::ForceDestroy);
 
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck][Lifetime] Request Create New Entity",
-              Category = "Ck|Utils|EntityLifetime")
+              Category = "Ck|Utils|Lifetime")
     static FCk_Handle
     Request_CreateEntity(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
 public:
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][Lifetime] Get Entity Lifetime Owner",
-              Category = "Ck|Utils|EntityLifetime")
+              Category = "Ck|Utils|Lifetime")
     static FCk_Handle
     Get_LifetimeOwner(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         ECk_PendingKill_Policy InPendingKillPolicy = ECk_PendingKill_Policy::ExcludePendingKill);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][Lifetime] Get Entity Lifetime Dependents",
-              Category = "Ck|Utils|EntityLifetime")
+              Category = "Ck|Utils|Lifetime")
     static TArray<FCk_Handle>
     Get_LifetimeDependents(
         const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][Lifetime] Get Is Entity Pending Destroy",
-              Category = "Ck|Utils|EntityLifetime")
+              Category = "Ck|Utils|Lifetime")
     static bool
     Get_IsPendingDestroy(
         const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][Lifetime] Get Transient Entity",
-              Category = "Ck|Utils|EntityLifetime")
+              Category = "Ck|Utils|Lifetime")
     static FCk_Handle
     Get_TransientEntity(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][Lifetime] Get World For Entity",
-              Category = "Ck|Utils|EntityLifetime")
+              Category = "Ck|Utils|Lifetime")
     static UWorld*
     Get_WorldForEntity(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
 public:
     template <typename T_Predicate>
     [[nodiscard]]
     static auto
     Get_LifetimeOwnerIf(
-        FCk_Handle  InHandle,
+        const FCk_Handle& InHandle,
         T_Predicate T_Func,
         ECk_PendingKill_Policy InPendingKillPolicy = ECk_PendingKill_Policy::ExcludePendingKill) -> FCk_Handle;
 
@@ -106,7 +106,7 @@ public:
     [[nodiscard]]
     static auto
     Request_CreateEntity(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         PostEntityCreatedFunc InFunc) -> HandleType;
 
     [[nodiscard]]
@@ -135,7 +135,7 @@ template <typename T_Predicate>
 auto
     UCk_Utils_EntityLifetime_UE::
     Get_LifetimeOwnerIf(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         T_Predicate T_Func,
         ECk_PendingKill_Policy InPendingKillPolicy)
     -> FCk_Handle

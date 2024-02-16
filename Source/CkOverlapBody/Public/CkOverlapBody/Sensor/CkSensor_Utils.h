@@ -85,7 +85,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Sensor",
-        DisplayName="[Ck][Sensor] Has Sensor")
+        DisplayName="[Ck][Sensor] Has Feature")
     static bool
     Has(
         const FCk_Handle& InHandle);
