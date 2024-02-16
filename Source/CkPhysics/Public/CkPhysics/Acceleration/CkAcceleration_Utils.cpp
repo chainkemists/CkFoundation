@@ -246,7 +246,7 @@ auto
     if (NOT Ensure(InAccelerationOwnerEntity, InModifierName))
     { return; }
 
-    const auto& AccelerationModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+    auto AccelerationModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_AccelerationModifier_UE,
         RecordOfAccelerationModifiers_Utils>(InAccelerationOwnerEntity, InModifierName);
 
@@ -330,7 +330,7 @@ auto
     if (NOT Ensure(InHandle, InModifierName))
     { return; }
 
-    const auto& AccelerationModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+    auto AccelerationModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_AccelerationModifier_UE,
         RecordOfBulkAccelerationModifiers_Utils>(InHandle, InModifierName);
 

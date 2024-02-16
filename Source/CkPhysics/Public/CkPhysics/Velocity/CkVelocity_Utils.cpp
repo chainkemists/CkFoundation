@@ -258,7 +258,7 @@ auto
     if (NOT Ensure(InVelocityOwnerEntity, InModifierName))
     { return; }
 
-    const auto& VelocityModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+    auto VelocityModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_VelocityModifier_UE,
         RecordOfVelocityModifiers_Utils>(InVelocityOwnerEntity, InModifierName);
 
@@ -342,7 +342,7 @@ auto
     if (NOT Ensure(InHandle, InModifierName))
     { return; }
 
-    const auto& VelocityModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
+    auto VelocityModifierEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
         UCk_Utils_VelocityModifier_UE,
         RecordOfBulkVelocityModifiers_Utils>(InHandle, InModifierName);
 

@@ -52,7 +52,7 @@ auto
         if (const auto EntityOwningActorComponent = OwningActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
             ck::IsValid(EntityOwningActorComponent))
         {
-            const auto OwningEntity = EntityOwningActorComponent->Get_EntityHandle();
+            auto OwningEntity = EntityOwningActorComponent->Get_EntityHandle();
 
             UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(OwningEntity);
 
@@ -148,7 +148,7 @@ auto
             );
         }
 
-        if (ck::Is_NOT_Valid(OwningActor->GetComponentByClass<UCk_ObjectReplicator_ActorComponent_UE>()))
+        if (NOT UCk_Utils_Actor_UE::Get_HasComponentByClass(OwningActor, UCk_ObjectReplicator_ActorComponent_UE::StaticClass()))
         {
             UCk_Utils_Actor_UE::Request_AddNewActorComponent<UCk_ObjectReplicator_ActorComponent_UE>
             (
@@ -387,7 +387,6 @@ auto
     {
         case EInvoke_Caller::ReplicationDriver:
         {
-
             if (_ReplicationComplete_BroadcastStep == EOnReplicationCompleteBroadcastStep::Wait)
             {
                 _ReplicationComplete_BroadcastStep = EOnReplicationCompleteBroadcastStep::WaitOnConstructionScript;
