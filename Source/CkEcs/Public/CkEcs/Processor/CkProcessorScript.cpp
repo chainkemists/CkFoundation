@@ -14,7 +14,10 @@ auto
     -> void
 {
     if (ck::Is_NOT_Valid(_Registry))
-    { _Registry = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>()->Get_Registry(); }
+    {
+        _Registry = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>()->Get_Registry();
+        _TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(*_Registry);
+    }
 }
 
 auto
