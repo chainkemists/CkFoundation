@@ -273,7 +273,7 @@ namespace ck
     template<typename T_DerivedAttribute>
     struct TFragment_Signal_OnAttributeValueChanged : public TFragment_Signal
     <
-        typename T_DerivedAttribute::HandleType,
+        FCk_Handle,
         TPayload_Attribute_OnValueChanged<T_DerivedAttribute>
     > {};
 
