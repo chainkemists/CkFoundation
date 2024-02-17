@@ -97,6 +97,9 @@ public:
     template <typename T_Fragment>
     auto Try_Remove() -> void;
 
+    template <typename... T_Fragments>
+    auto Clear() -> void;
+
     template <typename... T_Fragment>
     auto View() -> FCk_Registry::RegistryViewType<T_Fragment...>;
 
@@ -146,6 +149,13 @@ public:
     auto Get_Registry() const -> const FCk_Registry&;
 
 private:
+    template <typename T_Fragment>
+    requires(std::is_empty_v<T_Fragment>)
+    auto DoClear() -> void;
+
+    template <typename T_Fragment>
+    auto DoClear() -> void;
+
     auto DoUpdate_FragmentDebugInfo_Blueprints() -> void;
 
     template <typename T_Fragment>
@@ -537,6 +547,23 @@ auto
     DoRemove_FragmentDebugInfo<T_Fragment>();
 }
 
+template <typename ... T_Fragments>
+auto
+    FCk_Handle::
+    Clear()
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(_Registry),
+        TEXT("Unable to Clear<...> Fragments. Handle [{}] does NOT have a valid Registry."), *this)
+    { return; }
+
+    // we need to do this to allow Entity debugging to properly clear the debug mapping
+#if CK_ECS_DISABLE_HANDLE_DEBUGGING == 0
+    (DoClear<T_Fragments>(), ...);
+#endif
+    _Registry->Clear<T_Fragments...>();
+}
+
 template <typename ... T_Fragment>
 auto
     FCk_Handle::
@@ -689,6 +716,33 @@ auto
     }
 
     return _Registry->Get<T_Fragment>(_Entity);
+}
+
+template <typename T_Fragment>
+requires (std::is_empty_v<T_Fragment>)
+auto
+    FCk_Handle::
+    DoClear()
+    -> void
+{
+    View<T_Fragment>().ForEach([&](EntityType InEntity)
+    {
+        auto Handle = ck::MakeHandle(InEntity, *this);
+        Handle.DoRemove_FragmentDebugInfo<T_Fragment>();
+    });
+}
+
+template <typename T_Fragment>
+auto
+    FCk_Handle::
+    DoClear()
+    -> void
+{
+    View<T_Fragment>().ForEach([&](EntityType InEntity, T_Fragment&)
+    {
+        auto Handle = ck::MakeHandle(InEntity, *this);
+        Handle.DoRemove_FragmentDebugInfo<T_Fragment>();
+    });
 }
 
 template <typename T_Fragment>
