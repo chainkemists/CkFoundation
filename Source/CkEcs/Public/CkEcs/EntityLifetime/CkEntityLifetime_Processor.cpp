@@ -15,7 +15,7 @@ namespace ck
     FProcessor_EntityLifetime_EntityJustCreated::
         FProcessor_EntityLifetime_EntityJustCreated(
             const FRegistryType& InRegistry)
-        : _Registry(InRegistry)
+        : Super(InRegistry)
     {
     }
 
@@ -25,7 +25,7 @@ namespace ck
             FTimeType)
         -> void
     {
-        _Registry.Clear<FTag_EntityJustCreated>();
+        _TransientEntity.Clear<FTag_EntityJustCreated>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -38,7 +38,7 @@ namespace ck
     {
         Super::Tick(InDeltaT);
 
-        _Registry.Clear<FTag_TriggerDestroyEntity>();
+        _TransientEntity.Clear<FTag_TriggerDestroyEntity>();
     }
 
     auto

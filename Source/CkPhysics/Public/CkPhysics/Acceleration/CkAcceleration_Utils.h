@@ -205,7 +205,7 @@ public:
 private:
     static auto
     Has(
-        FCk_Handle InHandle) -> bool;
+        const FCk_Handle& InHandle) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

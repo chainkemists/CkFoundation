@@ -171,19 +171,19 @@ namespace ck
         auto
         ForEachEntity(
             TimeType InDeltaT,
-            HandleType InHandle,
+            HandleType& InHandle,
             const FFragment_BulkVelocityModifier_Params& InParams,
             FFragment_BulkVelocityModifier_Requests& InRequests) const -> void;
 
     private:
         static auto DoHandleRequest(
-            HandleType InHandle,
+            const HandleType& InHandle,
             const FFragment_BulkVelocityModifier_Params& InParams,
             const FCk_Request_BulkVelocityModifier_AddTarget& InRequest) -> void;
 
         static auto DoHandleRequest(
-            HandleType InHandle,
-            const FFragment_BulkVelocityModifier_Params& InParams,
+            const HandleType&                                    InHandle,
+            const FFragment_BulkVelocityModifier_Params&         InParams,
             const FCk_Request_BulkVelocityModifier_RemoveTarget& InRequest) -> void;
     };
 

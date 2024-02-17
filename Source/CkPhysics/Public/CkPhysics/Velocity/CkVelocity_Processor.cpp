@@ -18,7 +18,7 @@ namespace ck
     {
         TProcessor::Tick(InDeltaT);
 
-        _Registry.Clear<MarkedDirtyBy>();
+        _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
     auto
@@ -168,7 +168,7 @@ namespace ck
             const FFragment_RecordOfVelocityChannels& InVelocityChannels) const
         -> void
     {
-        InHandle.Get_Registry().View<FFragment_BulkVelocityModifier_Params, FTag_BulkVelocityModifier_GlobalScope>().ForEach(
+        InHandle.View<FFragment_BulkVelocityModifier_Params, FTag_BulkVelocityModifier_GlobalScope>().ForEach(
         [&](FCk_Entity InModifierEntity, const FFragment_BulkVelocityModifier_Params& InMultiTargetVelocityModifierParams)
         {
             if (NOT UCk_Utils_VelocityChannel_UE::Get_IsAffectedByAnyOtherChannel(InHandle, InMultiTargetVelocityModifierParams.Get_Params().Get_TargetChannels()))
@@ -188,7 +188,7 @@ namespace ck
         FProcessor_BulkVelocityModifier_HandleRequests::
         ForEachEntity(
             TimeType InDeltaT,
-            HandleType InHandle,
+            HandleType& InHandle,
             const FFragment_BulkVelocityModifier_Params& InParams,
             FFragment_BulkVelocityModifier_Requests& InRequests) const
         -> void
@@ -216,7 +216,7 @@ namespace ck
     auto
         FProcessor_BulkVelocityModifier_HandleRequests::
         DoHandleRequest(
-            HandleType InHandle,
+            const HandleType& InHandle,
             const FFragment_BulkVelocityModifier_Params& InParams,
             const FCk_Request_BulkVelocityModifier_AddTarget& InRequest)
         -> void
@@ -237,7 +237,7 @@ namespace ck
     auto
         FProcessor_BulkVelocityModifier_HandleRequests::
         DoHandleRequest(
-            HandleType InHandle,
+            const HandleType& InHandle,
             const FFragment_BulkVelocityModifier_Params& InParams,
             const FCk_Request_BulkVelocityModifier_RemoveTarget& InRequest)
         -> void

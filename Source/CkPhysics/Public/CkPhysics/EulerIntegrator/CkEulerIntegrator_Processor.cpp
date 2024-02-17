@@ -13,7 +13,7 @@ namespace ck
     {
         TProcessor::Tick(InDeltaT);
 
-        _Registry.Clear<FTag_EulerIntegrator_DoOnePredictiveUpdate>();
+        _TransientEntity.Clear<FTag_EulerIntegrator_DoOnePredictiveUpdate>();
     }
 
     auto

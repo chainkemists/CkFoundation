@@ -16,7 +16,7 @@ namespace ck
     {
         TProcessor::Tick(InDeltaT);
 
-        _Registry.Clear<MarkedDirtyBy>();
+        _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
     auto
@@ -146,7 +146,7 @@ namespace ck
             const FFragment_RecordOfAccelerationChannels& InAccelerationChannels) const
         -> void
     {
-        InHandle.Get_Registry().View<FFragment_BulkAccelerationModifier_Params, FTag_BulkAccelerationModifier_GlobalScope>().ForEach(
+        InHandle.View<FFragment_BulkAccelerationModifier_Params, FTag_BulkAccelerationModifier_GlobalScope>().ForEach(
         [&](FCk_Entity InModifierEntity, const FFragment_BulkAccelerationModifier_Params& InMultiTargetAccelerationModifierParams)
         {
             if (NOT UCk_Utils_AccelerationChannel_UE::Get_IsAffectedByAnyOtherChannel(InHandle, InMultiTargetAccelerationModifierParams.Get_Params().Get_TargetChannels()))
