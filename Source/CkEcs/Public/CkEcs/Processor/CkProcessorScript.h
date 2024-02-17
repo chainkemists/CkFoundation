@@ -50,8 +50,11 @@ public:
     ProcessEntity_If(
         FCk_Handle InEntity) const;
 
-protected:
+private:
     TOptional<RegistryType> _Registry;
+
+protected:
+    FCk_Handle _TransientEntity;
 
 public:
     CK_PROPERTY_GET(_ForEachPolicy);
