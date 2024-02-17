@@ -361,7 +361,7 @@ namespace ck
                 InAbilityOwnerEntity,
                 [&](const FCk_Handle& InAbilityEntityToCancel)
                 {
-                    const auto AbilityEntityToCancel = UCk_Utils_Ability_UE::CastChecked(InAbilityOwnerEntity);
+                    const auto AbilityEntityToCancel = UCk_Utils_Ability_UE::CastChecked(InAbilityEntityToCancel);
 
                     ability::Verbose
                     (
