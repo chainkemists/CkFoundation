@@ -43,6 +43,8 @@ public:
     friend class UCk_Utils_EntityLifetime_UE;
     friend class ck::FProcessor_EntityLifetime_PendingDestroyEntity;
 
+    friend struct FCk_Handle;
+
 public:
     using EntityType = FCk_Entity;
 
@@ -136,14 +138,18 @@ public:
     FCk_Registry();
 
 public:
+    template <typename T_Fragment, typename T_Compare>
+    auto Sort(T_Compare InCompare) -> void;
+
+    template <typename T_FragmentType, typename T_Func>
+    auto Try_Transform(EntityType InEntity, T_Func InFunc) -> void;
+
+private:
     template <typename T_FragmentType, typename... T_Args>
     auto Add(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentType&;
 
     template <typename T_FragmentType, typename... T_Args>
     auto AddOrGet(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentType&;
-
-    template <typename T_FragmentType, typename T_Func>
-    auto Try_Transform(EntityType InEntity, T_Func InFunc) -> void;
 
     template <typename T_FragmentType, typename... T_Args>
     auto Replace(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentType&;
@@ -157,16 +163,14 @@ public:
     template <typename... T_Fragments>
     auto Clear() -> void;
 
+public:
     template <typename... T_Fragments>
     auto View() -> RegistryViewType<T_Fragments...>;
 
     template <typename... T_Fragments>
     auto View() const -> ConstRegistryViewType<T_Fragments...>;
 
-    template <typename T_Fragment, typename T_Compare>
-    auto Sort(T_Compare InCompare) -> void;
-
-public:
+private:
     template <typename T_Fragment>
     auto Has(EntityType InEntity) const -> bool;
 
@@ -195,7 +199,7 @@ public:
 public:
     friend auto CKECS_API GetTypeHash(const ThisType& InRegistry) -> uint32;
 
-public:
+private:
     ck::TPtrWrapper<InternalRegistryPtrType> _InternalRegistry;
     EntityType _TransientEntity;
 

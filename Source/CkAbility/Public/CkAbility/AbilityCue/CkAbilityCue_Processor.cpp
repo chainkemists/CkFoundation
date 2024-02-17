@@ -1,5 +1,8 @@
 #include "CkAbilityCue_Processor.h"
 
+// needed for non-unity builds
+#include <Engine/World.h>
+
 #include "CkAbility/AbilityCue/CkAbilityCue_Subsystem.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -14,7 +17,7 @@ namespace ck
     {
         TProcessor::Tick(InDeltaT);
 
-        _Registry.Clear<MarkedDirtyBy>();
+        _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
     auto
