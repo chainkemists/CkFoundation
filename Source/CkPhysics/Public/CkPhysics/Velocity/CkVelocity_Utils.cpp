@@ -268,10 +268,10 @@ auto
 auto
     UCk_Utils_VelocityModifier_UE::
     Has(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
-    return InHandle->Has<ck::FTag_VelocityModifier>(InHandle.Get_Entity()) &&
+    return InHandle.Has<ck::FTag_VelocityModifier>() &&
         UCk_Utils_Velocity_UE::VelocityTarget_Utils::Has(InHandle) &&
         UCk_Utils_Velocity_UE::Has(InHandle);
 }

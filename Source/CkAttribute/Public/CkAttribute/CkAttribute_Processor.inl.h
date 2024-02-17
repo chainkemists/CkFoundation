@@ -324,7 +324,8 @@ namespace ck::detail
     TProcessor_AttributeModifier_ComputeAll<T_DerivedProcessor, T_DerivedAttributeModifier>::
         TProcessor_AttributeModifier_ComputeAll(
             RegistryType InRegistry)
-        : _NotRevocableAdd_Compute(InRegistry)
+        : Super(InRegistry)
+        , _NotRevocableAdd_Compute(InRegistry)
         , _NotRevocableSubtract_Compute(InRegistry)
         , _NotRevocableMultiply_Compute(InRegistry)
         , _NotRevocableDivide_Compute(InRegistry)
@@ -332,7 +333,6 @@ namespace ck::detail
         , _RevocableSubtract_Compute(InRegistry)
         , _RevocableMultiply_Compute(InRegistry)
         , _RevocableDivide_Compute(InRegistry)
-        , _Registry(InRegistry)
     {
     }
 
@@ -353,7 +353,7 @@ namespace ck::detail
         _RevocableMultiply_Compute.Tick(InDeltaT);
         _RevocableDivide_Compute.Tick(InDeltaT);
 
-        this->_Registry.template Clear<MarkedDirtyBy>();
+        _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------

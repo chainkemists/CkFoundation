@@ -51,7 +51,7 @@ auto
         float RoundTripTime)
     -> void
 {
-    _Registry.View<TObjectPtr<UCk_Fragment_NetTimeSync_Rep>>().ForEach(
+    _TransientEntity.View<TObjectPtr<UCk_Fragment_NetTimeSync_Rep>>().ForEach(
     [&](EntityType InEntity, TObjectPtr<UCk_Fragment_NetTimeSync_Rep> InRep)
     {
         InRep->DoBroadcast_NetTimeSync(FCk_Time{RoundTripTime});
@@ -68,7 +68,7 @@ auto
 {
     TProcessor::Tick(InDeltaT);
 
-    _Registry.Clear<MarkedDirtyBy>();
+    _TransientEntity.Clear<MarkedDirtyBy>();
 }
 
 auto
@@ -82,13 +82,13 @@ auto
     ck::algo::ForEachRequest(InRequests._NetTimeSyncRequests,
     [&](const FCk_Request_NetTimeSync_NewSync& InNewSync)
     {
-        const auto& isNetTimeSyncEnabled = UCk_Utils_NetTimeSync_Settings_UE::Get_EnableNetTimeSynchronization();
-        const auto& roundTripTime = isNetTimeSyncEnabled ? InNewSync.Get_RoundTripTime() : FCk_Time::ZeroSecond();
+        const auto& IsNetTimeSyncEnabled = UCk_Utils_NetTimeSync_Settings_UE::Get_EnableNetTimeSynchronization();
+        const auto& RoundTripTime = IsNetTimeSyncEnabled ? InNewSync.Get_RoundTripTime() : FCk_Time::ZeroSecond();
 
-        _Registry.View<FFragment_NetTimeSync>().ForEach([&](EntityType InEntity, FFragment_NetTimeSync& InTimeSync)
+        _TransientEntity.View<FFragment_NetTimeSync>().ForEach([&](EntityType InEntity, FFragment_NetTimeSync& InTimeSync)
         {
-            InTimeSync._RoundTripTime = roundTripTime;
-            InTimeSync._PlayerRoundTripTimes.FindOrAdd(InNewSync.Get_PlayerController(), roundTripTime);
+            InTimeSync._RoundTripTime = RoundTripTime;
+            InTimeSync._PlayerRoundTripTimes.FindOrAdd(InNewSync.Get_PlayerController(), RoundTripTime);
         });
     });
 }
@@ -109,10 +109,10 @@ auto
      * almost no resources if there are no Entities that have not at least synced once
      */
 
-    _Registry.View<FFragment_NetTimeSync, ck::TExclude<FTag_NetTimeSync_SyncedAtleastOnce>>().ForEach(
+    _TransientEntity.View<FFragment_NetTimeSync, ck::TExclude<FTag_NetTimeSync_SyncedAtleastOnce>>().ForEach(
     [&](EntityType InEntity, FFragment_NetTimeSync& InTimeSync)
     {
-        _Registry.Add<ck::FTag_NetTimeSync_SyncedAtleastOnce>(InEntity);
+        _TransientEntity.Add<ck::FTag_NetTimeSync_SyncedAtleastOnce>(InEntity);
         InTimeSync = InTimeToSyncFrom;
     });
 }

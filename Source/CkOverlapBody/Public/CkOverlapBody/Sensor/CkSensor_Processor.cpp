@@ -25,7 +25,7 @@ namespace ck
     {
         TProcessor::Tick(InDeltaT);
 
-        _Registry.Clear<MarkedDirtyBy>();
+        _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
     auto

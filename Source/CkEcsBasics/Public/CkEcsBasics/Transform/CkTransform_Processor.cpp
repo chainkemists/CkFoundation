@@ -18,11 +18,11 @@ namespace ck
         FProcessor_Transform_HandleRequests::
         Tick(TimeType InDeltaT) -> void
     {
-        _Registry.Clear<FTag_Transform_Updated>();
+        _TransientEntity.Clear<FTag_Transform_Updated>();
 
         TProcessor::Tick(InDeltaT);
 
-        _Registry.Clear<MarkedDirtyBy>();
+        _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
     auto

@@ -16,11 +16,11 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        _Registry.Clear<FTag_EcsTemplate_Updated>();
+        _TransientEntity.Clear<FTag_EcsTemplate_Updated>();
 
         TProcessor::Tick(InDeltaT);
 
-        _Registry.Clear<MarkedDirtyBy>();
+        _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
     auto

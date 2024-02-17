@@ -8,9 +8,10 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECS_API FProcessor_EntityLifetime_EntityJustCreated
+    class CKECS_API FProcessor_EntityLifetime_EntityJustCreated : public FProcessor
     {
     public:
+        using Super = FProcessor;
         using FTimeType = FCk_Time;
         using FRegistryType = FCk_Registry;
 
@@ -19,9 +20,6 @@ namespace ck
 
     public:
         auto Tick(FTimeType) -> void;
-
-    private:
-        FCk_Registry _Registry;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -256,10 +256,10 @@ auto
 auto
     UCk_Utils_AccelerationModifier_UE::
     Has(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
-    return InHandle->Has<ck::FTag_AccelerationModifier>(InHandle.Get_Entity()) &&
+    return InHandle.Has<ck::FTag_AccelerationModifier>() &&
         UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Has(InHandle) &&
         UCk_Utils_Acceleration_UE::Has(InHandle);
 }
