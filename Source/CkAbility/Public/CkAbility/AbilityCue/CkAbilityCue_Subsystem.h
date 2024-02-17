@@ -4,6 +4,10 @@
 
 #include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
 
+// needed for non-unity builds
+#include <GameFramework/GameModeBase.h>
+#include <Subsystems/EngineSubsystem.h>
+
 #include "CkAbilityCue_Subsystem.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
