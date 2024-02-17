@@ -33,7 +33,7 @@ namespace ck::detail
             InHandle,
             ck::MakePayload
             (
-                InHandle,
+                AttributeLifetimeOwner,
                 TPayload_Attribute_OnValueChanged<T_DerivedAttribute>
                 {
                     InHandle,
