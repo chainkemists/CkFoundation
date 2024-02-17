@@ -212,11 +212,15 @@ namespace ck
         using StaticCastReturnType = decltype(StaticCast<T_DerivedHandle>(T_Handle{}));
     }
 
+    // This mainly exists to allow generic functions to work with type-safe handles. Originally, MakeHandle was used to get
+    // a Handle from an Entity. Generic functions needed to work with Entities that could be FCk_Entity or FCk_Handle, so
+    // MakeHandle was overloaded for that purpose (see CkHandle.h). This is another overload to have those generic functions
+    // work with type-safe Handles as well (which is why it's essentially a pass-through)
     template <typename T_DerivedHandle>
     auto
         MakeHandle(
             T_DerivedHandle&& InEntity,
-            FCk_Handle InValidHandle)
+            FCk_Handle)
         -> T_DerivedHandle
     {
         static_assert(std::is_base_of_v<FCk_Handle_TypeSafe, std::remove_cvref_t<T_DerivedHandle>>, "T_DerivedHandle MUST be type-safe Handle");
