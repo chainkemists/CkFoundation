@@ -15,6 +15,9 @@ auto
         ECk_EntityLifetime_DestructionBehavior InDestructionBehavior)
     -> void
 {
+    if (ck::Is_NOT_Valid(InHandle))
+    { return; }
+
     if (Get_IsPendingDestroy(InHandle))
     { return; }
 
