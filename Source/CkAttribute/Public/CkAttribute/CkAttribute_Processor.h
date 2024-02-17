@@ -450,9 +450,10 @@ namespace ck::detail
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_ComputeAll
+    class TProcessor_AttributeModifier_ComputeAll : public FProcessor
     {
     public:
+        using Super        = FProcessor;
         using TimeType     = FCk_Time;
         using RegistryType = FCk_Registry;
         using MarkedDirtyBy = typename T_DerivedAttributeModifier::FTag_ComputeResult;
@@ -483,9 +484,6 @@ namespace ck::detail
             TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier> _RevocableMultiply_Compute;
         TProcessor_AttributeModifier_RevocableDivide_Compute<
             TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier> _RevocableDivide_Compute;
-
-    private:
-        RegistryType _Registry;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

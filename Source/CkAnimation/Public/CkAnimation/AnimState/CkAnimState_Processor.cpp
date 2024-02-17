@@ -15,11 +15,11 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        _Registry.Clear<FTag_AnimState_Updated>();
+        _TransientEntity.Clear<FTag_AnimState_Updated>();
 
         TProcessor::Tick(InDeltaT);
 
-        _Registry.Clear<MarkedDirtyBy>();
+        _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
     auto
