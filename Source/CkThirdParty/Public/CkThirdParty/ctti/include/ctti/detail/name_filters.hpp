@@ -60,7 +60,10 @@ constexpr const char* find_ith(const ctti::detail::cstring& name, const ctti::de
 
 constexpr const char* find_last(const ctti::detail::cstring& name, const ctti::detail::cstring& substring)
 {
-    return find_ith_impl(name, substring, name.end(), -1, true);
+//++CK
+    //return find_ith_impl(name, substring, name.end(), std::numeric_limits<size_t>::max(), true);
+    return find_ith_impl(name, substring, name.end(), std::numeric_limits<size_t>::max(), true);
+//--CK
 }
 
 constexpr const char* find(const ctti::detail::cstring& name, const ctti::detail::cstring& substring)
