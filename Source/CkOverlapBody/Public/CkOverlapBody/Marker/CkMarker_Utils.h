@@ -54,7 +54,7 @@ public:
               DisplayName="[Ck][Marker] Add Multiple New Markers")
     static TArray<FCk_Handle_Marker>
     AddMultiple(
-        FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_MultipleMarker_ParamsData& InParams,
         ECk_Net_ReplicationType InReplicationType = ECk_Net_ReplicationType::All);
 
