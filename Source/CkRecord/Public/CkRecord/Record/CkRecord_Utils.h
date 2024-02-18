@@ -68,6 +68,33 @@ namespace ck
     public:
         template <typename T_Func>
         static auto
+        ForEach_InvalidEntry(
+            FCk_Handle& InHandle,
+            T_Func InFunc) -> void;
+
+        template <typename T_Func>
+        static auto
+        ForEach_InvalidEntry(
+            const FCk_Handle& InHandle,
+            T_Func InFunc) -> void;
+
+        template <typename T_Unary, typename T_Predicate>
+        static auto
+        ForEach_InvalidEntry_If(
+            FCk_Handle& InRecordHandle,
+            T_Unary InFunc,
+            T_Predicate InPredicate) -> void;
+
+        template <typename T_Unary, typename T_Predicate>
+        static auto
+        ForEach_InvalidEntry_If(
+            const FCk_Handle& InRecordHandle,
+            T_Unary InFunc,
+            T_Predicate InPredicate) -> void;
+
+    public:
+        template <typename T_Func>
+        static auto
         ForEach_ValidEntry(
             FCk_Handle& InHandle,
             T_Func InFunc,
@@ -95,6 +122,33 @@ namespace ck
             T_Unary InFunc,
             T_Predicate InPredicate,
             ECk_Record_ForEach_Policy InPolicy = ECk_Record_ForEach_Policy::EnsureRecordExists) -> void;
+
+    private:
+        template <typename T_ValidationPolicy, typename T_Func>
+        static auto
+        DoForEach_Entry(
+            FCk_Handle& InHandle,
+            T_Func InFunc) -> void;
+
+        template <typename T_ValidationPolicy, typename T_Func>
+        static auto
+        DoForEach_Entry(
+            const FCk_Handle& InHandle,
+            T_Func InFunc) -> void;
+
+        template <typename T_ValidationPolicy, typename T_Unary, typename T_Predicate>
+        static auto
+        DoForEach_Entry_If(
+            FCk_Handle& InRecordHandle,
+            T_Unary InFunc,
+            T_Predicate InPredicate) -> void;
+
+        template <typename T_ValidationPolicy, typename T_Unary, typename T_Predicate>
+        static auto
+        DoForEach_Entry_If(
+            const FCk_Handle& InRecordHandle,
+            T_Unary InFunc,
+            T_Predicate InPredicate) -> void;
 
     public:
         static auto
@@ -196,6 +250,60 @@ namespace ck
         return {};
     }
 
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedRecord>
+    template <typename T_Func>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        ForEach_InvalidEntry(
+            FCk_Handle& InHandle,
+            T_Func InFunc)
+        -> void
+    {
+        DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InHandle, InFunc);
+    }
+
+    template <typename T_DerivedRecord>
+    template <typename T_Func>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        ForEach_InvalidEntry(
+            const FCk_Handle& InHandle,
+            T_Func InFunc)
+        -> void
+    {
+        DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InHandle, InFunc);
+    }
+
+    template <typename T_DerivedRecord>
+    template <typename T_Unary, typename T_Predicate>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        ForEach_InvalidEntry_If(
+            FCk_Handle& InRecordHandle,
+            T_Unary InFunc,
+            T_Predicate InPredicate)
+        -> void
+    {
+        DoForEach_Entry_If<IsValid_Policy_IncludePendingKill>(InRecordHandle, InFunc, InPredicate);
+    }
+
+    template <typename T_DerivedRecord>
+    template <typename T_Unary, typename T_Predicate>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        ForEach_InvalidEntry_If(
+            const FCk_Handle& InRecordHandle,
+            T_Unary InFunc,
+            T_Predicate InPredicate)
+        -> void
+    {
+        DoForEach_Entry_If<IsValid_Policy_IncludePendingKill>(InRecordHandle, InFunc, InPredicate);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T_DerivedRecord>
     template <typename T_Func>
     auto
@@ -206,28 +314,7 @@ namespace ck
             ECk_Record_ForEach_Policy InPolicy)
         -> void
     {
-        if (InPolicy == ECk_Record_ForEach_Policy::IgnoreRecordMissing)
-        {
-            if (NOT InHandle.Has<RecordType>())
-            { return; }
-        }
-
-        auto& Fragment      = InHandle.Get<RecordType>();
-        auto& RecordEntries = Fragment._RecordEntries;
-
-        for (auto Index = 0; Index < RecordEntries.Num(); ++Index)
-        {
-            const auto RecordEntryHandle = ck::MakeHandle(RecordEntries[Index], InHandle);
-
-            if (ck::Is_NOT_Valid(RecordEntryHandle))
-            {
-                RecordEntries.RemoveAtSwap(Index);
-                --Index;
-                continue;
-            }
-
-            InFunc(RecordEntryHandle);
-        }
+        DoForEach_Entry<IsValid_Policy_Default>(InHandle, InFunc);
     }
 
     template <typename T_DerivedRecord>
@@ -240,29 +327,7 @@ namespace ck
             ECk_Record_ForEach_Policy InPolicy)
         -> void
     {
-        if (InPolicy == ECk_Record_ForEach_Policy::IgnoreRecordMissing)
-        {
-            if (NOT InHandle.Has<RecordType>())
-            { return; }
-        }
-
-        const auto& Fragment      = InHandle.Get<RecordType>();
-        const auto& RecordEntries = Fragment._RecordEntries;
-
-        for (auto Index = 0; Index < RecordEntries.Num(); ++Index)
-        {
-            const auto RecordEntryHandle = ck::StaticCast<const HandleType>(ck::MakeHandle(RecordEntries[Index], InHandle));
-
-            if (ck::Is_NOT_Valid(RecordEntryHandle))
-            {
-                // not using RecordEntries local variable to keep mutability
-                Fragment._RecordEntries.RemoveAtSwap(Index);
-                --Index;
-                continue;
-            }
-
-            InFunc(RecordEntryHandle);
-        }
+        DoForEach_Entry<IsValid_Policy_Default>(InHandle, InFunc);
     }
 
     template <typename T_DerivedRecord>
@@ -276,11 +341,7 @@ namespace ck
             ECk_Record_ForEach_Policy InPolicy)
         -> void
     {
-        ForEach_ValidEntry(InRecordHandle, [&](HandleType InRecordEntryHandle)
-        {
-            if (InPredicate(InRecordEntryHandle))
-            { InFunc(InRecordEntryHandle); }
-        }, InPolicy);
+        DoForEach_Entry_If<IsValid_Policy_Default>(InRecordHandle, InFunc, InPredicate);
     }
 
     template <typename T_DerivedRecord>
@@ -294,12 +355,107 @@ namespace ck
             ECk_Record_ForEach_Policy InPolicy)
         -> void
     {
-        ForEach_ValidEntry(InRecordHandle, [&](const HandleType& InRecordEntryHandle)
+        DoForEach_Entry_If<IsValid_Policy_Default>(InRecordHandle, InFunc, InPredicate);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedRecord>
+    template <typename T_ValidationPolicy, typename T_Func>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        DoForEach_Entry(
+            FCk_Handle& InHandle,
+            T_Func InFunc)
+        -> void
+    {
+        if (NOT InHandle.Has<RecordType>())
+        { return; }
+
+        auto& Fragment      = InHandle.Get<RecordType, T_ValidationPolicy>();
+        auto& RecordEntries = Fragment._RecordEntries;
+
+        for (auto Index = 0; Index < RecordEntries.Num(); ++Index)
+        {
+            const auto RecordEntryHandle = ck::MakeHandle(RecordEntries[Index], InHandle);
+
+            if (ck::Is_NOT_Valid(RecordEntryHandle, T_ValidationPolicy{}))
+            {
+                RecordEntries.RemoveAtSwap(Index);
+                --Index;
+                continue;
+            }
+
+            InFunc(RecordEntryHandle);
+        }
+    }
+
+    template <typename T_DerivedRecord>
+    template <typename T_ValidationPolicy, typename T_Func>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        DoForEach_Entry(
+            const FCk_Handle& InHandle,
+            T_Func InFunc)
+        -> void
+    {
+        if (NOT InHandle.Has<RecordType>())
+        { return; }
+
+        const auto& Fragment      = InHandle.Get<RecordType, T_ValidationPolicy>();
+        const auto& RecordEntries = Fragment._RecordEntries;
+
+        for (auto Index = 0; Index < RecordEntries.Num(); ++Index)
+        {
+            const auto RecordEntryHandle = ck::StaticCast<const HandleType>(ck::MakeHandle(RecordEntries[Index], InHandle));
+
+            if (ck::Is_NOT_Valid(RecordEntryHandle, T_ValidationPolicy{}))
+            {
+                // not using RecordEntries local variable to keep mutability
+                Fragment._RecordEntries.RemoveAtSwap(Index);
+                --Index;
+                continue;
+            }
+
+            InFunc(RecordEntryHandle);
+        }
+    }
+
+    template <typename T_DerivedRecord>
+    template <typename T_ValidationPolicy, typename T_Unary, typename T_Predicate>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        DoForEach_Entry_If(
+            FCk_Handle& InRecordHandle,
+            T_Unary InFunc,
+            T_Predicate InPredicate)
+        -> void
+    {
+        DoForEach_Entry<T_ValidationPolicy>(InRecordHandle, [&](HandleType InRecordEntryHandle)
         {
             if (InPredicate(InRecordEntryHandle))
             { InFunc(InRecordEntryHandle); }
-        }, InPolicy);
+        });
     }
+
+    template <typename T_DerivedRecord>
+    template <typename T_ValidationPolicy, typename T_Unary, typename T_Predicate>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        DoForEach_Entry_If(
+            const FCk_Handle& InRecordHandle,
+            T_Unary InFunc,
+            T_Predicate InPredicate)
+        -> void
+    {
+        DoForEach_Entry<T_ValidationPolicy>(InRecordHandle, [&](const HandleType& InRecordEntryHandle)
+        {
+            if (InPredicate(InRecordEntryHandle))
+            { InFunc(InRecordEntryHandle); }
+        });
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedRecord>
     auto
