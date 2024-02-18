@@ -356,6 +356,7 @@ namespace ck
             }
 
             // Cancel All Abilities that are cancelled by the newly granted tags
+            // TODO: this is repeated multiple times in this file, move to a common function
             UCk_Utils_AbilityOwner_UE::ForEach_Ability_If
             (
                 InAbilityOwnerEntity,
@@ -572,6 +573,40 @@ namespace ck
         { return {}; }
 
         return InAbilityEntity;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_AbilityOwner_Teardown::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            const FFragment_Ability_Params&) const
+        -> void
+    {
+        auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        auto AbilityOwner = UCk_Utils_AbilityOwner_UE::CastChecked(LifetimeOwner);
+
+        // TODO: this is repeated multiple times in this file, move to a common function
+        UCk_Utils_Ability_UE::RecordOfAbilities_Utils::ForEach_InvalidEntry
+        (
+            AbilityOwner,
+            [&](FCk_Handle InAbilityEntityToCancel)
+            {
+                auto AbilityEntityToCancel = UCk_Utils_Ability_UE::CastChecked(InAbilityEntityToCancel);
+
+                ability::Verbose
+                (
+                    TEXT("FORCE DEACTIVATING Ability [Name: {} | Entity: {}] because our AbilityOwner [{}] is pending destroy"),
+                    UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntityToCancel),
+                    InAbilityEntityToCancel,
+                    AbilityOwner
+                );
+
+                UCk_Utils_Ability_UE::DoDeactivate(AbilityOwner, AbilityEntityToCancel);
+            }
+        );
     }
 }
 
