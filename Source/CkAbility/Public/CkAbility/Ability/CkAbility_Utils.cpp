@@ -240,8 +240,8 @@ auto
         FCk_Handle_Ability& InAbilityEntity)
     -> void
 {
-    auto& AbilityCurrent = InAbilityEntity.Get<ck::FFragment_Ability_Current>();
-    const auto& AbilityParams = InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params();
+    auto& AbilityCurrent = InAbilityEntity.Get<ck::FFragment_Ability_Current, ck::IsValid_Policy_IncludePendingKill>();
+    const auto& AbilityParams = InAbilityEntity.Get<ck::FFragment_Ability_Params, ck::IsValid_Policy_IncludePendingKill>().Get_Params();
     auto Script = AbilityCurrent.Get_AbilityScript();
 
     CK_ENSURE_IF_NOT(ck::IsValid(Script),

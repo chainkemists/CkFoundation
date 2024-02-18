@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkAbility/Ability/CkAbility_Fragment.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Fragment.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
@@ -110,6 +111,28 @@ namespace ck
         DoFindAbilityByHandle(
             const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
             const FCk_Handle_Ability& InAbilityEntity) -> FCk_Handle_Ability;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKABILITY_API FProcessor_AbilityOwner_Teardown : public ck_exp::TProcessor<
+            FProcessor_AbilityOwner_Teardown,
+            FCk_Handle_Ability,
+            FFragment_Ability_Params,
+            CK_IF_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FFragment_AbilityOwner_Requests;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            const FFragment_Ability_Params&) const -> void;
     };
 }
 
