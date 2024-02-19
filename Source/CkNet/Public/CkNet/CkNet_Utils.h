@@ -191,7 +191,7 @@ public:
     requires(std::is_base_of_v<class UCk_Ecs_ReplicatedObject_UE, T_ReplicatedFragment>)
     static auto
     TryUpdateReplicatedFragment(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         T_UnaryUpdateFunc InUpdateFunc) -> void;
 
     template <typename T_ReplicatedFragment>
@@ -204,7 +204,7 @@ public:
     requires(std::is_base_of_v<class UCk_Ecs_ReplicatedObject_UE, T_ReplicatedFragment>)
     static auto
     TryAddReplicatedFragment(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         UCk_Ecs_ReplicatedObject_UE* InExistingObject = nullptr) -> ECk_AddedOrNot;
 };
 
@@ -216,7 +216,7 @@ requires(std::is_base_of_v<class UCk_Ecs_ReplicatedObject_UE, T_ReplicatedFragme
 auto
     UCk_Utils_Ecs_Net_UE::
     TryUpdateReplicatedFragment(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         T_UnaryUpdateFunc InUpdateFunc)
     -> void
 {
@@ -248,7 +248,7 @@ requires(std::is_base_of_v<class UCk_Ecs_ReplicatedObject_UE, T_ReplicatedFragme
 auto
     UCk_Utils_Ecs_Net_UE::
     TryAddReplicatedFragment(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         UCk_Ecs_ReplicatedObject_UE* InExistingObject)
     -> ECk_AddedOrNot
 {
