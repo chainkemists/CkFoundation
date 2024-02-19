@@ -514,7 +514,7 @@ auto
     if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(LifetimeOwner))
     { return NewModifierEntity; }
 
-    UCk_Utils_Ecs_Net_UE::UpdateReplicatedFragment<UCk_Fragment_ByteAttribute_Rep>(
+    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_ByteAttribute_Rep>(
         LifetimeOwner, [&](UCk_Fragment_ByteAttribute_Rep* InRepComp)
     {
         InRepComp->Broadcast_AddModifier(InModifierName, ParamsToUse);
@@ -577,7 +577,7 @@ auto
     if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AttributeOwnerEntity))
     { return AttributeEntity; }
 
-    UCk_Utils_Ecs_Net_UE::UpdateReplicatedFragment<UCk_Fragment_ByteAttribute_Rep>(AttributeOwnerEntity,
+    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_ByteAttribute_Rep>(AttributeOwnerEntity,
     [&](UCk_Fragment_ByteAttribute_Rep* InRepComp)
     {
         InRepComp->Broadcast_RemoveModifier(UCk_Utils_GameplayLabel_UE::Get_Label(InAttributeModifierEntity),
