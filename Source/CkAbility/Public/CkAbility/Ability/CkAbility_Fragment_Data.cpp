@@ -25,7 +25,7 @@ auto
 auto
     UCk_Ability_ConstructionScript_PDA::
     DoConstruct_Implementation(
-        FCk_Handle& InHandle,
+        FCk_Handle_UnderConstruction& InHandle,
         const FInstancedStruct& InOptionalParams) const
     -> void
 {

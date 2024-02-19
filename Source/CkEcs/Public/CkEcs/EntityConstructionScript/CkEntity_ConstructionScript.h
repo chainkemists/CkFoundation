@@ -3,10 +3,17 @@
 #include "CkCore/Types/DataAsset/CkDataAsset.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Handle/CkHandle_Typesafe.h"
 
 #include <InstancedStruct.h>
 
 #include "CkEntity_ConstructionScript.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
+struct CKECS_API FCk_Handle_UnderConstruction : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_UnderConstruction); };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_UnderConstruction);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -29,7 +36,7 @@ protected:
               DisplayName = "Construct")
     void
     DoConstruct(
-        UPARAM(ref) FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle_UnderConstruction& InHandle,
         const FInstancedStruct& InOptionalParams) const;
 };
 

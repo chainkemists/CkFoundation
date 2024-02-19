@@ -49,7 +49,7 @@ public:
               DisplayName="[Ck][Acceleration] Add Feature")
     static void
     Add(
-        UPARAM(ref) FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_Acceleration_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
@@ -103,7 +103,7 @@ public:
               DisplayName="Add Multiple New Acceleration Channels")
     static void
     AddMultiple(
-        FCk_Handle InAccelerationOwnerEntity,
+        UPARAM(ref) FCk_Handle_UnderConstruction& InAccelerationOwnerEntity,
         FGameplayTagContainer InAccelerationChannels);
 
     UFUNCTION(BlueprintCallable,
@@ -111,7 +111,7 @@ public:
               DisplayName="Add New Acceleration Channel")
     static void
     Add(
-        FCk_Handle InAccelerationOwnerEntity,
+        UPARAM(ref) FCk_Handle_UnderConstruction& InAccelerationOwnerEntity,
         FGameplayTag InAccelerationChannel);
 
     UFUNCTION(BlueprintPure,

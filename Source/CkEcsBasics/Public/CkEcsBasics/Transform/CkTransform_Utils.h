@@ -10,6 +10,7 @@
 #include <CkCore/TypeTraits/CkTypeTraits.h>
 
 #include "CkCore/Actor/CkActor_Utils.h"
+#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcsBasics/CkEcsBasics_Log.h"
@@ -31,7 +32,7 @@ public:
     template <typename T_ConstOrNonConst = ck::type_traits::NonConst>
     static auto
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle_UnderConstruction& InHandle,
         FTransform InInitialTransform,
         FCk_Transform_ParamsData InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates) -> void;
@@ -164,7 +165,7 @@ private:
               DisplayName="[Ck][Transform] Add Feature")
     static void
     DoAdd(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle_UnderConstruction& InHandle,
         FTransform InInitialTransform,
         FCk_Transform_ParamsData InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
@@ -191,7 +192,7 @@ template <typename T_ConstOrNonConst>
 auto
     UCk_Utils_Transform_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle_UnderConstruction& InHandle,
         FTransform InInitialTransform,
         FCk_Transform_ParamsData InParams,
         ECk_Replication InReplicates)

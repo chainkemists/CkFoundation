@@ -1,8 +1,11 @@
 #pragma once
 
-#include "CkAnimation/AnimAsset/CkAnimAsset_Fragment.h"
-#include "CkEcsBasics/CkEcsBasics_Utils.h"
 #include "CkCore/Macros/CkMacros.h"
+
+#include "CkAnimation/AnimAsset/CkAnimAsset_Fragment.h"
+
+#include "CkEcsBasics/CkEcsBasics_Utils.h"
+#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 
 #include "CkRecord/Record/CkRecord_Utils.h"
 
@@ -33,7 +36,7 @@ public:
               DisplayName="[Ck][AnimAsset] Add New Animation")
     static FCk_Handle_AnimAsset
     Add(
-        UPARAM(ref) FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_AnimAsset_ParamsData& InParams);
 
     UFUNCTION(BlueprintCallable,

@@ -320,7 +320,7 @@ auto
 auto
     UCk_Utils_Ability_UE::
     DoAdd(
-        FCk_Handle& InHandle,
+        FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_Ability_ParamsData& InParams)
     -> void
 {

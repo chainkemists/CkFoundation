@@ -22,7 +22,7 @@ public:
               DisplayName="[Ck][Label] Add Feature")
     static void
     Add(
-        UPARAM(ref) FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle_UnderConstruction& InHandle,
         const FGameplayTag& InLabel);
 
     UFUNCTION(BlueprintPure,

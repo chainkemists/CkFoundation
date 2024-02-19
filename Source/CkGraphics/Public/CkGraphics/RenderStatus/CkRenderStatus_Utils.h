@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 #include "CkECS/Handle/CkHandle.h"
 
 #include "CkGraphics/RenderStatus/CkRenderStatus_Fragment_Data.h"
@@ -22,7 +23,7 @@ public:
               DisplayName="[Ck][RenderStatus] Add Feature")
     static void
     Add(
-        UPARAM(ref) FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_RenderStatus_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
@@ -46,7 +47,7 @@ public:
               DisplayName="[Ck][RenderStatus] Request Query Rendered Actors")
     static void
     Request_QueryRenderedActors(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Request_RenderStatus_QueryRenderedActors& InRequest,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Delegate_RenderStatus_OnRenderedActorsQueried& InDelegate);

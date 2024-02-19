@@ -7,7 +7,7 @@
 auto
     UCk_Utils_AnimAsset_UE::
     Add(
-        FCk_Handle& InHandle,
+        FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_AnimAsset_ParamsData& InParams)
     -> FCk_Handle_AnimAsset
 {
@@ -26,7 +26,7 @@ auto
 auto
     UCk_Utils_AnimAsset_UE::
     AddMultiple(
-        FCk_Handle& InHandle,
+        FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_MultipleAnimAsset_ParamsData& InParams)
     -> TArray<FCk_Handle_AnimAsset>
 {

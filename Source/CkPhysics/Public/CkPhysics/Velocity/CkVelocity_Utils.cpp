@@ -12,7 +12,7 @@
 auto
     UCk_Utils_Velocity_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_Velocity_ParamsData& InParams,
         ECk_Replication InReplicates)
     -> void

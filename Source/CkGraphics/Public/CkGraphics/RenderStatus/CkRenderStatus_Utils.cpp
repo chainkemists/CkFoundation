@@ -10,7 +10,7 @@
 auto
     UCk_Utils_RenderStatus_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_RenderStatus_ParamsData& InParams)
     -> void
 {
@@ -68,7 +68,7 @@ auto
 auto
     UCk_Utils_RenderStatus_UE::
     Request_QueryRenderedActors(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Request_RenderStatus_QueryRenderedActors& InRequest,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Delegate_RenderStatus_OnRenderedActorsQueried& InDelegate)

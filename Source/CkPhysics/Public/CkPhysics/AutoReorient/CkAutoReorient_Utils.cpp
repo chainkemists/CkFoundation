@@ -10,7 +10,7 @@
 auto
     UCk_Utils_AutoReorient_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_AutoReorient_ParamsData& InParams)
     -> void
 {

@@ -35,7 +35,7 @@ public:
               DisplayName="[Ck][AbilityOwner] Add Feature")
     static FCk_Handle_AbilityOwner
     Add(
-        UPARAM(ref) FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_AbilityOwner_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 

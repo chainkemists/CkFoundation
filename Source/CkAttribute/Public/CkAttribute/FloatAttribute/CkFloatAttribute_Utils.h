@@ -5,6 +5,7 @@
 #include "CkAttribute/CkAttribute_Utils.h"
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment.h"
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment_Data.h"
+#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 #include "CkEcsBasics/CkEcsBasics_Utils.h"
 #include "CkSignal/CkSignal_Fragment_Data.h"
 
@@ -40,7 +41,7 @@ public:
               DisplayName="[Ck][FloatAttribute] Add New Attribute")
     static FCk_Handle_FloatAttribute
     Add(
-        UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
+        UPARAM(ref) FCk_Handle_UnderConstruction& InAttributeOwnerEntity,
         const FCk_Fragment_FloatAttribute_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
@@ -49,7 +50,7 @@ public:
               DisplayName="[Ck][FloatAttribute] Add Multiple New Attributes")
     static TArray<FCk_Handle_FloatAttribute>
     AddMultiple(
-        UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
+        UPARAM(ref) FCk_Handle_UnderConstruction& InAttributeOwnerEntity,
         const FCk_Fragment_MultipleFloatAttribute_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 

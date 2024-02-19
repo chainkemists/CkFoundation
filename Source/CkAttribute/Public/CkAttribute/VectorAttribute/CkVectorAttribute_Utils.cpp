@@ -13,7 +13,7 @@
 auto
     UCk_Utils_VectorAttribute_UE::
     Add(
-        FCk_Handle& InAttributeOwnerEntity,
+        FCk_Handle_UnderConstruction& InAttributeOwnerEntity,
         const FCk_Fragment_VectorAttribute_ParamsData& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle_VectorAttribute
@@ -75,7 +75,7 @@ auto
 auto
     UCk_Utils_VectorAttribute_UE::
     AddMultiple(
-        FCk_Handle& InHandle,
+        FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_MultipleVectorAttribute_ParamsData& InParams,
         ECk_Replication InReplicates)
     -> TArray<FCk_Handle_VectorAttribute>

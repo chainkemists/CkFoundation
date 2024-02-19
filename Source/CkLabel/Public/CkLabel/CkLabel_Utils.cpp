@@ -41,7 +41,7 @@ namespace ck_label
 auto
     UCk_Utils_GameplayLabel_UE::
     Add(
-        FCk_Handle& InHandle,
+        FCk_Handle_UnderConstruction& InHandle,
         const FGameplayTag& InLabel)
     -> void
 {
@@ -62,7 +62,7 @@ auto
 auto
     UCk_Utils_GameplayLabel_UE::
     Has(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     return InHandle.Has<ck::FFragment_GameplayLabel>();

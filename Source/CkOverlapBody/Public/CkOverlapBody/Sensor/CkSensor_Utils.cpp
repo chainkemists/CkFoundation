@@ -11,7 +11,7 @@
 auto
     UCk_Utils_Sensor_UE::
     Add(
-        FCk_Handle& InHandle,
+        FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_Sensor_ParamsData& InParams,
         ECk_Net_ReplicationType InReplicationType)
     -> FCk_Handle_Sensor
@@ -45,7 +45,9 @@ auto
         InSensorEntity.Add<ck::FFragment_Sensor_Current>(ParamsToUse.Get_StartingState());
         InSensorEntity.Add<ck::FTag_Sensor_NeedsSetup>();
 
-        UCk_Utils_GameplayLabel_UE::Add(InSensorEntity, SensorName);
+        auto SensorEntityUnderConstruction = ck::StaticCast<FCk_Handle_UnderConstruction>(InSensorEntity);
+
+        UCk_Utils_GameplayLabel_UE::Add(SensorEntityUnderConstruction, SensorName);
     }));
 
     RecordOfSensors_Utils::AddIfMissing(InHandle ,ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
@@ -58,7 +60,7 @@ auto
 auto
     UCk_Utils_Sensor_UE::
     AddMultiple(
-        FCk_Handle& InHandle,
+        FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_MultipleSensor_ParamsData& InParams,
         ECk_Net_ReplicationType InReplicationType)
     -> TArray<FCk_Handle_Sensor>

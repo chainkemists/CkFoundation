@@ -12,7 +12,7 @@
 auto
     UCk_Utils_Acceleration_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_Acceleration_ParamsData& InParams,
         ECk_Replication InReplicates)
     -> void
@@ -87,7 +87,7 @@ auto
 auto
     UCk_Utils_AccelerationChannel_UE::
     AddMultiple(
-        FCk_Handle InAccelerationOwnerEntity,
+        FCk_Handle_UnderConstruction& InAccelerationOwnerEntity,
         FGameplayTagContainer InAccelerationChannels)
     -> void
 {
@@ -103,7 +103,7 @@ auto
 auto
     UCk_Utils_AccelerationChannel_UE::
     Add(
-        FCk_Handle InAccelerationOwnerEntity,
+        FCk_Handle_UnderConstruction& InAccelerationOwnerEntity,
         FGameplayTag InAccelerationChannel)
     -> void
 {

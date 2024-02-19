@@ -3,6 +3,7 @@
 #include "CkCamera/CameraShake/CkCameraShake_Fragment.h"
 #include "CkEcsBasics/CkEcsBasics_Utils.h"
 #include "CkCore/Macros/CkMacros.h"
+#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 
 #include "CkRecord/Record/CkRecord_Utils.h"
 
@@ -30,7 +31,7 @@ public:
               DisplayName="[Ck][CameraShake] Add New Camera Shake")
     static void
     Add(
-        UPARAM(ref) FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_CameraShake_ParamsData& InParams);
 
     UFUNCTION(BlueprintCallable,
@@ -38,7 +39,7 @@ public:
               DisplayName="[Ck][CameraShake] Add Multiple New Camera Shakes")
     static void
     AddMultiple(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_MultipleCameraShake_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,

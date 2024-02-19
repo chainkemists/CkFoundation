@@ -15,7 +15,7 @@
 auto
     UCk_Utils_Marker_UE::
     Add(
-        FCk_Handle& InHandle,
+        FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_Marker_ParamsData& InParams,
         ECk_Net_ReplicationType InReplicationType)
     -> FCk_Handle_Marker
@@ -49,7 +49,9 @@ auto
         InMarkerEntity.Add<ck::FFragment_Marker_Current>(ParamsToUse.Get_StartingState());
         InMarkerEntity.Add<ck::FTag_Marker_NeedsSetup>();
 
-        UCk_Utils_GameplayLabel_UE::Add(InMarkerEntity, MarkerName);
+        auto MarkerEntityUnderConstruction = ck::StaticCast<FCk_Handle_UnderConstruction>(InMarkerEntity);
+
+        UCk_Utils_GameplayLabel_UE::Add(MarkerEntityUnderConstruction, MarkerName);
     }));
 
     RecordOfMarkers_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
@@ -61,7 +63,7 @@ auto
 auto
     UCk_Utils_Marker_UE::
     AddMultiple(
-        FCk_Handle& InHandle,
+        FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_MultipleMarker_ParamsData& InParams,
         ECk_Net_ReplicationType InReplicationType)
     -> TArray<FCk_Handle_Marker>

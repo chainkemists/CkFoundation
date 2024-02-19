@@ -20,13 +20,15 @@ auto
 
     UCk_Utils_Handle_UE::Set_DebugName(InHandle, UCk_Utils_Debug_UE::Get_DebugName(this, ECk_DebugNameVerbosity_Policy::Compact));
 
-    DoConstruct(InHandle, InOptionalParams);
+    auto HandleUnderConstruction = ck::StaticCast<FCk_Handle_UnderConstruction>(InHandle);
+
+    DoConstruct(HandleUnderConstruction, InOptionalParams);
 }
 
 auto
     UCk_Entity_ConstructionScript_PDA::
     DoConstruct_Implementation(
-        FCk_Handle& InHandle,
+        FCk_Handle_UnderConstruction& InHandle,
         const FInstancedStruct& InOptionalParams) const
     -> void
 {

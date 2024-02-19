@@ -224,7 +224,7 @@ auto
 auto
     UCk_Utils_Transform_UE::
     DoAdd(
-        FCk_Handle InHandle,
+        FCk_Handle_UnderConstruction& InHandle,
         FTransform InInitialTransform,
         FCk_Transform_ParamsData InParams,
         ECk_Replication InReplicates)

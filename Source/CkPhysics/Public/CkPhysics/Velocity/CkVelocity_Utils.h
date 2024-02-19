@@ -49,7 +49,7 @@ public:
               DisplayName="[Ck][Velocity] Add Feature")
     static void
     Add(
-        UPARAM(ref) FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_Velocity_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 

@@ -12,7 +12,7 @@
 auto
     UCk_Utils_AbilityOwner_UE::
     Add(
-        FCk_Handle& InHandle,
+        FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_AbilityOwner_ParamsData& InParams,
         ECk_Replication InReplicates)
     -> FCk_Handle_AbilityOwner

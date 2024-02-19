@@ -5,6 +5,7 @@
 #include "CkAttribute/CkAttribute_Utils.h"
 #include "CkAttribute/ByteAttribute/CkByteAttribute_Fragment.h"
 #include "CkAttribute/ByteAttribute/CkByteAttribute_Fragment_Data.h"
+#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 #include "CkEcsBasics/CkEcsBasics_Utils.h"
 #include "CkSignal/CkSignal_Fragment_Data.h"
 
@@ -40,7 +41,7 @@ public:
               DisplayName="[Ck][ByteAttribute] Add New Attribute")
     static FCk_Handle_ByteAttribute
     Add(
-        UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
+        UPARAM(ref) FCk_Handle_UnderConstruction& InAttributeOwnerEntity,
         const FCk_Fragment_ByteAttribute_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
@@ -49,7 +50,7 @@ public:
               DisplayName="[Ck][ByteAttribute] Add Multiple New Attributes")
     static TArray<FCk_Handle_ByteAttribute>
     AddMultiple(
-        UPARAM(ref) FCk_Handle& InAttributeOwnerEntity,
+        UPARAM(ref) FCk_Handle_UnderConstruction& InAttributeOwnerEntity,
         const FCk_Fragment_MultipleByteAttribute_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 

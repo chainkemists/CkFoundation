@@ -7,7 +7,7 @@
 auto
     UCk_Utils_CameraShake_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_CameraShake_ParamsData& InParams)
     -> void
 {
@@ -25,7 +25,7 @@ auto
 auto
     UCk_Utils_CameraShake_UE::
     AddMultiple(
-        FCk_Handle InHandle,
+        FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_MultipleCameraShake_ParamsData& InParams)
     -> void
 {

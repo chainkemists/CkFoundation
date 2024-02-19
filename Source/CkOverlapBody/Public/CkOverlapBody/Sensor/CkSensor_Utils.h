@@ -44,7 +44,7 @@ public:
               DisplayName="[Ck][Sensor] Try Add New Sensor")
     static FCk_Handle_Sensor
     Add(
-        UPARAM(ref) FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_Sensor_ParamsData& InParams,
         ECk_Net_ReplicationType InReplicationType = ECk_Net_ReplicationType::All);
 
@@ -53,7 +53,7 @@ public:
               DisplayName="[Ck][Sensor] Add Multiple New Sensors")
     static TArray<FCk_Handle_Sensor>
     AddMultiple(
-        UPARAM(ref) FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle_UnderConstruction& InHandle,
         const FCk_Fragment_MultipleSensor_ParamsData& InParams,
         ECk_Net_ReplicationType InReplicationType = ECk_Net_ReplicationType::All);
 
