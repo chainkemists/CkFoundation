@@ -445,7 +445,7 @@ auto
     auto ParamsToUse = InParams;
     ParamsToUse.Set_TargetAttributeName(UCk_Utils_GameplayLabel_UE::Get_Label(InAttribute));
 
-    const auto& LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute);
+    auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute);
     const auto& ModifierOperation = ParamsToUse.Get_ModifierOperation();
     const auto& AttributeComponent = ParamsToUse.Get_Component();
 
