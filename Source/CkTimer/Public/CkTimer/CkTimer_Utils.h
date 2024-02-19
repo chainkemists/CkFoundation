@@ -66,9 +66,8 @@ public:
     //Remove(
     //    FCk_Handle InTimerEntity);
 
-    UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|Timer",
-        DisplayName="[Ck][Timer] Has Feature")
+public:
+    // Has Feature
     static bool
     Has(
         const FCk_Handle& InHandle);

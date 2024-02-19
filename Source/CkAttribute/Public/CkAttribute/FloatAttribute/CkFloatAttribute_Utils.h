@@ -54,18 +54,16 @@ public:
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
 public:
+    // Has Feature
+    static bool
+    Has(
+        const FCk_Handle& InAttributeOwnerEntity);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
               DisplayName="[Ck][FloatAttribute] Has Any Attribute")
     static bool
     Has_Any(
-        const FCk_Handle& InAttributeOwnerEntity);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Attribute|Float",
-              DisplayName="[Ck][FloatAttribute] Has Feature")
-    static bool
-    Has(
         const FCk_Handle& InAttributeOwnerEntity);
 
 private:
