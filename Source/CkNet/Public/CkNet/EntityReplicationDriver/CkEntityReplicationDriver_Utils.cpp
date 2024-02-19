@@ -10,7 +10,7 @@
 auto
     UCk_Utils_EntityReplicationDriver_UE::
     Add(
-        const FCk_Handle InHandle)
+        FCk_Handle& InHandle)
     -> ECk_AddedOrNot
 {
     return TryAddReplicatedFragment<UCk_Fragment_EntityReplicationDriver_Rep>(InHandle);
