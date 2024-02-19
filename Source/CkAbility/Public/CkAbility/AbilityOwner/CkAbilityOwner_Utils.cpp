@@ -289,7 +289,7 @@ auto
         InAbilityOwnerHandle)
     { return InAbilityOwnerHandle; }
 
-    UCk_Utils_Ecs_Net_UE::UpdateReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(
+    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(
         InAbilityOwnerHandle, [&](UCk_Fragment_AbilityOwner_Rep* InRepComp)
     {
         InRepComp->_PendingGiveAbilityRequests.Emplace(InRequest);
