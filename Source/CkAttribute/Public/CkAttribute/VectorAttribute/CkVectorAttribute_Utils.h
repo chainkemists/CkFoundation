@@ -54,9 +54,7 @@ public:
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
 public:
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Attribute|Vector",
-              DisplayName="[Ck][VectorAttribute] Has Feature")
+    // Has Feature
     static bool
     Has(
         const FCk_Handle& InAttributeOwnerEntity);

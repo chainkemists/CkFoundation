@@ -84,9 +84,7 @@ public:
         const FCk_Handle& InHandle);
 
 public:
-    UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|Marker",
-        DisplayName="[Ck][Marker] Has Feature")
+    // Has Feature
     static bool
     Has(
         const FCk_Handle& InHandle);
