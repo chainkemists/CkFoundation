@@ -190,7 +190,7 @@ public:
     template <typename T_ReplicatedFragment, typename T_UnaryUpdateFunc>
     requires(std::is_base_of_v<class UCk_Ecs_ReplicatedObject_UE, T_ReplicatedFragment>)
     static auto
-    UpdateReplicatedFragment(
+    TryUpdateReplicatedFragment(
         FCk_Handle InHandle,
         T_UnaryUpdateFunc InUpdateFunc) -> void;
 
@@ -215,7 +215,7 @@ template <typename T_ReplicatedFragment, typename T_UnaryUpdateFunc>
 requires(std::is_base_of_v<class UCk_Ecs_ReplicatedObject_UE, T_ReplicatedFragment>)
 auto
     UCk_Utils_Ecs_Net_UE::
-    UpdateReplicatedFragment(
+    TryUpdateReplicatedFragment(
         FCk_Handle InHandle,
         T_UnaryUpdateFunc InUpdateFunc)
     -> void

@@ -46,7 +46,7 @@ namespace ck
             const TObjectPtr<UCk_Fragment_EcsTemplate_Rep>& InComp) const
         -> void
     {
-        UCk_Utils_Ecs_Net_UE::UpdateReplicatedFragment<UCk_Fragment_EcsTemplate_Rep>(InHandle, [&](UCk_Fragment_EcsTemplate_Rep* InRepComp)
+        UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_EcsTemplate_Rep>(InHandle, [&](UCk_Fragment_EcsTemplate_Rep* InRepComp)
         {
             // Add replication logic here
         });
