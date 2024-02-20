@@ -118,7 +118,7 @@ namespace ck
     class CKABILITY_API FProcessor_AbilityOwner_Teardown : public ck_exp::TProcessor<
             FProcessor_AbilityOwner_Teardown,
             FCk_Handle_Ability,
-            FFragment_Ability_Params,
+            FFragment_Ability_Current,
             CK_IF_PENDING_KILL>
     {
     public:
@@ -132,7 +132,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
-            const FFragment_Ability_Params&) const -> void;
+            const FFragment_Ability_Current& InCurrent) const -> void;
     };
 }
 
