@@ -22,18 +22,15 @@ public:
 public:
     static auto
     Add(
-        FCk_Handle InHandle) -> void;
+        FCk_Handle& InHandle) -> void;
 
     static auto
     Has(
-        FCk_Handle InHandle) -> bool;
+        const FCk_Handle& InHandle) -> bool;
 
     static auto
     Ensure(
-        FCk_Handle InHandle) -> bool;
-
-private:
-
+        const FCk_Handle& InHandle) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

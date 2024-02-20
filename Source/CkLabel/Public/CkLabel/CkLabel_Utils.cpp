@@ -62,7 +62,7 @@ auto
 auto
     UCk_Utils_GameplayLabel_UE::
     Has(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     return InHandle.Has<ck::FFragment_GameplayLabel>();
@@ -71,7 +71,7 @@ auto
 auto
     UCk_Utils_GameplayLabel_UE::
     Ensure(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have Gameplay Label"), InHandle)
@@ -95,7 +95,7 @@ auto
 auto
     UCk_Utils_GameplayLabel_UE::
     DoGet_LabelOrNone(
-        FGameplayTag InTag)
+        const FGameplayTag& InTag)
     -> FGameplayTag
 {
     if (ck::Is_NOT_Valid(InTag))
@@ -107,7 +107,7 @@ auto
 auto
     UCk_Utils_GameplayLabel_UE::
     Matches(
-        FCk_Handle         InHandle,
+        const FCk_Handle& InHandle,
         const FGameplayTag InTagToMatch)
     -> bool
 {
@@ -119,7 +119,7 @@ auto
 auto
     UCk_Utils_GameplayLabel_UE::
     MatchesExact(
-        FCk_Handle         InHandle,
+        const FCk_Handle& InHandle,
         const FGameplayTag InTagToMatch)
     -> bool
 {
@@ -131,7 +131,7 @@ auto
 auto
     UCk_Utils_GameplayLabel_UE::
     MatchesAny(
-        FCk_Handle                   InHandle,
+        const FCk_Handle& InHandle,
         const FGameplayTagContainer& InTagsToMatch)
     -> bool
 {
@@ -143,7 +143,7 @@ auto
 auto
     UCk_Utils_GameplayLabel_UE::
     MatchesAnyExact(
-        FCk_Handle                   InHandle,
+        const FCk_Handle& InHandle,
         const FGameplayTagContainer& InTagsToMatch)
     -> bool
 {
