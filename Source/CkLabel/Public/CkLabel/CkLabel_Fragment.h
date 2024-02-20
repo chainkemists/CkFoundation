@@ -5,6 +5,7 @@
 #include <GameplayTagContainer.h>
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Concepts/CkConcepts.h"
 
 #include "CkLabel/CkLabel_Utils.h"
 
@@ -42,8 +43,7 @@ namespace ck::algo
     struct CKLABEL_API MatchesGameplayLabelExact
     {
     public:
-        template <typename T_Handle>
-        requires(std::is_base_of_v<FCk_Handle, T_Handle>)
+        template <concepts::ValidHandleType T_Handle>
         auto operator()(const T_Handle& InHandle) const -> bool
         {
             if (NOT UCk_Utils_GameplayLabel_UE::Has(InHandle))
@@ -64,8 +64,7 @@ namespace ck::algo
     struct CKLABEL_API MatchesGameplayLabel
     {
     public:
-        template <typename T_Handle>
-        requires(std::is_base_of_v<FCk_Handle, T_Handle>)
+        template <concepts::ValidHandleType T_Handle>
         auto operator()(const T_Handle& InHandle) const -> bool
         {
             if (NOT UCk_Utils_GameplayLabel_UE::Has(InHandle))
@@ -86,8 +85,7 @@ namespace ck::algo
     struct CKLABEL_API MatchesAnyGameplayLabel
     {
     public:
-        template <typename T_Handle>
-        requires(std::is_base_of_v<FCk_Handle, T_Handle>)
+        template <concepts::ValidHandleType T_Handle>
         auto operator()(const T_Handle& InHandle) const -> bool
         {
             if (NOT UCk_Utils_GameplayLabel_UE::Has(InHandle))
@@ -108,8 +106,7 @@ namespace ck::algo
     struct CKLABEL_API MatchesAnyGameplayLabelExact
     {
     public:
-        template <typename T_Handle>
-        requires(std::is_base_of_v<FCk_Handle, T_Handle>)
+        template <concepts::ValidHandleType T_Handle>
         auto operator()(const T_Handle& InHandle) const -> bool
         {
             if (NOT UCk_Utils_GameplayLabel_UE::Has(InHandle))
