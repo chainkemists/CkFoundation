@@ -8,7 +8,8 @@
 
 auto
     UCk_Utils_RecordEntry_UE::
-    Add(FCk_Handle InHandle)
+    Add(
+        FCk_Handle& InHandle)
     -> void
 {
     InHandle.Add<ck::FFragment_RecordEntry>();
@@ -16,7 +17,8 @@ auto
 
 auto
     UCk_Utils_RecordEntry_UE::
-    Has(FCk_Handle InHandle)
+    Has(
+        const FCk_Handle& InHandle)
     -> bool
 {
     return InHandle.Has<ck::FFragment_RecordEntry>();
@@ -24,7 +26,8 @@ auto
 
 auto
     UCk_Utils_RecordEntry_UE::
-    Ensure(FCk_Handle InHandle)
+    Ensure(
+        const FCk_Handle& InHandle)
     -> bool
 {
     CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have a [{}]"),
