@@ -36,7 +36,8 @@ namespace ck
 
     public:
         // TODO: Use FCk_DebuggableEntity when available [OBS-845]
-        using EntityType = FCk_Handle;
+        using HandleType = FCk_Handle;
+        using EntityType = HandleType;
         using RecordsListType = TSet<EntityType>;
 
         using DestructionCleanupFuncType = TFunction<void(FCk_Handle, FCk_Handle)>;
@@ -49,6 +50,14 @@ namespace ck
 
     private:
         CK_PROPERTY(_Records);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct FFragment_RecordEntryStack
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_RecordEntry);
     };
 }
 

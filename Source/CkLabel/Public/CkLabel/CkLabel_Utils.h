@@ -30,14 +30,14 @@ public:
               DisplayName="[Ck][Label] Has Feature")
     static bool
     Has(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Label",
               DisplayName="[Ck][Label] Ensure Has Feature")
     static bool
     Ensure(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Label",
@@ -52,7 +52,7 @@ public:
               DisplayName="[Ck][Label] Matches")
     static bool
     Matches(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InTagToMatch);
 
     UFUNCTION(BlueprintPure,
@@ -60,7 +60,7 @@ public:
               DisplayName="[Ck][Label] Matches Exactly")
     static bool
     MatchesExact(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InTagToMatch);
 
     UFUNCTION(BlueprintPure,
@@ -68,7 +68,7 @@ public:
               DisplayName="[Ck][Label] Matches Any")
     static bool
     MatchesAny(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         const FGameplayTagContainer& InTagsToMatch);
 
     UFUNCTION(BlueprintPure,
@@ -76,13 +76,13 @@ public:
               DisplayName="[Ck][Label] Matches Any Exactly")
     static bool
     MatchesAnyExact(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         const FGameplayTagContainer& InTagsToMatch);
 
 private:
     static auto
     DoGet_LabelOrNone(
-        FGameplayTag InTag) -> FGameplayTag;
+        const FGameplayTag& InTag) -> FGameplayTag;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

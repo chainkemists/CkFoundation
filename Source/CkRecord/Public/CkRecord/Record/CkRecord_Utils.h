@@ -577,21 +577,21 @@ public:
               DisplayName = "[Ck][Record] Add Feature")
     static void
     Add(
-        FCk_Handle InHandle);
+        UPARAM(ref) FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Record",
               DisplayName = "[Ck][Record] Has Feature")
     static bool
     Has(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Record",
               DisplayName = "[Ck][Record] Ensure Has Feature")
     static bool
     Ensure(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -600,7 +600,7 @@ public:
               meta=(AutoCreateRefTerm="InOptionalPayload"))
     static bool
     Get_HasValidEntry_If(
-        FCk_Handle InRecordHandle,
+        const FCk_Handle& InRecordHandle,
         const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InHandle_OutResult InPredicate);
 
@@ -610,7 +610,7 @@ public:
               meta=(AutoCreateRefTerm="InOptionalPayload"))
     static FCk_Handle
     Get_ValidEntry_If(
-        FCk_Handle InRecordHandle,
+        const FCk_Handle& InRecordHandle,
         const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InHandle_OutResult InPredicate);
 
@@ -641,16 +641,16 @@ public:
               Category = "Ck|Utils|Record")
     static void
     Request_Connect(
-        FCk_Handle InRecordHandle,
-        FCk_Handle InRecordEntry);
+        UPARAM(ref) FCk_Handle& InRecordHandle,
+        UPARAM(ref) FCk_Handle& InRecordEntry);
 
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck][Record] Request Disconnect",
               Category = "Ck|Utils|Record")
     static void
     Request_Disconnect(
-        FCk_Handle InRecordHandle,
-        FCk_Handle InRecordEntry);
+        UPARAM(ref) FCk_Handle& InRecordHandle,
+        UPARAM(ref) FCk_Handle& InRecordEntry);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -10,7 +10,7 @@
 auto
     UCk_Utils_RecordOfEntities_UE::
     Add(
-        FCk_Handle InHandle)
+        FCk_Handle& InHandle)
     -> void
 {
     UtilsType::AddIfMissing(InHandle);
@@ -19,7 +19,7 @@ auto
 auto
     UCk_Utils_RecordOfEntities_UE::
     Has(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     return UtilsType::Has(InHandle);
@@ -28,7 +28,7 @@ auto
 auto
     UCk_Utils_RecordOfEntities_UE::
     Ensure(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     return UtilsType::Ensure(InHandle);
@@ -37,7 +37,7 @@ auto
 auto
     UCk_Utils_RecordOfEntities_UE::
     Get_HasValidEntry_If(
-        FCk_Handle InRecordHandle,
+        const FCk_Handle& InRecordHandle,
         const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InHandle_OutResult InPredicate)
     -> bool
@@ -54,7 +54,7 @@ auto
 auto
     UCk_Utils_RecordOfEntities_UE::
     Get_ValidEntry_If(
-        FCk_Handle InRecordHandle,
+        const FCk_Handle& InRecordHandle,
         const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InHandle_OutResult InPredicate)
     -> FCk_Handle
@@ -122,8 +122,8 @@ auto
 auto
     UCk_Utils_RecordOfEntities_UE::
     Request_Connect(
-        FCk_Handle InRecordHandle,
-        FCk_Handle InRecordEntry)
+        FCk_Handle& InRecordHandle,
+        FCk_Handle& InRecordEntry)
     -> void
 {
     UtilsType::Request_Connect(InRecordHandle, InRecordEntry);
@@ -132,8 +132,8 @@ auto
 auto
     UCk_Utils_RecordOfEntities_UE::
     Request_Disconnect(
-        FCk_Handle InRecordHandle,
-        FCk_Handle InRecordEntry)
+        FCk_Handle& InRecordHandle,
+        FCk_Handle& InRecordEntry)
     -> void
 {
     UtilsType::Request_Disconnect(InRecordHandle, InRecordEntry);
