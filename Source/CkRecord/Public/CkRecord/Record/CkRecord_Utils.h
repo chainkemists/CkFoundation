@@ -234,9 +234,8 @@ namespace ck
             T_Predicate InPredicate)
         -> HandleType
     {
-        const auto& Fragment = InRecordHandle.Get<RecordType>();
-
-        for (const auto& RecordEntry : Fragment.Get_RecordEntries())
+        for (const auto& Fragment = InRecordHandle.Get<RecordType>();
+             const auto& RecordEntry : Fragment.Get_RecordEntries())
         {
             auto RecordEntryHandle = ck::MakeHandle(RecordEntry, InRecordHandle);
 
