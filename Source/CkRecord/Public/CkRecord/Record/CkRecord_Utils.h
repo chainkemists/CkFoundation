@@ -68,26 +68,26 @@ namespace ck
     public:
         template <typename T_Func>
         static auto
-        ForEach_InvalidEntry(
+        ForEach_Entry(
             FCk_Handle& InHandle,
             T_Func InFunc) -> void;
 
         template <typename T_Func>
         static auto
-        ForEach_InvalidEntry(
+        ForEach_Entry(
             const FCk_Handle& InHandle,
             T_Func InFunc) -> void;
 
         template <typename T_Unary, typename T_Predicate>
         static auto
-        ForEach_InvalidEntry_If(
+        ForEach_Entry_If(
             FCk_Handle& InRecordHandle,
             T_Unary InFunc,
             T_Predicate InPredicate) -> void;
 
         template <typename T_Unary, typename T_Predicate>
         static auto
-        ForEach_InvalidEntry_If(
+        ForEach_Entry_If(
             const FCk_Handle& InRecordHandle,
             T_Unary InFunc,
             T_Predicate InPredicate) -> void;
@@ -256,7 +256,7 @@ namespace ck
     template <typename T_Func>
     auto
         TUtils_RecordOfEntities<T_DerivedRecord>::
-        ForEach_InvalidEntry(
+        ForEach_Entry(
             FCk_Handle& InHandle,
             T_Func InFunc)
         -> void
@@ -268,7 +268,7 @@ namespace ck
     template <typename T_Func>
     auto
         TUtils_RecordOfEntities<T_DerivedRecord>::
-        ForEach_InvalidEntry(
+        ForEach_Entry(
             const FCk_Handle& InHandle,
             T_Func InFunc)
         -> void
@@ -280,7 +280,7 @@ namespace ck
     template <typename T_Unary, typename T_Predicate>
     auto
         TUtils_RecordOfEntities<T_DerivedRecord>::
-        ForEach_InvalidEntry_If(
+        ForEach_Entry_If(
             FCk_Handle& InRecordHandle,
             T_Unary InFunc,
             T_Predicate InPredicate)
@@ -293,7 +293,7 @@ namespace ck
     template <typename T_Unary, typename T_Predicate>
     auto
         TUtils_RecordOfEntities<T_DerivedRecord>::
-        ForEach_InvalidEntry_If(
+        ForEach_Entry_If(
             const FCk_Handle& InRecordHandle,
             T_Unary InFunc,
             T_Predicate InPredicate)
