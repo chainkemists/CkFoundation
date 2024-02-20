@@ -414,7 +414,7 @@ namespace ck
                     PendingRequest->Get_AbilityHandle())
                 { return; }
 
-                ability::Verbose(TEXT("Deactivating Ability [{}] on Ability Owner [{}] IMMEDIATELY"),
+                ability::Verbose(TEXT("DEACTIVATING Ability [{}] on Ability Owner [{}] IMMEDIATELY"),
                     InAbilityToActivateEntity, InAbilityOwnerEntity);
 
                 RequestsComp._Requests.Reset();
@@ -582,31 +582,24 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
-            const FFragment_Ability_Params&) const
+            const FFragment_Ability_Current& InCurrent) const
         -> void
     {
+        // there is nothing to teardown if the Ability is already InActive
+        if (InCurrent.Get_Status() == ECk_Ability_Status::NotActive)
+        { return; }
+
         auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         auto AbilityOwner = UCk_Utils_AbilityOwner_UE::CastChecked(LifetimeOwner);
 
-        // TODO: this is repeated multiple times in this file, move to a common function
-        UCk_Utils_Ability_UE::RecordOfAbilities_Utils::ForEach_InvalidEntry
+        ability::Verbose
         (
-            AbilityOwner,
-            [&](FCk_Handle InAbilityEntityToCancel)
-            {
-                auto AbilityEntityToCancel = UCk_Utils_Ability_UE::CastChecked(InAbilityEntityToCancel);
-
-                ability::Verbose
-                (
-                    TEXT("FORCE DEACTIVATING Ability [Name: {} | Entity: {}] because our AbilityOwner [{}] is pending destroy"),
-                    UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntityToCancel),
-                    InAbilityEntityToCancel,
-                    AbilityOwner
-                );
-
-                UCk_Utils_Ability_UE::DoDeactivate(AbilityOwner, AbilityEntityToCancel);
-            }
+            TEXT("FORCE DEACTIVATING Ability [Name: {} | Entity: {}] with AbilityOwner [{}] that is {}"),
+            UCk_Utils_GameplayLabel_UE::Get_Label(InHandle), InHandle, AbilityOwner,
+            ck::IsValid(LifetimeOwner) ? TEXT("VALID") : TEXT("PENDING DESTROY")
         );
+
+        UCk_Utils_Ability_UE::DoDeactivate(AbilityOwner, InHandle);
     }
 }
 

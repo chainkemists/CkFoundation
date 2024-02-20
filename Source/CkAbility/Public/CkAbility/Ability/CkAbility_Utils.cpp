@@ -249,10 +249,16 @@ auto
         InAbilityEntity)
     { return; }
 
+    if (AbilityCurrent.Get_Status() == ECk_Ability_Status::NotActive)
+    { return; }
+
     AbilityCurrent._Status = ECk_Ability_Status::NotActive;
     Script->OnDeactivateAbility();
 
     ck::UUtils_Signal_OnAbilityDeactivated::Broadcast(InAbilityEntity, ck::MakePayload(InAbilityEntity));
+
+    if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InAbilityEntity))
+    { return; }
 
     // NOTE: If we reset the ability script properties on DEACTIVATE, we are potentially doing a cleanup for nothing
     // if the ability is not activated again. If we do it on ACTIVATE then we are going to perform a cleanup for nothing
