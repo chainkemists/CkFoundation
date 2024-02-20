@@ -71,14 +71,14 @@ static_assert
     CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(_HandleType_,                                             \
     [&]()                                                                                             \
     {                                                                                                 \
-        if (ck::IsValid(InObj) && InObj.Has<DEBUG_NAME>())                                            \
+        if (ck::IsValid(InObj, ck::IsValid_Policy_IncludePendingKill{}) && InObj.Has<DEBUG_NAME>())   \
         { return ck::Format(TEXT("{}({})"), InObj.Get_Entity(), InObj.Get<DEBUG_NAME>().Get_Name()); }\
                                                                                                       \
         return ck::Format(TEXT("{}"), InObj.Get_Entity());                                            \
     },                                                                                                \
     [&]()                                                                                             \
     {                                                                                                 \
-        if (ck::IsValid(InObj) && InObj.Has<DEBUG_NAME>())                                            \
+        if (ck::IsValid(InObj, ck::IsValid_Policy_IncludePendingKill{}) && InObj.Has<DEBUG_NAME>())   \
         {                                                                                             \
             return ck::Format(TEXT("{}[{}]({})"),                                                     \
                 InObj.Get_Entity(),                                                                   \
