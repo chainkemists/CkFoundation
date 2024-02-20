@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkEcs/Concepts/CkConcepts.h"
 #include "CkEcs/Entity/CkEntity.h"
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
@@ -14,12 +15,9 @@ class UCk_Utils_RecordOfEntities_UE;
 
 namespace ck
 {
-    template <typename T_HandleType>
+    template <concepts::ValidHandleType T_HandleType>
     struct TFragment_RecordOfEntities
     {
-        static_assert(std::is_same_v<FCk_Handle, T_HandleType> || std::is_base_of_v<FCk_Handle_TypeSafe, T_HandleType>,
-            "RecordOfEntities T_HandleType MUST be a FCk_Handle or a derived type-safe FCk_Handle_TypeSafe");
-
     public:
         CK_GENERATED_BODY(TFragment_RecordOfEntities<T_HandleType>);
 
@@ -32,8 +30,8 @@ namespace ck
         friend class TUtils_RecordOfEntities;
 
     public:
-        using HandleType = T_HandleType;
         // TODO: Use FCk_DebuggableEntity when available [OBS-845]
+        using HandleType = T_HandleType;
         using EntityType = HandleType;
         using RecordEntriesType = TArray<EntityType>;
 
