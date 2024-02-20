@@ -31,20 +31,12 @@ namespace ck
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_EntityHolder, _Entity);
     };
+}
 
-    // --------------------------------------------------------------------------------------------------------------------
-
-    struct FFragment_ParentEntity : public FFragment_EntityHolder
-    {
-        using FFragment_EntityHolder::FFragment_EntityHolder;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    struct FFragment_TargetEntity : public FFragment_EntityHolder
-    {
-        using FFragment_EntityHolder::FFragment_EntityHolder;
-    };
+#define CK_DEFINE_ENTITY_HOLDER(_NameOfEntityHolder_)      \
+struct _NameOfEntityHolder_ : public FFragment_EntityHolder\
+{                                                          \
+    using FFragment_EntityHolder::FFragment_EntityHolder;  \
 }
 
 // --------------------------------------------------------------------------------------------------------------------
