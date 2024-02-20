@@ -114,26 +114,6 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-
-    class CKABILITY_API FProcessor_AbilityOwner_Teardown : public ck_exp::TProcessor<
-            FProcessor_AbilityOwner_Teardown,
-            FCk_Handle_Ability,
-            FFragment_Ability_Current,
-            CK_IF_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = FFragment_AbilityOwner_Requests;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType& InHandle,
-            const FFragment_Ability_Current& InCurrent) const -> void;
-    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------

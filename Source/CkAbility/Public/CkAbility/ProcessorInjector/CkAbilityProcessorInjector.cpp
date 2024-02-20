@@ -14,7 +14,7 @@ auto
     InWorld.Add<ck::FProcessor_AbilityOwner_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AbilityOwner_HandleRequests>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AbilityOwner_HandleEvents>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_AbilityOwner_Teardown>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Ability_Teardown>(InWorld.Get_Registry());
 
     InWorld.Add<ck::FProcessor_AbilityCue_Spawn>(InWorld.Get_Registry());
 }
