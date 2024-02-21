@@ -31,8 +31,8 @@ namespace ck
 
     public:
         // TODO: Use FCk_DebuggableEntity when available [OBS-845]
-        using HandleType = T_HandleType;
-        using EntityType = HandleType;
+        using MaybeTypeSafeHandle = T_HandleType;
+        using EntityType = MaybeTypeSafeHandle;
         using RecordEntriesType = TArray<EntityType>;
 
     private:
