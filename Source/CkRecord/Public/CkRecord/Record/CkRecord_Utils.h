@@ -42,26 +42,31 @@ namespace ck
             FCk_Handle& InHandle,
             ECk_Record_EntryHandlingPolicy _EntryHandlingPolicy = ECk_Record_EntryHandlingPolicy::Default) -> void;
 
+        [[nodiscard]]
         static auto
         Has(
             const FCk_Handle& InHandle) -> bool;
 
+        [[nodiscard]]
         static auto
         Ensure(
             const FCk_Handle& InHandle) -> bool;
 
+        [[nodiscard]]
         static auto
         Get_ValidEntriesCount(
             const FCk_Handle& InRecordHandle) -> int32;
 
     public:
         template <typename T_Predicate>
+        [[nodiscard]]
         static auto
         Get_HasValidEntry_If(
             const FCk_Handle& InRecordHandle,
             T_Predicate InPredicate) -> bool;
 
         template <typename T_Predicate>
+        [[nodiscard]]
         static auto
         Get_ValidEntry_If(
             const FCk_Handle& InRecordHandle,
