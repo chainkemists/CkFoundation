@@ -24,10 +24,12 @@ public:
     Add(
         FCk_Handle& InHandle) -> void;
 
+    [[nodiscard]]
     static auto
     Has(
         const FCk_Handle& InHandle) -> bool;
 
+    [[nodiscard]]
     static auto
     Ensure(
         const FCk_Handle& InHandle) -> bool;
