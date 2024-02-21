@@ -399,7 +399,7 @@ auto
 
                 _ReplicationComplete_BroadcastStep = EOnReplicationCompleteBroadcastStep::Broadcast;
 
-                const auto AssociatedEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(GetOwner());
+                auto AssociatedEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(GetOwner());
 
                 UCk_Utils_Handle_UE::Set_DebugName(AssociatedEntity,
                     UCk_Utils_Debug_UE::Get_DebugName(GetOwner(), ECk_DebugNameVerbosity_Policy::Compact));
@@ -423,7 +423,7 @@ auto
 
                 _ReplicationComplete_BroadcastStep = EOnReplicationCompleteBroadcastStep::Broadcast;
 
-                const auto AssociatedEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(GetOwner());
+                auto AssociatedEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(GetOwner());
 
                 UCk_Utils_Handle_UE::Set_DebugName(AssociatedEntity,
                     UCk_Utils_Debug_UE::Get_DebugName(GetOwner(), ECk_DebugNameVerbosity_Policy::Compact));

@@ -31,7 +31,7 @@ auto
         const auto& CurrentLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(Get_AssociatedEntity());
         UCk_Utils_Transform_UE::Request_SetInterpolationGoal_LocationOffset
         (
-            Get_AssociatedEntity(),
+            _AssociatedEntity,
             _Location - CurrentLocation
         );
     });
@@ -46,7 +46,7 @@ auto
         const auto& CurrentRotation = UCk_Utils_Transform_UE::Get_EntityCurrentRotation(Get_AssociatedEntity());
         UCk_Utils_Transform_UE::Request_SetInterpolationGoal_RotationOffset
         (
-            Get_AssociatedEntity(),
+            _AssociatedEntity,
             _Rotation.Rotator() - CurrentRotation
         );
     });
@@ -60,7 +60,7 @@ auto
     {
         UCk_Utils_Transform_UE::Request_SetScale
         (
-            Get_AssociatedEntity(),
+            _AssociatedEntity,
             FCk_Request_Transform_SetScale{_Scale}.Set_RelativeAbsolute(ECk_RelativeAbsolute::Absolute)
         );
     });

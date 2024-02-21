@@ -67,7 +67,7 @@ UE_ENABLE_OPTIMIZATION_SHIP
 auto
     UCk_Utils_Handle_UE::
     Set_DebugName(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         FName InDebugName)
     -> void
 {
