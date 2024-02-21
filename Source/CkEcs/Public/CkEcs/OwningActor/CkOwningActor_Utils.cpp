@@ -12,7 +12,7 @@
 auto
     UCk_Utils_OwningActor_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         AActor* InOwningActor)
     -> void
 {
@@ -22,7 +22,7 @@ auto
 auto
     UCk_Utils_OwningActor_UE::
     Has(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     return InHandle.Has<ck::FFragment_OwningActor_Current>();
@@ -31,7 +31,7 @@ auto
 auto
     UCk_Utils_OwningActor_UE::
     Ensure(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Entity [{}] does NOT have OwningActor Fragment! The Entity has no associated Actor"), InHandle)
@@ -43,7 +43,7 @@ auto
 auto
     UCk_Utils_OwningActor_UE::
     Get_EntityOwningActor(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> AActor*
 {
     if (NOT Ensure(InHandle))
@@ -55,7 +55,7 @@ auto
 auto
     UCk_Utils_OwningActor_UE::
     Get_EntityOwningActorBasicDetails(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> FCk_EntityOwningActor_BasicDetails
 {
     if (NOT Ensure(InHandle))

@@ -71,7 +71,7 @@ public:
 public:
     static auto
     Set_DebugName(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         FName InDebugName) -> void;
 
 public:

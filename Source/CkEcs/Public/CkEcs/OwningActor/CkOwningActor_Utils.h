@@ -21,7 +21,7 @@ public:
 public:
     static void
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         AActor* InOwningActor);
 
     UFUNCTION(BlueprintPure,
@@ -29,14 +29,14 @@ public:
               DisplayName = "[Ck][OwningActor] Has Feature")
     static bool
     Has(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor",
               DisplayName = "[Ck][OwningActor] Ensure Has Feature")
     static bool
     Ensure(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
 public:
     UFUNCTION(BlueprintPure,
@@ -45,7 +45,7 @@ public:
               meta = (CompactNodeTitle="EntityToActor"))
     static AActor*
     Get_EntityOwningActor(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor",
@@ -53,7 +53,7 @@ public:
               meta = (CompactNodeTitle="EntityBasicDetails"))
     static FCk_EntityOwningActor_BasicDetails
     Get_EntityOwningActorBasicDetails(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor",

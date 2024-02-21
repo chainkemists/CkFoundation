@@ -7,7 +7,7 @@
 auto
     UCk_Utils_Transform_UE::
     Request_SetLocation(
-        FCk_Handle                               InHandle,
+        FCk_Handle& InHandle,
         const FCk_Request_Transform_SetLocation& InRequest)
     -> void
 {
@@ -20,7 +20,7 @@ auto
 auto
     UCk_Utils_Transform_UE::
     Request_AddLocationOffset(
-        FCk_Handle                                     InHandle,
+        FCk_Handle& InHandle,
         const FCk_Request_Transform_AddLocationOffset& InRequest)
     -> void
 {
@@ -33,7 +33,7 @@ auto
 auto
     UCk_Utils_Transform_UE::
     Request_SetRotation(
-        FCk_Handle                               InHandle,
+        FCk_Handle& InHandle,
         const FCk_Request_Transform_SetRotation& InRequest)
     -> void
 {
@@ -46,7 +46,7 @@ auto
 auto
     UCk_Utils_Transform_UE::
     Request_AddRotationOffset(
-        FCk_Handle                                     InHandle,
+        FCk_Handle& InHandle,
         const FCk_Request_Transform_AddRotationOffset& InRequest)
     -> void
 {
@@ -59,7 +59,7 @@ auto
 auto
     UCk_Utils_Transform_UE::
     Request_SetScale(
-        FCk_Handle                             InHandle,
+        FCk_Handle& InHandle,
         const FCk_Request_Transform_SetScale&  InRequest)
     -> void
 {
@@ -72,7 +72,7 @@ auto
 auto
     UCk_Utils_Transform_UE::
     Request_SetTransform(
-        FCk_Handle                                InHandle,
+        FCk_Handle& InHandle,
         const FCk_Request_Transform_SetTransform& InRequest)
     -> void
 {
@@ -91,8 +91,8 @@ auto
 auto
     UCk_Utils_Transform_UE::
     Request_SetInterpolationGoal_LocationOffset(
-        FCk_Handle InHandle,
-        FVector    InOffset)
+        FCk_Handle& InHandle,
+        FVector InOffset)
     -> void
 {
     auto& NewGoal = InHandle.AddOrGet<ck::FFragment_Transform_NewGoal_Location>();
@@ -102,8 +102,8 @@ auto
 auto
     UCk_Utils_Transform_UE::
     Request_SetInterpolationGoal_RotationOffset(
-        FCk_Handle InHandle,
-        FRotator   InOffset)
+        FCk_Handle& InHandle,
+        FRotator InOffset)
     -> void
 {
     auto& NewGoal = InHandle.AddOrGet<ck::FFragment_Transform_NewGoal_Rotation>();
@@ -113,7 +113,7 @@ auto
 auto
     UCk_Utils_Transform_UE::
     Get_EntityCurrentTransform(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> FTransform
 {
     if (Has<ck::type_traits::NonConst>(InHandle))
@@ -134,7 +134,7 @@ auto
 auto
     UCk_Utils_Transform_UE::
     Get_EntityCurrentLocation(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> FVector
 {
     if (Has<ck::type_traits::NonConst>(InHandle))
@@ -155,7 +155,7 @@ auto
 auto
     UCk_Utils_Transform_UE::
     Get_EntityCurrentRotation(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> FRotator
 {
     if (Has<ck::type_traits::NonConst>(InHandle))
@@ -176,7 +176,7 @@ auto
 auto
     UCk_Utils_Transform_UE::
     Get_EntityCurrentScale(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> FVector
 {
     if (Has<ck::type_traits::NonConst>(InHandle))
@@ -197,7 +197,7 @@ auto
 auto
     UCk_Utils_Transform_UE::
     BindTo_OnUpdate(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_Transform_OnUpdate& InDelegate)
     -> void
@@ -211,7 +211,7 @@ auto
 auto
     UCk_Utils_Transform_UE::
     UnbindFrom_OnUpdate(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Delegate_Transform_OnUpdate& InDelegate)
     -> void
 {
@@ -224,9 +224,9 @@ auto
 auto
     UCk_Utils_Transform_UE::
     DoAdd(
-        FCk_Handle InHandle,
-        FTransform InInitialTransform,
-        FCk_Transform_ParamsData InParams,
+        FCk_Handle& InHandle,
+        const FTransform& InInitialTransform,
+        const FCk_Transform_ParamsData&  InParams,
         ECk_Replication InReplicates)
     -> void
 {
@@ -236,7 +236,7 @@ auto
 auto
     UCk_Utils_Transform_UE::
     DoHas(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     return Has<ck::type_traits::NonConst>(InHandle);
@@ -245,7 +245,7 @@ auto
 auto
     UCk_Utils_Transform_UE::
     DoEnsure(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     return Ensure<ck::type_traits::NonConst>(InHandle);

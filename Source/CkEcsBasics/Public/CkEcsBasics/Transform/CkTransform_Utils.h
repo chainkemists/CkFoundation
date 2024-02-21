@@ -31,20 +31,20 @@ public:
     template <typename T_ConstOrNonConst = ck::type_traits::NonConst>
     static auto
     Add(
-        FCk_Handle InHandle,
-        FTransform InInitialTransform,
-        FCk_Transform_ParamsData InParams,
+        FCk_Handle& InHandle,
+        const FTransform& InInitialTransform,
+        const FCk_Transform_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates) -> void;
 
     template <typename T_ConstOrNonConst = void>
     static auto
     Has(
-        FCk_Handle InHandle) -> bool;
+        const FCk_Handle& InHandle) -> bool;
 
     template <typename T_ConstOrNonConst = void>
     static auto
     Ensure(
-        FCk_Handle InHandle) -> bool;
+        const FCk_Handle& InHandle) -> bool;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -52,7 +52,7 @@ public:
               DisplayName = "[Ck][Transform] Request Set Location")
     static void
     Request_SetLocation(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Request_Transform_SetLocation& InRequest);
 
     UFUNCTION(BlueprintCallable,
@@ -60,7 +60,7 @@ public:
               DisplayName = "[Ck][Transform] Request Add Location Offset")
     static void
     Request_AddLocationOffset(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Request_Transform_AddLocationOffset& InRequest);
 
     UFUNCTION(BlueprintCallable,
@@ -68,7 +68,7 @@ public:
               DisplayName = "[Ck][Transform] Request Set Rotation")
     static void
     Request_SetRotation(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Request_Transform_SetRotation& InRequest);
 
     UFUNCTION(BlueprintCallable,
@@ -76,7 +76,7 @@ public:
               DisplayName = "[Ck][Transform] Request Add Rotation Offset")
     static void
     Request_AddRotationOffset(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Request_Transform_AddRotationOffset& InRequest);
 
     UFUNCTION(BlueprintCallable,
@@ -84,7 +84,7 @@ public:
               DisplayName = "[Ck][Transform] Request Set Scale")
     static void
     Request_SetScale(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Request_Transform_SetScale&  InRequest);
 
     UFUNCTION(BlueprintCallable,
@@ -92,7 +92,7 @@ public:
               DisplayName = "[Ck][Transform] Request Set Transform")
     static void
     Request_SetTransform(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Request_Transform_SetTransform& InRequest);
 
     UFUNCTION(BlueprintCallable,
@@ -100,7 +100,7 @@ public:
               DisplayName = "[Ck][Transform] Request Set Interpolation Goal (Location)")
     static void
     Request_SetInterpolationGoal_LocationOffset(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FVector    InOffset);
 
     UFUNCTION(BlueprintCallable,
@@ -108,7 +108,7 @@ public:
               DisplayName = "[Ck][Transform] Request Set Interpolation Goal (Rotation)")
     static void
     Request_SetInterpolationGoal_RotationOffset(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FRotator   InOffset);
 
 public:
@@ -117,28 +117,28 @@ public:
               DisplayName = "[Ck][Transform] Get Transform")
     static FTransform
     Get_EntityCurrentTransform(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Transform",
               DisplayName = "[Ck][Transform] Get Location")
     static FVector
     Get_EntityCurrentLocation(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Transform",
               DisplayName = "[Ck][Transform] Get Rotation")
     static FRotator
     Get_EntityCurrentRotation(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Transform",
               DisplayName = "[Ck][Transform] Get Scale")
     static FVector
     Get_EntityCurrentScale(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -146,7 +146,7 @@ public:
               DisplayName = "[Ck][Transform] Bind To OnUpdate")
     static void
     BindTo_OnUpdate(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_Transform_OnUpdate& InDelegate);
 
@@ -155,7 +155,7 @@ public:
               DisplayName = "[Ck][Transform] Unbind From OnUpdate")
     static void
     UnbindFrom_OnUpdate(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Delegate_Transform_OnUpdate& InDelegate);
 
 private:
@@ -164,9 +164,9 @@ private:
               DisplayName="[Ck][Transform] Add Feature")
     static void
     DoAdd(
-        FCk_Handle InHandle,
-        FTransform InInitialTransform,
-        FCk_Transform_ParamsData InParams,
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FTransform& InInitialTransform,
+        const FCk_Transform_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintPure,
@@ -174,14 +174,14 @@ private:
               DisplayName="[Ck][Transform] Has Feature")
     static bool
     DoHas(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Transform",
               DisplayName="[Ck][Transform] Ensure Has Feature")
     static bool
     DoEnsure(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -191,9 +191,9 @@ template <typename T_ConstOrNonConst>
 auto
     UCk_Utils_Transform_UE::
     Add(
-        FCk_Handle InHandle,
-        FTransform InInitialTransform,
-        FCk_Transform_ParamsData InParams,
+        FCk_Handle& InHandle,
+        const FTransform& InInitialTransform,
+        const FCk_Transform_ParamsData& InParams,
         ECk_Replication InReplicates)
     -> void
 {
@@ -219,7 +219,7 @@ template <typename T_ConstOrNonConst>
 auto
     UCk_Utils_Transform_UE::
     Has(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     if (std::is_same_v<T_ConstOrNonConst, void>)
@@ -234,7 +234,7 @@ template <typename T_ConstOrNonConst>
 auto
     UCk_Utils_Transform_UE::
     Ensure(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     CK_ENSURE_IF_NOT(Has<T_ConstOrNonConst>(InHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle)
