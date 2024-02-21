@@ -136,13 +136,27 @@ auto
     {
         Ar << _Instigator_RepObj;
         if (NOT Ar.IsSaving())
-        { _Instigator = _Instigator_RepObj->Get_AssociatedEntity(); }
+        {
+            CK_ENSURE_IF_NOT(ck::IsValid(_Instigator_RepObj),
+                TEXT("Instigator RepObj was [{}] even though RepBits tell us that it WAS replicated. Unable to set the Instigator."),
+                _Instigator_RepObj)
+            { }
+            else
+            { _Instigator = _Instigator_RepObj->Get_AssociatedEntity(); }
+        }
     }
     if (RepBits & (1 << Rep_EffectCauser))
     {
         Ar << _EffectCauser_RepObj;
         if (NOT Ar.IsSaving())
-        { _EffectCauser = _EffectCauser_RepObj->Get_AssociatedEntity(); }
+        {
+            CK_ENSURE_IF_NOT(ck::IsValid(_EffectCauser_RepObj),
+                TEXT("EffectCauser RepObj was [{}] even though RepBits tell us that it WAS replicated. Unable to set the EffectCauser."),
+                _EffectCauser_RepObj)
+            { }
+
+            _EffectCauser = _EffectCauser_RepObj->Get_AssociatedEntity();
+        }
     }
 
     bOutSuccess = true;
