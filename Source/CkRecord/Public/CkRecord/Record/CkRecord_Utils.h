@@ -9,8 +9,10 @@
 
 #include "CkCore/Enums/CkEnums.h"
 #include "CkEcs/Delegates/CkDelegates.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkLabel/Public/CkLabel/CkLabel_Fragment.h"
 #include "CkLabel/Public/CkLabel/CkLabel_Utils.h"
+#include "CkRecord/RecordEntry/CkRecordEntry_Fragment_Data.h"
 
 #include "CkRecord_Utils.generated.h"
 
@@ -28,10 +30,10 @@ namespace ck
 
     public:
         using RecordType            = T_DerivedRecord;
-        using HandleType            = typename T_DerivedRecord::HandleType;
+        using MaybeTypeSafeHandle   = typename T_DerivedRecord::MaybeTypeSafeHandle;
         using RecordEntityType      = typename T_DerivedRecord::EntityType;
         using RecordEntryEntityType = typename T_DerivedRecord::EntityType;
-        using RecordEntryHandleType = HandleType;
+        using RecordEntryMaybeTypeSafeHandle = MaybeTypeSafeHandle;
         using RecordEntryListType   = typename RecordType::RecordEntriesType;
 
     public:
@@ -63,7 +65,7 @@ namespace ck
         static auto
         Get_ValidEntry_If(
             const FCk_Handle& InRecordHandle,
-            T_Predicate InPredicate) -> HandleType;
+            T_Predicate InPredicate) -> MaybeTypeSafeHandle;
 
     public:
         template <typename T_Func>
@@ -154,12 +156,12 @@ namespace ck
         static auto
         Request_Connect(
             FCk_Handle& InRecordHandle,
-            HandleType& InRecordEntry) -> void;
+            MaybeTypeSafeHandle& InRecordEntry) -> void;
 
         static auto
         Request_Disconnect(
             FCk_Handle& InRecordHandle,
-            HandleType& InRecordEntry) -> void;
+            MaybeTypeSafeHandle& InRecordEntry) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -232,7 +234,7 @@ namespace ck
         Get_ValidEntry_If(
             const FCk_Handle& InRecordHandle,
             T_Predicate InPredicate)
-        -> HandleType
+        -> MaybeTypeSafeHandle
     {
         for (const auto& Fragment = InRecordHandle.Get<RecordType>();
              const auto& RecordEntry : Fragment.Get_RecordEntries())
@@ -243,7 +245,7 @@ namespace ck
             { continue; }
 
             if (const auto Result = InPredicate(RecordEntryHandle))
-            { return ck::StaticCast<HandleType>(RecordEntryHandle); }
+            { return ck::StaticCast<MaybeTypeSafeHandle>(RecordEntryHandle); }
         }
 
         return {};
@@ -406,7 +408,7 @@ namespace ck
 
         for (auto Index = 0; Index < RecordEntries.Num(); ++Index)
         {
-            const auto RecordEntryHandle = ck::StaticCast<const HandleType>(ck::MakeHandle(RecordEntries[Index], InHandle));
+            const auto RecordEntryHandle = ck::StaticCast<const MaybeTypeSafeHandle>(ck::MakeHandle(RecordEntries[Index], InHandle));
 
             if (ck::Is_NOT_Valid(RecordEntryHandle, T_ValidationPolicy{}))
             {
@@ -430,7 +432,7 @@ namespace ck
             T_Predicate InPredicate)
         -> void
     {
-        DoForEach_Entry<T_ValidationPolicy>(InRecordHandle, [&](HandleType InRecordEntryHandle)
+        DoForEach_Entry<T_ValidationPolicy>(InRecordHandle, [&](MaybeTypeSafeHandle InRecordEntryHandle)
         {
             if (InPredicate(InRecordEntryHandle))
             { InFunc(InRecordEntryHandle); }
@@ -447,7 +449,7 @@ namespace ck
             T_Predicate InPredicate)
         -> void
     {
-        DoForEach_Entry<T_ValidationPolicy>(InRecordHandle, [&](const HandleType& InRecordEntryHandle)
+        DoForEach_Entry<T_ValidationPolicy>(InRecordHandle, [&](const MaybeTypeSafeHandle& InRecordEntryHandle)
         {
             if (InPredicate(InRecordEntryHandle))
             { InFunc(InRecordEntryHandle); }
@@ -461,7 +463,7 @@ namespace ck
         TUtils_RecordOfEntities<T_DerivedRecord>::
         Request_Connect(
             FCk_Handle& InRecordHandle,
-            HandleType& InRecordEntry)
+            MaybeTypeSafeHandle& InRecordEntry)
         -> void
     {
         if (NOT Ensure(InRecordHandle))
@@ -506,7 +508,7 @@ namespace ck
         RecordEntryFragment._DisconnectionFuncs.Add(InRecordHandle,
         [](FCk_Handle InRecordEntity, FCk_Handle InRecordEntryEntity)
         {
-            InRecordEntity.Get<T_DerivedRecord>()._RecordEntries.Remove(ck::StaticCast<HandleType>(InRecordEntryEntity));
+            InRecordEntity.Get<T_DerivedRecord>()._RecordEntries.Remove(ck::StaticCast<MaybeTypeSafeHandle>(InRecordEntryEntity));
         });
     }
 
@@ -515,7 +517,7 @@ namespace ck
         TUtils_RecordOfEntities<T_DerivedRecord>::
         Request_Disconnect(
             FCk_Handle& InRecordHandle,
-            HandleType& InRecordEntry)
+            MaybeTypeSafeHandle& InRecordEntry)
         -> void
     {
         if (NOT Ensure(InRecordHandle))
