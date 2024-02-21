@@ -27,7 +27,7 @@ namespace ck
             const HandleType& InHandle) -> bool;
 
         static auto Get_StoredEntity(
-            HandleType& InHandle) -> HandleType;
+            const HandleType& InHandle) -> HandleType;
     };
 }
 
@@ -74,7 +74,7 @@ namespace ck
     auto
         TUtils_EntityHolder<T_DerivedCompType>::
         Get_StoredEntity(
-            HandleType& InHandle)
+            const HandleType& InHandle)
         -> HandleType
     {
         if (NOT Ensure(InHandle))
