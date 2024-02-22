@@ -68,8 +68,7 @@ private:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[Ck][AbilityOwner] Has Ability (By Class)",
-              meta=(DevelopmentOnly))
+              DisplayName="[Ck][AbilityOwner] Has Ability (By Class)")
     static bool
     Has_AbilityByClass(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
@@ -92,8 +91,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[Ck][AbilityOwner] Try Get Ability (By Class)",
-              meta=(DevelopmentOnly))
+              DisplayName="[Ck][AbilityOwner] Try Get Ability (By Class)")
     static FCk_Handle_Ability
     TryGet_AbilityByClass(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
