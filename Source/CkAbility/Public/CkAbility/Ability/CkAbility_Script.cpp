@@ -102,6 +102,15 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
+    Get_CanBeGiven(
+        const FCk_Handle_AbilityOwner& InAbilityOwner) const
+    -> bool
+{
+    return DoGet_CanBeGiven(InAbilityOwner);
+}
+
+auto
+    UCk_Ability_Script_PDA::
     OnGiveAbility(
         const FCk_Ability_Payload_OnGranted& InOptionalPayload)
     -> void
