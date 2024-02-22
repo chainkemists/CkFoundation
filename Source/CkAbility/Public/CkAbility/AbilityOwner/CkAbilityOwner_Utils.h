@@ -114,6 +114,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
+              DisplayName="[Ck][AbilityOwner] Get Ability Count (Of Class")
+    static int32
+    Get_AbilityCount_OfClass(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner",
               DisplayName="[Ck][AbilityOwner] Get Ability Count If",
               meta=(AutoCreateRefTerm="InOptionalPayload"))
     static int32
@@ -159,7 +167,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[Ck][AbilityOwner] For Each Ability with Status",
+              DisplayName="[Ck][AbilityOwner] For Each Ability (With Status)",
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle_Ability>
     ForEach_Ability_WithStatus(
@@ -171,6 +179,22 @@ public:
     ForEach_Ability_WithStatus(
         FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         ECk_Ability_Status InStatus,
+        const TFunction<void(FCk_Handle_Ability)>& InFunc) -> void;
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="[Ck][AbilityOwner] For Each Ability (Of Class)",
+              meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
+    static TArray<FCk_Handle_Ability>
+    ForEach_Ability_OfClass(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate);
+    static auto
+    ForEach_Ability_OfClass(
+        FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass,
         const TFunction<void(FCk_Handle_Ability)>& InFunc) -> void;
 
 public:

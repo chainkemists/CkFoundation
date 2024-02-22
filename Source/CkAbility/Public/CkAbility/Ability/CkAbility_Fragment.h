@@ -82,6 +82,20 @@ namespace ck::algo
     public:
         CK_DEFINE_CONSTRUCTOR(MatchesAnyAbilityActivationCancelledTags, _Tags);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct MatchesAbilityScriptClass
+    {
+    public:
+        auto operator()(const FCk_Handle& InHandle) const -> bool;
+
+    private:
+        TSubclassOf<class UCk_Ability_Script_PDA> _ScriptClass;
+
+    public:
+        CK_DEFINE_CONSTRUCTOR(MatchesAbilityScriptClass, _ScriptClass);
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
