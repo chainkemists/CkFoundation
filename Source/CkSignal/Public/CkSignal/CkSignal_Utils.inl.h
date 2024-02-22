@@ -227,7 +227,7 @@ namespace ck
         Unbind(
             T_HandleType InHandle)
     {
-        auto& Signal = InHandle.template Get<SignalType>();
+        auto& Signal = InHandle.template Get<SignalType, ck::IsValid_Policy_IncludePendingKill{}>();
         Signal._Invoke_Sink.template disconnect<T_Candidate>();
     }
 
@@ -239,7 +239,7 @@ namespace ck
             T_Instance&& InInstance,
             T_HandleType InHandle)
     {
-        auto& Signal = InHandle.template Get<SignalType>();
+        auto& Signal = InHandle.template Get<SignalType, ck::IsValid_Policy_IncludePendingKill{}>();
         Signal._Invoke_Sink.template disconnect<T_Candidate>();
     }
 
@@ -364,7 +364,7 @@ namespace ck
         if (NOT InHandle.template Has<T_DerivedSignal_Unreal>())
         { return; }
 
-        auto& UnrealMulticast = InHandle.template AddOrGet<T_DerivedSignal_Unreal>();
+        auto& UnrealMulticast = InHandle.template Get<T_DerivedSignal_Unreal, ck::IsValid_Policy_IncludePendingKill>();
         UnrealMulticast._Multicast.Remove(InDelegate);
 
         if (UnrealMulticast._Multicast.IsBound())
