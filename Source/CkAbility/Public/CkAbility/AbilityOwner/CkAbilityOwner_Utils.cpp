@@ -114,6 +114,16 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
+    Get_AbilityCount_OfClass(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass)
+    -> int32
+{
+    return Get_AbilityCount_If(InAbilityOwnerEntity, ck::algo::MatchesAbilityScriptClass{InAbilityClass});
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
     Get_AbilityCount_If(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         const FInstancedStruct& InOptionalPayload,
@@ -264,7 +274,46 @@ auto
 {
     ForEach_Ability(InAbilityOwnerEntity, [&](const FCk_Handle_Ability& InAbility)
     {
-        if (UCk_Utils_Ability_UE::Get_Status(UCk_Utils_Ability_UE::CastChecked(InAbility)) == InStatus)
+        if (UCk_Utils_Ability_UE::Get_Status(InAbility) == InStatus)
+        {
+            InFunc(InAbility);
+        }
+    });
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    ForEach_Ability_OfClass(
+        FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate)
+    -> TArray<FCk_Handle_Ability>
+{
+    auto Abilities = TArray<FCk_Handle_Ability>{};
+
+    ForEach_Ability_OfClass(InAbilityOwnerEntity, InAbilityClass, [&](FCk_Handle_Ability InAbility)
+    {
+        if (InDelegate.IsBound())
+        { InDelegate.Execute(InAbility, InOptionalPayload); }
+        else
+        { Abilities.Emplace(InAbility); }
+    });
+
+    return Abilities;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    ForEach_Ability_OfClass(
+        FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass,
+        const TFunction<void(FCk_Handle_Ability)>& InFunc)
+    -> void
+{
+    ForEach_Ability(InAbilityOwnerEntity, [&](const FCk_Handle_Ability& InAbility)
+    {
+        if (UCk_Utils_Ability_UE::Get_ScriptClass(InAbility) == InAbilityClass)
         {
             InFunc(InAbility);
         }

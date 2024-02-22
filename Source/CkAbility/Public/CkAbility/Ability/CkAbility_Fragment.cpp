@@ -1,5 +1,6 @@
 #include "CkAbility_Fragment.h"
 
+#include "CkAbility/Ability/CkAbility_Script.h"
 #include "CkAbility/Ability/CkAbility_Utils.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Utils.h"
 
@@ -25,6 +26,19 @@ namespace ck::algo
         }();
 
         return CancelledByTags.HasAnyExact(_Tags);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        MatchesAbilityScriptClass::
+        operator()(
+            const FCk_Handle& InTypeUnsafeHandle) const
+        -> bool
+    {
+        const auto& Handle = UCk_Utils_Ability_UE::CastChecked(InTypeUnsafeHandle);
+
+        return UCk_Utils_Ability_UE::Get_ScriptClass(Handle) == _ScriptClass;
     }
 }
 
