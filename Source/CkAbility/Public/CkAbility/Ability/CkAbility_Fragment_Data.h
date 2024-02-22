@@ -79,6 +79,80 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_ActivationTrigger_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// How this Ability stacks with other instances of this same Ability
+UENUM(BlueprintType)
+enum class ECk_Ability_Stacking_Policy : uint8
+{
+    DoesNotStack,
+
+    // Each caster has it's own stack
+    Stack_AggregateBySource UMETA(DisplayName = "Aggregate By Source"),
+
+    // Each target has it's own stack
+    Stack_AggregateByTarget UMETA(DisplayName = "Aggregate By Target"),
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_Stacking_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// How the Ability duration should be refreshed while stacking
+UENUM(BlueprintType)
+enum class ECk_Ability_StackDurationRefresh_Policy : uint8
+{
+    // The duration of this Ability will be refreshed from any successful stack application
+    RefreshOnSuccessfulApplication,
+
+    // The duration of this Ability will never be refreshed
+    NeverRefresh,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_StackDurationRefresh_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// How the Ability period should be reset (or not) while stacking
+UENUM(BlueprintType)
+enum class ECk_Ability_StackPeriodReset_Policy : uint8
+{
+    // Any progress toward the next tick of a periodic application is discarded upon any successful stack application
+    ResetOnSuccessfulApplication,
+
+    // The progress toward the next tick of a periodic application will never be reset, regardless of stack applications
+    NeverReset,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_StackPeriodReset_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// How to handle duration expiring on this Ability
+UENUM(BlueprintType)
+enum class ECk_Ability_StackExpiration_Policy : uint8
+{
+    // The entire stack is cleared when the active Ability expires
+    ClearEntireStack,
+
+    // The current stack count will decrement by 1 and the duration is refreshed
+    RemoveSingleStackAndRefreshDuration,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_StackExpiration_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Ability_Duration_Policy : uint8
+{
+    Instant,
+    Duration,
+    Infinite
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_Duration_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UENUM(BlueprintType)
 enum class ECk_Ability_ActivationRequirementsResult : uint8
 {
