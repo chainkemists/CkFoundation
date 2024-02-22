@@ -185,6 +185,11 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#define CK_IF_HANDLE_IS_PENDING_KILL(_Handle_)\
+if (ck::Is_NOT_Valid(_Handle_) && ck::IsValid(_Handle_, ck::IsValid_Policy_IncludePendingKill{}))
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto CKECS_API GetTypeHash(const FCk_Handle& InHandle) -> uint32;
 
 namespace ck
