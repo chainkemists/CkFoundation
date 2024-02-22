@@ -114,6 +114,20 @@ public:
     Get_AbilityCount(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="[Ck][AbilityOwner] Get Ability Count If",
+              meta=(AutoCreateRefTerm="InOptionalPayload"))
+    static int32
+    Get_AbilityCount_If(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Predicate_InHandle_OutResult& InPredicate);
+    static auto
+    Get_AbilityCount_If(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        const TFunction<bool(FCk_Handle_Ability)>& InPredicate) -> int32;
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
