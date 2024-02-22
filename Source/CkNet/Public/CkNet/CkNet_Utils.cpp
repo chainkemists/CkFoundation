@@ -13,7 +13,7 @@ auto
     UCk_Utils_Net_UE::
     Add(
         FCk_Handle InEntity,
-        FCk_Net_ConnectionSettings InConnectionSettings)
+        const FCk_Net_ConnectionSettings& InConnectionSettings)
     -> void
 {
     auto& Params = InEntity.Add<ck::FFragment_Net_Params>(InConnectionSettings);
@@ -31,8 +31,8 @@ auto
 auto
     UCk_Utils_Net_UE::
     Copy(
-        FCk_Handle InFrom,
-        FCk_Handle InTo)
+        const FCk_Handle& InFrom,
+        FCk_Handle& InTo)
     -> void
 {
     if (NOT Has(InFrom))
@@ -44,7 +44,7 @@ auto
 auto
     UCk_Utils_Net_UE::
     Has(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     return InHandle.Has<ck::FFragment_Net_Params>();
@@ -53,7 +53,7 @@ auto
 auto
     UCk_Utils_Net_UE::
     Ensure(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have Network Info"), InHandle)
@@ -65,7 +65,7 @@ auto
 auto
     UCk_Utils_Net_UE::
     Get_EntityNetRole(
-        FCk_Handle InEntity)
+        const FCk_Handle& InEntity)
     -> ECk_Net_EntityNetRole
 {
     if (ck::Is_NOT_Valid(InEntity))
@@ -80,7 +80,7 @@ auto
 auto
     UCk_Utils_Net_UE::
     Get_EntityNetMode(
-        FCk_Handle InEntity)
+        const FCk_Handle& InEntity)
     -> ECk_Net_NetModeType
 {
     if (ck::Is_NOT_Valid(InEntity))
@@ -95,7 +95,7 @@ auto
 auto
     UCk_Utils_Net_UE::
     Get_IsEntityRoleMatching(
-        FCk_Handle              InEntity,
+        const FCk_Handle& InEntity,
         ECk_Net_ReplicationType InReplicationType)
     -> bool
 {
@@ -136,7 +136,7 @@ auto
 auto
     UCk_Utils_Net_UE::
     Get_HasAuthority(
-        FCk_Handle InEntity)
+        const FCk_Handle& InEntity)
     -> bool
 {
     if (ck::Is_NOT_Valid(InEntity))
@@ -318,7 +318,7 @@ auto
 auto
     UCk_Utils_Net_UE::
     Get_IsEntityNetMode_Host(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     const auto FoundHandle = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwnerIf(InHandle, [](FCk_Handle Handle)
@@ -332,7 +332,7 @@ auto
 auto
     UCk_Utils_Net_UE::
     Get_IsEntityNetMode_Client(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     return NOT Get_IsEntityNetMode_Host(InHandle);
@@ -341,7 +341,7 @@ auto
 auto
     UCk_Utils_Net_UE::
     Get_EntityReplication(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> ECk_Replication
 {
     if (NOT Ensure(InHandle))
