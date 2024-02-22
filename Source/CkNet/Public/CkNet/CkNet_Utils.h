@@ -34,7 +34,7 @@ public:
     static auto
     Add(
         FCk_Handle InEntity,
-        FCk_Net_ConnectionSettings InConnectionSettings) -> void;
+        const FCk_Net_ConnectionSettings& InConnectionSettings) -> void;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -42,22 +42,22 @@ public:
               DisplayName="[Ck] Copy Network Info")
     static void
     Copy(
-        FCk_Handle InFrom,
-        FCk_Handle InTo);
+        const FCk_Handle& InFrom,
+        FCk_Handle& InTo);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Net",
               DisplayName="[Ck] Has Network Info")
     static bool
     Has(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Net",
               DisplayName="[Ck] Ensure Has Network Info")
     static bool
     Ensure(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
 public:
     UFUNCTION(BlueprintPure,
@@ -65,21 +65,21 @@ public:
               Category = "Ck|Utils|Net")
     static ECk_Net_EntityNetRole
     Get_EntityNetRole(
-        FCk_Handle InEntity);
+        const FCk_Handle& InEntity);
 
     UFUNCTION(BlueprintPure,
               DisplayName="[Ck] Get Entity Net Mode",
               Category = "Ck|Utils|Net")
     static ECk_Net_NetModeType
     Get_EntityNetMode(
-        FCk_Handle InEntity);
+        const FCk_Handle& InEntity);
 
     UFUNCTION(BlueprintPure,
               DisplayName="[Ck] Get is Entity Role Matching",
               Category = "Ck|Utils|Net")
     static bool
     Get_IsEntityRoleMatching(
-        FCk_Handle InEntity,
+        const FCk_Handle& InEntity,
         ECk_Net_ReplicationType InReplicationType);
 
     UFUNCTION(BlueprintPure,
@@ -87,7 +87,7 @@ public:
               Category = "Ck|Utils|Net")
     static bool
     Get_HasAuthority(
-        FCk_Handle InEntity);
+        const FCk_Handle& InEntity);
 
 public:
     UFUNCTION(BlueprintPure,
@@ -124,21 +124,21 @@ public:
               Category = "Ck|Utils|Net")
     static bool
     Get_IsEntityNetMode_Host(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               DisplayName="[Ck] Get Is Entity Net Mode Client",
               Category = "Ck|Utils|Net")
     static bool
     Get_IsEntityNetMode_Client(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               DisplayName="[Ck] Get Is Entity Replicated",
               Category = "Ck|Utils|Net")
     static ECk_Replication
     Get_EntityReplication(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
 public:
     UFUNCTION(BlueprintPure,
