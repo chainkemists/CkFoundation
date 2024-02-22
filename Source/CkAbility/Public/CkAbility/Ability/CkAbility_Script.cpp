@@ -301,7 +301,7 @@ auto
     DoGet_AbilityEntity() const
     -> FCk_Handle_Ability
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
+    CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle(), ck::IsValid_Policy_IncludePendingKill{}),
         TEXT("AbilityHandle is INVALID. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
         ck::Context(this))
     { return {}; }
@@ -314,7 +314,7 @@ auto
     DoGet_AbilityOwnerEntity() const
     -> FCk_Handle_AbilityOwner
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityOwnerHandle()),
+    CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityOwnerHandle(), ck::IsValid_Policy_IncludePendingKill{}),
         TEXT("AbilityOwnerHandle is INVALID. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
         ck::Context(this))
     { return {}; }
