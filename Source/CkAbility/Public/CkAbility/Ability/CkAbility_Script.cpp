@@ -28,6 +28,8 @@ namespace ck
             Manager.AddNativeGameplayTag(TEXT("Ck.Ability.CooldownInProgress"));
             Manager.AddNativeGameplayTag(TEXT("Ck.Ability.CostsNotMet"));
             Manager.AddNativeGameplayTag(TEXT("Ck.Ability.ConditionsNotMet"));
+            Manager.AddNativeGameplayTag(TEXT("Ck.Ability.Duration"));
+            Manager.AddNativeGameplayTag(TEXT("Ck.Ability.Period"));
 
             Manager.AddNativeGameplayTag(TEXT("Ck.AbilityTrigger.ApplyCostsNotMet"));
         }
@@ -272,20 +274,20 @@ auto
     UCk_Ability_Script_PDA::
     DoRequest_SpawnAbilityCue(
         const FCk_AbilityCue_Params&  InReplicatedParams,
-        FGameplayTag InAbilityCueName) const
+        FGameplayTag InAbilityCueName)
     -> void
 {
     UCk_Utils_AbilityCue_UE::Request_Spawn_AbilityCue
     (
         Get_AbilityHandle(),
-        FCk_Request_AbilityCue_Spawn{InAbilityCueName, const_cast<UCk_Ability_Script_PDA*>(this)}
+        FCk_Request_AbilityCue_Spawn{InAbilityCueName, this}
             .Set_ReplicatedParams(InReplicatedParams)
     );
 }
 
 auto
     UCk_Ability_Script_PDA::
-    DoGet_Status() const
+    DoGet_Status()
     -> ECk_Ability_Status
 {
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
@@ -298,7 +300,7 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    DoGet_AbilityEntity() const
+    DoGet_AbilityEntity()
     -> FCk_Handle_Ability
 {
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle(), ck::IsValid_Policy_IncludePendingKill{}),
@@ -311,7 +313,7 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    DoGet_AbilityOwnerEntity() const
+    DoGet_AbilityOwnerEntity()
     -> FCk_Handle_AbilityOwner
 {
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityOwnerHandle(), ck::IsValid_Policy_IncludePendingKill{}),
