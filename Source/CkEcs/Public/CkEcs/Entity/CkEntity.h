@@ -48,9 +48,6 @@ public:
 private:
     IdType _ID;
 
-private:
-    static FCk_Entity _Tombstone;
-
 public:
     CK_PROPERTY_GET(_ID)
 

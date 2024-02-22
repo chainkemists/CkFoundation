@@ -2,10 +2,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Entity FCk_Entity::_Tombstone = FCk_Entity::TombstoneType{};
-
-// --------------------------------------------------------------------------------------------------------------------
-
 FCk_Entity::
     FCk_Entity(IdType InID)
     : _ID(InID)
@@ -91,7 +87,8 @@ auto
     Tombstone()
     -> FCk_Entity
 {
-    return _Tombstone;
+    static FCk_Entity Tombstone;
+    return Tombstone;
 }
 
 auto
