@@ -436,6 +436,23 @@ auto
 
 auto
     UCk_Utils_Ability_UE::
+    DoGet_CanBeGiven(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass)
+    -> bool
+{
+    const auto& AbilityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_Script_PDA>(InAbilityScriptClass);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptCDO),
+        TEXT("Cannot get valid CDO for Ability Script [{}]"),
+        InAbilityScriptClass)
+    { return {}; }
+
+    return AbilityScriptCDO->Get_CanBeGiven(InAbilityOwnerEntity);
+}
+
+auto
+    UCk_Utils_Ability_UE::
     DoCreate_AbilityEntityConfig(
         UObject* InOuter,
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass)

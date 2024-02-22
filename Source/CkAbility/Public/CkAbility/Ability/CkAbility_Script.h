@@ -35,6 +35,10 @@ public:
 
     auto
     OnDeactivateAbility() -> void;
+    
+    auto
+    Get_CanBeGiven(
+        const FCk_Handle_AbilityOwner& InAbilityOwner) const -> bool;
 
 protected:
     UFUNCTION(BlueprintImplementableEvent,
@@ -62,6 +66,13 @@ protected:
               meta     = (DisplayName = "OnRevokeAbility"))
     void
     DoOnRevokeAbility();
+
+    UFUNCTION(BlueprintImplementableEvent,
+              Category = "Ck|Ability|Script",
+              meta     = (DisplayName = "CanBeGiven"))
+    bool
+    DoGet_CanBeGiven(
+        const FCk_Handle_AbilityOwner& InAbilityOwner) const;
 
 private:
     UFUNCTION(BlueprintCallable,
@@ -149,7 +160,6 @@ private:
         UObject* InTask);
 
     UFUNCTION(BlueprintCallable,
-              BlueprintPure = false,
               Category = "Ck|Ability|Script",
               DisplayName = "[Ck][AbilityScript] Request Spawn Ability Cue",
               meta = (CompactNodeTitle="SpawnAbilityCue", HideSelfPin = true))

@@ -128,9 +128,9 @@ namespace ck
         { return; }
 
         const auto& AbilityData = AbilityParams.Get_Data();
-        const auto& ReplicationType = AbilityData.Get_NetworkSettings().Get_ReplicationType();
 
-        if (NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InAbilityOwnerEntity, ReplicationType))
+        if (const auto& ReplicationType = AbilityData.Get_NetworkSettings().Get_ReplicationType();
+            NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InAbilityOwnerEntity, ReplicationType))
         {
             ability::Verbose
             (
@@ -144,11 +144,18 @@ namespace ck
             return;
         }
 
-        const auto& AlreadyHasAbilityWithScript = UCk_Utils_AbilityOwner_UE::Has_AbilityByClass(InAbilityOwnerEntity, AbilityScriptClass);
+        if (NOT UCk_Utils_Ability_UE::DoGet_CanBeGiven(InAbilityOwnerEntity, AbilityScriptClass))
+        {
+            ability::Verbose
+            (
+                TEXT("Skipping Giving Ability [{}] with Script [{}] because CanBeGiven returned false"),
+                AbilityEntityConfig,
+                AbilityScriptClass,
+                InAbilityOwnerEntity
+            );
 
-        CK_ENSURE_IF_NOT(NOT AlreadyHasAbilityWithScript, TEXT("Cannot GIVE Ability [{}] to Ability Owner [{}] because it already has it"),
-            AbilityScriptClass, InAbilityOwnerEntity)
-        { return; }
+            return;
+        }
 
         const auto& OptionalPayload = InRequest.Get_OptionalPayload();
 
