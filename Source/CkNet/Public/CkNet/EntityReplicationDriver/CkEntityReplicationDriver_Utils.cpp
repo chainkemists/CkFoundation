@@ -39,6 +39,16 @@ auto
 
 auto
     UCk_Utils_EntityReplicationDriver_UE::
+    Request_BuildAndReplicate(
+        FCk_Handle                                          InHandle,
+        const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo)
+    -> FCk_Handle
+{
+    return Request_TryBuildAndReplicate(InHandle, InConstructionInfo, [](FCk_Handle){});
+}
+
+auto
+    UCk_Utils_EntityReplicationDriver_UE::
     Request_TryBuildAndReplicate(
         FCk_Handle                                          InHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo,

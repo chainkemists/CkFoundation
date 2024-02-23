@@ -26,6 +26,16 @@ public:
         FCk_Handle InHandle) -> int32;
 
 public:
+    UFUNCTION(BlueprintCallable,
+        BlueprintAuthorityOnly,
+        Category = "Ck|Utils|ReplicationDriver",
+        DisplayName="[Ck][ReplicationDriver] Request Build and Replicate")
+    static FCk_Handle
+    Request_BuildAndReplicate(
+        FCk_Handle InHandle,
+        const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo);
+
+public:
     static auto
     Request_TryBuildAndReplicate(
         FCk_Handle InHandle,
@@ -45,35 +55,38 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ReplicationDriver",
-              DisplayName="Has ReplicationDriver")
+              DisplayName="[Ck][ReplicationDriver] Has Feature")
     static bool
     Has(
         FCk_Handle InEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ReplicationDriver",
-              DisplayName="Ensure Has ReplicationDriver")
+              DisplayName="[Ck][ReplicationDriver] Ensure Has Feature")
     static bool
     Ensure(
         FCk_Handle InEntity);
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|ReplicationDriver")
+              Category = "Ck|Utils|ReplicationDriver",
+              DisplayName="[Ck][ReplicationDriver] Get_IsReplicationCompleteOnAllDependents")
     static bool
     Get_IsReplicationCompleteAllDependents(
         FCk_Handle InHandle);
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|ReplicationDriver")
+              Category = "Ck|Utils|ReplicationDriver",
+              DisplayName="[Ck][ReplicationDriver] Promise/Future OnReplicationComplete")
     static void
     Promise_OnReplicationComplete(
         FCk_Handle InEntity,
         const FCk_Delegate_EntityReplicationDriver_OnReplicationComplete& InDelegate);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|ReplicationDriver")
+              Category = "Ck|Utils|ReplicationDriver",
+              DisplayName="[Ck][ReplicationDriver] Promise/Future OnReplicationCompleteAllDependents")
     static void
     Promise_OnReplicationCompleteAllDependents(
         FCk_Handle InEntity,
