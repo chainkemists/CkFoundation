@@ -123,19 +123,19 @@ auto
     if (RepBits & (1 << Rep_Location))
     {
         Ar << _QuantizedLocation;
-        if (NOT Ar.IsSaving())
+        if (Ar.IsLoading())
         { _Location = _QuantizedLocation; }
     }
     if (RepBits & (1 << Rep_Normal))
     {
         Ar << _QuantizedNormal;
-        if (NOT Ar.IsSaving())
+        if (Ar.IsLoading())
         { _Normal = _QuantizedNormal; }
     }
     if (RepBits & (1 << Rep_Instigator))
     {
         Ar << _Instigator_RepObj;
-        if (NOT Ar.IsSaving())
+        if (Ar.IsLoading())
         {
             CK_ENSURE_IF_NOT(ck::IsValid(_Instigator_RepObj),
                 TEXT("Instigator RepObj was [{}] even though RepBits tell us that it WAS replicated. Unable to set the Instigator."),
@@ -148,7 +148,7 @@ auto
     if (RepBits & (1 << Rep_EffectCauser))
     {
         Ar << _EffectCauser_RepObj;
-        if (NOT Ar.IsSaving())
+        if (Ar.IsLoading())
         {
             CK_ENSURE_IF_NOT(ck::IsValid(_EffectCauser_RepObj),
                 TEXT("EffectCauser RepObj was [{}] even though RepBits tell us that it WAS replicated. Unable to set the EffectCauser."),
