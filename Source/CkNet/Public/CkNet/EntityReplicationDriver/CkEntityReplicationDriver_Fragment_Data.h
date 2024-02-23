@@ -86,18 +86,16 @@ public:
     CK_GENERATED_BODY(FCk_EntityReplicationDriver_ConstructionInfo);
 
 private:
-    UPROPERTY()
-    FCk_Entity _OriginalEntity;
-
-    UPROPERTY()
-    FGameplayTag _Label;
-
-    UPROPERTY()
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess=true))
     TSubclassOf<UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess=true))
+    FInstancedStruct _OptionalParams;
+
 public:
-    CK_PROPERTY(_OriginalEntity);
-    CK_PROPERTY(_Label);
+    CK_PROPERTY(_OptionalParams);
     CK_PROPERTY_GET(_ConstructionScript);
 
     CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_ConstructionInfo, _ConstructionScript);
