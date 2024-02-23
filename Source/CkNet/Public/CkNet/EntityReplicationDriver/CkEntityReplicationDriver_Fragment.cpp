@@ -99,11 +99,6 @@ auto
 
     const auto NewOrExistingEntity = [&]()
     {
-        if (OwningEntity->IsValid(ConstructionInfo.Get_OriginalEntity()))
-        {
-            return ck::MakeHandle(ConstructionInfo.Get_OriginalEntity(), OwningEntity);
-        }
-
         auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OwningEntity);
 
         UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings
@@ -113,10 +108,8 @@ auto
                 ECk_Net_EntityNetRole::Proxy
             });
 
-        if (ck::IsValid(ConstructionInfo.Get_Label()))
-        { UCk_Utils_GameplayLabel_UE::Add(NewEntity, ConstructionInfo.Get_Label()); }
-
-        ConstructionScript->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(NewEntity, {});
+        ConstructionScript->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(
+            NewEntity, ConstructionInfo.Get_OptionalParams());
 
         UCk_Utils_ReplicatedObjects_UE::Add(NewEntity, FCk_ReplicatedObjects{}.
             Set_ReplicatedObjects(ReplicationData.Get_ReplicatedObjectsData().Get_Objects()));
