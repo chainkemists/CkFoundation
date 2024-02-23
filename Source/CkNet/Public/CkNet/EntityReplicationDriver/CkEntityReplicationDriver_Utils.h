@@ -91,6 +91,23 @@ public:
     Promise_OnReplicationCompleteAllDependents(
         FCk_Handle InEntity,
         const FCk_Delegate_EntityReplicationDriver_OnReplicationComplete& InDelegate);
+
+private:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|ReplicationDriver",
+              meta = (NativeMakeFunc))
+    static FCk_HandleReplicator
+    Make_HandleReplicator(
+        UPARAM(ref) FCk_Handle& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|ReplicationDriver",
+              meta = (NativeBreakFunc))
+    static void
+    Break_HandleReplicator(
+        const FCk_HandleReplicator& InHandleReplicator,
+        FCk_Handle& OutHandle);
+
 };
 
 // --------------------------------------------------------------------------------------------------------------------
