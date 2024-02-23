@@ -196,6 +196,9 @@ auto
         InAbilityEntity)
     { return; }
 
+    if (AbilityCurrent.Get_Status() == ECk_Ability_Status::Active)
+    { return; }
+
     const auto& AbilityParams = InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params();
     const auto& AbilityInstancingPolicy = AbilityParams.Get_Data().Get_InstancingPolicy();
     AbilityCurrent._Status = ECk_Ability_Status::Active;
