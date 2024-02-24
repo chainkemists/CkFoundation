@@ -114,7 +114,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[Ck][AbilityOwner] Get Ability Count (Of Class")
+              DisplayName="[Ck][AbilityOwner] Get Ability Count (Of Class)")
     static int32
     Get_AbilityCount_OfClass(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
@@ -214,46 +214,56 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName="[Ck][AbilityOwner] Request Give Ability")
+              DisplayName="[Ck][AbilityOwner] Request Give Ability",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AbilityOwner
     Request_GiveAbility(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        const FCk_Request_AbilityOwner_GiveAbility& InRequest);
+        const FCk_Request_AbilityOwner_GiveAbility& InRequest,
+        const FCk_Delegate_AbilityOwner_OnAbilityGivenOrNot& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName="[Ck][AbilityOwner] Request Give Ability (Replicated)")
+              DisplayName="[Ck][AbilityOwner] Request Give Ability (Replicated)",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AbilityOwner
     Request_GiveAbility_Replicated(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        const FCk_Request_AbilityOwner_GiveAbility& InRequest);
+        const FCk_Request_AbilityOwner_GiveAbility& InRequest,
+        const FCk_Delegate_AbilityOwner_OnAbilityGivenOrNot& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName="[Ck][AbilityOwner] Request Revoke Ability")
+              DisplayName="[Ck][AbilityOwner] Request Revoke Ability",
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AbilityOwner
     Request_RevokeAbility(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        const FCk_Request_AbilityOwner_RevokeAbility& InRequest);
+        const FCk_Request_AbilityOwner_RevokeAbility& InRequest,
+        const FCk_Delegate_AbilityOwner_OnAbilityRevokedOrNot& InDelegate);
 
     // NOTE: This is for development only. Use 'Request_SendEvent' to trigger Activation of Abilities
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName="[Ck][AbilityOwner] Request Try Activate Ability")
+              DisplayName="[Ck][AbilityOwner] Request Try Activate Ability",
+              meta = (AutoCreateRefTerm = "InDelegate", DevelopmentOnly))
     static FCk_Handle_AbilityOwner
     Request_TryActivateAbility(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        const FCk_Request_AbilityOwner_ActivateAbility& InRequest);
+        const FCk_Request_AbilityOwner_ActivateAbility& InRequest,
+        const FCk_Delegate_AbilityOwner_OnAbilityActivatedOrNot& InDelegate);
 
     // NOTE: This is for development only. Use 'Request_SendEvent' to trigger Deactivation of Abilities
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName="[Ck][AbilityOwner] Request Deactivate Ability")
+              DisplayName="[Ck][AbilityOwner] Request Deactivate Ability",
+              meta = (AutoCreateRefTerm = "InDelegate", DevelopmentOnly))
     static FCk_Handle_AbilityOwner
     Request_DeactivateAbility(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        const FCk_Request_AbilityOwner_DeactivateAbility& InRequest);
+        const FCk_Request_AbilityOwner_DeactivateAbility& InRequest,
+        const FCk_Delegate_AbilityOwner_OnAbilityDeactivatedOrNot& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",

@@ -109,7 +109,7 @@ auto
     for (auto Index = _NextPendingGiveAbilityRequests; Index < _PendingGiveAbilityRequests.Num(); ++Index)
     {
         const auto& GiveAbilityRequest = _PendingGiveAbilityRequests[Index];
-        UCk_Utils_AbilityOwner_UE::Request_GiveAbility(AssociatedEntityAbilityOwner, GiveAbilityRequest);
+        UCk_Utils_AbilityOwner_UE::Request_GiveAbility(AssociatedEntityAbilityOwner, GiveAbilityRequest, {});
     }
     _NextPendingGiveAbilityRequests = _PendingGiveAbilityRequests.Num();
 }
