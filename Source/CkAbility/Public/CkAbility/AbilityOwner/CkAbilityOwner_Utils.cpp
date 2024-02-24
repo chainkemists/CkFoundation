@@ -342,9 +342,12 @@ auto
     UCk_Utils_AbilityOwner_UE::
     Request_GiveAbility(
         FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        const FCk_Request_AbilityOwner_GiveAbility& InRequest)
+        const FCk_Request_AbilityOwner_GiveAbility& InRequest,
+        const FCk_Delegate_AbilityOwner_OnAbilityGivenOrNot& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
+    CK_SIGNAL_BIND_PROMISE(ck::UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot, InAbilityOwnerHandle, InDelegate);
+
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
     return InAbilityOwnerHandle;
 }
@@ -353,10 +356,13 @@ auto
     UCk_Utils_AbilityOwner_UE::
     Request_GiveAbility_Replicated(
         FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        const FCk_Request_AbilityOwner_GiveAbility& InRequest)
+        const FCk_Request_AbilityOwner_GiveAbility& InRequest,
+        const FCk_Delegate_AbilityOwner_OnAbilityGivenOrNot& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
-    Request_GiveAbility(InAbilityOwnerHandle, InRequest);
+    CK_SIGNAL_BIND_PROMISE(ck::UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot, InAbilityOwnerHandle, InDelegate);
+
+    Request_GiveAbility(InAbilityOwnerHandle, InRequest, InDelegate);
 
     CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAbilityOwnerHandle),
         TEXT("Cannot Give a REPLICATED Ability to Entity [{}] because it is NOT a Host"),
@@ -381,9 +387,12 @@ auto
     UCk_Utils_AbilityOwner_UE::
     Request_RevokeAbility(
         FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        const FCk_Request_AbilityOwner_RevokeAbility& InRequest)
+        const FCk_Request_AbilityOwner_RevokeAbility& InRequest,
+        const FCk_Delegate_AbilityOwner_OnAbilityRevokedOrNot& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
+    CK_SIGNAL_BIND_PROMISE(ck::UUtils_Signal_AbilityOwner_OnAbilityRevokedOrNot, InAbilityOwnerHandle, InDelegate);
+
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
     return InAbilityOwnerHandle;
 }
@@ -392,9 +401,12 @@ auto
     UCk_Utils_AbilityOwner_UE::
     Request_TryActivateAbility(
         FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        const FCk_Request_AbilityOwner_ActivateAbility& InRequest)
+        const FCk_Request_AbilityOwner_ActivateAbility& InRequest,
+        const FCk_Delegate_AbilityOwner_OnAbilityActivatedOrNot& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
+    CK_SIGNAL_BIND_PROMISE(ck::UUtils_Signal_AbilityOwner_OnAbilityActivatedOrNot, InAbilityOwnerHandle, InDelegate);
+
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
     return InAbilityOwnerHandle;
 }
@@ -403,9 +415,12 @@ auto
     UCk_Utils_AbilityOwner_UE::
     Request_DeactivateAbility(
         FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        const FCk_Request_AbilityOwner_DeactivateAbility& InRequest)
+        const FCk_Request_AbilityOwner_DeactivateAbility& InRequest,
+        const FCk_Delegate_AbilityOwner_OnAbilityDeactivatedOrNot& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
+    CK_SIGNAL_BIND_PROMISE(ck::UUtils_Signal_AbilityOwner_OnAbilityDeactivatedOrNot, InAbilityOwnerHandle, InDelegate);
+
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
     return InAbilityOwnerHandle;
 }

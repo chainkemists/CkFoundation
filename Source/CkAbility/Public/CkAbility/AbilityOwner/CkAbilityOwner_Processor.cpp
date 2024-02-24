@@ -37,7 +37,7 @@ namespace ck
             CK_ENSURE_IF_NOT(ck::IsValid(DefaultAbility), TEXT("Entity [{}] has an INVALID default Ability in its Params!"), InHandle)
             { continue; }
 
-            UCk_Utils_AbilityOwner_UE::Request_GiveAbility(InHandle, FCk_Request_AbilityOwner_GiveAbility{DefaultAbility});
+            UCk_Utils_AbilityOwner_UE::Request_GiveAbility(InHandle, FCk_Request_AbilityOwner_GiveAbility{DefaultAbility}, {});
         }
     }
 
@@ -98,107 +98,132 @@ namespace ck
             const FCk_Request_AbilityOwner_GiveAbility& InRequest) const
         -> void
     {
-        const auto& AbilityScriptClass = InRequest.Get_AbilityScriptClass();
-        CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptClass),
-            TEXT("Cannot GIVE Ability to Ability Owner [{}] because it has an INVALID Ability Script Class"),
-            InAbilityOwnerEntity)
-        { return; }
-
-        const auto& AbilityEntityConfig = UCk_Utils_Ability_UE::DoCreate_AbilityEntityConfig(
-            UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAbilityOwnerEntity), AbilityScriptClass);
-
-        CK_ENSURE_IF_NOT(ck::IsValid(AbilityEntityConfig),
-            TEXT("Cannot GIVE Ability to Ability Owner [{}] because the created Ability Entity Config for [{}] is INVALID"),
-            InAbilityOwnerEntity,
-            AbilityScriptClass)
-        { return; }
-
-        const auto& AbilityConstructionScript = Cast<UCk_Ability_ConstructionScript_PDA>(AbilityEntityConfig->Get_EntityConstructionScript());
-        CK_ENSURE_IF_NOT(ck::IsValid(AbilityConstructionScript),
-            TEXT("Cannot GIVE Ability to Ability Owner [{}] because it has an INVALID Construction Script"),
-            InAbilityOwnerEntity)
-        { return; }
-
-        const auto& AbilityParams = AbilityConstructionScript->Get_AbilityParams();
-        CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptClass),
-            TEXT("Cannot GIVE Ability to Ability Owner [{}] using Construction Script [{}] because the ScriptClass [{}] is INVALID"),
-            InAbilityOwnerEntity,
-            AbilityConstructionScript,
-            AbilityScriptClass)
-        { return; }
-
-        const auto& AbilityData = AbilityParams.Get_Data();
-
-        if (const auto& ReplicationType = AbilityData.Get_NetworkSettings().Get_ReplicationType();
-            NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InAbilityOwnerEntity, ReplicationType))
+        const auto AbilityGivenOrNot = [&]() -> ECk_AbilityOwner_AbilityGivenOrNot
         {
-            ability::Verbose
-            (
-                TEXT("Skipping Giving Ability [{}] with Script [{}] because ReplicationType [{}] does not match for Entity [{}]"),
-                AbilityEntityConfig,
-                AbilityScriptClass,
-                ReplicationType,
-                InAbilityOwnerEntity
-            );
+            const auto& AbilityScriptClass = InRequest.Get_AbilityScriptClass();
+            CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptClass),
+                TEXT("Cannot GIVE Ability to Ability Owner [{}] because it has an INVALID Ability Script Class"),
+                InAbilityOwnerEntity)
+            { return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven; }
 
-            return;
-        }
+            const auto& AbilityEntityConfig = UCk_Utils_Ability_UE::DoCreate_AbilityEntityConfig(
+                UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAbilityOwnerEntity), AbilityScriptClass);
 
-        if (NOT UCk_Utils_Ability_UE::DoGet_CanBeGiven(InAbilityOwnerEntity, AbilityScriptClass))
-        {
-            ability::Verbose
-            (
-                TEXT("Skipping Giving Ability [{}] with Script [{}] because CanBeGiven returned false"),
-                AbilityEntityConfig,
-                AbilityScriptClass,
-                InAbilityOwnerEntity
-            );
+            CK_ENSURE_IF_NOT(ck::IsValid(AbilityEntityConfig),
+                TEXT("Cannot GIVE Ability to Ability Owner [{}] because the created Ability Entity Config for [{}] is INVALID"),
+                InAbilityOwnerEntity,
+                AbilityScriptClass)
+            { return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven; }
 
-            return;
-        }
+            const auto& AbilityConstructionScript = Cast<UCk_Ability_ConstructionScript_PDA>(AbilityEntityConfig->Get_EntityConstructionScript());
+            CK_ENSURE_IF_NOT(ck::IsValid(AbilityConstructionScript),
+                TEXT("Cannot GIVE Ability to Ability Owner [{}] because it has an INVALID Construction Script"),
+                InAbilityOwnerEntity)
+            { return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven; }
 
-        const auto& OptionalPayload = InRequest.Get_OptionalPayload();
+            const auto& AbilityParams = AbilityConstructionScript->Get_AbilityParams();
+            CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptClass),
+                TEXT("Cannot GIVE Ability to Ability Owner [{}] using Construction Script [{}] because the ScriptClass [{}] is INVALID"),
+                InAbilityOwnerEntity,
+                AbilityConstructionScript,
+                AbilityScriptClass)
+            { return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven; }
 
-        const auto PreAbilityCreationFunc = [InAbilityOwnerEntity](FCk_Handle& InEntity)
-        {
-            UCk_Utils_Net_UE::Copy(InAbilityOwnerEntity, InEntity);
-        };
+            const auto& AbilityData = AbilityParams.Get_Data();
 
-        const auto PostAbilityCreationFunc =
-        [InAbilityOwnerEntity, AbilityScriptClass, AbilityParams, OptionalPayload](FCk_Handle& InEntity) -> void
-        {
-            auto AbilityEntity = UCk_Utils_Ability_UE::CastChecked(InEntity);
-
-            auto AbilityOwnerEntity = InAbilityOwnerEntity;
-
-            ability::VeryVerbose
-            (
-                TEXT("Giving Ability [Class: {} | Entity: {}] to Ability Owner [{}]"),
-                AbilityScriptClass,
-                AbilityEntity,
-                AbilityOwnerEntity
-            );
-
-            UCk_Utils_Handle_UE::Set_DebugName(AbilityEntity,
-                UCk_Utils_Debug_UE::Get_DebugName(AbilityParams.Get_AbilityScriptClass(), ECk_DebugNameVerbosity_Policy::Compact));
-
-            auto AbilityHandle = UCk_Utils_Ability_UE::CastChecked(AbilityEntity);
-            UCk_Utils_Ability_UE::DoGive(AbilityOwnerEntity, AbilityHandle, OptionalPayload);
-
-            if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(AbilityHandle).Get_ActivationPolicy();
-                ActivationPolicy == ECk_Ability_Activation_Policy::ActivateOnGranted)
+            if (const auto& ReplicationType = AbilityData.Get_NetworkSettings().Get_ReplicationType();
+                NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InAbilityOwnerEntity, ReplicationType))
             {
-                UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(AbilityOwnerEntity,
-                    FCk_Request_AbilityOwner_ActivateAbility{AbilityEntity}
-                    .Set_OptionalPayload(FCk_Ability_Payload_OnActivate{}.Set_ContextEntity(AbilityOwnerEntity)));
-            }
-        };
+                ability::Verbose
+                (
+                    TEXT("Skipping Giving Ability [{}] with Script [{}] because ReplicationType [{}] does not match for Entity [{}]"),
+                    AbilityEntityConfig,
+                    AbilityScriptClass,
+                    ReplicationType,
+                    InAbilityOwnerEntity
+                );
 
-        UCk_Utils_EntityBridge_UE::Request_Spawn(InAbilityOwnerEntity,
-            FCk_Request_EntityBridge_SpawnEntity{AbilityEntityConfig}
-            .Set_PreBuildFunc(PreAbilityCreationFunc)
-            .Set_PostSpawnFunc(PostAbilityCreationFunc));
+                return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven;
+            }
+
+            if (NOT UCk_Utils_Ability_UE::DoGet_CanBeGiven(InAbilityOwnerEntity, AbilityScriptClass))
+            {
+                ability::Verbose
+                (
+                    TEXT("Skipping Giving Ability [{}] with Script [{}] because CanBeGiven returned false"),
+                    AbilityEntityConfig,
+                    AbilityScriptClass,
+                    InAbilityOwnerEntity
+                );
+
+                return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven;
+            }
+
+            const auto& OptionalPayload = InRequest.Get_OptionalPayload();
+
+            const auto PreAbilityCreationFunc = [InAbilityOwnerEntity](FCk_Handle& InEntity)
+            {
+                UCk_Utils_Net_UE::Copy(InAbilityOwnerEntity, InEntity);
+            };
+
+            const auto PostAbilityCreationFunc =
+            [InAbilityOwnerEntity, AbilityScriptClass, AbilityParams, OptionalPayload](FCk_Handle& InEntity) -> void
+            {
+                // TODO: Since the construction of the Ability entity is deferred, if multiple Give requests of the same
+                // script class are processed in the same frame, it is possible for the CanBeGiven to NOT return the correct value
+                // This check here is a temporary (an potentially expensive) workaround, but we should handle this case better
+                if (NOT UCk_Utils_Ability_UE::DoGet_CanBeGiven(InAbilityOwnerEntity, AbilityScriptClass))
+                {
+                    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InEntity);
+                    return;
+                }
+
+                auto AbilityEntity = UCk_Utils_Ability_UE::CastChecked(InEntity);
+                auto AbilityOwnerEntity = InAbilityOwnerEntity;
+
+                ability::VeryVerbose
+                (
+                    TEXT("Giving Ability [Class: {} | Entity: {}] to Ability Owner [{}]"),
+                    AbilityScriptClass,
+                    AbilityEntity,
+                    AbilityOwnerEntity
+                );
+
+                UCk_Utils_Handle_UE::Set_DebugName(AbilityEntity,
+                    UCk_Utils_Debug_UE::Get_DebugName(AbilityParams.Get_AbilityScriptClass(), ECk_DebugNameVerbosity_Policy::Compact));
+
+                UCk_Utils_Ability_UE::DoGive(AbilityOwnerEntity, AbilityEntity, OptionalPayload);
+
+                UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
+                    AbilityOwnerEntity, MakePayload(AbilityOwnerEntity, AbilityEntity, ECk_AbilityOwner_AbilityGivenOrNot::Given));
+
+                if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(AbilityEntity).Get_ActivationPolicy();
+                    ActivationPolicy == ECk_Ability_Activation_Policy::ActivateOnGranted)
+                {
+                    UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(
+                        AbilityOwnerEntity,
+                        FCk_Request_AbilityOwner_ActivateAbility{AbilityEntity}
+                        .Set_OptionalPayload(FCk_Ability_Payload_OnActivate{}.Set_ContextEntity(AbilityOwnerEntity)),
+                        {});
+                }
+            };
+
+            UCk_Utils_EntityBridge_UE::Request_Spawn(InAbilityOwnerEntity,
+                FCk_Request_EntityBridge_SpawnEntity{AbilityEntityConfig}
+                .Set_PreBuildFunc(PreAbilityCreationFunc)
+                .Set_PostSpawnFunc(PostAbilityCreationFunc));
+
+            return ECk_AbilityOwner_AbilityGivenOrNot::Given;
+        }();
+
+        if (AbilityGivenOrNot == ECk_AbilityOwner_AbilityGivenOrNot::NotGiven)
+        {
+            UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
+                InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{}, ECk_AbilityOwner_AbilityGivenOrNot::Given));
+        }
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     auto
         FProcessor_AbilityOwner_HandleRequests::
@@ -210,6 +235,14 @@ namespace ck
     {
         const auto& DoRevokeAbility = [&](FCk_Handle_Ability& InAbilityEntity, const TSubclassOf<UCk_Ability_Script_PDA>& InAbilityClass) -> void
         {
+            if (ck::Is_NOT_Valid(InAbilityEntity))
+            {
+                UUtils_Signal_AbilityOwner_OnAbilityRevokedOrNot::Broadcast(
+                    InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{}, ECk_AbilityOwner_AbilityRevokedOrNot::NotRevoked));
+
+                return;
+            }
+
             ability::VeryVerbose
             (
                 TEXT("Revoking Ability [Name: {} | Entity: {}] on Ability Owner [{}]"),
@@ -219,6 +252,9 @@ namespace ck
             );
 
             UCk_Utils_Ability_UE::DoRevoke(InAbilityOwnerEntity, InAbilityEntity);
+
+            UUtils_Signal_AbilityOwner_OnAbilityRevokedOrNot::Broadcast(
+                InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityEntity, ECk_AbilityOwner_AbilityRevokedOrNot::Revoked));
         };
 
         switch (const auto& SearchPolicy = InRequest.Get_SearchPolicy())
@@ -227,9 +263,6 @@ namespace ck
             {
                 auto FoundAbilityEntity = DoFindAbilityByClass(InAbilityOwnerEntity, InRequest.Get_AbilityClass());
 
-                if (ck::Is_NOT_Valid(FoundAbilityEntity))
-                { break; }
-
                 DoRevokeAbility(FoundAbilityEntity, InRequest.Get_AbilityClass());
 
                 break;
@@ -237,9 +270,6 @@ namespace ck
             case ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle:
             {
                 auto FoundAbilityEntity = DoFindAbilityByHandle(InAbilityOwnerEntity, InRequest.Get_AbilityHandle());
-
-                if (ck::Is_NOT_Valid(FoundAbilityEntity))
-                { break; }
 
                 DoRevokeAbility(FoundAbilityEntity, InRequest.Get_AbilityClass());
 
@@ -253,6 +283,8 @@ namespace ck
         }
     }
 
+    // --------------------------------------------------------------------------------------------------------------------
+
     auto
         FProcessor_AbilityOwner_HandleRequests::
         DoHandleRequest(
@@ -263,133 +295,150 @@ namespace ck
     {
         const auto& DoTryActivateAbility = [&](FCk_Handle_Ability& InAbilityToActivateEntity, const FGameplayTag& InAbilityToActivateName) -> void
         {
-            const auto& AbilityActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityToActivateEntity);
-            const auto& GrantedTags = AbilityActivationSettings.Get_ActivationSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
-
-            switch (const auto& CanActivateAbility = UCk_Utils_Ability_UE::Get_CanActivate(InAbilityToActivateEntity))
+            if (ck::Is_NOT_Valid(InAbilityToActivateEntity))
             {
-                case ECk_Ability_ActivationRequirementsResult::RequirementsMet:
+                UUtils_Signal_AbilityOwner_OnAbilityActivatedOrNot::Broadcast(
+                    InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityToActivateEntity, ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_AbilityNotFound));
+                return;
+            }
+
+            const auto AbilityActivatedOrNot = [&]() -> ECk_AbilityOwner_AbilityActivatedOrNot
+            {
+                if (UCk_Utils_Ability_UE::Get_Status(InAbilityToActivateEntity) == ECk_Ability_Status::Active)
+                { return ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks; }
+
+                const auto& AbilityActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityToActivateEntity);
+                const auto& GrantedTags = AbilityActivationSettings.Get_ActivationSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
+
+                switch (const auto& CanActivateAbility = UCk_Utils_Ability_UE::Get_CanActivate(InAbilityToActivateEntity))
                 {
-                    ability::Verbose
-                    (
-                        TEXT("ACTIVATING Ability [Name: {} | Entity: {}] on Ability Owner [{}] and Granting Tags [{}]"),
-                        InAbilityToActivateName,
-                        InAbilityToActivateEntity,
-                        InAbilityOwnerEntity,
-                        GrantedTags
-                    );
-
-                    const auto PreviousActiveTags = InAbilityOwnerComp.Get_ActiveTags();
-                    InAbilityOwnerComp.AppendTags(GrantedTags);
-
-                    if (PreviousActiveTags != InAbilityOwnerComp.Get_ActiveTags())
+                    case ECk_Ability_ActivationRequirementsResult::RequirementsMet:
                     {
-                        UUtils_Signal_AbilityOwner_OnTagsUpdated::Broadcast(InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityOwnerComp.Get_ActiveTags()));
+                        ability::Verbose
+                        (
+                            TEXT("ACTIVATING Ability [Name: {} | Entity: {}] on Ability Owner [{}] and Granting Tags [{}]"),
+                            InAbilityToActivateName,
+                            InAbilityToActivateEntity,
+                            InAbilityOwnerEntity,
+                            GrantedTags
+                        );
+
+                        const auto PreviousActiveTags = InAbilityOwnerComp.Get_ActiveTags();
+                        InAbilityOwnerComp.AppendTags(GrantedTags);
+
+                        if (PreviousActiveTags != InAbilityOwnerComp.Get_ActiveTags())
+                        {
+                            UUtils_Signal_AbilityOwner_OnTagsUpdated::Broadcast(InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityOwnerComp.Get_ActiveTags()));
+                        }
+
+                        break;
                     }
+                    case ECk_Ability_ActivationRequirementsResult::RequirementsMet_ButAlreadyActive:
+                    {
+                        ability::Verbose
+                        (
+                            TEXT("Failed to ACTIVATE Ability [Name: {} | Entity: {}] on Ability Owner [{}]! "
+                                 "The Activation Requirements are met BUT the Ability is ALREADY ACTIVE"),
+                            InAbilityToActivateName,
+                            InAbilityToActivateEntity,
+                            InAbilityOwnerEntity
+                        );
 
-                    break;
+                        return ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks;
+                    }
+                    case ECk_Ability_ActivationRequirementsResult::RequirementsNotMet_OnOwner:
+                    {
+                        ability::Verbose
+                        (
+                            TEXT("Failed to ACTIVATE Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
+                                 "because the Activation Requirements on ABILITY OWNER are NOT met"),
+                            InAbilityToActivateName,
+                            InAbilityToActivateEntity,
+                            InAbilityOwnerEntity
+                        );
+
+                        return ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks;
+                    }
+                    case ECk_Ability_ActivationRequirementsResult::RequirementsNotMet_OnSelf:
+                    {
+                        ability::Verbose
+                        (
+                            TEXT("Failed to ACTIVATE Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
+                                 "because the Activation Requirements on ABILITY ITSELF are NOT met"),
+                            InAbilityToActivateName,
+                            InAbilityToActivateEntity,
+                            InAbilityOwnerEntity
+                        );
+
+                        return ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks;
+                    }
+                    case ECk_Ability_ActivationRequirementsResult::RequirementsNotMet_OnOwnerAndSelf:
+                    {
+                        ability::Verbose
+                        (
+                            TEXT("Failed to ACTIVATE Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
+                                 "because the Activation Requirements on ABILITY OWNER and ABILITY ITSELF are NOT met"),
+                            InAbilityToActivateName,
+                            InAbilityToActivateEntity,
+                            InAbilityOwnerEntity
+                        );
+
+                        return ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks;
+                    }
+                    default:
+                    {
+                        CK_INVALID_ENUM(CanActivateAbility);
+                        return ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks;
+                    }
                 }
-                case ECk_Ability_ActivationRequirementsResult::RequirementsMet_ButAlreadyActive:
-                {
-                    ability::Verbose
-                    (
-                        TEXT("Failed to ACTIVATE Ability [Name: {} | Entity: {}] on Ability Owner [{}]! "
-                             "The Activation Requirements are met BUT the Ability is ALREADY ACTIVE"),
-                        InAbilityToActivateName,
-                        InAbilityToActivateEntity,
-                        InAbilityOwnerEntity
-                    );
 
-                    return;
+                // Try Deactivate our own Ability if we have one
+                if (UCk_Utils_Ability_UE::Has(InAbilityOwnerEntity))
+                {
+                    if (const auto Condition = algo::MatchesAnyAbilityActivationCancelledTags{GrantedTags};
+                        Condition(InAbilityOwnerEntity))
+                    {
+                        auto MyOwner = UCk_Utils_AbilityOwner_UE::CastChecked(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityOwnerEntity));
+
+                        const auto AbilityOwnerAsAbility = UCk_Utils_Ability_UE::CastChecked(InAbilityOwnerEntity);
+                        UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(MyOwner,
+                            FCk_Request_AbilityOwner_DeactivateAbility{AbilityOwnerAsAbility}, {});
+                    }
                 }
-                case ECk_Ability_ActivationRequirementsResult::RequirementsNotMet_OnOwner:
-                {
-                    ability::Verbose
-                    (
-                        TEXT("Failed to ACTIVATE Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
-                             "because the Activation Requirements on ABILITY OWNER are NOT met"),
-                        InAbilityToActivateName,
-                        InAbilityToActivateEntity,
-                        InAbilityOwnerEntity
-                    );
 
-                    return;
-                }
-                case ECk_Ability_ActivationRequirementsResult::RequirementsNotMet_OnSelf:
-                {
-                    ability::Verbose
-                    (
-                        TEXT("Failed to ACTIVATE Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
-                             "because the Activation Requirements on ABILITY ITSELF are NOT met"),
-                        InAbilityToActivateName,
-                        InAbilityToActivateEntity,
-                        InAbilityOwnerEntity
-                    );
+                // Cancel All Abilities that are cancelled by the newly granted tags
+                // TODO: this is repeated multiple times in this file, move to a common function
+                UCk_Utils_AbilityOwner_UE::ForEach_Ability_If
+                (
+                    InAbilityOwnerEntity,
+                    [&](const FCk_Handle_Ability& InAbilityEntityToCancel)
+                    {
+                        ability::Verbose
+                        (
+                            TEXT("CANCELLING Ability [Name: {} | Entity: {}] after Activating Ability [Name: {} | Entity: {}] on Ability Owner [{}]"),
+                            UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntityToCancel),
+                            InAbilityEntityToCancel,
+                            InAbilityToActivateName,
+                            InAbilityToActivateEntity,
+                            InAbilityOwnerEntity
+                        );
 
-                    return;
-                }
-                case ECk_Ability_ActivationRequirementsResult::RequirementsNotMet_OnOwnerAndSelf:
-                {
-                    ability::Verbose
-                    (
-                        TEXT("Failed to ACTIVATE Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
-                             "because the Activation Requirements on ABILITY OWNER and ABILITY ITSELF are NOT met"),
-                        InAbilityToActivateName,
-                        InAbilityToActivateEntity,
-                        InAbilityOwnerEntity
-                    );
+                        UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(InAbilityOwnerEntity,
+                            FCk_Request_AbilityOwner_DeactivateAbility{InAbilityEntityToCancel}, {});
+                    },
+                    algo::MatchesAnyAbilityActivationCancelledTags{GrantedTags}
+                );
 
-                    return;
-                }
-                default:
-                {
-                    CK_INVALID_ENUM(CanActivateAbility);
-                    return;
-                }
-            }
+                UCk_Utils_Ability_UE::DoActivate(InAbilityOwnerEntity, InAbilityToActivateEntity, InRequest.Get_OptionalPayload());
 
-            // Try Deactivate our own Ability if we have one
-            if (UCk_Utils_Ability_UE::Has(InAbilityOwnerEntity))
-            {
-                if (const auto Condition = algo::MatchesAnyAbilityActivationCancelledTags{GrantedTags};
-                    Condition(InAbilityOwnerEntity))
-                {
-                    auto MyOwner = UCk_Utils_AbilityOwner_UE::CastChecked(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityOwnerEntity));
+                return ECk_AbilityOwner_AbilityActivatedOrNot::Activated;
+            }();
 
-                    const auto AbilityOwnerAsAbility = UCk_Utils_Ability_UE::CastChecked(InAbilityOwnerEntity);
-                    UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(MyOwner,
-                        FCk_Request_AbilityOwner_DeactivateAbility{AbilityOwnerAsAbility});
-                }
-            }
-
-            // Cancel All Abilities that are cancelled by the newly granted tags
-            // TODO: this is repeated multiple times in this file, move to a common function
-            UCk_Utils_AbilityOwner_UE::ForEach_Ability_If
-            (
-                InAbilityOwnerEntity,
-                [&](const FCk_Handle& InAbilityEntityToCancel)
-                {
-                    const auto AbilityEntityToCancel = UCk_Utils_Ability_UE::CastChecked(InAbilityEntityToCancel);
-
-                    ability::Verbose
-                    (
-                        TEXT("CANCELLING Ability [Name: {} | Entity: {}] after Activating Ability [Name: {} | Entity: {}] on Ability Owner [{}]"),
-                        UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntityToCancel),
-                        InAbilityEntityToCancel,
-                        InAbilityToActivateName,
-                        InAbilityToActivateEntity,
-                        InAbilityOwnerEntity
-                    );
-
-                    UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(InAbilityOwnerEntity,
-                        FCk_Request_AbilityOwner_DeactivateAbility{AbilityEntityToCancel});
-                },
-                algo::MatchesAnyAbilityActivationCancelledTags{GrantedTags}
-            );
+            UUtils_Signal_AbilityOwner_OnAbilityActivatedOrNot::Broadcast(
+                    InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityToActivateEntity, AbilityActivatedOrNot));
 
             auto& RequestsComp = InAbilityOwnerEntity.Get<FFragment_AbilityOwner_Requests>();
             const auto NumNewRequests = RequestsComp.Get_Requests().Num();
-            UCk_Utils_Ability_UE::DoActivate(InAbilityOwnerEntity, InAbilityToActivateEntity, InRequest.Get_OptionalPayload());
 
             // it's possible that we already have a deactivation request, if yes, process it
             const auto ProcessPossibleDeactivationRequest = [&]
@@ -435,9 +484,6 @@ namespace ck
             {
                 auto FoundAbilityEntity = DoFindAbilityByClass(InAbilityOwnerEntity, InRequest.Get_AbilityClass());
 
-                if (ck::Is_NOT_Valid(FoundAbilityEntity))
-                { break; }
-
                 DoTryActivateAbility(FoundAbilityEntity, UCk_Utils_GameplayLabel_UE::Get_Label(FoundAbilityEntity));
 
                 break;
@@ -445,9 +491,6 @@ namespace ck
             case ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle:
             {
                 auto FoundAbilityEntity = DoFindAbilityByHandle(InAbilityOwnerEntity, InRequest.Get_AbilityHandle());
-
-                if (ck::Is_NOT_Valid(FoundAbilityEntity))
-                { break; }
 
                 DoTryActivateAbility(FoundAbilityEntity, UCk_Utils_GameplayLabel_UE::Get_Label(FoundAbilityEntity));
 
@@ -461,6 +504,8 @@ namespace ck
         }
     }
 
+    // --------------------------------------------------------------------------------------------------------------------
+
     auto
         FProcessor_AbilityOwner_HandleRequests::
         DoHandleRequest(
@@ -471,8 +516,21 @@ namespace ck
     {
         const auto& DoDeactivateAbility = [&](FCk_Handle_Ability& InAbilityEntity, const TSubclassOf<UCk_Ability_Script_PDA>& InAbilityClass) -> void
         {
+            if (ck::Is_NOT_Valid(InAbilityEntity))
+            {
+                UUtils_Signal_AbilityOwner_OnAbilityDeactivatedOrNot::Broadcast(
+                    InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{}, ECk_AbilityOwner_AbilityDeactivatedOrNot::NotDeactivated_AbilityNotFound));
+
+                return;
+            }
+
             if (UCk_Utils_Ability_UE::Get_Status(InAbilityEntity) == ECk_Ability_Status::NotActive)
-            { return; }
+            {
+                UUtils_Signal_AbilityOwner_OnAbilityDeactivatedOrNot::Broadcast(
+                    InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{}, ECk_AbilityOwner_AbilityDeactivatedOrNot::NotDeactivated_FailedChecks));
+
+                return;
+            }
 
             const auto& AbilityActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityEntity);
             const auto& GrantedTags = AbilityActivationSettings.Get_ActivationSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
@@ -495,6 +553,9 @@ namespace ck
             );
 
             UCk_Utils_Ability_UE::DoDeactivate(InAbilityOwnerEntity, InAbilityEntity);
+
+            UUtils_Signal_AbilityOwner_OnAbilityDeactivatedOrNot::Broadcast(
+                    InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityEntity, ECk_AbilityOwner_AbilityDeactivatedOrNot::Deactivated));
         };
 
         switch (const auto& SearchPolicy = InRequest.Get_SearchPolicy())
@@ -503,9 +564,6 @@ namespace ck
             {
                 auto FoundAbilityEntity = DoFindAbilityByClass(InAbilityOwnerEntity, InRequest.Get_AbilityClass());
 
-                if (ck::Is_NOT_Valid(FoundAbilityEntity))
-                { break; }
-
                 DoDeactivateAbility(FoundAbilityEntity, InRequest.Get_AbilityClass());
 
                 break;
@@ -513,9 +571,6 @@ namespace ck
             case ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle:
             {
                 auto FoundAbilityEntity = DoFindAbilityByHandle(InAbilityOwnerEntity, InRequest.Get_AbilityHandle());
-
-                if (ck::Is_NOT_Valid(FoundAbilityEntity))
-                { break; }
 
                 DoDeactivateAbility(FoundAbilityEntity, UCk_Utils_Ability_UE::Get_ScriptClass(FoundAbilityEntity));
 
@@ -541,9 +596,8 @@ namespace ck
         const auto& FoundAbilityWithName = UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Get_ValidEntry_If
         (
             InAbilityOwnerEntity,
-            [InAbilityClass](const FCk_Handle& InHandle)
-            // TODO: remove conv when RecordOfAbilities is fully templated
-            { return UCk_Utils_Ability_UE::Get_ScriptClass(UCk_Utils_Ability_UE::CastChecked(InHandle)) == InAbilityClass; }
+            [InAbilityClass](const FCk_Handle_Ability& InAbilityHandle)
+            { return UCk_Utils_Ability_UE::Get_ScriptClass(InAbilityHandle) == InAbilityClass; }
         );
 
         CK_ENSURE_IF_NOT(ck::IsValid(FoundAbilityWithName),
@@ -555,6 +609,8 @@ namespace ck
         return FoundAbilityWithName;
     }
 
+    // --------------------------------------------------------------------------------------------------------------------
+
     auto
         FProcessor_AbilityOwner_HandleRequests::
         DoFindAbilityByHandle(
@@ -562,15 +618,10 @@ namespace ck
             const FCk_Handle_Ability& InAbilityEntity)
         -> FCk_Handle_Ability
     {
-        CK_ENSURE_IF_NOT(UCk_Utils_Ability_UE::Has(InAbilityEntity),
-            TEXT("Entity [{}] is NOT an Ability"),
-            InAbilityEntity)
-        { return {}; }
-
-        const auto& HasAbilityWithEntity = UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Get_HasValidEntry_If
+        const auto& HasAbilityWithEntity = UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Get_ContainsEntry
         (
             InAbilityOwnerEntity,
-            algo::MatchesEntityHandle{InAbilityEntity}
+            InAbilityEntity
         );
 
         CK_ENSURE_IF_NOT(HasAbilityWithEntity,
@@ -581,8 +632,6 @@ namespace ck
 
         return InAbilityEntity;
     }
-
-    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------
