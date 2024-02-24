@@ -2,6 +2,8 @@
 
 #include "NativeGameplayTags.h"
 #include "CkAbility/AbilityCue/CkAbilityCue_Fragment_Data.h"
+#include "CkAttribute/CkAttribute_Fragment_Data.h"
+#include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment_Data.h"
 #include "CkCore/Public/CkCore/Format/CkFormat.h"
 #include "CkCore/Types/DataAsset/CkDataAsset.h"
 
@@ -88,7 +90,7 @@ enum class ECk_Ability_Stacking_Policy : uint8
     // Each caster has it's own stack
     Stack_AggregateBySource UMETA(DisplayName = "Aggregate By Source"),
 
-    // Each target has it's own stack
+    // Each recipient has it's own stack
     Stack_AggregateByTarget UMETA(DisplayName = "Aggregate By Target"),
 };
 
@@ -96,7 +98,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_Stacking_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// How the Ability duration should be refreshed while stacking
+// How the Ability duration should be refreshed or not) while stacking
 UENUM(BlueprintType)
 enum class ECk_Ability_StackDurationRefresh_Policy : uint8
 {
@@ -214,9 +216,86 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_InstancingPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Type of calculation to perform to derive the magnitude
+UENUM(BlueprintType)
+enum class ECk_Ability_Modifier_MagnitudeCalculation_Policy : uint8
+{
+    DiscreteValue,
+
+    // Perform a calculation based upon an Attribute
+    AttributeBased,
+
+    // The magnitude will be set explicitly by the source that creates/apply this ability
+    SetByCaller,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_Modifier_MagnitudeCalculation_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKABILITY_API FCk_Handle_Ability : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Ability); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Ability);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Ability_Magnitude
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Ability_Magnitude);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Ability_Modifier_MagnitudeCalculation_Policy _MagnitudeCalculation = ECk_Ability_Modifier_MagnitudeCalculation_Policy::DiscreteValue;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MagnitudeCalculation == ECk_Ability_Modifier_MagnitudeCalculation_Policy::AttributeBased"))
+    ECk_SourceOrTarget _AttributeSource = ECk_SourceOrTarget::Source;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MagnitudeCalculation == ECk_Ability_Modifier_MagnitudeCalculation_Policy::AttributeBased"))
+    FCk_FloatAttribute_Magnitude _AttributeBasedMagnitude;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MagnitudeCalculation == ECk_Ability_Modifier_MagnitudeCalculation_Policy::AttributeBased"))
+    bool _Snapshot = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MagnitudeCalculation == ECk_Ability_Modifier_MagnitudeCalculation_Policy::DiscreteValue"))
+    float _DiscreteValueMagnitude;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MagnitudeCalculation == ECk_Ability_Modifier_MagnitudeCalculation_Policy::SetByCaller"))
+    FGameplayTag _SetByCallerMagnitude_DataTag;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Ability_Modifier
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Ability_Modifier);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTag _AttributeToModify;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_AttributeModifier_Operation _ModifierOperation = ECk_AttributeModifier_Operation::Add;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Ability_Magnitude _ModifierMagnitude;
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 
