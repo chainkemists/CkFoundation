@@ -137,8 +137,10 @@ auto
         ck::Context(this))
     { return; }
 
-    UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(_AbilityOwnerHandle,
-        FCk_Request_AbilityOwner_ActivateAbility{Get_AbilityHandle()}.Set_OptionalPayload(InOptionalPayload));
+    UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(
+        _AbilityOwnerHandle,
+        FCk_Request_AbilityOwner_ActivateAbility{Get_AbilityHandle()}.Set_OptionalPayload(InOptionalPayload),
+        {});
 }
 
 auto
@@ -151,8 +153,10 @@ auto
         ck::Context(this))
     { return; }
 
-    UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(_AbilityOwnerHandle,
-        FCk_Request_AbilityOwner_DeactivateAbility{Get_AbilityHandle()});
+    UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(
+        _AbilityOwnerHandle,
+        FCk_Request_AbilityOwner_DeactivateAbility{Get_AbilityHandle()},
+        {});
 }
 
 auto
