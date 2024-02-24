@@ -40,6 +40,19 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AttributeModifier_ExistMissing);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_AttributeModifier_Operation : uint8
+{
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Override
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AttributeModifier_Operation);
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_Attribute_BaseBonusFinal : uint8
 {
     Base,

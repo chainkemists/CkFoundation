@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkAttribute/CkAttribute_Fragment_Data.h"
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkEcs/Handle/CkHandle.h"
@@ -21,6 +22,52 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_FloatAttribute
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKATTRIBUTE_API FCk_Handle_FloatAttributeModifier : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_FloatAttributeModifier); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_FloatAttributeModifier);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Struct representing a float whose magnitude is dictated by a backing attribute and a calculation policy, follows basic form of:
+ * (Coefficient * (PreMultiplyAdditiveValue + [Eval'd Attribute Value According to Policy])) + PostMultiplyAdditiveValue
+ */
+USTRUCT(BlueprintType)
+struct CKATTRIBUTE_API FCk_FloatAttribute_Magnitude
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_FloatAttribute_Magnitude);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTag _AttributeName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Attribute_BaseBonusFinal _MagnitudeComponent = ECk_Attribute_BaseBonusFinal::Final;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _Coefficient = 1.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _PreMultiplyAdditiveValue = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _PostMultiplyAdditiveValue = 0.0f;
+
+public:
+    CK_PROPERTY_GET(_AttributeName);
+    CK_PROPERTY(_MagnitudeComponent);
+    CK_PROPERTY(_Coefficient);
+    CK_PROPERTY(_PreMultiplyAdditiveValue);
+    CK_PROPERTY(_PostMultiplyAdditiveValue);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_FloatAttribute_Magnitude, _AttributeName);
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 
