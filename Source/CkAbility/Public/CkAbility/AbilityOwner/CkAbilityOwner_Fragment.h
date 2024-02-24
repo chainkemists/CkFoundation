@@ -115,6 +115,14 @@ namespace ck
         FCk_Delegate_AbilityOwner_Events_MC, FCk_Handle_AbilityOwner, TArray<FCk_AbilityOwner_Event>);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_OnTagsUpdated,
         FCk_Delegate_AbilityOwner_OnTagsUpdated_MC, FCk_Handle_AbilityOwner, FGameplayTagContainer);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_OnAbilityGivenOrNot,
+        FCk_Delegate_AbilityOwner_OnAbilityGivenOrNot_MC, FCk_Handle_AbilityOwner, FCk_Handle_Ability, ECk_AbilityOwner_AbilityGivenOrNot);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_OnAbilityRevokedOrNot,
+        FCk_Delegate_AbilityOwner_OnAbilityRevokedOrNot_MC, FCk_Handle_AbilityOwner, FCk_Handle_Ability, ECk_AbilityOwner_AbilityRevokedOrNot);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_OnAbilityActivatedOrNot,
+        FCk_Delegate_AbilityOwner_OnAbilityActivatedOrNot_MC, FCk_Handle_AbilityOwner, FCk_Handle_Ability, ECk_AbilityOwner_AbilityActivatedOrNot);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_OnAbilityDeactivatedOrNot,
+        FCk_Delegate_AbilityOwner_OnAbilityDeactivatedOrNot_MC, FCk_Handle_AbilityOwner, FCk_Handle_Ability, ECk_AbilityOwner_AbilityDeactivatedOrNot);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
