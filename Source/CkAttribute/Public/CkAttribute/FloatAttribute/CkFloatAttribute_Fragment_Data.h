@@ -46,14 +46,17 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Attribute_BaseBonusFinal _MagnitudeComponent = ECk_Attribute_BaseBonusFinal::Final;
 
+    // Coefficient to the attribute calculation
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     float _Coefficient = 1.0f;
 
+    // Additive value to the attribute calculation, added in BEFORE the coefficient applies
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     float _PreMultiplyAdditiveValue = 0.0f;
 
+    // Additive value to the attribute calculation, added in AFTER the coefficient applies
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     float _PostMultiplyAdditiveValue = 0.0f;

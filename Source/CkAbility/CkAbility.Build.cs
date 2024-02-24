@@ -19,6 +19,7 @@ public class CkAbility : CkModuleRules
             "DeveloperSettings",
             "StructUtils",
 
+            "CkAttribute",
             "CkCore",
             "CkEcs",
             "CkEcsBasics",
@@ -28,7 +29,7 @@ public class CkAbility : CkModuleRules
             "CkSettings",
             "CkSignal",
             "CkNet",
-            "CkEntityBridge"
+            "CkEntityBridge",
         });
     }
 }

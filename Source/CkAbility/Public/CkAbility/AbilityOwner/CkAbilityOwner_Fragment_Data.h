@@ -24,6 +24,52 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_AbilitySearch_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_AbilityOwner_AbilityGivenOrNot : uint8
+{
+    Given,
+    NotGiven
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_AbilityGivenOrNot);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_AbilityOwner_AbilityRevokedOrNot : uint8
+{
+    Revoked,
+    NotRevoked
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_AbilityRevokedOrNot);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_AbilityOwner_AbilityActivatedOrNot : uint8
+{
+    Activated,
+    NotActivated_AbilityNotFound,
+    NotActivated_FailedChecks
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_AbilityActivatedOrNot);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_AbilityOwner_AbilityDeactivatedOrNot : uint8
+{
+    Deactivated,
+    NotDeactivated_AbilityNotFound,
+    NotDeactivated_FailedChecks,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_AbilityDeactivatedOrNot);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKABILITY_API FCk_Handle_AbilityOwner : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_AbilityOwner); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_AbilityOwner);
