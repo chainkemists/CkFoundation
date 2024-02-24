@@ -415,8 +415,8 @@ auto
     const auto& Current = InAbility.Get<ck::FFragment_Ability_Current>();
     if (Current.Get_Status() == ECk_Ability_Status::Active)
     {
-        UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(InAbilityOwner, FCk_Request_AbilityOwner_DeactivateAbility{InAbility});
-        UCk_Utils_AbilityOwner_UE::Request_RevokeAbility(InAbilityOwner, FCk_Request_AbilityOwner_RevokeAbility{InAbility});
+        UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(InAbilityOwner, FCk_Request_AbilityOwner_DeactivateAbility{InAbility}, {});
+        UCk_Utils_AbilityOwner_UE::Request_RevokeAbility(InAbilityOwner, FCk_Request_AbilityOwner_RevokeAbility{InAbility}, {});
 
         return;
     }
