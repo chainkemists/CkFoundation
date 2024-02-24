@@ -15,6 +15,17 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_SourceOrTarget : uint8
+{
+    Source,
+    Target,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SourceOrTarget);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_PendingKill_Policy : uint8
 {
     ExcludePendingKill,
