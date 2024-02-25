@@ -57,7 +57,20 @@ namespace ck
         Get_ValidEntriesCount(
             const FCk_Handle& InRecordHandle) -> int32;
 
+        [[nodiscard]]
+        static auto
+        Get_ContainsEntry(
+            const FCk_Handle& InRecordHandle,
+            const MaybeTypeSafeHandle& InRecordEntry) -> bool;
+
     public:
+        template <typename T_Predicate>
+        [[nodiscard]]
+        static auto
+        Get_ValidEntriesCount_If(
+            const FCk_Handle& InRecordHandle,
+            T_Predicate InPredicate) -> int32;
+
         template <typename T_Predicate>
         [[nodiscard]]
         static auto
@@ -130,7 +143,7 @@ namespace ck
             T_Predicate InPredicate,
             ECk_Record_ForEach_Policy InPolicy = ECk_Record_ForEach_Policy::EnsureRecordExists) -> void;
 
-    private:
+    protected:
         template <typename T_ValidationPolicy, typename T_Func>
         static auto
         DoForEach_Entry(
@@ -167,6 +180,14 @@ namespace ck
         Request_Disconnect(
             FCk_Handle& InRecordHandle,
             MaybeTypeSafeHandle& InRecordEntry) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class RecordOfEntityExtensions_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfEntityExtensions>
+    {
+        template <typename T>
+        friend class TUtils_RecordOfEntities;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -216,8 +237,61 @@ namespace ck
             const FCk_Handle& InRecordHandle)
         -> int32
     {
+        return Get_ValidEntriesCount_If(InRecordHandle, algo::IsValidEntityHandle{});
+    }
+
+    template <typename T_DerivedRecord>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        Get_ContainsEntry(
+            const FCk_Handle& InRecordHandle,
+            const MaybeTypeSafeHandle& InRecordEntry)
+        -> bool
+    {
         const auto& Fragment = InRecordHandle.Get<RecordType>();
-        return algo::CountIf(Fragment.Get_RecordEntries(), algo::IsValidEntityHandle{});
+
+        if (const auto MaybeContainsEntry = Fragment.Get_RecordEntries().Contains(InRecordEntry))
+        { return true; }
+
+        auto ExtensionContainEntry = false;
+        RecordOfEntityExtensions_Utils::ForEach_Entry(InRecordHandle,
+        [&](const FCk_Handle_EntityExtension& InEntityExtension)
+        {
+            if (Get_ContainsEntry(InEntityExtension, InRecordEntry))
+            {
+                ExtensionContainEntry = true;
+                return ECk_Record_ForEachIterationResult::Break;
+            }
+
+            return ECk_Record_ForEachIterationResult::Continue;
+        });
+
+        return ExtensionContainEntry;
+    }
+
+    template <typename T_DerivedRecord>
+    template <typename T_Predicate>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        Get_ValidEntriesCount_If(
+            const FCk_Handle& InRecordHandle,
+            T_Predicate InPredicate) -> int32
+    {
+        auto Count = 0;
+
+        if (InRecordHandle.Has<RecordType>())
+        {
+            const auto& Fragment = InRecordHandle.Get<RecordType>();
+            Count = algo::CountIf(Fragment.Get_RecordEntries(), InPredicate);
+        }
+
+        RecordOfEntityExtensions_Utils::ForEach_Entry(InRecordHandle,
+        [&](const FCk_Handle_EntityExtension& InEntityExtension)
+        {
+            Count += Get_ValidEntriesCount_If(InEntityExtension, InPredicate);
+        });
+
+        return Count;
     }
 
     template <typename T_DerivedRecord>
@@ -241,19 +315,37 @@ namespace ck
             T_Predicate InPredicate)
         -> MaybeTypeSafeHandle
     {
-        for (const auto& Fragment = InRecordHandle.Get<RecordType>();
-             const auto& RecordEntry : Fragment.Get_RecordEntries())
+        auto MaybeValidEntry = [&]() -> MaybeTypeSafeHandle
         {
-            auto RecordEntryHandle = ck::MakeHandle(RecordEntry, InRecordHandle);
+            for (const auto& Fragment = InRecordHandle.Get<RecordType>();
+                 const auto& RecordEntry : Fragment.Get_RecordEntries())
+            {
+                auto RecordEntryHandle = ck::MakeHandle(RecordEntry, InRecordHandle);
 
-            if (ck::Is_NOT_Valid(RecordEntryHandle))
-            { continue; }
+                if (ck::Is_NOT_Valid(RecordEntryHandle))
+                { continue; }
 
-            if (const auto Result = InPredicate(RecordEntryHandle))
-            { return ck::StaticCast<MaybeTypeSafeHandle>(RecordEntryHandle); }
-        }
+                if (const auto Result = InPredicate(RecordEntryHandle))
+                { return ck::StaticCast<MaybeTypeSafeHandle>(RecordEntryHandle); }
+            }
 
-        return {};
+            return {};
+        }();
+
+        if (ck::IsValid(MaybeValidEntry))
+        { return MaybeValidEntry; }
+
+        RecordOfEntityExtensions_Utils::ForEach_Entry(InRecordHandle, [&](FCk_Handle_EntityExtension InEntityExtension)
+        {
+            MaybeValidEntry = Get_ValidEntry_If(InEntityExtension, InPredicate);
+
+            if (ck::IsValid(MaybeValidEntry))
+            { return ECk_Record_ForEachIterationResult::Break; }
+
+            return ECk_Record_ForEachIterationResult::Continue;
+        });
+
+        return MaybeValidEntry;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -268,6 +360,12 @@ namespace ck
         -> void
     {
         DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InHandle, InFunc);
+
+        RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InHandle,
+        [&](FCk_Handle_EntityExtension InEntityExtension)
+        {
+            DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InEntityExtension, InFunc);
+        });
     }
 
     template <typename T_DerivedRecord>
@@ -280,6 +378,12 @@ namespace ck
         -> void
     {
         DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InHandle, InFunc);
+
+        RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InHandle,
+        [&](FCk_Handle_EntityExtension InEntityExtension)
+        {
+            DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InEntityExtension, InFunc);
+        });
     }
 
     template <typename T_DerivedRecord>
@@ -293,6 +397,12 @@ namespace ck
         -> void
     {
         DoForEach_Entry_If<IsValid_Policy_IncludePendingKill>(InRecordHandle, InFunc, InPredicate);
+
+        RecordOfEntityExtensions_Utils::DoForEach_Entry_If<IsValid_Policy_IncludePendingKill>(InRecordHandle,
+        [&](FCk_Handle_EntityExtension InEntityExtension)
+        {
+            DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InEntityExtension, InFunc);
+        });
     }
 
     template <typename T_DerivedRecord>
@@ -306,6 +416,12 @@ namespace ck
         -> void
     {
         DoForEach_Entry_If<IsValid_Policy_IncludePendingKill>(InRecordHandle, InFunc, InPredicate);
+
+        RecordOfEntityExtensions_Utils::DoForEach_Entry_If<IsValid_Policy_IncludePendingKill>(InRecordHandle,
+        [&](FCk_Handle_EntityExtension InEntityExtension)
+        {
+            DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InEntityExtension, InFunc);
+        });
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -321,6 +437,12 @@ namespace ck
         -> void
     {
         DoForEach_Entry<IsValid_Policy_Default>(InHandle, InFunc);
+
+        RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_Default>(InHandle,
+        [&](FCk_Handle_EntityExtension InEntityExtension)
+        {
+            DoForEach_Entry<IsValid_Policy_Default>(InEntityExtension, InFunc);
+        });
     }
 
     template <typename T_DerivedRecord>
@@ -334,6 +456,12 @@ namespace ck
         -> void
     {
         DoForEach_Entry<IsValid_Policy_Default>(InHandle, InFunc);
+
+        RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_Default>(InHandle,
+        [&](FCk_Handle_EntityExtension InEntityExtension)
+        {
+            DoForEach_Entry<IsValid_Policy_Default>(InEntityExtension, InFunc);
+        });
     }
 
     template <typename T_DerivedRecord>
@@ -348,6 +476,12 @@ namespace ck
         -> void
     {
         DoForEach_Entry_If<IsValid_Policy_Default>(InRecordHandle, InFunc, InPredicate);
+
+        RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_Default>(InRecordHandle,
+        [&](FCk_Handle_EntityExtension InEntityExtension)
+        {
+            DoForEach_Entry_If<IsValid_Policy_Default>(InEntityExtension, InFunc, InPredicate);
+        });
     }
 
     template <typename T_DerivedRecord>
@@ -362,6 +496,12 @@ namespace ck
         -> void
     {
         DoForEach_Entry_If<IsValid_Policy_Default>(InRecordHandle, InFunc, InPredicate);
+
+        RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_Default>(InRecordHandle,
+        [&](FCk_Handle_EntityExtension InEntityExtension)
+        {
+            DoForEach_Entry_If<IsValid_Policy_Default>(InEntityExtension, InFunc, InPredicate);
+        });
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -392,7 +532,15 @@ namespace ck
                 continue;
             }
 
-            InFunc(RecordEntryHandle);
+            if constexpr (std::is_void_v<decltype(InFunc(RecordEntryHandle))>)
+            {
+                InFunc(RecordEntryHandle);
+            }
+            else
+            {
+                if (InFunc(RecordEntryHandle) == ECk_Record_ForEachIterationResult::Break)
+                { break; }
+            }
         }
     }
 
@@ -423,7 +571,15 @@ namespace ck
                 continue;
             }
 
-            InFunc(RecordEntryHandle);
+            if constexpr (std::is_void_v<decltype(InFunc(RecordEntryHandle))>)
+            {
+                InFunc(RecordEntryHandle);
+            }
+            else
+            {
+                if (InFunc(RecordEntryHandle) == ECk_Record_ForEachIterationResult::Break)
+                { break; }
+            }
         }
     }
 
