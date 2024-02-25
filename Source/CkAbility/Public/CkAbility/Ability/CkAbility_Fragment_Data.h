@@ -254,7 +254,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MagnitudeCalculation == ECk_Ability_Modifier_MagnitudeCalculation_Policy::AttributeBased"))
-    ECk_SourceOrTarget _AttributeSource = ECk_SourceOrTarget::Source;
+    ECk_SourceOrTarget _AttributeSource = ECk_SourceOrTarget::Target;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MagnitudeCalculation == ECk_Ability_Modifier_MagnitudeCalculation_Policy::AttributeBased"))

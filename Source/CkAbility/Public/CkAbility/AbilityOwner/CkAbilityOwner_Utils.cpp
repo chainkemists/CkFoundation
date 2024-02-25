@@ -346,7 +346,7 @@ auto
         const FCk_Delegate_AbilityOwner_OnAbilityGivenOrNot& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
-    CK_SIGNAL_BIND_PROMISE(ck::UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot, InAbilityOwnerHandle, InDelegate);
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot, InAbilityOwnerHandle, InDelegate);
 
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
     return InAbilityOwnerHandle;
@@ -360,7 +360,7 @@ auto
         const FCk_Delegate_AbilityOwner_OnAbilityGivenOrNot& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
-    CK_SIGNAL_BIND_PROMISE(ck::UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot, InAbilityOwnerHandle, InDelegate);
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot, InAbilityOwnerHandle, InDelegate);
 
     Request_GiveAbility(InAbilityOwnerHandle, InRequest, InDelegate);
 
@@ -391,7 +391,7 @@ auto
         const FCk_Delegate_AbilityOwner_OnAbilityRevokedOrNot& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
-    CK_SIGNAL_BIND_PROMISE(ck::UUtils_Signal_AbilityOwner_OnAbilityRevokedOrNot, InAbilityOwnerHandle, InDelegate);
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityRevokedOrNot, InAbilityOwnerHandle, InDelegate);
 
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
     return InAbilityOwnerHandle;
@@ -405,7 +405,7 @@ auto
         const FCk_Delegate_AbilityOwner_OnAbilityActivatedOrNot& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
-    CK_SIGNAL_BIND_PROMISE(ck::UUtils_Signal_AbilityOwner_OnAbilityActivatedOrNot, InAbilityOwnerHandle, InDelegate);
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityActivatedOrNot, InAbilityOwnerHandle, InDelegate);
 
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
     return InAbilityOwnerHandle;
@@ -419,7 +419,7 @@ auto
         const FCk_Delegate_AbilityOwner_OnAbilityDeactivatedOrNot& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
-    CK_SIGNAL_BIND_PROMISE(ck::UUtils_Signal_AbilityOwner_OnAbilityDeactivatedOrNot, InAbilityOwnerHandle, InDelegate);
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityDeactivatedOrNot, InAbilityOwnerHandle, InDelegate);
 
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
     return InAbilityOwnerHandle;
