@@ -56,3 +56,13 @@ struct _NameOfRecord_ : public TFragment_RecordOfEntities<_HandleType_>\
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // NOTE: this _should_ be in CkEntityExtensions but then we have a circular dependency
+    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfEntityExtensions, FCk_Handle_EntityExtension);
+
+    // --------------------------------------------------------------------------------------------------------------------
+}
