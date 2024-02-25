@@ -44,6 +44,10 @@
 #define CK_SIGNAL_BIND_PROMISE(_SignalUtils_, _Handle_, _PromiseDelegate_)\
     CK_SIGNAL_BIND(_SignalUtils_, _Handle_, _PromiseDelegate_, ECk_Signal_BindingPolicy::FireIfPayloadInFlight, ECk_Signal_PostFireBehavior::Unbind)\
 
+// This is a convenience macro for our widely used deferred requests that fire signals when they are processed
+#define CK_SIGNAL_BIND_REQUEST_FULFILLED(_SignalUtils_, _Handle_, _PromiseDelegate_)\
+    CK_SIGNAL_BIND(_SignalUtils_, _Handle_, _PromiseDelegate_, ECk_Signal_BindingPolicy::IgnorePayloadInFlight, ECk_Signal_PostFireBehavior::Unbind)\
+
 #define CK_SIGNAL_BIND(_SignalUtils_, _Handle_, _Delegate_, _BindingPolicy_, _PostFireBehavior_)\
 if (_PostFireBehavior_ == ECk_Signal_PostFireBehavior::DoNothing) \
 { _SignalUtils_::Bind(_Handle_, _Delegate_, _BindingPolicy_); } \
