@@ -41,11 +41,8 @@
     CK_DEFINE_SIGNAL_WITH_DELEGATE(_API_, _SignalName_, _MulticastDelegate_, __VA_ARGS__);\
     CK_DEFINE_SIGNAL_WITH_DELEGATE_UTILS(_API_, _SignalName_)
 
-#define CK_SIGNAL_BIND_PROMISE(_Handle_, _PromiseDelegate_, _SignalUtils_)\
-if (_PromiseDelegate_.IsBound())\
-{\
-    _SignalUtils_##::Bind(_Handle_, _PromiseDelegate_, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);\
-}
+#define CK_SIGNAL_BIND_PROMISE(_SignalUtils_, _Handle_, _PromiseDelegate_)\
+    CK_SIGNAL_BIND(_SignalUtils_, _Handle_, _PromiseDelegate_, ECk_Signal_BindingPolicy::FireIfPayloadInFlight, ECk_Signal_PostFireBehavior::Unbind)\
 
 #define CK_SIGNAL_BIND(_SignalUtils_, _Handle_, _Delegate_, _BindingPolicy_, _PostFireBehavior_)\
 if (_PostFireBehavior_ == ECk_Signal_PostFireBehavior::DoNothing) \
