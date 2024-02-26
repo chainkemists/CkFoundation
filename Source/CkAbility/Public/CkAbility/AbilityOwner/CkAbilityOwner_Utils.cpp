@@ -357,7 +357,16 @@ auto
         const FCk_Handle_AbilityOwner& InAbilityOwnerHandle)
     -> FGameplayTagContainer
 {
-    return InAbilityOwnerHandle.Get<ck::FFragment_AbilityOwner_Current>().Get_ActiveTags();
+    return InAbilityOwnerHandle.Get<ck::FFragment_AbilityOwner_Current>().Get_ActiveTags(InAbilityOwnerHandle);
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Get_PreviousTags(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerHandle)
+    -> FGameplayTagContainer
+{
+    return InAbilityOwnerHandle.Get<ck::FFragment_AbilityOwner_Current>().Get_PreviousTags(InAbilityOwnerHandle);
 }
 
 auto
@@ -366,7 +375,17 @@ auto
         const FCk_Handle_AbilityOwner& InAbilityOwnerHandle)
     -> TMap<FGameplayTag, int32>
 {
-    return InAbilityOwnerHandle.Get<ck::FFragment_AbilityOwner_Current>().Get_ActiveTagsWithCount();
+    return InAbilityOwnerHandle.Get<ck::FFragment_AbilityOwner_Current>().Get_ActiveTagsWithCount(InAbilityOwnerHandle);
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Get_SpecificActiveTagsWithCount(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FGameplayTag&            InTag)
+    -> int32
+{
+    return InAbilityOwnerHandle.Get<ck::FFragment_AbilityOwner_Current>().Get_SpecificActiveTagCount(InAbilityOwnerHandle, InTag);
 }
 
 auto
