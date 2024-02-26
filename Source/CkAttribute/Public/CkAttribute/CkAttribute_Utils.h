@@ -36,33 +36,33 @@ namespace ck
     public:
         static auto
         Add(
-            HandleType InHandle,
+            HandleType& InHandle,
             const AttributeDataType& InBaseValue) -> void;
 
         static auto
         Has(
-            HandleType InHandle) -> bool;
+            const HandleType& InHandle) -> bool;
 
         static auto
         Ensure(
-            HandleType InHandle) -> bool;
+            const HandleType& InHandle) -> bool;
 
         static auto
         Get_BaseValue(
-            HandleType InHandle) -> AttributeDataType;
+            const HandleType& InHandle) -> AttributeDataType;
 
         static auto
         Get_FinalValue(
-            HandleType InHandle) -> AttributeDataType;
+            const HandleType& InHandle) -> AttributeDataType;
 
     private:
         static auto
         Request_RecomputeFinalValue(
-            HandleType InHandle) -> void;
+            HandleType& InHandle) -> void;
 
         static auto
         Request_FireSignals(
-            HandleType InHandle) -> void;
+            HandleType& InHandle) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -89,27 +89,27 @@ namespace ck
     public:
         static auto
         Add(
-            HandleType InHandle,
+            HandleType& InHandle,
             AttributeDataType InModifierDelta,
             ECk_ArithmeticOperations_Basic InModifierOperation,
             ECk_ModifierOperation_RevocablePolicy InModifierOperationRevocablePolicy) -> void;
 
         static auto
         Has(
-            HandleType InHandle) -> bool;
+            const HandleType& InHandle) -> bool;
 
         static auto
         Ensure(
-            HandleType InHandle) -> bool;
+            const HandleType& InHandle) -> bool;
 
         static auto
         Get_ModifierDeltaValue(
-            HandleType InHandle) -> const AttributeDataType&;
+            const HandleType& InHandle) -> const AttributeDataType&;
 
     private:
         static auto
         Request_ComputeResult(
-            HandleType InHandle) -> void;
+            HandleType& InHandle) -> void;
     };
 }
 
