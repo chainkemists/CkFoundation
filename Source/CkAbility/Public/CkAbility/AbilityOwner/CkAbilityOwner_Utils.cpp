@@ -573,4 +573,13 @@ auto
     return FCk_Request_AbilityOwner_RevokeAbility{InAbilityEntity};
 }
 
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Request_TagsUpdated(
+        FCk_Handle_AbilityOwner& InAbilityOwner)
+    -> void
+{
+    InAbilityOwner.AddOrGet<ck::FTag_AbilityOwner_TagsUpdated>();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
