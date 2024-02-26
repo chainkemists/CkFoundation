@@ -293,7 +293,7 @@ namespace ck
             const FCk_Request_AbilityOwner_ActivateAbility& InRequest) const
         -> void
     {
-        const auto& DoTryActivateAbility = [&](FCk_Handle_Ability& InAbilityToActivateEntity, const FGameplayTag& InAbilityToActivateName) -> void
+        const auto& DoTryActivateAbility = [&](FCk_Handle_Ability& InAbilityToActivateEntity) -> void
         {
             if (ck::Is_NOT_Valid(InAbilityToActivateEntity))
             {
@@ -307,6 +307,7 @@ namespace ck
                 if (UCk_Utils_Ability_UE::Get_Status(InAbilityToActivateEntity) == ECk_Ability_Status::Active)
                 { return ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks; }
 
+                const auto& AbilityToActivateName = UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityToActivateEntity);
                 const auto& AbilityActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityToActivateEntity);
                 const auto& GrantedTags = AbilityActivationSettings.Get_ActivationSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
 
@@ -317,7 +318,7 @@ namespace ck
                         ability::Verbose
                         (
                             TEXT("ACTIVATING Ability [Name: {} | Entity: {}] on Ability Owner [{}] and Granting Tags [{}]"),
-                            InAbilityToActivateName,
+                            AbilityToActivateName,
                             InAbilityToActivateEntity,
                             InAbilityOwnerEntity,
                             GrantedTags
@@ -339,7 +340,7 @@ namespace ck
                         (
                             TEXT("Failed to ACTIVATE Ability [Name: {} | Entity: {}] on Ability Owner [{}]! "
                                  "The Activation Requirements are met BUT the Ability is ALREADY ACTIVE"),
-                            InAbilityToActivateName,
+                            AbilityToActivateName,
                             InAbilityToActivateEntity,
                             InAbilityOwnerEntity
                         );
@@ -352,7 +353,7 @@ namespace ck
                         (
                             TEXT("Failed to ACTIVATE Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
                                  "because the Activation Requirements on ABILITY OWNER are NOT met"),
-                            InAbilityToActivateName,
+                            AbilityToActivateName,
                             InAbilityToActivateEntity,
                             InAbilityOwnerEntity
                         );
@@ -365,7 +366,7 @@ namespace ck
                         (
                             TEXT("Failed to ACTIVATE Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
                                  "because the Activation Requirements on ABILITY ITSELF are NOT met"),
-                            InAbilityToActivateName,
+                            AbilityToActivateName,
                             InAbilityToActivateEntity,
                             InAbilityOwnerEntity
                         );
@@ -378,7 +379,7 @@ namespace ck
                         (
                             TEXT("Failed to ACTIVATE Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
                                  "because the Activation Requirements on ABILITY OWNER and ABILITY ITSELF are NOT met"),
-                            InAbilityToActivateName,
+                            AbilityToActivateName,
                             InAbilityToActivateEntity,
                             InAbilityOwnerEntity
                         );
@@ -418,7 +419,7 @@ namespace ck
                             TEXT("CANCELLING Ability [Name: {} | Entity: {}] after Activating Ability [Name: {} | Entity: {}] on Ability Owner [{}]"),
                             UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntityToCancel),
                             InAbilityEntityToCancel,
-                            InAbilityToActivateName,
+                            AbilityToActivateName,
                             InAbilityToActivateEntity,
                             InAbilityOwnerEntity
                         );
@@ -484,7 +485,7 @@ namespace ck
             {
                 auto FoundAbilityEntity = DoFindAbilityByClass(InAbilityOwnerEntity, InRequest.Get_AbilityClass());
 
-                DoTryActivateAbility(FoundAbilityEntity, UCk_Utils_GameplayLabel_UE::Get_Label(FoundAbilityEntity));
+                DoTryActivateAbility(FoundAbilityEntity);
 
                 break;
             }
@@ -492,7 +493,7 @@ namespace ck
             {
                 auto FoundAbilityEntity = DoFindAbilityByHandle(InAbilityOwnerEntity, InRequest.Get_AbilityHandle());
 
-                DoTryActivateAbility(FoundAbilityEntity, UCk_Utils_GameplayLabel_UE::Get_Label(FoundAbilityEntity));
+                DoTryActivateAbility(FoundAbilityEntity);
 
                 break;
             }
@@ -600,11 +601,11 @@ namespace ck
             { return UCk_Utils_Ability_UE::Get_ScriptClass(InAbilityHandle) == InAbilityClass; }
         );
 
-        CK_ENSURE_IF_NOT(ck::IsValid(FoundAbilityWithName),
-            TEXT("Ability Owner [{}] does NOT have Ability [{}]"),
-            InAbilityOwnerEntity,
-            InAbilityClass)
-        { return {}; }
+        if (ck::Is_NOT_Valid(FoundAbilityWithName))
+        {
+            ability::Verbose(TEXT("Failed to Find Ability [{}] in Ability Owner [{}]"), InAbilityClass, InAbilityOwnerEntity);
+            return {};
+        }
 
         return FoundAbilityWithName;
     }
@@ -624,11 +625,11 @@ namespace ck
             InAbilityEntity
         );
 
-        CK_ENSURE_IF_NOT(HasAbilityWithEntity,
-            TEXT("Ability Owner [{}] does NOT have Ability [{}]"),
-            InAbilityOwnerEntity,
-            InAbilityEntity)
-        { return {}; }
+        if (NOT HasAbilityWithEntity)
+        {
+            ability::Verbose(TEXT("Failed to Find Ability [{}] in Ability Owner [{}]"), InAbilityEntity, InAbilityOwnerEntity);
+            return {};
+        }
 
         return InAbilityEntity;
     }
