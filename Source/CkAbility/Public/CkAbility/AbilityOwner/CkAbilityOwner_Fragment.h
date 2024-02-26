@@ -47,17 +47,44 @@ namespace ck
 
     private:
         // Aggregate list of all tags granted by the owned active abilities
+        FGameplayTagCountContainer _PreviousTags;
         FGameplayTagCountContainer _ActiveTags;
 
-    public:
-        auto Get_ActiveTags() const -> FGameplayTagContainer;
-        auto Get_ActiveTagsWithCount() const -> TMap<FGameplayTag, int32>;
-        auto Get_SpecificActiveTagCount(const FGameplayTag& InTag) const -> int32;
+        FGameplayTagContainer _PreviousTags_IncludingAllEntityExtensions;
+        FGameplayTagContainer _ActiveTags_IncludingAllEntityExtensions;
 
-        auto AppendTags(const FGameplayTagContainer& InTagsToAdd) -> void;
-        auto AddTag(const FGameplayTag& InTagToAdd) -> void;
-        auto RemoveTags(const FGameplayTagContainer& InTagsToRemove) -> void;
-        auto RemoveTag(const FGameplayTag& InTagToRemove) -> void;
+        friend class FProcessor_AbilityOwner_Teardown;
+
+    public:
+        auto Get_ActiveTags(
+            const FCk_Handle_AbilityOwner& InAbilityOwner) const -> FGameplayTagContainer;
+        auto Get_PreviousTags(
+            const FCk_Handle_AbilityOwner& InAbilityOwner) const -> FGameplayTagContainer;
+        auto Get_ActiveTagsWithCount(
+            const FCk_Handle_AbilityOwner& InAbilityOwner) const -> TMap<FGameplayTag, int32>;
+        auto Get_SpecificActiveTagCount(
+            const FCk_Handle_AbilityOwner& InAbilityOwner,
+            const FGameplayTag& InTag) const -> int32;
+        auto Get_AreActiveTagsDifferentThanPreviousTags(
+            const FCk_Handle_AbilityOwner& InAbilityOwner) const -> bool;
+
+        auto AppendTags(
+            const FCk_Handle_AbilityOwner& InAbilityOwner,
+            const FGameplayTagContainer& InTagsToAdd) -> void;
+        auto AddTag(
+            const FCk_Handle_AbilityOwner& InAbilityOwner,
+            const FGameplayTag& InTagToAdd) -> void;
+        auto RemoveTags(
+            const FCk_Handle_AbilityOwner& InAbilityOwner,
+            const FGameplayTagContainer& InTagsToRemove) -> void;
+        auto RemoveTag(
+            const FCk_Handle_AbilityOwner& InAbilityOwner,
+            const FGameplayTag& InTagToRemove) -> void;
+
+    private:
+        static auto
+        DoTry_TagsUpdatedOnExtensionOwner(
+            const FCk_Handle_AbilityOwner& InAbilityOwner) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

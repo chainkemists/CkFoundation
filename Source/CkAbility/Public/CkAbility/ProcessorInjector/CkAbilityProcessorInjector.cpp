@@ -11,6 +11,7 @@ void
         EcsWorldType& InWorld)
 {
     InWorld.Add<ck::FProcessor_Ability_Teardown>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_AbilityOwner_Teardown>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -25,6 +26,8 @@ auto
     InWorld.Add<ck::FProcessor_AbilityOwner_HandleRequests>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AbilityOwner_HandleEvents>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AbilityOwner_TagsUpdated>(InWorld.Get_Registry());
+    // there may be requests to Deactivate after Tags are updated, pump the HandleRequests again
+    InWorld.Add<ck::FProcessor_AbilityOwner_HandleRequests>(InWorld.Get_Registry());
 
     InWorld.Add<ck::FProcessor_AbilityCue_Spawn>(InWorld.Get_Registry());
 }

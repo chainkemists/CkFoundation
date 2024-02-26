@@ -220,10 +220,25 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
+              DisplayName="[Ck][AbilityOwner] Get Previous Tags")
+    static FGameplayTagContainer
+    Get_PreviousTags(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner",
               DisplayName="[Ck][AbilityOwner] Get Active Tags With Count")
     static TMap<FGameplayTag, int32>
     Get_ActiveTagsWithCount(
         const FCk_Handle_AbilityOwner& InAbilityOwnerHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="[Ck][AbilityOwner] Get Active Tags With Count")
+    static int32
+    Get_SpecificActiveTagsWithCount(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FGameplayTag& InTag);
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
