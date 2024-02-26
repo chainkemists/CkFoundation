@@ -329,9 +329,11 @@ namespace ck
                         const auto PreviousActiveTags = InAbilityOwnerComp.Get_ActiveTags();
                         InAbilityOwnerComp.AppendTags(GrantedTags);
 
-                        if (PreviousActiveTags != InAbilityOwnerComp.Get_ActiveTags())
+                        InAbilityOwnerComp.AppendTags(InAbilityOwnerEntity, GrantedTags);
+
+                        if (InAbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags(InAbilityOwnerEntity))
                         {
-                            UUtils_Signal_AbilityOwner_OnTagsUpdated::Broadcast(InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityOwnerComp.Get_ActiveTags()));
+                            UCk_Utils_AbilityOwner_UE::Request_TagsUpdated(InAbilityOwnerEntity);
                         }
 
                         break;
@@ -411,6 +413,7 @@ namespace ck
 
                 // Cancel All Abilities that are cancelled by the newly granted tags
                 // TODO: this is repeated multiple times in this file, move to a common function
+                // TODO: See if the new system TagsChanged can help replace this section of code
                 UCk_Utils_AbilityOwner_UE::ForEach_Ability_If
                 (
                     InAbilityOwnerEntity,
@@ -538,12 +541,11 @@ namespace ck
             const auto& AbilityActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityEntity);
             const auto& GrantedTags = AbilityActivationSettings.Get_ActivationSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
 
-            const auto PreviousActiveTags = InAbilityOwnerComp.Get_ActiveTags();
-            InAbilityOwnerComp.RemoveTags(GrantedTags);
+            InAbilityOwnerComp.RemoveTags(InAbilityOwnerEntity, GrantedTags);
 
-            if (PreviousActiveTags != InAbilityOwnerComp.Get_ActiveTags())
+            if (InAbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags(InAbilityOwnerEntity))
             {
-                UUtils_Signal_AbilityOwner_OnTagsUpdated::Broadcast(InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityOwnerComp.Get_ActiveTags()));
+                UCk_Utils_AbilityOwner_UE::Request_TagsUpdated(InAbilityOwnerEntity);
             }
 
             ability::VeryVerbose
@@ -635,6 +637,20 @@ namespace ck
 
         return InAbilityEntity;
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_AbilityOwner_TagsUpdated::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        Super::Tick(InDeltaT);
+
+        _TransientEntity.Clear<MarkedDirtyBy>();
+    }
+    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -114,6 +114,34 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
+
+    class CKABILITY_API FProcessor_AbilityOwner_TagsUpdated : public ck_exp::TProcessor<
+            FProcessor_AbilityOwner_TagsUpdated,
+            FCk_Handle_AbilityOwner,
+            FFragment_AbilityOwner_Current,
+            FTag_AbilityOwner_TagsUpdated,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Super = TProcessor;
+        using MarkedDirtyBy = FTag_AbilityOwner_TagsUpdated;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        Tick(
+            TimeType InDeltaT) -> void;
+
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            const FFragment_AbilityOwner_Current& InAbilityOwnerComp) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------
