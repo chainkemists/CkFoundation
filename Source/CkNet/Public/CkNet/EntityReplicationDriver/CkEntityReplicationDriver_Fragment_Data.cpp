@@ -14,7 +14,6 @@ auto
         bool& bOutSuccess)
     -> bool
 {
-    auto RepBits = uint16{0};
     if (Ar.IsSaving())
     {
         if (ck::IsValid(_Handle))
@@ -25,6 +24,10 @@ auto
                 Ar << InRepDriver;
             });
         }
+        else
+        {
+            Ar << _Handle_RepObj;
+        }
     }
 
     if (Ar.IsLoading())
@@ -33,6 +36,10 @@ auto
         if (ck::IsValid(_Handle_RepObj))
         {
             _Handle = _Handle_RepObj->Get_AssociatedEntity();
+        }
+        else
+        {
+            _Handle = {};
         }
     }
 
