@@ -348,7 +348,7 @@ auto
         { return {}; }
     }
 
-    const auto& DeferredSpawnActorParams = DeferredSpawnActor_Params{
+    const auto DeferredSpawnActorParams = DeferredSpawnActor_Params{
         InSpawnActorParams.Get_ActorClass(), InSpawnActorParams.Get_OwnerOrWorld().Get()}
         .Set_Archetype(InSpawnActorParams.Get_Archetype().Get())
         .Set_CollisionHandlingOverride(InSpawnActorParams.Get_CollisionHandlingOverride())
