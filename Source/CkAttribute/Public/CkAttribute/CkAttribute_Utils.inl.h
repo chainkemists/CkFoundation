@@ -11,7 +11,7 @@ namespace ck
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Add(
-            HandleType InHandle,
+            HandleType& InHandle,
             const AttributeDataType& InBaseValue)
         -> void
     {
@@ -22,7 +22,7 @@ namespace ck
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Has(
-            HandleType InHandle)
+            const HandleType& InHandle)
         -> bool
     {
         return InHandle.Has<AttributeFragmentType>();
@@ -32,7 +32,7 @@ namespace ck
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Ensure(
-            HandleType InHandle)
+            const HandleType& InHandle)
         -> bool
     {
         CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have an Attribute [{}]"), InHandle, ck::TypeToString<T_DerivedAttribute>)
@@ -45,7 +45,7 @@ namespace ck
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Get_BaseValue(
-            HandleType InHandle)
+            const HandleType& InHandle)
         -> AttributeDataType
     {
         if (NOT Ensure(InHandle))
@@ -58,7 +58,7 @@ namespace ck
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Get_FinalValue(
-            HandleType InHandle)
+            const HandleType& InHandle)
         -> AttributeDataType
     {
         if (NOT Ensure(InHandle))
@@ -71,7 +71,7 @@ namespace ck
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Request_RecomputeFinalValue(
-            HandleType InHandle)
+            HandleType& InHandle)
         -> void
     {
         if (NOT Ensure(InHandle))
@@ -84,7 +84,7 @@ namespace ck
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Request_FireSignals(
-            HandleType InHandle)
+            HandleType& InHandle)
         -> void
     {
         if (NOT Ensure(InHandle))
@@ -99,7 +99,7 @@ namespace ck
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Add(
-            HandleType InHandle,
+            HandleType& InHandle,
             AttributeDataType InModifierDelta,
             ECk_ArithmeticOperations_Basic InModifierOperation,
             ECk_ModifierOperation_RevocablePolicy InModifierOperationRevocablePolicy)
@@ -107,17 +107,17 @@ namespace ck
     {
         // Attribute fragments live on Entity (A) and AttributeModifiers live on Entities UNDER Entity (A)
         // Here LifetimeOwner is Entity (A)
-        auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-        CK_ENSURE_IF_NOT(ck::IsValid(LifetimeOwner),
+        auto LifetimeOwnerAsAttributeEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        CK_ENSURE_IF_NOT(ck::IsValid(LifetimeOwnerAsAttributeEntity),
             TEXT("Target Entity [{}] is NOT a valid Entity when adding AttributeModifier to Handle [{}]"),
-            LifetimeOwner,
+            LifetimeOwnerAsAttributeEntity,
             InHandle)
         { return; }
 
-        CK_ENSURE_IF_NOT(TUtils_Attribute<AttributeFragmentType>::Has(LifetimeOwner),
+        CK_ENSURE_IF_NOT(TUtils_Attribute<AttributeFragmentType>::Has(LifetimeOwnerAsAttributeEntity),
             TEXT("AttributeModifier Entity [{}] is targeting Entity [{}] who does NOT have an Attribute component!"),
             InHandle,
-            LifetimeOwner)
+            LifetimeOwnerAsAttributeEntity)
         { return; }
 
         InHandle.template Add<AttributeModifierFragmentType>(InModifierDelta);
@@ -135,11 +135,15 @@ namespace ck
                 break;
             }
             case ECk_ArithmeticOperations_Basic::Multiply:
+            {
                 InHandle.template Add<typename AttributeModifierFragmentType::FTag_ModifyMultiply>();
                 break;
+            }
             case ECk_ArithmeticOperations_Basic::Divide:
+            {
                 InHandle.template Add<typename AttributeModifierFragmentType::FTag_ModifyDivide>();
                 break;
+            }
             default:
             {
                 CK_INVALID_ENUM(InModifierOperation);
@@ -159,8 +163,8 @@ namespace ck
             case ECk_ModifierOperation_RevocablePolicy::Revocable:
             {
                 InHandle.template Add<typename AttributeModifierFragmentType::FTag_IsRevocableModification>();
-                RecordOfAttributeModifiers_Utils::AddIfMissing(LifetimeOwner, ECk_Record_EntryHandlingPolicy::Default);
-                RecordOfAttributeModifiers_Utils::Request_Connect(LifetimeOwner, InHandle);
+                RecordOfAttributeModifiers_Utils::AddIfMissing(LifetimeOwnerAsAttributeEntity, ECk_Record_EntryHandlingPolicy::Default);
+                RecordOfAttributeModifiers_Utils::Request_Connect(LifetimeOwnerAsAttributeEntity, InHandle);
 
                 break;
             }
@@ -171,14 +175,14 @@ namespace ck
             }
         }
 
-        TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(LifetimeOwner);
+        TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(LifetimeOwnerAsAttributeEntity);
     }
 
     template <typename T_DerivedAttributeModifier>
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Has(
-            HandleType InHandle)
+            const HandleType& InHandle)
         -> bool
     {
         return InHandle.template Has<AttributeModifierFragmentType>();
@@ -188,7 +192,7 @@ namespace ck
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Ensure(
-            HandleType InHandle)
+            const HandleType& InHandle)
         -> bool
     {
         CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have an AttributeModifier [{}]"), InHandle, ck::TypeToString<T_DerivedAttributeModifier>)
@@ -201,7 +205,7 @@ namespace ck
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Get_ModifierDeltaValue(
-            HandleType InHandle)
+            const HandleType& InHandle)
         -> const AttributeDataType&
     {
         return InHandle.template Get<AttributeModifierFragmentType>().Get_ModifierDelta();
@@ -211,7 +215,7 @@ namespace ck
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Request_ComputeResult(
-            HandleType InHandle)
+            HandleType& InHandle)
         -> void
     {
         if (NOT Ensure(InHandle))
