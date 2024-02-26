@@ -650,6 +650,59 @@ namespace ck
 
         _TransientEntity.Clear<MarkedDirtyBy>();
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_AbilityOwner_TagsUpdated::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            const FFragment_AbilityOwner_Current& InAbilityOwnerComp) const
+        -> void
+    {
+        // Cancel All Abilities that are cancelled by the newly granted tags
+        // TODO: this is repeated multiple times in this file, move to a common function
+        UCk_Utils_AbilityOwner_UE::ForEach_Ability_If
+        (
+            InHandle,
+            [&](const FCk_Handle_Ability& InAbilityEntityToCancel)
+            {
+                ability::Verbose
+                (
+                    TEXT("CANCELLING Ability [Name: {} | Entity: {}] after Tags Changed on Ability Owner [{}]"),
+                    UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntityToCancel),
+                    InAbilityEntityToCancel,
+                    InHandle
+                );
+
+                UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(InHandle,
+                    FCk_Request_AbilityOwner_DeactivateAbility{InAbilityEntityToCancel});
+            },
+            algo::MatchesAnyAbilityActivationCancelledTags{InAbilityOwnerComp.Get_ActiveTags(InHandle)}
+        );
+
+        if (InAbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags(InHandle))
+        {
+            UUtils_Signal_AbilityOwner_OnTagsUpdated::Broadcast(InHandle,
+                MakePayload(InHandle, InAbilityOwnerComp.Get_ActiveTags(InHandle)));
+        }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_AbilityOwner_Teardown::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            const FFragment_AbilityOwner_Current& InCurrent) const
+        -> void
+    {
+        // if we are an EntityExtension, then inform our ExtensionOwner of potentially updated tags
+        InCurrent.DoTry_TagsUpdatedOnExtensionOwner(InHandle);
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 }
 
