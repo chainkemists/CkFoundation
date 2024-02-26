@@ -159,13 +159,15 @@ namespace ck
     {
         auto& TimerChrono = InCurrentComp._Chrono;
 
+        const auto PreviousTimeElapsed = TimerChrono.Get_TimeElapsed();
+
         switch(InParamsComp.Get_Params().Get_CountDirection())
         {
             case ECk_Timer_CountDirection::CountUp:
             {
                 TimerChrono.Consume(InRequest.Get_ConsumeDuration());
 
-                if (TimerChrono.Get_IsDepleted())
+                if (TimerChrono.Get_IsDepleted() && PreviousTimeElapsed != TimerChrono.Get_TimeElapsed())
                 {
                     UUtils_Signal_OnTimerDepleted::Broadcast(InHandle, MakePayload(InHandle, TimerChrono));
                 }
@@ -176,7 +178,7 @@ namespace ck
             {
                 TimerChrono.Tick(InRequest.Get_ConsumeDuration());
 
-                if (TimerChrono.Get_IsDone())
+                if (TimerChrono.Get_IsDone() && PreviousTimeElapsed != TimerChrono.Get_TimeElapsed())
                 {
                     UUtils_Signal_OnTimerDepleted::Broadcast(InHandle, MakePayload(InHandle, TimerChrono));
                 }
@@ -185,7 +187,8 @@ namespace ck
             }
         }
 
-        UUtils_Signal_OnTimerUpdate::Broadcast(InHandle, MakePayload(InHandle, TimerChrono));
+        if (PreviousTimeElapsed != TimerChrono.Get_TimeElapsed())
+        { UUtils_Signal_OnTimerUpdate::Broadcast(InHandle, MakePayload(InHandle, TimerChrono)); }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
