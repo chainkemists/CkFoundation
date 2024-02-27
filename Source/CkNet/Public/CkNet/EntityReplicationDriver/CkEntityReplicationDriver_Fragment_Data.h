@@ -104,7 +104,7 @@ public:
     FVector _StartingLocation = FVector::Zero();
 
     UPROPERTY()
-    TArray<TWeakObjectPtr<UCk_ReplicatedObject_UE>> _ReplicatedObjects;
+    TArray<TWeakObjectPtr<class UCk_ReplicatedObject_UE>> _ReplicatedObjects;
 public:
     CK_PROPERTY_GET(_OuterReplicatedActor);
     CK_PROPERTY_GET(_NonReplicatedActor);
@@ -155,7 +155,7 @@ public:
 
 private:
     UPROPERTY()
-    TArray<TWeakObjectPtr<UCk_ReplicatedObject_UE>> _Objects;
+    TArray<TWeakObjectPtr<class UCk_ReplicatedObject_UE>> _Objects;
 
 public:
     CK_PROPERTY_GET(_Objects);
