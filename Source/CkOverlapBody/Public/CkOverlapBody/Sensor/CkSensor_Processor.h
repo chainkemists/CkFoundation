@@ -113,6 +113,29 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class CKOVERLAPBODY_API FProcessor_Sensor_Teardown : public ck_exp::TProcessor<
+            FProcessor_Sensor_Teardown,
+            FCk_Handle_Sensor,
+            FFragment_Sensor_Current,
+            FFragment_Sensor_Params,
+            CK_IF_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = CK_IF_PENDING_KILL;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InSensorEntity,
+            FFragment_Sensor_Current& InCurrentComp,
+            const FFragment_Sensor_Params& InParamsComp) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKOVERLAPBODY_API FProcessor_Sensor_DebugPreviewAll
     {
     public:
