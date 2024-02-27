@@ -103,10 +103,11 @@ auto
 auto
     UCk_Ability_Script_PDA::
     Get_CanBeGiven(
-        const FCk_Handle_AbilityOwner& InAbilityOwner) const
+        const FCk_Handle_AbilityOwner& InAbilityOwner,
+        const FCk_Handle& InAbilitySource) const
     -> bool
 {
-    return DoGet_CanBeGiven(InAbilityOwner);
+    return DoGet_CanBeGiven(InAbilityOwner, InAbilitySource);
 }
 
 auto
