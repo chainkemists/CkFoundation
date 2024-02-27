@@ -143,14 +143,19 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
+    FCk_Handle _AbilitySource;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
     FCk_Ability_Payload_OnGranted _OptionalPayload;
 
 public:
     CK_PROPERTY_GET(_AbilityScriptClass)
+    CK_PROPERTY_GET(_AbilitySource)
     CK_PROPERTY(_OptionalPayload)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_AbilityOwner_GiveAbility, _AbilityScriptClass);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_AbilityOwner_GiveAbility, _AbilityScriptClass, _AbilitySource);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

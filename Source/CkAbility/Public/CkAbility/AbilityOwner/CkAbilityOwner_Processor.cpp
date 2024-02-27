@@ -37,7 +37,7 @@ namespace ck
             CK_ENSURE_IF_NOT(ck::IsValid(DefaultAbility), TEXT("Entity [{}] has an INVALID default Ability in its Params!"), InHandle)
             { continue; }
 
-            UCk_Utils_AbilityOwner_UE::Request_GiveAbility(InHandle, FCk_Request_AbilityOwner_GiveAbility{DefaultAbility}, {});
+            UCk_Utils_AbilityOwner_UE::Request_GiveAbility(InHandle, FCk_Request_AbilityOwner_GiveAbility{DefaultAbility, InHandle}, {});
         }
     }
 
@@ -146,7 +146,9 @@ namespace ck
                 return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven;
             }
 
-            if (NOT UCk_Utils_Ability_UE::DoGet_CanBeGiven(InAbilityOwnerEntity, AbilityScriptClass))
+            const auto& AbilitySource = InRequest.Get_AbilitySource();
+
+            if (NOT UCk_Utils_Ability_UE::DoGet_CanBeGiven(InAbilityOwnerEntity, AbilitySource, AbilityScriptClass))
             {
                 ability::Verbose
                 (
@@ -167,12 +169,12 @@ namespace ck
             };
 
             const auto PostAbilityCreationFunc =
-            [InAbilityOwnerEntity, AbilityScriptClass, AbilityParams, OptionalPayload](FCk_Handle& InEntity) -> void
+            [InAbilityOwnerEntity, AbilityScriptClass, AbilityParams, OptionalPayload, AbilitySource](FCk_Handle& InEntity) -> void
             {
                 // TODO: Since the construction of the Ability entity is deferred, if multiple Give requests of the same
                 // script class are processed in the same frame, it is possible for the CanBeGiven to NOT return the correct value
                 // This check here is a temporary (an potentially expensive) workaround, but we should handle this case better
-                if (NOT UCk_Utils_Ability_UE::DoGet_CanBeGiven(InAbilityOwnerEntity, AbilityScriptClass))
+                if (NOT UCk_Utils_Ability_UE::DoGet_CanBeGiven(InAbilityOwnerEntity, AbilitySource, AbilityScriptClass))
                 {
                     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InEntity);
                     return;
@@ -192,7 +194,7 @@ namespace ck
                 UCk_Utils_Handle_UE::Set_DebugName(AbilityEntity,
                     UCk_Utils_Debug_UE::Get_DebugName(AbilityParams.Get_AbilityScriptClass(), ECk_DebugNameVerbosity_Policy::Compact));
 
-                UCk_Utils_Ability_UE::DoGive(AbilityOwnerEntity, AbilityEntity, OptionalPayload);
+                UCk_Utils_Ability_UE::DoGive(AbilityOwnerEntity, AbilityEntity, AbilitySource, OptionalPayload);
 
                 UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
                     AbilityOwnerEntity, MakePayload(AbilityOwnerEntity, AbilityEntity, ECk_AbilityOwner_AbilityGivenOrNot::Given));

@@ -6,6 +6,7 @@
 #include "CkEcsBasics/CkEcsBasics_Utils.h"
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkEcsBasics/EntityHolder/CkEntityHolder_Utils.h"
 
 #include "CkNet/CkNet_Common.h"
 
@@ -34,6 +35,7 @@ public:
 
 public:
     struct RecordOfAbilities_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfAbilities> {};
+    struct AbilitySource_Utils : public ck::TUtils_EntityHolder<ck::FFragment_Ability_Source> {};
 
 public:
     friend class UCk_Utils_Ecs_Base_UE;
@@ -72,6 +74,13 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Ability);
 
 public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability",
+              DisplayName="[Ck][Ability] Get Source/Caster")
+    static FCk_Handle
+    Get_Source(
+        const FCk_Handle_Ability& InAbilityEntity);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
               DisplayName="[Ck][Ability] Get Display Name")
@@ -174,6 +183,7 @@ private:
     DoGive(
         FCk_Handle_AbilityOwner& InAbilityOwner,
         FCk_Handle_Ability& InAbility,
+        const FCk_Handle& InAbilitySource,
         const FCk_Ability_Payload_OnGranted& InOptionalPayload) -> void;
 
     static auto
@@ -184,6 +194,7 @@ private:
     static auto
     DoGet_CanBeGiven(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        const FCk_Handle& InAbilitySource,
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass) -> bool;
 
 private:

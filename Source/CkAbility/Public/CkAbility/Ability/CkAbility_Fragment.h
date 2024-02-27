@@ -5,6 +5,7 @@
 #include "CkAbility/Ability/CkAbility_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcsBasics/EntityHolder/CkEntityHolder_Fragment.h"
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
 
@@ -56,6 +57,10 @@ namespace ck
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_Ability_Current, _AbilityScript)
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_ENTITY_HOLDER(FFragment_Ability_Source);
 
     // --------------------------------------------------------------------------------------------------------------------
 

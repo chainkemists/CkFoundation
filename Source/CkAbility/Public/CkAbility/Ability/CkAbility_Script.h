@@ -38,7 +38,8 @@ public:
     
     auto
     Get_CanBeGiven(
-        const FCk_Handle_AbilityOwner& InAbilityOwner) const -> bool;
+        const FCk_Handle_AbilityOwner& InAbilityOwner,
+        const FCk_Handle& InAbilitySource) const -> bool;
 
 protected:
     UFUNCTION(BlueprintImplementableEvent,
@@ -72,7 +73,8 @@ protected:
               meta     = (DisplayName = "CanBeGiven"))
     bool
     DoGet_CanBeGiven(
-        const FCk_Handle_AbilityOwner& InAbilityOwner) const;
+        const FCk_Handle_AbilityOwner& InAbilityOwner,
+        const FCk_Handle& InAbilitySource) const;
 
 private:
     UFUNCTION(BlueprintCallable,
