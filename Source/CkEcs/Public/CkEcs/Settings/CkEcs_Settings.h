@@ -31,6 +31,11 @@ public:
     CK_GENERATED_BODY(FCk_Ecs_ProcessorInjectors_Info);
 
 private:
+#if WITH_EDITORONLY_DATA
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
+    FName _Description = NAME_None;
+#endif
+
     UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
     TEnumAsByte<ETickingGroup> _TickingGroup = TG_PrePhysics;
 
