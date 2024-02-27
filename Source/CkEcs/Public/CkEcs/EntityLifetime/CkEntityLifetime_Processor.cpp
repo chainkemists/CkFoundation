@@ -38,7 +38,7 @@ namespace ck
     {
         Super::Tick(InDeltaT);
 
-        _TransientEntity.Clear<FTag_RequestTriggerDestroyEntity>();
+        _TransientEntity.Clear<FTag_DestroyEntity_Initiate>();
     }
 
     auto
@@ -49,7 +49,7 @@ namespace ck
         -> void
     {
         ecs::VeryVerbose(TEXT("Entity [{}] set to 'Pending Destroy'"), InHandle);
-        InHandle.Add<FTag_TriggerDestroyEntity>();
+        InHandle.Add<FTag_DestroyEntity_Await>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -62,7 +62,7 @@ namespace ck
     {
         Super::Tick(InDeltaT);
 
-        _TransientEntity.Clear<FTag_TriggerDestroyEntity>();
+        _TransientEntity.Clear<FTag_DestroyEntity_Await>();
     }
 
     auto
@@ -73,7 +73,7 @@ namespace ck
         -> void
     {
         ecs::VeryVerbose(TEXT("Entity [{}] set to 'Pending Destroy'"), InHandle);
-        InHandle.Add<FTag_PendingDestroyEntity, ck::IsValid_Policy_IncludePendingKill>();
+        InHandle.Add<FTag_DestroyEntity_Finalize, ck::IsValid_Policy_IncludePendingKill>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
