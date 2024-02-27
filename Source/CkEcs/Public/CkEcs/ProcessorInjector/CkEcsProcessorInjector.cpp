@@ -12,7 +12,9 @@ auto
         EcsWorldType& InWorld)
     -> void
 {
+    InWorld.Add<ck::FProcessor_OwningActor_Destroy>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_EntityLifetime_TriggerDestroyEntity>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_EntityLifetime_RequestDestroyEntity>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -23,7 +25,6 @@ auto
         EcsWorldType& InWorld)
         -> void
 {
-    InWorld.Add<ck::FProcessor_OwningActor_Destroy>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_EntityLifetime_EntityJustCreated>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_EntityLifetime_PendingDestroyEntity>(InWorld.Get_Registry());
 

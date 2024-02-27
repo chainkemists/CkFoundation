@@ -31,6 +31,30 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
+        FProcessor_EntityLifetime_RequestDestroyEntity::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        Super::Tick(InDeltaT);
+
+        _TransientEntity.Clear<FTag_RequestTriggerDestroyEntity>();
+    }
+
+    auto
+        FProcessor_EntityLifetime_RequestDestroyEntity::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle) const
+        -> void
+    {
+        ecs::VeryVerbose(TEXT("Entity [{}] set to 'Pending Destroy'"), InHandle);
+        InHandle.Add<FTag_TriggerDestroyEntity>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_EntityLifetime_TriggerDestroyEntity::
         Tick(
             TimeType InDeltaT)
