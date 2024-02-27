@@ -118,7 +118,7 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
-    return InHandle.Has_Any<ck::FTag_DestroyEntity_Finalize>();
+    return InHandle.Has_Any<ck::FTag_DestroyEntity_Await, ck::FTag_DestroyEntity_Finalize>();
 }
 
 auto
