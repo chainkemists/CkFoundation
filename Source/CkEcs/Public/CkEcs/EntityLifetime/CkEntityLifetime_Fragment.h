@@ -6,16 +6,18 @@
 
 namespace ck
 {
-    CK_DEFINE_ECS_TAG(FTag_PendingDestroyEntity);
-    CK_DEFINE_ECS_TAG(FTag_RequestTriggerDestroyEntity);
-    CK_DEFINE_ECS_TAG(FTag_TriggerDestroyEntity);
+    CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Finalize);
+    CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Initiate);
+    CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Await);
     CK_DEFINE_ECS_TAG(FTag_EntityJustCreated);
 
+    // 'Initialize' phase NOT part of Pending Kill as all regular Processors should still be able to complete their work
+    // before the end of the frame
 #define CK_IGNORE_PENDING_KILL \
-    ck::TExclude<ck::FTag_RequestTriggerDestroyEntity>, ck::TExclude<ck::FTag_TriggerDestroyEntity>, ck::TExclude<ck::FTag_PendingDestroyEntity>
+    ck::TExclude<ck::FTag_DestroyEntity_Await>, ck::TExclude<ck::FTag_DestroyEntity_Finalize>
 
 #define CK_IF_PENDING_KILL \
-    ck::FTag_TriggerDestroyEntity
+    ck::FTag_DestroyEntity_Await
 
     // --------------------------------------------------------------------------------------------------------------------
 

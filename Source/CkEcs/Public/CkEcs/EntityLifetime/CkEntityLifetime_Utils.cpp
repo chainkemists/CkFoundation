@@ -18,7 +18,7 @@ auto
     if (ck::Is_NOT_Valid(InHandle))
     { return; }
 
-    if (InHandle.Has_Any<ck::FTag_RequestTriggerDestroyEntity, ck::FTag_TriggerDestroyEntity, ck::FTag_PendingDestroyEntity>())
+    if (InHandle.Has_Any<ck::FTag_DestroyEntity_Initiate, ck::FTag_DestroyEntity_Await, ck::FTag_DestroyEntity_Finalize>())
     { return; }
 
     switch(InDestructionBehavior)
@@ -41,7 +41,7 @@ auto
         }
     }
 
-    InHandle.AddOrGet<ck::FTag_RequestTriggerDestroyEntity>();
+    InHandle.AddOrGet<ck::FTag_DestroyEntity_Initiate>();
 
     for (auto& LifeTimeDependents : Get_LifetimeDependents(InHandle))
     {
@@ -118,7 +118,7 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
-    return InHandle.Has_Any<ck::FTag_PendingDestroyEntity>();
+    return InHandle.Has_Any<ck::FTag_DestroyEntity_Finalize>();
 }
 
 auto
