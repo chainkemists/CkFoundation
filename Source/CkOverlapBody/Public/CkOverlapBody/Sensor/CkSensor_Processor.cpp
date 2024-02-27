@@ -147,9 +147,10 @@ namespace ck
         {
             InParamsComp.Get_Params().Get_SensorName(),
             InSensorEntity,
-            UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(Sensor->GetOwner())
+            InCurrentComp.Get_AttachedEntityAndActor()
         };
 
+        // TODO: this is repeated in this file, consolidate
         const auto& DoManuallyTriggerAllEndOverlaps = [&]() -> void
         {
             for (const auto& OverlapKvp : InCurrentComp.Get_CurrentMarkerOverlaps().Get_Overlaps())
@@ -464,6 +465,63 @@ namespace ck
 
         Sensor->SetWorldTransform(*BoneTransform);
         Sensor->AddLocalTransform(InParamsComp.Get_Params().Get_RelativeTransform());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Sensor_Teardown::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InSensorEntity,
+            FFragment_Sensor_Current& InCurrentComp,
+            const FFragment_Sensor_Params& InParamsComp) const
+        -> void
+    {
+        if (InCurrentComp.Get_EnableDisable() == ECk_EnableDisable::Disable)
+        { return; }
+
+        InCurrentComp._EnableDisable = ECk_EnableDisable::Disable;
+
+        // Since we are in the teardown, we are ok if the sensor object is pending kill
+        const auto& Params     = InParamsComp.Get_Params();
+        const auto& SensorName = Params.Get_SensorName();
+        const auto& Sensor     = InCurrentComp.Get_Sensor().Get(true);
+
+        UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(Sensor, ECk_EnableDisable::Disable);
+        UCk_Utils_Physics_UE::Request_SetCollisionEnabled(Sensor, ECollisionEnabled::NoCollision);
+
+        const auto SensorBasicDetails =  FCk_Sensor_BasicDetails
+        {
+            InParamsComp.Get_Params().Get_SensorName(),
+            InSensorEntity,
+            InCurrentComp.Get_AttachedEntityAndActor()
+        };
+
+        const auto& DoManuallyTriggerAllEndOverlaps = [&]() -> void
+        {
+            for (const auto& OverlapKvp : InCurrentComp.Get_CurrentMarkerOverlaps().Get_Overlaps())
+            {
+                const auto& MarkerDetails = OverlapKvp.Key;
+                const auto& OverlapDetails = OverlapKvp.Value.Get_OverlapDetails();
+
+                const auto& OnEndOverlapPayload = FCk_Sensor_Payload_OnEndOverlap
+                {
+                    SensorBasicDetails,
+                    MarkerDetails,
+                    FCk_Sensor_EndOverlap_UnrealDetails
+                    {
+                        OverlapDetails.Get_OverlappedComponent().Get(),
+                        OverlapDetails.Get_OtherActor().Get(),
+                        OverlapDetails.Get_OtherComp().Get()
+                    }
+                };
+
+                UUtils_Signal_OnSensorEndOverlap::Broadcast(InSensorEntity, MakePayload(
+                    InCurrentComp.Get_AttachedEntityAndActor().Get_Handle(), OnEndOverlapPayload));
+            }
+        };
+        DoManuallyTriggerAllEndOverlaps();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
