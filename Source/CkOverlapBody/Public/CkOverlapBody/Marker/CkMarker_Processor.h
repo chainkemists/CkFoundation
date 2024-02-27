@@ -66,10 +66,10 @@ namespace ck
             FCk_Handle_Marker,
             FFragment_Marker_Current,
             FFragment_Marker_Params,
-            CK_IF_PENDING_KILL>
+            CK_IF_INITIATE_KILL>
     {
     public:
-        using MarkedDirtyBy = CK_IF_PENDING_KILL;
+        using MarkedDirtyBy = CK_IF_INITIATE_KILL;
 
     public:
         using TProcessor::TProcessor;

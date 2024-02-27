@@ -118,10 +118,10 @@ namespace ck
             FCk_Handle_Sensor,
             FFragment_Sensor_Current,
             FFragment_Sensor_Params,
-            CK_IF_PENDING_KILL>
+            CK_IF_INITIATE_KILL>
     {
     public:
-        using MarkedDirtyBy = CK_IF_PENDING_KILL;
+        using MarkedDirtyBy = CK_IF_INITIATE_KILL;
 
     public:
         using TProcessor::TProcessor;
