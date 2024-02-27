@@ -162,8 +162,6 @@ namespace ck
 
         UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(Marker, ECk_EnableDisable::Disable);
         UCk_Utils_Physics_UE::Request_SetCollisionEnabled(Marker, ECollisionEnabled::NoCollision);
-
-        UUtils_Signal_OnMarkerEnableDisable::Broadcast(InMarkerEntity, MakePayload(InCurrentComp.Get_AttachedEntityAndActor().Get_Handle(), MarkerName, ECk_EnableDisable::Disable));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
