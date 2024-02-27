@@ -6,6 +6,18 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
+    UCk_OverlapBody_ProcessorInjector_Teardown::
+    DoInjectProcessors(
+        EcsWorldType& InWorld)
+    -> void
+{
+    InWorld.Add<ck::FProcessor_Marker_Teardown>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Sensor_Teardown>(InWorld.Get_Registry());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
     UCk_OverlapBody_ProcessorInjector::
     DoInjectProcessors(
         EcsWorldType& InWorld)
@@ -15,9 +27,7 @@ auto
     InWorld.Add<ck::FProcessor_Sensor_Setup>(InWorld.Get_Registry());
 
     InWorld.Add<ck::FProcessor_Marker_HandleRequests>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_Marker_Teardown>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Sensor_HandleRequests>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_Sensor_Teardown>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
