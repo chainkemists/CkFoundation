@@ -22,6 +22,15 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Ability, UCk_Utils_Ability_UE, FCk_Handl
 
 auto
     UCk_Utils_Ability_UE::
+    Get_Source(
+        const FCk_Handle_Ability& InAbilityEntity)
+    -> FCk_Handle
+{
+    return AbilitySource_Utils::Get_StoredEntity(InAbilityEntity);
+}
+
+auto
+    UCk_Utils_Ability_UE::
     Get_DisplayName(
         const FCk_Handle_Ability& InAbilityEntity)
     -> FName
@@ -387,10 +396,13 @@ auto
     DoGive(
         FCk_Handle_AbilityOwner& InAbilityOwner,
         FCk_Handle_Ability& InAbility,
+        const FCk_Handle& InAbilitySource,
         const FCk_Ability_Payload_OnGranted& InOptionalPayload)
     -> void
 {
     RecordOfAbilities_Utils::Request_Connect(InAbilityOwner, InAbility);
+    AbilitySource_Utils::Add(InAbility, InAbilitySource);
+
     const auto Script = InAbility.Get<ck::FFragment_Ability_Current>().Get_AbilityScript();
 
     CK_ENSURE_IF_NOT(ck::IsValid(Script),
@@ -441,6 +453,7 @@ auto
     UCk_Utils_Ability_UE::
     DoGet_CanBeGiven(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        const FCk_Handle& InAbilitySource,
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass)
     -> bool
 {
@@ -451,7 +464,7 @@ auto
         InAbilityScriptClass)
     { return {}; }
 
-    return AbilityScriptCDO->Get_CanBeGiven(InAbilityOwnerEntity);
+    return AbilityScriptCDO->Get_CanBeGiven(InAbilityOwnerEntity, InAbilitySource);
 }
 
 auto
