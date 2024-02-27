@@ -14,7 +14,7 @@ namespace ck
             FProcessor_Ability_Teardown,
             FCk_Handle_Ability,
             FFragment_Ability_Current,
-            CK_IF_PENDING_KILL>
+            CK_IF_INITIATE_KILL>
     {
     public:
         using TProcessor::TProcessor;
