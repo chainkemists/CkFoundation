@@ -105,6 +105,37 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
+    TryGet_Ability_If(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Predicate_InHandle_OutResult& InPredicate)
+    -> FCk_Handle_Ability
+{
+    return TryGet_Ability_If(InAbilityOwnerEntity, [&](const FCk_Handle_Ability& InAbility)  -> bool
+    {
+        const FCk_SharedBool PredicateResult;
+
+        if (InPredicate.IsBound())
+        {
+            InPredicate.Execute(InAbility, PredicateResult, InOptionalPayload);
+        }
+
+        return *PredicateResult;
+    });
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    TryGet_Ability_If(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        const TFunction<bool(FCk_Handle_Ability)>& InPredicate)
+    -> FCk_Handle_Ability
+{
+    return RecordOfAbilities_Utils::Get_ValidEntry_If(InAbilityOwnerEntity, InPredicate);
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
     Get_AbilityCount(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity)
     -> int32
