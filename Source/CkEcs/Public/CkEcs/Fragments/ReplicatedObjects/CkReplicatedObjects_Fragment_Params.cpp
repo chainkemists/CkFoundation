@@ -88,8 +88,7 @@ auto
 
     if (ck::IsValid(Get_AssociatedEntity()) && NOT UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(Get_AssociatedEntity()))
     {
-        _AssociatedEntity.Add<ck::FTag_TriggerDestroyEntity>();
-        _AssociatedEntity = {};
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(_AssociatedEntity);
     }
 
     Super::BeginDestroy();
