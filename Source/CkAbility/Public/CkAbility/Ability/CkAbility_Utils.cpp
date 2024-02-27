@@ -452,9 +452,9 @@ auto
 auto
     UCk_Utils_Ability_UE::
     DoGet_CanBeGiven(
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass,
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
-        const FCk_Handle& InAbilitySource,
-        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass)
+        const FCk_Handle& InAbilitySource)
     -> bool
 {
     const auto& AbilityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_Script_PDA>(InAbilityScriptClass);

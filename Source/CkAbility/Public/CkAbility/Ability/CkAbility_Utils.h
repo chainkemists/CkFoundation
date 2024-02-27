@@ -193,9 +193,9 @@ private:
 
     static auto
     DoGet_CanBeGiven(
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass,
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
-        const FCk_Handle& InAbilitySource,
-        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass) -> bool;
+        const FCk_Handle& InAbilitySource) -> bool;
 
 private:
     static UCk_Ability_EntityConfig_PDA*
