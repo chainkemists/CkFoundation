@@ -107,6 +107,19 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
+              DisplayName="[Ck][AbilityOwner] Try Get Ability If")
+    static FCk_Handle_Ability
+    TryGet_Ability_If(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Predicate_InHandle_OutResult& InPredicate);
+    static auto
+    TryGet_Ability_If(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        const TFunction<bool(FCk_Handle_Ability)>& InPredicate) -> FCk_Handle_Ability;
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner",
               DisplayName="[Ck][AbilityOwner] Get Ability Count")
     static int32
     Get_AbilityCount(
