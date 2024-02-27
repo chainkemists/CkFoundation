@@ -86,8 +86,10 @@ auto
         FGameplayTag      InMarkerName)
     -> FCk_Handle_Marker
 {
-    return Cast(Get_EntityOrRecordEntry_WithFragmentAndLabel<UCk_Utils_Marker_UE, RecordOfMarkers_Utils>(
-        InMarkerOwnerEntity, InMarkerName));
+    if (NOT RecordOfMarkers_Utils::Has(InMarkerOwnerEntity))
+    { return {}; }
+
+    return RecordOfMarkers_Utils::Get_ValidEntry_If(InMarkerOwnerEntity, ck::algo::MatchesGameplayLabelExact{InMarkerName});
 }
 
 auto
