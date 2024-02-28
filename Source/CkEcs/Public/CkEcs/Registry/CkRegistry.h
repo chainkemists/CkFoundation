@@ -17,7 +17,7 @@
 
 namespace ck
 {
-    class FProcessor_EntityLifetime_PendingDestroyEntity;
+    class FProcessor_EntityLifetime_DestroyEntity;
 }
 
 namespace ck
@@ -41,7 +41,7 @@ public:
 
 public:
     friend class UCk_Utils_EntityLifetime_UE;
-    friend class ck::FProcessor_EntityLifetime_PendingDestroyEntity;
+    friend class ck::FProcessor_EntityLifetime_DestroyEntity;
 
     friend struct FCk_Handle;
 
