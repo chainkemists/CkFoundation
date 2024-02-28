@@ -31,7 +31,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_EntityLifetime_RequestDestroyEntity::
+        FProcessor_EntityLifetime_DestructionPhase_Await::
         Tick(
             TimeType InDeltaT)
         -> void
@@ -42,7 +42,7 @@ namespace ck
     }
 
     auto
-        FProcessor_EntityLifetime_RequestDestroyEntity::
+        FProcessor_EntityLifetime_DestructionPhase_Await::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle) const
@@ -55,7 +55,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_EntityLifetime_TriggerDestroyEntity::
+        FProcessor_EntityLifetime_DestructionPhase_Finalize::
         Tick(
             TimeType InDeltaT)
         -> void
@@ -66,7 +66,7 @@ namespace ck
     }
 
     auto
-        FProcessor_EntityLifetime_TriggerDestroyEntity::
+        FProcessor_EntityLifetime_DestructionPhase_Finalize::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle) const
@@ -79,7 +79,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_EntityLifetime_PendingDestroyEntity::
+        FProcessor_EntityLifetime_DestroyEntity::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle) const
