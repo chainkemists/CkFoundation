@@ -76,6 +76,15 @@ auto
 
 auto
     FCk_Handle::
+    operator<(
+        ThisType InOther) const
+    -> bool
+{
+    return _Entity.operator<(InOther.Get_Entity());
+}
+
+auto
+    FCk_Handle::
     operator==(
         const ThisType& InOther) const
     -> bool
