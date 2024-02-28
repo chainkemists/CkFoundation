@@ -69,6 +69,7 @@ public:
     template <typename T_WrappedHandle, class = std::enable_if_t<std::is_base_of_v<struct FCk_Handle_TypeSafe, T_WrappedHandle>>>
     auto operator!=(const T_WrappedHandle& InOther) const -> bool;
 
+    auto operator<(ThisType InOther) const -> bool;
     auto operator==(const ThisType& InOther) const -> bool;
     CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
 

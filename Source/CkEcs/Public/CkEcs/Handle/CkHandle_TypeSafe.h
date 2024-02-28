@@ -25,6 +25,7 @@ public:
 public:
     using FCk_Handle::operator==;
     using FCk_Handle::operator!=;
+    using FCk_Handle::operator<;
 
 public:
     FCk_Handle_TypeSafe() = default;
@@ -57,6 +58,7 @@ static_assert
     CK_GENERATED_BODY(_ClassType_);                                                                                 \
     using FCk_Handle_TypeSafe::operator==;                                                                          \
     using FCk_Handle_TypeSafe::operator!=;                                                                          \
+    using FCk_Handle_TypeSafe::operator<;                                                                          \
     _ClassType_() = default;                                                                                        \
     _ClassType_(ThisType&& InOther) noexcept : FCk_Handle_TypeSafe(MoveTemp(InOther)) { }                           \
     _ClassType_(const ThisType& InHandle) : FCk_Handle_TypeSafe(InHandle) { }                                       \
