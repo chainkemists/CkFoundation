@@ -24,8 +24,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECS_API FProcessor_EntityLifetime_RequestDestroyEntity
-        : public TProcessor<FProcessor_EntityLifetime_RequestDestroyEntity, FTag_DestroyEntity_Initiate>
+    class CKECS_API FProcessor_EntityLifetime_DestructionPhase_Await
+        : public TProcessor<FProcessor_EntityLifetime_DestructionPhase_Await, FTag_DestroyEntity_Initiate>
     {
     public:
         using Super = TProcessor;
@@ -40,8 +40,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECS_API FProcessor_EntityLifetime_TriggerDestroyEntity
-        : public TProcessor<FProcessor_EntityLifetime_TriggerDestroyEntity, FTag_DestroyEntity_Await>
+    class CKECS_API FProcessor_EntityLifetime_DestructionPhase_Finalize
+        : public TProcessor<FProcessor_EntityLifetime_DestructionPhase_Finalize, FTag_DestroyEntity_Await>
     {
     public:
         using Super = TProcessor;
@@ -56,8 +56,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECS_API FProcessor_EntityLifetime_PendingDestroyEntity
-        : public TProcessor<FProcessor_EntityLifetime_PendingDestroyEntity, FTag_DestroyEntity_Finalize>
+    class CKECS_API FProcessor_EntityLifetime_DestroyEntity
+        : public TProcessor<FProcessor_EntityLifetime_DestroyEntity, FTag_DestroyEntity_Finalize>
     {
     public:
         using TProcessor::TProcessor;

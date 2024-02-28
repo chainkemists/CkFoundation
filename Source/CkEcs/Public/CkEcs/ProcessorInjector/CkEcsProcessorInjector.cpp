@@ -13,8 +13,8 @@ auto
     -> void
 {
     InWorld.Add<ck::FProcessor_OwningActor_Destroy>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_EntityLifetime_TriggerDestroyEntity>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_EntityLifetime_RequestDestroyEntity>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_EntityLifetime_DestructionPhase_Finalize>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_EntityLifetime_DestructionPhase_Await>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -26,7 +26,7 @@ auto
         -> void
 {
     InWorld.Add<ck::FProcessor_EntityLifetime_EntityJustCreated>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_EntityLifetime_PendingDestroyEntity>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_EntityLifetime_DestroyEntity>(InWorld.Get_Registry());
 
 #if CK_MEMORY_TRACKING
     InWorld.Add<ck::FProcessor_Memory_Stats>();
