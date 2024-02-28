@@ -55,6 +55,30 @@ auto
 
 auto
     UCk_Utils_CompositeAlgos_UE::
+    NoneActors_If(
+        const TArray<AActor*>& InActors,
+        const FInstancedStruct& InOptionalPayload,
+        FCk_Predicate_InActor_OutResult InPredicate)
+    -> bool
+{
+    return ck::algo::NoneOf(InActors, [&](AActor* InActor)
+    {
+        if (ck::Is_NOT_Valid(InActor))
+        { return false; }
+
+        const FCk_SharedBool PredicateResult;
+
+        if (InPredicate.IsBound())
+        {
+            InPredicate.Execute(InActor, PredicateResult, InOptionalPayload);
+        }
+
+        return *PredicateResult;
+    });
+}
+
+auto
+    UCk_Utils_CompositeAlgos_UE::
     AnyEntities_If(
         const TArray<FCk_Handle>& InEntities,
         const FInstancedStruct& InOptionalPayload,
@@ -101,6 +125,29 @@ auto
     });
 }
 
+auto
+    UCk_Utils_CompositeAlgos_UE::
+    NoneEntities_If(
+        const TArray<FCk_Handle>& InEntities,
+        const FInstancedStruct& InOptionalPayload,
+        FCk_Predicate_InHandle_OutResult InPredicate)
+    -> bool
+{
+    return ck::algo::NoneOf(InEntities, [&](const FCk_Handle& InEntity)
+    {
+        if (ck::Is_NOT_Valid(InEntity))
+        { return false; }
+
+        const FCk_SharedBool PredicateResult;
+
+        if (InPredicate.IsBound())
+        {
+            InPredicate.Execute(InEntity, PredicateResult, InOptionalPayload);
+        }
+
+        return *PredicateResult;
+    });
+}
 auto
     UCk_Utils_CompositeAlgos_UE::
     FilterActors_ByPredicate(

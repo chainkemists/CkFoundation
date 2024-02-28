@@ -42,6 +42,14 @@ namespace ck::algo
 
     template <typename T_Container, typename T_PredicateFunction>
     [[nodiscard]]
+    auto NoneOf(const T_Container& InContainer, T_PredicateFunction InFunc) -> bool;
+
+    template <typename T_ItrType, typename T_PredicateFunction>
+    [[nodiscard]]
+    auto NoneOf(T_ItrType InItrBegin, T_ItrType InItrEnd, T_PredicateFunction InFunc) -> bool;
+
+    template <typename T_Container, typename T_PredicateFunction>
+    [[nodiscard]]
     auto CountIf(const T_Container& InContainer, T_PredicateFunction InFunc) -> int32;
 
     template <typename T_Container, typename T_UnaryFunction>
@@ -101,8 +109,16 @@ namespace ck::algo
     template <typename T_Container, typename T_PredicateFunction>
     auto Sort(T_Container& InContainer, T_PredicateFunction InFunc) -> void;
 
+    template <typename T_Container, typename T_PredicateFunction>
+    [[nodiscard]]
+    auto Sort(const T_Container& InContainer, T_PredicateFunction InFunc) -> T_Container;
+
     template <typename T_Container>
     auto Sort(T_Container& InContainer) -> void;
+
+    template <typename T_Container>
+    [[nodiscard]]
+    auto Sort(const T_Container& InContainer) -> T_Container;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -110,7 +126,10 @@ namespace ck::algo
 namespace ck::algo
 {
     template <typename T_Func, typename T_ContainerA, typename T_ContainerB>
-    static auto ForEachView(T_ContainerA& InContainerA, T_ContainerB& InContainerB, T_Func InFunc) -> void;
+    static auto ForEachView(
+        T_ContainerA& InContainerA,
+        T_ContainerB& InContainerB,
+        T_Func InFunc) -> void;
 
     template <typename T_Func, typename T_ContainerA, typename T_ContainerB, typename T_ContainerC>
     static auto ForEachView(
@@ -145,8 +164,11 @@ namespace ck::algo
         T_TransformFunc InFunc) -> void;
 
     template <class T_ReturnContainer, class T_TransformFunc, class T_ContainerA, typename T_ContainerB>
-    static auto ForEachViewTransform(T_ContainerA& InContainerA, T_ContainerB& InContainerB, T_TransformFunc InFunc)
-        -> T_ReturnContainer;
+    [[nodiscard]]
+    static auto ForEachViewTransform(
+        T_ContainerA& InContainerA,
+        T_ContainerB& InContainerB,
+        T_TransformFunc InFunc) -> T_ReturnContainer;
 
     template <typename T_TransformFunc, typename T_ContainerA, typename T_ContainerB, typename T_ContainerC, typename T_ReturnContainer>
     static auto ForEachViewTransform(
@@ -162,8 +184,7 @@ namespace ck::algo
         T_ContainerA& InContainerA,
         T_ContainerB& InContainerB,
         T_ContainerC& InContainerC,
-        T_TransformFunc InFunc)
-        -> T_ReturnContainer;
+        T_TransformFunc InFunc) -> T_ReturnContainer;
 
     template <typename T_TransformFunc, typename T_ContainerA, typename T_ContainerB, typename T_ContainerC, typename
               T_ContainerD, typename T_ReturnContainer>
@@ -183,8 +204,7 @@ namespace ck::algo
         T_ContainerB& InContainerB,
         T_ContainerC& InContainerC,
         T_ContainerD& InContainerD,
-        T_TransformFunc InFunc)
-        -> T_ReturnContainer;
+        T_TransformFunc InFunc) -> T_ReturnContainer;
 
     template <typename T_TransformFunc, typename T_ContainerA, typename T_ContainerB, typename T_ContainerC, typename
               T_ContainerD, typename T_ContainerE, typename T_ReturnContainer>
@@ -206,8 +226,7 @@ namespace ck::algo
         T_ContainerC& InContainerC,
         T_ContainerD& InContainerD,
         T_ContainerE& InContainerE,
-        T_TransformFunc InFunc)
-        -> T_ReturnContainer;
+        T_TransformFunc InFunc) -> T_ReturnContainer;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

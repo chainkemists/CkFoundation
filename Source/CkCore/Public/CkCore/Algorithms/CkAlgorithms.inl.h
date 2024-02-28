@@ -20,7 +20,8 @@ namespace ck::algo
     auto
         AllOf(
             const T_Container& InContainer,
-            T_PredicateFunction InFunc) -> bool
+            T_PredicateFunction InFunc)
+        -> bool
     {
         return AllOf(InContainer.begin(), InContainer.end(), InFunc);
     }
@@ -30,7 +31,8 @@ namespace ck::algo
         AllOf(
             T_ItrType InItrBegin,
             T_ItrType InItrEnd,
-            T_PredicateFunction InFunc) -> bool
+            T_PredicateFunction InFunc)
+        -> bool
     {
         return std::all_of(InItrBegin, InItrEnd, InFunc);
     }
@@ -39,7 +41,8 @@ namespace ck::algo
     auto
         AnyOf(
             const T_Container& InContainer,
-            T_PredicateFunction InFunc) -> bool
+            T_PredicateFunction InFunc)
+        -> bool
     {
         return AnyOf(InContainer.begin(), InContainer.end(), InFunc);
     }
@@ -49,9 +52,31 @@ namespace ck::algo
         AnyOf(
             T_ItrType InItrBegin,
             T_ItrType InItrEnd,
-            T_PredicateFunction InFunc) -> bool
+            T_PredicateFunction InFunc)
+        -> bool
     {
         return std::any_of(InItrBegin, InItrEnd, InFunc);
+    }
+
+    template <typename T_Container, typename T_PredicateFunction>
+    auto
+        NoneOf(
+            const T_Container& InContainer,
+            T_PredicateFunction InFunc)
+        -> bool
+    {
+        return NoneOf(InContainer.begin(), InContainer.end(), InFunc);
+    }
+
+    template <typename T_ItrType, typename T_PredicateFunction>
+    auto
+        NoneOf(
+            T_ItrType InItrBegin,
+            T_ItrType InItrEnd,
+            T_PredicateFunction InFunc)
+        -> bool
+    {
+        return std::none_of(InItrBegin, InItrEnd, InFunc);
     }
 
     template <typename T_Container, typename T_PredicateFunction>
@@ -100,7 +125,7 @@ namespace ck::algo
         ForEach(
             const TArray<T_ValueType>& InContainer,
             T_UnaryFunction InFunc)
-    -> void
+        -> void
     {
         std::for_each(InContainer.begin(), InContainer.end(), InFunc);
     }
@@ -109,14 +134,19 @@ namespace ck::algo
     auto
         ForEachIsValid(
             T_Container& InContainer,
-            T_UnaryFunction InFunc) -> void
+            T_UnaryFunction InFunc)
+        -> void
     {
         ForEachIsValid(InContainer.begin(), InContainer.end(), InFunc);
     }
 
     template <typename T_ItrType, typename T_UnaryFunction, typename T_Validator>
     auto
-        ForEachIsValid(T_ItrType InItrBegin, T_ItrType InItrEnd, T_UnaryFunction InFunc, T_Validator InValidator)
+        ForEachIsValid(
+            T_ItrType InItrBegin,
+            T_ItrType InItrEnd,
+            T_UnaryFunction InFunc,
+            T_Validator InValidator)
         -> void
     {
         for (; InItrBegin != InItrEnd; ++InItrBegin)
@@ -130,7 +160,10 @@ namespace ck::algo
 
     template <typename T_ItrType, typename T_UnaryFunction>
     auto
-        ForEachIsValid(T_ItrType InItrBegin, T_ItrType InItrEnd, T_UnaryFunction InFunc)
+        ForEachIsValid(
+            T_ItrType InItrBegin,
+            T_ItrType InItrEnd,
+            T_UnaryFunction InFunc)
         -> void
     {
         ForEachIsValid(InItrBegin, InItrEnd, InFunc, [](auto InObj) { return ck::IsValid(InObj); });
@@ -138,7 +171,9 @@ namespace ck::algo
 
     template <typename T_ValueType, typename T_UnaryFunction>
     auto
-        ForEachRequest(TArray<T_ValueType>& InContainer, T_UnaryFunction InFunc)
+        ForEachRequest(
+            TArray<T_ValueType>& InContainer,
+            T_UnaryFunction InFunc)
         -> void
     {
         ForEach(InContainer.begin(), InContainer.end(), InFunc);
@@ -147,7 +182,9 @@ namespace ck::algo
 
     template <typename T_ValueType, typename T_UnaryFunction>
     auto
-        ForEachRequest(TOptional<T_ValueType>& InContainer, T_UnaryFunction InFunc)
+        ForEachRequest(
+            TOptional<T_ValueType>& InContainer,
+            T_UnaryFunction InFunc)
         -> void
     {
         if (InContainer.IsSet())
@@ -159,7 +196,10 @@ namespace ck::algo
 
     template <typename T_ValueType, typename T_UnaryFunction>
     auto
-        ForEachRequest(const TArray<T_ValueType>& InContainer, T_UnaryFunction InFunc, policy::DontResetContainer)
+        ForEachRequest(
+            const TArray<T_ValueType>& InContainer,
+            T_UnaryFunction InFunc,
+            policy::DontResetContainer)
         -> void
     {
         ForEach(InContainer.begin(), InContainer.end(), InFunc);
@@ -167,7 +207,10 @@ namespace ck::algo
 
     template <typename T_ValueType, typename T_UnaryFunction>
     auto
-        ForEachRequest(const TOptional<T_ValueType>& InContainer, T_UnaryFunction InFunc, policy::DontResetContainer)
+        ForEachRequest(
+            const TOptional<T_ValueType>& InContainer,
+            T_UnaryFunction InFunc,
+            policy::DontResetContainer)
         -> void
     {
         if (InContainer.IsSet())
@@ -177,7 +220,11 @@ namespace ck::algo
     }
 
     template <typename T_Array, typename T_UnaryFunction>
-    auto ForEachReverse(T_Array& InArray, T_UnaryFunction InFunc) -> void
+    auto
+        ForEachReverse(
+            T_Array& InArray,
+            T_UnaryFunction InFunc)
+        -> void
     {
         auto Index = InArray.Num();
         while (Index-- > 0)
@@ -260,6 +307,31 @@ namespace ck::algo
         Algo::Sort(InContainer, InFunc);
     }
 
+    template <typename T_Container, typename T_PredicateFunction>
+    auto
+        Sort(
+            const T_Container& InContainer,
+            T_PredicateFunction InFunc)
+        -> T_Container
+    {
+        auto SortedContainer = InContainer;
+        Sort(SortedContainer, InFunc);
+
+        return SortedContainer;
+    }
+
+    template <typename T_Container>
+    auto
+        Sort(
+            const T_Container& InContainer)
+        -> T_Container
+    {
+        auto SortedContainer = InContainer;
+        Sort(SortedContainer);
+
+        return SortedContainer;
+    }
+
     template <typename T_Container>
     auto
         Sort(
@@ -275,7 +347,12 @@ namespace ck::algo
 namespace ck::algo
 {
     template <typename T_Func, typename T_ContainerA, typename T_ContainerB>
-    auto ForEachView(T_ContainerA& InContainerA, T_ContainerB& InContainerB, T_Func InFunc) -> void
+    auto
+        ForEachView(
+            T_ContainerA& InContainerA,
+            T_ContainerB& InContainerB,
+            T_Func InFunc)
+        -> void
     {
         CK_ENSURE_IF_NOT(InContainerA.Num() == InContainerB.Num(), TEXT("Non-Matching Container sizes"))
         { return; }
@@ -287,11 +364,13 @@ namespace ck::algo
     }
 
     template <typename T_Func, typename T_ContainerA, typename T_ContainerB, typename T_ContainerC>
-    auto ForEachView(
-        T_ContainerA& InContainerA,
-        T_ContainerB& InContainerB,
-        T_ContainerC& InContainerC,
-        T_Func InFunc) -> void
+    auto
+        ForEachView(
+            T_ContainerA& InContainerA,
+            T_ContainerB& InContainerB,
+            T_ContainerC& InContainerC,
+            T_Func InFunc)
+        -> void
     {
         CK_ENSURE_IF_NOT(
             InContainerA.Num() == InContainerB.Num() == InContainerC.Num(), TEXT("Non-Matching Container sizes"))
@@ -304,12 +383,14 @@ namespace ck::algo
     }
 
     template <typename T_Func,	typename T_ContainerA,	typename T_ContainerB,	typename T_ContainerC,	typename T_ContainerD>
-    auto ForEachView(
-        T_ContainerA& InContainerA,
-        T_ContainerB& InContainerB,
-        T_ContainerC& InContainerC,
-        T_ContainerD& InContainerD,
-        T_Func InFunc) -> void
+    auto
+        ForEachView(
+            T_ContainerA& InContainerA,
+            T_ContainerB& InContainerB,
+            T_ContainerC& InContainerC,
+            T_ContainerD& InContainerD,
+            T_Func InFunc)
+        -> void
     {
         CK_ENSURE_IF_NOT(
             InContainerA.Num() == InContainerB.Num() == InContainerC.Num() == InContainerD.Num(),
@@ -323,13 +404,15 @@ namespace ck::algo
     }
 
     template <typename T_Func, typename T_ContainerA,	typename T_ContainerB,	typename T_ContainerC,	typename T_ContainerD,	typename T_ContainerE>
-    auto ForEachView(
-        T_ContainerA& InContainerA,
-        T_ContainerB& InContainerB,
-        T_ContainerC& InContainerC,
-        T_ContainerD& InContainerD,
-        T_ContainerE& InContainerE,
-        T_Func InFunc) -> void
+    auto
+        ForEachView(
+            T_ContainerA& InContainerA,
+            T_ContainerB& InContainerB,
+            T_ContainerC& InContainerC,
+            T_ContainerD& InContainerD,
+            T_ContainerE& InContainerE,
+            T_Func InFunc)
+        -> void
     {
         CK_ENSURE_IF_NOT(
             InContainerA.Num() == InContainerB.Num() == InContainerC.Num() == InContainerD.Num() == InContainerE.Num(),
@@ -343,11 +426,13 @@ namespace ck::algo
     }
 
     template <typename T_TransformFunc, typename T_ContainerA, typename T_ContainerB, typename T_ReturnContainer>
-    auto ForEachViewTransform(
-        T_ContainerA& InContainerA,
-        T_ContainerB& InContainerB,
-        TToTransform<T_ReturnContainer> InReturnContainer,
-        T_TransformFunc InFunc) -> void
+    auto
+        ForEachViewTransform(
+            T_ContainerA& InContainerA,
+            T_ContainerB& InContainerB,
+            TToTransform<T_ReturnContainer> InReturnContainer,
+            T_TransformFunc InFunc)
+        -> void
     {
         CK_ENSURE_IF_NOT(InContainerA.Num() == InContainerB.Num(), TEXT("Non-Matching Container sizes"))
         { return; }
@@ -359,10 +444,12 @@ namespace ck::algo
     }
 
     template <class T_ReturnContainer, class T_TransformFunc, class T_ContainerA, typename T_ContainerB>
-    auto ForEachViewTransform(
-        T_ContainerA& InContainerA,
-        T_ContainerB& InContainerB,
-        T_TransformFunc InFunc) -> T_ReturnContainer
+    auto
+        ForEachViewTransform(
+            T_ContainerA& InContainerA,
+            T_ContainerB& InContainerB,
+            T_TransformFunc InFunc)
+        -> T_ReturnContainer
     {
         auto ToRet = T_ReturnContainer{};
         ForEachViewTransform(InContainerA, InContainerB, ToTransform(ToRet), InFunc);
@@ -370,12 +457,14 @@ namespace ck::algo
     }
 
     template <typename T_TransformFunc,	typename T_ContainerA,	typename T_ContainerB,	typename T_ContainerC,	typename T_ReturnContainer>
-    auto ForEachViewTransform(
-        T_ContainerA& InContainerA,
-        T_ContainerB& InContainerB,
-        T_ContainerC& InContainerC,
-        TToTransform<T_ReturnContainer> InReturnContainer,
-        T_TransformFunc InFunc) -> void
+    auto
+        ForEachViewTransform(
+            T_ContainerA& InContainerA,
+            T_ContainerB& InContainerB,
+            T_ContainerC& InContainerC,
+            TToTransform<T_ReturnContainer> InReturnContainer,
+            T_TransformFunc InFunc)
+        -> void
     {
         CK_ENSURE_IF_NOT(
             InContainerA.Num() == InContainerB.Num() == InContainerC.Num(), TEXT("Non-Matching Container sizes"))
@@ -388,11 +477,13 @@ namespace ck::algo
     }
 
     template <class T_ReturnContainer, class T_TransformFunc, class T_ContainerA, typename T_ContainerB, typename T_ContainerC>
-    auto ForEachViewTransform(
-        T_ContainerA& InContainerA,
-        T_ContainerB& InContainerB,
-        T_ContainerC& InContainerC,
-        T_TransformFunc InFunc) -> T_ReturnContainer
+    auto
+        ForEachViewTransform(
+            T_ContainerA& InContainerA,
+            T_ContainerB& InContainerB,
+            T_ContainerC& InContainerC,
+            T_TransformFunc InFunc)
+        -> T_ReturnContainer
     {
         auto ToRet = T_ReturnContainer{};
         ForEachViewTransform(InContainerA, InContainerB, InContainerC, ToTransform(ToRet), InFunc);
@@ -400,13 +491,15 @@ namespace ck::algo
     }
 
     template <typename T_TransformFunc,	typename T_ContainerA,	typename T_ContainerB,	typename T_ContainerC,	typename T_ContainerD,	typename T_ReturnContainer>
-    auto ForEachViewTransform(
-        T_ContainerA& InContainerA,
-        T_ContainerB& InContainerB,
-        T_ContainerC& InContainerC,
-        T_ContainerD& InContainerD,
-        TToTransform<T_ReturnContainer> InReturnContainer,
-        T_TransformFunc InFunc) -> void
+    auto
+        ForEachViewTransform(
+            T_ContainerA& InContainerA,
+            T_ContainerB& InContainerB,
+            T_ContainerC& InContainerC,
+            T_ContainerD& InContainerD,
+            TToTransform<T_ReturnContainer> InReturnContainer,
+            T_TransformFunc InFunc)
+        -> void
     {
         CK_ENSURE_IF_NOT(
             InContainerA.Num() == InContainerB.Num() == InContainerC.Num() == InContainerD.Num(),
@@ -420,12 +513,14 @@ namespace ck::algo
     }
 
     template <class T_ReturnContainer, class T_TransformFunc, class T_ContainerA, typename T_ContainerB, typename T_ContainerC, typename T_ContainerD>
-    auto ForEachViewTransform(
-        T_ContainerA& InContainerA,
-        T_ContainerB& InContainerB,
-        T_ContainerC& InContainerC,
-        T_ContainerD& InContainerD,
-        T_TransformFunc InFunc) -> T_ReturnContainer
+    auto
+        ForEachViewTransform(
+            T_ContainerA& InContainerA,
+            T_ContainerB& InContainerB,
+            T_ContainerC& InContainerC,
+            T_ContainerD& InContainerD,
+            T_TransformFunc InFunc)
+        -> T_ReturnContainer
     {
         auto ToRet = T_ReturnContainer{};
         ForEachViewTransform(InContainerA, InContainerB, InContainerC, InContainerD, ToTransform(ToRet), InFunc);
@@ -433,14 +528,16 @@ namespace ck::algo
     }
 
     template <typename T_TransformFunc,	typename T_ContainerA,	typename T_ContainerB,	typename T_ContainerC,	typename T_ContainerD,	typename T_ContainerE,	typename T_ReturnContainer>
-    auto ForEachViewTransform(
-        T_ContainerA& InContainerA,
-        T_ContainerB& InContainerB,
-        T_ContainerC& InContainerC,
-        T_ContainerD& InContainerD,
-        T_ContainerE& InContainerE,
-        TToTransform<T_ReturnContainer> InReturnContainer,
-        T_TransformFunc InFunc) -> void
+    auto
+        ForEachViewTransform(
+            T_ContainerA& InContainerA,
+            T_ContainerB& InContainerB,
+            T_ContainerC& InContainerC,
+            T_ContainerD& InContainerD,
+            T_ContainerE& InContainerE,
+            TToTransform<T_ReturnContainer> InReturnContainer,
+            T_TransformFunc InFunc)
+        -> void
     {
         CK_ENSURE_IF_NOT(
             InContainerA.Num() == InContainerB.Num() == InContainerC.Num() == InContainerD.Num() == InContainerE.Num(),
@@ -455,13 +552,15 @@ namespace ck::algo
     }
 
     template <class T_ReturnContainer, class T_TransformFunc, class T_ContainerA, typename T_ContainerB, typename T_ContainerC, typename T_ContainerD, typename T_ContainerE>
-    auto ForEachViewTransform(
-        T_ContainerA& InContainerA,
-        T_ContainerB& InContainerB,
-        T_ContainerC& InContainerC,
-        T_ContainerD& InContainerD,
-        T_ContainerE& InContainerE,
-        T_TransformFunc InFunc) -> T_ReturnContainer
+    auto
+        ForEachViewTransform(
+            T_ContainerA& InContainerA,
+            T_ContainerB& InContainerB,
+            T_ContainerC& InContainerC,
+            T_ContainerD& InContainerD,
+            T_ContainerE& InContainerE,
+            T_TransformFunc InFunc)
+        -> T_ReturnContainer
     {
         auto ToRet = T_ReturnContainer{};
         ForEachViewTransform(
