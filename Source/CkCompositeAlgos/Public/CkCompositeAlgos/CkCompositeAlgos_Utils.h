@@ -40,6 +40,18 @@ private:
         const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InActor_OutResult InPredicate);
 
+    // Returns true if no actors satisfy the predicate
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Algos",
+              DisplayName = "[Ck] None Actors If",
+              meta=(AutoCreateRefTerm="InOptionalPayload"))
+    static bool
+    NoneActors_If(
+        const TArray<AActor*>& InActors,
+        const FInstancedStruct& InOptionalPayload,
+        FCk_Predicate_InActor_OutResult InPredicate);
+
+private:
     // Returns true if at least one entity satisfies the predicate
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Algos",
@@ -62,6 +74,16 @@ private:
         const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InHandle_OutResult InPredicate);
 
+    // Returns true if no entities satisfy the predicate
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Algos",
+              DisplayName = "[Ck] None Entities If",
+              meta=(AutoCreateRefTerm="InOptionalPayload"))
+    static bool
+    NoneEntities_If(
+        const TArray<FCk_Handle>& InEntities,
+        const FInstancedStruct& InOptionalPayload,
+        FCk_Predicate_InHandle_OutResult InPredicate);
 private:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Algos",
