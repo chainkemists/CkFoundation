@@ -84,6 +84,27 @@ private:
         const TArray<FCk_Handle>& InEntities,
         const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InHandle_OutResult InPredicate);
+
+    // Returns a list of all entities that are present in both lists
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Algos",
+              DisplayName = "[Ck] Intersect Entities",
+              meta = (CompactNodeTitle = "Intersect_Entities"))
+    static TArray<FCk_Handle>
+    IntersectEntities(
+        const TArray<FCk_Handle>& InEntitiesA,
+        const TArray<FCk_Handle>& InEntitiesB);
+
+    // Returns a list of all entities that are NOT present in both lists
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Algos",
+              DisplayName = "[Ck] Except Entities",
+              meta = (CompactNodeTitle = "Except_Entities"))
+    static TArray<FCk_Handle>
+    ExceptEntities(
+        const TArray<FCk_Handle>& InEntitiesA,
+        const TArray<FCk_Handle>& InEntitiesB);
+
 private:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Algos",
