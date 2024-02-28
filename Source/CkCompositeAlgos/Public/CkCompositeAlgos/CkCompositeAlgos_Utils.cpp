@@ -148,6 +148,65 @@ auto
         return *PredicateResult;
     });
 }
+
+auto
+    UCk_Utils_CompositeAlgos_UE::
+    IntersectEntities(
+        const TArray<FCk_Handle>& InEntitiesA,
+        const TArray<FCk_Handle>& InEntitiesB)
+    -> TArray<FCk_Handle>
+{
+    auto Intersection = std::vector<FCk_Handle>{};
+    Intersection.reserve(FMath::Min(InEntitiesA.Num(), InEntitiesB.Num()));
+
+    const auto SortedEntitiesA = ck::algo::Sort(InEntitiesA);
+    const auto SortedEntitiesB = ck::algo::Sort(InEntitiesB);
+
+    std::set_intersection
+    (
+        SortedEntitiesA.begin(),
+        SortedEntitiesA.end(),
+        SortedEntitiesB.begin(),
+        SortedEntitiesB.end(),
+        std::back_inserter(Intersection)
+    );
+
+    auto Result = TArray<FCk_Handle>{};
+    Result.Reserve(Intersection.size());
+    Result.Append(Intersection.data(), Intersection.size());
+
+    return Result;
+}
+
+auto
+    UCk_Utils_CompositeAlgos_UE::
+    ExceptEntities(
+        const TArray<FCk_Handle>& InEntitiesA,
+        const TArray<FCk_Handle>& InEntitiesB)
+    -> TArray<FCk_Handle>
+{
+    auto Difference = std::vector<FCk_Handle>{};
+    Difference.reserve(FMath::Min(InEntitiesA.Num(), InEntitiesB.Num()));
+
+    const auto SortedEntitiesA = ck::algo::Sort(InEntitiesA);
+    const auto SortedEntitiesB = ck::algo::Sort(InEntitiesB);
+
+    std::set_difference
+    (
+        SortedEntitiesA.begin(),
+        SortedEntitiesA.end(),
+        SortedEntitiesB.begin(),
+        SortedEntitiesB.end(),
+        std::back_inserter(Difference)
+    );
+
+    auto Result = TArray<FCk_Handle>{};
+    Result.Reserve(Difference.size());
+    Result.Append(Difference.data(), Difference.size());
+
+    return Result;
+}
+
 auto
     UCk_Utils_CompositeAlgos_UE::
     FilterActors_ByPredicate(
