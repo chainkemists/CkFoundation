@@ -85,6 +85,13 @@ public:
         FCk_Entity& OutEntity);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Invalid Handle",
+              Category = "Ck|Utils|Handle",
+              meta = (CompactNodeTitle = "INVALID_Handle"))
+    static const FCk_Handle&
+    Get_InvalidHandle();
+
+    UFUNCTION(BlueprintPure,
               CustomThunk,
               Displayname = "[Ck] Get Raw Handle",
               Category = "Ck|Utils|Handle",
