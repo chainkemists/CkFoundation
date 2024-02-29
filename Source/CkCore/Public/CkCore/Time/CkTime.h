@@ -34,21 +34,30 @@ public:
     auto operator<(const ThisType& InOther) const -> bool;
     CK_DECL_AND_DEF_OPERATORS(ThisType);
 
-    auto operator+(ThisType InOther) const -> ThisType;
-    auto operator-(ThisType InOther) const -> ThisType;
-    auto operator*(ThisType InOther) const -> ThisType;
-    auto operator/(ThisType InOther) const -> ThisType;
+    auto operator+(const ThisType& InOther) const -> ThisType;
+    auto operator-(const ThisType& InOther) const -> ThisType;
+    auto operator*(const ThisType& InOther) const -> ThisType;
+    auto operator/(const ThisType& InOther) const -> ThisType;
     CK_DECL_AND_DEF_ADD_SUBTRACT_ASSIGNMENT_OPERATORS(ThisType);
 
 public:
     auto Get_Milliseconds() const -> float;
 
 public:
-    static auto ZeroSecond() -> FCk_Time;
-    static auto OneMillisecond() -> FCk_Time;
-    static auto TenMilliseconds() -> FCk_Time;
-    static auto HundredMilliseconds() -> FCk_Time;
-    static auto OneSecond() -> FCk_Time;
+    static auto
+    ZeroSecond() -> const FCk_Time&;
+
+    static auto
+    OneMillisecond() -> const FCk_Time&;
+
+    static auto
+    TenMilliseconds() -> const FCk_Time&;
+
+    static auto
+    HundredMilliseconds() -> const FCk_Time&;
+
+    static auto
+    OneSecond() -> const FCk_Time&;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

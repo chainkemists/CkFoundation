@@ -28,7 +28,7 @@ auto
 auto
     FCk_Time::
     operator+(
-        ThisType InOther) const
+        const ThisType& InOther) const
     -> ThisType
 {
     return ThisType{_Seconds + InOther._Seconds};
@@ -37,7 +37,7 @@ auto
 auto
     FCk_Time::
     operator-(
-        ThisType InOther) const
+        const ThisType& InOther) const
     -> ThisType
 {
     return ThisType{_Seconds - InOther._Seconds};
@@ -46,7 +46,7 @@ auto
 auto
     FCk_Time::
     operator*(
-        ThisType InOther) const
+        const ThisType& InOther) const
     -> ThisType
 {
     return ThisType{_Seconds * InOther._Seconds};
@@ -55,7 +55,7 @@ auto
 auto
     FCk_Time::
     operator/(
-        ThisType InOther) const
+        const ThisType& InOther) const
     -> ThisType
 {
     return ThisType{_Seconds / InOther._Seconds};
@@ -72,7 +72,7 @@ auto
 auto
     FCk_Time::
     ZeroSecond()
-    -> FCk_Time
+    -> const FCk_Time&
 {
     static auto ZeroSecond = FCk_Time{ 0.0f };
     return ZeroSecond;
@@ -81,7 +81,7 @@ auto
 auto
     FCk_Time::
     OneMillisecond()
-    -> FCk_Time
+    -> const FCk_Time&
 {
     static auto OneMillisecond = FCk_Time{ 0.001f };
     return OneMillisecond;
@@ -90,7 +90,7 @@ auto
 auto
     FCk_Time::
     TenMilliseconds()
-    -> FCk_Time
+    -> const FCk_Time&
 {
     static auto TenMilliseconds = FCk_Time{ 0.01f };
     return TenMilliseconds;
@@ -99,7 +99,7 @@ auto
 auto
     FCk_Time::
     HundredMilliseconds()
-    -> FCk_Time
+    -> const FCk_Time&
 {
     static auto HundredMilliseconds = FCk_Time{ 0.1f };
     return HundredMilliseconds;
@@ -108,7 +108,7 @@ auto
 auto
     FCk_Time::
     OneSecond()
-    -> FCk_Time
+    -> const FCk_Time&
 {
     static auto OneSecond = FCk_Time{ 1.0f };
     return OneSecond;
