@@ -23,11 +23,14 @@ auto
         -> void
 {
     InWorld.Add<ck::FProcessor_AbilityOwner_Setup>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_AbilityOwner_HandleRequests>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_AbilityOwner_HandleEvents>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_AbilityOwner_TagsUpdated>(InWorld.Get_Registry());
-    // there may be requests to Deactivate after Tags are updated, pump the HandleRequests again
-    InWorld.Add<ck::FProcessor_AbilityOwner_HandleRequests>(InWorld.Get_Registry());
+
+    auto NumPumps = 5;
+    while (NumPumps --> 0)
+    {
+        InWorld.Add<ck::FProcessor_AbilityOwner_HandleRequests>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_AbilityOwner_HandleEvents>(InWorld.Get_Registry());
+        InWorld.Add<ck::FProcessor_AbilityOwner_TagsUpdated>(InWorld.Get_Registry());
+    }
 
     InWorld.Add<ck::FProcessor_AbilityCue_Spawn>(InWorld.Get_Registry());
 }
