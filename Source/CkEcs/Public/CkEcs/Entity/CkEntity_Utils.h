@@ -51,6 +51,14 @@ public:
     Conv_EntityToString(
         const FCk_Entity& InEntity);
 
+public:
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Tombstone Entity",
+              Category = "Ck|Utils|Entity",
+              meta = (CompactNodeTitle = "TOMBSTONE_Entity"))
+    static const FCk_Entity&
+    Get_TombstoneEntity();
+
 private:
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Break Entity",

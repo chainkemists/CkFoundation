@@ -85,7 +85,7 @@ auto
 auto
     FCk_Entity::
     Tombstone()
-    -> FCk_Entity
+    -> const FCk_Entity&
 {
     static FCk_Entity Tombstone;
     return Tombstone;
