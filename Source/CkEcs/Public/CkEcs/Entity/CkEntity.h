@@ -37,13 +37,18 @@ public:
     CK_DECL_AND_DEF_OPERATORS(ThisType);
 
 public:
-    auto Get_IsTombstone() const -> bool;
+    auto
+    Get_IsTombstone() const -> bool;
 
-    auto Get_EntityNumber() const -> EntityNumberType;
-    auto Get_VersionNumber() const -> VersionNumberType;
+    auto
+    Get_EntityNumber() const -> EntityNumberType;
+
+    auto
+    Get_VersionNumber() const -> VersionNumberType;
 
 public:
-    static auto Tombstone() -> FCk_Entity;
+    static auto
+    Tombstone() -> const FCk_Entity&;
 
 private:
     IdType _ID;
