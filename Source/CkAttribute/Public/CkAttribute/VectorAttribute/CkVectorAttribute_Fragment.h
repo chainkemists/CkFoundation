@@ -201,22 +201,21 @@ public:
     friend class ck::FProcessor_VectorAttribute_Replicate;
 
 public:
-    UFUNCTION(Server, Reliable)
-    void
+    auto
     Broadcast_AddModifier(
-        FGameplayTag InModifierName,
-        const FCk_Fragment_VectorAttributeModifier_ParamsData& InParams);
+        FGameplayTag                                           InModifierName,
+        const FCk_Fragment_VectorAttributeModifier_ParamsData& InParams) -> void;
 
-    UFUNCTION(Server, Reliable)
-    void
+    auto
     Broadcast_RemoveModifier(
         FGameplayTag InModifierName,
-        FGameplayTag InAttributeName);
+        FGameplayTag InAttributeName) -> void;
 
     // TODO: 'permanent' modifiers
 
 private:
-    auto PostLink() -> void override;;
+    auto
+    PostLink() -> void override;;
 
 private:
     auto

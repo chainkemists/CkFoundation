@@ -4,24 +4,28 @@
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
 
 #include "Net/UnrealNetwork.h"
+#include "Net/Core/PushModel/PushModel.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 auto
     UCk_Fragment_FloatAttribute_Rep::
-    Broadcast_AddModifier_Implementation(
+    Broadcast_AddModifier(
         const FGameplayTag                                    InModifierName,
         const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams)
     -> void
 {
+    MARK_PROPERTY_DIRTY_FROM_NAME(UCk_Fragment_FloatAttribute_Rep, _PendingAddModifiers, this);
     _PendingAddModifiers.Emplace(FCk_Fragment_FloatAttribute_PendingModifier{InModifierName, InParams});
 }
 
-void
+auto
     UCk_Fragment_FloatAttribute_Rep::
-    Broadcast_RemoveModifier_Implementation(
+    Broadcast_RemoveModifier(
         FGameplayTag InModifierName,
         FGameplayTag InAttributeName)
+    -> void
 {
+    MARK_PROPERTY_DIRTY_FROM_NAME(UCk_Fragment_FloatAttribute_Rep, _PendingRemoveModifiers, this);
     _PendingRemoveModifiers.Emplace(FCk_Fragment_FloatAttribute_RemovePendingModifier{InAttributeName, InModifierName});
 }
 
@@ -45,8 +49,10 @@ auto
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    DOREPLIFETIME(ThisType, _PendingAddModifiers);
-    DOREPLIFETIME(ThisType, _PendingRemoveModifiers);
+    constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
+
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingAddModifiers, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingRemoveModifiers, Params);
 }
 
 auto
