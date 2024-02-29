@@ -42,6 +42,14 @@ auto
 
 auto
     UCk_Utils_Entity_UE::
+    Get_TombstoneEntity()
+    -> const FCk_Entity&
+{
+    return FCk_Entity::Tombstone();
+}
+
+auto
+    UCk_Utils_Entity_UE::
     Break_Entity(
         const FCk_Entity& InEntity,
         int32& OutEntityID,
