@@ -91,6 +91,15 @@ auto
 
 auto
     UCk_Utils_Handle_UE::
+    Get_InvalidHandle()
+    -> const FCk_Handle&
+{
+    static FCk_Handle Invalid;
+    return Invalid;
+}
+
+auto
+    UCk_Utils_Handle_UE::
     Get_RawHandle(
         UStruct*)
         -> FCk_Handle
