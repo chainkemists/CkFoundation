@@ -95,7 +95,12 @@ private:
         const TArray<FCk_Handle>& InEntitiesA,
         const TArray<FCk_Handle>& InEntitiesB);
 
-    // Returns a list of all entities that are NOT present in both lists
+    /**
+    * Returns a a list of all entities from ListA that are NOT present in ListB
+    *
+    * @param InEntitiesA Whose elements that are not also in second will be returned.
+    * @param InEntitiesB Whose elements that also occur in the first sequence will cause those elements to be removed from the returned sequence
+    **/
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Algos",
               DisplayName = "[Ck] Except Entities",
