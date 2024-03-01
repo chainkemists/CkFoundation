@@ -2,6 +2,8 @@
 
 #include "CkCore/Actor/CkActor_Utils.h"
 
+#include "Components/BillboardComponent.h"
+
 #include <Engine/World.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -24,24 +26,12 @@ auto
 {
     Super::OnConstruction(Transform);
 
-    if (ck::IsValid(_SpawnedActor))
-    {
-        _SpawnedActor->SetActorTransform(this->GetActorTransform());
-    }
-    else
-    {
-        if (ck::Is_NOT_Valid(_ActorToSpawn))
-        { return; }
+#if WITH_EDITORONLY_DATA
+    if (ck::IsValid(_Icon))
+    { GetSpriteComponent()->Sprite = _Icon; }
+#endif
 
-        if (NOT GetWorld()->IsEditorWorld())
-        { return; }
-
-        auto Params = FActorSpawnParameters{};
-        Params.bHideFromSceneOutliner = true;
-        Params.ObjectFlags = RF_Transient;
-
-        _SpawnedActor = GetWorld()->SpawnActor(_ActorToSpawn, &GetActorTransform(), Params);
-    }
+    DoSpawnActor();
 }
 
 auto

@@ -45,7 +45,7 @@ private:
     auto
     DoSpawnActor() -> void;
 
-public:
+private:
     UPROPERTY(EditInstanceOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     TSubclassOf<AActor> _ActorToSpawn;
 
@@ -53,6 +53,12 @@ public:
     bool _ActorToSpawnIsReplicated = false;
 
     TWeakObjectPtr<AActor> _SpawnedActor;
+
+private:
+#if WITH_EDITORONLY_DATA
+    UPROPERTY(EditDefaultsOnly, meta = (AllowPrivateAccess = true))
+    TObjectPtr<UTexture2D> _Icon;
+#endif
 };
 
 // --------------------------------------------------------------------------------------------------------------------
