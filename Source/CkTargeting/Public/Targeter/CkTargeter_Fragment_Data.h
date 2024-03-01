@@ -41,7 +41,7 @@ public:
     CK_GENERATED_BODY(UCk_Targeter_CustomTargetFilter_PDA);
 
 public:
-    UFUNCTION(BlueprintCallable, BlueprintImplementableEvent,
+    UFUNCTION(BlueprintCallable, BlueprintnativeEvent,
               BlueprintPure = false,
               Category = "UCk_Targeter_CustomTargetFilter_PDA")
     TArray<FCk_Handle_Targetable>
@@ -49,7 +49,7 @@ public:
         const FCk_Handle_Targeter& InTargeter,
         const TArray<FCk_Handle_Targetable>& InUnfilteredTargets) const;
 
-    UFUNCTION(BlueprintCallable, BlueprintImplementableEvent,
+    UFUNCTION(BlueprintCallable, BlueprintnativeEvent,
               BlueprintPure = false,
               Category = "UCk_Targeter_CustomTargetFilter_PDA")
     TArray<FCk_Handle_Targetable>
