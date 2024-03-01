@@ -367,6 +367,16 @@
 			]
 		},
 		{
+			"Name": "CkTargeting",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
 			"Name": "CkTemplate",
 			"Type": "Runtime",
 			"LoadingPhase": "PreDefault",

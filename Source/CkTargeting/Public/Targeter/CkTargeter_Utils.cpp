@@ -1,0 +1,202 @@
+#include "CkTargeter_Utils.h"
+
+#include "CkSignal/CkSignal_Macros.h"
+#include "Targetable/CkTargetable_Fragment.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Targeter_UE::
+    Add(
+        FCk_Handle& InHandle,
+        const FCk_Fragment_Targeter_ParamsData& InParams)
+    -> FCk_Handle_Targeter
+{
+     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
+     {
+        UCk_Utils_GameplayLabel_UE::Add(InNewEntity, InParams.Get_Name());
+
+        InNewEntity.Add<ck::FFragment_Targeter_Params>(InParams);
+        InNewEntity.Add<ck::FFragment_Targeter_Current>();
+    });
+
+    auto NewTargeterEntity = Cast(NewEntity);
+
+    RecordOfTargeters_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
+    RecordOfTargeters_Utils::Request_Connect(InHandle, NewTargeterEntity);
+
+    return NewTargeterEntity;
+}
+
+auto
+    UCk_Utils_Targeter_UE::
+    AddMultiple(
+        FCk_Handle& InHandle,
+        const FCk_Fragment_MultipleTargeter_ParamsData& InParams)
+    -> TArray<FCk_Handle_Targeter>
+{
+    return ck::algo::Transform<TArray<FCk_Handle_Targeter>>(InParams.Get_TargeterParams(),
+    [&](const FCk_Fragment_Targeter_ParamsData& InTargeterParams)
+    {
+        return Add(InHandle, InTargeterParams);
+    });
+}
+
+auto
+    UCk_Utils_Targeter_UE::
+    Has_Any(
+        const FCk_Handle& InAttributeOwnerEntity)
+    -> bool
+{
+    return RecordOfTargeters_Utils::Has(InAttributeOwnerEntity);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Targeter, UCk_Utils_Targeter_UE, FCk_Handle_Targeter, ck::FFragment_Targeter_Current, ck::FFragment_Targeter_Params);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Targeter_UE::
+    TryGet_Targeter(
+        const FCk_Handle& InTargeterOwnerEntity,
+        FGameplayTag InTargeterName)
+    -> FCk_Handle_Targeter
+{
+    if (NOT RecordOfTargeters_Utils::Has(InTargeterOwnerEntity))
+    { return {}; }
+
+    return RecordOfTargeters_Utils::Get_ValidEntry_If(InTargeterOwnerEntity, ck::algo::MatchesGameplayLabelExact{InTargeterName});
+}
+
+auto
+    UCk_Utils_Targeter_UE::
+    Get_CanTarget(
+        const FCk_Handle_Targeter& InTargeter,
+        const FCk_Handle_Targetable& InTarget)
+    -> bool
+{
+    const auto& TargetingQuery    = InTargeter.Get<ck::FFragment_Targeter_Params>().Get_Params().Get_TargetingQuery();
+    const auto& TargetabilityTags = InTarget.Get<ck::FFragment_Targetable_Params>().Get_Params().Get_TargetabilityTags();
+    const auto& QueryResult       = TargetingQuery.Matches(TargetabilityTags);
+
+    return QueryResult;
+}
+
+auto
+    UCk_Utils_Targeter_UE::
+    Get_TargetingStatus(
+        const FCk_Handle_Targeter& InTargeter)
+    -> ECk_Targeter_TargetingStatus
+{
+    return InTargeter.Get<ck::FFragment_Targeter_Current>().Get_TargetingStatus();
+}
+
+auto
+    UCk_Utils_Targeter_UE::
+    ForEach_Targeter(
+        FCk_Handle& InTargeterOwnerEntity,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate)
+    -> TArray<FCk_Handle_Targeter>
+{
+    auto Targeters = TArray<FCk_Handle_Targeter>{};
+
+    ForEach_Targeter(InTargeterOwnerEntity, [&](FCk_Handle_Targeter InTargeter)
+    {
+        Targeters.Emplace(InTargeter);
+
+        std::ignore = InDelegate.ExecuteIfBound(InTargeter, InOptionalPayload);
+    });
+
+    return Targeters;
+}
+
+auto
+    UCk_Utils_Targeter_UE::
+    ForEach_Targeter(
+        FCk_Handle& InTargeterOwnerEntity,
+        const TFunction<void(FCk_Handle_Targeter)>& InFunc)
+    -> void
+{
+    RecordOfTargeters_Utils::ForEach_ValidEntry
+    (
+        InTargeterOwnerEntity,
+        InFunc,
+        ECk_Record_ForEach_Policy::IgnoreRecordMissing
+    );
+}
+
+auto
+    UCk_Utils_Targeter_UE::
+    Request_Start(
+        FCk_Handle_Targeter& InTargeter)
+    -> FCk_Handle_Targeter
+{
+    InTargeter.AddOrGet<ck::FTag_Targeter_NeedsUpdate>();
+    InTargeter.Get<ck::FFragment_Targeter_Current>()._TargetingStatus = ECk_Targeter_TargetingStatus::Targeting;
+
+    return InTargeter;
+}
+
+auto
+    UCk_Utils_Targeter_UE::
+    Request_Stop(
+        FCk_Handle_Targeter& InTargeter)
+    -> FCk_Handle_Targeter
+{
+    InTargeter.Try_Remove<ck::FTag_Targeter_NeedsUpdate>();
+    InTargeter.Get<ck::FFragment_Targeter_Current>()._TargetingStatus = ECk_Targeter_TargetingStatus::NotTargeting;
+    return InTargeter;
+}
+
+auto
+    UCk_Utils_Targeter_UE::
+    Request_QueryTargets(
+        FCk_Handle_Targeter& InTargeter,
+        const FCk_Request_Targeter_QueryTargets& InRequest,
+        const FCk_Delegate_Targeter_OnTargetsQueried& InDelegate)
+    -> FCk_Handle_Targeter
+{
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_Targeter_OnTargetsQueried, InTargeter, InDelegate);
+
+    InTargeter.AddOrGet<ck::FFragment_Targeter_Requests>()._Requests.Emplace(InRequest);
+
+    return InTargeter;
+}
+
+auto
+    UCk_Utils_Targeter_UE::
+    BindTo_OnTargetsQueried(
+        FCk_Handle_Targeter& InTargeterHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_Targeter_OnTargetsQueried& InDelegate)
+    -> FCk_Handle_Targeter
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_Targeter_OnTargetsQueried, InTargeterHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InTargeterHandle;
+}
+
+auto
+    UCk_Utils_Targeter_UE::
+    UnbindFrom_OnTargetsQueried(
+        FCk_Handle_Targeter& InTargeterHandle,
+        const FCk_Delegate_Targeter_OnTargetsQueried& InDelegate)
+    -> FCk_Handle_Targeter
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_Targeter_OnTargetsQueried, InTargeterHandle, InDelegate);
+    return InTargeterHandle;
+}
+
+auto
+    UCk_Utils_Targeter_UE::
+    Request_Cleanup(
+        FCk_Handle_Targeter& InTargeter)
+    -> void
+{
+    InTargeter.AddOrGet<ck::FTag_Targeter_NeedsCleanup>();
+}
+
+// --------------------------------------------------------------------------------------------------------------------

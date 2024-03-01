@@ -1,0 +1,109 @@
+#include "CkTargetable_Processor.h"
+
+#include "CkActor/ActorModifier/CkActorModifier_Fragment_Data.h"
+#include "CkActor/ActorModifier/CkActorModifier_Utils.h"
+#include "CkCore/Algorithms/CkAlgorithms.h"
+
+#include "CkTargeting/CkTargeting_Log.h"
+
+#include "CkNet/CkNet_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    auto
+        FProcessor_Targetable_Setup::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        TProcessor::Tick(InDeltaT);
+
+        _TransientEntity.Clear<MarkedDirtyBy>();
+    }
+
+    auto
+        FProcessor_Targetable_Setup::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            const FFragment_Targetable_Params& InParams,
+            FFragment_Targetable_Current& InCurrent) const
+        -> void
+    {
+        const auto& LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+
+        CK_ENSURE_IF_NOT(UCk_Utils_OwningActor_UE::Has(LifetimeOwner),
+            TEXT("Targetable [{}] was added to Entity [{}] which does NOT have an Owning Actor"),
+            InHandle,
+            LifetimeOwner)
+        { return; }
+
+        const auto& LifetimeOwnerActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(LifetimeOwner);
+
+        CK_ENSURE_IF_NOT(ck::IsValid(LifetimeOwnerActor),
+            TEXT("Targetable [{}] was added to Entity [{}] which has an INVALID Owning Actor"),
+            InHandle,
+            LifetimeOwner)
+        { return; }
+
+        const auto& DisplayParams = InParams.Get_Params().Get_DisplayParams();
+        const auto& CameraParams  = DisplayParams.Get_CameraParams();
+        const auto& LookAtOffset  = CameraParams.Get_LookAtOffset();
+        const auto& BoneName      = CameraParams.Get_BoneName();
+
+        const auto& ParentSceneComp = [&]() -> USceneComponent*
+        {
+            if (ck::Is_NOT_Valid(BoneName))
+            { return LifetimeOwnerActor->GetRootComponent(); }
+
+            auto* SkeletalMeshComponent = LifetimeOwnerActor->FindComponentByClass<USkeletalMeshComponent>();
+
+            CK_ENSURE_IF_NOT(ck::IsValid(SkeletalMeshComponent),
+                TEXT("Targetable [{}] was added to Entity [{}] that does NOT have a SkeletalMesh Component"),
+                InHandle,
+                LifetimeOwner)
+            { return LifetimeOwnerActor->GetRootComponent(); }
+
+            CK_ENSURE_IF_NOT(UCk_Utils_Actor_UE::Get_DoesBoneExistInSkeletalMesh(LifetimeOwnerActor, BoneName),
+                TEXT("Targetable [{}] was added to Entity [{}] that does NOT have the Bone [{}] in its SkeletalMesh"),
+                InHandle,
+                LifetimeOwner,
+                BoneName)
+            { return LifetimeOwnerActor->GetRootComponent(); }
+
+            return SkeletalMeshComponent;
+        }();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(ParentSceneComp),
+            TEXT("Invalid ParentScene Component. Cannot attach Targetable [{}] on Entity [{}]"),
+            InHandle,
+            LifetimeOwner)
+        { return; }
+
+        const auto& Targetable_ActorCompParams = FCk_AddActorComponent_Params{ParentSceneComp}
+                                                        .Set_AttachmentSocket(BoneName)
+                                                        .Set_AttachmentType(ECk_ActorComponent_AttachmentPolicy::Attach);
+
+        UCk_Utils_ActorModifier_UE::Request_AddActorComponent
+        (
+            LifetimeOwner,
+            FCk_Request_ActorModifier_AddActorComponent{USceneComponent::StaticClass()}
+                .Set_ComponentParams(Targetable_ActorCompParams)
+                .Set_IsUnique(false)
+                .Set_InitializerFunc(
+                [=](UActorComponent* InActorComp) mutable
+                {
+                    auto* SceneComp = Cast<USceneComponent>(InActorComp);
+                    SceneComp->AddLocalOffset(LookAtOffset);
+
+                    InHandle.Get<FFragment_Targetable_Current>()._CameraLookAtComponent = SceneComp;
+                }),
+            {},
+            {}
+        );
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
