@@ -17,7 +17,6 @@ ACk_ActorProxy_UE::
     bAlwaysRelevant = false;
 }
 
-#if WITH_EDITOR
 auto
     ACk_ActorProxy_UE::
     OnConstruction(
@@ -56,6 +55,7 @@ auto
     { _SpawnedActor->Destroy(); }
 }
 
+#if WITH_EDITOR
 auto
     ACk_ActorProxy_UE::
     PostEditChangeProperty(
@@ -107,7 +107,9 @@ auto
         { return; }
 
         auto Params = FActorSpawnParameters{};
+#if WITH_EDITOR
         Params.bHideFromSceneOutliner = true;
+#endif
         Params.ObjectFlags = RF_Transient;
 
         _SpawnedActor = GetWorld()->SpawnActor(_ActorToSpawn, &GetActorTransform(), Params);
