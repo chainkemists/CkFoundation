@@ -29,7 +29,7 @@ private:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Targetable",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][Targetable] Add New Targetable")
     static FCk_Handle_Targetable
     Add(
