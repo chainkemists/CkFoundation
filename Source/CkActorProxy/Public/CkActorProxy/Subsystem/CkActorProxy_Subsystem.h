@@ -6,12 +6,14 @@
 
 #include "CkEntityBridge/CkEntityBridge_Fragment_Data.h"
 
+#include <GameFramework/Info.h>
+
 #include "CkActorProxy_Subsystem.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, Blueprintable, BlueprintType)
-class CKACTORPROXY_API ACk_ActorProxy_UE : public AActor
+class CKACTORPROXY_API ACk_ActorProxy_UE : public AInfo
 {
     GENERATED_BODY()
 
@@ -21,58 +23,36 @@ public:
 public:
     ACk_ActorProxy_UE();
 
-protected:
-    UFUNCTION(BlueprintImplementableEvent)
-    FCk_Handle
-    Get_TransientHandle() const;
+public:
+    auto
+    OnConstruction(
+        const FTransform& Transform) -> void override;
 
-    UFUNCTION(BlueprintImplementableEvent)
-    void
-    OnEntityCreated(const FCk_Handle& InCreatedEntity) const;
+    auto
+    BeginDestroy() -> void override;
 
 protected:
 #if WITH_EDITOR
-    virtual auto PostEditChangeProperty(FPropertyChangedEvent& InPropertyChangedEvent) -> void override;
+    auto
+    PostEditChangeProperty(FPropertyChangedEvent& InPropertyChangedEvent) -> void override;
 #endif
 
 public:
-    virtual auto BeginPlay() -> void override;
+    auto
+    BeginPlay() -> void override;
 
-public:
-    auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
+private:
+    auto
+    DoSpawnActor() -> void;
 
 public:
     UPROPERTY(EditInstanceOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     TSubclassOf<AActor> _ActorToSpawn;
 
-    UPROPERTY(Transient, BlueprintReadOnly, meta = (AllowPrivateAccess = true), Replicated)
-    TObjectPtr<AActor> _SpawnedActor;
+    UPROPERTY()
+    bool _ActorToSpawnIsReplicated = false;
 
-#if WITH_EDITORONLY_DATA
-    UPROPERTY(Transient)
-    TObjectPtr<UChildActorComponent> _ChildActorComponent;
-#endif
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS()
-class CKACTORPROXY_API UCk_ActorProxy_Subsystem_UE : public UWorldSubsystem
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_ActorProxy_Subsystem_UE);
-
-    void PostInitialize() override;
-    void Initialize(
-        FSubsystemCollectionBase& Collection) override;
-
-    /** Called when world is ready to start gameplay before the game mode transitions to the correct state and call BeginPlay on all actors */
-    auto OnWorldBeginPlay(UWorld& InWorld) -> void override;
-
-private:
-    auto DoDestroyAllActorProxyChildActors() const -> void;
+    TWeakObjectPtr<AActor> _SpawnedActor;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
