@@ -116,6 +116,12 @@ auto
 
         _SpawnedActor = GetWorld()->SpawnActor(_ActorToSpawn, &GetActorTransform(), Params);
         _ActorToSpawnIsReplicated = _SpawnedActor->GetIsReplicated();
+
+#if WITH_EDITOR
+        // the following disables the Actor from being deleted OR from being moved directly (the ActorProxy can still move the Actor)
+        SaveToTransactionBuffer(_SpawnedActor.Get(), false);
+        _SpawnedActor->SetLockLocation(true);
+#endif
     }
 }
 
