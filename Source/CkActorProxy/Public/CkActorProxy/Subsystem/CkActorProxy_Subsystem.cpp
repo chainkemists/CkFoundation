@@ -111,7 +111,6 @@ auto
         { return; }
 
         auto Params = FActorSpawnParameters{};
-        Params.Owner = this;
         Params.bHideFromSceneOutliner = true;
         Params.ObjectFlags = RF_Transient;
 
