@@ -64,19 +64,8 @@ auto
 {
     Super::PostEditChangeProperty(InPropertyChangedEvent);
 
-    if (ck::Is_NOT_Valid(InPropertyChangedEvent.Property))
-    {
-        // TODO: does this need to be logged?
-        return;
-    }
-
     if (InPropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(ACk_ActorProxy_UE, _ActorToSpawn))
-    {
-        if (ck::IsValid(_SpawnedActor))
-        { _SpawnedActor->Destroy(); }
-
-        DoSpawnActor();
-    }
+    { DoSpawnActor(); }
 }
 #endif
 
@@ -100,6 +89,13 @@ auto
 {
     if (ck::IsValid(_SpawnedActor))
     {
+        if (_ActorToSpawn != _SpawnedActor->GetClass())
+        {
+            _SpawnedActor->Destroy();
+            DoSpawnActor();
+            return;
+        }
+
         _SpawnedActor->SetActorTransform(this->GetActorTransform());
     }
     else
