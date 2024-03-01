@@ -1,0 +1,106 @@
+#include "CkTargetable_Utils.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Targetable_UE::
+    Add(
+        FCk_Handle& InHandle,
+        const FCk_Fragment_Targetable_ParamsData& InParams)
+    -> FCk_Handle_Targetable
+{
+     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
+     {
+        UCk_Utils_GameplayLabel_UE::Add(InNewEntity, InParams.Get_Name());
+
+        InNewEntity.Add<ck::FFragment_Targetable_Params>(InParams);
+        InNewEntity.Add<ck::FFragment_Targetable_Current>();
+        InNewEntity.Add<ck::FTag_Targetable_NeedsSetup>();
+    });
+
+    auto NewTargetableEntity = Cast(NewEntity);
+
+    RecordOfTargetables_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
+    RecordOfTargetables_Utils::Request_Connect(InHandle, NewTargetableEntity);
+
+    return NewTargetableEntity;
+}
+
+auto
+    UCk_Utils_Targetable_UE::
+    AddMultiple(
+        FCk_Handle& InHandle,
+        const FCk_Fragment_MultipleTargetable_ParamsData& InParams)
+    -> TArray<FCk_Handle_Targetable>
+{
+    return ck::algo::Transform<TArray<FCk_Handle_Targetable>>(InParams.Get_TargetableParams(),
+    [&](const FCk_Fragment_Targetable_ParamsData& InTargetableParams)
+    {
+        return Add(InHandle, InTargetableParams);
+    });
+}
+
+auto
+    UCk_Utils_Targetable_UE::
+    Has_Any(
+        const FCk_Handle& InAttributeOwnerEntity)
+    -> bool
+{
+    return RecordOfTargetables_Utils::Has(InAttributeOwnerEntity);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Targetable, UCk_Utils_Targetable_UE, FCk_Handle_Targetable, ck::FFragment_Targetable_Current, ck::FFragment_Targetable_Params);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Targetable_UE::
+    TryGet_Targetable(
+        const FCk_Handle& InTargetableOwnerEntity,
+        FGameplayTag InTargetableName)
+    -> FCk_Handle_Targetable
+{
+    if (NOT RecordOfTargetables_Utils::Has(InTargetableOwnerEntity))
+    { return {}; }
+
+    return RecordOfTargetables_Utils::Get_ValidEntry_If(InTargetableOwnerEntity, ck::algo::MatchesGameplayLabelExact{InTargetableName});
+}
+
+auto
+    UCk_Utils_Targetable_UE::
+    ForEach_Targetable(
+        FCk_Handle& InTargetableOwnerEntity,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate)
+    -> TArray<FCk_Handle_Targetable>
+{
+    auto Targetables = TArray<FCk_Handle_Targetable>{};
+
+    ForEach_Targetable(InTargetableOwnerEntity, [&](FCk_Handle_Targetable InTargetable)
+    {
+        Targetables.Emplace(InTargetable);
+
+        std::ignore = InDelegate.ExecuteIfBound(InTargetable, InOptionalPayload);
+    });
+
+    return Targetables;
+}
+
+auto
+    UCk_Utils_Targetable_UE::
+    ForEach_Targetable(
+        FCk_Handle& InTargetableOwnerEntity,
+        const TFunction<void(FCk_Handle_Targetable)>& InFunc)
+    -> void
+{
+    RecordOfTargetables_Utils::ForEach_ValidEntry
+    (
+        InTargetableOwnerEntity,
+        InFunc,
+        ECk_Record_ForEach_Policy::IgnoreRecordMissing
+    );
+}
+
+// --------------------------------------------------------------------------------------------------------------------
