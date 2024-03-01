@@ -31,6 +31,9 @@ public:
     auto
     BeginDestroy() -> void override;
 
+    auto
+    Destroyed() -> void override;
+
 protected:
 #if WITH_EDITOR
     auto

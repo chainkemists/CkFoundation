@@ -47,6 +47,17 @@ auto
 
 auto
     ACk_ActorProxy_UE::
+    Destroyed()
+    -> void
+{
+    Super::Destroyed();
+
+    if (ck::IsValid(_SpawnedActor))
+    { _SpawnedActor->Destroy(); }
+}
+
+auto
+    ACk_ActorProxy_UE::
     PostEditChangeProperty(
         FPropertyChangedEvent& InPropertyChangedEvent)
     -> void
