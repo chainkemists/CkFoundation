@@ -58,7 +58,7 @@ public:
     CK_GENERATED_BODY(UCk_Ecs_ProcessorInjectors_PDA);
 
 private:
-    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess, TitleProperty = "_Description"))
     TArray<FCk_Ecs_ProcessorInjectors_Info> _ProcessorInjectors;
 
 public:
