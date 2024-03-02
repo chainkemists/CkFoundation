@@ -90,9 +90,11 @@ namespace ck
             const FCk_Request_Targeter_QueryTargets& InRequest) const
         -> void
     {
+        const auto TargeterBasicInfo = FCk_Targeter_BasicInfo{InHandle, UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle)};
+
         if (InCurrent.Get_CachedTargets().IsSet())
         {
-            UUtils_Signal_Targeter_OnTargetsQueried::Broadcast(InHandle, MakePayload(InHandle, *InCurrent.Get_CachedTargets()));
+            UUtils_Signal_Targeter_OnTargetsQueried::Broadcast(InHandle, MakePayload(TargeterBasicInfo, *InCurrent.Get_CachedTargets()));
             return;
         }
 
@@ -103,7 +105,7 @@ namespace ck
             InHandle)
         { return; }
 
-        TArray<FCk_Handle_Targetable> ValidTargets;
+        auto ValidTargets = TArray<FCk_Targetable_BasicInfo>{};
 
         InHandle.View<FFragment_Targetable_Params, FFragment_Targetable_Current, CK_IGNORE_PENDING_KILL>()
         .ForEach([&](FCk_Entity InEntity, const FFragment_Targetable_Params&, const FFragment_Targetable_Current&)
@@ -114,17 +116,18 @@ namespace ck
             if (NOT UCk_Utils_Targeter_UE::Get_CanTarget(InHandle, Targetable))
             { return; }
 
-            ValidTargets.Add(Targetable);
+            ValidTargets.Add(FCk_Targetable_BasicInfo{Targetable, UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Targetable)});
         });
 
-        const auto& FilteredTargets = CustomTargetFilter->FilterTargets(InHandle, ValidTargets);
-        const auto& SortedTargets   = CustomTargetFilter->SortTargets(InHandle, FilteredTargets);
+        const auto ValidTargetList  = FCk_Targeter_TargetList{ValidTargets};
+        const auto& FilteredTargets = CustomTargetFilter->FilterTargets(TargeterBasicInfo, ValidTargetList);
+        const auto& SortedTargets   = CustomTargetFilter->SortTargets(TargeterBasicInfo, FilteredTargets);
 
         InCurrent._CachedTargets = SortedTargets;
 
         UCk_Utils_Targeter_UE::Request_Cleanup(InHandle);
 
-        UUtils_Signal_Targeter_OnTargetsQueried::Broadcast(InHandle, MakePayload(InHandle, SortedTargets));
+        UUtils_Signal_Targeter_OnTargetsQueried::Broadcast(InHandle, MakePayload(TargeterBasicInfo, *InCurrent._CachedTargets));
     }
 }
 

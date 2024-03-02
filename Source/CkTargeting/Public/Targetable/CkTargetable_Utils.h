@@ -78,11 +78,60 @@ private:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Targetable",
+              DisplayName = "[Ck][Targetable] Get Is Valid (BasicInfo)",
+              meta = (CompactNodeTitle = "IsValid"))
+    static bool
+    IsValid(
+        const FCk_Targetable_BasicInfo& InTargetableInfo);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Targetable",
+              DisplayName = "[Ck][Targetable] BasicInfo == BasicInfo",
+              meta = (CompactNodeTitle = "==", KeyWords = "==,equal"))
+    static bool
+    IsEqual(
+        const FCk_Targetable_BasicInfo& InTargetableInfoA,
+        const FCk_Targetable_BasicInfo& InTargetableInfoB);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Targetable",
+              DisplayName = "[Ck][Targetable] BasicInfo != BasicInfo",
+              meta = (CompactNodeTitle = "!=", KeyWords = "!=,not,equal"))
+    static bool
+    IsNotEqual(
+        const FCk_Targetable_BasicInfo& InTargetableInfoA,
+        const FCk_Targetable_BasicInfo& InTargetableInfoB);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Targetable",
               DisplayName="[Ck][Targetable] Try Get Targetable")
     static FCk_Handle_Targetable
     TryGet_Targetable(
         const FCk_Handle& InTargetableOwnerEntity,
         FGameplayTag InTargetableName);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Targetable",
+              DisplayName="[Ck][Targetable] Get Targetability Tags")
+    static FGameplayTagContainer
+    Get_TargetabilityTags(
+        const FCk_Handle_Targetable& InTargetable);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Targetable",
+              DisplayName="[Ck][Targetable] Get Attachment Params")
+    static FCk_Targetable_AttachmentParams
+    Get_AttachmentParams(
+        const FCk_Handle_Targetable& InTargetable);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Targetable",
+              DisplayName="[Ck][Targetable] Get Attachment Node")
+    static USceneComponent*
+    Get_AttachmentNode(
+        const FCk_Handle_Targetable& InTargetable);
 
 public:
     UFUNCTION(BlueprintCallable,

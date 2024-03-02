@@ -48,10 +48,9 @@ namespace ck
             LifetimeOwner)
         { return; }
 
-        const auto& DisplayParams = InParams.Get_Params().Get_DisplayParams();
-        const auto& CameraParams  = DisplayParams.Get_CameraParams();
-        const auto& LookAtOffset  = CameraParams.Get_LookAtOffset();
-        const auto& BoneName      = CameraParams.Get_BoneName();
+        const auto& AttachmentParams = InParams.Get_Params().Get_AttachmentParams();
+        const auto& LocalOffset      = AttachmentParams.Get_LocalOffset();
+        const auto& BoneName         = AttachmentParams.Get_BoneName();
 
         const auto& ParentSceneComp = [&]() -> USceneComponent*
         {
@@ -96,9 +95,9 @@ namespace ck
                 [=](UActorComponent* InActorComp) mutable
                 {
                     auto* SceneComp = Cast<USceneComponent>(InActorComp);
-                    SceneComp->AddLocalOffset(LookAtOffset);
+                    SceneComp->AddLocalOffset(LocalOffset);
 
-                    InHandle.Get<FFragment_Targetable_Current>()._CameraLookAtComponent = SceneComp;
+                    InHandle.Get<FFragment_Targetable_Current>()._AttachmentNode = SceneComp;
                 }),
             {},
             {}
