@@ -57,6 +57,35 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Targetable, UCk_Utils_Targetable_UE, FCk
 
 auto
     UCk_Utils_Targetable_UE::
+    IsValid(
+        const FCk_Targetable_BasicInfo& InTargetableInfo)
+    -> bool
+{
+    return ck::IsValid(InTargetableInfo);
+}
+
+auto
+    UCk_Utils_Targetable_UE::
+    IsEqual(
+        const FCk_Targetable_BasicInfo& InTargetableInfoA,
+        const FCk_Targetable_BasicInfo& InTargetableInfoB)
+    -> bool
+{
+    return InTargetableInfoA == InTargetableInfoB;
+}
+
+auto
+    UCk_Utils_Targetable_UE::
+    IsNotEqual(
+        const FCk_Targetable_BasicInfo& InTargetableInfoA,
+        const FCk_Targetable_BasicInfo& InTargetableInfoB)
+    -> bool
+{
+    return InTargetableInfoA != InTargetableInfoB;
+}
+
+auto
+    UCk_Utils_Targetable_UE::
     TryGet_Targetable(
         const FCk_Handle& InTargetableOwnerEntity,
         FGameplayTag InTargetableName)
@@ -66,6 +95,33 @@ auto
     { return {}; }
 
     return RecordOfTargetables_Utils::Get_ValidEntry_If(InTargetableOwnerEntity, ck::algo::MatchesGameplayLabelExact{InTargetableName});
+}
+
+auto
+    UCk_Utils_Targetable_UE::
+    Get_TargetabilityTags(
+        const FCk_Handle_Targetable& InTargetable)
+    -> FGameplayTagContainer
+{
+    return InTargetable.Get<ck::FFragment_Targetable_Params>().Get_Params().Get_TargetabilityTags();
+}
+
+auto
+    UCk_Utils_Targetable_UE::
+    Get_AttachmentParams(
+        const FCk_Handle_Targetable& InTargetable)
+    -> FCk_Targetable_AttachmentParams
+{
+    return InTargetable.Get<ck::FFragment_Targetable_Params>().Get_Params().Get_AttachmentParams();
+}
+
+auto
+    UCk_Utils_Targetable_UE::
+    Get_AttachmentNode(
+        const FCk_Handle_Targetable& InTargetable)
+    -> USceneComponent*
+{
+    return InTargetable.Get<ck::FFragment_Targetable_Current>().Get_AttachmentNode().Get();
 }
 
 auto

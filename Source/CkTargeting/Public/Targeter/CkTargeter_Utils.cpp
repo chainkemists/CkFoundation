@@ -59,6 +59,35 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Targeter, UCk_Utils_Targeter_UE, FCk_Han
 
 auto
     UCk_Utils_Targeter_UE::
+    IsValid(
+        const FCk_Targeter_BasicInfo& InTargeterInfo)
+    -> bool
+{
+    return ck::IsValid(InTargeterInfo);
+}
+
+auto
+    UCk_Utils_Targeter_UE::
+    IsEqual(
+        const FCk_Targeter_BasicInfo& InTargeterInfoA,
+        const FCk_Targeter_BasicInfo& InTargeterInfoB)
+    -> bool
+{
+    return InTargeterInfoA == InTargeterInfoB;
+}
+
+auto
+    UCk_Utils_Targeter_UE::
+    IsNotEqual(
+        const FCk_Targeter_BasicInfo& InTargeterInfoA,
+        const FCk_Targeter_BasicInfo& InTargeterInfoB)
+    -> bool
+{
+    return InTargeterInfoA != InTargeterInfoB;
+}
+
+auto
+    UCk_Utils_Targeter_UE::
     TryGet_Targeter(
         const FCk_Handle& InTargeterOwnerEntity,
         FGameplayTag InTargeterName)
@@ -95,6 +124,32 @@ auto
 
 auto
     UCk_Utils_Targeter_UE::
+    Get_ExtractOwners_FromTargetList(
+        const FCk_Targeter_TargetList& InTargetList)
+    -> TArray<FCk_Handle>
+{
+    return ck::algo::Transform<TArray<FCk_Handle>>(InTargetList.Get_Targets(),
+    [](const FCk_Targetable_BasicInfo& InBasicInfo)
+    {
+        return InBasicInfo.Get_Owner();
+    });
+}
+
+auto
+    UCk_Utils_Targeter_UE::
+    Get_ExtractTargetables_FromTargetList(
+        const FCk_Targeter_TargetList& InTargetList)
+    -> TArray<FCk_Handle_Targetable>
+{
+    return ck::algo::Transform<TArray<FCk_Handle_Targetable>>(InTargetList.Get_Targets(),
+    [](const FCk_Targetable_BasicInfo& InBasicInfo)
+    {
+        return InBasicInfo.Get_Targetable();
+    });
+}
+
+auto
+    UCk_Utils_Targeter_UE::
     ForEach_Targeter(
         FCk_Handle& InTargeterOwnerEntity,
         const FInstancedStruct& InOptionalPayload,
@@ -126,6 +181,78 @@ auto
         InFunc,
         ECk_Record_ForEach_Policy::IgnoreRecordMissing
     );
+}
+
+auto
+    UCk_Utils_Targeter_UE::
+    FilterTargets_ByPredicate(
+        const FCk_Targeter_BasicInfo& InTargeter,
+        const FCk_Targeter_TargetList& InTargetList,
+        const FInstancedStruct& InOptionalPayload,
+        FCk_Predicate_InTargeter_InTarget_OutResult InPredicate)
+    -> FCk_Targeter_TargetList
+{
+    const auto& FilteredTargets = ck::algo::Filter(InTargetList.Get_Targets(),
+    [&](const FCk_Targetable_BasicInfo& InTargetBasicInfo)
+    {
+        const FCk_SharedBool PredicateResult;
+
+        if (InPredicate.IsBound())
+        {
+            InPredicate.Execute(InTargeter, InTargetBasicInfo, InOptionalPayload, PredicateResult);
+        }
+
+        return *PredicateResult;
+    });
+
+    return FCk_Targeter_TargetList{FilteredTargets};
+}
+
+auto
+    UCk_Utils_Targeter_UE::
+    SortTargets_ByPredicate(
+        const FCk_Targeter_BasicInfo& InTargeter,
+        FCk_Targeter_TargetList& InTargetList,
+        const FInstancedStruct& InOptionalPayload,
+        FCk_Predicate_InTargeter_In2Targets_OutResult InPredicate)
+    -> void
+{
+    const auto& SortedTargets = ck::algo::Sort(InTargetList.Get_Targets(),
+    [&](const FCk_Targetable_BasicInfo& InTargetBasicInfoA, const FCk_Targetable_BasicInfo& InTargetBasicInfoB)
+    {
+        const FCk_SharedBool PredicateResult;
+
+        if (InPredicate.IsBound())
+        {
+            InPredicate.Execute(InTargeter, InTargetBasicInfoA, InTargetBasicInfoB, InOptionalPayload, PredicateResult);
+        }
+
+        return *PredicateResult;
+    });
+
+    InTargetList = FCk_Targeter_TargetList{SortedTargets};
+}
+
+auto
+    UCk_Utils_Targeter_UE::
+    IntersectTargets(
+        const FCk_Targeter_TargetList& InTargetListA,
+        const FCk_Targeter_TargetList& InTargetListB)
+    -> FCk_Targeter_TargetList
+{
+    const auto Result = ck::algo::Intersect(InTargetListA.Get_Targets(), InTargetListB.Get_Targets());
+    return FCk_Targeter_TargetList{Result};
+}
+
+auto
+    UCk_Utils_Targeter_UE::
+    ExceptTargets(
+        const FCk_Targeter_TargetList& InTargetListA,
+        const FCk_Targeter_TargetList& InTargetListB)
+    -> FCk_Targeter_TargetList
+{
+    const auto Result = ck::algo::Except(InTargetListA.Get_Targets(), InTargetListB.Get_Targets());
+    return FCk_Targeter_TargetList{Result};
 }
 
 auto
