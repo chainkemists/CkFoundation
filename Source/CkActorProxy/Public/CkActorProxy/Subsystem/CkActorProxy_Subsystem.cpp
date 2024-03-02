@@ -1,6 +1,7 @@
 #include "CkActorProxy_Subsystem.h"
 
 #include "CkCore/Actor/CkActor_Utils.h"
+#include "CkCore/Object/CkObject_Utils.h"
 
 #include "Components/BillboardComponent.h"
 
@@ -41,7 +42,10 @@ auto
     Super::BeginDestroy();
 
     if (ck::IsValid(_SpawnedActor))
-    { _SpawnedActor->Destroy(); }
+    {
+        _SpawnedActor->Destroy();
+        _SpawnedActor = nullptr;
+    }
 }
 
 auto
@@ -52,7 +56,10 @@ auto
     Super::Destroyed();
 
     if (ck::IsValid(_SpawnedActor))
-    { _SpawnedActor->Destroy(); }
+    {
+        _SpawnedActor->Destroy();
+        _SpawnedActor = nullptr;
+    }
 }
 
 #if WITH_EDITOR
@@ -65,7 +72,16 @@ auto
     Super::PostEditChangeProperty(InPropertyChangedEvent);
 
     if (InPropertyChangedEvent.Property->GetFName() == GET_MEMBER_NAME_CHECKED(ACk_ActorProxy_UE, _ActorToSpawn))
-    { DoSpawnActor(); }
+    {
+        auto ChangeLabel = false;
+
+        DoSpawnActor();
+
+        if (ChangeLabel && ck::IsValid(_SpawnedActor))
+        {
+            UCk_Utils_Actor_UE::Request_SetActorLabel(this, _SpawnedActor->GetActorNameOrLabel(), false);
+        }
+    }
 }
 #endif
 
@@ -87,12 +103,26 @@ auto
     DoSpawnActor()
     -> void
 {
+    auto DoChangeLabel = [this](const AActor* InActor)
+    {
+        UCk_Utils_Actor_UE::Request_SetActorLabel(this, InActor->GetActorNameOrLabel() + TEXT("__PROXY"), false);
+    };
+
     if (ck::IsValid(_SpawnedActor))
     {
         if (_ActorToSpawn != _SpawnedActor->GetClass())
         {
             _SpawnedActor->Destroy();
+            _SpawnedActor = nullptr;
             DoSpawnActor();
+
+            if (ck::IsValid(_SpawnedActor))
+            { DoChangeLabel(_SpawnedActor.Get()); }
+            else
+            {
+                UCk_Utils_Actor_UE::Request_SetActorLabel(this, this->GetActorNameOrLabel() + TEXT("_INVALID"), false);
+            }
+
             return;
         }
 
@@ -119,6 +149,7 @@ auto
         // the following disables the Actor from being deleted OR from being moved directly (the ActorProxy can still move the Actor)
         SaveToTransactionBuffer(_SpawnedActor.Get(), false);
         _SpawnedActor->SetLockLocation(true);
+        DoChangeLabel(_SpawnedActor.Get());
 #endif
     }
 }
