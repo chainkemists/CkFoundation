@@ -49,7 +49,8 @@ private:
     DoSpawnActor() -> void;
 
 private:
-    UPROPERTY(EditInstanceOnly, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    UPROPERTY(EditInstanceOnly, BlueprintReadOnly,
+        meta = (AllowPrivateAccess = true, AllowAbstract = false))
     TSubclassOf<AActor> _ActorToSpawn;
 
     UPROPERTY()
