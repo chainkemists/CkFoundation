@@ -1,4 +1,4 @@
-#include "CkActorProxy_Subsystem.h"
+#include "CkActorProxy.h"
 
 #include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
