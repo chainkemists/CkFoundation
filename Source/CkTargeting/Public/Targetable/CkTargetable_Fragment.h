@@ -48,10 +48,10 @@ namespace ck
         friend class UCk_Utils_Targetable_UE;
 
     private:
-        TWeakObjectPtr<USceneComponent> _CameraLookAtComponent;
+        TWeakObjectPtr<USceneComponent> _AttachmentNode;
 
     public:
-        CK_PROPERTY_GET(_CameraLookAtComponent);
+        CK_PROPERTY_GET(_AttachmentNode);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

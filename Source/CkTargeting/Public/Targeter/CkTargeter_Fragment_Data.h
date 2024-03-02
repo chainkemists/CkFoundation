@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/SharedValues/CkSharedValues.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
@@ -32,6 +33,72 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Targeter);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType, meta = (HasNativeMake))
+struct CKTARGETING_API FCk_Targeter_BasicInfo
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Targeter_BasicInfo);
+
+public:
+    auto operator==(const ThisType& InOther) const -> bool;
+    auto operator<(const ThisType& InOther) const -> bool;
+    CK_DECL_AND_DEF_OPERATORS(ThisType);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Targeter _Targeter;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _Owner;
+
+public:
+    CK_PROPERTY_GET(_Targeter);
+    CK_PROPERTY_GET(_Owner);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Targeter_BasicInfo, _Targeter, _Owner);
+};
+
+auto CKTARGETING_API GetTypeHash(const FCk_Targeter_BasicInfo& InObj) -> uint32;
+
+CK_DEFINE_CUSTOM_IS_VALID(FCk_Targeter_BasicInfo, ck::IsValid_Policy_Default, [&](const FCk_Targeter_BasicInfo& InTargeter)
+{
+    return ck::IsValid(InTargeter.Get_Owner(), ck::IsValid_Policy_Default{}) && ck::IsValid(InTargeter.Get_Targeter(), ck::IsValid_Policy_Default{});
+});
+
+CK_DEFINE_CUSTOM_IS_VALID(FCk_Targeter_BasicInfo, ck::IsValid_Policy_IncludePendingKill, [&](const FCk_Targeter_BasicInfo& InTargeter)
+{
+    return ck::IsValid(InTargeter.Get_Owner(), ck::IsValid_Policy_IncludePendingKill{}) && ck::IsValid(InTargeter.Get_Targeter(), ck::IsValid_Policy_IncludePendingKill{});
+});
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKTARGETING_API FCk_Targeter_TargetList
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Targeter_TargetList);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<FCk_Targetable_BasicInfo> _Targets;
+
+public:
+    CK_PROPERTY_GET(_Targets);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Targeter_TargetList, _Targets);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(Abstract, EditInlineNew, Blueprintable, BlueprintType)
 class CKTARGETING_API UCk_Targeter_CustomTargetFilter_PDA : public UCk_DataAsset_PDA
 {
@@ -44,18 +111,18 @@ public:
     UFUNCTION(BlueprintCallable, BlueprintnativeEvent,
               BlueprintPure = false,
               Category = "UCk_Targeter_CustomTargetFilter_PDA")
-    TArray<FCk_Handle_Targetable>
+    FCk_Targeter_TargetList
     FilterTargets(
-        const FCk_Handle_Targeter& InTargeter,
-        const TArray<FCk_Handle_Targetable>& InUnfilteredTargets) const;
+        const FCk_Targeter_BasicInfo& InTargeter,
+        const FCk_Targeter_TargetList& InUnfilteredTargets) const;
 
     UFUNCTION(BlueprintCallable, BlueprintnativeEvent,
               BlueprintPure = false,
               Category = "UCk_Targeter_CustomTargetFilter_PDA")
-    TArray<FCk_Handle_Targetable>
+    FCk_Targeter_TargetList
     SortTargets(
-        const FCk_Handle_Targeter& InTargeter,
-        const TArray<FCk_Handle_Targetable>& InFilteredTargets) const;
+        const FCk_Targeter_BasicInfo& InTargeter,
+        const FCk_Targeter_TargetList& InFilteredTargets) const;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -234,12 +301,29 @@ public:
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_Targeter_OnTargetsQueried,
-    FCk_Handle_Targeter, InTargeted,
-    const TArray<FCk_Handle_Targetable>&, InOrderedTargets);
+    FCk_Targeter_BasicInfo, InTargeter,
+    FCk_Targeter_TargetList, InOrderedTargetList);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_Targeter_OnTargetsQueried_MC,
-    FCk_Handle_Targeter, InTargeted,
-    const TArray<FCk_Handle_Targetable>&, InOrderedTargets);
+    FCk_Targeter_BasicInfo, InTargeter,
+    FCk_Targeter_TargetList, InOrderedTargetList);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_FourParams(
+    FCk_Predicate_InTargeter_InTarget_OutResult,
+    FCk_Targeter_BasicInfo, InTargeter,
+    FCk_Targetable_BasicInfo, InTarget,
+    FInstancedStruct, InOptionalPayload,
+    FCk_SharedBool, OutResult);
+
+DECLARE_DYNAMIC_DELEGATE_FiveParams(
+    FCk_Predicate_InTargeter_In2Targets_OutResult,
+    FCk_Targeter_BasicInfo, InTargeter,
+    FCk_Targetable_BasicInfo, InTargetA,
+    FCk_Targetable_BasicInfo, InTargetB,
+    FInstancedStruct, InOptionalPayload,
+    FCk_SharedBool, OutResult);
 
 // --------------------------------------------------------------------------------------------------------------------

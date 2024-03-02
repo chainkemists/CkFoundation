@@ -49,7 +49,7 @@ namespace ck
         friend class UCk_Utils_Targeter_UE;
 
     public:
-        using CachedTargetsType = TArray<FCk_Handle_Targetable>;
+        using CachedTargetsType = FCk_Targeter_TargetList;
 
     private:
         TOptional<CachedTargetsType> _CachedTargets;
@@ -91,7 +91,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKTARGETING_API, Targeter_OnTargetsQueried,
-        FCk_Delegate_Targeter_OnTargetsQueried_MC, FCk_Handle_Targeter, TArray<FCk_Handle_Targetable>);
+        FCk_Delegate_Targeter_OnTargetsQueried_MC, FCk_Targeter_BasicInfo, FCk_Targeter_TargetList);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -88,6 +88,33 @@ private:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Targeter",
+              DisplayName = "[Ck][Targeter] Get Is Valid (BasicInfo)",
+              meta = (CompactNodeTitle = "IsValid"))
+    static bool
+    IsValid(
+        const FCk_Targeter_BasicInfo& InTargeterInfo);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Targeter",
+              DisplayName = "[Ck][Targeter] BasicInfo == BasicInfo",
+              meta = (CompactNodeTitle = "==", KeyWords = "==,equal"))
+    static bool
+    IsEqual(
+        const FCk_Targeter_BasicInfo& InTargeterInfoA,
+        const FCk_Targeter_BasicInfo& InTargeterInfoB);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Targeter",
+              DisplayName = "[Ck][Targeter] BasicInfo != BasicInfo",
+              meta = (CompactNodeTitle = "!=", KeyWords = "!=,not,equal"))
+    static bool
+    IsNotEqual(
+        const FCk_Targeter_BasicInfo& InTargeterInfoA,
+        const FCk_Targeter_BasicInfo& InTargeterInfoB);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Targeter",
               DisplayName="[Ck][Targeter] Try Get Targeter")
     static FCk_Handle_Targeter
     TryGet_Targeter(
@@ -111,6 +138,21 @@ public:
         const FCk_Handle_Targeter& InTargeter);
 
 public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Targeter",
+              DisplayName="[Ck][Targeter] Extract Owners (From TargetList)")
+    static TArray<FCk_Handle>
+    Get_ExtractOwners_FromTargetList(
+        const FCk_Targeter_TargetList& InTargetList);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Targeter",
+              DisplayName="[Ck][Targeter] Extract Targetables (From TargetList)")
+    static TArray<FCk_Handle_Targetable>
+    Get_ExtractTargetables_FromTargetList(
+        const FCk_Targeter_TargetList& InTargetList);
+
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Targeter",
               DisplayName="[Ck][Targeter] For Each",
@@ -124,6 +166,47 @@ public:
     ForEach_Targeter(
         FCk_Handle& InTargeterOwnerEntity,
         const TFunction<void(FCk_Handle_Targeter)>& InFunc) -> void;
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Targeter",
+              DisplayName = "[Ck][Targeter] Filter Targets By Predicate",
+              meta=(AutoCreateRefTerm="InOptionalPayload"))
+    static FCk_Targeter_TargetList
+    FilterTargets_ByPredicate(
+        const FCk_Targeter_BasicInfo& InTargeter,
+        const FCk_Targeter_TargetList& InTargetList,
+        const FInstancedStruct& InOptionalPayload,
+        FCk_Predicate_InTargeter_InTarget_OutResult InPredicate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Targeter",
+              DisplayName = "[Ck][Targeter] Sort Targets By Predicate",
+              meta=(AutoCreateRefTerm="InOptionalPayload"))
+    static void
+    SortTargets_ByPredicate(
+        const FCk_Targeter_BasicInfo& InTargeter,
+        UPARAM(ref) FCk_Targeter_TargetList& InTargetList,
+        const FInstancedStruct& InOptionalPayload,
+        FCk_Predicate_InTargeter_In2Targets_OutResult InPredicate);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Targeter",
+              DisplayName = "[Ck][Targeter] Intersect Targets",
+              meta = (CompactNodeTitle = "Intersect_Targets"))
+    static FCk_Targeter_TargetList
+    IntersectTargets(
+        const FCk_Targeter_TargetList& InTargetListA,
+        const FCk_Targeter_TargetList& InTargetListB);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Targeter",
+              DisplayName = "[Ck][Targeter] Except Targets",
+              meta = (CompactNodeTitle = "Except_Targets"))
+    static FCk_Targeter_TargetList
+    ExceptTargets(
+        const FCk_Targeter_TargetList& InTargetListA,
+        const FCk_Targeter_TargetList& InTargetListB);
 
 public:
     UFUNCTION(BlueprintCallable,
