@@ -163,6 +163,10 @@ auto
     const auto NewEntity = Request_CreateEntity(**InHandle, [&](FCk_Handle InNewEntity)
     {
         InNewEntity.Add<ck::FFragment_LifetimeOwner>(InHandle);
+
+        if (InHandle.Has_Any<ck::FTag_DestroyEntity_Initiate>())
+        { InNewEntity.Add<ck::FTag_DestroyEntity_Initiate>(); }
+
         // Not doing something like this because it is undefined behavior: *const_cast<FCk_Handle*>(&InHandle)
         auto NonConstHandle = InHandle;
 

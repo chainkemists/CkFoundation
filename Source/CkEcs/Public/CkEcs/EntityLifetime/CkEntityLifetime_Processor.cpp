@@ -48,7 +48,7 @@ namespace ck
             HandleType InHandle) const
         -> void
     {
-        ecs::VeryVerbose(TEXT("Entity [{}] set to 'Pending Destroy'"), InHandle);
+        ecs::VeryVerbose(TEXT("Entity [{}] set to 'Awaiting Destruction'"), InHandle);
         InHandle.Add<FTag_DestroyEntity_Await>();
     }
 
@@ -72,7 +72,7 @@ namespace ck
             HandleType InHandle) const
         -> void
     {
-        ecs::VeryVerbose(TEXT("Entity [{}] set to 'Pending Destroy'"), InHandle);
+        ecs::VeryVerbose(TEXT("Entity [{}] set to 'Finalizing Destruction'"), InHandle);
         InHandle.Add<FTag_DestroyEntity_Finalize, ck::IsValid_Policy_IncludePendingKill>();
     }
 
