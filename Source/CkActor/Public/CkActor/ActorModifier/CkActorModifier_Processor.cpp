@@ -50,9 +50,8 @@ namespace ck
                     InRequest.Get_SpawnParams().Get_ActorClass())
                 { return; }
 
-                const auto OutermostActor = UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(OwningActor);
-
-                if (ck::IsValid(OutermostActor))
+                if (const auto OutermostActor = UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(OwningActor);
+                    ck::IsValid(OutermostActor))
                 {
                     if (OutermostActor->GetLocalRole() == ROLE_AutonomousProxy ||
                         (OutermostActor->GetLocalRole() == ROLE_Authority && OutermostActor->GetRemoteRole() != ROLE_AutonomousProxy))

@@ -24,7 +24,7 @@ auto
     RequestEntity.AddOrGet<ck::FFragment_ActorModifier_SpawnActorRequests>()._Requests.Add(InRequest);
     UCk_Utils_Variables_InstancedStruct_UE::Set(RequestEntity, FGameplayTag::EmptyTag, InOptionalPayload);
 
-    ck::UUtils_Signal_OnActorSpawned_PostFireUnbind::Bind(RequestEntity, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_OnActorSpawned, RequestEntity, InDelegate);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -43,7 +43,7 @@ auto
     RequestEntity.AddOrGet<ck::FFragment_ActorModifier_AddActorComponentRequests>()._Requests.Add(InRequest);
     UCk_Utils_Variables_InstancedStruct_UE::Set(RequestEntity, FGameplayTag::EmptyTag, InOptionalPayload);
 
-    ck::UUtils_Signal_OnActorComponentAdded_PostFireUnbind::Bind(RequestEntity, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_OnActorComponentAdded, RequestEntity, InDelegate);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

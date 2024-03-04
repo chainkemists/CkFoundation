@@ -213,7 +213,9 @@ namespace ck
             UCk_Utils_EntityBridge_UE::Request_Spawn(InAbilityOwnerEntity,
                 FCk_Request_EntityBridge_SpawnEntity{AbilityEntityConfig}
                 .Set_PreBuildFunc(PreAbilityCreationFunc)
-                .Set_PostSpawnFunc(PostAbilityCreationFunc));
+                .Set_PostSpawnFunc(PostAbilityCreationFunc),
+                {},
+                {});
 
             return ECk_AbilityOwner_AbilityGivenOrNot::Given;
         }();
