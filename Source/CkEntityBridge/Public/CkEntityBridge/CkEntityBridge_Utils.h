@@ -21,11 +21,14 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EntityBridge",
-              DisplayName  = "[Ck] Request Spawn New Entity")
+              DisplayName  = "[Ck] Request Spawn New Entity",
+              meta = (AutoCreateRefTerm = "InOptionalPayload, InDelegate"))
     static void
     Request_Spawn(
-        FCk_Handle InHandle,
-        const FCk_Request_EntityBridge_SpawnEntity& InRequest);
+        const FCk_Handle& InHandle,
+        const FCk_Request_EntityBridge_SpawnEntity& InRequest,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Delegate_EntityBridge_OnEntitySpawned& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

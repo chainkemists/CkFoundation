@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkEntityBridge_Fragment_Data.h"
+#include "CkSignal/CkSignal_Macros.h"
 
 #include <variant>
 
@@ -27,7 +28,14 @@ namespace ck
         CK_PROPERTY_GET(_Requests);
     };
 
-    // TODO: add signal for entity created when Signals are added
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKENTITYBRIDGE_API,
+        OnEntitySpawned,
+        FCk_Delegate_EntityBridge_OnEntitySpawned_MC,
+        FCk_Handle,
+        FInstancedStruct);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
