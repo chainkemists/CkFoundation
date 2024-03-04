@@ -6,6 +6,7 @@
 #include "CkEcs/Registry/CkRegistry.h"
 
 #include <InstancedStruct.h>
+#include <GameplayTagContainer.h>
 
 #include "CkEntityBridge_Fragment_Data.generated.h"
 
@@ -103,7 +104,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FInstancedStruct _OptionalParams;
+    FInstancedStruct _OptionalBuildParams;
 
     // TODO:
     // - add an owner
@@ -116,7 +117,7 @@ private:
 
 public:
     CK_PROPERTY_GET(_EntityConfig);
-    CK_PROPERTY(_OptionalParams);
+    CK_PROPERTY(_OptionalBuildParams);
     CK_PROPERTY(_PreBuildFunc);
     CK_PROPERTY(_PostSpawnFunc);
 
@@ -126,39 +127,14 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
-struct CKENTITYBRIDGE_API FCk_Payload_EntityBridge_EntityCreated
-{
-    GENERATED_BODY()
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_EntityBridge_OnEntitySpawned,
+    const FCk_Handle&, InEntitySpawned,
+    const FInstancedStruct&, InOptionalPayload);
 
-public:
-    CK_GENERATED_BODY(FCk_Payload_EntityBridge_EntityCreated);
-
-private:
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-    FCk_Handle _Handle;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-    FCk_Handle _CreatedEntity;
-
-public:
-    CK_PROPERTY_GET(_Handle);
-    CK_PROPERTY_GET(_CreatedEntity);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Payload_EntityBridge_EntityCreated, _Handle, _CreatedEntity);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-DECLARE_DYNAMIC_DELEGATE_OneParam(
-    FCk_Delegate_EntityBridge_OnEntityCreated,
-    const FCk_Payload_EntityBridge_EntityCreated&,
-    InPayload);
-
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
-    FCk_Delegate_EntityBridge_OnEntityCreated_MC,
-    const FCk_Payload_EntityBridge_EntityCreated&,
-    InPayload);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FCk_Delegate_EntityBridge_OnEntitySpawned_MC,
+    const FCk_Handle&, InEntitySpawned,
+    const FInstancedStruct&, InOptionalPayload);
 
 // --------------------------------------------------------------------------------------------------------------------

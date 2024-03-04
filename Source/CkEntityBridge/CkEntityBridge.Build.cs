@@ -14,6 +14,7 @@ public class CkEntityBridge : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
+            "GameplayTags",
             "StructUtils",
 
             "CkCore",
@@ -24,6 +25,7 @@ public class CkEntityBridge : CkModuleRules
             "CkSettings",
             "CkSignal",
             "CkNet",
+            "CkVariables",
         });
     }
 }

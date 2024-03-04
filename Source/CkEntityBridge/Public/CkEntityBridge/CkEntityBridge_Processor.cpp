@@ -4,6 +4,8 @@
 
 #include "CkEntityBridge/CkEntityBridge_Log.h"
 
+#include "CkVariables/CkUnrealVariables_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -16,31 +18,43 @@ namespace ck
             FFragment_EntityBridge_Requests& InRequests) const
         -> void
     {
-        for (const auto& Request : InRequests._Requests)
+        algo::ForEach(InRequests._Requests, [&](const auto& InRequest)
         {
-            const auto& EntityConfig = Request.Get_EntityConfig();
+            DoHandleRequest(InHandle, InRequest);
+        });
 
-            CK_ENSURE_IF_NOT(ck::IsValid(EntityConfig),
-                TEXT("EntityConfig is INVALID. Unable to handle Request for [{}]"), InHandle)
-            { return; }
+        InHandle.Remove<MarkedDirtyBy>();
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle, ECk_EntityLifetime_DestructionBehavior::DestroyOnlyIfOrphan);
+    }
 
-            auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
+    auto
+        FProcessor_EntityBridge_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FCk_Request_EntityBridge_SpawnEntity& InRequest)
+        -> void
+    {
+        const auto& EntityConfig = InRequest.Get_EntityConfig();
 
-            if (Request.Get_PreBuildFunc())
-            { Request.Get_PreBuildFunc() (NewEntity); }
+        CK_ENSURE_IF_NOT(ck::IsValid(EntityConfig),
+            TEXT("EntityConfig is INVALID. Unable to handle Request for [{}]"), InHandle)
+        { return; }
 
-            EntityConfig->Build(NewEntity, Request.Get_OptionalParams());
+        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle));
 
-            if (Request.Get_PostSpawnFunc())
-            { Request.Get_PostSpawnFunc()(NewEntity); }
+        if (InRequest.Get_PreBuildFunc())
+        { InRequest.Get_PreBuildFunc() (NewEntity); }
 
-            entity_bridge::VeryVerbose(TEXT("[EntityBridge] Built new Entity [{}] from Entity Config PDA [{}] by Request from [{}]"),
-                NewEntity, EntityConfig, InHandle);
+        EntityConfig->Build(NewEntity, InRequest.Get_OptionalBuildParams());
 
-            // TODO: Fire signal for new entity created once we have signals
-        }
+        if (InRequest.Get_PostSpawnFunc())
+        { InRequest.Get_PostSpawnFunc()(NewEntity); }
 
-        InHandle.Remove<FFragment_EntityBridge_Requests>();
+        entity_bridge::VeryVerbose(TEXT("[EntityBridge] Built new Entity [{}] from Entity Config PDA [{}] by Request from [{}]"),
+            NewEntity, EntityConfig, InHandle);
+
+        UUtils_Signal_OnEntitySpawned::Broadcast(InHandle, MakePayload(NewEntity,
+            UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag)));
     }
 }
 

@@ -12,6 +12,9 @@ namespace ck
         : public TProcessor<FProcessor_EntityBridge_HandleRequests, FFragment_EntityBridge_Requests>
     {
     public:
+        using MarkedDirtyBy = FFragment_EntityBridge_Requests;
+
+    public:
         using TProcessor::TProcessor;
 
     public:
@@ -19,6 +22,12 @@ namespace ck
             TimeType,
             HandleType InHandle,
             FFragment_EntityBridge_Requests& InRequests) const -> void;
+
+    private:
+        static auto
+        DoHandleRequest(
+            HandleType InHandle,
+            const FCk_Request_EntityBridge_SpawnEntity& InRequest) -> void;
     };
 }
 
