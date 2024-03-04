@@ -137,12 +137,16 @@ auto
         Ar << _Instigator_RepObj;
         if (Ar.IsLoading())
         {
-            CK_ENSURE_IF_NOT(ck::IsValid(_Instigator_RepObj),
-                TEXT("Instigator RepObj was [{}] even though RepBits tell us that it WAS replicated. Unable to set the Instigator."),
-                _Instigator_RepObj)
-            { }
+            if (ck::Is_NOT_Valid(_Instigator_RepObj))
+            {
+                ck::ability::Verbose(TEXT("Instigator RepObj was [{}] even though RepBits tell us that it WAS replicated. Unable to set "
+                    "the Instigator. Note that this is always possible if the cue comes in AFTER the Instigator has been destroyed"),
+                    _Instigator_RepObj);
+            }
             else
-            { _Instigator = _Instigator_RepObj->Get_AssociatedEntity(); }
+            {
+                _Instigator = _Instigator_RepObj->Get_AssociatedEntity();
+            }
         }
     }
     if (RepBits & (1 << Rep_EffectCauser))
@@ -150,12 +154,16 @@ auto
         Ar << _EffectCauser_RepObj;
         if (Ar.IsLoading())
         {
-            CK_ENSURE_IF_NOT(ck::IsValid(_EffectCauser_RepObj),
-                TEXT("EffectCauser RepObj was [{}] even though RepBits tell us that it WAS replicated. Unable to set the EffectCauser."),
-                _EffectCauser_RepObj)
-            { }
-
-            _EffectCauser = _EffectCauser_RepObj->Get_AssociatedEntity();
+            if (ck::Is_NOT_Valid(_EffectCauser_RepObj))
+            {
+                ck::ability::Verbose(TEXT("EffectCauser RepObj was [{}] even though RepBits tell us that it WAS replicated. Unable to set "
+                    "the EffectCauser. Note that this is always possible if the cue comes in AFTER the EffectCauser has been destroyed"),
+                    _EffectCauser_RepObj);
+            }
+            else
+            {
+                _EffectCauser = _EffectCauser_RepObj->Get_AssociatedEntity();
+            }
         }
     }
 
