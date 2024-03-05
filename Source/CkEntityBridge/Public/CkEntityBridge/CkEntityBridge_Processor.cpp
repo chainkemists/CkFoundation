@@ -3,6 +3,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include "CkEntityBridge/CkEntityBridge_Log.h"
+#include "CkNet/CkNet_Utils.h"
 
 #include "CkVariables/CkUnrealVariables_Utils.h"
 
@@ -40,7 +41,10 @@ namespace ck
             TEXT("EntityConfig is INVALID. Unable to handle Request for [{}]"), InHandle)
         { return; }
 
-        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle));
+        const auto& NewEntityLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(NewEntityLifetimeOwner);
+
+        UCk_Utils_Net_UE::Copy(NewEntityLifetimeOwner, NewEntity);
 
         if (InRequest.Get_PreBuildFunc())
         { InRequest.Get_PreBuildFunc() (NewEntity); }
