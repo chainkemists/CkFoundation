@@ -59,6 +59,32 @@ namespace ck
             HandleType InHandle,
             const FCk_Request_ActorModifier_AddActorComponent& InRequest) -> void;
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKACTOR_API FProcessor_ActorModifier_RemoveActorComponent_HandleRequests : public TProcessor<
+            FProcessor_ActorModifier_RemoveActorComponent_HandleRequests,
+            FFragment_ActorModifier_RemoveActorComponentRequests,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FFragment_ActorModifier_RemoveActorComponentRequests;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            FFragment_ActorModifier_RemoveActorComponentRequests& InRequests) -> void;
+
+    private:
+        static auto
+        DoHandleRequest(
+            HandleType InHandle,
+            const FCk_Request_ActorModifier_RemoveActorComponent& InRequest) -> void;
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
