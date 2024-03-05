@@ -163,11 +163,6 @@ namespace ck
 
             const auto& OptionalPayload = InRequest.Get_OptionalPayload();
 
-            const auto PreAbilityCreationFunc = [InAbilityOwnerEntity](FCk_Handle& InEntity)
-            {
-                UCk_Utils_Net_UE::Copy(InAbilityOwnerEntity, InEntity);
-            };
-
             const auto PostAbilityCreationFunc =
             [InAbilityOwnerEntity, AbilityScriptClass, AbilityParams, OptionalPayload, AbilitySource](FCk_Handle& InEntity) -> void
             {
@@ -212,7 +207,6 @@ namespace ck
 
             UCk_Utils_EntityBridge_UE::Request_Spawn(InAbilityOwnerEntity,
                 FCk_Request_EntityBridge_SpawnEntity{AbilityEntityConfig}
-                .Set_PreBuildFunc(PreAbilityCreationFunc)
                 .Set_PostSpawnFunc(PostAbilityCreationFunc),
                 {},
                 {});
