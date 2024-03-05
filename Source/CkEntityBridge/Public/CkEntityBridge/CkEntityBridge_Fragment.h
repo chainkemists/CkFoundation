@@ -19,13 +19,12 @@ namespace ck
 
     public:
         using RequestType = FCk_Request_EntityBridge_SpawnEntity;
-        using RequestList = TArray<RequestType>;
 
     private:
-        RequestList _Requests;
+        RequestType _Request;
 
     public:
-        CK_PROPERTY_GET(_Requests);
+        CK_PROPERTY_GET(_Request);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

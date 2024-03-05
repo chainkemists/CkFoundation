@@ -29,13 +29,10 @@ namespace ck
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            FFragment_ActorModifier_SpawnActorRequests& InRequests) const
+            FFragment_ActorModifier_SpawnActorRequests& InRequests)
         -> void
     {
-        algo::ForEach(InRequests._Requests, [&](const auto& InRequest)
-        {
-            DoHandleRequest(InHandle, InRequest);
-        });
+        DoHandleRequest(InHandle, InRequests.Get_Request());
 
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
     }
@@ -67,7 +64,7 @@ namespace ck
                     { break; }
                 }
 
-                actor::VeryVerbose
+                actor::Verbose
                 (
                     TEXT("Skipped Spawning [{}] because SpawnPolicy is [{}] and our role is "
                          "neither ROLE_AutomousProxy NOR (if we are a client) do we have ROLE_Authority"),
@@ -90,7 +87,7 @@ namespace ck
                 if (NOT OwnerOrWorld->GetWorld()->IsNetMode(NM_Client))
                 { break; }
 
-                actor::VeryVerbose
+                actor::Verbose
                 (
                     TEXT("Skipped Spawning [{}] because SpawnPolicy is [{}] and we are a client"),
                     InRequest.Get_SpawnParams().Get_ActorClass(),
@@ -152,13 +149,10 @@ namespace ck
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            FFragment_ActorModifier_AddActorComponentRequests& InRequests) const
+            FFragment_ActorModifier_AddActorComponentRequests& InRequests)
         -> void
     {
-        algo::ForEach(InRequests._Requests, [&](const auto& InRequest)
-        {
-            DoHandleRequest(InHandle, InRequest);
-        });
+        DoHandleRequest(InHandle, InRequests.Get_Request());
 
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
     }
@@ -172,7 +166,12 @@ namespace ck
     {
         const auto& ComponentParams = InRequest.Get_ComponentParams();
         const auto& AttachmentType  = ComponentParams.Get_AttachmentType();
-        const auto& ComponentOwner  = ComponentParams.Get_Parent()->GetOwner();
+        const auto& ComponentParent = ComponentParams.Get_Parent();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(ComponentParent), TEXT("Invalid Parent Actor Component supplied to Request_AddActorComponent"))
+        { return; }
+
+        const auto& ComponentOwner  = ComponentParent->GetOwner();
 
         if (ck::Is_NOT_Valid(ComponentOwner))
         { return; }
@@ -182,8 +181,6 @@ namespace ck
 
         const auto& ParentComponent = [&]() -> USceneComponent*
         {
-            const auto& ComponentParent = ComponentParams.Get_Parent();
-
             if (AttachmentType == ECk_ActorComponent_AttachmentPolicy::DoNotAttach)
             { return nullptr; }
 
@@ -227,9 +224,12 @@ namespace ck
             }
         }
 
+        actor::Verbose(TEXT("ADDING Actor Component [{}] to Actor [{}]"), AddedActorComponent, ComponentOwner);
+
         UUtils_Signal_OnActorComponentAdded::Broadcast(InHandle, MakePayload(AddedActorComponent->GetOwner(), AddedActorComponent,
             UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag)));
     }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
