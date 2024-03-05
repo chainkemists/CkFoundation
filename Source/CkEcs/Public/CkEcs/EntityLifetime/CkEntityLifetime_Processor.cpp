@@ -31,6 +31,19 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
+        FProcessor_EntityLifetime_DestructionPhase_InitiateConfirm::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle) const
+        -> void
+    {
+        ecs::VeryVerbose(TEXT("[DESTRUCTION] Entity [{}] set to 'Awaiting Destruction'"), InHandle);
+        InHandle.Add<FTag_DestroyEntity_Initiate_Confirm>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_EntityLifetime_DestructionPhase_Await::
         Tick(
             TimeType InDeltaT)
@@ -38,7 +51,8 @@ namespace ck
     {
         Super::Tick(InDeltaT);
 
-        _TransientEntity.Clear<FTag_DestroyEntity_Initiate>();
+        // Do NOT clear tag here. Why? Because it might clear the tag for something that was _just_ initiated to destroy
+        // _TransientEntity.Clear<FTag_DestroyEntity_Initiate>();
     }
 
     auto
@@ -48,8 +62,10 @@ namespace ck
             HandleType InHandle) const
         -> void
     {
-        ecs::VeryVerbose(TEXT("Entity [{}] set to 'Awaiting Destruction'"), InHandle);
+        ecs::VeryVerbose(TEXT("[DESTRUCTION] Entity [{}] set to 'Awaiting Destruction'"), InHandle);
         InHandle.Add<FTag_DestroyEntity_Await>();
+        InHandle.Remove<FTag_DestroyEntity_Initiate, ck::IsValid_Policy_IncludePendingKill>();
+        InHandle.Remove<FTag_DestroyEntity_Initiate_Confirm, ck::IsValid_Policy_IncludePendingKill>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -62,7 +78,8 @@ namespace ck
     {
         Super::Tick(InDeltaT);
 
-        _TransientEntity.Clear<FTag_DestroyEntity_Await>();
+        // Do NOT clear tag here, see similar comment above
+        // _TransientEntity.Clear<FTag_DestroyEntity_Await>();
     }
 
     auto
@@ -72,8 +89,9 @@ namespace ck
             HandleType InHandle) const
         -> void
     {
-        ecs::VeryVerbose(TEXT("Entity [{}] set to 'Finalizing Destruction'"), InHandle);
+        ecs::VeryVerbose(TEXT("[DESTRUCTION] Entity [{}] set to 'Finalizing Destruction'"), InHandle);
         InHandle.Add<FTag_DestroyEntity_Finalize, ck::IsValid_Policy_IncludePendingKill>();
+        InHandle.Remove<FTag_DestroyEntity_Await, ck::IsValid_Policy_IncludePendingKill>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -85,7 +103,7 @@ namespace ck
             HandleType InHandle) const
         -> void
     {
-        ecs::VeryVerbose(TEXT("Destroying Entity [{}]"), InHandle);
+        ecs::VeryVerbose(TEXT("[DESTRUCTION] Destroying Entity [{}]"), InHandle);
 
         if (InHandle.Has<FTag_Replicated>())
         {

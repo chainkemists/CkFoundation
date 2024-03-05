@@ -4,10 +4,26 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+/*
+ * Destruction Pipeline:
+ * => Entity Destruction Request = DestroyEntity_Initiate (Entity is still valid)
+ *
+ * ---> Processors have a chance to reason about an Entity that has initiated destruction
+ *
+ * => End of Frame = DestroyEntity_Initiate_Confirm (Entity is still valid)
+ *     - Initiate_Confirm is needed to guarantee that 'Initiate' will last 1 full frame
+ *
+ * ---> Teardown Processors can hook in here as this is their last chance to deal with an Entity that is about to be Invalidated
+ *
+ * => Start of Frame = DestroyEntity_Initiate CONVERTS TO DestroyEntity_Await (Entity is now Invalid)
+ * => Start of NEXT Frame = DestroyEntity_Initiate CONVERT TO DestroyEntity_Finalize
+ */
+
 namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Finalize);
     CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Initiate);
+    CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Initiate_Confirm);
     CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Await);
     CK_DEFINE_ECS_TAG(FTag_EntityJustCreated);
 

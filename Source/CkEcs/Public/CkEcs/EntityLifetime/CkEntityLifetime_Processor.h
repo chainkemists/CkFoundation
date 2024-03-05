@@ -24,8 +24,25 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class CKECS_API FProcessor_EntityLifetime_DestructionPhase_InitiateConfirm
+        : public TProcessor<FProcessor_EntityLifetime_DestructionPhase_InitiateConfirm,
+            FTag_DestroyEntity_Initiate>
+    {
+    public:
+        using Super = TProcessor;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto ForEachEntity(TimeType InDeltaT, HandleType InHandle) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKECS_API FProcessor_EntityLifetime_DestructionPhase_Await
-        : public TProcessor<FProcessor_EntityLifetime_DestructionPhase_Await, FTag_DestroyEntity_Initiate>
+        : public TProcessor<FProcessor_EntityLifetime_DestructionPhase_Await, FTag_DestroyEntity_Initiate,
+            FTag_DestroyEntity_Initiate_Confirm>
     {
     public:
         using Super = TProcessor;

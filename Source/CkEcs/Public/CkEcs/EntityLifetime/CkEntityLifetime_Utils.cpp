@@ -2,6 +2,7 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
+#include "CkEcs/CkEcsLog.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
@@ -41,6 +42,7 @@ auto
         }
     }
 
+    ck::ecs::VeryVerbose(TEXT("Entity [{}] set to 'Initiate Destruction'"), InHandle);
     InHandle.AddOrGet<ck::FTag_DestroyEntity_Initiate>();
 
     for (auto& LifeTimeDependents : Get_LifetimeDependents(InHandle))
@@ -166,6 +168,9 @@ auto
 
         if (InHandle.Has_Any<ck::FTag_DestroyEntity_Initiate>())
         { InNewEntity.Add<ck::FTag_DestroyEntity_Initiate>(); }
+
+        if (InHandle.Has_Any<ck::FTag_DestroyEntity_Initiate_Confirm>())
+        { InNewEntity.Add<ck::FTag_DestroyEntity_Initiate_Confirm>(); }
 
         // Not doing something like this because it is undefined behavior: *const_cast<FCk_Handle*>(&InHandle)
         auto NonConstHandle = InHandle;
