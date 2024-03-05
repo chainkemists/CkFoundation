@@ -16,9 +16,6 @@ namespace ck
             const FFragment_Ability_Current& InCurrent) const
         -> void
     {
-        // there is nothing to teardown if the Ability is already Inactive
-        if (InCurrent.Get_Status() == ECk_Ability_Status::NotActive)
-        { return; }
 
         auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         auto AbilityOwner = UCk_Utils_AbilityOwner_UE::CastChecked(LifetimeOwner);
@@ -31,6 +28,7 @@ namespace ck
         );
 
         UCk_Utils_Ability_UE::DoDeactivate(AbilityOwner, InHandle);
+        UCk_Utils_Ability_UE::DoRevoke(AbilityOwner, InHandle);
     }
 }
 
