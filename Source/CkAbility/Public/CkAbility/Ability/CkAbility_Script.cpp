@@ -100,8 +100,38 @@ auto
     -> void
 {
     DoDebugSet_Deactivated();
+    const auto AbilityOwnerEntity = Get_AbilityOwnerHandle();
 
-    DoOnDeactivateAbility();
+    switch(const auto ExecutionPolicy = Get_Data().Get_NetworkSettings().Get_ExecutionPolicy())
+    {
+        case ECk_Net_NetExecutionPolicy::PreferHost:
+        {
+            if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AbilityOwnerEntity))
+            {
+                DoOnDeactivateAbility();
+            }
+            break;
+        }
+        case ECk_Net_NetExecutionPolicy::LocalAndHost:
+        {
+            if (UCk_Utils_Net_UE::Get_HasAuthority(AbilityOwnerEntity) ||
+                UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AbilityOwnerEntity))
+            {
+                DoOnDeactivateAbility();
+            }
+            break;
+        }
+        case ECk_Net_NetExecutionPolicy::All:
+        {
+            DoOnDeactivateAbility();
+            break;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(ExecutionPolicy);
+            break;
+        }
+    }
 }
 
 auto
