@@ -433,7 +433,9 @@ auto
         return;
     }
 
-    RecordOfAbilities_Utils::Request_Disconnect(InAbilityOwner, InAbility);
+    if (RecordOfAbilities_Utils::Get_ContainsEntry(InAbilityOwner, InAbility))
+    { RecordOfAbilities_Utils::Request_Disconnect(InAbilityOwner, InAbility); }
+
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAbility);
 
     const auto Script = Current.Get_AbilityScript();
