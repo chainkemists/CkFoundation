@@ -56,6 +56,25 @@ namespace ck
 
     private:
         CK_PROPERTY_GET_NON_CONST(_Requests);
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKACTOR_API FFragment_ActorModifier_RemoveActorComponentRequests
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_ActorModifier_RemoveActorComponentRequests);
+
+    public:
+        friend class FProcessor_ActorModifier_RemoveActorComponent_HandleRequests;
+        friend class UCk_Utils_ActorModifier_UE;
+
+    public:
+        using RequestType = FCk_Request_ActorModifier_RemoveActorComponent;
+
+    private:
+        RequestType _Request;
+
+    private:
+        CK_PROPERTY_GET_NON_CONST(_Request);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -75,6 +94,13 @@ namespace ck
         TWeakObjectPtr<UActorComponent>,
         FInstancedStruct);
 
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKACTOR_API,
+        OnActorComponentRemoved,
+        FCk_Delegate_ActorModifier_OnActorComponentRemoved_MC,
+        TWeakObjectPtr<AActor>,
+        TSubclassOf<UActorComponent>,
+        FInstancedStruct);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

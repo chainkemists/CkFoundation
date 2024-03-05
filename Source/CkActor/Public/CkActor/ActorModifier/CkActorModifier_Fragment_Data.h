@@ -229,6 +229,45 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKACTOR_API FCk_Request_ActorModifier_RemoveActorComponent
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_ActorModifier_RemoveActorComponent);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TWeakObjectPtr<UActorComponent> _ComponentToRemove;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    bool _PromoteChildrenComponents = false;
+
+public:
+    CK_PROPERTY_GET(_ComponentToRemove);
+    CK_PROPERTY(_PromoteChildrenComponents);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_ActorModifier_RemoveActorComponent, _ComponentToRemove);
+};
+
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+    FCk_Delegate_ActorModifier_OnActorComponentRemoved,
+    AActor*, InOwner,
+    TSubclassOf<UActorComponent>, InActorComponentTypeRemoved,
+    const FInstancedStruct&, InOptionalPayload);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
+    FCk_Delegate_ActorModifier_OnActorComponentRemoved_MC,
+    AActor*, InOwner,
+    TSubclassOf<UActorComponent>, InActorComponentTypeRemoved,
+    const FInstancedStruct&, InOptionalPayload);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKACTOR_API FCk_Request_ActorModifier_AttachActor
 {
     GENERATED_BODY()

@@ -39,6 +39,17 @@ public:
         const FCk_Request_ActorModifier_AddActorComponent& InRequest,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Delegate_ActorModifier_OnActorComponentAdded& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+        meta = (AutoCreateRefTerm = "InOptionalPayload, InDelegate"),
+        DisplayName = "[Ck][ActorModifier] Request Remove Actor Component")
+    static void
+    Request_RemoveActorComponent(
+        const FCk_Handle& InHandle,
+        const FCk_Request_ActorModifier_RemoveActorComponent& InRequest,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Delegate_ActorModifier_OnActorComponentRemoved& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
