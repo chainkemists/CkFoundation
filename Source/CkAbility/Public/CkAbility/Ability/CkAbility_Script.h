@@ -35,7 +35,7 @@ public:
 
     auto
     OnDeactivateAbility() -> void;
-    
+
     auto
     Get_CanBeGiven(
         const FCk_Handle_AbilityOwner& InAbilityOwner,
@@ -209,6 +209,38 @@ private:
 
     UPROPERTY(Transient)
     TArray<TObjectPtr<UObject>> _Tasks;
+
+private:
+#if NOT CK_DISABLE_ABILITY_SCRIPT_DEBUGGING
+    enum class EActivatedDeactivated
+    {
+        None,
+        Activated,
+        Deactivated
+    };
+
+    enum class EGivenRevoked
+    {
+        None,
+        Given,
+        Revoked
+    };
+
+    EActivatedDeactivated _ActivateDeactivate = EActivatedDeactivated::None;
+    EGivenRevoked _GiveRevoke = EGivenRevoked::None;
+#endif
+
+    auto
+    DoDebugSet_Activated() -> void;
+
+    auto
+    DoDebugSet_Deactivated() -> void;
+
+    auto
+    DoDebugSet_Given() -> void;
+
+    auto
+    DoDebugSet_Revoked() -> void;
 
 public:
     CK_PROPERTY_GET(_Data);
