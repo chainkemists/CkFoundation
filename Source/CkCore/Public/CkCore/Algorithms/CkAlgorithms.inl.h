@@ -332,6 +332,64 @@ namespace ck::algo
         return SortedContainer;
     }
 
+    template <typename T_ValueType>
+    auto
+        Intersect(
+            const TArray<T_ValueType>& InContainerA,
+            const TArray<T_ValueType>& InContainerB)
+        -> TArray<T_ValueType>
+    {
+        auto Intersection = std::vector<T_ValueType>{};
+        Intersection.reserve(FMath::Min(InContainerA.Num(), InContainerB.Num()));
+
+        const auto SortedContainerA = ck::algo::Sort(InContainerA);
+        const auto SortedContainerB = ck::algo::Sort(InContainerB);
+
+        std::set_intersection
+        (
+            SortedContainerA.begin(),
+            SortedContainerA.end(),
+            SortedContainerB.begin(),
+            SortedContainerB.end(),
+            std::back_inserter(Intersection)
+        );
+
+        auto Result = TArray<T_ValueType>{};
+        Result.Reserve(Intersection.size());
+        Result.Append(Intersection.data(), Intersection.size());
+
+        return Result;
+    }
+
+    template <typename T_ValueType>
+    auto
+        Except(
+            const TArray<T_ValueType>& InContainerA,
+            const TArray<T_ValueType>& InContainerB)
+        -> TArray<T_ValueType>
+    {
+        auto Difference = std::vector<T_ValueType>{};
+        Difference.reserve(FMath::Min(InContainerA.Num(), InContainerB.Num()));
+
+        const auto SortedContainerA = ck::algo::Sort(InContainerA);
+        const auto SortedContainerB = ck::algo::Sort(InContainerB);
+
+        std::set_difference
+        (
+            SortedContainerA.begin(),
+            SortedContainerA.end(),
+            SortedContainerB.begin(),
+            SortedContainerB.end(),
+            std::back_inserter(Difference)
+        );
+
+        auto Result = TArray<T_ValueType>{};
+        Result.Reserve(Difference.size());
+        Result.Append(Difference.data(), Difference.size());
+
+        return Result;
+    }
+
     template <typename T_Container>
     auto
         Sort(

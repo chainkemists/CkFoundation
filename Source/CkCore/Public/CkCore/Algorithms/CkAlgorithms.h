@@ -119,6 +119,14 @@ namespace ck::algo
     template <typename T_Container>
     [[nodiscard]]
     auto Sort(const T_Container& InContainer) -> T_Container;
+
+    template <typename T_ValueType>
+    [[nodiscard]]
+    auto Intersect(const TArray<T_ValueType>& InContainerA, const TArray<T_ValueType>& InContainerB) -> TArray<T_ValueType>;
+
+    template <typename T_ValueType>
+    [[nodiscard]]
+    auto Except(const TArray<T_ValueType>& InContainerA, const TArray<T_ValueType>& InContainerB) -> TArray<T_ValueType>;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
