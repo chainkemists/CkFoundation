@@ -21,7 +21,7 @@ auto
 {
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
 
-    RequestEntity.AddOrGet<ck::FFragment_ActorModifier_SpawnActorRequests>()._Requests.Add(InRequest);
+    RequestEntity.AddOrGet<ck::FFragment_ActorModifier_SpawnActorRequests>()._Request = InRequest;
     UCk_Utils_Variables_InstancedStruct_UE::Set(RequestEntity, FGameplayTag::EmptyTag, InOptionalPayload);
 
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_OnActorSpawned, RequestEntity, InDelegate);
@@ -40,7 +40,7 @@ auto
 {
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
 
-    RequestEntity.AddOrGet<ck::FFragment_ActorModifier_AddActorComponentRequests>()._Requests.Add(InRequest);
+    RequestEntity.AddOrGet<ck::FFragment_ActorModifier_AddActorComponentRequests>()._Request = InRequest;
     UCk_Utils_Variables_InstancedStruct_UE::Set(RequestEntity, FGameplayTag::EmptyTag, InOptionalPayload);
 
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_OnActorComponentAdded, RequestEntity, InDelegate);

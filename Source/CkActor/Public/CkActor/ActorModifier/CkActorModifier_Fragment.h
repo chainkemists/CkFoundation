@@ -27,13 +27,12 @@ namespace ck
 
     public:
         using RequestType = FCk_Request_ActorModifier_SpawnActor;
-        using RequestList = TArray<RequestType>;
 
     private:
-        RequestList _Requests;
+        RequestType _Request;
 
     private:
-        CK_PROPERTY_GET_NON_CONST(_Requests);
+        CK_PROPERTY_GET_NON_CONST(_Request);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -49,13 +48,14 @@ namespace ck
 
     public:
         using RequestType = FCk_Request_ActorModifier_AddActorComponent;
-        using RequestList = TArray<RequestType>;
 
     private:
-        RequestList _Requests;
+        RequestType _Request;
 
     private:
-        CK_PROPERTY_GET_NON_CONST(_Requests);
+        CK_PROPERTY_GET_NON_CONST(_Request);
+    };
+
     // --------------------------------------------------------------------------------------------------------------------
 
     struct CKACTOR_API FFragment_ActorModifier_RemoveActorComponentRequests
