@@ -17,6 +17,7 @@ public class CkModuleRules : ModuleRules
         // normally, detailed formatting is invoked using {d}, this switch will force detailed formatting (if supported by formatter)
         PublicDefinitions.Add("CK_FORMAT_FORCE_DETAILED=0");
         PublicDefinitions.Add("CK_DEBUG_NAME_FORCE_VERBOSE=0");
+        PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=0");
 
         switch(BuildConfigurationOverride)
         {

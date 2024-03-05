@@ -58,6 +58,8 @@ auto
         const FCk_Ability_Payload_OnActivate& InActivationPayload)
     -> void
 {
+    DoDebugSet_Activated();
+
     const auto AbilityOwnerEntity = Get_AbilityOwnerHandle();
 
     switch(const auto ExecutionPolicy = Get_Data().Get_NetworkSettings().Get_ExecutionPolicy())
@@ -97,6 +99,8 @@ auto
     OnDeactivateAbility()
     -> void
 {
+    DoDebugSet_Deactivated();
+
     DoOnDeactivateAbility();
 }
 
@@ -116,6 +120,8 @@ auto
         const FCk_Ability_Payload_OnGranted& InOptionalPayload)
     -> void
 {
+    DoDebugSet_Given();
+
     DoOnGiveAbility(InOptionalPayload);
 }
 
@@ -124,6 +130,8 @@ auto
     OnRevokeAbility()
     -> void
 {
+    DoDebugSet_Revoked();
+
     DoOnRevokeAbility();
 }
 
@@ -134,8 +142,8 @@ auto
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
-        TEXT("AbilityHandle is INVALID. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
-        ck::Context(this))
+        TEXT("AbilityHandle is [{}]. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
+        Get_AbilityHandle(), ck::Context(this))
     { return; }
 
     UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(
@@ -150,8 +158,8 @@ auto
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
-        TEXT("AbilityHandle is INVALID. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
-        ck::Context(this))
+        TEXT("AbilityHandle is [{}]. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
+        Get_AbilityHandle(), ck::Context(this))
     { return; }
 
     UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(
@@ -305,8 +313,8 @@ auto
     -> ECk_Ability_Status
 {
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
-        TEXT("AbilityHandle is INVALID. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
-        ck::Context(this))
+        TEXT("AbilityHandle is [{}]. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
+        Get_AbilityHandle(), ck::Context(this))
     { return {}; }
 
     return UCk_Utils_Ability_UE::Get_Status(Get_AbilityHandle());
@@ -318,8 +326,8 @@ auto
     -> FCk_Handle_Ability
 {
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle(), ck::IsValid_Policy_IncludePendingKill{}),
-        TEXT("AbilityHandle is INVALID. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
-        ck::Context(this))
+        TEXT("AbilityHandle is [{}]. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
+        Get_AbilityHandle(), ck::Context(this))
     { return {}; }
 
     return Get_AbilityHandle();
@@ -331,11 +339,53 @@ auto
     -> FCk_Handle_AbilityOwner
 {
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityOwnerHandle(), ck::IsValid_Policy_IncludePendingKill{}),
-        TEXT("AbilityOwnerHandle is INVALID. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
-        ck::Context(this))
+        TEXT("AbilityOwnerHandle is [{}]. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
+        Get_AbilityOwnerHandle(), ck::Context(this))
     { return {}; }
 
     return Get_AbilityOwnerHandle();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Ability_Script_PDA::
+    DoDebugSet_Activated()
+    -> void
+{
+#if NOT CK_DISABLE_ABILITY_SCRIPT_DEBUGGING
+    _ActivateDeactivate = EActivatedDeactivated::Activated;
+#endif
+}
+
+auto
+    UCk_Ability_Script_PDA::
+    DoDebugSet_Deactivated()
+    -> void
+{
+#if NOT CK_DISABLE_ABILITY_SCRIPT_DEBUGGING
+    _ActivateDeactivate = EActivatedDeactivated::Deactivated;
+#endif
+}
+
+auto
+    UCk_Ability_Script_PDA::
+    DoDebugSet_Given()
+    -> void
+{
+#if NOT CK_DISABLE_ABILITY_SCRIPT_DEBUGGING
+    _GiveRevoke = EGivenRevoked::Given;
+#endif
+}
+
+auto
+    UCk_Ability_Script_PDA::
+    DoDebugSet_Revoked()
+    -> void
+{
+#if NOT CK_DISABLE_ABILITY_SCRIPT_DEBUGGING
+    _GiveRevoke = EGivenRevoked::Revoked;
+#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------
