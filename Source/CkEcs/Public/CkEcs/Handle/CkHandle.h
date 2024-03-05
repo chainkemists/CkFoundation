@@ -95,7 +95,13 @@ public:
     template <typename T_Fragment>
     auto Remove() -> void;
 
+    template <typename T_Fragment, typename T_ValidationPolicy>
+    auto Remove() -> void;
+
     template <typename T_Fragment>
+    auto Try_Remove() -> void;
+
+    template <typename T_Fragment, typename T_ValidationPolicy>
     auto Try_Remove() -> void;
 
     template <typename... T_Fragments>
@@ -505,7 +511,16 @@ auto
     Remove()
     -> void
 {
-    CK_ENSURE_IF_NOT(IsValid(ck::IsValid_Policy_Default{}),
+    Remove<T_Fragment, ck::IsValid_Policy_Default>();
+}
+
+template <typename T_Fragment, typename T_ValidationPolicy>
+auto
+    FCk_Handle::
+    Remove()
+    -> void
+{
+    CK_ENSURE_IF_NOT(IsValid(T_ValidationPolicy{}),
         TEXT("Unable to Remove Fragment [{}]. Handle [{}] {}."),
         ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
         [&]
@@ -532,7 +547,16 @@ auto
     Try_Remove()
     -> void
 {
-    CK_ENSURE_IF_NOT(IsValid(ck::IsValid_Policy_Default{}),
+    Try_Remove<T_Fragment, ck::IsValid_Policy_Default>();
+}
+
+template <typename T_Fragment, typename T_ValidationPolicy>
+auto
+    FCk_Handle::
+    Try_Remove()
+    -> void
+{
+    CK_ENSURE_IF_NOT(IsValid(T_ValidationPolicy{}),
         TEXT("Unable to Remove Fragment [{}]. Handle [{}] {}."),
         ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
         [&]
