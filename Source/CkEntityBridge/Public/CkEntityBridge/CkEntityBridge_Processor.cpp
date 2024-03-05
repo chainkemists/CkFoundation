@@ -27,7 +27,7 @@ namespace ck
         ForEachEntity(
             TimeType,
             HandleType InHandle,
-            FFragment_EntityBridge_Requests& InRequests) const
+            FFragment_EntityBridge_Requests& InRequests)
         -> void
     {
         DoHandleRequest(InHandle, InRequests.Get_Request());
