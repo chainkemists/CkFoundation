@@ -121,7 +121,7 @@ namespace ck
             CK_IF_INITIATE_KILL>
     {
     public:
-        using MarkedDirtyBy = CK_IF_INITIATE_KILL;
+        using MarkedDirtyBy = ck::FTag_DestroyEntity_Initiate;
 
     public:
         using TProcessor::TProcessor;
