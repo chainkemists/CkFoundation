@@ -245,6 +245,11 @@ public:
         SpawnActorParamsType InSpawnActorParams,
         const TFunction<void (T_ActorType*)>& InPreFinishSpawningFunc = nullptr) -> T_ActorType*;
 
+    static auto
+    Request_RemoveActorComponent(
+        UActorComponent* InComponentToRemove,
+        bool InPromoteChildrenComponents = false) -> void;
+
 public:
     template <typename T_CompType>
     static auto

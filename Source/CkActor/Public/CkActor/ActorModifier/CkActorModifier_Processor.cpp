@@ -212,6 +212,48 @@ namespace ck
         UUtils_Signal_OnActorComponentAdded::Broadcast(InHandle, MakePayload(AddedActorComponent->GetOwner(), AddedActorComponent,
             UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag)));
     }
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_ActorModifier_RemoveActorComponent_HandleRequests::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            FFragment_ActorModifier_RemoveActorComponentRequests& InRequests)
+        -> void
+    {
+        DoHandleRequest(InHandle, InRequests.Get_Request());
+
+        InHandle.Remove<FFragment_ActorModifier_RemoveActorComponentRequests>();
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+    }
+
+    auto
+        FProcessor_ActorModifier_RemoveActorComponent_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FCk_Request_ActorModifier_RemoveActorComponent& InRequest)
+        -> void
+    {
+        const auto& ComponentToRemove         = InRequest.Get_ComponentToRemove();
+        const auto& PromoteChildrenComponents = InRequest.Get_PromoteChildrenComponents();
+
+        CK_ENSURE_IF_NOT(ComponentToRemove != nullptr, TEXT("Invalid Actor Component to REMOVE"))
+        { return; }
+
+        if (ck::Is_NOT_Valid(ComponentToRemove))
+        { return; }
+
+        const auto& ComponentOwner = ComponentToRemove->GetOwner();
+        const auto& ComponentToRemoveClass = ComponentToRemove->GetClass();
+
+        actor::Verbose(TEXT("REMOVING Actor Component [{}] from Actor [{}]"), ComponentToRemove, ComponentOwner);
+
+        UCk_Utils_Actor_UE::Request_RemoveActorComponent(ComponentToRemove.Get(), PromoteChildrenComponents);
+
+        UUtils_Signal_OnActorComponentRemoved::Broadcast(InHandle, MakePayload(ComponentOwner, ComponentToRemoveClass,
+            UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag)));
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

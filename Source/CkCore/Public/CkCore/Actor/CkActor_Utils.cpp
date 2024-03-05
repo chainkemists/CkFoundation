@@ -237,6 +237,20 @@ auto
 
 auto
     UCk_Utils_Actor_UE::
+    Request_RemoveActorComponent(
+        UActorComponent* InComponentToRemove,
+        bool InPromoteChildrenComponents)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InComponentToRemove), TEXT("Invalid Actor Component to REMOVE"))
+    { return; }
+
+    InComponentToRemove->UnregisterComponent();
+    InComponentToRemove->DestroyComponent(InPromoteChildrenComponents);
+}
+
+auto
+    UCk_Utils_Actor_UE::
     DoRequest_BeginDeferredSpawnActor(
         const DeferredSpawnActor_Params& InDeferredSpawnActorParams)
     -> AActor*
