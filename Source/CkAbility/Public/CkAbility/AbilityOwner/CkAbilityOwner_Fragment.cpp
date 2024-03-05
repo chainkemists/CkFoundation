@@ -21,8 +21,8 @@ namespace ck
 
         RecordOfEntityExtensions_Utils::ForEach_Entry(InAbilityOwner, [&](FCk_Handle_EntityExtension InEntityExtension)
         {
-            const auto EntityExtensionAsAbilityOwnerHandle = UCk_Utils_AbilityOwner_UE::Cast(InEntityExtension);
-            if (ck::IsValid(EntityExtensionAsAbilityOwnerHandle))
+            if (const auto EntityExtensionAsAbilityOwnerHandle = UCk_Utils_AbilityOwner_UE::Cast(InEntityExtension);
+                ck::IsValid(EntityExtensionAsAbilityOwnerHandle))
             {
                 ActiveTags.AppendTags(UCk_Utils_AbilityOwner_UE::Get_ActiveTags(EntityExtensionAsAbilityOwnerHandle));
             }
@@ -41,8 +41,8 @@ namespace ck
 
         RecordOfEntityExtensions_Utils::ForEach_Entry(InAbilityOwner, [&](FCk_Handle_EntityExtension InEntityExtension)
         {
-            const auto EntityExtensionAsAbilityOwnerHandle = UCk_Utils_AbilityOwner_UE::Cast(InEntityExtension);
-            if (ck::IsValid(EntityExtensionAsAbilityOwnerHandle))
+            if (const auto EntityExtensionAsAbilityOwnerHandle = UCk_Utils_AbilityOwner_UE::Cast(InEntityExtension);
+                ck::IsValid(EntityExtensionAsAbilityOwnerHandle))
             {
                 PreviousTags.AppendTags(UCk_Utils_AbilityOwner_UE::Get_PreviousTags(EntityExtensionAsAbilityOwnerHandle));
             }
@@ -81,8 +81,8 @@ namespace ck
 
         RecordOfEntityExtensions_Utils::ForEach_Entry(InAbilityOwner, [&](FCk_Handle_EntityExtension InEntityExtension)
         {
-            const auto EntityExtensionAsAbilityOwnerHandle = UCk_Utils_AbilityOwner_UE::Cast(InEntityExtension);
-            if (ck::IsValid(EntityExtensionAsAbilityOwnerHandle))
+            if (const auto EntityExtensionAsAbilityOwnerHandle = UCk_Utils_AbilityOwner_UE::Cast(InEntityExtension);
+                ck::IsValid(EntityExtensionAsAbilityOwnerHandle))
             {
                 Count += UCk_Utils_AbilityOwner_UE::Get_SpecificActiveTagsWithCount(EntityExtensionAsAbilityOwnerHandle, InTag);
             }
@@ -107,6 +107,9 @@ namespace ck
             const FGameplayTagContainer& InTagsToAdd)
         -> void
     {
+        if (InTagsToAdd.IsEmpty())
+        { return; }
+
         DoTry_TagsUpdatedOnExtensionOwner(InAbilityOwner);
         _PreviousTags = _ActiveTags;
         _ActiveTags.UpdateTagCount(InTagsToAdd, 1);
@@ -152,6 +155,9 @@ namespace ck
             const FGameplayTagContainer& InTagsToRemove)
         -> void
     {
+        if (InTagsToRemove.IsEmpty())
+        { return; }
+
         DoTry_TagsUpdatedOnExtensionOwner(InAbilityOwner);
         _PreviousTags = _ActiveTags;
         _ActiveTags.UpdateTagCount(InTagsToRemove, -1);
