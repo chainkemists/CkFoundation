@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Format/CkFormat.h"
+#include "CkUI/UserWidget/CkUserWidget.h"
 
 #include <Components/WidgetComponent.h>
 
@@ -64,6 +65,17 @@ protected:
     auto InitWidget() -> void override;
 
 protected:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|UI|WidgetComponent")
+    void Request_SetWidgetAndBind(
+        UCk_UserWidget_UE* InNewWidget);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|UI|WidgetComponent")
+    void Request_SetWidgetSpacePolicy(
+        ECk_WidgetComponent_WidgetSpacePolicy InNewPolicy);
+
+
     UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|UI|WidgetComponent")
     void OnPostInitWidget();
@@ -74,8 +86,13 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_WidgetComponent_Params _Params;
 
+private:
+    UPROPERTY(Transient)
+    ECk_WidgetComponent_WidgetSpacePolicy _CurrentWidgetSpacePolicy = ECk_WidgetComponent_WidgetSpacePolicy::Default;
+
 public:
     CK_PROPERTY_GET(_Params);
+    CK_PROPERTY_GET(_CurrentWidgetSpacePolicy);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

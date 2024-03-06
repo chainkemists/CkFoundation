@@ -36,7 +36,7 @@ auto
 {
     Super::TickComponent(InDeltaTime, InTickType, InThisTickFunction);
 
-    if (bHiddenInGame || Get_Params().Get_WidgetSpacePolicy() != ECk_WidgetComponent_WidgetSpacePolicy::AlwaysFaceCamera)
+    if (bHiddenInGame || _CurrentWidgetSpacePolicy != ECk_WidgetComponent_WidgetSpacePolicy::AlwaysFaceCamera)
     { return; }
 
     const auto* PlayerCameraManager = UGameplayStatics::GetPlayerCameraManager(this, 0);
@@ -61,7 +61,45 @@ auto
 {
     Super::InitializeComponent();
 
-    switch (const auto& WidgetSpacePolicy = Get_Params().Get_WidgetSpacePolicy())
+    Request_SetWidgetSpacePolicy(Get_Params().Get_WidgetSpacePolicy());
+}
+
+auto
+    UCk_WidgetComponent_UE::
+    InitWidget()
+    -> void
+{
+    Super::InitWidget();
+
+    if (UCk_Utils_Game_UE::Get_IsInGame(this))
+    {
+        OnPostInitWidget();
+    }
+}
+
+auto
+    UCk_WidgetComponent_UE::
+    Request_SetWidgetAndBind(
+        UCk_UserWidget_UE* InNewWidget)
+    -> void
+{
+    SetWidget(InNewWidget);
+
+    OnPostInitWidget();
+}
+
+auto
+    UCk_WidgetComponent_UE::
+    Request_SetWidgetSpacePolicy(
+        ECk_WidgetComponent_WidgetSpacePolicy InNewPolicy)
+    -> void
+{
+    if (_CurrentWidgetSpacePolicy == InNewPolicy)
+    { return; }
+
+    _CurrentWidgetSpacePolicy = InNewPolicy;
+
+    switch (_CurrentWidgetSpacePolicy)
     {
         case ECk_WidgetComponent_WidgetSpacePolicy::Default:
         {
@@ -91,22 +129,9 @@ auto
         }
         default:
         {
-            CK_INVALID_ENUM(WidgetSpacePolicy);
+            CK_INVALID_ENUM(_CurrentWidgetSpacePolicy);
             break;
         }
-    }
-}
-
-auto
-    UCk_WidgetComponent_UE::
-    InitWidget()
-    -> void
-{
-    Super::InitWidget();
-
-    if (UCk_Utils_Game_UE::Get_IsInGame(this))
-    {
-        OnPostInitWidget();
     }
 }
 
