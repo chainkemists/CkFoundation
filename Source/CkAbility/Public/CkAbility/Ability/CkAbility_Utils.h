@@ -197,6 +197,12 @@ private:
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         const FCk_Handle& InAbilitySource) -> bool;
 
+    static auto
+    DoOnNotGiven(
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass,
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        const FCk_Handle& InAbilitySource) -> void;
+
 private:
     static UCk_Ability_EntityConfig_PDA*
     DoCreate_AbilityEntityConfig(
