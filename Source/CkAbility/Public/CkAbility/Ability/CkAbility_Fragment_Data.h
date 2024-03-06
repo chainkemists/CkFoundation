@@ -102,6 +102,9 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_Stacking_Policy);
 UENUM(BlueprintType)
 enum class ECk_Ability_StackDurationRefresh_Policy : uint8
 {
+    // The duration of this Ability will be refreshed from any stack application, even if unsuccessful
+    RefreshOnAnyApplication,
+
     // The duration of this Ability will be refreshed from any successful stack application
     RefreshOnSuccessfulApplication,
 
@@ -117,6 +120,9 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_StackDurationRefresh_Policy);
 UENUM(BlueprintType)
 enum class ECk_Ability_StackPeriodReset_Policy : uint8
 {
+    // Any progress toward the next tick of a periodic application is discarded upon any stack application, even if unsuccessful
+    ResetOnAnyApplication,
+
     // Any progress toward the next tick of a periodic application is discarded upon any successful stack application
     ResetOnSuccessfulApplication,
 
