@@ -16,6 +16,16 @@ namespace ck
 {
     auto
         FProcessor_ActorModifier_SpawnActor_HandleRequests::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        TProcessor::Tick(InDeltaT);
+        _TransientEntity.Clear<MarkedDirtyBy>();
+    }
+
+    auto
+        FProcessor_ActorModifier_SpawnActor_HandleRequests::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
@@ -27,7 +37,6 @@ namespace ck
             DoHandleRequest(InHandle, InRequest);
         });
 
-        InHandle.Remove<FFragment_ActorModifier_SpawnActorRequests>();
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
     }
 
@@ -130,6 +139,16 @@ namespace ck
 
     auto
         FProcessor_ActorModifier_AddActorComponent_HandleRequests::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        TProcessor::Tick(InDeltaT);
+        _TransientEntity.Clear<MarkedDirtyBy>();
+    }
+
+    auto
+        FProcessor_ActorModifier_AddActorComponent_HandleRequests::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
@@ -141,7 +160,6 @@ namespace ck
             DoHandleRequest(InHandle, InRequest);
         });
 
-        InHandle.Remove<FFragment_ActorModifier_AddActorComponentRequests>();
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
     }
 
@@ -216,6 +234,16 @@ namespace ck
 
     auto
         FProcessor_ActorModifier_RemoveActorComponent_HandleRequests::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        TProcessor::Tick(InDeltaT);
+        _TransientEntity.Clear<MarkedDirtyBy>();
+    }
+
+    auto
+        FProcessor_ActorModifier_RemoveActorComponent_HandleRequests::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
@@ -224,7 +252,7 @@ namespace ck
     {
         DoHandleRequest(InHandle, InRequests.Get_Request());
 
-        InHandle.Remove<FFragment_ActorModifier_RemoveActorComponentRequests>();
+        InHandle.Remove<MarkedDirtyBy, IsValid_Policy_IncludePendingKill>();
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
     }
 
