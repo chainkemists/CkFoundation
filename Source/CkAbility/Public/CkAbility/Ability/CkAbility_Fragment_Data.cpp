@@ -17,6 +17,13 @@ auto
     -> const FCk_Ability_Script_Data&
 {
     const auto& AbilityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_Script_PDA>(_AbilityScriptClass);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptCDO), TEXT("Could not retrieve valid CDO for Ability Script Class [{}]"), _AbilityScriptClass)
+    {
+        static FCk_Ability_Script_Data Invalid;
+        return Invalid;
+    }
+
     return AbilityScriptCDO->Get_Data();
 }
 
