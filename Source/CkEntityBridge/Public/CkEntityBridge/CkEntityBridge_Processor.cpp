@@ -13,19 +13,26 @@ namespace ck
 {
     auto
         FProcessor_EntityBridge_HandleRequests::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        TProcessor::Tick(InDeltaT);
+
+        _TransientEntity.Clear<MarkedDirtyBy>();
+    }
+
+    auto
+        FProcessor_EntityBridge_HandleRequests::
         ForEachEntity(
             TimeType,
             HandleType InHandle,
             FFragment_EntityBridge_Requests& InRequests) const
         -> void
     {
-        algo::ForEach(InRequests._Requests, [&](const auto& InRequest)
-        {
-            DoHandleRequest(InHandle, InRequest);
-        });
+        DoHandleRequest(InHandle, InRequests.Get_Request());
 
-        InHandle.Remove<MarkedDirtyBy>();
-        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle, ECk_EntityLifetime_DestructionBehavior::DestroyOnlyIfOrphan);
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
     }
 
     auto
@@ -42,6 +49,13 @@ namespace ck
         { return; }
 
         const auto& NewEntityLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+
+        if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(NewEntityLifetimeOwner))
+        {
+            entity_bridge::Verbose(TEXT("Aborting Spawn Entity process since the New Entity's Lifetime Owner is PendingKill"));
+            return;
+        }
+
         auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(NewEntityLifetimeOwner);
 
         UCk_Utils_Net_UE::Copy(NewEntityLifetimeOwner, NewEntity);

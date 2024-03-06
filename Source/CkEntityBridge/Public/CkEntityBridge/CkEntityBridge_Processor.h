@@ -18,10 +18,16 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(
+        auto
+        Tick(
+            TimeType InDeltaT) -> void;
+
+    public:
+        static auto
+        ForEachEntity(
             TimeType,
             HandleType InHandle,
-            FFragment_EntityBridge_Requests& InRequests) const -> void;
+            FFragment_EntityBridge_Requests& InRequests) -> void;
 
     private:
         static auto
