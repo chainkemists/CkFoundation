@@ -158,6 +158,7 @@ namespace ck
                     InAbilityOwnerEntity
                 );
 
+                UCk_Utils_Ability_UE::DoOnNotGiven(AbilityScriptClass, InAbilityOwnerEntity, AbilitySource);
                 return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven;
             }
 
@@ -171,6 +172,7 @@ namespace ck
                 // This check here is a temporary (an potentially expensive) workaround, but we should handle this case better
                 if (NOT UCk_Utils_Ability_UE::DoGet_CanBeGiven(AbilityScriptClass, InAbilityOwnerEntity, AbilitySource))
                 {
+                    UCk_Utils_Ability_UE::DoOnNotGiven(AbilityScriptClass, InAbilityOwnerEntity, AbilitySource);
                     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InEntity);
                     return;
                 }

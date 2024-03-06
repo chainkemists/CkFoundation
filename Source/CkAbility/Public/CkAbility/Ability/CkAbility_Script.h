@@ -41,6 +41,11 @@ public:
         const FCk_Handle_AbilityOwner& InAbilityOwner,
         const FCk_Handle& InAbilitySource) const -> bool;
 
+    auto
+    OnNotGiven(
+        const FCk_Handle_AbilityOwner& InAbilityOwner,
+        const FCk_Handle& InAbilitySource) const -> void;
+
 protected:
     UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|Ability|Script",
@@ -73,6 +78,14 @@ protected:
               meta     = (DisplayName = "CanBeGiven"))
     bool
     DoGet_CanBeGiven(
+        const FCk_Handle_AbilityOwner& InAbilityOwner,
+        const FCk_Handle& InAbilitySource) const;
+
+    UFUNCTION(BlueprintImplementableEvent,
+              Category = "Ck|Ability|Script",
+              meta     = (DisplayName = "OnNotGiven"))
+    void
+    DoOnNotGiven(
         const FCk_Handle_AbilityOwner& InAbilityOwner,
         const FCk_Handle& InAbilitySource) const;
 

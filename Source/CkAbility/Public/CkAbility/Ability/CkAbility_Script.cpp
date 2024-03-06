@@ -146,6 +146,16 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
+    OnNotGiven(
+        const FCk_Handle_AbilityOwner& InAbilityOwner,
+        const FCk_Handle& InAbilitySource) const
+    -> void
+{
+    DoOnNotGiven(InAbilityOwner, InAbilitySource);
+}
+
+auto
+    UCk_Ability_Script_PDA::
     OnGiveAbility(
         const FCk_Ability_Payload_OnGranted& InOptionalPayload)
     -> void

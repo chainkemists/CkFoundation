@@ -462,11 +462,29 @@ auto
     const auto& AbilityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_Script_PDA>(InAbilityScriptClass);
 
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptCDO),
-        TEXT("Cannot get valid CDO for Ability Script [{}]"),
-        InAbilityScriptClass)
+        TEXT("Cannot get valid CDO for Ability Script [{}] with AbilityOwner [{}] and AbilitySource [{}]"),
+        InAbilityScriptClass, InAbilityOwnerEntity, InAbilitySource)
     { return {}; }
 
     return AbilityScriptCDO->Get_CanBeGiven(InAbilityOwnerEntity, InAbilitySource);
+}
+
+auto
+    UCk_Utils_Ability_UE::
+    DoOnNotGiven(
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass,
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        const FCk_Handle& InAbilitySource)
+    -> void
+{
+    const auto& AbilityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_Script_PDA>(InAbilityScriptClass);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptCDO),
+        TEXT("Cannot get valid CDO for Ability Script [{}] with AbilityOwner [{}] and AbilitySource [{}]"),
+        InAbilityScriptClass, InAbilityOwnerEntity, InAbilitySource)
+    { return; }
+
+    AbilityScriptCDO->DoOnNotGiven(InAbilityOwnerEntity, InAbilitySource);
 }
 
 auto
