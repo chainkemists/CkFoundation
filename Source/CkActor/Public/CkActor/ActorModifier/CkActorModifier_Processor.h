@@ -22,10 +22,17 @@ namespace ck
     public:
         using TProcessor::TProcessor;
 
+   public:
+        auto
+        Tick(
+            TimeType InDeltaT) -> void;
+
     public:
-        auto ForEachEntity(const TimeType& InDeltaT,
+        static auto
+        ForEachEntity(
+            const TimeType& InDeltaT,
             HandleType InHandle,
-            FFragment_ActorModifier_SpawnActorRequests& InRequests) const -> void;
+            FFragment_ActorModifier_SpawnActorRequests& InRequests) -> void;
 
     private:
         static auto
@@ -48,10 +55,16 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(
+        auto
+        Tick(
+            TimeType InDeltaT) -> void;
+
+    public:
+        static auto
+        ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            FFragment_ActorModifier_AddActorComponentRequests& InRequests) const -> void;
+            FFragment_ActorModifier_AddActorComponentRequests& InRequests) -> void;
 
     private:
         static auto
@@ -74,7 +87,13 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        static auto ForEachEntity(
+        auto
+        Tick(
+            TimeType InDeltaT) -> void;
+
+    public:
+        static auto
+        ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
             FFragment_ActorModifier_RemoveActorComponentRequests& InRequests) -> void;
