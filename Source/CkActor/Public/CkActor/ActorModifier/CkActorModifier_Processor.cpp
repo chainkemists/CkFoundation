@@ -193,10 +193,11 @@ namespace ck
             {
                 ComponentOwner,
                 InRequest.Get_ComponentToAdd(),
-                InRequest.Get_IsUnique(),
-                ParentComponent,
-                ComponentParams.Get_AttachmentSocket()
+                ParentComponent
             }
+            .Set_IsUnique(InRequest.Get_IsUnique())
+            .Set_Socket(ComponentParams.Get_AttachmentSocket())
+            .Set_Tags(ComponentParams.Get_Tags())
         );
 
         CK_ENSURE_IF_NOT(ck::IsValid(AddedActorComponent), TEXT("Failed to Add new Actor Component [{}]"), InRequest.Get_ComponentToAdd())

@@ -296,11 +296,9 @@ auto
         UCk_Utils_Actor_UE::AddNewActorComponent_Params<USceneComponent>
         {
             MarkerOrSensorAttachedActor,
-            USceneComponent::StaticClass(),
-            false,
             MarkerAttachedActorRootComponent,
-            NAME_None
         }
+        .Set_IsUnique(false)
     );
 
     CK_ENSURE_IF_NOT(ck::IsValid(ShapeHolderComponent),

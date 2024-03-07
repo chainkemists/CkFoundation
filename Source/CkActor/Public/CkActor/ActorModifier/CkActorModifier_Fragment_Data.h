@@ -97,6 +97,10 @@ private:
     TObjectPtr<USceneComponent> _Parent;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<FName> _Tags;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, InlineEditConditionToggle))
     bool _IsTickEnabled = true;
 
@@ -114,6 +118,7 @@ private:
 
 public:
     CK_PROPERTY_GET(_Parent);
+    CK_PROPERTY(_Tags);
     CK_PROPERTY(_IsTickEnabled);
     CK_PROPERTY(_TickInterval);
     CK_PROPERTY(_AttachmentType);
