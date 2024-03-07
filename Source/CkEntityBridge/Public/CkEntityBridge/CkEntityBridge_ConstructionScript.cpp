@@ -126,7 +126,7 @@ auto
 
         // We need the EntityOwningActor ActorComponent to exist before building the Entity from Config
 
-        // TODO: consolidate into a utilty. Other usage in replication driver
+        // TODO: consolidate into a utility. Other usage in replication driver
         if (const auto EntityOwningActorComponent = OwningActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
             ck::IsValid(EntityOwningActorComponent))
         {
@@ -139,7 +139,6 @@ auto
                 UCk_Utils_Actor_UE::AddNewActorComponent_Params<UCk_EntityOwningActor_ActorComponent_UE>
                 {
                     OwningActor,
-                    true
                 },
                 [&](UCk_EntityOwningActor_ActorComponent_UE* InComp)
                 {
@@ -154,10 +153,8 @@ auto
             (
                 UCk_Utils_Actor_UE::AddNewActorComponent_Params<UCk_ObjectReplicator_ActorComponent_UE>
                 {
-                    OwningActor,
-                    true
-                },
-                [&](UCk_ObjectReplicator_ActorComponent_UE* InComp) { }
+                    OwningActor
+                }
             );
         }
 
@@ -279,8 +276,7 @@ auto
             (
                 UCk_Utils_Actor_UE::AddNewActorComponent_Params<UCk_EntityOwningActor_ActorComponent_UE>
                 {
-                    OwningActor,
-                    true
+                    OwningActor
                 },
                 [&](UCk_EntityOwningActor_ActorComponent_UE* InComp)
                 {
@@ -343,8 +339,7 @@ auto
             (
                 UCk_Utils_Actor_UE::AddNewActorComponent_Params<UCk_EntityOwningActor_ActorComponent_UE>
                 {
-                    OwningActor,
-                    true
+                    OwningActor
                 },
                 [&](UCk_EntityOwningActor_ActorComponent_UE* InComp)
                 {
