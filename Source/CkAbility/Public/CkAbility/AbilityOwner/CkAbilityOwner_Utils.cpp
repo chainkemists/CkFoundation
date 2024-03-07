@@ -42,7 +42,17 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(AbilityOwner, UCk_Utils_AbilityOwner_UE, FCk_Handle_AbilityOwner, ck::FFragment_AbilityOwner_Current, ck::FFragment_AbilityOwner_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(AbilityOwner, UCk_Utils_AbilityOwner_UE, FCk_Handle_AbilityOwner, ck::FFragment_AbilityOwner_Current, ck::FFragment_AbilityOwner_Params)
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Has_AbilityByHandle(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        const FCk_Handle_Ability&      InAbility)
+    -> bool
+{
+    return UCk_Utils_Ability_UE::RecordOfAbilities_Utils::Get_ContainsEntry(InAbilityOwnerEntity, InAbility);
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 

@@ -68,6 +68,14 @@ private:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
+              DisplayName="[Ck][AbilityOwner] Has Ability (By Handle)")
+    static bool
+    Has_AbilityByHandle(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        const FCk_Handle_Ability& InAbility);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner",
               DisplayName="[Ck][AbilityOwner] Has Ability (By Class)")
     static bool
     Has_AbilityByClass(
