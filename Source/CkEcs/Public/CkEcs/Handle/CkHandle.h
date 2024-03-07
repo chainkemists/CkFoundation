@@ -25,6 +25,16 @@ private:
 public:
     CK_PROPERTY_GET(_Name);
 };
+
+// enable pointer stability for all Fragments when debugging
+template<typename Type>
+struct entt::component_traits<Type> {
+    // ReSharper disable once CppInconsistentNaming
+    static constexpr bool in_place_delete = true;
+    // ReSharper disable once CppInconsistentNaming
+    static constexpr std::size_t page_size = !std::is_empty_v<Type> * ENTT_PACKED_PAGE;
+};
+
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
