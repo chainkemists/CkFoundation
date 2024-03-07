@@ -527,8 +527,11 @@ namespace ck
 
             if (ck::Is_NOT_Valid(RecordEntryHandle, T_ValidationPolicy{}))
             {
-                RecordEntries.RemoveAtSwap(Index);
-                --Index;
+                if (ck::Is_NOT_Valid(RecordEntryHandle, ck::IsValid_Policy_IncludePendingKill{}))
+                {
+                    RecordEntries.RemoveAtSwap(Index);
+                    --Index;
+                }
                 continue;
             }
 
@@ -565,9 +568,12 @@ namespace ck
 
             if (ck::Is_NOT_Valid(RecordEntryHandle, T_ValidationPolicy{}))
             {
-                // not using RecordEntries local variable to keep mutability
-                Fragment._RecordEntries.RemoveAtSwap(Index);
-                --Index;
+                if (ck::Is_NOT_Valid(RecordEntryHandle, ck::IsValid_Policy_IncludePendingKill{}))
+                {
+                    // not using RecordEntries local variable to keep mutability
+                    Fragment._RecordEntries.RemoveAtSwap(Index);
+                    --Index;
+                }
                 continue;
             }
 
