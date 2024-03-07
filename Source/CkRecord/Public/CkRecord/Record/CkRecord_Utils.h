@@ -525,7 +525,7 @@ namespace ck
         {
             const auto RecordEntryHandle = ck::MakeHandle(RecordEntries[Index], InHandle);
 
-            if (ck::Is_NOT_Valid(RecordEntryHandle, T_ValidationPolicy{}))
+            if (ck::Is_NOT_Valid(RecordEntryHandle, ck::IsValid_Policy_IncludePendingKill{}))
             {
                 RecordEntries.RemoveAtSwap(Index);
                 --Index;
@@ -563,7 +563,7 @@ namespace ck
         {
             const auto RecordEntryHandle = ck::StaticCast<const MaybeTypeSafeHandle>(ck::MakeHandle(RecordEntries[Index], InHandle));
 
-            if (ck::Is_NOT_Valid(RecordEntryHandle, T_ValidationPolicy{}))
+            if (ck::Is_NOT_Valid(RecordEntryHandle, ck::IsValid_Policy_IncludePendingKill{}))
             {
                 // not using RecordEntries local variable to keep mutability
                 Fragment._RecordEntries.RemoveAtSwap(Index);
