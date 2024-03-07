@@ -451,6 +451,12 @@ auto
         const FCk_Delegate_AbilityOwner_OnAbilityRevokedOrNot& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
+    CK_ENSURE_IF_NOT(Has_AbilityByClass(InAbilityOwnerHandle, InRequest.Get_AbilityClass()) ||
+        Has_AbilityByHandle(InAbilityOwnerHandle, InRequest.Get_AbilityHandle()), TEXT("Ability [{}] does NOT exist on AbilityOwner [{}]"),
+        InRequest.Get_SearchPolicy() == ECk_AbilityOwner_AbilitySearch_Policy::SearchByClass
+            ? ck::Format(TEXT("{}"), InRequest.Get_AbilityClass()) : ck::Format(TEXT("{}"), InRequest.Get_AbilityHandle(), InAbilityOwnerHandle))
+    { return InAbilityOwnerHandle; }
+
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityRevokedOrNot, InAbilityOwnerHandle, InDelegate);
 
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
