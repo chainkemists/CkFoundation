@@ -90,6 +90,13 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
+              DisplayName="[Ck][Ability] Get OnGive Settings")
+    static FCk_Ability_OnGiveSettings
+    Get_OnGiveSettings(
+        const FCk_Handle_Ability& InAbilityEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability",
               DisplayName="[Ck][Ability] Get Activation Settings")
     static FCk_Ability_ActivationSettings
     Get_ActivationSettings(
