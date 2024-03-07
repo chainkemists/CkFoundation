@@ -180,7 +180,6 @@ auto
             UCk_Utils_Actor_UE::AddNewActorComponent_Params<UCk_EntityOwningActor_ActorComponent_UE>
             {
                 ReplicatedActor,
-                true
             },
             [&](UCk_EntityOwningActor_ActorComponent_UE* InComp)
             {

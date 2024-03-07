@@ -44,31 +44,31 @@ public:
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    TWeakObjectPtr<UObject>                              _OwnerOrWorld;
+    TWeakObjectPtr<UObject> _OwnerOrWorld;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    TSubclassOf<AActor>                                  _ActorClass;
+    TSubclassOf<AActor> _ActorClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    TWeakObjectPtr<AActor>                               _Archetype;
+    TWeakObjectPtr<AActor> _Archetype;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    FName                                                _NonUniqueName;
+    FName _NonUniqueName;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    FString                                              _Label;
+    FString _Label;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    FTransform                                           _SpawnTransform            = FTransform::Identity;
+    FTransform _SpawnTransform = FTransform::Identity;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    ESpawnActorCollisionHandlingMethod                   _CollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::Undefined;
+    ESpawnActorCollisionHandlingMethod _CollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::Undefined;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    ECk_Actor_NetworkingType                             _NetworkingType            = ECk_Actor_NetworkingType::Local;
+    ECk_Actor_NetworkingType _NetworkingType = ECk_Actor_NetworkingType::Local;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    ECk_Utils_Actor_SpawnActorPolicy                     _SpawnPolicy               = ECk_Utils_Actor_SpawnActorPolicy::Default;
+    ECk_Utils_Actor_SpawnActorPolicy _SpawnPolicy = ECk_Utils_Actor_SpawnActorPolicy::Default;
 
 public:
     CK_PROPERTY_GET(_OwnerOrWorld);
@@ -106,23 +106,34 @@ public:
         using CompClassType = TSubclassOf<T_CompType>;
 
     public:
-        AddNewActorComponent_Params(AActor* InTargetActor, bool InIsUnique = true);
-        AddNewActorComponent_Params(AActor* InTargetActor, bool InIsUnique, USceneComponent* InParent, FName InSocket);
-        AddNewActorComponent_Params(AActor* InTargetActor, CompClassType InCompClass, bool InIsUnique, USceneComponent* InParent, FName InSocket);
+        explicit
+        AddNewActorComponent_Params(
+            AActor* InTargetActor);
+
+        AddNewActorComponent_Params(
+            AActor* InTargetActor,
+            USceneComponent* InParent);
+
+        AddNewActorComponent_Params(
+            AActor* InTargetActor,
+            CompClassType InCompClass,
+            USceneComponent* InParent);
 
     private:
-        TWeakObjectPtr<AActor>          _Owner;
+        TWeakObjectPtr<AActor> _Owner;
         TWeakObjectPtr<USceneComponent> _ParentComp;
-        CompClassType                   _CompClass;
-        bool                            _IsUnique = true;
-        FName                           _Socket;
+        CompClassType _CompClass;
+        bool _IsUnique = true;
+        FName _Socket;
+        TArray<FName> _Tags;
 
     public:
         CK_PROPERTY_GET(_Owner);
         CK_PROPERTY_GET(_ParentComp);
         CK_PROPERTY_GET(_CompClass);
-        CK_PROPERTY_GET(_IsUnique);
-        CK_PROPERTY_GET(_Socket);
+        CK_PROPERTY(_IsUnique);
+        CK_PROPERTY(_Socket);
+        CK_PROPERTY(_Tags);
     };
 
 private:
@@ -136,12 +147,12 @@ private:
             UObject* InOwnerOrWorld);
 
     private:
-        TSubclassOf<AActor>                _ActorClass;
-        TWeakObjectPtr<UObject>            _OwnerOrWorld;
-        TWeakObjectPtr<AActor>             _Archetype;
-        FName                              _NonUniqueName;
-        FString                            _Label;
-        FTransform                         _SpawnTransform;
+        TSubclassOf<AActor> _ActorClass;
+        TWeakObjectPtr<UObject> _OwnerOrWorld;
+        TWeakObjectPtr<AActor> _Archetype;
+        FName _NonUniqueName;
+        FString _Label;
+        FTransform _SpawnTransform;
         ESpawnActorCollisionHandlingMethod _CollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::Undefined;
 
     public:
@@ -280,6 +291,37 @@ private:
 // --------------------------------------------------------------------------------------------------------------------
 // Definitions
 
+template <typename T_CompType>
+UCk_Utils_Actor_UE::AddNewActorComponent_Params<T_CompType>::
+    AddNewActorComponent_Params(
+        AActor* InTargetActor)
+    : ThisType(InTargetActor, ck::IsValid(InTargetActor) ? InTargetActor->GetRootComponent() : nullptr)
+{
+}
+
+template <typename T_CompType>
+UCk_Utils_Actor_UE::AddNewActorComponent_Params<T_CompType>::
+    AddNewActorComponent_Params(
+        AActor* InTargetActor,
+        USceneComponent* InParent)
+    : ThisType(InTargetActor, T_CompType::StaticClass(), InParent)
+{
+}
+
+template <typename T_CompType>
+UCk_Utils_Actor_UE::AddNewActorComponent_Params<T_CompType>::
+    AddNewActorComponent_Params(
+        AActor* InTargetActor,
+        CompClassType InCompClass,
+        USceneComponent* InParent)
+    : _Owner(InTargetActor)
+    , _ParentComp(InParent)
+    , _CompClass(InCompClass)
+{
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 template <typename T_ActorType>
 auto
     UCk_Utils_Actor_UE::
@@ -302,45 +344,6 @@ auto
     return Cast<T_ActorType>(DoRequest_SpawnActor_Finish(InSpawnActorParams, SpawnedActor));
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-
-
-template <typename T_CompType>
-UCk_Utils_Actor_UE::AddNewActorComponent_Params<T_CompType>::
-    AddNewActorComponent_Params(
-        AActor* InTargetActor,
-        bool InIsUnique)
-    : ThisType(InTargetActor, InIsUnique, ck::IsValid(InTargetActor) ? InTargetActor->GetRootComponent() : nullptr, NAME_None)
-{
-}
-
-template <typename T_CompType>
-UCk_Utils_Actor_UE::AddNewActorComponent_Params<T_CompType>::
-    AddNewActorComponent_Params(
-        AActor* InTargetActor,
-        bool InIsUnique,
-        USceneComponent* InParent,
-        FName InSocket)
-    : ThisType(InTargetActor, T_CompType::StaticClass(), InIsUnique, InParent, InSocket)
-{
-}
-
-template <typename T_CompType>
-UCk_Utils_Actor_UE::AddNewActorComponent_Params<T_CompType>::
-    AddNewActorComponent_Params(
-        AActor* InTargetActor,
-        CompClassType InCompClass,
-        bool InIsUnique,
-        USceneComponent* InParent,
-        FName InSocket)
-    : _Owner(InTargetActor)
-    , _ParentComp(InParent)
-    , _CompClass(InCompClass)
-    , _IsUnique(InIsUnique)
-    , _Socket(InSocket)
-{
-}
-
 template <typename T_CompType>
 auto
     UCk_Utils_Actor_UE::
@@ -351,7 +354,7 @@ auto
 {
     const auto& Owner = InParams.Get_Owner();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(Owner), TEXT("Failed to add new component to an invalid Actor."))
+    CK_ENSURE_IF_NOT(ck::IsValid(Owner), TEXT("Cannot add new component of type [{}] because the Owning Actor is INVALID."), InParams.Get_CompClass())
     { return nullptr; }
 
     if (InParams.Get_IsUnique())
@@ -369,6 +372,8 @@ auto
 
     if (ck::Is_NOT_Valid(Comp))
     { return Comp; }
+
+    Comp->ComponentTags = InParams.Get_Tags();
 
     auto* SceneComp  = Cast<USceneComponent>(Comp);
 
