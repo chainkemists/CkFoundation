@@ -169,7 +169,7 @@ namespace ck
             {
                 // TODO: Since the construction of the Ability entity is deferred, if multiple Give requests of the same
                 // script class are processed in the same frame, it is possible for the CanBeGiven to NOT return the correct value
-                // This check here is a temporary (an potentially expensive) workaround, but we should handle this case better
+                // This check here is a temporary (and potentially expensive) workaround, but we should handle this case better
                 if (NOT UCk_Utils_Ability_UE::DoGet_CanBeGiven(AbilityScriptClass, InAbilityOwnerEntity, AbilitySource))
                 {
                     UCk_Utils_Ability_UE::DoOnNotGiven(AbilityScriptClass, InAbilityOwnerEntity, AbilitySource);
@@ -190,6 +190,21 @@ namespace ck
 
                 UCk_Utils_Handle_UE::Set_DebugName(AbilityEntity,
                     UCk_Utils_Debug_UE::Get_DebugName(AbilityParams.Get_AbilityScriptClass(), ECk_DebugNameVerbosity_Policy::Compact));
+
+                {
+                    const auto& AbilityOnGiveSettings = UCk_Utils_Ability_UE::Get_OnGiveSettings(AbilityEntity);
+                    const auto& GrantedTags = AbilityOnGiveSettings.Get_OnGiveSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
+
+                    // HACK: need a non-const handle as we're unable to make the lambda mutable
+                    auto NonConstAbilityOwnerEntity = InAbilityOwnerEntity;
+                    auto& AbilityOwnerComp = NonConstAbilityOwnerEntity.Get<FFragment_AbilityOwner_Current>();
+                    AbilityOwnerComp.AppendTags(InAbilityOwnerEntity, GrantedTags);
+
+                    if (AbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags(InAbilityOwnerEntity))
+                    {
+                        UCk_Utils_AbilityOwner_UE::Request_TagsUpdated(NonConstAbilityOwnerEntity);
+                    }
+                }
 
                 UCk_Utils_Ability_UE::DoGive(AbilityOwnerEntity, AbilityEntity, AbilitySource, OptionalPayload);
 
@@ -250,6 +265,18 @@ namespace ck
                 InAbilityEntity,
                 InAbilityOwnerEntity
             );
+
+            {
+                const auto& AbilityOnGiveSettings = UCk_Utils_Ability_UE::Get_OnGiveSettings(InAbilityEntity);
+                const auto& GrantedTags = AbilityOnGiveSettings.Get_OnGiveSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
+
+                InAbilityOwnerComp.RemoveTags(InAbilityOwnerEntity, GrantedTags);
+
+                if (InAbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags(InAbilityOwnerEntity))
+                {
+                    UCk_Utils_AbilityOwner_UE::Request_TagsUpdated(InAbilityOwnerEntity);
+                }
+            }
 
             UCk_Utils_Ability_UE::DoRevoke(InAbilityOwnerEntity, InAbilityEntity);
 

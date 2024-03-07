@@ -45,6 +45,15 @@ auto
 
 auto
     UCk_Utils_Ability_UE::
+    Get_OnGiveSettings(
+        const FCk_Handle_Ability& InAbilityEntity)
+    -> FCk_Ability_OnGiveSettings
+{
+    return InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params().Get_Data().Get_OnGiveSettings();
+}
+
+auto
+    UCk_Utils_Ability_UE::
     Get_ActivationSettings(
         const FCk_Handle_Ability& InAbilityEntity)
     -> FCk_Ability_ActivationSettings

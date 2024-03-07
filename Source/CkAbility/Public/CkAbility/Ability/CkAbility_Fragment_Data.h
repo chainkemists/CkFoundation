@@ -306,6 +306,26 @@ private:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Ability_OnGiveSettings_OnOwner
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Ability_OnGiveSettings_OnOwner);
+
+private:
+    // When this Ability is given, the owner of the Ability will be granted this set of Tags.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTagContainer _GrantTagsOnAbilityOwner;
+
+public:
+    CK_PROPERTY(_GrantTagsOnAbilityOwner);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKABILITY_API FCk_Ability_ActivationSettings_OnOwner
 {
     GENERATED_BODY()
@@ -365,6 +385,26 @@ private:
 public:
     CK_PROPERTY(_CancelledByTagsOnSelf);
     CK_PROPERTY(_BlockedByTagsOnSelf);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Ability_OnGiveSettings
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Ability_OnGiveSettings);
+
+private:
+    // Tags on AbilityOwner that affect this Ability
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Ability_OnGiveSettings_OnOwner _OnGiveSettingsOnOwner;
+
+public:
+    CK_PROPERTY(_OnGiveSettingsOnOwner);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -554,6 +594,11 @@ private:
     FName _DisplayName;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              Category = "OnGive",
+              meta = (AllowPrivateAccess = true))
+    FCk_Ability_OnGiveSettings _OnGiveSettings;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               Category = "Activation",
               meta = (AllowPrivateAccess = true))
     FCk_Ability_ActivationSettings _ActivationSettings;
@@ -601,6 +646,7 @@ public:
     CK_PROPERTY_GET(_AbilityName);
     CK_PROPERTY(_HasDisplayName);
     CK_PROPERTY(_DisplayName);
+    CK_PROPERTY(_OnGiveSettings);
     CK_PROPERTY(_ActivationSettings);
     CK_PROPERTY(_ConditionSettings);
     CK_PROPERTY(_CostSettings);
