@@ -187,8 +187,9 @@ protected:
 
     TOptional<FCk_Registry> _Registry;
 
-    // TODO: wrap in pre-processor macro to compile this out in builds such as Shipping
+#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
     const struct FEntity_FragmentMapper* _Mapper = nullptr;
+#endif
 
 public:
     CK_PROPERTY(_Entity);
@@ -296,7 +297,9 @@ FCk_Handle::
         const T_WrappedHandle& InOther)
     : _Entity(InOther._Entity)
     , _Registry(InOther._Registry)
+#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
     , _Mapper(InOther._Mapper)
+#endif
 #if WITH_EDITORONLY_DATA
     , _Fragments(InOther._Fragments)
 #endif
@@ -794,8 +797,10 @@ auto
     if (UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Disable)
     { return; }
 
+#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
     _Mapper = &_Registry->AddOrGet<FEntity_FragmentMapper>(_Entity);
     _Mapper->Add_FragmentInfo<T_Fragment>(*this);
+#endif
 }
 
 template <typename T_Fragment>
@@ -807,8 +812,10 @@ auto
     if (UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() == ECk_Ecs_HandleDebuggerBehavior::Disable)
     { return; }
 
+#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
     _Mapper = &_Registry->AddOrGet<FEntity_FragmentMapper>(_Entity);
     _Mapper->Remove_FragmentInfo<T_Fragment>();
+#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------
