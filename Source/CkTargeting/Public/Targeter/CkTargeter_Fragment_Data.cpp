@@ -50,7 +50,7 @@ auto
         const ThisType& InOther) const
     -> bool
 {
-    return Get_Owner() < InOther.Get_Owner() && Get_Targeter() < InOther.Get_Targeter();
+    return Get_Targeter() < InOther.Get_Targeter();
 }
 
 auto
