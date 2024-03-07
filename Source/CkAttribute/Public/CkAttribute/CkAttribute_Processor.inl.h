@@ -56,12 +56,10 @@ namespace ck::detail
             const AttributeFragmentType_Min& InAttributeMin) const
         -> void
     {
-        const auto BaseValue = InAttributeCurrent._Base;
         const auto FinalValue = InAttributeCurrent._Final;
 
         const auto FinalValue_Min = InAttributeMin._Final;
 
-        InAttributeCurrent._Base = TAttributeMinMax<AttributeDataType>::Max(BaseValue, FinalValue_Min);
         InAttributeCurrent._Final = TAttributeMinMax<AttributeDataType>::Max(FinalValue, FinalValue_Min);
     }
 
@@ -77,12 +75,10 @@ namespace ck::detail
             const AttributeFragmentType_Max& InAttributeMax) const
         -> void
     {
-        const auto BaseValue = InAttributeCurrent._Base;
         const auto FinalValue = InAttributeCurrent._Final;
 
         const auto FinalValue_Max = InAttributeMax._Final;
 
-        InAttributeCurrent._Base = TAttributeMinMax<AttributeDataType>::Min(BaseValue, FinalValue_Max);
         InAttributeCurrent._Final = TAttributeMinMax<AttributeDataType>::Min(FinalValue, FinalValue_Max);
     }
 
