@@ -17,9 +17,11 @@ namespace ck
         if (InIntegratorComp.Get_DistanceOffset().IsNearlyZero())
         { return; }
 
+        auto HandleTransform = UCk_Utils_Transform_UE::CastChecked(InHandle);
+
         UCk_Utils_Transform_UE::Request_AddLocationOffset
         (
-            InHandle,
+            HandleTransform,
             FCk_Request_Transform_AddLocationOffset{InIntegratorComp.Get_DistanceOffset()}.Set_LocalWorld(ECk_LocalWorld::World)
         );
     }

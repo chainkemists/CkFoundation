@@ -159,9 +159,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSBASICS_API FProcessor_Transform_InterpolateToGoal_Location : public TProcessor<
+    class CKECSBASICS_API FProcessor_Transform_InterpolateToGoal_Location : public ck_exp::TProcessor<
             FProcessor_Transform_InterpolateToGoal_Location,
-            FFragment_Transform_Params,
+            FCk_Handle_Transform,
+            FFragment_TransformInterpolation_Params,
             FFragment_Transform,
             FFragment_Transform_NewGoal_Location,
             CK_IGNORE_PENDING_KILL>
@@ -176,16 +177,17 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Transform_Params& InParams,
+            const FFragment_TransformInterpolation_Params& InParams,
             const FFragment_Transform& InCurrent,
             FFragment_Transform_NewGoal_Location& InGoal) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSBASICS_API FProcessor_Transform_InterpolateToGoal_Rotation : public TProcessor<
+    class CKECSBASICS_API FProcessor_Transform_InterpolateToGoal_Rotation : public ck_exp::TProcessor<
             FProcessor_Transform_InterpolateToGoal_Rotation,
-            FFragment_Transform_Params,
+            FCk_Handle_Transform,
+            FFragment_TransformInterpolation_Params,
             FFragment_Transform,
             FFragment_Transform_NewGoal_Rotation,
             CK_IGNORE_PENDING_KILL>
@@ -200,8 +202,8 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Transform_Params& InParams,
-            FFragment_Transform& InCurrent,
+            const FFragment_TransformInterpolation_Params& InParams,
+            const FFragment_Transform& InCurrent,
             FFragment_Transform_NewGoal_Rotation& InGoal) const -> void;
     };
 }

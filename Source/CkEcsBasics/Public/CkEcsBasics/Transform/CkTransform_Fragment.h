@@ -69,6 +69,26 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    struct CKECSBASICS_API FFragment_TransformInterpolation_Params
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_TransformInterpolation_Params);
+
+    public:
+        using ParamsType = FCk_TransformInterpolation_ParamsData;
+
+    private:
+        ParamsType _Data;
+
+    public:
+        CK_PROPERTY_GET(_Data);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_TransformInterpolation_Params, _Data);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct FFragment_Transform_NewGoal_Location
     {
         friend class FProcessor_Transform_InterpolateToGoal_Location;
