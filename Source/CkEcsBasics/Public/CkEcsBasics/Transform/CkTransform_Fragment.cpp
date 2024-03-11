@@ -61,7 +61,7 @@ auto
         UCk_Utils_Transform_UE::Request_SetScale
         (
             _AssociatedEntity,
-            FCk_Request_Transform_SetScale{_Scale}.Set_RelativeAbsolute(ECk_RelativeAbsolute::Absolute)
+            FCk_Request_Transform_SetScale{_Scale}.Set_LocalWorld(ECk_LocalWorld::World)
         );
     });
 }

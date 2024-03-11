@@ -200,6 +200,21 @@ auto
     InHandle.Add<ck::TFragment_Transform<T_ConstOrNonConst>>(InInitialTransform);
     InHandle.Add<ck::FFragment_Transform_Params>(InParams);
 
+    if (const auto OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
+        ck::IsValid(OwningActor))
+    {
+        if (OwningActor->IsReplicatingMovement())
+        {
+            ck::ecs_basics::VeryVerbose
+            (
+                TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it has an Owning Actor with Replicated Movement"),
+                InHandle
+            );
+
+            return;
+        }
+    }
+
     if (InReplicates == ECk_Replication::DoesNotReplicate)
     {
         ck::ecs_basics::VeryVerbose

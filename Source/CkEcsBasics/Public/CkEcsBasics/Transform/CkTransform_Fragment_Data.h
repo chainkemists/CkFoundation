@@ -7,7 +7,27 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Handle/CkHandle_TypeSafe.h"
+
 #include "CkTransform_Fragment_Data.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Transform_Ownership_Policy : uint8
+{
+    // Actor transformation will
+    Actor,
+    Entity
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Transform_Ownership_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
+struct CKECSBASICS_API FCk_Handle_Transform : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Transform); };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Transform);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -78,11 +98,11 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_RelativeAbsolute _RelativeAbsolute = ECk_RelativeAbsolute::Absolute;
+    ECk_LocalWorld _LocalWorld = ECk_LocalWorld::World;
 
 public:
     CK_PROPERTY_GET(_NewLocation)
-    CK_PROPERTY(_RelativeAbsolute)
+    CK_PROPERTY(_LocalWorld)
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Transform_SetLocation, _NewLocation);
@@ -132,11 +152,11 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_RelativeAbsolute _RelativeAbsolute = ECk_RelativeAbsolute::Absolute;
+    ECk_LocalWorld _LocalWorld = ECk_LocalWorld::World;
 
 public:
     CK_PROPERTY_GET(_NewRotation)
-    CK_PROPERTY(_RelativeAbsolute)
+    CK_PROPERTY(_LocalWorld)
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Transform_SetRotation, _NewRotation);
@@ -186,11 +206,11 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_RelativeAbsolute _RelativeAbsolute = ECk_RelativeAbsolute::Absolute;
+    ECk_LocalWorld _LocalWorld = ECk_LocalWorld::World;
 
 public:
     CK_PROPERTY_GET(_NewScale)
-    CK_PROPERTY(_RelativeAbsolute)
+    CK_PROPERTY(_LocalWorld)
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_Transform_SetScale, _NewScale);
