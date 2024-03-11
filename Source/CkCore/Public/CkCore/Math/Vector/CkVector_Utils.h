@@ -36,6 +36,29 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKCORE_API FCk_LocationResultWithActorLocation
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_LocationResultWithActorLocation);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+        meta=(AllowPrivateAccess))
+    FVector _Result;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+        meta=(AllowPrivateAccess))
+    FVector _ActorLocation;
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_LocationResultWithActorLocation, _Result, _ActorLocation);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable)
 class CKCORE_API UCk_Utils_Vector3_UE : public UBlueprintFunctionLibrary
 {
@@ -317,7 +340,7 @@ public:
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Location From Actor In Direction",
               Category = "Ck|Utils|Math|Actor")
-    static FVector
+    static FCk_LocationResultWithActorLocation
     Get_LocationFromActorInDirection(
         const AActor* InActor,
         FVector InDirection,
@@ -326,7 +349,7 @@ public:
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Location From Actor In Fixed Direction",
               Category = "Ck|Utils|Math|Actor")
-    static FVector
+    static FCk_LocationResultWithActorLocation
     Get_LocationFromActorInFixedDirection(
         const AActor* InActor,
         ECk_Direction_3D InDirection = ECk_Direction_3D::Forward,
