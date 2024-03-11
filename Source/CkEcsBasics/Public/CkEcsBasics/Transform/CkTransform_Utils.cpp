@@ -83,9 +83,9 @@ auto
 
     auto& RequestsFragment = InHandle.AddOrGet<ck::FFragment_Transform_Requests>();
 
-    RequestsFragment._LocationRequests.Emplace(FCk_Request_Transform_SetLocation{NewTransform.GetLocation()}.Set_RelativeAbsolute(ECk_RelativeAbsolute::Absolute));
-    RequestsFragment._RotationRequests.Emplace(FCk_Request_Transform_SetRotation{NewTransform.GetRotation().Rotator()}.Set_RelativeAbsolute(ECk_RelativeAbsolute::Absolute));
-    RequestsFragment._ScaleRequests = FCk_Request_Transform_SetScale{NewTransform.GetScale3D()}.Set_RelativeAbsolute(ECk_RelativeAbsolute::Absolute);
+    RequestsFragment._LocationRequests.Emplace(FCk_Request_Transform_SetLocation{NewTransform.GetLocation()}.Set_LocalWorld(ECk_LocalWorld::World));
+    RequestsFragment._RotationRequests.Emplace(FCk_Request_Transform_SetRotation{NewTransform.GetRotation().Rotator()}.Set_LocalWorld(ECk_LocalWorld::World));
+    RequestsFragment._ScaleRequests = FCk_Request_Transform_SetScale{NewTransform.GetScale3D()}.Set_LocalWorld(ECk_LocalWorld::World);
 }
 
 auto

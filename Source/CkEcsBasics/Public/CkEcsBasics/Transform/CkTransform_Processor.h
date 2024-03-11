@@ -11,6 +11,33 @@
 
 namespace ck
 {
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKECSBASICS_API FProcessor_Transform_Setup : public TProcessor<
+        FProcessor_Transform_Setup, FTag_Transform_Setup, FFragment_Transform_Params, CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Super = TProcessor;
+        using MarkedDirtyBy = FTag_Transform_Setup;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        Tick(
+            TimeType InDeltaT) -> void;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_Transform_Params& InParams) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKECSBASICS_API FProcessor_Transform_HandleRequests : public TProcessor<
             FProcessor_Transform_HandleRequests,
             FFragment_Transform_Current,
@@ -150,7 +177,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform_Params& InParams,
-            FFragment_Transform_Current& InCurrent,
+            const FFragment_Transform_Current& InCurrent,
             FFragment_Transform_NewGoal_Location& InGoal) const -> void;
     };
 
