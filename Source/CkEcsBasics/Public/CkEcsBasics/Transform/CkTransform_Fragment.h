@@ -27,6 +27,7 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
+    CK_DEFINE_ECS_TAG(FTag_Transform_Setup);
     CK_DEFINE_ECS_TAG(FTag_Transform_Updated);
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -47,6 +48,23 @@ namespace ck
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_Transform_Params, _Data);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKECSBASICS_API FFragment_Transform_RootComponent
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Transform_RootComponent);
+
+    private:
+        TWeakObjectPtr<USceneComponent> _RootComponent;
+
+    public:
+        CK_PROPERTY_GET(_RootComponent);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Transform_RootComponent, _RootComponent);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
