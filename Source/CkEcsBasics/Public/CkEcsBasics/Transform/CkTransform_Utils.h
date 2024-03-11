@@ -28,25 +28,6 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Transform_UE);
 
 public:
-    template <typename T_ConstOrNonConst = ck::type_traits::NonConst>
-    static auto
-    Add(
-        FCk_Handle& InHandle,
-        const FTransform& InInitialTransform,
-        const FCk_Transform_ParamsData& InParams,
-        ECk_Replication InReplicates = ECk_Replication::Replicates) -> void;
-
-    template <typename T_ConstOrNonConst = void>
-    static auto
-    Has(
-        const FCk_Handle& InHandle) -> bool;
-
-    template <typename T_ConstOrNonConst = void>
-    static auto
-    Ensure(
-        const FCk_Handle& InHandle) -> bool;
-
-public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
               DisplayName = "[Ck][Transform] Request Set Location")
@@ -158,10 +139,20 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Delegate_Transform_OnUpdate& InDelegate);
 
-private:
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
               DisplayName="[Ck][Transform] Add Feature")
+    static void
+    Add(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FTransform& InInitialTransform,
+        const FCk_Transform_ParamsData& InParams,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
+
+    UFUNCTION(Category = "Ck|Utils|Transform",
+              DisplayName="[Ck][Transform] Add Feature (DEPRECATED)",
+              meta=(DeprecatedFunction, DeprecationMessage = "Use the non-deprecated Add Feature instead"))
     static void
     DoAdd(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -173,89 +164,15 @@ private:
               Category = "Ck|Utils|Transform",
               DisplayName="[Ck][Transform] Has Feature")
     static bool
-    DoHas(
+    Has(
         const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Transform",
               DisplayName="[Ck][Transform] Ensure Has Feature")
     static bool
-    DoEnsure(
+    Ensure(
         const FCk_Handle& InHandle);
 };
-
-// --------------------------------------------------------------------------------------------------------------------
-// Definitions
-
-template <typename T_ConstOrNonConst>
-auto
-    UCk_Utils_Transform_UE::
-    Add(
-        FCk_Handle& InHandle,
-        const FTransform& InInitialTransform,
-        const FCk_Transform_ParamsData& InParams,
-        ECk_Replication InReplicates)
-    -> void
-{
-    InHandle.Add<ck::TFragment_Transform<T_ConstOrNonConst>>(InInitialTransform);
-    InHandle.Add<ck::FFragment_Transform_Params>(InParams);
-
-    if (const auto OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
-        ck::IsValid(OwningActor))
-    {
-        if (OwningActor->IsReplicatingMovement())
-        {
-            ck::ecs_basics::VeryVerbose
-            (
-                TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it has an Owning Actor with Replicated Movement"),
-                InHandle
-            );
-
-            return;
-        }
-    }
-
-    if (InReplicates == ECk_Replication::DoesNotReplicate)
-    {
-        ck::ecs_basics::VeryVerbose
-        (
-            TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it's set to [{}]"),
-            InHandle,
-            InReplicates
-        );
-
-        return;
-    }
-
-    TryAddReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle);
-}
-
-template <typename T_ConstOrNonConst>
-auto
-    UCk_Utils_Transform_UE::
-    Has(
-        const FCk_Handle& InHandle)
-    -> bool
-{
-    if (std::is_same_v<T_ConstOrNonConst, void>)
-    {
-        return InHandle.Has_Any<ck::FFragment_Transform_Current, ck::FFragment_ImmutableTransform_Current>();
-    }
-
-    return InHandle.Has_Any<ck::TFragment_Transform<T_ConstOrNonConst>>();
-}
-
-template <typename T_ConstOrNonConst>
-auto
-    UCk_Utils_Transform_UE::
-    Ensure(
-        const FCk_Handle& InHandle)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(Has<T_ConstOrNonConst>(InHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle)
-    { return false; }
-
-    return true;
-}
 
 // --------------------------------------------------------------------------------------------------------------------
