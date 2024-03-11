@@ -5,6 +5,8 @@
 
 #include <Kismet/KismetMathLibrary.h>
 
+#include <ranges>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_vector
@@ -667,7 +669,7 @@ auto
         const AActor* InActor,
         FVector InDirection,
         float InDistanceFromOriginInDirection)
-    -> FVector
+    -> FCk_LocationResultWithActorLocation
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InActor),
         TEXT("Unable to get location from Actor in Direction [{}]. Actor is [{}]"),
@@ -676,9 +678,10 @@ auto
     { return {}; }
 
     const auto& ActorLocation = InActor->GetActorLocation();
+    const auto& Result = FCk_LocationResultWithActorLocation{UCk_Utils_Vector3_UE::Get_LocationFromOriginInDirection(
+        ActorLocation, InDirection, InDistanceFromOriginInDirection), ActorLocation};
 
-    return UCk_Utils_Vector3_UE::Get_LocationFromOriginInDirection(
-        ActorLocation, InDirection, InDistanceFromOriginInDirection);
+    return Result;
 }
 
 auto
@@ -687,7 +690,7 @@ auto
         const AActor* InActor,
         ECk_Direction_3D InDirection,
         float InDistanceFromOriginInDirection)
-    -> FVector
+    -> FCk_LocationResultWithActorLocation
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InActor),
         TEXT("Unable to get fixed location from Actor in Direction [{}]. Actor is [{}]"),
