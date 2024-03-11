@@ -11,7 +11,7 @@ auto
         const FCk_Request_Transform_SetLocation& InRequest)
     -> void
 {
-    if (NOT Ensure<ck::type_traits::NonConst>(InHandle))
+    if (NOT Ensure(InHandle))
     { return; }
 
     InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._LocationRequests.Emplace(InRequest);
@@ -24,7 +24,7 @@ auto
         const FCk_Request_Transform_AddLocationOffset& InRequest)
     -> void
 {
-    if (NOT Ensure<ck::type_traits::NonConst>(InHandle))
+    if (NOT Ensure(InHandle))
     { return; }
 
     InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._LocationRequests.Emplace(InRequest);
@@ -37,7 +37,7 @@ auto
         const FCk_Request_Transform_SetRotation& InRequest)
     -> void
 {
-    if (NOT Ensure<ck::type_traits::NonConst>(InHandle))
+    if (NOT Ensure(InHandle))
     { return; }
 
     InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._RotationRequests.Emplace(InRequest);
@@ -50,7 +50,7 @@ auto
         const FCk_Request_Transform_AddRotationOffset& InRequest)
     -> void
 {
-    if (NOT Ensure<ck::type_traits::NonConst>(InHandle))
+    if (NOT Ensure(InHandle))
     { return; }
 
     InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._RotationRequests.Emplace(InRequest);
@@ -63,7 +63,7 @@ auto
         const FCk_Request_Transform_SetScale&  InRequest)
     -> void
 {
-    if (NOT Ensure<ck::type_traits::NonConst>(InHandle))
+    if (NOT Ensure(InHandle))
     { return; }
 
     InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._ScaleRequests = InRequest;
@@ -78,7 +78,7 @@ auto
 {
     const auto& NewTransform = InRequest.Get_NewTransform();
 
-    if (NOT Ensure<ck::type_traits::NonConst>(InHandle))
+    if (NOT Ensure(InHandle))
     { return; }
 
     auto& RequestsFragment = InHandle.AddOrGet<ck::FFragment_Transform_Requests>();
@@ -116,19 +116,10 @@ auto
         const FCk_Handle& InHandle)
     -> FTransform
 {
-    if (Has<ck::type_traits::NonConst>(InHandle))
-    {
-        return InHandle.Get<ck::FFragment_Transform_Current>().Get_Transform();
-    }
+    if (NOT Ensure(InHandle))
+    { return {}; }
 
-    if (Has<ck::type_traits::Const>(InHandle))
-    {
-        return InHandle.Get<ck::FFragment_ImmutableTransform_Current>().Get_Transform();
-    }
-
-    CK_TRIGGER_ENSURE(TEXT("Cannot get the Current Transform of Entity [{}] because it has no Transform component"), InHandle);
-
-    return {};
+    return InHandle.Get<ck::FFragment_Transform>().Get_Transform();
 }
 
 auto
@@ -137,19 +128,7 @@ auto
         const FCk_Handle& InHandle)
     -> FVector
 {
-    if (Has<ck::type_traits::NonConst>(InHandle))
-    {
-        return InHandle.Get<ck::FFragment_Transform_Current>().Get_Transform().GetLocation();
-    }
-
-    if (Has<ck::type_traits::Const>(InHandle))
-    {
-        return InHandle.Get<ck::FFragment_ImmutableTransform_Current>().Get_Transform().GetLocation();
-    }
-
-    CK_TRIGGER_ENSURE(TEXT("Cannot get the Current Location of Entity [{}] because it has no Transform component"), InHandle);
-
-    return {};
+    return Get_EntityCurrentTransform(InHandle).GetLocation();
 }
 
 auto
@@ -158,19 +137,7 @@ auto
         const FCk_Handle& InHandle)
     -> FRotator
 {
-    if (Has<ck::type_traits::NonConst>(InHandle))
-    {
-        return InHandle.Get<ck::FFragment_Transform_Current>().Get_Transform().GetRotation().Rotator();
-    }
-
-    if (Has<ck::type_traits::Const>(InHandle))
-    {
-        return InHandle.Get<ck::FFragment_ImmutableTransform_Current>().Get_Transform().GetRotation().Rotator();
-    }
-
-    CK_TRIGGER_ENSURE(TEXT("Cannot get the Current Rotation of Entity [{}] because it has no Transform component"), InHandle);
-
-    return {};
+    return Get_EntityCurrentTransform(InHandle).GetRotation().Rotator();
 }
 
 auto
@@ -179,19 +146,7 @@ auto
         const FCk_Handle& InHandle)
     -> FVector
 {
-    if (Has<ck::type_traits::NonConst>(InHandle))
-    {
-        return InHandle.Get<ck::FFragment_Transform_Current>().Get_Transform().GetScale3D();
-    }
-
-    if (Has<ck::type_traits::Const>(InHandle))
-    {
-        return InHandle.Get<ck::FFragment_ImmutableTransform_Current>().Get_Transform().GetScale3D();
-    }
-
-    CK_TRIGGER_ENSURE(TEXT("Cannot get the Current Scale of Entity [{}] because it has no Transform component"), InHandle);
-
-    return {};
+    return Get_EntityCurrentTransform(InHandle).GetScale3D();
 }
 
 auto
@@ -223,6 +178,48 @@ auto
 
 auto
     UCk_Utils_Transform_UE::
+    Add(
+        FCk_Handle&                     InHandle,
+        const FTransform&               InInitialTransform,
+        const FCk_Transform_ParamsData& InParams,
+        ECk_Replication                 InReplicates)
+    -> void
+{
+    InHandle.Add<ck::FFragment_Transform>(InInitialTransform);
+    InHandle.Add<ck::FFragment_Transform_Params>(InParams);
+
+    if (const auto OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
+        ck::IsValid(OwningActor))
+    {
+        if (OwningActor->IsReplicatingMovement())
+        {
+            ck::ecs_basics::VeryVerbose
+            (
+                TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it has an Owning Actor with Replicated Movement"),
+                InHandle
+            );
+
+            return;
+        }
+    }
+
+    if (InReplicates == ECk_Replication::DoesNotReplicate)
+    {
+        ck::ecs_basics::VeryVerbose
+        (
+            TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it's set to [{}]"),
+            InHandle,
+            InReplicates
+        );
+
+        return;
+    }
+
+    TryAddReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle);
+}
+
+auto
+    UCk_Utils_Transform_UE::
     DoAdd(
         FCk_Handle& InHandle,
         const FTransform& InInitialTransform,
@@ -230,25 +227,26 @@ auto
         ECk_Replication InReplicates)
     -> void
 {
-    Add<ck::type_traits::NonConst>(InHandle, InInitialTransform, InParams, InReplicates);
+    Add(InHandle, InInitialTransform, InParams, InReplicates);
 }
 
 auto
     UCk_Utils_Transform_UE::
-    DoHas(
+    Has(
         const FCk_Handle& InHandle)
     -> bool
 {
-    return Has<ck::type_traits::NonConst>(InHandle);
+    return InHandle.Has_Any<ck::FFragment_Transform>();
 }
 
 auto
     UCk_Utils_Transform_UE::
-    DoEnsure(
+    Ensure(
         const FCk_Handle& InHandle)
-    -> bool
+        -> bool
 {
-    return Ensure<ck::type_traits::NonConst>(InHandle);
+    // temporary work: be replaced with type-safe handles
+    return Has(InHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
