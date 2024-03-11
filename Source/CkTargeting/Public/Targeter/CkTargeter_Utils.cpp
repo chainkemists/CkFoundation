@@ -195,6 +195,9 @@ auto
     const auto& FilteredTargets = ck::algo::Filter(InTargetList.Get_Targets(),
     [&](const FCk_Targetable_BasicInfo& InTargetBasicInfo)
     {
+        if (ck::Is_NOT_Valid(InTargetBasicInfo))
+        { return false; }
+
         const FCk_SharedBool PredicateResult;
 
         if (InPredicate.IsBound())
