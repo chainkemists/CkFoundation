@@ -40,7 +40,8 @@ namespace ck
                 {
                     if (UCk_Utils_Transform_UE::Has(InHandle))
                     {
-                        return UCk_Utils_Transform_UE::Get_EntityCurrentRotation(InHandle);
+                        const auto HandleTransform = UCk_Utils_Transform_UE::CastChecked(InHandle);
+                        return UCk_Utils_Transform_UE::Get_EntityCurrentRotation(HandleTransform);
                     }
 
                     CK_ENSURE_IF_NOT(UCk_Utils_Velocity_UE::VelocityTarget_Utils::Has(InHandle),
@@ -51,7 +52,8 @@ namespace ck
 
                     const auto AccelerationTarget = UCk_Utils_Velocity_UE::VelocityTarget_Utils::Get_StoredEntity(InHandle);
 
-                    return UCk_Utils_Transform_UE::Get_EntityCurrentRotation(AccelerationTarget);
+                    const auto HandleTransform = UCk_Utils_Transform_UE::CastChecked(AccelerationTarget);
+                    return UCk_Utils_Transform_UE::Get_EntityCurrentRotation(HandleTransform);
                 };
 
                 const auto& Rotation = DoGet_RotationFromEntityOrTargetEntity();

@@ -13,21 +13,15 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UENUM(BlueprintType)
-enum class ECk_Transform_Ownership_Policy : uint8
-{
-    // Actor transformation will
-    Actor,
-    Entity
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Transform_Ownership_Policy);
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
+struct CKECSBASICS_API FCk_Handle_Transform : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Transform); };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Transform);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
-struct CKECSBASICS_API FCk_Handle_Transform : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Transform); };
-CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Transform);
+struct CKECSBASICS_API FCk_Handle_TransformInterpolation : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_TransformInterpolation); };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_TransformInterpolation);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -79,6 +73,26 @@ private:
 
 public:
     CK_PROPERTY(_InterpolationSettings);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKECSBASICS_API FCk_TransformInterpolation_ParamsData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_TransformInterpolation_ParamsData);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
+    FCk_Transform_Interpolation_Settings _InterpolationSettings;
+
+public:
+    CK_PROPERTY_GET(_InterpolationSettings);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_TransformInterpolation_ParamsData, _InterpolationSettings);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

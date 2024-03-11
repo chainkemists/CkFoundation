@@ -360,7 +360,7 @@ namespace ck
         FProcessor_Transform_InterpolateToGoal_Location::
         ForEachEntity(TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Transform_Params& InParams,
+            const FFragment_TransformInterpolation_Params& InParams,
             const FFragment_Transform& InCurrent,
             FFragment_Transform_NewGoal_Location& InGoal) const
         -> void
@@ -422,10 +422,10 @@ namespace ck
     auto
         FProcessor_Transform_InterpolateToGoal_Rotation::
         ForEachEntity(
-            TimeType InDeltaT,
+            const TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Transform_Params& InParams,
-            FFragment_Transform& InCurrent,
+            const FFragment_TransformInterpolation_Params& InParams,
+            const FFragment_Transform& InCurrent,
             FFragment_Transform_NewGoal_Rotation& InGoal) const
         -> void
     {
@@ -444,8 +444,8 @@ namespace ck
 
         InGoal.Set_DeltaT(InGoal.Get_DeltaT() + InDeltaT);
 
-        const auto& InterpSettings = InParams.Get_Data().Get_InterpolationSettings();
-        const auto& SmoothTime = InterpSettings.Get_SmoothRotationTime();
+        const auto& Interpolation_Settings = InParams.Get_Data().Get_InterpolationSettings();
+        const auto& SmoothTime = Interpolation_Settings.Get_SmoothRotationTime();
 
         if (InGoal.Get_DeltaT() > SmoothTime)
         {
