@@ -40,7 +40,7 @@ namespace ck
 
     class CKECSBASICS_API FProcessor_Transform_HandleRequests : public TProcessor<
             FProcessor_Transform_HandleRequests,
-            FFragment_Transform_Current,
+            FFragment_Transform,
             FFragment_Transform_Requests,
             CK_IGNORE_PENDING_KILL>
     {
@@ -58,33 +58,33 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Transform_Current& InComp,
+            FFragment_Transform& InComp,
             FFragment_Transform_Requests& InRequestsComp) const -> void;
 
     private:
         static auto DoHandleRequest(
             HandleType InHandle,
-            FFragment_Transform_Current& InComp,
+            FFragment_Transform& InComp,
             const FCk_Request_Transform_SetLocation& InRequest) -> void;
 
         static auto DoHandleRequest(
             HandleType InHandle,
-            FFragment_Transform_Current& InComp,
+            FFragment_Transform& InComp,
             const FCk_Request_Transform_AddLocationOffset& InRequest) -> void;
 
         static auto DoHandleRequest(
             HandleType InHandle,
-            FFragment_Transform_Current& InComp,
+            FFragment_Transform& InComp,
             const FCk_Request_Transform_SetRotation& InRequest) -> void;
 
         static auto DoHandleRequest(
             HandleType InHandle,
-            FFragment_Transform_Current& InComp,
+            FFragment_Transform& InComp,
             const FCk_Request_Transform_AddRotationOffset& InRequest) -> void;
 
         static auto DoHandleRequest(
             HandleType InHandle,
-            FFragment_Transform_Current& InComp,
+            FFragment_Transform& InComp,
             const FCk_Request_Transform_SetScale& InRequest) -> void;
     };
 
@@ -93,7 +93,7 @@ namespace ck
     class CKECSBASICS_API FProcessor_Transform_Actor : public TProcessor<
             FProcessor_Transform_Actor,
             FFragment_OwningActor_Current,
-            FFragment_Transform_Current,
+            FFragment_Transform,
             FTag_Transform_Updated,
             CK_IGNORE_PENDING_KILL>
     {
@@ -108,7 +108,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_OwningActor_Current& InOwningActor,
-            const FFragment_Transform_Current& InComp) const -> void;
+            const FFragment_Transform& InComp) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -116,7 +116,7 @@ namespace ck
     class CKECSBASICS_API FProcessor_Transform_FireSignals : public TProcessor<
             FProcessor_Transform_FireSignals,
             FFragment_Signal_TransformUpdate,
-            FFragment_Transform_Current,
+            FFragment_Transform,
             FTag_Transform_Updated,
             CK_IGNORE_PENDING_KILL>
     {
@@ -131,14 +131,14 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Signal_TransformUpdate& InSignal,
-            const FFragment_Transform_Current& InCurrent) const -> void;
+            const FFragment_Transform& InCurrent) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKECSBASICS_API FProcessor_Transform_Replicate : public TProcessor<
             FProcessor_Transform_Replicate,
-            FFragment_Transform_Current,
+            FFragment_Transform,
             TObjectPtr<UCk_Fragment_Transform_Rep>,
             FTag_Transform_Updated,
             CK_IGNORE_PENDING_KILL>
@@ -153,7 +153,7 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Transform_Current& InCurrent,
+            FFragment_Transform& InCurrent,
             const TObjectPtr<UCk_Fragment_Transform_Rep>& InComp) const -> void;
     };
 
@@ -162,7 +162,7 @@ namespace ck
     class CKECSBASICS_API FProcessor_Transform_InterpolateToGoal_Location : public TProcessor<
             FProcessor_Transform_InterpolateToGoal_Location,
             FFragment_Transform_Params,
-            FFragment_Transform_Current,
+            FFragment_Transform,
             FFragment_Transform_NewGoal_Location,
             CK_IGNORE_PENDING_KILL>
     {
@@ -177,7 +177,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform_Params& InParams,
-            const FFragment_Transform_Current& InCurrent,
+            const FFragment_Transform& InCurrent,
             FFragment_Transform_NewGoal_Location& InGoal) const -> void;
     };
 
@@ -186,7 +186,7 @@ namespace ck
     class CKECSBASICS_API FProcessor_Transform_InterpolateToGoal_Rotation : public TProcessor<
             FProcessor_Transform_InterpolateToGoal_Rotation,
             FFragment_Transform_Params,
-            FFragment_Transform_Current,
+            FFragment_Transform,
             FFragment_Transform_NewGoal_Rotation,
             CK_IGNORE_PENDING_KILL>
     {
@@ -201,7 +201,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform_Params& InParams,
-            FFragment_Transform_Current& InCurrent,
+            FFragment_Transform& InCurrent,
             FFragment_Transform_NewGoal_Rotation& InGoal) const -> void;
     };
 }

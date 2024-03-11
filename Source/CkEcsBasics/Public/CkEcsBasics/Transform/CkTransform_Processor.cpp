@@ -64,7 +64,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Transform_Current& InComp,
+            FFragment_Transform& InComp,
             FFragment_Transform_Requests& InRequestsComp) const
         -> void
     {
@@ -110,7 +110,7 @@ namespace ck
         FProcessor_Transform_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Transform_Current& InComp,
+            FFragment_Transform& InComp,
             const FCk_Request_Transform_SetLocation& InRequest)
         -> void
     {
@@ -146,7 +146,7 @@ namespace ck
         FProcessor_Transform_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Transform_Current& InComp,
+            FFragment_Transform& InComp,
             const FCk_Request_Transform_AddLocationOffset& InRequest)
         -> void
     {
@@ -186,7 +186,7 @@ namespace ck
         FProcessor_Transform_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Transform_Current& InComp,
+            FFragment_Transform& InComp,
             const FCk_Request_Transform_SetRotation& InRequest)
         -> void
     {
@@ -222,7 +222,7 @@ namespace ck
         FProcessor_Transform_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Transform_Current& InComp,
+            FFragment_Transform& InComp,
             const FCk_Request_Transform_AddRotationOffset& InRequest)
         -> void
     {
@@ -263,7 +263,7 @@ namespace ck
         FProcessor_Transform_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_Transform_Current& InComp,
+            FFragment_Transform& InComp,
             const FCk_Request_Transform_SetScale& InRequest)
         -> void
     {
@@ -302,7 +302,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_OwningActor_Current& InOwningActor,
-            const FFragment_Transform_Current& InComp) const
+            const FFragment_Transform& InComp) const
         -> void
     {
         const auto EntityOwningActor = InOwningActor.Get_EntityOwningActor();
@@ -321,7 +321,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Signal_TransformUpdate& InSignal,
-            const FFragment_Transform_Current& InCurrent) const
+            const FFragment_Transform& InCurrent) const
         -> void
     {
         UUtils_Signal_TransformUpdate::Broadcast(InHandle, MakePayload(InHandle, InCurrent.Get_Transform()));
@@ -334,7 +334,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Transform_Current& InCurrent,
+            FFragment_Transform& InCurrent,
             const TObjectPtr<UCk_Fragment_Transform_Rep>& InComp) const
         -> void
     {
@@ -361,7 +361,7 @@ namespace ck
         ForEachEntity(TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform_Params& InParams,
-            const FFragment_Transform_Current& InCurrent,
+            const FFragment_Transform& InCurrent,
             FFragment_Transform_NewGoal_Location& InGoal) const
         -> void
     {
@@ -425,7 +425,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform_Params& InParams,
-            FFragment_Transform_Current& InCurrent,
+            FFragment_Transform& InCurrent,
             FFragment_Transform_NewGoal_Rotation& InGoal) const
         -> void
     {

@@ -111,12 +111,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_ConstOrNonConst>
-    struct TFragment_Transform
+    struct FFragment_Transform
     {
     public:
-        using ThisType = TFragment_Transform<T_ConstOrNonConst>;
-        using MutabilityPolicy = policy::TMutability<T_ConstOrNonConst>;
+        CK_GENERATED_BODY(FFragment_Transform);
 
     public:
         friend class FProcessor_Transform_HandleRequests;
@@ -133,14 +131,8 @@ namespace ck
         CK_PROPERTY(_ComponentsModified);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(TFragment_Transform<T_ConstOrNonConst>, _Transform);
+        CK_DEFINE_CONSTRUCTORS(FFragment_Transform, _Transform);
     };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    using FFragment_Transform_Current = TFragment_Transform<type_traits::NonConst>;
-
-    using FFragment_ImmutableTransform_Current = TFragment_Transform<type_traits::Const>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
