@@ -3,6 +3,8 @@
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Tag/CkTag.h"
+
 #include "CkPhysics/EulerIntegrator/CkEulerIntegrator_Fragment_Data.h"
 
 // --------------------------------------------------------------------------------------------------------------------
