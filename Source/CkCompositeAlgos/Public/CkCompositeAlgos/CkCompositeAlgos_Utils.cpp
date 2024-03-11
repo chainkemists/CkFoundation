@@ -364,8 +364,11 @@ auto
             }
         }
 
-        const auto& DistanceA = FVector::DistSquared(InOrigin, UCk_Utils_Transform_UE::Get_EntityCurrentLocation(InA));
-        const auto& DistanceB = FVector::DistSquared(InOrigin, UCk_Utils_Transform_UE::Get_EntityCurrentLocation(InB));
+        const auto TransformA = UCk_Utils_Transform_UE::Cast(InA);
+        const auto TransformB = UCk_Utils_Transform_UE::Cast(InB);
+
+        const auto& DistanceA = FVector::DistSquared(InOrigin, UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformA));
+        const auto& DistanceB = FVector::DistSquared(InOrigin, UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformB));
 
         switch (InSortingPolicy)
         {

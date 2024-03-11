@@ -6,80 +6,110 @@
 
 auto
     UCk_Utils_Transform_UE::
+    Add(
+        FCk_Handle&                     InHandle,
+        const FTransform&               InInitialTransform,
+        ECk_Replication                 InReplicates)
+    -> FCk_Handle_Transform
+{
+    InHandle.Add<ck::FFragment_Transform>(InInitialTransform);
+
+    if (const auto OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
+        ck::IsValid(OwningActor))
+    {
+        if (OwningActor->IsReplicatingMovement())
+        {
+            ck::ecs_basics::VeryVerbose
+            (
+                TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it has an Owning Actor with Replicated Movement"),
+                InHandle
+            );
+
+            return Cast(InHandle);
+        }
+    }
+
+    if (InReplicates == ECk_Replication::DoesNotReplicate)
+    {
+        ck::ecs_basics::VeryVerbose
+        (
+            TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it's set to [{}]"),
+            InHandle,
+            InReplicates
+        );
+
+        return Cast(InHandle);
+    }
+
+    TryAddReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle);
+
+    return Cast(InHandle);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Transform, UCk_Utils_Transform_UE, FCk_Handle_Transform, ck::FFragment_Transform);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Transform_UE::
     Request_SetLocation(
-        FCk_Handle& InHandle,
+        FCk_Handle_Transform& InHandle,
         const FCk_Request_Transform_SetLocation& InRequest)
     -> void
 {
-    if (NOT Ensure(InHandle))
-    { return; }
-
     InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._LocationRequests.Emplace(InRequest);
 }
 
 auto
     UCk_Utils_Transform_UE::
     Request_AddLocationOffset(
-        FCk_Handle& InHandle,
+        FCk_Handle_Transform& InHandle,
         const FCk_Request_Transform_AddLocationOffset& InRequest)
     -> void
 {
-    if (NOT Ensure(InHandle))
-    { return; }
-
     InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._LocationRequests.Emplace(InRequest);
 }
 
 auto
     UCk_Utils_Transform_UE::
     Request_SetRotation(
-        FCk_Handle& InHandle,
+        FCk_Handle_Transform& InHandle,
         const FCk_Request_Transform_SetRotation& InRequest)
     -> void
 {
-    if (NOT Ensure(InHandle))
-    { return; }
-
     InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._RotationRequests.Emplace(InRequest);
 }
 
 auto
     UCk_Utils_Transform_UE::
     Request_AddRotationOffset(
-        FCk_Handle& InHandle,
+        FCk_Handle_Transform& InHandle,
         const FCk_Request_Transform_AddRotationOffset& InRequest)
     -> void
 {
-    if (NOT Ensure(InHandle))
-    { return; }
-
     InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._RotationRequests.Emplace(InRequest);
 }
 
 auto
     UCk_Utils_Transform_UE::
     Request_SetScale(
-        FCk_Handle& InHandle,
+        FCk_Handle_Transform& InHandle,
         const FCk_Request_Transform_SetScale&  InRequest)
     -> void
 {
-    if (NOT Ensure(InHandle))
-    { return; }
-
     InHandle.AddOrGet<ck::FFragment_Transform_Requests>()._ScaleRequests = InRequest;
 }
 
 auto
     UCk_Utils_Transform_UE::
     Request_SetTransform(
-        FCk_Handle& InHandle,
+        FCk_Handle_Transform& InHandle,
         const FCk_Request_Transform_SetTransform& InRequest)
     -> void
 {
     const auto& NewTransform = InRequest.Get_NewTransform();
-
-    if (NOT Ensure(InHandle))
-    { return; }
 
     auto& RequestsFragment = InHandle.AddOrGet<ck::FFragment_Transform_Requests>();
 
@@ -90,42 +120,17 @@ auto
 
 auto
     UCk_Utils_Transform_UE::
-    Request_SetInterpolationGoal_LocationOffset(
-        FCk_Handle& InHandle,
-        FVector InOffset)
-    -> void
-{
-    auto& NewGoal = InHandle.AddOrGet<ck::FFragment_Transform_NewGoal_Location>();
-    NewGoal = ck::FFragment_Transform_NewGoal_Location{InOffset};
-}
-
-auto
-    UCk_Utils_Transform_UE::
-    Request_SetInterpolationGoal_RotationOffset(
-        FCk_Handle& InHandle,
-        FRotator InOffset)
-    -> void
-{
-    auto& NewGoal = InHandle.AddOrGet<ck::FFragment_Transform_NewGoal_Rotation>();
-    NewGoal = ck::FFragment_Transform_NewGoal_Rotation{InOffset};
-}
-
-auto
-    UCk_Utils_Transform_UE::
     Get_EntityCurrentTransform(
-        const FCk_Handle& InHandle)
+        const FCk_Handle_Transform& InHandle)
     -> FTransform
 {
-    if (NOT Ensure(InHandle))
-    { return {}; }
-
     return InHandle.Get<ck::FFragment_Transform>().Get_Transform();
 }
 
 auto
     UCk_Utils_Transform_UE::
     Get_EntityCurrentLocation(
-        const FCk_Handle& InHandle)
+        const FCk_Handle_Transform& InHandle)
     -> FVector
 {
     return Get_EntityCurrentTransform(InHandle).GetLocation();
@@ -134,7 +139,7 @@ auto
 auto
     UCk_Utils_Transform_UE::
     Get_EntityCurrentRotation(
-        const FCk_Handle& InHandle)
+        const FCk_Handle_Transform& InHandle)
     -> FRotator
 {
     return Get_EntityCurrentTransform(InHandle).GetRotation().Rotator();
@@ -143,7 +148,7 @@ auto
 auto
     UCk_Utils_Transform_UE::
     Get_EntityCurrentScale(
-        const FCk_Handle& InHandle)
+        const FCk_Handle_Transform& InHandle)
     -> FVector
 {
     return Get_EntityCurrentTransform(InHandle).GetScale3D();
@@ -157,9 +162,6 @@ auto
         const FCk_Delegate_Transform_OnUpdate& InDelegate)
     -> void
 {
-    if (NOT Ensure(InHandle))
-    { return; }
-
     ck::UUtils_Signal_TransformUpdate::Bind(InHandle, InDelegate, InBehavior);
 }
 
@@ -170,52 +172,7 @@ auto
         const FCk_Delegate_Transform_OnUpdate& InDelegate)
     -> void
 {
-    if (NOT Ensure(InHandle))
-    { return; }
-
     ck::UUtils_Signal_TransformUpdate::Unbind(InHandle, InDelegate);
-}
-
-auto
-    UCk_Utils_Transform_UE::
-    Add(
-        FCk_Handle&                     InHandle,
-        const FTransform&               InInitialTransform,
-        const FCk_Transform_ParamsData& InParams,
-        ECk_Replication                 InReplicates)
-    -> void
-{
-    InHandle.Add<ck::FFragment_Transform>(InInitialTransform);
-    InHandle.Add<ck::FFragment_Transform_Params>(InParams);
-
-    if (const auto OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
-        ck::IsValid(OwningActor))
-    {
-        if (OwningActor->IsReplicatingMovement())
-        {
-            ck::ecs_basics::VeryVerbose
-            (
-                TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it has an Owning Actor with Replicated Movement"),
-                InHandle
-            );
-
-            return;
-        }
-    }
-
-    if (InReplicates == ECk_Replication::DoesNotReplicate)
-    {
-        ck::ecs_basics::VeryVerbose
-        (
-            TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it's set to [{}]"),
-            InHandle,
-            InReplicates
-        );
-
-        return;
-    }
-
-    TryAddReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle);
 }
 
 auto
@@ -223,30 +180,53 @@ auto
     DoAdd(
         FCk_Handle& InHandle,
         const FTransform& InInitialTransform,
-        const FCk_Transform_ParamsData&  InParams,
         ECk_Replication InReplicates)
     -> void
 {
-    Add(InHandle, InInitialTransform, InParams, InReplicates);
-}
-
-auto
-    UCk_Utils_Transform_UE::
-    Has(
-        const FCk_Handle& InHandle)
-    -> bool
-{
-    return InHandle.Has_Any<ck::FFragment_Transform>();
-}
-
-auto
-    UCk_Utils_Transform_UE::
-    Ensure(
-        const FCk_Handle& InHandle)
-        -> bool
-{
-    // temporary work: be replaced with type-safe handles
-    return Has(InHandle);
+    Add(InHandle, InInitialTransform, InReplicates);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_TransformInterpolation_UE::
+    Add(
+        FCk_Handle&                                 InHandle,
+        const FCk_Transform_Interpolation_Settings& InParams)
+    -> FCk_Handle_TransformInterpolation
+{
+    InHandle.Add<ck::FFragment_TransformInterpolation_Params>(FCk_TransformInterpolation_ParamsData{InParams});
+    return ck::StaticCast<FCk_Handle_TransformInterpolation>(InHandle);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(TransformInterpolation, UCk_Utils_TransformInterpolation_UE,
+    FCk_Handle_TransformInterpolation, ck::FFragment_Transform_Params);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_TransformInterpolation_UE::
+    Request_SetInterpolationGoal_LocationOffset(
+        FCk_Handle_TransformInterpolation& InHandle,
+        FVector InOffset)
+    -> void
+{
+    auto& NewGoal = InHandle.AddOrGet<ck::FFragment_Transform_NewGoal_Location>();
+    NewGoal = ck::FFragment_Transform_NewGoal_Location{InOffset};
+}
+
+auto
+    UCk_Utils_TransformInterpolation_UE::
+    Request_SetInterpolationGoal_RotationOffset(
+        FCk_Handle_TransformInterpolation& InHandle,
+        FRotator InOffset)
+    -> void
+{
+    auto& NewGoal = InHandle.AddOrGet<ck::FFragment_Transform_NewGoal_Rotation>();
+    NewGoal = ck::FFragment_Transform_NewGoal_Rotation{InOffset};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
