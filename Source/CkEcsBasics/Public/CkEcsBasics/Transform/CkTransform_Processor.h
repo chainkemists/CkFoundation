@@ -14,7 +14,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKECSBASICS_API FProcessor_Transform_Setup : public TProcessor<
-        FProcessor_Transform_Setup, FTag_Transform_Setup, FFragment_Transform_Params, CK_IGNORE_PENDING_KILL>
+        FProcessor_Transform_Setup, FTag_Transform_Setup, CK_IGNORE_PENDING_KILL>
     {
     public:
         using Super = TProcessor;
@@ -32,8 +32,7 @@ namespace ck
         auto
         ForEachEntity(
             TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_Transform_Params& InParams) const -> void;
+            HandleType InHandle) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -10,6 +10,7 @@ auto
         EcsWorldType& InWorld)
         -> void
 {
+    InWorld.Add<ck::FProcessor_Transform_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Transform_InterpolateToGoal_Location>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Transform_InterpolateToGoal_Rotation>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Transform_HandleRequests>(InWorld.Get_Registry());
