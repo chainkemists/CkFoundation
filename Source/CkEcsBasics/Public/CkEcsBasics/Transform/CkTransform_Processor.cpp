@@ -31,14 +31,13 @@ namespace ck
         FProcessor_Transform_Setup::
         ForEachEntity(
             TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_Transform_Params& InParams) const
+            HandleType InHandle) const
         -> void
     {
         if (UCk_Utils_OwningActor_UE::Has(InHandle))
         {
             const auto Actor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
-            if (ck::Is_NOT_Valid(Actor))
+            if (ck::IsValid(Actor))
             {
                 const auto RootComponent = Actor->GetRootComponent();
                 InHandle.Add<FFragment_Transform_RootComponent>(RootComponent);

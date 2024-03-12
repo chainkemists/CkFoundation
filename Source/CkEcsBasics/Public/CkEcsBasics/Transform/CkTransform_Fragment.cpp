@@ -28,7 +28,7 @@ auto
 {
     CK_REP_OBJ_EXECUTE_IF_VALID([&]()
     {
-        auto HandleTransform = UCk_Utils_Transform_UE::CastChecked(_AssociatedEntity);
+        const auto HandleTransform = UCk_Utils_Transform_UE::CastChecked(_AssociatedEntity);
         const auto& CurrentLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(HandleTransform);
 
         auto HandleTransformInterpolation = UCk_Utils_TransformInterpolation_UE::CastChecked(_AssociatedEntity);
@@ -46,7 +46,7 @@ auto
 {
     CK_REP_OBJ_EXECUTE_IF_VALID([&]()
     {
-        auto HandleTransform = UCk_Utils_Transform_UE::CastChecked(_AssociatedEntity);
+        const auto HandleTransform = UCk_Utils_Transform_UE::CastChecked(_AssociatedEntity);
         const auto& CurrentRotation = UCk_Utils_Transform_UE::Get_EntityCurrentRotation(HandleTransform);
 
         auto HandleTransformInterpolation = UCk_Utils_TransformInterpolation_UE::CastChecked(_AssociatedEntity);
