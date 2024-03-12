@@ -13,6 +13,7 @@ auto
     -> FCk_Handle_Transform
 {
     InHandle.Add<ck::FFragment_Transform>(InInitialTransform);
+    InHandle.Add<ck::FTag_Transform_Setup>();
 
     if (const auto OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
         ck::IsValid(OwningActor))
@@ -124,6 +125,16 @@ auto
         const FCk_Handle_Transform& InHandle)
     -> FTransform
 {
+    if (InHandle.Has<ck::FFragment_Transform_RootComponent>())
+    {
+        auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
+
+        if (ck::IsValid(RootComponentFragment))
+        {
+            return RootComponentFragment.Get_RootComponent()->GetComponentToWorld();
+        }
+    }
+
     return InHandle.Get<ck::FFragment_Transform>().Get_Transform();
 }
 
@@ -133,6 +144,16 @@ auto
         const FCk_Handle_Transform& InHandle)
     -> FVector
 {
+    if (InHandle.Has<ck::FFragment_Transform_RootComponent>())
+    {
+        auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
+
+        if (ck::IsValid(RootComponentFragment))
+        {
+            return RootComponentFragment.Get_RootComponent()->GetComponentToWorld().GetLocation();
+        }
+    }
+
     return Get_EntityCurrentTransform(InHandle).GetLocation();
 }
 
@@ -142,6 +163,16 @@ auto
         const FCk_Handle_Transform& InHandle)
     -> FRotator
 {
+    if (InHandle.Has<ck::FFragment_Transform_RootComponent>())
+    {
+        auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
+
+        if (ck::IsValid(RootComponentFragment))
+        {
+            return RootComponentFragment.Get_RootComponent()->GetComponentToWorld().GetRotation().Rotator();
+        }
+    }
+
     return Get_EntityCurrentTransform(InHandle).GetRotation().Rotator();
 }
 
@@ -151,6 +182,16 @@ auto
         const FCk_Handle_Transform& InHandle)
     -> FVector
 {
+    if (InHandle.Has<ck::FFragment_Transform_RootComponent>())
+    {
+        auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
+
+        if (ck::IsValid(RootComponentFragment))
+        {
+            return RootComponentFragment.Get_RootComponent()->GetComponentToWorld().GetScale3D();
+        }
+    }
+
     return Get_EntityCurrentTransform(InHandle).GetScale3D();
 }
 
