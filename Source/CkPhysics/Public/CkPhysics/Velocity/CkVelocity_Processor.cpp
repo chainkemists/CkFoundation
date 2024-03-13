@@ -6,6 +6,9 @@
 #include "CkEcsBasics/Transform/CkTransform_Utils.h"
 #include "CkPhysics/Velocity/CkVelocity_Utils.h"
 
+#include "GameFramework/Character.h"
+#include "GameFramework/PawnMovementComponent.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -30,6 +33,19 @@ namespace ck
             FFragment_Velocity_Current& InCurrent) const
         -> void
     {
+        if (UCk_Utils_OwningActor_UE::Has(InHandle))
+        {
+            const auto Actor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
+            if (const auto MovementComponent = Actor->GetComponentByClass<UMovementComponent>();
+                ck::IsValid(MovementComponent))
+            {
+                InHandle.Add<ck::FFragment_MovementComponent>(MovementComponent);
+            }
+        }
+
+        // We continue adding the regular Velocity Fragments even if they are not applicable anymore IF we
+        // have the MovementComponent. This is mainly for us to be able to debug (and add gameplay debugger breadcrumbs)
+
         const auto& Params = InParams.Get_Params();
 
         switch(const auto& Coordinates = Params.Get_Coordinates())
