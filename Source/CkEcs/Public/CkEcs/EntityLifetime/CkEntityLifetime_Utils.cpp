@@ -117,10 +117,27 @@ auto
 auto
     UCk_Utils_EntityLifetime_UE::
     Get_IsPendingDestroy(
-        const FCk_Handle& InHandle)
+        const FCk_Handle& InHandle,
+        ECk_EntityLifetime_DestructionPhase InDestructionPhase)
     -> bool
 {
-    return InHandle.Has_Any<ck::FTag_DestroyEntity_Await, ck::FTag_DestroyEntity_Finalize>();
+    switch(InDestructionPhase)
+    {
+        case ECk_EntityLifetime_DestructionPhase::Initiated:
+        {
+            return InHandle.Has_Any<ck::FTag_DestroyEntity_Initiate>();
+        }
+        case ECk_EntityLifetime_DestructionPhase::Confirmed:
+        {
+            return InHandle.Has_Any<ck::FTag_DestroyEntity_Await, ck::FTag_DestroyEntity_Finalize>();
+        }
+        case ECk_EntityLifetime_DestructionPhase::InitiatedOrConfirmed:
+        {
+            return InHandle.Has_Any<ck::FTag_DestroyEntity_Initiate, ck::FTag_DestroyEntity_Await, ck::FTag_DestroyEntity_Finalize>();
+        }
+    }
+
+    return false;
 }
 
 auto
