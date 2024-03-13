@@ -329,6 +329,19 @@ namespace ck
                 return;
             }
 
+            if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InAbilityToActivateEntity, ECk_EntityLifetime_DestructionPhase::InitiatedOrConfirmed))
+            {
+                ability::Verbose
+                (
+                    TEXT("NOT Activating Ability [Entity: {}] on Ability Owner [{}] because the Ability has Initiated Or Confirmed Destruction."),
+                    InAbilityToActivateEntity,
+                    InAbilityOwnerEntity
+                );
+                UUtils_Signal_AbilityOwner_OnAbilityActivatedOrNot::Broadcast(
+                    InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityToActivateEntity, ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks));
+                return;
+            }
+
             const auto AbilityActivatedOrNot = [&]() -> ECk_AbilityOwner_AbilityActivatedOrNot
             {
                 if (UCk_Utils_Ability_UE::Get_Status(InAbilityToActivateEntity) == ECk_Ability_Status::Active)
