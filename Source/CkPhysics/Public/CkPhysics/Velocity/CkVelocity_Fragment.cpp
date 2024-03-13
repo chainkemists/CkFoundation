@@ -20,10 +20,13 @@ auto
     UCk_Fragment_Velocity_Rep::
     OnRep_Velocity() -> void
 {
-    CK_REP_OBJ_EXECUTE_IF_VALID([&]()
+    if (NOT ck::IsValid(Get_AssociatedEntity())) { return; }
+    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this) { return; }
+    [&]()
     {
-        UCk_Utils_Velocity_UE::Request_OverrideVelocity(Get_AssociatedEntity(), _Velocity);
-    });
+        auto VelocityHandle = UCk_Utils_Velocity_UE::CastChecked(_AssociatedEntity);
+        UCk_Utils_Velocity_UE::Request_OverrideVelocity(VelocityHandle, _Velocity);
+    }();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

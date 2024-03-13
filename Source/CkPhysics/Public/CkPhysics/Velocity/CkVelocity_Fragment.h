@@ -13,6 +13,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class UMovementComponent;
 class UCk_Utils_Velocity_UE;
 class UCk_Utils_BulkVelocityModifier_UE;
 
@@ -45,6 +46,23 @@ namespace ck
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_Velocity_Params, _Params);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKPHYSICS_API FFragment_MovementComponent
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_MovementComponent);
+
+    private:
+        TWeakObjectPtr<UMovementComponent> _MovementComponent;
+
+    public:
+        CK_PROPERTY_GET(_MovementComponent);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_MovementComponent, _MovementComponent);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -154,6 +172,14 @@ namespace ck
 
     CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfVelocityChannels, FCk_Handle);
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_DEFINE_CUSTOM_IS_VALID(ck::FFragment_MovementComponent, ck::IsValid_Policy_Default,
+[&](const ck::FFragment_MovementComponent& InMovementComponent)
+{
+    return ck::IsValid(InMovementComponent.Get_MovementComponent());
+});
 
 // --------------------------------------------------------------------------------------------------------------------
 

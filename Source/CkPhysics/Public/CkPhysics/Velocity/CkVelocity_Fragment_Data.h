@@ -2,9 +2,15 @@
 
 #include "CkCore/Enums/CkEnums.h"
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
 #include "CkVelocity_Fragment_Data.generated.h"
 
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
+struct CKPHYSICS_API FCk_Handle_Velocity : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Velocity); };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Velocity);
 
 // --------------------------------------------------------------------------------------------------------------------
 
