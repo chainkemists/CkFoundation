@@ -77,7 +77,8 @@ public:
               Category = "Ck|Utils|Lifetime")
     static bool
     Get_IsPendingDestroy(
-        const FCk_Handle& InHandle);
+        const FCk_Handle& InHandle,
+        ECk_EntityLifetime_DestructionPhase InDestructionPhase = ECk_EntityLifetime_DestructionPhase::Confirmed);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][Lifetime] Get Transient Entity",
