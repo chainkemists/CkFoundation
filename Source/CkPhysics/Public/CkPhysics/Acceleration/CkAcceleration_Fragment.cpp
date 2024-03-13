@@ -22,7 +22,8 @@ auto
 {
     CK_REP_OBJ_EXECUTE_IF_VALID([&]()
     {
-        UCk_Utils_Acceleration_UE::Request_OverrideAcceleration(Get_AssociatedEntity(), _Acceleration);
+        auto AccelerationHandle = UCk_Utils_Acceleration_UE::CastChecked(_AssociatedEntity);
+        UCk_Utils_Acceleration_UE::Request_OverrideAcceleration(AccelerationHandle, _Acceleration);
     });
 }
 

@@ -15,7 +15,7 @@ auto
         FCk_Handle InHandle,
         const FCk_Fragment_Acceleration_ParamsData& InParams,
         ECk_Replication InReplicates)
-    -> void
+    -> FCk_Handle_Acceleration
 {
     InHandle.Add<ck::FFragment_Acceleration_Params>(InParams);
     InHandle.Add<ck::FFragment_Acceleration_Current>(InParams.Get_StartingAcceleration());
@@ -30,55 +30,37 @@ auto
             InReplicates
         );
 
-        return;
+        return Cast(InHandle);
     }
 
     TryAddReplicatedFragment<UCk_Fragment_Acceleration_Rep>(InHandle);
+
+    return Cast(InHandle);
 }
 
-auto
-    UCk_Utils_Acceleration_UE::
-    Has(
-        FCk_Handle InHandle)
-    -> bool
-{
-    return InHandle.Has_All<ck::FFragment_Acceleration_Current, ck::FFragment_Acceleration_Params>();
-}
+// --------------------------------------------------------------------------------------------------------------------
 
-auto
-    UCk_Utils_Acceleration_UE::
-    Ensure(
-        FCk_Handle InHandle)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have Acceleration"), InHandle)
-    { return false; }
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Acceleration, UCk_Utils_Acceleration_UE,
+    FCk_Handle_Acceleration, ck::FFragment_Acceleration_Params, ck::FFragment_Acceleration_Current);
 
-    return true;
-}
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_Acceleration_UE::
     Get_CurrentAcceleration(
-        FCk_Handle InHandle)
+        const FCk_Handle_Acceleration& InHandle)
     -> FVector
 {
-    if (NOT Ensure(InHandle))
-    { return {}; }
-
     return InHandle.Get<ck::FFragment_Acceleration_Current>().Get_CurrentAcceleration();
 }
 
 auto
     UCk_Utils_Acceleration_UE::
     Request_OverrideAcceleration(
-        FCk_Handle InHandle,
+        FCk_Handle_Acceleration& InHandle,
         const FVector& InNewAcceleration)
     -> void
 {
-    if (NOT Ensure(InHandle))
-    { return; }
-
     InHandle.Get<ck::FFragment_Acceleration_Current>()._CurrentAcceleration = InNewAcceleration;
 }
 

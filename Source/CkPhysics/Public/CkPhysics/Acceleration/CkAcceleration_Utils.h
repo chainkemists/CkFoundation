@@ -33,6 +33,7 @@ class CKPHYSICS_API UCk_Utils_Acceleration_UE : public UCk_Utils_Ecs_Net_UE
 
 public:
     CK_GENERATED_BODY(UCk_Utils_Acceleration_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Acceleration);
 
 public:
     friend class UCk_Utils_AccelerationModifier_UE;
@@ -47,7 +48,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Acceleration",
               DisplayName="[Ck][Acceleration] Add Feature")
-    static void
+    static FCk_Handle_Acceleration
     Add(
         UPARAM(ref) FCk_Handle InHandle,
         const FCk_Fragment_Acceleration_ParamsData& InParams,
@@ -58,26 +59,39 @@ public:
               DisplayName="[Ck][Acceleration] Has Feature")
     static bool
     Has(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
+
+private:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Acceleration",
+        DisplayName="[Ck][Acceleration] Cast",
+        meta = (ExpandEnumAsExecs = "OutResult"))
+    static FCk_Handle_Acceleration
+    DoCast(
+        FCk_Handle InHandle,
+        ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Acceleration",
-              DisplayName="[Ck][Acceleration] Ensure Has Feature")
-    static bool
-    Ensure(
+        Category = "Ck|Utils|Acceleration",
+        DisplayName="[Ck][Acceleration] Handle -> Acceleration Handle",
+        meta = (CompactNodeTitle = "<AsAcceleration>", BlueprintAutocast))
+    static FCk_Handle_Acceleration
+    DoCastChecked(
         FCk_Handle InHandle);
 
+
+public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Acceleration",
               DisplayName="[Ck][Acceleration] Get Acceleration")
     static FVector
     Get_CurrentAcceleration(
-        FCk_Handle InHandle);
+        const FCk_Handle_Acceleration& InHandle);
 
 public:
     static auto
     Request_OverrideAcceleration(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle_Acceleration& InHandle,
         const FVector& InNewAcceleration) -> void;
 };
 
