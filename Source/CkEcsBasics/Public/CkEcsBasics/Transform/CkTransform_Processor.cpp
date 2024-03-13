@@ -361,7 +361,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_TransformInterpolation_Params& InParams,
             const FFragment_Transform& InCurrent,
-            FFragment_Transform_NewGoal_Location& InGoal) const
+            FFragment_TransformInterpolation_NewGoal_Location& InGoal) const
         -> void
     {
         if (NOT UCk_Utils_EcsBasics_Settings_UE::Get_EnableTransformSmoothing())
@@ -425,7 +425,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_TransformInterpolation_Params& InParams,
             const FFragment_Transform& InCurrent,
-            FFragment_Transform_NewGoal_Rotation& InGoal) const
+            FFragment_TransformInterpolation_NewGoal_Rotation& InGoal) const
         -> void
     {
         if (NOT UCk_Utils_EcsBasics_Settings_UE::Get_EnableTransformSmoothing())

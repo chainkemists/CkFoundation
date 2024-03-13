@@ -163,11 +163,11 @@ namespace ck
             FCk_Handle_Transform,
             FFragment_TransformInterpolation_Params,
             FFragment_Transform,
-            FFragment_Transform_NewGoal_Location,
+            FFragment_TransformInterpolation_NewGoal_Location,
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using MarkedDirtyBy = FFragment_Transform_NewGoal_Location;
+        using MarkedDirtyBy = FFragment_TransformInterpolation_NewGoal_Location;
 
     public:
         using TProcessor::TProcessor;
@@ -178,7 +178,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_TransformInterpolation_Params& InParams,
             const FFragment_Transform& InCurrent,
-            FFragment_Transform_NewGoal_Location& InGoal) const -> void;
+            FFragment_TransformInterpolation_NewGoal_Location& InGoal) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -188,11 +188,11 @@ namespace ck
             FCk_Handle_Transform,
             FFragment_TransformInterpolation_Params,
             FFragment_Transform,
-            FFragment_Transform_NewGoal_Rotation,
+            FFragment_TransformInterpolation_NewGoal_Rotation,
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using MarkedDirtyBy = FFragment_Transform_NewGoal_Rotation;
+        using MarkedDirtyBy = FFragment_TransformInterpolation_NewGoal_Rotation;
 
     public:
         using TProcessor::TProcessor;
@@ -203,7 +203,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_TransformInterpolation_Params& InParams,
             const FFragment_Transform& InCurrent,
-            FFragment_Transform_NewGoal_Rotation& InGoal) const -> void;
+            FFragment_TransformInterpolation_NewGoal_Rotation& InGoal) const -> void;
     };
 }
 

@@ -254,8 +254,8 @@ auto
         FVector InOffset)
     -> void
 {
-    auto& NewGoal = InHandle.AddOrGet<ck::FFragment_Transform_NewGoal_Location>();
-    NewGoal = ck::FFragment_Transform_NewGoal_Location{InOffset};
+    auto& NewGoal = InHandle.AddOrGet<ck::FFragment_TransformInterpolation_NewGoal_Location>();
+    NewGoal = ck::FFragment_TransformInterpolation_NewGoal_Location{InOffset};
 }
 
 auto
@@ -265,8 +265,8 @@ auto
         FRotator InOffset)
     -> void
 {
-    auto& NewGoal = InHandle.AddOrGet<ck::FFragment_Transform_NewGoal_Rotation>();
-    NewGoal = ck::FFragment_Transform_NewGoal_Rotation{InOffset};
+    auto& NewGoal = InHandle.AddOrGet<ck::FFragment_TransformInterpolation_NewGoal_Rotation>();
+    NewGoal = ck::FFragment_TransformInterpolation_NewGoal_Rotation{InOffset};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
