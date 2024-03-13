@@ -7,6 +7,8 @@
 #include "CkPhysics/CkPhysics_Log.h"
 #include "CkPhysics/Velocity/CkVelocity_Fragment.h"
 
+#include "GameFramework/MovementComponent.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -15,7 +17,7 @@ auto
         FCk_Handle InHandle,
         const FCk_Fragment_Velocity_ParamsData& InParams,
         ECk_Replication InReplicates)
-    -> void
+    -> FCk_Handle_Velocity
 {
     InHandle.Add<ck::FFragment_Velocity_Params>(InParams);
     InHandle.Add<ck::FFragment_Velocity_Current>(InParams.Get_StartingVelocity());
@@ -42,41 +44,35 @@ auto
             InReplicates
         );
 
-        return;
+        return Cast(InHandle);
     }
 
     TryAddReplicatedFragment<UCk_Fragment_Velocity_Rep>(InHandle);
+
+    return Cast(InHandle);
 }
 
-auto
-    UCk_Utils_Velocity_UE::
-    Has(
-        FCk_Handle InHandle)
-    -> bool
-{
-    return InHandle.Has_All<ck::FFragment_Velocity_Current, ck::FFragment_Velocity_Params>();
-}
+// --------------------------------------------------------------------------------------------------------------------
 
-auto
-    UCk_Utils_Velocity_UE::
-    Ensure(
-        FCk_Handle InHandle)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have Velocity"), InHandle)
-    { return false; }
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Velocity, UCk_Utils_Velocity_UE, FCk_Handle_Velocity, ck::FFragment_Velocity_Params);
 
-    return true;
-}
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_Velocity_UE::
     Get_CurrentVelocity(
-        FCk_Handle InHandle)
+        const FCk_Handle_Velocity& InHandle)
     -> FVector
 {
-    if (NOT Ensure(InHandle))
-    { return {}; }
+    if (InHandle.Has<ck::FFragment_MovementComponent>())
+    {
+        const auto& MovementComponent = InHandle.Get<ck::FFragment_MovementComponent>();
+
+        if (ck::IsValid(MovementComponent))
+        {
+            return MovementComponent.Get_MovementComponent()->Velocity;
+        }
+    }
 
     return InHandle.Get<ck::FFragment_Velocity_Current>().Get_CurrentVelocity();
 }
@@ -84,12 +80,20 @@ auto
 auto
     UCk_Utils_Velocity_UE::
     Request_OverrideVelocity(
-        FCk_Handle InHandle,
+        FCk_Handle_Velocity& InHandle,
         const FVector& InNewVelocity)
     -> void
 {
-    if (NOT Ensure(InHandle))
-    { return; }
+    if (InHandle.Has<ck::FFragment_MovementComponent>())
+    {
+        const auto& MovementComponent = InHandle.Get<ck::FFragment_MovementComponent>();
+
+        if (ck::IsValid(MovementComponent))
+        {
+            MovementComponent.Get_MovementComponent()->Velocity = InNewVelocity;
+            return;
+        }
+    }
 
     InHandle.Get<ck::FFragment_Velocity_Current>()._CurrentVelocity = InNewVelocity;
 }
@@ -103,12 +107,12 @@ auto
         FGameplayTagContainer InVelocityChannels)
     -> void
 {
-    TArray<FGameplayTag> outVelocityChannelTags;
-    InVelocityChannels.GetGameplayTagArray(outVelocityChannelTags);
+    auto VelocityChannelTags = TArray<FGameplayTag>{};
+    InVelocityChannels.GetGameplayTagArray(VelocityChannelTags);
 
-    for (const auto& velocityChannel : outVelocityChannelTags)
+    for (const auto& VelocityChannel : VelocityChannelTags)
     {
-        Add(InVelocityOwnerEntity, velocityChannel);
+        Add(InVelocityOwnerEntity, VelocityChannel);
     }
 }
 

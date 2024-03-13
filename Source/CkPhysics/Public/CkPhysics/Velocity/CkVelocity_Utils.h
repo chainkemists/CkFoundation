@@ -33,6 +33,7 @@ class CKPHYSICS_API UCk_Utils_Velocity_UE : public UCk_Utils_Ecs_Net_UE
 
 public:
     CK_GENERATED_BODY(UCk_Utils_Velocity_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Velocity);
 
 public:
     friend class UCk_Utils_VelocityModifier_UE;
@@ -47,7 +48,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Velocity",
               DisplayName="[Ck][Velocity] Add Feature")
-    static void
+    static FCk_Handle_Velocity
     Add(
         UPARAM(ref) FCk_Handle InHandle,
         const FCk_Fragment_Velocity_ParamsData& InParams,
@@ -58,26 +59,38 @@ public:
               DisplayName="[Ck][Velocity] Has Feature")
     static bool
     Has(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
+
+private:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Velocity",
+        DisplayName="[Ck][Velocity] Cast",
+        meta = (ExpandEnumAsExecs = "OutResult"))
+    static FCk_Handle_Velocity
+    DoCast(
+        FCk_Handle InHandle,
+        ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Velocity",
-              DisplayName="[Ck][Velocity] Ensure Has Feature")
-    static bool
-    Ensure(
+        Category = "Ck|Utils|Velocity",
+        DisplayName="[Ck][Velocity] Handle -> Velocity Handle",
+        meta = (CompactNodeTitle = "<AsVelocity>", BlueprintAutocast))
+    static FCk_Handle_Velocity
+    DoCastChecked(
         FCk_Handle InHandle);
 
+public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Velocity",
               DisplayName="[Ck][Velocity] Get Velocity")
     static FVector
     Get_CurrentVelocity(
-        FCk_Handle InHandle);
+        const FCk_Handle_Velocity& InHandle);
 
 public:
     static auto
     Request_OverrideVelocity(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle_Velocity& InHandle,
         const FVector& InNewVelocity) -> void;
 };
 
