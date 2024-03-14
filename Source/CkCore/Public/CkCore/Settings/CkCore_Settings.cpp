@@ -10,7 +10,7 @@ auto
     -> ECk_EnsureDisplay_Policy
 {
 #if WITH_EDITOR
-    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Core_ProjectSettings_UE>()->Get_EnsureDisplayPolicy();
+    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Core_UserSettings_UE>()->Get_EnsureDisplayPolicy();
 #else
     return ECk_EnsureDisplay_Policy::LogOnly;
 #endif
@@ -21,7 +21,7 @@ auto
     Get_EnsureDetailsPolicy()
     -> ECk_EnsureDetails_Policy
 {
-    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Core_ProjectSettings_UE>()->Get_EnsureDetailsPolicy();
+    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Core_UserSettings_UE>()->Get_EnsureDetailsPolicy();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
