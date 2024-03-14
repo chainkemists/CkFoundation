@@ -223,7 +223,7 @@ auto
 
     CK_ENSURE_IF_NOT([&]
     {
-        if (AbilityInstancingPolicy == ECk_Ability_InstancingPolicy::NotInstanced)
+        if (AbilityInstancingPolicy != ECk_Ability_InstancingPolicy::InstancedPerAbilityActivation)
         { return true; }
 
         const auto IsSameAbilityEntity      = Script->_AbilityHandle == InAbilityEntity;
