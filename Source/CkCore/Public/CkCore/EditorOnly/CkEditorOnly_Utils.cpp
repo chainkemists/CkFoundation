@@ -3,8 +3,13 @@
 #include "CkCore/Ensure/CkEnsure.h"
 
 #if WITH_EDITOR
+#include <UnrealEdGlobals.h>
+
+#include <Editor/UnrealEdEngine.h>
+
 #include <Logging/MessageLog.h>
 #include <Logging/TokenizedMessage.h>
+
 #include <Misc/UObjectToken.h>
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION <= 2
@@ -106,6 +111,28 @@ auto
         }
     }
 #endif // WITH_EDITOR
+}
+
+auto
+    UCk_Utils_EditorOnly_UE::
+    Request_DebugPauseExecution()
+    -> void
+{
+#if WITH_EDITOR
+    if (GUnrealEd)
+    { GUnrealEd->PlayWorld->bDebugPauseExecution = true; }
+#endif
+}
+
+auto
+    UCk_Utils_EditorOnly_UE::
+    Request_DebugResumeExecution()
+    -> void
+{
+#if WITH_EDITOR
+    if (GUnrealEd)
+    { GUnrealEd->PlayWorld->bDebugPauseExecution = false; }
+#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------
