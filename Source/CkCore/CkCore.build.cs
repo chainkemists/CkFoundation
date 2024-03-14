@@ -35,6 +35,15 @@ public class CkCore : CkModuleRules
             }
             );
 
+        if (Target.bBuildEditor)
+        {
+			PublicDependencyModuleNames.AddRange(
+				new string[]
+				{
+                    "UnrealEd"
+                }
+                );
+        }
 
         PrivateDependencyModuleNames.AddRange(
             new string[]

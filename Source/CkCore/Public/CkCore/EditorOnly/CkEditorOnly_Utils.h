@@ -159,6 +159,20 @@ public:
     static void
     Request_PushNewEditorMessage(
         const FCk_Utils_EditorOnly_PushNewEditorMessage_Params& InParams);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|EditorOnly",
+              DisplayName = "[Ck] Request Debug Pause Execution",
+              meta = (DevelopmentOnly))
+    static void
+    Request_DebugPauseExecution();
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|EditorOnly",
+              DisplayName = "[Ck] Request Debug Resume Execution",
+              meta = (DevelopmentOnly))
+    static void
+    Request_DebugResumeExecution();
 };
 
 // --------------------------------------------------------------------------------------------------------------------
