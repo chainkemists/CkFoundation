@@ -222,7 +222,8 @@ auto
 auto
     UCk_Utils_Debug_StackTrace_UE::
     Try_BreakInScript(
-        const UObject* InContext)
+        const UObject* InContext,
+        FText InDescription)
     -> void
 {
 #if !CK_DISABLE_STACK_TRACE
@@ -246,7 +247,7 @@ auto
     if (ScriptStack.IsEmpty())
     { return; }
 
-    const FBlueprintExceptionInfo ExceptionInfo(EBlueprintExceptionType::Breakpoint);
+    const auto ExceptionInfo = FBlueprintExceptionInfo{EBlueprintExceptionType::AccessViolation, InDescription};
     FBlueprintCoreDelegates::ThrowScriptException(Context, *ScriptStack.Last(), ExceptionInfo);
 #endif
 }
