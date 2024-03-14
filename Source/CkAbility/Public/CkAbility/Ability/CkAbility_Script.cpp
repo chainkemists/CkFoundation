@@ -339,6 +339,9 @@ auto
         FGameplayTag InAbilityCueName)
     -> void
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InAbilityCueName), TEXT("Invalid AbilityCueName in Ability [{}]"), this)
+    { return; }
+
     UCk_Utils_AbilityCue_UE::Request_Spawn_AbilityCue
     (
         Get_AbilityHandle(),
