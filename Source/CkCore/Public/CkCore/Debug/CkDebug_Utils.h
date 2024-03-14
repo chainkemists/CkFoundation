@@ -110,7 +110,8 @@ public:
 
     static auto
     Try_BreakInScript(
-        const UObject* InContext) -> void;
+        const UObject* InContext,
+        FText InDescription = FText{}) -> void;
 
 private:
     inline static UObject* _LastStackTraceContextObject = nullptr;
