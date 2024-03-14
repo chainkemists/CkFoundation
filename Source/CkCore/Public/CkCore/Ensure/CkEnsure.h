@@ -225,12 +225,12 @@ public:
         .Set_ToastNotificationDisplayPolicy(ECk_EditorMessage_ToastNotification_DisplayPolicy::DoNotDisplay)                               \
         .Set_MessageLogDisplayPolicy(ECk_EditorMessage_MessageLog_DisplayPolicy::DoNotFocus)                                               \
     );                                                                                                                                     \
-    if (UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::LogOnly)                             \
+    if (UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::LogOnly)                                 \
     { return false; }
 #else
 // ReSharper disable once CppInconsistentNaming
 #define _DETAILS_CK_ENSURE_LOG_OR_PUSHMESSAGE(_Category_, _Msg_, _ContextObject_)                                                          \
-    if (UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::LogOnly)                             \
+    if (UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::LogOnly)                                 \
     {                                                                                                                                      \
         UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLineWithMessage(__FILE__, FText::FromString(_Msg_), __LINE__);                   \
         UE_LOG(CkCore, Error, TEXT("%s"), *_Msg_);                                                                                         \
@@ -251,7 +251,7 @@ public:
     if (UCk_Utils_Ensure_UE::Get_IsEnsureIgnored(__FILE__, __LINE__))                                                                      \
     { return false; }                                                                                                                      \
                                                                                                                                            \
-    const auto IsMessageOnly = UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDetailsPolicy() == ECk_EnsureDetails_Policy::MessageOnly;  \
+    const auto IsMessageOnly = UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDetailsPolicy() == ECk_EnsureDetails_Policy::MessageOnly;      \
                                                                                                                                            \
     const auto& Message = ck::Format_UE(InString, ##__VA_ARGS__);                                                                          \
     const auto& Title = ck::Format_UE(TEXT("Ignore and Continue? Frame#[{}] PIE-ID[{}]"), GFrameCounter, GPlayInEditorID - 1);             \
@@ -272,6 +272,13 @@ public:
     _DETAILS_CK_ENSURE_LOG_OR_PUSHMESSAGE("CkEnsures", CallstackPlusMessage, nullptr);                                                     \
                                                                                                                                            \
     const auto& DialogMessage = FText::FromString(CallstackPlusMessage);                                                                   \
+    if (UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::MessageLog)                              \
+    {                                                                                                                                      \
+            UCk_Utils_Debug_StackTrace_UE::Try_BreakInScript(nullptr, DialogMessage);                                                      \
+            UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLineWithMessage(__FILE__, DialogMessage, __LINE__);                          \
+            return false;                                                                                                                  \
+    }                                                                                                                                      \
+                                                                                                                                           \
     switch(const auto& Ans = UCk_Utils_MessageDialog_UE::YesNoYesAll(DialogMessage, FText::FromString(Title)))                             \
     {                                                                                                                                      \
         case ECk_MessageDialog_YesNoYesAll::Yes:                                                                                           \
