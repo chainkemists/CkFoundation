@@ -15,18 +15,21 @@ auto
     InHandle.Add<ck::FFragment_Transform>(InInitialTransform);
     InHandle.Add<ck::FTag_Transform_Setup>();
 
-    if (const auto OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
-        ck::IsValid(OwningActor))
+    if (UCk_Utils_OwningActor_UE::Has(InHandle))
     {
-        if (OwningActor->IsReplicatingMovement())
+        if (const auto OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
+            ck::IsValid(OwningActor))
         {
-            ck::ecs_basics::VeryVerbose
-            (
-                TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it has an Owning Actor with Replicated Movement"),
-                InHandle
-            );
+            if (OwningActor->IsReplicatingMovement())
+            {
+                ck::ecs_basics::VeryVerbose
+                (
+                    TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it has an Owning Actor with Replicated Movement"),
+                    InHandle
+                );
 
-            return Cast(InHandle);
+                return Cast(InHandle);
+            }
         }
     }
 
