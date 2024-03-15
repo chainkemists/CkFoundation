@@ -320,8 +320,8 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    TProcessor_AttributeModifier_ComputeAll<T_DerivedProcessor, T_DerivedAttributeModifier>::
+    template <typename T_DerivedAttributeModifier>
+    TProcessor_AttributeModifier_ComputeAll<T_DerivedAttributeModifier>::
         TProcessor_AttributeModifier_ComputeAll(
             RegistryType InRegistry)
         : Super(InRegistry)
@@ -336,10 +336,10 @@ namespace ck::detail
     {
     }
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    template <typename T_DerivedAttributeModifier>
     auto
-        TProcessor_AttributeModifier_ComputeAll<T_DerivedProcessor, T_DerivedAttributeModifier>::
-        Tick(
+        TProcessor_AttributeModifier_ComputeAll<T_DerivedAttributeModifier>::
+        DoTick(
             TimeType InDeltaT)
         -> void
     {
@@ -353,7 +353,7 @@ namespace ck::detail
         _RevocableMultiply_Compute.Tick(InDeltaT);
         _RevocableDivide_Compute.Tick(InDeltaT);
 
-        _TransientEntity.Clear<MarkedDirtyBy>();
+        this->_TransientEntity.template Clear<MarkedDirtyBy>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------

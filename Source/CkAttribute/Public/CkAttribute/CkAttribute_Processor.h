@@ -449,11 +449,11 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_ComputeAll : public FProcessor
+    template <typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_ComputeAll : public FProcessor<TProcessor_AttributeModifier_ComputeAll<T_DerivedAttributeModifier>>
     {
     public:
-        using Super        = FProcessor;
+        using Super        = FProcessor<TProcessor_AttributeModifier_ComputeAll<T_DerivedAttributeModifier>>;
         using TimeType     = FCk_Time;
         using RegistryType = FCk_Registry;
         using MarkedDirtyBy = typename T_DerivedAttributeModifier::FTag_ComputeResult;
@@ -463,7 +463,7 @@ namespace ck::detail
         TProcessor_AttributeModifier_ComputeAll(RegistryType InRegistry);
 
     public:
-        auto Tick(
+        auto DoTick(
             TimeType InDeltaT) -> void;
 
     private:
@@ -623,8 +623,7 @@ namespace ck
         using RegistryType = FCk_Registry;
 
         template <ECk_MinMaxCurrent T_Component>
-        using TInternalProcessorType = detail::TProcessor_AttributeModifier_ComputeAll<
-            TProcessor_AttributeModifier_ComputeAll_CurrentMinMax, T_DerivedAttributeModifier<T_Component>>;
+        using TInternalProcessorType = detail::TProcessor_AttributeModifier_ComputeAll<T_DerivedAttributeModifier<T_Component>>;
 
     public:
         explicit
