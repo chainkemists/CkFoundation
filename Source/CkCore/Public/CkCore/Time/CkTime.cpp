@@ -13,7 +13,7 @@ auto
         const ThisType& InOther) const
     -> bool
 {
-    return _Seconds == InOther._Seconds;
+    return FMath::IsNearlyEqual(_Seconds, InOther._Seconds);
 }
 
 auto
