@@ -439,10 +439,10 @@ namespace ck
                         Condition(InAbilityOwnerEntity))
                     {
                         auto MyOwner = UCk_Utils_AbilityOwner_UE::CastChecked(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityOwnerEntity));
+                        auto& MyOwnerAbilityOwnerCurrent = MyOwner.Get<FFragment_AbilityOwner_Current>();
 
                         const auto AbilityOwnerAsAbility = UCk_Utils_Ability_UE::CastChecked(InAbilityOwnerEntity);
-                        UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(MyOwner,
-                            FCk_Request_AbilityOwner_DeactivateAbility{AbilityOwnerAsAbility}, {});
+                        DoHandleRequest(MyOwner, MyOwnerAbilityOwnerCurrent, FCk_Request_AbilityOwner_DeactivateAbility{AbilityOwnerAsAbility});
                     }
                 }
 
@@ -464,8 +464,7 @@ namespace ck
                             InAbilityOwnerEntity
                         );
 
-                        UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(InAbilityOwnerEntity,
-                            FCk_Request_AbilityOwner_DeactivateAbility{InAbilityEntityToCancel}, {});
+                        DoHandleRequest(InAbilityOwnerEntity, InAbilityOwnerComp, FCk_Request_AbilityOwner_DeactivateAbility{InAbilityEntityToCancel});
                     },
                     algo::MatchesAnyAbilityActivationCancelledTags{GrantedTags}
                 );
