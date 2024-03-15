@@ -47,7 +47,7 @@ namespace ck
 
     public:
         auto
-        Tick(
+        DoTick(
             FCk_Time InDeltaT) -> void;
 
     public:

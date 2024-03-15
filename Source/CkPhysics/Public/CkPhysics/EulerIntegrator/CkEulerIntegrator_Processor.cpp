@@ -8,10 +8,10 @@ namespace ck
 {
     auto
         FProcessor_EulerIntegrator_DoOnePredictiveUpdate::
-        Tick(TimeType InDeltaT)
+        DoTick(TimeType InDeltaT)
         -> void
     {
-        TProcessor::Tick(InDeltaT);
+        TProcessor::DoTick(InDeltaT);
 
         _TransientEntity.Clear<FTag_EulerIntegrator_DoOnePredictiveUpdate>();
     }

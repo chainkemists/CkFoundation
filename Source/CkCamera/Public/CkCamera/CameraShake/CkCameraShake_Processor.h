@@ -22,7 +22,7 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto Tick(
+        auto DoTick(
             TimeType InDeltaT) -> void;
 
     public:

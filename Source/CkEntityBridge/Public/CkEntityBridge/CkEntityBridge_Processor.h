@@ -19,7 +19,7 @@ namespace ck
 
     public:
         auto
-        Tick(
+        DoTick(
             TimeType InDeltaT) -> void;
 
     public:

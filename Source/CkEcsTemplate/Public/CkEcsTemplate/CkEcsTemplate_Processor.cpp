@@ -12,13 +12,13 @@ namespace ck
 {
     auto
         FProcessor_EcsTemplate_HandleRequests::
-        Tick(
+        DoTick(
             TimeType InDeltaT)
         -> void
     {
         _TransientEntity.Clear<FTag_EcsTemplate_Updated>();
 
-        TProcessor::Tick(InDeltaT);
+        TProcessor::DoTick(InDeltaT);
 
         _TransientEntity.Clear<MarkedDirtyBy>();
     }

@@ -25,7 +25,7 @@ namespace ck
 
     public:
         auto
-        Tick(
+        DoTick(
             TimeType InDeltaT) -> void;
 
     public:
@@ -50,7 +50,7 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto Tick(
+        auto DoTick(
             TimeType InDeltaT) -> void;
 
     public:

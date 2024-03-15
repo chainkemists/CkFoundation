@@ -25,9 +25,6 @@ namespace ck
     public:
         CK_GENERATED_BODY(TProcessorBase);
 
-        // TODO: this is temporary so that we can refactor all existing processors easily
-        friend class FTicker;
-
     public:
         using EntityType = FCk_Entity;
         using TimeType = FCk_Time;

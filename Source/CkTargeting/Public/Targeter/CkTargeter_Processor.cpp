@@ -28,11 +28,11 @@ namespace ck
 
     auto
         FProcessor_Targeter_Cleanup::
-        Tick(
+        DoTick(
             FCk_Time InDeltaT)
         -> void
     {
-        TProcessor::Tick(InDeltaT);
+        TProcessor::DoTick(InDeltaT);
 
         _TransientEntity.Clear<MarkedDirtyBy>();
     }
