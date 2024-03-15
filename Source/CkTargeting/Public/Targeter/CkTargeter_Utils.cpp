@@ -276,8 +276,22 @@ auto
         FCk_Handle_Targeter& InTargeter)
     -> FCk_Handle_Targeter
 {
-    InTargeter.Try_Remove<ck::FTag_Targeter_NeedsUpdate>();
     InTargeter.Get<ck::FFragment_Targeter_Current>()._TargetingStatus = ECk_Targeter_TargetingStatus::NotTargeting;
+
+    if (InTargeter.Has<ck::FTag_Targeter_NeedsUpdate>())
+    {
+        InTargeter.Remove<ck::FTag_Targeter_NeedsUpdate>();
+
+        const auto TargeterBasicInfo = FCk_Targeter_BasicInfo{InTargeter, UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InTargeter)};
+
+        // Don't fire the signal if the Targeter doesn't have any result computed yet
+        if (ck::IsValid(InTargeter.Get<ck::FFragment_Targeter_Current>()._CachedTargets))
+        {
+            InTargeter.Get<ck::FFragment_Targeter_Current>()._CachedTargets.Reset();
+            ck::UUtils_Signal_Targeter_OnTargetsQueried::Broadcast(InTargeter, ck::MakePayload(TargeterBasicInfo, FCk_Targeter_TargetList{}));
+        }
+    }
+
     return InTargeter;
 }
 
