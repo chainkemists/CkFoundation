@@ -21,7 +21,7 @@ namespace ck
 
     auto
         FProcessor_EntityLifetime_EntityJustCreated::
-        Tick(
+        DoTick(
             FTimeType)
         -> void
     {

@@ -8,18 +8,20 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECS_API FProcessor_EntityLifetime_EntityJustCreated : public FProcessor
+    class CKECS_API FProcessor_EntityLifetime_EntityJustCreated : public FProcessor<FProcessor_EntityLifetime_EntityJustCreated>
     {
     public:
         using Super = FProcessor;
         using FTimeType = FCk_Time;
         using FRegistryType = FCk_Registry;
 
+        friend class Super;
+
     public:
         explicit FProcessor_EntityLifetime_EntityJustCreated(const FRegistryType& InRegistry);
 
     public:
-        auto Tick(FTimeType) -> void;
+        auto DoTick(FTimeType) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

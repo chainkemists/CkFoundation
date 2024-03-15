@@ -19,13 +19,21 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECS_API FProcessor
+    template <typename T_DerivedProcessor>
+    class FProcessor
     {
+    public:
+        CK_GENERATED_BODY(FProcessor);
+
+        // TODO: this is temporary so that we can refactor all existing processors easily
+        friend class FTicker;
+
     public:
         using EntityType = FCk_Entity;
         using TimeType = FCk_Time;
         using HandleType = FCk_Handle;
         using RegistryType = FCk_Registry;
+        using DerivedType = T_DerivedProcessor;
 
     public:
         explicit FProcessor(
@@ -34,17 +42,33 @@ namespace ck
     protected:
         ~FProcessor() = default;
 
+    public:
+        auto
+        Tick(TimeType InDeltaT) -> void;
+
     private:
         RegistryType _Registry;
 
+        TimeType _TickRate;
+        TimeType _RemainingDeltaTFromLastFrame;
+
+    private:
+        int32 _TotalTicks = 0;
+
     protected:
         HandleType _TransientEntity;
+
+    private:
+        CK_ENABLE_SFINAE_THIS(DerivedType);
+
+    public:
+        CK_PROPERTY(_TickRate);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename... T_Fragments>
-    class TProcessor : public FProcessor
+    class TProcessor : public FProcessor<T_DerivedProcessor>
     {
         CK_GENERATED_BODY(TProcessor<T_DerivedProcessor COMMA T_Fragments...>);
 
@@ -53,7 +77,7 @@ namespace ck
         CK_DEFINE_STAT(STAT_Tick, T_DerivedProcessor, FStatGroup_STATGROUP_CkProcessors);
 
     public:
-        using Super = FProcessor;
+        using Super = FProcessor<T_DerivedProcessor>;
         using EntityType = FCk_Entity;
         using TimeType = FCk_Time;
         using HandleType = FCk_Handle;
@@ -65,7 +89,7 @@ namespace ck
             const RegistryType& InRegistry);
 
     public:
-        auto Tick(TimeType InDeltaT) -> void;
+        auto DoTick(TimeType InDeltaT) -> void;
 
     private:
         template <typename... T_ComponentsOnly>
@@ -81,6 +105,49 @@ namespace ck
 
 namespace ck
 {
+    template <typename T_DerivedProcessor>
+    FProcessor<T_DerivedProcessor>::
+        FProcessor(
+            const RegistryType& InRegistry)
+        : _Registry(InRegistry)
+    {
+        _TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(_Registry);
+    }
+
+    template <typename T_DerivedProcessor>
+    auto
+        FProcessor<T_DerivedProcessor>::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        auto AdjustedTickRate = InDeltaT + _RemainingDeltaTFromLastFrame;
+
+        if (_TickRate == TimeType::ZeroSecond())
+        {
+            ++_TotalTicks;
+            This()->DoTick(InDeltaT);
+            AdjustedTickRate = TimeType::ZeroSecond();
+        }
+        else
+        {
+            while(AdjustedTickRate >= _TickRate)
+            {
+                AdjustedTickRate -= _TickRate;
+                ++_TotalTicks;
+
+                This()->DoTick(_TickRate);
+            }
+        }
+
+        _RemainingDeltaTFromLastFrame = AdjustedTickRate;
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
     template <typename T_DerivedProcessor, typename ... T_Fragments>
     TProcessor<T_DerivedProcessor, T_Fragments...>::
         TProcessor(
@@ -91,11 +158,11 @@ namespace ck
     template <typename T_DerivedProcessor, typename ... T_Fragments>
     auto
         TProcessor<T_DerivedProcessor, T_Fragments...>::
-        Tick(
+        DoTick(
             TimeType InDeltaT)
         -> void
     {
-        using ViewType = decltype(_TransientEntity.View<T_Fragments...>());
+        using ViewType = decltype(this->_TransientEntity.template View<T_Fragments...>());
         using ComponentsOnly = typename ViewType::template FragmentsOnly<T_Fragments...>;
 
         DoTick(InDeltaT, ComponentsOnly{});
@@ -112,11 +179,11 @@ namespace ck
     {
         CK_STAT(STAT_Tick);
 
-        _TransientEntity.View<T_Fragments...>().ForEach([&](EntityType InEntity, T_ComponentsOnly&... InComponents)
+        this->_TransientEntity.template View<T_Fragments...>().ForEach([&](EntityType InEntity, T_ComponentsOnly&... InComponents)
         {
             CK_STAT(STAT_ForEachEntity);
 
-            auto Handle = ck::MakeHandle(InEntity, _TransientEntity);
+            auto Handle = ck::MakeHandle(InEntity, this->_TransientEntity);
             This()->ForEachEntity(InDeltaT, Handle, InComponents...);
         });
     }
@@ -128,7 +195,7 @@ namespace ck_exp
 {
     template <typename T_DerivedProcessor, typename T_HandleType, typename... T_Fragments>
     requires(std::is_base_of_v<FCk_Handle, T_HandleType>)
-    class TProcessor : public ck::FProcessor
+    class TProcessor : public ck::FProcessor<T_DerivedProcessor>
     {
         CK_GENERATED_BODY(TProcessor<T_DerivedProcessor COMMA T_HandleType COMMA T_Fragments...>);
 
@@ -137,7 +204,7 @@ namespace ck_exp
         CK_DEFINE_STAT(STAT_Tick, T_DerivedProcessor, FStatGroup_STATGROUP_CkProcessors);
 
     public:
-        using Super = ck::FProcessor;
+        using Super = ck::FProcessor<T_DerivedProcessor>;
         using EntityType = FCk_Entity;
         using TimeType = FCk_Time;
         using HandleType = T_HandleType;
@@ -149,7 +216,7 @@ namespace ck_exp
             const RegistryType& InRegistry);
 
     public:
-        auto Tick(TimeType InDeltaT) -> void;
+        auto DoTick(TimeType InDeltaT) -> void;
 
     private:
         template <typename... T_ComponentsOnly>
@@ -178,11 +245,11 @@ namespace ck_exp
     requires(std::is_base_of_v<FCk_Handle, T_HandleType>)
     auto
         TProcessor<T_DerivedProcessor, T_HandleType, T_Fragments...>::
-        Tick(
+        DoTick(
             TimeType InDeltaT)
         -> void
     {
-        using ViewType = decltype(_TransientEntity.View<T_Fragments...>());
+        using ViewType = decltype(this->_TransientEntity.template View<T_Fragments...>());
         using ComponentsOnly = typename ViewType::template FragmentsOnly<T_Fragments...>;
 
         DoTick(InDeltaT, ComponentsOnly{});
@@ -200,11 +267,11 @@ namespace ck_exp
     {
         CK_STAT(STAT_Tick);
 
-        _TransientEntity.View<T_Fragments...>().ForEach([&](EntityType InEntity, T_ComponentsOnly&... InComponents)
+        this->_TransientEntity.template View<T_Fragments...>().ForEach([&](EntityType InEntity, T_ComponentsOnly&... InComponents)
         {
             CK_STAT(STAT_ForEachEntity);
 
-            auto TypeSafeHandle = ck::StaticCast<HandleType>(ck::MakeHandle(InEntity, _TransientEntity));
+            auto TypeSafeHandle = ck::StaticCast<HandleType>(ck::MakeHandle(InEntity, this->_TransientEntity));
             This()->ForEachEntity(InDeltaT, TypeSafeHandle, InComponents...);
         });
     }
