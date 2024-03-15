@@ -8,10 +8,10 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECS_API FProcessor_EntityLifetime_EntityJustCreated : public FProcessor<FProcessor_EntityLifetime_EntityJustCreated>
+    class CKECS_API FProcessor_EntityLifetime_EntityJustCreated : public TProcessorBase<FProcessor_EntityLifetime_EntityJustCreated>
     {
     public:
-        using Super = FProcessor;
+        using Super = TProcessorBase;
         using FTimeType = FCk_Time;
         using FRegistryType = FCk_Registry;
 

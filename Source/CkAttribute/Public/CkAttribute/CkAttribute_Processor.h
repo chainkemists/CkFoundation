@@ -450,10 +450,10 @@ namespace ck::detail
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedAttributeModifier>
-    class TProcessor_AttributeModifier_ComputeAll : public FProcessor<TProcessor_AttributeModifier_ComputeAll<T_DerivedAttributeModifier>>
+    class TProcessor_AttributeModifier_ComputeAll : public TProcessorBase<TProcessor_AttributeModifier_ComputeAll<T_DerivedAttributeModifier>>
     {
     public:
-        using Super        = FProcessor<TProcessor_AttributeModifier_ComputeAll<T_DerivedAttributeModifier>>;
+        using Super        = TProcessorBase<TProcessor_AttributeModifier_ComputeAll<T_DerivedAttributeModifier>>;
         using TimeType     = FCk_Time;
         using RegistryType = FCk_Registry;
         using MarkedDirtyBy = typename T_DerivedAttributeModifier::FTag_ComputeResult;

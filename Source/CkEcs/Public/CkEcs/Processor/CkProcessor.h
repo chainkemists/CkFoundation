@@ -20,10 +20,10 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor>
-    class FProcessor
+    class TProcessorBase
     {
     public:
-        CK_GENERATED_BODY(FProcessor);
+        CK_GENERATED_BODY(TProcessorBase);
 
         // TODO: this is temporary so that we can refactor all existing processors easily
         friend class FTicker;
@@ -36,11 +36,11 @@ namespace ck
         using DerivedType = T_DerivedProcessor;
 
     public:
-        explicit FProcessor(
+        explicit TProcessorBase(
             const RegistryType& InRegistry);
 
     protected:
-        ~FProcessor() = default;
+        ~TProcessorBase() = default;
 
     public:
         auto
@@ -68,7 +68,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename... T_Fragments>
-    class TProcessor : public FProcessor<T_DerivedProcessor>
+    class TProcessor : public TProcessorBase<T_DerivedProcessor>
     {
         CK_GENERATED_BODY(TProcessor<T_DerivedProcessor COMMA T_Fragments...>);
 
@@ -77,7 +77,7 @@ namespace ck
         CK_DEFINE_STAT(STAT_Tick, T_DerivedProcessor, FStatGroup_STATGROUP_CkProcessors);
 
     public:
-        using Super = FProcessor<T_DerivedProcessor>;
+        using Super = TProcessorBase<T_DerivedProcessor>;
         using EntityType = FCk_Entity;
         using TimeType = FCk_Time;
         using HandleType = FCk_Handle;
@@ -106,8 +106,8 @@ namespace ck
 namespace ck
 {
     template <typename T_DerivedProcessor>
-    FProcessor<T_DerivedProcessor>::
-        FProcessor(
+    TProcessorBase<T_DerivedProcessor>::
+        TProcessorBase(
             const RegistryType& InRegistry)
         : _Registry(InRegistry)
     {
@@ -116,7 +116,7 @@ namespace ck
 
     template <typename T_DerivedProcessor>
     auto
-        FProcessor<T_DerivedProcessor>::
+        TProcessorBase<T_DerivedProcessor>::
         Tick(
             TimeType InDeltaT)
         -> void
@@ -195,7 +195,7 @@ namespace ck_exp
 {
     template <typename T_DerivedProcessor, typename T_HandleType, typename... T_Fragments>
     requires(std::is_base_of_v<FCk_Handle, T_HandleType>)
-    class TProcessor : public ck::FProcessor<T_DerivedProcessor>
+    class TProcessor : public ck::TProcessorBase<T_DerivedProcessor>
     {
         CK_GENERATED_BODY(TProcessor<T_DerivedProcessor COMMA T_HandleType COMMA T_Fragments...>);
 
@@ -204,7 +204,7 @@ namespace ck_exp
         CK_DEFINE_STAT(STAT_Tick, T_DerivedProcessor, FStatGroup_STATGROUP_CkProcessors);
 
     public:
-        using Super = ck::FProcessor<T_DerivedProcessor>;
+        using Super = ck::TProcessorBase<T_DerivedProcessor>;
         using EntityType = FCk_Entity;
         using TimeType = FCk_Time;
         using HandleType = T_HandleType;
