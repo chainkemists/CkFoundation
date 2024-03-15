@@ -18,11 +18,11 @@ namespace ck
 
     auto
         FProcessor_Transform_Setup::
-        Tick(
+        DoTick(
             TimeType InDeltaT)
         -> void
     {
-        Super::Tick(InDeltaT);
+        Super::DoTick(InDeltaT);
 
         _TransientEntity.Clear<MarkedDirtyBy>();
     }
@@ -49,11 +49,11 @@ namespace ck
 
     auto
         FProcessor_Transform_HandleRequests::
-        Tick(TimeType InDeltaT) -> void
+        DoTick(TimeType InDeltaT) -> void
     {
         _TransientEntity.Clear<FTag_Transform_Updated>();
 
-        TProcessor::Tick(InDeltaT);
+        TProcessor::DoTick(InDeltaT);
 
         _TransientEntity.Clear<MarkedDirtyBy>();
     }

@@ -11,13 +11,13 @@ namespace ck
 {
     auto
         FProcessor_AnimState_HandleRequests::
-        Tick(
+        DoTick(
             TimeType InDeltaT)
         -> void
     {
         _TransientEntity.Clear<FTag_AnimState_Updated>();
 
-        TProcessor::Tick(InDeltaT);
+        TProcessor::DoTick(InDeltaT);
 
         _TransientEntity.Clear<MarkedDirtyBy>();
     }
