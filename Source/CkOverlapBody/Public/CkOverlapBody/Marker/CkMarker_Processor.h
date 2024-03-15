@@ -24,7 +24,7 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto Tick(
+        auto DoTick(
             FCk_Time InDeltaT) -> void;
 
         auto ForEachEntity(

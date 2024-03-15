@@ -45,11 +45,11 @@ namespace ck
 
     auto
         FProcessor_EntityLifetime_DestructionPhase_Await::
-        Tick(
+        DoTick(
             TimeType InDeltaT)
         -> void
     {
-        Super::Tick(InDeltaT);
+        Super::DoTick(InDeltaT);
 
         // Do NOT clear tag here. Why? Because it might clear the tag for something that was _just_ initiated to destroy
         // _TransientEntity.Clear<FTag_DestroyEntity_Initiate>();
@@ -72,11 +72,11 @@ namespace ck
 
     auto
         FProcessor_EntityLifetime_DestructionPhase_Finalize::
-        Tick(
+        DoTick(
             TimeType InDeltaT)
         -> void
     {
-        Super::Tick(InDeltaT);
+        Super::DoTick(InDeltaT);
 
         // Do NOT clear tag here, see similar comment above
         // _TransientEntity.Clear<FTag_DestroyEntity_Await>();

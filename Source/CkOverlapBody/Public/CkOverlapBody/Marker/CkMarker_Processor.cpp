@@ -19,11 +19,11 @@ namespace ck
 {
     auto
         FProcessor_Marker_Setup::
-        Tick(
+        DoTick(
             TimeType InDeltaT)
         -> void
     {
-        TProcessor::Tick(InDeltaT);
+        TProcessor::DoTick(InDeltaT);
 
         _TransientEntity.Clear<MarkedDirtyBy>();
     }

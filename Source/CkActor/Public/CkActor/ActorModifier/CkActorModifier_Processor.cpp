@@ -16,11 +16,11 @@ namespace ck
 {
     auto
         FProcessor_ActorModifier_SpawnActor_HandleRequests::
-        Tick(
+        DoTick(
             TimeType InDeltaT)
         -> void
     {
-        TProcessor::Tick(InDeltaT);
+        TProcessor::DoTick(InDeltaT);
         _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
@@ -136,11 +136,11 @@ namespace ck
 
     auto
         FProcessor_ActorModifier_AddActorComponent_HandleRequests::
-        Tick(
+        DoTick(
             TimeType InDeltaT)
         -> void
     {
-        TProcessor::Tick(InDeltaT);
+        TProcessor::DoTick(InDeltaT);
         _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
@@ -235,11 +235,11 @@ namespace ck
 
     auto
         FProcessor_ActorModifier_RemoveActorComponent_HandleRequests::
-        Tick(
+        DoTick(
             TimeType InDeltaT)
         -> void
     {
-        TProcessor::Tick(InDeltaT);
+        TProcessor::DoTick(InDeltaT);
         _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
