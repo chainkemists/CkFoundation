@@ -248,6 +248,9 @@ namespace ck
             const MaybeTypeSafeHandle& InRecordEntry)
         -> bool
     {
+        if (NOT InRecordHandle.Has<RecordType>())
+        { return {}; }
+
         const auto& Fragment = InRecordHandle.Get<RecordType>();
 
         if (const auto MaybeContainsEntry = Fragment.Get_RecordEntries().Contains(InRecordEntry))
@@ -315,6 +318,9 @@ namespace ck
             T_Predicate InPredicate)
         -> MaybeTypeSafeHandle
     {
+        if (NOT InRecordHandle.Has<RecordType>())
+        { return {}; }
+
         auto MaybeValidEntry = [&]() -> MaybeTypeSafeHandle
         {
             for (const auto& Fragment = InRecordHandle.Get<RecordType>();
