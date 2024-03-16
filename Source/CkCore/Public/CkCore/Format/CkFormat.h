@@ -112,7 +112,7 @@ namespace ck
 #define CK_DEFINE_CUSTOM_FORMATTER_PTR_FORWARDER(_Type_, _LambdaToReturnInvalidObj_)\
 namespace ck { namespace ck_format_detail {                                         \
     inline auto&                                                                    \
-    ForwarderForPointers(const _Type_* InObj)                                       \
+    ForwarderForPointers(const _Type_* InObj)                                      \
     {                                                                               \
         if (ck::IsValid(InObj))                                                     \
         { return *InObj; }                                                          \
