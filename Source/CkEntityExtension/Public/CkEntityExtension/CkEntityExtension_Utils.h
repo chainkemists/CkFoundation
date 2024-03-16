@@ -63,7 +63,7 @@ private:
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|EntityExtension",
-        DisplayName="[Ck][EntityExtension] Cast")
+        DisplayName="[Ck][EntityExtension] Get Extension Owner")
     static FCk_Handle
     Get_ExtensionOwner(
         const FCk_Handle_EntityExtension& InEntityExtension);
@@ -86,3 +86,18 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UCLASS()
+class CKENTITYEXTENSION_API UCk_Utils_ContextOwner_UE : public UCk_Utils_Ecs_Net_UE
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY(UCk_Utils_ContextOwner_UE);
+
+public:
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|ContextOwner",
+        DisplayName="[Ck][ContextOwner] Get Context Owner")
+    static FCk_Handle
+    Get_ContextOwner(
+        const FCk_Handle& InHandle);
+};

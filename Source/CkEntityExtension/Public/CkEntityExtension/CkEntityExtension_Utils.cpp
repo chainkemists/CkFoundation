@@ -76,3 +76,20 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ContextOwner_UE::
+    Get_ContextOwner(
+        const FCk_Handle& InHandle)
+    -> FCk_Handle
+{
+    if (const auto EntityExtension = UCk_Utils_EntityExtension_UE::Cast(InHandle);
+        ck::IsValid(EntityExtension))
+    {
+        return Get_ContextOwner(UCk_Utils_EntityExtension_UE::Get_ExtensionOwner(EntityExtension));
+    }
+
+    return UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
