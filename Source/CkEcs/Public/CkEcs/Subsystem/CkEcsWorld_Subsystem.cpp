@@ -99,6 +99,48 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+ACk_NewEcsWorld_Actor_UE::
+    ACk_NewEcsWorld_Actor_UE()
+{
+    PrimaryActorTick.bCanEverTick = true;
+    PrimaryActorTick.bTickEvenWhenPaused = false;
+    bReplicates = false;
+    bAlwaysRelevant = true;
+}
+
+void
+    ACk_NewEcsWorld_Actor_UE::BeginPlay()
+{
+    for (auto Injectors : _ProcessorInjectors)
+    {
+        for (const auto Injector : Injectors.Get_ProcessorInjectors())
+        {
+            CK_ENSURE_IF_NOT(ck::IsValid(Injector),
+                TEXT("Encountered an INVALID Injector in NewEcsWorld Actor [{}]"), this)
+            { continue; }
+
+            const auto NewInjector = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_EcsWorld_ProcessorInjector_Base_UE>(this, Injector, nullptr);
+
+            NewInjector->DoInjectProcessors(_EcsWorld);
+        }
+    }
+
+    Super::BeginPlay();
+}
+
+auto
+    ACk_NewEcsWorld_Actor_UE::
+    Tick(
+        float DeltaSeconds)
+    -> void
+{
+    Super::Tick(DeltaSeconds);
+
+    _EcsWorld.Tick(FCk_Time{DeltaSeconds});
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_EcsWorld_Subsystem_UE::
     Initialize(
