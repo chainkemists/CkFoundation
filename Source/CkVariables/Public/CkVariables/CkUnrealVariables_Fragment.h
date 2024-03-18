@@ -23,7 +23,7 @@ namespace ck
 
     struct CKVARIABLES_API FFragment_Variable_InstancedStruct : public TFragment_Variables<FInstancedStruct, const FInstancedStruct&> {};
 
-    struct CKVARIABLES_API FFragment_Variable_UObject : public TFragment_Variables<UObject*> {};
+    struct CKVARIABLES_API FFragment_Variable_UObject : public TFragment_Variables<TWeakObjectPtr<UObject>> {};
     struct CKVARIABLES_API FFragment_Variable_UObject_SubclassOf : public TFragment_Variables<TSubclassOf<UObject>> {};
 };
 

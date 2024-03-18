@@ -37,6 +37,17 @@ namespace ck
             HandleType InHandle,
             FGameplayTag InVariableName,
             ArgType InValue) -> void;
+
+        static auto
+        Get(
+            HandleType InHandle,
+            FName InVariableName) -> ArgType;
+
+        static auto
+        Set(
+            HandleType InHandle,
+            FName InVariableName,
+            ArgType InValue) -> void;
     };
 }
 
