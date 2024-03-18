@@ -19,7 +19,7 @@ namespace ck
         using ArgType = T_ArgType;
 
     private:
-        TMap<FGameplayTag, ValueType> _Variables;
+        TMap<FName, ValueType> _Variables;
 
     private:
         CK_PROPERTY_GET_NON_CONST(_Variables);
