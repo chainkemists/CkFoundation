@@ -19,6 +19,7 @@ class CKECS_API UCk_EcsWorld_ProcessorInjector_Base_UE : public UObject
     GENERATED_BODY()
 
     friend class ACk_EcsWorld_Actor_UE;
+    friend class ACk_NewEcsWorld_Actor_UE;
 
 public:
     using EcsWorldType = ck::FEcsWorld;
@@ -51,7 +52,6 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-
 UCLASS(NotBlueprintable, NotBlueprintType)
 class CKECS_API ACk_EcsWorld_Actor_UE final : public AInfo
 {
@@ -81,6 +81,38 @@ public:
 
 protected:
     TOptional<EcsWorldType> _EcsWorld;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(Abstract, BlueprintType, Blueprintable)
+class CKECS_API ACk_NewEcsWorld_Actor_UE final : public AInfo
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(ACk_NewEcsWorld_Actor_UE);
+
+public:
+    using EcsWorldType = ck::FEcsWorld;
+
+public:
+    ACk_NewEcsWorld_Actor_UE();
+
+protected:
+    auto
+    BeginPlay() -> void override;
+
+    auto
+    Tick(
+        float DeltaSeconds) -> void override;
+
+public:
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
+    TArray<FCk_Ecs_ProcessorInjectors_Info> _ProcessorInjectors;
+
+protected:
+    EcsWorldType _EcsWorld;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
