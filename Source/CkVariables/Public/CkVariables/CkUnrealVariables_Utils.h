@@ -24,7 +24,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Bool] Get Value",
+              DisplayName="[Ck][Bool] Get Value (GameplayTag)",
               Category = "Ck|Utils|Variables|Bool")
     static bool
     Get(
@@ -32,13 +32,38 @@ public:
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Bool] Set Value",
+              DisplayName="[Ck][Bool] Set Value (GameplayTag)",
               Category = "Ck|Utils|Variables|Bool")
     static void
     Set(
         FCk_Handle InHandle,
         FGameplayTag InVariableName,
         bool InValue);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][Bool] Get Value (Name)",
+              Category = "Ck|Utils|Variables|Bool")
+    static bool
+    Get_ByName(
+        const FCk_Handle& InHandle,
+        FName InVariableName);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Bool] Set Value (Name)",
+              Category = "Ck|Utils|Variables|Bool")
+    static void
+    Set_ByName(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FName InVariableName,
+        bool InValue);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Bool] Get All Variables",
+              Category = "Ck|Utils|Variables|Bool",
+              meta=(DevelopmentOnly))
+    static const TMap<FName, bool>&
+    Get_All(
+        const FCk_Handle& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -57,7 +82,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Int32] Get Value",
+              DisplayName="[Ck][Int32] Get Value (GameplayTag)",
               Category = "Ck|Utils|Variables|Int32")
     static int32
     Get(
@@ -65,13 +90,38 @@ public:
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Int32] Set Value",
+              DisplayName="[Ck][Int32] Set Value (GameplayTag)",
               Category = "Ck|Utils|Variables|Int32")
     static void
     Set(
         FCk_Handle InHandle,
         FGameplayTag InVariableName,
         int32 InValue);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][Int32] Get Value (Name)",
+              Category = "Ck|Utils|Variables|Int32")
+    static int32
+    Get_ByName(
+        const FCk_Handle& InHandle,
+        FName InVariableName);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Int32] Set Value (Name)",
+              Category = "Ck|Utils|Variables|Int32")
+    static void
+    Set_ByName(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FName InVariableName,
+        int32 InValue);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Int32] Get All Variables",
+              Category = "Ck|Utils|Variables|Int32",
+              meta=(DevelopmentOnly))
+    static const TMap<FName, int32>&
+    Get_All(
+        const FCk_Handle& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -90,7 +140,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Int64] Get Value",
+              DisplayName="[Ck][Int64] Get Value (GameplayTag)",
               Category = "Ck|Utils|Variables|Int64")
     static int64
     Get(
@@ -98,13 +148,38 @@ public:
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Int64] Set Value",
+              DisplayName="[Ck][Int64] Set Value (GameplayTag)",
               Category = "Ck|Utils|Variables|Int64")
     static void
     Set(
         FCk_Handle InHandle,
         FGameplayTag InVariableName,
         int64 InValue);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][Int64] Get Value (Name)",
+              Category = "Ck|Utils|Variables|Int64")
+    static int64
+    Get_ByName(
+        const FCk_Handle& InHandle,
+        FName InVariableName);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Int64] Set Value (Name)",
+              Category = "Ck|Utils|Variables|Int64")
+    static void
+    Set_ByName(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FName InVariableName,
+        int64 InValue);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Int64] Get All Variables",
+              Category = "Ck|Utils|Variables|Int64",
+              meta=(DevelopmentOnly))
+    static const TMap<FName, int64>&
+    Get_All(
+        const FCk_Handle& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -123,7 +198,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Float] Get Value",
+              DisplayName="[Ck][Float] Get Value (GameplayTag)",
               Category = "Ck|Utils|Variables|Float")
     static float
     Get(
@@ -131,13 +206,38 @@ public:
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Float] Set Value",
+              DisplayName="[Ck][Float] Set Value (GameplayTag)",
               Category = "Ck|Utils|Variables|Float")
     static void
     Set(
         FCk_Handle InHandle,
         FGameplayTag InVariableName,
         float InValue);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][Float] Get Value (Name)",
+              Category = "Ck|Utils|Variables|Float")
+    static float
+    Get_ByName(
+        const FCk_Handle& InHandle,
+        FName InVariableName);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Float] Set Value (Name)",
+              Category = "Ck|Utils|Variables|Float")
+    static void
+    Set_ByName(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FName InVariableName,
+        float InValue);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Float] Get All Variables",
+              Category = "Ck|Utils|Variables|Float",
+              meta=(DevelopmentOnly))
+    static const TMap<FName, float>&
+    Get_All(
+        const FCk_Handle& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -156,7 +256,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Name] Get Value",
+              DisplayName="[Ck][Name] Get Value (GameplayTag)",
               Category = "Ck|Utils|Variables|Name")
     static FName
     Get(
@@ -164,13 +264,38 @@ public:
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Name] Set Value",
+              DisplayName="[Ck][Name] Set Value (GameplayTag)",
               Category = "Ck|Utils|Variables|Name")
     static void
     Set(
         FCk_Handle InHandle,
         FGameplayTag InVariableName,
         FName InValue);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][Name] Get Value (Name)",
+              Category = "Ck|Utils|Variables|Name")
+    static FName
+    Get_ByName(
+        const FCk_Handle& InHandle,
+        FName InVariableName);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Name] Set Value (Name)",
+              Category = "Ck|Utils|Variables|Name")
+    static void
+    Set_ByName(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FName InVariableName,
+        FName InValue);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Name] Get All Variables",
+              Category = "Ck|Utils|Variables|Name",
+              meta=(DevelopmentOnly))
+    static const TMap<FName, FName>&
+    Get_All(
+        const FCk_Handle& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -189,7 +314,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][String] Get Value",
+              DisplayName="[Ck][String] Get Value (GameplayTag)",
               Category = "Ck|Utils|Variables|String")
     static const FString&
     Get(
@@ -197,13 +322,38 @@ public:
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][String] Set Value",
+              DisplayName="[Ck][String] Set Value (GameplayTag)",
               Category = "Ck|Utils|Variables|String")
     static void
     Set(
         FCk_Handle InHandle,
         FGameplayTag InVariableName,
         const FString& InValue);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][String] Get Value (Name)",
+              Category = "Ck|Utils|Variables|String")
+    static const FString&
+    Get_ByName(
+        const FCk_Handle& InHandle,
+        FName InVariableName);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][String] Set Value (Name)",
+              Category = "Ck|Utils|Variables|String")
+    static void
+    Set_ByName(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FName InVariableName,
+        const FString& InValue);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][String] Get All Variables",
+              Category = "Ck|Utils|Variables|String",
+              meta=(DevelopmentOnly))
+    static const TMap<FName, FString>&
+    Get_All(
+        const FCk_Handle& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -222,7 +372,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Text] Get Value",
+              DisplayName="[Ck][Text] Get Value (GameplayTag)",
               Category = "Ck|Utils|Variables|Text")
     static FText
     Get(
@@ -230,13 +380,38 @@ public:
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Text] Set Value",
+              DisplayName="[Ck][Text] Set Value (GameplayTag)",
               Category = "Ck|Utils|Variables|Text")
     static void
     Set(
         FCk_Handle InHandle,
         FGameplayTag InVariableName,
         FText InValue);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][Text] Get Value (Name)",
+              Category = "Ck|Utils|Variables|Text")
+    static FText
+    Get_ByName(
+        const FCk_Handle& InHandle,
+        FName InVariableName);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Text] Set Value (Name)",
+              Category = "Ck|Utils|Variables|Text")
+    static void
+    Set_ByName(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FName InVariableName,
+        FText InValue);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Text] Get All Variables",
+              Category = "Ck|Utils|Variables|Text",
+              meta=(DevelopmentOnly))
+    static const TMap<FName, FText>&
+    Get_All(
+        const FCk_Handle& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -255,7 +430,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Vec3] Get Value",
+              DisplayName="[Ck][Vec3] Get Value (GameplayTag)",
               Category = "Ck|Utils|Variables|Vec3")
     static FVector
     Get(
@@ -263,13 +438,38 @@ public:
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Vec3] Set Value",
+              DisplayName="[Ck][Vec3] Set Value (GameplayTag)",
               Category = "Ck|Utils|Variables|Vec3")
     static void
     Set(
         FCk_Handle InHandle,
         FGameplayTag InVariableName,
         FVector InValue);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][Vec3] Get Value (Name)",
+              Category = "Ck|Utils|Variables|Vec3")
+    static FVector
+    Get_ByName(
+        const FCk_Handle& InHandle,
+        FName InVariableName);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Vec3] Set Value (Name)",
+              Category = "Ck|Utils|Variables|Vec3")
+    static void
+    Set_ByName(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FName InVariableName,
+        FVector InValue);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Vec3] Get All Variables",
+              Category = "Ck|Utils|Variables|Vec3",
+              meta=(DevelopmentOnly))
+    static const TMap<FName, FVector>&
+    Get_All(
+        const FCk_Handle& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -288,7 +488,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Vec2] Get Value",
+              DisplayName="[Ck][Vec2] Get Value (GameplayTag)",
               Category = "Ck|Utils|Variables|Vec2")
     static FVector2D
     Get(
@@ -296,13 +496,38 @@ public:
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Vec2] Set Value",
+              DisplayName="[Ck][Vec2] Set Value (GameplayTag)",
               Category = "Ck|Utils|Variables|Vec2")
     static void
     Set(
         FCk_Handle InHandle,
         FGameplayTag InVariableName,
         FVector2D InValue);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][Vec2] Get Value (Name)",
+              Category = "Ck|Utils|Variables|Vec2")
+    static FVector2D
+    Get_ByName(
+        const FCk_Handle& InHandle,
+        FName InVariableName);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Vec2] Set Value (Name)",
+              Category = "Ck|Utils|Variables|Vec2")
+    static void
+    Set_ByName(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FName InVariableName,
+        FVector2D InValue);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][FVector2D] Get All Variables",
+              Category = "Ck|Utils|Variables|FVector2D",
+              meta=(DevelopmentOnly))
+    static const TMap<FName, FVector2D>&
+    Get_All(
+        const FCk_Handle& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -321,7 +546,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Rotator] Get Value",
+              DisplayName="[Ck][Rotator] Get Value (GameplayTag)",
               Category = "Ck|Utils|Variables|Rotator")
     static FRotator
     Get(
@@ -329,13 +554,38 @@ public:
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Rotator] Set Value",
+              DisplayName="[Ck][Rotator] Set Value (GameplayTag)",
               Category = "Ck|Utils|Variables|Rotator")
     static void
     Set(
         FCk_Handle InHandle,
         FGameplayTag InVariableName,
         FRotator InValue);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][Rotator] Get Value (Name)",
+              Category = "Ck|Utils|Variables|Rotator")
+    static FRotator
+    Get_ByName(
+        const FCk_Handle& InHandle,
+        FName InVariableName);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Rotator] Set Value (Name)",
+              Category = "Ck|Utils|Variables|Rotator")
+    static void
+    Set_ByName(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FName InVariableName,
+        FRotator InValue);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Rotator] Get All Variables",
+              Category = "Ck|Utils|Variables|Rotator",
+              meta=(DevelopmentOnly))
+    static const TMap<FName, FRotator>&
+    Get_All(
+        const FCk_Handle& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -354,7 +604,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Transform] Get Value",
+              DisplayName="[Ck][Transform] Get Value (GameplayTag)",
               Category = "Ck|Utils|Variables|Transform")
     static const FTransform&
     Get(
@@ -362,13 +612,38 @@ public:
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Transform] Set Value",
+              DisplayName="[Ck][Transform] Set Value (GameplayTag)",
               Category = "Ck|Utils|Variables|Transform")
     static void
     Set(
         FCk_Handle InHandle,
         FGameplayTag InVariableName,
         const FTransform& InValue);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][Transform] Get Value (Name)",
+              Category = "Ck|Utils|Variables|Transform")
+    static const FTransform&
+    Get_ByName(
+        const FCk_Handle& InHandle,
+        FName InVariableName);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Transform] Set Value (Name)",
+              Category = "Ck|Utils|Variables|Transform")
+    static void
+    Set_ByName(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FName InVariableName,
+        const FTransform& InValue);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Transform] Get All Variables",
+              Category = "Ck|Utils|Variables|Transform",
+              meta=(DevelopmentOnly))
+    static const TMap<FName, FTransform>&
+    Get_All(
+        const FCk_Handle& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -387,7 +662,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][InstancedStruct] Get Value",
+              DisplayName="[Ck][InstancedStruct] Get Value (GameplayTag)",
               Category = "Ck|Utils|Variables|InstancedStruct")
     static const FInstancedStruct&
     Get(
@@ -395,13 +670,38 @@ public:
         FGameplayTag InVariableName);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][InstancedStruct] Set Value",
+              DisplayName="[Ck][InstancedStruct] Set Value (GameplayTag)",
               Category = "Ck|Utils|Variables|InstancedStruct")
     static void
     Set(
         FCk_Handle InHandle,
         FGameplayTag InVariableName,
         const FInstancedStruct& InValue);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][InstancedStruct] Get Value (Name)",
+              Category = "Ck|Utils|Variables|InstancedStruct")
+    static const FInstancedStruct&
+    Get_ByName(
+        const FCk_Handle& InHandle,
+        FName InVariableName);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][InstancedStruct] Set Value (Name)",
+              Category = "Ck|Utils|Variables|InstancedStruct")
+    static void
+    Set_ByName(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FName InVariableName,
+        const FInstancedStruct& InValue);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][InstancedStruct] Get All Variables",
+              Category = "Ck|Utils|Variables|InstancedStruct",
+              meta=(DevelopmentOnly))
+    static const TMap<FName, FInstancedStruct>&
+    Get_All(
+        const FCk_Handle& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -420,7 +720,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][UObject] Get Value",
+              DisplayName="[Ck][UObject] Get Value (GameplayTag)",
               Category = "Ck|Utils|Variables|UObject",
               meta = (DeterminesOutputType = "InObject"))
     static UObject*
@@ -430,13 +730,40 @@ public:
         TSubclassOf<UObject> InObject);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][UObject] Set Value",
+              DisplayName="[Ck][UObject] Set Value (GameplayTag)",
               Category = "Ck|Utils|Variables|UObject")
     static void
     Set(
         FCk_Handle InHandle,
         FGameplayTag InVariableName,
         UObject* InValue);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][UObject] Get Value (Name)",
+              Category = "Ck|Utils|Variables|UObject",
+              meta = (DeterminesOutputType = "InObject"))
+    static UObject*
+    Get_ByName(
+        const FCk_Handle& InHandle,
+        FName InVariableName,
+        TSubclassOf<UObject> InObject);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][UObject] Set Value (Name)",
+              Category = "Ck|Utils|Variables|UObject")
+    static void
+    Set_ByName(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FName InVariableName,
+        UObject* InValue);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][UObject] Get All Variables",
+              Category = "Ck|Utils|Variables|UObject",
+              meta=(DevelopmentOnly))
+    static TMap<FName, UObject*>
+    Get_All(
+        const FCk_Handle& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -455,7 +782,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][SubclassOf] Get Value",
+              DisplayName="[Ck][SubclassOf] Get Value (GameplayTag)",
               Category = "Ck|Utils|Variables|SubclassOf",
               meta = (DeterminesOutputType = "InObject"))
     static TSubclassOf<UObject>
@@ -465,13 +792,40 @@ public:
         TSubclassOf<UObject> InObject);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][SubclassOf] Set Value",
+              DisplayName="[Ck][SubclassOf] Set Value (GameplayTag)",
               Category = "Ck|Utils|Variables|SubclassOf")
     static void
     Set(
         FCk_Handle InHandle,
         FGameplayTag InVariableName,
         TSubclassOf<UObject> InValue);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][SubclassOf] Get Value (Name)",
+              Category = "Ck|Utils|Variables|SubclassOf",
+              meta = (DeterminesOutputType = "InObject"))
+    static TSubclassOf<UObject>
+    Get_ByName(
+        const FCk_Handle&    InHandle,
+        FName                InVariableName,
+        TSubclassOf<UObject> InObject);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][SubclassOf] Set Value (Name)",
+              Category = "Ck|Utils|Variables|SubclassOf")
+    static void
+    Set_ByName(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FName InVariableName,
+        TSubclassOf<UObject> InValue);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][SubclassOf] Get All Variables",
+              Category = "Ck|Utils|Variables|SubclassOf",
+              meta=(DevelopmentOnly))
+    static const TMap<FName, TSubclassOf<UObject>>&
+    Get_All(
+        const FCk_Handle& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
