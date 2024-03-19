@@ -98,13 +98,6 @@ namespace ck
             return;
         }
 
-        const auto& CustomTargetFilter = InParams.Get_Params().Get_CustomTargetFilter();
-
-        CK_ENSURE_IF_NOT(ck::IsValid(CustomTargetFilter),
-            TEXT("Targeter [{}] does NOT have a valid Custom Target Filter"),
-            InHandle)
-        { return; }
-
         auto ValidTargets = TArray<FCk_Targetable_BasicInfo>{};
 
         InHandle.View<FFragment_Targetable_Params, FFragment_Targetable_Current, CK_IGNORE_PENDING_KILL>()
@@ -120,10 +113,15 @@ namespace ck
         });
 
         const auto ValidTargetList  = FCk_Targeter_TargetList{ValidTargets};
-        const auto& FilteredTargets = CustomTargetFilter->FilterTargets(TargeterBasicInfo, ValidTargetList);
-        const auto& SortedTargets   = CustomTargetFilter->SortTargets(TargeterBasicInfo, FilteredTargets);
+        InCurrent._CachedTargets = ValidTargetList;
 
-        InCurrent._CachedTargets = SortedTargets;
+        if (const auto& CustomTargetFilter = InParams.Get_Params().Get_CustomTargetFilter();
+            ck::IsValid(CustomTargetFilter))
+        {
+            const auto& FilteredTargets = CustomTargetFilter->FilterTargets(TargeterBasicInfo, ValidTargetList);
+            const auto& SortedTargets   = CustomTargetFilter->SortTargets(TargeterBasicInfo, FilteredTargets);
+            InCurrent._CachedTargets = SortedTargets;
+        }
 
         UCk_Utils_Targeter_UE::Request_Cleanup(InHandle);
 
