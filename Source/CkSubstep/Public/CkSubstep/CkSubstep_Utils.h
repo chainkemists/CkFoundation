@@ -87,6 +87,24 @@ public:
     UnbindFrom_OnUpdate(
         UPARAM(ref) FCk_Handle_Substep& InSubstepHandle,
         const FCk_Delegate_Substep_OnUpdate& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Substep",
+              DisplayName = "[Ck][Substep] Bind To OnFrameEnd")
+    static FCk_Handle_Substep
+    BindTo_OnFrameEnd(
+        UPARAM(ref) FCk_Handle_Substep& InSubstepHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_Substep_OnFrameEnd& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Substep",
+              DisplayName = "[Ck][Substep] Unbind From OnFrameEnd")
+    static FCk_Handle_Substep
+    UnbindFrom_OnFrameEnd(
+        UPARAM(ref) FCk_Handle_Substep& InSubstepHandle,
+        const FCk_Delegate_Substep_OnFrameEnd& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

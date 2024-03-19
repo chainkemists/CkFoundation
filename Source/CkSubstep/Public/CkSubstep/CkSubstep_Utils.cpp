@@ -71,4 +71,28 @@ auto
     return InSubstepHandle;
 }
 
+auto
+    UCk_Utils_Substep_UE::
+    BindTo_OnFrameEnd(
+        FCk_Handle_Substep&                    InSubstepHandle,
+        ECk_Signal_BindingPolicy               InBindingPolicy,
+        ECk_Signal_PostFireBehavior            InPostFireBehavior,
+        const FCk_Delegate_Substep_OnFrameEnd& InDelegate)
+    -> FCk_Handle_Substep
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnSubstepFrameEnd, InSubstepHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InSubstepHandle;
+}
+
+auto
+    UCk_Utils_Substep_UE::
+    UnbindFrom_OnFrameEnd(
+        FCk_Handle_Substep&                    InSubstepHandle,
+        const FCk_Delegate_Substep_OnFrameEnd& InDelegate)
+    -> FCk_Handle_Substep
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnSubstepFrameEnd, InSubstepHandle, InDelegate);
+    return InSubstepHandle;
+}
+
 // --------------------------------------------------------------------------------------------------------------------

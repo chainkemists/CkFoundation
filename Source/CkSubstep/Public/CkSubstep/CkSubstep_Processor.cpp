@@ -34,6 +34,7 @@ namespace ck
         }
 
         InCurrent._DeltaOverflowFromLastFrame = AdjustedTickRate;
+        UUtils_Signal_OnSubstepFrameEnd::Broadcast(InHandle, MakePayload(InHandle, InDeltaT));
     }
 }
 

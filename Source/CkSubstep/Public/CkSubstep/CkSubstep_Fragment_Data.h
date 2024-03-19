@@ -64,3 +64,17 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(
     FCk_Time, InSubstepDeltaT,
     int32, InStepNumber,
     FCk_Time, InFrameDeltaT);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_Substep_OnFrameEnd,
+    FCk_Handle_Substep, InHandle,
+    FCk_Time, InFrameDeltaT);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FCk_Delegate_Substep_OnFrameEnd_MC,
+    FCk_Handle_Substep, InHandle,
+    FCk_Time, InFrameDeltaT);
+
+// --------------------------------------------------------------------------------------------------------------------
