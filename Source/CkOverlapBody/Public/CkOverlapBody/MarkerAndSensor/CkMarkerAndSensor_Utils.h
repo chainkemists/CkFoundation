@@ -283,7 +283,14 @@ auto
         const T_MarkerOrSensorParams& InMarkerOrSensorParams)
     -> void
 {
-    const auto& MarkerOrSensorAttachedActor = InMarkerOrSensorAttachedEntityAndActor.Get_Actor().Get();
+    const auto ActorPtr = InMarkerOrSensorAttachedEntityAndActor.Get_Actor();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(ActorPtr),
+        TEXT("Handle [{}] does NOT have a valid Actor for us to Attach Sensor/Marker to!"),
+        InMarkerOrSensorEntity)
+    { return; }
+
+    const auto& MarkerOrSensorAttachedActor = ActorPtr.Get();
     const auto& MarkerAttachedActorRootComponent = MarkerOrSensorAttachedActor->GetRootComponent();
 
     CK_ENSURE_IF_NOT(ck::IsValid(MarkerAttachedActorRootComponent),
