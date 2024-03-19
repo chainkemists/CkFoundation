@@ -367,6 +367,16 @@
 			]
 		},
 		{
+			"Name": "CkSubstep",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
 			"Name": "CkTargeting",
 			"Type": "Runtime",
 			"LoadingPhase": "PreDefault",
