@@ -69,7 +69,33 @@ public:
     Request_Resume(
         UPARAM(ref) FCk_Handle_Substep& InHandle);
 
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Substep",
+        DisplayName="[Ck][Substep] Request Reset")
+    static FCk_Handle_Substep
+    Request_Reset(
+        UPARAM(ref) FCk_Handle_Substep& InHandle,
+        ECk_Substep_State InState);
+
 public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Substep",
+              DisplayName = "[Ck][Substep] Bind To OnFirstUpdate")
+    static FCk_Handle_Substep
+    BindTo_OnFirstUpdate(
+        UPARAM(ref) FCk_Handle_Substep& InSubstepHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_Substep_OnFirstUpdate& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Substep",
+              DisplayName = "[Ck][Substep] Unbind From OnFirstUpdate")
+    static FCk_Handle_Substep
+    UnbindFrom_OnFirstUpdate(
+        UPARAM(ref) FCk_Handle_Substep& InSubstepHandle,
+        const FCk_Delegate_Substep_OnFirstUpdate& InDelegate);
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Substep",
               DisplayName = "[Ck][Substep] Bind To OnUpdate")
