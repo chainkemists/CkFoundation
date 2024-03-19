@@ -129,7 +129,7 @@ namespace ck
         }
 
         UUtils_Signal_OnActorSpawned::Broadcast(InHandle, MakePayload(SpawnedActor,
-            UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag)));
+            UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag, IgnoreSucceededFailed)));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -228,7 +228,7 @@ namespace ck
         actor::Verbose(TEXT("ADDING Actor Component [{}] to Actor [{}]"), AddedActorComponent, ComponentOwner);
 
         UUtils_Signal_OnActorComponentAdded::Broadcast(InHandle, MakePayload(AddedActorComponent->GetOwner(), AddedActorComponent,
-            UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag)));
+            UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag, IgnoreSucceededFailed)));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -281,7 +281,7 @@ namespace ck
         UCk_Utils_Actor_UE::Request_RemoveActorComponent(ComponentToRemove.Get(), PromoteChildrenComponents);
 
         UUtils_Signal_OnActorComponentRemoved::Broadcast(InHandle, MakePayload(ComponentOwner, ComponentToRemoveClass,
-            UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag)));
+            UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag, IgnoreSucceededFailed)));
     }
 }
 

@@ -130,6 +130,8 @@ enum class ECk_SucceededFailed : uint8
     Failed
 };
 
+static inline ECk_SucceededFailed IgnoreSucceededFailed;
+
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SucceededFailed);
 
 // --------------------------------------------------------------------------------------------------------------------

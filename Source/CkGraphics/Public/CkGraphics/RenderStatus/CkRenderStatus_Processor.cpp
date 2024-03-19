@@ -122,7 +122,7 @@ namespace ck
                                           .Set_RenderedEntityWithActors(RenderedEntityWithActors);
 
         UUtils_Signal_OnRenderedActorsQueried::Broadcast(InHandle, MakePayload(RenderedActorsList,
-            UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag)));
+            UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag, IgnoreSucceededFailed)));
     }
 }
 
