@@ -8,11 +8,17 @@ namespace ck
         FProcessor_Substep_Update::
         ForEachEntity(
             TimeType InDeltaT,
-            const FCk_Handle_Substep& InHandle,
+            FCk_Handle_Substep& InHandle,
             const FFragment_Substep_Params& InParams,
             FFragment_Substep_Current& InCurrent) const
         -> void
     {
+        if (InHandle.Has<FTag_Substep_FirstUpdate>())
+        {
+            UUtils_Signal_OnSubstepFirstUpdate::Broadcast(InHandle, MakePayload(InHandle, InDeltaT));
+            InHandle.Remove<FTag_Substep_FirstUpdate>();
+        }
+
         auto AdjustedTickRate = InDeltaT + InCurrent.Get_DeltaOverflowFromLastFrame();
 
         if (InParams.Get_Data().Get_TickRate() == TimeType::ZeroSecond())
