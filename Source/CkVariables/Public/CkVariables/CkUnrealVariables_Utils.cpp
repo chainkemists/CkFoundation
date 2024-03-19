@@ -6,57 +6,75 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-#define CK_UTILS_VARIABLES_DEFINITION(_UtilsName_, _Type_)\
-auto\
-    _UtilsName_::\
-    Get(\
-        FCk_Handle InHandle,\
-        FGameplayTag InVariableName)\
-    -> _Type_\
-{\
-    return UtilsType::Get(InHandle, InVariableName);\
-}\
-\
-auto\
-    _UtilsName_::\
-    Set(\
-        FCk_Handle InHandle,\
-        FGameplayTag InVariableName,\
-        _Type_ InValue)\
-    -> void\
-{\
-    UtilsType::Set(InHandle, InVariableName, InValue);\
-}\
-auto\
-    _UtilsName_::\
-    Get_ByName(\
-        const FCk_Handle& InHandle,\
-        FName InVariableName)\
-    -> _Type_\
-{\
-    return UtilsType::Get(InHandle, InVariableName);\
-}\
-\
-auto\
-    _UtilsName_::\
-    Set_ByName(\
-        FCk_Handle& InHandle,\
-        FName InVariableName,\
-        _Type_ InValue)\
-    -> void\
-{\
-    UtilsType::Set(InHandle, InVariableName, InValue);\
-}\
-auto\
-    _UtilsName_::\
-    Get_All(\
-        const FCk_Handle& InHandle)\
-    -> const TMap<FName, std::remove_cv_t<std::remove_reference_t<_Type_>>>&\
-{\
-    if (NOT UtilsType::Has(InHandle))\
+#define CK_UTILS_VARIABLES_DEFINITION(_UtilsName_, _Type_)                                            \
+auto                                                                                                  \
+    _UtilsName_::                                                                                     \
+    Get(                                                                                              \
+        FCk_Handle InHandle,                                                                          \
+        FGameplayTag InVariableName,                                                                  \
+        ECk_SucceededFailed& OutSuccessFail)                                                          \
+    -> _Type_                                                                                         \
+{                                                                                                     \
+    if (NOT UtilsType::Has(InHandle, InVariableName))                                                 \
+    {                                                                                                 \
+        static std::remove_cv_t<std::remove_reference_t<_Type_>> Invalid;                             \
+        OutSuccessFail = ECk_SucceededFailed::Failed;                                                 \
+        return Invalid;                                                                               \
+    }                                                                                                 \
+                                                                                                      \
+    OutSuccessFail = ECk_SucceededFailed::Succeeded;                                                  \
+    return UtilsType::Get(InHandle, InVariableName);                                                  \
+}                                                                                                     \
+                                                                                                      \
+auto                                                                                                  \
+    _UtilsName_::                                                                                     \
+    Set(                                                                                              \
+        FCk_Handle InHandle,                                                                          \
+        FGameplayTag InVariableName,                                                                  \
+        _Type_ InValue)                                                                               \
+    -> void                                                                                           \
+{                                                                                                     \
+    UtilsType::Set(InHandle, InVariableName, InValue);                                                \
+}                                                                                                     \
+auto                                                                                                  \
+    _UtilsName_::                                                                                     \
+    Get_ByName(                                                                                       \
+        const FCk_Handle& InHandle,                                                                   \
+        FName InVariableName,                                                                         \
+        ECk_SucceededFailed& OutSuccessFail)                                                          \
+    -> _Type_                                                                                         \
+{                                                                                                     \
+    if (NOT UtilsType::Has(InHandle, InVariableName))                                                 \
+    {                                                                                                 \
+        static std::remove_cv_t<std::remove_reference_t<_Type_>> Invalid;                             \
+        OutSuccessFail = ECk_SucceededFailed::Failed;                                                 \
+        return Invalid;                                                                               \
+    }                                                                                                 \
+                                                                                                      \
+    OutSuccessFail = ECk_SucceededFailed::Succeeded;                                                  \
+    return UtilsType::Get(InHandle, InVariableName);                                                  \
+}                                                                                                     \
+                                                                                                      \
+auto                                                                                                  \
+    _UtilsName_::                                                                                     \
+    Set_ByName(                                                                                       \
+        FCk_Handle& InHandle,                                                                         \
+        FName InVariableName,                                                                         \
+        _Type_ InValue)                                                                               \
+    -> void                                                                                           \
+{                                                                                                     \
+    UtilsType::Set(InHandle, InVariableName, InValue);                                                \
+}                                                                                                     \
+auto                                                                                                  \
+    _UtilsName_::                                                                                     \
+    Get_All(                                                                                          \
+        const FCk_Handle& InHandle)                                                                   \
+    -> const TMap<FName, std::remove_cv_t<std::remove_reference_t<_Type_>>>&                          \
+{                                                                                                     \
+    if (NOT UtilsType::Has(InHandle))                                                                 \
     { static TMap<FName, std::remove_cv_t<std::remove_reference_t<_Type_>>> Invalid; return Invalid; }\
-\
-    return InHandle.Get<FragmentType>().Get_Variables();\
+                                                                                                      \
+    return InHandle.Get<FragmentType>().Get_Variables();                                              \
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -81,13 +99,20 @@ auto
     Get(
         FCk_Handle InHandle,
         FGameplayTag InVariableName,
-        TSubclassOf<UObject> InObject)
+        TSubclassOf<UObject> InObject,
+        ECk_SucceededFailed& OutSuccessFail)
     -> UObject*
 {
+    OutSuccessFail = ECk_SucceededFailed::Failed;
+
+    if (NOT UtilsType::Has(InHandle, InVariableName))
+    { return {}; }
+
     const auto& Var = UtilsType::Get(InHandle, InVariableName);
     if (ck::Is_NOT_Valid(Var))
     { return {}; }
 
+    OutSuccessFail = ECk_SucceededFailed::Succeeded;
     return Var.Get();
 }
 
@@ -107,13 +132,20 @@ auto
     Get_ByName(
         const FCk_Handle& InHandle,
         FName InVariableName,
-        TSubclassOf<UObject> InObject)
+        TSubclassOf<UObject> InObject,
+        ECk_SucceededFailed& OutSuccessFail)
     -> UObject*
 {
+    OutSuccessFail = ECk_SucceededFailed::Failed;
+
+    if (NOT UtilsType::Has(InHandle, InVariableName))
+    { return {}; }
+
     const auto& Var = UtilsType::Get(InHandle, InVariableName);
     if (ck::Is_NOT_Valid(Var))
     { return {}; }
 
+    OutSuccessFail = ECk_SucceededFailed::Succeeded;
     return Var.Get();
 }
 
@@ -159,9 +191,16 @@ auto
     Get(
         FCk_Handle InHandle,
         FGameplayTag InVariableName,
-        TSubclassOf<UObject> InObject)
+        TSubclassOf<UObject> InObject,
+        ECk_SucceededFailed& OutSuccessFail)
     -> TSubclassOf<UObject>
 {
+    OutSuccessFail = ECk_SucceededFailed::Failed;
+
+    if (NOT UtilsType::Has(InHandle, InVariableName))
+    { return {}; }
+
+    OutSuccessFail = ECk_SucceededFailed::Succeeded;
     return UtilsType::Get(InHandle, InVariableName);
 }
 
@@ -181,9 +220,16 @@ auto
     Get_ByName(
         const FCk_Handle&    InHandle,
         FName                InVariableName,
-        TSubclassOf<UObject> InObject)
+        TSubclassOf<UObject> InObject,
+        ECk_SucceededFailed& OutSuccessFail)
     -> TSubclassOf<UObject>
 {
+    OutSuccessFail = ECk_SucceededFailed::Failed;
+
+    if (NOT UtilsType::Has(InHandle, InVariableName))
+    { return {}; }
+
+    OutSuccessFail = ECk_SucceededFailed::Succeeded;
     return UtilsType::Get(InHandle, InVariableName);
 }
 
