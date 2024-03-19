@@ -28,6 +28,11 @@ namespace ck
 
     public:
         static auto
+        Has(
+            HandleType InHandle,
+            FGameplayTag InVariableName) -> bool;
+
+        static auto
         Get(
             HandleType InHandle,
             FGameplayTag InVariableName) -> ArgType;
@@ -37,6 +42,11 @@ namespace ck
             HandleType InHandle,
             FGameplayTag InVariableName,
             ArgType InValue) -> void;
+
+        static auto
+        Has(
+            HandleType InHandle,
+            FName InVariableName) -> bool;
 
         static auto
         Get(
