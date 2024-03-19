@@ -22,7 +22,7 @@ namespace ck
         auto
         ForEachEntity(
             TimeType InDeltaT,
-            const FCk_Handle_Substep& InHandle,
+            FCk_Handle_Substep& InHandle,
             const FFragment_Substep_Params& InParams,
             FFragment_Substep_Current& InCurrent) const -> void;
     };

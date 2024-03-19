@@ -51,6 +51,18 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_Substep_OnFirstUpdate,
+    FCk_Handle_Substep, InHandle,
+    FCk_Time, InFrameDeltaT);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FCk_Delegate_Substep_OnFirstUpdate_MC,
+    FCk_Handle_Substep, InHandle,
+    FCk_Time, InFrameDeltaT);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 DECLARE_DYNAMIC_DELEGATE_FourParams(
     FCk_Delegate_Substep_OnUpdate,
     FCk_Handle_Substep, InHandle,
