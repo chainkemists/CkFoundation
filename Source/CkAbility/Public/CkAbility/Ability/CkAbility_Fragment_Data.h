@@ -81,6 +81,23 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_ActivationTrigger_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_Ability_EventsForwarding_Policy : uint8
+{
+    // Forward all the ability events received
+    All,
+
+    // Forward all ability events received except specific ones
+    AllExcept,
+
+    // Only forward specific ability events received
+    Specific
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_EventsForwarding_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // How this Ability stacks with other instances of this same Ability
 UENUM(BlueprintType)
 enum class ECk_Ability_Stacking_Policy : uint8
@@ -554,6 +571,25 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Ability_OtherAbilitySettings
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Ability_OtherAbilitySettings);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true, AllowAbstract = false))
+     TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _OtherAbilities;
+
+public:
+    CK_PROPERTY(_OtherAbilities);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKABILITY_API FCk_Ability_CostSettings
 {
     GENERATED_BODY()
@@ -625,6 +661,12 @@ private:
     FCk_Ability_CooldownSettings _CooldownSettings;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              Category = "SubAbilities",
+              DisplayName = "Other",
+              meta = (AllowPrivateAccess = true))
+    FCk_Ability_OtherAbilitySettings _OtherAbilitySettings;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               Category = "Replication",
               meta = (AllowPrivateAccess = true))
     FCk_Ability_NetworkSettings _NetworkSettings;
@@ -652,6 +694,7 @@ public:
     CK_PROPERTY(_OnGiveSettings);
     CK_PROPERTY(_ActivationSettings);
     CK_PROPERTY(_ConditionSettings);
+    CK_PROPERTY(_OtherAbilitySettings);
     CK_PROPERTY(_CostSettings);
     CK_PROPERTY(_CooldownSettings);
     CK_PROPERTY(_NetworkSettings);
