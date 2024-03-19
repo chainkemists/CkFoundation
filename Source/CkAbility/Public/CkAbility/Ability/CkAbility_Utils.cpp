@@ -518,11 +518,12 @@ auto
         InAbilityScriptClass)
     { return {}; }
 
-    const auto& AbilityScriptData = AbilityScriptCDO->Get_Data();
-    const auto& ConditionSettings = AbilityScriptData.Get_ConditionSettings();
-    const auto& CostSettings      = AbilityScriptData.Get_CostSettings();
-    const auto& CooldownSettings  = AbilityScriptData.Get_CooldownSettings();
-    const auto& AbilityCtorScript = AbilityScriptData.Get_AbilityConstructionScript();
+    const auto& AbilityScriptData    = AbilityScriptCDO->Get_Data();
+    const auto& ConditionSettings    = AbilityScriptData.Get_ConditionSettings();
+    const auto& CostSettings         = AbilityScriptData.Get_CostSettings();
+    const auto& CooldownSettings     = AbilityScriptData.Get_CooldownSettings();
+    const auto& OtherAbilitySettings = AbilityScriptData.Get_OtherAbilitySettings();
+    const auto& AbilityCtorScript    = AbilityScriptData.Get_AbilityConstructionScript();
 
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityCtorScript),
         TEXT("Ability Script [{}] specifies an INVALID Ability ConstructionScript. Cannot create Ability Entity Config"),
@@ -535,6 +536,7 @@ auto
         InAbilityCtorScript->_DefaultAbilities.Append(ConditionSettings.Get_ConditionAbilities());
         InAbilityCtorScript->_DefaultAbilities.Append(CostSettings.Get_CostAbilities());
         InAbilityCtorScript->_DefaultAbilities.Append(CooldownSettings.Get_CooldownAbilities());
+        InAbilityCtorScript->_DefaultAbilities.Append(OtherAbilitySettings.Get_OtherAbilities());
 
         InAbilityCtorScript->_AbilityParams = FCk_Fragment_Ability_ParamsData{InAbilityScriptClass};
     });
