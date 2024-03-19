@@ -26,6 +26,17 @@ namespace ck
         return InHandle.Has_Any<FragmentType>();
     }
 
+    template <typename T_VariableFragment>
+    auto
+        TUtils_Variables<T_VariableFragment>::
+        Has(
+            HandleType InHandle,
+            FGameplayTag InVariableName)
+        -> bool
+    {
+        return Has(InHandle, InVariableName.GetTagName());
+    }
+
     template <typename T_VariableComponent>
     auto
         TUtils_Variables<T_VariableComponent>::
@@ -47,6 +58,26 @@ namespace ck
         -> void
     {
         Set(InHandle, InVariableName.GetTagName(), InValue);
+    }
+
+    template <typename T_VariableFragment>
+    auto
+        TUtils_Variables<T_VariableFragment>::
+        Has(
+            HandleType InHandle,
+            FName InVariableName)
+        -> bool
+    {
+        if (NOT Has(InHandle))
+        { return false; }
+
+        const auto& VariablesComp = InHandle.Get<FragmentType>();
+        auto* FoundVariableWithName = VariablesComp.Get_Variables().Find(InVariableName);
+
+        if (ck::Is_NOT_Valid(FoundVariableWithName, ck::IsValid_Policy_NullptrOnly{}))
+        { return false; }
+
+        return true;
     }
 
     template <typename T_VariableComponent>

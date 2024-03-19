@@ -29,7 +29,8 @@ public:
     static bool
     Get(
         FCk_Handle InHandle,
-        FGameplayTag InVariableName);
+        FGameplayTag InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Bool] Set Value (GameplayTag)",
@@ -46,7 +47,8 @@ public:
     static bool
     Get_ByName(
         const FCk_Handle& InHandle,
-        FName InVariableName);
+        FName InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Bool] Set Value (Name)",
@@ -87,7 +89,8 @@ public:
     static int32
     Get(
         FCk_Handle InHandle,
-        FGameplayTag InVariableName);
+        FGameplayTag InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Int32] Set Value (GameplayTag)",
@@ -104,7 +107,8 @@ public:
     static int32
     Get_ByName(
         const FCk_Handle& InHandle,
-        FName InVariableName);
+        FName InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Int32] Set Value (Name)",
@@ -145,7 +149,8 @@ public:
     static int64
     Get(
         FCk_Handle InHandle,
-        FGameplayTag InVariableName);
+        FGameplayTag InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Int64] Set Value (GameplayTag)",
@@ -162,7 +167,8 @@ public:
     static int64
     Get_ByName(
         const FCk_Handle& InHandle,
-        FName InVariableName);
+        FName InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Int64] Set Value (Name)",
@@ -203,7 +209,8 @@ public:
     static float
     Get(
         FCk_Handle InHandle,
-        FGameplayTag InVariableName);
+        FGameplayTag InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Float] Set Value (GameplayTag)",
@@ -220,7 +227,8 @@ public:
     static float
     Get_ByName(
         const FCk_Handle& InHandle,
-        FName InVariableName);
+        FName InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Float] Set Value (Name)",
@@ -261,7 +269,8 @@ public:
     static FName
     Get(
         FCk_Handle InHandle,
-        FGameplayTag InVariableName);
+        FGameplayTag InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Name] Set Value (GameplayTag)",
@@ -278,7 +287,8 @@ public:
     static FName
     Get_ByName(
         const FCk_Handle& InHandle,
-        FName InVariableName);
+        FName InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Name] Set Value (Name)",
@@ -319,7 +329,8 @@ public:
     static const FString&
     Get(
         FCk_Handle InHandle,
-        FGameplayTag InVariableName);
+        FGameplayTag InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][String] Set Value (GameplayTag)",
@@ -336,7 +347,8 @@ public:
     static const FString&
     Get_ByName(
         const FCk_Handle& InHandle,
-        FName InVariableName);
+        FName InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][String] Set Value (Name)",
@@ -377,7 +389,8 @@ public:
     static FText
     Get(
         FCk_Handle InHandle,
-        FGameplayTag InVariableName);
+        FGameplayTag InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Text] Set Value (GameplayTag)",
@@ -394,7 +407,8 @@ public:
     static FText
     Get_ByName(
         const FCk_Handle& InHandle,
-        FName InVariableName);
+        FName InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Text] Set Value (Name)",
@@ -435,7 +449,8 @@ public:
     static FVector
     Get(
         FCk_Handle InHandle,
-        FGameplayTag InVariableName);
+        FGameplayTag InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Vec3] Set Value (GameplayTag)",
@@ -452,7 +467,8 @@ public:
     static FVector
     Get_ByName(
         const FCk_Handle& InHandle,
-        FName InVariableName);
+        FName InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Vec3] Set Value (Name)",
@@ -493,7 +509,8 @@ public:
     static FVector2D
     Get(
         FCk_Handle InHandle,
-        FGameplayTag InVariableName);
+        FGameplayTag InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Vec2] Set Value (GameplayTag)",
@@ -510,7 +527,8 @@ public:
     static FVector2D
     Get_ByName(
         const FCk_Handle& InHandle,
-        FName InVariableName);
+        FName InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Vec2] Set Value (Name)",
@@ -551,7 +569,8 @@ public:
     static FRotator
     Get(
         FCk_Handle InHandle,
-        FGameplayTag InVariableName);
+        FGameplayTag InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Rotator] Set Value (GameplayTag)",
@@ -568,7 +587,8 @@ public:
     static FRotator
     Get_ByName(
         const FCk_Handle& InHandle,
-        FName InVariableName);
+        FName InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Rotator] Set Value (Name)",
@@ -609,7 +629,8 @@ public:
     static const FTransform&
     Get(
         FCk_Handle InHandle,
-        FGameplayTag InVariableName);
+        FGameplayTag InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Transform] Set Value (GameplayTag)",
@@ -626,7 +647,8 @@ public:
     static const FTransform&
     Get_ByName(
         const FCk_Handle& InHandle,
-        FName InVariableName);
+        FName InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Transform] Set Value (Name)",
@@ -667,7 +689,8 @@ public:
     static const FInstancedStruct&
     Get(
         FCk_Handle InHandle,
-        FGameplayTag InVariableName);
+        FGameplayTag InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][InstancedStruct] Set Value (GameplayTag)",
@@ -684,7 +707,8 @@ public:
     static const FInstancedStruct&
     Get_ByName(
         const FCk_Handle& InHandle,
-        FName InVariableName);
+        FName InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][InstancedStruct] Set Value (Name)",
@@ -727,7 +751,8 @@ public:
     Get(
         FCk_Handle InHandle,
         FGameplayTag InVariableName,
-        TSubclassOf<UObject> InObject);
+        TSubclassOf<UObject> InObject,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][UObject] Set Value (GameplayTag)",
@@ -746,7 +771,8 @@ public:
     Get_ByName(
         const FCk_Handle& InHandle,
         FName InVariableName,
-        TSubclassOf<UObject> InObject);
+        TSubclassOf<UObject> InObject,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][UObject] Set Value (Name)",
@@ -789,7 +815,8 @@ public:
     Get(
         FCk_Handle InHandle,
         FGameplayTag InVariableName,
-        TSubclassOf<UObject> InObject);
+        TSubclassOf<UObject> InObject,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][SubclassOf] Set Value (GameplayTag)",
@@ -808,7 +835,8 @@ public:
     Get_ByName(
         const FCk_Handle&    InHandle,
         FName                InVariableName,
-        TSubclassOf<UObject> InObject);
+        TSubclassOf<UObject> InObject,
+        ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][SubclassOf] Set Value (Name)",
