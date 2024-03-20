@@ -48,13 +48,23 @@ namespace ck
             SensorAttachedEntity)
         { return; }
 
-        if (Is_NOT_Valid(SensorAttachedEntityAndActor.Get_Actor()))
+        if (ck::Is_NOT_Valid(SensorAttachedEntityAndActor.Get_Actor()))
         { return; }
 
         InCurrentComp._AttachedEntityAndActor = SensorAttachedEntityAndActor;
 
         const auto& Params      = InParamsComp.Get_Params();
         const auto& ShapeParams = Params.Get_ShapeParams();
+        const auto& PhysicsParams = Params.Get_PhysicsParams();
+
+        CK_ENSURE_IF_NOT
+        (
+            PhysicsParams.Get_CollisionProfileName().Name != TEXT("NoCollision"),
+            TEXT("Sensor [{}] added to Entity [{}] has Collision Profile set to [{}]. Sensor will NOT work properly!"),
+            Params.Get_SensorName(),
+            SensorLifetimeOwner,
+            PhysicsParams.Get_CollisionProfileName()
+        ) {};
 
         switch (const auto& ShapeType = ShapeParams.Get_ShapeDimensions().Get_ShapeType())
         {
