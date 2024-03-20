@@ -10,6 +10,7 @@
 #include <AssetRegistry/AssetData.h>
 #include <Framework/Commands/InputChord.h>
 #include <GameFramework/Actor.h>
+#include <Engine/CollisionProfile.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -129,6 +130,15 @@ CK_DEFINE_CUSTOM_FORMATTER(FAssetData, [&]()
     (
         TEXT("AssetPath: [{}]"),
         InObj.AssetClassPath.ToString()
+    );
+});
+
+CK_DEFINE_CUSTOM_FORMATTER(FCollisionProfileName, [&]()
+{
+    return ck::Format
+    (
+        TEXT("CollisionProfileName: [{}]"),
+        InObj.Name
     );
 });
 
