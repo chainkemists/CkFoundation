@@ -21,7 +21,7 @@
                                                                                                                                                \
     UCk_Utils_Ensure_UE::Request_IncrementEnsureCount();                                                                                       \
                                                                                                                                                \
-    const auto IsMessageOnly = UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDetailsPolicy() == ECk_EnsureDetails_Policy::MessageOnly;      \
+    const auto IsMessageOnly = UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDetailsPolicy() == ECk_EnsureDetails_Policy::MessageOnly;          \
                                                                                                                                                \
     const auto& Message = ck::Format_UE(InString, ##__VA_ARGS__);                                                                              \
     const auto& Title = ck::Format_UE(TEXT("Ignore and Continue? Frame#[{}]"), GFrameCounter);                                                 \
@@ -45,6 +45,13 @@
     _DETAILS_CK_ENSURE_LOG_OR_PUSHMESSAGE("CkEnsure Blueprints", CallstackPlusMessage, InContext);                                             \
                                                                                                                                                \
     const auto& DialogMessage = FText::FromString(CallstackPlusMessage);                                                                       \
+    if (UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::MessageLog)                                  \
+    {                                                                                                                                          \
+            UCk_Utils_Debug_StackTrace_UE::Try_BreakInScript(InContext, DialogMessage);                                                        \
+            UCk_Utils_Ensure_UE::Request_IgnoreEnsure_WithCallstack(CallStack);                                                                \
+            return false;                                                                                                                      \
+    }                                                                                                                                          \
+                                                                                                                                               \
     switch(const auto& Ans = UCk_Utils_MessageDialog_UE::YesNoYesAll(DialogMessage, FText::FromString(Title)))                                 \
     {                                                                                                                                          \
         case ECk_MessageDialog_YesNoYesAll::Yes:                                                                                               \
