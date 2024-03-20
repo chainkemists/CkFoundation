@@ -42,14 +42,22 @@
         CallStack                                                                                                                              \
     );                                                                                                                                         \
                                                                                                                                                \
+    const auto& DialogMessage = FText::FromString(CallstackPlusMessage);                                                                       \
+                                                                                                                                               \
+    if (UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::StreamerMode)                                \
+    {                                                                                                                                          \
+        ck::core::Error(TEXT("{}"), CallstackPlusMessage);                                                                                     \
+        UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLineWithMessage(__FILE__, DialogMessage, __LINE__);                                  \
+        return false;                                                                                                                          \
+    }                                                                                                                                          \
+                                                                                                                                               \
     _DETAILS_CK_ENSURE_LOG_OR_PUSHMESSAGE("CkEnsure Blueprints", CallstackPlusMessage, InContext);                                             \
                                                                                                                                                \
-    const auto& DialogMessage = FText::FromString(CallstackPlusMessage);                                                                       \
     if (UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::MessageLog)                                  \
     {                                                                                                                                          \
-            UCk_Utils_Debug_StackTrace_UE::Try_BreakInScript(InContext, DialogMessage);                                                        \
-            UCk_Utils_Ensure_UE::Request_IgnoreEnsure_WithCallstack(CallStack);                                                                \
-            return false;                                                                                                                      \
+        UCk_Utils_Debug_StackTrace_UE::Try_BreakInScript(InContext, DialogMessage);                                                            \
+        UCk_Utils_Ensure_UE::Request_IgnoreEnsure_WithCallstack(CallStack);                                                                    \
+        return false;                                                                                                                          \
     }                                                                                                                                          \
                                                                                                                                                \
     switch(const auto& Ans = UCk_Utils_MessageDialog_UE::YesNoYesAll(DialogMessage, FText::FromString(Title)))                                 \
