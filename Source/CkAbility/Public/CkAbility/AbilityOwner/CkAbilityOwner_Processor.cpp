@@ -4,6 +4,7 @@
 #include "CkAbility/Ability/CkAbility_Script.h"
 #include "CkAbility/Ability/CkAbility_Utils.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Utils.h"
+#include "CkAbility/Subsystem/CkAbility_Subsystem.h"
 
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
@@ -165,8 +166,10 @@ namespace ck
             const auto& OptionalPayload = InRequest.Get_OptionalPayload();
 
             const auto PostAbilityCreationFunc =
-            [InAbilityOwnerEntity, AbilityScriptClass, AbilityParams, OptionalPayload, AbilitySource](FCk_Handle& InEntity) -> void
+            [InAbilityOwnerEntity, AbilityScriptClass, AbilityParams, OptionalPayload, AbilitySource, AbilityEntityConfig](FCk_Handle& InEntity) -> void
             {
+                UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityEntityConfig->GetWorld())->Request_RemoveAbilityEntityConfig(AbilityEntityConfig);
+
                 // TODO: Since the construction of the Ability entity is deferred, if multiple Give requests of the same
                 // script class are processed in the same frame, it is possible for the CanBeGiven to NOT return the correct value
                 // This check here is a temporary (and potentially expensive) workaround, but we should handle this case better
@@ -221,6 +224,8 @@ namespace ck
                         {});
                 }
             };
+
+            UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityEntityConfig->GetWorld())->Request_TrackAbilityEntityConfig(AbilityEntityConfig);
 
             UCk_Utils_EntityBridge_UE::Request_Spawn(InAbilityOwnerEntity,
                 FCk_Request_EntityBridge_SpawnEntity{AbilityEntityConfig}

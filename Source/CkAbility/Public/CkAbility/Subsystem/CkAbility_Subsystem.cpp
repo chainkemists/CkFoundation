@@ -16,7 +16,8 @@ auto
         UCk_Ability_Script_PDA* InAbility)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InAbility), TEXT("Unable to TrackAbility. Ability is [{}].{}"), InAbility, ck::Context(this))
+    CK_ENSURE_IF_NOT(ck::IsValid(InAbility),
+        TEXT("Unable to TrackAbility. Ability is [{}].{}"), InAbility, ck::Context(this))
     { return; }
 
     _AbilityScripts.Add(InAbility);
@@ -28,11 +29,39 @@ auto
         UCk_Ability_Script_PDA* InAbility)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InAbility), TEXT("Ability is [{}].{}"), InAbility, ck::Context(this))
+    CK_ENSURE_IF_NOT(ck::IsValid(InAbility),
+        TEXT("Unable to RemoveAbilityScript. Ability is [{}].{}"), InAbility, ck::Context(this))
     { return; }
 
     ck::ability::WarningIf(_AbilityScripts.Remove(InAbility) == 0,
         TEXT("Attempted to Remove Ability [{}] but it was never tracked.{}"), InAbility, ck::Context(this));
+}
+
+auto
+    UCk_Ability_Subsystem_UE::
+    Request_TrackAbilityEntityConfig(
+        UCk_Ability_EntityConfig_PDA* InAbilityEntityConfig)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAbilityEntityConfig),
+        TEXT("Unable to TrackAbilityEntityConfig. Config is [{}].{}"), InAbilityEntityConfig, ck::Context(this))
+    { return; }
+
+    _AbilityEntityConfigs.Add(InAbilityEntityConfig);
+}
+
+auto
+    UCk_Ability_Subsystem_UE::
+    Request_RemoveAbilityEntityConfig(
+        UCk_Ability_EntityConfig_PDA* InAbilityEntityConfig)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAbilityEntityConfig),
+        TEXT("Unable to RemoveAbilityEntityConfig. Config is [{}].{}"), InAbilityEntityConfig, ck::Context(this))
+    { return; }
+
+    ck::ability::WarningIf(_AbilityEntityConfigs.Remove(InAbilityEntityConfig) == 0,
+        TEXT("Attempted to Remove Ability Entity Config [{}] but it was never tracked.{}"), InAbilityEntityConfig, ck::Context(this));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
