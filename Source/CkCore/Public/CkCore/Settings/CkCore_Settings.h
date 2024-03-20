@@ -13,8 +13,12 @@
 UENUM(BlueprintType)
 enum class ECk_EnsureDisplay_Policy : uint8
 {
+    /* Ensures are processed and a modal dialog displayed to give users a chance to break, ignore once or ignore all. */
     ModalDialog,
+    /* Ensures are processed once per game session and sent to the MessageLog window. Will break into Blueprint Script if possible. No modal dialog is displayed. */
     MessageLog,
+    /* Ensures are processed once per game session and logged. Will NOT break into Blueprint script. Only use when streaming!*/
+    StreamerMode,
     LogOnly UMETA(Hidden)
 };
 
