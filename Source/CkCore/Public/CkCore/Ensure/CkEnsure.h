@@ -269,9 +269,17 @@ public:
         BpStackTrace,                                                                                                                      \
         StackTraceWith2Skips);                                                                                                             \
                                                                                                                                            \
+    const auto& DialogMessage = FText::FromString(CallstackPlusMessage);                                                                   \
+                                                                                                                                           \
+    if (UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::StreamerMode)                            \
+    {                                                                                                                                      \
+            ck::core::Error(TEXT("{}"), CallstackPlusMessage);                                                                             \
+            UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLineWithMessage(__FILE__, DialogMessage, __LINE__);                          \
+            return false;                                                                                                                  \
+    }                                                                                                                                      \
+                                                                                                                                           \
     _DETAILS_CK_ENSURE_LOG_OR_PUSHMESSAGE("CkEnsures", CallstackPlusMessage, nullptr);                                                     \
                                                                                                                                            \
-    const auto& DialogMessage = FText::FromString(CallstackPlusMessage);                                                                   \
     if (UCk_Utils_Core_ProjectSettings_UE::Get_EnsureDisplayPolicy() == ECk_EnsureDisplay_Policy::MessageLog)                              \
     {                                                                                                                                      \
             UCk_Utils_Debug_StackTrace_UE::Try_BreakInScript(nullptr, DialogMessage);                                                      \
