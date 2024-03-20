@@ -30,9 +30,18 @@ public:
     auto
     Request_RemoveAbilityScript(class UCk_Ability_Script_PDA* InAbility) -> void;
 
+    auto
+    Request_TrackAbilityEntityConfig(class UCk_Ability_EntityConfig_PDA* InAbilityEntityConfig) -> void;
+
+    auto
+    Request_RemoveAbilityEntityConfig(class UCk_Ability_EntityConfig_PDA* InAbilityEntityConfig) -> void;
+
 private:
     UPROPERTY(Transient)
     TArray<TObjectPtr<class UCk_Ability_Script_PDA>> _AbilityScripts;
+
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<class UCk_Ability_EntityConfig_PDA>> _AbilityEntityConfigs;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
