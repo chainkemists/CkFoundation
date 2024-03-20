@@ -412,7 +412,7 @@ auto
         MarkerOrSensorComp->SetBoxExtent(BoxExtents);
         MarkerOrSensorComp->AddLocalTransform(InMarkerOrSensorParams.Get_RelativeTransform());
         // we never want scale to affect our Sensors/Markers
-        MarkerOrSensorComp->SetWorldScale3D(FVector{1, 1, 1});
+        MarkerOrSensorComp->SetWorldScale3D(FVector::OneVector);
 
         if (InMarkerOrSensorParams.Get_AttachmentParams().Get_AttachmentType() == ECk_ActorComponent_AttachmentPolicy::DoNotAttach)
         {

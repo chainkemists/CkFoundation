@@ -48,10 +48,23 @@ namespace ck
             MarkerAttachedEntity)
         { return; }
 
+        if (ck::Is_NOT_Valid(MarkerAttachedEntityAndActor.Get_Actor()))
+        { return; }
+
         InCurrentComp._AttachedEntityAndActor = MarkerAttachedEntityAndActor;
 
-        const auto& Params      = InParamsComp.Get_Params();
-        const auto& ShapeParams = Params.Get_ShapeParams();
+        const auto& Params        = InParamsComp.Get_Params();
+        const auto& ShapeParams   = Params.Get_ShapeParams();
+        const auto& PhysicsParams = Params.Get_PhysicsParams();
+
+        CK_ENSURE_IF_NOT
+        (
+            PhysicsParams.Get_CollisionProfileName().Name != TEXT("NoCollision"),
+            TEXT("Marker [{}] added to Entity [{}] has Collision Profile set to [{}]. Marker will NOT work properly!"),
+            Params.Get_MarkerName(),
+            MarkerLifetimeOwner,
+            PhysicsParams.Get_CollisionProfileName()
+        ) {};
 
         switch (const auto& ShapeType = ShapeParams.Get_ShapeDimensions().Get_ShapeType())
         {
