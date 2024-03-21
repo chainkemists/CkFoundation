@@ -210,7 +210,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Sensor",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName = "[Ck][Sensor] Request Enable/Disable")
     static FCk_Handle_Sensor
     Request_EnableDisable(
