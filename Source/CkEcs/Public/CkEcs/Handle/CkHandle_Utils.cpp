@@ -73,7 +73,8 @@ auto
 {
 #if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
     InHandle.AddOrGet<DEBUG_NAME>()._Name = InDebugName;
-    ck::ecs::Log(TEXT("[EntityMap] [{}]"), InHandle, InDebugName);
+    ck::ecs::LogIf(UCk_Utils_Ecs_Settings_UE::Get_EntityMapPolicy() == ECk_Ecs_EntityMap_Policy::AlwaysLog,
+        TEXT("[EntityMap] [{}]"), InHandle, InDebugName);
 #endif
 }
 
