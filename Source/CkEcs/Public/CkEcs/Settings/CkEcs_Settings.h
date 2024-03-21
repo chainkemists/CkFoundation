@@ -22,6 +22,15 @@ enum class ECk_Ecs_HandleDebuggerBehavior : uint8
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_Ecs_EntityMap_Policy : uint8
+{
+    DoNotLog,
+    AlwaysLog
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKECS_API FCk_Ecs_ProcessorInjectors_Info
 {
@@ -100,8 +109,14 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Ecs_HandleDebuggerBehavior _HandleDebuggerBehavior = ECk_Ecs_HandleDebuggerBehavior::Disable;
 
+    // EntityMap helps us link up an Entity ID with its Actor/ConstructionScript/Ability by logging all Entities that are created
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Debugging",
+              meta = (AllowPrivateAccess = true))
+    ECk_Ecs_EntityMap_Policy _EntityMapPolicy = ECk_Ecs_EntityMap_Policy::DoNotLog;
+
 public:
     CK_PROPERTY_GET(_HandleDebuggerBehavior);
+    CK_PROPERTY_GET(_EntityMapPolicy);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -119,6 +134,11 @@ public:
               Category = "Ck|Utils|Ecs|Settings")
     static ECk_Ecs_HandleDebuggerBehavior
     Get_HandleDebuggerBehavior();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ecs|Settings")
+    static ECk_Ecs_EntityMap_Policy
+    Get_EntityMapPolicy();
 
 public:
     static auto Get_ProcessorInjectors() -> UCk_Ecs_ProcessorInjectors_PDA*;
