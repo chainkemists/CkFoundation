@@ -108,6 +108,9 @@ public:
     template <typename T_Fragment, typename T_ValidationPolicy>
     auto Remove() -> void;
 
+    template <typename T_Fragment, typename T_FragmentFunc>
+    auto CopyAndRemove(T_Fragment FragmentToCopyAndRemove, T_FragmentFunc InFunc) -> void;
+
     template <typename T_Fragment>
     auto Try_Remove() -> void;
 
@@ -552,6 +555,37 @@ auto
     _Registry->Remove<T_Fragment>(_Entity);
 
     DoRemove_FragmentDebugInfo<T_Fragment>();
+}
+
+template <typename T_Fragment, typename T_FragmentFunc>
+auto
+    FCk_Handle::
+    CopyAndRemove(
+        T_Fragment FragmentToCopyAndRemove,
+        T_FragmentFunc InFunc)
+    -> void
+{
+    CK_ENSURE_IF_NOT(IsValid(ck::IsValid_Policy_Default{}),
+        TEXT("Unable to CopeAndRemove Fragment [{}]. Handle [{}] {}."),
+        ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
+        [&]
+        {
+            if (ck::IsValid(_Registry))
+            {
+                if (_Registry->IsValid(_Entity))
+                { return TEXT("has an Entity that is about to be DESTROYED"); }
+
+                return TEXT("does NOT have a valid Entity");
+            }
+            return TEXT("does NOT have a valid Registry");
+        }())
+    { return; }
+
+    T_Fragment FragmentCopy;
+    ::Swap(FragmentToCopyAndRemove, FragmentCopy);
+    Remove<T_Fragment>();
+
+    InFunc(FragmentCopy);
 }
 
 template <typename T_Fragment>
