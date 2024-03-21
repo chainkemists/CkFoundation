@@ -196,6 +196,13 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
+              DisplayName = "[Ck][Sensor] Get Marker Overlap Count")
+    static int32
+    Get_MarkerOverlapCount(
+        const FCk_Handle_Sensor& InSensorEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Sensor",
               DisplayName = "[Ck][Sensor] Get Has Any Non-Marker Overlaps")
     static bool
     Get_HasNonMarkerOverlaps(
@@ -206,6 +213,13 @@ public:
               DisplayName = "[Ck][Sensor] Get All Non-Marker Overlaps")
     static FCk_Sensor_NonMarkerOverlaps
     Get_AllNonMarkerOverlaps(
+        const FCk_Handle_Sensor& InSensorEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Sensor",
+              DisplayName = "[Ck][Sensor] Get Non-Marker Overlap Count")
+    static int32
+    Get_NonMarkerOverlapCount(
         const FCk_Handle_Sensor& InSensorEntity);
 
 public:
