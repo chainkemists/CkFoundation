@@ -40,7 +40,7 @@ auto
     if (AbilityParams.Get_HasDisplayName())
     { return AbilityParams.Get_DisplayName(); }
 
-    return AbilityParams.Get_AbilityName().GetTagName();
+    return UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntity).GetTagName();
 }
 
 auto
