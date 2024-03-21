@@ -183,7 +183,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Marker",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName = "[Ck][Marker] Request Enable/Disable")
     static FCk_Handle_Marker
     Request_EnableDisable(
