@@ -104,7 +104,6 @@ auto
     {
         const auto EcsWorldSubsystem = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
 
-        // TODO: this hits at least once because the BP Subsystem is not loaded. Fix this.
         CK_ENSURE_IF_NOT(ck::IsValid(EcsWorldSubsystem),
             TEXT("WorldSubsystem is [{}]. Did you forget to set the default value in the component?.[{}]"),
             EcsWorldSubsystem, ck::Context(this))
@@ -186,7 +185,7 @@ auto
                 }.Set_ReplicatedObjects(ReplicatedObjects.Get_ReplicatedObjects()));
         }
 
-        ck::entity_bridge::Log(TEXT("[EntityMap] [{}] -> [{}]"), Entity, OwningActor);
+        UCk_Utils_Handle_UE::Set_DebugName(Entity, UCk_Utils_Debug_UE::Get_DebugName(OwningActor, ECk_DebugNameVerbosity_Policy::Compact));
 
         // TODO: Invoking this manually although ideally this should be called by ReplicationDriver for the Server
         TryInvoke_OnReplicationComplete(EInvoke_Caller::ReplicationDriver);
@@ -237,23 +236,31 @@ auto
                         ck::Context(this))
                     { return {}; }
 
-                    return UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OuterOwnerEntity, [&](FCk_Handle InEntity)
+                    auto Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OuterOwnerEntity, [&](FCk_Handle InEntity)
                     {
                         InEntity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
                         UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Replication::Replicates,
                             ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
                     });
+
+                    UCk_Utils_Handle_UE::Set_DebugName(Entity, UCk_Utils_Debug_UE::Get_DebugName(OwningActor, ECk_DebugNameVerbosity_Policy::Compact));
+
+                    return Entity;
                 }
                 case ECk_Replication::DoesNotReplicate:
                 {
                     const auto& TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(GetWorld());
 
-                    return UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity, [&](FCk_Handle InEntity)
+                    auto Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity, [&](FCk_Handle InEntity)
                     {
                         InEntity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
                         UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Replication::DoesNotReplicate,
                             ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
                     });
+
+                    UCk_Utils_Handle_UE::Set_DebugName(Entity, UCk_Utils_Debug_UE::Get_DebugName(OwningActor, ECk_DebugNameVerbosity_Policy::Compact));
+
+                    return Entity;
                 }
             }
 
@@ -298,8 +305,6 @@ auto
 
         EntityConfig->Build(NewEntity, Get_EntityConstructionParamsToInject());
 
-        ck::entity_bridge::Log(TEXT("[EntityMap] [{}] -> [{}]"), NewEntity, OwningActor);
-
         // TODO: this is a HACK due to the way TryInvoke_OnReplicationComplete works. The function assumes that it will be called twice.
         // Once by the EntityBridge and once by the ReplicationDriver. However, if we don't replicate at all, then there is no ReplicationDriver
         // and we need to 'spoof' it
@@ -315,12 +320,16 @@ auto
         {
             const auto& TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(GetWorld());
 
-            return UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity, [&](FCk_Handle InEntity)
+            auto Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity, [&](FCk_Handle InEntity)
             {
                 InEntity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
                 UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Replication::DoesNotReplicate,
                     ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
             });
+
+            UCk_Utils_Handle_UE::Set_DebugName(Entity, UCk_Utils_Debug_UE::Get_DebugName(OwningActor, ECk_DebugNameVerbosity_Policy::Compact));
+
+            return Entity;
         }();
 
         CK_LOG_ERROR_IF_NOT(ck::entity_bridge, ck::IsValid(NewEntity),
@@ -361,8 +370,6 @@ auto
 
         EntityConfig->Build(NewEntity, Get_EntityConstructionParamsToInject());
 
-        ck::entity_bridge::Log(TEXT("[EntityMap] [{}] -> [{}]"), NewEntity, OwningActor);
-
         // TODO: this is a HACK due to the way TryInvoke_OnReplicationComplete works. The function assumes that it will be called twice.
         // Once by the EntityBridge and once by the ReplicationDriver. However, if we don't replicate at all, then there is no ReplicationDriver
         // and we need to 'spoof' it
@@ -394,11 +401,7 @@ auto
 
                 _ReplicationComplete_BroadcastStep = EOnReplicationCompleteBroadcastStep::Broadcast;
 
-                auto AssociatedEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(GetOwner());
-
-                UCk_Utils_Handle_UE::Set_DebugName(AssociatedEntity,
-                    UCk_Utils_Debug_UE::Get_DebugName(GetOwner(), ECk_DebugNameVerbosity_Policy::Compact));
-
+                const auto AssociatedEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(GetOwner());
                 _OnReplicationComplete_MC.Broadcast(AssociatedEntity);
             }
 
@@ -418,11 +421,7 @@ auto
 
                 _ReplicationComplete_BroadcastStep = EOnReplicationCompleteBroadcastStep::Broadcast;
 
-                auto AssociatedEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(GetOwner());
-
-                UCk_Utils_Handle_UE::Set_DebugName(AssociatedEntity,
-                    UCk_Utils_Debug_UE::Get_DebugName(GetOwner(), ECk_DebugNameVerbosity_Policy::Compact));
-
+                const auto AssociatedEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(GetOwner());
                 _OnReplicationComplete_MC.Broadcast(AssociatedEntity);
             }
             break;
