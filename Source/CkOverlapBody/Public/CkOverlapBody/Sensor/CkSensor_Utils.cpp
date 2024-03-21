@@ -208,6 +208,24 @@ auto
 
 auto
     UCk_Utils_Sensor_UE::
+    Get_MarkerOverlapCount(
+        const FCk_Handle_Sensor& InSensorEntity)
+    -> int32
+{
+    return InSensorEntity.Get<ck::FFragment_Sensor_Current>().Get_CurrentMarkerOverlaps().Get_Overlaps().Num();
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    Get_NonMarkerOverlapCount(
+        const FCk_Handle_Sensor& InSensorEntity)
+    -> int32
+{
+    return InSensorEntity.Get<ck::FFragment_Sensor_Current>().Get_CurrentNonMarkerOverlaps().Get_Overlaps().Num();
+}
+
+auto
+    UCk_Utils_Sensor_UE::
     Get_HasMarkerOverlaps(
         const FCk_Handle_Sensor& InSensorEntity)
     -> bool
