@@ -56,7 +56,7 @@ namespace ck
             HandleType InMarkerEntity,
             FFragment_Marker_Current& InCurrentComp,
             const FFragment_Marker_Params& InParamsComp,
-            FFragment_Marker_Requests& InRequestsComp) const -> void;
+            const FFragment_Marker_Requests& InRequestsComp) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

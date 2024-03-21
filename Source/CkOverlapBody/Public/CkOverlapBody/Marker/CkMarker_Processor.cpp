@@ -124,34 +124,35 @@ namespace ck
             HandleType InMarkerEntity,
             FFragment_Marker_Current& InCurrentComp,
             const FFragment_Marker_Params& InParamsComp,
-            FFragment_Marker_Requests& InRequestsComp) const
+            const FFragment_Marker_Requests& InRequestsComp) const
         -> void
     {
-        ck::algo::ForEachRequest(InRequestsComp._Requests,
-        [&](const FFragment_Marker_Requests::RequestType& InRequest) -> void
+        InMarkerEntity.CopyAndRemove(InRequestsComp, [&](const FFragment_Marker_Requests& InRequests)
         {
-            const auto& CurrentEnableDisable = InCurrentComp.Get_EnableDisable();
-            const auto& NewEnableDisable = InRequest.Get_EnableDisable();
+            ck::algo::ForEachRequest(InRequests._Requests,
+            [&](const FFragment_Marker_Requests::RequestType& InRequest) -> void
+            {
+                const auto& CurrentEnableDisable = InCurrentComp.Get_EnableDisable();
+                const auto& NewEnableDisable = InRequest.Get_EnableDisable();
 
-            if (CurrentEnableDisable == NewEnableDisable)
-            { return; }
+                if (CurrentEnableDisable == NewEnableDisable)
+                { return; }
 
-            InCurrentComp._EnableDisable = NewEnableDisable;
-            const auto& CollisionEnabled = NewEnableDisable == ECk_EnableDisable::Enable
-                                             ? ECollisionEnabled::QueryOnly
-                                             : ECollisionEnabled::NoCollision;
+                InCurrentComp._EnableDisable = NewEnableDisable;
+                const auto& CollisionEnabled = NewEnableDisable == ECk_EnableDisable::Enable
+                                                 ? ECollisionEnabled::QueryOnly
+                                                 : ECollisionEnabled::NoCollision;
 
-            const auto& Params     = InParamsComp.Get_Params();
-            const auto& MarkerName = Params.Get_MarkerName();
-            const auto& Marker     = InCurrentComp.Get_Marker().Get();
+                const auto& Params     = InParamsComp.Get_Params();
+                const auto& MarkerName = Params.Get_MarkerName();
+                const auto& Marker     = InCurrentComp.Get_Marker().Get();
 
-            UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(Marker, NewEnableDisable);
-            UCk_Utils_Physics_UE::Request_SetCollisionEnabled(Marker, CollisionEnabled);
+                UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(Marker, NewEnableDisable);
+                UCk_Utils_Physics_UE::Request_SetCollisionEnabled(Marker, CollisionEnabled);
 
-            UUtils_Signal_OnMarkerEnableDisable::Broadcast(InMarkerEntity, MakePayload(InCurrentComp.Get_AttachedEntityAndActor().Get_Handle(), MarkerName, NewEnableDisable));
+                UUtils_Signal_OnMarkerEnableDisable::Broadcast(InMarkerEntity, MakePayload(InCurrentComp.Get_AttachedEntityAndActor().Get_Handle(), MarkerName, NewEnableDisable));
+            }, policy::DontResetContainer{});
         });
-
-        InMarkerEntity.Remove<MarkedDirtyBy>();
     }
 
     auto
