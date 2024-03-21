@@ -56,7 +56,7 @@ namespace ck
             HandleType InHandle,
             FFragment_Sensor_Current& InCurrentComp,
             const FFragment_Sensor_Params& InParamsComp,
-            FFragment_Sensor_Requests& InRequestsComp) const -> void;
+            const FFragment_Sensor_Requests& InRequestsComp) const -> void;
 
     private:
         static auto DoHandleRequest(

@@ -124,22 +124,23 @@ namespace ck
             HandleType InHandle,
             FFragment_Sensor_Current& InCurrentComp,
             const FFragment_Sensor_Params& InParamsComp,
-            FFragment_Sensor_Requests& InRequestsComp) const
+            const FFragment_Sensor_Requests& InRequestsComp) const
         -> void
     {
-        algo::ForEachRequest(InRequestsComp._EnableDisableRequest,
-        [&](const FFragment_Sensor_Requests::EnableDisableRequestType& InRequest) -> void
+        InHandle.CopyAndRemove(InRequestsComp, [&](const FFragment_Sensor_Requests& InRequests)
         {
-            DoHandleRequest(InHandle, InCurrentComp, InParamsComp, InRequest);
+            algo::ForEachRequest(InRequests._EnableDisableRequest,
+            [&](const FFragment_Sensor_Requests::EnableDisableRequestType& InRequest) -> void
+            {
+                DoHandleRequest(InHandle, InCurrentComp, InParamsComp, InRequest);
+            }, policy::DontResetContainer{});
+
+            algo::ForEachRequest(InRequests._BeginOrEndOverlapRequests, ck::Visitor(
+            [&](const auto& InRequestVariant)
+            {
+                DoHandleRequest(InHandle, InCurrentComp, InParamsComp, InRequestVariant);
+            }), policy::DontResetContainer{});
         });
-
-        algo::ForEachRequest(InRequestsComp._BeginOrEndOverlapRequests, ck::Visitor(
-        [&](const auto& InRequestVariant)
-        {
-            DoHandleRequest(InHandle, InCurrentComp, InParamsComp, InRequestVariant);
-        }));
-
-        InHandle.Remove<MarkedDirtyBy>();
     }
 
     auto
