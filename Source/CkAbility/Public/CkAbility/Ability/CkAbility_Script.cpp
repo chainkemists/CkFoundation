@@ -322,18 +322,6 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    DoRequest_TrackTask(
-        UObject* InTask)
-    -> void
-{
-    if (ck::Is_NOT_Valid(InTask))
-    { return; }
-
-    _Tasks.Emplace(InTask);
-}
-
-auto
-    UCk_Ability_Script_PDA::
     DoRequest_SpawnAbilityCue(
         const FCk_AbilityCue_Params&  InReplicatedParams,
         FGameplayTag InAbilityCueName)
