@@ -109,11 +109,6 @@ auto
         FGameplayTag      InAttributeName)
     -> FCk_Handle_FloatAttribute
 {
-    CK_ENSURE_IF_NOT(RecordOfFloatAttributes_Utils::Has(InAttributeOwnerEntity),
-        TEXT("Cannot get the FloatAttribute with name [{}] from Entity [{}] because it is MISSING the FloatAttribute feature!"),
-        InAttributeName, InAttributeOwnerEntity)
-    { return {}; }
-
     return RecordOfFloatAttributes_Utils::Get_ValidEntry_If(InAttributeOwnerEntity,
         ck::algo::MatchesGameplayLabelExact{InAttributeName});
 }
