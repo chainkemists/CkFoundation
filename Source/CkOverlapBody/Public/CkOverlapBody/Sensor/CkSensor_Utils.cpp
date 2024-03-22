@@ -83,10 +83,8 @@ auto
         FGameplayTag      InSensorName)
     -> FCk_Handle_Sensor
 {
-    if (NOT RecordOfSensors_Utils::Has(InSensorOwnerEntity))
-    { return {}; }
-
-    return RecordOfSensors_Utils::Get_ValidEntry_If(InSensorOwnerEntity, ck::algo::MatchesGameplayLabelExact{InSensorName});
+    return RecordOfSensors_Utils::Get_ValidEntry_If(InSensorOwnerEntity,
+        ck::algo::MatchesGameplayLabelExact{InSensorName});
 }
 
 auto

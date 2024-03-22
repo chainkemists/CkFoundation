@@ -86,10 +86,8 @@ auto
         FGameplayTag      InMarkerName)
     -> FCk_Handle_Marker
 {
-    if (NOT RecordOfMarkers_Utils::Has(InMarkerOwnerEntity))
-    { return {}; }
-
-    return RecordOfMarkers_Utils::Get_ValidEntry_If(InMarkerOwnerEntity, ck::algo::MatchesGameplayLabelExact{InMarkerName});
+    return RecordOfMarkers_Utils::Get_ValidEntry_If(InMarkerOwnerEntity,
+        ck::algo::MatchesGameplayLabelExact{InMarkerName});
 }
 
 auto
