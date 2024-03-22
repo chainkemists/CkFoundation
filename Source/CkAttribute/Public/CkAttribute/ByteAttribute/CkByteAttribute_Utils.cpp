@@ -109,11 +109,6 @@ auto
         FGameplayTag      InAttributeName)
     -> FCk_Handle_ByteAttribute
 {
-    CK_ENSURE_IF_NOT(RecordOfByteAttributes_Utils::Has(InAttributeOwnerEntity),
-        TEXT("Cannot get the ByteAttribute with name [{}] from Entity [{}] because it is MISSING the ByteAttribute feature!"),
-        InAttributeName, InAttributeOwnerEntity)
-    { return {}; }
-
     return RecordOfByteAttributes_Utils::Get_ValidEntry_If(InAttributeOwnerEntity,
         ck::algo::MatchesGameplayLabelExact{InAttributeName});
 }

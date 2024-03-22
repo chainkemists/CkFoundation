@@ -109,11 +109,6 @@ auto
         FGameplayTag      InAttributeName)
     -> FCk_Handle_VectorAttribute
 {
-    CK_ENSURE_IF_NOT(RecordOfVectorAttributes_Utils::Has(InAttributeOwnerEntity),
-        TEXT("Cannot get the VectorAttribute with name [{}] from Entity [{}] because it is MISSING the VectorAttribute feature!"),
-        InAttributeName, InAttributeOwnerEntity)
-    { return {}; }
-
     return RecordOfVectorAttributes_Utils::Get_ValidEntry_If(InAttributeOwnerEntity,
         ck::algo::MatchesGameplayLabelExact{InAttributeName});
 }
