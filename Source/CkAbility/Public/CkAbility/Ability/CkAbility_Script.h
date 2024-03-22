@@ -168,14 +168,6 @@ private:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
-              DisplayName = "[Ck][AbilityScript] Request Track Task",
-              meta = (CompactNodeTitle="TRACK_Task", HideSelfPin = true))
-    void
-    DoRequest_TrackTask(
-        UObject* InTask);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Ability|Script",
               DisplayName = "[Ck][AbilityScript] Request Spawn Ability Cue",
               meta = (CompactNodeTitle="SpawnAbilityCue", HideSelfPin = true))
     void
@@ -219,9 +211,6 @@ private:
 
     UPROPERTY(Transient)
     FCk_Handle_AbilityOwner _AbilityOwnerHandle;
-
-    UPROPERTY(Transient)
-    TArray<TObjectPtr<UObject>> _Tasks;
 
 private:
 #if NOT CK_DISABLE_ABILITY_SCRIPT_DEBUGGING
