@@ -248,28 +248,28 @@ namespace ck
             const MaybeTypeSafeHandle& InRecordEntry)
         -> bool
     {
-        if (NOT InRecordHandle.Has<RecordType>())
-        { return {}; }
+        if (InRecordHandle.Has<RecordType>())
+        {
+            const auto& Fragment = InRecordHandle.Get<RecordType>();
 
-        const auto& Fragment = InRecordHandle.Get<RecordType>();
+            if (const auto MaybeContainsEntry = Fragment.Get_RecordEntries().Contains(InRecordEntry))
+            { return true; }
+        }
 
-        if (const auto MaybeContainsEntry = Fragment.Get_RecordEntries().Contains(InRecordEntry))
-        { return true; }
-
-        auto ExtensionContainEntry = false;
+        auto ExtensionContainsEntry = false;
         RecordOfEntityExtensions_Utils::ForEach_Entry(InRecordHandle,
         [&](const FCk_Handle_EntityExtension& InEntityExtension)
         {
             if (Get_ContainsEntry(InEntityExtension, InRecordEntry))
             {
-                ExtensionContainEntry = true;
+                ExtensionContainsEntry = true;
                 return ECk_Record_ForEachIterationResult::Break;
             }
 
             return ECk_Record_ForEachIterationResult::Continue;
         });
 
-        return ExtensionContainEntry;
+        return ExtensionContainsEntry;
     }
 
     template <typename T_DerivedRecord>
@@ -318,11 +318,10 @@ namespace ck
             T_Predicate InPredicate)
         -> MaybeTypeSafeHandle
     {
-        if (NOT InRecordHandle.Has<RecordType>())
-        { return {}; }
-
         auto MaybeValidEntry = [&]() -> MaybeTypeSafeHandle
         {
+            if (NOT InRecordHandle.Has<RecordType>())
+            { return {}; }
             for (const auto& Fragment = InRecordHandle.Get<RecordType>();
                  const auto& RecordEntry : Fragment.Get_RecordEntries())
             {
