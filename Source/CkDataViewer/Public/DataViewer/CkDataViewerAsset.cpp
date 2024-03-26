@@ -1,5 +1,7 @@
 #include "CkDataViewerAsset.h"
 
+#include "AssetRegistry/AssetRegistryModule.h"
+
 #include "CkCore/Object/CkObject_Utils.h"
 
 #include "CkDataViewer/CkDataViewer_Log.h"
@@ -307,6 +309,32 @@ auto
         const auto GenClassObject = UCk_Utils_Object_UE::Get_ClassGeneratedByBlueprint(Class);
         auto ClassBlueprint = Cast<UBlueprint>(GenClassObject);
 
+        {
+            auto PinType = FEdGraphPinType{};
+            PinType.PinCategory = UEdGraphSchema_K2::PC_Class;
+            PinType.PinSubCategoryObject = Class;
+
+            FBlueprintEditorUtils::AddMemberVariable(Blueprint, *ClassBlueprint->GetBlueprintGuid().ToString(), PinType,
+                FString("/Script/Engine.BlueprintGeneratedClass") + "'" + ClassBlueprint->GetPathName() + "_C'");
+
+            if (const auto Found = Blueprint->NewVariables.FindByPredicate([&](const FBPVariableDescription& InVarDesc)
+            {
+                if (InVarDesc.VarName == *ClassBlueprint->GetBlueprintGuid().ToString())
+                { return true; }
+
+                return false;
+            }))
+            {
+                Found->RemoveMetaData("BlueprintPrivate");
+                Found->Category = FText::FromString(ck::Format_UE(TEXT("{} ({})"), Info.Get_OptionalFriendlyName(), ClassBlueprint->GetFName()));
+                Found->SetMetaData("DisplayName", FString{TEXT("Object")});
+                Found->PropertyFlags |= CPF_Transient;
+                Found->PropertyFlags |= CPF_NoClear;
+                Found->PropertyFlags |= CPF_DisableEditOnTemplate;
+                Found->PropertyFlags |= CPF_DisableEditOnInstance;
+            }
+        }
+
         for (auto Itr = TFieldIterator<FProperty>{Class}; Itr; ++Itr)
         {
             const auto Field = *Itr;
@@ -352,6 +380,7 @@ auto
                 Found->RemoveMetaData("BlueprintPrivate");
                 Found->Category = FText::FromString(ck::Format_UE(TEXT("{} ({})"), Info.Get_OptionalFriendlyName(), ClassBlueprint->GetFName()));
                 Found->SetMetaData("DisplayName", Property->GetDisplayNameText().ToString());
+                Found->PropertyFlags |= CPF_Transient;
             }
         }
     }
