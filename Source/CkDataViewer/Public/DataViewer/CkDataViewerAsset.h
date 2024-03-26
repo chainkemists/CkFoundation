@@ -57,11 +57,11 @@ public:
 public:
     UFUNCTION(BlueprintNativeEvent)
     TArray<FCk_DataViewer_ObjectsInfo>
-    DoGetObjectsToView() const;
+    DoGet_ObjectsToView() const;
 
     UFUNCTION(BlueprintNativeEvent)
     TArray<FString>
-    DoGetPropertiesToIgnore() const;
+    DoGet_PropertiesToIgnore() const;
 
 private:
     enum class ECompileOrNot
@@ -78,8 +78,7 @@ private:
 
     auto
     DoGet_ValueFromProperty(
-        FProperty* InProperty) const
-        -> FString;
+        FProperty* InProperty) const -> FString;
 
     static auto
     DoGet_ValueFromProperty(
@@ -100,15 +99,11 @@ public:
         const FStructProperty* InProperty) -> TOptional<FEdGraphPinType>;
 
 public:
-    UFUNCTION(CallInEditor)
+    UFUNCTION(CallInEditor, Category="Operations")
     void
     ResetView();
 
-    UFUNCTION(CallInEditor)
-    void
-    WriteAll();
-
-    UFUNCTION(CallInEditor)
+    UFUNCTION(CallInEditor, Category="Operations")
     void
     Reload();
 
@@ -117,5 +112,4 @@ private:
     DoGet_Blueprint(
         const FGuid& InGuid) const
         -> UBlueprint*;
-
 };

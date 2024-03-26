@@ -1,27 +1,25 @@
 #include "CkDataViewerAsset.h"
 
-#include "BlueprintCompilationManager.h"
-#include "EdGraphSchema_K2.h"
-
 #include "CkCore/Object/CkObject_Utils.h"
 
 #include "CkDataViewer/CkDataViewer_Log.h"
 
 #include "CkLog/CkLog_Utils.h"
 
-#include "Kismet2/BlueprintEditorUtils.h"
-#include "Kismet2/KismetEditorUtilities.h"
+#include <EdGraphSchema_K2.h>
+#include <Kismet2/BlueprintEditorUtils.h>
+#include <Kismet2/KismetEditorUtilities.h>
+
+#include <UObject/TextProperty.h>
 
 namespace data_viewer_cpp
 {
     constexpr auto VariablesPrefix = TEXT("DataViewerVar_");
 }
 
-#include "UObject/TextProperty.h"
-
 auto
     UCk_DataViewerAsset_PDA::
-    DoGetObjectsToView_Implementation() const
+    DoGet_ObjectsToView_Implementation() const
     -> TArray<FCk_DataViewer_ObjectsInfo>
 {
     return {};
@@ -29,16 +27,27 @@ auto
 
 auto
     UCk_DataViewerAsset_PDA::
-    DoGetPropertiesToIgnore_Implementation() const
+    DoGet_PropertiesToIgnore_Implementation() const
     -> TArray<FString>
 {
     return {};
 }
 
-void
-    UCk_DataViewerAsset_PDA::PostLoad()
+auto
+    UCk_DataViewerAsset_PDA::
+    PostLoad()
+    -> void
 {
     Super::PostLoad();
+
+    if (IsTemplate())
+    { return; }
+
+    const auto& TimerManager = GEditor->GetTimerManager();
+    TimerManager->SetTimerForNextTick([this]()
+    {
+        Reload();
+    });
 }
 
 auto
@@ -49,7 +58,7 @@ auto
 {
     Super::PostEditChangeProperty(PropertyChangedEvent);
 
-    if (HasAnyFlags(EObjectFlags::RF_ArchetypeObject))
+    if (IsTemplate())
     { return; }
 
     const auto& PropertyName = PropertyChangedEvent.Property->GetFName();
@@ -140,7 +149,7 @@ auto
 {
     auto Blueprint = Cast<UBlueprint>(UCk_Utils_Object_UE::Get_ClassGeneratedByBlueprint(GetClass()));
 
-    if (NOT ck::IsValid(Blueprint))
+    if (ck::Is_NOT_Valid(Blueprint))
     { return; }
 
     for (auto Itr = TFieldIterator<FProperty>{GetClass()}; Itr; ++Itr)
@@ -166,7 +175,7 @@ auto
         UBlueprint* InBlueprint)
     -> void
 {
-    if (this->HasAnyFlags(RF_ArchetypeObject))
+    if (IsTemplate())
     { return; }
 
     UPackage* Package = InBlueprint->GetOutermost();
@@ -183,7 +192,7 @@ auto
         const FStructProperty* InProperty)
     -> TOptional<FEdGraphPinType>
 {
-    auto PinType          = FEdGraphPinType{};
+    auto PinType = FEdGraphPinType{};
 
     if (InProperty-> IsA(FBoolProperty::StaticClass()))
     {
@@ -270,28 +279,21 @@ auto
 
 auto
     UCk_DataViewerAsset_PDA::
-    WriteAll()
-    -> void
-{
-}
-
-auto
-    UCk_DataViewerAsset_PDA::
     Reload()
     -> void
 {
-    if (this->HasAnyFlags(RF_ArchetypeObject))
+    if (IsTemplate())
     { return; }
 
     DoResetView(ECompileOrNot::DoNotCompile);
 
     auto Blueprint = Cast<UBlueprint>(UCk_Utils_Object_UE::Get_ClassGeneratedByBlueprint(GetClass()));
 
-    if (NOT ck::IsValid(Blueprint))
+    if (ck::Is_NOT_Valid(Blueprint))
     { return; }
 
-    const auto& ClassesToView = DoGetObjectsToView();
-    const auto& PropertiesToIgnore = DoGetPropertiesToIgnore();
+    const auto& ClassesToView = DoGet_ObjectsToView();
+    const auto& PropertiesToIgnore = DoGet_PropertiesToIgnore();
 
     for (auto Info : ClassesToView)
     {
@@ -304,8 +306,6 @@ auto
 
         const auto GenClassObject = UCk_Utils_Object_UE::Get_ClassGeneratedByBlueprint(Class);
         auto ClassBlueprint = Cast<UBlueprint>(GenClassObject);
-
-        const auto A = ClassBlueprint->GetPathName();
 
         for (auto Itr = TFieldIterator<FProperty>{Class}; Itr; ++Itr)
         {
@@ -333,7 +333,7 @@ auto
             {
                 auto NameStr = FString{data_viewer_cpp::VariablesPrefix};
                 NameStr += Itr->NamePrivate.ToString();
-                NameStr += "_";
+                NameStr += TEXT("_");
                 NameStr += ClassBlueprint->GetBlueprintGuid().ToString();
 
                 return FName{NameStr};
@@ -366,7 +366,7 @@ auto
         const FGuid& InGuid) const
     -> UBlueprint*
 {
-    const auto& ClassesToView = DoGetObjectsToView();
+    const auto& ClassesToView = DoGet_ObjectsToView();
 
     for (auto ObjectInfo : ClassesToView)
     {
