@@ -107,6 +107,16 @@
 			]
 		},
 		{
+			"Name": "CkDataViewer",
+			"Type": "UncookedOnly",
+			"LoadingPhase": "PreDefault",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
 			"Name": "CkEcs",
 			"Type": "Runtime",
 			"LoadingPhase": "PreDefault",
