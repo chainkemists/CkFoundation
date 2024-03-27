@@ -559,7 +559,7 @@ namespace ck
             const FCk_Request_AbilityOwner_DeactivateAbility& InRequest) const
         -> void
     {
-        const auto& DoDeactivateAbility = [&](FCk_Handle_Ability& InAbilityEntity, const TSubclassOf<UCk_Ability_Script_PDA>& InAbilityClass) -> void
+        const auto& DoDeactivateAbility = [&](FCk_Handle_Ability& InAbilityEntity) -> void
         {
             if (ck::Is_NOT_Valid(InAbilityEntity))
             {
@@ -734,12 +734,18 @@ namespace ck
         FProcessor_AbilityOwner_Teardown::
         ForEachEntity(
             TimeType InDeltaT,
-            const HandleType& InHandle,
+            HandleType& InHandle,
             const FFragment_AbilityOwner_Current& InCurrent) const
         -> void
     {
         // if we are an EntityExtension, then inform our ExtensionOwner of potentially updated tags
         InCurrent.DoTry_TagsUpdatedOnExtensionOwner(InHandle);
+
+        UCk_Utils_AbilityOwner_UE::ForEach_Ability(InHandle, [&](FCk_Handle_Ability InAbilityHandle)
+        {
+            UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(InHandle, FCk_Request_AbilityOwner_DeactivateAbility{InAbilityHandle}, {});
+            UCk_Utils_AbilityOwner_UE::Request_RevokeAbility(InHandle, FCk_Request_AbilityOwner_RevokeAbility{InAbilityHandle}, {});
+        });
     }
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -156,7 +156,7 @@ namespace ck
         auto
         ForEachEntity(
             TimeType InDeltaT,
-            const HandleType& InHandle,
+            HandleType& InHandle,
             const FFragment_AbilityOwner_Current& InCurrent) const -> void;
     };
 
