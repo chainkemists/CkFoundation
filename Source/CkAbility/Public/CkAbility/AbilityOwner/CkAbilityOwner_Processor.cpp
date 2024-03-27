@@ -590,7 +590,7 @@ namespace ck
             ability::VeryVerbose
             (
                 TEXT("DEACTIVATING Ability [Name: {} | Entity: {}] from Ability Owner [{}] and Removing Tags [{}]"),
-                InAbilityClass,
+                UCk_Utils_Ability_UE::Get_ScriptClass(InAbilityEntity),
                 InAbilityEntity,
                 InAbilityOwnerEntity,
                 GrantedTags
@@ -608,7 +608,7 @@ namespace ck
             {
                 auto FoundAbilityEntity = DoFindAbilityByClass(InAbilityOwnerEntity, InRequest.Get_AbilityClass());
 
-                DoDeactivateAbility(FoundAbilityEntity, InRequest.Get_AbilityClass());
+                DoDeactivateAbility(FoundAbilityEntity);
 
                 break;
             }
@@ -616,7 +616,7 @@ namespace ck
             {
                 auto FoundAbilityEntity = DoFindAbilityByHandle(InAbilityOwnerEntity, InRequest.Get_AbilityHandle());
 
-                DoDeactivateAbility(FoundAbilityEntity, UCk_Utils_Ability_UE::Get_ScriptClass(FoundAbilityEntity));
+                DoDeactivateAbility(FoundAbilityEntity);
 
                 break;
             }
