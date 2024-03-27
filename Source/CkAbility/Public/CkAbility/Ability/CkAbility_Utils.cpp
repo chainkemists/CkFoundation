@@ -397,6 +397,9 @@ auto
     InHandle.Add<ck::FFragment_Ability_Params>(InParams);
     InHandle.Add<ck::FFragment_Ability_Current>(AbilityScriptToUse);
 
+    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(AbilityScriptToUse)
+    { return; }
+
     UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityScriptToUse->GetWorld())->Request_TrackAbilityScript(AbilityScriptToUse);
 }
 
@@ -442,10 +445,16 @@ auto
         return;
     }
 
-    if (RecordOfAbilities_Utils::Get_ContainsEntry(InAbilityOwner, InAbility))
-    { RecordOfAbilities_Utils::Request_Disconnect(InAbilityOwner, InAbility); }
+    // NOTE: Because abilities can be granted through Entity Extensions, only proceed with record disconnection & Ability
+    // destruction if the Ability was granted to the Ability Owner directly and NOT by extension (which means the Ability Owner
+    // is also the lifetime owner of the Ability)
+    if (UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbility) == InAbilityOwner)
+    {
+        if (RecordOfAbilities_Utils::Get_ContainsEntry(InAbilityOwner, InAbility))
+        { RecordOfAbilities_Utils::Request_Disconnect(InAbilityOwner, InAbility); }
 
-    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAbility);
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAbility);
+    }
 
     const auto Script = Current.Get_AbilityScript();
 
@@ -456,6 +465,9 @@ auto
     { return; }
 
     Script->OnRevokeAbility();
+
+    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(Script)
+    { return; }
 
     UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(Script->GetWorld())->Request_RemoveAbilityScript(Script.Get());
 }

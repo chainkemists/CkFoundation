@@ -6,9 +6,11 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-void
-    UCk_Ability_ProcessorInjector_Teardown::DoInjectProcessors(
+auto
+    UCk_Ability_ProcessorInjector_Teardown::
+    DoInjectProcessors(
         EcsWorldType& InWorld)
+    -> void
 {
     InWorld.Add<ck::FProcessor_Ability_Teardown>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AbilityOwner_Teardown>(InWorld.Get_Registry());
