@@ -96,7 +96,7 @@ private:
 public:
     static auto
     TryGet_PinType(
-        const FStructProperty* InProperty) -> TOptional<FEdGraphPinType>;
+        const FProperty* InProperty) -> TOptional<FEdGraphPinType>;
 
 public:
     UFUNCTION(CallInEditor, Category="Operations")

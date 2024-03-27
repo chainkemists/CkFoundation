@@ -63,7 +63,7 @@ auto
     if (IsTemplate())
     { return; }
 
-    const auto& PropertyName = PropertyChangedEvent.Property->GetFName();
+    const auto& PropertyName = PropertyChangedEvent.MemberProperty->GetFName();
 
     const auto& PropertyNameString = PropertyName.ToString();
 
@@ -85,7 +85,7 @@ auto
         PropertyNameString, ck::Context(this))
     { return; }
 
-    const auto& ThisPropertyValue = DoGet_ValueFromProperty(PropertyChangedEvent.Property);
+    const auto& ThisPropertyValue = DoGet_ValueFromProperty(PropertyChangedEvent.MemberProperty);
     auto NameOnly = PropertyNameString;
     NameOnly.RemoveFromStart(FString{data_viewer_cpp::VariablesPrefix});
     NameOnly.RemoveFromEnd(FString{TEXT("_")} + GuidString);
@@ -191,7 +191,7 @@ auto
 auto
     UCk_DataViewerAsset_PDA::
     TryGet_PinType(
-        const FStructProperty* InProperty)
+        const FProperty* InProperty)
     -> TOptional<FEdGraphPinType>
 {
     auto PinType = FEdGraphPinType{};
@@ -242,30 +242,76 @@ auto
     }
     else if (InProperty->IsA(FObjectPropertyBase::StaticClass()))
     {
+        auto StructProp = CastFieldChecked<FStructProperty>(InProperty);
+
         PinType.PinCategory = UEdGraphSchema_K2::PC_Object;
-        PinType.PinSubCategoryObject = InProperty->Struct;
+        PinType.PinSubCategoryObject = StructProp->Struct;
     }
     else if (InProperty->IsA(FArrayProperty::StaticClass()))
     {
-        return {};
+        auto ArrayProp = CastFieldChecked<FArrayProperty>(InProperty);
+
+        auto InnerType = TryGet_PinType(ArrayProp->Inner);
+
+        CK_LOG_ERROR_NOTIFY_IF_NOT(ck::data_viewer, ck::IsValid(InnerType),
+            TEXT("Could NOT get a valid InnerType for an Array Property [{}]"), InProperty->NamePrivate)
+        { return {}; }
+
+        PinType.PinCategory = InnerType->PinCategory;
+        PinType.PinSubCategory = InnerType->PinSubCategory;
+        PinType.PinSubCategoryObject = InnerType->PinSubCategoryObject;
+        PinType.ContainerType = EPinContainerType::Array;
     }
     else if (InProperty->IsA(FMapProperty::StaticClass()))
     {
-        return {};
+        auto MapProp = CastFieldChecked<FMapProperty>(InProperty);
+
+        auto KeyType = TryGet_PinType(MapProp->KeyProp);
+        auto ValueType = TryGet_PinType(MapProp->ValueProp);
+
+        CK_LOG_ERROR_NOTIFY_IF_NOT(ck::data_viewer, ck::IsValid(KeyType),
+            TEXT("Could NOT get a valid KeyType for a Map Property [{}]"), InProperty->NamePrivate)
+        { return {}; }
+
+        CK_LOG_ERROR_NOTIFY_IF_NOT(ck::data_viewer, ck::IsValid(ValueType),
+            TEXT("Could NOT get a valid ValueType for a Map Property [{}]"), InProperty->NamePrivate)
+        { return {}; }
+
+        PinType.PinCategory = KeyType->PinCategory;
+        PinType.PinSubCategory = KeyType->PinCategory;
+        PinType.PinSubCategoryObject = KeyType->PinSubCategoryObject;
+
+        PinType.PinValueType.TerminalCategory = ValueType->PinCategory;
+        PinType.PinValueType.TerminalSubCategory = ValueType->PinSubCategory;
+        PinType.PinValueType.TerminalSubCategoryObject = ValueType->PinSubCategoryObject;
+
+        PinType.ContainerType = EPinContainerType::Map;
     }
     else if (InProperty->IsA(FSetProperty::StaticClass()))
     {
-        return {};
+        auto ArrayProp = CastFieldChecked<FSetProperty>(InProperty);
+
+        auto ElementType = TryGet_PinType(ArrayProp->ElementProp);
+
+        CK_LOG_ERROR_NOTIFY_IF_NOT(ck::data_viewer, ck::IsValid(ElementType),
+            TEXT("Could NOT get a valid ElementType for a Set Property [{}]"), InProperty->NamePrivate)
+        { return {}; }
+
+        PinType.PinCategory = ElementType->PinCategory;
+        PinType.PinSubCategory = ElementType->PinSubCategory;
+        PinType.PinSubCategoryObject = ElementType->PinSubCategoryObject;
+        PinType.ContainerType = EPinContainerType::Set;
     }
     else if (InProperty->IsA(FStructProperty::StaticClass()))
     {
+        auto StructProp = CastFieldChecked<FStructProperty>(InProperty);
+
         PinType.PinCategory = UEdGraphSchema_K2::PC_Struct;
-        PinType.PinSubCategoryObject = InProperty->Struct;
+        PinType.PinSubCategoryObject = StructProp->Struct;
     }
-    // Add more checks for other property types as needed...
     else
     {
-        return {};
+        ck::data_viewer::Warning(TEXT("Unsupported PropertyType for Property [{}]"), InProperty->NamePrivate);
     }
 
     return PinType;
@@ -379,8 +425,9 @@ auto
             {
                 Found->RemoveMetaData("BlueprintPrivate");
                 Found->Category = FText::FromString(ck::Format_UE(TEXT("{} ({})"), Info.Get_OptionalFriendlyName(), ClassBlueprint->GetFName()));
-                Found->SetMetaData("DisplayName", Property->GetDisplayNameText().ToString());
                 Found->PropertyFlags |= CPF_Transient;
+
+                Found->SetMetaData("DisplayName", Property->GetDisplayNameText().ToString());
             }
         }
     }
