@@ -495,12 +495,18 @@ namespace ck
         InCurrentComp._EnableDisable = ECk_EnableDisable::Disable;
 
         // Since we are in the teardown, we are ok if the sensor object is pending kill
-        const auto& Params     = InParamsComp.Get_Params();
-        const auto& SensorName = Params.Get_SensorName();
-        const auto& Sensor     = InCurrentComp.Get_Sensor().Get(true);
+        constexpr auto IncludePendingKill = true;
+        const auto& Sensor = InCurrentComp.Get_Sensor().Get(IncludePendingKill);
 
-        UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(Sensor, ECk_EnableDisable::Disable);
-        UCk_Utils_Physics_UE::Request_SetCollisionEnabled(Sensor, ECollisionEnabled::NoCollision);
+        if (CK_ENSURE(ck::IsValid(Sensor, ck::IsValid_Policy_IncludePendingKill{}),
+            TEXT("Expected Sensor Actor Component of Entity [{}] to still exist during the Teardown process.\n"
+                 "Because the entity destruction is done in multiple phases and the Teardown process is operating on a valid entity, it is expected for the Sensor to still exist.\n"
+                 "If we are the client, did the object get unexpectedly destroyed before we reached this point ?"),
+            InCurrentComp.Get_AttachedEntityAndActor().Get_Handle()))
+        {
+            UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(Sensor, ECk_EnableDisable::Disable);
+            UCk_Utils_Physics_UE::Request_SetCollisionEnabled(Sensor, ECollisionEnabled::NoCollision);
+        }
 
         const auto SensorBasicDetails =  FCk_Sensor_BasicDetails
         {
