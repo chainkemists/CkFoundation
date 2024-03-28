@@ -70,6 +70,15 @@ auto
 
 auto
     UCk_Utils_Sfx_UE::
+    Get_SoundCue(
+        const FCk_Handle_Sfx& InSfxHandle)
+    -> USoundBase*
+{
+    return InSfxHandle.Get<ck::FFragment_Sfx_Params>().Get_Params().Get_SoundCue();
+}
+
+auto
+    UCk_Utils_Sfx_UE::
     ForEach_Sfx(
         FCk_Handle& InSfxOwnerEntity,
         const FInstancedStruct& InOptionalPayload,

@@ -166,7 +166,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, TitleProperty = "_Name"))
     TArray<FCk_Fragment_Targeter_ParamsData> _TargeterParams;
 
 public:
