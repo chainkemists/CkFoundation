@@ -11,29 +11,21 @@ namespace ck
 {
     auto
         FProcessor_CameraShake_HandleRequests::
-        DoTick(
-            TimeType InDeltaT)
-        -> void
-    {
-        TProcessor::DoTick(InDeltaT);
-
-        _TransientEntity.Clear<MarkedDirtyBy>();
-    }
-
-    auto
-        FProcessor_CameraShake_HandleRequests::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_CameraShake_Params& InParams,
-            FFragment_CameraShake_Requests& InRequestsComp) const
+            const FFragment_CameraShake_Requests& InRequestsComp) const
         -> void
     {
-        algo::ForEachRequest(InRequestsComp._PlayRequests, ck::Visitor(
-        [&](const auto& InRequest)
+        InHandle.CopyAndRemove(InRequestsComp, [&](const FFragment_CameraShake_Requests& InRequests)
         {
-            DoHandleRequest(InHandle, InParams, InRequest);
-        }));
+            ck::algo::ForEachRequest(InRequests._Requests, ck::Visitor(
+            [&](const auto& InRequestVariant) -> void
+            {
+                DoHandleRequest(InHandle, InParams, InRequestVariant);
+            }), policy::DontResetContainer{});
+        });
     }
 
     auto
@@ -46,19 +38,19 @@ namespace ck
     {
         const auto& TargetEntity = InRequest.Get_Target();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(TargetEntity), TEXT("Invalid Camera Shake Target!"))
+        CK_ENSURE_IF_NOT(ck::IsValid(TargetEntity), TEXT("Invalid Camera Shake Target Entity!"))
         { return; }
 
         auto* TargetOwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(TargetEntity);
 
-        CK_ENSURE_IF_NOT(ck::IsValid(TargetOwningActor), TEXT("Camera Shake Targets an Entity [{}] that does NOT have an Actor!"), TargetEntity)
+        CK_ENSURE_IF_NOT(ck::IsValid(TargetOwningActor), TEXT("Camera Shake Targets Entity [{}] that does NOT have an Actor!"), TargetEntity)
         { return; }
 
         const auto& TargetPlayerController = Cast<APlayerController>(TargetOwningActor->GetInstigatorController());
 
         if (ck::Is_NOT_Valid(TargetPlayerController))
         {
-            camera::VeryVerbose(TEXT("Camera Shake Targets an Entity [{}] that is NO valid Player Controller!"), TargetEntity);
+            camera::VeryVerbose(TEXT("Camera Shake Targets Entity [{}] that is NO valid Player Controller!"), TargetEntity);
             return;
         }
 
@@ -66,7 +58,7 @@ namespace ck
 
         if (ck::Is_NOT_Valid(CameraManager))
         {
-            camera::VeryVerbose(TEXT("Camera Shake Targets an Entity [{}] with Player Controller [{}] but has NO Player Camera Manager!"), TargetEntity, TargetPlayerController);
+            camera::VeryVerbose(TEXT("Camera Shake Targets Entity [{}] with Player Controller [{}] but has NO Player Camera Manager!"), TargetEntity, TargetPlayerController);
             return;
         }
 
@@ -87,11 +79,6 @@ namespace ck
             const FCk_Request_CameraShake_PlayAtLocation& InRequest) const
         -> void
     {
-        const auto& WorldContextObject = InRequest.Get_WorldContextObject();
-
-        CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(WorldContextObject)
-        { return; }
-
         const auto& Params                 = InParams.Get_Params();
         const auto& CameraShake            = Params.Get_CameraShake();
         const auto& InnerRadius            = Params.Get_InnerRadius();
@@ -99,6 +86,10 @@ namespace ck
         const auto& FallOff                = Params.Get_Falloff();
         const auto& OrientTowardsEpicenter = Params.Get_OrientTowardsEpicenter();
         const auto& ShakeLocation          = InRequest.Get_Location();
+        const auto& WorldContextObject     = InRequest.Get_WorldContextObject();
+
+        CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(WorldContextObject)
+        { return; }
 
         camera::VeryVerbose(TEXT("Playing CameraShake [{}] at Location [{}]"), CameraShake, ShakeLocation);
 

@@ -9,8 +9,9 @@
 
 namespace ck
 {
-    class CKCAMERA_API FProcessor_CameraShake_HandleRequests : public TProcessor<
+    class CKCAMERA_API FProcessor_CameraShake_HandleRequests : public ck_exp::TProcessor<
             FProcessor_CameraShake_HandleRequests,
+            FCk_Handle_CameraShake,
             FFragment_CameraShake_Params,
             FFragment_CameraShake_Requests,
             CK_IGNORE_PENDING_KILL>
@@ -22,15 +23,11 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto DoTick(
-            TimeType InDeltaT) -> void;
-
-    public:
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_CameraShake_Params& InParams,
-            FFragment_CameraShake_Requests& InRequestsComp) const -> void;
+            const FFragment_CameraShake_Requests& InRequestsComp) const -> void;
 
     private:
         auto DoHandleRequest(

@@ -15,6 +15,7 @@ public class CkCamera : CkModuleRules
             "CoreUObject",
             "Engine",
             "GameplayTags",
+            "StructUtils",
 
             "CkCore",
             "CkEcs",

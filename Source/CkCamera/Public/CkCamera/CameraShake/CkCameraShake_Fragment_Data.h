@@ -3,12 +3,17 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Handle/CkHandle.h"
-
-#include "CkProvider/CkProvider_Data.h"
+#include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
 #include <GameplayTagContainer.h>
 
 #include "CkCameraShake_Fragment_Data.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
+struct CKCAMERA_API FCk_Handle_CameraShake : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_CameraShake); };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_CameraShake);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -22,17 +27,13 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FGameplayTag _CameraShakeID;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FCk_Handle _Target;
 
 public:
-    CK_PROPERTY_GET(_CameraShakeID);
     CK_PROPERTY_GET(_Target);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_CameraShake_PlayOnTarget, _CameraShakeID, _Target);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_CameraShake_PlayOnTarget, _Target);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -47,21 +48,17 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FGameplayTag _CameraShakeID;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FVector _Location = FVector::Zero();
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     TObjectPtr<UObject> _WorldContextObject;
 
 public:
-    CK_PROPERTY_GET(_CameraShakeID);
     CK_PROPERTY_GET(_Location);
     CK_PROPERTY_GET(_WorldContextObject);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_CameraShake_PlayAtLocation, _CameraShakeID, _Location, _WorldContextObject);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_CameraShake_PlayAtLocation, _Location, _WorldContextObject);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -76,7 +73,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FGameplayTag _ID;
+    FGameplayTag _Name;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     TSubclassOf<class UCameraShakeBase> _CameraShake;
@@ -101,7 +98,7 @@ private:
     float _Falloff = 1.0f;
 
 public:
-    CK_PROPERTY_GET(_ID);
+    CK_PROPERTY_GET(_Name);
     CK_PROPERTY_GET(_CameraShake);
     CK_PROPERTY(_Scale);
     CK_PROPERTY(_OrientTowardsEpicenter);
@@ -110,7 +107,7 @@ public:
     CK_PROPERTY(_Falloff);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_CameraShake_ParamsData, _ID, _CameraShake);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_CameraShake_ParamsData, _Name, _CameraShake);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -133,116 +130,6 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleCameraShake_ParamsData, _CameraShakeParams);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(Abstract, Blueprintable, BlueprintType, EditInlineNew)
-class CKCAMERA_API UCk_Provider_CameraShake_ParamsData_PDA : public UCk_Provider_PDA
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_Provider_CameraShake_ParamsData_PDA);
-
-public:
-    UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
-              Category = "Ck|Provider|CameraShake")
-    FCk_Fragment_CameraShake_ParamsData
-    Get_Value(
-        FCk_Handle InHandle) const;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(NotBlueprintable)
-class CKCAMERA_API UCk_Provider_CameraShake_ParamsData_Literal_PDA : public UCk_Provider_CameraShake_ParamsData_PDA
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_Provider_CameraShake_ParamsData_Literal_PDA);
-
-private:
-    auto Get_Value_Implementation(
-        FCk_Handle InHandle) const -> FCk_Fragment_CameraShake_ParamsData override;
-
-private:
-    UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
-    FCk_Fragment_CameraShake_ParamsData _Value;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKCAMERA_API FCk_Provider_CameraShake_ParamsData
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Provider_CameraShake_ParamsData);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCk_Provider_CameraShake_ParamsData_PDA> _Provider;
-
-public:
-    CK_PROPERTY_GET(_Provider);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(Abstract, Blueprintable, BlueprintType, EditInlineNew)
-class CKCAMERA_API UCk_Provider_MultipleCameraShake_ParamsData_PDA : public UCk_Provider_PDA
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_Provider_MultipleCameraShake_ParamsData_PDA);
-
-public:
-    UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
-              Category = "Ck|Provider|CameraShake")
-    FCk_Fragment_MultipleCameraShake_ParamsData
-    Get_Value(
-        FCk_Handle InHandle) const;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(NotBlueprintable)
-class CKCAMERA_API UCk_Provider_MultipleCameraShake_ParamsData_Literal_PDA : public UCk_Provider_MultipleCameraShake_ParamsData_PDA
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_Provider_MultipleCameraShake_ParamsData_Literal_PDA);
-
-private:
-    auto Get_Value_Implementation(
-        FCk_Handle InHandle) const -> FCk_Fragment_MultipleCameraShake_ParamsData override;
-
-private:
-    UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
-    FCk_Fragment_MultipleCameraShake_ParamsData _Value;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKCAMERA_API FCk_Provider_MultipleCameraShake_ParamsData
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Provider_MultipleCameraShake_ParamsData);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCk_Provider_MultipleCameraShake_ParamsData_PDA> _Provider;
-
-public:
-    CK_PROPERTY_GET(_Provider);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
