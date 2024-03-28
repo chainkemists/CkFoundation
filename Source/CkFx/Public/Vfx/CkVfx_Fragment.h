@@ -58,7 +58,7 @@ namespace ck
         friend class UCk_Utils_Vfx_UE;
 
     private:
-        // Add your requests here
+        // TODO: Add various requests here
         int32 _DummyProperty = 0;
     };
 

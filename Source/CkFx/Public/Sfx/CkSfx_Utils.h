@@ -84,7 +84,12 @@ public:
         FGameplayTag InSfxName);
 
 public:
-    // TODO: Add getters
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Sfx",
+              DisplayName="[Ck][Sfx] Get Sound Cue")
+    static USoundBase*
+    Get_SoundCue(
+        const FCk_Handle_Sfx& InSfxHandle);
 
 public:
     UFUNCTION(BlueprintCallable,

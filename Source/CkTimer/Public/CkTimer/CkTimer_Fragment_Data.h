@@ -118,7 +118,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, TitleProperty = "_TimerName"))
     TArray<FCk_Fragment_Timer_ParamsData> _TimerParams;
 
 public:
