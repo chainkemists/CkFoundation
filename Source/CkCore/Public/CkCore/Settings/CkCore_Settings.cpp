@@ -38,4 +38,12 @@ auto
 #endif
 }
 
+auto
+    UCk_Utils_Core_UserSettings_UE::
+    Get_EnsureBreakInBlueprintsPolicy()
+    -> ECk_EnsureBreakInBlueprints_Policy
+{
+    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Core_UserSettings_UE>()->Get_EnsureBreakInBlueprintsPolicy();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
