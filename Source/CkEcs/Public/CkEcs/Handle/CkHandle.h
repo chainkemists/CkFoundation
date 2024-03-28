@@ -199,8 +199,7 @@ public:
 
 #if WITH_EDITORONLY_DATA
 private:
-    UPROPERTY()
-    TObjectPtr<class UCk_Handle_FragmentsDebug> _Fragments = nullptr;
+    TWeakObjectPtr<class UCk_Handle_FragmentsDebug> _Fragments = nullptr;
 #endif
 };
 
