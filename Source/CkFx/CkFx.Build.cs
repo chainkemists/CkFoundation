@@ -1,0 +1,32 @@
+using System.IO;
+using UnrealBuildTool;
+
+public class CkFx : CkModuleRules
+{
+    public CkFx(ReadOnlyTargetRules Target) : base(Target)
+    {
+        PrivateIncludePaths.AddRange(new string[] {
+            // ... add other private include paths required here ...
+        });
+
+        PublicDependencyModuleNames.AddRange(new string[]
+        {
+            "Core",
+            "CoreUObject",
+            "Engine",
+            "StructUtils",
+            "GameplayTags",
+            "Niagara",
+
+            "CkCore",
+            "CkEcs",
+            "CkEcsBasics",
+            "CkLabel",
+            "CkLog",
+            "CkNet",
+            "CkRecord",
+            "CkSettings",
+            "CkSignal",
+        });
+    }
+}
