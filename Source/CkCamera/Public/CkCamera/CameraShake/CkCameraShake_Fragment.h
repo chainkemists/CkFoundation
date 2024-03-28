@@ -50,15 +50,15 @@ namespace ck
         using PlayRequests = TArray<std::variant<PlayOnTargetRequestType, PlayAtLocationRequestType>>;
 
     private:
-        PlayRequests _PlayRequests;
+        PlayRequests _Requests;
 
     public:
-        CK_PROPERTY_GET(_PlayRequests);
+        CK_PROPERTY_GET(_Requests);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfCameraShakes, FCk_Handle);
+    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfCameraShakes, FCk_Handle_CameraShake);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
