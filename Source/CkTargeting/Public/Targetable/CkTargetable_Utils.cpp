@@ -43,10 +43,10 @@ auto
 auto
     UCk_Utils_Targetable_UE::
     Has_Any(
-        const FCk_Handle& InAttributeOwnerEntity)
+        const FCk_Handle& InHandle)
     -> bool
 {
-    return RecordOfTargetables_Utils::Has(InAttributeOwnerEntity);
+    return RecordOfTargetables_Utils::Has(InHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -91,9 +91,6 @@ auto
         FGameplayTag InTargetableName)
     -> FCk_Handle_Targetable
 {
-    if (NOT RecordOfTargetables_Utils::Has(InTargetableOwnerEntity))
-    { return {}; }
-
     return RecordOfTargetables_Utils::Get_ValidEntry_If(InTargetableOwnerEntity, ck::algo::MatchesGameplayLabelExact{InTargetableName});
 }
 
