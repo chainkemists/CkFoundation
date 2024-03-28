@@ -17,6 +17,7 @@ namespace ck
         {
             UUtils_Signal_OnSubstepFirstUpdate::Broadcast(InHandle, MakePayload(InHandle, InDeltaT));
             InHandle.Remove<FTag_Substep_FirstUpdate>();
+            InCurrent._DeltaOverflowFromLastFrame = FCk_Time::ZeroSecond();
         }
 
         auto AdjustedTickRate = InDeltaT + InCurrent.Get_DeltaOverflowFromLastFrame();
