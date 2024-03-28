@@ -35,6 +35,16 @@ enum class ECk_EnsureDetails_Policy : uint8
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_EnsureBreak_Policy : uint8
+{
+    AlwaysBreak,
+    // Unreal 'Break on Exception' is disabled by default in Editor Settings
+    UseUnrealExceptionBehavior
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(meta = (DisplayName = "Core"))
 class CKCORE_API UCk_Core_ProjectSettings_UE : public UCk_Plugin_ProjectSettings_UE
 {
@@ -67,10 +77,15 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_EnsureDetails_Policy _EnsureDetailsPolicy = ECk_EnsureDetails_Policy::MessageAndStackTrace;
 
+    UPROPERTY(Config, VisibleAnywhere, BlueprintReadOnly, Category = "Ensures",
+              meta = (AllowPrivateAccess = true))
+    ECk_EnsureBreak_Policy _EnsureBreakPolicy = ECk_EnsureBreak_Policy::AlwaysBreak;
+
 public:
     CK_PROPERTY_GET(_DefaultDebugNameVerbosity);
     CK_PROPERTY_GET(_EnsureDisplayPolicy);
     CK_PROPERTY_GET(_EnsureDetailsPolicy);
+    CK_PROPERTY_GET(_EnsureBreakPolicy);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -88,6 +103,7 @@ class CKCORE_API UCk_Utils_Core_UserSettings_UE
 {
 public:
     static auto Get_DefaultDebugNameVerbosity() -> ECk_DebugNameVerbosity_Policy;
+    static auto Get_EnsureBreakPolicy() -> ECk_EnsureBreak_Policy;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

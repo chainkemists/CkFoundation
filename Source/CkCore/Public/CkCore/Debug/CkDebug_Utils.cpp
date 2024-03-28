@@ -247,7 +247,11 @@ auto
     if (ScriptStack.IsEmpty())
     { return; }
 
-    const auto ExceptionInfo = FBlueprintExceptionInfo{EBlueprintExceptionType::AccessViolation, InDescription};
+    const auto ExceptionType = UCk_Utils_Core_UserSettings_UE::Get_EnsureBreakPolicy() == ECk_EnsureBreak_Policy::AlwaysBreak
+        ? EBlueprintExceptionType::Breakpoint
+        : EBlueprintExceptionType::AccessViolation;
+
+    const auto ExceptionInfo = FBlueprintExceptionInfo{ExceptionType, InDescription};
     FBlueprintCoreDelegates::ThrowScriptException(Context, *ScriptStack.Last(), ExceptionInfo);
 #endif
 }

@@ -38,4 +38,12 @@ auto
 #endif
 }
 
+auto
+    UCk_Utils_Core_UserSettings_UE::
+    Get_EnsureBreakPolicy()
+    -> ECk_EnsureBreak_Policy
+{
+    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Core_UserSettings_UE>()->Get_EnsureBreakPolicy();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
