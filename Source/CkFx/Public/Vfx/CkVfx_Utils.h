@@ -10,6 +10,8 @@
 
 #include "CkSignal/CkSignal_Fragment_Data.h"
 
+#include <NiagaraSystem.h>
+
 #include "CkVfx_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -84,7 +86,19 @@ public:
         FGameplayTag InVfxName);
 
 public:
-    // TODO: Add getters
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Vfx",
+              DisplayName="[Ck][Vfx] Get Particle System")
+    static UNiagaraSystem*
+    Get_ParticleSystem(
+        const FCk_Handle_Vfx& InVfxHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Vfx",
+              DisplayName="[Ck][Vfx] Get Attachment Settings")
+    static FCk_Vfx_AttachmentSettings
+    Get_AttachmentSettings(
+        const FCk_Handle_Vfx& InVfxHandle);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -100,6 +114,31 @@ public:
     ForEach_Vfx(
         FCk_Handle& InVfxOwnerEntity,
         const TFunction<void(FCk_Handle_Vfx)>& InFunc) -> void;
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              DisplayName="[Ck][Vfx] Request Play Attached",
+              meta=(AutoCreateRefTerm="InDelegate, InOptionalPayload"))
+    static FCk_Handle_Vfx
+    Request_PlayAttached(
+        UPARAM(ref) FCk_Handle_Vfx& InVfxHandle,
+        const FCk_Request_Vfx_PlayAttached& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              DisplayName="[Ck][Vfx] Request Play At Location",
+              meta=(AutoCreateRefTerm="InDelegate, InOptionalPayload"))
+    static FCk_Handle_Vfx
+    Request_PlayAtLocation(
+        UPARAM(ref) FCk_Handle_Vfx& InVfxHandle,
+        const FCk_Request_Vfx_PlayAtLocation& InRequest);
+
+public:
+    static auto
+    DoSet_NiagaraInstanceParameter(
+        UNiagaraComponent* InVfx,
+        const FCk_Vfx_InstanceParameterSettings& InInstanceParameterSettings) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
