@@ -7,123 +7,117 @@
 auto
     UCk_Utils_CameraShake_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_CameraShake_ParamsData& InParams)
-    -> void
+    -> FCk_Handle_CameraShake
 {
-    auto NewCameraShakeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InCameraShakeEntity)
-    {
-        InCameraShakeEntity.Add<ck::FFragment_CameraShake_Params>(InParams);
+     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
+     {
+        UCk_Utils_GameplayLabel_UE::Add(InNewEntity, InParams.Get_Name());
 
-        UCk_Utils_GameplayLabel_UE::Add(InCameraShakeEntity, InParams.Get_ID());
+        InNewEntity.Add<ck::FFragment_CameraShake_Params>(InParams);
     });
+
+    auto NewCameraShakeEntity = Cast(NewEntity);
 
     RecordOfCameraShakes_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
     RecordOfCameraShakes_Utils::Request_Connect(InHandle, NewCameraShakeEntity);
+
+    return NewCameraShakeEntity;
 }
 
 auto
     UCk_Utils_CameraShake_UE::
     AddMultiple(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_MultipleCameraShake_ParamsData& InParams)
-    -> void
+    -> TArray<FCk_Handle_CameraShake>
 {
-    for (const auto& params : InParams.Get_CameraShakeParams())
+    return ck::algo::Transform<TArray<FCk_Handle_CameraShake>>(InParams.Get_CameraShakeParams(),
+    [&](const FCk_Fragment_CameraShake_ParamsData& InCameraShakeParams)
     {
-        Add(InHandle, params);
-    }
-}
-
-auto
-    UCk_Utils_CameraShake_UE::
-    Has(
-        FCk_Handle InCameraShakeOwnerEntity,
-        FGameplayTag InCameraShakeName)
-    -> bool
-{
-    const auto& CameraShakeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_CameraShake_UE,
-        RecordOfCameraShakes_Utils>(InCameraShakeOwnerEntity, InCameraShakeName);
-
-    return ck::IsValid(CameraShakeEntity);
+        return Add(InHandle, InCameraShakeParams);
+    });
 }
 
 auto
     UCk_Utils_CameraShake_UE::
     Has_Any(
-        FCk_Handle InCameraShakeOwnerEntity)
+        const FCk_Handle& InHandle)
     -> bool
 {
-    return RecordOfCameraShakes_Utils::Has(InCameraShakeOwnerEntity);
+    return RecordOfCameraShakes_Utils::Has(InHandle);
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(CameraShake, UCk_Utils_CameraShake_UE, FCk_Handle_CameraShake, ck::FFragment_CameraShake_Params);
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_CameraShake_UE::
-    Ensure(
-        FCk_Handle InCameraShakeOwnerEntity,
+    TryGet_CameraShake(
+        const FCk_Handle& InCameraShakeOwnerEntity,
         FGameplayTag InCameraShakeName)
-    -> bool
+    -> FCk_Handle_CameraShake
 {
-    CK_ENSURE_IF_NOT(Has(InCameraShakeOwnerEntity, InCameraShakeName), TEXT("Handle [{}] does NOT have CameraShake [{}]"), InCameraShakeOwnerEntity, InCameraShakeName)
-    { return false; }
-
-    return true;
+    return RecordOfCameraShakes_Utils::Get_ValidEntry_If(InCameraShakeOwnerEntity, ck::algo::MatchesGameplayLabelExact{InCameraShakeName});
 }
 
 auto
     UCk_Utils_CameraShake_UE::
-    Ensure_Any(
-        FCk_Handle InCameraShakeOwnerEntity)
-    -> bool
+    ForEach_CameraShake(
+        FCk_Handle& InCameraShakeOwnerEntity,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate)
+    -> TArray<FCk_Handle_CameraShake>
 {
-    CK_ENSURE_IF_NOT(Has_Any(InCameraShakeOwnerEntity), TEXT("Handle [{}] does NOT have any CameraShake [{}]"), InCameraShakeOwnerEntity)
-    { return false; }
+    auto CameraShakes = TArray<FCk_Handle_CameraShake>{};
 
-    return true;
+    ForEach_CameraShake(InCameraShakeOwnerEntity, [&](FCk_Handle_CameraShake InCameraShake)
+    {
+        CameraShakes.Emplace(InCameraShake);
+
+        std::ignore = InDelegate.ExecuteIfBound(InCameraShake, InOptionalPayload);
+    });
+
+    return CameraShakes;
+}
+
+auto
+    UCk_Utils_CameraShake_UE::
+    ForEach_CameraShake(
+        FCk_Handle& InCameraShakeOwnerEntity,
+        const TFunction<void(FCk_Handle_CameraShake)>& InFunc)
+    -> void
+{
+    RecordOfCameraShakes_Utils::ForEach_ValidEntry
+    (
+        InCameraShakeOwnerEntity,
+        InFunc,
+        ECk_Record_ForEach_Policy::IgnoreRecordMissing
+    );
 }
 
 auto
     UCk_Utils_CameraShake_UE::
     Request_PlayOnTarget(
-        FCk_Handle InCameraShakeOwnerEntity,
+        UPARAM(ref) FCk_Handle_CameraShake& InCameraShakeHandle,
         const FCk_Request_CameraShake_PlayOnTarget& InRequest)
     -> void
 {
-    if (NOT Ensure(InCameraShakeOwnerEntity, InRequest.Get_CameraShakeID()))
-    { return; }
-
-    auto CameraShakeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_CameraShake_UE,
-        RecordOfCameraShakes_Utils>(InCameraShakeOwnerEntity, InRequest.Get_CameraShakeID());
-
-    CameraShakeEntity.AddOrGet<ck::FFragment_CameraShake_Requests>()._PlayRequests.Emplace(InRequest);
+    InCameraShakeHandle.AddOrGet<ck::FFragment_CameraShake_Requests>()._Requests.Emplace(InRequest);
 }
 
 auto
     UCk_Utils_CameraShake_UE::
     Request_PlayAtLocation(
-        FCk_Handle InCameraShakeOwnerEntity,
+        UPARAM(ref) FCk_Handle_CameraShake& InCameraShakeHandle,
         const FCk_Request_CameraShake_PlayAtLocation& InRequest)
     -> void
 {
-    if (NOT Ensure(InCameraShakeOwnerEntity, InRequest.Get_CameraShakeID()))
-    { return; }
-
-    auto CameraShakeEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_CameraShake_UE,
-        RecordOfCameraShakes_Utils>(InCameraShakeOwnerEntity, InRequest.Get_CameraShakeID());
-
-    CameraShakeEntity.AddOrGet<ck::FFragment_CameraShake_Requests>()._PlayRequests.Emplace(InRequest);
-}
-
-auto
-    UCk_Utils_CameraShake_UE::
-    Has(
-        FCk_Handle InHandle)
-    -> bool
-{
-    return InHandle.Has_All<ck::FFragment_CameraShake_Params>();
+    InCameraShakeHandle.AddOrGet<ck::FFragment_CameraShake_Requests>()._Requests.Emplace(InRequest);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
