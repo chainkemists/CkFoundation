@@ -19,7 +19,7 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Targetable);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType, meta = (HasNativeMake))
+USTRUCT(BlueprintType)
 struct CKTARGETING_API FCk_Targetable_BasicInfo
 {
     GENERATED_BODY()
