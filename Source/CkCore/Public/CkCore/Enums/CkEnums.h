@@ -124,6 +124,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ScaledUnscaled);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_Recursion : uint8
+{
+    NotRecursive,
+    Recursive
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Recursion);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_SucceededFailed : uint8
 {
     Succeeded,
