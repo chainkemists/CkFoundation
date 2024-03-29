@@ -44,6 +44,10 @@ public:
 protected:
     auto OnUnregister() -> void override;
 
+public:
+    auto
+    PostLoad() -> void override;
+
 protected:
     auto Do_Construct_Implementation(
         const FCk_ActorComponent_DoConstruct_Params& InParams) -> void override;
@@ -62,7 +66,10 @@ public:
     UPROPERTY(EditDefaultsOnly)
     ECk_Replication _Replication = ECk_Replication::Replicates;
 
-    UPROPERTY(EditDefaultsOnly, Instanced)
+    UPROPERTY(EditDefaultsOnly)
+    TSubclassOf<UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
+
+    UPROPERTY(Instanced)
     TObjectPtr<class UCk_EntityBridge_Config_WithActor_PDA> EntityConfig;
 
 private:

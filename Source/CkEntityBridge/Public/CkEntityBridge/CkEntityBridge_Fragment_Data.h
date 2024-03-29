@@ -81,6 +81,9 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
               meta = (AllowPrivateAccess = true, ExposeOnSpawn = true))
     TObjectPtr<class UCk_Entity_ConstructionScript_WithTransform_PDA> _EntityConstructionScript;
+
+public:
+    CK_PROPERTY_GET(_EntityConstructionScript);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

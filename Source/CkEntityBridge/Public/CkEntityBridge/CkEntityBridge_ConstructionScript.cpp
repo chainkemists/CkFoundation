@@ -74,6 +74,25 @@ auto
 
 auto
     UCk_EntityBridge_ActorComponent_UE::
+    PostLoad()
+    -> void
+{
+    Super::PostLoad();
+
+    if (IsTemplate())
+    { return; }
+
+    if (ck::Is_NOT_Valid(EntityConfig))
+    { return; }
+
+    _ConstructionScript = EntityConfig->Get_EntityConstructionScript()->GetClass();
+    EntityConfig = nullptr;
+
+    ck::entity_bridge::Log(TEXT("[MIGRATE] EntityConfig with ConstructionScript [{}] migrated for [{}]"), _ConstructionScript, GetOwner());
+}
+
+auto
+    UCk_EntityBridge_ActorComponent_UE::
     Do_Construct_Implementation(
         const FCk_ActorComponent_DoConstruct_Params& InParams)
     -> void
@@ -89,13 +108,21 @@ auto
 
     Super::Do_Construct_Implementation(InParams);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(EntityConfig),
-        TEXT("EntityConfig is [{}]. Did you forget to set the default value in the component?.[{}]"),
-        EntityConfig, ck::Context(this))
+    if (ck::Is_NOT_Valid(_ConstructionScript) && ck::IsValid(EntityConfig))
+    {
+        _ConstructionScript = EntityConfig->Get_EntityConstructionScript()->GetClass();
+        EntityConfig = nullptr;
+    }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(_ConstructionScript),
+        TEXT("ConstructionScript is [{}]. Did you forget to set the default value in the component?.[{}]"),
+        _ConstructionScript, ck::Context(this))
     { return; }
 
     CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(this)
     { return; }
+
+    auto ConstructionScript = _ConstructionScript->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>();
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -164,16 +191,16 @@ auto
         // --------------------------------------------------------------------------------------------------------------------
         // Build Entity
 
-        const auto CsWithTransform = Cast<UCk_Entity_ConstructionScript_WithTransform_PDA>(EntityConfig->Get_EntityConstructionScript());
+        const auto CsWithTransform = Cast<UCk_Entity_ConstructionScript_WithTransform_PDA>(ConstructionScript);
 
         CK_ENSURE_IF_NOT(ck::IsValid(CsWithTransform), TEXT("Entity Construction Script [{}] for Actor [{}] is NOT one with Transform. "
-            "Entity Construction Scripts that have an Actor attached MUST use [{}]."), EntityConfig->Get_EntityConstructionScript(), OwningActor,
+            "Entity Construction Scripts that have an Actor attached MUST use [{}]."), ConstructionScript, OwningActor,
             ck::TypeToString<UCk_Entity_ConstructionScript_WithTransform_PDA>)
         { return; }
 
         CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
 
-        EntityConfig->Build(Entity, Get_EntityConstructionParamsToInject());
+        ConstructionScript->Construct(Entity, Get_EntityConstructionParamsToInject());
 
         if (OwningActor->GetIsReplicated() && _Replication == ECk_Replication::Replicates)
         {
@@ -195,7 +222,7 @@ auto
         if (OwningActor->bIsEditorOnlyActor)
         { return; }
 
-        const auto NewEntity = [&]() -> FCk_Handle
+        auto NewEntity = [&]() -> FCk_Handle
         {
             switch(_Replication)
             {
@@ -294,16 +321,16 @@ auto
 
         // --------------------------------------------------------------------------------------------------------------------
 
-        const auto CsWithTransform = Cast<UCk_Entity_ConstructionScript_WithTransform_PDA>(EntityConfig->Get_EntityConstructionScript());
+        const auto CsWithTransform = Cast<UCk_Entity_ConstructionScript_WithTransform_PDA>(ConstructionScript);
 
         CK_ENSURE_IF_NOT(ck::IsValid(CsWithTransform), TEXT("Entity Construction Script [{}] for Actor [{}] is NOT one with Transform. "
-            "Entity Construction Scripts that have an Actor attached MUST use [{}]."), EntityConfig->Get_EntityConstructionScript(), OwningActor,
+            "Entity Construction Scripts that have an Actor attached MUST use [{}]."), ConstructionScript, OwningActor,
             ck::TypeToString<UCk_Entity_ConstructionScript_WithTransform_PDA>)
         { return; }
 
         CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
 
-        EntityConfig->Build(NewEntity, Get_EntityConstructionParamsToInject());
+        ConstructionScript->Construct(NewEntity, Get_EntityConstructionParamsToInject());
 
         // TODO: this is a HACK due to the way TryInvoke_OnReplicationComplete works. The function assumes that it will be called twice.
         // Once by the EntityBridge and once by the ReplicationDriver. However, if we don't replicate at all, then there is no ReplicationDriver
@@ -316,7 +343,7 @@ auto
         if (OwningActor->bIsEditorOnlyActor)
         { return; }
 
-        const auto NewEntity = [&]() -> FCk_Handle
+        auto NewEntity = [&]() -> FCk_Handle
         {
             const auto& TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(GetWorld());
 
@@ -359,16 +386,16 @@ auto
 
         // --------------------------------------------------------------------------------------------------------------------
 
-        const auto CsWithTransform = Cast<UCk_Entity_ConstructionScript_WithTransform_PDA>(EntityConfig->Get_EntityConstructionScript());
+        const auto CsWithTransform = Cast<UCk_Entity_ConstructionScript_WithTransform_PDA>(ConstructionScript);
 
         CK_ENSURE_IF_NOT(ck::IsValid(CsWithTransform), TEXT("Entity Construction Script [{}] for Actor [{}] is NOT one with Transform. "
-            "Entity Construction Scripts that have an Actor attached MUST use [{}]."), EntityConfig->Get_EntityConstructionScript(), OwningActor,
+            "Entity Construction Scripts that have an Actor attached MUST use [{}]."), ConstructionScript, OwningActor,
             ck::TypeToString<UCk_Entity_ConstructionScript_WithTransform_PDA>)
         { return; }
 
         CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
 
-        EntityConfig->Build(NewEntity, Get_EntityConstructionParamsToInject());
+        ConstructionScript->Construct(NewEntity, Get_EntityConstructionParamsToInject());
 
         // TODO: this is a HACK due to the way TryInvoke_OnReplicationComplete works. The function assumes that it will be called twice.
         // Once by the EntityBridge and once by the ReplicationDriver. However, if we don't replicate at all, then there is no ReplicationDriver
