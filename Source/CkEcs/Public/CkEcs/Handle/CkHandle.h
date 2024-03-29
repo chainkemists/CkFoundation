@@ -199,6 +199,7 @@ public:
 
 #if WITH_EDITORONLY_DATA
 private:
+    UPROPERTY(Transient) // needs to be a UPROPERTY so that it shows up when debugging Blueprints
     TWeakObjectPtr<class UCk_Handle_FragmentsDebug> _Fragments = nullptr;
 #endif
 };
