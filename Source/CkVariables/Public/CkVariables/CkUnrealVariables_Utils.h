@@ -24,7 +24,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Bool] Get Value (GameplayTag)",
+              DisplayName="[Ck][Bool] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Bool")
     static bool
     Get(
@@ -33,7 +33,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Bool] Set Value (GameplayTag)",
+              DisplayName="[Ck][Bool] Set Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Bool")
     static void
     Set(
@@ -42,7 +42,7 @@ public:
         bool InValue);
 
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Bool] Get Value (Name)",
+              DisplayName="[Ck][Bool] Get Value (By Name)",
               Category = "Ck|Utils|Variables|Bool")
     static bool
     Get_ByName(
@@ -51,7 +51,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Bool] Set Value (Name)",
+              DisplayName="[Ck][Bool] Set Value (By Name)",
               Category = "Ck|Utils|Variables|Bool")
     static void
     Set_ByName(
@@ -84,7 +84,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Int32] Get Value (GameplayTag)",
+              DisplayName="[Ck][Int32] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Int32")
     static int32
     Get(
@@ -93,7 +93,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Int32] Set Value (GameplayTag)",
+              DisplayName="[Ck][Int32] Set Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Int32")
     static void
     Set(
@@ -102,7 +102,7 @@ public:
         int32 InValue);
 
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Int32] Get Value (Name)",
+              DisplayName="[Ck][Int32] Get Value (By Name)",
               Category = "Ck|Utils|Variables|Int32")
     static int32
     Get_ByName(
@@ -111,7 +111,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Int32] Set Value (Name)",
+              DisplayName="[Ck][Int32] Set Value (By Name)",
               Category = "Ck|Utils|Variables|Int32")
     static void
     Set_ByName(
@@ -144,7 +144,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Int64] Get Value (GameplayTag)",
+              DisplayName="[Ck][Int64] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Int64")
     static int64
     Get(
@@ -153,7 +153,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Int64] Set Value (GameplayTag)",
+              DisplayName="[Ck][Int64] Set Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Int64")
     static void
     Set(
@@ -162,7 +162,7 @@ public:
         int64 InValue);
 
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Int64] Get Value (Name)",
+              DisplayName="[Ck][Int64] Get Value (By Name)",
               Category = "Ck|Utils|Variables|Int64")
     static int64
     Get_ByName(
@@ -171,7 +171,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Int64] Set Value (Name)",
+              DisplayName="[Ck][Int64] Set Value (By Name)",
               Category = "Ck|Utils|Variables|Int64")
     static void
     Set_ByName(
@@ -204,7 +204,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Float] Get Value (GameplayTag)",
+              DisplayName="[Ck][Float] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Float")
     static float
     Get(
@@ -213,7 +213,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Float] Set Value (GameplayTag)",
+              DisplayName="[Ck][Float] Set Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Float")
     static void
     Set(
@@ -222,7 +222,7 @@ public:
         float InValue);
 
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Float] Get Value (Name)",
+              DisplayName="[Ck][Float] Get Value (By Name)",
               Category = "Ck|Utils|Variables|Float")
     static float
     Get_ByName(
@@ -231,7 +231,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Float] Set Value (Name)",
+              DisplayName="[Ck][Float] Set Value (By Name)",
               Category = "Ck|Utils|Variables|Float")
     static void
     Set_ByName(
@@ -264,7 +264,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Name] Get Value (GameplayTag)",
+              DisplayName="[Ck][Name] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Name")
     static FName
     Get(
@@ -273,7 +273,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Name] Set Value (GameplayTag)",
+              DisplayName="[Ck][Name] Set Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Name")
     static void
     Set(
@@ -282,7 +282,7 @@ public:
         FName InValue);
 
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Name] Get Value (Name)",
+              DisplayName="[Ck][Name] Get Value (By Name)",
               Category = "Ck|Utils|Variables|Name")
     static FName
     Get_ByName(
@@ -291,7 +291,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Name] Set Value (Name)",
+              DisplayName="[Ck][Name] Set Value (By Name)",
               Category = "Ck|Utils|Variables|Name")
     static void
     Set_ByName(
@@ -324,7 +324,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][String] Get Value (GameplayTag)",
+              DisplayName="[Ck][String] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|String")
     static const FString&
     Get(
@@ -333,7 +333,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][String] Set Value (GameplayTag)",
+              DisplayName="[Ck][String] Set Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|String")
     static void
     Set(
@@ -342,7 +342,7 @@ public:
         const FString& InValue);
 
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][String] Get Value (Name)",
+              DisplayName="[Ck][String] Get Value (By Name)",
               Category = "Ck|Utils|Variables|String")
     static const FString&
     Get_ByName(
@@ -351,7 +351,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][String] Set Value (Name)",
+              DisplayName="[Ck][String] Set Value (By Name)",
               Category = "Ck|Utils|Variables|String")
     static void
     Set_ByName(
@@ -384,7 +384,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Text] Get Value (GameplayTag)",
+              DisplayName="[Ck][Text] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Text")
     static FText
     Get(
@@ -393,7 +393,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Text] Set Value (GameplayTag)",
+              DisplayName="[Ck][Text] Set Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Text")
     static void
     Set(
@@ -402,7 +402,7 @@ public:
         FText InValue);
 
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Text] Get Value (Name)",
+              DisplayName="[Ck][Text] Get Value (By Name)",
               Category = "Ck|Utils|Variables|Text")
     static FText
     Get_ByName(
@@ -411,7 +411,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Text] Set Value (Name)",
+              DisplayName="[Ck][Text] Set Value (By Name)",
               Category = "Ck|Utils|Variables|Text")
     static void
     Set_ByName(
@@ -444,7 +444,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Vec3] Get Value (GameplayTag)",
+              DisplayName="[Ck][Vec3] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Vec3")
     static FVector
     Get(
@@ -453,7 +453,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Vec3] Set Value (GameplayTag)",
+              DisplayName="[Ck][Vec3] Set Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Vec3")
     static void
     Set(
@@ -462,7 +462,7 @@ public:
         FVector InValue);
 
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Vec3] Get Value (Name)",
+              DisplayName="[Ck][Vec3] Get Value (By Name)",
               Category = "Ck|Utils|Variables|Vec3")
     static FVector
     Get_ByName(
@@ -471,7 +471,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Vec3] Set Value (Name)",
+              DisplayName="[Ck][Vec3] Set Value (By Name)",
               Category = "Ck|Utils|Variables|Vec3")
     static void
     Set_ByName(
@@ -504,7 +504,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Vec2] Get Value (GameplayTag)",
+              DisplayName="[Ck][Vec2] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Vec2")
     static FVector2D
     Get(
@@ -513,7 +513,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Vec2] Set Value (GameplayTag)",
+              DisplayName="[Ck][Vec2] Set Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Vec2")
     static void
     Set(
@@ -522,7 +522,7 @@ public:
         FVector2D InValue);
 
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Vec2] Get Value (Name)",
+              DisplayName="[Ck][Vec2] Get Value (By Name)",
               Category = "Ck|Utils|Variables|Vec2")
     static FVector2D
     Get_ByName(
@@ -531,7 +531,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Vec2] Set Value (Name)",
+              DisplayName="[Ck][Vec2] Set Value (By Name)",
               Category = "Ck|Utils|Variables|Vec2")
     static void
     Set_ByName(
@@ -564,7 +564,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Rotator] Get Value (GameplayTag)",
+              DisplayName="[Ck][Rotator] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Rotator")
     static FRotator
     Get(
@@ -573,7 +573,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Rotator] Set Value (GameplayTag)",
+              DisplayName="[Ck][Rotator] Set Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Rotator")
     static void
     Set(
@@ -582,7 +582,7 @@ public:
         FRotator InValue);
 
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Rotator] Get Value (Name)",
+              DisplayName="[Ck][Rotator] Get Value (By Name)",
               Category = "Ck|Utils|Variables|Rotator")
     static FRotator
     Get_ByName(
@@ -591,7 +591,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Rotator] Set Value (Name)",
+              DisplayName="[Ck][Rotator] Set Value (By Name)",
               Category = "Ck|Utils|Variables|Rotator")
     static void
     Set_ByName(
@@ -624,7 +624,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Transform] Get Value (GameplayTag)",
+              DisplayName="[Ck][Transform] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Transform")
     static const FTransform&
     Get(
@@ -633,7 +633,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Transform] Set Value (GameplayTag)",
+              DisplayName="[Ck][Transform] Set Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Transform")
     static void
     Set(
@@ -642,7 +642,7 @@ public:
         const FTransform& InValue);
 
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Transform] Get Value (Name)",
+              DisplayName="[Ck][Transform] Get Value (By Name)",
               Category = "Ck|Utils|Variables|Transform")
     static const FTransform&
     Get_ByName(
@@ -651,7 +651,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][Transform] Set Value (Name)",
+              DisplayName="[Ck][Transform] Set Value (By Name)",
               Category = "Ck|Utils|Variables|Transform")
     static void
     Set_ByName(
@@ -683,42 +683,6 @@ public:
     using UtilsType = ck::TUtils_Variables<FragmentType>;
 
 public:
-    UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][InstancedStruct] Get Value (GameplayTag)",
-              Category = "Ck|Utils|Variables|InstancedStruct")
-    static const FInstancedStruct&
-    Get(
-        FCk_Handle InHandle,
-        FGameplayTag InVariableName,
-        ECk_SucceededFailed& OutSuccessFail);
-
-    UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][InstancedStruct] Set Value (GameplayTag)",
-              Category = "Ck|Utils|Variables|InstancedStruct")
-    static void
-    Set(
-        FCk_Handle InHandle,
-        FGameplayTag InVariableName,
-        const FInstancedStruct& InValue);
-
-    UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][InstancedStruct] Get Value (Name)",
-              Category = "Ck|Utils|Variables|InstancedStruct")
-    static const FInstancedStruct&
-    Get_ByName(
-        const FCk_Handle& InHandle,
-        FName InVariableName,
-        ECk_SucceededFailed& OutSuccessFail);
-
-    UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][InstancedStruct] Set Value (Name)",
-              Category = "Ck|Utils|Variables|InstancedStruct")
-    static void
-    Set_ByName(
-        UPARAM(ref) FCk_Handle& InHandle,
-        FName InVariableName,
-        const FInstancedStruct& InValue);
-
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][InstancedStruct] Get All Variables",
               Category = "Ck|Utils|Variables|InstancedStruct",
@@ -726,6 +690,86 @@ public:
     static const TMap<FName, FInstancedStruct>&
     Get_All(
         const FCk_Handle& InHandle);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              CustomThunk,
+              DisplayName="[Ck][InstancedStruct] Set Value (By GameplayTag)",
+              Category = "Ck|Utils|Variables|InstancedStruct",
+              meta=(CustomStructureParam = "InValue", BlueprintInternalUseOnly = true))
+    static void
+    INTERNAL__Set(
+        FCk_Handle InHandle,
+        FGameplayTag InVariableName,
+        const int32& InValue);
+    DECLARE_FUNCTION(execINTERNAL__Set);
+
+    static void
+    Set(
+        FCk_Handle InHandle,
+        FGameplayTag InVariableName,
+        const FInstancedStruct& InValue);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              CustomThunk,
+              DisplayName="[Ck][InstancedStruct] Set Value (By Name)",
+              Category = "Ck|Utils|Variables|InstancedStruct",
+              meta=(CustomStructureParam = "InValue", BlueprintInternalUseOnly = true))
+    static void
+    INTERNAL__Set_ByName(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FName InVariableName,
+        const int32& InValue);
+    DECLARE_FUNCTION(execINTERNAL__Set_ByName);
+
+    static void
+    Set_ByName(
+        FCk_Handle& InHandle,
+        FName InVariableName,
+        const FInstancedStruct& InValue);
+
+public:
+    UFUNCTION(BlueprintPure,
+              CustomThunk,
+              Displayname = "[Ck][InstancedStruct] Get Value (By Name)",
+              Category = "Ck|Utils|Variables|InstancedStruct",
+              meta=(CustomStructureParam = "OutValue", BlueprintInternalUseOnly = true))
+    static void
+    INTERNAL__Get_ByName(
+        const FCk_Handle& InHandle,
+        FName InVariableName,
+        ECk_Recursion InRecursion,
+        ECk_SucceededFailed& OutSuccessFail,
+        int32& OutValue);
+    DECLARE_FUNCTION(execINTERNAL__Get_ByName);
+
+    static const FInstancedStruct&
+    Get_ByName(
+        const FCk_Handle& InHandle,
+        FName InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
+
+public:
+    UFUNCTION(BlueprintPure,
+              CustomThunk,
+              Displayname = "[Ck][InstancedStruct] Get Value (By GameplayTag)",
+              Category = "Ck|Utils|Variables|InstancedStruct",
+              meta=(CustomStructureParam = "OutValue", BlueprintInternalUseOnly = true))
+    static const FInstancedStruct&
+    INTERNAL__Get(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
+        ECk_SucceededFailed& OutSuccessFail,
+        int32& OutValue);
+    DECLARE_FUNCTION(execINTERNAL__Get);
+
+    static const FInstancedStruct&
+    Get(
+        FCk_Handle InHandle,
+        FGameplayTag InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -744,7 +788,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][UObject] Get Value (GameplayTag)",
+              DisplayName="[Ck][UObject] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|UObject",
               meta = (DeterminesOutputType = "InObject"))
     static UObject*
@@ -755,7 +799,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][UObject] Set Value (GameplayTag)",
+              DisplayName="[Ck][UObject] Set Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|UObject")
     static void
     Set(
@@ -764,7 +808,7 @@ public:
         UObject* InValue);
 
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][UObject] Get Value (Name)",
+              DisplayName="[Ck][UObject] Get Value (By Name)",
               Category = "Ck|Utils|Variables|UObject",
               meta = (DeterminesOutputType = "InObject"))
     static UObject*
@@ -775,7 +819,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][UObject] Set Value (Name)",
+              DisplayName="[Ck][UObject] Set Value (By Name)",
               Category = "Ck|Utils|Variables|UObject")
     static void
     Set_ByName(
@@ -808,7 +852,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][SubclassOf] Get Value (GameplayTag)",
+              DisplayName="[Ck][SubclassOf] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|SubclassOf",
               meta = (DeterminesOutputType = "InObject"))
     static TSubclassOf<UObject>
@@ -819,7 +863,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][SubclassOf] Set Value (GameplayTag)",
+              DisplayName="[Ck][SubclassOf] Set Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|SubclassOf")
     static void
     Set(
@@ -828,7 +872,7 @@ public:
         TSubclassOf<UObject> InValue);
 
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][SubclassOf] Get Value (Name)",
+              DisplayName="[Ck][SubclassOf] Get Value (By Name)",
               Category = "Ck|Utils|Variables|SubclassOf",
               meta = (DeterminesOutputType = "InObject"))
     static TSubclassOf<UObject>
@@ -839,7 +883,7 @@ public:
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
-              DisplayName="[Ck][SubclassOf] Set Value (Name)",
+              DisplayName="[Ck][SubclassOf] Set Value (By Name)",
               Category = "Ck|Utils|Variables|SubclassOf")
     static void
     Set_ByName(
