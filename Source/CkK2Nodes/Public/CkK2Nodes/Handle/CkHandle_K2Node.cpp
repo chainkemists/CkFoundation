@@ -12,7 +12,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCkHandle_K2Node::
+    UCk_K2Node_Handle::
     GetMenuActions(
         FBlueprintActionDatabaseRegistrar& InActionRegistrar) const
     -> void
@@ -23,7 +23,7 @@ auto
     {
         const auto& CustomizeLambda = [](UEdGraphNode* InNewNode, bool InIsTemplateNode, FName InFunctionName) -> void
         {
-            auto* Node = CastChecked<UCkHandle_K2Node>(InNewNode);
+            auto* Node = CastChecked<UCk_K2Node_Handle>(InNewNode);
             const auto* Function = UCk_Utils_Handle_UE::StaticClass()->FindFunctionByName(InFunctionName);
             check(ck::IsValid(Function));
 
@@ -41,7 +41,7 @@ auto
 }
 
 auto
-    UCkHandle_K2Node::
+    UCk_K2Node_Handle::
     IsNodePure() const
     -> bool
 {
@@ -49,7 +49,7 @@ auto
 }
 
 auto
-    UCkHandle_K2Node::
+    UCk_K2Node_Handle::
     IsConnectionDisallowed(
         const UEdGraphPin* InMyPin,
         const UEdGraphPin* InOtherPin,
