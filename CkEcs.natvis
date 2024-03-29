@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
   <Type Name="FCk_Entity">
-    <DisplayString>{{ {_ID} }}</DisplayString>
+    <DisplayString>{{ {_EntityNumber}|{_EntityVersion} ({_ID}) }}</DisplayString>
   </Type>
   <Type Name="TCk_DebugWrapper&lt;*&gt;">
     <DisplayString>{"$T1"}</DisplayString>
@@ -11,7 +11,7 @@
       </Item>
     </Expand>
   </Type>
-  <Type Name="FCk_NAME_ConstructionScript">
+  <Type Name="NAME_ConstructionScript">
     <DisplayString>{{ {_Name} }}</DisplayString>
   </Type>
   <Type Name="FCk_Handle">
