@@ -23,6 +23,7 @@ public class CkK2Nodes : CkModuleRules
             "CkCore",
             "CkEcs",
             "CkLog",
+            "CkVariables",
         });
     }
 }

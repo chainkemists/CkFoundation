@@ -3,6 +3,9 @@
 #include "CkVariables_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+
+#define LOCTEXT_NAMESPACE "CkUnrealVariables"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -218,8 +221,8 @@ auto
 auto
     UCk_Utils_Variables_UObject_SubclassOf_UE::
     Get_ByName(
-        const FCk_Handle&    InHandle,
-        FName                InVariableName,
+        const FCk_Handle& InHandle,
+        FName InVariableName,
         TSubclassOf<UObject> InObject,
         ECk_SucceededFailed& OutSuccessFail)
     -> TSubclassOf<UObject>
@@ -261,3 +264,183 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+DEFINE_FUNCTION(UCk_Utils_Variables_InstancedStruct_UE::execINTERNAL__Set_ByName)
+{
+    P_GET_STRUCT_REF(FCk_Handle, Handle);
+    P_GET_PROPERTY(FNameProperty, VariableName);
+
+    // Read wildcard Value input.
+    Stack.MostRecentPropertyAddress = nullptr;
+    Stack.MostRecentPropertyContainer = nullptr;
+    Stack.StepCompiledIn<FStructProperty>(nullptr);
+
+    const auto* ValueProp = CastField<FStructProperty>(Stack.MostRecentProperty);
+    const void* ValuePtr = Stack.MostRecentPropertyAddress;
+
+    P_FINISH;
+
+    if (!ValueProp || !ValuePtr)
+    {
+        const FBlueprintExceptionInfo ExceptionInfo(
+            EBlueprintExceptionType::AbortExecution,
+            LOCTEXT("CkInstancedStructVariable_SetInvalidValueWarning", "Failed to resolve the Value for Set Value (By Name)"));
+
+        FBlueprintCoreDelegates::ThrowScriptException(P_THIS, Stack, ExceptionInfo);
+    }
+    else
+    {
+        P_NATIVE_BEGIN;
+        FInstancedStruct InstancedStruct;
+        InstancedStruct.InitializeAs(ValueProp->Struct, static_cast<const uint8*>(ValuePtr));
+        Set_ByName(Handle, VariableName, InstancedStruct);
+        P_NATIVE_END;
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DEFINE_FUNCTION(UCk_Utils_Variables_InstancedStruct_UE::execINTERNAL__Set)
+{
+    P_GET_STRUCT(FCk_Handle, Handle);
+    P_GET_STRUCT(FGameplayTag, VariableName);
+
+    // Read wildcard Value input.
+    Stack.MostRecentPropertyAddress = nullptr;
+    Stack.MostRecentPropertyContainer = nullptr;
+    Stack.StepCompiledIn<FStructProperty>(nullptr);
+
+    const auto* ValueProp = CastField<FStructProperty>(Stack.MostRecentProperty);
+    const void* ValuePtr = Stack.MostRecentPropertyAddress;
+
+    P_FINISH;
+
+    if (!ValueProp || !ValuePtr)
+    {
+        const FBlueprintExceptionInfo ExceptionInfo(
+            EBlueprintExceptionType::AbortExecution,
+            LOCTEXT("CkInstancedStructVariable_SetInvalidValueWarning", "Failed to resolve the Value for Set Value (By GameplayTag)"));
+
+        FBlueprintCoreDelegates::ThrowScriptException(P_THIS, Stack, ExceptionInfo);
+    }
+    else
+    {
+        P_NATIVE_BEGIN;
+        FInstancedStruct InstancedStruct;
+        InstancedStruct.InitializeAs(ValueProp->Struct, static_cast<const uint8*>(ValuePtr));
+        Set(Handle, VariableName, InstancedStruct);
+        P_NATIVE_END;
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DEFINE_FUNCTION(UCk_Utils_Variables_InstancedStruct_UE::execINTERNAL__Get_ByName)
+{
+    P_GET_STRUCT(FCk_Handle, Handle);
+    P_GET_PROPERTY(FNameProperty, VariableName);
+    P_GET_ENUM(ECk_Recursion, Recursion)
+    P_GET_ENUM_REF(ECk_SucceededFailed, SucceededFailed)
+
+    // Read wildcard Value input.
+    Stack.MostRecentPropertyAddress = nullptr;
+    Stack.MostRecentPropertyContainer = nullptr;
+    Stack.StepCompiledIn<FStructProperty>(nullptr);
+
+    const auto* ValueProp = CastField<FStructProperty>(Stack.MostRecentProperty);
+    void* ValuePtr = Stack.MostRecentPropertyAddress;
+
+    P_FINISH;
+
+    SucceededFailed = ECk_SucceededFailed::Failed;
+
+    if (!ValueProp || !ValuePtr)
+    {
+        const FBlueprintExceptionInfo ExceptionInfo(
+            EBlueprintExceptionType::AbortExecution,
+            LOCTEXT("CkInstancedStructVariable_GetInvalidValueWarning", "Failed to resolve the Value for Get Value (By Name)"));
+
+        FBlueprintCoreDelegates::ThrowScriptException(P_THIS, Stack, ExceptionInfo);
+    }
+
+    auto CurrentHandle = Handle;
+
+    while (ck::IsValid(CurrentHandle))
+    {
+        const auto& InstancedStruct = Get_ByName(CurrentHandle, VariableName, SucceededFailed);
+
+        if (SucceededFailed == ECk_SucceededFailed::Succeeded)
+        {
+            P_NATIVE_BEGIN;
+            if (InstancedStruct.IsValid() && InstancedStruct.GetScriptStruct()->IsChildOf(ValueProp->Struct))
+            {
+                ValueProp->Struct->CopyScriptStruct(ValuePtr, InstancedStruct.GetMemory());
+                return;
+            }
+            P_NATIVE_END;
+        }
+
+        if (Recursion == ECk_Recursion::NotRecursive)
+        { return; }
+
+        CurrentHandle = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(CurrentHandle);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DEFINE_FUNCTION(UCk_Utils_Variables_InstancedStruct_UE::execINTERNAL__Get)
+{
+    P_GET_STRUCT(FCk_Handle, Handle);
+    P_GET_STRUCT(FGameplayTag, VariableName);
+    P_GET_ENUM(ECk_Recursion, Recursion)
+    P_GET_ENUM_REF(ECk_SucceededFailed, SucceededFailed)
+
+    // Read wildcard Value input.
+    Stack.MostRecentPropertyAddress = nullptr;
+    Stack.MostRecentPropertyContainer = nullptr;
+    Stack.StepCompiledIn<FStructProperty>(nullptr);
+
+    const auto* ValueProp = CastField<FStructProperty>(Stack.MostRecentProperty);
+    void* ValuePtr = Stack.MostRecentPropertyAddress;
+
+    P_FINISH;
+
+    SucceededFailed = ECk_SucceededFailed::Failed;
+
+    if (!ValueProp || !ValuePtr)
+    {
+        const FBlueprintExceptionInfo ExceptionInfo(
+            EBlueprintExceptionType::AbortExecution,
+            LOCTEXT("CkInstancedStructVariable_GetInvalidValueWarning", "Failed to resolve the Value for Get Value (By GameplayTag)"));
+
+        FBlueprintCoreDelegates::ThrowScriptException(P_THIS, Stack, ExceptionInfo);
+    }
+
+    auto CurrentHandle = Handle;
+
+    while (ck::IsValid(CurrentHandle))
+    {
+        const auto& InstancedStruct = Get(CurrentHandle, VariableName, SucceededFailed);
+
+        if (SucceededFailed == ECk_SucceededFailed::Succeeded)
+        {
+            P_NATIVE_BEGIN;
+            if (InstancedStruct.IsValid() && InstancedStruct.GetScriptStruct()->IsChildOf(ValueProp->Struct))
+            {
+                ValueProp->Struct->CopyScriptStruct(ValuePtr, InstancedStruct.GetMemory());
+                SucceededFailed = ECk_SucceededFailed::Succeeded;
+                return;
+            }
+            P_NATIVE_END;
+        }
+
+        if (Recursion == ECk_Recursion::NotRecursive)
+        { return; }
+
+        CurrentHandle = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(CurrentHandle);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+#undef LOCTEXT_NAMESPACE
