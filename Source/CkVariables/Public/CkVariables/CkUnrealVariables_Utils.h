@@ -756,7 +756,7 @@ public:
               Displayname = "[Ck][InstancedStruct] Get Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|InstancedStruct",
               meta=(CustomStructureParam = "OutValue", BlueprintInternalUseOnly = true))
-    static const FInstancedStruct&
+    static void
     INTERNAL__Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
