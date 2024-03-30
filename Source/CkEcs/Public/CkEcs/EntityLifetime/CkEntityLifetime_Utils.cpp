@@ -142,11 +142,11 @@ auto
 
 auto
     UCk_Utils_EntityLifetime_UE::
-    Get_TransientEntity(
+    Get_IsTransientEntity(
         const FCk_Handle& InHandle)
-    -> FCk_Handle
+    -> bool
 {
-    return Get_TransientEntity(**InHandle);
+    return Get_TransientEntity(InHandle.Get_Registry()) == InHandle;
 }
 
 auto
