@@ -57,6 +57,20 @@ public:
         const FCk_Handle& InHandle);
 
 public:
+    /*
+    * NOT added by design. Every Entity, except the top-level Transient Entity, should have a lifetime owner.
+    * To check whether we 'are' the top-level Entity, get the transient entity from the Subsystem and compare
+    * OR use the `Get_TransientEntity(...)` found in this utils
+    *
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Lifetime] Has Entity Lifetime Owner",
+              Category = "Ck|Utils|Lifetime")
+    static FCk_Handle
+    Get_HasLifetimeOwner(
+        const FCk_Handle& InHandle,
+        ECk_PendingKill_Policy InPendingKillPolicy = ECk_PendingKill_Policy::ExcludePendingKill);
+    */
+
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][Lifetime] Get Entity Lifetime Owner",
               Category = "Ck|Utils|Lifetime")
@@ -81,10 +95,10 @@ public:
         ECk_EntityLifetime_DestructionPhase InDestructionPhase = ECk_EntityLifetime_DestructionPhase::Confirmed);
 
     UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck][Lifetime] Get Transient Entity",
+              DisplayName = "[Ck][Lifetime] Is Transient Entity?",
               Category = "Ck|Utils|Lifetime")
-    static FCk_Handle
-    Get_TransientEntity(
+    static bool
+    Get_IsTransientEntity(
         const FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
