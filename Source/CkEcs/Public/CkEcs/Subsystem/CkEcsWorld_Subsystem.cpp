@@ -8,12 +8,9 @@
 #include <Engine/World.h>
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/ProcessorInjector/CkEcsProcessorInjector.h"
 #include "CkEcs/Settings/CkEcs_Settings.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-
-CK_DEFINE_ECS_TAG(FTag_NAME_TransientEntity);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -150,7 +147,7 @@ auto
     Super::Initialize(Collection);
 
     _TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(_Registry);
-    _TransientEntity.Add<FTag_NAME_TransientEntity>();
+    UCk_Utils_Handle_UE::Set_DebugName(_TransientEntity, TEXT("Transient Entity"));
 }
 
 auto
