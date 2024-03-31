@@ -11,7 +11,7 @@
       </Item>
     </Expand>
   </Type>
-  <Type Name="NAME_ConstructionScript">
+  <Type Name="DEBUG_NAME">
     <DisplayString>{{ {_Name} }}</DisplayString>
   </Type>
   <Type Name="FCk_Handle">
