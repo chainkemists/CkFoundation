@@ -114,7 +114,8 @@ auto
     auto Property = BlueprintGenClass->FindPropertyByName(InPropertyName);
     if (ck::IsValid(Property, ck::IsValid_Policy_NullptrOnly{}))
     {
-        FBlueprintEditorUtils::PropertyValueFromString(Property, InValue, reinterpret_cast<uint8*>(BlueprintGenClass->ClassDefaultObject));
+        FBlueprintEditorUtils::PropertyValueFromString(Property, InValue, reinterpret_cast<uint8*>(
+            UCk_Utils_Object_UE::Get_ClassDefaultObject<UObject>(BlueprintGenClass)));
     }
 
     FKismetEditorUtilities::CompileBlueprint(Blueprint);
@@ -401,7 +402,8 @@ auto
             { continue; }
 
             const auto ClassBlueprintGenClass = ClassBlueprint->GeneratedClass;
-            const auto& Value = DoGet_ValueFromProperty(Property, reinterpret_cast<uint8*>(ClassBlueprintGenClass->ClassDefaultObject));
+            const auto& Value = DoGet_ValueFromProperty(Property, reinterpret_cast<uint8*>(
+                UCk_Utils_Object_UE::Get_ClassDefaultObject<UObject>(ClassBlueprintGenClass)));
 
             const auto Name = [&]()
             {
