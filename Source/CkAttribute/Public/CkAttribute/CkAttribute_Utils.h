@@ -17,6 +17,7 @@ namespace ck
     {
     public:
         using AttributeFragmentType = T_DerivedAttribute;
+        using AttributeFragmentPreviousValueType = ck::TFragment_Attribute_PreviousValues<T_DerivedAttribute>;
         using AttributeDataType     = typename AttributeFragmentType::AttributeDataType;
         using HandleType            = FCk_Handle;
 
