@@ -3,6 +3,7 @@
 #include "CkCore/Object/CkObject_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
 #include "CkEcs/Handle/CkHandle_Debugging.h"
 #include "CkEcs/Handle/CkHandle_Debugging_Data.h"
 #include "CkEcs/Handle/CkHandle_Subsystem.h"
@@ -77,7 +78,7 @@ auto
 auto
     FCk_Handle::
     operator<(
-        ThisType InOther) const
+        const ThisType& InOther) const
     -> bool
 {
     return _Entity.operator<(InOther.Get_Entity());
@@ -181,6 +182,36 @@ auto
     -> const FCk_Registry&
 {
     return *_Registry;
+}
+
+auto
+    FCk_Handle::
+    NetSerialize(
+        FArchive& Ar,
+        UPackageMap* Map,
+        bool& bOutSuccess)
+    -> bool
+{
+    if (Ar.IsSaving())
+    {
+        Ar << _ReplicationDriver;
+    }
+
+    if (Ar.IsLoading())
+    {
+        Ar << _ReplicationDriver;
+        if (ck::IsValid(_ReplicationDriver))
+        {
+            *this = _ReplicationDriver->Get_AssociatedEntity();
+        }
+        else
+        {
+            *this = {};
+        }
+    }
+
+    bOutSuccess = true;
+    return true;
 }
 
 auto

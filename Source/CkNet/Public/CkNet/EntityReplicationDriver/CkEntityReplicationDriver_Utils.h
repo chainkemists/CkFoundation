@@ -95,14 +95,14 @@ public:
 private:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ReplicationDriver",
-              meta = (NativeMakeFunc))
+              meta = (NativeMakeFunc, DeprecatedFunction, DeprecationMessage="FCk_HandleReplicator is Obsolete. FCk_Handle can now replicate"))
     static FCk_HandleReplicator
     Make_HandleReplicator(
         UPARAM(ref) FCk_Handle& InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ReplicationDriver",
-              meta = (NativeBreakFunc))
+              meta = (NativeMakeFunc, DeprecatedFunction, DeprecationMessage="FCk_HandleReplicator is Obsolete. FCk_Handle can now replicate"))
     static void
     Break_HandleReplicator(
         const FCk_HandleReplicator& InHandleReplicator,

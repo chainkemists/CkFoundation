@@ -44,6 +44,8 @@ struct CKECS_API FCk_Handle
 {
     GENERATED_BODY()
 
+    friend class UCk_Utils_EntityReplicationDriver_UE;
+
 public:
     CK_GENERATED_BODY(FCk_Handle);
     CK_ENABLE_CUSTOM_FORMATTER(FCk_Handle);
@@ -79,7 +81,7 @@ public:
     template <typename T_WrappedHandle, class = std::enable_if_t<std::is_base_of_v<struct FCk_Handle_TypeSafe, T_WrappedHandle>>>
     auto operator!=(const T_WrappedHandle& InOther) const -> bool;
 
-    auto operator<(ThisType InOther) const -> bool;
+    auto operator<(const ThisType& InOther) const -> bool;
     auto operator==(const ThisType& InOther) const -> bool;
     CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
 
@@ -168,6 +170,13 @@ public:
     auto Get_Registry() -> FCk_Registry&;
     auto Get_Registry() const -> const FCk_Registry&;
 
+public:
+    auto
+    NetSerialize(
+        FArchive& Ar,
+        class UPackageMap* Map,
+        bool& bOutSuccess) -> bool;
+
 private:
     template <typename T_Fragment>
     requires(std::is_empty_v<T_Fragment>)
@@ -190,6 +199,10 @@ protected:
 
     TOptional<FCk_Registry> _Registry;
 
+private:
+    UPROPERTY()
+    TWeakObjectPtr<class UCk_Ecs_ReplicatedObject_UE> _ReplicationDriver;
+
 #if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
     const struct FEntity_FragmentMapper* _Mapper = nullptr;
 #endif
@@ -202,6 +215,15 @@ private:
     UPROPERTY(Transient) // needs to be a UPROPERTY so that it shows up when debugging Blueprints
     TWeakObjectPtr<class UCk_Handle_FragmentsDebug> _Fragments = nullptr;
 #endif
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+template<>
+struct TStructOpsTypeTraits<FCk_Handle> : public TStructOpsTypeTraitsBase2<FCk_Handle>
+{
+    enum
+    { WithNetSerializer = true };
 };
 
 // --------------------------------------------------------------------------------------------------------------------
