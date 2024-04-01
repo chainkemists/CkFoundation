@@ -311,13 +311,23 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     float  _FinalValue = 0.0f;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    float  _BaseValue_Previous = 0.0f;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    float  _FinalValue_Previous = 0.0f;
+
 public:
     CK_PROPERTY_GET(_AttributeEntity);
     CK_PROPERTY_GET(_BaseValue);
     CK_PROPERTY_GET(_FinalValue);
 
+    CK_PROPERTY_GET(_BaseValue_Previous);
+    CK_PROPERTY_GET(_FinalValue_Previous);
+
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Payload_FloatAttribute_OnValueChanged, _AttributeEntity, _BaseValue, _FinalValue);
+    CK_DEFINE_CONSTRUCTORS(FCk_Payload_FloatAttribute_OnValueChanged,
+        _AttributeEntity, _BaseValue, _FinalValue, _BaseValue_Previous, _FinalValue_Previous);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
