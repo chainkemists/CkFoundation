@@ -9,13 +9,33 @@
 
 namespace ck::detail
 {
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_DerivedAttributeModifier>
+    auto
+        TProcessor_Attribute_StorePreviousValue<T_DerivedProcessor, T_DerivedAttribute, T_DerivedAttributeModifier>::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            AttributeFragmentType& InAttribute) const
+        -> void
+    {
+        using AttributePreviousType = ck::TFragment_Attribute_PreviousValues<AttributeFragmentType>;
+
+        auto& PreviousValue = InHandle.template AddOrGet<AttributePreviousType>();
+        PreviousValue = AttributePreviousType{InAttribute.Get_Base(), InAttribute.Get_Final()};
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_MulticastType>
     auto
         TProcessor_Attribute_FireSignals<T_DerivedProcessor, T_DerivedAttribute, T_MulticastType>::
         ForEachEntity(
             const TimeType&,
             HandleType InHandle,
-            AttributeFragmentType& InAttribute) const
+            AttributeFragmentType& InAttribute,
+            AttributeFragmentPreviousType& InAttributePrevious) const
         -> void
     {
         InHandle.template Remove<MarkedDirtyBy>();
@@ -38,7 +58,10 @@ namespace ck::detail
                 {
                     InHandle,
                     InAttribute._Base,
-                    InAttribute._Final
+                    InAttribute._Final,
+
+                    InAttributePrevious.Get_Base(),
+                    InAttributePrevious.Get_Final()
                 }
             )
         );
@@ -440,7 +463,10 @@ namespace ck
     TProcessor_Attribute_RecomputeAll_CurrentMinMax<T_DerivedAttributeModifier>::
         TProcessor_Attribute_RecomputeAll_CurrentMinMax(
             RegistryType InRegistry)
-        : _Current(InRegistry)
+        : _Current_Previous(InRegistry)
+        , _Min_Previous(InRegistry)
+        , _Max_Previous(InRegistry)
+        , _Current(InRegistry)
         , _Min(InRegistry)
         , _Max(InRegistry)
     {
@@ -453,6 +479,10 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
+        _Current_Previous.Tick(InDeltaT);
+        _Min_Previous.Tick(InDeltaT);
+        _Max_Previous.Tick(InDeltaT);
+
         _Current.Tick(InDeltaT);
         _Min.Tick(InDeltaT);
         _Max.Tick(InDeltaT);
