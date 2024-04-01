@@ -88,7 +88,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))
-    FVector _Normal = FVector::ZAxisVector;
+    FVector _Normal = FVector::ZeroVector;
     UPROPERTY()
     FVector_NetQuantizeNormal _QuantizedNormal;
 
