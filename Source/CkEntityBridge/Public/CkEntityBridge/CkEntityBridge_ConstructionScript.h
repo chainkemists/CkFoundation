@@ -44,10 +44,6 @@ public:
 protected:
     auto OnUnregister() -> void override;
 
-public:
-    auto
-    PostLoad() -> void override;
-
 protected:
     auto Do_Construct_Implementation(
         const FCk_ActorComponent_DoConstruct_Params& InParams) -> void override;
