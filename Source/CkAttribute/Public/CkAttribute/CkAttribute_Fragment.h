@@ -168,6 +168,33 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // we store the previous values of the Attribute in another Fragment for the following reasons:
+    // - avoid bloating up the Attribute with previous values
+    // - only store previous values for Attributes that need it (ones that are modified)
+    template <typename T_AttributeType>
+    struct TFragment_Attribute_PreviousValues
+    {
+    public:
+        CK_GENERATED_BODY(TFragment_Attribute_PreviousValues<T_AttributeType>);
+
+    public:
+        using AttributeType = T_AttributeType;
+        using AttributeDataType = typename T_AttributeType::AttributeDataType;
+        using HandleType = typename T_AttributeType::HandleType;
+
+    private:
+        AttributeDataType _Base;
+        AttributeDataType _Final;
+
+    public:
+        CK_PROPERTY(_Base);
+        CK_PROPERTY(_Final);
+
+        CK_DEFINE_CONSTRUCTORS(TFragment_Attribute_PreviousValues, _Base, _Final);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T_HandleType, typename T_AttributeType>
     using TFragment_Attribute_Current = TFragment_Attribute<T_HandleType, T_AttributeType, ECk_MinMaxCurrent::Current>;
 
