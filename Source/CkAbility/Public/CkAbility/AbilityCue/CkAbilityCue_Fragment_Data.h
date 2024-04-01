@@ -71,7 +71,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, meta = (HasNativeMake = "/Script/CkAbility.Ck_Utils_AbilityCue_UE:Make_AbilityCue_Params"))
 struct CKABILITY_API FCk_AbilityCue_Params
 {
     GENERATED_BODY()
@@ -110,6 +110,12 @@ public:
         FArchive& Ar,
         class UPackageMap* Map,
         bool& bOutSuccess) -> bool;
+
+public:
+    CK_PROPERTY(_Location);
+    CK_PROPERTY(_Normal);
+    CK_PROPERTY(_Instigator);
+    CK_PROPERTY(_EffectCauser);
 };
 
 template<>
