@@ -33,6 +33,17 @@ public:
     static FCk_AbilityCue_Params
     Get_Params(
         const FCk_Handle& InAbilityCueEntity);
+
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Make AbilityCue Params",
+        Category = "Ck|Utils|AbilityCue",
+        meta = (NativeMakeFunc))
+    static FCk_AbilityCue_Params
+    Make_AbilityCue_Params(
+        FVector InLocation,
+        FVector InNormal,
+        FCk_Handle InInstigator,
+        FCk_Handle InEffectCauser);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

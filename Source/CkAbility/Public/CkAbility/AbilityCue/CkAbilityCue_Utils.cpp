@@ -7,6 +7,8 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
+#include "CkNet/CkNet_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -28,6 +30,43 @@ auto
     -> FCk_AbilityCue_Params
 {
     return InAbilityCueEntity.Get<FCk_AbilityCue_Params>();
+}
+
+auto
+    UCk_Utils_AbilityCue_UE::
+    Make_AbilityCue_Params(
+        FVector InLocation,
+        FVector InNormal,
+        FCk_Handle InInstigator,
+        FCk_Handle InEffectCauser)
+    -> FCk_AbilityCue_Params
+{
+    FCk_AbilityCue_Params AbilityCueParams;
+
+    AbilityCueParams.Set_Location(InLocation);
+    AbilityCueParams.Set_Normal(InNormal);
+
+    if (ck::IsValid(InInstigator))
+    {
+        CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_EntityReplication(InInstigator) == ECk_Replication::Replicates,
+            TEXT("Constructing AbilityCue Params with Instigator Entity [{}] which is NOT replicated! AbilityCue using these params will NOT work as expected"),
+            InInstigator)
+        {}
+
+        AbilityCueParams.Set_Instigator(InInstigator);
+    }
+
+    if (ck::IsValid(InEffectCauser))
+    {
+        CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_EntityReplication(InEffectCauser) == ECk_Replication::Replicates,
+            TEXT("Constructing AbilityCue Params with EffectCauser Entity [{}] which is NOT replicated! AbilityCue using these params will NOT work as expected"),
+            InEffectCauser)
+        {}
+
+        AbilityCueParams.Set_EffectCauser(InEffectCauser);
+    }
+
+    return AbilityCueParams;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
