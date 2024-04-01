@@ -74,25 +74,6 @@ auto
 
 auto
     UCk_EntityBridge_ActorComponent_UE::
-    PostLoad()
-    -> void
-{
-    Super::PostLoad();
-
-    if (IsTemplate())
-    { return; }
-
-    if (ck::Is_NOT_Valid(EntityConfig))
-    { return; }
-
-    _ConstructionScript = EntityConfig->Get_EntityConstructionScript()->GetClass();
-    EntityConfig = nullptr;
-
-    ck::entity_bridge::Log(TEXT("[MIGRATE] EntityConfig with ConstructionScript [{}] migrated for [{}]"), _ConstructionScript, GetOwner());
-}
-
-auto
-    UCk_EntityBridge_ActorComponent_UE::
     Do_Construct_Implementation(
         const FCk_ActorComponent_DoConstruct_Params& InParams)
     -> void
@@ -111,6 +92,7 @@ auto
     if (ck::Is_NOT_Valid(_ConstructionScript) && ck::IsValid(EntityConfig))
     {
         _ConstructionScript = EntityConfig->Get_EntityConstructionScript()->GetClass();
+        ck::entity_bridge::Log(TEXT("[MIGRATE] EntityConfig with ConstructionScript [{}] migrated for [{}]"), _ConstructionScript, GetOwner());
         EntityConfig = nullptr;
     }
 
