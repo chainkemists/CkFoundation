@@ -7,11 +7,49 @@
 
 namespace ck::detail
 {
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_DerivedAttributeModifier>
+    class TProcessor_Attribute_StorePreviousValue : public TProcessor<
+            TProcessor_Attribute_StorePreviousValue<T_DerivedProcessor, T_DerivedAttribute, T_DerivedAttributeModifier>,
+            T_DerivedAttribute,
+            typename T_DerivedAttributeModifier::AttributeFragmentType::FTag_RecomputeFinalValue,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = typename T_DerivedAttributeModifier::AttributeFragmentType::FTag_RecomputeFinalValue;
+
+    public:
+        using AttributeModifierFragmentType = T_DerivedAttributeModifier;
+        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
+        using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
+        using ThisType                      = TProcessor_Attribute_StorePreviousValue<T_DerivedProcessor, T_DerivedAttribute, AttributeModifierFragmentType>;
+        using Super                         = TProcessor<ThisType, AttributeFragmentType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using HandleType                    = typename Super::HandleType;
+        using TimeType                      = typename Super::TimeType;
+
+    public:
+        CK_USING_BASE_CONSTRUCTORS(Super);
+
+    public:
+        auto
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            AttributeFragmentType& InAttribute) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_MulticastType>
     class TProcessor_Attribute_FireSignals : public ck_exp::TProcessor<
             TProcessor_Attribute_FireSignals<T_DerivedProcessor, T_DerivedAttribute, T_MulticastType>,
             typename T_DerivedAttribute::HandleType,
             T_DerivedAttribute,
+            TFragment_Attribute_PreviousValues<T_DerivedAttribute>,
             typename T_DerivedAttribute::FTag_FireSignals,
             CK_IGNORE_PENDING_KILL>
     {
@@ -20,10 +58,11 @@ namespace ck::detail
 
     public:
         using AttributeFragmentType = T_DerivedAttribute;
+        using AttributeFragmentPreviousType = TFragment_Attribute_PreviousValues<T_DerivedAttribute>;
         using HandleType            = typename AttributeFragmentType::HandleType;
         using AttributeDataType     = typename AttributeFragmentType::AttributeDataType;
         using ThisType              = TProcessor_Attribute_FireSignals<T_DerivedProcessor, AttributeFragmentType, T_MulticastType>;
-        using Super                 = ck_exp::TProcessor<ThisType, HandleType, AttributeFragmentType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using Super                 = ck_exp::TProcessor<ThisType, HandleType, AttributeFragmentType, AttributeFragmentPreviousType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
         using TimeType              = typename Super::TimeType;
 
     public:
@@ -33,7 +72,8 @@ namespace ck::detail
         auto ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            AttributeFragmentType& InAttribute) const -> void;
+            AttributeFragmentType& InAttribute,
+            AttributeFragmentPreviousType& InAttributePrevious) const -> void;
 
     public:
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
@@ -595,6 +635,11 @@ namespace ck
         using TInternalProcessorType = detail::TProcessor_Attribute_RecomputeAll<
             TProcessor_Attribute_RecomputeAll_CurrentMinMax, T_DerivedAttributeModifier<T_Component>>;
 
+        template <ECk_MinMaxCurrent T_Component>
+        using TStorePreviousValueProcessorType = detail::TProcessor_Attribute_StorePreviousValue<
+            TProcessor_Attribute_RecomputeAll_CurrentMinMax, typename T_DerivedAttributeModifier<T_Component>::AttributeFragmentType,
+            T_DerivedAttributeModifier<T_Component>>;
+
     public:
         explicit
         TProcessor_Attribute_RecomputeAll_CurrentMinMax(RegistryType InRegistry);
@@ -604,6 +649,10 @@ namespace ck
             TimeType InDeltaT) -> void;
 
     private:
+        TStorePreviousValueProcessorType<ECk_MinMaxCurrent::Current> _Current_Previous;
+        TStorePreviousValueProcessorType<ECk_MinMaxCurrent::Min> _Min_Previous;
+        TStorePreviousValueProcessorType<ECk_MinMaxCurrent::Max> _Max_Previous;
+
         TInternalProcessorType<ECk_MinMaxCurrent::Current> _Current;
         TInternalProcessorType<ECk_MinMaxCurrent::Min> _Min;
         TInternalProcessorType<ECk_MinMaxCurrent::Max> _Max;
