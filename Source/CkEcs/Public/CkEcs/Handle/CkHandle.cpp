@@ -26,7 +26,10 @@ FCk_Handle::
         ThisType&& InOther) noexcept
     : _Entity(std::move(InOther._Entity))
     , _Registry(std::move(InOther._Registry))
+    , _ReplicationDriver(std::move(InOther._ReplicationDriver))
+#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
     , _Mapper(std::move(InOther._Mapper))
+#endif
 #if WITH_EDITORONLY_DATA
     , _Fragments(std::move(InOther._Fragments))
 #endif
@@ -39,7 +42,10 @@ FCk_Handle::
         const ThisType& InOther)
     : _Entity(InOther._Entity)
     , _Registry(InOther._Registry)
+    , _ReplicationDriver(InOther._ReplicationDriver)
+#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
     , _Mapper(InOther._Mapper)
+#endif
 #if WITH_EDITORONLY_DATA
     , _Fragments(InOther._Fragments)
 #endif
@@ -69,7 +75,10 @@ auto
 {
     ::Swap(_Entity, InOther._Entity);
     ::Swap(_Registry, InOther._Registry);
+    ::Swap(_ReplicationDriver, InOther._ReplicationDriver);
+#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
     ::Swap(_Mapper, InOther._Mapper);
+#endif
 #if WITH_EDITORONLY_DATA
     ::Swap(_Fragments, InOther._Fragments);
 #endif
@@ -225,11 +234,13 @@ auto
     if (NOT IsValid(ck::IsValid_Policy_IncludePendingKill{}))
     { return; }
 
+#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
     if (ck::Is_NOT_Valid(_Mapper, ck::IsValid_Policy_NullptrOnly{}))
     { _Mapper = &_Registry->AddOrGet<FEntity_FragmentMapper>(_Entity); }
 
     if (UCk_Utils_Ecs_Settings_UE::Get_HandleDebuggerBehavior() != ECk_Ecs_HandleDebuggerBehavior::EnableWithBlueprintDebugging)
     { return; }
+#endif
 
 #if WITH_EDITORONLY_DATA
     if (ck::Is_NOT_Valid(_Fragments))
