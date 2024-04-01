@@ -77,7 +77,9 @@ namespace ck
             {
                 InPayload.Get_Handle(),
                 InPayload.Get_BaseValue(),
-                InPayload.Get_FinalValue()
+                InPayload.Get_FinalValue(),
+                InPayload.Get_BaseValue_Previous(),
+                InPayload.Get_FinalValue_Previous()
             };
         }
     };
@@ -93,7 +95,9 @@ namespace ck
             {
                 InPayload.Get_Handle(),
                 InPayload.Get_BaseValue(),
-                InPayload.Get_FinalValue()
+                InPayload.Get_FinalValue(),
+                InPayload.Get_BaseValue_Previous(),
+                InPayload.Get_FinalValue_Previous()
             };
         }
     };
@@ -109,7 +113,9 @@ namespace ck
             {
                 InPayload.Get_Handle(),
                 InPayload.Get_BaseValue(),
-                InPayload.Get_FinalValue()
+                InPayload.Get_FinalValue(),
+                InPayload.Get_BaseValue_Previous(),
+                InPayload.Get_FinalValue_Previous()
             };
         }
     };

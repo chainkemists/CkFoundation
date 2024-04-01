@@ -261,13 +261,22 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     uint8  _FinalValue = 0;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    uint8  _BaseValue_Previous = 0;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    uint8  _FinalValue_Previous = 0;
+
 public:
     CK_PROPERTY_GET(_AttributeEntity);
     CK_PROPERTY_GET(_BaseValue);
     CK_PROPERTY_GET(_FinalValue);
+    CK_PROPERTY_GET(_BaseValue_Previous);
+    CK_PROPERTY_GET(_FinalValue_Previous);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Payload_ByteAttribute_OnValueChanged, _AttributeEntity, _BaseValue, _FinalValue);
+    CK_DEFINE_CONSTRUCTORS(FCk_Payload_ByteAttribute_OnValueChanged,
+        _AttributeEntity, _BaseValue, _FinalValue, _BaseValue_Previous, _FinalValue_Previous);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

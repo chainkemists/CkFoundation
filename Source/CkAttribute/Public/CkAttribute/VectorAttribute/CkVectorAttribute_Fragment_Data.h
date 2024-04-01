@@ -261,13 +261,22 @@ private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     FVector  _FinalValue = FVector::ZeroVector;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FVector  _BaseValue_Previous = FVector::ZeroVector;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FVector  _FinalValue_Previous = FVector::ZeroVector;
+
 public:
     CK_PROPERTY_GET(_AttributeEntity);
     CK_PROPERTY_GET(_BaseValue);
     CK_PROPERTY_GET(_FinalValue);
+    CK_PROPERTY_GET(_BaseValue_Previous);
+    CK_PROPERTY_GET(_FinalValue_Previous);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Payload_VectorAttribute_OnValueChanged, _AttributeEntity, _BaseValue, _FinalValue);
+    CK_DEFINE_CONSTRUCTORS(FCk_Payload_VectorAttribute_OnValueChanged,
+        _AttributeEntity, _BaseValue, _FinalValue, _BaseValue_Previous, _FinalValue_Previous);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

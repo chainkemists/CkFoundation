@@ -26,18 +26,6 @@ namespace ck
     }
 
     // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedAttribute>
-    TPayload_Attribute_OnValueChanged<T_DerivedAttribute>::
-        TPayload_Attribute_OnValueChanged(
-            HandleType InHandle,
-            AttributeDataType InBaseValue,
-            AttributeDataType InFinalValue)
-        : _Handle(InHandle)
-        , _BaseValue(InBaseValue)
-        , _FinalValue(InFinalValue)
-    {
-    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

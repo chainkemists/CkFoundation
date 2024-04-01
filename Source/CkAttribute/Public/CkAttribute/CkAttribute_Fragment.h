@@ -278,20 +278,26 @@ namespace ck
         using HandleType              = typename AttributeFragmentType::HandleType;
 
     public:
-        TPayload_Attribute_OnValueChanged(
-            HandleType        InHandle,
-            AttributeDataType InBaseValue,
-            AttributeDataType InFinalValue);
+        CK_GENERATED_BODY(TPayload_Attribute_OnValueChanged<T_DerivedAttribute>);
 
     private:
         HandleType _Handle;
         AttributeDataType _BaseValue;
         AttributeDataType _FinalValue;
 
+        AttributeDataType _BaseValue_Previous;
+        AttributeDataType _FinalValue_Previous;
+
     public:
         CK_PROPERTY_GET(_Handle);
         CK_PROPERTY_GET(_BaseValue);
         CK_PROPERTY_GET(_FinalValue);
+
+        CK_PROPERTY_GET(_BaseValue_Previous);
+        CK_PROPERTY_GET(_FinalValue_Previous);
+
+        CK_DEFINE_CONSTRUCTORS(TPayload_Attribute_OnValueChanged<T_DerivedAttribute>,
+            _Handle, _BaseValue, _FinalValue, _BaseValue_Previous, _FinalValue_Previous);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
