@@ -44,6 +44,10 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
+    ECk_MinMaxCurrent _AttributeComponent = ECk_MinMaxCurrent::Current;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
     ECk_Attribute_BaseBonusFinal _MagnitudeComponent = ECk_Attribute_BaseBonusFinal::Final;
 
     // Coefficient to the attribute calculation
@@ -63,6 +67,7 @@ private:
 
 public:
     CK_PROPERTY_GET(_AttributeName);
+    CK_PROPERTY(_AttributeComponent);
     CK_PROPERTY(_MagnitudeComponent);
     CK_PROPERTY(_Coefficient);
     CK_PROPERTY(_PreMultiplyAdditiveValue);

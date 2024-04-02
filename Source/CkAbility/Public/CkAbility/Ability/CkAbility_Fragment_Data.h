@@ -266,12 +266,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Ability);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKABILITY_API FCk_Ability_Magnitude
+struct CKABILITY_API FCk_Ability_Modifier_Magnitude
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Ability_Magnitude);
+    CK_GENERATED_BODY(FCk_Ability_Modifier_Magnitude);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -316,11 +316,15 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
+    ECk_MinMaxCurrent _AttributeComponent = ECk_MinMaxCurrent::Current;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
     ECk_AttributeModifier_Operation _ModifierOperation = ECk_AttributeModifier_Operation::Add;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Ability_Magnitude _ModifierMagnitude;
+    FCk_Ability_Modifier_Magnitude _ModifierMagnitude;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
