@@ -18,6 +18,7 @@ auto
     if (AddedOrNot != ECk_AddedOrNot::NotAdded)
     {
         InHandle._ReplicationDriver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
+        InHandle.Add<TWeakObjectPtr<UCk_Ecs_ReplicatedObject_UE>>(InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>());
     }
     return AddedOrNot;
 }

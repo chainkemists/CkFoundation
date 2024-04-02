@@ -45,6 +45,7 @@ struct CKECS_API FCk_Handle
     GENERATED_BODY()
 
     friend class UCk_Utils_EntityReplicationDriver_UE;
+    friend class UCk_Fragment_EntityReplicationDriver_Rep;
 
 public:
     CK_GENERATED_BODY(FCk_Handle);
@@ -322,6 +323,7 @@ FCk_Handle::
         const T_WrappedHandle& InOther)
     : _Entity(InOther._Entity)
     , _Registry(InOther._Registry)
+    , _ReplicationDriver(InOther._ReplicationDriver)
 #if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
     , _Mapper(InOther._Mapper)
 #endif
