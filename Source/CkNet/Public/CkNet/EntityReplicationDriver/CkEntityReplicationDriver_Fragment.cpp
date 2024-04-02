@@ -108,6 +108,9 @@ auto
                 ECk_Net_EntityNetRole::Proxy
             });
 
+        NewEntity._ReplicationDriver = this;
+        NewEntity.Add<TWeakObjectPtr<UCk_Ecs_ReplicatedObject_UE>>(this);
+
         ConstructionScript->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(
             NewEntity, ConstructionInfo.Get_OptionalParams());
 
@@ -152,6 +155,9 @@ auto
                 ECk_Net_NetModeType::Client,
                 ReplicatedActor->GetLocalRole() == ROLE_AutonomousProxy ? ECk_Net_EntityNetRole::Authority : ECk_Net_EntityNetRole::Proxy
             });
+
+        InEntity._ReplicationDriver = this;
+        InEntity.Add<TWeakObjectPtr<UCk_Ecs_ReplicatedObject_UE>>(this);
     });
 
     // TODO: we need the transform

@@ -203,6 +203,11 @@ auto
 {
     if (Ar.IsSaving())
     {
+        if (ck::Is_NOT_Valid(_ReplicationDriver) && Has<TWeakObjectPtr<class UCk_Ecs_ReplicatedObject_UE>>())
+        {
+            _ReplicationDriver = Get<TWeakObjectPtr<class UCk_Ecs_ReplicatedObject_UE>>();
+        }
+
         Ar << _ReplicationDriver;
     }
 
