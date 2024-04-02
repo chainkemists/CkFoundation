@@ -169,7 +169,7 @@ public:
 public:
     FCk_Sensor_MarkerOverlapInfo() = default;
     FCk_Sensor_MarkerOverlapInfo(
-        FCk_Marker_BasicDetails InMarkerDetails,
+        FCk_Marker_BasicInfo InMarkerDetails,
         FCk_Sensor_BeginOverlap_UnrealDetails InOverlapDetails);
 
 public:
@@ -179,7 +179,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Marker_BasicDetails _MarkerDetails;
+    FCk_Marker_BasicInfo _MarkerDetails;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -234,7 +234,7 @@ public:
 
 public:
     using SensorOverlapInfoType = FCk_Sensor_MarkerOverlapInfo;
-    using SensorOverlapInfoList = TMap<FCk_Marker_BasicDetails, SensorOverlapInfoType>;
+    using SensorOverlapInfoList = TMap<FCk_Marker_BasicInfo, SensorOverlapInfoType>;
 
 public:
     FCk_Sensor_MarkerOverlaps() = default;
@@ -249,15 +249,15 @@ public:
         const SensorOverlapInfoType& InOverlap) -> ThisType&;
 
     auto Process_RemoveOverlapWithMarker(
-        const FCk_Marker_BasicDetails& InMarkerDetails) -> ThisType&;
+        const FCk_Marker_BasicInfo& InMarkerDetails) -> ThisType&;
 
     auto Get_HasOverlapWithMarker(
-        const FCk_Marker_BasicDetails& InMarkerDetails) const -> bool;
+        const FCk_Marker_BasicInfo& InMarkerDetails) const -> bool;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TMap<FCk_Marker_BasicDetails, FCk_Sensor_MarkerOverlapInfo> _Overlaps;
+    TMap<FCk_Marker_BasicInfo, FCk_Sensor_MarkerOverlapInfo> _Overlaps;
 
 public:
     CK_PROPERTY_GET(_Overlaps);
@@ -500,12 +500,12 @@ public:
 public:
     FCk_Request_Sensor_OnBeginOverlap() = default;
     explicit FCk_Request_Sensor_OnBeginOverlap(
-        FCk_Marker_BasicDetails InMarkerDetails,
+        FCk_Marker_BasicInfo InMarkerDetails,
         FCk_Sensor_BasicDetails InSensorDetails,
         FCk_Sensor_BeginOverlap_UnrealDetails InOverlapDetails);
 
 private:
-    FCk_Marker_BasicDetails _MarkerDetails;
+    FCk_Marker_BasicInfo _MarkerDetails;
     FCk_Sensor_BasicDetails _SensorDetails;
     FCk_Sensor_BeginOverlap_UnrealDetails _OverlapDetails;
 
@@ -553,12 +553,12 @@ public:
 public:
     FCk_Request_Sensor_OnEndOverlap() = default;
     FCk_Request_Sensor_OnEndOverlap(
-        FCk_Marker_BasicDetails InMarkerDetails,
+        FCk_Marker_BasicInfo InMarkerDetails,
         FCk_Sensor_BasicDetails InSensorDetails,
         FCk_Sensor_EndOverlap_UnrealDetails InOverlapDetails);
 
 private:
-    FCk_Marker_BasicDetails _MarkerDetails;
+    FCk_Marker_BasicInfo _MarkerDetails;
     FCk_Sensor_BasicDetails _SensorDetails;
     FCk_Sensor_EndOverlap_UnrealDetails _OverlapDetails;
 
@@ -607,7 +607,7 @@ public:
     FCk_Sensor_Payload_OnBeginOverlap() = default;
     FCk_Sensor_Payload_OnBeginOverlap(
         FCk_Sensor_BasicDetails InSensorDetails,
-        FCk_Marker_BasicDetails InMarkerDetails,
+        FCk_Marker_BasicInfo InMarkerDetails,
         FCk_Sensor_BeginOverlap_UnrealDetails InOverlapDetails);
 
 private:
@@ -617,7 +617,7 @@ private:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
-    FCk_Marker_BasicDetails _MarkerDetails;
+    FCk_Marker_BasicInfo _MarkerDetails;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
@@ -697,7 +697,7 @@ public:
     FCk_Sensor_Payload_OnEndOverlap() = default;
     FCk_Sensor_Payload_OnEndOverlap(
         FCk_Sensor_BasicDetails InSensorDetails,
-        FCk_Marker_BasicDetails InMarkerDetails,
+        FCk_Marker_BasicInfo InMarkerDetails,
         FCk_Sensor_EndOverlap_UnrealDetails InOverlapDetails);
 
 private:
@@ -707,7 +707,7 @@ private:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
-    FCk_Marker_BasicDetails _MarkerDetails;
+    FCk_Marker_BasicInfo _MarkerDetails;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))

@@ -45,44 +45,34 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Marker);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKOVERLAPBODY_API FCk_Marker_BasicDetails
+struct CKOVERLAPBODY_API FCk_Marker_BasicInfo
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Marker_BasicDetails);
-
-public:
-    FCk_Marker_BasicDetails() = default;
-    FCk_Marker_BasicDetails(
-        FGameplayTag InMarkerName,
-        FCk_Handle_Marker InMarkerEntity,
-        FCk_EntityOwningActor_BasicDetails InMarkerAttachedEntityAndActor);
+    CK_GENERATED_BODY(FCk_Marker_BasicInfo);
 
 public:
     auto operator==(const ThisType& InOther) const -> bool;
     CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
 
 private:
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
-              meta = (AllowPrivateAccess = true))
-    FGameplayTag _MarkerName;
-
     UPROPERTY(Transient, meta = (AllowPrivateAccess = true))
-    FCk_Handle_Marker _MarkerEntity;
+    FCk_Handle_Marker _Marker;
 
-    // Represents the Entity/Actor that the Marker ActorComp is attached to. Different from the Marker Entity itself
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_EntityOwningActor_BasicDetails _MarkerAttachedEntityAndActor;
+    FCk_Handle _Owner;
 
 public:
-    CK_PROPERTY_GET(_MarkerName);
-    CK_PROPERTY_GET(_MarkerEntity);
-    CK_PROPERTY_GET(_MarkerAttachedEntityAndActor);
+    CK_PROPERTY_GET(_Marker);
+    CK_PROPERTY_GET(_Owner);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Marker_BasicInfo, _Marker, _Owner);
 };
 
-auto CKOVERLAPBODY_API GetTypeHash(const FCk_Marker_BasicDetails& InObj) -> uint32;
+auto CKOVERLAPBODY_API GetTypeHash(const FCk_Marker_BasicInfo& InObj) -> uint32;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -94,12 +84,6 @@ struct CKOVERLAPBODY_API FCk_Marker_DebugInfo
 public:
     CK_GENERATED_BODY(FCk_Marker_DebugInfo);
 
-public:
-    FCk_Marker_DebugInfo() = default;
-    FCk_Marker_DebugInfo(
-        float InLineThickness,
-        FColor InDebugLineColor);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -110,8 +94,11 @@ private:
     FColor _DebugLineColor = FColor::White;
 
 public:
-    CK_PROPERTY_GET(_LineThickness);
+    CK_PROPERTY(_LineThickness);
     CK_PROPERTY_GET(_DebugLineColor);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Marker_DebugInfo, _DebugLineColor);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -123,14 +110,6 @@ struct CKOVERLAPBODY_API FCk_Marker_PhysicsInfo
 
 public:
     CK_GENERATED_BODY(FCk_Marker_PhysicsInfo);
-
-public:
-    FCk_Marker_PhysicsInfo() = default;
-    FCk_Marker_PhysicsInfo(
-        ECk_CollisionDetectionType   InCollisionType,
-        ECk_NavigationEffect         InNavigationEffect,
-        ECk_ComponentOverlapBehavior InOverlapBehavior,
-        FName                        InCollisionProfileName);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -147,13 +126,16 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCollisionProfileName _CollisionProfileName  = FCollisionProfileName(TEXT("CkMarker"));
+    FCollisionProfileName _CollisionProfileName  = FCollisionProfileName{TEXT("CkMarker")};
 
 public:
-    CK_PROPERTY_GET(_CollisionType)
-    CK_PROPERTY_GET(_NavigationEffect);
-    CK_PROPERTY_GET(_OverlapBehavior);
+    CK_PROPERTY(_CollisionType)
+    CK_PROPERTY(_NavigationEffect);
+    CK_PROPERTY(_OverlapBehavior);
     CK_PROPERTY_GET(_CollisionProfileName);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Marker_PhysicsInfo, _CollisionProfileName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -198,11 +180,6 @@ struct CKOVERLAPBODY_API FCk_Marker_ShapeInfo
 public:
     CK_GENERATED_BODY(FCk_Marker_ShapeInfo);
 
-public:
-    FCk_Marker_ShapeInfo() = default;
-    explicit FCk_Marker_ShapeInfo(
-        FCk_ShapeDimensions InShapeDimensions);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -210,6 +187,9 @@ private:
 
 public:
     CK_PROPERTY_GET(_ShapeDimensions)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Marker_ShapeInfo, _ShapeDimensions);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -222,10 +202,6 @@ struct CKOVERLAPBODY_API FCk_Request_Marker_EnableDisable
 public:
     CK_GENERATED_BODY(FCk_Request_Marker_EnableDisable);
 
-public:
-    FCk_Request_Marker_EnableDisable() = default;
-    explicit FCk_Request_Marker_EnableDisable(ECk_EnableDisable InEnableDisable);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -233,20 +209,21 @@ private:
 
 public:
     CK_PROPERTY_GET(_EnableDisable)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Marker_EnableDisable, _EnableDisable);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_Marker_OnEnableDisable,
-    FCk_Handle, InHandle,
-    FGameplayTag, InMarkerName,
+    FCk_Marker_BasicInfo, InMarkerBasicInfo,
     ECk_EnableDisable, InEnableDisable);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_Marker_OnEnableDisable_MC,
-    FCk_Handle, InHandle,
-    FGameplayTag, InMarkerName,
+    FCk_Marker_BasicInfo, InMarkerBasicInfo,
     ECk_EnableDisable, InEnableDisable);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -259,22 +236,9 @@ struct CKOVERLAPBODY_API FCk_Fragment_Marker_ParamsData
 public:
     CK_GENERATED_BODY(FCk_Fragment_Marker_ParamsData);
 
-public:
-    FCk_Fragment_Marker_ParamsData() = default;
-    FCk_Fragment_Marker_ParamsData(
-        FGameplayTag              InMarkerName,
-        FCk_Marker_ShapeInfo      InShapeParams,
-        FCk_Marker_PhysicsInfo    InPhysicsParams,
-        FCk_Marker_AttachmentInfo InAttachmentParams,
-        FTransform                InRelativeTransform,
-        ECk_EnableDisable         InStartingState,
-        ECk_Net_ReplicationType   InReplicationType,
-        bool                      InShowDebug,
-        FCk_Marker_DebugInfo      InDebugParams);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, GameplayTagFilter = "Marker"))
+              meta = (AllowPrivateAccess = true))
     FGameplayTag _MarkerName;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -312,13 +276,16 @@ private:
 public:
     CK_PROPERTY_GET(_MarkerName);
     CK_PROPERTY_GET(_ShapeParams);
-    CK_PROPERTY_GET(_PhysicsParams);
-    CK_PROPERTY_GET(_AttachmentParams);
-    CK_PROPERTY_GET(_RelativeTransform);
-    CK_PROPERTY_GET(_ShowDebug);
-    CK_PROPERTY_GET(_DebugParams);
-    CK_PROPERTY_GET(_StartingState);
+    CK_PROPERTY(_PhysicsParams);
+    CK_PROPERTY(_AttachmentParams);
+    CK_PROPERTY(_RelativeTransform);
+    CK_PROPERTY(_ShowDebug);
+    CK_PROPERTY(_DebugParams);
+    CK_PROPERTY(_StartingState);
     CK_PROPERTY(_ReplicationType);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Marker_ParamsData, _MarkerName, _ShapeParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -333,7 +300,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, TitleProperty = "_MarkerName"))
     TArray<FCk_Fragment_Marker_ParamsData> _MarkerParams;
 
 public:

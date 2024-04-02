@@ -37,21 +37,18 @@ namespace ck
             const FFragment_Marker_Params& InParamsComp) const
         -> void
     {
-        const auto& MarkerLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InMarkerEntity);
-        const auto& MarkerAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(MarkerLifetimeOwner);
-        const auto& MarkerAttachedEntity = MarkerAttachedEntityAndActor.Get_Handle();
+        const auto& MarkerOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InMarkerEntity);
+        const auto& MarkerOwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(MarkerOwner);
 
         constexpr auto IncludePendingKill = true;
-        CK_ENSURE_IF_NOT(ck::IsValid(MarkerAttachedEntityAndActor.Get_Actor().Get(IncludePendingKill), ck::IsValid_Policy_IncludePendingKill{}),
-            TEXT("Marker Entity [{}] is Attached to Entity [{}] that does NOT have a valid Actor"),
+        CK_ENSURE_IF_NOT(ck::IsValid(MarkerOwningActor, ck::IsValid_Policy_IncludePendingKill{}),
+            TEXT("Marker Entity [{}] has a MarkerOwner [{}] that does NOT have a valid Actor"),
             InMarkerEntity,
-            MarkerAttachedEntity)
+            MarkerOwner)
         { return; }
 
-        if (ck::Is_NOT_Valid(MarkerAttachedEntityAndActor.Get_Actor()))
+        if (ck::Is_NOT_Valid(MarkerOwningActor))
         { return; }
-
-        InCurrentComp._AttachedEntityAndActor = MarkerAttachedEntityAndActor;
 
         const auto& Params        = InParamsComp.Get_Params();
         const auto& ShapeParams   = Params.Get_ShapeParams();
@@ -62,7 +59,7 @@ namespace ck
             PhysicsParams.Get_CollisionProfileName().Name != TEXT("NoCollision"),
             TEXT("Marker [{}] added to Entity [{}] has Collision Profile set to [{}]. Marker will NOT work properly!"),
             Params.Get_MarkerName(),
-            MarkerLifetimeOwner,
+            MarkerOwner,
             PhysicsParams.Get_CollisionProfileName()
         ) {};
 
@@ -70,17 +67,17 @@ namespace ck
         {
             case ECk_ShapeType::Box:
             {
-                UCk_Utils_MarkerAndSensor_UE::Add_MarkerOrSensor_ActorComponent<UCk_Marker_ActorComponent_Box_UE, ECk_ShapeType::Box>(InMarkerEntity, MarkerAttachedEntityAndActor, Params);
+                UCk_Utils_MarkerAndSensor_UE::Add_MarkerOrSensor_ActorComponent<UCk_Marker_ActorComponent_Box_UE, ECk_ShapeType::Box>(InMarkerEntity, MarkerOwningActor, Params);
                 break;
             }
             case ECk_ShapeType::Sphere:
             {
-                UCk_Utils_MarkerAndSensor_UE::Add_MarkerOrSensor_ActorComponent<UCk_Marker_ActorComponent_Sphere_UE, ECk_ShapeType::Sphere>(InMarkerEntity, MarkerAttachedEntityAndActor, Params);
+                UCk_Utils_MarkerAndSensor_UE::Add_MarkerOrSensor_ActorComponent<UCk_Marker_ActorComponent_Sphere_UE, ECk_ShapeType::Sphere>(InMarkerEntity, MarkerOwningActor, Params);
                 break;
             }
             case ECk_ShapeType::Capsule:
             {
-                UCk_Utils_MarkerAndSensor_UE::Add_MarkerOrSensor_ActorComponent<UCk_Marker_ActorComponent_Capsule_UE, ECk_ShapeType::Capsule>(InMarkerEntity, MarkerAttachedEntityAndActor, Params);
+                UCk_Utils_MarkerAndSensor_UE::Add_MarkerOrSensor_ActorComponent<UCk_Marker_ActorComponent_Capsule_UE, ECk_ShapeType::Capsule>(InMarkerEntity, MarkerOwningActor, Params);
                 break;
             }
             default:
@@ -103,7 +100,7 @@ namespace ck
             EnumHasAnyFlags(AttachmentParams.Get_AttachmentPolicy(), ECk_Marker_AttachmentPolicy::UseBoneRotation))
         { return; }
 
-        const auto& AttachedActorSkeletalMeshComponent = MarkerAttachedEntityAndActor.Get_Actor()->FindComponentByClass<USkeletalMeshComponent>();
+        const auto& AttachedActorSkeletalMeshComponent = MarkerOwningActor.Get_Actor()->FindComponentByClass<USkeletalMeshComponent>();
 
         CK_ENSURE_IF_NOT(ck::IsValid(AttachedActorSkeletalMeshComponent),
             TEXT("Marker Entity [{}] cannot use Attachment Policy [UseBonePosition: {}, UseBoneRotation: {}] because it is attached to an Actor that has NO SkeletalMesh"),
@@ -143,14 +140,14 @@ namespace ck
                                                  ? ECollisionEnabled::QueryOnly
                                                  : ECollisionEnabled::NoCollision;
 
-                const auto& Params     = InParamsComp.Get_Params();
-                const auto& MarkerName = Params.Get_MarkerName();
-                const auto& Marker     = InCurrentComp.Get_Marker().Get();
+                const auto& Marker = InCurrentComp.Get_Marker().Get();
 
                 UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(Marker, NewEnableDisable);
                 UCk_Utils_Physics_UE::Request_SetCollisionEnabled(Marker, CollisionEnabled);
 
-                UUtils_Signal_OnMarkerEnableDisable::Broadcast(InMarkerEntity, MakePayload(InCurrentComp.Get_AttachedEntityAndActor().Get_Handle(), MarkerName, NewEnableDisable));
+                const auto MarkerBasicInfo = FCk_Marker_BasicInfo{InMarkerEntity, UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InMarkerEntity)};
+
+                UUtils_Signal_OnMarkerEnableDisable::Broadcast(InMarkerEntity, MakePayload(MarkerBasicInfo, NewEnableDisable));
             }, policy::DontResetContainer{});
         });
     }
@@ -174,10 +171,10 @@ namespace ck
         const auto& Marker = InCurrentComp.Get_Marker().Get(IncludePendingKill);
 
         CK_ENSURE_IF_NOT(ck::IsValid(Marker, ck::IsValid_Policy_IncludePendingKill{}),
-            TEXT("Expected Marker Actor Component of Entity [{}] to still exist during the Teardown process.\n"
+            TEXT("Expected Marker Actor Component of MarkerOwner [{}] to still exist during the Teardown process.\n"
                  "Because the entity destruction is done in multiple phases and the Teardown process is operating on a valid entity, it is expected for the Marker to still exist.\n"
                  "If we are the client, did the object get unexpectedly destroyed before we reached this point ?"),
-            InCurrentComp.Get_AttachedEntityAndActor().Get_Handle())
+            InCurrentComp.Get_MarkerOwner().Get_Handle())
         { return; }
 
         UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(Marker, ECk_EnableDisable::Disable);
@@ -196,11 +193,11 @@ namespace ck
         -> void
     {
         // TODO: Extract this in a common function to avoid code duplication between similar system for Sensor
-        const auto& MarkerAttachedEntityAndActor = InCurrentComp.Get_AttachedEntityAndActor();
-        const auto& MarkerAttachedActor          = MarkerAttachedEntityAndActor.Get_Actor();
+        const auto& MarkerOwner = InCurrentComp.Get_MarkerOwner();
+        const auto& MarkerOwningActor = MarkerOwner.Get_Actor();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(MarkerAttachedActor),
-            TEXT("Cannot update Marker [{}] Transform because its Attached Actor is INVALID"),
+        CK_ENSURE_IF_NOT(ck::IsValid(MarkerOwningActor),
+            TEXT("Cannot update Marker [{}] Transform because its Owning Actor is INVALID"),
             InMarkerEntity)
         { return; }
 
@@ -214,17 +211,17 @@ namespace ck
             const auto& AttachmentParams = Params.Get_AttachmentParams();
             const auto& BoneName         = AttachmentParams.Get_BoneName();
 
-            CK_ENSURE_IF_NOT(UCk_Utils_Actor_UE::Get_DoesBoneExistInSkeletalMesh(MarkerAttachedActor.Get(), BoneName),
-                TEXT("Marker Entity [{}] cannot update its Transform according to Bone [{}] because its Attached Actor [{}] does NOT have it in its Skeletal Mesh"),
+            CK_ENSURE_IF_NOT(UCk_Utils_Actor_UE::Get_DoesBoneExistInSkeletalMesh(MarkerOwningActor.Get(), BoneName),
+                TEXT("Marker Entity [{}] cannot update its Transform according to Bone [{}] because its Owning Actor [{}] does NOT have it in its Skeletal Mesh"),
                 InMarkerEntity,
                 BoneName,
-                MarkerAttachedEntityAndActor)
+                MarkerOwner)
             { return {}; }
 
-            const auto& AttachedActorSkeletalMeshComponent = MarkerAttachedActor->FindComponentByClass<USkeletalMeshComponent>();
+            const auto& AttachedActorSkeletalMeshComponent = MarkerOwningActor->FindComponentByClass<USkeletalMeshComponent>();
             const auto& SocketBoneName                     = AttachedActorSkeletalMeshComponent->GetSocketBoneName(BoneName);
             const auto& BoneIndex                          = AttachedActorSkeletalMeshComponent->GetBoneIndex(SocketBoneName);
-            const auto& AttachedActorTransform             = MarkerAttachedActor->GetTransform();
+            const auto& AttachedActorTransform             = MarkerOwningActor->GetTransform();
             const auto& AttachmentPolicy                   = AttachmentParams.Get_AttachmentPolicy();
             auto SkeletonTransform                         = AttachedActorSkeletalMeshComponent->GetBoneTransform(BoneIndex);
 
@@ -272,7 +269,7 @@ namespace ck
             if (ck::Is_NOT_Valid(InMarkerCurrent.Get_Marker()))
             { return; }
 
-            const auto& OuterForDebugDraw = InMarkerCurrent.Get_AttachedEntityAndActor().Get_Actor().Get();
+            const auto& OuterForDebugDraw = InMarkerCurrent.Get_MarkerOwner().Get_Actor().Get();
 
             const auto MarkerHandle = UCk_Utils_Marker_UE::CastChecked(FCk_Handle{InMarkerEntity, _Registry});
             UCk_Utils_Marker_UE::Preview(OuterForDebugDraw, MarkerHandle);

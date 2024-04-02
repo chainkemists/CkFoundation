@@ -58,12 +58,10 @@ namespace ck
 
     private:
         TWeakObjectPtr<UShapeComponent> _Marker;
-        FCk_EntityOwningActor_BasicDetails _AttachedEntityAndActor;
         ECk_EnableDisable _EnableDisable = ECk_EnableDisable::Enable;
 
     public:
         CK_PROPERTY_GET(_EnableDisable);
-        CK_PROPERTY_GET(_AttachedEntityAndActor);
         CK_PROPERTY_GET(_Marker);
 
     public:
@@ -102,8 +100,7 @@ namespace ck
         CKOVERLAPBODY_API,
         OnMarkerEnableDisable,
         FCk_Delegate_Marker_OnEnableDisable_MC,
-        FCk_Handle,
-        FGameplayTag,
+        FCk_Marker_BasicInfo,
         ECk_EnableDisable);
 }
 

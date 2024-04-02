@@ -160,7 +160,7 @@ namespace ck_sensor
             SensorOwningEntity,
             FCk_Request_Sensor_OnBeginOverlap
             {
-                FCk_Marker_BasicDetails
+                FCk_Marker_BasicInfo
                 {
                     MarkerName,
                     MarkerOwningEntity,
@@ -254,7 +254,7 @@ namespace ck_sensor
             SensorOwningEntity,
             FCk_Request_Sensor_OnEndOverlap
             {
-                FCk_Marker_BasicDetails
+                FCk_Marker_BasicInfo
                 {
                     MarkerName,
                     UCk_Utils_Marker_UE::CastChecked(MarkerOwningEntity),
@@ -358,7 +358,7 @@ auto
 
 FCk_Sensor_MarkerOverlapInfo::
     FCk_Sensor_MarkerOverlapInfo(
-        FCk_Marker_BasicDetails InMarkerDetails,
+        FCk_Marker_BasicInfo InMarkerDetails,
         FCk_Sensor_BeginOverlap_UnrealDetails InOverlapDetails)
     : _MarkerDetails(InMarkerDetails)
     , _OverlapDetails(InOverlapDetails)
@@ -440,7 +440,7 @@ auto
 auto
     FCk_Sensor_MarkerOverlaps::
     Process_RemoveOverlapWithMarker(
-        const FCk_Marker_BasicDetails& InMarkerDetails)
+        const FCk_Marker_BasicInfo& InMarkerDetails)
     -> ThisType&
 {
     _Overlaps.Remove(InMarkerDetails);
@@ -451,7 +451,7 @@ auto
 auto
     FCk_Sensor_MarkerOverlaps::
     Get_HasOverlapWithMarker(
-        const FCk_Marker_BasicDetails& InMarkerDetails) const
+        const FCk_Marker_BasicInfo& InMarkerDetails) const
     -> bool
 {
     return _Overlaps.Contains(InMarkerDetails);
@@ -555,7 +555,7 @@ FCk_Request_Sensor_EnableDisable::
 
 FCk_Request_Sensor_OnBeginOverlap::
     FCk_Request_Sensor_OnBeginOverlap(
-        FCk_Marker_BasicDetails InMarkerDetails,
+        FCk_Marker_BasicInfo InMarkerDetails,
         FCk_Sensor_BasicDetails InSensorDetails,
         FCk_Sensor_BeginOverlap_UnrealDetails InOverlapDetails)
     : _MarkerDetails(InMarkerDetails)
@@ -578,7 +578,7 @@ FCk_Request_Sensor_OnBeginOverlap_NonMarker::
 
 FCk_Request_Sensor_OnEndOverlap::
     FCk_Request_Sensor_OnEndOverlap(
-        FCk_Marker_BasicDetails InMarkerDetails,
+        FCk_Marker_BasicInfo InMarkerDetails,
         FCk_Sensor_BasicDetails InSensorDetails,
         FCk_Sensor_EndOverlap_UnrealDetails InOverlapDetails)
     : _MarkerDetails(InMarkerDetails)
@@ -603,7 +603,7 @@ FCk_Request_Sensor_OnEndOverlap_NonMarker::
 FCk_Sensor_Payload_OnBeginOverlap::
     FCk_Sensor_Payload_OnBeginOverlap(
         FCk_Sensor_BasicDetails InSensorDetails,
-        FCk_Marker_BasicDetails InMarkerDetails,
+        FCk_Marker_BasicInfo InMarkerDetails,
         FCk_Sensor_BeginOverlap_UnrealDetails InOverlapDetails)
     : _SensorDetails(InSensorDetails)
     , _MarkerDetails(InMarkerDetails)
@@ -627,7 +627,7 @@ FCk_Sensor_Payload_OnBeginOverlap_NonMarker::
 FCk_Sensor_Payload_OnEndOverlap::
     FCk_Sensor_Payload_OnEndOverlap(
         FCk_Sensor_BasicDetails InSensorDetails,
-        FCk_Marker_BasicDetails InMarkerDetails,
+        FCk_Marker_BasicInfo InMarkerDetails,
         FCk_Sensor_EndOverlap_UnrealDetails InOverlapDetails)
     : _SensorDetails(InSensorDetails)
     , _MarkerDetails(InMarkerDetails)
