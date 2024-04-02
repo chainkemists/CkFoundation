@@ -36,10 +36,14 @@ namespace ck
         if (UCk_Utils_OwningActor_UE::Has(InHandle))
         {
             const auto Actor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
-            if (const auto MovementComponent = Actor->GetComponentByClass<UMovementComponent>();
-                ck::IsValid(MovementComponent))
+
+            if (ck::IsValid(Actor))
             {
-                InHandle.Add<ck::FFragment_MovementComponent>(MovementComponent);
+                if (const auto MovementComponent = Actor->GetComponentByClass<UMovementComponent>();
+                    ck::IsValid(MovementComponent))
+                {
+                    InHandle.Add<ck::FFragment_MovementComponent>(MovementComponent);
+                }
             }
         }
 
