@@ -90,7 +90,7 @@ namespace ck
         if (NOT Ensure(InHandle))
         { return; }
 
-        InHandle.Add<typename AttributeFragmentType::FTag_FireSignals>();
+        InHandle.AddOrGet<typename AttributeFragmentType::FTag_FireSignals>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -221,7 +221,7 @@ namespace ck
         if (NOT Ensure(InHandle))
         { return; }
 
-        InHandle.template Add<typename AttributeModifierFragmentType::FTag_ComputeResult>();
+        InHandle.template AddOrGet<typename AttributeModifierFragmentType::FTag_ComputeResult>();
     }
 }
 
