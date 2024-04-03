@@ -184,6 +184,7 @@ auto
     AssetRegistryModule.Get().OnAssetAdded().AddUObject(this, &UCk_AbilityCue_Subsystem_UE::DoHandleAssetAddedDeleted);
     AssetRegistryModule.Get().OnAssetRemoved().AddUObject(this, &UCk_AbilityCue_Subsystem_UE::DoHandleAssetAddedDeleted);
     AssetRegistryModule.Get().OnAssetRenamed().AddUObject(this, &UCk_AbilityCue_Subsystem_UE::DoHandleRenamed);
+    AssetRegistryModule.Get().OnAssetUpdated().AddUObject(this, &UCk_AbilityCue_Subsystem_UE::DoAssetUpdated);
 }
 
 auto
@@ -203,6 +204,18 @@ auto
     -> void
 {
     DoHandleAssetAddedDeletedOrRenamed(InAssetData);
+}
+
+auto
+    UCk_AbilityCue_Subsystem_UE::
+    DoAssetUpdated(
+        const FAssetData& InAssetData)
+    -> void
+{
+    if (InAssetData.IsInstanceOf<UCk_AbilityCue_Aggregator_PDA>())
+    {
+        DoPopulateAllAggregators();
+    }
 }
 
 auto
