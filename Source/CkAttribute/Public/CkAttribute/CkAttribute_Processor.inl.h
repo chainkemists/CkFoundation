@@ -42,7 +42,8 @@ namespace ck::detail
 
         attribute::VeryVerbose
         (
-            TEXT("Dispatching Attribute Delegates of Entity [{}]"),
+            TEXT("Dispatching Delegates for [{}] AttributeComponent of Attribute Entity [{}]"),
+            AttributeFragmentType::ComponentTagType,
             InHandle
         );
 
@@ -124,7 +125,8 @@ namespace ck::detail
 
         attribute::VeryVerbose
         (
-            TEXT("Resetting Attribute FinalValue of Entity [{}] and requesting a new computation from all its Attribute Modifiers."),
+            TEXT("Resetting FinalValue for [{}] AttributeComponent of Attribute Entity [{}] and requesting a new computation from all its Attribute Modifiers."),
+            AttributeFragmentType::ComponentTagType,
             InHandle
         );
 
@@ -165,8 +167,9 @@ namespace ck::detail
 
         attribute::VeryVerbose
         (
-            TEXT("Computing REVOKABLE (ADD) AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
+            TEXT("Computing REVOCABLE (ADD) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"),
             InHandle,
+            AttributeFragmentType::ComponentTagType,
             TargetEntity
         );
 
@@ -189,8 +192,9 @@ namespace ck::detail
 
         attribute::VeryVerbose
         (
-            TEXT("Computing REVOKABLE (SUBTRACT) AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
+            TEXT("Computing REVOCABLE (SUBTRACT) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"),
             InHandle,
+            AttributeFragmentType::ComponentTagType,
             TargetEntity
         );
 
@@ -212,15 +216,16 @@ namespace ck::detail
 
         attribute::VeryVerbose
         (
-            TEXT("Computing NOT REVOKABLE (ADD) AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
+            TEXT("Computing NOT REVOCABLE (ADD) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"),
             InHandle,
+            AttributeFragmentType::ComponentTagType,
             TargetEntity
         );
 
         AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Add(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
 
         // TODO: move this to the Tick() of TProcessor_AttributeModifier_RevocableAdditive_Compute
-        // technically, the follow is 'correct' but it's confusing as to why we are resetting the Final in this processor
+        // technically, the following is 'correct' but it's confusing as to why we are resetting the Final in this processor
         AttributeComp._Final = AttributeComp._Base;
 
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
@@ -241,15 +246,16 @@ namespace ck::detail
 
         attribute::VeryVerbose
         (
-            TEXT("Computing NOT REVOKABLE (SUBTRACT) AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
+            TEXT("Computing NOT REVOCABLE (SUBTRACT) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"),
             InHandle,
+            AttributeFragmentType::ComponentTagType,
             TargetEntity
         );
 
         AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Sub(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
 
         // TODO: move this to the Tick() of TProcessor_AttributeModifier_RevocableAdditive_Compute
-        // technically, the follow is 'correct' but it's confusing as to why we are resetting the Final in this processor
+        // technically, the following is 'correct' but it's confusing as to why we are resetting the Final in this processor
         AttributeComp._Final = AttributeComp._Base;
 
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
@@ -269,8 +275,13 @@ namespace ck::detail
         auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
 
-        attribute::VeryVerbose(TEXT("Computing REVOKABLE (MULTIPLY) AttributeModifier for Entity [{}] to Attribute component of Target Entity [{}]"),
-            InHandle, TargetEntity);
+        attribute::VeryVerbose
+        (
+            TEXT("Computing REVOCABLE (MULTIPLY) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"),
+            InHandle,
+            AttributeFragmentType::ComponentTagType,
+            TargetEntity
+        );
 
         AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Mul(AttributeComp._Final, InAttributeModifier.Get_ModifierDelta());
     }
@@ -289,8 +300,13 @@ namespace ck::detail
         auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
 
-        attribute::VeryVerbose(TEXT("Computing REVOKABLE (DIVIDE) AttributeModifier for Entity [{}] to Attribute component of Target Entity [{}]"),
-            InHandle, TargetEntity);
+        attribute::VeryVerbose
+        (
+            TEXT("Computing REVOCABLE (DIVIDE) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"),
+            InHandle,
+            AttributeFragmentType::ComponentTagType,
+            TargetEntity
+        );
 
         AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Div(AttributeComp._Final, InAttributeModifier.Get_ModifierDelta());
     }
@@ -309,8 +325,13 @@ namespace ck::detail
         auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
 
-        attribute::VeryVerbose(TEXT("Computing NOT REVOKABLE (MULTIPLY) AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
-            InHandle, TargetEntity);
+        attribute::VeryVerbose
+        (
+            TEXT("Computing NOT REVOCABLE (MULTIPLY) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"),
+            InHandle,
+            AttributeFragmentType::ComponentTagType,
+            TargetEntity
+        );
 
         AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Mul(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
         AttributeComp._Final = AttributeComp._Base;
@@ -332,8 +353,13 @@ namespace ck::detail
         auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
 
-        attribute::VeryVerbose(TEXT("Computing NOT REVOKABLE (DIVIDE) AttributeModifier for Entity [{}] to Attribute component of target Entity [{}]"),
-            InHandle, TargetEntity);
+        attribute::VeryVerbose
+        (
+            TEXT("Computing NOT REVOCABLE (DIVIDE) AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"),
+            InHandle,
+            AttributeFragmentType::ComponentTagType,
+            TargetEntity
+        );
 
         AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Div(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
         AttributeComp._Final = AttributeComp._Base;
@@ -396,22 +422,23 @@ namespace ck::detail
         if (ck::Is_NOT_Valid(TargetEntity))
         { return; }
 
-        attribute::VeryVerbose(TEXT("Removing REVOKABLE ({}) AttributeModifier value of Entity [{}] from Attribute component of Target Entity [{}]. "
-            "Forcing final value calculation again"), InHandle, TargetEntity);
+        attribute::VeryVerbose
+        (
+            TEXT("Removing REVOCABLE AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]. "
+            "Forcing final value calculation again"),
+            InHandle,
+            AttributeFragmentType::ComponentTagType,
+            TargetEntity
+        );
 
         TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(TargetEntity);
     }
-
-
-    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
-    // --------------------------------------------------------------------------------------------------------------------
-
     template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttribute, typename
         T_MulticastType>
     TProcessor_Attribute_FireSignals_CurrentMinMax<T_DerivedAttribute, T_MulticastType>::
