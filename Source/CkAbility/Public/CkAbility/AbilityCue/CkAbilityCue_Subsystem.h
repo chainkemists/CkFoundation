@@ -123,6 +123,10 @@ private:
         const FString&) -> void;
 
     auto
+    DoAssetUpdated(
+        const FAssetData&) -> void;
+
+    auto
     DoHandleAssetAddedDeletedOrRenamed(
         const FAssetData&) -> void;
 
