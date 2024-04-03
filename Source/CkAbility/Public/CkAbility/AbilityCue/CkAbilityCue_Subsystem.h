@@ -135,12 +135,15 @@ private:
 
 public:
     auto
-    Get_AbilityCue(
-        const FGameplayTag& InCueName) -> UCk_AbilityCue_Config_PDA*;
+    Get_AbilityCue_ConstructionScript(
+        const FGameplayTag& InCueName) -> class UCk_Entity_ConstructionScript_PDA*;
 
 private:
     UPROPERTY(Transient)
     TMap<FGameplayTag, FSoftObjectPath> _AbilityCues;
+
+    UPROPERTY(Transient)
+    TMap<FGameplayTag, TObjectPtr<UCk_AbilityCue_Config_PDA>> _EntityConfigs;
 
     UPROPERTY(Transient)
     TMap<FName, TSoftObjectPtr<class UCk_AbilityCue_Aggregator_PDA>> _Aggregators;
