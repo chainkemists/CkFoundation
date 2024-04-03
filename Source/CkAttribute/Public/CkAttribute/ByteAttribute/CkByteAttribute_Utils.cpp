@@ -503,12 +503,6 @@ auto
         }
     }
 
-    if (NOT UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_ByteAttribute_Rep>(LifetimeOwner))
-    { return NewModifierEntity; }
-
-    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(LifetimeOwner))
-    { return NewModifierEntity; }
-
     UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_ByteAttribute_Rep>(
         LifetimeOwner, [&](UCk_Fragment_ByteAttribute_Rep* InRepComp)
     {
@@ -530,23 +524,14 @@ auto
     {
         case ECk_MinMaxCurrent::Current:
         {
-            if (NOT RecordOfByteAttributeModifiers_Utils_Current::Has(InAttribute))
-            { return {}; }
-
             return RecordOfByteAttributeModifiers_Utils_Current::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
         }
         case ECk_MinMaxCurrent::Min:
         {
-            if (NOT RecordOfByteAttributeModifiers_Utils_Min::Has(InAttribute))
-            { return {}; }
-
             return RecordOfByteAttributeModifiers_Utils_Min::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
         }
         case ECk_MinMaxCurrent::Max:
         {
-            if (NOT RecordOfByteAttributeModifiers_Utils_Max::Has(InAttribute))
-            { return {}; }
-
             return RecordOfByteAttributeModifiers_Utils_Max::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
         }
         default:
@@ -565,12 +550,6 @@ auto
     auto AttributeOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(AttributeEntity);
 
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAttributeModifierEntity);
-
-    if (NOT UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_ByteAttribute_Rep>(AttributeOwnerEntity))
-    { return AttributeEntity; }
-
-    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AttributeOwnerEntity))
-    { return AttributeEntity; }
 
     UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_ByteAttribute_Rep>(AttributeOwnerEntity,
     [&](UCk_Fragment_ByteAttribute_Rep* InRepComp)
