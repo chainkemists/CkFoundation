@@ -1,8 +1,11 @@
 #include "CkAbilityCue_Fragment_Data.h"
 
 #include "CkAbility/CkAbility_Log.h"
+#include "CkAbility/Ability/CkAbility_Script.h"
+#include "CkAbility/Settings/CkAbility_Settings.h"
 
 #include "CkCore/IO/CkIO_Utils.h"
+#include "CkCore/Object/CkObject_Utils.h"
 
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
 
@@ -22,36 +25,96 @@ auto
     Request_Populate() -> void
 {
     _AbilityCues.Empty();
+    _AbilityCueConfigs.Empty();
 
     const auto& ThisPath = this->GetPathName();
     const auto& ExtractedPath = UCk_Utils_IO_UE::Get_ExtractPath(ThisPath);
 
-    const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-
-    FARFilter Filter;
-    Filter.ClassPaths.Add(FTopLevelAssetPath{ConfigType::StaticClass()});
-    Filter.PackagePaths.Add(*ExtractedPath);
-    Filter.bRecursiveClasses = true;
-
-    FARCompiledFilter CompiledFilter;
-    IAssetRegistry::Get()->CompileFilter(Filter, CompiledFilter);
-
-    AssetRegistryModule.Get().EnumerateAssets(CompiledFilter, [&](const FAssetData& InAssetData)
     {
-        // TODO: See if we can avoid resolving the Object
-        const auto ResolvedObject = InAssetData.GetSoftObjectPath().TryLoad();
-        const auto Object = Cast<UCk_AbilityCue_Config_PDA>(ResolvedObject);
+        const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 
-        if (ck::Is_NOT_Valid(Object))
+        FARFilter Filter;
+        Filter.ClassPaths.Add(FTopLevelAssetPath{ConfigType::StaticClass()});
+        Filter.PackagePaths.Add(*ExtractedPath);
+        Filter.bRecursiveClasses = true;
+        Filter.bRecursivePaths = true;
+        Filter.bIncludeOnlyOnDiskAssets = true;
+
+        FARCompiledFilter CompiledFilter;
+        IAssetRegistry::Get()->CompileFilter(Filter, CompiledFilter);
+
+        AssetRegistryModule.Get().EnumerateAssets(CompiledFilter, [&](const FAssetData& InAssetData)
         {
-            ck::ability::Error(TEXT("Unable to Cast Cue [{}] to [{}].{}"),
-                ResolvedObject, ck::Get_RuntimeTypeToString<UCk_AbilityCue_Config_PDA>(), ck::Context(this));
-            return false;
-        }
+            // TODO: See if we can avoid resolving the Object
+            const auto ResolvedObject = InAssetData.GetSoftObjectPath().TryLoad();
+            const auto Object = Cast<UCk_AbilityCue_Config_PDA>(ResolvedObject);
 
-        _AbilityCues.Add(Object->Get_CueName(), InAssetData.GetSoftObjectPath());
-        return true;
-    });
+            if (ck::Is_NOT_Valid(Object))
+            {
+                ck::ability::Error(TEXT("Unable to Cast Cue [{}] to [{}].{}"),
+                    ResolvedObject, ck::Get_RuntimeTypeToString<UCk_AbilityCue_Config_PDA>(), ck::Context(this));
+                return false;
+            }
+
+            _AbilityCues.Add(Object->Get_CueName(), InAssetData.GetSoftObjectPath());
+            _AbilityCueConfigs.Add(Object->Get_CueName(), Object);
+            return true;
+        });
+    }
+
+    const auto& OtherCueTypes = UCk_Utils_Ability_Settings_UE::Get_CueTypes();
+
+    CK_LOG_ERROR_IF_NOT(ck::ability, NOT OtherCueTypes.IsEmpty(),
+        TEXT("CueTypes in Ability Settings for this Project is empty. Cues without dedicated EntityConfigs will NOT work correctly"))
+    { return; }
+
+    for (const auto& CueType : OtherCueTypes)
+    {
+        const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+
+        auto CueTypeBlueprint = UCk_Utils_Object_UE::Get_ClassGeneratedByBlueprint(CueType);
+
+        FARFilter Filter;
+        // unfortunately, there is no way to get asset data on Blueprints deriving from a particular Blueprint class
+        //Filter.ClassPaths.Add(FTopLevelAssetPath{UCk_Ability_Script_PDA::StaticClass()});
+        Filter.ClassPaths.Add(FTopLevelAssetPath{UBlueprint::StaticClass()});
+        Filter.PackagePaths.Add(*ExtractedPath);
+        Filter.bRecursiveClasses = true;
+        Filter.bRecursivePaths = true;
+        Filter.bIncludeOnlyOnDiskAssets = true;
+
+        FARCompiledFilter CompiledFilter;
+        IAssetRegistry::Get()->CompileFilter(Filter, CompiledFilter);
+
+        AssetRegistryModule.Get().EnumerateAssets(CompiledFilter, [&](const FAssetData& InAssetData)
+        {
+            // TODO: See if we can avoid resolving the Object
+            const auto ResolvedObject = InAssetData.GetSoftObjectPath().TryLoad();
+            const auto& Blueprint = Cast<UBlueprint>(ResolvedObject);
+            const auto ResolvedObjectDefaultClass = Blueprint->GeneratedClass->GetDefaultObject();
+
+            if (NOT ResolvedObjectDefaultClass->IsA(CueType))
+            { return true; }
+
+            const auto Object = Cast<UCk_Ability_Script_PDA>(ResolvedObjectDefaultClass);
+
+            if (ck::Is_NOT_Valid(Object))
+            {
+                ck::ability::Error(TEXT("Unable to Cast Cue [{}] to [{}].{}"),
+                    ResolvedObject, ck::Get_RuntimeTypeToString<UCk_Ability_Script_PDA>(), ck::Context(this));
+                return true;
+            }
+
+            const auto AbilityCueConfig = Get_ConfigForCue(Object->GetClass());
+
+            if (ck::Is_NOT_Valid(AbilityCueConfig))
+            { return true; }
+
+            _AbilityCues.Add(Object->Get_Data().Get_AbilityName(), InAssetData.GetSoftObjectPath());
+            _AbilityCueConfigs.Add(Object->Get_Data().Get_AbilityName(), AbilityCueConfig);
+            return true;
+        });
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
