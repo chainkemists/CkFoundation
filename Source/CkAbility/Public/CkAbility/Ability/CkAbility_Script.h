@@ -201,8 +201,8 @@ private:
     DoGet_AbilityOwnerEntity();
 
 private:
-    UPROPERTY(EditDefaultsOnly,
-              meta = (ShowOnlyInnerProperties))
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
+              meta = (AllowPrivateAccess, ShowOnlyInnerProperties))
     FCk_Ability_Script_Data _Data;
 
 private:
