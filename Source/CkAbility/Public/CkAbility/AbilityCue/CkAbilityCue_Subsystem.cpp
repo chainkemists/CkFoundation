@@ -1,6 +1,7 @@
 #include "CkAbilityCue_Subsystem.h"
 
 #include "CkAbility/CkAbility_Log.h"
+#include "CkAbility/Ability/CkAbility_Script.h"
 #include "CkAbility/AbilityCue/CkAbilityCue_Fragment_Data.h"
 
 #include "CkCore/Actor/CkActor_Utils.h"
@@ -47,14 +48,9 @@ auto
     { return; }
 
     const auto AbilityCueSubsystem = GEngine->GetEngineSubsystem<UCk_AbilityCue_Subsystem_UE>();
-    const auto AbilityCueConfig = AbilityCueSubsystem->Get_AbilityCue(InCueName);
+    const auto ConstructionScript = AbilityCueSubsystem->Get_AbilityCue_ConstructionScript(InCueName);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(AbilityCueConfig), TEXT("Failed to retrieve AbilityCue Config with Name [{}]"), InCueName)
-    { return; }
-
-    const auto& AbilityCueEntityConfig = AbilityCueConfig->Get_EntityConfig();
-
-    CK_ENSURE_IF_NOT(ck::IsValid(AbilityCueEntityConfig), TEXT("EntityConfig for AbilityCue Config [{}] is NOT valid."), AbilityCueConfig)
+    if (ck::Is_NOT_Valid(ConstructionScript))
     { return; }
 
     const auto TransientEntity = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>()->Get_TransientEntity();
@@ -62,9 +58,9 @@ auto
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity);
     NewEntity.Add<FCk_AbilityCue_Params>(InParams);
 
-    ck::ability::Verbose(TEXT("Executing AbilityCue Config [{}] with created Entity [{}]") ,AbilityCueConfig, NewEntity);
+    ck::ability::Verbose(TEXT("Executing AbilityCue ConstructionScript [{}] with created Entity [{}]"), ConstructionScript, NewEntity);
 
-    AbilityCueEntityConfig->Build(NewEntity, {});
+    ConstructionScript->Construct(NewEntity, {});
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -147,47 +143,9 @@ auto
         _AbilityCueReplicators.Emplace
         (
             GetWorld()->SpawnActor<ACk_AbilityCueReplicator_UE>()
-            //UCk_Utils_Actor_UE::Request_SpawnActor<ACk_AbilityCueReplicator_UE>
-            //(
-            //    FCk_Utils_Actor_SpawnActor_Params
-            //    {
-            //        GetWorld()->SpawnActor,
-            //        ACk_AbilityCueReplicator_UE::StaticClass()
-            //    }
-            //    .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel)
-            //    .Set_NetworkingType(ECk_Actor_NetworkingType::Replicated),
-            //    [&](AActor* InActor) { }
-            //)
         );
     }
 }
-
-//auto
-//    UCk_AbilityCueReplicator_Subsystem_UE::
-//    OnPlayerControllerReady(
-//        TWeakObjectPtr<APlayerController> InNewPlayerController,
-//        TArray<TWeakObjectPtr<APlayerController>> InAllPlayerControllers)
-//    -> void
-//{
-//    for (auto Index = 0; Index < NumberOfReplicators; ++Index)
-//    {
-//        _AbilityCueReplicators.Emplace
-//        (
-//            GetWorld()->SpawnActor<ACk_AbilityCueReplicator_UE>()
-//            //UCk_Utils_Actor_UE::Request_SpawnActor<ACk_AbilityCueReplicator_UE>
-//            //(
-//            //    FCk_Utils_Actor_SpawnActor_Params
-//            //    {
-//            //        GetWorld()->SpawnActor,
-//            //        ACk_AbilityCueReplicator_UE::StaticClass()
-//            //    }
-//            //    .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel)
-//            //    .Set_NetworkingType(ECk_Actor_NetworkingType::Replicated),
-//            //    [&](AActor* InActor) { }
-//            //)
-//        );
-//    }
-//}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -329,10 +287,7 @@ auto
         const auto Aggregator = Asset.LoadSynchronous();
         Aggregator->Request_Populate();
 
-        for (const auto KeyVal : Aggregator->Get_AbilityCues())
-        {
-            _AbilityCues.Add(KeyVal.Key, KeyVal.Value);
-        }
+        _EntityConfigs.Append(Aggregator->Get_AbilityCueConfigs());
     });
 }
 
@@ -354,30 +309,24 @@ auto
 
 auto
     UCk_AbilityCue_Subsystem_UE::
-    Get_AbilityCue(
+    Get_AbilityCue_ConstructionScript(
         const FGameplayTag& InCueName)
-    -> UCk_AbilityCue_Config_PDA*
+    -> class UCk_Entity_ConstructionScript_PDA*
 {
     if (_AbilityCues.IsEmpty())
     { DoPopulateAllAggregators(); }
 
-    const auto FoundAbilityCue = _AbilityCues.Find(InCueName);
+    const auto FoundAbilityCue = _EntityConfigs.Find(InCueName);
 
     CK_ENSURE_IF_NOT(ck::IsValid(FoundAbilityCue, ck::IsValid_Policy_NullptrOnly{}), TEXT("Could not find AbilityCue with Name [{}]"), InCueName)
     { return {}; }
 
-    auto Config = Cast<UCk_AbilityCue_Config_PDA>(FoundAbilityCue->ResolveObject());
+    auto EntityConfig = (*FoundAbilityCue)->Get_EntityConfig();
 
-    if (ck::Is_NOT_Valid(Config))
-    { FoundAbilityCue->TryLoad(); }
-
-    Config = Cast<UCk_AbilityCue_Config_PDA>(FoundAbilityCue->ResolveObject());
-
-    CK_ENSURE_IF_NOT(ck::IsValid(Config),
-        TEXT("Failed to Resolve AbilityCue Config object with Name [{}]"), InCueName)
+    CK_ENSURE_IF_NOT(ck::IsValid(EntityConfig), TEXT("EntityConfig INVALID for AbilityCue with Name [{}]"), InCueName)
     { return {}; }
 
-    return Config;
+    return EntityConfig->Get_EntityConstructionScript();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
