@@ -1,5 +1,6 @@
 #include "CkLabel_Utils.h"
 
+#include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkLabel/CkLabel_Fragment.h"
 
 #include <GameplayTagsManager.h>
@@ -57,6 +58,11 @@ auto
     }
 
     InHandle.Add<ck::FFragment_GameplayLabel>(DoGet_LabelOrNone(InLabel));
+
+    if (ck::IsValid(InLabel))
+    {
+        UCk_Utils_Handle_UE::Set_DebugName(InHandle, InLabel.GetTagName());
+    }
 }
 
 auto
