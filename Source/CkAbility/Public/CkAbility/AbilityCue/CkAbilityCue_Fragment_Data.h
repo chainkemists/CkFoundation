@@ -24,11 +24,11 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
-        meta=(AllowPrivateAccess))
+        meta=(AllowPrivateAccess, ExposeOnSpawn))
     FGameplayTag _CueName;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Instanced,
-        meta=(AllowPrivateAccess))
+        meta=(AllowPrivateAccess, ExposeOnSpawn))
     TObjectPtr<UCk_EntityBridge_Config_Base_PDA> _EntityConfig;
 
 public:
