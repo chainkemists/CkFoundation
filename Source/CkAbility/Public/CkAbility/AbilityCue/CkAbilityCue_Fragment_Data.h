@@ -44,7 +44,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(BlueprintType)
+UCLASS(Abstract)
 class CKABILITY_API UCk_AbilityCue_Aggregator_PDA : public UCk_DataAsset_PDA
 {
     GENERATED_BODY()
@@ -61,12 +61,23 @@ public:
 public:
     auto PreSave(FObjectPreSaveContext ObjectSaveContext) -> void override;
 
+public:
+    UFUNCTION(BlueprintImplementableEvent)
+    UCk_AbilityCue_Config_PDA*
+    Get_ConfigForCue(TSubclassOf<class UCk_Ability_Script_PDA> InBlueprint);
+
 private:
-    UPROPERTY(EditInstanceOnly, meta=(AllowPrivateAccess, DisplayThumbnail="false", ForceInlineRow))
+    UPROPERTY(Transient, EditInstanceOnly,
+        meta=(AllowPrivateAccess, DisplayThumbnail="false", ForceInlineRow))
     TMap<FGameplayTag, FSoftObjectPath> _AbilityCues;
+
+    UPROPERTY(Transient, EditInstanceOnly,
+        meta=(AllowPrivateAccess, DisplayThumbnail="false", ForceInlineRow))
+    TMap<FGameplayTag, TObjectPtr<UCk_AbilityCue_Config_PDA>> _AbilityCueConfigs;
 
 public:
     CK_PROPERTY_GET(_AbilityCues);
+    CK_PROPERTY_GET(_AbilityCueConfigs);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
