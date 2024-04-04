@@ -234,7 +234,7 @@ namespace ck
         const auto& SensorFilteringInfo  = InParamsComp.Get_Params().Get_FilteringParams().Get_MarkerNames();
 
         CK_ENSURE_IF_NOT(ck::IsValid(OverlappedMarkerEntity),
-            TEXT("Sensor [Name: {} | Entity: {}] received EndOverlap with Marker [{}] that has an INVALID Entity"),
+            TEXT("Sensor [Name: {} | Entity: {}] received BeginOverlap with Marker [{}] that has an INVALID Entity"),
             SensorName,
             InSensorEntity,
             OverlappedMarkerName)
