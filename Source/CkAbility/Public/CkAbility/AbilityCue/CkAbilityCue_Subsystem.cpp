@@ -3,11 +3,13 @@
 #include "CkAbility/CkAbility_Log.h"
 #include "CkAbility/Ability/CkAbility_Script.h"
 #include "CkAbility/AbilityCue/CkAbilityCue_Fragment_Data.h"
+#include "CkAbility/Settings/CkAbility_Settings.h"
 
 #include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/IO/CkIO_Utils.h"
 #include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
+#include "CkCore/Object/CkObject_Utils.h"
 
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
@@ -176,15 +178,51 @@ auto
 
 auto
     UCk_AbilityCue_Subsystem_UE::
+    Request_PopulateAllAggregators()
+    -> void
+{
+    _AbilityCues.Empty();
+    _EntityConfigs.Empty();
+
+    const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    const auto& AssetRegistry       = AssetRegistryModule.Get();
+
+    FARFilter Filter;
+    Filter.ClassPaths.Add(FTopLevelAssetPath{UCk_AbilityCue_Aggregator_PDA::StaticClass()});
+    Filter.bRecursiveClasses = true;
+
+    FARCompiledFilter CompiledFilter;
+    AssetRegistry.CompileFilter(Filter, CompiledFilter);
+
+    TArray<TSoftObjectPtr<UCk_AbilityCue_Aggregator_PDA>> Assets;
+    AssetRegistry.EnumerateAssets(CompiledFilter, [&](const FAssetData& InEnumeratedAssetData)
+    {
+        DoAddAggregator(InEnumeratedAssetData);
+        Assets.Emplace(TSoftObjectPtr<UCk_AbilityCue_Aggregator_PDA>{InEnumeratedAssetData.GetSoftObjectPath()});
+        return true;
+    });
+
+    ck::algo::ForEach(Assets, [&](const TSoftObjectPtr<class UCk_AbilityCue_Aggregator_PDA>& Asset)
+    {
+        const auto Aggregator = Asset.LoadSynchronous();
+        Aggregator->Request_Populate();
+
+        _EntityConfigs.Append(Aggregator->Get_AbilityCueConfigs());
+    });
+}
+
+auto
+    UCk_AbilityCue_Subsystem_UE::
     DoOnEngineInitComplete()
     -> void
 {
-    DoPopulateAllAggregators();
+    Request_PopulateAllAggregators();
     const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
     AssetRegistryModule.Get().OnAssetAdded().AddUObject(this, &UCk_AbilityCue_Subsystem_UE::DoHandleAssetAddedDeleted);
     AssetRegistryModule.Get().OnAssetRemoved().AddUObject(this, &UCk_AbilityCue_Subsystem_UE::DoHandleAssetAddedDeleted);
     AssetRegistryModule.Get().OnAssetRenamed().AddUObject(this, &UCk_AbilityCue_Subsystem_UE::DoHandleRenamed);
     AssetRegistryModule.Get().OnAssetUpdated().AddUObject(this, &UCk_AbilityCue_Subsystem_UE::DoAssetUpdated);
+    AssetRegistryModule.Get().OnAssetUpdatedOnDisk().AddUObject(this, &UCk_AbilityCue_Subsystem_UE::DoAssetUpdated);
 }
 
 auto
@@ -212,9 +250,21 @@ auto
         const FAssetData& InAssetData)
     -> void
 {
-    if (InAssetData.IsInstanceOf<UCk_AbilityCue_Aggregator_PDA>())
+    if (InAssetData.IsInstanceOf<UCk_AbilityCue_Aggregator_PDA>() || InAssetData.IsInstanceOf<UCk_Ability_EntityConfig_PDA>())
     {
-        DoPopulateAllAggregators();
+        Request_PopulateAllAggregators();
+        return;
+    }
+
+    const auto& CueTypes = UCk_Utils_Ability_Settings_UE::Get_CueTypes();
+    for (const auto& CueType : CueTypes)
+    {
+        const auto CueTypeBlueprint = UCk_Utils_Object_UE::Get_ClassGeneratedByBlueprint(CueType);
+        if (InAssetData.IsInstanceOf(CueTypeBlueprint->GetClass(), EResolveClass::Yes))
+        {
+            Request_PopulateAllAggregators();
+            return;
+        }
     }
 }
 
@@ -274,38 +324,6 @@ auto
 
 auto
     UCk_AbilityCue_Subsystem_UE::
-    DoPopulateAllAggregators()
-    -> void
-{
-    const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-    const auto& AssetRegistry       = AssetRegistryModule.Get();
-
-    FARFilter Filter;
-    Filter.ClassPaths.Add(FTopLevelAssetPath{UCk_AbilityCue_Aggregator_PDA::StaticClass()});
-    Filter.bRecursiveClasses = true;
-
-    FARCompiledFilter CompiledFilter;
-    AssetRegistry.CompileFilter(Filter, CompiledFilter);
-
-    TArray<TSoftObjectPtr<UCk_AbilityCue_Aggregator_PDA>> Assets;
-    AssetRegistry.EnumerateAssets(CompiledFilter, [&](const FAssetData& InEnumeratedAssetData)
-    {
-        DoAddAggregator(InEnumeratedAssetData);
-        Assets.Emplace(TSoftObjectPtr<UCk_AbilityCue_Aggregator_PDA>{InEnumeratedAssetData.GetSoftObjectPath()});
-        return true;
-    });
-
-    ck::algo::ForEach(Assets, [&](const TSoftObjectPtr<class UCk_AbilityCue_Aggregator_PDA>& Asset)
-    {
-        const auto Aggregator = Asset.LoadSynchronous();
-        Aggregator->Request_Populate();
-
-        _EntityConfigs.Append(Aggregator->Get_AbilityCueConfigs());
-    });
-}
-
-auto
-    UCk_AbilityCue_Subsystem_UE::
     DoAddAggregator(
         const FAssetData& InAggregatorData)
     -> void
@@ -327,7 +345,7 @@ auto
     -> class UCk_Entity_ConstructionScript_PDA*
 {
     if (_AbilityCues.IsEmpty())
-    { DoPopulateAllAggregators(); }
+    { Request_PopulateAllAggregators(); }
 
     const auto FoundAbilityCue = _EntityConfigs.Find(InCueName);
 
@@ -340,6 +358,16 @@ auto
     { return {}; }
 
     return EntityConfig->Get_EntityConstructionScript();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_AbilityCue_Subsystem_UE::
+    Request_PopulateAggregators()
+    -> void
+{
+    GEngine->GetEngineSubsystem<SubsystemType>()->Request_PopulateAllAggregators();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

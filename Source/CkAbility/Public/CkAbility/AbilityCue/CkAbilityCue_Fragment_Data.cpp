@@ -11,12 +11,13 @@
 
 #include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
 
-#include "CkEntityBridge/CkEntityBridge_Fragment_Data.h"
+#include <Engine/AssetManager.h>
 
-#include "Engine/AssetManager.h"
-#include "Engine/ObjectLibrary.h"
+#if WITH_EDITOR
+#include <Editor.h>
+#endif
 
-#include "UObject/ObjectSaveContext.h"
+#include <UObject/ObjectSaveContext.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -24,8 +25,31 @@ auto
     UCk_AbilityCue_Aggregator_PDA::
     Request_Populate() -> void
 {
-    _AbilityCues.Empty();
-    _AbilityCueConfigs.Empty();
+    if (IsTemplate())
+    { return; }
+
+#if WITH_EDITOR
+    if (NOT _AbilityCues.IsEmpty())
+    {
+        if (NOT GEditor->IsPlaySessionInProgress())
+        {
+            _AbilityCues.Empty();
+            _AbilityCueConfigs.Empty();
+
+            // for an unknown reason, we need to wait for a few frames for the above clearing of the arrays to propagate to the DataAsset
+            // before we re-populate it - there is possibly a function that must be called to force the propagation to happen immediately
+
+            const auto& TimerManager = GEditor->GetTimerManager();
+            auto TempTimerHandle = FTimerHandle{};
+            TimerManager->SetTimer(TempTimerHandle, [this]()
+            {
+                Request_Populate();
+            }, 1.0f, false);
+
+            return;
+        }
+    }
+#endif
 
     const auto& ThisPath = this->GetPathName();
     const auto& ExtractedPath = UCk_Utils_IO_UE::Get_ExtractPath(ThisPath);
@@ -49,12 +73,9 @@ auto
             const auto ResolvedObject = InAssetData.GetSoftObjectPath().TryLoad();
             const auto Object = Cast<UCk_AbilityCue_Config_PDA>(ResolvedObject);
 
-            if (ck::Is_NOT_Valid(Object))
-            {
-                ck::ability::Error(TEXT("Unable to Cast Cue [{}] to [{}].{}"),
-                    ResolvedObject, ck::Get_RuntimeTypeToString<UCk_AbilityCue_Config_PDA>(), ck::Context(this));
-                return false;
-            }
+            CK_LOG_ERROR_NOTIFY_IF_NOT(ck::ability, ck::IsValid(Object), TEXT("Unable to Cast Cue [{}] to [{}].{}"),
+                    ResolvedObject, ck::Get_RuntimeTypeToString<UCk_AbilityCue_Config_PDA>(), ck::Context(this))
+            { return false; }
 
             _AbilityCues.Add(Object->Get_CueName(), InAssetData.GetSoftObjectPath());
             _AbilityCueConfigs.Add(Object->Get_CueName(), Object);
@@ -81,7 +102,7 @@ auto
         Filter.PackagePaths.Add(*ExtractedPath);
         Filter.bRecursiveClasses = true;
         Filter.bRecursivePaths = true;
-        Filter.bIncludeOnlyOnDiskAssets = true;
+        Filter.bIncludeOnlyOnDiskAssets = false;
 
         FARCompiledFilter CompiledFilter;
         IAssetRegistry::Get()->CompileFilter(Filter, CompiledFilter);
@@ -98,12 +119,9 @@ auto
 
             const auto Object = Cast<UCk_Ability_Script_PDA>(ResolvedObjectDefaultClass);
 
-            if (ck::Is_NOT_Valid(Object))
-            {
-                ck::ability::Error(TEXT("Unable to Cast Cue [{}] to [{}].{}"),
-                    ResolvedObject, ck::Get_RuntimeTypeToString<UCk_Ability_Script_PDA>(), ck::Context(this));
-                return true;
-            }
+            CK_LOG_ERROR_NOTIFY_IF_NOT(ck::ability, ck::IsValid(Object), TEXT("Unable to Cast Cue [{}] to [{}].{}"),
+                    ResolvedObject, ck::Get_RuntimeTypeToString<UCk_Ability_Script_PDA>(), ck::Context(this))
+            { return true; }
 
             const auto AbilityCueConfig = Get_ConfigForCue(Object->GetClass());
 
