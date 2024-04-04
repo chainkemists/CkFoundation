@@ -274,7 +274,7 @@ auto
     const auto& OutermostActor = UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(OwningActor);
 
     CK_ENSURE_IF_NOT(ck::IsValid(OutermostActor),
-        TEXT("Unable to add ReplicatedFramgment [{}] for Entity [{}]. We require an Entity with an Actor in the Outer chain that has remote "
+        TEXT("Unable to add ReplicatedFragment [{}] for Entity [{}]. We require an Entity with an Actor in the Outer chain that has remote "
             "authority (is Replicated) to be able to add replicated fragments. During this search, we found the Entity [{}] with OwningActor [{}] "
             "that does NOT have remote authority, nor does any owning Actor in the ownership chain. Does this Entity even require replication?"),
         ck::Get_RuntimeTypeToString<T_ReplicatedFragment>(), InHandle,  EntityWithActor, OwningActor)
