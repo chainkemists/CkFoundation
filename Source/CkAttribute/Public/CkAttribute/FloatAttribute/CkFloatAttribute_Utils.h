@@ -25,14 +25,11 @@ public:
     friend class UCk_Utils_FloatAttributeModifier_UE;
 
 private:
-    class FloatAttribute_Utils_Min : public ck::TUtils_Attribute<ck::FFragment_FloatAttribute_Min> {};
-    class FloatAttribute_Utils_Max : public ck::TUtils_Attribute<ck::FFragment_FloatAttribute_Max> {};
-    class FloatAttribute_Utils_Current : public ck::TUtils_Attribute<ck::FFragment_FloatAttribute_Current> {};
+    using FloatAttribute_Utils_Min = ck::TUtils_Attribute<ck::FFragment_FloatAttribute_Min>;
+    using FloatAttribute_Utils_Max = ck::TUtils_Attribute<ck::FFragment_FloatAttribute_Max>;
+    using FloatAttribute_Utils_Current = ck::TUtils_Attribute<ck::FFragment_FloatAttribute_Current>;
 
-    class RecordOfFloatAttributes_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfFloatAttributes> {};
-
-public:
-    friend class UCk_Utils_FloatAttributes_UE;
+    using RecordOfFloatAttributes_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfFloatAttributes>;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -200,13 +197,13 @@ public:
     CK_GENERATED_BODY(UCk_Utils_FloatAttributeModifier_UE);
 
 private:
-    class FloatAttributeModifier_Utils_Current : public ck::TUtils_AttributeModifier<ck::FFragment_FloatAttributeModifier_Current> {};
-    class FloatAttributeModifier_Utils_Min : public ck::TUtils_AttributeModifier<ck::FFragment_FloatAttributeModifier_Min> {};
-    class FloatAttributeModifier_Utils_Max : public ck::TUtils_AttributeModifier<ck::FFragment_FloatAttributeModifier_Max> {};
+    using FloatAttributeModifier_Utils_Current = ck::TUtils_AttributeModifier<ck::FFragment_FloatAttributeModifier_Current>;
+    using FloatAttributeModifier_Utils_Min     = ck::TUtils_AttributeModifier<ck::FFragment_FloatAttributeModifier_Min>;
+    using FloatAttributeModifier_Utils_Max     = ck::TUtils_AttributeModifier<ck::FFragment_FloatAttributeModifier_Max>;
 
-    class RecordOfFloatAttributeModifiers_Utils_Current : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfFloatAttributeModifiers> {};
-    class RecordOfFloatAttributeModifiers_Utils_Min : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfFloatAttributeModifiers> {};
-    class RecordOfFloatAttributeModifiers_Utils_Max : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfFloatAttributeModifiers> {};
+    using RecordOfFloatAttributeModifiers_Utils_Current = FloatAttributeModifier_Utils_Current::RecordOfAttributeModifiers_Utils;
+    using RecordOfFloatAttributeModifiers_Utils_Min     = FloatAttributeModifier_Utils_Min::RecordOfAttributeModifiers_Utils;
+    using RecordOfFloatAttributeModifiers_Utils_Max     = FloatAttributeModifier_Utils_Max::RecordOfAttributeModifiers_Utils;
 
 public:
     UFUNCTION(BlueprintCallable,

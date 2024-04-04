@@ -25,14 +25,11 @@ public:
     friend class UCk_Utils_ByteAttributeModifier_UE;
 
 private:
-    class ByteAttribute_Utils_Min : public ck::TUtils_Attribute<ck::FFragment_ByteAttribute_Min> {};
-    class ByteAttribute_Utils_Max : public ck::TUtils_Attribute<ck::FFragment_ByteAttribute_Max> {};
-    class ByteAttribute_Utils_Current : public ck::TUtils_Attribute<ck::FFragment_ByteAttribute_Current> {};
+    using ByteAttribute_Utils_Min = ck::TUtils_Attribute<ck::FFragment_ByteAttribute_Min>;
+    using ByteAttribute_Utils_Max = ck::TUtils_Attribute<ck::FFragment_ByteAttribute_Max>;
+    using ByteAttribute_Utils_Current = ck::TUtils_Attribute<ck::FFragment_ByteAttribute_Current>;
 
-    class RecordOfByteAttributes_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfByteAttributes> {};
-
-public:
-    friend class UCk_Utils_ByteAttributes_UE;
+    using RecordOfByteAttributes_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfByteAttributes>;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -200,13 +197,13 @@ public:
     CK_GENERATED_BODY(UCk_Utils_ByteAttributeModifier_UE);
 
 private:
-    class ByteAttributeModifier_Utils_Current : public ck::TUtils_AttributeModifier<ck::FFragment_ByteAttributeModifier_Current> {};
-    class ByteAttributeModifier_Utils_Min : public ck::TUtils_AttributeModifier<ck::FFragment_ByteAttributeModifier_Min> {};
-    class ByteAttributeModifier_Utils_Max : public ck::TUtils_AttributeModifier<ck::FFragment_ByteAttributeModifier_Max> {};
+    using ByteAttributeModifier_Utils_Current = ck::TUtils_AttributeModifier<ck::FFragment_ByteAttributeModifier_Current>;
+    using ByteAttributeModifier_Utils_Min     = ck::TUtils_AttributeModifier<ck::FFragment_ByteAttributeModifier_Min>;
+    using ByteAttributeModifier_Utils_Max     = ck::TUtils_AttributeModifier<ck::FFragment_ByteAttributeModifier_Max>;
 
-    class RecordOfByteAttributeModifiers_Utils_Current : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfByteAttributeModifiers> {};
-    class RecordOfByteAttributeModifiers_Utils_Min : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfByteAttributeModifiers> {};
-    class RecordOfByteAttributeModifiers_Utils_Max : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfByteAttributeModifiers> {};
+    using RecordOfByteAttributeModifiers_Utils_Current = ByteAttributeModifier_Utils_Current::RecordOfAttributeModifiers_Utils;
+    using RecordOfByteAttributeModifiers_Utils_Min     = ByteAttributeModifier_Utils_Min::RecordOfAttributeModifiers_Utils;
+    using RecordOfByteAttributeModifiers_Utils_Max     = ByteAttributeModifier_Utils_Max::RecordOfAttributeModifiers_Utils;
 
 public:
     UFUNCTION(BlueprintCallable,
