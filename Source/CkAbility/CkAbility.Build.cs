@@ -32,5 +32,14 @@ public class CkAbility : CkModuleRules
             "CkNet",
             "CkEntityBridge",
         });
+
+        if (Target.bBuildEditor)
+        {
+            PublicDependencyModuleNames.AddRange(new string[]
+            {
+                "Slate",
+                "UnrealEd",
+            });
+        }
     }
 }
