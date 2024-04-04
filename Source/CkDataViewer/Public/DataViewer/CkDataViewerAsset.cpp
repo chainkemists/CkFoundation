@@ -219,11 +219,13 @@ auto
     }
     else if (InProperty->IsA(FFloatProperty::StaticClass()))
     {
-        PinType.PinCategory = UEdGraphSchema_K2::PC_Float;
+        PinType.PinCategory = UEdGraphSchema_K2::PC_Real;
+        PinType.PinSubCategory = UEdGraphSchema_K2::PC_Float;
     }
     else if (InProperty->IsA(FDoubleProperty::StaticClass()))
     {
-        PinType.PinCategory = UEdGraphSchema_K2::PC_Double;
+        PinType.PinCategory = UEdGraphSchema_K2::PC_Real;
+        PinType.PinSubCategory = UEdGraphSchema_K2::PC_Double;
     }
     else if (InProperty->IsA(FStrProperty::StaticClass()))
     {
