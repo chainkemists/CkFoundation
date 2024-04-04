@@ -1,4 +1,5 @@
 #include "CkFloatAttribute_Utils.h"
+#include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
 
 #include "CkAttribute/CkAttribute_Log.h"
 #include "CkCore/Algorithms/CkAlgorithms.h"
@@ -551,11 +552,28 @@ auto
 
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAttributeModifierEntity);
 
+    const auto& AttributeComponent = [InAttributeModifierEntity]() -> ECk_MinMaxCurrent
+    {
+        if (FloatAttributeModifier_Utils_Current::Has(InAttributeModifierEntity))
+        { return ECk_MinMaxCurrent::Current; }
+
+        if (FloatAttributeModifier_Utils_Min::Has(InAttributeModifierEntity))
+        { return ECk_MinMaxCurrent::Min; }
+
+        if (FloatAttributeModifier_Utils_Max::Has(InAttributeModifierEntity))
+        { return ECk_MinMaxCurrent::Max; }
+
+        CK_TRIGGER_ENSURE(TEXT("Float Attribute Modifier Entity [{}] does NOT have Min, Max or Current"), InAttributeModifierEntity);
+        return ECk_MinMaxCurrent::Current;
+    }();
+
     UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_FloatAttribute_Rep>(AttributeOwnerEntity,
     [&](UCk_Fragment_FloatAttribute_Rep* InRepComp)
     {
-        InRepComp->Broadcast_RemoveModifier(UCk_Utils_GameplayLabel_UE::Get_Label(InAttributeModifierEntity),
-            UCk_Utils_GameplayLabel_UE::Get_Label(AttributeEntity));
+        InRepComp->Broadcast_RemoveModifier(
+            UCk_Utils_GameplayLabel_UE::Get_Label(InAttributeModifierEntity),
+            UCk_Utils_GameplayLabel_UE::Get_Label(AttributeEntity),
+            AttributeComponent);
     });
 
     return AttributeEntity;

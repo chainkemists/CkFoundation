@@ -10,7 +10,7 @@
 auto
     UCk_Fragment_FloatAttribute_Rep::
     Broadcast_AddModifier(
-        const FGameplayTag                                    InModifierName,
+        const FGameplayTag InModifierName,
         const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams)
     -> void
 {
@@ -22,11 +22,12 @@ auto
     UCk_Fragment_FloatAttribute_Rep::
     Broadcast_RemoveModifier(
         FGameplayTag InModifierName,
-        FGameplayTag InAttributeName)
+        FGameplayTag InAttributeName,
+        ECk_MinMaxCurrent InAttributeComponent)
     -> void
 {
     MARK_PROPERTY_DIRTY_FROM_NAME(UCk_Fragment_FloatAttribute_Rep, _PendingRemoveModifiers, this);
-    _PendingRemoveModifiers.Emplace(FCk_Fragment_FloatAttribute_RemovePendingModifier{InAttributeName, InModifierName});
+    _PendingRemoveModifiers.Emplace(FCk_Fragment_FloatAttribute_RemovePendingModifier{InAttributeName, InModifierName, InAttributeComponent});
 }
 
 // --------------------------------------------------------------------------------------------------------------------

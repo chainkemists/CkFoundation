@@ -40,7 +40,6 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfVectorAttributes, FCk_Handle_VectorAttribute);
-    using FFragment_RecordOfVectorAttributeModifiers = TFragment_RecordOfAttributeModifiers<FCk_Handle_VectorAttributeModifier>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -189,7 +188,7 @@ public:
     CK_PROPERTY_GET(_ModifierName);
     CK_PROPERTY_GET(_Component);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_VectorAttribute_RemovePendingModifier, _AttributeName, _ModifierName);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_VectorAttribute_RemovePendingModifier, _AttributeName, _ModifierName, _Component);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -209,13 +208,14 @@ public:
 public:
     auto
     Broadcast_AddModifier(
-        FGameplayTag                                           InModifierName,
+        FGameplayTag InModifierName,
         const FCk_Fragment_VectorAttributeModifier_ParamsData& InParams) -> void;
 
     auto
     Broadcast_RemoveModifier(
         FGameplayTag InModifierName,
-        FGameplayTag InAttributeName) -> void;
+        FGameplayTag InAttributeName,
+        ECk_MinMaxCurrent InAttributeComponent) -> void;
 
     // TODO: 'permanent' modifiers
 

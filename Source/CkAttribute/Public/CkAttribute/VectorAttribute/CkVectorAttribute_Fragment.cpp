@@ -10,7 +10,7 @@
 auto
     UCk_Fragment_VectorAttribute_Rep::
     Broadcast_AddModifier(
-        const FGameplayTag                                    InModifierName,
+        const FGameplayTag InModifierName,
         const FCk_Fragment_VectorAttributeModifier_ParamsData& InParams)
     -> void
 {
@@ -18,14 +18,16 @@ auto
     _PendingAddModifiers.Emplace(FCk_Fragment_VectorAttribute_PendingModifier{InModifierName, InParams});
 }
 
-void
+auto
     UCk_Fragment_VectorAttribute_Rep::
     Broadcast_RemoveModifier(
         FGameplayTag InModifierName,
-        FGameplayTag InAttributeName)
+        FGameplayTag InAttributeName,
+        ECk_MinMaxCurrent InAttributeComponent)
+    -> void
 {
     MARK_PROPERTY_DIRTY_FROM_NAME(UCk_Fragment_VectorAttribute_Rep, _PendingRemoveModifiers, this);
-    _PendingRemoveModifiers.Emplace(FCk_Fragment_VectorAttribute_RemovePendingModifier{InAttributeName, InModifierName});
+    _PendingRemoveModifiers.Emplace(FCk_Fragment_VectorAttribute_RemovePendingModifier{InAttributeName, InModifierName, InAttributeComponent});
 }
 
 // --------------------------------------------------------------------------------------------------------------------

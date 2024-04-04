@@ -25,14 +25,11 @@ public:
     friend class UCk_Utils_VectorAttributeModifier_UE;
 
 private:
-    class VectorAttribute_Utils_Min : public ck::TUtils_Attribute<ck::FFragment_VectorAttribute_Min> {};
-    class VectorAttribute_Utils_Max : public ck::TUtils_Attribute<ck::FFragment_VectorAttribute_Max> {};
-    class VectorAttribute_Utils_Current : public ck::TUtils_Attribute<ck::FFragment_VectorAttribute_Current> {};
+    using VectorAttribute_Utils_Min = ck::TUtils_Attribute<ck::FFragment_VectorAttribute_Min>;
+    using VectorAttribute_Utils_Max = ck::TUtils_Attribute<ck::FFragment_VectorAttribute_Max>;
+    using VectorAttribute_Utils_Current = ck::TUtils_Attribute<ck::FFragment_VectorAttribute_Current>;
 
-    class RecordOfVectorAttributes_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfVectorAttributes> {};
-
-public:
-    friend class UCk_Utils_VectorAttributes_UE;
+    using RecordOfVectorAttributes_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfVectorAttributes>;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -200,13 +197,13 @@ public:
     CK_GENERATED_BODY(UCk_Utils_VectorAttributeModifier_UE);
 
 private:
-    class VectorAttributeModifier_Utils_Current : public ck::TUtils_AttributeModifier<ck::FFragment_VectorAttributeModifier_Current> {};
-    class VectorAttributeModifier_Utils_Min : public ck::TUtils_AttributeModifier<ck::FFragment_VectorAttributeModifier_Min> {};
-    class VectorAttributeModifier_Utils_Max : public ck::TUtils_AttributeModifier<ck::FFragment_VectorAttributeModifier_Max> {};
+    using VectorAttributeModifier_Utils_Current = ck::TUtils_AttributeModifier<ck::FFragment_VectorAttributeModifier_Current>;
+    using VectorAttributeModifier_Utils_Min     = ck::TUtils_AttributeModifier<ck::FFragment_VectorAttributeModifier_Min>;
+    using VectorAttributeModifier_Utils_Max     = ck::TUtils_AttributeModifier<ck::FFragment_VectorAttributeModifier_Max>;
 
-    class RecordOfVectorAttributeModifiers_Utils_Current : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfVectorAttributeModifiers> {};
-    class RecordOfVectorAttributeModifiers_Utils_Min : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfVectorAttributeModifiers> {};
-    class RecordOfVectorAttributeModifiers_Utils_Max : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfVectorAttributeModifiers> {};
+    using RecordOfVectorAttributeModifiers_Utils_Current = VectorAttributeModifier_Utils_Current::RecordOfAttributeModifiers_Utils;
+    using RecordOfVectorAttributeModifiers_Utils_Min     = VectorAttributeModifier_Utils_Min::RecordOfAttributeModifiers_Utils;
+    using RecordOfVectorAttributeModifiers_Utils_Max     = VectorAttributeModifier_Utils_Max::RecordOfAttributeModifiers_Utils;
 
 public:
     UFUNCTION(BlueprintCallable,

@@ -85,7 +85,10 @@ namespace ck
         friend class detail::TProcessor_AttributeModifier_Teardown;
 
     public:
-        struct RecordOfAttributeModifiers_Utils : TUtils_RecordOfEntities<TFragment_RecordOfAttributeModifiers<HandleType>>{};
+        struct DerivedRecordType : TFragment_RecordOfAttributeModifiers<HandleType>{
+            using TFragment_RecordOfAttributeModifiers<HandleType>::TFragment_RecordOfAttributeModifiers;};
+
+        struct RecordOfAttributeModifiers_Utils : TUtils_RecordOfEntities<DerivedRecordType>{};
 
     public:
         static auto
