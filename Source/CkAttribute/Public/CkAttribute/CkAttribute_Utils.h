@@ -34,6 +34,12 @@ namespace ck
         template <typename, typename>
         friend class detail::TProcessor_AttributeModifier_Teardown;
 
+        template <typename, typename, typename>
+        friend class detail::TProcessor_Attribute_MinClamp;
+
+        template <typename, typename, typename>
+        friend class detail::TProcessor_Attribute_MaxClamp;
+
     public:
         static auto
         Add(

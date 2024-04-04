@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkAttribute_Processor.h"
+#include "CkCore/Format/CkFormat.h"
 #include "CkAttribute/CkAttribute_Log.h"
 #include "CkAttribute/CkAttribute_Utils.h"
 #include "CkCore/Payload/CkPayload.h"
@@ -9,8 +10,6 @@
 
 namespace ck::detail
 {
-    // --------------------------------------------------------------------------------------------------------------------
-
     template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_DerivedAttributeModifier>
     auto
         TProcessor_Attribute_StorePreviousValue<T_DerivedProcessor, T_DerivedAttribute, T_DerivedAttributeModifier>::
@@ -87,6 +86,16 @@ namespace ck::detail
 
         InAttributeCurrent._Base = TAttributeMinMax<AttributeDataType>::Max(BaseValue, FinalValue_Min);
         InAttributeCurrent._Final = TAttributeMinMax<AttributeDataType>::Max(FinalValue, FinalValue_Min);
+
+        if (InAttributeCurrent._Final != FinalValue || InAttributeCurrent._Base != BaseValue)
+        {
+            using AttributePreviousType = ck::TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
+            auto& PreviousValue = InHandle.template AddOrGet<AttributePreviousType>();
+
+            PreviousValue = AttributePreviousType{BaseValue, FinalValue};
+
+            TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle);
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -108,6 +117,16 @@ namespace ck::detail
 
         InAttributeCurrent._Base = TAttributeMinMax<AttributeDataType>::Min(BaseValue, FinalValue_Max);
         InAttributeCurrent._Final = TAttributeMinMax<AttributeDataType>::Min(FinalValue, FinalValue_Max);
+
+        if (InAttributeCurrent._Final != FinalValue || InAttributeCurrent._Base != BaseValue)
+        {
+            using AttributePreviousType = ck::TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
+            auto& PreviousValue = InHandle.template AddOrGet<AttributePreviousType>();
+
+            PreviousValue = AttributePreviousType{BaseValue, FinalValue};
+
+            TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle);
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
