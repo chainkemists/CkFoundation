@@ -457,9 +457,9 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        _Current.Tick(InDeltaT);
         _Min.Tick(InDeltaT);
         _Max.Tick(InDeltaT);
+        _Current.Tick(InDeltaT);
     }
 
     // --------------------------------------------------------------------------------------------------------------------

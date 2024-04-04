@@ -40,7 +40,6 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfFloatAttributes, FCk_Handle_FloatAttribute);
-    using FFragment_RecordOfFloatAttributeModifiers = TFragment_RecordOfAttributeModifiers<FCk_Handle_FloatAttributeModifier>;
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -165,7 +164,7 @@ public:
     CK_PROPERTY_GET(_ModifierName);
     CK_PROPERTY_GET(_Component);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttribute_RemovePendingModifier, _AttributeName, _ModifierName);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttribute_RemovePendingModifier, _AttributeName, _ModifierName, _Component);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -185,13 +184,14 @@ public:
 public:
     auto
     Broadcast_AddModifier(
-        FGameplayTag                                          InModifierName,
+        FGameplayTag InModifierName,
         const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams) -> void;
 
     auto
     Broadcast_RemoveModifier(
         FGameplayTag InModifierName,
-        FGameplayTag InAttributeName) -> void;
+        FGameplayTag InAttributeName,
+        ECk_MinMaxCurrent InAttributeComponent) -> void;
 
     // TODO: 'permanent' modifiers
 

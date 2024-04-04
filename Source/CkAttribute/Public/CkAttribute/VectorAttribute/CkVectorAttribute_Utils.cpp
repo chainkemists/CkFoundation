@@ -551,11 +551,28 @@ auto
 
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAttributeModifierEntity);
 
+    const auto& AttributeComponent = [InAttributeModifierEntity]() -> ECk_MinMaxCurrent
+    {
+        if (VectorAttributeModifier_Utils_Current::Has(InAttributeModifierEntity))
+        { return ECk_MinMaxCurrent::Current; }
+
+        if (VectorAttributeModifier_Utils_Min::Has(InAttributeModifierEntity))
+        { return ECk_MinMaxCurrent::Min; }
+
+        if (VectorAttributeModifier_Utils_Max::Has(InAttributeModifierEntity))
+        { return ECk_MinMaxCurrent::Max; }
+
+        CK_TRIGGER_ENSURE(TEXT("Vector Attribute Modifier Entity [{}] does NOT have Min, Max or Current"), InAttributeModifierEntity);
+        return ECk_MinMaxCurrent::Current;
+    }();
+
     UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_VectorAttribute_Rep>(AttributeOwnerEntity,
     [&](UCk_Fragment_VectorAttribute_Rep* InRepComp)
     {
-        InRepComp->Broadcast_RemoveModifier(UCk_Utils_GameplayLabel_UE::Get_Label(InAttributeModifierEntity),
-            UCk_Utils_GameplayLabel_UE::Get_Label(AttributeEntity));
+        InRepComp->Broadcast_RemoveModifier(UCk_Utils_GameplayLabel_UE::Get_Label(
+            InAttributeModifierEntity),
+            UCk_Utils_GameplayLabel_UE::Get_Label(AttributeEntity),
+            AttributeComponent);
     });
 
     return AttributeEntity;
