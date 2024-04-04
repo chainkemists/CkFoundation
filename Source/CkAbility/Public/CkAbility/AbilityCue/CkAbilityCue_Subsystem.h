@@ -109,6 +109,10 @@ public:
     auto
     Deinitialize() -> void override;
 
+public:
+    auto
+    Request_PopulateAllAggregators() -> void;
+
 private:
     auto
     DoOnEngineInitComplete() -> void;
@@ -129,9 +133,6 @@ private:
     auto
     DoHandleAssetAddedDeletedOrRenamed(
         const FAssetData&) -> void;
-
-    auto
-    DoPopulateAllAggregators() -> void;
 
     auto
     DoAddAggregator(
@@ -161,11 +162,11 @@ class CKABILITY_API UCk_Utils_AbilityCue_Subsystem_UE : public UBlueprintFunctio
     GENERATED_BODY()
 
 public:
-    using SubsystemType = UCk_Utils_AbilityCue_Subsystem_UE;
+    using SubsystemType = UCk_AbilityCue_Subsystem_UE;
 
 public:
     static auto
-    Get_Subsystem(const UWorld* InWorld) -> SubsystemType*;
+    Request_PopulateAggregators() -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
