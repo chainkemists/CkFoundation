@@ -72,7 +72,10 @@ auto
     -> void
 {
 #if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
-    InHandle.AddOrGet<DEBUG_NAME>()._Name = InDebugName;
+    if (NOT InHandle.Has<DEBUG_NAME>())
+    { InHandle.Add<DEBUG_NAME>(InDebugName); }
+    else
+    { InHandle.Get<DEBUG_NAME>().DoSet_DebugName(InDebugName); }
     ck::ecs::LogIf(UCk_Utils_Ecs_Settings_UE::Get_EntityMapPolicy() == ECk_Ecs_EntityMap_Policy::AlwaysLog,
         TEXT("[EntityMap] [{}]"), InHandle, InDebugName);
 #endif
