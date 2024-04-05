@@ -120,6 +120,7 @@ auto
 
         auto Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(EcsWorldSubsystem->Get_TransientEntity());
 
+        UCk_Utils_Handle_UE::Set_DebugName(Entity, UCk_Utils_Debug_UE::Get_DebugName(OwningActor, ECk_DebugNameVerbosity_Policy::Compact));
         Entity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
 
         // --------------------------------------------------------------------------------------------------------------------
@@ -194,8 +195,6 @@ auto
                 }.Set_ReplicatedObjects(ReplicatedObjects.Get_ReplicatedObjects()));
         }
 
-        UCk_Utils_Handle_UE::Set_DebugName(Entity, UCk_Utils_Debug_UE::Get_DebugName(OwningActor, ECk_DebugNameVerbosity_Policy::Compact));
-
         // TODO: Invoking this manually although ideally this should be called by ReplicationDriver for the Server
         TryInvoke_OnReplicationComplete(EInvoke_Caller::ReplicationDriver);
     }
@@ -247,12 +246,11 @@ auto
 
                     auto Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OuterOwnerEntity, [&](FCk_Handle InEntity)
                     {
+                        UCk_Utils_Handle_UE::Set_DebugName(InEntity, UCk_Utils_Debug_UE::Get_DebugName(OwningActor, ECk_DebugNameVerbosity_Policy::Compact));
                         InEntity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
                         UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Replication::Replicates,
                             ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
                     });
-
-                    UCk_Utils_Handle_UE::Set_DebugName(Entity, UCk_Utils_Debug_UE::Get_DebugName(OwningActor, ECk_DebugNameVerbosity_Policy::Compact));
 
                     return Entity;
                 }
@@ -262,12 +260,11 @@ auto
 
                     auto Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity, [&](FCk_Handle InEntity)
                     {
+                        UCk_Utils_Handle_UE::Set_DebugName(InEntity, UCk_Utils_Debug_UE::Get_DebugName(OwningActor, ECk_DebugNameVerbosity_Policy::Compact));
                         InEntity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
                         UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Replication::DoesNotReplicate,
                             ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
                     });
-
-                    UCk_Utils_Handle_UE::Set_DebugName(Entity, UCk_Utils_Debug_UE::Get_DebugName(OwningActor, ECk_DebugNameVerbosity_Policy::Compact));
 
                     return Entity;
                 }
@@ -331,12 +328,11 @@ auto
 
             auto Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity, [&](FCk_Handle InEntity)
             {
+                UCk_Utils_Handle_UE::Set_DebugName(InEntity, UCk_Utils_Debug_UE::Get_DebugName(OwningActor, ECk_DebugNameVerbosity_Policy::Compact));
                 InEntity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
                 UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Replication::DoesNotReplicate,
                     ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
             });
-
-            UCk_Utils_Handle_UE::Set_DebugName(Entity, UCk_Utils_Debug_UE::Get_DebugName(OwningActor, ECk_DebugNameVerbosity_Policy::Compact));
 
             return Entity;
         }();
