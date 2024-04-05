@@ -21,9 +21,22 @@ public:
 
 private:
     FName _Name;
+    TArray<FName> _PreviousNames;
+
+private:
+    auto
+    DoSet_DebugName(FName InDebugName)
+    {
+        if (NOT _Name.IsNone())
+        { _PreviousNames.Emplace(_Name); }
+
+        _Name = InDebugName;
+    }
 
 public:
     CK_PROPERTY_GET(_Name);
+
+    CK_DEFINE_CONSTRUCTORS(DEBUG_NAME, _Name);
 };
 
 // enable pointer stability for all Fragments when debugging
