@@ -11,6 +11,58 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+TCk_DebugWrapper<DEBUG_NAME>::
+    TCk_DebugWrapper(
+        const DEBUG_NAME* InPtr)
+{
+}
+
+auto
+    TCk_DebugWrapper<DEBUG_NAME>::
+    GetHash() const
+    -> IdType
+{
+    return entt::type_id<DEBUG_NAME>().hash();
+}
+
+auto
+    TCk_DebugWrapper<DEBUG_NAME>::
+    SetFragmentPointer(
+        const void* InFragmentPtr)
+    -> void
+{
+    _Fragment = static_cast<const DEBUG_NAME*>(InFragmentPtr);
+}
+
+auto
+    TCk_DebugWrapper<DEBUG_NAME>::
+    Get_FragmentName(
+        const FCk_Handle& InHandle) const
+    -> FName
+{
+    return InHandle.Get<DEBUG_NAME>().Get_Name();
+}
+
+auto
+    TCk_DebugWrapper<DEBUG_NAME>::
+    operator==(
+        const TCk_DebugWrapper<DEBUG_NAME>& InOther) const
+    -> bool
+{
+    return GetHash() == InOther.GetHash();
+}
+
+auto
+    TCk_DebugWrapper<DEBUG_NAME>::
+    operator!=(
+        const TCk_DebugWrapper<DEBUG_NAME>& InOther) const
+    -> bool
+{
+    return GetHash() != InOther.GetHash();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 FCk_Handle::
     FCk_Handle(
         EntityType InEntity,

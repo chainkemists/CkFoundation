@@ -18,9 +18,9 @@ struct FCk_DebugWrapper
 
     virtual ~FCk_DebugWrapper() = default;
 
-    virtual auto GetHash() -> IdType = 0;
+    virtual auto GetHash() const -> IdType = 0;
     virtual auto SetFragmentPointer(const void* InFragmentPtr) -> void = 0;
-    virtual auto Get_FragmentName() -> FName = 0;
+    virtual auto Get_FragmentName(const FCk_Handle& InHandle) const -> FName = 0;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -31,12 +31,12 @@ struct TCk_DebugWrapper : public FCk_DebugWrapper
 public:
     explicit TCk_DebugWrapper(const T_Fragment* InPtr);
 
-    auto GetHash() -> IdType override;
+    auto GetHash() const -> IdType override;
     auto SetFragmentPointer(const void* InFragmentPtr) -> void override;
-    auto Get_FragmentName() -> FName override;
+    auto Get_FragmentName(const FCk_Handle& InHandle) const -> FName override;
 
-    auto operator==(const TCk_DebugWrapper& InOther) -> bool;
-    auto operator!=(const TCk_DebugWrapper& InOther) -> bool;
+    auto operator==(const TCk_DebugWrapper& InOther) const -> bool;
+    auto operator!=(const TCk_DebugWrapper& InOther) const -> bool;
 
 private:
     const T_Fragment* _Fragment = nullptr;
@@ -83,7 +83,7 @@ TCk_DebugWrapper<T_Fragment>::
 template <typename T_Fragment>
 auto
     TCk_DebugWrapper<T_Fragment>::
-    GetHash()
+    GetHash() const
     -> IdType
 {
     return entt::type_id<T_Fragment>().hash();
@@ -102,7 +102,8 @@ auto
 template <typename T_Fragment>
 auto
     TCk_DebugWrapper<T_Fragment>::
-    Get_FragmentName()
+    Get_FragmentName(
+        const FCk_Handle& InHandle) const
     -> FName
 {
     constexpr auto TypeString = ck::TypeToString<T_Fragment>;
@@ -112,7 +113,8 @@ auto
 template <typename T_Fragment>
 auto
     TCk_DebugWrapper<T_Fragment>::
-    operator==(const TCk_DebugWrapper<T_Fragment>& InOther)
+    operator==(
+        const TCk_DebugWrapper<T_Fragment>& InOther) const
     -> bool
 {
     return GetHash() == InOther.GetHash();
@@ -121,7 +123,8 @@ auto
 template <typename T_Fragment>
 auto
     TCk_DebugWrapper<T_Fragment>::
-    operator!=(const TCk_DebugWrapper<T_Fragment>& InOther)
+    operator!=(
+        const TCk_DebugWrapper<T_Fragment>& InOther) const
     -> bool
 {
     return GetHash() != InOther.GetHash();
