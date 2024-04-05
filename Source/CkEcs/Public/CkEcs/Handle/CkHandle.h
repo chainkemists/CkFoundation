@@ -48,6 +48,23 @@ struct entt::component_traits<Type> {
     static constexpr std::size_t page_size = !std::is_empty_v<Type> * ENTT_PACKED_PAGE;
 };
 
+template <>
+struct TCk_DebugWrapper<DEBUG_NAME> : public FCk_DebugWrapper
+{
+public:
+    explicit TCk_DebugWrapper(const DEBUG_NAME* InPtr);
+
+    auto GetHash() const -> IdType override;
+    auto SetFragmentPointer(const void* InFragmentPtr) -> void override;
+    auto Get_FragmentName(const FCk_Handle& InHandle) const -> FName override;
+
+    auto operator==(const TCk_DebugWrapper& InOther) const -> bool;
+    auto operator!=(const TCk_DebugWrapper& InOther) const -> bool;
+
+private:
+    const DEBUG_NAME* _Fragment = nullptr;
+};
+
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -442,17 +459,19 @@ auto
     auto& NewOrExistingFragment = [&]() -> T_Fragment&
     {
         // only add it ONCE in the debugger
-        if (NOT Has<T_Fragment>())
+        const auto AddDebugInfo = NOT Has<T_Fragment>();
+
+        auto& Fragment = _Registry->AddOrGet<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
+
+        if (AddDebugInfo)
         {
             auto& FragmentToReturn = _Registry->AddOrGet<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
 
             DoAdd_FragmentDebugInfo<T_Fragment>();
             DoUpdate_FragmentDebugInfo_Blueprints();
-
-            return FragmentToReturn;
         }
 
-        return _Registry->AddOrGet<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
+        return Fragment;
     }();
 
     return NewOrExistingFragment;
@@ -487,17 +506,19 @@ auto
     auto& NewOrExistingFragment = [&]() -> T_Fragment&
     {
         // only add it ONCE in the debugger
-        if (NOT Has<T_Fragment>())
+        const auto AddDebugInfo = NOT Has<T_Fragment>();
+
+        auto& Fragment = _Registry->AddOrGet<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
+
+        if (AddDebugInfo)
         {
             auto& FragmentToReturn = _Registry->AddOrGet<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
 
             DoAdd_FragmentDebugInfo<T_Fragment>();
             DoUpdate_FragmentDebugInfo_Blueprints();
-
-            return FragmentToReturn;
         }
 
-        return _Registry->AddOrGet<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
+        return Fragment;
     }();
 
     return NewOrExistingFragment;
@@ -909,7 +930,7 @@ auto
         { new TCk_DebugWrapper<T_Fragment>(&InHandle.Get<T_Fragment, ck::IsValid_Policy_IncludePendingKill>()) };
     }
 
-    _FragmentNames.Emplace(FragmentInfo->Get_FragmentName());
+    _FragmentNames.Emplace(FragmentInfo->Get_FragmentName(InHandle));
     _AllFragments.Emplace(MoveTemp(FragmentInfo));
 }
 
