@@ -5,6 +5,7 @@
 
 #include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
@@ -148,6 +149,7 @@ auto
     const auto WorldSubsystem = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(WorldSubsystem->Get_TransientEntity(), [&](FCk_Handle InEntity)
     {
+        UCk_Utils_Handle_UE::Set_DebugName(InEntity, UCk_Utils_Debug_UE::Get_DebugName(ReplicatedActor, ECk_DebugNameVerbosity_Policy::Compact));
         InEntity.Add<ck::FFragment_OwningActor_Current>(ReplicatedActor);
         UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings
             {
