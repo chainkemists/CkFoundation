@@ -7,7 +7,7 @@
 auto
     UCk_Utils_Substep_UE::
     Add(
-        FCk_Handle                    InHandle,
+        FCk_Handle& InHandle,
         const FCk_Substep_ParamsData& InParams)
     -> FCk_Handle_Substep
 {
@@ -30,7 +30,7 @@ auto
         FCk_Handle_Substep& InHandle)
     -> FCk_Handle_Substep
 {
-    InHandle.Remove<ck::FTag_Substep_Update>();
+    InHandle.Try_Remove<ck::FTag_Substep_Update>();
 
     return InHandle;
 }
@@ -59,7 +59,7 @@ auto
         case ECk_Substep_State::Running: { Request_Resume(InHandle); break; }
     }
 
-    InHandle.Add<ck::FTag_Substep_FirstUpdate>();
+    InHandle.AddOrGet<ck::FTag_Substep_FirstUpdate>();
 
     return InHandle;
 }
@@ -69,9 +69,9 @@ auto
 auto
     UCk_Utils_Substep_UE::
     BindTo_OnFirstUpdate(
-        FCk_Handle_Substep&                       InSubstepHandle,
-        ECk_Signal_BindingPolicy                  InBindingPolicy,
-        ECk_Signal_PostFireBehavior               InPostFireBehavior,
+        FCk_Handle_Substep& InSubstepHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_Substep_OnFirstUpdate& InDelegate)
     -> FCk_Handle_Substep
 {
@@ -79,10 +79,12 @@ auto
     return InSubstepHandle;
 }
 
-FCk_Handle_Substep
-    UCk_Utils_Substep_UE::UnbindFrom_OnFirstUpdate(
+auto
+    UCk_Utils_Substep_UE::
+    UnbindFrom_OnFirstUpdate(
         FCk_Handle_Substep& InSubstepHandle,
         const FCk_Delegate_Substep_OnFirstUpdate& InDelegate)
+    -> FCk_Handle_Substep
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnSubstepFirstUpdate, InSubstepHandle, InDelegate);
     return InSubstepHandle;
@@ -91,9 +93,9 @@ FCk_Handle_Substep
 auto
     UCk_Utils_Substep_UE::
     BindTo_OnUpdate(
-        FCk_Handle_Substep&                  InSubstepHandle,
-        ECk_Signal_BindingPolicy             InBindingPolicy,
-        ECk_Signal_PostFireBehavior          InPostFireBehavior,
+        FCk_Handle_Substep& InSubstepHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_Substep_OnUpdate& InDelegate)
     -> FCk_Handle_Substep
 {
@@ -104,7 +106,7 @@ auto
 auto
     UCk_Utils_Substep_UE::
     UnbindFrom_OnUpdate(
-        FCk_Handle_Substep&                  InSubstepHandle,
+        FCk_Handle_Substep& InSubstepHandle,
         const FCk_Delegate_Substep_OnUpdate& InDelegate)
     -> FCk_Handle_Substep
 {
@@ -115,9 +117,9 @@ auto
 auto
     UCk_Utils_Substep_UE::
     BindTo_OnFrameEnd(
-        FCk_Handle_Substep&                    InSubstepHandle,
-        ECk_Signal_BindingPolicy               InBindingPolicy,
-        ECk_Signal_PostFireBehavior            InPostFireBehavior,
+        FCk_Handle_Substep& InSubstepHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_Substep_OnFrameEnd& InDelegate)
     -> FCk_Handle_Substep
 {
@@ -128,7 +130,7 @@ auto
 auto
     UCk_Utils_Substep_UE::
     UnbindFrom_OnFrameEnd(
-        FCk_Handle_Substep&                    InSubstepHandle,
+        FCk_Handle_Substep& InSubstepHandle,
         const FCk_Delegate_Substep_OnFrameEnd& InDelegate)
     -> FCk_Handle_Substep
 {

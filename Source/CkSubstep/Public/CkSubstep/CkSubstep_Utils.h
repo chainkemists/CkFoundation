@@ -3,6 +3,7 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
 #include "CkEcsBasics/CkEcsBasics_Utils.h"
+#include "CkSignal/CkSignal_Fragment_Data.h"
 
 #include "CkSubstep/CkSubstep_Fragment_Data.h"
 
@@ -25,7 +26,7 @@ public:
               DisplayName="[Ck][Substep] Add Substep Feature")
     static FCk_Handle_Substep
     Add(
-        UPARAM(ref) FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Substep_ParamsData& InParams);
 
 public:
