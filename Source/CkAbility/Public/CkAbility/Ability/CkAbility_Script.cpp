@@ -222,9 +222,7 @@ auto
         FGameplayTag InAbilityCostTag)
     -> void
 {
-    CK_ENSURE_IF_NOT(UCk_Utils_AbilityOwner_UE::Has(Get_AbilityHandle()),
-        TEXT("Ability Entity [{}] with AbilityScript [{}] is NOT an AbilityOwner itself. Did you forget to add a 'Cost' Ability to the aforementioned?"),
-        Get_AbilityHandle(), this)
+    if (NOT UCk_Utils_AbilityOwner_UE::Has(Get_AbilityHandle()))
     { return; }
 
     auto AbilityAsAbilityOwner = UCk_Utils_AbilityOwner_UE::CastChecked(_AbilityHandle);
@@ -278,9 +276,7 @@ auto
         FGameplayTag InAbilityCooldownTag)
     -> void
 {
-    CK_ENSURE_IF_NOT(UCk_Utils_AbilityOwner_UE::Has(Get_AbilityHandle()),
-        TEXT("Ability Entity [{}] with AbilityScript [{}] is NOT an AbilityOwner itself. Did you forget to add a 'Cooldown' Ability to the aforementioned?"),
-        Get_AbilityHandle(), this)
+    if (NOT UCk_Utils_AbilityOwner_UE::Has(Get_AbilityHandle()))
     { return; }
 
     auto AbilityAsAbilityOwner = UCk_Utils_AbilityOwner_UE::CastChecked(_AbilityHandle);
