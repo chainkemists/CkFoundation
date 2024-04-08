@@ -322,15 +322,21 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_TwoParams(
+DECLARE_DYNAMIC_DELEGATE_FiveParams(
     FCk_Delegate_AbilityOwner_OnTagsUpdated,
     FCk_Handle_AbilityOwner, InHandle,
-    const FGameplayTagContainer&, InActiveTags);
+    const FGameplayTagContainer&, InPreviousTags,
+    const FGameplayTagContainer&, InActiveTags,
+    const FGameplayTagContainer&, InTagsRemoved,
+    const FGameplayTagContainer&, InTagsAdded);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(
     FCk_Delegate_AbilityOwner_OnTagsUpdated_MC,
     FCk_Handle_AbilityOwner, InHandle,
-    const FGameplayTagContainer&, InActiveTags);
+    const FGameplayTagContainer&, InPreviousTags,
+    const FGameplayTagContainer&, InActiveTags,
+    const FGameplayTagContainer&, InTagsRemoved,
+    const FGameplayTagContainer&, InTagsAdded);
 
 // --------------------------------------------------------------------------------------------------------------------
 
