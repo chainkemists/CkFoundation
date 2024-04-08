@@ -1,10 +1,9 @@
 #pragma once
 
-#include "CkMessaging/CkMessaging_Fragment_Data.h"
-
 #include "CkECS/Handle/CkHandle.h"
 
 #include "CkMessaging/CkMessaging_Fragment.h"
+#include "CkMessaging/CkMessaging_Fragment_Data.h"
 
 #include "CkNet/CkNet_Utils.h"
 
@@ -32,8 +31,7 @@ public:
               CustomThunk,
               Category = "Ck|Utils|Messaging",
               DisplayName="[Ck][Messaging] Broadcast",
-              //meta=(CustomStructureParam = "InValue", BlueprintInternalUseOnly = true))
-              meta=(CustomStructureParam = "InValue"))
+              meta=(CustomStructureParam = "InValue", BlueprintInternalUseOnly = true))
     static void
     INTERNAL__Broadcast(
         FCk_Handle InHandle,
