@@ -109,28 +109,35 @@ auto
 
         AssetRegistryModule.Get().EnumerateAssets(CompiledFilter, [&](const FAssetData& InAssetData)
         {
+            constexpr auto ContinueIterating = true;
+
             // TODO: See if we can avoid resolving the Object
             const auto ResolvedObject = InAssetData.GetSoftObjectPath().TryLoad();
             const auto& Blueprint = Cast<UBlueprint>(ResolvedObject);
+
+            CK_LOG_ERROR_IF_NOT(ck::ability, ck::IsValid(Blueprint), TEXT("Could not get UBlueprint from Asset [{}] when trying Populate CueAggregators"),
+                InAssetData.GetSoftObjectPath().ToString())
+            { return ContinueIterating; }
+
             const auto ResolvedObjectDefaultClass = Blueprint->GeneratedClass->GetDefaultObject();
 
             if (NOT ResolvedObjectDefaultClass->IsA(CueType))
-            { return true; }
+            { return ContinueIterating; }
 
             const auto Object = Cast<UCk_Ability_Script_PDA>(ResolvedObjectDefaultClass);
 
             CK_LOG_ERROR_NOTIFY_IF_NOT(ck::ability, ck::IsValid(Object), TEXT("Unable to Cast Cue [{}] to [{}].{}"),
                     ResolvedObject, ck::Get_RuntimeTypeToString<UCk_Ability_Script_PDA>(), ck::Context(this))
-            { return true; }
+            { return ContinueIterating; }
 
             const auto AbilityCueConfig = Get_ConfigForCue(Object->GetClass());
 
             if (ck::Is_NOT_Valid(AbilityCueConfig))
-            { return true; }
+            { return ContinueIterating; }
 
             _AbilityCues.Add(Object->Get_Data().Get_AbilityName(), InAssetData.GetSoftObjectPath());
             _AbilityCueConfigs.Add(Object->Get_Data().Get_AbilityName(), AbilityCueConfig);
-            return true;
+            return ContinueIterating;
         });
     }
 }
