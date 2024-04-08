@@ -1,0 +1,23 @@
+#pragma once
+
+#include "CkMessaging_Fragment_Data.h"
+
+#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
+
+#include "CkRecord/Record/CkRecord_Fragment.h"
+
+#include "CkSignal/CkSignal_Macros.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfMessengers, FCk_Handle);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKMESSAGING_API, Messaging, FCk_Delegate_Messaging_OnBroadcast_MC, FCk_Handle, FInstancedStruct);
+
+}
+
+// --------------------------------------------------------------------------------------------------------------------
