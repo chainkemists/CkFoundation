@@ -24,6 +24,7 @@ public class CkK2Nodes : CkModuleRules
             "CkEcs",
             "CkLog",
             "CkVariables",
+            "CkMessaging"
         });
     }
 }
