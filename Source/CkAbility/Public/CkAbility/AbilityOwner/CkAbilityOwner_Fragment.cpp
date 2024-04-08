@@ -93,8 +93,7 @@ namespace ck
 
     auto
         FFragment_AbilityOwner_Current::
-        Get_AreActiveTagsDifferentThanPreviousTags(
-            const FCk_Handle_AbilityOwner& InAbilityOwner) const
+        Get_AreActiveTagsDifferentThanPreviousTags() const
         -> bool
     {
         return _ActiveTags_IncludingAllEntityExtensions != _PreviousTags_IncludingAllEntityExtensions;
