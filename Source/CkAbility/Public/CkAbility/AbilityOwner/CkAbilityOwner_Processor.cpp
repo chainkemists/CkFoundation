@@ -203,7 +203,7 @@ namespace ck
                     auto& AbilityOwnerComp = NonConstAbilityOwnerEntity.Get<FFragment_AbilityOwner_Current>();
                     AbilityOwnerComp.AppendTags(InAbilityOwnerEntity, GrantedTags);
 
-                    if (AbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags(InAbilityOwnerEntity))
+                    if (AbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags())
                     {
                         UCk_Utils_AbilityOwner_UE::Request_TagsUpdated(NonConstAbilityOwnerEntity);
                     }
@@ -277,7 +277,7 @@ namespace ck
 
                 InAbilityOwnerComp.RemoveTags(InAbilityOwnerEntity, GrantedTags);
 
-                if (InAbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags(InAbilityOwnerEntity))
+                if (InAbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags())
                 {
                     UCk_Utils_AbilityOwner_UE::Request_TagsUpdated(InAbilityOwnerEntity);
                 }
@@ -371,7 +371,7 @@ namespace ck
 
                         InAbilityOwnerComp.AppendTags(InAbilityOwnerEntity, GrantedTags);
 
-                        if (InAbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags(InAbilityOwnerEntity))
+                        if (InAbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags())
                         {
                             UCk_Utils_AbilityOwner_UE::Request_TagsUpdated(InAbilityOwnerEntity);
                         }
@@ -582,7 +582,7 @@ namespace ck
 
             InAbilityOwnerComp.RemoveTags(InAbilityOwnerEntity, GrantedTags);
 
-            if (InAbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags(InAbilityOwnerEntity))
+            if (InAbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags())
             {
                 UCk_Utils_AbilityOwner_UE::Request_TagsUpdated(InAbilityOwnerEntity);
             }
@@ -700,6 +700,8 @@ namespace ck
             const FFragment_AbilityOwner_Current& InAbilityOwnerComp) const
         -> void
     {
+        const auto& ActiveTags = InAbilityOwnerComp.Get_ActiveTags(InHandle);
+
         // Cancel All Abilities that are cancelled by the newly granted tags
         // TODO: this is repeated multiple times in this file, move to a common function
         UCk_Utils_AbilityOwner_UE::ForEach_Ability_If
@@ -718,13 +720,24 @@ namespace ck
                 UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(InHandle,
                     FCk_Request_AbilityOwner_DeactivateAbility{InAbilityEntityToCancel}, {});
             },
-            algo::MatchesAnyAbilityActivationCancelledTags{InAbilityOwnerComp.Get_ActiveTags(InHandle)}
+            algo::MatchesAnyAbilityActivationCancelledTags{ActiveTags}
         );
 
-        if (InAbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags(InHandle))
+        if (InAbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags())
         {
+            const auto& PreviousTags = InAbilityOwnerComp.Get_PreviousTags(InHandle);
+
+            auto ActiveTagsList = TArray<FGameplayTag>{};
+            auto PreviousTagsList = TArray<FGameplayTag>{};
+
+            ActiveTags.GetGameplayTagArray(ActiveTagsList);
+            PreviousTags.GetGameplayTagArray(PreviousTagsList);
+
+            const auto& TagsAdded = FGameplayTagContainer::CreateFromArray(algo::Except(ActiveTagsList, PreviousTagsList));
+            const auto& TagsRemoved = FGameplayTagContainer::CreateFromArray(algo::Except(PreviousTagsList, ActiveTagsList));
+
             UUtils_Signal_AbilityOwner_OnTagsUpdated::Broadcast(InHandle,
-                MakePayload(InHandle, InAbilityOwnerComp.Get_ActiveTags(InHandle)));
+                MakePayload(InHandle, PreviousTags, ActiveTags, TagsRemoved, TagsAdded));
         }
     }
 
