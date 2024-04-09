@@ -166,6 +166,19 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_StackExpiration_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// How to handle requirements not being met on this Ability
+UENUM(BlueprintType)
+enum class ECk_Ability_ActivationRequirementsNotMet_Policy
+{
+    // Any ongoing duration & period timers are left ticking
+    DoNothing,
+
+    // Period timer (if valid) is reset and paused. Resumed once the requirements are met again.
+    PauseAndResetPeriod
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UENUM(BlueprintType)
 enum class ECk_Ability_Duration_Policy : uint8
 {
