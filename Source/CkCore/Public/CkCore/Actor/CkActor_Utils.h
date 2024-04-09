@@ -1,15 +1,13 @@
 #pragma once
 
+#include "CkActor.h"
+
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Ensure/CkEnsure.h"
 
 #include <CoreMinimal.h>
 #include <Kismet/BlueprintFunctionLibrary.h>
 #include <Kismet/GameplayStatics.h>
-
-#include "CkActor.h"
-
-#include "CkCore/Game/CkGame_Utils.h"
 
 #include "CkActor_Utils.generated.h"
 

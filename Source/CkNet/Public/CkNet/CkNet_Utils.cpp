@@ -1,18 +1,21 @@
 #include "CkNet_Utils.h"
 
 #include "CkNet_Fragment.h"
+
+#include "CkCore/Game/CkGame_Utils.h"
 #include "CkCore/Time/CkTime_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment.h"
-#include "Engine/World.h"
+
+#include <Engine/World.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_Net_UE::
     Add(
-        FCk_Handle InEntity,
+        FCk_Handle& InEntity,
         const FCk_Net_ConnectionSettings& InConnectionSettings)
     -> void
 {

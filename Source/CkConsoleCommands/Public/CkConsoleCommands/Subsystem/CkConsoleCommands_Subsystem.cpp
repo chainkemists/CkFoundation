@@ -4,7 +4,9 @@
 
 #include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Algorithms/CkAlgorithms.h"
-#include "Engine/World.h"
+#include "CkCore/Game/CkGame_Utils.h"
+
+#include <Engine/World.h>
 
 #include "GameFramework/GameModeBase.h"
 
