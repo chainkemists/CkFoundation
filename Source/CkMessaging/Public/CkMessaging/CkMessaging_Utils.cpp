@@ -59,13 +59,15 @@ auto
     ck::UUtils_Signal_Messaging::Broadcast(MessengerEntity, ck::MakePayload(InHandle, InPayload));
 }
 
-void
-    UCk_Utils_Messaging_UE::BindTo_OnBroadcast(
+auto
+    UCk_Utils_Messaging_UE::
+    BindTo_OnBroadcast(
         FCk_Handle& InHandle,
         FGameplayTag InMessageName,
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_Messaging_OnBroadcast& InDelegate)
+    -> void
 {
     RecordOfMessengers_Utils::AddIfMissing(InHandle);
     const auto MessengerEntity = DoGet_MessengerEntity(InHandle, InMessageName);
