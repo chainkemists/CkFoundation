@@ -33,7 +33,7 @@ public:
 public:
     static auto
     Add(
-        FCk_Handle InEntity,
+        FCk_Handle& InEntity,
         const FCk_Net_ConnectionSettings& InConnectionSettings) -> void;
 
 public:
