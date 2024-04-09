@@ -39,6 +39,17 @@ public:
     Request_ExecuteAbilityCue(
         FGameplayTag InCueName,
         FCk_AbilityCue_Params InParams);
+
+protected:
+    virtual auto
+    BeginPlay() -> void override;
+
+private:
+    UPROPERTY(Transient)
+    TObjectPtr<class UCk_AbilityCue_Subsystem_UE> _Subsystem_AbilityCue;
+
+    UPROPERTY(Transient)
+    TObjectPtr<class UCk_EcsWorld_Subsystem_UE> _Subsystem_EcsWorldSubsystem;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -30,6 +30,17 @@ ACk_AbilityCueReplicator_UE::
 
 auto
     ACk_AbilityCueReplicator_UE::
+    BeginPlay()
+    -> void
+{
+    Super::BeginPlay();
+
+    _Subsystem_AbilityCue = GEngine->GetEngineSubsystem<UCk_AbilityCue_Subsystem_UE>();
+    _Subsystem_EcsWorldSubsystem = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+}
+
+auto
+    ACk_AbilityCueReplicator_UE::
     Server_RequestExecuteAbilityCue_Implementation(
         FGameplayTag InCueName,
         FCk_AbilityCue_Params InParams)
@@ -49,13 +60,12 @@ auto
         TEXT("Unable to ExecuteAbilityCue since the CueName is [{}]"), InCueName)
     { return; }
 
-    const auto AbilityCueSubsystem = GEngine->GetEngineSubsystem<UCk_AbilityCue_Subsystem_UE>();
-    const auto ConstructionScript = AbilityCueSubsystem->Get_AbilityCue_ConstructionScript(InCueName);
+    const auto ConstructionScript = _Subsystem_AbilityCue->Get_AbilityCue_ConstructionScript(InCueName);
 
     if (ck::Is_NOT_Valid(ConstructionScript))
     { return; }
 
-    const auto TransientEntity = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>()->Get_TransientEntity();
+    const auto TransientEntity = _Subsystem_EcsWorldSubsystem->Get_TransientEntity();
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity);
     NewEntity.Add<FCk_AbilityCue_Params>(InParams);
