@@ -191,7 +191,6 @@ auto
     Request_PopulateAllAggregators()
     -> void
 {
-    _AbilityCues.Empty();
     _EntityConfigs.Empty();
 
     const auto& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
@@ -326,7 +325,7 @@ auto
             ck::Get_RuntimeTypeToString<ConfigType>())
         { return; }
 
-        _AbilityCues.Add(Config->Get_CueName(), InAssetData.GetSoftObjectPath());
+        _EntityConfigs.Emplace(Config->Get_CueName(), Config);
 
         Found->LoadSynchronous()->Request_Populate();
     }
@@ -354,8 +353,10 @@ auto
         const FGameplayTag& InCueName)
     -> class UCk_Entity_ConstructionScript_PDA*
 {
-    if (_AbilityCues.IsEmpty())
+#if WITH_EDITOR
+    if (_EntityConfigs.IsEmpty())
     { Request_PopulateAllAggregators(); }
+#endif
 
     const auto FoundAbilityCue = _EntityConfigs.Find(InCueName);
 
