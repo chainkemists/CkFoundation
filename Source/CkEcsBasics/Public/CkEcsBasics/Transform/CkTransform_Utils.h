@@ -53,7 +53,7 @@ private:
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_Transform
     DoCast(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
@@ -206,7 +206,7 @@ private:
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_TransformInterpolation
     DoCast(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,

@@ -49,7 +49,7 @@ private:
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_EntityExtension
     DoCast(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
