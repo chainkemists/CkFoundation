@@ -156,9 +156,6 @@ public:
 
 private:
     UPROPERTY(Transient)
-    TMap<FGameplayTag, FSoftObjectPath> _AbilityCues;
-
-    UPROPERTY(Transient)
     TMap<FGameplayTag, TObjectPtr<UCk_AbilityCue_Config_PDA>> _EntityConfigs;
 
     UPROPERTY(Transient)
