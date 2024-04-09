@@ -143,7 +143,7 @@ auto                                                                            
 auto                                                                                                     \
     _ClassType_::                                                                                        \
     DoCast(                                                                                              \
-        FCk_Handle InHandle,                                                                             \
+        FCk_Handle& InHandle,                                                                            \
         ECk_SucceededFailed& OutResult)                                                                  \
     -> _HandleType_                                                                                      \
 {                                                                                                        \

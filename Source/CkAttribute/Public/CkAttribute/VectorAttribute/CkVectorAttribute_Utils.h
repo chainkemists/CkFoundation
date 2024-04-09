@@ -70,7 +70,7 @@ private:
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_VectorAttribute
     DoCast(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
