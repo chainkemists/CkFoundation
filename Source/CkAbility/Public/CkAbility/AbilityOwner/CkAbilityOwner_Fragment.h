@@ -192,9 +192,18 @@ private:
     void
     OnRep_PendingGiveAbilityRequests();
 
+    UFUNCTION()
+    void
+    OnRep_PendingRevokeAbilityRequests();
+
+private:
     UPROPERTY(ReplicatedUsing = OnRep_PendingGiveAbilityRequests)
     TArray<FCk_Request_AbilityOwner_GiveAbility> _PendingGiveAbilityRequests;
     int32 _NextPendingGiveAbilityRequests = 0;
+
+    UPROPERTY(ReplicatedUsing = OnRep_PendingRevokeAbilityRequests)
+    TArray<FCk_Request_AbilityOwner_RevokeAbility> _PendingRevokeAbilityRequests;
+    int32 _NextPendingRevokeAbilityRequests = 0;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
