@@ -465,6 +465,37 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
+    Request_RevokeAbility_Replicated(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Request_AbilityOwner_RevokeAbility& InRequest,
+        const FCk_Delegate_AbilityOwner_OnAbilityRevokedOrNot& InDelegate)
+    -> FCk_Handle_AbilityOwner
+{
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityRevokedOrNot, InAbilityOwnerHandle, InDelegate);
+
+    Request_RevokeAbility(InAbilityOwnerHandle, InRequest, InDelegate);
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAbilityOwnerHandle),
+        TEXT("Cannot Revoke a REPLICATED Ability to Entity [{}] because it is NOT a Host"),
+        InAbilityOwnerHandle)
+    { return InAbilityOwnerHandle; }
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InAbilityOwnerHandle),
+        TEXT("Cannot Revoke a REPLICATED Ability to Entity [{}] because it's missing the AbilityOwner Replicated Fragment"),
+        InAbilityOwnerHandle)
+    { return InAbilityOwnerHandle; }
+
+    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(
+        InAbilityOwnerHandle, [&](UCk_Fragment_AbilityOwner_Rep* InRepComp)
+    {
+        InRepComp->_PendingRevokeAbilityRequests.Emplace(InRequest);
+    });
+
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
     Request_TryActivateAbility(
         FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_ActivateAbility& InRequest,

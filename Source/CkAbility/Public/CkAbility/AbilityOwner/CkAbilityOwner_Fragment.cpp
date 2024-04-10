@@ -196,6 +196,7 @@ auto
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
     DOREPLIFETIME(ThisType, _PendingGiveAbilityRequests);
+    DOREPLIFETIME(ThisType, _PendingRevokeAbilityRequests);
 }
 
 auto
@@ -217,6 +218,27 @@ auto
         UCk_Utils_AbilityOwner_UE::Request_GiveAbility(AssociatedEntityAbilityOwner, GiveAbilityRequest, {});
     }
     _NextPendingGiveAbilityRequests = _PendingGiveAbilityRequests.Num();
+}
+
+auto
+    UCk_Fragment_AbilityOwner_Rep::
+    OnRep_PendingRevokeAbilityRequests()
+    -> void
+{
+    if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
+    { return; }
+
+    if (GetWorld()->IsNetMode(NM_DedicatedServer))
+    { return; }
+
+    auto AssociatedEntityAbilityOwner = ck::StaticCast<FCk_Handle_AbilityOwner>(_AssociatedEntity);
+
+    for (auto Index = _NextPendingRevokeAbilityRequests; Index < _PendingRevokeAbilityRequests.Num(); ++Index)
+    {
+        const auto& RevokeAbilityRequest = _PendingRevokeAbilityRequests[Index];
+        UCk_Utils_AbilityOwner_UE::Request_RevokeAbility(AssociatedEntityAbilityOwner, RevokeAbilityRequest, {});
+    }
+    _NextPendingRevokeAbilityRequests = _PendingRevokeAbilityRequests.Num();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
