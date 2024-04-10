@@ -21,6 +21,30 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UINTERFACE(Blueprintable)
+class UCk_Ability_Effect_Interface : public UInterface { GENERATED_BODY() };
+class CKABILITY_API ICk_Ability_Effect_Interface
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(ICk_Ability_Effect_Interface);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UINTERFACE(Blueprintable)
+class UCk_Ability_Cue_Interface : public UInterface { GENERATED_BODY() };
+class CKABILITY_API ICk_Ability_Cue_Interface
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(ICk_Ability_Cue_Interface);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UINTERFACE(Blueprintable)
 class UCk_Ability_Cost_Interface : public UInterface { GENERATED_BODY() };
 class CKABILITY_API ICk_Ability_Cost_Interface
 {
