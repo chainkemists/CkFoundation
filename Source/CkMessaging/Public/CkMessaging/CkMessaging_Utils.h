@@ -34,7 +34,7 @@ public:
               meta=(CustomStructureParam = "InValue", BlueprintInternalUseOnly = true))
     static void
     INTERNAL__Broadcast(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InMessageName,
         const int32& InValue);
     DECLARE_FUNCTION(execINTERNAL__Broadcast);
@@ -48,7 +48,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Messaging",
-              DisplayName="[Ck][Messaging] BindTo Broadcast")
+              DisplayName="[Ck][Messaging] Bind To OnBroadcast")
     static void
     BindTo_OnBroadcast(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -59,7 +59,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Messaging",
-              DisplayName="[Ck][Messaging] Unbind From Broadcast")
+              DisplayName="[Ck][Messaging] Unbind From OnBroadcast")
     static void
     UnbindFrom_OnBroadcast(
         UPARAM(ref) FCk_Handle& InHandle,
