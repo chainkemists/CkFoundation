@@ -11,7 +11,7 @@
 
 DEFINE_FUNCTION(UCk_Utils_Messaging_UE::execINTERNAL__Broadcast)
 {
-    P_GET_STRUCT(FCk_Handle, Handle);
+    P_GET_STRUCT_REF(FCk_Handle, Handle);
     P_GET_STRUCT(FGameplayTag, MessageName);
 
 
