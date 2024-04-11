@@ -195,6 +195,7 @@ class CKATTRIBUTE_API UCk_Utils_ByteAttributeModifier_UE : public UCk_Utils_Ecs_
 
 public:
     CK_GENERATED_BODY(UCk_Utils_ByteAttributeModifier_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_ByteAttributeModifier);
 
 private:
     using ByteAttributeModifier_Utils_Current = ck::TUtils_AttributeModifier<ck::FFragment_ByteAttributeModifier_Current>;
@@ -223,6 +224,12 @@ public:
         const FCk_Handle_ByteAttribute& InAttribute,
         FGameplayTag InModifierName,
         ECk_MinMaxCurrent InComponent = ECk_MinMaxCurrent::Current);
+    static FCk_Handle_ByteAttributeModifier
+    TryGet_If(
+        const FCk_Handle_ByteAttribute& InAttribute,
+        FGameplayTag InModifierName,
+        ECk_MinMaxCurrent InComponent,
+        const TFunction<bool(FCk_Handle_ByteAttributeModifier)>& InPredicate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Byte",
@@ -230,6 +237,12 @@ public:
     static FCk_Handle_ByteAttribute
     Remove(
         UPARAM(ref) FCk_Handle_ByteAttributeModifier& InAttributeModifierEntity);
+
+public:
+    // Has Feature
+    static bool
+    Has(
+        const FCk_Handle& InModifierEntity);
 
 public:
     UFUNCTION(BlueprintCallable,

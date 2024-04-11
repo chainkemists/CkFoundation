@@ -535,7 +535,57 @@ auto
             return RecordOfByteAttributeModifiers_Utils_Max::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
         }
         default:
+        {
             return {};
+        }
+    }
+}
+
+auto
+    UCk_Utils_ByteAttributeModifier_UE::
+    TryGet_If(
+        const FCk_Handle_ByteAttribute& InAttribute,
+        FGameplayTag InModifierName,
+        ECk_MinMaxCurrent InComponent,
+        const TFunction<bool(FCk_Handle_ByteAttributeModifier)>& InPredicate)
+    -> FCk_Handle_ByteAttributeModifier
+{
+    switch(InComponent)
+    {
+        case ECk_MinMaxCurrent::Current:
+        {
+            return RecordOfByteAttributeModifiers_Utils_Current::Get_ValidEntry_If(InAttribute, [&](const FCk_Handle& InHandle) -> bool
+            {
+                if (NOT ck::algo::MatchesGameplayLabel{InModifierName}(InHandle))
+                { return false; }
+
+                return InPredicate(Cast(InHandle));
+            });
+        }
+        case ECk_MinMaxCurrent::Min:
+        {
+            return RecordOfByteAttributeModifiers_Utils_Min::Get_ValidEntry_If(InAttribute, [&](const FCk_Handle& InHandle) -> bool
+            {
+                if (NOT ck::algo::MatchesGameplayLabel{InModifierName}(InHandle))
+                { return false; }
+
+                return InPredicate(Cast(InHandle));
+            });
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            return RecordOfByteAttributeModifiers_Utils_Max::Get_ValidEntry_If(InAttribute, [&](const FCk_Handle& InHandle) -> bool
+            {
+                if (NOT ck::algo::MatchesGameplayLabel{InModifierName}(InHandle))
+                { return false; }
+
+                return InPredicate(Cast(InHandle));
+            });
+        }
+        default:
+        {
+            return {};
+        }
     }
 }
 
@@ -576,6 +626,15 @@ auto
     });
 
     return AttributeEntity;
+}
+
+auto
+    UCk_Utils_ByteAttributeModifier_UE::
+    Has(
+        const FCk_Handle& InModifierEntity)
+    -> bool
+{
+    return InModifierEntity.Has_Any<ck::FFragment_ByteAttributeModifier_Min, ck::FFragment_ByteAttributeModifier_Current,ck::FFragment_ByteAttributeModifier_Max>();
 }
 
 auto
