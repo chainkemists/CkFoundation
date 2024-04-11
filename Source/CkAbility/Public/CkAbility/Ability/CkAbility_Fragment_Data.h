@@ -139,6 +139,19 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_Stacking_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// How this Ability stacks with other instances of this same Ability
+UENUM(BlueprintType)
+enum class ECk_Ability_CueStacking_Policy : uint8
+{
+    // Each new application of a stacking ability will spawn its associated Ability Cue(s)
+    SpawnCueForEachStack,
+
+    // If true, AbilityCues will only be triggered for the first instance in a stacking Ability
+    SuppressStackingCues,
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // How the Ability duration should be refreshed or not) while stacking
 UENUM(BlueprintType)
 enum class ECk_Ability_StackDurationRefresh_Policy : uint8
@@ -172,6 +185,20 @@ enum class ECk_Ability_StackPeriodReset_Policy : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_StackPeriodReset_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// How the Ability stack should be cleared (or not) when it overflows
+UENUM(BlueprintType)
+enum class ECk_Ability_StackOverflow_Policy : uint8
+{
+    DoNothing,
+
+    // The entire Ability stack will be cleared once it overflows
+    ClearEntireStackOnOverflow
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_StackOverflow_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
