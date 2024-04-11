@@ -536,7 +536,57 @@ auto
             return RecordOfFloatAttributeModifiers_Utils_Max::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
         }
         default:
+        {
             return {};
+        }
+    }
+}
+
+auto
+    UCk_Utils_FloatAttributeModifier_UE::
+    TryGet_If(
+        const FCk_Handle_FloatAttribute& InAttribute,
+        FGameplayTag InModifierName,
+        ECk_MinMaxCurrent InComponent,
+        const TFunction<bool(FCk_Handle_FloatAttributeModifier)>& InPredicate)
+    -> FCk_Handle_FloatAttributeModifier
+{
+    switch(InComponent)
+    {
+        case ECk_MinMaxCurrent::Current:
+        {
+            return RecordOfFloatAttributeModifiers_Utils_Current::Get_ValidEntry_If(InAttribute, [&](const FCk_Handle& InHandle) -> bool
+            {
+                if (NOT ck::algo::MatchesGameplayLabel{InModifierName}(InHandle))
+                { return false; }
+
+                return InPredicate(Cast(InHandle));
+            });
+        }
+        case ECk_MinMaxCurrent::Min:
+        {
+            return RecordOfFloatAttributeModifiers_Utils_Min::Get_ValidEntry_If(InAttribute, [&](const FCk_Handle& InHandle) -> bool
+            {
+                if (NOT ck::algo::MatchesGameplayLabel{InModifierName}(InHandle))
+                { return false; }
+
+                return InPredicate(Cast(InHandle));
+            });
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            return RecordOfFloatAttributeModifiers_Utils_Max::Get_ValidEntry_If(InAttribute, [&](const FCk_Handle& InHandle) -> bool
+            {
+                if (NOT ck::algo::MatchesGameplayLabel{InModifierName}(InHandle))
+                { return false; }
+
+                return InPredicate(Cast(InHandle));
+            });
+        }
+        default:
+        {
+            return {};
+        }
     }
 }
 
@@ -577,6 +627,15 @@ auto
     });
 
     return AttributeEntity;
+}
+
+auto
+    UCk_Utils_FloatAttributeModifier_UE::
+    Has(
+        const FCk_Handle& InModifierEntity)
+    -> bool
+{
+    return InModifierEntity.Has_Any<ck::FFragment_FloatAttributeModifier_Min, ck::FFragment_FloatAttributeModifier_Current,ck::FFragment_FloatAttributeModifier_Max>();
 }
 
 auto

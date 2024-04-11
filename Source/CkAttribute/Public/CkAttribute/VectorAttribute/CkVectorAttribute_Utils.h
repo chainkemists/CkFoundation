@@ -195,6 +195,7 @@ class CKATTRIBUTE_API UCk_Utils_VectorAttributeModifier_UE : public UCk_Utils_Ec
 
 public:
     CK_GENERATED_BODY(UCk_Utils_VectorAttributeModifier_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_VectorAttributeModifier);
 
 private:
     using VectorAttributeModifier_Utils_Current = ck::TUtils_AttributeModifier<ck::FFragment_VectorAttributeModifier_Current>;
@@ -223,6 +224,12 @@ public:
         const FCk_Handle_VectorAttribute& InAttribute,
         FGameplayTag InModifierName,
         ECk_MinMaxCurrent InComponent = ECk_MinMaxCurrent::Current);
+    static FCk_Handle_VectorAttributeModifier
+    TryGet_If(
+        const FCk_Handle_VectorAttribute& InAttribute,
+        FGameplayTag InModifierName,
+        ECk_MinMaxCurrent InComponent,
+        const TFunction<bool(FCk_Handle_VectorAttributeModifier)>& InPredicate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Vector",
@@ -230,6 +237,12 @@ public:
     static FCk_Handle_VectorAttribute
     Remove(
         UPARAM(ref) FCk_Handle_VectorAttributeModifier& InAttributeModifierEntity);
+
+public:
+    // Has Feature
+    static bool
+    Has(
+        const FCk_Handle& InModifierEntity);
 
 public:
     UFUNCTION(BlueprintCallable,

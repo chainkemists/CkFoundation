@@ -535,7 +535,57 @@ auto
             return RecordOfVectorAttributeModifiers_Utils_Max::Get_ValidEntry_If(InAttribute, ck::algo::MatchesGameplayLabel{InModifierName});
         }
         default:
+        {
             return {};
+        }
+    }
+}
+
+auto
+    UCk_Utils_VectorAttributeModifier_UE::
+    TryGet_If(
+        const FCk_Handle_VectorAttribute& InAttribute,
+        FGameplayTag InModifierName,
+        ECk_MinMaxCurrent InComponent,
+        const TFunction<bool(FCk_Handle_VectorAttributeModifier)>& InPredicate)
+    -> FCk_Handle_VectorAttributeModifier
+{
+    switch(InComponent)
+    {
+        case ECk_MinMaxCurrent::Current:
+        {
+            return RecordOfVectorAttributeModifiers_Utils_Current::Get_ValidEntry_If(InAttribute, [&](const FCk_Handle& InHandle) -> bool
+            {
+                if (NOT ck::algo::MatchesGameplayLabel{InModifierName}(InHandle))
+                { return false; }
+
+                return InPredicate(Cast(InHandle));
+            });
+        }
+        case ECk_MinMaxCurrent::Min:
+        {
+            return RecordOfVectorAttributeModifiers_Utils_Min::Get_ValidEntry_If(InAttribute, [&](const FCk_Handle& InHandle) -> bool
+            {
+                if (NOT ck::algo::MatchesGameplayLabel{InModifierName}(InHandle))
+                { return false; }
+
+                return InPredicate(Cast(InHandle));
+            });
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            return RecordOfVectorAttributeModifiers_Utils_Max::Get_ValidEntry_If(InAttribute, [&](const FCk_Handle& InHandle) -> bool
+            {
+                if (NOT ck::algo::MatchesGameplayLabel{InModifierName}(InHandle))
+                { return false; }
+
+                return InPredicate(Cast(InHandle));
+            });
+        }
+        default:
+        {
+            return {};
+        }
     }
 }
 
@@ -569,13 +619,22 @@ auto
     UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_VectorAttribute_Rep>(AttributeOwnerEntity,
     [&](UCk_Fragment_VectorAttribute_Rep* InRepComp)
     {
-        InRepComp->Broadcast_RemoveModifier(UCk_Utils_GameplayLabel_UE::Get_Label(
-            InAttributeModifierEntity),
+        InRepComp->Broadcast_RemoveModifier(
+            UCk_Utils_GameplayLabel_UE::Get_Label(InAttributeModifierEntity),
             UCk_Utils_GameplayLabel_UE::Get_Label(AttributeEntity),
             AttributeComponent);
     });
 
     return AttributeEntity;
+}
+
+auto
+    UCk_Utils_VectorAttributeModifier_UE::
+    Has(
+        const FCk_Handle& InModifierEntity)
+    -> bool
+{
+    return InModifierEntity.Has_Any<ck::FFragment_VectorAttributeModifier_Min, ck::FFragment_VectorAttributeModifier_Current,ck::FFragment_VectorAttributeModifier_Max>();
 }
 
 auto

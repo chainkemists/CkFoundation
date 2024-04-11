@@ -195,6 +195,7 @@ class CKATTRIBUTE_API UCk_Utils_FloatAttributeModifier_UE : public UCk_Utils_Ecs
 
 public:
     CK_GENERATED_BODY(UCk_Utils_FloatAttributeModifier_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_FloatAttributeModifier);
 
 private:
     using FloatAttributeModifier_Utils_Current = ck::TUtils_AttributeModifier<ck::FFragment_FloatAttributeModifier_Current>;
@@ -223,6 +224,12 @@ public:
         const FCk_Handle_FloatAttribute& InAttribute,
         FGameplayTag InModifierName,
         ECk_MinMaxCurrent InComponent = ECk_MinMaxCurrent::Current);
+    static FCk_Handle_FloatAttributeModifier
+    TryGet_If(
+        const FCk_Handle_FloatAttribute& InAttribute,
+        FGameplayTag InModifierName,
+        ECk_MinMaxCurrent InComponent,
+        const TFunction<bool(FCk_Handle_FloatAttributeModifier)>& InPredicate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeModifier|Float",
@@ -230,6 +237,12 @@ public:
     static FCk_Handle_FloatAttribute
     Remove(
         UPARAM(ref) FCk_Handle_FloatAttributeModifier& InAttributeModifierEntity);
+
+public:
+    // Has Feature
+    static bool
+    Has(
+        const FCk_Handle& InModifierEntity);
 
 public:
     UFUNCTION(BlueprintCallable,
