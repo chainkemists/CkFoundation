@@ -111,7 +111,13 @@ auto
         const auto& ModifierName = Modifier.Get_ModifierName();
         const auto& Component = Modifier.Get_Component();
 
-        auto ModifierEntity = UCk_Utils_ByteAttributeModifier_UE::TryGet(Attribute, ModifierName, Component);
+        auto ModifierEntity = UCk_Utils_ByteAttributeModifier_UE::TryGet_If
+        (
+            Attribute,
+            ModifierName,
+            Component,
+            ck::algo::Is_NOT_DestructionPhase{ECk_EntityLifetime_DestructionPhase::InitiatedOrConfirmed}
+        );
 
         CK_LOG_ERROR_IF_NOT(ck::attribute, ck::IsValid(ModifierEntity),
             TEXT("Received a BYTE RemoveModifier Request from the SERVER with ModifierName [{}] for a TargetAttribute [{}] but the Modifier does NOT exist.{}"),
