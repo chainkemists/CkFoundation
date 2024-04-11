@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Params.h"
 #include "CkEcs/Handle/CkHandle.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -74,6 +75,38 @@ namespace ck
         CK_PROPERTY_GET(_Entity);
 
         CK_DEFINE_CONSTRUCTORS(FFragment_LifetimeOwner, _Entity);
+    };
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+// Algos
+
+namespace ck::algo
+{
+    struct CKECS_API IsDestructionPhase
+    {
+    public:
+        auto operator()(const FCk_Handle& InHandle) const -> bool;
+
+    private:
+        ECk_EntityLifetime_DestructionPhase _DestructionPhase = ECk_EntityLifetime_DestructionPhase::Initiated;
+
+    public:
+        CK_DEFINE_CONSTRUCTOR(IsDestructionPhase, _DestructionPhase)
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKECS_API Is_NOT_DestructionPhase
+    {
+    public:
+        auto operator()(const FCk_Handle& InHandle) const -> bool;
+
+    private:
+        ECk_EntityLifetime_DestructionPhase _DestructionPhase = ECk_EntityLifetime_DestructionPhase::Initiated;
+
+    public:
+        CK_DEFINE_CONSTRUCTOR(Is_NOT_DestructionPhase, _DestructionPhase)
     };
 }
 
