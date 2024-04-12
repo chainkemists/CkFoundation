@@ -11,6 +11,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#define LOCTEXT_NAMESPACE "CkAbilityCue"
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_AbilityCue_UE::
     Request_Spawn_AbilityCue(
@@ -69,4 +73,101 @@ auto
     return AbilityCueParams;
 }
 
+DEFINE_FUNCTION(UCk_Utils_AbilityCue_UE::execINTERNAL__Make_AbilityCue_Params_With_CustomData)
+{
+    P_GET_STRUCT(FVector, Location);
+    P_GET_STRUCT(FVector, Normal);
+    P_GET_STRUCT(FCk_Handle, Instigator);
+    P_GET_STRUCT(FCk_Handle, EffectCauser);
+
+    // Read wildcard Value input.
+    Stack.MostRecentPropertyAddress = nullptr;
+    Stack.MostRecentPropertyContainer = nullptr;
+    Stack.StepCompiledIn<FStructProperty>(nullptr);
+
+    const auto* ValueProp = CastField<FStructProperty>(Stack.MostRecentProperty);
+    const void* ValuePtr = Stack.MostRecentPropertyAddress;
+
+    P_FINISH;
+
+    if (!ValueProp || !ValuePtr)
+    {
+        const FBlueprintExceptionInfo ExceptionInfo(
+            EBlueprintExceptionType::AbortExecution,
+            LOCTEXT("CkInstancedStructVariable_SetInvalidValueWarning", "Failed to resolve the Value for Broadcast"));
+
+        FBlueprintCoreDelegates::ThrowScriptException(P_THIS, Stack, ExceptionInfo);
+    }
+    else
+    {
+        P_NATIVE_BEGIN;
+        FInstancedStruct InstancedStruct;
+        InstancedStruct.InitializeAs(ValueProp->Struct, static_cast<const uint8*>(ValuePtr));
+        auto AbilityCueParams = Make_AbilityCue_Params_With_CustomData(Location, Normal, Instigator, EffectCauser, InstancedStruct);
+        *static_cast<decltype(AbilityCueParams)*>(RESULT_PARAM) = AbilityCueParams;
+        P_NATIVE_END;
+    }
+}
+
+auto
+    UCk_Utils_AbilityCue_UE::
+    Make_AbilityCue_Params_With_CustomData(
+        FVector InLocation,
+        FVector InNormal,
+        FCk_Handle InInstigator,
+        FCk_Handle InEffectCauser,
+        FInstancedStruct InCustomData)
+    -> FCk_AbilityCue_Params
+{
+    auto AbilityCueParams = Make_AbilityCue_Params(InLocation, InNormal, InInstigator, InEffectCauser);
+    AbilityCueParams.Set_CustomData(InCustomData);
+
+    return AbilityCueParams;
+}
+
+DEFINE_FUNCTION(UCk_Utils_AbilityCue_UE::execINTERNAL__Make_AbilityCue_With_CustomData)
+{
+    // Read wildcard Value input.
+    Stack.MostRecentPropertyAddress = nullptr;
+    Stack.MostRecentPropertyContainer = nullptr;
+    Stack.StepCompiledIn<FStructProperty>(nullptr);
+
+    const auto* ValueProp = CastField<FStructProperty>(Stack.MostRecentProperty);
+    const void* ValuePtr = Stack.MostRecentPropertyAddress;
+
+    P_FINISH;
+
+    if (!ValueProp || !ValuePtr)
+    {
+        const FBlueprintExceptionInfo ExceptionInfo(
+            EBlueprintExceptionType::AbortExecution,
+            LOCTEXT("CkInstancedStructVariable_SetInvalidValueWarning", "Failed to resolve the Value for Broadcast"));
+
+        FBlueprintCoreDelegates::ThrowScriptException(P_THIS, Stack, ExceptionInfo);
+    }
+    else
+    {
+        P_NATIVE_BEGIN;
+        FInstancedStruct InstancedStruct;
+        InstancedStruct.InitializeAs(ValueProp->Struct, static_cast<const uint8*>(ValuePtr));
+        auto AbilityCueParams = Make_AbilityCue_With_CustomData(InstancedStruct);
+        *static_cast<decltype(AbilityCueParams)*>(RESULT_PARAM) = AbilityCueParams;
+        P_NATIVE_END;
+    }
+}
+
+auto
+    UCk_Utils_AbilityCue_UE::
+    Make_AbilityCue_With_CustomData(
+        FInstancedStruct InCustomData)
+    -> FCk_AbilityCue_Params
+{
+    auto AbilityCueParams = FCk_AbilityCue_Params{};
+    AbilityCueParams.Set_CustomData(InCustomData);
+
+    return AbilityCueParams;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
+
+#undef LOCTEXT_MESSAGE
