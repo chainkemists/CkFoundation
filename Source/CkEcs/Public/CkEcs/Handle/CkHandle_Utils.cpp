@@ -68,14 +68,20 @@ auto
     UCk_Utils_Handle_UE::
     Set_DebugName(
         FCk_Handle& InHandle,
-        FName InDebugName)
+        FName InDebugName,
+        ECk_Override InOverride)
     -> void
 {
 #if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
     if (NOT InHandle.Has<DEBUG_NAME>())
-    { InHandle.Add<DEBUG_NAME>(InDebugName); }
+    {
+        InHandle.Add<DEBUG_NAME>(InDebugName);
+    }
     else
-    { InHandle.Get<DEBUG_NAME>().DoSet_DebugName(InDebugName); }
+    {
+        InHandle.Get<DEBUG_NAME>().DoSet_DebugName(InDebugName, InOverride);
+    }
+
     ck::ecs::LogIf(UCk_Utils_Ecs_Settings_UE::Get_EntityMapPolicy() == ECk_Ecs_EntityMap_Policy::AlwaysLog,
         TEXT("[EntityMap] [{}]"), InHandle, InDebugName);
 #endif

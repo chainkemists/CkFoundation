@@ -25,13 +25,7 @@ private:
 
 private:
     auto
-    DoSet_DebugName(FName InDebugName)
-    {
-        if (NOT _Name.IsNone())
-        { _PreviousNames.Emplace(_Name); }
-
-        _Name = InDebugName;
-    }
+    DoSet_DebugName(FName InDebugName, ECk_Override InOverride = ECk_Override::Override) -> void;
 
 public:
     CK_PROPERTY_GET(_Name);
