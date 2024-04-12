@@ -36,6 +36,7 @@ auto
 TCk_DebugWrapper<DEBUG_NAME>::
     TCk_DebugWrapper(
         const DEBUG_NAME* InPtr)
+    : _Fragment(InPtr)
 {
 }
 
