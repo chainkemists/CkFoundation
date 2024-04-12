@@ -44,6 +44,43 @@ public:
         FVector InNormal,
         FCk_Handle InInstigator,
         FCk_Handle InEffectCauser);
+
+    UFUNCTION(BlueprintPure,
+        CustomThunk,
+        DisplayName = "[Ck] Make AbilityCue Params With Custom Data",
+        Category = "Ck|Utils|AbilityCue",
+        meta=(CustomStructureParam = "InValue", BlueprintInternalUseOnly = true))
+    static FCk_AbilityCue_Params
+    INTERNAL__Make_AbilityCue_Params_With_CustomData(
+        FVector InLocation,
+        FVector InNormal,
+        FCk_Handle InInstigator,
+        FCk_Handle InEffectCauser,
+        const int32& InValue);
+    DECLARE_FUNCTION(execINTERNAL__Make_AbilityCue_Params_With_CustomData);
+
+    static auto
+    Make_AbilityCue_Params_With_CustomData(
+        FVector InLocation,
+        FVector InNormal,
+        FCk_Handle InInstigator,
+        FCk_Handle InEffectCauser,
+        FInstancedStruct InCustomData) -> FCk_AbilityCue_Params;
+
+    UFUNCTION(BlueprintPure,
+        CustomThunk,
+        DisplayName = "[Ck] Make AbilityCue With Custom Data",
+        Category = "Ck|Utils|AbilityCue",
+        meta=(CustomStructureParam = "InValue", BlueprintInternalUseOnly = true))
+    static FCk_AbilityCue_Params
+    INTERNAL__Make_AbilityCue_With_CustomData(
+        const int32& InValue);
+    DECLARE_FUNCTION(execINTERNAL__Make_AbilityCue_With_CustomData);
+
+    static auto
+    Make_AbilityCue_With_CustomData(
+        FInstancedStruct InCustomData) -> FCk_AbilityCue_Params;
+
 };
 
 // --------------------------------------------------------------------------------------------------------------------
