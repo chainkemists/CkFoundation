@@ -115,6 +115,10 @@ private:
     UPROPERTY()
     TWeakObjectPtr<class UCk_Fragment_EntityReplicationDriver_Rep> _EffectCauser_RepObj;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
+    FInstancedStruct _CustomData;
+
 public:
     auto
     NetSerialize(
@@ -127,6 +131,7 @@ public:
     CK_PROPERTY(_Normal);
     CK_PROPERTY(_Instigator);
     CK_PROPERTY(_EffectCauser);
+    CK_PROPERTY(_CustomData);
 };
 
 template<>
