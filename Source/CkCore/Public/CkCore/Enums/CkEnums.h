@@ -528,3 +528,14 @@ enum class ECk_MinMaxCurrent : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_MinMaxCurrent);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Override : uint8
+{
+    Override,
+    DoNotOverride,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Override);
+
+// --------------------------------------------------------------------------------------------------------------------
