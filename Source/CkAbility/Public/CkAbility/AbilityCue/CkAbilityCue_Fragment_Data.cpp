@@ -171,6 +171,7 @@ auto
         Rep_Normal,
         Rep_Instigator,
         Rep_EffectCauser,
+        Rep_CustomData,
 
         Rep_Max
     };
@@ -203,6 +204,10 @@ auto
                 _EffectCauser_RepObj = _EffectCauser.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
                 RepBits |= (1 << Rep_EffectCauser);
             }
+        }
+        if (ck::IsValid(_CustomData))
+        {
+            RepBits |= (1 << Rep_CustomData);
         }
     }
 
@@ -253,6 +258,10 @@ auto
                 _EffectCauser = _EffectCauser_RepObj->Get_AssociatedEntity();
             }
         }
+    }
+    if (RepBits & (1 << Rep_CustomData))
+    {
+        _CustomData.NetSerialize(Ar, Map, bOutSuccess);
     }
 
     bOutSuccess = true;
