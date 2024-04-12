@@ -11,6 +11,28 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    DEBUG_NAME::DoSet_DebugName(
+        FName InDebugName,
+        ECk_Override InOverride)
+    -> void
+{
+    if (InOverride == ECk_Override::DoNotOverride)
+    {
+        if (NOT _Name.IsNone())
+        { _PreviousNames.Emplace(InDebugName); }
+        else
+        { _Name = InDebugName; }
+    }
+    else
+    {
+        if (NOT _Name.IsNone())
+        { _PreviousNames.Emplace(_Name); }
+
+        _Name = InDebugName;
+    }
+}
+
 TCk_DebugWrapper<DEBUG_NAME>::
     TCk_DebugWrapper(
         const DEBUG_NAME* InPtr)
