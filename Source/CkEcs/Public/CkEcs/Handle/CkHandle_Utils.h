@@ -72,7 +72,8 @@ public:
     static auto
     Set_DebugName(
         FCk_Handle& InHandle,
-        FName InDebugName) -> void;
+        FName InDebugName,
+        ECk_Override InOverride = ECk_Override::Override) -> void;
 
 public:
     UFUNCTION(BlueprintPure,
