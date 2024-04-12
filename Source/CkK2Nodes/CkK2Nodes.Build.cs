@@ -20,11 +20,12 @@ public class CkK2Nodes : CkModuleRules
             "StructUtils",
             "UnrealEd",
 
+            "CkAbility",
             "CkCore",
             "CkEcs",
             "CkLog",
-            "CkVariables",
-            "CkMessaging"
+            "CkMessaging",
+            "CkVariables"
         });
     }
 }
