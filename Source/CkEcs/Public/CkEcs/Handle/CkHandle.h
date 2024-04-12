@@ -13,6 +13,20 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 #if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// enable pointer stability for all Fragments when debugging
+template<typename Type>
+struct entt::component_traits<Type> {
+    // ReSharper disable once CppInconsistentNaming
+    static constexpr bool in_place_delete = true;
+    // ReSharper disable once CppInconsistentNaming
+    static constexpr std::size_t page_size = !std::is_empty_v<Type> * ENTT_PACKED_PAGE;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 struct DEBUG_NAME
 {
     friend class UCk_Utils_Handle_UE;
@@ -33,14 +47,7 @@ public:
     CK_DEFINE_CONSTRUCTORS(DEBUG_NAME, _Name);
 };
 
-// enable pointer stability for all Fragments when debugging
-template<typename Type>
-struct entt::component_traits<Type> {
-    // ReSharper disable once CppInconsistentNaming
-    static constexpr bool in_place_delete = true;
-    // ReSharper disable once CppInconsistentNaming
-    static constexpr std::size_t page_size = !std::is_empty_v<Type> * ENTT_PACKED_PAGE;
-};
+// --------------------------------------------------------------------------------------------------------------------
 
 template <>
 struct TCk_DebugWrapper<DEBUG_NAME> : public FCk_DebugWrapper
