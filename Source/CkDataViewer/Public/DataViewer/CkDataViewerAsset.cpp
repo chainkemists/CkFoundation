@@ -160,7 +160,7 @@ auto
         const auto Field = *Itr;
         const auto Property = static_cast<FStructProperty*>(Field);
 
-        if (NOT (Property->PropertyFlags & CPF_BlueprintVisible))
+        if (NOT (Property->PropertyFlags & CPF_Transient))
         { continue; }
 
         FBlueprintEditorUtils::RemoveMemberVariable(Blueprint, *Itr->GetNameCPP());
