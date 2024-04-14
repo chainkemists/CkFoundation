@@ -16,7 +16,10 @@ namespace ck
     public:
         static auto GetStatName() -> const char*;
         static auto GetDescription() -> const TCHAR*;
+
+#if STATS
         static auto GetStatType() -> EStatDataType::Type;
+#endif
 
         static auto IsClearEveryFrame() -> bool;
         static auto IsCycleStat() -> bool;
@@ -29,6 +32,7 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#if STATS
 #define CK_DEFINE_STAT(_CounterName_, Type, GroupId)      \
 struct FStat_##_CounterName_ : public ck::TStat_Id<Type>  \
 {                                                       \
@@ -42,3 +46,16 @@ static inline DEFINE_STAT(_CounterName_)
     STAT(FScopeCycleCounter _CounterName_{GET_STATID(_CounterName_)});
 
 // --------------------------------------------------------------------------------------------------------------------
+#else
+#define CK_DEFINE_STAT(_CounterName_, Type, GroupId)      \
+struct FStat_##_CounterName_ : public ck::TStat_Id<Type>  \
+{                                                       \
+};                                                      \
+
+// --------------------------------------------------------------------------------------------------------------------
+
+#define CK_STAT(_CounterName_)\
+    SCOPED_NAMED_EVENT_TCHAR(FStat_##_CounterName_::GetStatName(), FColor::Red);
+
+// --------------------------------------------------------------------------------------------------------------------
+#endif

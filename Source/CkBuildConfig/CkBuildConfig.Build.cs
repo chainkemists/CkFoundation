@@ -56,7 +56,7 @@ public class CkModuleRules : ModuleRules
                     case UnrealTargetConfiguration.Test:
                         PublicDefinitions.Add("CK_BYPASS_ENSURES=0");
                         PublicDefinitions.Add("CK_LOG_NO_CONTEXT=0");
-                        PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=0");
+                        PublicDefinitions.Add("CK_DISABLE_STACK_TRACE=1");
                         PublicDefinitions.Add("CK_ECS_DISABLE_HANDLE_DEBUGGING=0");
                         PublicDefinitions.Add("CK_MEMORY_TRACKING=0");
                         break;
