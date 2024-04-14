@@ -48,6 +48,7 @@ namespace ck
         return *Description;
     }
 
+#if STATS
     template <typename T_StatName>
     auto
         TStat_Id<T_StatName>::
@@ -56,6 +57,7 @@ namespace ck
     {
         return EStatDataType::ST_int64;
     }
+#endif
 
     template <typename T_StatName>
     auto
