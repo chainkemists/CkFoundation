@@ -114,7 +114,7 @@ public:
     static FCk_Handle_Marker
     TryGet_Marker(
         const FCk_Handle& InMarkerOwnerEntity,
-        FGameplayTag      InMarkerName);
+        UPARAM(meta = (Categories = "Marker")) FGameplayTag InMarkerName);
 
 public:
     UFUNCTION(BlueprintPure,
@@ -216,7 +216,7 @@ private:
 
     static auto
     Request_MarkMarker_AsNeedToUpdateTransform(
-        UPARAM(ref) FCk_Handle_Marker& InMarkerEntity) -> void;
+        FCk_Handle_Marker& InMarkerEntity) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -2,6 +2,12 @@
 
 #include "CkAttribute/CkAttribute_Log.h"
 
+#include <NativeGameplayTags.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_FloatAttribute, TEXT("FloatAttribute"));
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

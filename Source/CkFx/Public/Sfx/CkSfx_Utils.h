@@ -81,7 +81,7 @@ public:
     static FCk_Handle_Sfx
     TryGet_Sfx(
         const FCk_Handle& InSfxOwnerEntity,
-        FGameplayTag InSfxName);
+        UPARAM(meta = (Categories = "Sfx")) FGameplayTag InSfxName);
 
 public:
     UFUNCTION(BlueprintPure,

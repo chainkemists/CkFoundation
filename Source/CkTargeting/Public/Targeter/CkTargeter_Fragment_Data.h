@@ -137,15 +137,15 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta=(AllowPrivateAccess = true, Categories = "Targeter"))
     FGameplayTag _Name;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta=(AllowPrivateAccess = true))
     FGameplayTagQuery _TargetingQuery;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess))
+        meta=(AllowPrivateAccess = true))
     TWeakObjectPtr<UCk_Targeter_CustomTargetFilter_PDA> _CustomTargetFilter;
 
 public:

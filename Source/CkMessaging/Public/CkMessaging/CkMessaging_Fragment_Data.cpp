@@ -1,5 +1,9 @@
 #include "CkMessaging_Fragment_Data.h"
 
+#include <NativeGameplayTags.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_INTENTIONALLY_EMPTY()
+UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_Message, TEXT("Message"));
+
+// --------------------------------------------------------------------------------------------------------------------

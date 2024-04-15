@@ -2,10 +2,19 @@
 
 #include "CkCore/Macros/CkMacros.h"
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
 #include <GameplayTagContainer.h>
 
 #include "CkAnimState_Fragment_Data.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
+struct CKANIMATION_API FCk_Handle_AnimState : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_AnimState); };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_AnimState);
+
+// --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType, meta = (Bitflags, UseEnumValuesAsMaskValuesInEditor = true))
 enum class ECk_AnimStateComponents : uint8
@@ -35,7 +44,8 @@ public:
     CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true, Categories = "Animation.Goal"))
     FGameplayTag _AnimGoal;
 
 public:
@@ -67,7 +77,8 @@ public:
     CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true, Categories = "Animation.Cluster"))
     FGameplayTag _AnimCluster;
 
 public:
@@ -99,7 +110,8 @@ public:
     CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true, Categories = "Animation.State"))
     FGameplayTag _AnimState;
 
 public:
@@ -131,7 +143,8 @@ public:
     CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true, Categories = "Animation.Overlay"))
     FGameplayTag _AnimOverlay;
 
 public:
@@ -244,7 +257,7 @@ public:
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-    FCk_Handle _Handle;
+    FCk_Handle_AnimState _Handle;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     FCk_AnimState_Goal _PreviousAnimGoal;
@@ -263,12 +276,12 @@ public:
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_AnimState_OnGoalChanged,
-    FCk_Handle, InHandle,
+    FCk_Handle_AnimState, InHandle,
     const FCk_Payload_AnimState_OnGoalChanged&, InPayload);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_AnimState_OnGoalChanged_MC,
-    FCk_Handle, InHandle,
+    FCk_Handle_AnimState, InHandle,
     const FCk_Payload_AnimState_OnGoalChanged&, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -283,7 +296,7 @@ public:
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-    FCk_Handle _Handle;
+    FCk_Handle_AnimState _Handle;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     FCk_AnimState_Cluster _PreviousAnimCluster;
@@ -302,12 +315,12 @@ public:
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_AnimState_OnClusterChanged,
-    FCk_Handle, InHandle,
+    FCk_Handle_AnimState, InHandle,
     const FCk_Payload_AnimState_OnClusterChanged&, InPayload);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_AnimState_OnClusterChanged_MC,
-    FCk_Handle, InHandle,
+    FCk_Handle_AnimState, InHandle,
     const FCk_Payload_AnimState_OnClusterChanged&, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -322,7 +335,7 @@ public:
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-    FCk_Handle _Handle;
+    FCk_Handle_AnimState _Handle;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     FCk_AnimState_State _PreviousAnimState;
@@ -341,12 +354,12 @@ public:
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_AnimState_OnStateChanged,
-    FCk_Handle, InHandle,
+    FCk_Handle_AnimState, InHandle,
     const FCk_Payload_AnimState_OnStateChanged&, InPayload);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_AnimState_OnStateChanged_MC,
-    FCk_Handle, InHandle,
+    FCk_Handle_AnimState, InHandle,
     const FCk_Payload_AnimState_OnStateChanged&, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -361,7 +374,7 @@ public:
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-    FCk_Handle _Handle;
+    FCk_Handle_AnimState _Handle;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
     FCk_AnimState_Overlay _PreviousAnimOverlay;
@@ -380,12 +393,12 @@ public:
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_AnimState_OnOverlayChanged,
-    FCk_Handle, InHandle,
+    FCk_Handle_AnimState, InHandle,
     const FCk_Payload_AnimState_OnOverlayChanged&, InPayload);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_AnimState_OnOverlayChanged_MC,
-    FCk_Handle, InHandle,
+    FCk_Handle_AnimState, InHandle,
     const FCk_Payload_AnimState_OnOverlayChanged&, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------

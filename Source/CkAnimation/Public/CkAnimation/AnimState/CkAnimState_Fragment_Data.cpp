@@ -1,9 +1,19 @@
 #include "CkAnimState_Fragment_Data.h"
 
+#include <NativeGameplayTags.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_AnimState, TEXT("Animation.State"));
+UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_AnimGoal, TEXT("Animation.Goal"));
+UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_AnimCluster, TEXT("Animation.Cluster"));
+UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_AnimOverlay, TEXT("Animation.Overlay"));
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_AnimState_Goal::operator==(
+    FCk_AnimState_Goal::
+    operator==(
         const ThisType& InOther) const
     -> bool
 {
@@ -21,7 +31,8 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_AnimState_Cluster::operator==(
+    FCk_AnimState_Cluster::
+    operator==(
         const ThisType& InOther) const
     -> bool
 {

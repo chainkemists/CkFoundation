@@ -88,7 +88,7 @@ public:
     static FCk_Handle_ByteAttribute
     TryGet(
         const FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName);
+        UPARAM(meta = (Categories = "ByteAttribute")) FGameplayTag InAttributeName);
 
 public:
     UFUNCTION(BlueprintCallable,

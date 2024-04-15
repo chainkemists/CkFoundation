@@ -47,17 +47,10 @@ auto
     UCk_Utils_AnimAsset_UE::
     TryGet_AnimAsset(
         const FCk_Handle& InAnimAssetOwnerEntity,
-        FGameplayTag      InAnimAssetName)
+        FGameplayTag InAnimAssetName)
     -> FCk_Handle_AnimAsset
 {
-    const auto FoundEntity = Get_EntityOrRecordEntry_WithFragmentAndLabel<
-        UCk_Utils_AnimAsset_UE,
-        RecordOfAnimAssets_Utils>(InAnimAssetOwnerEntity, InAnimAssetName);
-
-    if (ck::Is_NOT_Valid(FoundEntity))
-    { return {}; }
-
-    return CastChecked(FoundEntity);
+    return RecordOfAnimAssets_Utils::Get_ValidEntry_If(InAnimAssetOwnerEntity, ck::algo::MatchesGameplayLabelExact{InAnimAssetName});
 }
 
 auto
@@ -72,7 +65,7 @@ auto
 auto
     UCk_Utils_AnimAsset_UE::
     ForEach_AnimAsset(
-        const FCk_Handle& InHandle,
+        FCk_Handle& InHandle,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
     -> TArray<FCk_Handle_AnimAsset>
@@ -93,7 +86,7 @@ auto
 auto
     UCk_Utils_AnimAsset_UE::
     ForEach_AnimAsset(
-        const FCk_Handle& InHandle,
+        FCk_Handle& InHandle,
         const TFunction<void(FCk_Handle_AnimAsset&)>& InFunc)
     -> void
 {

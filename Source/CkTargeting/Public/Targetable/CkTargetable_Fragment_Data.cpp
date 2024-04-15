@@ -1,5 +1,12 @@
 #include "CkTargetable_Fragment_Data.h"
 
+#include <NativeGameplayTags.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_Targetable, TEXT("Targetable"));
+UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_Targetability, TEXT("Targetability"));
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

@@ -113,7 +113,7 @@ public:
     static FCk_Handle_Sensor
     TryGet_Sensor(
         const FCk_Handle& InSensorOwnerEntity,
-        FGameplayTag      InSensorName);
+        UPARAM(meta = (Categories = "Sensor")) FGameplayTag InSensorName);
 
 public:
     UFUNCTION(BlueprintPure,
@@ -320,22 +320,22 @@ public:
 public:
     static auto
     Request_OnBeginOverlap(
-        UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
+        FCk_Handle_Sensor& InSensorEntity,
         const FCk_Request_Sensor_OnBeginOverlap& InRequest) -> void;
 
     static auto
     Request_OnEndOverlap(
-        UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
+        FCk_Handle_Sensor& InSensorEntity,
         const FCk_Request_Sensor_OnEndOverlap& InRequest) -> void;
 
     static auto
     Request_OnBeginOverlap_NonMarker(
-        UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
+        FCk_Handle_Sensor& InSensorEntity,
         const FCk_Request_Sensor_OnBeginOverlap_NonMarker& InRequest) -> void;
 
     static auto
     Request_OnEndOverlap_NonMarker(
-        UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
+        FCk_Handle_Sensor& InSensorEntity,
         const FCk_Request_Sensor_OnEndOverlap_NonMarker& InRequest) -> void;
 
 private:
@@ -346,7 +346,7 @@ private:
 
     static auto
     Request_MarkSensor_AsNeedToUpdateTransform(
-        UPARAM(ref) FCk_Handle_Sensor& InSensorHandle) -> void;
+        FCk_Handle_Sensor& InSensorHandle) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

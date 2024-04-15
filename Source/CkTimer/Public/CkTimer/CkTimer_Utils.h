@@ -35,7 +35,7 @@ public:
               DisplayName="[Ck][Timer] Add New Timer")
     static FCk_Handle_Timer
     Add(
-        UPARAM(ref) FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_Timer_ParamsData& InParams);
 
     UFUNCTION(BlueprintCallable,
@@ -51,7 +51,7 @@ public:
               DisplayName="[Ck][Timer] Add Multiple New Timers")
     static TArray<FCk_Handle_Timer>
     AddMultiple(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_MultipleTimer_ParamsData& InParams);
 
 
@@ -104,7 +104,7 @@ public:
     static FCk_Handle_Timer
     TryGet_Timer(
         const FCk_Handle& InTimerOwnerEntity,
-        FGameplayTag InTimerName);
+        UPARAM(meta = (Categories = "Timer")) FGameplayTag InTimerName);
 
 public:
     UFUNCTION(BlueprintPure,
@@ -149,12 +149,12 @@ public:
               meta=(AutoCreateRefTerm="InDelegate, InOptionalPayload"))
     static TArray<FCk_Handle_Timer>
     ForEach_Timer(
-        FCk_Handle InTimerOwnerEntity,
+        UPARAM(ref) FCk_Handle& InTimerOwnerEntity,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_Timer(
-        FCk_Handle InTimerOwnerEntity,
+        FCk_Handle& InTimerOwnerEntity,
         const TFunction<void(FCk_Handle_Timer)>& InFunc) -> void;
 
 public:

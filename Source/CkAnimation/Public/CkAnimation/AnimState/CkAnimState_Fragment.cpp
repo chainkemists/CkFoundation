@@ -41,9 +41,10 @@ auto
 {
     CK_REP_OBJ_EXECUTE_IF_VALID([&]()
     {
+        auto AnimStateHandle = UCk_Utils_AnimState_UE::CastChecked(_AssociatedEntity);
         UCk_Utils_AnimState_UE::Request_SetAnimGoal
         (
-            Get_AssociatedEntity(),
+            AnimStateHandle,
             FCk_Request_AnimState_SetGoal{_AnimGoal}
         );
     });
@@ -55,9 +56,10 @@ auto
 {
     CK_REP_OBJ_EXECUTE_IF_VALID([&]()
     {
+        auto AnimStateHandle = UCk_Utils_AnimState_UE::CastChecked(_AssociatedEntity);
         UCk_Utils_AnimState_UE::Request_SetAnimState
         (
-            Get_AssociatedEntity(),
+            AnimStateHandle,
             FCk_Request_AnimState_SetState{_AnimState}
         );
     });
@@ -69,9 +71,10 @@ auto
 {
     CK_REP_OBJ_EXECUTE_IF_VALID([&]()
     {
+        auto AnimStateHandle = UCk_Utils_AnimState_UE::CastChecked(_AssociatedEntity);
         UCk_Utils_AnimState_UE::Request_SetAnimCluster
         (
-            Get_AssociatedEntity(),
+            AnimStateHandle,
             FCk_Request_AnimState_SetCluster{_AnimCluster}
         );
     });
@@ -83,9 +86,10 @@ auto
 {
     CK_REP_OBJ_EXECUTE_IF_VALID([&]()
     {
+        auto AnimStateHandle = UCk_Utils_AnimState_UE::CastChecked(_AssociatedEntity);
         UCk_Utils_AnimState_UE::Request_SetAnimOverlay
         (
-            Get_AssociatedEntity(),
+            AnimStateHandle,
             FCk_Request_AnimState_SetOverlay{_AnimOverlay}
         );
     });

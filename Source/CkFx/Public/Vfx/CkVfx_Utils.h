@@ -83,7 +83,7 @@ public:
     static FCk_Handle_Vfx
     TryGet_Vfx(
         const FCk_Handle& InVfxOwnerEntity,
-        FGameplayTag InVfxName);
+        UPARAM(meta = (Categories = "Vfx")) FGameplayTag InVfxName);
 
 public:
     UFUNCTION(BlueprintPure,

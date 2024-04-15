@@ -13,7 +13,7 @@
 auto
     UCk_Utils_Timer_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_Timer_ParamsData& InParams)
     -> FCk_Handle_Timer
 {
@@ -67,7 +67,7 @@ auto
 auto
     UCk_Utils_Timer_UE::
     AddMultiple(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_MultipleTimer_ParamsData& InParams)
     -> TArray<FCk_Handle_Timer>
 {
@@ -154,8 +154,8 @@ auto
 auto
     UCk_Utils_Timer_UE::
     ForEach_Timer(
-        FCk_Handle                 InTimerOwnerEntity,
-        const FInstancedStruct&    InOptionalPayload,
+        FCk_Handle& InTimerOwnerEntity,
+        const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
     -> TArray<FCk_Handle_Timer>
 {
@@ -175,7 +175,7 @@ auto
 auto
     UCk_Utils_Timer_UE::
     ForEach_Timer(
-        FCk_Handle InTimerOwnerEntity,
+        FCk_Handle& InTimerOwnerEntity,
         const TFunction<void(FCk_Handle_Timer)>& InFunc)
     -> void
 {
