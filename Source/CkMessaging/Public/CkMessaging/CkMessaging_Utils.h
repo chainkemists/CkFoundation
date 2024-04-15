@@ -35,7 +35,7 @@ public:
     static void
     INTERNAL__Broadcast(
         UPARAM(ref) FCk_Handle& InHandle,
-        FGameplayTag InMessageName,
+        UPARAM(meta = (Categories = "Message")) FGameplayTag InMessageName,
         const int32& InValue);
     DECLARE_FUNCTION(execINTERNAL__Broadcast);
 
@@ -52,7 +52,7 @@ public:
     static void
     BindTo_OnBroadcast(
         UPARAM(ref) FCk_Handle& InHandle,
-        FGameplayTag InMessageName,
+        UPARAM(meta = (Categories = "Message")) FGameplayTag InMessageName,
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_Messaging_OnBroadcast& InDelegate);
@@ -63,7 +63,7 @@ public:
     static void
     UnbindFrom_OnBroadcast(
         UPARAM(ref) FCk_Handle& InHandle,
-        FGameplayTag InMessageName,
+        UPARAM(meta = (Categories = "Message")) FGameplayTag InMessageName,
         const FCk_Delegate_Messaging_OnBroadcast& InDelegate);
 
 private:

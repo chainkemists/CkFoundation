@@ -41,7 +41,7 @@ public:
               DisplayName="[Ck][AnimAsset] Add Multiple New Animations")
     static TArray<FCk_Handle_AnimAsset>
     AddMultiple(
-        FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_MultipleAnimAsset_ParamsData& InParams);
 
 public:
@@ -77,7 +77,7 @@ public:
     static FCk_Handle_AnimAsset
     TryGet_AnimAsset(
         const FCk_Handle& InAnimAssetOwnerEntity,
-        FGameplayTag      InAnimAssetName);
+        UPARAM(meta = (Categories = "AnimAsset")) FGameplayTag InAnimAssetName);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AnimAsset",
@@ -85,14 +85,14 @@ public:
               meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle_AnimAsset>
     ForEach_AnimAsset(
-        const FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
 
     static auto
     ForEach_AnimAsset(
-        const FCk_Handle& InHandle,
-        const TFunction<void(UPARAM(ref) FCk_Handle_AnimAsset&)>& InFunc) -> void;
+        FCk_Handle& InHandle,
+        const TFunction<void(FCk_Handle_AnimAsset&)>& InFunc) -> void;
 
 public:
     UFUNCTION(BlueprintPure,

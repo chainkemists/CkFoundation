@@ -6,6 +6,12 @@
 #include "CkOverlapBody/Marker/CkMarker_Utils.h"
 #include "CkOverlapBody/Sensor/CkSensor_Utils.h"
 
+#include <NativeGameplayTags.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_Sensor, TEXT("Sensor"));
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_sensor

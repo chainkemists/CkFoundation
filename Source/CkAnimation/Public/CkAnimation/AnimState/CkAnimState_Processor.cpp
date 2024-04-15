@@ -73,7 +73,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_AnimState_Current& InComp,
-            const FCk_Request_AnimState_SetGoal& InRequest) const
+            const FCk_Request_AnimState_SetGoal& InRequest)
         -> void
     {
         const auto PreviousAnimGoal = InComp.Get_AnimGoal();
@@ -104,7 +104,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_AnimState_Current& InComp,
-            const FCk_Request_AnimState_SetState& InRequest) const
+            const FCk_Request_AnimState_SetState& InRequest)
         -> void
     {
         const auto PreviousAnimState = InComp.Get_AnimState();
@@ -135,7 +135,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_AnimState_Current& InComp,
-            const FCk_Request_AnimState_SetCluster& InRequest) const
+            const FCk_Request_AnimState_SetCluster& InRequest)
         -> void
     {
         const auto PreviousAnimCluster = InComp.Get_AnimCluster();
@@ -166,7 +166,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_AnimState_Current& InComp,
-            const FCk_Request_AnimState_SetOverlay& InRequest) const
+            const FCk_Request_AnimState_SetOverlay& InRequest)
         -> void
     {
         const auto PreviousAnimOverlay = InComp.Get_AnimOverlay();
