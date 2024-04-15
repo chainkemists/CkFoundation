@@ -44,7 +44,7 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Marker);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, meta = (HasNativeMake))
 struct CKOVERLAPBODY_API FCk_Marker_BasicDetails
 {
     GENERATED_BODY()
@@ -274,7 +274,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, GameplayTagFilter = "Marker"))
+              meta = (AllowPrivateAccess = true, Categories = "Marker"))
     FGameplayTag _MarkerName;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -333,7 +333,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, TitleProperty = "_MarkerName"))
     TArray<FCk_Fragment_Marker_ParamsData> _MarkerParams;
 
 public:

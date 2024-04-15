@@ -130,11 +130,12 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, Categories = "Targetable"))
     FGameplayTag _Name;
 
+    // Tag query that is run against a given Targetable's Targetability Tags
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, Categories = "Targetability"))
     FGameplayTagContainer _TargetabilityTags;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

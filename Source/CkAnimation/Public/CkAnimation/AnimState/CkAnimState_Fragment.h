@@ -88,10 +88,30 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKANIMATION_API, AnimState_OnGoalChanged, FCk_Delegate_AnimState_OnGoalChanged_MC, FCk_Handle, FCk_Payload_AnimState_OnGoalChanged);
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKANIMATION_API, AnimState_OnStateChanged, FCk_Delegate_AnimState_OnStateChanged_MC, FCk_Handle, FCk_Payload_AnimState_OnStateChanged);
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKANIMATION_API, AnimState_OnClusterChanged, FCk_Delegate_AnimState_OnClusterChanged_MC, FCk_Handle, FCk_Payload_AnimState_OnClusterChanged);
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKANIMATION_API, AnimState_OnOverlayChanged, FCk_Delegate_AnimState_OnOverlayChanged_MC, FCk_Handle, FCk_Payload_AnimState_OnOverlayChanged);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKANIMATION_API,
+        AnimState_OnGoalChanged,
+        FCk_Delegate_AnimState_OnGoalChanged_MC,
+        FCk_Handle_AnimState,
+        FCk_Payload_AnimState_OnGoalChanged);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKANIMATION_API,
+        AnimState_OnStateChanged,
+        FCk_Delegate_AnimState_OnStateChanged_MC,
+        FCk_Handle_AnimState,
+        FCk_Payload_AnimState_OnStateChanged);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKANIMATION_API,
+        AnimState_OnClusterChanged,
+        FCk_Delegate_AnimState_OnClusterChanged_MC,
+        FCk_Handle_AnimState,
+        FCk_Payload_AnimState_OnClusterChanged);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKANIMATION_API,
+        AnimState_OnOverlayChanged,
+        FCk_Delegate_AnimState_OnOverlayChanged_MC,
+        FCk_Handle_AnimState,
+        FCk_Payload_AnimState_OnOverlayChanged);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

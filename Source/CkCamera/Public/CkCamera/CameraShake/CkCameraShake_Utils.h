@@ -62,7 +62,7 @@ public:
     static FCk_Handle_CameraShake
     TryGet_CameraShake(
         const FCk_Handle& InCameraShakeOwnerEntity,
-        FGameplayTag InCameraShakeName);
+        UPARAM(meta = (Categories = "CameraShake")) FGameplayTag InCameraShakeName);
 
 private:
     UFUNCTION(BlueprintCallable,

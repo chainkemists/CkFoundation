@@ -119,7 +119,7 @@ public:
     static FCk_Handle_Targeter
     TryGet_Targeter(
         const FCk_Handle& InTargeterOwnerEntity,
-        FGameplayTag InTargeterName);
+        UPARAM(meta = (Categories = "Targeter")) FGameplayTag InTargeterName);
 
 public:
     UFUNCTION(BlueprintPure,

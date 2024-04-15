@@ -76,7 +76,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, Categories = "Timer"))
     FGameplayTag _TimerName;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

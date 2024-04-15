@@ -88,7 +88,7 @@ public:
     static FCk_Handle_FloatAttribute
     TryGet(
         const FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName);
+        UPARAM(meta = (Categories = "FloatAttribute")) FGameplayTag InAttributeName);
 
 public:
     UFUNCTION(BlueprintCallable,

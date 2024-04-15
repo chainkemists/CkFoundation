@@ -34,7 +34,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, Categories = "VectorAttribute"))
     FGameplayTag _Name;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

@@ -72,7 +72,8 @@ public:
     CK_GENERATED_BODY(FCk_Fragment_CameraShake_ParamsData);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, Categories = "CameraShake"))
     FGameplayTag _Name;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))

@@ -88,7 +88,7 @@ public:
     static FCk_Handle_VectorAttribute
     TryGet(
         const FCk_Handle& InAttributeOwnerEntity,
-        FGameplayTag InAttributeName);
+        UPARAM(meta = (Categories = "VectorAttribute")) FGameplayTag InAttributeName);
 
 public:
     UFUNCTION(BlueprintCallable,

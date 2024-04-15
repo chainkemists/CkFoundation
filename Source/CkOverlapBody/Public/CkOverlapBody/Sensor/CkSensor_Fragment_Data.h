@@ -116,7 +116,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, meta = (HasNativeMake))
 struct CKOVERLAPBODY_API FCk_Sensor_BasicDetails
 {
     GENERATED_BODY()
@@ -442,8 +442,9 @@ public:
         const TArray<FGameplayTag>& InMarkerNames);
 
 private:
+    // TODO: Turn into GameplayTagContainer
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, Categories = "Marker"))
     TArray<FGameplayTag> _MarkerNames;
 
 public:
@@ -799,7 +800,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, GameplayTagFilter = "Sensor"))
+              meta = (AllowPrivateAccess = true, Categories = "Sensor"))
     FGameplayTag _SensorName;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

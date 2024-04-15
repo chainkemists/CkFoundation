@@ -175,7 +175,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, Categories = "Vfx"))
     FGameplayTag _Name;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

@@ -1,5 +1,11 @@
 #include "CkAnimAsset_Fragment_Data.h"
 
+#include <NativeGameplayTags.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_AnimAsset, TEXT("AnimAsset"));
+
 // --------------------------------------------------------------------------------------------------------------------
 
 FCk_AnimAsset_Animation::

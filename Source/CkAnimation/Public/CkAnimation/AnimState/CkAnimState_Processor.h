@@ -9,8 +9,9 @@
 
 namespace ck
 {
-    class CKANIMATION_API FProcessor_AnimState_HandleRequests : public TProcessor<
+    class CKANIMATION_API FProcessor_AnimState_HandleRequests : public ck_exp::TProcessor<
             FProcessor_AnimState_HandleRequests,
+            FCk_Handle_AnimState,
             FFragment_AnimState_Current,
             FFragment_AnimState_Requests,
             CK_IGNORE_PENDING_KILL>
@@ -22,42 +23,49 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto DoTick(
+        auto
+        DoTick(
             TimeType InDeltaT) -> void;
 
     public:
-        auto ForEachEntity(
+        auto
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_AnimState_Current& InComp,
             FFragment_AnimState_Requests& InRequestsComp) const -> void;
 
     private:
-        auto DoHandleRequest(
+        static auto
+        DoHandleRequest(
             HandleType InHandle,
             FFragment_AnimState_Current& InComp,
-            const FCk_Request_AnimState_SetGoal& InRequest) const -> void;
+            const FCk_Request_AnimState_SetGoal& InRequest) -> void;
 
-        auto DoHandleRequest(
+        static auto
+        DoHandleRequest(
             HandleType InHandle,
             FFragment_AnimState_Current& InComp,
-            const FCk_Request_AnimState_SetState& InRequest) const -> void;
+            const FCk_Request_AnimState_SetState& InRequest) -> void;
 
-        auto DoHandleRequest(
+        static auto
+        DoHandleRequest(
             HandleType InHandle,
             FFragment_AnimState_Current& InComp,
-            const FCk_Request_AnimState_SetCluster& InRequest) const -> void;
+            const FCk_Request_AnimState_SetCluster& InRequest) -> void;
 
-        auto DoHandleRequest(
+        static auto
+        DoHandleRequest(
             HandleType InHandle,
             FFragment_AnimState_Current& InComp,
-            const FCk_Request_AnimState_SetOverlay& InRequest) const -> void;
+            const FCk_Request_AnimState_SetOverlay& InRequest) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKANIMATION_API FProcessor_AnimState_Replicate : public TProcessor<
+    class CKANIMATION_API FProcessor_AnimState_Replicate : public ck_exp::TProcessor<
             FProcessor_AnimState_Replicate,
+            FCk_Handle_AnimState,
             FFragment_AnimState_Current,
             TObjectPtr<UCk_Fragment_AnimState_Rep>,
             FTag_AnimState_Updated,
@@ -70,7 +78,8 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(
+        auto
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_AnimState_Current& InCurrent,
