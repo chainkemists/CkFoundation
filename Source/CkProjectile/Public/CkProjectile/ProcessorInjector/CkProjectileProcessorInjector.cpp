@@ -11,6 +11,7 @@ auto
         -> void
 {
     InWorld.Add<ck::FProcessor_Projectile_Update>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Projectile_HandleRequests>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
