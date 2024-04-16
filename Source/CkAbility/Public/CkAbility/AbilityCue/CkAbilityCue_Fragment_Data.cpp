@@ -98,7 +98,13 @@ auto
         FARFilter Filter;
         // unfortunately, there is no way to get asset data on Blueprints deriving from a particular Blueprint class
         //Filter.ClassPaths.Add(FTopLevelAssetPath{UCk_Ability_Script_PDA::StaticClass()});
+
+#if WITH_EDITOR
         Filter.ClassPaths.Add(FTopLevelAssetPath{UBlueprint::StaticClass()});
+#else
+        Filter.ClassPaths.Add(FTopLevelAssetPath{UBlueprintGeneratedClass::StaticClass()});
+#endif
+
         Filter.PackagePaths.Add(*ExtractedPath);
         Filter.bRecursiveClasses = true;
         Filter.bRecursivePaths = true;
@@ -113,18 +119,36 @@ auto
 
             // TODO: See if we can avoid resolving the Object
             const auto ResolvedObject = InAssetData.GetSoftObjectPath().TryLoad();
-            const auto& Blueprint = Cast<UBlueprint>(ResolvedObject);
 
-            CK_LOG_ERROR_IF_NOT(ck::ability, ck::IsValid(Blueprint), TEXT("Could not get UBlueprint from Asset [{}] when trying Populate CueAggregators"),
+            CK_LOG_ERROR_IF_NOT(ck::ability, ck::IsValid(ResolvedObject),
+                TEXT("Could not resolve the Object from Asset [{}] when trying Populate CueAggregators"),
                 InAssetData.GetSoftObjectPath().ToString())
             { return ContinueIterating; }
 
-            const auto ResolvedObjectDefaultClass = Blueprint->GeneratedClass->GetDefaultObject();
+            const auto ResolvedObjectDefaultClassObject = [&]() -> UObject*
+            {
+#if WITH_EDITOR
+                const auto& Blueprint = Cast<UBlueprint>(ResolvedObject);
 
-            if (NOT ResolvedObjectDefaultClass->IsA(CueType))
+                if (ck::IsValid(Blueprint))
+                { return Blueprint->GeneratedClass->GetDefaultObject(); }
+#else
+                const auto BlueprintGeneratedClass = Cast<UBlueprintGeneratedClass>(InAssetData.GetAsset());
+                if (ck::IsValid(BlueprintGeneratedClass))
+                { return BlueprintGeneratedClass->GetDefaultObject(); }
+#endif
+                return nullptr;
+            }();
+
+            CK_LOG_ERROR_IF_NOT(ck::ability, ck::IsValid(ResolvedObjectDefaultClassObject),
+                TEXT("Could not get DefaultClass from Asset [{}] when trying Populate CueAggregators"),
+                InAssetData.GetSoftObjectPath().ToString())
             { return ContinueIterating; }
 
-            const auto Object = Cast<UCk_Ability_Script_PDA>(ResolvedObjectDefaultClass);
+            if (NOT ResolvedObjectDefaultClassObject->IsA(CueType))
+            { return ContinueIterating; }
+
+            const auto Object = Cast<UCk_Ability_Script_PDA>(ResolvedObjectDefaultClassObject);
 
             CK_LOG_ERROR_NOTIFY_IF_NOT(ck::ability, ck::IsValid(Object), TEXT("Unable to Cast Cue [{}] to [{}].{}"),
                     ResolvedObject, ck::Get_RuntimeTypeToString<UCk_Ability_Script_PDA>(), ck::Context(this))
@@ -134,6 +158,8 @@ auto
 
             if (ck::Is_NOT_Valid(AbilityCueConfig))
             { return ContinueIterating; }
+
+            ck::ability::Log(TEXT("Discovered and Adding Cue [{}] with Name [{}]"), Object, Object->Get_Data().Get_AbilityName());
 
             _AbilityCues.Add(Object->Get_Data().Get_AbilityName(), InAssetData.GetSoftObjectPath());
             _AbilityCueConfigs.Add(Object->Get_Data().Get_AbilityName(), AbilityCueConfig);
