@@ -14,13 +14,17 @@ public class CkProjectile : CkModuleRules
             "Core",
             "CoreUObject",
             "Engine",
+            "StructUtils",
+            "GameplayTags",
 
             "CkCore",
             "CkEcs",
             "CkEcsBasics",
             "CkNet",
             "CkPhysics",
-            "CkLog"
+            "CkLog",
+            "CkSignal",
+            "CkVariables",
         });
     }
 }

@@ -22,13 +22,24 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Projectile",
-              DisplayName="[Ck][Projectile] Add Feature",
-              meta=(BlueprintInternalUseOnly=true))
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              DisplayName="[Ck][Projectile] Add Feature")
     static void
     Add(
-        UPARAM(ref) FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_Projectile_ParamsData& InParams);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              meta = (AutoCreateRefTerm = "InOptionalPayload, InDelegate"),
+              DisplayName="[Ck][Projectile] Request Calculate Aim Ahead")
+    static void
+    Request_CalculateAimAhead(
+        const FCk_Handle& InHandle,
+        const FCk_Request_Projectile_CalculateAimAhead& InRequest,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Delegate_Projectile_OnAimAheadCalculated& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
