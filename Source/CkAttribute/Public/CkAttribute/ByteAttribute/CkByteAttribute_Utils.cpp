@@ -514,6 +514,65 @@ auto
 
 auto
     UCk_Utils_ByteAttributeModifier_UE::
+    Override(
+        FCk_Handle_ByteAttributeModifier& InAttributeModifierEntity,
+        uint8 InNewDelta,
+        ECk_MinMaxCurrent InComponent)
+    -> FCk_Handle_ByteAttributeModifier
+{
+    switch (InComponent)
+    {
+        case ECk_MinMaxCurrent::Min:
+        {
+            ByteAttributeModifier_Utils_Min::Override
+            (
+                InAttributeModifierEntity,
+                InNewDelta
+            );
+            break;
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            ByteAttributeModifier_Utils_Max::Override
+            (
+                InAttributeModifierEntity,
+                InNewDelta
+            );
+            break;
+        }
+        case ECk_MinMaxCurrent::Current:
+        {
+            ByteAttributeModifier_Utils_Current::Override
+            (
+                InAttributeModifierEntity,
+                InNewDelta
+            );
+            break;
+        }
+    }
+
+    return InAttributeModifierEntity;
+}
+
+auto
+    UCk_Utils_ByteAttributeModifier_UE::
+    Get_Delta(
+        const FCk_Handle_ByteAttributeModifier& InAttributeModifierEntity,
+        ECk_MinMaxCurrent InComponent)
+    -> uint8
+{
+    switch (InComponent)
+    {
+        case ECk_MinMaxCurrent::Min: return ByteAttributeModifier_Utils_Min::Get_ModifierDeltaValue(InAttributeModifierEntity);
+        case ECk_MinMaxCurrent::Max: return ByteAttributeModifier_Utils_Max::Get_ModifierDeltaValue(InAttributeModifierEntity);
+        case ECk_MinMaxCurrent::Current: return ByteAttributeModifier_Utils_Current::Get_ModifierDeltaValue(InAttributeModifierEntity);
+    }
+
+    return {};
+}
+
+auto
+    UCk_Utils_ByteAttributeModifier_UE::
     TryGet(
         const FCk_Handle_ByteAttribute& InAttribute,
         FGameplayTag InModifierName,

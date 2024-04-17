@@ -216,6 +216,23 @@ public:
         FGameplayTag InModifierName,
         const FCk_Fragment_VectorAttributeModifier_ParamsData& InParams);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AttributeModifier|Vector",
+              DisplayName="[Ck][VectorAttribute] Override Modifier")
+    static FCk_Handle_VectorAttributeModifier
+    Override(
+        UPARAM(ref) FCk_Handle_VectorAttributeModifier& InAttributeModifierEntity,
+        FVector InNewDelta,
+        ECk_MinMaxCurrent InComponent = ECk_MinMaxCurrent::Current);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|AttributeModifier|Vector",
+              DisplayName="[Ck][VectorAttribute] Get Modifier Delta")
+    static FVector
+    Get_Delta(
+        const FCk_Handle_VectorAttributeModifier& InAttributeModifierEntity,
+        ECk_MinMaxCurrent InComponent = ECk_MinMaxCurrent::Current);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AttributeModifier|Vector",
               DisplayName="[Ck][VectorAttribute] Try Get Modifier")
