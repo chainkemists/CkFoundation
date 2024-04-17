@@ -105,6 +105,11 @@ namespace ck
             ECk_ModifierOperation_RevocablePolicy InModifierOperationRevocablePolicy) -> void;
 
         static auto
+        Override(
+            HandleType& InHandle,
+            AttributeDataType InNewModifierDelta) -> void;
+
+        static auto
         Has(
             const HandleType& InHandle) -> bool;
 

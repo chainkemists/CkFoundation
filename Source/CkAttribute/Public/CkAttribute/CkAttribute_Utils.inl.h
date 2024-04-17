@@ -181,6 +181,21 @@ namespace ck
     template <typename T_DerivedAttributeModifier>
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
+        Override(
+            HandleType& InHandle,
+            AttributeDataType InNewModifierDelta)
+        -> void
+    {
+        auto& ModifierFragment = InHandle.template Get<AttributeModifierFragmentType>();
+        ModifierFragment._ModifierDelta = InNewModifierDelta;
+
+        auto LifetimeOwnerAsAttributeEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(LifetimeOwnerAsAttributeEntity);
+    }
+
+    template <typename T_DerivedAttributeModifier>
+    auto
+        TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Has(
             const HandleType& InHandle)
         -> bool
