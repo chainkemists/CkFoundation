@@ -216,6 +216,23 @@ public:
         FGameplayTag InModifierName,
         const FCk_Fragment_ByteAttributeModifier_ParamsData& InParams);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AttributeModifier|Byte",
+              DisplayName="[Ck][ByteAttribute] Override Modifier")
+    static FCk_Handle_ByteAttributeModifier
+    Override(
+        UPARAM(ref) FCk_Handle_ByteAttributeModifier& InAttributeModifierEntity,
+        uint8 InNewDelta,
+        ECk_MinMaxCurrent InComponent = ECk_MinMaxCurrent::Current);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|AttributeModifier|Byte",
+              DisplayName="[Ck][ByteAttribute] Get Modifier Delta")
+    static uint8
+    Get_Delta(
+        const FCk_Handle_ByteAttributeModifier& InAttributeModifierEntity,
+        ECk_MinMaxCurrent InComponent = ECk_MinMaxCurrent::Current);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AttributeModifier|Byte",
               DisplayName="[Ck][ByteAttribute] Try Get Modifier")
