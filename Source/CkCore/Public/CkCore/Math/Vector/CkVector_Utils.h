@@ -276,6 +276,14 @@ public:
     Get_ClosestCardinalAndOrdinalDirection(
         const FVector& InVector,
         ECk_Plane_Axis InAxis = ECk_Plane_Axis::XY);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Add Noise",
+              Category = "Ck|Utils|Math|Vector3")
+    static FVector
+    Get_AddNoise(
+        const FVector& InVector,
+        FVector InNoiseHalfRange);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
