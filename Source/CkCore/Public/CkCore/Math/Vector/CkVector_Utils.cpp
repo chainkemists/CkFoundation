@@ -543,6 +543,25 @@ auto
 }
 
 auto
+    UCk_Utils_Vector3_UE::
+    Get_AddNoise(
+        const FVector& InVector,
+        FVector InNoiseHalfRange)
+    -> FVector
+{
+    const auto& HalfRangeX = InNoiseHalfRange.X;
+    const auto& HalfRangeY = InNoiseHalfRange.Y;
+    const auto& HalfRangeZ = InNoiseHalfRange.Z;
+
+    return FVector
+    {
+        InVector.X + FMath::RandRange(-HalfRangeX, HalfRangeX),
+        InVector.Y + FMath::RandRange(-HalfRangeY, HalfRangeY),
+        InVector.Z + FMath::RandRange(-HalfRangeZ, HalfRangeZ)
+    };
+}
+
+auto
     UCk_Utils_ActorVector3_UE::
     Get_DirectionVectorFromActor(
         const AActor*    InActor,
