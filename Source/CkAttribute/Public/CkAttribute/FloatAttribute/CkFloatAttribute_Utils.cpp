@@ -452,11 +452,13 @@ auto
         AttributeComponent)
     { return {}; }
 
-    if (FMath::IsNearlyZero(ParamsToUse.Get_ModifierDelta()) &&
+    if (InParams.Get_ModifierOperation_RevocablePolicy() == ECk_ModifierOperation_RevocablePolicy::NotRevocable &&
+        FMath::IsNearlyZero(ParamsToUse.Get_ModifierDelta()) &&
         (ModifierOperation == ECk_ArithmeticOperations_Basic::Add || ModifierOperation  == ECk_ArithmeticOperations_Basic::Subtract))
     { return {}; }
 
-    if (FMath::IsNearlyEqual(ParamsToUse.Get_ModifierDelta(), 1.0f) &&
+    if (InParams.Get_ModifierOperation_RevocablePolicy() == ECk_ModifierOperation_RevocablePolicy::NotRevocable &&
+        FMath::IsNearlyEqual(ParamsToUse.Get_ModifierDelta(), 1.0f) &&
         (ModifierOperation == ECk_ArithmeticOperations_Basic::Multiply || ModifierOperation == ECk_ArithmeticOperations_Basic::Divide))
     { return {}; }
 

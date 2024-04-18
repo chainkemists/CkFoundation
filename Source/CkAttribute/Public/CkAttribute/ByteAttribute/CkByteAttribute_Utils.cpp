@@ -451,11 +451,13 @@ auto
         AttributeComponent)
     { return {}; }
 
-    if (ParamsToUse.Get_ModifierDelta() == 0 &&
+    if (InParams.Get_ModifierOperation_RevocablePolicy() == ECk_ModifierOperation_RevocablePolicy::NotRevocable &&
+        ParamsToUse.Get_ModifierDelta() == 0 &&
         (ModifierOperation == ECk_ArithmeticOperations_Basic::Add || ModifierOperation  == ECk_ArithmeticOperations_Basic::Subtract))
     { return {}; }
 
-    if (ParamsToUse.Get_ModifierDelta() == 1 &&
+    if (InParams.Get_ModifierOperation_RevocablePolicy() == ECk_ModifierOperation_RevocablePolicy::NotRevocable &&
+        ParamsToUse.Get_ModifierDelta() == 1 &&
         (ModifierOperation == ECk_ArithmeticOperations_Basic::Multiply || ModifierOperation == ECk_ArithmeticOperations_Basic::Divide))
     { return {}; }
 
