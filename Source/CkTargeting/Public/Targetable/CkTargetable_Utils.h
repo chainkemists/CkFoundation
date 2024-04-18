@@ -114,6 +114,13 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Targetable",
+              DisplayName = "[Ck][Targetable] Get Enable/Disable")
+    static ECk_EnableDisable
+    Get_EnableDisable(
+        const FCk_Handle_Targetable& InTargetable);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Targetable",
               DisplayName="[Ck][Targetable] Get Targetability Tags")
     static FGameplayTagContainer
     Get_TargetabilityTags(
@@ -147,6 +154,36 @@ public:
     ForEach_Targetable(
         FCk_Handle& InTargetableOwnerEntity,
         const TFunction<void(FCk_Handle_Targetable)>& InFunc) -> void;
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|BLUEPRINT_INTERNAL_USE_ONLY",
+              DisplayName = "[Ck][Targetable] Request Enable/Disable",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_Targetable
+    Request_EnableDisable(
+        UPARAM(ref) FCk_Handle_Targetable& InTargetable,
+        const FCk_Request_Targetable_EnableDisable& InRequest,
+        const FCk_Delegate_Targetable_OnEnableDisable& InDelegate);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Targetable",
+              DisplayName = "[Ck][Targetable] Bind To On Enable/Disable")
+    static FCk_Handle_Targetable
+    BindTo_OnEnableDisable(
+        UPARAM(ref) FCk_Handle_Targetable& InTargetable,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_Targetable_OnEnableDisable& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Targetable",
+              DisplayName = "[Ck][Targetable] Unbind From On Enable/Disable")
+    static FCk_Handle_Targetable
+    UnbindFrom_OnEnableDisable(
+        UPARAM(ref) FCk_Handle_Targetable& InTargetable,
+        const FCk_Delegate_Targetable_OnEnableDisable& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

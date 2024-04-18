@@ -81,7 +81,7 @@ namespace ck
             HandleType& InHandle,
             const FFragment_Targeter_Params& InParams,
             FFragment_Targeter_Current& InCurrent,
-            FFragment_Targeter_Requests& InRequests) const -> void;
+            const FFragment_Targeter_Requests& InRequests) const -> void;
 
     private:
         auto
@@ -89,7 +89,7 @@ namespace ck
             HandleType& InHandle,
             const FFragment_Targeter_Params& InParams,
             FFragment_Targeter_Current& InCurrent,
-            const FCk_Request_Targeter_QueryTargets& InRequest) const -> void;
+            const FFragment_Targeter_Requests::QueryValidTargetsRequestType& InRequest) const -> void;
     };
 }
 
