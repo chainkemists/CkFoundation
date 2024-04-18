@@ -539,3 +539,13 @@ enum class ECk_Override : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Override);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Unique : uint8
+{
+    Unique,
+    NotUnique,
+    DoesNotExist
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Unique);
