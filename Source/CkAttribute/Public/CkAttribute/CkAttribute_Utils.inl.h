@@ -229,6 +229,32 @@ namespace ck
     template <typename T_DerivedAttributeModifier>
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
+        Get_IsModifierUnique(
+            const HandleType& InHandle)
+            -> ECk_Unique
+    {
+        const auto AttributeEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        const auto& NameOfModifier = UCk_Utils_GameplayLabel_UE::Get_Label(InHandle);
+
+        const auto Predicate = [&](const HandleType& InCurrentModifier)
+        {
+            return UCk_Utils_GameplayLabel_UE::Matches(InCurrentModifier, NameOfModifier);
+        };
+
+        const auto Count = RecordOfAttributeModifiers_Utils::Get_ValidEntriesCount_If(AttributeEntity, Predicate);
+
+        if (Count == 0)
+        { return ECk_Unique::DoesNotExist; }
+
+        if (Count == 1)
+        { return ECk_Unique::Unique; }
+
+        return ECk_Unique::NotUnique;
+    }
+
+    template <typename T_DerivedAttributeModifier>
+    auto
+        TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Request_ComputeResult(
             HandleType& InHandle)
         -> void
