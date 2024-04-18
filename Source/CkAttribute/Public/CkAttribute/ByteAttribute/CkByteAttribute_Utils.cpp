@@ -520,10 +520,21 @@ auto
         ECk_MinMaxCurrent InComponent)
     -> FCk_Handle_ByteAttributeModifier
 {
+#define ENSURE_IS_UNIQUE(_Utils_)\
+    CK_ENSURE_IF_NOT(_Utils_::Get_IsModifierUnique(InAttributeModifierEntity) == ECk_Unique::Unique,\
+        TEXT("Modifier [{}] is NOT unique for Attribute [{}][{}] with Owner [{}].\n"\
+             "Overriding non-unique Modifiers affect only the last non-unique Modifier on Clients."),\
+        InAttributeModifierEntity,\
+        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttributeModifierEntity),\
+        InComponent,\
+        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttributeModifierEntity)))\
+    { return InAttributeModifierEntity; }
+
     switch (InComponent)
     {
         case ECk_MinMaxCurrent::Min:
         {
+            ENSURE_IS_UNIQUE(ByteAttributeModifier_Utils_Min);
             ByteAttributeModifier_Utils_Min::Override
             (
                 InAttributeModifierEntity,
@@ -533,6 +544,7 @@ auto
         }
         case ECk_MinMaxCurrent::Max:
         {
+            ENSURE_IS_UNIQUE(ByteAttributeModifier_Utils_Max);
             ByteAttributeModifier_Utils_Max::Override
             (
                 InAttributeModifierEntity,
@@ -542,6 +554,7 @@ auto
         }
         case ECk_MinMaxCurrent::Current:
         {
+            ENSURE_IS_UNIQUE(ByteAttributeModifier_Utils_Current);
             ByteAttributeModifier_Utils_Current::Override
             (
                 InAttributeModifierEntity,
@@ -550,6 +563,19 @@ auto
             break;
         }
     }
+#undef ENSURE_IS_UNIQUE
+
+    const auto AttributeEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttributeModifierEntity);
+    auto ReplicatedEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(AttributeEntity);
+
+    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_ByteAttribute_Rep>(
+        ReplicatedEntity, [&](UCk_Fragment_ByteAttribute_Rep* InRepComp)
+    {
+        InRepComp->Broadcast_OverrideModifier(
+            UCk_Utils_GameplayLabel_UE::Get_Label(InAttributeModifierEntity),
+            UCk_Utils_GameplayLabel_UE::Get_Label(AttributeEntity),
+            InNewDelta, InComponent);
+    });
 
     return InAttributeModifierEntity;
 }
@@ -845,6 +871,31 @@ auto
             break;
         }
     }
+}
+
+auto
+    UCk_Utils_ByteAttributeModifier_UE::
+    DoGet_IsModifierUnique(
+        const FCk_Handle_ByteAttributeModifier& InAttributeModifierEntity,
+        ECk_MinMaxCurrent InComponent)
+    -> bool
+{
+    const auto AttributeEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttributeModifierEntity);
+    const auto& NameOfModifier = UCk_Utils_GameplayLabel_UE::Get_Label(InAttributeModifierEntity);
+
+    const auto Predicate = [&](const FCk_Handle_ByteAttributeModifier& InCurrentModifier)
+    {
+        return UCk_Utils_GameplayLabel_UE::Matches(InCurrentModifier, NameOfModifier);
+    };
+
+    switch(InComponent)
+    {
+        case ECk_MinMaxCurrent::Current: return RecordOfByteAttributeModifiers_Utils_Current::Get_ValidEntriesCount_If(AttributeEntity, Predicate) < 2;
+        case ECk_MinMaxCurrent::Min: return RecordOfByteAttributeModifiers_Utils_Min::Get_ValidEntriesCount_If(AttributeEntity, Predicate) < 2;
+        case ECk_MinMaxCurrent::Max: return RecordOfByteAttributeModifiers_Utils_Max::Get_ValidEntriesCount_If(AttributeEntity, Predicate) < 2;
+    }
+
+    return {};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
