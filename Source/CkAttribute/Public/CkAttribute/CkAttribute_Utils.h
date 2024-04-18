@@ -121,6 +121,10 @@ namespace ck
         Get_ModifierDeltaValue(
             const HandleType& InHandle) -> const AttributeDataType&;
 
+        static auto
+        Get_IsModifierUnique(
+            const HandleType& InHandle) -> ECk_Unique;
+
     private:
         static auto
         Request_ComputeResult(
