@@ -124,6 +124,35 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT()
+struct FCk_Fragment_FloatAttribute_OverrideModifier
+{
+    GENERATED_BODY()
+
+private:
+    UPROPERTY()
+    FGameplayTag _AttributeName;
+
+    UPROPERTY()
+    FGameplayTag _ModifierName;
+
+    UPROPERTY()
+    float _NewDelta = 0.0f;
+
+    UPROPERTY()
+    ECk_MinMaxCurrent _Component = ECk_MinMaxCurrent::Current;
+
+public:
+    CK_PROPERTY_GET(_AttributeName);
+    CK_PROPERTY_GET(_ModifierName);
+    CK_PROPERTY_GET(_NewDelta);
+    CK_PROPERTY_GET(_Component);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttribute_OverrideModifier, _AttributeName, _ModifierName, _NewDelta, _Component);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT()
 struct FCk_Fragment_FloatAttribute_PendingModifier
 {
     GENERATED_BODY()
@@ -193,7 +222,12 @@ public:
         FGameplayTag InAttributeName,
         ECk_MinMaxCurrent InAttributeComponent) -> void;
 
-    // TODO: 'permanent' modifiers
+    auto
+    Broadcast_OverrideModifier(
+        FGameplayTag InModifierName,
+        FGameplayTag InAttributeName,
+        float InNewDelta,
+        ECk_MinMaxCurrent InAttributeComponent) -> void;
 
 private:
     auto
@@ -207,15 +241,27 @@ private:
 private:
     UFUNCTION()
     void
-    OnRep_PendingModifiers();
+    OnRep_PendingModifiers_Add();
 
-    UPROPERTY(ReplicatedUsing = OnRep_PendingModifiers)
+    UFUNCTION()
+    void
+    OnRep_PendingModifiers_Remove();
+
+    UFUNCTION()
+    void
+    OnRep_PendingModifiers_Override();
+
+    UPROPERTY(ReplicatedUsing = OnRep_PendingModifiers_Add)
     TArray<FCk_Fragment_FloatAttribute_PendingModifier> _PendingAddModifiers;
     int32 _NextPendingAddModifier = 0;
 
-    UPROPERTY(ReplicatedUsing = OnRep_PendingModifiers)
+    UPROPERTY(ReplicatedUsing = OnRep_PendingModifiers_Remove)
     TArray<FCk_Fragment_FloatAttribute_RemovePendingModifier> _PendingRemoveModifiers;
     int32 _NextPendingRemoveModifier = 0;
+
+    UPROPERTY(ReplicatedUsing = OnRep_PendingModifiers_Override)
+    TArray<FCk_Fragment_FloatAttribute_OverrideModifier> _PendingOverrideModifiers;
+    int32 _NextPendingOverrideModifiers = 0;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
