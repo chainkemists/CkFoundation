@@ -2,6 +2,7 @@
 
 #include "CkSignal/CkSignal_Macros.h"
 #include "Targetable/CkTargetable_Fragment.h"
+#include "Targetable/CkTargetable_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -103,8 +104,11 @@ auto
         const FCk_Handle_Targetable& InTarget)
     -> bool
 {
-    const auto& TargetingQuery    = InTargeter.Get<ck::FFragment_Targeter_Params>().Get_Params().Get_TargetingQuery();
-    const auto& TargetabilityTags = InTarget.Get<ck::FFragment_Targetable_Params>().Get_Params().Get_TargetabilityTags();
+    if (UCk_Utils_Targetable_UE::Get_EnableDisable(InTarget) == ECk_EnableDisable::Disable)
+    { return false; }
+
+    const auto& TargetingQuery    =  InTargeter.Get<ck::FFragment_Targeter_Params>().Get_Params().Get_TargetingQuery();
+    const auto& TargetabilityTags = UCk_Utils_Targetable_UE::Get_TargetabilityTags(InTarget);
     const auto& QueryResult       = TargetingQuery.Matches(TargetabilityTags);
 
     return QueryResult;

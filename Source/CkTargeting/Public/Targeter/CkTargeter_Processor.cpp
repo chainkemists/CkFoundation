@@ -58,27 +58,17 @@ namespace ck
             HandleType& InHandle,
             const FFragment_Targeter_Params& InParams,
             FFragment_Targeter_Current& InCurrent,
-            FFragment_Targeter_Requests& InRequests) const
+            const FFragment_Targeter_Requests& InRequestsComp) const
         -> void
     {
-        const auto RequestsCopy = InRequests._Requests;
-        InRequests._Requests.Reset();
-
-        algo::ForEach(RequestsCopy, ck::Visitor([&](const auto& InRequestVariant)
+        InHandle.CopyAndRemove(InRequestsComp, [&](const FFragment_Targeter_Requests& InRequests)
         {
-            DoHandleRequest(InHandle, InParams, InCurrent, InRequestVariant);
-        }));
-
-        if (ck::Is_NOT_Valid(InHandle))
-        {
-            targeting::Verbose(TEXT("Targeter Entity [{}] was Marked Pending Kill during the handling of its requests."), InHandle);
-            return;
-        }
-
-        if (InRequests.Get_Requests().IsEmpty())
-        {
-            InHandle.Remove<MarkedDirtyBy>();
-        }
+            algo::ForEachRequest(InRequests._Requests, ck::Visitor(
+            [&](const auto& InRequestVariant) -> void
+            {
+                DoHandleRequest(InHandle, InParams, InCurrent, InRequestVariant);
+            }), policy::DontResetContainer{});
+        });
     }
 
     auto
@@ -87,7 +77,7 @@ namespace ck
             HandleType& InHandle,
             const FFragment_Targeter_Params& InParams,
             FFragment_Targeter_Current& InCurrent,
-            const FCk_Request_Targeter_QueryTargets& InRequest) const
+            const FFragment_Targeter_Requests::QueryValidTargetsRequestType& InRequest) const
         -> void
     {
         const auto TargeterBasicInfo = FCk_Targeter_BasicInfo{InHandle, UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle)};

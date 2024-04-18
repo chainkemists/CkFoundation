@@ -36,6 +36,37 @@ namespace ck
             const FFragment_Targetable_Params& InParams,
             FFragment_Targetable_Current& InCurrent) const -> void;
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKTARGETING_API FProcessor_Targetable_HandleRequests : public ck_exp::TProcessor<
+            FProcessor_Targetable_HandleRequests,
+            FCk_Handle_Targetable,
+            FFragment_Targetable_Current,
+            FFragment_Targetable_Requests,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FFragment_Targetable_Requests;
+
+    public:
+        CK_USING_BASE_CONSTRUCTORS(TProcessor);
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            FFragment_Targetable_Current& InCurrent,
+            const FFragment_Targetable_Requests& InRequests) const -> void;
+
+    private:
+        static auto
+        DoHandleRequest(
+            HandleType& InHandle,
+            FFragment_Targetable_Current& InCurrent,
+            const FFragment_Targetable_Requests::EnableDisableRequestType& InRequest) -> void;
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -14,7 +14,7 @@ auto
         UCk_Utils_GameplayLabel_UE::Add(InNewEntity, InParams.Get_Name());
 
         InNewEntity.Add<ck::FFragment_Targetable_Params>(InParams);
-        InNewEntity.Add<ck::FFragment_Targetable_Current>();
+        InNewEntity.Add<ck::FFragment_Targetable_Current>(InParams.Get_StartingState());
         InNewEntity.Add<ck::FTag_Targetable_NeedsSetup>();
     });
 
@@ -96,6 +96,15 @@ auto
 
 auto
     UCk_Utils_Targetable_UE::
+    Get_EnableDisable(
+        const FCk_Handle_Targetable& InTargetable)
+    -> ECk_EnableDisable
+{
+    return InTargetable.Get<ck::FFragment_Targetable_Current>().Get_EnableDisable();
+}
+
+auto
+    UCk_Utils_Targetable_UE::
     Get_TargetabilityTags(
         const FCk_Handle_Targetable& InTargetable)
     -> FGameplayTagContainer
@@ -154,6 +163,45 @@ auto
         InFunc,
         ECk_Record_ForEach_Policy::IgnoreRecordMissing
     );
+}
+
+auto
+    UCk_Utils_Targetable_UE::
+    Request_EnableDisable(
+        FCk_Handle_Targetable& InTargetable,
+        const FCk_Request_Targetable_EnableDisable& InRequest,
+        const FCk_Delegate_Targetable_OnEnableDisable& InDelegate)
+    -> FCk_Handle_Targetable
+{
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_OnTargetableEnableDisable, InTargetable, InDelegate);
+
+    InTargetable.AddOrGet<ck::FFragment_Targetable_Requests>()._Requests.Emplace(InRequest);
+
+    return InTargetable;
+}
+
+auto
+    UCk_Utils_Targetable_UE::
+    BindTo_OnEnableDisable(
+        FCk_Handle_Targetable& InTargetable,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_Targetable_OnEnableDisable& InDelegate)
+    -> FCk_Handle_Targetable
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnTargetableEnableDisable, InTargetable, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InTargetable;
+}
+
+auto
+    UCk_Utils_Targetable_UE::
+    UnbindFrom_OnEnableDisable(
+        FCk_Handle_Targetable& InTargetable,
+        const FCk_Delegate_Targetable_OnEnableDisable& InDelegate)
+    -> FCk_Handle_Targetable
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnTargetableEnableDisable, InTargetable, InDelegate);
+    return InTargetable;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
