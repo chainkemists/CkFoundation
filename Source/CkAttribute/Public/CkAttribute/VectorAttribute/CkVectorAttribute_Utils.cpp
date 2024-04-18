@@ -451,11 +451,13 @@ auto
         AttributeComponent)
     { return {}; }
 
-    if (ParamsToUse.Get_ModifierDelta().IsNearlyZero() &&
+    if (InParams.Get_ModifierOperation_RevocablePolicy() == ECk_ModifierOperation_RevocablePolicy::NotRevocable &&
+        ParamsToUse.Get_ModifierDelta().IsNearlyZero() &&
         (ModifierOperation == ECk_ArithmeticOperations_Basic::Add || ModifierOperation  == ECk_ArithmeticOperations_Basic::Subtract))
     { return {}; }
 
-    if (ParamsToUse.Get_ModifierDelta().Equals(FVector::OneVector) &&
+    if (InParams.Get_ModifierOperation_RevocablePolicy() == ECk_ModifierOperation_RevocablePolicy::NotRevocable &&
+        ParamsToUse.Get_ModifierDelta().Equals(FVector::OneVector) &&
         (ModifierOperation == ECk_ArithmeticOperations_Basic::Add || ModifierOperation  == ECk_ArithmeticOperations_Basic::Subtract))
     { return {}; }
 
