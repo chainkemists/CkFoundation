@@ -225,7 +225,12 @@ enum class ECk_Ability_ActivationRequirementsNotMet_Policy
     DoNothing,
 
     // Period timer (if valid) is reset and paused. Resumed once the requirements are met again.
-    PauseAndResetPeriod
+    // Does NOT trigger if the requirements were previously met already
+    PauseAndResetPeriod,
+
+    // Period timer (if valid) is reset and paused. Resumed once the requirements are met.
+    // Triggers event if the requirements were previously met already
+    PauseAndResetPeriodAlways
 };
 
 // --------------------------------------------------------------------------------------------------------------------
