@@ -103,6 +103,48 @@ namespace ck
             {}
         );
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Targetable_HandleRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            FFragment_Targetable_Current& InCurrent,
+            const FFragment_Targetable_Requests& InRequestsComp) const
+        -> void
+    {
+        InHandle.CopyAndRemove(InRequestsComp, [&](const FFragment_Targetable_Requests& InRequests)
+        {
+            algo::ForEachRequest(InRequests._Requests, ck::Visitor(
+            [&](const auto& InRequestVariant) -> void
+            {
+                DoHandleRequest(InHandle, InCurrent, InRequestVariant);
+            }), policy::DontResetContainer{});
+        });
+    }
+
+    auto
+        FProcessor_Targetable_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            FFragment_Targetable_Current& InCurrent,
+            const FFragment_Targetable_Requests::EnableDisableRequestType& InRequest)
+        -> void
+    {
+        const auto& CurrentEnableDisable = InCurrent.Get_EnableDisable();
+        const auto& NewEnableDisable = InRequest.Get_EnableDisable();
+
+        if (CurrentEnableDisable == NewEnableDisable)
+        { return; }
+
+        InCurrent._EnableDisable = NewEnableDisable;
+
+        const auto TargetableBasicInfo = FCk_Targetable_BasicInfo{InHandle, UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle)};
+
+        UUtils_Signal_OnTargetableEnableDisable::Broadcast(InHandle, MakePayload(TargetableBasicInfo, NewEnableDisable));
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
