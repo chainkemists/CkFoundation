@@ -33,8 +33,8 @@ namespace ck
 #define CK_IGNORE_PENDING_KILL \
     ck::TExclude<ck::FTag_DestroyEntity_Await>, ck::TExclude<ck::FTag_DestroyEntity_Finalize>
 
-#define CK_IF_INITIATE_KILL \
-    ck::FTag_DestroyEntity_Initiate
+#define CK_IF_INITIATE_CONFIRM_KILL \
+    ck::FTag_DestroyEntity_Initiate_Confirm
 
 #define CK_IF_PENDING_KILL \
     ck::FTag_DestroyEntity_Await
