@@ -717,6 +717,10 @@ namespace ck
                     InHandle
                 );
 
+                // It's possible that we are the Entity Extension Owner and we are not the direct owner of the Ability
+                if (UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityEntityToCancel) != InHandle)
+                { return; }
+
                 UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(InHandle,
                     FCk_Request_AbilityOwner_DeactivateAbility{InAbilityEntityToCancel}, {});
             },
