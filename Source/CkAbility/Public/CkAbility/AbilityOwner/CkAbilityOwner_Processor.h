@@ -147,7 +147,7 @@ namespace ck
             FProcessor_AbilityOwner_Teardown,
             FCk_Handle_AbilityOwner,
             FFragment_AbilityOwner_Current,
-            CK_IF_INITIATE_KILL>
+            CK_IF_INITIATE_CONFIRM_KILL>
     {
     public:
         using TProcessor::TProcessor;
