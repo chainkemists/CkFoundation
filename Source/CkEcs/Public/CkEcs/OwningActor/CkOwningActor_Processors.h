@@ -11,7 +11,7 @@
 namespace ck
 {
     class CKECS_API FProcessor_OwningActor_Destroy
-        : public TProcessor<FProcessor_OwningActor_Destroy, FFragment_OwningActor_Current, CK_IF_PENDING_KILL>
+        : public TProcessor<FProcessor_OwningActor_Destroy, FFragment_OwningActor_Current, CK_IF_INITIATE_CONFIRM_KILL>
     {
     public:
         using TProcessor::TProcessor;
