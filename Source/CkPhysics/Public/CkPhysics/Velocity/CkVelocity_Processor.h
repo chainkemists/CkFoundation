@@ -89,10 +89,10 @@ namespace ck
             FFragment_Velocity_Current,
             FFragment_Velocity_Target,
             FTag_VelocityModifier,
-            CK_IF_PENDING_KILL>
+            CK_IF_INITIATE_CONFIRM_KILL>
     {
     public:
-        using MarkedDirtyBy = CK_IF_PENDING_KILL;
+        using MarkedDirtyBy = CK_IF_INITIATE_CONFIRM_KILL;
 
     public:
         using TProcessor::TProcessor;
