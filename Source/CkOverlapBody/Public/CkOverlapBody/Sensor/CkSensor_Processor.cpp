@@ -502,14 +502,16 @@ namespace ck
         constexpr auto IncludePendingKill = true;
         const auto& Sensor = InCurrentComp.Get_Sensor().Get(IncludePendingKill);
 
-        if (CK_ENSURE(ck::IsValid(Sensor, ck::IsValid_Policy_IncludePendingKill{}),
-            TEXT("Expected Sensor Actor Component of Entity [{}] to still exist during the Teardown process.\n"
-                 "Because the entity destruction is done in multiple phases and the Teardown process is operating on a valid entity, it is expected for the Sensor to still exist.\n"
-                 "If we are the client, did the object get unexpectedly destroyed before we reached this point ?"),
-            InCurrentComp.Get_AttachedEntityAndActor().Get_Handle()))
+        if (ck::IsValid(Sensor, ck::IsValid_Policy_IncludePendingKill{}))
         {
             UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(Sensor, ECk_EnableDisable::Disable);
             UCk_Utils_Physics_UE::Request_SetCollisionEnabled(Sensor, ECollisionEnabled::NoCollision);
+        }
+        else
+        {
+            ck::overlap_body::Verbose(TEXT("Expected Sensor Actor Component of Entity [{}] to still exist during the Teardown process. "
+                "However, it's possible that that the Actor and it's components were pulled from under us on Client machines due to the way "
+                "destruction is handled in Unreal."), InCurrentComp.Get_AttachedEntityAndActor().Get_Handle());
         }
 
         const auto SensorBasicDetails =  FCk_Sensor_BasicDetails
