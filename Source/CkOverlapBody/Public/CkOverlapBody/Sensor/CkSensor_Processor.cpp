@@ -233,7 +233,7 @@ namespace ck
         const auto& SensorName           = InRequest.Get_SensorDetails().Get_SensorName();
         const auto& SensorFilteringInfo  = InParamsComp.Get_Params().Get_FilteringParams().Get_MarkerNames();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(OverlappedMarkerEntity),
+        CK_ENSURE_IF_NOT(ck::IsValid(OverlappedMarkerEntity, ck::IsValid_Policy_IncludePendingKill{}),
             TEXT("Sensor [Name: {} | Entity: {}] received BeginOverlap with Marker [{}] that has an INVALID Entity"),
             SensorName,
             InSensorEntity,
@@ -249,13 +249,17 @@ namespace ck
         const auto& OverlappedMarkerEnableDisable = UCk_Utils_Marker_UE::
             Get_EnableDisable(OverlappedMarkerEntity);
 
-        CK_ENSURE_IF_NOT(OverlappedMarkerEnableDisable == ECk_EnableDisable::Enable,
-            TEXT("Sensor [Name: {} | Entity: {}] received BeginOverlap with Marker [Name: {} | Entity: {}] that is DISABLED"),
-            SensorName,
-            InSensorEntity,
-            OverlappedMarkerName,
-            OverlappedMarkerEntity)
-        { return; }
+        if (const auto IsMarkerEntity_Not_PendingKill = ck::IsValid(OverlappedMarkerEntity);
+            IsMarkerEntity_Not_PendingKill)
+        {
+            CK_ENSURE_IF_NOT(OverlappedMarkerEnableDisable == ECk_EnableDisable::Enable,
+                TEXT("Sensor [Name: {} | Entity: {}] received BeginOverlap with Marker [Name: {} | Entity: {}] that is DISABLED"),
+                SensorName,
+                InSensorEntity,
+                OverlappedMarkerName,
+                OverlappedMarkerEntity)
+            { return; }
+        }
 
         overlap_body::VeryVerbose
         (
