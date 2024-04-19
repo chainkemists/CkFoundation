@@ -533,7 +533,7 @@ namespace ck::detail
             TProcessor_AttributeModifier_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>,
             T_DerivedAttributeModifier,
             typename T_DerivedAttributeModifier::FTag_IsRevocableModification,
-            CK_IF_INITIATE_KILL>
+            CK_IF_INITIATE_CONFIRM_KILL>
     {
     public:
         using AttributeModifierFragmentType = T_DerivedAttributeModifier;
@@ -541,7 +541,7 @@ namespace ck::detail
         using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
         using IsRevocableModificationType   = typename AttributeModifierFragmentType::FTag_IsRevocableModification;
         using ThisType                      = TProcessor_AttributeModifier_Teardown<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, IsRevocableModificationType, CK_IF_INITIATE_KILL>;
+        using Super                         = TProcessor<ThisType, AttributeModifierFragmentType, IsRevocableModificationType, CK_IF_INITIATE_CONFIRM_KILL>;
         using HandleType                    = typename Super::HandleType;
         using TimeType                      = typename Super::TimeType;
 
