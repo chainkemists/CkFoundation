@@ -4,6 +4,8 @@
 
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 #include "CkEcsBasics/EntityHolder/CkEntityHolder_Utils.h"
+
+#include "CkOverlapBody/CkOverlapBody_Log.h"
 #include "CkOverlapBody/Marker/CkMarker_Utils.h"
 
 #include "CkOverlapBody/MarkerAndSensor/CkMarkerAndSensor_Utils.h"
@@ -173,12 +175,13 @@ namespace ck
         constexpr auto IncludePendingKill = true;
         const auto& Marker = InCurrentComp.Get_Marker().Get(IncludePendingKill);
 
-        CK_ENSURE_IF_NOT(ck::IsValid(Marker, ck::IsValid_Policy_IncludePendingKill{}),
-            TEXT("Expected Marker Actor Component of Entity [{}] to still exist during the Teardown process.\n"
-                 "Because the entity destruction is done in multiple phases and the Teardown process is operating on a valid entity, it is expected for the Marker to still exist.\n"
-                 "If we are the client, did the object get unexpectedly destroyed before we reached this point ?"),
-            InCurrentComp.Get_AttachedEntityAndActor().Get_Handle())
-        { return; }
+        if (ck::Is_NOT_Valid(Marker, ck::IsValid_Policy_IncludePendingKill{}))
+        {
+            ck::overlap_body::Verbose(TEXT("Expected Marker Actor Component of Entity [{}] to still exist during the Teardown process. "
+                "However, it's possible that that the Actor and it's components were pulled from under us on Client machines due to the way "
+                "destruction is handled in Unreal."), InCurrentComp.Get_AttachedEntityAndActor().Get_Handle());
+            return;
+        }
 
         UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(Marker, ECk_EnableDisable::Disable);
         UCk_Utils_Physics_UE::Request_SetCollisionEnabled(Marker, ECollisionEnabled::NoCollision);
