@@ -315,7 +315,7 @@ inline struct _ ##_LogCategory_## LogMapInjector                                
 // --------------------------------------------------------------------------------------------------------------------
 
 #define CK_LOG_ERROR_IF_NOT(_Namespace_, _Expression_, _Format_, ...)\
-    if (_Namespace_::ErrorIf(NOT _Expression_, _Format_, ##__VA_ARGS__) == ECk_LogResults::Logged)
+    if (_Namespace_::ErrorIf(NOT (_Expression_), _Format_, ##__VA_ARGS__) == ECk_LogResults::Logged)
 
 #if WITH_EDITOR
 #define CK_LOG_ERROR_NOTIFY_IF_NOT(_Namespace_, _Expression_, _Format_, ...)                                                       \
