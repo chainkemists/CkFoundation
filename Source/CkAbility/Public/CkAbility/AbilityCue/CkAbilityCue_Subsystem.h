@@ -59,6 +59,8 @@ class CKABILITY_API UCk_AbilityCueReplicator_Subsystem_UE : public UCk_Game_Worl
 {
     GENERATED_BODY()
 
+    friend class ACk_AbilityCueReplicator_UE;
+
 public:
     CK_GENERATED_BODY(UCk_AbilityCueReplicator_Subsystem_UE);
 
@@ -76,15 +78,17 @@ public:
         FGameplayTag InCueName,
         const FCk_AbilityCue_Params& InRequest);
 
+    UFUNCTION(BlueprintCallable)
+    void
+    Request_ExecuteAbilityCue_Local(
+        FGameplayTag InCueName,
+        const FCk_AbilityCue_Params& InRequest);
+
 private:
     auto
     OnLoginEvent(
         AGameModeBase* InGameModeBase,
         APlayerController* InPlayerController) -> void;
-
-    //auto OnPlayerControllerReady(
-    //    TWeakObjectPtr<APlayerController> InNewPlayerController,
-    //    TArray<TWeakObjectPtr<APlayerController>> InAllPlayerControllers) -> void;
 
 private:
     UPROPERTY(Transient)
@@ -92,11 +96,10 @@ private:
     int32                                           _NextAvailableReplicator = 0;
 
     // TODO: drive this through a tuner
-    static constexpr int32 NumberOfReplicators = 5;
+    static constexpr int32 NumberOfReplicators = 1;
 
 private:
     FDelegateHandle                                 _PostLoginDelegateHandle;
-    //ck::UUtils_Signal_OnLoginEvent_PostFireUnbind::ConnectionType _PostFireUnbind_Connection;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
