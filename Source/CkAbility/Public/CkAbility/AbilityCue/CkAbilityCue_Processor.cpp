@@ -34,7 +34,11 @@ namespace ck
         { return; }
 
         const auto SubSystem = InRequest.Get_WorldContextObject()->GetWorld()->GetSubsystem<UCk_AbilityCueReplicator_Subsystem_UE>();
-        SubSystem->Request_ExecuteAbilityCue(InRequest.Get_CueName(), InRequest.Get_ReplicatedParams());
+
+        if (InRequest.Get_Replication() == ECk_Replication::DoesNotReplicate)
+        { SubSystem->Request_ExecuteAbilityCue_Local(InRequest.Get_CueName(), InRequest.Get_ReplicatedParams()); }
+        else
+        { SubSystem->Request_ExecuteAbilityCue(InRequest.Get_CueName(), InRequest.Get_ReplicatedParams()); }
     }
 }
 
