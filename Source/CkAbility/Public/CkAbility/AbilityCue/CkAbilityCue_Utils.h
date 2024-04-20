@@ -26,6 +26,15 @@ public:
         const FCk_Handle& InHandle,
         const FCk_Request_AbilityCue_Spawn& InRequest);
 
+    UFUNCTION(BlueprintCallable,
+        BlueprintAuthorityOnly,
+        Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+        DisplayName="[Ck][AbilityCue] Request Spawn (Local)")
+    static void
+    Request_Spawn_AbilityCue_Local(
+        const FCk_Handle& InHandle,
+        const FCk_Request_AbilityCue_Spawn& InRequest);
+
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|AbilityCue",

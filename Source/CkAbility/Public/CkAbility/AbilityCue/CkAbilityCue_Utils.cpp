@@ -24,7 +24,19 @@ auto
 {
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
     RequestEntity.AddOrGet<ck::FFragment_AbilityCue_SpawnRequest>(
-        InRequest.Get_AbilityCueName(), InRequest.Get_WorldContextObject(), InRequest.Get_ReplicatedParams());
+        InRequest.Get_AbilityCueName(), InRequest.Get_WorldContextObject(), InRequest.Get_ReplicatedParams(), ECk_Replication::Replicates);
+}
+
+auto
+    UCk_Utils_AbilityCue_UE::
+    Request_Spawn_AbilityCue_Local(
+        const FCk_Handle& InHandle,
+        const FCk_Request_AbilityCue_Spawn& InRequest)
+    -> void
+{
+    auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
+    RequestEntity.AddOrGet<ck::FFragment_AbilityCue_SpawnRequest>(
+        InRequest.Get_AbilityCueName(), InRequest.Get_WorldContextObject(), InRequest.Get_ReplicatedParams(), ECk_Replication::DoesNotReplicate);
 }
 
 auto
