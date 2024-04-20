@@ -19,6 +19,35 @@
 #include <AssetRegistry/AssetRegistryModule.h>
 #include <GameFramework/GameModeBase.h>
 
+namespace ck_ability_cue_subsystem
+{
+    auto
+    SpawnCue(
+        FGameplayTag InCueName,
+        UCk_AbilityCue_Subsystem_UE* InSubsystem_AbilityCue,
+        const UCk_EcsWorld_Subsystem_UE* InSubsystem_EcsWorldSubsystem,
+        const FCk_AbilityCue_Params& InParams)
+    {
+        CK_ENSURE_IF_NOT(ck::IsValid(InCueName),
+            TEXT("Unable to ExecuteAbilityCue since the CueName is [{}]"), InCueName)
+        { return; }
+
+        const auto ConstructionScript = InSubsystem_AbilityCue->Get_AbilityCue_ConstructionScript(InCueName);
+
+        if (ck::Is_NOT_Valid(ConstructionScript))
+        { return; }
+
+        const auto TransientEntity = InSubsystem_EcsWorldSubsystem->Get_TransientEntity();
+
+        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity);
+        NewEntity.Add<FCk_AbilityCue_Params>(InParams);
+
+        ck::ability::Verbose(TEXT("Executing AbilityCue ConstructionScript [{}] with created Entity [{}]"), ConstructionScript, NewEntity);
+
+        ConstructionScript->Construct(NewEntity, {});
+    }
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 ACk_AbilityCueReplicator_UE::
@@ -37,6 +66,15 @@ auto
 
     _Subsystem_AbilityCue = GEngine->GetEngineSubsystem<UCk_AbilityCue_Subsystem_UE>();
     _Subsystem_EcsWorldSubsystem = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+
+    if (NOT IsNetMode(NM_Client))
+    { return; }
+
+    if (GetOwner() == nullptr)
+    { return; }
+
+    const auto AbilityCueReplicator = GetWorld()->GetSubsystem<UCk_AbilityCueReplicator_Subsystem_UE>();
+    AbilityCueReplicator->_AbilityCueReplicators.Emplace(this);
 }
 
 auto
@@ -56,23 +94,7 @@ auto
         FCk_AbilityCue_Params InParams)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InCueName),
-        TEXT("Unable to ExecuteAbilityCue since the CueName is [{}]"), InCueName)
-    { return; }
-
-    const auto ConstructionScript = _Subsystem_AbilityCue->Get_AbilityCue_ConstructionScript(InCueName);
-
-    if (ck::Is_NOT_Valid(ConstructionScript))
-    { return; }
-
-    const auto TransientEntity = _Subsystem_EcsWorldSubsystem->Get_TransientEntity();
-
-    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity);
-    NewEntity.Add<FCk_AbilityCue_Params>(InParams);
-
-    ck::ability::Verbose(TEXT("Executing AbilityCue ConstructionScript [{}] with created Entity [{}]"), ConstructionScript, NewEntity);
-
-    ConstructionScript->Construct(NewEntity, {});
+    ck_ability_cue_subsystem::SpawnCue(InCueName, _Subsystem_AbilityCue, _Subsystem_EcsWorldSubsystem, InParams);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -123,7 +145,7 @@ auto
         const FCk_AbilityCue_Params& InRequest)
     -> void
 {
-    CK_ENSURE_IF_NOT(_AbilityCueReplicators.Num() > 0,
+    CK_LOG_ERROR_IF_NOT(ck::ability, _AbilityCueReplicators.Num() > 0,
         TEXT("No AbilityCueReplicator Actors available. Unable to Execute Ability Cue"))
     { return; }
 
@@ -139,8 +161,22 @@ auto
     }
     else
     {
+        const auto CueReplicator = _AbilityCueReplicators[_NextAvailableReplicator];
         _AbilityCueReplicators[_NextAvailableReplicator]->Server_RequestExecuteAbilityCue(InCueName, InRequest);
     }
+}
+
+auto
+    UCk_AbilityCueReplicator_Subsystem_UE::
+    Request_ExecuteAbilityCue_Local(
+        FGameplayTag InCueName,
+        const FCk_AbilityCue_Params& InRequest)
+    -> void
+{
+    const auto Subsystem_AbilityCue = GEngine->GetEngineSubsystem<UCk_AbilityCue_Subsystem_UE>();
+    const auto Subsystem_EcsWorldSubsystem = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+
+    ck_ability_cue_subsystem::SpawnCue(InCueName, Subsystem_AbilityCue, Subsystem_EcsWorldSubsystem, InRequest);
 }
 
 auto
@@ -152,9 +188,12 @@ auto
 {
     for (auto Index = 0; Index < NumberOfReplicators; ++Index)
     {
+        auto* AbilityCueReplicator = GetWorld()->SpawnActor<ACk_AbilityCueReplicator_UE>();
+        AbilityCueReplicator->SetOwner(InPlayerController);
+
         _AbilityCueReplicators.Emplace
         (
-            GetWorld()->SpawnActor<ACk_AbilityCueReplicator_UE>()
+            AbilityCueReplicator
         );
     }
 }
