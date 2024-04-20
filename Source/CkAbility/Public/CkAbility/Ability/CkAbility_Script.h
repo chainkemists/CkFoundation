@@ -169,9 +169,18 @@ private:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
               DisplayName = "[Ck][AbilityScript] Request Spawn Ability Cue",
-              meta = (CompactNodeTitle="SpawnAbilityCue", HideSelfPin = true))
+              meta = (CompactNodeTitle="SpawnCue", HideSelfPin = true))
     void
     DoRequest_SpawnAbilityCue(
+        const FCk_AbilityCue_Params& InReplicatedParams,
+        FGameplayTag InAbilityCueName);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Ability|Script",
+              DisplayName = "[Ck][AbilityScript] Request Spawn Ability Cue (Local)",
+              meta = (CompactNodeTitle="SpawnLocalCue", HideSelfPin = true))
+    void
+    DoRequest_SpawnAbilityCue_Local(
         const FCk_AbilityCue_Params& InReplicatedParams,
         FGameplayTag InAbilityCueName);
 

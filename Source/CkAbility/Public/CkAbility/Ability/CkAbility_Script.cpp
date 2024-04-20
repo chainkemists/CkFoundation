@@ -336,6 +336,24 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
+    DoRequest_SpawnAbilityCue_Local(
+        const FCk_AbilityCue_Params& InReplicatedParams,
+        FGameplayTag InAbilityCueName)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAbilityCueName), TEXT("Invalid AbilityCueName in Ability [{}]"), this)
+    { return; }
+
+    UCk_Utils_AbilityCue_UE::Request_Spawn_AbilityCue_Local
+    (
+        Get_AbilityHandle(),
+        FCk_Request_AbilityCue_Spawn{InAbilityCueName, this}
+            .Set_ReplicatedParams(InReplicatedParams)
+    );
+}
+
+auto
+    UCk_Ability_Script_PDA::
     DoGet_Status()
     -> ECk_Ability_Status
 {
