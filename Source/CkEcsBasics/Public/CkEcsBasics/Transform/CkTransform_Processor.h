@@ -126,11 +126,11 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(
+        static auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Signal_TransformUpdate& InSignal,
-            const FFragment_Transform& InCurrent) const -> void;
+            const FFragment_Transform& InCurrent) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

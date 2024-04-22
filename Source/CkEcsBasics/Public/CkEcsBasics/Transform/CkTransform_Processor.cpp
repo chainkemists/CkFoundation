@@ -92,9 +92,8 @@ namespace ck
             InComp.Set_ComponentsModified(InComp.Get_ComponentsModified() | ECk_TransformComponents::Scale);
         });
 
-        const auto& NewTransform = InComp.Get_Transform();
-
-        if (NOT PreviousTransform.Equals(NewTransform))
+        if (const auto& NewTransform = InComp.Get_Transform();
+            NOT PreviousTransform.Equals(NewTransform))
         {
             ecs_basics::VeryVerbose(TEXT("Updated Transform [Old: {} | New: {}] of Entity [{}]"), PreviousTransform, NewTransform, InHandle);
             InHandle.Add<ck::FTag_Transform_Updated>();
@@ -118,7 +117,11 @@ namespace ck
         if (InHandle.Has<FFragment_Transform_RootComponent>())
         {
             const auto& RootComponentFragment = InHandle.Get<FFragment_Transform_RootComponent>();
-            const auto RootComponent = RootComponentFragment.Get_RootComponent();
+            const auto RootComponent = RootComponentFragment.Get_RootComponent().Get();
+
+            if (ck::Is_NOT_Valid(RootComponent))
+            { return; }
+
             constexpr auto Sweep = false;
 
             switch (InRequest.Get_LocalWorld())
@@ -157,7 +160,11 @@ namespace ck
         if (InHandle.Has<FFragment_Transform_RootComponent>())
         {
             const auto& RootComponentFragment = InHandle.Get<FFragment_Transform_RootComponent>();
-            const auto RootComponent = RootComponentFragment.Get_RootComponent();
+            const auto RootComponent = RootComponentFragment.Get_RootComponent().Get();
+
+            if (ck::Is_NOT_Valid(RootComponent))
+            { return; }
+
             constexpr auto Sweep = false;
 
             const auto NewLocation = DeltaLocation + RootComponent->GetComponentLocation();
@@ -194,7 +201,11 @@ namespace ck
         if (InHandle.Has<FFragment_Transform_RootComponent>())
         {
             const auto& RootComponentFragment = InHandle.Get<FFragment_Transform_RootComponent>();
-            const auto RootComponent = RootComponentFragment.Get_RootComponent();
+            const auto RootComponent = RootComponentFragment.Get_RootComponent().Get();
+
+            if (ck::Is_NOT_Valid(RootComponent))
+            { return; }
+
             constexpr auto Sweep = false;
 
             switch (InRequest.Get_LocalWorld())
@@ -233,7 +244,11 @@ namespace ck
         if (InHandle.Has<FFragment_Transform_RootComponent>())
         {
             const auto& RootComponentFragment = InHandle.Get<FFragment_Transform_RootComponent>();
-            const auto RootComponent = RootComponentFragment.Get_RootComponent();
+            const auto RootComponent = RootComponentFragment.Get_RootComponent().Get();
+
+            if (ck::Is_NOT_Valid(RootComponent))
+            { return; }
+
             constexpr auto Sweep = false;
 
             const auto NewRotation = DeltaRotation + RootComponent->GetComponentRotation();
@@ -271,7 +286,10 @@ namespace ck
         if (InHandle.Has<FFragment_Transform_RootComponent>())
         {
             const auto& RootComponentFragment = InHandle.Get<FFragment_Transform_RootComponent>();
-            const auto RootComponent = RootComponentFragment.Get_RootComponent();
+            const auto RootComponent = RootComponentFragment.Get_RootComponent().Get();
+
+            if (ck::Is_NOT_Valid(RootComponent))
+            { return; }
 
             switch (InRequest.Get_LocalWorld())
             {
@@ -320,7 +338,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Signal_TransformUpdate& InSignal,
-            const FFragment_Transform& InCurrent) const
+            const FFragment_Transform& InCurrent)
         -> void
     {
         UUtils_Signal_TransformUpdate::Broadcast(InHandle, MakePayload(InHandle, InCurrent.Get_Transform()));
@@ -357,7 +375,8 @@ namespace ck
 
     auto
         FProcessor_Transform_InterpolateToGoal_Location::
-        ForEachEntity(TimeType InDeltaT,
+        ForEachEntity(
+            TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_TransformInterpolation_Params& InParams,
             const FFragment_Transform& InCurrent,
