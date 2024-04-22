@@ -333,15 +333,15 @@ auto
 
     const auto& World = [&]() -> UWorld*
     {
-        const auto MaybeWorld = Cast<UWorld>(OwnerOrWorld);
-        if (ck::IsValid(MaybeWorld))
+        if (const auto MaybeWorld = Cast<UWorld>(OwnerOrWorld);
+            ck::IsValid(MaybeWorld))
         {
             return MaybeWorld;
         }
 
         const auto Actor = Cast<AActor>(OwnerOrWorld);
 
-        CK_ENSURE_IF_NOT(ck::IsValid(OwnerOrWorld), TEXT("OwnerOrWorld [{}] MUST be an Owner OR World. Unable to spawn [{}]."),
+        CK_ENSURE_IF_NOT(ck::IsValid(Actor), TEXT("OwnerOrWorld [{}] MUST be an Actor OR World. Unable to spawn [{}]."),
             OwnerOrWorld, InSpawnActorParams.Get_ActorClass())
         { return nullptr; }
 

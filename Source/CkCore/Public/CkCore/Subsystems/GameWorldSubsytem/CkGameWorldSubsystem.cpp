@@ -41,9 +41,8 @@ auto
         UObject* InOuter) const
     -> bool
 {
-    const auto& ShouldCreateSubsystem = Super::ShouldCreateSubsystem(InOuter);
-
-    if (NOT ShouldCreateSubsystem)
+    if (const auto& ShouldCreateSubsystem = Super::ShouldCreateSubsystem(InOuter);
+        NOT ShouldCreateSubsystem)
     { return false; }
 
     if (ck::Is_NOT_Valid(InOuter))
