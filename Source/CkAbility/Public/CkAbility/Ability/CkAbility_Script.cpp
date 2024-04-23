@@ -60,37 +60,40 @@ auto
 {
     DoDebugSet_Activated();
 
-    const auto AbilityOwnerEntity = Get_AbilityOwnerHandle();
+    const auto& AbilityOwnerEntity = Get_AbilityOwnerHandle();
 
-    switch(const auto ExecutionPolicy = Get_Data().Get_NetworkSettings().Get_ExecutionPolicy())
+    if (const auto& NetworkSettings = Get_Data().Get_NetworkSettings();
+        NetworkSettings.Get_ReplicationType() == ECk_Net_ReplicationType::LocalAndHost)
     {
-        case ECk_Net_NetExecutionPolicy::PreferHost:
+        switch(const auto ExecutionPolicy = Get_Data().Get_NetworkSettings().Get_ExecutionPolicy())
         {
-            if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AbilityOwnerEntity))
+            case ECk_Net_NetExecutionPolicy::PreferHost:
             {
-                DoOnActivateAbility(InActivationPayload);
+                if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AbilityOwnerEntity))
+                {
+                    DoOnActivateAbility(InActivationPayload);
+                }
+                break;
             }
-            break;
-        }
-        case ECk_Net_NetExecutionPolicy::LocalAndHost:
-        {
-            if (UCk_Utils_Net_UE::Get_HasAuthority(AbilityOwnerEntity) ||
-                UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AbilityOwnerEntity))
+            case ECk_Net_NetExecutionPolicy::LocalAndHost:
             {
-                DoOnActivateAbility(InActivationPayload);
+                if (UCk_Utils_Net_UE::Get_HasAuthority(AbilityOwnerEntity) ||
+                    UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AbilityOwnerEntity))
+                {
+                    DoOnActivateAbility(InActivationPayload);
+                }
+                break;
             }
-            break;
+            default:
+            {
+                CK_INVALID_ENUM(ExecutionPolicy);
+                break;
+            }
         }
-        case ECk_Net_NetExecutionPolicy::All:
-        {
-            DoOnActivateAbility(InActivationPayload);
-            break;
-        }
-        default:
-        {
-            CK_INVALID_ENUM(ExecutionPolicy);
-            break;
-        }
+    }
+    else
+    {
+        DoOnActivateAbility(InActivationPayload);
     }
 }
 
@@ -102,35 +105,38 @@ auto
     DoDebugSet_Deactivated();
     const auto AbilityOwnerEntity = Get_AbilityOwnerHandle();
 
-    switch(const auto ExecutionPolicy = Get_Data().Get_NetworkSettings().Get_ExecutionPolicy())
+    if (const auto& NetworkSettings = Get_Data().Get_NetworkSettings();
+        NetworkSettings.Get_ReplicationType() == ECk_Net_ReplicationType::LocalAndHost)
     {
-        case ECk_Net_NetExecutionPolicy::PreferHost:
+        switch(const auto ExecutionPolicy = Get_Data().Get_NetworkSettings().Get_ExecutionPolicy())
         {
-            if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AbilityOwnerEntity))
+            case ECk_Net_NetExecutionPolicy::PreferHost:
             {
-                DoOnDeactivateAbility();
+                if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AbilityOwnerEntity))
+                {
+                    DoOnDeactivateAbility();
+                }
+                break;
             }
-            break;
-        }
-        case ECk_Net_NetExecutionPolicy::LocalAndHost:
-        {
-            if (UCk_Utils_Net_UE::Get_HasAuthority(AbilityOwnerEntity) ||
-                UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AbilityOwnerEntity))
+            case ECk_Net_NetExecutionPolicy::LocalAndHost:
             {
-                DoOnDeactivateAbility();
+                if (UCk_Utils_Net_UE::Get_HasAuthority(AbilityOwnerEntity) ||
+                    UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AbilityOwnerEntity))
+                {
+                    DoOnDeactivateAbility();
+                }
+                break;
             }
-            break;
+            default:
+            {
+                CK_INVALID_ENUM(ExecutionPolicy);
+                break;
+            }
         }
-        case ECk_Net_NetExecutionPolicy::All:
-        {
-            DoOnDeactivateAbility();
-            break;
-        }
-        default:
-        {
-            CK_INVALID_ENUM(ExecutionPolicy);
-            break;
-        }
+    }
+    else
+    {
+        DoOnDeactivateAbility();
     }
 }
 
