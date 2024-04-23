@@ -5,12 +5,10 @@
 #include "CkAttribute/CkAttribute_Fragment_Data.h"
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment_Data.h"
 #include "CkCore/Public/CkCore/Format/CkFormat.h"
-#include "CkCore/Types/DataAsset/CkDataAsset.h"
 
 #include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 #include "CkEcs/Handle/CkHandle_Typesafe.h"
-
-#include "CkNet/Public/CkNet/CkNet_Common.h"
+#include "CkEcs/Net/CkNet_Common.h"
 
 #include "CkEntityBridge/CkEntityBridge_Fragment_Data.h"
 

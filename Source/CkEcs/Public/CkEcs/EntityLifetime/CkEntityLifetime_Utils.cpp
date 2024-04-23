@@ -6,6 +6,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
+#include "CkEcs/Net/CkNet_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -171,6 +172,36 @@ auto
 
 auto
     UCk_Utils_EntityLifetime_UE::
+    Get_EntityNetRole(
+        const FCk_Handle& InEntity)
+    -> ECk_Net_EntityNetRole
+{
+    if (ck::Is_NOT_Valid(InEntity))
+    { return ECk_Net_EntityNetRole::None; }
+
+    if (InEntity.Has<ck::FFragment_Net_Params>())
+    { return InEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings().Get_NetRole(); }
+
+    return Get_EntityNetRole(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InEntity));
+}
+
+auto
+    UCk_Utils_EntityLifetime_UE::
+    Get_EntityNetMode(
+        const FCk_Handle& InEntity)
+    -> ECk_Net_NetModeType
+{
+    if (ck::Is_NOT_Valid(InEntity))
+    { return ECk_Net_NetModeType::None; }
+
+    if (InEntity.Has<ck::FFragment_Net_Params>())
+    { return InEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings().Get_NetMode(); }
+
+    return Get_EntityNetMode(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InEntity));
+}
+
+auto
+    UCk_Utils_EntityLifetime_UE::
     Request_CreateEntity(
         const FCk_Handle& InHandle,
         PostEntityCreatedFunc InFunc)
@@ -182,6 +213,13 @@ auto
     const auto NewEntity = Request_CreateEntity(**InHandle, [&](FCk_Handle InNewEntity)
     {
         InNewEntity.Add<ck::FFragment_LifetimeOwner>(InHandle);
+
+#ifdef CK_COPY_NET_PARAMS_ON_EVERY_ENTITY
+        if (NOT Get_IsTransientEntity(InHandle) && InHandle.Has<ck::FFragment_Net_Params>())
+        {
+            InNewEntity.Add<ck::FFragment_Net_Params>(InHandle.Get<ck::FFragment_Net_Params>());
+        }
+#endif
 
         if (InHandle.Has_Any<ck::FTag_DestroyEntity_Initiate>())
         { InNewEntity.Add<ck::FTag_DestroyEntity_Initiate>(); }

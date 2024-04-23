@@ -6,6 +6,8 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Params.h"
 #include "CkEcs/Registry/CkRegistry.h"
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Net/CkNet_Common.h"
+#include "CkEcs/Net/CkNet_Fragment_Data.h"
 
 #include <CoreMinimal.h>
 
@@ -107,6 +109,19 @@ public:
     static UWorld*
     Get_WorldForEntity(
         const FCk_Handle& InHandle);
+
+public:
+    // These functions already exist on Net_Utils (which are now a pass-through). The reason they exist on this
+    // utils as well is because CkEcs cannot depend on CkNet
+    [[nodiscard]]
+    static auto
+    Get_EntityNetRole(
+        const FCk_Handle& InEntity) -> ECk_Net_EntityNetRole;
+
+    [[nodiscard]]
+    static auto
+    Get_EntityNetMode(
+        const FCk_Handle& InEntity) -> ECk_Net_NetModeType;
 
 public:
     template <typename T_Predicate>
