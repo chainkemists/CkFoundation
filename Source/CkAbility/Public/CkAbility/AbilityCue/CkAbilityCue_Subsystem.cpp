@@ -307,6 +307,10 @@ auto
     const auto& CueTypes = UCk_Utils_Ability_Settings_UE::Get_CueTypes();
     for (const auto& CueType : CueTypes)
     {
+        // hot-reload/Live++ can result in the Cue's getting GC'ed and replaced by new Cues
+        if (ck::Is_NOT_Valid(CueType))
+        { continue; }
+
         const auto CueTypeBlueprint = UCk_Utils_Object_UE::Get_ClassGeneratedByBlueprint(CueType);
         if (InAssetData.IsInstanceOf(CueTypeBlueprint->GetClass(), EResolveClass::Yes))
         {
