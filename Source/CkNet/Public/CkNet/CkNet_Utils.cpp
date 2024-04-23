@@ -1,12 +1,10 @@
 #include "CkNet_Utils.h"
 
-#include "CkNet_Fragment.h"
-
 #include "CkCore/Game/CkGame_Utils.h"
 #include "CkCore/Time/CkTime_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment.h"
+#include "CkEcs/Net/CkNet_Fragment.h"
 
 #include <Engine/World.h>
 
@@ -19,7 +17,7 @@ auto
         const FCk_Net_ConnectionSettings& InConnectionSettings)
     -> void
 {
-    auto& Params = InEntity.Add<ck::FFragment_Net_Params>(InConnectionSettings);
+    InEntity.AddOrGet<ck::FFragment_Net_Params>(InConnectionSettings);
 
     if (InConnectionSettings.Get_NetRole() == ECk_Net_EntityNetRole::Authority)
     {
@@ -71,13 +69,8 @@ auto
         const FCk_Handle& InEntity)
     -> ECk_Net_EntityNetRole
 {
-    if (ck::Is_NOT_Valid(InEntity))
-    { return ECk_Net_EntityNetRole::None; }
-
-    if (Has(InEntity))
-    { return InEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings().Get_NetRole(); }
-
-    return Get_EntityNetRole(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InEntity));
+    // this is now a pass-through because Entity Lifetime utils needs the Net Fragment to be defined in CkEcs
+    return UCk_Utils_EntityLifetime_UE::Get_EntityNetRole(InEntity);
 }
 
 auto
@@ -86,13 +79,8 @@ auto
         const FCk_Handle& InEntity)
     -> ECk_Net_NetModeType
 {
-    if (ck::Is_NOT_Valid(InEntity))
-    { return ECk_Net_NetModeType::None; }
-
-    if (Has(InEntity))
-    { return InEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings().Get_NetMode(); }
-
-    return Get_EntityNetMode(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InEntity));
+    // this is now a pass-through because Entity Lifetime utils needs the Net Fragment to be defined in CkEcs
+    return UCk_Utils_EntityLifetime_UE::Get_EntityNetMode(InEntity);
 }
 
 auto
@@ -209,42 +197,42 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor!"))
     { return {}; }
 
-    const auto isLocallyOwned = Get_IsActorLocallyOwned(InActor);
-    const auto netRole        = Get_NetRole(InActor);
+    const auto IsLocallyOwned = Get_IsActorLocallyOwned(InActor);
+    const auto NetRole        = Get_NetRole(InActor);
 
     switch(InReplicationType)
     {
         case ECk_Net_ReplicationType::LocalOnly:
         {
-            if (isLocallyOwned)
+            if (IsLocallyOwned)
             { return true; }
 
             break;
         }
         case ECk_Net_ReplicationType::LocalAndHost:
         {
-            if (isLocallyOwned || netRole == ECk_Net_NetModeType::Server || netRole == ECk_Net_NetModeType::Host)
+            if (IsLocallyOwned || NetRole == ECk_Net_NetModeType::Server || NetRole == ECk_Net_NetModeType::Host)
             { return true; }
 
             break;
         }
         case ECk_Net_ReplicationType::HostOnly:
         {
-            if (netRole == ECk_Net_NetModeType::Host || netRole == ECk_Net_NetModeType::Server)
+            if (NetRole == ECk_Net_NetModeType::Host || NetRole == ECk_Net_NetModeType::Server)
             { return true; }
 
             break;
         }
         case ECk_Net_ReplicationType::ClientsOnly:
         {
-            if (netRole != ECk_Net_NetModeType::Server)
+            if (NetRole != ECk_Net_NetModeType::Server)
             { return true; }
 
             break;
         }
         case ECk_Net_ReplicationType::ServerOnly:
         {
-            if (netRole == ECk_Net_NetModeType::Server)
+            if (NetRole == ECk_Net_NetModeType::Server)
             { return true; }
 
             break;
@@ -279,12 +267,12 @@ auto
         if (ck::Is_NOT_Valid(InContext))
         { return true; }
 
-        const auto* world = InContext->GetWorld();
+        const auto* World = InContext->GetWorld();
 
-        if (ck::Is_NOT_Valid(world))
+        if (ck::Is_NOT_Valid(World))
         { return true; }
 
-        return world->IsNetMode(NM_DedicatedServer) || world->IsNetMode(NM_ListenServer);
+        return World->IsNetMode(NM_DedicatedServer) || World->IsNetMode(NM_ListenServer);
     };
 
     if (GetIsServer())
@@ -324,7 +312,8 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
-    const auto FoundHandle = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwnerIf(InHandle, [](FCk_Handle Handle)
+    const auto FoundHandle = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwnerIf(InHandle,
+    [](const FCk_Handle& Handle)
     {
         return Handle.Has<ck::FTag_NetMode_IsHost>();
     });

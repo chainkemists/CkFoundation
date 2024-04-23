@@ -1,8 +1,9 @@
 #pragma once
 
+#include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkNet/CkNet_Common.h"
+#include "CkEcs/Net/CkNet_Common.h"
 
 #include "CkNet_Fragment_Data.generated.h"
 

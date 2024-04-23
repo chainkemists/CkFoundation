@@ -3,17 +3,14 @@
 #include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Engine/CkPlayerState.h"
 #include "CkCore/Enums/CkEnums.h"
-#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
-#include "CkEcs/Handle/CkHandle.h"
-#include "CkEcs/OwningActor/CkOwningActor_Utils.h"
-
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Time/CkTime.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-
-#include "CkNet/CkNet_Common.h"
-#include "CkNet/CkNet_Fragment_Data.h"
+#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
+#include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Net/CkNet_Fragment_Data.h"
+#include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
 #include "CkNet_Utils.generated.h"
 
@@ -261,7 +258,8 @@ auto
     if (InHandle.Has<TObjectPtr<T_ReplicatedFragment>>())
     { return ECk_AddedOrNot::AlreadyExists; }
 
-    const auto EntityWithActor = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwnerIf(InHandle, [](FCk_Handle Handle)
+    const auto EntityWithActor = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwnerIf(InHandle,
+    [](const FCk_Handle& Handle)
     {
         return UCk_Utils_OwningActor_UE::Has(Handle);
     });

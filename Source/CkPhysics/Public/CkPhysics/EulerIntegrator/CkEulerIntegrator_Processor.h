@@ -1,9 +1,8 @@
 #pragma once
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
+#include "CkEcs/Net/CkNet_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
-
-#include "CkNet/CkNet_Fragment.h"
 
 #include "CkPhysics/Velocity/CkVelocity_Fragment.h"
 #include "CkPhysics/Acceleration/CkAcceleration_Fragment.h"

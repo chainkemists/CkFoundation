@@ -6,9 +6,8 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkEcs/Net/CkNet_Common.h"
 #include "CkEcs/OwningActor/CkOwningActor_Fragment_Data.h"
-
-#include "CkNet/CkNet_Common.h"
 
 #include "CkOverlapBody/CkOverlapBody_Common.h"
 
