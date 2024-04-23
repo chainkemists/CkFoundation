@@ -70,7 +70,7 @@ auto
     if (NOT IsNetMode(NM_Client))
     { return; }
 
-    if (GetOwner() == nullptr)
+    if (ck::Is_NOT_Valid(GetOwner()))
     { return; }
 
     const auto AbilityCueReplicator = GetWorld()->GetSubsystem<UCk_AbilityCueReplicator_Subsystem_UE>();
@@ -155,14 +155,18 @@ auto
     _NextAvailableReplicator = UCk_Utils_Arithmetic_UE::Get_Increment_WithWrap(
         _NextAvailableReplicator, FCk_IntRange{0, _AbilityCueReplicators.Num()});
 
+    const auto CueReplicator = _AbilityCueReplicators[_NextAvailableReplicator];
+    CK_LOG_ERROR_IF_NOT(ck::ability, ck::IsValid(CueReplicator),
+        TEXT("Next Available Ability Cue Replicator Actor at Index [{}] is INVALID"), _NextAvailableReplicator)
+    { return; }
+
     if (GetWorld()->IsNetMode(NM_DedicatedServer))
     {
-        _AbilityCueReplicators[_NextAvailableReplicator]->Request_ExecuteAbilityCue(InCueName, InRequest);
+        CueReplicator->Request_ExecuteAbilityCue(InCueName, InRequest);
     }
     else
     {
-        const auto CueReplicator = _AbilityCueReplicators[_NextAvailableReplicator];
-        _AbilityCueReplicators[_NextAvailableReplicator]->Server_RequestExecuteAbilityCue(InCueName, InRequest);
+        CueReplicator->Server_RequestExecuteAbilityCue(InCueName, InRequest);
     }
 }
 
@@ -305,19 +309,17 @@ auto
     }
 
     const auto& CueTypes = UCk_Utils_Ability_Settings_UE::Get_CueTypes();
-    for (const auto& CueType : CueTypes)
-    {
-        // hot-reload/Live++ can result in the Cue's getting GC'ed and replaced by new Cues
-        if (ck::Is_NOT_Valid(CueType))
-        { continue; }
 
-        const auto CueTypeBlueprint = UCk_Utils_Object_UE::Get_ClassGeneratedByBlueprint(CueType);
-        if (InAssetData.IsInstanceOf(CueTypeBlueprint->GetClass(), EResolveClass::Yes))
+    // hot-reload/Live++ can result in the Cue's getting GC'ed and replaced by new Cues
+    ck::algo::ForEachIsValid(CueTypes, [&](const auto& CueType)
+    {
+        if (const auto CueTypeBlueprint = UCk_Utils_Object_UE::Get_ClassGeneratedByBlueprint(CueType);
+            InAssetData.IsInstanceOf(CueTypeBlueprint->GetClass(), EResolveClass::Yes))
         {
             Request_PopulateAllAggregators();
             return;
         }
-    }
+    });
 }
 
 auto
