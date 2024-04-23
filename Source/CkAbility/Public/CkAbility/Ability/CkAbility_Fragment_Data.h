@@ -593,7 +593,7 @@ private:
      ECk_Net_ReplicationType _ReplicationType = ECk_Net_ReplicationType::LocalAndHost;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess = true))
+        meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition="_ReplicationType == ECk_Net_ReplicationType::LocalAndHost"))
     ECk_Net_NetExecutionPolicy _ExecutionPolicy = ECk_Net_NetExecutionPolicy::PreferHost;
 
 public:
