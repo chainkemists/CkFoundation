@@ -12,7 +12,6 @@ enum class ECk_Net_ReplicationType : uint8
     LocalAndHost,
     HostOnly,
     ClientsOnly,
-    ServerOnly,
     All
 };
 
@@ -26,7 +25,6 @@ enum class ECk_Net_NetModeType : uint8
     None  ,
     Client,
     Host  ,
-    Server UMETA(DisplayName = "Dedicated Server")
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Net_NetModeType);
@@ -40,8 +38,6 @@ enum class ECk_Net_NetExecutionPolicy : uint8
     PreferHost,
     // Run on owning client and Server
     LocalAndHost,
-    // Run on all clients and Server
-    All
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Net_NetExecutionPolicy);
