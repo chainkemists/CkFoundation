@@ -94,7 +94,6 @@ auto
     switch(const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(InHandle))
     {
         case ECk_Net_NetModeType::Host:
-        case ECk_Net_NetModeType::Server:
         {
             const auto& RepDriver = NewEntity.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
             const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(NewEntity);
@@ -159,7 +158,6 @@ auto
         RepDriver->Request_Replicate_NonReplicatedActor(InConstructionInfo);
         break;
     case ECk_Net_NetModeType::Host:
-    case ECk_Net_NetModeType::Server:
         RepDriver->Set_ReplicationData_NonReplicatedActor(InConstructionInfo);
         break;
     default: ;
