@@ -3,6 +3,8 @@
 #include "CkOwningActor_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
 
 #include "CkEcs/Handle/CkHandle.h"
@@ -50,6 +52,23 @@ auto
     { return {}; }
 
     return Get_EntityOwningActorBasicDetails(InHandle).Get_Actor().Get();
+}
+
+auto
+    UCk_Utils_OwningActor_UE::
+    TryGet_EntityOwningActor_Recursive(
+        const FCk_Handle& InHandle)
+        -> AActor*
+{
+    if (NOT Has(InHandle))
+    {
+        if (UCk_Utils_EntityLifetime_UE::Get_IsTransientEntity(InHandle))
+        { return nullptr; }
+
+        return TryGet_EntityOwningActor_Recursive(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle));
+    }
+
+    return Get_EntityOwningActor(InHandle);
 }
 
 auto
