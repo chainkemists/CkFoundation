@@ -136,6 +136,9 @@ public:
     template <typename T_Fragment, typename... T_Args>
     auto Replace(T_Args&&... InArgs) -> T_Fragment&;
 
+    template <typename T_Fragment, typename... T_Args>
+    auto AddOrReplace(T_Args&&... InArgs) -> T_Fragment&;
+
     template <typename T_Fragment>
     auto Remove() -> void;
 
@@ -578,6 +581,35 @@ auto
     }
 
     return _Registry->Replace<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
+}
+
+template <typename T_Fragment, typename ... T_Args>
+auto
+    FCk_Handle::
+    AddOrReplace(
+        T_Args&&... InArgs)
+    -> T_Fragment&
+{
+    CK_ENSURE_IF_NOT(IsValid(ck::IsValid_Policy_Default{}),
+        TEXT("Unable to Replace Fragment [{}]. Handle [{}] {}."),
+        ck::Get_RuntimeTypeToString<T_Fragment>(), *this,
+        [&]
+        {
+            if (ck::IsValid(_Registry))
+            {
+                if (_Registry->IsValid(_Entity))
+                { return TEXT("has an Entity that is about to be DESTROYED"); }
+
+                return TEXT("does NOT have a valid Entity");
+            }
+            return TEXT("does NOT have a valid Registry");
+        }())
+    {
+        static T_Fragment Invalid_Fragment;
+        return Invalid_Fragment;
+    }
+
+    return _Registry->AddOrReplace<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
 }
 
 template <typename T_Fragment>
