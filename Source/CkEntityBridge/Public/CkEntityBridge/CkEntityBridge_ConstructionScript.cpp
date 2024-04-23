@@ -250,8 +250,12 @@ auto
                     {
                         UCk_Utils_Handle_UE::Set_DebugName(InEntity, UCk_Utils_Debug_UE::Get_DebugName(OwningActor, ECk_DebugNameVerbosity_Policy::Compact));
                         InEntity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
-                        UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Replication::Replicates,
-                            ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
+                        UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings
+                            {
+                                ECk_Replication::Replicates,
+                                ECk_Net_NetModeType::Client,
+                                OwningActor->GetLocalRole() == ROLE_AutonomousProxy ? ECk_Net_EntityNetRole::Authority : ECk_Net_EntityNetRole::Proxy
+                            });
                     });
 
                     return Entity;
