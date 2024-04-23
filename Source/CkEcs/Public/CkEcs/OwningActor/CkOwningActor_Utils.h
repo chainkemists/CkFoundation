@@ -49,6 +49,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor",
+              DisplayName = "[Ck][OwningActor] Get Entity To Actor (Recursive)",
+              meta = (CompactNodeTitle="EntityToActor (Recursive)"))
+    static AActor*
+    TryGet_EntityOwningActor_Recursive(
+        const FCk_Handle& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|OwningActor",
               DisplayName = "[Ck][OwningActor] Get Basic Details (From Entity)",
               meta = (CompactNodeTitle="EntityBasicDetails"))
     static FCk_EntityOwningActor_BasicDetails
