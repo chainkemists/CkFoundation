@@ -154,6 +154,9 @@ private:
     template <typename T_FragmentType, typename... T_Args>
     auto Replace(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentType&;
 
+    template <typename T_FragmentType, typename... T_Args>
+    auto AddOrReplace(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentType&;
+
     template <typename T_Fragment>
     auto Remove(EntityType InEntity) -> void;
 
@@ -324,6 +327,28 @@ auto
     Fragment = T_FragmentType{ std::forward<T_Args>(InArgs)... };
 
     return Fragment;
+}
+
+template <typename T_FragmentType, typename ... T_Args>
+auto
+    FCk_Registry::
+    AddOrReplace(
+        EntityType InEntity,
+        T_Args&&... InArgs)
+    -> T_FragmentType&
+{
+    static_assert(std::is_empty_v<T_FragmentType> == false, "You can only replace Fragments with data.");
+
+    CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to Replace Fragment"), InEntity)
+    {
+        static T_FragmentType Invalid_Fragment;
+        return Invalid_Fragment;
+    }
+
+    if (Has<T_FragmentType>(InEntity))
+    { Remove<T_FragmentType>(InEntity); }
+
+    return Add<T_FragmentType>(std::forward<T_Args>(InArgs)...);
 }
 
 template <typename T_Fragment>
