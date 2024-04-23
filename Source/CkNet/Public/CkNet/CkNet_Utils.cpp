@@ -94,6 +94,16 @@ auto
     {
         case ECk_Net_ReplicationType::LocalOnly:
         {
+            auto MaybeActor = UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor_Recursive(InEntity);
+            if (ck::IsValid(MaybeActor))
+            {
+                if (MaybeActor->GetLocalRole() == ROLE_AutonomousProxy)
+                { return true; }
+
+                if (MaybeActor->GetRemoteRole() == ROLE_AutonomousProxy)
+                { return false; }
+            }
+
             return Get_HasAuthority(InEntity);
         }
         case ECk_Net_ReplicationType::LocalAndHost:
@@ -107,10 +117,6 @@ auto
         case ECk_Net_ReplicationType::ClientsOnly:
         {
             return Get_EntityNetMode(InEntity) == ECk_Net_NetModeType::Client;
-        }
-        case ECk_Net_ReplicationType::ServerOnly:
-        {
-            return Get_EntityNetMode(InEntity) == ECk_Net_NetModeType::Server;
         }
         case ECk_Net_ReplicationType::All:
         {
@@ -211,28 +217,21 @@ auto
         }
         case ECk_Net_ReplicationType::LocalAndHost:
         {
-            if (IsLocallyOwned || NetRole == ECk_Net_NetModeType::Server || NetRole == ECk_Net_NetModeType::Host)
+            if (IsLocallyOwned || NetRole == ECk_Net_NetModeType::Host)
             { return true; }
 
             break;
         }
         case ECk_Net_ReplicationType::HostOnly:
         {
-            if (NetRole == ECk_Net_NetModeType::Host || NetRole == ECk_Net_NetModeType::Server)
+            if (NetRole == ECk_Net_NetModeType::Host)
             { return true; }
 
             break;
         }
         case ECk_Net_ReplicationType::ClientsOnly:
         {
-            if (NetRole != ECk_Net_NetModeType::Server)
-            { return true; }
-
-            break;
-        }
-        case ECk_Net_ReplicationType::ServerOnly:
-        {
-            if (NetRole == ECk_Net_NetModeType::Server)
+            if (NetRole != ECk_Net_NetModeType::Host)
             { return true; }
 
             break;
@@ -259,7 +258,7 @@ auto
 {
     if (IsRunningDedicatedServer())
     {
-        return ECk_Net_NetModeType::Server;
+        return ECk_Net_NetModeType::Host;
     }
 
     const auto GetIsServer = [InContext]() -> bool
@@ -293,9 +292,8 @@ auto
     switch(InContext->GetWorld()->GetNetMode())
     {
     case NM_DedicatedServer:
-        return ECk_Net_NetModeType::Server;
-    case NM_Standalone:
     case NM_ListenServer:
+    case NM_Standalone:
         return ECk_Net_NetModeType::Host;
     case NM_Client:
         return ECk_Net_NetModeType::Client;
