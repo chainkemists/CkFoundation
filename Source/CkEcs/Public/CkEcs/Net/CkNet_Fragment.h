@@ -1,5 +1,7 @@
 #pragma once
-#include "CkNet/CkNet_Fragment_Data.h"
+
+#include "CkEcs/Net/CkNet_Fragment_Data.h"
+#include "CkEcs/Tag/CkTag.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -10,7 +12,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKNET_API FFragment_Net_Params
+    struct CKECS_API FFragment_Net_Params
     {
     public:
         CK_GENERATED_BODY(FFragment_Net_Params);
