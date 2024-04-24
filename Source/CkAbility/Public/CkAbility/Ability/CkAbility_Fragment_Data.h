@@ -302,7 +302,7 @@ enum class ECk_Ability_InstancingPolicy : uint8
     InstancedPerAbilityActivation,
 
     // A new instance of the Ability is made on granted. Each Activation uses the same instance.
-    InstancedOnce
+    InstancedOnce UMETA(DisplayName = "Instanced Once (when Granted)")
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_InstancingPolicy);
