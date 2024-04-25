@@ -190,10 +190,18 @@ auto
         APlayerController* InPlayerController)
     -> void
 {
-    for (auto Index = 0; Index < NumberOfReplicators; ++Index)
     {
         auto* AbilityCueReplicator = GetWorld()->SpawnActor<ACk_AbilityCueReplicator_UE>();
         AbilityCueReplicator->SetOwner(InPlayerController);
+        _ClientToServerAbilityCueReplicators.Emplace
+        (
+            AbilityCueReplicator
+        );
+    }
+
+    for (auto Index = 0; Index < NumberOfReplicators; ++Index)
+    {
+        auto* AbilityCueReplicator = GetWorld()->SpawnActor<ACk_AbilityCueReplicator_UE>();
 
         _AbilityCueReplicators.Emplace
         (
