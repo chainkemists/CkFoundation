@@ -1,7 +1,7 @@
 #include "CkTargeter_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
-
+#include "CkEcs/TransientEntity/CkTransientEntity_Utils.h"
 
 #include "CkNet/CkNet_Utils.h"
 #include "CkTargeting/CkTargeting_Log.h"
@@ -105,9 +105,13 @@ namespace ck
         const auto ValidTargetList  = FCk_Targeter_TargetList{ValidTargets};
         InCurrent._CachedTargets = ValidTargetList;
 
-        if (const auto& CustomTargetFilter = InParams.Get_Params().Get_CustomTargetFilter();
+        if (const auto& CustomTargetFilter = InParams.Get_Params().Get_CustomTargetFilter().Get();
             ck::IsValid(CustomTargetFilter))
         {
+#if WITH_EDITOR
+            const auto& World = UCk_Utils_TransientEntity_UE::Get_World(InHandle);
+            CustomTargetFilter->Set_CurrentWorld(World);
+#endif
             const auto& FilteredTargets = CustomTargetFilter->FilterTargets(TargeterBasicInfo, ValidTargetList);
             const auto& SortedTargets   = CustomTargetFilter->SortTargets(TargeterBasicInfo, FilteredTargets);
             InCurrent._CachedTargets = SortedTargets;
