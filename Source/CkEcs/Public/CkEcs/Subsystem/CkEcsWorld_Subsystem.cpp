@@ -4,13 +4,11 @@
 #include "CkCore/Object/CkObject_Utils.h"
 
 #include "CkEcs/CkEcsLog.h"
-
-#include <Engine/World.h>
-
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
-#include "CkEcs/ProcessorInjector/CkEcsProcessorInjector.h"
 #include "CkEcs/Settings/CkEcs_Settings.h"
+
+#include <Engine/World.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
