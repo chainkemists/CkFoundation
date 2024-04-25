@@ -92,11 +92,14 @@ private:
 
 private:
     UPROPERTY(Transient)
+    TArray<TObjectPtr<ACk_AbilityCueReplicator_UE>> _ClientToServerAbilityCueReplicators;
+
+    UPROPERTY(Transient)
     TArray<TObjectPtr<ACk_AbilityCueReplicator_UE>> _AbilityCueReplicators;
     int32                                           _NextAvailableReplicator = 0;
 
     // TODO: drive this through a tuner
-    static constexpr int32 NumberOfReplicators = 1;
+    static constexpr int32 NumberOfReplicators = 4;
 
 private:
     FDelegateHandle                                 _PostLoginDelegateHandle;
