@@ -42,7 +42,7 @@ namespace ck_ability_cue_subsystem
         auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity);
         NewEntity.Add<FCk_AbilityCue_Params>(InParams);
 
-        ck::ability::Verbose(TEXT("Executing AbilityCue ConstructionScript [{}] with created Entity [{}]"), ConstructionScript, NewEntity);
+        ck::ability::Verbose(TEXT("Executing AbilityCue [{}] ConstructionScript [{}] with created Entity [{}]"), InCueName, ConstructionScript, NewEntity);
 
         ConstructionScript->Construct(NewEntity, {});
     }
@@ -94,6 +94,9 @@ auto
         FCk_AbilityCue_Params InParams)
     -> void
 {
+    if (GetWorld()->IsNetMode(NM_DedicatedServer))
+    { return; }
+
     ck_ability_cue_subsystem::SpawnCue(InCueName, _Subsystem_AbilityCue, _Subsystem_EcsWorldSubsystem, InParams);
 }
 
