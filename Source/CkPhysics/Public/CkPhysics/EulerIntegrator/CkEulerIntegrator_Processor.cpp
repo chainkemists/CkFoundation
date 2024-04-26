@@ -23,18 +23,17 @@ namespace ck
             HandleType InHandle,
             FFragment_EulerIntegrator_Current& InIntegrator,
             FFragment_Velocity_Current& InVelocity,
-            const FFragment_Acceleration_Current& InAcceleration) const
+            const FFragment_Acceleration_Current& InAcceleration,
+            const TObjectPtr<UCk_Fragment_Velocity_Rep>& InVelocityRO) const
         -> void
     {
-        const auto& VelocityRO = InHandle.Get<TObjectPtr<UCk_Fragment_Velocity_Rep>>();
-
-        CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(VelocityRO)
+        CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(InVelocityRO)
         { return; }
 
-        const auto OutermostPawn = UCk_Utils_Actor_UE::Get_OutermostPawn(VelocityRO);
+        const auto OutermostPawn = UCk_Utils_Actor_UE::Get_OutermostPawn(InVelocityRO);
 
         CK_ENSURE_IF_NOT(OutermostPawn, TEXT("Expected ReplicatedObject [{}] to have an owning Pawn in the parent chain. "
-            "Unable to perform predictive integration."), VelocityRO)
+            "Unable to perform predictive integration."), InVelocityRO)
         { return; }
 
         const auto PlayerController = Cast<APlayerController>(OutermostPawn->Controller.Get());
@@ -74,7 +73,7 @@ namespace ck
             HandleType InHandle,
             FFragment_EulerIntegrator_Current& InIntegrator,
             FFragment_Velocity_Current& InVelocity,
-            const FFragment_Acceleration_Current& InAcceleration) const
+            const FFragment_Acceleration_Current& InAcceleration)
         -> void
     {
         const auto& OldVelocity = InVelocity.Get_CurrentVelocity();
