@@ -184,6 +184,23 @@ private:
         const FCk_AbilityCue_Params& InReplicatedParams,
         FGameplayTag InAbilityCueName);
 
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Ability|Script",
+              DisplayName = "[Ck][AbilityScript] Add Task To Deactivate On Ability Revoke",
+              meta = (CompactNodeTitle="TaskToDeactivateOnRevoke", HideSelfPin = true))
+    void
+    DoRequest_AddTaskToDeactivateOnRevoke(
+        UBlueprintTaskTemplate* InTask);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Ability|Script",
+              DisplayName = "[Ck][AbilityScript] Request Add Task To Deactivate On Ability Deactivate",
+              meta = (CompactNodeTitle="TaskToDeactivateOnDeactivate", HideSelfPin = true))
+    void
+    DoRequest_AddTaskToDeactivateOnDeactivate(
+        UBlueprintTaskTemplate* InTask);
+
 private:
     UFUNCTION(BlueprintCallable,
               BlueprintPure = true,
@@ -252,6 +269,10 @@ private:
 
     auto
     DoDebugSet_Revoked() -> void;
+
+private:
+    TArray<TWeakObjectPtr<UBlueprintTaskTemplate>> _TasksToDeactivateOnRevoke;
+    TArray<TWeakObjectPtr<UBlueprintTaskTemplate>> _TasksToDeactivateOnDeactivate;
 
 public:
     CK_PROPERTY_GET(_Data);
