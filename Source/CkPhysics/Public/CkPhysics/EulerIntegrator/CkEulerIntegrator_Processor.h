@@ -19,6 +19,7 @@ namespace ck
             FFragment_EulerIntegrator_Current,
             FFragment_Velocity_Current,
             FFragment_Acceleration_Current,
+            TObjectPtr<UCk_Fragment_Velocity_Rep>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -33,7 +34,8 @@ namespace ck
             HandleType InHandle,
             FFragment_EulerIntegrator_Current& InIntegrator,
             FFragment_Velocity_Current& InVelocity,
-            const FFragment_Acceleration_Current& InAcceleration) const -> void;
+            const FFragment_Acceleration_Current& InAcceleration,
+            const TObjectPtr<UCk_Fragment_Velocity_Rep>& InVelocityRO) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -51,13 +53,13 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_EulerIntegrator_Current& InIntegrator,
             FFragment_Velocity_Current& InVelocity,
-            const FFragment_Acceleration_Current& InAcceleration) const -> void;
+            const FFragment_Acceleration_Current& InAcceleration) -> void;
     };
 }
 
