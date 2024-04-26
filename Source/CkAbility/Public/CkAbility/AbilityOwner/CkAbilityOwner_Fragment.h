@@ -66,6 +66,8 @@ namespace ck
             const FCk_Handle_AbilityOwner& InAbilityOwner,
             const FGameplayTag& InTag) const -> int32;
         auto Get_AreActiveTagsDifferentThanPreviousTags() const -> bool;
+        auto Get_AreActiveTagsDifferentThanPreviousTags(
+            const FCk_Handle_AbilityOwner& InAbilityOwner) const -> bool;
 
         auto AppendTags(
             const FCk_Handle_AbilityOwner& InAbilityOwner,
