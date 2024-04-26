@@ -11,6 +11,8 @@
 
 namespace ck
 {
+    CK_DEFINE_ECS_TAG(FTag_ReplicatedAttribute);
+
     template <typename T_DerivedAttribute>
     class TUtils_Attribute;
 
