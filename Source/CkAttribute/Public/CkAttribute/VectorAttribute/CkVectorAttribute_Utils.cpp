@@ -54,7 +54,7 @@ auto
     }
 
     if (InReplicates == ECk_Replication::Replicates)
-    { NewAttributeEntity.Add<ck::FTag_Replicated>(); }
+    { NewAttributeEntity.Add<ck::FTag_ReplicatedAttribute>(); }
 
     UCk_Utils_GameplayLabel_UE::Add(NewAttributeEntity, InParams.Get_Name());
     RecordOfVectorAttributes_Utils::Request_Connect(InAttributeOwnerEntity, NewAttributeEntity);
@@ -512,7 +512,7 @@ auto
     UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_VectorAttribute_Rep>(
         LifetimeOwner, [&](UCk_Fragment_VectorAttribute_Rep* InRepComp)
     {
-        if (NOT InAttribute.Has<ck::FTag_Replicated>())
+        if (NOT InAttribute.Has<ck::FTag_ReplicatedAttribute>())
         { return; }
 
         InRepComp->Broadcast_AddModifier(InModifierName, ParamsToUse);
@@ -580,7 +580,7 @@ auto
     UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_VectorAttribute_Rep>(
         ReplicatedEntity, [&](UCk_Fragment_VectorAttribute_Rep* InRepComp)
     {
-        if (NOT AttributeEntity.Has<ck::FTag_Replicated>())
+        if (NOT AttributeEntity.Has<ck::FTag_ReplicatedAttribute>())
         { return; }
 
         InRepComp->Broadcast_OverrideModifier(
