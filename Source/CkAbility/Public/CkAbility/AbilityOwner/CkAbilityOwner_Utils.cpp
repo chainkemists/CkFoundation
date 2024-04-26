@@ -40,6 +40,30 @@ auto
     return Cast(InHandle);
 }
 
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Append_DefaultAbilities(
+        FCk_Handle& InHandle,
+        TArray<TSubclassOf<UCk_Ability_Script_PDA>> InDefaultAbilities)
+    -> FCk_Handle_AbilityOwner
+{
+    CK_ENSURE_IF_NOT(Has(InHandle),
+        TEXT("Cannot Append to DefaultAbilities, Handle [{}] is NOT an AbilityOwner. Did you forge to call 'Add Feature'?"), InHandle)
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(InHandle.Has<ck::FTag_AbilityOwner_NeedsSetup>(),
+        TEXT("Cannot Append DefaultAbilites to Handle [{}] AFTER it's already gone through it's Setup. Call this only in the construction script"),
+        InHandle)
+    { return {}; }
+
+    auto& Params = InHandle.Get<ck::FFragment_AbilityOwner_Params>();
+    auto DefaultAbilities = Params.Get_Params().Get_DefaultAbilities();
+    DefaultAbilities.Append(InDefaultAbilities);
+    Params = ck::FFragment_AbilityOwner_Params{FCk_Fragment_AbilityOwner_ParamsData{DefaultAbilities}};
+
+    return Cast(InHandle);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(AbilityOwner, UCk_Utils_AbilityOwner_UE, FCk_Handle_AbilityOwner, ck::FFragment_AbilityOwner_Current, ck::FFragment_AbilityOwner_Params)
@@ -406,6 +430,11 @@ auto
         const FCk_Delegate_AbilityOwner_OnAbilityGivenOrNot& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_AbilityScriptClass()),
+        TEXT("Unable to process GiveAbility on Handle [{}] as the AbilityScriptClass is INVALID.{}"), InAbilityOwnerHandle,
+        ck::Context(InDelegate.GetFunctionName()))
+    { return {}; }
+
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot, InAbilityOwnerHandle, InDelegate);
 
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
@@ -454,7 +483,7 @@ auto
     CK_ENSURE_IF_NOT(Has_AbilityByClass(InAbilityOwnerHandle, InRequest.Get_AbilityClass()) ||
         Has_AbilityByHandle(InAbilityOwnerHandle, InRequest.Get_AbilityHandle()), TEXT("Ability [{}] does NOT exist on AbilityOwner [{}]"),
         InRequest.Get_SearchPolicy() == ECk_AbilityOwner_AbilitySearch_Policy::SearchByClass
-            ? ck::Format(TEXT("{}"), InRequest.Get_AbilityClass()) : ck::Format(TEXT("{}"), InRequest.Get_AbilityHandle(), InAbilityOwnerHandle))
+            ? ck::Format(TEXT("{}"), InRequest.Get_AbilityClass()) : ck::Format(TEXT("{}"), InRequest.Get_AbilityHandle()), InAbilityOwnerHandle)
     { return InAbilityOwnerHandle; }
 
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityRevokedOrNot, InAbilityOwnerHandle, InDelegate);
