@@ -39,6 +39,14 @@ public:
         const FCk_Fragment_AbilityOwner_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="[Ck][AbilityOwner] Append Default Abilities")
+    static FCk_Handle_AbilityOwner
+    Append_DefaultAbilities(
+        UPARAM(ref) FCk_Handle& InHandle,
+        TArray<TSubclassOf<class UCk_Ability_Script_PDA>> InDefaultAbilities);
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
