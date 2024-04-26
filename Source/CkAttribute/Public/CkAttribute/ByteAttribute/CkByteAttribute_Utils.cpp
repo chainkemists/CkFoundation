@@ -3,6 +3,7 @@
 #include "CkAttribute/CkAttribute_Log.h"
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment.h"
 
 #include "CkEcsBasics/Transform/CkTransform_Fragment.h"
 
@@ -51,6 +52,9 @@ auto
             break;
         }
     }
+
+    if (InReplicates == ECk_Replication::Replicates)
+    { NewAttributeEntity.Add<ck::FTag_Replicated>(); }
 
     UCk_Utils_GameplayLabel_UE::Add(NewAttributeEntity, InParams.Get_Name());
     RecordOfByteAttributes_Utils::Request_Connect(InAttributeOwnerEntity, NewAttributeEntity);
@@ -508,6 +512,9 @@ auto
     UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_ByteAttribute_Rep>(
         LifetimeOwner, [&](UCk_Fragment_ByteAttribute_Rep* InRepComp)
     {
+        if (NOT InAttribute.Has<ck::FTag_Replicated>())
+        { return; }
+
         InRepComp->Broadcast_AddModifier(InModifierName, ParamsToUse);
     });
 
@@ -573,6 +580,9 @@ auto
     UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_ByteAttribute_Rep>(
         ReplicatedEntity, [&](UCk_Fragment_ByteAttribute_Rep* InRepComp)
     {
+        if (NOT AttributeEntity.Has<ck::FTag_Replicated>())
+        { return; }
+
         InRepComp->Broadcast_OverrideModifier(
             UCk_Utils_GameplayLabel_UE::Get_Label(InAttributeModifierEntity),
             UCk_Utils_GameplayLabel_UE::Get_Label(AttributeEntity),
@@ -706,6 +716,9 @@ auto
     UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_ByteAttribute_Rep>(AttributeOwnerEntity,
     [&](UCk_Fragment_ByteAttribute_Rep* InRepComp)
     {
+        if (NOT AttributeEntity.Has<ck::FTag_Replicated>())
+        { return; }
+
         InRepComp->Broadcast_RemoveModifier(UCk_Utils_GameplayLabel_UE::Get_Label(
             InAttributeModifierEntity),
             UCk_Utils_GameplayLabel_UE::Get_Label(AttributeEntity),
