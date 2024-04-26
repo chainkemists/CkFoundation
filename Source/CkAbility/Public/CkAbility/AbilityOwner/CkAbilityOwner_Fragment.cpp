@@ -101,6 +101,15 @@ namespace ck
 
     auto
         FFragment_AbilityOwner_Current::
+        Get_AreActiveTagsDifferentThanPreviousTags(
+            const FCk_Handle_AbilityOwner& InAbilityOwner) const
+        -> bool
+    {
+        return Get_ActiveTags(InAbilityOwner) != _PreviousTags_IncludingAllEntityExtensions;
+    }
+
+    auto
+        FFragment_AbilityOwner_Current::
         AppendTags(
             const FCk_Handle_AbilityOwner& InAbilityOwner,
             const FGameplayTagContainer& InTagsToAdd)
