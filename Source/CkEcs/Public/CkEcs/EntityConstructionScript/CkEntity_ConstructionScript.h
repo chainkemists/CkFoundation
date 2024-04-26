@@ -24,6 +24,14 @@ public:
         FCk_Handle& InHandle,
         const FInstancedStruct& InOptionalParams) const -> void;
 
+public:
+    UFUNCTION(BlueprintCallable)
+    static FCk_Handle
+    Request_Construct(
+        UPARAM(ref) FCk_Handle& InHandle,
+        TSubclassOf<UCk_Entity_ConstructionScript_PDA> InConstructionScript,
+        const FInstancedStruct& InOptionalParams);
+
 protected:
     UFUNCTION(BlueprintNativeEvent,
               DisplayName = "Construct")
