@@ -217,7 +217,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_StackExpiration_Policy);
 
 // How to handle requirements not being met on this Ability
 UENUM(BlueprintType)
-enum class ECk_Ability_ActivationRequirementsNotMet_Policy
+enum class ECk_Ability_ActivationRequirementsNotMet_Policy : uint8
 {
     // Any ongoing duration & period timers are left ticking
     DoNothing,
