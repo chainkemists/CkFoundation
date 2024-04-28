@@ -138,6 +138,8 @@ namespace ck
                 }
             }
 
+            InComp._Transform.SetLocation(RootComponent->GetComponentLocation());
+
             return;
         }
 
@@ -182,6 +184,8 @@ namespace ck
                     break;
                 }
             }
+            InComp._Transform.SetLocation(RootComponent->GetComponentLocation());
+
             return;
         }
 
@@ -221,6 +225,8 @@ namespace ck
                     break;
                 }
             }
+
+            InComp._Transform.SetRotation(RootComponent->GetComponentRotation().Quaternion());
 
             return;
         }
@@ -267,6 +273,8 @@ namespace ck
                 }
             }
 
+            InComp._Transform.SetRotation(RootComponent->GetComponentRotation().Quaternion());
+
             return;
         }
 
@@ -304,6 +312,8 @@ namespace ck
                     break;
                 }
             }
+
+            InComp._Transform.SetScale3D(RootComponent->GetComponentScale());
 
             return;
         }
