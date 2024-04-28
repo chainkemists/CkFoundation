@@ -16,7 +16,7 @@ class UWorld;
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
-enum class ECk_GameStatus
+enum class ECk_GameStatus : uint8
 {
     NotInGame,
     InPIE,

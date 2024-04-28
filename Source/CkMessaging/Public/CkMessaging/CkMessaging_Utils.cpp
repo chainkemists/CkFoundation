@@ -3,6 +3,8 @@
 #include "CkMessaging/CkMessaging_Fragment.h"
 #include "CkMessaging/CkMessaging_Log.h"
 
+#include <Blueprint/BlueprintExceptionInfo.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 #define LOCTEXT_NAMESPACE "CkMessaging"
