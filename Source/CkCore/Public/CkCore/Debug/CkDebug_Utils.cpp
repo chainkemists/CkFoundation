@@ -4,6 +4,8 @@
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include <Blueprint/BlueprintExceptionInfo.h>
+
 #if !CK_DISABLE_STACK_TRACE
 #include "Windows/WindowsPlatformStackWalk.h"
 #endif

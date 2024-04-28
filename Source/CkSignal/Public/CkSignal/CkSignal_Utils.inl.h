@@ -118,8 +118,8 @@ namespace ck
 
         if constexpr (InPostFireBehavior == ECk_Signal_PostFireBehavior::Unbind)
         { return Signal._InvokeAndUnbind_Sink.template connect<T_Candidate>(InInstance); }
-
-        return Signal._Invoke_Sink.template connect<T_Candidate>(InInstance);
+        else
+        { return Signal._Invoke_Sink.template connect<T_Candidate>(InInstance); }
     }
 
     template <typename T_DerivedSignal>
