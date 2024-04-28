@@ -5,6 +5,8 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
+#include <Blueprint/BlueprintExceptionInfo.h>
+
 #define LOCTEXT_NAMESPACE "CkUnrealVariables"
 
 // --------------------------------------------------------------------------------------------------------------------

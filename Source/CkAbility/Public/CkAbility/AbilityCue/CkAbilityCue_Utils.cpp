@@ -9,6 +9,8 @@
 
 #include "CkNet/CkNet_Utils.h"
 
+#include <Blueprint/BlueprintExceptionInfo.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 #define LOCTEXT_NAMESPACE "CkAbilityCue"
