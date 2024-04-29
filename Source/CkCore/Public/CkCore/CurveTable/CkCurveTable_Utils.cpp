@@ -80,7 +80,19 @@ auto
 
     static FString ContextString;
 
-    return UCk_Utils_Curve_UE::Get_ValueAtTime(*InCurveTableRowHandle.GetRichCurve(ContextString), InTime);
+    if (const auto& RichCurve = InCurveTableRowHandle.GetRichCurve(ContextString);
+        ck::IsValid(RichCurve, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        return UCk_Utils_Curve_UE::Get_ValueAtTime(*RichCurve, InTime);
+    }
+
+    if (const auto& SimpleCurve = InCurveTableRowHandle.GetSimpleCurve(ContextString);
+        ck::IsValid(SimpleCurve, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        return UCk_Utils_Curve_UE::Get_ValueAtTime(*SimpleCurve, InTime);
+    }
+
+    return {};
 }
 
 auto
@@ -95,7 +107,19 @@ auto
 
     static FString ContextString;
 
-    return UCk_Utils_Curve_UE::Get_TimeRange(*InCurveTableRowHandle.GetRichCurve(ContextString));
+    if (const auto& RichCurve = InCurveTableRowHandle.GetRichCurve(ContextString);
+        ck::IsValid(RichCurve, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        return UCk_Utils_Curve_UE::Get_TimeRange(*RichCurve);
+    }
+
+    if (const auto& SimpleCurve = InCurveTableRowHandle.GetSimpleCurve(ContextString);
+        ck::IsValid(SimpleCurve, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        return UCk_Utils_Curve_UE::Get_TimeRange(*SimpleCurve);
+    }
+
+    return {};
 }
 
 auto
@@ -110,7 +134,19 @@ auto
 
     static FString ContextString;
 
-    return UCk_Utils_Curve_UE::Get_ValueRange(*InCurveTableRowHandle.GetRichCurve(ContextString));
+    if (const auto& RichCurve = InCurveTableRowHandle.GetRichCurve(ContextString);
+        ck::IsValid(RichCurve, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        return UCk_Utils_Curve_UE::Get_ValueRange(*RichCurve);
+    }
+
+    if (const auto& SimpleCurve = InCurveTableRowHandle.GetSimpleCurve(ContextString);
+        ck::IsValid(SimpleCurve, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        return UCk_Utils_Curve_UE::Get_ValueRange(*SimpleCurve);
+    }
+
+    return {};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
