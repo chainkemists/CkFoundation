@@ -26,12 +26,25 @@ public:
         const FCk_Time& InTime) -> float;
 
     static auto
+    Get_ValueAtTime(
+        const FSimpleCurve& InSimpleCurve,
+        const FCk_Time& InTime) -> float;
+
+    static auto
     Get_TimeRange(
         const FRichCurve& InRichCurve) -> FCk_FloatRange;
 
     static auto
+    Get_TimeRange(
+        const FSimpleCurve& InSimpleCurve) -> FCk_FloatRange;
+
+    static auto
     Get_ValueRange(
         const FRichCurve& InRichCurve) -> FCk_FloatRange;
+
+    static auto
+    Get_ValueRange(
+        const FSimpleCurve& InSimpleCurve) -> FCk_FloatRange;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
