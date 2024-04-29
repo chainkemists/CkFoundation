@@ -174,14 +174,14 @@ auto
         const auto& AttributeName = Modifier.Get_AttributeName();
 
         CK_LOG_ERROR_IF_NOT(ck::attribute, ck::IsValid(AttributeName),
-            TEXT("Received a FLOAT AddModifier Request from the SERVER with ModifierName [{}] for a TargetAttribute with INVALID name.{}"),
+            TEXT("Received a FLOAT Override Request from the SERVER with ModifierName [{}] for a TargetAttribute with INVALID name.{}"),
             Modifier.Get_ModifierName(), ck::Context(this))
         { continue; }
 
         auto Attribute = UCk_Utils_FloatAttribute_UE::TryGet(_AssociatedEntity, AttributeName);
 
         CK_LOG_ERROR_IF_NOT(ck::attribute, ck::IsValid(Attribute),
-            TEXT("Received a FLOAT AddModifier Request from the SERVER with ModifierName [{}] for a TargetAttribute with name [{}] "
+            TEXT("Received a FLOAT Override Request from the SERVER with ModifierName [{}] for a TargetAttribute with name [{}] "
                 "but could NOT find that Attribute on [{}]"),
             Modifier.Get_ModifierName(), AttributeName, Get_AssociatedEntity())
         { continue; }
@@ -198,11 +198,11 @@ auto
         );
 
         CK_LOG_ERROR_IF_NOT(ck::attribute, ck::IsValid(ModifierEntity),
-            TEXT("Received a FLOAT RemoveModifier Request from the SERVER with ModifierName [{}] for a TargetAttribute [{}] but the Modifier does NOT exist.{}"),
+            TEXT("Received a FLOAT Override Request from the SERVER with ModifierName [{}] for a TargetAttribute [{}] but the Modifier does NOT exist.{}"),
             ModifierName, AttributeName, ck::Context(Get_AssociatedEntity()))
         { continue; }
 
-        UCk_Utils_FloatAttributeModifier_UE::Override(ModifierEntity, Modifier.Get_NewDelta());
+        UCk_Utils_FloatAttributeModifier_UE::Override(ModifierEntity, Modifier.Get_NewDelta(), Component);
     }
     _NextPendingOverrideModifiers = _PendingOverrideModifiers.Num();
 }
