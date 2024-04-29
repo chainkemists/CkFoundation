@@ -11,6 +11,8 @@
 #include <Framework/Commands/InputChord.h>
 #include <GameFramework/Actor.h>
 #include <Engine/CollisionProfile.h>
+#include <Engine/DataTable.h>
+#include <Engine/CurveTable.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -139,6 +141,26 @@ CK_DEFINE_CUSTOM_FORMATTER(FCollisionProfileName, [&]()
     (
         TEXT("CollisionProfileName: [{}]"),
         InObj.Name
+    );
+});
+
+CK_DEFINE_CUSTOM_FORMATTER(FDataTableRowHandle, [&]()
+{
+    return ck::Format
+    (
+        TEXT("DataTable: [{}], RowName: [{}]"),
+        InObj.DataTable,
+        InObj.RowName
+    );
+});
+
+CK_DEFINE_CUSTOM_FORMATTER(FCurveTableRowHandle, [&]()
+{
+    return ck::Format
+    (
+        TEXT("CurveTable: [{}], RowName: [{}]"),
+        InObj.CurveTable,
+        InObj.RowName
     );
 });
 
