@@ -3812,7 +3812,10 @@ struct width_checker {
   template <typename T, FMT_ENABLE_IF(!is_integer<T>::value)>
   FMT_CONSTEXPR auto operator()(T) -> unsigned long long {
     throw_format_error("width is not integer");
-    return 0;
+//++CK
+    // supress MSVC warning-turned-error of unreachable code
+    // return 0;
+//--CK
   }
 };
 
@@ -3826,7 +3829,10 @@ struct precision_checker {
   template <typename T, FMT_ENABLE_IF(!is_integer<T>::value)>
   FMT_CONSTEXPR auto operator()(T) -> unsigned long long {
     throw_format_error("precision is not integer");
-    return 0;
+//++CK
+    // supress MSVC warning-turned-error of unreachable code
+    // return 0;
+//--CK
   }
 };
 
