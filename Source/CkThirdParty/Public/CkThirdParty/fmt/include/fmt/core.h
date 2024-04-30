@@ -712,7 +712,10 @@ template <typename Char> class basic_format_parse_context {
     if (next_arg_id_ < 0) {
       detail::throw_format_error(
           "cannot switch from manual to automatic argument indexing");
-      return 0;
+//++CK
+      // supress MSVC warning-turned-error of unreachable code
+      // return 0;
+//--CK
     }
     int id = next_arg_id_++;
     do_check_arg_id(id);
@@ -2226,7 +2229,10 @@ FMT_CONSTEXPR auto do_parse_arg_id(const Char* begin, const Char* end,
   }
   if (!is_name_start(c)) {
     throw_format_error("invalid format string");
-    return begin;
+//++CK
+    // supress MSVC warning-turned-error of unreachable code
+    // return begin;
+//-CK
   }
   auto it = begin;
   do {
@@ -2297,7 +2303,10 @@ FMT_CONSTEXPR auto parse_precision(const Char* begin, const Char* end,
   ++begin;
   if (begin == end || *begin == '}') {
     throw_format_error("invalid precision");
-    return begin;
+//++CK
+    // supress MSVC warning-turned-error of unreachable code
+    // return begin;
+//--CK
   }
   return parse_dynamic_spec(begin, end, value, ref, ctx);
 }
@@ -2464,11 +2473,17 @@ FMT_CONSTEXPR FMT_INLINE auto parse_format_specs(
       auto fill_end = begin + code_point_length(begin);
       if (end - fill_end <= 0) {
         throw_format_error("invalid format specifier");
-        return begin;
+//++CK
+        // supress MSVC warning-turned-error of unreachable code
+        // return begin;
+//--CK
       }
       if (*begin == '{') {
         throw_format_error("invalid fill character '{'");
-        return begin;
+//++CK
+        // supress MSVC warning-turned-error of unreachable code
+        // return begin;
+//--CK
       }
       auto align = parse_align(to_ascii(*fill_end));
       enter_state(state::align, align != align::none);
@@ -2497,7 +2512,10 @@ FMT_CONSTEXPR auto parse_replacement_field(const Char* begin, const Char* end,
   };
 
   ++begin;
-  if (begin == end) return handler.on_error("invalid format string"), end;
+//++CK
+  // supress MSVC warning-turned-error of unreachable code
+  // if (begin == end) return handler.on_error("invalid format string"), end;
+//--CK
   if (*begin == '}') {
     handler.on_replacement_field(handler.on_arg_id(), begin);
   } else if (*begin == '{') {
@@ -2510,10 +2528,16 @@ FMT_CONSTEXPR auto parse_replacement_field(const Char* begin, const Char* end,
       handler.on_replacement_field(adapter.arg_id, begin);
     } else if (c == ':') {
       begin = handler.on_format_specs(adapter.arg_id, begin + 1, end);
-      if (begin == end || *begin != '}')
-        return handler.on_error("unknown format specifier"), end;
+//++CK
+      // supress MSVC warning-turned-error of unreachable code
+      //if (begin == end || *begin != '}')
+      //  return handler.on_error("unknown format specifier"), end;
+//--CK
     } else {
-      return handler.on_error("missing '}' in format string"), end;
+//++CK
+      // supress MSVC warning-turned-error of unreachable code
+      // return handler.on_error("missing '}' in format string"), end;
+//--CK
     }
   }
   return begin + 1;
