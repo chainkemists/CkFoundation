@@ -469,6 +469,10 @@
 	],
 	"Plugins": [
 		{
+			"Name": "BlueprintNodeTemplate",
+			"Enabled": true
+		},
+		{
 			"Name": "CommonUI",
 			"Enabled": true
 		},
