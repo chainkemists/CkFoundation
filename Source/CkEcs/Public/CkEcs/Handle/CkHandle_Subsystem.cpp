@@ -20,7 +20,7 @@ auto
     { return {}; }
 
     if (ck::Is_NOT_Valid(GetTransientPackage()))
-    { return Cast<UCk_Handle_FragmentsDebug>(UCk_Handle_FragmentsDebug::StaticClass()); }
+    { return Cast<UCk_Handle_FragmentsDebug>(UCk_Handle_FragmentsDebug::StaticClass()->GetDefaultObject()); }
 
     if (const auto Found = _EntityToDebug.Find(InHandle.Get_Entity()))
     {
