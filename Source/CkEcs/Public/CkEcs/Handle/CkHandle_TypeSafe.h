@@ -58,7 +58,7 @@ static_assert
     CK_GENERATED_BODY(_ClassType_);                                                                                 \
     using FCk_Handle_TypeSafe::operator==;                                                                          \
     using FCk_Handle_TypeSafe::operator!=;                                                                          \
-    using FCk_Handle_TypeSafe::operator<;                                                                          \
+    using FCk_Handle_TypeSafe::operator<;                                                                           \
     _ClassType_() = default;                                                                                        \
     _ClassType_(ThisType&& InOther) noexcept : FCk_Handle_TypeSafe(MoveTemp(InOther)) { }                           \
     _ClassType_(const ThisType& InHandle) : FCk_Handle_TypeSafe(InHandle) { }                                       \
@@ -137,7 +137,7 @@ auto                                                                            
         const FCk_Handle& InAbilityEntity)                                                               \
     -> bool                                                                                              \
 {                                                                                                        \
-    return InAbilityEntity.Has_All<##__VA_ARGS__>();                                                     \
+    return InAbilityEntity.Has_All<EXPAND_ALL(__VA_ARGS__)>();                                           \
 }                                                                                                        \
                                                                                                          \
 auto                                                                                                     \
@@ -160,7 +160,7 @@ auto                                                                            
     }                                                                                                    \
                                                                                                          \
     OutResult = ECk_SucceededFailed::Succeeded;                                                          \
-    return ck::StaticCast<_HandleType_>(InHandle);                                                       \
+    return ck::StaticCast<EXPAND(_HandleType_)>(InHandle);                                               \
 }                                                                                                        \
                                                                                                          \
 auto                                                                                                     \
@@ -173,10 +173,10 @@ auto                                                                            
     { return {}; }                                                                                       \
                                                                                                          \
     CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have a [{}]. Unable to convert Handle."), \
-        InHandle, ck::Get_RuntimeTypeToString<_HandleType_>())                                           \
+        InHandle, ck::Get_RuntimeTypeToString<EXPAND(_HandleType_)>())                                   \
     { return {}; }                                                                                       \
                                                                                                          \
-    return ck::StaticCast<_HandleType_>(InHandle);                                                       \
+    return ck::StaticCast<EXPAND(_HandleType_)>(InHandle);                                               \
 }
 
 // --------------------------------------------------------------------------------------------------------------------
