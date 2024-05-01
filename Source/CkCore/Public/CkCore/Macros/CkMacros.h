@@ -14,6 +14,7 @@ namespace ck
 
 // Mainly used to work around MSVC preprocessor bug
 #define EXPAND( x ) x
+#define EXPAND_ALL(...) __VA_ARGS__
 
 // --------------------------------------------------------------------------------------------------------------------
 
