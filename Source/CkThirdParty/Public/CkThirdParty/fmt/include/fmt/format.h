@@ -3813,8 +3813,10 @@ struct width_checker {
   FMT_CONSTEXPR auto operator()(T) -> unsigned long long {
     throw_format_error("width is not integer");
 //++CK
-    // supress MSVC warning-turned-error of unreachable code
-    // return 0;
+#if FMT_EXCEPTIONS == 1
+    // suppress MSVC warning-turned-error of unreachable code
+    return 0;
+#endif
 //--CK
   }
 };
@@ -3830,8 +3832,10 @@ struct precision_checker {
   FMT_CONSTEXPR auto operator()(T) -> unsigned long long {
     throw_format_error("precision is not integer");
 //++CK
-    // supress MSVC warning-turned-error of unreachable code
-    // return 0;
+#if FMT_EXCEPTIONS == 1
+    // suppress MSVC warning-turned-error of unreachable code
+    return 0;
+#endif
 //--CK
   }
 };
