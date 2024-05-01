@@ -373,12 +373,18 @@ auto
 
     Comp->ComponentTags = InParams.Get_Tags();
 
-    auto* SceneComp  = Cast<USceneComponent>(Comp);
-
-    if (auto* ParentComp = InParams.Get_ParentComp().Get();
-        ck::IsValid(SceneComp) && ck::IsValid(ParentComp))
+    if constexpr (
+        std::is_base_of_v<USceneComponent, T_CompType> ||
+        std::is_same_v<UActorComponent, T_CompType> ||
+        std::is_same_v<UObject, T_CompType>)
     {
-        SceneComp->SetupAttachment(ParentComp, InParams.Get_Socket());
+        auto* SceneComp  = Cast<USceneComponent>(Comp);
+
+        if (auto* ParentComp = InParams.Get_ParentComp().Get();
+            ck::IsValid(SceneComp) && ck::IsValid(ParentComp))
+        {
+            SceneComp->SetupAttachment(ParentComp, InParams.Get_Socket());
+        }
     }
 
     if (InInitializerFunc)
