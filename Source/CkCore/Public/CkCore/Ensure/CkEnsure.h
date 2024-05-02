@@ -123,7 +123,7 @@ public:
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Trigger Ensure",
               Category = "Ck|Utils|Ensure",
-              meta     = (DefaultToSelf = "InContext", HidePin = "InContext"))
+              meta     = (DevelopmentOnly, DefaultToSelf = "InContext", HidePin = "InContext"))
     static void
     TriggerEnsure(
         FText InMsg,
