@@ -200,6 +200,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_StackOverflow_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_Ability_StackLimit_Policy : uint8
+{
+    HasStackLimit,
+    NoStackLimit
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_StackLimit_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // How to handle duration expiring on this Ability
 UENUM(BlueprintType)
 enum class ECk_Ability_StackExpiration_Policy : uint8
