@@ -71,6 +71,30 @@ namespace ck
             std::forward<decltype(ArgsForward(InArgs))>(ArgsForward(std::forward<TArgs>(InArgs)))...);
     }
 
+    template <typename TString, typename... TArgs>
+    auto
+    Format_ANSI(TString InStr, TArgs&&... InArgs)
+        -> std::basic_string<char>
+    {
+        using namespace ck_format_detail;
+
+        // Notes:
+        // - with C++20, fmt has support for compile time strings and verification of the formatting
+        // - we cannot directly pass a string literal to fmt::format with the C++20 interface
+        // - fmt::format takes a fmt::wformat_string which takes the same arg types as the args we are
+        //   attempting to format
+        // - we cannot pass the args directly because they have to go through our forwarded which resolves pointers
+        // - we feed the converted args to a manually constructed fmt::wformat_string, making sure the
+        //   arg types match the ones returned by ArgsForward
+        // - this results in a complex looking expression below, although most of it is forwarding and
+        //   figuring out the new return types
+
+        const auto& WideStr = ck_format_detail::DoFormat(
+            fmt::wformat_string<decltype(ArgsForward(InArgs))...>(fmt::runtime_format_string<TCHAR>{InStr}),
+            std::forward<decltype(ArgsForward(InArgs))>(ArgsForward(std::forward<TArgs>(InArgs)))...);
+        return std::basic_string<char>(WideStr.begin(), WideStr.end());
+    }
+
     template <typename T>
     auto
     Format_UE(const T& InString)
