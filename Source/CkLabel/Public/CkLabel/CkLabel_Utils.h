@@ -46,6 +46,13 @@ public:
     Get_Label(
         const FCk_Handle& InHandle);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Label",
+              DisplayName="[Ck][Label] Get Is Unnamed Label")
+    static bool
+    Get_IsUnnamedLabel(
+        const FCk_Handle& InHandle);
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Label",
