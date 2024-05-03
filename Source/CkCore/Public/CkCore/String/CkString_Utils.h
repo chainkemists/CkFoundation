@@ -52,6 +52,15 @@ public:
               meta = (CompactNodeTitle = "INVALID_Name"))
     static FName
     Get_InvalidName();
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|String",
+              DisplayName = "[Ck] Get Symbol N times")
+    static FString
+    Get_SymbolNTimes(
+        const FString& InSymbol,
+        int32 InCount);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
