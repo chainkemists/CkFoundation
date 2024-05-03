@@ -139,6 +139,58 @@ auto
     return Offset_WithWrap(InToDecrement, InOffset, InRange);
 }
 
+auto
+    UCk_Utils_Arithmetic_UE::
+    Get_IsNearlyEqual(
+        uint8 A,
+        uint8 B)
+    -> bool
+{
+    return A == B;
+}
+
+auto
+    UCk_Utils_Arithmetic_UE::
+    Get_IsNearlyEqual(
+        int32 A,
+        int32 B)
+    -> bool
+{
+    return A == B;
+}
+
+auto
+    UCk_Utils_Arithmetic_UE::
+    Get_IsNearlyEqual(
+        float A,
+        float B)
+    -> bool
+{
+    return FMath::IsNearlyEqual(A, B);
+}
+
+auto
+    UCk_Utils_Arithmetic_UE::
+    Get_IsNearlyEqual(
+        double A,
+        double B)
+    -> bool
+{
+    return FMath::IsNearlyEqual(A, B);
+}
+
+auto
+    UCk_Utils_Arithmetic_UE::
+    Get_IsNearlyEqual(
+        const FVector& A,
+        const FVector& B)
+    -> bool
+{
+    return Get_IsNearlyEqual(A.X, B.X) &&
+        Get_IsNearlyEqual(A.Y, B.Y) &&
+        Get_IsNearlyEqual(A.Z, B.Z);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
