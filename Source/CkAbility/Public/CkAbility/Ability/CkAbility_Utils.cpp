@@ -40,7 +40,10 @@ auto
     if (AbilityParams.Get_HasDisplayName())
     { return AbilityParams.Get_DisplayName(); }
 
-    return UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntity).GetTagName();
+    if (NOT UCk_Utils_GameplayLabel_UE::Get_IsUnnamedLabel(InAbilityEntity))
+    { return UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntity).GetTagName(); }
+
+    return UCk_Utils_Debug_UE::Get_DebugName(Get_ScriptClass(InAbilityEntity), ECk_DebugNameVerbosity_Policy::Compact);
 }
 
 auto
