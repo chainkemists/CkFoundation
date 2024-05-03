@@ -17,6 +17,8 @@ enum class ECk_Net_EntityNetRole : uint8
     Proxy
 };
 
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Net_EntityNetRole);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT()
