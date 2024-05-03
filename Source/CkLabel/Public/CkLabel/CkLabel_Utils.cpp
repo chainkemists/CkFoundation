@@ -100,6 +100,22 @@ auto
 
 auto
     UCk_Utils_GameplayLabel_UE::
+    Get_IsUnnamedLabel(
+        const FCk_Handle& InHandle)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have Gameplay Label"), InHandle)
+    { return false; }
+
+    const auto& Label = Get_Label(InHandle);
+    if (Label == ck_label::FGameplayLabel_Tags::Get_None())
+    { return true; }
+
+    return false;
+}
+
+auto
+    UCk_Utils_GameplayLabel_UE::
     DoGet_LabelOrNone(
         const FGameplayTag& InTag)
     -> FGameplayTag
