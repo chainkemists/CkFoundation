@@ -46,4 +46,21 @@ auto
     return NAME_None;
 }
 
+auto
+    UCk_Utils_String_UE::
+    Get_SymbolNTimes(
+        const FString& InSymbol,
+        int32 InCount)
+    -> FString
+{
+    auto SymbolNTimes = FString{};
+
+    while (InCount --> 0)
+    {
+        SymbolNTimes.Append(InSymbol);
+    }
+
+    return SymbolNTimes;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
