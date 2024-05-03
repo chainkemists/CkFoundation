@@ -99,6 +99,22 @@ public:
         int32 InToDecrement,
         int32 InOffset,
         const FCk_IntRange& InRange);
+
+public:
+    static auto
+    Get_IsNearlyEqual(uint8 A, uint8 B) -> bool;
+
+    static auto
+    Get_IsNearlyEqual(int32 A, int32 B) -> bool;
+
+    static auto
+    Get_IsNearlyEqual(float A, float B) -> bool;
+
+    static auto
+    Get_IsNearlyEqual(double A, double B) -> bool;
+
+    static auto
+    Get_IsNearlyEqual(const FVector& A, const FVector& B) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
