@@ -300,9 +300,9 @@ public:
 
     // NOTE: This is for development only. Use 'Request_SendEvent' to trigger Activation of Abilities
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              Category = "Ck|Utils|Ability|Owner",
               DisplayName="[Ck][AbilityOwner] Request Try Activate Ability",
-              meta = (AutoCreateRefTerm = "InDelegate", DevelopmentOnly))
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AbilityOwner
     Request_TryActivateAbility(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
