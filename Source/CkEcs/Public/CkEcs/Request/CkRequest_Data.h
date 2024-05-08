@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkHandle.h"
+#include "CkEcs/Handle/CkHandle.h"
 
 #include "CkCore/Macros/CkMacros.h"
 

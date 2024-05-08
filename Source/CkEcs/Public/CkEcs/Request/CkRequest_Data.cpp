@@ -1,6 +1,6 @@
 #include "CkRequest_Data.h"
 
-#include "CkEntityLifetime_Utils.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
