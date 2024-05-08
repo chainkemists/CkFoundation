@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkRequest_Data.h"
+
 #include "CkAbility/Ability/CkAbility_Fragment_Data.h"
 
 #include "CkCore/Format/CkFormat.h"
@@ -129,7 +131,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKABILITY_API FCk_Request_AbilityOwner_GiveAbility
+struct CKABILITY_API FCk_Request_AbilityOwner_GiveAbility : public FCk_Request_Base
 {
     GENERATED_BODY()
 
@@ -161,7 +163,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta= (HasNativeMake))
-struct CKABILITY_API FCk_Request_AbilityOwner_RevokeAbility
+struct CKABILITY_API FCk_Request_AbilityOwner_RevokeAbility : public FCk_Request_Base
 {
     GENERATED_BODY()
 
@@ -203,7 +205,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta= (HasNativeMake))
-struct CKABILITY_API FCk_Request_AbilityOwner_ActivateAbility
+struct CKABILITY_API FCk_Request_AbilityOwner_ActivateAbility : public FCk_Request_Base
 {
     GENERATED_BODY()
 
@@ -248,7 +250,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta= (HasNativeMake))
-struct CKABILITY_API FCk_Request_AbilityOwner_DeactivateAbility
+struct CKABILITY_API FCk_Request_AbilityOwner_DeactivateAbility : public FCk_Request_Base
 {
     GENERATED_BODY()
 
@@ -290,7 +292,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKABILITY_API FCk_Request_AbilityOwner_SendEvent
+struct CKABILITY_API FCk_Request_AbilityOwner_SendEvent : public FCk_Request_Base
 {
     GENERATED_BODY()
 

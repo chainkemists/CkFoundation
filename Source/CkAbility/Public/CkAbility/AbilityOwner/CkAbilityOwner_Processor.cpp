@@ -166,7 +166,8 @@ namespace ck
             const auto& OptionalPayload = InRequest.Get_OptionalPayload();
 
             const auto PostAbilityCreationFunc =
-            [InAbilityOwnerEntity, AbilityScriptClass, AbilityParams, OptionalPayload, AbilitySource, AbilityEntityConfig](FCk_Handle& InEntity) -> void
+            [InAbilityOwnerEntity, AbilityScriptClass, AbilityParams, OptionalPayload, AbilitySource, AbilityEntityConfig, InRequest]
+            (FCk_Handle& InEntity) -> void
             {
                 UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityEntityConfig->GetWorld())->Request_RemoveAbilityEntityConfig(AbilityEntityConfig);
 
@@ -211,6 +212,13 @@ namespace ck
 
                 UCk_Utils_Ability_UE::DoGive(AbilityOwnerEntity, AbilityEntity, AbilitySource, OptionalPayload);
 
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
+                        InRequest.GetAndDestroyRequestHandle(), MakePayload(AbilityOwnerEntity, AbilityEntity,
+                            ECk_AbilityOwner_AbilityGivenOrNot::Given));
+                }
+
                 UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
                     AbilityOwnerEntity, MakePayload(AbilityOwnerEntity, AbilityEntity, ECk_AbilityOwner_AbilityGivenOrNot::Given));
 
@@ -238,6 +246,13 @@ namespace ck
 
         if (AbilityGivenOrNot == ECk_AbilityOwner_AbilityGivenOrNot::NotGiven)
         {
+            if (InRequest.Get_IsRequestHandleValid())
+            {
+                UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
+                    InRequest.GetAndDestroyRequestHandle(), MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{},
+                        ECk_AbilityOwner_AbilityGivenOrNot::NotGiven));
+            }
+
             UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
                 InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{}, ECk_AbilityOwner_AbilityGivenOrNot::NotGiven));
         }
@@ -257,6 +272,13 @@ namespace ck
         {
             if (ck::Is_NOT_Valid(InAbilityEntity))
             {
+
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    UUtils_Signal_AbilityOwner_OnAbilityRevokedOrNot::Broadcast(
+                        InRequest.GetAndDestroyRequestHandle(), MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{}, ECk_AbilityOwner_AbilityRevokedOrNot::NotRevoked));
+                }
+
                 UUtils_Signal_AbilityOwner_OnAbilityRevokedOrNot::Broadcast(
                     InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{}, ECk_AbilityOwner_AbilityRevokedOrNot::NotRevoked));
 
@@ -284,6 +306,13 @@ namespace ck
             }
 
             UCk_Utils_Ability_UE::DoRevoke(InAbilityOwnerEntity, InAbilityEntity);
+
+            if (InRequest.Get_IsRequestHandleValid())
+            {
+                UUtils_Signal_AbilityOwner_OnAbilityRevokedOrNot::Broadcast(
+                    InRequest.GetAndDestroyRequestHandle(), MakePayload(InAbilityOwnerEntity, InAbilityEntity,
+                        ECk_AbilityOwner_AbilityRevokedOrNot::Revoked));
+            }
 
             UUtils_Signal_AbilityOwner_OnAbilityRevokedOrNot::Broadcast(
                 InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityEntity, ECk_AbilityOwner_AbilityRevokedOrNot::Revoked));
@@ -329,6 +358,13 @@ namespace ck
         {
             if (ck::Is_NOT_Valid(InAbilityToActivateEntity))
             {
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    UUtils_Signal_AbilityOwner_OnAbilityActivatedOrNot::Broadcast(
+                        InRequest.GetAndDestroyRequestHandle(), MakePayload(InAbilityOwnerEntity, InAbilityToActivateEntity,
+                            ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_AbilityNotFound));
+                }
+
                 UUtils_Signal_AbilityOwner_OnAbilityActivatedOrNot::Broadcast(
                     InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityToActivateEntity, ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_AbilityNotFound));
                 return;
@@ -342,6 +378,14 @@ namespace ck
                     InAbilityToActivateEntity,
                     InAbilityOwnerEntity
                 );
+
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    UUtils_Signal_AbilityOwner_OnAbilityActivatedOrNot::Broadcast(
+                        InRequest.GetAndDestroyRequestHandle(), MakePayload(InAbilityOwnerEntity, InAbilityToActivateEntity,
+                            ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks));
+                }
+
                 UUtils_Signal_AbilityOwner_OnAbilityActivatedOrNot::Broadcast(
                     InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityToActivateEntity, ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks));
                 return;
@@ -479,6 +523,12 @@ namespace ck
                 return ECk_AbilityOwner_AbilityActivatedOrNot::Activated;
             }();
 
+            if (InRequest.Get_IsRequestHandleValid())
+            {
+                UUtils_Signal_AbilityOwner_OnAbilityActivatedOrNot::Broadcast(
+                        InRequest.GetAndDestroyRequestHandle(), MakePayload(InAbilityOwnerEntity, InAbilityToActivateEntity, AbilityActivatedOrNot));
+            }
+
             UUtils_Signal_AbilityOwner_OnAbilityActivatedOrNot::Broadcast(
                     InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityToActivateEntity, AbilityActivatedOrNot));
 
@@ -563,6 +613,13 @@ namespace ck
         {
             if (ck::Is_NOT_Valid(InAbilityEntity))
             {
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    UUtils_Signal_AbilityOwner_OnAbilityDeactivatedOrNot::Broadcast(
+                        InRequest.GetAndDestroyRequestHandle(), MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{},
+                            ECk_AbilityOwner_AbilityDeactivatedOrNot::NotDeactivated_AbilityNotFound));
+                }
+
                 UUtils_Signal_AbilityOwner_OnAbilityDeactivatedOrNot::Broadcast(
                     InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{}, ECk_AbilityOwner_AbilityDeactivatedOrNot::NotDeactivated_AbilityNotFound));
 
@@ -571,8 +628,15 @@ namespace ck
 
             if (UCk_Utils_Ability_UE::Get_Status(InAbilityEntity) == ECk_Ability_Status::NotActive)
             {
+                if (InRequest.Get_IsRequestHandleValid())
+                {
+                    UUtils_Signal_AbilityOwner_OnAbilityDeactivatedOrNot::Broadcast(
+                        InRequest.GetAndDestroyRequestHandle(), MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{}, ECk_AbilityOwner_AbilityDeactivatedOrNot::NotDeactivated_FailedChecks));
+                }
+
                 UUtils_Signal_AbilityOwner_OnAbilityDeactivatedOrNot::Broadcast(
-                    InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{}, ECk_AbilityOwner_AbilityDeactivatedOrNot::NotDeactivated_FailedChecks));
+                    InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{},
+                        ECk_AbilityOwner_AbilityDeactivatedOrNot::NotDeactivated_FailedChecks));
 
                 return;
             }
@@ -597,6 +661,13 @@ namespace ck
             );
 
             UCk_Utils_Ability_UE::DoDeactivate(InAbilityOwnerEntity, InAbilityEntity);
+
+            if (InRequest.Get_IsRequestHandleValid())
+            {
+                UUtils_Signal_AbilityOwner_OnAbilityDeactivatedOrNot::Broadcast(
+                        InRequest.GetAndDestroyRequestHandle(), MakePayload(InAbilityOwnerEntity, InAbilityEntity,
+                            ECk_AbilityOwner_AbilityDeactivatedOrNot::Deactivated));
+            }
 
             UUtils_Signal_AbilityOwner_OnAbilityDeactivatedOrNot::Broadcast(
                     InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityEntity, ECk_AbilityOwner_AbilityDeactivatedOrNot::Deactivated));
