@@ -298,11 +298,10 @@ public:
         const FCk_Request_AbilityOwner_RevokeAbility& InRequest,
         const FCk_Delegate_AbilityOwner_OnAbilityRevokedOrNot& InDelegate);
 
-    // NOTE: This is for development only. Use 'Request_SendEvent' to trigger Activation of Abilities
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][AbilityOwner] Request Try Activate Ability",
-              meta = (AutoCreateRefTerm = "InDelegate", DevelopmentOnly))
+              meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AbilityOwner
     Request_TryActivateAbility(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
