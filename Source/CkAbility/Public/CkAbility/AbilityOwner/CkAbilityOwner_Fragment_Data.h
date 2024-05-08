@@ -1,13 +1,12 @@
 #pragma once
 
-#include "CkRequest_Data.h"
-
 #include "CkAbility/Ability/CkAbility_Fragment_Data.h"
 
 #include "CkCore/Format/CkFormat.h"
 
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Data.h"
 
 #include <InstancedStruct.h>
 
