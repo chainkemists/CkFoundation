@@ -15,6 +15,7 @@
 
 #if WITH_EDITOR
 #include <Editor.h>
+#include "Engine/Blueprint.h"
 #endif
 
 #include <UObject/ObjectSaveContext.h>
@@ -129,15 +130,18 @@ auto
             {
 #if WITH_EDITOR
                 const auto& Blueprint = Cast<UBlueprint>(ResolvedObject);
+                if (ck::Is_NOT_Valid(Blueprint))
+                { return {}; }
 
-                if (ck::IsValid(Blueprint))
-                { return Blueprint->GeneratedClass->GetDefaultObject(); }
+                if (const auto BlueprintGeneratedClass = Blueprint->GeneratedClass;
+                    ck::IsValid(BlueprintGeneratedClass))
+                { return BlueprintGeneratedClass->GetDefaultObject(); }
 #else
                 const auto BlueprintGeneratedClass = Cast<UBlueprintGeneratedClass>(InAssetData.GetAsset());
                 if (ck::IsValid(BlueprintGeneratedClass))
                 { return BlueprintGeneratedClass->GetDefaultObject(); }
 #endif
-                return nullptr;
+                return {};
             }();
 
             CK_LOG_ERROR_IF_NOT(ck::ability, ck::IsValid(ResolvedObjectDefaultClassObject),
