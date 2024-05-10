@@ -250,9 +250,9 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[Ck][AbilityOwner] Get Active Tags With Count")
+              DisplayName="[Ck][AbilityOwner] Get Specific Active Tag Count")
     static int32
-    Get_SpecificActiveTagsWithCount(
+    Get_SpecificActiveTagCount(
         const FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FGameplayTag& InTag);
 public:
