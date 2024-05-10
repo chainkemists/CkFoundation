@@ -84,7 +84,7 @@ namespace ck
             if (const auto EntityExtensionAsAbilityOwnerHandle = UCk_Utils_AbilityOwner_UE::Cast(InEntityExtension);
                 ck::IsValid(EntityExtensionAsAbilityOwnerHandle))
             {
-                Count += UCk_Utils_AbilityOwner_UE::Get_SpecificActiveTagsWithCount(EntityExtensionAsAbilityOwnerHandle, InTag);
+                Count += UCk_Utils_AbilityOwner_UE::Get_SpecificActiveTagCount(EntityExtensionAsAbilityOwnerHandle, InTag);
             }
         });
 

@@ -414,7 +414,7 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
-    Get_SpecificActiveTagsWithCount(
+    Get_SpecificActiveTagCount(
         const FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FGameplayTag&            InTag)
     -> int32
