@@ -104,12 +104,7 @@ auto
         const TFunction<void(FCk_Handle_Sfx)>& InFunc)
     -> void
 {
-    RecordOfSfx_Utils::ForEach_ValidEntry
-    (
-        InSfxOwnerEntity,
-        InFunc,
-        ECk_Record_ForEach_Policy::IgnoreRecordMissing
-    );
+    RecordOfSfx_Utils::ForEach_ValidEntry(InSfxOwnerEntity, InFunc);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

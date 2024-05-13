@@ -179,12 +179,7 @@ auto
         const TFunction<void(FCk_Handle_Timer)>& InFunc)
     -> void
 {
-    RecordOfTimers_Utils::ForEach_ValidEntry
-    (
-        InTimerOwnerEntity,
-        InFunc,
-        ECk_Record_ForEach_Policy::IgnoreRecordMissing
-    );
+    RecordOfTimers_Utils::ForEach_ValidEntry(InTimerOwnerEntity, InFunc);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

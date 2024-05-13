@@ -92,12 +92,7 @@ auto
         const TFunction<void(FCk_Handle_CameraShake)>& InFunc)
     -> void
 {
-    RecordOfCameraShakes_Utils::ForEach_ValidEntry
-    (
-        InCameraShakeOwnerEntity,
-        InFunc,
-        ECk_Record_ForEach_Policy::IgnoreRecordMissing
-    );
+    RecordOfCameraShakes_Utils::ForEach_ValidEntry(InCameraShakeOwnerEntity, InFunc);
 }
 
 auto
