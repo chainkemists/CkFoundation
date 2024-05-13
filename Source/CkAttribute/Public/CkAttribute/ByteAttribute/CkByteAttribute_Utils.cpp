@@ -145,12 +145,7 @@ auto
         const TFunction<void(FCk_Handle_ByteAttribute)>& InFunc)
     -> void
 {
-    RecordOfByteAttributes_Utils::ForEach_ValidEntry
-    (
-        InAttributeOwner,
-        InFunc,
-        ECk_Record_ForEach_Policy::IgnoreRecordMissing
-    );
+    RecordOfByteAttributes_Utils::ForEach_ValidEntry(InAttributeOwner, InFunc);
 }
 
 auto
@@ -198,13 +193,7 @@ auto
         const TFunction<bool(FCk_Handle_ByteAttribute)>& InPredicate)
     -> void
 {
-    RecordOfByteAttributes_Utils::ForEach_ValidEntry_If
-    (
-        InAttributeOwner,
-        InFunc,
-        InPredicate,
-        ECk_Record_ForEach_Policy::IgnoreRecordMissing
-    );
+    RecordOfByteAttributes_Utils::ForEach_ValidEntry_If(InAttributeOwner, InFunc, InPredicate);
 }
 
 auto
@@ -771,32 +760,17 @@ auto
     {
         case ECk_MinMaxCurrent::Current:
         {
-            RecordOfByteAttributeModifiers_Utils_Current::ForEach_ValidEntry
-            (
-                InAttribute,
-                InFunc,
-                ECk_Record_ForEach_Policy::IgnoreRecordMissing
-            );
+            RecordOfByteAttributeModifiers_Utils_Current::ForEach_ValidEntry(InAttribute, InFunc);
             break;
         }
         case ECk_MinMaxCurrent::Min:
         {
-            RecordOfByteAttributeModifiers_Utils_Min::ForEach_ValidEntry
-            (
-                InAttribute,
-                InFunc,
-                ECk_Record_ForEach_Policy::IgnoreRecordMissing
-            );
+            RecordOfByteAttributeModifiers_Utils_Min::ForEach_ValidEntry(InAttribute, InFunc);
             break;
         }
         case ECk_MinMaxCurrent::Max:
         {
-            RecordOfByteAttributeModifiers_Utils_Max::ForEach_ValidEntry
-            (
-                InAttribute,
-                InFunc,
-                ECk_Record_ForEach_Policy::IgnoreRecordMissing
-            );
+            RecordOfByteAttributeModifiers_Utils_Max::ForEach_ValidEntry(InAttribute, InFunc);
             break;
         }
     }
@@ -854,35 +828,17 @@ auto
     {
         case ECk_MinMaxCurrent::Current:
         {
-            RecordOfByteAttributeModifiers_Utils_Current::ForEach_ValidEntry_If
-            (
-                InAttribute,
-                InFunc,
-                InPredicate,
-                ECk_Record_ForEach_Policy::IgnoreRecordMissing
-            );
+            RecordOfByteAttributeModifiers_Utils_Current::ForEach_ValidEntry_If(InAttribute, InFunc, InPredicate);
             break;
         }
         case ECk_MinMaxCurrent::Min:
         {
-            RecordOfByteAttributeModifiers_Utils_Min::ForEach_ValidEntry_If
-            (
-                InAttribute,
-                InFunc,
-                InPredicate,
-                ECk_Record_ForEach_Policy::IgnoreRecordMissing
-            );
+            RecordOfByteAttributeModifiers_Utils_Min::ForEach_ValidEntry_If(InAttribute, InFunc, InPredicate);
             break;
         }
         case ECk_MinMaxCurrent::Max:
         {
-            RecordOfByteAttributeModifiers_Utils_Max::ForEach_ValidEntry_If
-            (
-                InAttribute,
-                InFunc,
-                InPredicate,
-                ECk_Record_ForEach_Policy::IgnoreRecordMissing
-            );
+            RecordOfByteAttributeModifiers_Utils_Max::ForEach_ValidEntry_If(InAttribute, InFunc, InPredicate);
             break;
         }
     }

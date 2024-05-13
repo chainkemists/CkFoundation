@@ -157,12 +157,7 @@ auto
         const TFunction<void(FCk_Handle_Targetable)>& InFunc)
     -> void
 {
-    RecordOfTargetables_Utils::ForEach_ValidEntry
-    (
-        InTargetableOwnerEntity,
-        InFunc,
-        ECk_Record_ForEach_Policy::IgnoreRecordMissing
-    );
+    RecordOfTargetables_Utils::ForEach_ValidEntry(InTargetableOwnerEntity, InFunc);
 }
 
 auto

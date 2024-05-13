@@ -116,12 +116,7 @@ auto
         const TFunction<void(FCk_Handle_Vfx)>& InFunc)
     -> void
 {
-    RecordOfVfx_Utils::ForEach_ValidEntry
-    (
-        InVfxOwnerEntity,
-        InFunc,
-        ECk_Record_ForEach_Policy::IgnoreRecordMissing
-    );
+    RecordOfVfx_Utils::ForEach_ValidEntry(InVfxOwnerEntity, InFunc);
 }
 
 auto

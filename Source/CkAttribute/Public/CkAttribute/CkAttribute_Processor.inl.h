@@ -163,8 +163,7 @@ namespace ck::detail
                 { return; }
 
                 TUtils_AttributeModifier<AttributeModifierFragmentType>::Request_ComputeResult(InAttributeModifier);
-            },
-            ECk_Record_ForEach_Policy::IgnoreRecordMissing
+            }
         );
 
         TUtils_Attribute<AttributeFragmentType>::Request_FireSignals(InHandle);

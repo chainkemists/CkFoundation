@@ -146,12 +146,7 @@ auto
         const TFunction<void(FCk_Handle_FloatAttribute)>& InFunc)
     -> void
 {
-    RecordOfFloatAttributes_Utils::ForEach_ValidEntry
-    (
-        InAttributeOwner,
-        InFunc,
-        ECk_Record_ForEach_Policy::IgnoreRecordMissing
-    );
+    RecordOfFloatAttributes_Utils::ForEach_ValidEntry(InAttributeOwner, InFunc);
 }
 
 auto
@@ -199,13 +194,7 @@ auto
         const TFunction<bool(FCk_Handle_FloatAttribute)>& InPredicate)
     -> void
 {
-    RecordOfFloatAttributes_Utils::ForEach_ValidEntry_If
-    (
-        InAttributeOwner,
-        InFunc,
-        InPredicate,
-        ECk_Record_ForEach_Policy::IgnoreRecordMissing
-    );
+    RecordOfFloatAttributes_Utils::ForEach_ValidEntry_If(InAttributeOwner, InFunc, InPredicate);
 }
 
 auto
@@ -772,32 +761,17 @@ auto
     {
         case ECk_MinMaxCurrent::Current:
         {
-            RecordOfFloatAttributeModifiers_Utils_Current::ForEach_ValidEntry
-            (
-                InAttribute,
-                InFunc,
-                ECk_Record_ForEach_Policy::IgnoreRecordMissing
-            );
+            RecordOfFloatAttributeModifiers_Utils_Current::ForEach_ValidEntry(InAttribute, InFunc);
             break;
         }
         case ECk_MinMaxCurrent::Min:
         {
-            RecordOfFloatAttributeModifiers_Utils_Min::ForEach_ValidEntry
-            (
-                InAttribute,
-                InFunc,
-                ECk_Record_ForEach_Policy::IgnoreRecordMissing
-            );
+            RecordOfFloatAttributeModifiers_Utils_Min::ForEach_ValidEntry(InAttribute, InFunc);
             break;
         }
         case ECk_MinMaxCurrent::Max:
         {
-            RecordOfFloatAttributeModifiers_Utils_Max::ForEach_ValidEntry
-            (
-                InAttribute,
-                InFunc,
-                ECk_Record_ForEach_Policy::IgnoreRecordMissing
-            );
+            RecordOfFloatAttributeModifiers_Utils_Max::ForEach_ValidEntry(InAttribute, InFunc);
             break;
         }
     }
@@ -855,35 +829,17 @@ auto
     {
         case ECk_MinMaxCurrent::Current:
         {
-            RecordOfFloatAttributeModifiers_Utils_Current::ForEach_ValidEntry_If
-            (
-                InAttribute,
-                InFunc,
-                InPredicate,
-                ECk_Record_ForEach_Policy::IgnoreRecordMissing
-            );
+            RecordOfFloatAttributeModifiers_Utils_Current::ForEach_ValidEntry_If(InAttribute, InFunc, InPredicate);
             break;
         }
         case ECk_MinMaxCurrent::Min:
         {
-            RecordOfFloatAttributeModifiers_Utils_Min::ForEach_ValidEntry_If
-            (
-                InAttribute,
-                InFunc,
-                InPredicate,
-                ECk_Record_ForEach_Policy::IgnoreRecordMissing
-            );
+            RecordOfFloatAttributeModifiers_Utils_Min::ForEach_ValidEntry_If(InAttribute, InFunc, InPredicate);
             break;
         }
         case ECk_MinMaxCurrent::Max:
         {
-            RecordOfFloatAttributeModifiers_Utils_Max::ForEach_ValidEntry_If
-            (
-                InAttribute,
-                InFunc,
-                InPredicate,
-                ECk_Record_ForEach_Policy::IgnoreRecordMissing
-            );
+            RecordOfFloatAttributeModifiers_Utils_Max::ForEach_ValidEntry_If(InAttribute, InFunc, InPredicate);
             break;
         }
     }

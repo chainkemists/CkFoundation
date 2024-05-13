@@ -33,8 +33,9 @@ public:
               DisplayName="[Ck][EntityExtension] Add Entity As Extension")
     static FCk_Handle_EntityExtension
     Add(
-        UPARAM(ref) FCk_Handle InExtensionOwner,
-        UPARAM(ref) FCk_Handle InEntityToAddAsExtension, ECk_Replication InReplicates = ECk_Replication::Replicates);
+        UPARAM(ref) FCk_Handle& InExtensionOwner,
+        UPARAM(ref) FCk_Handle& InEntityToAddAsExtension,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
 
 public:
     // Has Feature
@@ -75,12 +76,12 @@ public:
               meta=(AutoCreateRefTerm="InDelegate, InOptionalPayload"))
     static TArray<FCk_Handle_EntityExtension>
     ForEach_EntityExtension(
-        FCk_Handle InEntityExtensionOwner,
+        UPARAM(ref) FCk_Handle& InEntityExtensionOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_EntityExtension(
-        FCk_Handle InEntityExtensionOwner,
+        FCk_Handle& InEntityExtensionOwner,
         const TFunction<void(FCk_Handle_EntityExtension)>& InFunc) -> void;
 
 };

@@ -28,17 +28,6 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_FragmentQuery_Policy);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
-enum class ECk_Record_ForEach_Policy : uint8
-{
-    EnsureRecordExists,
-    IgnoreRecordMissing
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Record_ForEach_Policy);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UENUM(BlueprintType)
 enum class ECk_Record_ForEachIterationResult : uint8
 {
     Continue,
