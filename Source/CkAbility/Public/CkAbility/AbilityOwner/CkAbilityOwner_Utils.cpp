@@ -245,12 +245,7 @@ auto
         const TFunction<void(FCk_Handle_Ability)>& InFunc)
     -> void
 {
-    RecordOfAbilities_Utils::ForEach_ValidEntry
-    (
-        InAbilityOwnerEntity,
-        InFunc,
-        ECk_Record_ForEach_Policy::IgnoreRecordMissing
-    );
+    RecordOfAbilities_Utils::ForEach_ValidEntry(InAbilityOwnerEntity, InFunc);
 }
 
 auto
@@ -298,13 +293,7 @@ auto
         const TFunction<bool(FCk_Handle_Ability)>& InPredicate)
     -> void
 {
-    RecordOfAbilities_Utils::ForEach_ValidEntry_If
-    (
-        InAbilityOwnerEntity,
-        InFunc,
-        InPredicate,
-        ECk_Record_ForEach_Policy::IgnoreRecordMissing
-    );
+    RecordOfAbilities_Utils::ForEach_ValidEntry_If(InAbilityOwnerEntity, InFunc, InPredicate);
 }
 
 auto
@@ -503,7 +492,7 @@ auto
         const FCk_Delegate_AbilityOwner_OnAbilityRevokedOrNot& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
-    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityRevokedOrNot, 
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityRevokedOrNot,
         InRequest.PopulateRequestHandle(InAbilityOwnerHandle), InDelegate);
 
     Request_RevokeAbility(InAbilityOwnerHandle, InRequest, InDelegate);
@@ -535,7 +524,7 @@ auto
         const FCk_Delegate_AbilityOwner_OnAbilityActivatedOrNot& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
-    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityActivatedOrNot, 
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityActivatedOrNot,
         InRequest.PopulateRequestHandle(InAbilityOwnerHandle), InDelegate);
 
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
@@ -550,7 +539,7 @@ auto
         const FCk_Delegate_AbilityOwner_OnAbilityDeactivatedOrNot& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
-    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityDeactivatedOrNot, 
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityDeactivatedOrNot,
         InRequest.PopulateRequestHandle(InAbilityOwnerHandle), InDelegate);
 
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);

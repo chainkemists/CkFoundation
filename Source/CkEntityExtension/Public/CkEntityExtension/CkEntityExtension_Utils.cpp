@@ -8,8 +8,8 @@
 auto
     UCk_Utils_EntityExtension_UE::
     Add(
-        FCk_Handle      InExtensionOwner,
-        FCk_Handle      InEntityToAddAsExtension,
+        FCk_Handle& InExtensionOwner,
+        FCk_Handle& InEntityToAddAsExtension,
         ECk_Replication InReplicates)
     -> FCk_Handle_EntityExtension
 {
@@ -41,8 +41,8 @@ auto
 auto
     UCk_Utils_EntityExtension_UE::
     ForEach_EntityExtension(
-        FCk_Handle                 InEntityExtensionOwner,
-        const FInstancedStruct&    InOptionalPayload,
+        FCk_Handle& InEntityExtensionOwner,
+        const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
     -> TArray<FCk_Handle_EntityExtension>
 {
@@ -63,16 +63,11 @@ auto
 auto
     UCk_Utils_EntityExtension_UE::
     ForEach_EntityExtension(
-        FCk_Handle InEntityExtensionOwner,
+        FCk_Handle& InEntityExtensionOwner,
         const TFunction<void(FCk_Handle_EntityExtension)>& InFunc)
     -> void
 {
-    RecordOfEntityExtensions_Utils::ForEach_ValidEntry
-    (
-        InEntityExtensionOwner,
-        InFunc,
-        ECk_Record_ForEach_Policy::IgnoreRecordMissing
-    );
+    RecordOfEntityExtensions_Utils::ForEach_ValidEntry(InEntityExtensionOwner, InFunc);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

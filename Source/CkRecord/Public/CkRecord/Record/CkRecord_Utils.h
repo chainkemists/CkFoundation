@@ -117,31 +117,27 @@ namespace ck
         static auto
         ForEach_ValidEntry(
             FCk_Handle& InHandle,
-            T_Func InFunc,
-            ECk_Record_ForEach_Policy InPolicy = ECk_Record_ForEach_Policy::EnsureRecordExists) -> void;
+            T_Func InFunc) -> void;
 
         template <typename T_Func>
         static auto
         ForEach_ValidEntry(
             const FCk_Handle& InHandle,
-            T_Func InFunc,
-            ECk_Record_ForEach_Policy InPolicy = ECk_Record_ForEach_Policy::EnsureRecordExists) -> void;
+            T_Func InFunc) -> void;
 
         template <typename T_Unary, typename T_Predicate>
         static auto
         ForEach_ValidEntry_If(
             FCk_Handle& InRecordHandle,
             T_Unary InFunc,
-            T_Predicate InPredicate,
-            ECk_Record_ForEach_Policy InPolicy = ECk_Record_ForEach_Policy::EnsureRecordExists) -> void;
+            T_Predicate InPredicate) -> void;
 
         template <typename T_Unary, typename T_Predicate>
         static auto
         ForEach_ValidEntry_If(
             const FCk_Handle& InRecordHandle,
             T_Unary InFunc,
-            T_Predicate InPredicate,
-            ECk_Record_ForEach_Policy InPolicy = ECk_Record_ForEach_Policy::EnsureRecordExists) -> void;
+            T_Predicate InPredicate) -> void;
 
     protected:
         template <typename T_ValidationPolicy, typename T_Func>
@@ -438,8 +434,7 @@ namespace ck
         TUtils_RecordOfEntities<T_DerivedRecord>::
         ForEach_ValidEntry(
             FCk_Handle& InHandle,
-            T_Func InFunc,
-            ECk_Record_ForEach_Policy InPolicy)
+            T_Func InFunc)
         -> void
     {
         DoForEach_Entry<IsValid_Policy_Default>(InHandle, InFunc);
@@ -457,8 +452,7 @@ namespace ck
         TUtils_RecordOfEntities<T_DerivedRecord>::
         ForEach_ValidEntry(
             const FCk_Handle& InHandle,
-            T_Func InFunc,
-            ECk_Record_ForEach_Policy InPolicy)
+            T_Func InFunc)
         -> void
     {
         DoForEach_Entry<IsValid_Policy_Default>(InHandle, InFunc);
@@ -477,8 +471,7 @@ namespace ck
         ForEach_ValidEntry_If(
             FCk_Handle& InRecordHandle,
             T_Unary InFunc,
-            T_Predicate InPredicate,
-            ECk_Record_ForEach_Policy InPolicy)
+            T_Predicate InPredicate)
         -> void
     {
         DoForEach_Entry_If<IsValid_Policy_Default>(InRecordHandle, InFunc, InPredicate);
@@ -497,8 +490,7 @@ namespace ck
         ForEach_ValidEntry_If(
             const FCk_Handle& InRecordHandle,
             T_Unary InFunc,
-            T_Predicate InPredicate,
-            ECk_Record_ForEach_Policy InPolicy)
+            T_Predicate InPredicate)
         -> void
     {
         DoForEach_Entry_If<IsValid_Policy_Default>(InRecordHandle, InFunc, InPredicate);
