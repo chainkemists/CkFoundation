@@ -370,11 +370,15 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MagnitudeCalculation == ECk_Ability_Modifier_MagnitudeCalculation_Policy::DiscreteValue"))
-    float _DiscreteValueMagnitude;
+    float _DiscreteValueMagnitude = 0.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MagnitudeCalculation == ECk_Ability_Modifier_MagnitudeCalculation_Policy::SetByCaller", Categories = "FloatAttribute"))
     FGameplayTag _SetByCallerMagnitude_DataTag;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+          meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MagnitudeCalculation == ECk_Ability_Modifier_MagnitudeCalculation_Policy::SetByCaller"))
+    float _SetByCallerMagnitude_DefaultValue = 0.f;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
