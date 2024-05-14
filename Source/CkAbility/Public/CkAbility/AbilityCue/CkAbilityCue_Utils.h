@@ -27,7 +27,7 @@ public:
         const FCk_Request_AbilityCue_Spawn& InRequest);
 
     UFUNCTION(BlueprintCallable,
-        BlueprintAuthorityOnly,
+        BlueprintCosmetic,
         Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
         DisplayName="[Ck][AbilityCue] Request Spawn (Local)")
     static void
