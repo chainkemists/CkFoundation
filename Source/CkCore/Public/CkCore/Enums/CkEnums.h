@@ -268,6 +268,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Logic_And_Or);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_Condition_Result : uint8
+{
+    Pass,
+    Fail
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Condition_Result);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_EnableDisable : uint8
 {
     Enable,
