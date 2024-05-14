@@ -167,6 +167,7 @@ private:
         FGameplayTag InAbilityCooldownTag);
 
     UFUNCTION(BlueprintCallable,
+              BlueprintAuthorityOnly,
               Category = "Ck|Ability|Script",
               DisplayName = "[Ck][AbilityScript] Request Spawn Ability Cue",
               meta = (CompactNodeTitle="SpawnCue", HideSelfPin = true))
@@ -176,6 +177,7 @@ private:
         FGameplayTag InAbilityCueName);
 
     UFUNCTION(BlueprintCallable,
+              BlueprintCosmetic,
               Category = "Ck|Ability|Script",
               DisplayName = "[Ck][AbilityScript] Request Spawn Ability Cue (Local)",
               meta = (CompactNodeTitle="SpawnLocalCue", HideSelfPin = true))
@@ -191,7 +193,7 @@ public:
               meta = (CompactNodeTitle="TaskToDeactivate_OnRevoke", HideSelfPin = true))
     void
     DoRequest_AddTaskToDeactivateOnRevoke(
-        UBlueprintTaskTemplate* InTask);
+        class UBlueprintTaskTemplate* InTask);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
@@ -199,7 +201,7 @@ public:
               meta = (CompactNodeTitle="TaskToDeactivate_OnDeactivate", HideSelfPin = true))
     void
     DoRequest_AddTaskToDeactivateOnDeactivate(
-        UBlueprintTaskTemplate* InTask);
+        class UBlueprintTaskTemplate* InTask);
 
 private:
     UFUNCTION(BlueprintCallable,
