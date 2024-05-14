@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkEcs/Tag/CkTag.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Params.h"
 #include "CkEcs/Handle/CkHandle.h"
 
