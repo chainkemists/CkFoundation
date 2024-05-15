@@ -407,6 +407,11 @@ public:
     static auto
     Request_TagsUpdated(
         FCk_Handle_AbilityOwner& InAbilityOwner) -> void;
+
+    static auto
+    Request_GiveReplicatedAbility(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Request_AbilityOwner_GiveReplicatedAbility& InRequest) -> FCk_Handle_AbilityOwner;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

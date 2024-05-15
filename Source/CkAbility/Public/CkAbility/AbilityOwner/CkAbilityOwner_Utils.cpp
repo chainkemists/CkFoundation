@@ -672,4 +672,19 @@ auto
     InAbilityOwner.AddOrGet<ck::FTag_AbilityOwner_TagsUpdated>();
 }
 
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Request_GiveReplicatedAbility(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Request_AbilityOwner_GiveReplicatedAbility& InRequest)
+    -> FCk_Handle_AbilityOwner
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_AbilityScriptClass()),
+        TEXT("Unable to process GiveAbility on Handle [{}] as the AbilityScriptClass is INVALID."), InAbilityOwnerHandle)
+    { return {}; }
+
+    InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
+    return InAbilityOwnerHandle;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
