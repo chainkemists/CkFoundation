@@ -1,5 +1,8 @@
 #include "CkAbilityOwner_Processor.h"
 
+#include "CkEntityReplicationDriver_Utils.h"
+#include "CkObject_Utils.h"
+
 #include "CkAbility/CkAbility_Log.h"
 #include "CkAbility/Ability/CkAbility_Script.h"
 #include "CkAbility/Ability/CkAbility_Utils.h"
@@ -49,7 +52,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
-            const FFragment_AbilityOwner_Events&  InAbilityOwnerEvents) const
+            const FFragment_AbilityOwner_Events&  InAbilityOwnerEvents)
         -> void
     {
         UUtils_Signal_AbilityOwner_Events::Broadcast(InHandle, MakePayload(InHandle, InAbilityOwnerEvents.Get_Events()));
@@ -235,11 +238,175 @@ namespace ck
 
             UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityEntityConfig->GetWorld())->Request_TrackAbilityEntityConfig(AbilityEntityConfig);
 
-            UCk_Utils_EntityBridge_UE::Request_Spawn(InAbilityOwnerEntity,
-                FCk_Request_EntityBridge_SpawnEntity{AbilityEntityConfig}
-                .Set_PostSpawnFunc(PostAbilityCreationFunc),
-                {},
-                {});
+            if (AbilityData.Get_NetworkSettings().Get_FeatureReplicationPolicy() == ECk_Ability_FeatureReplication_Policy::ReplicateAbilityFeatures)
+            {
+                if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAbilityOwnerEntity))
+                {
+                    auto AbilityEntity = UCk_Utils_EntityReplicationDriver_UE::Request_TryReplicateAbility(InAbilityOwnerEntity,
+                        AbilityConstructionScript, AbilityScriptClass, AbilitySource);
+                    PostAbilityCreationFunc(AbilityEntity);
+                }
+                else
+                {
+                    return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven;
+                }
+            }
+            else
+            {
+                UCk_Utils_EntityBridge_UE::Request_Spawn(InAbilityOwnerEntity,
+                    FCk_Request_EntityBridge_SpawnEntity{AbilityEntityConfig}
+                    .Set_PostSpawnFunc(PostAbilityCreationFunc),
+                    {},
+                    {});
+            }
+
+            return ECk_AbilityOwner_AbilityGivenOrNot::Given;
+        }();
+
+        if (AbilityGivenOrNot == ECk_AbilityOwner_AbilityGivenOrNot::NotGiven)
+        {
+            UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
+                InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{}, ECk_AbilityOwner_AbilityGivenOrNot::NotGiven));
+        }
+    }
+
+    auto
+        FProcessor_AbilityOwner_HandleRequests::
+        DoHandleRequest(
+            HandleType& InAbilityOwnerEntity,
+            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            const FCk_Request_AbilityOwner_GiveReplicatedAbility& InRequest) const
+        -> void
+    {
+        const auto AbilityGivenOrNot = [&]() -> ECk_AbilityOwner_AbilityGivenOrNot
+        {
+            const auto& AbilityScriptClass = InRequest.Get_AbilityScriptClass();
+            CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptClass),
+                TEXT("Cannot GIVE Ability to Ability Owner [{}] because it has an INVALID Ability Script Class"),
+                InAbilityOwnerEntity)
+            { return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven; }
+
+            const auto& AbilityEntityConfig = UCk_Utils_Ability_UE::DoCreate_AbilityEntityConfig(
+                UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAbilityOwnerEntity), AbilityScriptClass);
+
+            CK_ENSURE_IF_NOT(ck::IsValid(AbilityEntityConfig),
+                TEXT("Cannot GIVE Ability to Ability Owner [{}] because the created Ability Entity Config for [{}] is INVALID"),
+                InAbilityOwnerEntity,
+                AbilityScriptClass)
+            { return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven; }
+
+            const auto& AbilityConstructionScript = Cast<UCk_Ability_ConstructionScript_PDA>(AbilityEntityConfig->Get_EntityConstructionScript());
+            CK_ENSURE_IF_NOT(ck::IsValid(AbilityConstructionScript),
+                TEXT("Cannot GIVE Ability to Ability Owner [{}] because it has an INVALID Construction Script"),
+                InAbilityOwnerEntity)
+            { return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven; }
+
+            const auto& AbilityParams = AbilityConstructionScript->Get_AbilityParams();
+            CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptClass),
+                TEXT("Cannot GIVE Ability to Ability Owner [{}] using Construction Script [{}] because the ScriptClass [{}] is INVALID"),
+                InAbilityOwnerEntity,
+                AbilityConstructionScript,
+                AbilityScriptClass)
+            { return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven; }
+
+            const auto& AbilityData = AbilityParams.Get_Data();
+
+            if (const auto& ReplicationType = AbilityData.Get_NetworkSettings().Get_ReplicationType();
+                NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InAbilityOwnerEntity, ReplicationType))
+            {
+                ability::Verbose
+                (
+                    TEXT("Skipping Giving Ability [{}] with Script [{}] because ReplicationType [{}] does not match for Entity [{}]"),
+                    AbilityEntityConfig,
+                    AbilityScriptClass,
+                    ReplicationType,
+                    InAbilityOwnerEntity
+                );
+
+                return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven;
+            }
+
+            const auto& AbilitySource = InRequest.Get_AbilitySource();
+
+            if (NOT UCk_Utils_Ability_UE::DoGet_CanBeGiven(AbilityScriptClass, InAbilityOwnerEntity, AbilitySource))
+            {
+                ability::Verbose
+                (
+                    TEXT("Skipping Giving Ability [{}] with Script [{}] because CanBeGiven returned false"),
+                    AbilityEntityConfig,
+                    AbilityScriptClass,
+                    InAbilityOwnerEntity
+                );
+
+                UCk_Utils_Ability_UE::DoOnNotGiven(AbilityScriptClass, InAbilityOwnerEntity, AbilitySource);
+                return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven;
+            }
+
+            const auto PostAbilityCreationFunc =
+            [InAbilityOwnerEntity, AbilityScriptClass, AbilityParams, AbilitySource, AbilityEntityConfig](FCk_Handle& InEntity) -> void
+            {
+                UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityEntityConfig->GetWorld())->Request_RemoveAbilityEntityConfig(AbilityEntityConfig);
+
+                // TODO: Since the construction of the Ability entity is deferred, if multiple Give requests of the same
+                // script class are processed in the same frame, it is possible for the CanBeGiven to NOT return the correct value
+                // This check here is a temporary (and potentially expensive) workaround, but we should handle this case better
+                if (NOT UCk_Utils_Ability_UE::DoGet_CanBeGiven(AbilityScriptClass, InAbilityOwnerEntity, AbilitySource))
+                {
+                    UCk_Utils_Ability_UE::DoOnNotGiven(AbilityScriptClass, InAbilityOwnerEntity, AbilitySource);
+                    UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InEntity);
+                    return;
+                }
+
+                auto AbilityEntity = UCk_Utils_Ability_UE::CastChecked(InEntity);
+                auto AbilityOwnerEntity = InAbilityOwnerEntity;
+
+                ability::VeryVerbose
+                (
+                    TEXT("Giving Ability [Class: {} | Entity: {}] to Ability Owner [{}]"),
+                    AbilityScriptClass,
+                    AbilityEntity,
+                    AbilityOwnerEntity
+                );
+
+                UCk_Utils_Handle_UE::Set_DebugName(AbilityEntity,
+                    UCk_Utils_Debug_UE::Get_DebugName(AbilityParams.Get_AbilityScriptClass(), ECk_DebugNameVerbosity_Policy::Compact));
+
+                {
+                    const auto& AbilityOnGiveSettings = UCk_Utils_Ability_UE::Get_OnGiveSettings(AbilityEntity);
+                    const auto& GrantedTags = AbilityOnGiveSettings.Get_OnGiveSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
+
+                    // HACK: need a non-const handle as we're unable to make the lambda mutable
+                    auto NonConstAbilityOwnerEntity = InAbilityOwnerEntity;
+                    auto& AbilityOwnerComp = NonConstAbilityOwnerEntity.Get<FFragment_AbilityOwner_Current>();
+                    AbilityOwnerComp.AppendTags(InAbilityOwnerEntity, GrantedTags);
+
+                    if (AbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags())
+                    {
+                        UCk_Utils_AbilityOwner_UE::Request_TagsUpdated(NonConstAbilityOwnerEntity);
+                    }
+                }
+
+                UCk_Utils_Ability_UE::DoGive(AbilityOwnerEntity, AbilityEntity, AbilitySource, {});
+
+                UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
+                    AbilityOwnerEntity, MakePayload(AbilityOwnerEntity, AbilityEntity, ECk_AbilityOwner_AbilityGivenOrNot::Given));
+
+                if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(AbilityEntity).Get_ActivationPolicy();
+                    ActivationPolicy == ECk_Ability_Activation_Policy::ActivateOnGranted)
+                {
+                    UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(
+                        AbilityOwnerEntity,
+                        FCk_Request_AbilityOwner_ActivateAbility{AbilityEntity}
+                        .Set_OptionalPayload(FCk_Ability_Payload_OnActivate{}.Set_ContextEntity(AbilityOwnerEntity)),
+                        {});
+                }
+            };
+
+            UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityEntityConfig->GetWorld())->Request_TrackAbilityEntityConfig(AbilityEntityConfig);
+
+            auto ReplicatedAbilityEntity = InRequest.Get_ReplicatedEntityToUse();
+            AbilityConstructionScript->Construct(ReplicatedAbilityEntity, {});
+            PostAbilityCreationFunc(ReplicatedAbilityEntity);
 
             return ECk_AbilityOwner_AbilityGivenOrNot::Given;
         }();

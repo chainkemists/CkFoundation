@@ -47,10 +47,10 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto ForEachEntity(
+        static auto ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
-            const FFragment_AbilityOwner_Events&  InAbilityOwnerEvents) const -> void;
+            const FFragment_AbilityOwner_Events&  InAbilityOwnerEvents) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -82,6 +82,12 @@ namespace ck
             HandleType& InAbilityOwnerEntity,
             FFragment_AbilityOwner_Current& InAbilityOwnerComp,
             const FCk_Request_AbilityOwner_GiveAbility& InRequest) const -> void;
+
+        auto
+        DoHandleRequest(
+            HandleType& InAbilityOwnerEntity,
+            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            const FCk_Request_AbilityOwner_GiveReplicatedAbility& InRequest) const -> void;
 
         auto
         DoHandleRequest(
