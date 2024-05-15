@@ -123,6 +123,9 @@ private:
     UPROPERTY(Transient)
     TArray<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>> _PendingChildEntityConstructions;
 
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>> _PendingChildAbilityEntityConstructions;
+
 private:
     auto
     DoAdd_SyncedDependentReplicationDriver() -> void;
