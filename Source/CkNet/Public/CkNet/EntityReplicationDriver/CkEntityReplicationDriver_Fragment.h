@@ -90,6 +90,10 @@ private:
 
     UFUNCTION()
     void
+    OnRep_ReplicationData_Ability();
+
+    UFUNCTION()
+    void
     OnRep_ReplicationData_ReplicatedActor();
 
     UFUNCTION()
@@ -103,6 +107,9 @@ private:
 private:
     UPROPERTY(ReplicatedUsing = OnRep_ReplicationData)
     FCk_EntityReplicationDriver_ReplicationData _ReplicationData;
+
+    UPROPERTY(ReplicatedUsing = OnRep_ReplicationData_Ability)
+    FCk_EntityReplicationDriver_AbiliyData _ReplicationData_Ability;
 
     UPROPERTY(ReplicatedUsing = OnRep_ReplicationData_ReplicatedActor)
     FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor _ReplicationData_ReplicatedActor;
@@ -127,6 +134,7 @@ private:
 public:
     // TODO: reduce the exposure of this variable
     CK_PROPERTY(_ReplicationData);
+    CK_PROPERTY(_ReplicationData_Ability);
     CK_PROPERTY(_ReplicationData_ReplicatedActor);
     CK_PROPERTY(_ReplicationData_NonReplicatedActor);
     CK_PROPERTY(_ExpectedNumberOfDependentReplicationDrivers);

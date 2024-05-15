@@ -1,5 +1,7 @@
 #include "CkEntityReplicationDriver_Fragment.h"
 
+#include "CkObject_Utils.h"
+
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Payload/CkPayload.h"
 
@@ -40,6 +42,7 @@ auto
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
     DOREPLIFETIME(ThisType, _ReplicationData);
+    DOREPLIFETIME(ThisType, _ReplicationData_Ability);
     DOREPLIFETIME(ThisType, _ReplicationData_ReplicatedActor);
     DOREPLIFETIME(ThisType, _ReplicationData_NonReplicatedActor);
     DOREPLIFETIME(ThisType, _ExpectedNumberOfDependentReplicationDrivers);
@@ -76,6 +79,11 @@ auto
     { return; }
 
     // --------------------------------------------------------------------------------------------------------------------
+
+    CK_ENSURE_IF_NOT(ck::IsValid(_ReplicationData.Get_OwningEntityDriver()),
+        TEXT("OwningEntityDriver is NOT valid. Somehow the ReplicationDriver was NOT added to the OwningEntity but WAS "
+            "added to the child Entity.{}"), ck::Context(this))
+    { return; }
 
     const auto OwningEntity = _ReplicationData.Get_OwningEntityDriver()->Get_AssociatedEntity();
 
@@ -124,6 +132,64 @@ auto
     // --------------------------------------------------------------------------------------------------------------------
 
     _ReplicationData.Get_OwningEntityDriver()->DoAdd_SyncedDependentReplicationDriver();
+}
+
+auto
+    UCk_Fragment_EntityReplicationDriver_Rep::
+    OnRep_ReplicationData_Ability()
+    -> void
+{
+    if (ck::IsValid(Get_AssociatedEntity()))
+    { return; }
+
+    // wait for the data to be fully replicated
+    if (ck::Is_NOT_Valid(_ReplicationData_Ability.Get_AbilityScriptClass()))
+    { return; }
+
+    if ([[maybe_unused]] const auto ShouldSkipIfAllObjectsAreNotYetResolved =
+        AnyOf(_ReplicationData_Ability.Get_ReplicatedObjectsData().Get_Objects(), ck::algo::Is_NOT_Valid{}))
+    { return; }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    const auto OwningEntity = _ReplicationData_Ability.Get_OwningEntityDriver()->Get_AssociatedEntity();
+
+    // wait on the owning entity to fully replicate
+    if (ck::Is_NOT_Valid(OwningEntity))
+    {
+        _ReplicationData_Ability.Get_OwningEntityDriver()->_PendingChildEntityConstructions.Emplace(this);
+        return;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    const auto NewOrExistingEntity = [&]()
+    {
+        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OwningEntity);
+
+        UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings
+            {
+                ECk_Replication::Replicates,
+                ECk_Net_NetModeType::Client,
+                ECk_Net_EntityNetRole::Proxy
+            });
+
+        NewEntity._ReplicationDriver = this;
+        NewEntity.Add<TWeakObjectPtr<UCk_Ecs_ReplicatedObject_UE>>(this);
+
+        // For Abilities, we have to pass the information for construction to the Ability Processor. This will be removed once
+        // the processor has had the chance to construct the Entity correctly
+        NewEntity.Add<FCk_EntityReplicationDriver_AbiliyData>(_ReplicationData_Ability);
+
+        UCk_Utils_ReplicatedObjects_UE::Add(NewEntity, FCk_ReplicatedObjects{}.
+            Set_ReplicatedObjects(_ReplicationData_Ability.Get_ReplicatedObjectsData().Get_Objects()));
+
+        return NewEntity;
+    }();
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    _ReplicationData_Ability.Get_OwningEntityDriver()->DoAdd_SyncedDependentReplicationDriver();
 }
 
 auto
