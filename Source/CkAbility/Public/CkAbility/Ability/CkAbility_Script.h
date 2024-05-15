@@ -190,15 +190,15 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
               DisplayName = "[Ck][AbilityScript] Add Task To Deactivate On Ability Revoke",
-              meta = (CompactNodeTitle="TaskToDeactivate_OnRevoke", HideSelfPin = true))
+              meta = (CompactNodeTitle="TaskToDeactivate_OnRevoke", HideSelfPin = true, Keywords = "Register, Track"))
     void
     DoRequest_AddTaskToDeactivateOnRevoke(
         class UBlueprintTaskTemplate* InTask);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",
-              DisplayName = "[Ck][AbilityScript] Request Add Task To Deactivate On Ability Deactivate",
-              meta = (CompactNodeTitle="TaskToDeactivate_OnDeactivate", HideSelfPin = true))
+              DisplayName = "[Ck][AbilityScript] Add Task To Deactivate On Ability Deactivate",
+              meta = (CompactNodeTitle="TaskToDeactivate_OnDeactivate", HideSelfPin = true, Keywords = "Register, Track"))
     void
     DoRequest_AddTaskToDeactivateOnDeactivate(
         class UBlueprintTaskTemplate* InTask);
