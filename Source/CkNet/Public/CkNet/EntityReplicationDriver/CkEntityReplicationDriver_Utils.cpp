@@ -47,7 +47,7 @@ auto
 auto
     UCk_Utils_EntityReplicationDriver_UE::
     Request_BuildAndReplicate(
-        FCk_Handle                                          InHandle,
+        FCk_Handle InHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo)
     -> FCk_Handle
 {
@@ -96,12 +96,13 @@ auto
             const auto& RepDriver = NewEntity.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
             const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(NewEntity);
 
-            RepDriver->Set_ReplicationData_Ability(FCk_EntityReplicationDriver_AbiliyData
-                {
-                    InAbilityScriptClass,
-                    InAbilitySource,
-                    FCk_EntityReplicationDriver_ReplicateObjects_Data{ReplicatedObjects.Get_ReplicatedObjects()}
-                }.Set_OwningEntityDriver(InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>()));
+            RepDriver->Set_ReplicationData_Ability(FCk_EntityReplicationDriver_AbilityData
+            {
+                InAbilityScriptClass,
+                InAbilitySource,
+                FCk_EntityReplicationDriver_ReplicateObjects_Data{ReplicatedObjects.Get_ReplicatedObjects()}
+            }.Set_OwningEntityDriver(InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>()));
+
             ck::UUtils_Signal_OnReplicationComplete::Broadcast(NewEntity, ck::MakePayload(NewEntity));
             ck::UUtils_Signal_OnDependentsReplicationComplete::Broadcast(NewEntity, ck::MakePayload(NewEntity));
 
@@ -119,9 +120,9 @@ auto
 auto
     UCk_Utils_EntityReplicationDriver_UE::
     Request_TryBuildAndReplicate(
-        FCk_Handle                                          InHandle,
+        FCk_Handle InHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo,
-        const std::function<void(FCk_Handle)>&              InFunc_OnCreateEntityBeforeBuild)
+        const std::function<void(FCk_Handle)>& InFunc_OnCreateEntityBeforeBuild)
     -> FCk_Handle
 {
     if (UCk_Utils_Net_UE::Get_EntityReplication(InHandle) == ECk_Replication::DoesNotReplicate)
@@ -264,7 +265,7 @@ auto
 auto
     UCk_Utils_EntityReplicationDriver_UE::
     Promise_OnReplicationComplete(
-        FCk_Handle                                                        InEntity,
+        FCk_Handle InEntity,
         const FCk_Delegate_EntityReplicationDriver_OnReplicationComplete& InDelegate)
     -> void
 {
@@ -280,7 +281,7 @@ auto
 auto
     UCk_Utils_EntityReplicationDriver_UE::
     Promise_OnReplicationCompleteAllDependents(
-        FCk_Handle                                                        InEntity,
+        FCk_Handle InEntity,
         const FCk_Delegate_EntityReplicationDriver_OnReplicationComplete& InDelegate)
     -> void
 {
@@ -320,7 +321,7 @@ auto
     UCk_Utils_EntityReplicationDriver_UE::
     Break_HandleReplicator(
         const FCk_HandleReplicator& InHandleReplicator,
-        FCk_Handle&                 OutHandle)
+        FCk_Handle& OutHandle)
     -> void
 {
     OutHandle = InHandleReplicator.Get_Handle();

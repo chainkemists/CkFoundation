@@ -20,31 +20,32 @@ public:
 public:
     static auto
     Add(
-        UPARAM(ref) FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_ReplicatedObjects& InReplicatedObjects) -> void;
 
     static auto
     Has(
-        FCk_Handle InHandle) -> bool;
+        const FCk_Handle& InHandle) -> bool;
 
     static auto
     Ensure(
-        FCk_Handle InHandle) -> bool;
+        const FCk_Handle& InHandle) -> bool;
 
 public:
     // TODO: see if InReplicatedObject can be `const` and then in Add(...) we const-cast because 'ideally'
     // TODO: the replicated objects should never be modified. The reason we ARE modifying them is for link-up with Server
     static auto
     Request_AddReplicatedObject(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         class UCk_ReplicatedObject_UE* InReplicatedObject) -> void;
 
     static auto
-    Get_NetRole(FCk_Handle InHandle) -> ENetRole;
+    Get_NetRole(
+        const FCk_Handle& InHandle) -> ENetRole;
 
     static auto
     OnFirstValidReplicatedObject(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         ECk_PendingKill_Policy InPendingKillPolicy,
         const std::function<void(const TWeakObjectPtr<UCk_ReplicatedObject_UE>& InRO)>& InFunc) -> void;
 

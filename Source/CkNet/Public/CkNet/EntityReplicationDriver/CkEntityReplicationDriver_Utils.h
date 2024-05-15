@@ -39,7 +39,6 @@ public:
     static auto
     Request_TryReplicateAbility(
         FCk_Handle InHandle,
-
         const UCk_Entity_ConstructionScript_PDA* InConstructionScript,
         // ideally, this would be UCk_Ability_Script_PDA, however we cannot depend on it in this module
         const TSubclassOf<UCk_DataAsset_PDA>& InAbilityScriptClass,
