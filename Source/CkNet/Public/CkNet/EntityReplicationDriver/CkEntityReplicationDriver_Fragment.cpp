@@ -157,7 +157,7 @@ auto
     // wait on the owning entity to fully replicate
     if (ck::Is_NOT_Valid(OwningEntity))
     {
-        _ReplicationData_Ability.Get_OwningEntityDriver()->_PendingChildEntityConstructions.Emplace(this);
+        _ReplicationData_Ability.Get_OwningEntityDriver()->_PendingChildAbilityEntityConstructions.Emplace(this);
         return;
     }
 
@@ -334,6 +334,12 @@ auto
     for (const auto ChildRepDriver : _PendingChildEntityConstructions)
     {
         ChildRepDriver->OnRep_ReplicationData();
+    }
+
+    // It's possible that some children are waiting on the parent to fully replicate
+    for (const auto ChildRepDriver : _PendingChildAbilityEntityConstructions)
+    {
+        ChildRepDriver->OnRep_ReplicationData_Ability();
     }
 
     _PendingChildEntityConstructions.Reset();
