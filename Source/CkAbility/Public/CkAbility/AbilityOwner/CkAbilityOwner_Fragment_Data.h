@@ -161,6 +161,38 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Request_AbilityOwner_GiveReplicatedAbility
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_AbilityOwner_GiveReplicatedAbility);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TSubclassOf<class UCk_Ability_Script_PDA> _AbilityScriptClass;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _ReplicatedEntityToUse;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _AbilitySource;
+
+public:
+    CK_PROPERTY_GET(_AbilityScriptClass)
+    CK_PROPERTY_GET(_ReplicatedEntityToUse)
+    CK_PROPERTY_GET(_AbilitySource)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_AbilityOwner_GiveReplicatedAbility, _AbilityScriptClass, _ReplicatedEntityToUse, _AbilitySource);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta= (HasNativeMake))
 struct CKABILITY_API FCk_Request_AbilityOwner_RevokeAbility : public FCk_Request_Base
 {

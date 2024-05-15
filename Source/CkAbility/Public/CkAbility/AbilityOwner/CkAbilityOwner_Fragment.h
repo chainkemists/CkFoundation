@@ -101,11 +101,12 @@ namespace ck
 
     public:
         using GiveAbilityRequestType = FCk_Request_AbilityOwner_GiveAbility;
+        using GiveAbilityReplicatedRequestType = FCk_Request_AbilityOwner_GiveReplicatedAbility;
         using RevokeAbilityRequestType = FCk_Request_AbilityOwner_RevokeAbility;
         using ActivateAbilityRequestType = FCk_Request_AbilityOwner_ActivateAbility;
         using DeactivateAbilityRequestType = FCk_Request_AbilityOwner_DeactivateAbility;
 
-        using RequestType = std::variant<GiveAbilityRequestType, RevokeAbilityRequestType,
+        using RequestType = std::variant<GiveAbilityRequestType, GiveAbilityReplicatedRequestType, RevokeAbilityRequestType,
             ActivateAbilityRequestType, DeactivateAbilityRequestType>;
         using RequestList = TArray<RequestType>;
 
