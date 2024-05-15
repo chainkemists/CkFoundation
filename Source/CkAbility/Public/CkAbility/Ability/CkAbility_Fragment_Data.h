@@ -337,6 +337,20 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_Modifier_MagnitudeCalculation_Policy
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_Ability_FeatureReplication_Policy : uint8
+{
+    // Ability may still be Given/Activated on Client/Server but do NOT replicate the Features of the Ability (e.g. Attributes)
+    DoNotReplicateAbilityFeatures,
+
+    // Ability may still be Given/Activated on Client/Server but DO replicate the Features of the Ability (e.g. Attributes)
+    ReplicateAbilityFeatures,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_FeatureReplication_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKABILITY_API FCk_Handle_Ability : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Ability); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Ability);
@@ -605,15 +619,23 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-     ECk_Net_ReplicationType _ReplicationType = ECk_Net_ReplicationType::LocalAndHost;
+    ECk_Net_ReplicationType _ReplicationType = ECk_Net_ReplicationType::LocalAndHost;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition="_ReplicationType == ECk_Net_ReplicationType::LocalAndHost"))
     ECk_Net_NetExecutionPolicy _ExecutionPolicy = ECk_Net_NetExecutionPolicy::PreferHost;
 
+    /* An Ability that is marked 'LocalAndHost' OR 'All' does not necessarily require replication to work. Set this to Replicate ONLY
+     if your Ability has Features that require Replication (e.g. Replicated Attributes) */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, AdvancedDisplay,
+              meta = (AllowPrivateAccess = true, EditConditionHides,
+                  EditCondition="_ReplicationType == ECk_Net_ReplicationType::LocalAndHost || _ReplicationType == ECk_Net_ReplicationType::All"))
+    ECk_Ability_FeatureReplication_Policy _FeatureReplicationPolicy = ECk_Ability_FeatureReplication_Policy::DoNotReplicateAbilityFeatures;
+
 public:
     CK_PROPERTY(_ReplicationType);
     CK_PROPERTY(_ExecutionPolicy);
+    CK_PROPERTY(_FeatureReplicationPolicy);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
