@@ -217,6 +217,16 @@ auto
 #ifdef CK_COPY_NET_PARAMS_ON_EVERY_ENTITY
         if (NOT Get_IsTransientEntity(InHandle) && InHandle.Has<ck::FFragment_Net_Params>())
         {
+            const auto& ConnectionSettings = InHandle.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings();
+            if (ConnectionSettings.Get_NetRole() == ECk_Net_EntityNetRole::Authority)
+            {
+                InNewEntity.Add<ck::FTag_HasAuthority>();
+            }
+            if (ConnectionSettings.Get_NetMode() == ECk_Net_NetModeType::Host)
+            {
+                InNewEntity.Add<ck::FTag_NetMode_IsHost>();
+            }
+
             InNewEntity.Add<ck::FFragment_Net_Params>(InHandle.Get<ck::FFragment_Net_Params>());
         }
 #endif
