@@ -1,5 +1,7 @@
 #include "CkAbility_Processor.h"
 
+#include "CkAbility_Script.h"
+
 #include "CkAbility/CkAbility_Log.h"
 #include "CkAbility/Ability/CkAbility_Utils.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Utils.h"
@@ -8,6 +10,29 @@
 
 namespace ck
 {
+    auto
+        FProcessor_Ability_AddReplicated::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            const FCk_EntityReplicationDriver_AbiliyData& InReplicatedAbility) const
+        -> void
+    {
+        auto AbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle));
+
+        if (ck::Is_NOT_Valid(AbilityOwner))
+        { return; }
+
+        auto AbilityScriptClass = TSubclassOf<UCk_Ability_Script_PDA>{InReplicatedAbility.Get_AbilityScriptClass()};
+
+        UCk_Utils_AbilityOwner_UE::Request_GiveReplicatedAbility(AbilityOwner,
+            FCk_Request_AbilityOwner_GiveReplicatedAbility{AbilityScriptClass, InHandle, InReplicatedAbility.Get_AbilitySource()});
+
+        InHandle.Remove<FCk_EntityReplicationDriver_AbiliyData>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     auto
         FProcessor_Ability_Teardown::
         ForEachEntity(

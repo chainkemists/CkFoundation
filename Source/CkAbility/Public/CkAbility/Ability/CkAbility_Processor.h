@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkEntityReplicationDriver_Fragment_Data.h"
+
 #include "CkAbility/Ability/CkAbility_Fragment.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
@@ -8,6 +10,25 @@
 
 namespace ck
 {
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKABILITY_API FProcessor_Ability_AddReplicated : public ck_exp::TProcessor<
+            FProcessor_Ability_AddReplicated,
+            FCk_Handle_Ability,
+            FCk_EntityReplicationDriver_AbiliyData,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            const FCk_EntityReplicationDriver_AbiliyData& InReplicatedAbility) const -> void;
+    };
+
     // --------------------------------------------------------------------------------------------------------------------
 
     class CKABILITY_API FProcessor_Ability_Teardown : public ck_exp::TProcessor<
