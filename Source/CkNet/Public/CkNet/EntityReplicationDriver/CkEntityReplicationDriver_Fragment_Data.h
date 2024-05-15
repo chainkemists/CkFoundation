@@ -194,6 +194,41 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKNET_API FCk_EntityReplicationDriver_AbiliyData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_EntityReplicationDriver_AbiliyData);
+
+private:
+    UPROPERTY()
+    TObjectPtr<class UCk_Fragment_EntityReplicationDriver_Rep> _OwningEntityDriver;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TSubclassOf<UCk_DataAsset_PDA> _AbilityScriptClass;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _AbilitySource;
+
+    UPROPERTY()
+    FCk_EntityReplicationDriver_ReplicateObjects_Data _ReplicatedObjectsData;
+
+public:
+    CK_PROPERTY(_OwningEntityDriver)
+    CK_PROPERTY_GET(_AbilityScriptClass)
+    CK_PROPERTY_GET(_AbilitySource)
+    CK_PROPERTY_GET(_ReplicatedObjectsData)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_AbiliyData, _AbilityScriptClass, _AbilitySource, _ReplicatedObjectsData);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKNET_API FCk_Request_ReplicationDriver_ReplicateEntity
 {
     GENERATED_BODY()
