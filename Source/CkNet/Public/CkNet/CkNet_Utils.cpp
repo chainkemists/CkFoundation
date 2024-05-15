@@ -21,11 +21,11 @@ auto
 
     if (InConnectionSettings.Get_NetRole() == ECk_Net_EntityNetRole::Authority)
     {
-        InEntity.Add<ck::FTag_HasAuthority>();
+        InEntity.AddOrGet<ck::FTag_HasAuthority>();
     }
     if (InConnectionSettings.Get_NetMode() == ECk_Net_NetModeType::Host)
     {
-        InEntity.Add<ck::FTag_NetMode_IsHost>();
+        InEntity.AddOrGet<ck::FTag_NetMode_IsHost>();
     }
 }
 
