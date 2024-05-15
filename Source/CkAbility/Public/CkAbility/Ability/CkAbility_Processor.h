@@ -15,7 +15,7 @@ namespace ck
     class CKABILITY_API FProcessor_Ability_AddReplicated : public ck_exp::TProcessor<
             FProcessor_Ability_AddReplicated,
             FCk_Handle_Ability,
-            FCk_EntityReplicationDriver_AbiliyData,
+            FCk_EntityReplicationDriver_AbilityData,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -26,7 +26,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
-            const FCk_EntityReplicationDriver_AbiliyData& InReplicatedAbility) const -> void;
+            const FCk_EntityReplicationDriver_AbilityData& InReplicatedAbility) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

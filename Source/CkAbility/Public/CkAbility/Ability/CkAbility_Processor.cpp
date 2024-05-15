@@ -15,20 +15,26 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
-            const FCk_EntityReplicationDriver_AbiliyData& InReplicatedAbility) const
+            const FCk_EntityReplicationDriver_AbilityData& InReplicatedAbility) const
         -> void
     {
         auto AbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle));
 
+        // it is possible that the AbilityOwner is NOT replicated yet
         if (ck::Is_NOT_Valid(AbilityOwner))
         { return; }
 
         auto AbilityScriptClass = TSubclassOf<UCk_Ability_Script_PDA>{InReplicatedAbility.Get_AbilityScriptClass()};
 
+        CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptClass),
+            TEXT("Expected a valid AbilityScriptClass for Entity [{}]. This means that either the AbilityScriptClass was always nullptr OR "
+                "the AbilityScriptClass is not network stable"), InHandle)
+        { return; }
+
         UCk_Utils_AbilityOwner_UE::Request_GiveReplicatedAbility(AbilityOwner,
             FCk_Request_AbilityOwner_GiveReplicatedAbility{AbilityScriptClass, InHandle, InReplicatedAbility.Get_AbilitySource()});
 
-        InHandle.Remove<FCk_EntityReplicationDriver_AbiliyData>();
+        InHandle.Remove<FCk_EntityReplicationDriver_AbilityData>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------

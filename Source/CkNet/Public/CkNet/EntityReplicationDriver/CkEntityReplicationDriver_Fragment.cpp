@@ -106,28 +106,23 @@ auto
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    const auto NewOrExistingEntity = [&]()
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OwningEntity);
+
+    UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings
     {
-        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OwningEntity);
+        ECk_Replication::Replicates,
+        ECk_Net_NetModeType::Client,
+        ECk_Net_EntityNetRole::Proxy
+    });
 
-        UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings
-            {
-                ECk_Replication::Replicates,
-                ECk_Net_NetModeType::Client,
-                ECk_Net_EntityNetRole::Proxy
-            });
+    NewEntity._ReplicationDriver = this;
+    NewEntity.Add<TWeakObjectPtr<UCk_Ecs_ReplicatedObject_UE>>(this);
 
-        NewEntity._ReplicationDriver = this;
-        NewEntity.Add<TWeakObjectPtr<UCk_Ecs_ReplicatedObject_UE>>(this);
+    ConstructionScript->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(
+        NewEntity, ConstructionInfo.Get_OptionalParams());
 
-        ConstructionScript->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(
-            NewEntity, ConstructionInfo.Get_OptionalParams());
-
-        UCk_Utils_ReplicatedObjects_UE::Add(NewEntity, FCk_ReplicatedObjects{}.
-            Set_ReplicatedObjects(ReplicationData.Get_ReplicatedObjectsData().Get_Objects()));
-
-        return NewEntity;
-    }();
+    UCk_Utils_ReplicatedObjects_UE::Add(NewEntity, FCk_ReplicatedObjects{}.
+        Set_ReplicatedObjects(ReplicationData.Get_ReplicatedObjectsData().Get_Objects()));
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -139,6 +134,8 @@ auto
     OnRep_ReplicationData_Ability()
     -> void
 {
+    // TODO: investigate why this OnRep_Notify is called twice for an Entity where we have already gone through the motions
+    // and set the AssociatedEntity
     if (ck::IsValid(Get_AssociatedEntity()))
     { return; }
 
@@ -148,6 +145,13 @@ auto
 
     if ([[maybe_unused]] const auto ShouldSkipIfAllObjectsAreNotYetResolved =
         AnyOf(_ReplicationData_Ability.Get_ReplicatedObjectsData().Get_Objects(), ck::algo::Is_NOT_Valid{}))
+    { return; }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_ENSURE_IF_NOT(ck::IsValid(_ReplicationData.Get_OwningEntityDriver()),
+        TEXT("OwningEntityDriver is NOT valid. Somehow the ReplicationDriver was NOT added to the OwningEntity but WAS "
+            "added to the child Entity.{}"), ck::Context(this))
     { return; }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -163,29 +167,24 @@ auto
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    const auto NewOrExistingEntity = [&]()
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OwningEntity);
+
+    UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings
     {
-        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OwningEntity);
+        ECk_Replication::Replicates,
+        ECk_Net_NetModeType::Client,
+        ECk_Net_EntityNetRole::Proxy
+    });
 
-        UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings
-            {
-                ECk_Replication::Replicates,
-                ECk_Net_NetModeType::Client,
-                ECk_Net_EntityNetRole::Proxy
-            });
+    NewEntity._ReplicationDriver = this;
+    NewEntity.Add<TWeakObjectPtr<UCk_Ecs_ReplicatedObject_UE>>(this);
 
-        NewEntity._ReplicationDriver = this;
-        NewEntity.Add<TWeakObjectPtr<UCk_Ecs_ReplicatedObject_UE>>(this);
+    // For Abilities, we have to pass the information for construction to the Ability Processor. This will be removed once
+    // the processor has had the chance to construct the Entity correctly
+    NewEntity.Add<FCk_EntityReplicationDriver_AbilityData>(_ReplicationData_Ability);
 
-        // For Abilities, we have to pass the information for construction to the Ability Processor. This will be removed once
-        // the processor has had the chance to construct the Entity correctly
-        NewEntity.Add<FCk_EntityReplicationDriver_AbiliyData>(_ReplicationData_Ability);
-
-        UCk_Utils_ReplicatedObjects_UE::Add(NewEntity, FCk_ReplicatedObjects{}.
-            Set_ReplicatedObjects(_ReplicationData_Ability.Get_ReplicatedObjectsData().Get_Objects()));
-
-        return NewEntity;
-    }();
+    UCk_Utils_ReplicatedObjects_UE::Add(NewEntity, FCk_ReplicatedObjects{}.
+        Set_ReplicatedObjects(_ReplicationData_Ability.Get_ReplicatedObjectsData().Get_Objects()));
 
     // --------------------------------------------------------------------------------------------------------------------
 

@@ -109,7 +109,7 @@ private:
     FCk_EntityReplicationDriver_ReplicationData _ReplicationData;
 
     UPROPERTY(ReplicatedUsing = OnRep_ReplicationData_Ability)
-    FCk_EntityReplicationDriver_AbiliyData _ReplicationData_Ability;
+    FCk_EntityReplicationDriver_AbilityData _ReplicationData_Ability;
 
     UPROPERTY(ReplicatedUsing = OnRep_ReplicationData_ReplicatedActor)
     FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor _ReplicationData_ReplicatedActor;

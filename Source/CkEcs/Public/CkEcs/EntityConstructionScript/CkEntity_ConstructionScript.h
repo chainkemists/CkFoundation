@@ -39,6 +39,13 @@ protected:
     DoConstruct(
         UPARAM(ref) FCk_Handle& InHandle,
         const FInstancedStruct& InOptionalParams) const;
+
+private:
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
+    ECk_Replication _Replication = ECk_Replication::Replicates;
+
+public:
+    CK_PROPERTY_GET(_Replication);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

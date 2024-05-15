@@ -7,7 +7,7 @@
 auto
     UCk_Utils_ReplicatedObjects_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_ReplicatedObjects& InReplicatedObjects)
     -> void
 {
@@ -20,7 +20,7 @@ auto
 auto
     UCk_Utils_ReplicatedObjects_UE::
     Has(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     return InHandle.Has<ck::FFragment_ReplicatedObjects_Params>();
@@ -29,7 +29,7 @@ auto
 auto
     UCk_Utils_ReplicatedObjects_UE::
     Ensure(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Entity [{}] does NOT have ReplicatedObjects Fragment!"), InHandle)
@@ -41,18 +41,14 @@ auto
 auto
     UCk_Utils_ReplicatedObjects_UE::
     Request_AddReplicatedObject(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         UCk_ReplicatedObject_UE* InReplicatedObject)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InReplicatedObject), TEXT("Invalid Replicated Object request to add to Entity [{}]"), InHandle)
     { return; }
 
-    // TODO: Cleanup this
-    if (NOT InHandle.Has<ck::FTag_Replicated>())
-    {
-        InHandle.Add<ck::FTag_Replicated>();
-    }
+    InHandle.AddOrGet<ck::FTag_Replicated>();
 
     InHandle.AddOrGet<ck::FFragment_ReplicatedObjects_Params>()
     .Update_ReplicatedObjects([&](FCk_ReplicatedObjects& InReplicatedObjects)
@@ -67,7 +63,7 @@ auto
 auto
     UCk_Utils_ReplicatedObjects_UE::
     Get_NetRole(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> ENetRole
 {
     if (NOT Has(InHandle))
@@ -92,7 +88,7 @@ auto
 auto
     UCk_Utils_ReplicatedObjects_UE::
     OnFirstValidReplicatedObject(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         ECk_PendingKill_Policy InPendingKillPolicy,
         const std::function<void(const TWeakObjectPtr<UCk_ReplicatedObject_UE>& InRO)>& InFunc)
     -> void
