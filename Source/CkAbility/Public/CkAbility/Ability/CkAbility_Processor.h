@@ -1,10 +1,10 @@
 #pragma once
 
-#include "CkEntityReplicationDriver_Fragment_Data.h"
-
 #include "CkAbility/Ability/CkAbility_Fragment.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
+
+#include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Fragment_Data.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

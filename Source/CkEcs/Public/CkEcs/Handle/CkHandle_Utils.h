@@ -63,7 +63,7 @@ public:
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Debug Handle",
               Category = "Ck|Utils|Handle",
-              meta = (CompactNodeTitle = "BREAK", DevevelopmentOnly))
+              meta = (CompactNodeTitle = "BREAK", DevelopmentOnly))
     static void
     Debug_Handle(
         const FCk_Handle& InHandle);
