@@ -162,7 +162,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKABILITY_API FCk_Request_AbilityOwner_GiveReplicatedAbility
+struct CKABILITY_API FCk_Request_AbilityOwner_GiveReplicatedAbility : public FCk_Request_Base
 {
     GENERATED_BODY()
 

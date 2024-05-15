@@ -194,12 +194,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKNET_API FCk_EntityReplicationDriver_AbiliyData
+struct CKNET_API FCk_EntityReplicationDriver_AbilityData
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_EntityReplicationDriver_AbiliyData);
+    CK_GENERATED_BODY(FCk_EntityReplicationDriver_AbilityData);
 
 private:
     UPROPERTY()
@@ -223,7 +223,7 @@ public:
     CK_PROPERTY_GET(_ReplicatedObjectsData)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_AbiliyData, _AbilityScriptClass, _AbilitySource, _ReplicatedObjectsData);
+    CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_AbilityData, _AbilityScriptClass, _AbilitySource, _ReplicatedObjectsData);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
