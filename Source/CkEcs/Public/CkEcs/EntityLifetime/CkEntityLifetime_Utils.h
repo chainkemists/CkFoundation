@@ -138,7 +138,7 @@ public:
     template <typename T_Predicate>
     [[nodiscard]]
     static auto
-    Get_LifetimeOwnerIf(
+    Get_EntityInOwnershipChain_If(
         const FCk_Handle& InHandle,
         T_Predicate T_Func,
         ECk_PendingKill_Policy InPendingKillPolicy = ECk_PendingKill_Policy::ExcludePendingKill) -> FCk_Handle;
@@ -175,7 +175,7 @@ public:
 template <typename T_Predicate>
 auto
     UCk_Utils_EntityLifetime_UE::
-    Get_LifetimeOwnerIf(
+    Get_EntityInOwnershipChain_If(
         const FCk_Handle& InHandle,
         T_Predicate T_Func,
         ECk_PendingKill_Policy InPendingKillPolicy)
