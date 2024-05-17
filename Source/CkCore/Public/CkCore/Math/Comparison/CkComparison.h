@@ -35,10 +35,10 @@ private:
 public:
     CK_PROPERTY_GET(_Operator);
     CK_PROPERTY_GET(_RHS);
-    CK_PROPERTY_GET(_Tolerance);
+    CK_PROPERTY(_Tolerance);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Comparison_Float, _Operator, _RHS, _Tolerance);
+    CK_DEFINE_CONSTRUCTORS(FCk_Comparison_Float, _Operator, _RHS);
 };
 
 auto CKCORE_API GetTypeHash(const FCk_Comparison_Float& InA) -> uint32;
@@ -84,10 +84,10 @@ public:
     CK_PROPERTY_GET(_Logic);
     CK_PROPERTY_GET(_OperatorRHS);
     CK_PROPERTY_GET(_RHS);
-    CK_PROPERTY_GET(_Tolerance);
+    CK_PROPERTY(_Tolerance);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Comparison_FloatRange, _LHS, _OperatorLHS, _Logic, _OperatorRHS, _RHS, _Tolerance);
+    CK_DEFINE_CONSTRUCTORS(FCk_Comparison_FloatRange, _LHS, _OperatorLHS, _Logic, _OperatorRHS, _RHS);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
