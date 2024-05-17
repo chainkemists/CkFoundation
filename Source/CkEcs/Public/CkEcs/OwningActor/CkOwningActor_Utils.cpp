@@ -44,6 +44,24 @@ auto
 
 auto
     UCk_Utils_OwningActor_UE::
+    TryGet_Entity_OwningActor_InOwnershipChain(
+        const FCk_Handle& InHandle)
+    -> FCk_Handle
+{
+    auto MaybeActorEntity = UCk_Utils_EntityLifetime_UE::Get_EntityInOwnershipChain_If(InHandle,
+    [&](const FCk_Handle& Handle)
+    {
+        if (Has(Handle))
+        { return true; }
+
+        return false;
+    });
+
+    return MaybeActorEntity;
+}
+
+auto
+    UCk_Utils_OwningActor_UE::
     Get_EntityOwningActor(
         const FCk_Handle& InHandle)
     -> AActor*
