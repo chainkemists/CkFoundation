@@ -10,6 +10,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+struct FCk_Comparison_FloatRange;
+
 USTRUCT(BlueprintType)
 struct CKCORE_API FCk_DirectionAndLength
 {
@@ -209,6 +211,31 @@ public:
         const FVector& InFrom);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Dot Inside Range",
+              Category = "Ck|Utils|Math|Vector3")
+    static bool
+    Get_IsDotInsideRange(
+        const FVector& InA,
+        const FVector& InB,
+        FCk_Comparison_FloatRange InAngleBetween);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Vector In Front Of",
+              Category = "Ck|Utils|Math|Vector3")
+    static bool
+    Get_IsInFrontOf(
+        const FVector& InA,
+        const FVector& InB);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Vector Behind Of",
+              Category = "Ck|Utils|Math|Vector3")
+    static bool
+    Get_IsBehindOf(
+        const FVector& InA,
+        const FVector& InB);
+
+    UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Rotator",
               Category = "Ck|Utils|Math|Vector3")
     static FRotator
@@ -362,6 +389,22 @@ public:
         const AActor* InActor,
         ECk_Direction_3D InDirection = ECk_Direction_3D::Forward,
         float InDistanceFromOriginInDirection = 500.0f);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Actor In Front Of",
+              Category = "Ck|Utils|Math|Vector3")
+    static bool
+    Get_IsFrontOf(
+        const AActor* InA,
+        const AActor* InB);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Actor Behind Of",
+              Category = "Ck|Utils|Math|Vector3")
+    static bool
+    Get_IsBehindOf(
+        const AActor* InA,
+        const AActor* InB);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
