@@ -116,6 +116,14 @@ public:
         const FCk_Handle& InMarkerOwnerEntity,
         UPARAM(meta = (Categories = "Marker")) FGameplayTag InMarkerName);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Marker",
+              DisplayName="[Ck][Marker] Try Get Entity With Marker In Ownership Chain")
+    static FCk_Handle
+    TryGet_Entity_WithMarker_InOwnershipChain(
+        const FCk_Handle& InHandle,
+        UPARAM(meta = (Categories = "Marker")) FGameplayTag InMarkerName);
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Marker",
