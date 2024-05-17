@@ -115,6 +115,14 @@ public:
         const FCk_Handle& InSensorOwnerEntity,
         UPARAM(meta = (Categories = "Sensor")) FGameplayTag InSensorName);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Sensor",
+              DisplayName="[Ck][Sensor] Try Get Entity With Sensor In Ownership Chain")
+    static FCk_Handle
+    TryGet_Entity_WithSensor_InOwnershipChain(
+        const FCk_Handle& InHandle,
+        UPARAM(meta = (Categories = "Sensor")) FGameplayTag InSensorName);
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",

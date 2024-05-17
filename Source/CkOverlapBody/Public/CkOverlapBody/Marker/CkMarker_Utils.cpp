@@ -92,6 +92,25 @@ auto
 
 auto
     UCk_Utils_Marker_UE::
+    TryGet_Entity_WithMarker_InOwnershipChain(
+        const FCk_Handle& InHandle,
+        FGameplayTag InMarkerName)
+    -> FCk_Handle
+{
+    auto MaybeMarkerOwner = UCk_Utils_EntityLifetime_UE::Get_EntityInOwnershipChain_If(InHandle,
+    [&](const FCk_Handle& Handle)
+    {
+        if (ck::IsValid(TryGet_Marker(Handle, InMarkerName)))
+        { return true; }
+
+        return false;
+    });
+
+    return MaybeMarkerOwner;
+}
+
+auto
+    UCk_Utils_Marker_UE::
     Get_Name(
         const FCk_Handle_Marker& InMarkerEntity)
     -> FGameplayTag
