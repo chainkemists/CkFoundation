@@ -8,6 +8,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Common.h"
 #include "CkEcs/Net/CkNet_Fragment_Data.h"
+#include "CkEcs/Delegates/CkDelegates.h"
 
 #include <CoreMinimal.h>
 
@@ -109,6 +110,16 @@ public:
     static UWorld*
     Get_WorldForEntity(
         const FCk_Handle& InHandle);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Lifetime",
+              DisplayName = "[Ck][Lifetime] Get Entity In Ownership Chain If",
+              meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
+    static FCk_Handle
+    Get_EntityInOwnershipChain_If(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Predicate_InHandle_OutResult& InPredicate);
 
 public:
     // These functions already exist on Net_Utils (which are now a pass-through). The reason they exist on this

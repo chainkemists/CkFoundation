@@ -1,8 +1,10 @@
 #include "CkEntityLifetime_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/SharedValues/CkSharedValues.h"
 
 #include "CkEcs/CkEcsLog.h"
+#include "CkEcs/Delegates/CkDelegates.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
@@ -168,6 +170,28 @@ auto
     { return {}; }
 
     return Get_WorldForEntity(LifeTimeOwner);
+}
+
+auto
+    UCk_Utils_EntityLifetime_UE::
+    Get_EntityInOwnershipChain_If(
+        FCk_Handle& InHandle,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Predicate_InHandle_OutResult& InPredicate)
+    -> FCk_Handle
+{
+    return Get_LifetimeOwnerIf(InHandle,
+    [&](const FCk_Handle& InAttribute)  -> bool
+    {
+        const FCk_SharedBool PredicateResult;
+
+        if (InPredicate.IsBound())
+        {
+            InPredicate.Execute(InAttribute, PredicateResult, InOptionalPayload);
+        }
+
+        return *PredicateResult;
+    });
 }
 
 auto
