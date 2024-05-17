@@ -41,6 +41,14 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor",
+              DisplayName="[Ck][OwningActor] Try Get Entity With OwningActor In Ownership Chain")
+    static FCk_Handle
+    TryGet_Entity_OwningActor_InOwnershipChain(
+        const FCk_Handle& InHandle);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|OwningActor",
               DisplayName = "[Ck][OwningActor] Get Entity To Actor",
               meta = (CompactNodeTitle="EntityToActor"))
     static AActor*
