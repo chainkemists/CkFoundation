@@ -1,5 +1,7 @@
 #include "CkVector_Utils.h"
 
+#include "CkComparison_Utils.h"
+
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
 
@@ -413,6 +415,46 @@ auto
 
 auto
     UCk_Utils_Vector3_UE::
+    Get_IsDotInsideRange(
+        const FVector& InA,
+        const FVector& InB,
+        FCk_Comparison_FloatRange InAngleBetween)
+    -> bool
+{
+    const auto Dot = FVector::DotProduct(InA, InB);
+    const float DotAngle = FMath::RadiansToDegrees(FMath::Acos(Dot));
+    return UCk_Utils_FloatComparison_UE::Get_IsInRange(DotAngle, InAngleBetween);
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    Get_IsInFrontOf(
+        const FVector& InA,
+        const FVector& InB)
+    -> bool
+{
+    return Get_IsDotInsideRange(InA, InB, FCk_Comparison_FloatRange
+    {
+        0.0f,
+        ECk_ComparisonOperators::GreaterThanOrEqualTo,
+        ECk_Logic_And_Or::And,
+        ECk_ComparisonOperators::GreaterThanOrEqualTo,
+        0.0f
+    });
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    Get_IsBehindOf(
+        const FVector& InA,
+        const FVector& InB)
+    -> bool
+{
+    return NOT Get_IsInFrontOf(InA, InB);
+}
+
+auto
+    UCk_Utils_Vector3_UE::
     Get_Rotator(
         const FVector& InDirectionVector)
     -> FRotator
@@ -755,6 +797,36 @@ auto
             return {};
         }
     }
+}
+
+auto
+    UCk_Utils_ActorVector3_UE::
+    Get_IsFrontOf(
+        const AActor* InA,
+        const AActor* InB)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InA),
+        TEXT("Unable to calculate whether B is ahead of A. Actor A is [{}]"),
+        InA)
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InB),
+        TEXT("Unable to calculate whether B is ahead of A. Actor B is [{}]"),
+        InA)
+    { return {}; }
+
+    return UCk_Utils_Vector3_UE::Get_IsInFrontOf(InA->GetActorForwardVector(), InB->GetActorLocation() - InA->GetActorLocation());
+}
+
+auto
+    UCk_Utils_ActorVector3_UE::
+    Get_IsBehindOf(
+        const AActor* InA,
+        const AActor* InB)
+    -> bool
+{
+    return NOT Get_IsFrontOf(InA, InB);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
