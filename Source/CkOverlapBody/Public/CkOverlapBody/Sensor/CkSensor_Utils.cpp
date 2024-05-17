@@ -89,6 +89,25 @@ auto
 
 auto
     UCk_Utils_Sensor_UE::
+    TryGet_Entity_WithSensor_InOwnershipChain(
+        const FCk_Handle& InHandle,
+        FGameplayTag InSensorName)
+    -> FCk_Handle
+{
+    auto MaybeSensorOwner = UCk_Utils_EntityLifetime_UE::Get_EntityInOwnershipChain_If(InHandle,
+    [&](const FCk_Handle& Handle)
+    {
+        if (ck::IsValid(TryGet_Sensor(Handle, InSensorName)))
+        { return true; }
+
+        return false;
+    });
+
+    return MaybeSensorOwner;
+}
+
+auto
+    UCk_Utils_Sensor_UE::
     Get_Name(
         const FCk_Handle_Sensor& InSensorEntity)
     -> FGameplayTag
