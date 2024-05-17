@@ -1,13 +1,12 @@
 #include "CkVector_Utils.h"
 
-#include "CkComparison_Utils.h"
-
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
-
-#include <Kismet/KismetMathLibrary.h>
+#include "CkCore/Math/Comparison/CkComparison_Utils.h"
 
 #include <ranges>
+
+#include <Kismet/KismetMathLibrary.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
