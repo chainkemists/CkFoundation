@@ -228,8 +228,17 @@ private:
     FCk_Handle_AbilityOwner
     DoGet_AbilityOwnerEntity();
 
+public:
+    UFUNCTION(BlueprintCallable,
+              BlueprintPure = true,
+              Category = "Ck|Ability|Script",
+              DisplayName = "[Ck][AbilityScript] Get Ability Config",
+              meta = (Keywords = "params, data"))
+    const FCk_Ability_Script_Data&
+    Get_AbilityConfig() const;
+
 private:
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
+    UPROPERTY(EditDefaultsOnly,
               meta = (AllowPrivateAccess, ShowOnlyInnerProperties))
     FCk_Ability_Script_Data _Data;
 
