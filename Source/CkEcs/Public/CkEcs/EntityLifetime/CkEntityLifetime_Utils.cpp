@@ -180,7 +180,7 @@ auto
         const FCk_Predicate_InHandle_OutResult& InPredicate)
     -> FCk_Handle
 {
-    return Get_LifetimeOwnerIf(InHandle,
+    return Get_EntityInOwnershipChain_If(InHandle,
     [&](const FCk_Handle& InAttribute)  -> bool
     {
         const FCk_SharedBool PredicateResult;

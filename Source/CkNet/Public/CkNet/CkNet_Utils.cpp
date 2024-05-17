@@ -310,7 +310,7 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
-    const auto FoundHandle = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwnerIf(InHandle,
+    const auto FoundHandle = UCk_Utils_EntityLifetime_UE::Get_EntityInOwnershipChain_If(InHandle,
     [](const FCk_Handle& Handle)
     {
         return Handle.Has<ck::FTag_NetMode_IsHost>();

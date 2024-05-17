@@ -258,7 +258,7 @@ auto
     if (InHandle.Has<TObjectPtr<T_ReplicatedFragment>>())
     { return ECk_AddedOrNot::AlreadyExists; }
 
-    const auto EntityWithActor = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwnerIf(InHandle,
+    const auto EntityWithActor = UCk_Utils_EntityLifetime_UE::Get_EntityInOwnershipChain_If(InHandle,
     [](const FCk_Handle& Handle)
     {
         return UCk_Utils_OwningActor_UE::Has(Handle);
