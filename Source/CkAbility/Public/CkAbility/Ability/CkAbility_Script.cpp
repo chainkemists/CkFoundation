@@ -426,6 +426,14 @@ auto
     return Get_AbilityOwnerHandle();
 }
 
+auto
+    UCk_Ability_Script_PDA::
+    Get_AbilityConfig() const
+    -> const FCk_Ability_Script_Data&
+{
+    return _Data;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
