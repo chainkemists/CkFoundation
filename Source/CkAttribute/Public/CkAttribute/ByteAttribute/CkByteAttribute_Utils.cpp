@@ -119,6 +119,25 @@ auto
 
 auto
     UCk_Utils_ByteAttribute_UE::
+    TryGet_Entity_WithAttribute_InOwnershipChain(
+        const FCk_Handle& InHandle,
+        FGameplayTag InAttributeName)
+    -> FCk_Handle
+{
+    auto MaybeOwner = UCk_Utils_EntityLifetime_UE::Get_EntityInOwnershipChain_If(InHandle,
+    [&](const FCk_Handle& Handle)
+    {
+        if (ck::IsValid(TryGet(Handle, InAttributeName)))
+        { return true; }
+
+        return false;
+    });
+
+    return MaybeOwner;
+}
+
+auto
+    UCk_Utils_ByteAttribute_UE::
     ForEach(
         FCk_Handle& InAttributeOwner,
         const FInstancedStruct& InOptionalPayload,

@@ -90,6 +90,14 @@ public:
         const FCk_Handle& InAttributeOwnerEntity,
         UPARAM(meta = (Categories = "VectorAttribute")) FGameplayTag InAttributeName);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Vector",
+              DisplayName="[Ck][VectorAttribute] Try Get Entity With Attribute In Ownership Chain")
+    static FCk_Handle
+    TryGet_Entity_WithAttribute_InOwnershipChain(
+        const FCk_Handle& InHandle,
+        UPARAM(meta = (Categories = "VectorAttribute")) FGameplayTag InAttributeName);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Attribute|Vector",
