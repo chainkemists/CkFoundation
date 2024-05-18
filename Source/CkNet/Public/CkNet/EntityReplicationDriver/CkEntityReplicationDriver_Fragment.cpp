@@ -1,10 +1,10 @@
 #include "CkEntityReplicationDriver_Fragment.h"
 
-#include "CkCore/Object/CkObject_Utils.h"
-
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Payload/CkPayload.h"
 
+#include "CkEcs/CkEcsLog.h"
 #include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
@@ -15,6 +15,7 @@
 #include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
 #include <Engine/World.h>
+
 #include <Net/UnrealNetwork.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -159,6 +160,10 @@ auto
         return;
     }
 
+    ck::ecs::Verbose(TEXT("Adding Ability [{}] to [{}] with Owning Entity [{}] on Client [{}].{}"),
+        _ReplicationData_Ability.Get_AbilityScriptClass(), Get_AssociatedEntity(), _ReplicationData_Ability.Get_OwningEntityDriver()->Get_AssociatedEntity(),
+        GetWorld()->GetFirstLocalPlayerFromController(), this);
+
     // --------------------------------------------------------------------------------------------------------------------
 
     const auto NewOrExistingEntity = [&]()
@@ -269,6 +274,14 @@ auto
     }
 
     _PendingChildEntityConstructions.Reset();
+
+    // It's possible that some children are waiting on the parent to fully replicate
+    for (const auto ChildRepDriver : _PendingChildAbilityEntityConstructions)
+    {
+        ChildRepDriver->OnRep_ReplicationData_Ability();
+    }
+
+    _PendingChildAbilityEntityConstructions.Reset();
 
     // --------------------------------------------------------------------------------------------------------------------
 
