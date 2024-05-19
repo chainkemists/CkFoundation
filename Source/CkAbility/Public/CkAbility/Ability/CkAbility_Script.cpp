@@ -428,7 +428,7 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    Get_AbilityConfig() const
+    Get_Data() const
     -> const FCk_Ability_Script_Data&
 {
     return _Data;

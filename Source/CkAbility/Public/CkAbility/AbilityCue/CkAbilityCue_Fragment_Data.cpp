@@ -163,10 +163,13 @@ auto
             if (ck::Is_NOT_Valid(AbilityCueConfig))
             { return ContinueIterating; }
 
-            ck::ability::Log(TEXT("Discovered and Adding Cue [{}] with Name [{}]"), Object, Object->Get_Data().Get_AbilityName());
+            const auto& AbilityName = Object->Get_Data().Get_AbilityName();
 
-            _AbilityCues.Add(Object->Get_Data().Get_AbilityName(), InAssetData.GetSoftObjectPath());
-            _AbilityCueConfigs.Add(Object->Get_Data().Get_AbilityName(), AbilityCueConfig);
+            ck::ability::Log(TEXT("Discovered and Adding Cue [{}] with Name [{}]"), Object, AbilityName);
+
+            _AbilityCues.Add(AbilityName, InAssetData.GetSoftObjectPath());
+            _AbilityCueConfigs.Add(AbilityName, AbilityCueConfig);
+
             return ContinueIterating;
         });
     }

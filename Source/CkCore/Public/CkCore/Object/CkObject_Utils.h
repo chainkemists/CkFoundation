@@ -388,7 +388,7 @@ auto
         TFunction<void(T*)> InInitFunc)
     -> T*
 {
-    auto* newObj = NewObject<T>
+    auto* NewObj = NewObject<T>
     (
         Outer,
         T::StaticClass(),
@@ -399,10 +399,10 @@ auto
 
     if (InInitFunc)
     {
-        InInitFunc(newObj);
+        InInitFunc(NewObj);
     }
 
-    return newObj;
+    return NewObj;
 }
 
 template <typename T>
@@ -418,7 +418,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InClass), TEXT("Invalid Class supplied to Request_CreateNewObject"))
     { return {}; }
 
-    auto* newObj = NewObject<T>
+    auto* NewObj = NewObject<T>
     (
         Outer,
         InClass,
@@ -429,10 +429,10 @@ auto
 
     if (InInitFunc)
     {
-        InInitFunc(newObj);
+        InInitFunc(NewObj);
     }
 
-    return newObj;
+    return NewObj;
 }
 
 template <typename T>

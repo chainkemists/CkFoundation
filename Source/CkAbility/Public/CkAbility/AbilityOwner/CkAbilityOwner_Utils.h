@@ -45,7 +45,7 @@ public:
     static FCk_Handle_AbilityOwner
     Append_DefaultAbilities(
         UPARAM(ref) FCk_Handle& InHandle,
-        TArray<TSubclassOf<class UCk_Ability_Script_PDA>> InDefaultAbilities);
+        const TArray<TSubclassOf<class UCk_Ability_Script_PDA>>& InDefaultAbilities);
 
 public:
     UFUNCTION(BlueprintPure,
