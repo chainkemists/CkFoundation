@@ -654,12 +654,13 @@ private:
     TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _ConditionAbilities;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
+        DisplayName = "Condition Abilities (Instanced)",
         meta = (AllowPrivateAccess = true, AllowAbstract = false, MustImplement = "/Script/CkAbility.Ck_Ability_Condition_Interface"))
-    TArray<TObjectPtr<class UCk_Ability_Script_PDA>> _ConditionAbilities2;
+    TArray<TObjectPtr<class UCk_Ability_Script_PDA>> _ConditionAbilities_Instanced;
 
 public:
     CK_PROPERTY(_ConditionAbilities);
-    CK_PROPERTY(_ConditionAbilities2);
+    CK_PROPERTY(_ConditionAbilities_Instanced);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -677,8 +678,14 @@ private:
         meta = (AllowPrivateAccess = true, AllowAbstract = false, MustImplement = "/Script/CkAbility.Ck_Ability_Cooldown_Interface"))
     TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _CooldownAbilities;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
+        DisplayName = "Cooldown Abilities (Instanced)",
+        meta = (AllowPrivateAccess = true, AllowAbstract = false, MustImplement = "/Script/CkAbility.Ck_Ability_Cooldown_Interface"))
+    TArray<TObjectPtr<class UCk_Ability_Script_PDA>> _CooldownAbilities_Instanced;
+
 public:
     CK_PROPERTY(_CooldownAbilities);
+    CK_PROPERTY(_CooldownAbilities_Instanced);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -695,10 +702,17 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true, AllowAbstract = false,
                 DisallowedClasses = "Ck_Ability_Condition_Interface, Ck_Ability_Cost_Interface, Ck_Ability_Cooldown_Interface, Ck_Ability_Cue_Interface, Ck_Ability_Effect_Interface"))
-     TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _OtherAbilities;
+    TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _OtherAbilities;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
+        DisplayName = "Other Abilities (Instanced)",
+        meta = (AllowPrivateAccess = true, AllowAbstract = false,
+                DisallowedClasses = "Ck_Ability_Condition_Interface, Ck_Ability_Cost_Interface, Ck_Ability_Cooldown_Interface, Ck_Ability_Cue_Interface, Ck_Ability_Effect_Interface"))
+    TArray<TObjectPtr<class UCk_Ability_Script_PDA>> _OtherAbilities_Instanced;
 
 public:
     CK_PROPERTY(_OtherAbilities);
+    CK_PROPERTY(_OtherAbilities_Instanced);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -714,10 +728,16 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true, AllowAbstract = false, MustImplement = "/Script/CkAbility.Ck_Ability_Cost_Interface"))
-     TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _CostAbilities;
+    TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _CostAbilities;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
+        DisplayName = "Cost Abilities (Instanced)",
+        meta = (AllowPrivateAccess = true, AllowAbstract = false, MustImplement = "/Script/CkAbility.Ck_Ability_Cost_Interface"))
+    TArray<TObjectPtr<class UCk_Ability_Script_PDA>> _CostAbilities_Instanced;
 
 public:
     CK_PROPERTY(_CostAbilities);
+    CK_PROPERTY(_CostAbilities_Instanced);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -892,11 +912,19 @@ private:
     TArray<TSubclassOf<UCk_Ability_Script_PDA>> _DefaultAbilities;
 
     UPROPERTY(Transient)
+    TArray<TObjectPtr<UCk_Ability_Script_PDA>> _DefaultAbilities_Instanced;
+
+    UPROPERTY(Transient)
     FCk_Fragment_Ability_ParamsData _AbilityParams;
+
+    UPROPERTY(Transient)
+    TObjectPtr<UCk_Ability_Script_PDA> _AbilityToConstructArchetype;
 
 public:
     CK_PROPERTY(_DefaultAbilities);
+    CK_PROPERTY(_DefaultAbilities_Instanced);
     CK_PROPERTY(_AbilityParams);
+    CK_PROPERTY(_AbilityToConstructArchetype);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

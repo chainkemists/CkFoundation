@@ -23,7 +23,7 @@ public:
 public:
     static auto
     Get_NumOfReplicationDriversIncludingDependents(
-        FCk_Handle InHandle) -> int32;
+        const FCk_Handle& InHandle) -> int32;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -32,13 +32,13 @@ public:
         DisplayName="[Ck][ReplicationDriver] Request Build and Replicate")
     static FCk_Handle
     Request_BuildAndReplicate(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo);
 
 public:
     static auto
     Request_TryReplicateAbility(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const UCk_Entity_ConstructionScript_PDA* InConstructionScript,
         // ideally, this would be UCk_Ability_Script_PDA, however we cannot depend on it in this module
         const TSubclassOf<UCk_DataAsset_PDA>& InAbilityScriptClass,
@@ -46,18 +46,18 @@ public:
 
     static auto
     Request_TryBuildAndReplicate(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo,
         const std::function<void(FCk_Handle)>& InFunc_OnCreateEntityBeforeBuild = nullptr) -> FCk_Handle;
 
     static auto
     Request_ReplicateEntityOnReplicatedActor(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor& InConstructionInfo) -> void;
 
     static auto
     Request_ReplicateEntityOnNonReplicatedActor(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo_NonReplicatedActor& InConstructionInfo) -> void;
 
 public:
@@ -66,14 +66,14 @@ public:
               DisplayName="[Ck][ReplicationDriver] Has Feature")
     static bool
     Has(
-        FCk_Handle InEntity);
+        const FCk_Handle& InEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ReplicationDriver",
               DisplayName="[Ck][ReplicationDriver] Ensure Has Feature")
     static bool
     Ensure(
-        FCk_Handle InEntity);
+        const FCk_Handle& InEntity);
 
 public:
     UFUNCTION(BlueprintPure,
@@ -81,7 +81,7 @@ public:
               DisplayName="[Ck][ReplicationDriver] Get_IsReplicationCompleteOnAllDependents")
     static bool
     Get_IsReplicationCompleteAllDependents(
-        FCk_Handle InHandle);
+        const FCk_Handle& InHandle);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -89,7 +89,7 @@ public:
               DisplayName="[Ck][ReplicationDriver] Promise/Future OnReplicationComplete")
     static void
     Promise_OnReplicationComplete(
-        FCk_Handle InEntity,
+        UPARAM(ref) FCk_Handle& InEntity,
         const FCk_Delegate_EntityReplicationDriver_OnReplicationComplete& InDelegate);
 
     UFUNCTION(BlueprintCallable,
@@ -97,7 +97,7 @@ public:
               DisplayName="[Ck][ReplicationDriver] Promise/Future OnReplicationCompleteAllDependents")
     static void
     Promise_OnReplicationCompleteAllDependents(
-        FCk_Handle InEntity,
+        UPARAM(ref) FCk_Handle& InEntity,
         const FCk_Delegate_EntityReplicationDriver_OnReplicationComplete& InDelegate);
 
 private:

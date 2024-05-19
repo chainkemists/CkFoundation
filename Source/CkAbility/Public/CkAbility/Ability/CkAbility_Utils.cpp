@@ -210,7 +210,7 @@ auto
     -> void
 {
     auto& AbilityCurrent = InAbilityEntity.Get<ck::FFragment_Ability_Current>();
-    const auto Script = AbilityCurrent.Get_AbilityScript();
+    const auto Script = AbilityCurrent.Get_AbilityScript().Get();
 
     CK_ENSURE_IF_NOT(ck::IsValid(Script),
         TEXT("Cannot Activate Ability with Entity [{}] because its AbilityScript is INVALID"),
@@ -266,7 +266,7 @@ auto
 {
     auto& AbilityCurrent = InAbilityEntity.Get<ck::FFragment_Ability_Current, ck::IsValid_Policy_IncludePendingKill>();
     const auto& AbilityParams = InAbilityEntity.Get<ck::FFragment_Ability_Params, ck::IsValid_Policy_IncludePendingKill>().Get_Params();
-    auto Script = AbilityCurrent.Get_AbilityScript();
+    auto Script = AbilityCurrent.Get_AbilityScript().Get();
 
     CK_ENSURE_IF_NOT(ck::IsValid(Script),
         TEXT("Cannot Deactivate Ability with Entity [{}] because its AbilityScript is INVALID"),
@@ -301,7 +301,16 @@ auto
                     InAbilityOwnerEntity
                 );
 
-                UCk_Utils_Object_UE::Request_ResetAllPropertiesToDefault(Script.Get());
+                if (const auto& AbilityArchetypeCopy = AbilityCurrent.Get_AbilityArchetypeCopy().Get();
+                    ck::IsValid(AbilityArchetypeCopy))
+                {
+                    UCk_Utils_Object_UE::Request_CopyAllProperties(FCk_Utils_Object_CopyAllProperties_Params{}
+                                            .Set_Destination(Script)
+                                            .Set_Source(AbilityArchetypeCopy));
+                    break;
+                }
+
+                UCk_Utils_Object_UE::Request_ResetAllPropertiesToDefault(Script);
 
                 break;
             }
@@ -320,10 +329,13 @@ auto
                 UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityCurrent.Get_AbilityScript()->GetWorld())->
                     Request_RemoveAbilityScript(AbilityCurrent.Get_AbilityScript().Get());
 
+                const auto& AbilityArchetypeCopy = AbilityCurrent.Get_AbilityArchetypeCopy().Get();
+
                 Script = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_Ability_Script_PDA>
                 (
                     UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAbilityOwnerEntity),
                     AbilityScriptClass,
+                    AbilityArchetypeCopy,
                     nullptr
                 );
 
@@ -351,7 +363,8 @@ auto
     UCk_Utils_Ability_UE::
     DoAdd(
         FCk_Handle& InHandle,
-        const FCk_Fragment_Ability_ParamsData& InParams)
+        const FCk_Fragment_Ability_ParamsData& InParams,
+        UCk_Ability_Script_PDA* InAbilityArchetype)
     -> void
 {
     const auto& AbilityScriptClass = InParams.Get_AbilityScriptClass();
@@ -387,7 +400,7 @@ auto
 
     const auto& AbilityScriptToUse = InstancingPolicy == ECk_Ability_InstancingPolicy::NotInstanced
                                        ? AbilityScriptCDO
-                                       : UCk_Utils_Object_UE::Request_CreateNewObject<UCk_Ability_Script_PDA>(CurrentWorld, AbilityScriptClass, nullptr);
+                                       : UCk_Utils_Object_UE::Request_CreateNewObject<UCk_Ability_Script_PDA>(CurrentWorld, AbilityScriptClass, InAbilityArchetype, nullptr);
 
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptToUse), TEXT("Failed to create instance of Ability Script of Class [{}]"), AbilityScriptClass)
     { return; }
@@ -398,7 +411,13 @@ auto
     UCk_Utils_GameplayLabel_UE::Add(InHandle, AbilityName);
 
     InHandle.Add<ck::FFragment_Ability_Params>(InParams);
-    InHandle.Add<ck::FFragment_Ability_Current>(AbilityScriptToUse);
+    auto& AbilityCurrent = InHandle.Add<ck::FFragment_Ability_Current>(AbilityScriptToUse);
+
+    if (ck::IsValid(InAbilityArchetype))
+    {
+        // When Resetting the ability upon deactivation, use a copy of the original archetype instead of the CDO
+        AbilityCurrent._AbilityArchetypeCopy = UCk_Utils_Object_UE::Request_CloneObject(CurrentWorld, InAbilityArchetype);
+    }
 
     CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(AbilityScriptToUse)
     { return; }
@@ -515,7 +534,8 @@ auto
     UCk_Utils_Ability_UE::
     DoCreate_AbilityEntityConfig(
         UObject* InOuter,
-        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass)
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass,
+        UCk_Ability_Script_PDA* InAbilityArchetype)
     -> UCk_Ability_EntityConfig_PDA*
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InOuter),
@@ -526,14 +546,16 @@ auto
         TEXT("INVALID Ability Script Class! Cannot create Ability Entity Config"))
     { return {}; }
 
-    const auto& AbilityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_Script_PDA>(InAbilityScriptClass);
+    const auto& AbilityScript = ck::IsValid(InAbilityArchetype)
+                                    ? InAbilityArchetype
+                                    : UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_Script_PDA>(InAbilityScriptClass);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptCDO),
-        TEXT("Cannot get valid CDO for Ability Script [{}]. Cannot create Ability Entity Config"),
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityScript),
+        TEXT("Cannot get valid Instance of Ability Script [{}]. Cannot create Ability Entity Config"),
         InAbilityScriptClass)
     { return {}; }
 
-    const auto& AbilityScriptData    = AbilityScriptCDO->Get_Data();
+    const auto& AbilityScriptData    = AbilityScript->Get_Data();
     const auto& ConditionSettings    = AbilityScriptData.Get_ConditionSettings();
     const auto& CostSettings         = AbilityScriptData.Get_CostSettings();
     const auto& CooldownSettings     = AbilityScriptData.Get_CooldownSettings();
@@ -548,10 +570,19 @@ auto
     auto NewAbilityCtorScript = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_Ability_ConstructionScript_PDA>(InOuter, AbilityCtorScript,
     [&](UCk_Ability_ConstructionScript_PDA* InAbilityCtorScript) -> void
     {
+        InAbilityCtorScript->_AbilityToConstructArchetype = InAbilityArchetype;
+
         InAbilityCtorScript->_DefaultAbilities.Append(ConditionSettings.Get_ConditionAbilities());
+        InAbilityCtorScript->_DefaultAbilities_Instanced.Append(ConditionSettings.Get_ConditionAbilities_Instanced());
+
         InAbilityCtorScript->_DefaultAbilities.Append(CostSettings.Get_CostAbilities());
+        InAbilityCtorScript->_DefaultAbilities_Instanced.Append(CostSettings.Get_CostAbilities_Instanced());
+
         InAbilityCtorScript->_DefaultAbilities.Append(CooldownSettings.Get_CooldownAbilities());
+        InAbilityCtorScript->_DefaultAbilities_Instanced.Append(CooldownSettings.Get_CooldownAbilities_Instanced());
+
         InAbilityCtorScript->_DefaultAbilities.Append(OtherAbilitySettings.Get_OtherAbilities());
+        InAbilityCtorScript->_DefaultAbilities_Instanced.Append(OtherAbilitySettings.Get_OtherAbilities_Instanced());
 
         InAbilityCtorScript->_AbilityParams = FCk_Fragment_Ability_ParamsData{InAbilityScriptClass};
     });
@@ -560,20 +591,6 @@ auto
     [&](UCk_Ability_EntityConfig_PDA* InAbilityCtorScript) -> void
     {
         InAbilityCtorScript->_EntityConstructionScript = NewAbilityCtorScript;
-    });
-}
-
-auto
-    UCk_Utils_Ability_UE::
-    DoCreate_MultipleAbilityEntityConfigs(
-        UObject* InOuter,
-        const TArray<TSubclassOf<UCk_Ability_Script_PDA>> InAbilityScriptClasses)
-    -> TArray<UCk_Ability_EntityConfig_PDA*>
-{
-    return ck::algo::Transform<TArray<UCk_Ability_EntityConfig_PDA*>>(InAbilityScriptClasses,
-    [&](TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass)
-    {
-        return DoCreate_AbilityEntityConfig(InOuter, InAbilityScriptClass);
     });
 }
 
