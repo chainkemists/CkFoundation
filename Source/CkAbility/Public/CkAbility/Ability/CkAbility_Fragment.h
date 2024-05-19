@@ -48,14 +48,16 @@ namespace ck
 
     private:
         TWeakObjectPtr<UCk_Ability_Script_PDA> _AbilityScript = nullptr;
-        TWeakObjectPtr<UCk_Ability_Script_PDA> _AbilityArchetypeCopy = nullptr;
+
+        // Represents the instance Archetype provided OR the CDO if the Archetype is invalid
+        TWeakObjectPtr<UCk_Ability_Script_PDA> _AbilityScript_DefaultInstance = nullptr;
 
         ECk_Ability_Status _Status = ECk_Ability_Status::NotActive;
 
     public:
         CK_PROPERTY_GET(_AbilityScript);
         CK_PROPERTY_GET(_Status);
-        CK_PROPERTY_GET(_AbilityArchetypeCopy);
+        CK_PROPERTY_GET(_AbilityScript_DefaultInstance);
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_Ability_Current, _AbilityScript)

@@ -301,16 +301,9 @@ auto
                     InAbilityOwnerEntity
                 );
 
-                if (const auto& AbilityArchetypeCopy = AbilityCurrent.Get_AbilityArchetypeCopy().Get();
-                    ck::IsValid(AbilityArchetypeCopy))
-                {
-                    UCk_Utils_Object_UE::Request_CopyAllProperties(FCk_Utils_Object_CopyAllProperties_Params{}
-                                            .Set_Destination(Script)
-                                            .Set_Source(AbilityArchetypeCopy));
-                    break;
-                }
-
-                UCk_Utils_Object_UE::Request_ResetAllPropertiesToDefault(Script);
+                UCk_Utils_Object_UE::Request_CopyAllProperties(FCk_Utils_Object_CopyAllProperties_Params{}
+                                        .Set_Destination(Script)
+                                        .Set_Source(AbilityCurrent.Get_AbilityScript_DefaultInstance().Get()));
 
                 break;
             }
@@ -329,13 +322,11 @@ auto
                 UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityCurrent.Get_AbilityScript()->GetWorld())->
                     Request_RemoveAbilityScript(AbilityCurrent.Get_AbilityScript().Get());
 
-                const auto& AbilityArchetypeCopy = AbilityCurrent.Get_AbilityArchetypeCopy().Get();
-
                 Script = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_Ability_Script_PDA>
                 (
                     UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAbilityOwnerEntity),
                     AbilityScriptClass,
-                    AbilityArchetypeCopy,
+                    AbilityCurrent.Get_AbilityScript_DefaultInstance().Get(),
                     nullptr
                 );
 
@@ -413,11 +404,9 @@ auto
     InHandle.Add<ck::FFragment_Ability_Params>(InParams);
     auto& AbilityCurrent = InHandle.Add<ck::FFragment_Ability_Current>(AbilityScriptToUse);
 
-    if (ck::IsValid(InAbilityArchetype))
-    {
-        // When Resetting the ability upon deactivation, use a copy of the original archetype instead of the CDO
-        AbilityCurrent._AbilityArchetypeCopy = UCk_Utils_Object_UE::Request_CloneObject(CurrentWorld, InAbilityArchetype);
-    }
+    AbilityCurrent._AbilityScript_DefaultInstance = ck::IsValid(InAbilityArchetype)
+                                                        ? UCk_Utils_Object_UE::Request_CloneObject(CurrentWorld, InAbilityArchetype)
+                                                        : AbilityScriptCDO;
 
     CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(AbilityScriptToUse)
     { return; }
