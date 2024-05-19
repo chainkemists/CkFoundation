@@ -238,7 +238,7 @@ public:
               DisplayName = "[Ck][AbilityScript] Get Ability Config",
               meta = (Keywords = "params, data"))
     const FCk_Ability_Script_Data&
-    Get_AbilityConfig() const;
+    Get_Data() const;
 
 private:
     UPROPERTY(EditDefaultsOnly,
@@ -289,7 +289,6 @@ private:
     TArray<TWeakObjectPtr<UBlueprintTaskTemplate>> _TasksToDeactivateOnDeactivate;
 
 public:
-    CK_PROPERTY_GET(_Data);
     CK_PROPERTY_GET(_AbilityHandle);
     CK_PROPERTY_GET(_AbilityOwnerHandle);
 };

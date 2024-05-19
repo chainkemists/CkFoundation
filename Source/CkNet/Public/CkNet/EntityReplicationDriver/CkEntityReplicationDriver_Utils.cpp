@@ -26,7 +26,7 @@ auto
 auto
     UCk_Utils_EntityReplicationDriver_UE::
     Get_NumOfReplicationDriversIncludingDependents(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> int32
 {
     if (Has(InHandle))
@@ -47,7 +47,7 @@ auto
 auto
     UCk_Utils_EntityReplicationDriver_UE::
     Request_BuildAndReplicate(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo)
     -> FCk_Handle
 {
@@ -57,7 +57,7 @@ auto
 auto
     UCk_Utils_EntityReplicationDriver_UE::
     Request_TryReplicateAbility(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const UCk_Entity_ConstructionScript_PDA* InConstructionScript,
         const TSubclassOf<UCk_DataAsset_PDA>& InAbilityScriptClass,
         const FCk_Handle& InAbilitySource)
@@ -120,7 +120,7 @@ auto
 auto
     UCk_Utils_EntityReplicationDriver_UE::
     Request_TryBuildAndReplicate(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo,
         const std::function<void(FCk_Handle)>& InFunc_OnCreateEntityBeforeBuild)
     -> FCk_Handle
@@ -186,7 +186,7 @@ auto
 auto
     UCk_Utils_EntityReplicationDriver_UE::
     Request_ReplicateEntityOnReplicatedActor(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor& InConstructionInfo)
     -> void
 {
@@ -205,7 +205,7 @@ auto
 auto
     UCk_Utils_EntityReplicationDriver_UE::
     Request_ReplicateEntityOnNonReplicatedActor(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo_NonReplicatedActor& InConstructionInfo) -> void
 {
     if (NOT Ensure(InHandle))
@@ -230,7 +230,7 @@ auto
 auto
     UCk_Utils_EntityReplicationDriver_UE::
     Has(
-        FCk_Handle InEntity)
+        const FCk_Handle& InEntity)
     -> bool
 {
     return InEntity.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
@@ -239,7 +239,7 @@ auto
 auto
     UCk_Utils_EntityReplicationDriver_UE::
     Ensure(
-        FCk_Handle InEntity)
+        const FCk_Handle& InEntity)
     -> bool
 {
     CK_ENSURE_IF_NOT(Has(InEntity),
@@ -253,7 +253,7 @@ auto
 auto
     UCk_Utils_EntityReplicationDriver_UE::
     Get_IsReplicationCompleteAllDependents(
-        FCk_Handle InHandle)
+        const FCk_Handle& InHandle)
     -> bool
 {
     if (NOT Has(InHandle))
@@ -265,7 +265,7 @@ auto
 auto
     UCk_Utils_EntityReplicationDriver_UE::
     Promise_OnReplicationComplete(
-        FCk_Handle InEntity,
+        FCk_Handle& InEntity,
         const FCk_Delegate_EntityReplicationDriver_OnReplicationComplete& InDelegate)
     -> void
 {
@@ -281,7 +281,7 @@ auto
 auto
     UCk_Utils_EntityReplicationDriver_UE::
     Promise_OnReplicationCompleteAllDependents(
-        FCk_Handle InEntity,
+        FCk_Handle& InEntity,
         const FCk_Delegate_EntityReplicationDriver_OnReplicationComplete& InDelegate)
     -> void
 {

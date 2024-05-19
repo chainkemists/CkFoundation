@@ -169,7 +169,8 @@ private:
     static auto
     DoAdd(
         FCk_Handle& InHandle,
-        const FCk_Fragment_Ability_ParamsData& InParams) -> void;
+        const FCk_Fragment_Ability_ParamsData& InParams,
+        UCk_Ability_Script_PDA* InAbilityArchetype) -> void;
 
 // TODO: Move these back to the processor ?
 private:
@@ -212,12 +213,8 @@ private:
     static UCk_Ability_EntityConfig_PDA*
     DoCreate_AbilityEntityConfig(
         UObject* InOuter,
-        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass);
-
-    static TArray<UCk_Ability_EntityConfig_PDA*>
-    DoCreate_MultipleAbilityEntityConfigs(
-        UObject* InOuter,
-        const TArray<TSubclassOf<UCk_Ability_Script_PDA>> InAbilityScriptClasses);
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass,
+        UCk_Ability_Script_PDA* InAbilityArchetype);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
