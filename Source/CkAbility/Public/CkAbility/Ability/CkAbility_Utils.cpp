@@ -405,7 +405,7 @@ auto
     auto& AbilityCurrent = InHandle.Add<ck::FFragment_Ability_Current>(AbilityScriptToUse);
 
     AbilityCurrent._AbilityScript_DefaultInstance = ck::IsValid(InAbilityArchetype)
-                                                        ? UCk_Utils_Object_UE::Request_CloneObject(CurrentWorld, InAbilityArchetype)
+                                                        ? InAbilityArchetype
                                                         : AbilityScriptCDO;
 
     CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(AbilityScriptToUse)
