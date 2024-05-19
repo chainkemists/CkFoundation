@@ -651,10 +651,15 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true, AllowAbstract = false, MustImplement = "/Script/CkAbility.Ck_Ability_Condition_Interface"))
-     TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _ConditionAbilities;
+    TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _ConditionAbilities;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
+        meta = (AllowPrivateAccess = true, AllowAbstract = false, MustImplement = "/Script/CkAbility.Ck_Ability_Condition_Interface"))
+    TArray<TObjectPtr<class UCk_Ability_Script_PDA>> _ConditionAbilities2;
 
 public:
     CK_PROPERTY(_ConditionAbilities);
+    CK_PROPERTY(_ConditionAbilities2);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -670,7 +675,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true, AllowAbstract = false, MustImplement = "/Script/CkAbility.Ck_Ability_Cooldown_Interface"))
-     TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _CooldownAbilities;
+    TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _CooldownAbilities;
 
 public:
     CK_PROPERTY(_CooldownAbilities);
