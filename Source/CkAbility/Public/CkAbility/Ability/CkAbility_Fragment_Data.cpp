@@ -36,12 +36,15 @@ auto
         const FInstancedStruct& InOptionalParams) const
     -> void
 {
-    UCk_Utils_Ability_UE::DoAdd(InHandle, Get_AbilityParams());
+    UCk_Utils_Ability_UE::DoAdd(InHandle, Get_AbilityParams(), _AbilityToConstructArchetype);
 
-    if (NOT _DefaultAbilities.IsEmpty())
-    {
-        UCk_Utils_AbilityOwner_UE::Add(InHandle, FCk_Fragment_AbilityOwner_ParamsData{_DefaultAbilities});
-    }
+    if (_DefaultAbilities.IsEmpty() && _DefaultAbilities_Instanced.IsEmpty())
+    { return; }
+
+    const auto AbilityOwnerParamsData = FCk_Fragment_AbilityOwner_ParamsData{_DefaultAbilities}
+                                        .Set_DefaultAbilities_Instanced(_DefaultAbilities_Instanced);
+
+    UCk_Utils_AbilityOwner_UE::Add(InHandle, AbilityOwnerParamsData);
 }
 
 auto

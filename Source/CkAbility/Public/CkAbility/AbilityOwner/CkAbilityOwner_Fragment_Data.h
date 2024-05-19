@@ -121,8 +121,12 @@ private:
               meta = (AllowPrivateAccess = true))
     TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _DefaultAbilities;
 
+    UPROPERTY(Transient)
+    TArray<TObjectPtr<class UCk_Ability_Script_PDA>> _DefaultAbilities_Instanced;
+
 public:
     CK_PROPERTY_GET(_DefaultAbilities);
+    CK_PROPERTY(_DefaultAbilities_Instanced);
 
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_AbilityOwner_ParamsData, _DefaultAbilities);
 };
@@ -142,6 +146,9 @@ private:
               meta = (AllowPrivateAccess = true))
     TSubclassOf<class UCk_Ability_Script_PDA> _AbilityScriptClass;
 
+    UPROPERTY(Transient)
+    TObjectPtr<class UCk_Ability_Script_PDA> _AbilityScriptArchetype;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Handle _AbilitySource;
@@ -153,6 +160,7 @@ private:
 public:
     CK_PROPERTY_GET(_AbilityScriptClass)
     CK_PROPERTY_GET(_AbilitySource)
+    CK_PROPERTY(_AbilityScriptArchetype)
     CK_PROPERTY(_OptionalPayload)
 
 public:
@@ -174,6 +182,9 @@ private:
               meta = (AllowPrivateAccess = true))
     TSubclassOf<class UCk_Ability_Script_PDA> _AbilityScriptClass;
 
+    UPROPERTY(Transient)
+    TObjectPtr<class UCk_Ability_Script_PDA> _AbilityScriptArchetype;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Handle _ReplicatedEntityToUse;
@@ -185,6 +196,7 @@ private:
 public:
     CK_PROPERTY_GET(_AbilityScriptClass)
     CK_PROPERTY_GET(_ReplicatedEntityToUse)
+    CK_PROPERTY(_AbilityScriptArchetype)
     CK_PROPERTY_GET(_AbilitySource)
 
 public:

@@ -494,7 +494,7 @@ auto
         ck::Context(this))
     { return; }
 
-    const auto OuterOwnerEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(OuterOwner);
+    auto OuterOwnerEntity = UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(OuterOwner);
 
     CK_ENSURE_IF_NOT(UCk_Utils_EntityReplicationDriver_UE::Has(OuterOwnerEntity),
         TEXT("Unable to Replicate the Entity Associated with [{}]. The OuterOwner [{}] does NOT have a EntityReplicationDriver."

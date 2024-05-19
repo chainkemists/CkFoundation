@@ -14,6 +14,8 @@
 
 #include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
+#include <Engine/World.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -42,7 +44,26 @@ namespace ck
             CK_ENSURE_IF_NOT(ck::IsValid(DefaultAbility), TEXT("Entity [{}] has an INVALID default Ability in its Params!"), InHandle)
             { continue; }
 
-            UCk_Utils_AbilityOwner_UE::Request_GiveAbility(InHandle, FCk_Request_AbilityOwner_GiveAbility{DefaultAbility, InHandle}, {});
+            UCk_Utils_AbilityOwner_UE::Request_GiveAbility
+            (
+                InHandle,
+                FCk_Request_AbilityOwner_GiveAbility{DefaultAbility, InHandle},
+                {}
+            );
+        }
+
+        for (const auto& Params = InAbilityOwnerParams.Get_Params(); const auto& DefaultAbilityInstance : Params.Get_DefaultAbilities_Instanced())
+        {
+            CK_ENSURE_IF_NOT(ck::IsValid(DefaultAbilityInstance),
+                TEXT("Entity [{}] has an INVALID default Ability INSTANCE in its Params! This can only happen for Sub-Abilities"), InHandle)
+            { continue; }
+
+            UCk_Utils_AbilityOwner_UE::Request_GiveAbility
+            (
+                InHandle,
+                FCk_Request_AbilityOwner_GiveAbility{DefaultAbilityInstance->GetClass(), InHandle}.Set_AbilityScriptArchetype(DefaultAbilityInstance),
+                {}
+            );
         }
     }
 
@@ -112,7 +133,7 @@ namespace ck
             { return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven; }
 
             const auto& AbilityEntityConfig = UCk_Utils_Ability_UE::DoCreate_AbilityEntityConfig(
-                UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAbilityOwnerEntity), AbilityScriptClass);
+                UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAbilityOwnerEntity), AbilityScriptClass, InRequest.Get_AbilityScriptArchetype());
 
             CK_ENSURE_IF_NOT(ck::IsValid(AbilityEntityConfig),
                 TEXT("Cannot GIVE Ability to Ability Owner [{}] because the created Ability Entity Config for [{}] is INVALID"),
@@ -243,8 +264,14 @@ namespace ck
             {
                 if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAbilityOwnerEntity))
                 {
-                    auto AbilityEntity = UCk_Utils_EntityReplicationDriver_UE::Request_TryReplicateAbility(InAbilityOwnerEntity,
-                        AbilityConstructionScript, AbilityScriptClass, AbilitySource);
+                    auto AbilityEntity = UCk_Utils_EntityReplicationDriver_UE::Request_TryReplicateAbility
+                    (
+                        InAbilityOwnerEntity,
+                        AbilityConstructionScript,
+                        AbilityScriptClass,
+                        AbilitySource
+                    );
+
                     PostAbilityCreationFunc(AbilityEntity);
                 }
                 else
@@ -288,7 +315,7 @@ namespace ck
             { return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven; }
 
             const auto& AbilityEntityConfig = UCk_Utils_Ability_UE::DoCreate_AbilityEntityConfig(
-                UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAbilityOwnerEntity), AbilityScriptClass);
+                UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAbilityOwnerEntity), AbilityScriptClass, InRequest.Get_AbilityScriptArchetype());
 
             CK_ENSURE_IF_NOT(ck::IsValid(AbilityEntityConfig),
                 TEXT("Cannot GIVE Ability to Ability Owner [{}] because the created Ability Entity Config for [{}] is INVALID"),
