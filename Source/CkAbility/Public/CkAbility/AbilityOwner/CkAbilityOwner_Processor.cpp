@@ -588,9 +588,6 @@ namespace ck
 
             const auto AbilityActivatedOrNot = [&]() -> ECk_AbilityOwner_AbilityActivatedOrNot
             {
-                if (UCk_Utils_Ability_UE::Get_Status(InAbilityToActivateEntity) == ECk_Ability_Status::Active)
-                { return ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks; }
-
                 const auto& AbilityToActivateName = UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityToActivateEntity);
                 const auto& AbilityActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityToActivateEntity);
                 const auto& GrantedTags = AbilityActivationSettings.Get_ActivationSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
@@ -608,27 +605,36 @@ namespace ck
                             GrantedTags
                         );
 
-                        InAbilityOwnerComp.AppendTags(InAbilityOwnerEntity, GrantedTags);
-
-                        if (InAbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags())
-                        {
-                            UCk_Utils_AbilityOwner_UE::Request_TagsUpdated(InAbilityOwnerEntity);
-                        }
-
                         break;
                     }
                     case ECk_Ability_ActivationRequirementsResult::RequirementsMet_ButAlreadyActive:
                     {
+                        if (AbilityActivationSettings.Get_ReactivationPolicy() == ECk_Ability_Reactivation_Policy::OnlyActivateIfCurrentlyDeactivated)
+                        {
+                            ability::Verbose
+                            (
+                                TEXT("Failed to ACTIVATE Ability [Name: {} | Entity: {}] on Ability Owner [{}]! "
+                                     "The Activation Requirements are met BUT the Ability is ALREADY ACTIVE"),
+                                AbilityToActivateName,
+                                InAbilityToActivateEntity,
+                                InAbilityOwnerEntity
+                            );
+
+                            return ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks;
+                        }
+
                         ability::Verbose
                         (
-                            TEXT("Failed to ACTIVATE Ability [Name: {} | Entity: {}] on Ability Owner [{}]! "
-                                 "The Activation Requirements are met BUT the Ability is ALREADY ACTIVE"),
+                            TEXT("RE-ACTIVATING Ability [Name: {} | Entity: {}] on Ability Owner [{}] and Granting Tags [{}]"),
                             AbilityToActivateName,
                             InAbilityToActivateEntity,
-                            InAbilityOwnerEntity
+                            InAbilityOwnerEntity,
+                            GrantedTags
                         );
 
-                        return ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks;
+                        DoHandleRequest(InAbilityOwnerEntity, InAbilityOwnerComp, FCk_Request_AbilityOwner_DeactivateAbility{InAbilityToActivateEntity});
+
+                        break;
                     }
                     case ECk_Ability_ActivationRequirementsResult::RequirementsNotMet_OnOwner:
                     {
@@ -674,6 +680,13 @@ namespace ck
                         CK_INVALID_ENUM(CanActivateAbility);
                         return ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks;
                     }
+                }
+
+                InAbilityOwnerComp.AppendTags(InAbilityOwnerEntity, GrantedTags);
+
+                if (InAbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags())
+                {
+                    UCk_Utils_AbilityOwner_UE::Request_TagsUpdated(InAbilityOwnerEntity);
                 }
 
                 // Try Deactivate our own Ability if we have one
