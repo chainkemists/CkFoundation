@@ -44,7 +44,7 @@ auto
     UCk_Utils_AbilityOwner_UE::
     Append_DefaultAbilities(
         FCk_Handle& InHandle,
-        TArray<TSubclassOf<UCk_Ability_Script_PDA>> InDefaultAbilities)
+        const TArray<TSubclassOf<class UCk_Ability_Script_PDA>>& InDefaultAbilities)
     -> FCk_Handle_AbilityOwner
 {
     CK_ENSURE_IF_NOT(Has(InHandle),

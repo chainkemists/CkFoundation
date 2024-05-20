@@ -653,14 +653,27 @@ private:
         meta = (AllowPrivateAccess = true, AllowAbstract = false, MustImplement = "/Script/CkAbility.Ck_Ability_Condition_Interface"))
     TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _ConditionAbilities;
 
+public:
+    CK_PROPERTY(_ConditionAbilities);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Ability_ConditionSettings_Instanced
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Ability_ConditionSettings_Instanced);
+
+private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
-        DisplayName = "Condition Abilities (Instanced)",
         meta = (AllowPrivateAccess = true, AllowAbstract = false, MustImplement = "/Script/CkAbility.Ck_Ability_Condition_Interface"))
-    TArray<TObjectPtr<class UCk_Ability_Script_PDA>> _ConditionAbilities_Instanced;
+    TArray<TObjectPtr<class UCk_Ability_Script_PDA>> _ConditionAbilities;
 
 public:
     CK_PROPERTY(_ConditionAbilities);
-    CK_PROPERTY(_ConditionAbilities_Instanced);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -678,14 +691,27 @@ private:
         meta = (AllowPrivateAccess = true, AllowAbstract = false, MustImplement = "/Script/CkAbility.Ck_Ability_Cooldown_Interface"))
     TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _CooldownAbilities;
 
+public:
+    CK_PROPERTY(_CooldownAbilities);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Ability_CooldownSettings_Instanced
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Ability_CooldownSettings_Instanced);
+
+private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
-        DisplayName = "Cooldown Abilities (Instanced)",
         meta = (AllowPrivateAccess = true, AllowAbstract = false, MustImplement = "/Script/CkAbility.Ck_Ability_Cooldown_Interface"))
-    TArray<TObjectPtr<class UCk_Ability_Script_PDA>> _CooldownAbilities_Instanced;
+    TArray<TObjectPtr<class UCk_Ability_Script_PDA>> _CooldownAbilities;
 
 public:
     CK_PROPERTY(_CooldownAbilities);
-    CK_PROPERTY(_CooldownAbilities_Instanced);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -704,15 +730,28 @@ private:
                 DisallowedClasses = "Ck_Ability_Condition_Interface, Ck_Ability_Cost_Interface, Ck_Ability_Cooldown_Interface, Ck_Ability_Cue_Interface, Ck_Ability_Effect_Interface"))
     TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _OtherAbilities;
 
+public:
+    CK_PROPERTY(_OtherAbilities);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Ability_OtherAbilitySettings_Instanced
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Ability_OtherAbilitySettings_Instanced);
+
+private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
-        DisplayName = "Other Abilities (Instanced)",
         meta = (AllowPrivateAccess = true, AllowAbstract = false,
                 DisallowedClasses = "Ck_Ability_Condition_Interface, Ck_Ability_Cost_Interface, Ck_Ability_Cooldown_Interface, Ck_Ability_Cue_Interface, Ck_Ability_Effect_Interface"))
-    TArray<TObjectPtr<class UCk_Ability_Script_PDA>> _OtherAbilities_Instanced;
+    TArray<TObjectPtr<class UCk_Ability_Script_PDA>> _OtherAbilities;
 
 public:
     CK_PROPERTY(_OtherAbilities);
-    CK_PROPERTY(_OtherAbilities_Instanced);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -730,14 +769,27 @@ private:
         meta = (AllowPrivateAccess = true, AllowAbstract = false, MustImplement = "/Script/CkAbility.Ck_Ability_Cost_Interface"))
     TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _CostAbilities;
 
+public:
+    CK_PROPERTY(_CostAbilities);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Ability_CostSettings_Instanced
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Ability_CostSettings_Instanced);
+
+private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
-        DisplayName = "Cost Abilities (Instanced)",
         meta = (AllowPrivateAccess = true, AllowAbstract = false, MustImplement = "/Script/CkAbility.Ck_Ability_Cost_Interface"))
-    TArray<TObjectPtr<class UCk_Ability_Script_PDA>> _CostAbilities_Instanced;
+    TArray<TObjectPtr<class UCk_Ability_Script_PDA>> _CostAbilities;
 
 public:
     CK_PROPERTY(_CostAbilities);
-    CK_PROPERTY(_CostAbilities_Instanced);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -783,10 +835,22 @@ private:
     FCk_Ability_ConditionSettings _ConditionSettings;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              Category = "SubAbilities (Instanced)",
+              DisplayName = "Conditions",
+              meta = (AllowPrivateAccess = true))
+    FCk_Ability_ConditionSettings_Instanced _ConditionSettings_Instanced;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               Category = "SubAbilities",
               DisplayName = "Costs",
               meta = (AllowPrivateAccess = true))
     FCk_Ability_CostSettings _CostSettings;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              Category = "SubAbilities (Instanced)",
+              DisplayName = "Costs",
+              meta = (AllowPrivateAccess = true))
+    FCk_Ability_CostSettings_Instanced _CostSettings_Instanced;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               Category = "SubAbilities",
@@ -795,10 +859,22 @@ private:
     FCk_Ability_CooldownSettings _CooldownSettings;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              Category = "SubAbilities (Instanced)",
+              DisplayName = "Cooldowns",
+              meta = (AllowPrivateAccess = true))
+    FCk_Ability_CooldownSettings_Instanced _CooldownSettings_Instanced;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               Category = "SubAbilities",
               DisplayName = "Other",
               meta = (AllowPrivateAccess = true))
     FCk_Ability_OtherAbilitySettings _OtherAbilitySettings;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              Category = "SubAbilities (Instanced)",
+              DisplayName = "Other",
+              meta = (AllowPrivateAccess = true))
+    FCk_Ability_OtherAbilitySettings_Instanced _OtherAbilitySettings_Instanced;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               Category = "Replication",
@@ -828,9 +904,13 @@ public:
     CK_PROPERTY(_OnGiveSettings);
     CK_PROPERTY(_ActivationSettings);
     CK_PROPERTY(_ConditionSettings);
+    CK_PROPERTY(_ConditionSettings_Instanced);
     CK_PROPERTY(_OtherAbilitySettings);
+    CK_PROPERTY(_OtherAbilitySettings_Instanced);
     CK_PROPERTY(_CostSettings);
+    CK_PROPERTY(_CostSettings_Instanced);
     CK_PROPERTY(_CooldownSettings);
+    CK_PROPERTY(_CooldownSettings_Instanced);
     CK_PROPERTY(_NetworkSettings);
     CK_PROPERTY(_InstancingPolicy);
     CK_PROPERTY(_OverrideAbilityConstructionScript);
