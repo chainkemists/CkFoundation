@@ -90,6 +90,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_Activation_Policy);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_Ability_Reactivation_Policy : uint8
+{
+    OnlyActivateIfCurrentlyDeactivated,
+    AllowActivationIfAlreadyActive
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_Reactivation_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_Ability_ActivationTrigger_Policy : uint8
 {
     // Attempt to Activate the Ability based on AbilityEvents received by the Ability Owner
@@ -542,6 +553,10 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_Ability_Activation_Policy _ActivationPolicy = ECk_Ability_Activation_Policy::ActivateManually;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Ability_Reactivation_Policy _ReactivationPolicy = ECk_Ability_Reactivation_Policy::OnlyActivateIfCurrentlyDeactivated;
+
     // Tags on AbilityOwner that affect this Ability
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -554,6 +569,7 @@ private:
 
 public:
     CK_PROPERTY(_ActivationPolicy);
+    CK_PROPERTY(_ReactivationPolicy);
     CK_PROPERTY(_ActivationSettingsOnOwner);
     CK_PROPERTY(_ActivationSettingsOnSelf);
 };
