@@ -851,7 +851,7 @@ private:
     FCk_Ability_ConditionSettings _ConditionSettings;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              Category = "SubAbilities (Instanced)",
+              Category = "SubAbilities_(Instanced)",
               DisplayName = "Conditions",
               meta = (AllowPrivateAccess = true))
     FCk_Ability_ConditionSettings_Instanced _ConditionSettings_Instanced;
@@ -863,7 +863,7 @@ private:
     FCk_Ability_CostSettings _CostSettings;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              Category = "SubAbilities (Instanced)",
+              Category = "SubAbilities_(Instanced)",
               DisplayName = "Costs",
               meta = (AllowPrivateAccess = true))
     FCk_Ability_CostSettings_Instanced _CostSettings_Instanced;
@@ -875,7 +875,7 @@ private:
     FCk_Ability_CooldownSettings _CooldownSettings;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              Category = "SubAbilities (Instanced)",
+              Category = "SubAbilities_(Instanced)",
               DisplayName = "Cooldowns",
               meta = (AllowPrivateAccess = true))
     FCk_Ability_CooldownSettings_Instanced _CooldownSettings_Instanced;
@@ -887,7 +887,7 @@ private:
     FCk_Ability_OtherAbilitySettings _OtherAbilitySettings;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              Category = "SubAbilities (Instanced)",
+              Category = "SubAbilities_(Instanced)",
               DisplayName = "Other",
               meta = (AllowPrivateAccess = true))
     FCk_Ability_OtherAbilitySettings_Instanced _OtherAbilitySettings_Instanced;
