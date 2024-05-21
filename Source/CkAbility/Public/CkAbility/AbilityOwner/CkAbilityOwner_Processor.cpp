@@ -329,7 +329,6 @@ namespace ck
                 InAbilityOwnerEntity)
             { return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven; }
 
-            const auto& AbilityParams = AbilityConstructionScript->Get_AbilityParams();
             CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptClass),
                 TEXT("Cannot GIVE Ability to Ability Owner [{}] using Construction Script [{}] because the ScriptClass [{}] is INVALID"),
                 InAbilityOwnerEntity,
@@ -337,6 +336,7 @@ namespace ck
                 AbilityScriptClass)
             { return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven; }
 
+            const auto& AbilityParams = AbilityConstructionScript->Get_AbilityParams();
             const auto& AbilityData = AbilityParams.Get_Data();
 
             if (const auto& ReplicationType = AbilityData.Get_NetworkSettings().Get_ReplicationType();
@@ -371,7 +371,7 @@ namespace ck
             }
 
             const auto PostAbilityCreationFunc =
-            [InAbilityOwnerEntity, AbilityScriptClass, AbilityParams, AbilitySource, AbilityEntityConfig](FCk_Handle& InEntity) -> void
+            [InAbilityOwnerEntity, AbilityScriptClass, AbilitySource, AbilityEntityConfig](FCk_Handle& InEntity) -> void
             {
                 UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityEntityConfig->GetWorld())->Request_RemoveAbilityEntityConfig(AbilityEntityConfig);
 
@@ -397,7 +397,7 @@ namespace ck
                 );
 
                 UCk_Utils_Handle_UE::Set_DebugName(AbilityEntity,
-                    UCk_Utils_Debug_UE::Get_DebugName(AbilityParams.Get_AbilityScriptClass(), ECk_DebugNameVerbosity_Policy::Compact));
+                    UCk_Utils_Debug_UE::Get_DebugName(AbilityScriptClass, ECk_DebugNameVerbosity_Policy::Compact));
 
                 {
                     const auto& AbilityOnGiveSettings = UCk_Utils_Ability_UE::Get_OnGiveSettings(AbilityEntity);

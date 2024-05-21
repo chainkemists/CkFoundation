@@ -16,6 +16,9 @@ auto
     Get_Data() const
     -> const FCk_Ability_Script_Data&
 {
+    if (ck::IsValid(_AbilityArchetype))
+    { return _AbilityArchetype->Get_Data(); }
+
     const auto& AbilityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_Script_PDA>(_AbilityScriptClass);
 
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptCDO), TEXT("Could not retrieve valid CDO for Ability Script Class [{}]"), _AbilityScriptClass)
@@ -36,12 +39,12 @@ auto
         const FInstancedStruct& InOptionalParams) const
     -> void
 {
-    UCk_Utils_Ability_UE::DoAdd(InHandle, Get_AbilityParams(), _AbilityToConstructArchetype);
+    UCk_Utils_Ability_UE::DoAdd(InHandle, Get_AbilityParams());
 
-    if (_DefaultAbilities.IsEmpty() && _DefaultAbilities_Instanced.IsEmpty())
+    if (_DefaultAbilities_Instanced.IsEmpty())
     { return; }
 
-    const auto AbilityOwnerParamsData = FCk_Fragment_AbilityOwner_ParamsData{_DefaultAbilities}
+    const auto AbilityOwnerParamsData = FCk_Fragment_AbilityOwner_ParamsData{}
                                         .Set_DefaultAbilities_Instanced(_DefaultAbilities_Instanced);
 
     UCk_Utils_AbilityOwner_UE::Add(InHandle, AbilityOwnerParamsData);
