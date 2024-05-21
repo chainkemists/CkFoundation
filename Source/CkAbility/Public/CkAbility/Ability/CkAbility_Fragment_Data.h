@@ -818,6 +818,9 @@ struct CKABILITY_API FCk_Ability_Script_Data
 public:
     CK_GENERATED_BODY(FCk_Ability_Script_Data);
 
+public:
+    friend class UCk_Utils_Ability_UE;
+
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               Category = "Name",
@@ -951,8 +954,12 @@ private:
               meta = (AllowPrivateAccess = true, AllowAbstract = false))
     TSubclassOf<class UCk_Ability_Script_PDA> _AbilityScriptClass;
 
+    UPROPERTY(Transient)
+    TObjectPtr<UCk_Ability_Script_PDA> _AbilityArchetype;
+
 public:
     CK_PROPERTY_GET(_AbilityScriptClass);
+    CK_PROPERTY(_AbilityArchetype);
 
 public:
     [[nodiscard]]
@@ -1005,22 +1012,14 @@ public:
 
 private:
     UPROPERTY(Transient)
-    TArray<TSubclassOf<UCk_Ability_Script_PDA>> _DefaultAbilities;
-
-    UPROPERTY(Transient)
     TArray<TObjectPtr<UCk_Ability_Script_PDA>> _DefaultAbilities_Instanced;
 
     UPROPERTY(Transient)
     FCk_Fragment_Ability_ParamsData _AbilityParams;
 
-    UPROPERTY(Transient)
-    TObjectPtr<UCk_Ability_Script_PDA> _AbilityToConstructArchetype;
-
 public:
-    CK_PROPERTY(_DefaultAbilities);
     CK_PROPERTY(_DefaultAbilities_Instanced);
     CK_PROPERTY(_AbilityParams);
-    CK_PROPERTY(_AbilityToConstructArchetype);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
