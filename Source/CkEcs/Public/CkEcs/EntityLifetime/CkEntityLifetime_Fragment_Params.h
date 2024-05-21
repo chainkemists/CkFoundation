@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkEcs/Handle/CkHandle.h"
+
 #include "CkEntityLifetime_Fragment_Params.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -27,5 +29,15 @@ enum class ECk_EntityLifetime_DestructionPhase : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EntityLifetime_DestructionPhase);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(
+    FCk_Delegate_Lifetime_OnDestroy,
+    FCk_Handle, InHandle);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+    FCk_Delegate_Lifetime_OnDestroy_MC,
+    FCk_Handle, InHandle);
 
 // --------------------------------------------------------------------------------------------------------------------
