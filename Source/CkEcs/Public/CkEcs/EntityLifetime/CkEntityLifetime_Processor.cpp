@@ -127,6 +127,11 @@ namespace ck
                 });
         }
 
+        if (ck::UUtils_Signal_EntityDestroyed::Has(InHandle))
+        {
+            ck::UUtils_Signal_EntityDestroyed::Broadcast(InHandle, ck::MakePayload(InHandle));
+        }
+
         InHandle->DestroyEntity(InHandle.Get_Entity());
     }
 

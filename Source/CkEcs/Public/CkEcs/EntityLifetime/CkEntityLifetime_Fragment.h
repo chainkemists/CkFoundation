@@ -4,6 +4,8 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Params.h"
 #include "CkEcs/Handle/CkHandle.h"
 
+#include "CkSignal/Public/CkSignal/CkSignal_Macros.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 /*
@@ -77,6 +79,10 @@ namespace ck
 
         CK_DEFINE_CONSTRUCTORS(FFragment_LifetimeOwner, _Entity);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKECS_API, EntityDestroyed, FCk_Delegate_Lifetime_OnDestroy_MC, FCk_Handle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
