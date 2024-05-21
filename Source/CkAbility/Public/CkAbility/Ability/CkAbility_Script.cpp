@@ -34,6 +34,7 @@ namespace ck
 
             Manager.AddNativeGameplayTag(TEXT("Ck.AbilityTrigger.ApplyCostsNotMet"));
             Manager.AddNativeGameplayTag(TEXT("Ck.AbilityTrigger.PayoffToTargets"));
+            Manager.AddNativeGameplayTag(TEXT("Ck.AbilityTrigger.TraitTiggered"));
         }
 
     private:
