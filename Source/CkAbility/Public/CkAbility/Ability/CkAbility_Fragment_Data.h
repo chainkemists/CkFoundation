@@ -1076,13 +1076,15 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_Ability_OnActivated,
-    FCk_Handle_Ability, InAbilityHandle);
+    FCk_Handle_Ability, InAbilityHandle,
+    const FCk_Ability_Payload_OnActivate&, InActivationPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_Ability_OnActivated_MC,
-    FCk_Handle_Ability, InAbilityHandle);
+    FCk_Handle_Ability, InAbilityHandle,
+    const FCk_Ability_Payload_OnActivate&, InActivationPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
 
