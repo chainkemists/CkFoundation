@@ -16,7 +16,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKMESSAGING_API, Messaging, FCk_Delegate_Messaging_OnBroadcast_MC, FCk_Handle, FInstancedStruct);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKMESSAGING_API, Messaging, FCk_Delegate_Messaging_OnBroadcast_MC, FCk_Handle, FGameplayTag, FInstancedStruct);
 
 }
 
