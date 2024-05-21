@@ -122,6 +122,24 @@ public:
         const FCk_Predicate_InHandle_OutResult& InPredicate);
 
 public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Lifetime",
+              DisplayName = "[Ck][Lifetime] Bind To OnDestroy")
+    static void
+    BindTo_OnUpdate(
+        UPARAM(ref) FCk_Handle& InHandle,
+        ECk_Signal_BindingPolicy InBehavior,
+        const FCk_Delegate_Lifetime_OnDestroy& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Lifetime",
+              DisplayName = "[Ck][Transform] Unbind From OnDestroy")
+    static void
+    UnbindFrom_OnUpdate(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Delegate_Lifetime_OnDestroy& InDelegate);
+
+public:
     // These functions already exist on Net_Utils (which are now a pass-through). The reason they exist on this
     // utils as well is because CkEcs cannot depend on CkNet
     [[nodiscard]]
