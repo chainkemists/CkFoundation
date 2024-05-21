@@ -279,6 +279,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EnableDisable);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_TargetInstigator : uint8
+{
+    Target,
+    Instigator
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_TargetInstigator);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_BeginEndOverlap : uint8
 {
     BeginOverlap,
