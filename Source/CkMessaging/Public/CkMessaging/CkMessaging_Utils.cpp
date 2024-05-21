@@ -58,7 +58,7 @@ auto
     RecordOfMessengers_Utils::AddIfMissing(InHandle);
     const auto MessengerEntity = DoGet_MessengerEntity(InHandle, InMessageName);
 
-    ck::UUtils_Signal_Messaging::Broadcast(MessengerEntity, ck::MakePayload(InHandle, InPayload));
+    ck::UUtils_Signal_Messaging::Broadcast(MessengerEntity, ck::MakePayload(InHandle, InMessageName, InPayload));
 }
 
 auto

@@ -13,14 +13,16 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Messenger);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_TwoParams(
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Delegate_Messaging_OnBroadcast,
     FCk_Handle, InHandle,
+    FGameplayTag, InMessageName,
     FInstancedStruct, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
     FCk_Delegate_Messaging_OnBroadcast_MC,
     FCk_Handle, InHandle,
+    FGameplayTag, InMessageName,
     FInstancedStruct, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
