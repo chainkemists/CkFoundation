@@ -196,6 +196,27 @@ auto
 
 auto
     UCk_Utils_EntityLifetime_UE::
+    BindTo_OnUpdate(
+        FCk_Handle& InHandle,
+        ECk_Signal_BindingPolicy InBehavior,
+        const FCk_Delegate_Lifetime_OnDestroy& InDelegate)
+    -> void
+{
+    ck::UUtils_Signal_EntityDestroyed::Bind(InHandle, InDelegate, InBehavior);
+}
+
+auto
+    UCk_Utils_EntityLifetime_UE::
+    UnbindFrom_OnUpdate(
+        FCk_Handle& InHandle,
+        const FCk_Delegate_Lifetime_OnDestroy& InDelegate)
+    -> void
+{
+    ck::UUtils_Signal_EntityDestroyed::Unbind(InHandle, InDelegate);
+}
+
+auto
+    UCk_Utils_EntityLifetime_UE::
     Get_EntityNetRole(
         const FCk_Handle& InEntity)
     -> ECk_Net_EntityNetRole
