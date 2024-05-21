@@ -89,6 +89,12 @@ protected:
         const FCk_Handle_AbilityOwner& InAbilityOwner,
         const FCk_Handle& InAbilitySource) const;
 
+    UFUNCTION(BlueprintImplementableEvent,
+              Category = "Ck|Ability|Script",
+              meta     = (DisplayName = "Get_AdditionalSubAbilities"))
+    TArray<UCk_Ability_Script_PDA*>
+    DoGet_AdditionalSubAbilities() const;
+
 private:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Ability|Script",

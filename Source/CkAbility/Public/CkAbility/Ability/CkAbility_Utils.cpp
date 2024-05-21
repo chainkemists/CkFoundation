@@ -577,6 +577,8 @@ auto
         InAbilityCtorScript->_DefaultAbilities.Append(OtherAbilitySettings.Get_OtherAbilities());
         InAbilityCtorScript->_DefaultAbilities_Instanced.Append(OtherAbilitySettings_Instanced.Get_OtherAbilities());
 
+        InAbilityCtorScript->_DefaultAbilities_Instanced.Append(AbilityScript->DoGet_AdditionalSubAbilities());
+
         InAbilityCtorScript->_AbilityParams = FCk_Fragment_Ability_ParamsData{InAbilityScriptClass};
     });
 
