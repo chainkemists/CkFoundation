@@ -19,6 +19,30 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UINTERFACE(Blueprintable)
+class UCk_Ability_TraitTriggerCondition_Interface : public UInterface { GENERATED_BODY() };
+class CKABILITY_API ICk_Ability_TraitTriggerCondition_Interface
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(ICk_Ability_TraitTriggerCondition_Interface);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UINTERFACE(Blueprintable)
+class UCk_Ability_TraitTriggerPayoff_Interface : public UInterface { GENERATED_BODY() };
+class CKABILITY_API ICk_Ability_TraitTriggerPayoff_Interface
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(ICk_Ability_TraitTriggerPayoff_Interface);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UINTERFACE(Blueprintable)
 class UCk_Ability_Effect_Interface : public UInterface { GENERATED_BODY() };
 class CKABILITY_API ICk_Ability_Effect_Interface
 {
@@ -1069,5 +1093,45 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
     FCk_Delegate_Ability_OnDeactivated_MC,
     FCk_Handle_Ability, InAbilityHandle);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Ability_TraitTriggerPayoff_Instances
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Ability_TraitTriggerPayoff_Instances);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
+        meta = (AllowPrivateAccess = true, AllowAbstract = false,
+                MustImplement = "/Script/CkAbility.Ck_Ability_TraitTriggerPayoff_Interface"))
+    TArray<TObjectPtr<class UCk_Ability_Script_PDA>> _TriggerPayoffs;
+
+public:
+    CK_PROPERTY_GET(_TriggerPayoffs);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Ability_TraitTriggerCondition_Instances
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Ability_TraitTriggerCondition_Instances);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
+        meta = (AllowPrivateAccess = true, AllowAbstract = false,
+                MustImplement = "/Script/CkAbility.Ck_Ability_TraitTriggerCondition_Interface"))
+    TArray<TObjectPtr<class UCk_Ability_Script_PDA>> _TriggerConditions;
+
+public:
+    CK_PROPERTY_GET(_TriggerConditions);
+};
 
 // --------------------------------------------------------------------------------------------------------------------

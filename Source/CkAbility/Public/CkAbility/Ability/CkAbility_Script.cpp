@@ -33,6 +33,7 @@ namespace ck
             Manager.AddNativeGameplayTag(TEXT("Ck.Ability.Period"));
 
             Manager.AddNativeGameplayTag(TEXT("Ck.AbilityTrigger.ApplyCostsNotMet"));
+            Manager.AddNativeGameplayTag(TEXT("Ck.AbilityTrigger.PayoffToTargets"));
         }
 
     private:
