@@ -354,8 +354,7 @@ auto
     UCk_Utils_Ability_UE::
     DoAdd(
         FCk_Handle& InHandle,
-        const FCk_Fragment_Ability_ParamsData& InParams,
-        UCk_Ability_Script_PDA* InAbilityArchetype)
+        const FCk_Fragment_Ability_ParamsData& InParams)
     -> void
 {
     const auto& AbilityScriptClass = InParams.Get_AbilityScriptClass();
@@ -363,15 +362,16 @@ auto
     { return; }
 
     const auto& AbilityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_Script_PDA>(AbilityScriptClass);
+    const auto& AbilityArchetype = InParams.Get_AbilityArchetype().Get();
 
     const auto CurrentWorld = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
 
     AbilityScriptCDO->Set_CurrentWorld(CurrentWorld);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptCDO), TEXT("Failed to create CDO of Ability Script of Class [{}]"), AbilityScriptClass)
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptCDO), TEXT("Failed to get CDO of Ability Script of Class [{}]"), AbilityScriptClass)
     { return; }
 
-    const auto& AbilityData      = AbilityScriptCDO->Get_Data();
+    const auto& AbilityData      = InParams.Get_Data();
     const auto& AbilityName      = AbilityData.Get_AbilityName();
     const auto& NetworkSettings  = AbilityData.Get_NetworkSettings();
     const auto& ReplicationType  = NetworkSettings.Get_ReplicationType();
@@ -391,9 +391,10 @@ auto
 
     const auto& AbilityScriptToUse = InstancingPolicy == ECk_Ability_InstancingPolicy::NotInstanced
                                        ? AbilityScriptCDO
-                                       : UCk_Utils_Object_UE::Request_CreateNewObject<UCk_Ability_Script_PDA>(CurrentWorld, AbilityScriptClass, InAbilityArchetype, nullptr);
+                                       : UCk_Utils_Object_UE::Request_CreateNewObject<UCk_Ability_Script_PDA>(CurrentWorld, AbilityScriptClass, AbilityArchetype, nullptr);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptToUse), TEXT("Failed to create instance of Ability Script of Class [{}]"), AbilityScriptClass)
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptToUse),
+        TEXT("Failed to create instance of Ability Script of Class [{}] with Archetype [{}]"), AbilityScriptClass, AbilityArchetype)
     { return; }
 
     CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(AbilityScriptToUse)
@@ -404,8 +405,8 @@ auto
     InHandle.Add<ck::FFragment_Ability_Params>(InParams);
     auto& AbilityCurrent = InHandle.Add<ck::FFragment_Ability_Current>(AbilityScriptToUse);
 
-    AbilityCurrent._AbilityScript_DefaultInstance = ck::IsValid(InAbilityArchetype)
-                                                        ? InAbilityArchetype
+    AbilityCurrent._AbilityScript_DefaultInstance = ck::IsValid(AbilityArchetype)
+                                                        ? AbilityArchetype
                                                         : AbilityScriptCDO;
 
     CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(AbilityScriptToUse)
@@ -481,6 +482,12 @@ auto
     { return; }
 
     UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(Script->GetWorld())->Request_RemoveAbilityScript(Script.Get());
+
+    if (const auto& AbilityDefaultInstance = Current.Get_AbilityScript_DefaultInstance().Get();
+        NOT UCk_Utils_Object_UE::Get_IsDefaultObject(AbilityDefaultInstance))
+    {
+        UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(Script->GetWorld())->Request_RemoveAbilityScript(AbilityDefaultInstance);
+    }
 }
 
 auto
@@ -554,32 +561,65 @@ auto
     const auto& OtherAbilitySettings           = AbilityScriptData.Get_OtherAbilitySettings();
     const auto& OtherAbilitySettings_Instanced = AbilityScriptData.Get_OtherAbilitySettings_Instanced();
     const auto& AbilityCtorScript              = AbilityScriptData.Get_AbilityConstructionScript();
+    const auto& NetworkSettings                = AbilityScriptData.Get_NetworkSettings();
 
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityCtorScript),
         TEXT("Ability Script [{}] specifies an INVALID Ability ConstructionScript. Cannot create Ability Entity Config"),
         InAbilityScriptClass)
     { return {}; }
 
+    const auto& WorldToUse = InOuter->GetWorld();
+
+    const auto& CreateSubAbilityInstances = [&](const TArray<TSubclassOf<UCk_Ability_Script_PDA>>& InSubAbilityClasses)
+    {
+        return ck::algo::Transform<TArray<UCk_Ability_Script_PDA*>>(InSubAbilityClasses, [&](const TSubclassOf<UCk_Ability_Script_PDA>& InSubAbilityClass)
+        {
+            const auto& SubAbilityInstance = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_Ability_Script_PDA>(WorldToUse, InSubAbilityClass, nullptr, nullptr);
+
+            UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(WorldToUse)->Request_TrackAbilityScript(SubAbilityInstance);
+
+            return SubAbilityInstance;
+        });
+    };
+
+    const auto FixupSubAbilityNetworkSettings = [&](const TArray<UCk_Ability_Script_PDA*>& InSubAbilities)
+    {
+        for (const auto& SubAbility : InSubAbilities)
+        {
+            // TODO: We could drive this via (yet another) settings, but the interface is already quite bloated
+            if (const auto NeedsFixup = SubAbility->Implements<UCk_Ability_Cost_Interface>() ||
+                                        SubAbility->Implements<UCk_Ability_Cooldown_Interface>() ||
+                                        SubAbility->Implements<UCk_Ability_Condition_Interface>();
+                NOT NeedsFixup)
+            { continue; }
+
+            SubAbility->_Data._NetworkSettings = FCk_Ability_NetworkSettings{}
+                                                    .Set_ExecutionPolicy(NetworkSettings.Get_ExecutionPolicy())
+                                                    .Set_ReplicationType(NetworkSettings.Get_ReplicationType())
+                                                    .Set_FeatureReplicationPolicy(ECk_Ability_FeatureReplication_Policy::DoNotReplicateAbilityFeatures);
+        }
+    };
+
     auto NewAbilityCtorScript = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_Ability_ConstructionScript_PDA>(InOuter, AbilityCtorScript,
     [&](UCk_Ability_ConstructionScript_PDA* InAbilityCtorScript) -> void
     {
-        InAbilityCtorScript->_AbilityToConstructArchetype = InAbilityArchetype;
-
-        InAbilityCtorScript->_DefaultAbilities.Append(ConditionSettings.Get_ConditionAbilities());
+        InAbilityCtorScript->_DefaultAbilities_Instanced.Append(CreateSubAbilityInstances(ConditionSettings.Get_ConditionAbilities()));
         InAbilityCtorScript->_DefaultAbilities_Instanced.Append(ConditionSettings_Instanced.Get_ConditionAbilities());
 
-        InAbilityCtorScript->_DefaultAbilities.Append(CostSettings.Get_CostAbilities());
+        InAbilityCtorScript->_DefaultAbilities_Instanced.Append(CreateSubAbilityInstances(CostSettings.Get_CostAbilities()));
         InAbilityCtorScript->_DefaultAbilities_Instanced.Append(CostSettings_Instanced.Get_CostAbilities());
 
-        InAbilityCtorScript->_DefaultAbilities.Append(CooldownSettings.Get_CooldownAbilities());
+        InAbilityCtorScript->_DefaultAbilities_Instanced.Append(CreateSubAbilityInstances(CooldownSettings.Get_CooldownAbilities()));
         InAbilityCtorScript->_DefaultAbilities_Instanced.Append(CooldownSettings_Instanced.Get_CooldownAbilities());
 
-        InAbilityCtorScript->_DefaultAbilities.Append(OtherAbilitySettings.Get_OtherAbilities());
+        InAbilityCtorScript->_DefaultAbilities_Instanced.Append(CreateSubAbilityInstances(OtherAbilitySettings.Get_OtherAbilities()));
         InAbilityCtorScript->_DefaultAbilities_Instanced.Append(OtherAbilitySettings_Instanced.Get_OtherAbilities());
 
         InAbilityCtorScript->_DefaultAbilities_Instanced.Append(AbilityScript->DoGet_AdditionalSubAbilities());
 
-        InAbilityCtorScript->_AbilityParams = FCk_Fragment_Ability_ParamsData{InAbilityScriptClass};
+        InAbilityCtorScript->_AbilityParams = FCk_Fragment_Ability_ParamsData{InAbilityScriptClass}.Set_AbilityArchetype(InAbilityArchetype);
+
+        FixupSubAbilityNetworkSettings(InAbilityCtorScript->_DefaultAbilities_Instanced);
     });
 
     return UCk_Utils_Object_UE::Request_CreateNewObject<UCk_Ability_EntityConfig_PDA>(InOuter, nullptr,
