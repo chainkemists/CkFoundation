@@ -389,7 +389,7 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    DoGet_Status()
+    DoGet_Status() const
     -> ECk_Ability_Status
 {
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
@@ -402,7 +402,7 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    DoGet_AbilityEntity()
+    DoGet_AbilityEntity() const
     -> FCk_Handle_Ability
 {
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle(), ck::IsValid_Policy_IncludePendingKill{}),
@@ -415,7 +415,7 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    DoGet_AbilityOwnerEntity()
+    DoGet_AbilityOwnerEntity() const
     -> FCk_Handle_AbilityOwner
 {
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityOwnerHandle(), ck::IsValid_Policy_IncludePendingKill{}),

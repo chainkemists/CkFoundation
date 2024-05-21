@@ -210,7 +210,7 @@ private:
               DisplayName = "[Ck][AbilityScript] Get Ability Status",
               meta = (CompactNodeTitle="STATUS_ThisAbility", HideSelfPin = true))
     ECk_Ability_Status
-    DoGet_Status();
+    DoGet_Status() const;
 
     UFUNCTION(BlueprintCallable,
               BlueprintPure = true,
@@ -218,7 +218,7 @@ private:
               DisplayName = "[Ck][AbilityScript] Get Ability Entity",
               meta = (CompactNodeTitle="AbilityEntity", HideSelfPin = true))
     FCk_Handle_Ability
-    DoGet_AbilityEntity();
+    DoGet_AbilityEntity() const;
 
     UFUNCTION(BlueprintCallable,
               BlueprintPure = true,
@@ -226,7 +226,7 @@ private:
               DisplayName = "[Ck][AbilityScript] Get Ability Owner Entity",
               meta = (CompactNodeTitle="AbilityOwnerEntity", HideSelfPin = true))
     FCk_Handle_AbilityOwner
-    DoGet_AbilityOwnerEntity();
+    DoGet_AbilityOwnerEntity() const;
 
 public:
     UFUNCTION(BlueprintCallable,
