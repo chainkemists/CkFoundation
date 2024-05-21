@@ -210,6 +210,7 @@ public:
         class UBlueprintTaskTemplate* InTask);
 
 private:
+    // Non-const by design to avoid errors where this is called on the CDO and the Ability Handle is Invalid
     UFUNCTION(BlueprintCallable,
               BlueprintPure = true,
               Category = "Ck|Ability|Script",
@@ -218,6 +219,7 @@ private:
     ECk_Ability_Status
     DoGet_Status();
 
+    // Non-const by design to avoid errors where this is called on the CDO and the Ability Handle is Invalid
     UFUNCTION(BlueprintCallable,
               BlueprintPure = true,
               Category = "Ck|Ability|Script",
@@ -226,6 +228,7 @@ private:
     FCk_Handle_Ability
     DoGet_AbilityEntity();
 
+    // Non-const by design to avoid errors where this is called on the CDO and the Ability Handle is Invalid
     UFUNCTION(BlueprintCallable,
               BlueprintPure = true,
               Category = "Ck|Ability|Script",
