@@ -254,7 +254,7 @@ auto
 
     Script->OnActivateAbility(InOptionalPayload);
 
-    ck::UUtils_Signal_OnAbilityActivated::Broadcast(InAbilityEntity, ck::MakePayload(InAbilityEntity));
+    ck::UUtils_Signal_OnAbilityActivated::Broadcast(InAbilityEntity, ck::MakePayload(InAbilityEntity, InOptionalPayload));
 }
 
 auto
