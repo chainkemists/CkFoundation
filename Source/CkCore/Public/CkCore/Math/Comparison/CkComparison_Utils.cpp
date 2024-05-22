@@ -55,19 +55,19 @@ auto
         const FCk_Comparison_IntRange& InComparison)
     -> bool
 {
-    const auto lhs = InComparison.Get_LHS();
-    const auto rhs = InComparison.Get_RHS();
+    const auto Lhs = InComparison.Get_LHS();
+    const auto Rhs = InComparison.Get_RHS();
 
-    switch(const auto& logic = InComparison.Get_Logic())
+    switch(const auto& Logic = InComparison.Get_Logic())
     {
     case ECk_Logic_And_Or::And:
-        return ck_comparison::Get_IsComparisonTrue(lhs, InNum, InComparison.Get_OperatorLHS(), 0) &&
-               ck_comparison::Get_IsComparisonTrue(InNum, rhs, InComparison.Get_OperatorRHS(), 0);
+        return ck_comparison::Get_IsComparisonTrue(Lhs, InNum, InComparison.Get_OperatorLHS(), 0) &&
+               ck_comparison::Get_IsComparisonTrue(InNum, Rhs, InComparison.Get_OperatorRHS(), 0);
     case ECk_Logic_And_Or::Or:
-        return ck_comparison::Get_IsComparisonTrue(lhs, InNum, InComparison.Get_OperatorLHS(), 0) ||
-               ck_comparison::Get_IsComparisonTrue(InNum, rhs, InComparison.Get_OperatorRHS(), 0);
+        return ck_comparison::Get_IsComparisonTrue(Lhs, InNum, InComparison.Get_OperatorLHS(), 0) ||
+               ck_comparison::Get_IsComparisonTrue(InNum, Rhs, InComparison.Get_OperatorRHS(), 0);
     default:
-        CK_INVALID_ENUM(logic);
+        CK_INVALID_ENUM(Logic);
         return false;
     }
 }
@@ -89,19 +89,19 @@ auto
         const FCk_Comparison_FloatRange& InComparison)
     -> bool
 {
-    const auto lhs = InComparison.Get_LHS();
-    const auto rhs = InComparison.Get_RHS();
+    const auto Lhs = InComparison.Get_LHS();
+    const auto Rhs = InComparison.Get_RHS();
 
-    switch(const auto& logic = InComparison.Get_Logic())
+    switch(const auto& Logic = InComparison.Get_Logic())
     {
     case ECk_Logic_And_Or::And:
-        return ck_comparison::Get_IsComparisonTrue(lhs, InNum, InComparison.Get_OperatorLHS(), InComparison.Get_Tolerance()) &&
-               ck_comparison::Get_IsComparisonTrue(InNum, rhs, InComparison.Get_OperatorRHS(), InComparison.Get_Tolerance());
+        return ck_comparison::Get_IsComparisonTrue(Lhs, InNum, InComparison.Get_OperatorLHS(), InComparison.Get_Tolerance()) &&
+               ck_comparison::Get_IsComparisonTrue(InNum, Rhs, InComparison.Get_OperatorRHS(), InComparison.Get_Tolerance());
     case ECk_Logic_And_Or::Or:
-        return ck_comparison::Get_IsComparisonTrue(lhs, InNum, InComparison.Get_OperatorLHS(), InComparison.Get_Tolerance()) ||
-               ck_comparison::Get_IsComparisonTrue(InNum, rhs, InComparison.Get_OperatorRHS(), InComparison.Get_Tolerance());
+        return ck_comparison::Get_IsComparisonTrue(Lhs, InNum, InComparison.Get_OperatorLHS(), InComparison.Get_Tolerance()) ||
+               ck_comparison::Get_IsComparisonTrue(InNum, Rhs, InComparison.Get_OperatorRHS(), InComparison.Get_Tolerance());
     default:
-        CK_INVALID_ENUM(logic);
+        CK_INVALID_ENUM(Logic);
         return false;
     }
 }
