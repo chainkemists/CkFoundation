@@ -60,7 +60,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_ComparisonOperators _OperatorLHS = ECk_ComparisonOperators::GreaterThanOrEqualTo;
+    ECk_ComparisonOperators _OperatorLHS = ECk_ComparisonOperators::LessThanOrEqualTo;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -68,7 +68,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_ComparisonOperators _OperatorRHS = ECk_ComparisonOperators::GreaterThanOrEqualTo;
+    ECk_ComparisonOperators _OperatorRHS = ECk_ComparisonOperators::LessThanOrEqualTo;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -107,11 +107,11 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_ComparisonOperators        _Operator = ECk_ComparisonOperators::EqualTo;
+    ECk_ComparisonOperators _Operator = ECk_ComparisonOperators::EqualTo;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    int32                          _RHS = 0;
+    int32 _RHS = 0;
 
 public:
     CK_PROPERTY_GET(_Operator);
@@ -140,7 +140,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_ComparisonOperators _OperatorLHS = ECk_ComparisonOperators::GreaterThanOrEqualTo;
+    ECk_ComparisonOperators _OperatorLHS = ECk_ComparisonOperators::LessThanOrEqualTo;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -148,7 +148,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_ComparisonOperators _OperatorRHS = ECk_ComparisonOperators::GreaterThanOrEqualTo;
+    ECk_ComparisonOperators _OperatorRHS = ECk_ComparisonOperators::LessThanOrEqualTo;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
