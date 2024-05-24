@@ -23,12 +23,12 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "AI|EQS",
-              DisplayName = "Set EQS Named Integer Param")
+              DisplayName = "[Ck] Set EQS Named Integer Param")
     static void
     SetEqsNamedIntParam(
-        UEnvQueryInstanceBlueprintWrapper* EnvQueryInstance, 
-        FName ParamName,
-        int Value);
+        UEnvQueryInstanceBlueprintWrapper* InEnvQueryInstance, 
+        FName InParamName,
+        int32 InValue);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

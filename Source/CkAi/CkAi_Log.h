@@ -8,7 +8,7 @@ CKAI_API DECLARE_LOG_CATEGORY_EXTERN(CkAi, Log, All);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck::graphics
+namespace ck::ai
 {
     CK_DEFINE_LOG_FUNCTIONS(CkAi);
 }
