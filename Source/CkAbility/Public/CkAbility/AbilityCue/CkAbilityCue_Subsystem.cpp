@@ -28,6 +28,14 @@ namespace ck_ability_cue_subsystem
         const UCk_EcsWorld_Subsystem_UE* InSubsystem_EcsWorldSubsystem,
         const FCk_AbilityCue_Params& InParams)
     {
+        CK_LOG_ERROR_IF_NOT(ck::ability, ck::IsValid(InSubsystem_AbilityCue, ck::IsValid_Policy_NullptrOnly{}),
+            TEXT("AbilityCue Subsystem was INVALID when trying to spawn Cue [{}]."), InCueName)
+        { return; }
+
+        CK_LOG_ERROR_IF_NOT(ck::ability, ck::IsValid(InSubsystem_EcsWorldSubsystem, ck::IsValid_Policy_NullptrOnly{}),
+            TEXT("EcsWorld Subsystem was INVALID when trying to spawn Cue [{}]."), InCueName)
+        { return; }
+
         CK_ENSURE_IF_NOT(ck::IsValid(InCueName),
             TEXT("Unable to ExecuteAbilityCue since the CueName is [{}]"), InCueName)
         { return; }
