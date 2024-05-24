@@ -47,6 +47,16 @@
 			]
 		},
 		{
+			"Name": "CkAi",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
 			"Name": "CkAnimation",
 			"Type": "Runtime",
 			"LoadingPhase": "PreDefault",
