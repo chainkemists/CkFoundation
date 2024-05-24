@@ -4,7 +4,7 @@
 
 DEFINE_LOG_CATEGORY(CkAi);
 
-namespace ck::graphics
+namespace ck::ai
 {
 	CK_REGISTER_LOG_FUNCTIONS(CkAi);
 }
