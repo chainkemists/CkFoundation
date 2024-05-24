@@ -3,7 +3,7 @@
 #include <Kismet/BlueprintFunctionLibrary.h>
 #include <CoreMinimal.h>
 
-#include "CkMacros.h"
+#include "CkCore/Macros/CkMacros.h"
 #include "CkEqs_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
