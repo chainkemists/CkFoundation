@@ -27,6 +27,16 @@
 			]
 		},
 		{
+			"Name": "CkAbilityExt",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
 			"Name": "CkActor",
 			"Type": "Runtime",
 			"LoadingPhase": "PreDefault",
