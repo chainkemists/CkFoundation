@@ -21,7 +21,6 @@ public class CkAbility : CkModuleRules
 
             "BlueprintNodeTemplate",
 
-            "CkAttribute",
             "CkCore",
             "CkEcs",
             "CkEcsBasics",
