@@ -48,11 +48,16 @@ private:
     UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
     TEnumAsByte<ETickingGroup> _TickingGroup = TG_PrePhysics;
 
+    // Processors can be pumped multiple times _if_ they have requests that still need to be processed
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess, ClampMin="0", UIMin="0"))
+    int32 _MaximumNumberOfPumps = 1;
+
     UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
     TArray<TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>>  _ProcessorInjectors;
 
 public:
     CK_PROPERTY(_TickingGroup);
+    CK_PROPERTY_GET(_MaximumNumberOfPumps);
     CK_PROPERTY_GET(_ProcessorInjectors);
 };
 
