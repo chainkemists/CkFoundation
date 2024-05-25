@@ -51,10 +51,13 @@ auto
 {
     Super::Tick(DeltaSeconds);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(_EcsWorld), TEXT("ECS World is NOT set in the World Actor [{}]. Was Initialize() called?"), this)
-    { return; }
-
-    _EcsWorld->Tick(FCk_Time{DeltaSeconds});
+    for (auto& World : _WorldsToTick)
+    {
+        for (auto Pump = 0; Pump < World._MaxNumberOfPumps; ++Pump)
+        {
+            World._EcsWorld->Tick(FCk_Time{DeltaSeconds});
+        }
+    }
 }
 
 auto
@@ -65,8 +68,6 @@ auto
     -> void
 {
     SetTickGroup(InTickingGroup);
-
-    _EcsWorld = EcsWorldType{InRegistry};
 
     const auto ProcessorInjectors = UCk_Utils_Ecs_Settings_UE::Get_ProcessorInjectors();
 
@@ -79,6 +80,8 @@ auto
         if (Injectors.Get_TickingGroup() != InTickingGroup)
         { continue; }
 
+        _WorldsToTick.Emplace(Injectors.Get_MaximumNumberOfPumps(), EcsWorldType{InRegistry});
+
         for (const auto Injector : Injectors.Get_ProcessorInjectors())
         {
             CK_ENSURE_IF_NOT(ck::IsValid(Injector),
@@ -87,7 +90,7 @@ auto
 
             const auto NewInjector = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_EcsWorld_ProcessorInjector_Base_UE>(this, Injector, nullptr);
 
-            NewInjector->DoInjectProcessors(*_EcsWorld);
+            NewInjector->DoInjectProcessors(*_WorldsToTick.Last()._EcsWorld);
         }
     }
 }
