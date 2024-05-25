@@ -80,7 +80,13 @@ public:
         ETickingGroup InTickingGroup) -> void;
 
 protected:
-    TOptional<EcsWorldType> _EcsWorld;
+    struct FWorldInfo
+    {
+        int32 _MaxNumberOfPumps = 1;
+        TOptional<EcsWorldType> _EcsWorld;
+    };
+
+    TArray<FWorldInfo> _WorldsToTick;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
