@@ -311,7 +311,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
         meta = (AllowPrivateAccess = true, AllowAbstract = false,
-                MustImplement = "/Script/CkAbility.Ck_Ability_TraitPayoff_Interface"))
+                MustImplement = "/Script/CkAbilityExt.Ck_Ability_TraitPayoff_Interface"))
     TArray<TObjectPtr<class UCk_Ability_Script_PDA>> _Payoffs;
 
 public:
@@ -331,7 +331,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
         meta = (AllowPrivateAccess = true, AllowAbstract = false,
-                MustImplement = "/Script/CkAbility.Ck_Ability_TraitCondition_Interface"))
+                MustImplement = "/Script/CkAbilityExt.Ck_Ability_TraitCondition_Interface"))
     TArray<TObjectPtr<class UCk_Ability_Script_PDA>> _Conditions;
 
 public:
