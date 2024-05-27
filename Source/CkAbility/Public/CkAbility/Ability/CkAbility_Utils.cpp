@@ -147,7 +147,7 @@ auto
     if (NOT AreActivationRequirementsMet_OnOwner && NOT AreActivationRequirementsMet_OnSelf)
     { return ECk_Ability_ActivationRequirementsResult::RequirementsNotMet_OnOwnerAndSelf; }
 
-    if (AreActivationRequirementsMet_OnOwner)
+    if (NOT AreActivationRequirementsMet_OnOwner)
     { return ECk_Ability_ActivationRequirementsResult::RequirementsNotMet_OnOwner; }
 
     return ECk_Ability_ActivationRequirementsResult::RequirementsNotMet_OnSelf;
