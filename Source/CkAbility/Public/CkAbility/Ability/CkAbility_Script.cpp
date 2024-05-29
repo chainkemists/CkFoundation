@@ -194,6 +194,15 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
+    OnAbilityNotActivated(
+        const FCk_Ability_NotActivated_Info& InInfo)
+    -> void
+{
+    DoOnAbilityNotActivated(InInfo);
+}
+
+auto
+    UCk_Ability_Script_PDA::
     DoRequest_ActivateAbility(
         FCk_Ability_Payload_OnActivate InOptionalPayload)
     -> void
