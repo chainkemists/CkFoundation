@@ -592,6 +592,9 @@ namespace ck
                 const auto& AbilityActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityToActivateEntity);
                 const auto& GrantedTags = AbilityActivationSettings.Get_ActivationSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
 
+                const auto& AbilityCurrent = InAbilityToActivateEntity.Get<ck::FFragment_Ability_Current>();
+                const auto& Script         = AbilityCurrent.Get_AbilityScript();
+
                 switch (const auto& CanActivateAbility = UCk_Utils_Ability_UE::Get_CanActivate(InAbilityToActivateEntity))
                 {
                     case ECk_Ability_ActivationRequirementsResult::RequirementsMet:
@@ -620,6 +623,8 @@ namespace ck
                                 InAbilityOwnerEntity
                             );
 
+                            Script->OnAbilityNotActivated(FCk_Ability_NotActivated_Info{InAbilityToActivateEntity, CanActivateAbility});
+
                             return ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks;
                         }
 
@@ -647,6 +652,8 @@ namespace ck
                             InAbilityOwnerEntity
                         );
 
+                        Script->OnAbilityNotActivated(FCk_Ability_NotActivated_Info{InAbilityToActivateEntity, CanActivateAbility});
+
                         return ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks;
                     }
                     case ECk_Ability_ActivationRequirementsResult::RequirementsNotMet_OnSelf:
@@ -659,6 +666,8 @@ namespace ck
                             InAbilityToActivateEntity,
                             InAbilityOwnerEntity
                         );
+
+                        Script->OnAbilityNotActivated(FCk_Ability_NotActivated_Info{InAbilityToActivateEntity, CanActivateAbility});
 
                         return ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks;
                     }
@@ -673,11 +682,14 @@ namespace ck
                             InAbilityOwnerEntity
                         );
 
+                        Script->OnAbilityNotActivated(FCk_Ability_NotActivated_Info{InAbilityToActivateEntity, CanActivateAbility});
+
                         return ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks;
                     }
                     default:
                     {
                         CK_INVALID_ENUM(CanActivateAbility);
+                        Script->OnAbilityNotActivated(FCk_Ability_NotActivated_Info{InAbilityToActivateEntity, CanActivateAbility});
                         return ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks;
                     }
                 }
