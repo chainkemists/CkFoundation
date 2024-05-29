@@ -30,6 +30,10 @@ public:
     OnRevokeAbility() -> void;
 
     auto
+    OnAbilityNotActivated(
+        const FCk_Ability_NotActivated_Info& InInfo) -> void;
+
+    auto
     OnActivateAbility(
         const FCk_Ability_Payload_OnActivate& InOptionalPayload) -> void;
 
@@ -47,6 +51,13 @@ public:
         const FCk_Handle& InAbilitySource) const -> void;
 
 protected:
+    UFUNCTION(BlueprintCallable, BlueprintImplementableEvent,
+              Category = "Ck|Ability|Script",
+              meta     = (DevelopmentOnly, DisplayName = "OnAbilityNotActivated"))
+    void
+    DoOnAbilityNotActivated(
+        const FCk_Ability_NotActivated_Info& InInfo);
+
     UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|Ability|Script",
               meta     = (DisplayName = "OnActivateAbility"))
