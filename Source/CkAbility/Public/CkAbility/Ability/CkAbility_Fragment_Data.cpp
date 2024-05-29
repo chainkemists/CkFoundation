@@ -1,13 +1,41 @@
 #include "CkAbility_Fragment_Data.h"
 
+#include "CkAbility/CkAbility_Log.h"
+#include "CkAbility/Ability/CkAbility_Script.h"
 #include "CkAbility/Ability/CkAbility_Utils.h"
 #include "CkAbility/AbilityCue/CkAbilityCue_Utils.h"
-#include "CkAbility/Ability/CkAbility_Script.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Utils.h"
 
 #include "CkCore/Object/CkObject_Utils.h"
 
 #include <UObject/ObjectSaveContext.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+FCk_Ability_NotActivated_Info::
+    FCk_Ability_NotActivated_Info(
+        const FCk_Handle_Ability& InAbility,
+        ECk_Ability_ActivationRequirementsResult InActivationRequirementsResult)
+    : _ActivationRequirementResult(InActivationRequirementsResult)
+{
+    const auto& AbilityCurrent = InAbility.Get<ck::FFragment_Ability_Current>();
+    const auto& Script         = AbilityCurrent.Get_AbilityScript();
+
+    CK_LOG_ERROR_IF_NOT(ck::ability, ck::IsValid(Script),
+        TEXT("Cannot check if the Ability [{}] can Activate because it does NOT have a valid Script"),
+        InAbility)
+    { return; }
+
+    const auto& AbilityOwner = Script->Get_AbilityOwnerHandle();
+    _ActiveTagsOnOwner = UCk_Utils_AbilityOwner_UE::Get_ActiveTags(AbilityOwner);
+
+    const auto AbilityAsAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(InAbility);
+
+    if (ck::Is_NOT_Valid(AbilityAsAbilityOwner))
+    { return; }
+
+    _ActiveTagsOnSelf = UCk_Utils_AbilityOwner_UE::Get_ActiveTags(AbilityAsAbilityOwner);
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 

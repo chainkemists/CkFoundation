@@ -313,6 +313,46 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Ability_NotActivated_Info
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Ability_NotActivated_Info);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Ability_ActivationRequirementsResult _ActivationRequirementResult;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTagContainer _ActiveTagsOnOwner;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTagContainer _ActiveTagsOnSelf;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTagContainer _ActivationTriggers;
+
+public:
+    CK_PROPERTY_GET(_ActivationRequirementResult);
+    CK_PROPERTY_GET(_ActiveTagsOnOwner);
+    CK_PROPERTY_GET(_ActiveTagsOnSelf);
+    CK_PROPERTY_GET(_ActivationTriggers);
+
+public:
+    FCk_Ability_NotActivated_Info() = default;
+    FCk_Ability_NotActivated_Info(
+        const FCk_Handle_Ability& InAbility,
+        ECk_Ability_ActivationRequirementsResult InActivationRequirementsResult);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKABILITY_API FCk_Ability_Payload_OnActivate
 {
     GENERATED_BODY()
