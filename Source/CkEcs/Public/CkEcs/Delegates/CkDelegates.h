@@ -54,4 +54,9 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
     FCk_SharedBool, OutResult,
     FInstancedStruct, InOptionalPayload);
 
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Lambda_InActorComponent,
+    UActorComponent*, InActorComponent,
+    FInstancedStruct, InOptionalPayload);
+
 // --------------------------------------------------------------------------------------------------------------------

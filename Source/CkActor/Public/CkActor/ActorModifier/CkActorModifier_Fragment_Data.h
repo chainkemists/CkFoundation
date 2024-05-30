@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkDelegates.h"
 #include "CkCore/Actor/CkActor.h"
 #include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Enums/CkEnums.h"
@@ -27,7 +28,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SpawnActor_PostSpawnPolicy);
 UENUM(BlueprintType)
 enum class ECk_SpawnActor_SpawnPolicy : uint8
 {
-    SpawnOnInstanceWithOwership,
+    SpawnOnInstanceWithOwnership,
     SpawnOnServer,
     SpawnOnAll
 };
@@ -57,12 +58,6 @@ struct CKACTOR_API FCk_SpawnActor_PostSpawn_Params
 public:
     CK_GENERATED_BODY(FCk_SpawnActor_PostSpawn_Params);
 
-public:
-    FCk_SpawnActor_PostSpawn_Params() = default;
-    FCk_SpawnActor_PostSpawn_Params(
-        ECk_SpawnActor_PostSpawnPolicy InPostSpawnPolicy,
-        FCk_Actor_AttachToActor_Params InParams);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -74,7 +69,10 @@ private:
 
 public:
     CK_PROPERTY_GET(_PostSpawnPolicy);
-    CK_PROPERTY_GET(_Params);
+    CK_PROPERTY(_Params);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_SpawnActor_PostSpawn_Params, _PostSpawnPolicy)
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -138,13 +136,6 @@ public:
 public:
     using PreFinishSpawnFuncType = TFunction<void(AActor*)>;
 
-public:
-    FCk_Request_ActorModifier_SpawnActor() = default;
-    FCk_Request_ActorModifier_SpawnActor(
-        FCk_Utils_Actor_SpawnActor_Params InSpawnParams,
-        FCk_SpawnActor_PostSpawn_Params InPostSpawnParams,
-        PreFinishSpawnFuncType InPreFinishSpawnFunc = nullptr);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -156,16 +147,19 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_SpawnActor_SpawnPolicy _SpawnPolicy = ECk_SpawnActor_SpawnPolicy::SpawnOnInstanceWithOwership;
+    ECk_SpawnActor_SpawnPolicy _SpawnPolicy = ECk_SpawnActor_SpawnPolicy::SpawnOnInstanceWithOwnership;
 
 private:
     PreFinishSpawnFuncType _PreFinishSpawnFunc = nullptr;
 
 public:
     CK_PROPERTY_GET(_SpawnParams);
-    CK_PROPERTY_GET(_PostSpawnParams);
-    CK_PROPERTY_GET(_PreFinishSpawnFunc);
-    CK_PROPERTY_GET(_SpawnPolicy);
+    CK_PROPERTY(_PostSpawnParams);
+    CK_PROPERTY(_PreFinishSpawnFunc);
+    CK_PROPERTY(_SpawnPolicy);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_ActorModifier_SpawnActor, _SpawnParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -206,11 +200,17 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_AddActorComponent_Params _ComponentParams;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              DisplayName = "InitializerFunc",
+              meta = (AllowPrivateAccess = true))
+    FCk_Lambda_InActorComponent _InitializerFunc_BP;
+
 private:
     InitializerFuncType _InitializerFunc = nullptr;
 
 public:
     CK_PROPERTY_GET(_ComponentToAdd);
+    CK_PROPERTY_GET(_InitializerFunc_BP);
     CK_PROPERTY(_IsUnique);
     CK_PROPERTY(_ComponentParams);
     CK_PROPERTY(_InitializerFunc);

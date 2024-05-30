@@ -46,7 +46,7 @@ namespace ck
     {
         switch(const auto& SpawnPolicy = InRequest.Get_SpawnPolicy())
         {
-            case ECk_SpawnActor_SpawnPolicy::SpawnOnInstanceWithOwership:
+            case ECk_SpawnActor_SpawnPolicy::SpawnOnInstanceWithOwnership:
             {
                 const auto OwningActor = Cast<AActor>(InRequest.Get_SpawnParams().Get_OwnerOrWorld().Get());
 
@@ -182,34 +182,35 @@ namespace ck
         const auto& ParentComponent = [&]() -> USceneComponent*
         {
             if (AttachmentType == ECk_ActorComponent_AttachmentPolicy::DoNotAttach)
-            { return nullptr; }
+            { return {}; }
 
             return ck::IsValid(ComponentParent) ? ComponentParent.Get() : ComponentOwner->GetRootComponent();
         }();
 
-        auto* AddedActorComponent = UCk_Utils_Actor_UE::Request_AddNewActorComponent
-        (
-            UCk_Utils_Actor_UE::AddNewActorComponent_Params
+        const auto& OptionalPayload = UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag, IgnoreSucceededFailed);
+
+        const auto AddActorCompParams  = UCk_Utils_Actor_UE::AddNewActorComponent_Params{ComponentOwner, InRequest.Get_ComponentToAdd(), ParentComponent}
+                                            .Set_IsUnique(InRequest.Get_IsUnique())
+                                            .Set_Socket(ComponentParams.Get_AttachmentSocket())
+                                            .Set_Tags(ComponentParams.Get_Tags());
+
+        const auto& PreFinishInitializerFunc = [&](UActorComponent* InActorComponent)
+        {
+            InActorComponent->SetComponentTickEnabled(ComponentParams.Get_IsTickEnabled());
+            InActorComponent->SetComponentTickInterval(ComponentParams.Get_TickInterval().Get_Seconds());
+
+            if (const auto& InitializerFunc = InRequest.Get_InitializerFunc())
             {
-                ComponentOwner,
-                InRequest.Get_ComponentToAdd(),
-                ParentComponent
+                InitializerFunc(InActorComponent);
             }
-            .Set_IsUnique(InRequest.Get_IsUnique())
-            .Set_Socket(ComponentParams.Get_AttachmentSocket())
-            .Set_Tags(ComponentParams.Get_Tags())
-        );
+
+            InRequest.Get_InitializerFunc_BP().ExecuteIfBound(InActorComponent, OptionalPayload);
+        };
+
+        auto* AddedActorComponent = UCk_Utils_Actor_UE::Request_AddNewActorComponent<UActorComponent>(AddActorCompParams, PreFinishInitializerFunc);
 
         CK_ENSURE_IF_NOT(ck::IsValid(AddedActorComponent), TEXT("Failed to Add new Actor Component [{}]"), InRequest.Get_ComponentToAdd())
         { return; }
-
-        AddedActorComponent->SetComponentTickEnabled(ComponentParams.Get_IsTickEnabled());
-        AddedActorComponent->SetComponentTickInterval(ComponentParams.Get_TickInterval().Get_Seconds());
-
-        if (const auto& InitializerFunc = InRequest.Get_InitializerFunc())
-        {
-            InitializerFunc(AddedActorComponent);
-        }
 
         if (AttachmentType == ECk_ActorComponent_AttachmentPolicy::DoNotAttach)
         {
@@ -227,8 +228,7 @@ namespace ck
 
         actor::Verbose(TEXT("ADDING Actor Component [{}] to Actor [{}]"), AddedActorComponent, ComponentOwner);
 
-        UUtils_Signal_OnActorComponentAdded::Broadcast(InHandle, MakePayload(AddedActorComponent->GetOwner(), AddedActorComponent,
-            UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag, IgnoreSucceededFailed)));
+        UUtils_Signal_OnActorComponentAdded::Broadcast(InHandle, MakePayload(AddedActorComponent->GetOwner(), AddedActorComponent, OptionalPayload));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
