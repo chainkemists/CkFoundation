@@ -31,6 +31,7 @@ namespace ck
     private:
         static auto
         DoHandleRequest(
+            TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Timer_Current& InCurrentComp,
             const FFragment_Timer_Params& InParamsComp,
@@ -38,6 +39,7 @@ namespace ck
 
         static auto
         DoHandleRequest(
+            TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Timer_Current& InCurrentComp,
             const FFragment_Timer_Params& InParamsComp,
@@ -45,6 +47,7 @@ namespace ck
 
         static auto
         DoHandleRequest(
+            TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Timer_Current& InCurrentComp,
             const FFragment_Timer_Params& InParamsComp,
