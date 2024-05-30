@@ -384,6 +384,9 @@ DEFINE_FUNCTION(UCk_Utils_Variables_InstancedStruct_UE::execINTERNAL__Get_ByName
         if (Recursion == ECk_Recursion::NotRecursive)
         { return; }
 
+        if (UCk_Utils_EntityLifetime_UE::Get_IsTransientEntity(CurrentHandle))
+        { return; }
+
         CurrentHandle = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(CurrentHandle);
     }
 }
@@ -437,6 +440,9 @@ DEFINE_FUNCTION(UCk_Utils_Variables_InstancedStruct_UE::execINTERNAL__Get)
         }
 
         if (Recursion == ECk_Recursion::NotRecursive)
+        { return; }
+
+        if (UCk_Utils_EntityLifetime_UE::Get_IsTransientEntity(CurrentHandle))
         { return; }
 
         CurrentHandle = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(CurrentHandle);
