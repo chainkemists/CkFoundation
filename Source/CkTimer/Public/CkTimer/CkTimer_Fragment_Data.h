@@ -217,15 +217,17 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_TwoParams(
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Delegate_Timer,
     FCk_Handle_Timer, InHandle,
-    FCk_Chrono, InChrono);
+    FCk_Chrono, InChrono,
+    FCk_Time, InDeltaT);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
     FCk_Delegate_Timer_MC,
     FCk_Handle_Timer, InHandle,
-    FCk_Chrono, InChrono);
+    FCk_Chrono, InChrono,
+    FCk_Time, InDeltaT);
 
 // --------------------------------------------------------------------------------------------------------------------
 
