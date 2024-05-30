@@ -212,17 +212,45 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(AddedActorComponent), TEXT("Failed to Add new Actor Component [{}]"), InRequest.Get_ComponentToAdd())
         { return; }
 
-        if (AttachmentType == ECk_ActorComponent_AttachmentPolicy::DoNotAttach)
+        switch (AttachmentType)
         {
-            if (auto* SceneComponent = Cast<USceneComponent>(AddedActorComponent);
-                CK_ENSURE(ck::IsValid(SceneComponent),
-                    TEXT("The created Component [{}] is specified to be [{}] "
-                         "however it is NOT a SceneComponent and cannot be transformed to the "
-                         "Actor's starting location"),
-                    AddedActorComponent,
-                    ComponentParams.Get_AttachmentType()))
+            case ECk_ActorComponent_AttachmentPolicy::Attach:
             {
-                SceneComponent->SetWorldTransform(ComponentOwner->GetTransform());
+                if (const auto* SceneComponent = Cast<USceneComponent>(AddedActorComponent);
+                    ck::IsValid(SceneComponent))
+                {
+                    const auto& AddedComponentMobility = SceneComponent->Mobility;
+
+                    CK_ENSURE_IF_NOT(AddedComponentMobility == EComponentMobility::Movable,
+                        TEXT("The created Actor Component [{}] was has its Component Mobility set to [{}], but is meant to ATTACH to the Owner [{}].\n"
+                             "Change its Component Mobility to MOVABLE for it to work properly"),
+                        AddedActorComponent,
+                        AddedComponentMobility.GetValue(),
+                        ComponentOwner)
+                    {}
+                }
+
+                break;
+            }
+            case ECk_ActorComponent_AttachmentPolicy::DoNotAttach:
+            {
+                if (auto* SceneComponent = Cast<USceneComponent>(AddedActorComponent);
+                    CK_ENSURE(ck::IsValid(SceneComponent),
+                        TEXT("The created Actor Component [{}] is specified to be [{}] "
+                             "however it is NOT a SceneComponent and cannot be transformed to the "
+                             "Actor's starting location"),
+                        AddedActorComponent,
+                        AttachmentType))
+                {
+                    SceneComponent->SetWorldTransform(ComponentOwner->GetTransform());
+                }
+
+                break;
+            }
+            default:
+            {
+                CK_INVALID_ENUM(AttachmentType);
+                break;
             }
         }
 
