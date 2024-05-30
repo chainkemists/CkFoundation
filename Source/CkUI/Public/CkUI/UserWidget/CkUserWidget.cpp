@@ -114,10 +114,7 @@ auto
     { return false; }
 
     if (const auto& CurrentBindActor = Get_BindActor(); CurrentBindActor == InActor)
-    {
-        ck::ui::Warning(TEXT("The widget [{}] BindActor is already [{}]!"), this, InActor);
-        return true;
-    }
+    { return true; }
 
     return false;
 }
