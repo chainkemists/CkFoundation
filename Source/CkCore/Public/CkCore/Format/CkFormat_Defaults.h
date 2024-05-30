@@ -258,6 +258,7 @@ CK_DEFINE_CUSTOM_FORMATTER_T(TOptional<T>, [&]()
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(EAppReturnType::Type);
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ETickingGroup);
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(EComponentMobility::Type);
 
 // --------------------------------------------------------------------------------------------------------------------
 
