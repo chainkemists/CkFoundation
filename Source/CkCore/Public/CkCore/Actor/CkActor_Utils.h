@@ -102,6 +102,7 @@ public:
 
     public:
         using CompClassType = TSubclassOf<T_CompType>;
+        using CompType = T_CompType;
 
     public:
         explicit
