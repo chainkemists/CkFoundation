@@ -198,6 +198,9 @@ auto
         const FCk_Ability_NotActivated_Info& InInfo)
     -> void
 {
+    if (UCk_Utils_Ability_Settings_UE::Get_AbilityNotActivatedDebug() == ECk_EnableDisable::Disable)
+    { return; }
+
     DoOnAbilityNotActivated(InInfo);
 }
 
