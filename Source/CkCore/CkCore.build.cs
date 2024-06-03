@@ -54,6 +54,7 @@ public class CkCore : CkModuleRules
                 "SlateCore",
                 "InputCore",
                 "DeveloperSettings",
+                "GameplayAbilities",
 
                 "CkLog",
                 "CkThirdParty",
