@@ -292,10 +292,12 @@ namespace ck
             const FCk_Request_ActorModifier_RemoveActorComponent& InRequest)
         -> void
     {
-        const auto& ComponentToRemove         = InRequest.Get_ComponentToRemove();
+        constexpr auto IncludePendingKill = true;
+
+        const auto& ComponentToRemove         = InRequest.Get_ComponentToRemove().Get(IncludePendingKill);
         const auto& PromoteChildrenComponents = InRequest.Get_PromoteChildrenComponents();
 
-        CK_ENSURE_IF_NOT(ComponentToRemove != nullptr, TEXT("Invalid Actor Component to REMOVE"))
+        CK_ENSURE_IF_NOT(ck::IsValid(ComponentToRemove, ck::IsValid_Policy_IncludePendingKill{}), TEXT("Invalid Actor Component to REMOVE"))
         { return; }
 
         if (ck::Is_NOT_Valid(ComponentToRemove))
@@ -306,7 +308,7 @@ namespace ck
 
         actor::Verbose(TEXT("REMOVING Actor Component [{}] from Actor [{}]"), ComponentToRemove, ComponentOwner);
 
-        UCk_Utils_Actor_UE::Request_RemoveActorComponent(ComponentToRemove.Get(), PromoteChildrenComponents);
+        UCk_Utils_Actor_UE::Request_RemoveActorComponent(ComponentToRemove, PromoteChildrenComponents);
 
         UUtils_Signal_OnActorComponentRemoved::Broadcast(InHandle, MakePayload(ComponentOwner, ComponentToRemoveClass,
             UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag, IgnoreSucceededFailed)));
