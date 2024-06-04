@@ -153,8 +153,8 @@ auto
     UCk_Utils_Physics_UE::
     Request_SetCollisionProfileName(
         UPrimitiveComponent* InComp,
-        FName                InCollisionProfileName,
-        const UObject*       InContext)
+        FName InCollisionProfileName,
+        const UObject* InContext)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InComp, ck::IsValid_Policy_IncludePendingKill{}),
@@ -174,7 +174,7 @@ auto
 auto
     UCk_Utils_Physics_UE::
     Get_IsValidCollisionProfileName(
-        FName          InCollisionProfileName,
+        FName InCollisionProfileName,
         const UObject* InContext)
     -> bool
 {
@@ -192,7 +192,7 @@ auto
     UCk_Utils_Physics_UE::
     Get_CollisionProfileName(
         const UPrimitiveComponent* InComp,
-        const UObject*             InContext)
+        const UObject* InContext)
     -> FName
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InComp, ck::IsValid_Policy_IncludePendingKill{}),
@@ -205,9 +205,9 @@ auto
 auto
     UCk_Utils_Physics_UE::
     Request_SetCollisionEnabled(
-        UPrimitiveComponent*                 InComp,
+        UPrimitiveComponent* InComp,
         TEnumAsByte<ECollisionEnabled::Type> InCollisionEnabled,
-        const UObject*                       InContext)
+        const UObject* InContext)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InComp, ck::IsValid_Policy_IncludePendingKill{}),
