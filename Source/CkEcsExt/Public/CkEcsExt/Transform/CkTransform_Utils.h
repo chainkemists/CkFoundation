@@ -146,18 +146,19 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
               DisplayName = "[Ck][Transform] Bind To OnUpdate")
-    static void
+    static FCk_Handle_Transform
     BindTo_OnUpdate(
-        UPARAM(ref) FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle_Transform& InHandle,
         ECk_Signal_BindingPolicy InBehavior,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_Transform_OnUpdate& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
               DisplayName = "[Ck][Transform] Unbind From OnUpdate")
-    static void
+    static FCk_Handle_Transform
     UnbindFrom_OnUpdate(
-        UPARAM(ref) FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle_Transform& InHandle,
         const FCk_Delegate_Transform_OnUpdate& InDelegate);
 
 private:
@@ -233,5 +234,6 @@ public:
     Request_SetInterpolationGoal_RotationOffset(
         UPARAM(ref) FCk_Handle_TransformInterpolation& InHandle,
         FRotator   InOffset);
-
 };
+
+// --------------------------------------------------------------------------------------------------------------------

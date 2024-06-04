@@ -27,8 +27,10 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_ECS_TAG(FTag_Transform_Setup);
+    CK_DEFINE_ECS_TAG(FTag_Transform_NeedsSetup);
+    CK_DEFINE_ECS_TAG(FTag_Transform_NeedsUpdate);
     CK_DEFINE_ECS_TAG(FTag_Transform_Updated);
+    CK_DEFINE_ECS_TAG(FTag_Transform_TryFireSignals);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -139,6 +141,7 @@ namespace ck
     public:
         friend class FProcessor_Transform_HandleRequests;
         friend class FProcessor_Transform_Replicate;
+        friend class FProcessor_Transform_Update;
         friend class UCk_Fragment_Transform_Rep;
         friend UCk_Utils_Transform_UE;
 
@@ -187,7 +190,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKECSEXT_API, TransformUpdate, FCk_Delegate_Transform_OnUpdate_MC, FCk_Handle, FTransform);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKECSEXT_API, TransformUpdate, FCk_Delegate_Transform_OnUpdate_MC, FCk_Handle_Transform, FTransform);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
