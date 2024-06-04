@@ -90,6 +90,11 @@ namespace ck
         Unbind(
             T_HandleType InHandle,
             UnrealDynamicDelegateType InDelegate);
+
+        template <typename T_HandleType>
+        static auto
+        IsBoundToMulticast(
+            T_HandleType InHandle) -> bool;
     };
 
 }
