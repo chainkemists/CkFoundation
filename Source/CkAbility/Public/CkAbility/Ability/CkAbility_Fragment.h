@@ -5,7 +5,7 @@
 #include "CkAbility/Ability/CkAbility_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
-#include "CkEcsBasics/EntityHolder/CkEntityHolder_Fragment.h"
+#include "CkEcsExt/EntityHolder/CkEntityHolder_Fragment.h"
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
 

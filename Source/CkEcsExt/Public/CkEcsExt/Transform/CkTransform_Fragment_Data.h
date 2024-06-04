@@ -14,19 +14,19 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
-struct CKECSBASICS_API FCk_Handle_Transform : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Transform); };
+struct CKECSEXT_API FCk_Handle_Transform : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Transform); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Transform);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
-struct CKECSBASICS_API FCk_Handle_TransformInterpolation : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_TransformInterpolation); };
+struct CKECSEXT_API FCk_Handle_TransformInterpolation : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_TransformInterpolation); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_TransformInterpolation);
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECSBASICS_API FCk_Transform_Interpolation_Settings
+struct CKECSEXT_API FCk_Transform_Interpolation_Settings
 {
     GENERATED_BODY()
 
@@ -60,7 +60,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECSBASICS_API FCk_Transform_ParamsData
+struct CKECSEXT_API FCk_Transform_ParamsData
 {
     GENERATED_BODY()
 
@@ -78,7 +78,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECSBASICS_API FCk_TransformInterpolation_ParamsData
+struct CKECSEXT_API FCk_TransformInterpolation_ParamsData
 {
     GENERATED_BODY()
 
@@ -98,7 +98,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECSBASICS_API FCk_Request_Transform_SetLocation
+struct CKECSEXT_API FCk_Request_Transform_SetLocation
 {
     GENERATED_BODY()
 
@@ -125,7 +125,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECSBASICS_API FCk_Request_Transform_AddLocationOffset
+struct CKECSEXT_API FCk_Request_Transform_AddLocationOffset
 {
     GENERATED_BODY()
 
@@ -152,7 +152,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECSBASICS_API FCk_Request_Transform_SetRotation
+struct CKECSEXT_API FCk_Request_Transform_SetRotation
 {
     GENERATED_BODY()
 
@@ -179,7 +179,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECSBASICS_API FCk_Request_Transform_AddRotationOffset
+struct CKECSEXT_API FCk_Request_Transform_AddRotationOffset
 {
     GENERATED_BODY()
 
@@ -206,7 +206,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECSBASICS_API FCk_Request_Transform_SetScale
+struct CKECSEXT_API FCk_Request_Transform_SetScale
 {
     GENERATED_BODY()
 
@@ -233,7 +233,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECSBASICS_API FCk_Request_Transform_SetTransform
+struct CKECSEXT_API FCk_Request_Transform_SetTransform
 {
     GENERATED_BODY()
 

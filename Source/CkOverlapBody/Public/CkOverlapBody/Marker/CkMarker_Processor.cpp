@@ -3,7 +3,7 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
-#include "CkEcsBasics/EntityHolder/CkEntityHolder_Utils.h"
+#include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
 
 #include "CkOverlapBody/CkOverlapBody_Log.h"
 #include "CkOverlapBody/Marker/CkMarker_Utils.h"

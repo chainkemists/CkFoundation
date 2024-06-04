@@ -23,7 +23,7 @@ public class CkAbility : CkModuleRules
 
             "CkCore",
             "CkEcs",
-            "CkEcsBasics",
+            "CkEcsExt",
             "CkEntityExtension",
             "CkLabel",
             "CkLog",

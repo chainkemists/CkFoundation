@@ -1,7 +1,7 @@
 #include "CkAutoReorient_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
-#include "CkEcsBasics/Transform/CkTransform_Utils.h"
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
 #include "CkPhysics/Velocity/CkVelocity_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------

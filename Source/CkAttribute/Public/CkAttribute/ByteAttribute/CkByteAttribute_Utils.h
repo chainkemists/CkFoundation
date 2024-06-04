@@ -5,7 +5,7 @@
 #include "CkAttribute/CkAttribute_Utils.h"
 #include "CkAttribute/ByteAttribute/CkByteAttribute_Fragment.h"
 #include "CkAttribute/ByteAttribute/CkByteAttribute_Fragment_Data.h"
-#include "CkEcsBasics/CkEcsBasics_Utils.h"
+#include "CkEcsExt/CkEcsExt_Utils.h"
 #include "CkSignal/CkSignal_Fragment_Data.h"
 
 #include "CkByteAttribute_Utils.generated.h"

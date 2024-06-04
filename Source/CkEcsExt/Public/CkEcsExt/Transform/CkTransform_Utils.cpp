@@ -22,7 +22,7 @@ auto
         {
             if (OwningActor->IsReplicatingMovement())
             {
-                ck::ecs_basics::VeryVerbose
+                ck::ecs_extension::VeryVerbose
                 (
                     TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it has an Owning Actor with Replicated Movement"),
                     InHandle
@@ -35,7 +35,7 @@ auto
 
     if (InReplicates == ECk_Replication::DoesNotReplicate)
     {
-        ck::ecs_basics::VeryVerbose
+        ck::ecs_extension::VeryVerbose
         (
             TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it's set to [{}]"),
             InHandle,

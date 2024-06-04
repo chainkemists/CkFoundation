@@ -5,12 +5,12 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkSettings/ProjectSettings/CkProjectSettings.h"
 
-#include "CkEcsBasics_Settings.generated.h"
+#include "CkEcsExt_Settings.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(meta = (DisplayName = "ECS Basics"))
-class CKECSBASICS_API UCk_EcsBasics_ProjectSettings_UE : public UCk_Plugin_ProjectSettings_UE
+class CKECSEXT_API UCk_EcsExt_ProjectSettings_UE : public UCk_Plugin_ProjectSettings_UE
 {
     GENERATED_BODY()
 
@@ -24,7 +24,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class CKECSBASICS_API UCk_Utils_EcsBasics_Settings_UE
+class CKECSEXT_API UCk_Utils_EcsExt_Settings_UE
 {
 public:
     static auto Get_EnableTransformSmoothing() -> bool;

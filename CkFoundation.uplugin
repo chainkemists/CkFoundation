@@ -147,7 +147,7 @@
 			]
 		},
 		{
-			"Name": "CkEcsBasics",
+			"Name": "CkEcsExt",
 			"Type": "Runtime",
 			"LoadingPhase": "PreDefault",
 			"WhitelistPlatforms": [
