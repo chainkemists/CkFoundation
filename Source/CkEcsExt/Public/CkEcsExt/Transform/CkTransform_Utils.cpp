@@ -130,9 +130,8 @@ auto
 {
     if (InHandle.Has<ck::FFragment_Transform_RootComponent>())
     {
-        auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
-
-        if (ck::IsValid(RootComponentFragment))
+        if (auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
+            ck::IsValid(RootComponentFragment))
         {
             return RootComponentFragment.Get_RootComponent()->GetComponentToWorld();
         }
@@ -149,9 +148,8 @@ auto
 {
     if (InHandle.Has<ck::FFragment_Transform_RootComponent>())
     {
-        auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
-
-        if (ck::IsValid(RootComponentFragment))
+        if (auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
+            ck::IsValid(RootComponentFragment))
         {
             return RootComponentFragment.Get_RootComponent()->GetComponentToWorld().GetLocation();
         }
@@ -168,9 +166,8 @@ auto
 {
     if (InHandle.Has<ck::FFragment_Transform_RootComponent>())
     {
-        auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
-
-        if (ck::IsValid(RootComponentFragment))
+        if (auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
+            ck::IsValid(RootComponentFragment))
         {
             return RootComponentFragment.Get_RootComponent()->GetComponentToWorld().GetRotation().Rotator();
         }
@@ -187,9 +184,8 @@ auto
 {
     if (InHandle.Has<ck::FFragment_Transform_RootComponent>())
     {
-        auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
-
-        if (ck::IsValid(RootComponentFragment))
+        if (auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
+            ck::IsValid(RootComponentFragment))
         {
             return RootComponentFragment.Get_RootComponent()->GetComponentToWorld().GetScale3D();
         }
@@ -235,7 +231,7 @@ auto
 auto
     UCk_Utils_TransformInterpolation_UE::
     Add(
-        FCk_Handle&                                 InHandle,
+        FCk_Handle& InHandle,
         const FCk_Transform_Interpolation_Settings& InParams)
     -> FCk_Handle_TransformInterpolation
 {
