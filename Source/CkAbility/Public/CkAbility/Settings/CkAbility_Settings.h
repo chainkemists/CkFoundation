@@ -28,13 +28,27 @@ private:
               meta = (AllowPrivateAccess = true, AllowAbstract))
     TArray<TSubclassOf<UCk_Ability_Script_PDA>> _CueTypes;
 
+public:
+    CK_PROPERTY_GET(_AbilityRecyclingPolicy);
+    CK_PROPERTY_GET(_CueTypes);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(meta = (DisplayName = "Ability"))
+class CKABILITY_API UCk_Ability_UserSettings_UE : public UCk_Plugin_UserSettings_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Ability_UserSettings_UE);
+
+private:
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Debug",
               meta = (AllowPrivateAccess = true))
     ECk_EnableDisable _AbilityNotActivatedDebug = ECk_EnableDisable::Disable;
 
 public:
-    CK_PROPERTY_GET(_AbilityRecyclingPolicy);
-    CK_PROPERTY_GET(_CueTypes);
     CK_PROPERTY_GET(_AbilityNotActivatedDebug);
 };
 
