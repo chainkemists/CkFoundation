@@ -5,7 +5,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_Core_ProjectSettings_UE::
+    UCk_Utils_Core_UserSettings_UE::
     Get_EnsureDisplayPolicy()
     -> ECk_EnsureDisplay_Policy
 {
@@ -17,14 +17,12 @@ auto
 }
 
 auto
-    UCk_Utils_Core_ProjectSettings_UE::
+    UCk_Utils_Core_UserSettings_UE::
     Get_EnsureDetailsPolicy()
     -> ECk_EnsureDetails_Policy
 {
     return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Core_UserSettings_UE>()->Get_EnsureDetailsPolicy();
 }
-
-// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_Core_UserSettings_UE::

@@ -33,6 +33,8 @@ enum class ECk_EnsureDetails_Policy : uint8
     MessageAndStackTrace
 };
 
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EnsureDetails_Policy);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
@@ -42,6 +44,8 @@ enum class ECk_EnsureBreakInBlueprints_Policy : uint8
     // Unreal 'Break on Exception' is disabled by default in Editor Settings
     UseUnrealExceptionBehavior
 };
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EnsureBreakInBlueprints_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -74,11 +78,11 @@ private:
     ECk_EnsureDisplay_Policy _EnsureDisplayPolicy = ECk_EnsureDisplay_Policy::ModalDialog;
 
     UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Ensures",
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_EnsureDisplayPolicy != ECk_EnsureDisplay_Policy::StreamerMode"))
     ECk_EnsureBreakInBlueprints_Policy _EnsureBreakInBlueprintsPolicy = ECk_EnsureBreakInBlueprints_Policy::AlwaysBreak;
 
     UPROPERTY(Config, VisibleAnywhere, BlueprintReadOnly, Category = "Ensures",
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_EnsureDisplayPolicy != ECk_EnsureDisplay_Policy::StreamerMode"))
     ECk_EnsureDetails_Policy _EnsureDetailsPolicy = ECk_EnsureDetails_Policy::MessageAndStackTrace;
 
 public:
@@ -92,9 +96,6 @@ public:
 
 class CKCORE_API UCk_Utils_Core_ProjectSettings_UE
 {
-public:
-    static auto Get_EnsureDisplayPolicy() -> ECk_EnsureDisplay_Policy;
-    static auto Get_EnsureDetailsPolicy() -> ECk_EnsureDetails_Policy;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -104,6 +105,8 @@ class CKCORE_API UCk_Utils_Core_UserSettings_UE
 public:
     static auto Get_DefaultDebugNameVerbosity() -> ECk_DebugNameVerbosity_Policy;
     static auto Get_EnsureBreakInBlueprintsPolicy() -> ECk_EnsureBreakInBlueprints_Policy;
+    static auto Get_EnsureDisplayPolicy() -> ECk_EnsureDisplay_Policy;
+    static auto Get_EnsureDetailsPolicy() -> ECk_EnsureDetails_Policy;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
