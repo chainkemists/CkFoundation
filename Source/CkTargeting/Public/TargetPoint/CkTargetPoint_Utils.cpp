@@ -1,7 +1,7 @@
 #include "CkTargetPoint_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-#include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
@@ -16,6 +16,8 @@ auto
     -> FCk_Handle_Transform
 {
     auto TargetPointEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    UCk_Utils_Handle_UE::Set_DebugName(TargetPointEntity, *ck::Format_UE(TEXT("TARGET POINT: [{}]"), InTransform));
+
     return UCk_Utils_Transform_UE::Add(TargetPointEntity, InTransform, ECk_Replication::DoesNotReplicate);
 }
 
@@ -30,8 +32,11 @@ auto
         TEXT("WorldContextObject [{}] is INVALID. Unable to Create a Transient TargetPoint Entity"), InWorldContextObject)
     { return {}; }
 
-    auto TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(InWorldContextObject->GetWorld());
+    const auto& TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(InWorldContextObject->GetWorld());
+
     auto TargetPointEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity);
+    UCk_Utils_Handle_UE::Set_DebugName(TargetPointEntity, *ck::Format_UE(TEXT("TARGET POINT: [{}]"), InTransform));
+
     return UCk_Utils_Transform_UE::Add(TargetPointEntity, InTransform, ECk_Replication::DoesNotReplicate);
 }
 

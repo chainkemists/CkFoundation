@@ -2,6 +2,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
+
 #include "CkTargetPoint_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
