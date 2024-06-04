@@ -67,12 +67,6 @@ struct CKPHYSICS_API FCk_BoxExtents
 public:
     CK_GENERATED_BODY(FCk_BoxExtents);
 
-public:
-    FCk_BoxExtents() = default;
-    FCk_BoxExtents(
-        FVector InExtents,
-        ECk_ScaledUnscaled InScalesUnscaled);
-
 private:
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FVector _Extents = FVector::ZeroVector;
@@ -82,7 +76,10 @@ private:
 
 public:
     CK_PROPERTY_GET(_Extents);
-    CK_PROPERTY_GET(_ScaledUnscaled);
+    CK_PROPERTY(_ScaledUnscaled);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_BoxExtents, _Extents);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -95,12 +92,6 @@ struct CKPHYSICS_API FCk_SphereRadius
 public:
     CK_GENERATED_BODY(FCk_SphereRadius);
 
-public:
-    FCk_SphereRadius() = default;
-    FCk_SphereRadius(
-        float InRadius,
-        ECk_ScaledUnscaled InScaledUnscaled);
-
 private:
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Units = "cm"))
     float _Radius = 0.0f;
@@ -110,7 +101,10 @@ private:
 
 public:
     CK_PROPERTY_GET(_Radius);
-    CK_PROPERTY_GET(_ScaledUnscaled);
+    CK_PROPERTY(_ScaledUnscaled);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_SphereRadius, _Radius);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -122,13 +116,6 @@ struct CKPHYSICS_API FCk_CapsuleSize
 
 public:
     CK_GENERATED_BODY(FCk_CapsuleSize);
-
-public:
-    FCk_CapsuleSize() = default;
-    FCk_CapsuleSize(
-        float InRadius,
-        float InHalfHeight,
-        ECk_ScaledUnscaled InScaledUnscaled);
 
 private:
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Units = "cm"))
@@ -143,7 +130,10 @@ private:
 public:
     CK_PROPERTY_GET(_Radius);
     CK_PROPERTY_GET(_HalfHeight);
-    CK_PROPERTY_GET(_ScaledUnscaled);
+    CK_PROPERTY(_ScaledUnscaled);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_CapsuleSize, _Radius, _HalfHeight);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
