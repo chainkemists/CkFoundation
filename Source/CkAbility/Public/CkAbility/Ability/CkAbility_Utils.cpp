@@ -10,7 +10,7 @@
 #include "CkCore/Object/CkObject_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-#include "CkEcsBasics/EntityHolder/CkEntityHolder_Utils.h"
+#include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
 
 #include <Engine/World.h>
 

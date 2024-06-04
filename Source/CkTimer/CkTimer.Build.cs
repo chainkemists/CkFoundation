@@ -19,7 +19,7 @@ public class CkTimer : CkModuleRules
 
             "CkCore",
             "CkEcs",
-            "CkEcsBasics",
+            "CkEcsExt",
             "CkLabel",
             "CkLog",
             "CkNet",

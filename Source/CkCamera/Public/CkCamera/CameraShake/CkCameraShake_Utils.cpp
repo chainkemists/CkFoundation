@@ -1,6 +1,6 @@
 #include "CkCameraShake_Utils.h"
 
-#include "CkEcsBasics/EntityHolder/CkEntityHolder_Utils.h"
+#include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

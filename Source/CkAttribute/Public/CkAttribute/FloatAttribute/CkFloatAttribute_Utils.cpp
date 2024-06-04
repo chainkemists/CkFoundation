@@ -6,7 +6,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment.h"
 
-#include "CkEcsBasics/Transform/CkTransform_Fragment.h"
+#include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
 #include "CkLabel/CkLabel_Utils.h"
 

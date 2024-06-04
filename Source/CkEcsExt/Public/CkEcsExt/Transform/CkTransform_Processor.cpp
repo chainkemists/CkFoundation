@@ -4,9 +4,9 @@
 
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
-#include "CkEcsBasics/CkEcsBasics_Log.h"
-#include "CkEcsBasics/Settings/CkEcsBasics_Settings.h"
-#include "CkEcsBasics/Transform/CkTransform_Utils.h"
+#include "CkEcsExt/CkEcsExt_Log.h"
+#include "CkEcsExt/Settings/CkEcsExt_Settings.h"
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
 
 #include "CkNet/CkNet_Utils.h"
 
@@ -95,7 +95,7 @@ namespace ck
         if (const auto& NewTransform = InComp.Get_Transform();
             NOT PreviousTransform.Equals(NewTransform))
         {
-            ecs_basics::VeryVerbose(TEXT("Updated Transform [Old: {} | New: {}] of Entity [{}]"), PreviousTransform, NewTransform, InHandle);
+            ecs_extension::VeryVerbose(TEXT("Updated Transform [Old: {} | New: {}] of Entity [{}]"), PreviousTransform, NewTransform, InHandle);
             InHandle.Add<ck::FTag_Transform_Updated>();
         }
         else
@@ -393,7 +393,7 @@ namespace ck
             FFragment_TransformInterpolation_NewGoal_Location& InGoal) const
         -> void
     {
-        if (NOT UCk_Utils_EcsBasics_Settings_UE::Get_EnableTransformSmoothing())
+        if (NOT UCk_Utils_EcsExt_Settings_UE::Get_EnableTransformSmoothing())
         {
             UCk_Utils_Transform_UE::Request_SetLocation
             (
@@ -457,7 +457,7 @@ namespace ck
             FFragment_TransformInterpolation_NewGoal_Rotation& InGoal) const
         -> void
     {
-        if (NOT UCk_Utils_EcsBasics_Settings_UE::Get_EnableTransformSmoothing())
+        if (NOT UCk_Utils_EcsExt_Settings_UE::Get_EnableTransformSmoothing())
         {
             UCk_Utils_Transform_UE::Request_SetRotation
             (

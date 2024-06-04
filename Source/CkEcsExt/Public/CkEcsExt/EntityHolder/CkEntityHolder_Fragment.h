@@ -7,7 +7,7 @@
 
 namespace ck
 {
-    struct CKECSBASICS_API FFragment_EntityHolder
+    struct CKECSEXT_API FFragment_EntityHolder
     {
     public:
         CK_GENERATED_BODY(FFragment_EntityHolder);

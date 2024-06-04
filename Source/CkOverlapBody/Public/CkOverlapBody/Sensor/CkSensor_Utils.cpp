@@ -2,7 +2,7 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-#include "CkEcsBasics/EntityHolder/CkEntityHolder_Utils.h"
+#include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
 #include "CkNet/CkNet_Utils.h"
 #include "CkOverlapBody/CkOverlapBody_Log.h"
 

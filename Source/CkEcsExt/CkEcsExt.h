@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 
-class FCkEcsBasicsModule : public IModuleInterface
+class FCkEcsExtModule : public IModuleInterface
 {
 public:
 

@@ -2,8 +2,8 @@
 
 #include <CkEcs/Handle/CkHandle.h>
 
-#include <CkEcsBasics/Transform/CkTransform_Fragment.h>
-#include <CkEcsBasics/Transform/CkTransform_Fragment_Data.h>
+#include <CkEcsExt/Transform/CkTransform_Fragment.h>
+#include <CkEcsExt/Transform/CkTransform_Fragment_Data.h>
 
 #include <CkCore/Macros/CkMacros.h>
 
@@ -12,7 +12,7 @@
 #include "CkCore/Actor/CkActor_Utils.h"
 
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
-#include "CkEcsBasics/CkEcsBasics_Log.h"
+#include "CkEcsExt/CkEcsExt_Log.h"
 #include "CkNet/CkNet_Utils.h"
 
 #include "CkTransform_Utils.generated.h"
@@ -20,7 +20,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKECSBASICS_API UCk_Utils_Transform_UE : public UCk_Utils_Ecs_Net_UE
+class CKECSEXT_API UCk_Utils_Transform_UE : public UCk_Utils_Ecs_Net_UE
 {
     GENERATED_BODY()
 
@@ -174,7 +174,7 @@ private:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKECSBASICS_API UCk_Utils_TransformInterpolation_UE : public UCk_Utils_Ecs_Net_UE
+class CKECSEXT_API UCk_Utils_TransformInterpolation_UE : public UCk_Utils_Ecs_Net_UE
 {
     GENERATED_BODY()
 

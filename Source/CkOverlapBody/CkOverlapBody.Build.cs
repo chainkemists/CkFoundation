@@ -21,7 +21,7 @@ public class CkOverlapBody : CkModuleRules
             "CkActor",
             "CkCore",
             "CkEcs",
-            "CkEcsBasics",
+            "CkEcsExt",
             "CkGraphics",
             "CkLabel",
             "CkLog",

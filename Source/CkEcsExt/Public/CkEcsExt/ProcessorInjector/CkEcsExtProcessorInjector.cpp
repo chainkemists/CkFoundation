@@ -1,11 +1,11 @@
-#include "CkEcsBasicsProcessorInjector.h"
+#include "CkEcsExtProcessorInjector.h"
 
-#include "CkEcsBasics/Transform/CkTransform_Processor.h"
+#include "CkEcsExt/Transform/CkTransform_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_EcsBasics_ProcessorInjector::
+    UCk_EcsExt_ProcessorInjector::
     DoInjectProcessors(
         EcsWorldType& InWorld)
         -> void

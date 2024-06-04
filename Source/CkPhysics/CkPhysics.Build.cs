@@ -19,7 +19,7 @@ public class CkPhysics : CkModuleRules
             "CkActor",
             "CkCore",
             "CkEcs",
-            "CkEcsBasics",
+            "CkEcsExt",
             "CkLabel",
             "CkLog",
             "CkNet",
