@@ -32,7 +32,7 @@ public:
         DisplayName="[Ck][ReplicationDriver] Request Build and Replicate")
     static FCk_Handle
     Request_BuildAndReplicate(
-        FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo);
 
 public:
