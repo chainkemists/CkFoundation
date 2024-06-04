@@ -45,6 +45,30 @@ namespace ck
         }
     }
 
+    auto
+        FProcessor_Transform_Update::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_Transform& InTransform,
+            FFragment_Transform_RootComponent& InTransformRootComp) const
+        -> void
+    {
+        const auto& RootComponent = InTransformRootComp.Get_RootComponent();
+
+        if (ck::Is_NOT_Valid(RootComponent))
+        { return; }
+
+        const auto& PreviousTransform = InTransform.Get_Transform();
+
+        if (const auto& RootCompTransform = RootComponent->GetComponentToWorld();
+            NOT PreviousTransform.Equals(RootCompTransform))
+        {
+            InTransform._Transform = RootCompTransform;
+            InHandle.Add<ck::FTag_Transform_Updated>();
+        }
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     auto

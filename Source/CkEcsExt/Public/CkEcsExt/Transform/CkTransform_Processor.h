@@ -13,12 +13,15 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSEXT_API FProcessor_Transform_Setup : public TProcessor<
-        FProcessor_Transform_Setup, FTag_Transform_Setup, CK_IGNORE_PENDING_KILL>
+    class CKECSEXT_API FProcessor_Transform_Setup : public ck_exp::TProcessor<
+            FProcessor_Transform_Setup,
+            FCk_Handle_Transform,
+            FTag_Transform_NeedsSetup,
+            CK_IGNORE_PENDING_KILL>
     {
     public:
         using Super = TProcessor;
-        using MarkedDirtyBy = FTag_Transform_Setup;
+        using MarkedDirtyBy = FTag_Transform_NeedsSetup;
 
     public:
         using TProcessor::TProcessor;
@@ -37,8 +40,34 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSEXT_API FProcessor_Transform_HandleRequests : public TProcessor<
+    class CKECSEXT_API FProcessor_Transform_Update : public ck_exp::TProcessor<
+            FProcessor_Transform_Update,
+            FCk_Handle_Transform,
+            FFragment_Transform,
+            FFragment_Transform_RootComponent,
+            FTag_Transform_NeedsUpdate,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Super = TProcessor;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_Transform& InTransform,
+            FFragment_Transform_RootComponent& InTransformRootComp) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKECSEXT_API FProcessor_Transform_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Transform_HandleRequests,
+            FCk_Handle_Transform,
             FFragment_Transform,
             FFragment_Transform_Requests,
             CK_IGNORE_PENDING_KILL>
@@ -89,11 +118,13 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSEXT_API FProcessor_Transform_Actor : public TProcessor<
+    class CKECSEXT_API FProcessor_Transform_Actor : public ck_exp::TProcessor<
             FProcessor_Transform_Actor,
+            FCk_Handle_Transform,
             FFragment_OwningActor_Current,
             FFragment_Transform,
             FTag_Transform_Updated,
+            ck::TExclude<FFragment_Transform_RootComponent>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -112,8 +143,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSEXT_API FProcessor_Transform_FireSignals : public TProcessor<
+    class CKECSEXT_API FProcessor_Transform_FireSignals : public ck_exp::TProcessor<
             FProcessor_Transform_FireSignals,
+            FCk_Handle_Transform,
             FFragment_Signal_TransformUpdate,
             FFragment_Transform,
             FTag_Transform_Updated,
@@ -135,8 +167,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSEXT_API FProcessor_Transform_Replicate : public TProcessor<
+    class CKECSEXT_API FProcessor_Transform_Replicate : public ck_exp::TProcessor<
             FProcessor_Transform_Replicate,
+            FCk_Handle_Transform,
             FFragment_Transform,
             TObjectPtr<UCk_Fragment_Transform_Rep>,
             FTag_Transform_Updated,

@@ -13,7 +13,7 @@ auto
     -> FCk_Handle_Transform
 {
     InHandle.Add<ck::FFragment_Transform>(InInitialTransform);
-    InHandle.Add<ck::FTag_Transform_Setup>();
+    InHandle.Add<ck::FTag_Transform_NeedsSetup>();
 
     if (UCk_Utils_OwningActor_UE::Has(InHandle))
     {
@@ -197,22 +197,51 @@ auto
 auto
     UCk_Utils_Transform_UE::
     BindTo_OnUpdate(
-        FCk_Handle& InHandle,
+        FCk_Handle_Transform& InHandle,
         ECk_Signal_BindingPolicy InBehavior,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_Transform_OnUpdate& InDelegate)
-    -> void
+    -> FCk_Handle_Transform
 {
-    ck::UUtils_Signal_TransformUpdate::Bind(InHandle, InDelegate, InBehavior);
+    CK_SIGNAL_BIND(ck::UUtils_Signal_TransformUpdate, InHandle, InDelegate, InBehavior, InPostFireBehavior);
+
+    if (NOT InHandle.Has<ck::FFragment_Transform_RootComponent>())
+    { return InHandle; }
+
+    if (InHandle.Has<ck::FTag_Transform_NeedsUpdate>())
+    { return InHandle; }
+
+    if (auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
+        ck::IsValid(RootComponentFragment))
+    {
+        // Need to update the transform value in the fragment since when a RootComponent exists, we don't update it
+        // every frame through the processors. We need to set the current value NOW so that we can determine if it has changed
+        // when the Update processor is ticked
+        InHandle.Get<ck::FFragment_Transform>()._Transform = RootComponentFragment.Get_RootComponent()->GetComponentToWorld();
+        InHandle.Add<ck::FTag_Transform_NeedsUpdate>();
+    }
+
+    return InHandle;
 }
 
 auto
     UCk_Utils_Transform_UE::
     UnbindFrom_OnUpdate(
-        FCk_Handle& InHandle,
+        FCk_Handle_Transform& InHandle,
         const FCk_Delegate_Transform_OnUpdate& InDelegate)
-    -> void
+    -> FCk_Handle_Transform
 {
-    ck::UUtils_Signal_TransformUpdate::Unbind(InHandle, InDelegate);
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_TransformUpdate, InHandle, InDelegate);
+
+    if (NOT InHandle.Has<ck::FFragment_Transform_RootComponent>())
+    { return InHandle; }
+
+    if (ck::UUtils_Signal_TransformUpdate::IsBoundToMulticast(InHandle))
+    { return InHandle; }
+
+    InHandle.Remove<ck::FTag_Transform_NeedsUpdate>();
+
+    return InHandle;
 }
 
 auto
