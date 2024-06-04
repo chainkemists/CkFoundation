@@ -374,5 +374,21 @@ namespace ck
         InHandle.template Remove<T_DerivedSignal_Unreal>();
     }
 
+    template <typename T_DerivedSignal, typename T_DerivedSignal_Unreal>
+    template <typename T_HandleType>
+    auto
+        TUtils_Signal_UnrealMulticast<T_DerivedSignal, T_DerivedSignal_Unreal>::
+        IsBoundToMulticast(
+            T_HandleType InHandle)
+        -> bool
+    {
+        if (NOT InHandle.template Has<T_DerivedSignal_Unreal>())
+        { return {}; }
+
+        const auto& UnrealMulticast = InHandle.template Get<T_DerivedSignal_Unreal, ck::IsValid_Policy_IncludePendingKill>();
+
+        return UnrealMulticast._Multicast.IsBound();
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 }
