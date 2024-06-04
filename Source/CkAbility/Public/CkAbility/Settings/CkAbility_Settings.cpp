@@ -25,7 +25,7 @@ auto
     Get_AbilityNotActivatedDebug()
     -> const ECk_EnableDisable
 {
-    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_ProjectSettings_UE>()->Get_AbilityNotActivatedDebug();
+    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_UserSettings_UE>()->Get_AbilityNotActivatedDebug();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
