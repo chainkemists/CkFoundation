@@ -6,14 +6,14 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkNet/CkNet_Utils.h"
 
-#include "CkEcsBasics_Utils.generated.h"
+#include "CkEcsExt_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 
 
 UCLASS(NotBlueprintable)
-class CKECSBASICS_API UCk_Utils_Ecs_Base_UE : public UBlueprintFunctionLibrary
+class CKECSEXT_API UCk_Utils_Ecs_Base_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 

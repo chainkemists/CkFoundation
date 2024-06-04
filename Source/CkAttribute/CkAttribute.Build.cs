@@ -20,7 +20,7 @@ public class CkAttribute : CkModuleRules
 
             "CkCore",
             "CkEcs",
-            "CkEcsBasics",
+            "CkEcsExt",
             "CkLabel",
             "CkLog",
             "CkNet",

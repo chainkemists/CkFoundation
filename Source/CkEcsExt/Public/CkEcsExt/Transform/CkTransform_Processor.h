@@ -13,7 +13,7 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSBASICS_API FProcessor_Transform_Setup : public TProcessor<
+    class CKECSEXT_API FProcessor_Transform_Setup : public TProcessor<
         FProcessor_Transform_Setup, FTag_Transform_Setup, CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -37,7 +37,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSBASICS_API FProcessor_Transform_HandleRequests : public TProcessor<
+    class CKECSEXT_API FProcessor_Transform_HandleRequests : public TProcessor<
             FProcessor_Transform_HandleRequests,
             FFragment_Transform,
             FFragment_Transform_Requests,
@@ -89,7 +89,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSBASICS_API FProcessor_Transform_Actor : public TProcessor<
+    class CKECSEXT_API FProcessor_Transform_Actor : public TProcessor<
             FProcessor_Transform_Actor,
             FFragment_OwningActor_Current,
             FFragment_Transform,
@@ -112,7 +112,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSBASICS_API FProcessor_Transform_FireSignals : public TProcessor<
+    class CKECSEXT_API FProcessor_Transform_FireSignals : public TProcessor<
             FProcessor_Transform_FireSignals,
             FFragment_Signal_TransformUpdate,
             FFragment_Transform,
@@ -135,7 +135,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSBASICS_API FProcessor_Transform_Replicate : public TProcessor<
+    class CKECSEXT_API FProcessor_Transform_Replicate : public TProcessor<
             FProcessor_Transform_Replicate,
             FFragment_Transform,
             TObjectPtr<UCk_Fragment_Transform_Rep>,
@@ -158,7 +158,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSBASICS_API FProcessor_Transform_InterpolateToGoal_Location : public ck_exp::TProcessor<
+    class CKECSEXT_API FProcessor_Transform_InterpolateToGoal_Location : public ck_exp::TProcessor<
             FProcessor_Transform_InterpolateToGoal_Location,
             FCk_Handle_Transform,
             FFragment_TransformInterpolation_Params,
@@ -183,7 +183,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSBASICS_API FProcessor_Transform_InterpolateToGoal_Rotation : public ck_exp::TProcessor<
+    class CKECSEXT_API FProcessor_Transform_InterpolateToGoal_Rotation : public ck_exp::TProcessor<
             FProcessor_Transform_InterpolateToGoal_Rotation,
             FCk_Handle_Transform,
             FFragment_TransformInterpolation_Params,

@@ -2,12 +2,12 @@
 
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-#include "CkEcsBasicsProcessorInjector.generated.h"
+#include "CkEcsExtProcessorInjector.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKECSBASICS_API UCk_EcsBasics_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base_UE
+class CKECSEXT_API UCk_EcsExt_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 

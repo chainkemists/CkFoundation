@@ -1,12 +1,12 @@
-#include "CkEcsBasics_Log.h"
+#include "CkEcsExt_Log.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DEFINE_LOG_CATEGORY(CkEcsBasics);
+DEFINE_LOG_CATEGORY(CkEcsExt);
 
-namespace ck::ecs_basics
+namespace ck::ecs_extension
 {
-	CK_REGISTER_LOG_FUNCTIONS(CkEcsBasics);
+	CK_REGISTER_LOG_FUNCTIONS(CkEcsExt);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

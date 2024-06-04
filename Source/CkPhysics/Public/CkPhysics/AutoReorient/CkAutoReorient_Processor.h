@@ -3,7 +3,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 
-#include "CkEcsBasics/Transform/CkTransform_Fragment.h"
+#include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
 #include "CkPhysics/AutoReorient/CkAutoReorient_Fragment.h"
 #include "CkPhysics/Velocity/CkVelocity_Fragment.h"

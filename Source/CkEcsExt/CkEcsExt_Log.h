@@ -4,13 +4,13 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CKECSBASICS_API DECLARE_LOG_CATEGORY_EXTERN(CkEcsBasics, Log, All);
+CKECSEXT_API DECLARE_LOG_CATEGORY_EXTERN(CkEcsExt, Log, All);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck::ecs_basics
+namespace ck::ecs_extension
 {
-    CK_DEFINE_LOG_FUNCTIONS(CkEcsBasics);
+    CK_DEFINE_LOG_FUNCTIONS(CkEcsExt);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

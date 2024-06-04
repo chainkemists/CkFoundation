@@ -17,7 +17,7 @@ public class CkSubstep : CkModuleRules
 
             "CkCore",
             "CkEcs",
-            "CkEcsBasics",
+            "CkEcsExt",
             "CkLabel",
             "CkLog",
             "CkRecord",
