@@ -53,7 +53,7 @@ public:
 protected:
     UFUNCTION(BlueprintCallable, BlueprintImplementableEvent,
               Category = "Ck|Ability|Script",
-              meta     = (DevelopmentOnly, DisplayName = "OnAbilityNotActivated"))
+              meta     = (DevelopmentOnly, DisplayName = "OnAbilityNotActivated (DEVELOPMENT ONLY)"))
     void
     DoOnAbilityNotActivated(
         const FCk_Ability_NotActivated_Info& InInfo);
