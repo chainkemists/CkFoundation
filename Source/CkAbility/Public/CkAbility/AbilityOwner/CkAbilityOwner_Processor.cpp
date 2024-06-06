@@ -780,9 +780,8 @@ namespace ck
 
                 const auto PendingRequest = std::get_if<FCk_Request_AbilityOwner_DeactivateAbility>(&LastRequest);
 
-                CK_ENSURE_IF_NOT(IsValid(PendingRequest, IsValid_Policy_NullptrOnly{}),
-                    TEXT("Expected the PendingRequest IMMEDIATELY AFTER Activating Ability [{}] with Owner [{}] to be of type DeactivateAbility. "
-                    "Because this not the case, this code needs to be rethought."), InAbilityToActivateEntity, InAbilityOwnerEntity)
+                // it's possible there are Activation requests
+                if (ck::Is_NOT_Valid(PendingRequest, IsValid_Policy_NullptrOnly{}))
                 { return; }
 
                 CK_ENSURE_IF_NOT(PendingRequest->Get_AbilityHandle() == InAbilityToActivateEntity,
