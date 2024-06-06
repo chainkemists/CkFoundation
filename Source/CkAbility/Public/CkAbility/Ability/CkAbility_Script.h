@@ -38,6 +38,10 @@ public:
         const FCk_Ability_Payload_OnActivate& InOptionalPayload) -> void;
 
     auto
+    OnReactivateAbility(
+        const FCk_Ability_Payload_OnActivate& InOptionalPayload) -> void;
+
+    auto
     OnDeactivateAbility() -> void;
 
     auto
@@ -63,6 +67,13 @@ protected:
               meta     = (DisplayName = "OnActivateAbility"))
     void
     DoOnActivateAbility(
+        const FCk_Ability_Payload_OnActivate& InActivationPayload);
+
+    UFUNCTION(BlueprintImplementableEvent,
+              Category = "Ck|Ability|Script",
+              meta     = (DisplayName = "OnReactivateAbility"))
+    void
+    DoOnReactivateAbility(
         const FCk_Ability_Payload_OnActivate& InActivationPayload);
 
     UFUNCTION(BlueprintImplementableEvent,
