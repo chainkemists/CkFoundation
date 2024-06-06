@@ -756,17 +756,14 @@ namespace ck
                     InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityToActivateEntity, AbilityActivatedOrNot));
 
             auto& RequestsComp = InAbilityOwnerEntity.Get<FFragment_AbilityOwner_Requests>();
-            const auto NumNewRequests = RequestsComp.Get_Requests().Num();
 
             // it's possible that we already have a deactivation request, if yes, process it
             const auto ProcessPossibleDeactivationRequest = [&]
             {
-                const auto NewRequestsAfterActivate = RequestsComp.Get_Requests().Num() - NumNewRequests;
-
-                if (NOT NewRequestsAfterActivate)
+                if (RequestsComp.Get_Requests().IsEmpty())
                 { return; }
 
-                CK_ENSURE_IF_NOT(NewRequestsAfterActivate == 1,
+                CK_ENSURE_IF_NOT(RequestsComp.Get_Requests().Num() == 1,
                     TEXT("This code expects that the Requests Array size, IMMEDIATELY AFTER the Ability [{}] with Owner [{}] is Activated AND "
                         "WHILE we are potentially processing other requests, is ONE (where ONE means the Ability we just Activated, Deactivated), "
                         "in the same frame. If this Ensure is firing, this means this assumption is incorrect and this code needs to be rethought."),
