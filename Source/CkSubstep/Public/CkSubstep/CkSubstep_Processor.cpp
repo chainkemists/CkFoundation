@@ -38,6 +38,9 @@ namespace ck
             ++StepNumber;
             AdjustedTickRate -= TickRate;
             UUtils_Signal_OnSubstepUpdate::Broadcast(InHandle, MakePayload(InHandle, TickRate, StepNumber, InDeltaT));
+
+            if (NOT InHandle.Has<FTag_Substep_Update>())
+            { break; }
         }
 
         InCurrent._DeltaOverflowFromLastFrame = AdjustedTickRate;
