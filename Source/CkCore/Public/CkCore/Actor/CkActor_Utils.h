@@ -226,22 +226,6 @@ public:
         AActor* InActor,
         FName InBoneName);
 
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Actor",
-              DisplayName = "[Ck] Get Is Actor Locally Controlled",
-              meta = (DefaultToSelf = "InActor"))
-    static bool
-    Get_IsLocallyControlled(
-        AActor* InActor);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Actor",
-              DisplayName = "[Ck] Get Is Actor Locally Controlled (By Player)",
-              meta = (DefaultToSelf = "InActor"))
-    static bool
-    Get_IsLocallyControlledByPlayer(
-        AActor* InActor);
-
 public:
     /**
      * Assigns a new label to this actor. Actor labels are only available in development builds.

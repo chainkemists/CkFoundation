@@ -204,38 +204,6 @@ auto
 
 auto
     UCk_Utils_Actor_UE::
-    Get_IsLocallyControlled(
-        AActor* InActor)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to Get_IsLocallyControlled"))
-    { return {}; }
-
-    const auto& ActorAsPawn = Cast<APawn>(InActor);
-    if (ck::Is_NOT_Valid(ActorAsPawn))
-    { return {}; }
-
-    return ActorAsPawn->IsLocallyControlled();
-}
-
-auto
-    UCk_Utils_Actor_UE::
-    Get_IsLocallyControlledByPlayer(
-        AActor* InActor)
-    -> bool
-{
-    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to Get_IsLocallyControlled"))
-    { return {}; }
-
-    const auto& ActorAsPawn = Cast<APawn>(InActor);
-    if (ck::Is_NOT_Valid(ActorAsPawn))
-    { return {}; }
-
-    return ActorAsPawn->IsLocallyControlled() && ActorAsPawn->IsPlayerControlled();
-}
-
-auto
-    UCk_Utils_Actor_UE::
     Request_SetActorLabel(
         AActor* InActor,
         const FString& InNewActorLabel,

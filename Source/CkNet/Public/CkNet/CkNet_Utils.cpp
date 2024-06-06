@@ -65,6 +65,72 @@ auto
 
 auto
     UCk_Utils_Net_UE::
+    Get_IsActorLocallyControlled(
+        AActor* InActor)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to Get_IsActorLocallyControlled"))
+    { return {}; }
+
+    const auto& ActorAsPawn = Cast<APawn>(InActor);
+    if (ck::Is_NOT_Valid(ActorAsPawn))
+    { return {}; }
+
+    return ActorAsPawn->IsLocallyControlled();
+}
+
+auto
+    UCk_Utils_Net_UE::
+    Get_IsActorLocallyControlledByPlayer(
+        AActor* InActor)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to Get_IsActorLocallyControlledByPlayer"))
+    { return {}; }
+
+    const auto& ActorAsPawn = Cast<APawn>(InActor);
+    if (ck::Is_NOT_Valid(ActorAsPawn))
+    { return {}; }
+
+    return ActorAsPawn->IsLocallyControlled() && ActorAsPawn->IsPlayerControlled();
+}
+
+auto
+    UCk_Utils_Net_UE::
+    Get_IsEntityLocallyControlled(
+        const FCk_Handle& InEntity)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InEntity), TEXT("Invalid Entity supplied to Get_IsEntityLocallyControlled"))
+    { return {}; }
+
+    if (NOT UCk_Utils_OwningActor_UE::Has(InEntity))
+    { return {}; }
+
+    const auto& EntityOwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InEntity);
+
+    return Get_IsActorLocallyControlled(EntityOwningActor);
+}
+
+auto
+    UCk_Utils_Net_UE::
+    Get_IsEntityLocallyControlledByPlayer(
+        const FCk_Handle& InEntity)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InEntity), TEXT("Invalid Entity supplied to Get_IsEntityLocallyControlledByPlayer"))
+    { return {}; }
+
+    if (NOT UCk_Utils_OwningActor_UE::Has(InEntity))
+    { return {}; }
+
+    const auto& EntityOwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InEntity);
+
+    return Get_IsActorLocallyControlledByPlayer(EntityOwningActor);
+}
+
+auto
+    UCk_Utils_Net_UE::
     Get_EntityNetRole(
         const FCk_Handle& InEntity)
     -> ECk_Net_EntityNetRole
