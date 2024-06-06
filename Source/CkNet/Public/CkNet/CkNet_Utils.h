@@ -58,6 +58,37 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net",
+              DisplayName = "[Ck] Get Is Actor Locally Controlled",
+              meta = (DefaultToSelf = "InActor"))
+    static bool
+    Get_IsActorLocallyControlled(
+        AActor* InActor);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net",
+              DisplayName = "[Ck] Get Is Actor Locally Controlled (By Player)",
+              meta = (DefaultToSelf = "InActor"))
+    static bool
+    Get_IsActorLocallyControlledByPlayer(
+        AActor* InActor);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net",
+              DisplayName = "[Ck] Get Is Entity Locally Controlled")
+    static bool
+    Get_IsEntityLocallyControlled(
+        const FCk_Handle& InEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net",
+              DisplayName = "[Ck] Get Is Entity Locally Controlled (By Player)")
+    static bool
+    Get_IsEntityLocallyControlledByPlayer(
+        const FCk_Handle& InEntity);
+
+public:
+    UFUNCTION(BlueprintPure,
               DisplayName="[Ck] Get Entity Net Role",
               Category = "Ck|Utils|Net")
     static ECk_Net_EntityNetRole
