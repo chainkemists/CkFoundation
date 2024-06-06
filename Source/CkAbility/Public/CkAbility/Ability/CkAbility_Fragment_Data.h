@@ -80,7 +80,8 @@ UENUM(BlueprintType)
 enum class ECk_Ability_Reactivation_Policy : uint8
 {
     OnlyActivateIfCurrentlyDeactivated,
-    AllowActivationIfAlreadyActive
+    AllowActivationIfAlreadyActive UMETA(DisplayName="Allow Reactivation (Deactivate First)"),
+    AllowActivationIfAlreadyActiveDoNotDeactivate UMETA(DisplayName="Allow Reactivation (Do NOT Deactivate First)"),
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_Reactivation_Policy);
