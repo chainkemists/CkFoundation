@@ -586,6 +586,9 @@ namespace ck
                 return;
             }
 
+            auto& RequestsComp = InAbilityOwnerEntity.Get<FFragment_AbilityOwner_Requests>();
+            const auto NumNewRequests = RequestsComp.Get_Requests().Num();
+
             const auto AbilityActivatedOrNot = [&]() -> ECk_AbilityOwner_AbilityActivatedOrNot
             {
                 const auto& AbilityToActivateName = UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityToActivateEntity);
@@ -755,15 +758,15 @@ namespace ck
             UUtils_Signal_AbilityOwner_OnAbilityActivatedOrNot::Broadcast(
                     InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityToActivateEntity, AbilityActivatedOrNot));
 
-            auto& RequestsComp = InAbilityOwnerEntity.Get<FFragment_AbilityOwner_Requests>();
-            const auto NumNewRequests = RequestsComp.Get_Requests().Num();
-
             // it's possible that we already have a deactivation request, if yes, process it
             const auto ProcessPossibleDeactivationRequest = [&]
             {
+                if (RequestsComp.Get_Requests().IsEmpty())
+                { return; }
+
                 const auto NewRequestsAfterActivate = RequestsComp.Get_Requests().Num() - NumNewRequests;
 
-                if (NOT NewRequestsAfterActivate)
+                if (NewRequestsAfterActivate == 0)
                 { return; }
 
                 CK_ENSURE_IF_NOT(NewRequestsAfterActivate == 1,
