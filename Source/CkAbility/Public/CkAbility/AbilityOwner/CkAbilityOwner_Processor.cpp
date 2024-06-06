@@ -637,7 +637,10 @@ namespace ck
                             GrantedTags
                         );
 
-                        DoHandleRequest(InAbilityOwnerEntity, InAbilityOwnerComp, FCk_Request_AbilityOwner_DeactivateAbility{InAbilityToActivateEntity});
+                        if (AbilityActivationSettings.Get_ReactivationPolicy() != ECk_Ability_Reactivation_Policy::AllowActivationIfAlreadyActiveDoNotDeactivate)
+                        { DoHandleRequest(InAbilityOwnerEntity, InAbilityOwnerComp, FCk_Request_AbilityOwner_DeactivateAbility{InAbilityToActivateEntity}); }
+
+                        Script->OnReactivateAbility(InRequest.Get_OptionalPayload());
 
                         break;
                     }
