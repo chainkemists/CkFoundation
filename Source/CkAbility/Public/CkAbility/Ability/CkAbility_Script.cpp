@@ -100,6 +100,49 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
+    OnReactivateAbility(
+        const FCk_Ability_Payload_OnActivate& InOptionalPayload)
+    -> void
+{
+    const auto& AbilityOwnerEntity = Get_AbilityOwnerHandle();
+
+    if (const auto& NetworkSettings = Get_Data().Get_NetworkSettings();
+        NetworkSettings.Get_ReplicationType() == ECk_Net_ReplicationType::LocalAndHost)
+    {
+        switch(const auto ExecutionPolicy = Get_Data().Get_NetworkSettings().Get_ExecutionPolicy())
+        {
+            case ECk_Net_NetExecutionPolicy::PreferHost:
+            {
+                if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AbilityOwnerEntity))
+                {
+                    DoOnReactivateAbility(InOptionalPayload);
+                }
+                break;
+            }
+            case ECk_Net_NetExecutionPolicy::LocalAndHost:
+            {
+                if (UCk_Utils_Net_UE::Get_HasAuthority(AbilityOwnerEntity) ||
+                    UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AbilityOwnerEntity))
+                {
+                    DoOnReactivateAbility(InOptionalPayload);
+                }
+                break;
+            }
+            default:
+            {
+                CK_INVALID_ENUM(ExecutionPolicy);
+                break;
+            }
+        }
+    }
+    else
+    {
+        DoOnReactivateAbility(InOptionalPayload);
+    }
+}
+
+auto
+    UCk_Ability_Script_PDA::
     OnDeactivateAbility()
     -> void
 {
