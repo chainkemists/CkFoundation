@@ -14,37 +14,6 @@
 
 namespace ck
 {
-    // --------------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProcessor_Transform_Setup::
-        DoTick(
-            TimeType InDeltaT)
-        -> void
-    {
-        Super::DoTick(InDeltaT);
-
-        _TransientEntity.Clear<MarkedDirtyBy>();
-    }
-
-    auto
-        FProcessor_Transform_Setup::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle) const
-        -> void
-    {
-        if (UCk_Utils_OwningActor_UE::Has(InHandle))
-        {
-            if (const auto Actor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
-                ck::IsValid(Actor))
-            {
-                const auto RootComponent = Actor->GetRootComponent();
-                InHandle.Add<FFragment_Transform_RootComponent>(RootComponent);
-            }
-        }
-    }
-
     auto
         FProcessor_Transform_Update::
         ForEachEntity(
@@ -73,10 +42,9 @@ namespace ck
 
     auto
         FProcessor_Transform_HandleRequests::
-        DoTick(TimeType InDeltaT) -> void
+        DoTick(
+            TimeType InDeltaT) -> void
     {
-        _TransientEntity.Clear<FTag_Transform_Updated>();
-
         TProcessor::DoTick(InDeltaT);
 
         _TransientEntity.Clear<MarkedDirtyBy>();
@@ -376,6 +344,23 @@ namespace ck
         -> void
     {
         UUtils_Signal_TransformUpdate::Broadcast(InHandle, MakePayload(InHandle, InCurrent.Get_Transform()));
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    FProcessor_Transform_Cleanup::
+        FProcessor_Transform_Cleanup(
+            const RegistryType& InRegistry)
+        : Super(InRegistry)
+    {
+    }
+
+    auto
+        FProcessor_Transform_Cleanup::
+        DoTick(
+            TimeType InDeltaT) -> void
+    {
+        _TransientEntity.Clear<FTag_Transform_Updated>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
