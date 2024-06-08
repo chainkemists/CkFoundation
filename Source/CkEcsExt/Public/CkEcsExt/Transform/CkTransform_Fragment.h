@@ -27,7 +27,6 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_ECS_TAG(FTag_Transform_NeedsSetup);
     CK_DEFINE_ECS_TAG(FTag_Transform_NeedsUpdate);
     CK_DEFINE_ECS_TAG(FTag_Transform_Updated);
     CK_DEFINE_ECS_TAG(FTag_Transform_TryFireSignals);
