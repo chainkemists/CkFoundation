@@ -7,19 +7,21 @@
 auto
     UCk_Utils_Transform_UE::
     Add(
-        FCk_Handle&                     InHandle,
-        const FTransform&               InInitialTransform,
-        ECk_Replication                 InReplicates)
+        FCk_Handle& InHandle,
+        const FTransform& InInitialTransform,
+        ECk_Replication InReplicates)
     -> FCk_Handle_Transform
 {
     InHandle.Add<ck::FFragment_Transform>(InInitialTransform);
-    InHandle.Add<ck::FTag_Transform_NeedsSetup>();
 
     if (UCk_Utils_OwningActor_UE::Has(InHandle))
     {
         if (const auto OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
             ck::IsValid(OwningActor))
         {
+            const auto RootComponent = OwningActor->GetRootComponent();
+            InHandle.Add<ck::FFragment_Transform_RootComponent>(RootComponent);
+
             if (OwningActor->IsReplicatingMovement())
             {
                 ck::ecs_extension::VeryVerbose

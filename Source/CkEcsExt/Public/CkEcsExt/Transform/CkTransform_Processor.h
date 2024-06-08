@@ -11,35 +11,6 @@
 
 namespace ck
 {
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKECSEXT_API FProcessor_Transform_Setup : public ck_exp::TProcessor<
-            FProcessor_Transform_Setup,
-            FCk_Handle_Transform,
-            FTag_Transform_NeedsSetup,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using Super = TProcessor;
-        using MarkedDirtyBy = FTag_Transform_NeedsSetup;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto
-        DoTick(
-            TimeType InDeltaT) -> void;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle) const -> void;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     class CKECSEXT_API FProcessor_Transform_Update : public ck_exp::TProcessor<
             FProcessor_Transform_Update,
             FCk_Handle_Transform,
@@ -163,6 +134,20 @@ namespace ck
             HandleType InHandle,
             FFragment_Signal_TransformUpdate& InSignal,
             const FFragment_Transform& InCurrent) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKECSEXT_API FProcessor_Transform_Cleanup : public TProcessorBase<FProcessor_Transform_Cleanup>
+    {
+        using Super = TProcessorBase;
+        friend class Super;
+
+    public:
+        explicit FProcessor_Transform_Cleanup(const RegistryType& InRegistry);
+
+    public:
+        auto DoTick(TimeType) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

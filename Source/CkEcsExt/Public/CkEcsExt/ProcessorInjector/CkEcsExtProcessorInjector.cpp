@@ -10,12 +10,12 @@ auto
         EcsWorldType& InWorld)
     -> void
 {
-    InWorld.Add<ck::FProcessor_Transform_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Transform_Update>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Transform_Actor>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Transform_FireSignals>(InWorld.Get_Registry());
 
     InWorld.Add<ck::FProcessor_Transform_Replicate>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Transform_Cleanup>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
