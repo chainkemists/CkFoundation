@@ -245,10 +245,16 @@ auto
     }
     else if (InProperty->IsA(FObjectPropertyBase::StaticClass()))
     {
-        auto StructProp = CastFieldChecked<FStructProperty>(InProperty);
-
         PinType.PinCategory = UEdGraphSchema_K2::PC_Object;
+
+        if (auto StructProp = CastField<FStructProperty>(InProperty))
+        {
         PinType.PinSubCategoryObject = StructProp->Struct;
+    }
+        else if (auto ObjectProp = CastField<FObjectProperty>(InProperty))
+        {
+            PinType.PinSubCategoryObject = ObjectProp->PropertyClass;
+        }
     }
     else if (InProperty->IsA(FArrayProperty::StaticClass()))
     {
