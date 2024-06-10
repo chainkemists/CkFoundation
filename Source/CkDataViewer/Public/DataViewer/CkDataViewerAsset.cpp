@@ -434,10 +434,12 @@ auto
             }))
             {
                 Found->RemoveMetaData("BlueprintPrivate");
-                Found->Category = FText::FromString(ck::Format_UE(TEXT("{} ({})"), Info.Get_OptionalFriendlyName(), ClassBlueprint->GetFName()));
+                Found->Category = FText::FromString(ck::Format_UE(TEXT("{} ({})|{}"), Info.Get_OptionalFriendlyName(),
+                    ClassBlueprint->GetFName(), Property->GetMetaData(TEXT("Category"))));
                 Found->PropertyFlags |= CPF_Transient;
 
                 Found->SetMetaData("DisplayName", Property->GetDisplayNameText().ToString());
+                Found->SetMetaData("DisplayThumbnail", Property->GetMetaData(TEXT("DisplayThumbnail")));
             }
         }
     }
