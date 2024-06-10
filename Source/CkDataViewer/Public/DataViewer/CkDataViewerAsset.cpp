@@ -48,6 +48,9 @@ auto
     const auto& TimerManager = GEditor->GetTimerManager();
     TimerManager->SetTimerForNextTick([this]()
     {
+        if (ck::Is_NOT_Valid(this))
+        { return; }
+
         Reload();
     });
 }
@@ -249,8 +252,8 @@ auto
 
         if (auto StructProp = CastField<FStructProperty>(InProperty))
         {
-        PinType.PinSubCategoryObject = StructProp->Struct;
-    }
+            PinType.PinSubCategoryObject = StructProp->Struct;
+        }
         else if (auto ObjectProp = CastField<FObjectProperty>(InProperty))
         {
             PinType.PinSubCategoryObject = ObjectProp->PropertyClass;
