@@ -23,6 +23,8 @@ public class CkUI : CkModuleRules
             new string[]
             {
                 "Core",
+                "CommonUI", 
+                "CkCore",
                 // ... add other public dependencies that you statically link with here ...
             }
             );
