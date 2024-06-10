@@ -3,7 +3,7 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Validation/CkIsValid.h"
 
-#include <Blueprint/UserWidget.h>
+#include <CommonActivatableWidget.h>
 #include <Blueprint/WidgetTree.h>
 
 #include "CkUserWidget.generated.h"
@@ -11,7 +11,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, BlueprintType, Blueprintable, meta = (DisableNativeTick))
-class CKUI_API UCk_UserWidget_UE : public UUserWidget
+class CKUI_API UCk_UserWidget_UE : public UCommonActivatableWidget
 {
     GENERATED_BODY()
 

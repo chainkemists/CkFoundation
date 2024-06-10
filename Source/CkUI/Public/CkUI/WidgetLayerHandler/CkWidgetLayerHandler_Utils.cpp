@@ -1,0 +1,162 @@
+#include "CkWidgetLayerHandler_Utils.h"
+
+#include "CkUI/WidgetLayerHandler/CkWidgetLayerHandler_Fragment.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(WidgetLayerHandler, UCk_Utils_WidgetLayerHandler_UE, FCk_Handle_WidgetLayerHandler, ck::FFragment_WidgetLayerHandler_Params)
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_WidgetLayerHandler_UE::
+    Add(
+        FCk_Handle& InHandle,
+        const FCk_Fragment_WidgetLayerHandler_ParamsData& InParams)
+    -> FCk_Handle_WidgetLayerHandler
+{
+    InHandle.Add<ck::FFragment_WidgetLayerHandler_Params>(InParams);
+    return Cast(InHandle);
+}
+
+auto
+    UCk_Utils_WidgetLayerHandler_UE::
+    Request_PushToLayer(
+        FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Request_WidgetLayerHandler_PushToLayer& InRequest)
+    -> FCk_Handle_WidgetLayerHandler
+{
+    ck::UUtils_Signal_WidgetLayerHandler_OnPushToLayer::Broadcast(InHandle, ck::MakePayload(InHandle, InRequest.Get_Layer(), InRequest.Get_WidgetClass()));
+    return InHandle;
+}
+
+auto
+    UCk_Utils_WidgetLayerHandler_UE::
+    Request_PushToLayer_Instanced(
+        FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Request_WidgetLayerHandler_PushToLayer_Instanced& InRequest)
+    -> FCk_Handle_WidgetLayerHandler
+{
+    ck::UUtils_Signal_WidgetLayerHandler_OnPushToLayer_Instanced::Broadcast(InHandle, ck::MakePayload(InHandle, InRequest.Get_Layer(), InRequest.Get_WidgetInstance()));
+    return InHandle;
+}
+
+auto
+    UCk_Utils_WidgetLayerHandler_UE::
+    Request_PopFromLayer(
+        FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Request_WidgetLayerHandler_PopFromLayer& InRequest)
+    -> FCk_Handle_WidgetLayerHandler
+{
+    ck::UUtils_Signal_WidgetLayerHandler_OnPopFromLayer::Broadcast(InHandle, ck::MakePayload(InHandle, InRequest.Get_Layer()));
+    return InHandle;
+}
+
+auto
+    UCk_Utils_WidgetLayerHandler_UE::
+    Request_ClearLayer(
+        FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Request_WidgetLayerHandler_ClearLayer& InRequest)
+    -> FCk_Handle_WidgetLayerHandler
+{
+    ck::UUtils_Signal_WidgetLayerHandler_OnClearLayer::Broadcast(InHandle, ck::MakePayload(InHandle, InRequest.Get_Layer()));
+    return InHandle;
+}
+
+auto
+    UCk_Utils_WidgetLayerHandler_UE::
+    BindTo_OnPushToLayer(
+        FCk_Handle_WidgetLayerHandler& InHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_WidgetLayerHandler_OnPushToLayer& InDelegate)
+    -> FCk_Handle_WidgetLayerHandler
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_WidgetLayerHandler_OnPushToLayer, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_WidgetLayerHandler_UE::
+    UnbindFrom_OnPushToLayer(
+        FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Delegate_WidgetLayerHandler_OnPushToLayer& InDelegate)
+    -> FCk_Handle_WidgetLayerHandler
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_WidgetLayerHandler_OnPushToLayer, InHandle, InDelegate);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_WidgetLayerHandler_UE::
+    BindTo_OnPushToLayer_Instanced(
+        FCk_Handle_WidgetLayerHandler& InHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_WidgetLayerHandler_OnPushToLayer_Instanced& InDelegate)
+    -> FCk_Handle_WidgetLayerHandler
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_WidgetLayerHandler_OnPushToLayer_Instanced, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_WidgetLayerHandler_UE::
+    UnbindFrom_OnPushToLayer_Instanced(
+        FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Delegate_WidgetLayerHandler_OnPushToLayer_Instanced& InDelegate)
+    -> FCk_Handle_WidgetLayerHandler
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_WidgetLayerHandler_OnPushToLayer_Instanced, InHandle, InDelegate);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_WidgetLayerHandler_UE::
+    BindTo_OnPopFromLayer(
+        FCk_Handle_WidgetLayerHandler& InHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_WidgetLayerHandler_OnPopFromLayer& InDelegate)
+    -> FCk_Handle_WidgetLayerHandler
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_WidgetLayerHandler_OnPopFromLayer, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_WidgetLayerHandler_UE::
+    UnbindFrom_OnPopFromLayer(
+        FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Delegate_WidgetLayerHandler_OnPopFromLayer& InDelegate)
+    -> FCk_Handle_WidgetLayerHandler
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_WidgetLayerHandler_OnPopFromLayer, InHandle, InDelegate);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_WidgetLayerHandler_UE::
+    BindTo_OnClearLayer(
+        FCk_Handle_WidgetLayerHandler& InHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_WidgetLayerHandler_OnClearLayer& InDelegate)
+    -> FCk_Handle_WidgetLayerHandler
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_WidgetLayerHandler_OnClearLayer, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_WidgetLayerHandler_UE::
+    UnbindFrom_OnClearLayer(
+        FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Delegate_WidgetLayerHandler_OnClearLayer& InDelegate)
+    -> FCk_Handle_WidgetLayerHandler
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_WidgetLayerHandler_OnClearLayer, InHandle, InDelegate);
+    return InHandle;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
