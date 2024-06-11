@@ -446,7 +446,7 @@ namespace ck
             return;
         }
 
-        const auto Fraction =  FMath::Clamp((InDeltaT / SmoothTime).Get_Seconds(), 0.0f, 1.0f);
+        const auto Fraction =  FMath::Clamp(InDeltaT / SmoothTime, 0.0f, 1.0f);
         const auto GoalFraction = InGoal.Get_InterpolationOffset() * Fraction;
 
         UCk_Utils_Transform_UE::Request_SetLocation
@@ -490,7 +490,7 @@ namespace ck
             return;
         }
 
-        const auto Fraction =  FMath::Clamp((InDeltaT / SmoothTime).Get_Seconds(), 0.0f, 1.0f);
+        const auto Fraction =  FMath::Clamp(InDeltaT / SmoothTime, 0.0f, 1.0f);
         const auto GoalFraction = InGoal.Get_InterpolationOffset() * Fraction;
 
         UCk_Utils_Transform_UE::Request_SetRotation
