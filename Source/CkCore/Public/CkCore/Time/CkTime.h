@@ -36,8 +36,11 @@ public:
 
     auto operator+(const ThisType& InOther) const -> ThisType;
     auto operator-(const ThisType& InOther) const -> ThisType;
-    auto operator*(const ThisType& InOther) const -> ThisType;
-    auto operator/(const ThisType& InOther) const -> ThisType;
+    auto operator*(float InOther) const -> ThisType;
+    auto operator*(int32 InOther) const -> ThisType;
+    auto operator/(const ThisType& InOther) const -> float;
+    auto operator/(float InOther) const -> ThisType;
+    auto operator/(int32 InOther) const -> ThisType;
     CK_DECL_AND_DEF_ADD_SUBTRACT_ASSIGNMENT_OPERATORS(ThisType);
 
 public:
@@ -133,8 +136,11 @@ public:
 
     auto operator-(const ThisType& InOther) const  -> ThisType;
     auto operator+(const ThisType& InOther) const  -> ThisType;
-    auto operator*(const ThisType& InOther) const  -> ThisType;
-    auto operator/(const ThisType& InOther) const  -> ThisType;
+    auto operator*(float InOther) const -> ThisType;
+    auto operator*(int32 InOther) const -> ThisType;
+    auto operator/(const ThisType& InOther) const -> float;
+    auto operator/(float InOther) const -> ThisType;
+    auto operator/(int32 InOther) const -> ThisType;
     CK_DECL_AND_DEF_ADD_SUBTRACT_ASSIGNMENT_OPERATORS(ThisType);
 
     auto operator==(const TimeType& InOther) const -> bool;

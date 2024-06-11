@@ -198,6 +198,16 @@ auto
     Divide(
         const FCk_Time& InA,
         const FCk_Time& InB)
+    -> float
+{
+    return InA / InB;
+}
+
+auto
+    UCk_Utils_Time_UE::
+    Divide_TimeFloat(
+        const FCk_Time& InA,
+        float InB)
     -> FCk_Time
 {
     return InA / InB;
@@ -205,9 +215,29 @@ auto
 
 auto
     UCk_Utils_Time_UE::
-    Multiply(
+    Divide_TimeInt(
         const FCk_Time& InA,
-        const FCk_Time& InB)
+        int32 InB)
+    -> FCk_Time
+{
+    return InA / InB;
+}
+
+auto
+    UCk_Utils_Time_UE::
+    Multiply_TimeFloat(
+        const FCk_Time& InA,
+        float InB)
+    -> FCk_Time
+{
+    return InA * InB;
+}
+
+auto
+    UCk_Utils_Time_UE::
+    Multiply_TimeInt(
+        const FCk_Time& InA,
+        int32 InB)
     -> FCk_Time
 {
     return InA * InB;
