@@ -46,19 +46,55 @@ auto
 auto
     FCk_Time::
     operator*(
-        const ThisType& InOther) const
+        float InOther) const
     -> ThisType
 {
-    return ThisType{_Seconds * InOther._Seconds};
+    return ThisType{_Seconds * InOther};
+}
+
+auto
+    FCk_Time::
+    operator*(
+        int32 InOther) const
+    -> ThisType
+{
+    return ThisType{_Seconds * InOther};
 }
 
 auto
     FCk_Time::
     operator/(
         const ThisType& InOther) const
+    -> float
+{
+    if (CK_ENSURE(InOther.Get_Seconds() == 0.f,
+        TEXT("Division of Time [{}] by zero!"), *this))
+    { return 0; }
+    return _Seconds / InOther._Seconds;
+}
+
+auto
+    FCk_Time::
+    operator/(
+        float InOther) const
     -> ThisType
 {
-    return ThisType{_Seconds / InOther._Seconds};
+    if (CK_ENSURE(InOther == 0.f,
+        TEXT("Division of Time [{}] by zero!"), *this))
+    { return ThisType{0.f}; }
+    return ThisType{_Seconds / InOther};
+}
+
+auto
+    FCk_Time::
+    operator/(
+        int32 InOther) const
+    -> ThisType
+{
+    if (CK_ENSURE(InOther == 0,
+        TEXT("Division of Time [{}] by zero!"), *this))
+    { return ThisType{0.f}; }
+    return ThisType{_Seconds / InOther};
 }
 
 auto
@@ -229,7 +265,8 @@ auto
 
 auto
     FCk_Time_Unreal::
-    operator-(const ThisType& InOther) const
+    operator-(
+        const ThisType& InOther) const
     -> ThisType
 {
     const auto& IsSameWorldTimeType = Get_TimeType() == InOther.Get_TimeType();
@@ -247,7 +284,8 @@ auto
 
 auto
     FCk_Time_Unreal::
-    operator+(const ThisType& InOther) const
+    operator+(
+        const ThisType& InOther) const
     -> ThisType
 {
     const auto& IsSameWorldTimeType = Get_TimeType() == InOther.Get_TimeType();
@@ -265,26 +303,27 @@ auto
 
 auto
     FCk_Time_Unreal::
-    operator*(const ThisType& InOther) const
+    operator*(
+        float InOther) const
     -> ThisType
 {
-    const auto& IsSameWorldTimeType = Get_TimeType() == InOther.Get_TimeType();
-
-    CK_ENSURE
-    (
-        IsSameWorldTimeType,
-        TEXT("WorldTimeTypes [{}] and [{}] do not match"),
-        Get_TimeType(),
-        InOther.Get_TimeType()
-    );
-
-    return ThisType{ Get_Time() * InOther.Get_Time(), Get_TimeType() };
+    return ThisType{ Get_Time() * InOther, Get_TimeType() };
 }
 
 auto
     FCk_Time_Unreal::
-    operator/(const ThisType& InOther) const
+    operator*(
+        int32 InOther) const
     -> ThisType
+{
+    return ThisType{ Get_Time() * InOther, Get_TimeType() };
+}
+
+auto
+    FCk_Time_Unreal::
+    operator/(
+        const ThisType& InOther) const
+    -> float
 {
     const auto& IsSameWorldTimeType = Get_TimeType() == InOther.Get_TimeType();
 
@@ -296,7 +335,25 @@ auto
         InOther.Get_TimeType()
     );
 
-    return ThisType{ Get_Time() / InOther.Get_Time(), Get_TimeType() };
+    return Get_Time() / InOther.Get_Time();
+}
+
+auto
+    FCk_Time_Unreal::
+    operator/(
+        float InOther) const
+    -> ThisType
+{
+    return ThisType{ Get_Time() / InOther, Get_TimeType() };
+}
+
+auto
+    FCk_Time_Unreal::
+    operator/(
+        int32 InOther) const
+    -> ThisType
+{
+    return ThisType{ Get_Time() / InOther, Get_TimeType() };
 }
 
 // --------------------------------------------------------------------------------------------------------------------

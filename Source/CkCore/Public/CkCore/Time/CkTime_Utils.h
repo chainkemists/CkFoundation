@@ -165,18 +165,45 @@ public:
               DisplayName = "[Ck] Time / Time",
               Category = "Ck|Utils|Time",
               meta = (CompactNodeTitle = "/", KeyWords = "divide"))
-    static FCk_Time
+    static float
     Divide(const FCk_Time& InA,
         const FCk_Time& InB);
 
-    UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck] Time * Time",
-              Category = "Ck|Utils|Time",
-              meta = (CompactNodeTitle = "*", KeyWords = "multiply"))
-    static FCk_Time
-    Multiply(
-        const FCk_Time& InA,
-        const FCk_Time& InB);
+	UFUNCTION(BlueprintPure,
+	          DisplayName = "[Ck] Time / float",
+	          Category = "Ck|Utils|Time",
+	          meta = (CompactNodeTitle = "/", KeyWords = "divide"))
+	static FCk_Time
+	Divide_TimeFloat(
+		const FCk_Time& InA,
+		float InB);
+
+	UFUNCTION(BlueprintPure,
+	          DisplayName = "[Ck] Time / int",
+	          Category = "Ck|Utils|Time",
+	          meta = (CompactNodeTitle = "/", KeyWords = "divide"))
+	static FCk_Time
+		Divide_TimeInt(
+		const FCk_Time& InA,
+		int32 InB);
+	
+	UFUNCTION(BlueprintPure,
+			  DisplayName = "[Ck] Time * float",
+			  Category = "Ck|Utils|Time",
+			  meta = (CompactNodeTitle = "*", KeyWords = "multiply"))
+	static FCk_Time
+	Multiply_TimeFloat(
+		const FCk_Time& InA,
+		float InB);
+
+	UFUNCTION(BlueprintPure,
+		  DisplayName = "[Ck] Time * int",
+		  Category = "Ck|Utils|Time",
+		  meta = (CompactNodeTitle = "*", KeyWords = "multiply"))
+	static FCk_Time
+	Multiply_TimeInt(
+		const FCk_Time& InA,
+		int32 InB);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Time == Time",
