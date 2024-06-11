@@ -99,11 +99,11 @@ public:
         const FProperty* InProperty) -> TOptional<FEdGraphPinType>;
 
 public:
-    UFUNCTION(CallInEditor, Category="Operations")
+    UFUNCTION(CallInEditor, Category="Commands")
     void
     ResetView();
 
-    UFUNCTION(CallInEditor, Category="Operations")
+    UFUNCTION(CallInEditor, Category="Commands")
     void
     Reload();
 
