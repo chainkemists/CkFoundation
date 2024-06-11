@@ -384,8 +384,8 @@ auto
             }))
             {
                 Found->RemoveMetaData("BlueprintPrivate");
-                Found->Category = FText::FromString(ck::Format_UE(TEXT("{} ({})"), Info.Get_OptionalFriendlyName(), ClassBlueprint->GetFName()));
-                Found->SetMetaData("DisplayName", FString{TEXT("Object")});
+                Found->Category = FText::FromString(ck::Format_UE(TEXT("Data|{} ({})"), Info.Get_OptionalFriendlyName(), ClassBlueprint->GetFName()));
+                Found->SetMetaData("DisplayName", FString{TEXT("Viewing Object")});
                 Found->PropertyFlags |= CPF_Transient;
                 Found->PropertyFlags |= CPF_NoClear;
                 Found->PropertyFlags |= CPF_DisableEditOnTemplate;
@@ -437,7 +437,7 @@ auto
             }))
             {
                 Found->RemoveMetaData("BlueprintPrivate");
-                Found->Category = FText::FromString(ck::Format_UE(TEXT("{} ({})|{}"), Info.Get_OptionalFriendlyName(),
+                Found->Category = FText::FromString(ck::Format_UE(TEXT("Data|{} ({})|{}"), Info.Get_OptionalFriendlyName(),
                     ClassBlueprint->GetFName(), Property->GetMetaData(TEXT("Category"))));
                 Found->PropertyFlags |= CPF_Transient;
 
