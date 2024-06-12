@@ -7,7 +7,6 @@
 #include <CoreMinimal.h>
 #include <Components/RichTextBlockDecorator.h>
 #include <Engine/DataTable.h>
-#include <Styling/SlateBrush.h>
 #include <Templates/SubclassOf.h>
 #include <CommonRichTextBlock.h>
 #include <InstancedStruct.h>
@@ -21,47 +20,13 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UINTERFACE(MinimalAPI)
-class UCk_RichTextBlockDecocator_Interface : public UInterface { GENERATED_BODY() };
-class CKUI_API ICk_RichTextBlockDecocator_Interface
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(ICk_RichTextBlockDecocator_Interface);
-
-public:
-    UFUNCTION(BlueprintImplementableEvent)
-    void
-    OnDecoratorCustomParamsInjected(
-        const FInstancedStruct& InCustomParams);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS()
-class CKUI_API UCk_RichTextBlock_UE : public UCommonRichTextBlock
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_RichTextBlock_UE);
-
-public:
-    UFUNCTION(BlueprintCallable)
-    void InjectCustomParamsToAllDecorators(
-        const FInstancedStruct& InCustomParams) const;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
 USTRUCT(Blueprintable, BlueprintType)
-struct CKUI_API FCk_RichTextDecorator_Params
+struct CKUI_API FCk_RichTextDecorator_Metadata
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_RichTextDecorator_Params);
+    CK_GENERATED_BODY(FCk_RichTextDecorator_Metadata);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -70,6 +35,25 @@ private:
 
 public:
     CK_PROPERTY(_TagMetaData);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(Blueprintable, BlueprintType)
+struct CKUI_API FCk_RichTextDecorator_CustomParams
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_RichTextDecorator_CustomParams);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    FInstancedStruct _Params;
+
+public:
+    CK_PROPERTY(_Params);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -83,19 +67,33 @@ public:
     CK_GENERATED_BODY(UCk_RichTextDecorator_UserWidget_UE);
 
 public:
-    auto InitializeFromRichTextDecorator(
-        const FCk_RichTextDecorator_Params& InParams) -> void;
+    auto
+    InjectDecoratorMetadata(
+        const FCk_RichTextDecorator_Metadata& InMetadata) -> void;
+
+    auto
+    InjectDecoratorCustomParams(
+        const FCk_RichTextDecorator_CustomParams& InCustomParams) -> void;
 
 protected:
     UFUNCTION(BlueprintImplementableEvent)
     void
-    OnInitializeFromRichTextDecorator(
-        const FCk_RichTextDecorator_Params& InParams);
+    OnInjectDecoratorMetadata(
+        const FCk_RichTextDecorator_Metadata& InParams);
+
+    UFUNCTION(BlueprintImplementableEvent)
+    void
+    OnInjectDecoratorCustomParams(
+        const FCk_RichTextDecorator_CustomParams& InCustomParams);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    FCk_RichTextDecorator_Params _Params;
+    FCk_RichTextDecorator_Metadata _Metadata;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    FCk_RichTextDecorator_CustomParams _CustomParams;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -120,13 +118,38 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UINTERFACE(MinimalAPI)
+class UCk_RichTextBlockDecocator_Interface : public UInterface { GENERATED_BODY() };
+class CKUI_API ICk_RichTextBlockDecocator_Interface
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(ICk_RichTextBlockDecocator_Interface);
+
+public:
+    virtual auto
+    InjectDecoratorCustomParams(
+        const FCk_RichTextDecorator_CustomParams& InCustomParams) -> void
+    PURE_VIRTUAL(ICk_RichTextBlockDecocator_Interface::InjectDecoratorCustomParams, return;);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck { class FRichTextWidgetDecorator; }
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(Abstract, Blueprintable, DisplayName = "RichTextBlockWidgetDecorator")
-class CKUI_API UCk_RichTextBlockWidgetDecorator_UE : public URichTextBlockDecorator
+class CKUI_API UCk_RichTextBlockWidgetDecorator_UE : public URichTextBlockDecorator, public ICk_RichTextBlockDecocator_Interface
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(UCk_RichTextBlockWidgetDecorator_UE);
+
+public:
+    friend class ck::FRichTextWidgetDecorator;
 
 public:
     auto
@@ -137,13 +160,14 @@ public:
     FindUserWidget_DataRow(
         FName InTagOrId) const-> FCk_RichTextDecorator_UserWidget_DataRow*;
 
+protected:
     auto
-    InsertNewCreatedWidget(
-        UCk_RichTextDecorator_UserWidget_UE* InWidgetToInsert) -> void;
+    InjectDecoratorCustomParams(
+        const FCk_RichTextDecorator_CustomParams& InCustomParams) -> void override;
 
 private:
     UPROPERTY(EditAnywhere, meta=(RequiredAssetDataTags = "RowStructure=/Script/CkUI.Ck_RichTextDecorator_UserWidget_DataRow"))
-    TWeakObjectPtr<class UDataTable> _UserWidgetsTable;
+    TObjectPtr<class UDataTable> _UserWidgetsTable;
 
     UPROPERTY(Transient)
     TArray<UCk_RichTextDecorator_UserWidget_UE*> _CreatedWidgets;
@@ -151,3 +175,23 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UCLASS()
+class CKUI_API UCk_RichTextBlock_UE : public UCommonRichTextBlock
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_RichTextBlock_UE);
+
+public:
+    UFUNCTION(BlueprintCallable)
+    void InjectCustomParamsToAllDecorators(
+        const FCk_RichTextDecorator_CustomParams& InCustomParams) const;
+
+protected:
+#if WITH_EDITOR
+    auto GetPaletteCategory() -> const FText override;
+#endif
+};
+
+// --------------------------------------------------------------------------------------------------------------------
