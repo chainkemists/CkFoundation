@@ -38,34 +38,25 @@ namespace ck
     };
 }
 
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_RichTextBlock_UE::
-    InjectContext(
-        const FInstancedStruct& InCustomParams) const
-    -> void
-{
-    ck::algo::ForEachIsValid(InstanceDecorators, [&](TObjectPtr<URichTextBlockDecorator> InDecorator)
-    {
-        if (const auto& DecoratorInterface = Cast<ICk_RichTextBlockDecocator_Interface>(InDecorator);
-            ck::IsValid(DecoratorInterface, ck::IsValid_Policy_NullptrOnly{}))
-        {
-            DecoratorInterface->OnInjectContext(InCustomParams);
-        }
-    });
-}
-
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_RichTextDecorator_UserWidget_UE::
-    InitializeFromRichTextDecorator(
-        const FCk_RichTextDecorator_Params& InParams) -> void
+    InjectDecoratorMetadata(
+        const FCk_RichTextDecorator_Metadata& InMetadata) -> void
 {
-    _Params = InParams;
-    OnInitializeFromRichTextDecorator(InParams);
+    _Metadata = InMetadata;
+    OnInjectDecoratorMetadata(InMetadata);
+}
+
+auto
+    UCk_RichTextDecorator_UserWidget_UE::
+    InjectDecoratorCustomParams(
+        const FCk_RichTextDecorator_CustomParams& InCustomParams)
+    -> void
+{
+    _CustomParams = InCustomParams;
+    OnInjectDecoratorCustomParams(InCustomParams);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -89,16 +80,21 @@ auto
     { return {}; }
 
     const auto ContextString = FString{};
-    return _UserWidgetsTable->FindRow<FCk_RichTextDecorator_UserWidget_DataRow>(InTagOrId, ContextString, true);
+    constexpr auto WarnIfRowMissing = true;
+
+    return _UserWidgetsTable->FindRow<FCk_RichTextDecorator_UserWidget_DataRow>(InTagOrId, ContextString, WarnIfRowMissing);
 }
 
 auto
     UCk_RichTextBlockWidgetDecorator_UE::
-    InsertNewCreatedWidget(
-        UCk_RichTextDecorator_UserWidget_UE* InWidgetToInsert)
+    InjectDecoratorCustomParams(
+        const FCk_RichTextDecorator_CustomParams& InCustomParams)
     -> void
 {
-    _CreatedWidgets.Add(InWidgetToInsert);
+    ck::algo::ForEachIsValid(_CreatedWidgets, [&](UCk_RichTextDecorator_UserWidget_UE* InDecoratorWidget)
+    {
+        InDecoratorWidget->InjectDecoratorCustomParams(InCustomParams);
+    });
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -166,13 +162,42 @@ namespace ck
         if (ck::Is_NOT_Valid(NewUserWidget))
         { return {}; }
 
-        NewUserWidget->InitializeFromRichTextDecorator(FCk_RichTextDecorator_Params{}
+        NewUserWidget->InjectDecoratorMetadata(FCk_RichTextDecorator_Metadata{}
                                                         .Set_TagMetaData(InRunInfo.MetaData));
 
-        _Decorator->InsertNewCreatedWidget(NewUserWidget);
+        _Decorator->_CreatedWidgets.Add(NewUserWidget);
         const auto& SlateWidget = NewUserWidget->TakeWidget();
 
         return SlateWidget;
     }
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_RichTextBlock_UE::
+    InjectCustomParamsToAllDecorators(
+        const FCk_RichTextDecorator_CustomParams& InCustomParams) const
+    -> void
+{
+    ck::algo::ForEachIsValid(InstanceDecorators, [&](TObjectPtr<URichTextBlockDecorator> InDecorator)
+    {
+        if (const auto& DecoratorInterface = Cast<ICk_RichTextBlockDecocator_Interface>(InDecorator);
+            ck::IsValid(DecoratorInterface, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            DecoratorInterface->InjectDecoratorCustomParams(InCustomParams);
+        }
+    });
+}
+
+#if WITH_EDITOR
+auto
+    UCk_RichTextBlock_UE::
+    GetPaletteCategory()
+    -> const FText
+{
+    return ck::widget_palette_categories::Default;
+}
+#endif
+
 // --------------------------------------------------------------------------------------------------------------------
