@@ -33,6 +33,10 @@ auto
         const FInstancedStruct& InOptionalParams)
     -> FCk_Handle
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InConstructionScript),
+        TEXT("Unable to proceed with Entity Construction as the Construction Script [{}] is INVALID."), InConstructionScript)
+    { return {}; }
+
     UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Entity_ConstructionScript_PDA>(InConstructionScript)->Construct(InHandle, InOptionalParams);
     return InHandle;
 }
