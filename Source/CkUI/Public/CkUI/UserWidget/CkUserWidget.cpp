@@ -1,5 +1,7 @@
 #include "CkUserWidget.h"
 
+#include "Ckui/CkUI_Utils.h"
+
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkUI/CkUI_Log.h"
 
@@ -29,7 +31,7 @@ auto
 
     DoBindWidgetToActor(this);
 
-    ForEachWidget_IncludingUserWidgets([&](UWidget* InWidget) -> bool
+    UCk_Utils_UI_UE::ForEachWidgetAndChildren_IncludingUserWidgets(this, [&](UWidget* InWidget) -> bool
     {
         auto* DerivedWidget = Cast<UCk_UserWidget_UE>(InWidget);
 
@@ -79,7 +81,7 @@ auto
 
     DoUnbindWidgetFromActor(this);
 
-    ForEachWidget_IncludingUserWidgets([&](UWidget* InWidget)
+    UCk_Utils_UI_UE::ForEachWidgetAndChildren_IncludingUserWidgets(this, [&](UWidget* InWidget)
     {
         auto* DerivedWidget = Cast<UCk_UserWidget_UE>(InWidget);
 
