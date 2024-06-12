@@ -23,7 +23,7 @@ public class CkUI : CkModuleRules
             new string[]
             {
                 "Core",
-                "CommonUI", 
+                "CommonUI",
                 "CkCore",
                 // ... add other public dependencies that you statically link with here ...
             }
@@ -40,6 +40,7 @@ public class CkUI : CkModuleRules
                 "GameplayTags",
                 "DeveloperSettings",
                 "UMG",
+                "StructUtils",
 
                 "CkThirdParty",
                 "CkCore",
