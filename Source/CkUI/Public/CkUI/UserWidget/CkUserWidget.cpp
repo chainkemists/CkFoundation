@@ -112,9 +112,6 @@ auto
     DoGet_IsAlreadyBoundTo(const AActor* InActor) const
     -> bool
 {
-    if (Get_IsDefaultBindActor())
-    { return false; }
-
     if (const auto& CurrentBindActor = Get_BindActor(); CurrentBindActor == InActor)
     { return true; }
 
@@ -126,8 +123,6 @@ auto
     DoBindToActor(AActor* InActor)
     -> void
 {
-    DoClearDefaultBindActor();
-
     const auto& PrevBindActor = Get_BindActor().Get();
     CK_ENSURE_IF_NOT(ck::Is_NOT_Valid(PrevBindActor),
         TEXT("Widget [{}] cannot bind since _BindActor is [{}]!"),
@@ -143,13 +138,11 @@ auto
     DoBindToActor_BP(AActor* InActor)
     -> void
 {
-    DoClearDefaultBindActor();
-
-    const auto& currentBindActor = Get_BindActor().Get();
-    CK_ENSURE_IF_NOT(ck::IsValid(currentBindActor),
+    const auto& CurrentBindActor = Get_BindActor().Get();
+    CK_ENSURE_IF_NOT(ck::IsValid(CurrentBindActor),
         TEXT("Widget [{}] should be bound at this point but BindActor is [{}]!"),
         this,
-        currentBindActor)
+        CurrentBindActor)
     { return; }
 
     OnBindToActor(InActor);
@@ -160,15 +153,15 @@ auto
     DoUnbindFromActor_BP(AActor* InActor)
     -> void
 {
-    const auto& currentBindActor = Get_BindActor().Get();
-    CK_ENSURE_IF_NOT(currentBindActor == InActor,
+    const auto& CurrentBindActor = Get_BindActor().Get();
+    CK_ENSURE_IF_NOT(CurrentBindActor == InActor,
         TEXT("Widget [{}] cannot unbind since BindActor [{}] and InActor [{}] are not the same"),
         this,
-        currentBindActor,
+        CurrentBindActor,
         InActor)
     { return; }
 
-    OnUnbindFromActor(currentBindActor);
+    OnUnbindFromActor(CurrentBindActor);
 }
 
 auto
@@ -184,38 +177,7 @@ auto
         InActor)
     { return; }
 
-    DoClearDefaultBindActor();
-    _BindActor = nullptr;
-}
-
-auto
-    UCk_UserWidget_UE::
-    DoApplyDefaultBindActor()
-    -> void
-{
-    if (ck::IsValid(Get_BindActor()))
-    { return; }
-
-    if (ck::Is_NOT_Valid(GetOwningPlayer()))
-    { return; }
-
-    if (ck::Is_NOT_Valid(GetOwningPlayer()->GetPawn()))
-    { return; }
-
-    _IsDefaultBindActor = true;
-    _BindActor = GetOwningPlayer()->GetPawn();
-}
-
-auto
-    UCk_UserWidget_UE::
-    DoClearDefaultBindActor()
-    -> void
-{
-    if (NOT Get_IsDefaultBindActor())
-    { return; }
-
-    _IsDefaultBindActor = false;
-    _BindActor = nullptr;
+    _BindActor.Reset();
 }
 
 auto
