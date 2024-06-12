@@ -21,6 +21,11 @@ namespace ck
             URichTextBlock* InOwner,
             UCk_RichTextBlockWidgetDecorator_UE* InDecorator);
 
+        FRichTextWidgetDecorator(
+            URichTextBlock* InOwner,
+            UCk_RichTextBlockWidgetDecorator_UE* InDecorator,
+            const FCk_RichTextDecorator_CustomParams& InDecoratorCustomParams);
+
     public:
         auto
         Supports(
@@ -35,6 +40,7 @@ namespace ck
 
     private:
         TWeakObjectPtr<UCk_RichTextBlockWidgetDecorator_UE> _Decorator;
+        TOptional<FCk_RichTextDecorator_CustomParams> _DecoratorCustomParams;
     };
 }
 
@@ -67,7 +73,12 @@ auto
         URichTextBlock* InOwner)
     -> TSharedPtr<ITextDecorator>
 {
-    return MakeShareable(new ck::FRichTextWidgetDecorator(InOwner, this));
+    if (ck::IsValid(_LastInjectedCustomParams))
+    {
+        return MakeShareable(new ck::FRichTextWidgetDecorator{InOwner, this, *_LastInjectedCustomParams});
+    }
+
+    return MakeShareable(new ck::FRichTextWidgetDecorator{InOwner, this});
 }
 
 auto
@@ -91,6 +102,8 @@ auto
         const FCk_RichTextDecorator_CustomParams& InCustomParams)
     -> void
 {
+    _LastInjectedCustomParams = InCustomParams;
+
     ck::algo::ForEachIsValid(_CreatedWidgets, [&](UCk_RichTextDecorator_UserWidget_UE* InDecoratorWidget)
     {
         InDecoratorWidget->InjectDecoratorCustomParams(InCustomParams);
@@ -107,6 +120,17 @@ namespace ck
             UCk_RichTextBlockWidgetDecorator_UE* InDecorator)
         : FRichTextDecorator(InOwner)
         , _Decorator(InDecorator)
+    {
+    }
+
+    FRichTextWidgetDecorator::
+        FRichTextWidgetDecorator(
+            URichTextBlock* InOwner,
+            UCk_RichTextBlockWidgetDecorator_UE* InDecorator,
+            const FCk_RichTextDecorator_CustomParams& InDecoratorCustomParams)
+        : FRichTextDecorator(InOwner)
+        , _Decorator(InDecorator)
+        , _DecoratorCustomParams(InDecoratorCustomParams)
     {
     }
 
@@ -141,6 +165,7 @@ namespace ck
             const FTextBlockStyle& InTextStyle) const
         -> TSharedPtr<SWidget>
     {
+        // TODO: Cache decorator widget to avoid re-creating widget decorators over and over again
         if (ck::Is_NOT_Valid(_Decorator))
         { return {}; }
 
@@ -164,6 +189,15 @@ namespace ck
 
         NewUserWidget->InjectDecoratorMetadata(FCk_RichTextDecorator_Metadata{}
                                                         .Set_TagMetaData(InRunInfo.MetaData));
+
+        if (ck::IsValid(_DecoratorCustomParams))
+        {
+            NewUserWidget->InjectDecoratorCustomParams(*_DecoratorCustomParams);
+        }
+        else if (ck::IsValid(_Decorator->_LastInjectedCustomParams))
+        {
+            NewUserWidget->InjectDecoratorCustomParams(*_Decorator->_LastInjectedCustomParams);
+        }
 
         _Decorator->_CreatedWidgets.Add(NewUserWidget);
         const auto& SlateWidget = NewUserWidget->TakeWidget();

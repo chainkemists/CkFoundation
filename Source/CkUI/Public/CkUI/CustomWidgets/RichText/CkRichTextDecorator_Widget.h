@@ -76,12 +76,12 @@ public:
         const FCk_RichTextDecorator_CustomParams& InCustomParams) -> void;
 
 protected:
-    UFUNCTION(BlueprintImplementableEvent)
+    UFUNCTION(BlueprintImplementableEvent, Category = "Ck|UI")
     void
     OnInjectDecoratorMetadata(
-        const FCk_RichTextDecorator_Metadata& InParams);
+        const FCk_RichTextDecorator_Metadata& InMetadata);
 
-    UFUNCTION(BlueprintImplementableEvent)
+    UFUNCTION(BlueprintImplementableEvent, Category = "Ck|UI")
     void
     OnInjectDecoratorCustomParams(
         const FCk_RichTextDecorator_CustomParams& InCustomParams);
@@ -171,6 +171,9 @@ private:
 
     UPROPERTY(Transient)
     TArray<UCk_RichTextDecorator_UserWidget_UE*> _CreatedWidgets;
+
+private:
+    TOptional<FCk_RichTextDecorator_CustomParams> _LastInjectedCustomParams;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -184,7 +187,7 @@ public:
     CK_GENERATED_BODY(UCk_RichTextBlock_UE);
 
 public:
-    UFUNCTION(BlueprintCallable)
+    UFUNCTION(BlueprintCallable, BlueprintPure = false, Category = "Ck|UI")
     void InjectCustomParamsToAllDecorators(
         const FCk_RichTextDecorator_CustomParams& InCustomParams) const;
 
