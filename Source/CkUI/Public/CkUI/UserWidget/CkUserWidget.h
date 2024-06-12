@@ -42,9 +42,6 @@ protected:
     auto DoUnbindFromActor_BP(AActor* InActor) -> void;
     auto DoUnbindFromActor(AActor* InActor) -> void;
 
-    auto DoApplyDefaultBindActor() -> void;
-    auto DoClearDefaultBindActor() -> void;
-
 protected:
     virtual void NativeDestruct() override;
 
@@ -52,10 +49,6 @@ protected:
     UPROPERTY(Transient, BlueprintReadOnly,
               Category = "UCk_UserWidget_UE")
     TWeakObjectPtr<AActor> _BindActor;
-
-    UPROPERTY(Transient, BlueprintReadOnly,
-              Category = "UCk_UserWidget_UE")
-    bool _IsDefaultBindActor = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
               Category = "UCk_UserWidget_UE")
