@@ -61,7 +61,7 @@ auto
     {
         if (InOtherPin->PinType.PinCategory != UEdGraphSchema_K2::PC_Struct)
         {
-            OutReason = TEXT("Value must be a struct!");
+            OutReason = TEXT("Value must be a Struct");
             return true;
         }
 
@@ -70,9 +70,15 @@ auto
         {
             if (NOT StructType->IsChildOf(FCk_Handle_TypeSafe::StaticStruct()))
             {
-                OutReason = ck::Format_UE(TEXT("Value must be a child of {}!"), ck::Get_RuntimeTypeToString<FCk_Handle_TypeSafe>());
+                OutReason = ck::Format_UE(TEXT("Value must be a child of {}"), ck::Get_RuntimeTypeToString<FCk_Handle_TypeSafe>());
                 return true;
             }
+        }
+
+        if (InOtherPin->PinType.ContainerType != EPinContainerType::None)
+        {
+            OutReason = TEXT("Value cannot be an Array/Set/Map");
+            return true;
         }
     }
 
