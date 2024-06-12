@@ -62,7 +62,13 @@ auto
     {
         if (InOtherPin->PinType.PinCategory != UEdGraphSchema_K2::PC_Struct)
         {
-            OutReason = TEXT("Value must be a struct.");
+            OutReason = TEXT("Value must be a Struct");
+            return true;
+        }
+
+        if (InOtherPin->PinType.ContainerType != EPinContainerType::None)
+        {
+            OutReason = TEXT("Value cannot be an Array/Set/Map");
             return true;
         }
     }
@@ -122,7 +128,13 @@ auto
     {
         if (InOtherPin->PinType.PinCategory != UEdGraphSchema_K2::PC_Struct)
         {
-            OutReason = TEXT("Value must be a struct.");
+            OutReason = TEXT("Value must be a Struct");
+            return true;
+        }
+
+        if (InOtherPin->PinType.ContainerType != EPinContainerType::None)
+        {
+            OutReason = TEXT("Value cannot be an Array/Set/Map");
             return true;
         }
     }
