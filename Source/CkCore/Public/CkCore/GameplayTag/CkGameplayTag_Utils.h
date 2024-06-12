@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 
 #include <GameplayTagContainer.h>
@@ -25,6 +26,34 @@ public:
     Get_AreTagRequirementsMet(
         const FGameplayTagRequirements& InTagRequirements,
         const FGameplayTagContainer& InTagsToTest);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|GameplayTag|Utils",
+              DisplayName = "[Ck] Make Literal Gameplay Tag (From String)")
+    static FGameplayTag
+    Make_LiteralGameplayTag_FromString(
+        const FString& InTagNameAsString);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|GameplayTag|Utils",
+              DisplayName = "[Ck] Try Make Literal Gameplay Tag (From String)")
+    static FGameplayTag
+    TryMake_LiteralGameplayTag_FromString(
+        const FString& InTagNameAsString);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|GameplayTag|Utils",
+              DisplayName = "[Ck] Make Literal Gameplay Tag (From Name)")
+    static FGameplayTag
+    Make_LiteralGameplayTag_FromName(
+        FName InTagNameAsString);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|GameplayTag|Utils",
+              DisplayName = "[Ck] Try Make Literal Gameplay Tag (From Name)")
+    static FGameplayTag
+    TryMake_LiteralGameplayTag_FromName(
+        FName InTagNameAsString);
 
 public:
     static auto
