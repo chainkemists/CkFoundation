@@ -62,7 +62,7 @@ public:
     UPROPERTY(EditDefaultsOnly)
     ECk_Replication _Replication = ECk_Replication::Replicates;
 
-    UPROPERTY(EditDefaultsOnly)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
     TSubclassOf<UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
 
     UPROPERTY(Instanced)
