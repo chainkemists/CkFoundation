@@ -10,6 +10,13 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck::widget_palette_categories
+{
+    const FText Default = NSLOCTEXT("CkUI", "WidgetPaletteCategory", "CkFoundation Plugin");
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(Abstract, BlueprintType, Blueprintable, meta = (DisableNativeTick))
 class CKUI_API UCk_UserWidget_UE : public UCommonActivatableWidget
 {
@@ -41,6 +48,11 @@ protected:
     auto DoBindToActor_BP(AActor* InActor) -> void;
     auto DoUnbindFromActor_BP(AActor* InActor) -> void;
     auto DoUnbindFromActor(AActor* InActor) -> void;
+
+protected:
+#if WITH_EDITOR
+    auto GetPaletteCategory() -> const FText override;
+#endif
 
 protected:
     virtual void NativeDestruct() override;

@@ -180,6 +180,16 @@ auto
     _BindActor.Reset();
 }
 
+#if WITH_EDITOR
+auto
+    UCk_UserWidget_UE::
+    GetPaletteCategory()
+    -> const FText
+{
+    return ck::widget_palette_categories::Default;
+}
+#endif
+
 auto
     UCk_UserWidget_UE::
     NativeDestruct()
