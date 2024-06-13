@@ -294,6 +294,10 @@ namespace ck
         if (AbilityGivenOrNot == ECk_AbilityOwner_AbilityGivenOrNot::NotGiven)
         {
             UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
+                InRequest.GetAndDestroyRequestHandle(), MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{},
+                    ECk_AbilityOwner_AbilityGivenOrNot::NotGiven));
+
+            UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
                 InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{}, ECk_AbilityOwner_AbilityGivenOrNot::NotGiven));
         }
     }
