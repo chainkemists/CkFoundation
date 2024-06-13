@@ -169,6 +169,9 @@ private:
     UPROPERTY(EditAnywhere, meta=(RequiredAssetDataTags = "RowStructure=/Script/CkUI.Ck_RichTextDecorator_UserWidget_DataRow"))
     TObjectPtr<class UDataTable> _UserWidgetsTable;
 
+    UPROPERTY(EditAnywhere, Category = "Syntax")
+    FString _FallbackID = FString(TEXT("Default"));
+
     UPROPERTY(Transient)
     TArray<UCk_RichTextDecorator_UserWidget_UE*> _CreatedWidgets;
 
