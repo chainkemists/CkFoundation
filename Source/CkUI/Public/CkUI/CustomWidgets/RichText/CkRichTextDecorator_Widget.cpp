@@ -19,12 +19,14 @@ namespace ck
     public:
         FRichTextWidgetDecorator(
             URichTextBlock* InOwner,
-            UCk_RichTextBlockWidgetDecorator_UE* InDecorator);
+            UCk_RichTextBlockWidgetDecorator_UE* InDecorator,
+            const FString& InFallbackID);
 
         FRichTextWidgetDecorator(
             URichTextBlock* InOwner,
             UCk_RichTextBlockWidgetDecorator_UE* InDecorator,
-            const FCk_RichTextDecorator_CustomParams& InDecoratorCustomParams);
+            const FCk_RichTextDecorator_CustomParams& InDecoratorCustomParams,
+            const FString& InFallbackID);
 
     public:
         auto
@@ -41,6 +43,7 @@ namespace ck
     private:
         TWeakObjectPtr<UCk_RichTextBlockWidgetDecorator_UE> _Decorator;
         TOptional<FCk_RichTextDecorator_CustomParams> _DecoratorCustomParams;
+        FString _FallbackID;
     };
 }
 
@@ -75,10 +78,10 @@ auto
 {
     if (ck::IsValid(_LastInjectedCustomParams))
     {
-        return MakeShareable(new ck::FRichTextWidgetDecorator{InOwner, this, *_LastInjectedCustomParams});
+        return MakeShareable(new ck::FRichTextWidgetDecorator{InOwner, this, *_LastInjectedCustomParams, _FallbackID});
     }
 
-    return MakeShareable(new ck::FRichTextWidgetDecorator{InOwner, this});
+    return MakeShareable(new ck::FRichTextWidgetDecorator{InOwner, this, _FallbackID});
 }
 
 auto
@@ -117,9 +120,11 @@ namespace ck
     FRichTextWidgetDecorator::
         FRichTextWidgetDecorator(
             URichTextBlock* InOwner,
-            UCk_RichTextBlockWidgetDecorator_UE* InDecorator)
+            UCk_RichTextBlockWidgetDecorator_UE* InDecorator,
+            const FString& InFallbackID)
         : FRichTextDecorator(InOwner)
         , _Decorator(InDecorator)
+        , _FallbackID(InFallbackID)
     {
     }
 
@@ -127,10 +132,12 @@ namespace ck
         FRichTextWidgetDecorator(
             URichTextBlock* InOwner,
             UCk_RichTextBlockWidgetDecorator_UE* InDecorator,
-            const FCk_RichTextDecorator_CustomParams& InDecoratorCustomParams)
+            const FCk_RichTextDecorator_CustomParams& InDecoratorCustomParams,
+            const FString& InFallbackID)
         : FRichTextDecorator(InOwner)
         , _Decorator(InDecorator)
         , _DecoratorCustomParams(InDecoratorCustomParams)
+        , _FallbackID(InFallbackID)
     {
     }
 
@@ -147,13 +154,16 @@ namespace ck
         if (ck::Is_NOT_Valid(_Decorator))
         { return {}; }
 
-        if (NOT InRunParseResult.MetaData.Contains(TEXT("id")))
-        { return {}; }
+        FString RowName = _FallbackID;
 
-        const auto& IdRange = InRunParseResult.MetaData[TEXT("id")];
-        const auto& TagId = InText.Mid(IdRange.BeginIndex, IdRange.EndIndex - IdRange.BeginIndex);
+        if (InRunParseResult.MetaData.Contains(TEXT("id")))
+        {
+            const auto& IdRange = InRunParseResult.MetaData[TEXT("id")];
+            const auto& TagId = InText.Mid(IdRange.BeginIndex, IdRange.EndIndex - IdRange.BeginIndex);
+            RowName = TagId;
+        }
 
-        const auto& FoundUserWidget = _Decorator->FindUserWidget_DataRow(*TagId);
+        const auto& FoundUserWidget = _Decorator->FindUserWidget_DataRow(*RowName);
 
         return ck::IsValid(FoundUserWidget, ck::IsValid_Policy_NullptrOnly{});
     }
@@ -169,11 +179,14 @@ namespace ck
         if (ck::Is_NOT_Valid(_Decorator))
         { return {}; }
 
-        if (NOT InRunInfo.MetaData.Contains(TEXT("id")))
-        { return {}; }
+        FString RowName = _FallbackID;
 
-        const auto& StrId = InRunInfo.MetaData[TEXT("id")];
-        const auto& FoundUserWidget = _Decorator->FindUserWidget_DataRow(*StrId);
+        if (InRunInfo.MetaData.Contains(TEXT("id")))
+        {
+            RowName = InRunInfo.MetaData[TEXT("id")];
+        }
+
+        const auto& FoundUserWidget = _Decorator->FindUserWidget_DataRow(*RowName);
 
         if (ck::Is_NOT_Valid(FoundUserWidget, ck::IsValid_Policy_NullptrOnly{}))
         { return {}; }
