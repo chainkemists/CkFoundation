@@ -70,6 +70,10 @@ namespace ck
         static auto
         Request_FireSignals(
             HandleType& InHandle) -> void;
+
+        static auto
+        Request_TryReplicateAttribute(
+            HandleType& InHandle) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
