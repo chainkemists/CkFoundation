@@ -282,8 +282,8 @@ public:
     auto
     Broadcast_AddOrUpdate(
         FGameplayTag InAttributeName,
-        FVector InBase,
-        FVector InFinal,
+        const FVector& InBase,
+        const FVector& InFinal,
         ECk_MinMaxCurrent InComponent) -> void;
 
 private:

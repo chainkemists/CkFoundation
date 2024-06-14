@@ -115,7 +115,6 @@ auto
             ck::attribute::Verbose(TEXT("Replicating FLOAT Attribute [{}] for the FIRST time to [{}|{}]"), AttributeToReplicate.Get_AttributeName(),
                 AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Final());
 
-            // Update the attribute
             UCk_Utils_FloatAttribute_UE::Request_Override(AttributeEntity, AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Component());
 
             const auto& MaybeModifier = UCk_Utils_FloatAttributeModifier_UE::TryGet(AttributeEntity, ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),

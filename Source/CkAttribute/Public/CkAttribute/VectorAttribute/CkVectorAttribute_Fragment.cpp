@@ -3,6 +3,8 @@
 #include "CkAttribute/CkAttribute_Log.h"
 #include "CkAttribute/VectorAttribute/CkVectorAttribute_Utils.h"
 
+#include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
+
 #include "Net/UnrealNetwork.h"
 #include "Net/Core/PushModel/PushModel.h"
 
@@ -16,16 +18,16 @@ auto
 {
     return _AttributeName == InOther.Get_AttributeName() &&
         _Component == Get_Component() &&
-        _Base == InOther.Get_Base() &&
-        _Final == InOther.Get_Final();
+        UCk_Utils_Arithmetic_UE::Get_IsNearlyEqual(_Base, InOther.Get_Base()) &&
+        UCk_Utils_Arithmetic_UE::Get_IsNearlyEqual(_Final, InOther.Get_Final());
 }
 
 auto
     UCk_Fragment_VectorAttribute_Rep::
     Broadcast_AddOrUpdate(
         FGameplayTag InAttributeName,
-        FVector InBase,
-        FVector InFinal,
+        const FVector& InBase,
+        const FVector& InFinal,
         ECk_MinMaxCurrent InComponent)
     -> void
 {
@@ -113,7 +115,6 @@ auto
             ck::attribute::Verbose(TEXT("Replicating FLOAT Attribute [{}] for the FIRST time to [{}|{}]"), AttributeToReplicate.Get_AttributeName(),
                 AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Final());
 
-            // Update the attribute
             UCk_Utils_VectorAttribute_UE::Request_Override(AttributeEntity, AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Component());
 
             const auto& MaybeModifier = UCk_Utils_VectorAttributeModifier_UE::TryGet(AttributeEntity, ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
