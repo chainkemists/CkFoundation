@@ -73,6 +73,18 @@ auto
         UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_VectorAttribute_Rep>(InAttributeOwnerEntity);
     }
 
+    // it's possible that we have pending replication info
+    if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InAttributeOwnerEntity))
+    {
+        if (UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_VectorAttribute_Rep>(InAttributeOwnerEntity))
+        {
+            InAttributeOwnerEntity.Try_Transform<TObjectPtr<UCk_Fragment_VectorAttribute_Rep>>([&](TObjectPtr<UCk_Fragment_VectorAttribute_Rep>& InRepComp)
+            {
+                InRepComp->Request_TryUpdateReplicatedAttributes();
+            });
+        }
+    }
+
     return NewAttributeEntity;
 }
 
@@ -517,15 +529,6 @@ auto
         }
     }
 
-    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_VectorAttribute_Rep>(
-        LifetimeOwner, [&](UCk_Fragment_VectorAttribute_Rep* InRepComp)
-    {
-        if (NOT InAttribute.Has<ck::FTag_ReplicatedAttribute>())
-        { return; }
-
-        InRepComp->Broadcast_AddModifier(InModifierName, ParamsToUse);
-    });
-
     return NewModifierEntity;
 }
 
@@ -581,21 +584,6 @@ auto
         }
     }
 #undef ENSURE_IS_UNIQUE
-
-    const auto AttributeEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttributeModifierEntity);
-    auto ReplicatedEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(AttributeEntity);
-
-    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_VectorAttribute_Rep>(
-        ReplicatedEntity, [&](UCk_Fragment_VectorAttribute_Rep* InRepComp)
-    {
-        if (NOT AttributeEntity.Has<ck::FTag_ReplicatedAttribute>())
-        { return; }
-
-        InRepComp->Broadcast_OverrideModifier(
-            UCk_Utils_GameplayLabel_UE::Get_Label(InAttributeModifierEntity),
-            UCk_Utils_GameplayLabel_UE::Get_Label(AttributeEntity),
-            InNewDelta, InComponent);
-    });
 
     return InAttributeModifierEntity;
 }
@@ -720,18 +708,6 @@ auto
         CK_TRIGGER_ENSURE(TEXT("Vector Attribute Modifier Entity [{}] does NOT have Min, Max or Current"), InAttributeModifierEntity);
         return ECk_MinMaxCurrent::Current;
     }();
-
-    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_VectorAttribute_Rep>(AttributeOwnerEntity,
-    [&](UCk_Fragment_VectorAttribute_Rep* InRepComp)
-    {
-        if (NOT AttributeEntity.Has<ck::FTag_Replicated>())
-        { return; }
-
-        InRepComp->Broadcast_RemoveModifier(
-            UCk_Utils_GameplayLabel_UE::Get_Label(InAttributeModifierEntity),
-            UCk_Utils_GameplayLabel_UE::Get_Label(AttributeEntity),
-            AttributeComponent);
-    });
 
     return AttributeEntity;
 }
