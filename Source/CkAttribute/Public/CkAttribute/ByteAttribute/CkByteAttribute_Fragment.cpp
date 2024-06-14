@@ -1,9 +1,9 @@
 #include "CkByteAttribute_Fragment.h"
 
-#include "CkArithmetic_Utils.h"
-
 #include "CkAttribute/CkAttribute_Log.h"
 #include "CkAttribute/ByteAttribute/CkByteAttribute_Utils.h"
+
+#include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
 
 #include "Net/UnrealNetwork.h"
 #include "Net/Core/PushModel/PushModel.h"
@@ -115,7 +115,6 @@ auto
             ck::attribute::Verbose(TEXT("Replicating BYTE Attribute [{}] for the FIRST time to [{}|{}]"), AttributeToReplicate.Get_AttributeName(),
                 AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Final());
 
-            // Update the attribute
             UCk_Utils_ByteAttribute_UE::Request_Override(AttributeEntity, AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Component());
 
             const auto& MaybeModifier = UCk_Utils_ByteAttributeModifier_UE::TryGet(AttributeEntity, ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
