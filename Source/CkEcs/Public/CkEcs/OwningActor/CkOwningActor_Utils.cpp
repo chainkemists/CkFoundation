@@ -78,15 +78,12 @@ auto
         const FCk_Handle& InHandle)
         -> AActor*
 {
-    if (NOT Has(InHandle))
-    {
-        if (UCk_Utils_EntityLifetime_UE::Get_IsTransientEntity(InHandle))
-        { return nullptr; }
+    auto MaybeActorEntity = TryGet_Entity_OwningActor_InOwnershipChain(InHandle);
 
-        return TryGet_EntityOwningActor_Recursive(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle));
-    }
+    if (ck::Is_NOT_Valid(MaybeActorEntity))
+    { return {}; }
 
-    return Get_EntityOwningActor(InHandle);
+    return Get_EntityOwningActor(MaybeActorEntity);
 }
 
 auto
