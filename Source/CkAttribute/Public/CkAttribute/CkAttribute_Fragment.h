@@ -144,7 +144,7 @@ namespace ck
     public:
         CK_DEFINE_ECS_TAG(FTag_RecomputeFinalValue);
         CK_DEFINE_ECS_TAG(FTag_FireSignals);
-        CK_DEFINE_ECS_TAG(FTag_RequiresUpdate);
+        CK_DEFINE_ECS_TAG(FTag_MayRequireReplication);
 
     public:
         using AttributeDataType = T_AttributeType;
