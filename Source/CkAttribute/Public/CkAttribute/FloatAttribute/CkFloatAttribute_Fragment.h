@@ -117,8 +117,6 @@ namespace ck
 
 
     // --------------------------------------------------------------------------------------------------------------------
-
-    class FProcessor_FloatAttribute_Replicate;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -198,6 +196,41 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT()
+struct FCk_Fragment_FloatAttribute_BaseFinal
+{
+    GENERATED_BODY()
+
+    CK_GENERATED_BODY(FCk_Fragment_FloatAttribute_BaseFinal);
+
+private:
+    UPROPERTY()
+    FGameplayTag _AttributeName;
+
+    UPROPERTY()
+    float _Base = 0.0f;
+
+    UPROPERTY()
+    float _Final = 0.0f;
+
+    UPROPERTY()
+    ECk_MinMaxCurrent _Component = ECk_MinMaxCurrent::Current;
+
+public:
+    auto operator==(const ThisType& InOther) const -> bool;
+    CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
+
+public:
+    CK_PROPERTY_GET(_AttributeName);
+    CK_PROPERTY_GET(_Base);
+    CK_PROPERTY_GET(_Final);
+    CK_PROPERTY_GET(_Component);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttribute_BaseFinal, _AttributeName, _Base, _Final, _Component);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(Blueprintable)
 class CKATTRIBUTE_API UCk_Fragment_FloatAttribute_Rep : public UCk_Ecs_ReplicatedObject_UE
 {
@@ -208,26 +241,12 @@ public:
     CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_FloatAttribute_Rep);
 
 public:
-    friend class ck::FProcessor_FloatAttribute_Replicate;
-
-public:
     auto
-    Broadcast_AddModifier(
-        FGameplayTag InModifierName,
-        const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams) -> void;
-
-    auto
-    Broadcast_RemoveModifier(
-        FGameplayTag InModifierName,
+    Broadcast_AddOrUpdate(
         FGameplayTag InAttributeName,
-        ECk_MinMaxCurrent InAttributeComponent) -> void;
-
-    auto
-    Broadcast_OverrideModifier(
-        FGameplayTag InModifierName,
-        FGameplayTag InAttributeName,
-        float InNewDelta,
-        ECk_MinMaxCurrent InAttributeComponent) -> void;
+        float InBase,
+        float InFinal,
+        ECk_MinMaxCurrent InComponent) -> void;
 
 private:
     auto
@@ -238,30 +257,15 @@ private:
     GetLifetimeReplicatedProps(
         TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
 
+public:
+    UFUNCTION()
+    void
+    OnRep_Updated();
+
 private:
-    UFUNCTION()
-    void
-    OnRep_PendingModifiers_Add();
-
-    UFUNCTION()
-    void
-    OnRep_PendingModifiers_Remove();
-
-    UFUNCTION()
-    void
-    OnRep_PendingModifiers_Override();
-
-    UPROPERTY(ReplicatedUsing = OnRep_PendingModifiers_Add)
-    TArray<FCk_Fragment_FloatAttribute_PendingModifier> _PendingAddModifiers;
-    int32 _NextPendingAddModifier = 0;
-
-    UPROPERTY(ReplicatedUsing = OnRep_PendingModifiers_Remove)
-    TArray<FCk_Fragment_FloatAttribute_RemovePendingModifier> _PendingRemoveModifiers;
-    int32 _NextPendingRemoveModifier = 0;
-
-    UPROPERTY(ReplicatedUsing = OnRep_PendingModifiers_Override)
-    TArray<FCk_Fragment_FloatAttribute_OverrideModifier> _PendingOverrideModifiers;
-    int32 _NextPendingOverrideModifiers = 0;
+    UPROPERTY(ReplicatedUsing = OnRep_Updated);
+    TArray<FCk_Fragment_FloatAttribute_BaseFinal> _AttributesToReplicate;
+    TArray<FCk_Fragment_FloatAttribute_BaseFinal> _AttributesToReplicate_Previous;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
