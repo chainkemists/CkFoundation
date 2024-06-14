@@ -40,6 +40,8 @@ auto
     InWorld.Add<ck::FProcessor_ByteAttribute_FireSignals>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_FloatAttribute_FireSignals>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_VectorAttribute_FireSignals>(InWorld.Get_Registry());
+
+    InWorld.Add<ck::FProcessor_FloatAttribute_Replicate>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
