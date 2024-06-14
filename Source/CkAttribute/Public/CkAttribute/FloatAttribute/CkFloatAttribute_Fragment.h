@@ -229,6 +229,19 @@ public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttribute_BaseFinal, _AttributeName, _Base, _Final, _Component);
 };
 
+CK_DEFINE_CUSTOM_FORMATTER(FCk_Fragment_FloatAttribute_BaseFinal, [&]()
+{
+    return ck::Format
+    (
+        TEXT("{} [B{}|F{}][{}]"),
+        InObj.Get_AttributeName(),
+        InObj.Get_Base(),
+        InObj.Get_Final(),
+        InObj.Get_Component()
+    );
+});
+
+
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Blueprintable)
@@ -258,6 +271,10 @@ private:
         TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
 
 public:
+    auto
+    Request_TryUpdateReplicatedAttributes() -> void;
+
+private:
     UFUNCTION()
     void
     OnRep_Updated();

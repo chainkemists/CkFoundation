@@ -11,6 +11,27 @@
 
 namespace ck
 {
+    struct FAttributeModifier_ReplicationTags final : public FGameplayTagNativeAdder
+    {
+    protected:
+        auto AddTags() -> void override;
+
+    private:
+        FGameplayTag _Base;
+        FGameplayTag _Final;
+
+        static FAttributeModifier_ReplicationTags _Tags;
+
+    public:
+        static auto Get_BaseTag() -> FGameplayTag;
+        static auto Get_FinalTag() -> FGameplayTag;
+    };
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
     CK_DEFINE_ECS_TAG(FTag_ReplicatedAttribute);
 
     template <typename T_DerivedAttribute>
