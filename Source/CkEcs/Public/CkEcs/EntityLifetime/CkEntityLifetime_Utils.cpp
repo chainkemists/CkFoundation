@@ -149,6 +149,9 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
+    if (ck::Is_NOT_Valid(InHandle))
+    { return false; }
+
     return Get_TransientEntity(InHandle.Get_Registry()) == InHandle;
 }
 
