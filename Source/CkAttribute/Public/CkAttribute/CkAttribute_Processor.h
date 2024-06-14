@@ -152,6 +152,37 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_DerivedAttribute_ReplicatedFragment>
+    class TProcessor_Attribute_Replicate : public TProcessor<
+            TProcessor_Attribute_Replicate<T_DerivedProcessor, T_DerivedAttribute, T_DerivedAttribute_ReplicatedFragment>,
+            T_DerivedAttribute,
+            typename T_DerivedAttribute::FTag_MayRequireReplication,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = typename T_DerivedAttribute::FTag_MayRequireReplication;
+
+    public:
+        using ThisType                      = TProcessor_Attribute_Replicate<T_DerivedProcessor, T_DerivedAttribute, T_DerivedAttribute_ReplicatedFragment>;
+        using Super                         = TProcessor<ThisType, T_DerivedAttribute, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using HandleType                    = typename Super::HandleType;
+        using TimeType                      = typename Super::TimeType;
+
+    public:
+        CK_USING_BASE_CONSTRUCTORS(Super);
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const T_DerivedAttribute& InAttribute) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_Attribute_RecomputeAll : public TProcessor<
             TProcessor_Attribute_RecomputeAll<T_DerivedProcessor, T_DerivedAttributeModifier>,
@@ -579,6 +610,36 @@ namespace ck
     public:
         explicit
         TProcessor_Attribute_FireSignals_CurrentMinMax(RegistryType InRegistry);
+
+    public:
+        auto Tick(
+            TimeType InDeltaT) -> void;
+
+    private:
+        TInternalProcessorType<ECk_MinMaxCurrent::Current> _Current;
+        TInternalProcessorType<ECk_MinMaxCurrent::Min> _Min;
+        TInternalProcessorType<ECk_MinMaxCurrent::Max> _Max;
+
+    private:
+        RegistryType _Registry;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttribute, typename T_Attribute_ReplicatedFragment>
+    class TProcessor_Attribute_Replicate_All
+    {
+    public:
+        using TimeType     = FCk_Time;
+        using RegistryType = FCk_Registry;
+
+        template <ECk_MinMaxCurrent T_Component>
+        using TInternalProcessorType = detail::TProcessor_Attribute_Replicate<
+            TProcessor_Attribute_Replicate_All, T_DerivedAttribute<T_Component>, T_Attribute_ReplicatedFragment>;
+
+    public:
+        explicit
+        TProcessor_Attribute_Replicate_All(RegistryType InRegistry);
 
     public:
         auto Tick(
