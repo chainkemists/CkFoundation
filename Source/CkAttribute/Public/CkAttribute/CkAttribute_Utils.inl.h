@@ -93,6 +93,23 @@ namespace ck
         InHandle.AddOrGet<typename AttributeFragmentType::FTag_FireSignals>();
     }
 
+    template <typename T_DerivedAttribute>
+    auto
+        TUtils_Attribute<T_DerivedAttribute>::
+        Request_TryReplicateAttribute(
+            HandleType& InHandle)
+            -> void
+    {
+        if (NOT Ensure(InHandle))
+        { return; }
+
+        if (NOT InHandle.Has<ck::FTag_ReplicatedAttribute>())
+        { return; }
+
+        InHandle.AddOrGet<typename AttributeFragmentType::FTag_MayRequireReplication>();
+
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedAttributeModifier>
