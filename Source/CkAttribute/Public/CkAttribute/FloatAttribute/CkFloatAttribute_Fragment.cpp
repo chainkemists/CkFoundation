@@ -3,6 +3,8 @@
 #include "CkAttribute/CkAttribute_Log.h"
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
 
+#include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
+
 #include "Net/UnrealNetwork.h"
 #include "Net/Core/PushModel/PushModel.h"
 
@@ -16,8 +18,8 @@ auto
 {
     return _AttributeName == InOther.Get_AttributeName() &&
         _Component == Get_Component() &&
-        FMath::IsNearlyEqual(_Base, InOther.Get_Base()) &&
-        FMath::IsNearlyEqual(_Final, InOther.Get_Final());
+        UCk_Utils_Arithmetic_UE::Get_IsNearlyEqual(_Base, InOther.Get_Base()) &&
+        UCk_Utils_Arithmetic_UE::Get_IsNearlyEqual(_Final, InOther.Get_Final());
 }
 
 auto

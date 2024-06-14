@@ -586,9 +586,6 @@ auto
     }
 #undef ENSURE_IS_UNIQUE
 
-    const auto AttributeEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttributeModifierEntity);
-    auto ReplicatedEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(AttributeEntity);
-
     return InAttributeModifierEntity;
 }
 

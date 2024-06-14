@@ -115,10 +115,7 @@ namespace ck
     using UUtils_Signal_OnByteAttributeValueChanged_Max_PostFireUnbind = TUtils_Signal_OnAttributeValueChanged_PostFireUnbind<
         FFragment_ByteAttribute_Max, FCk_Delegate_ByteAttribute_OnValueChanged_MC>;
 
-
     // --------------------------------------------------------------------------------------------------------------------
-
-    class FProcessor_ByteAttribute_Replicate;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -198,6 +195,53 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT()
+struct FCk_Fragment_ByteAttribute_BaseFinal
+{
+    GENERATED_BODY()
+
+    CK_GENERATED_BODY(FCk_Fragment_ByteAttribute_BaseFinal);
+
+private:
+    UPROPERTY()
+    FGameplayTag _AttributeName;
+
+    UPROPERTY()
+    uint8 _Base = 0.0f;
+
+    UPROPERTY()
+    uint8 _Final = 0.0f;
+
+    UPROPERTY()
+    ECk_MinMaxCurrent _Component = ECk_MinMaxCurrent::Current;
+
+public:
+    auto operator==(const ThisType& InOther) const -> bool;
+    CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
+
+public:
+    CK_PROPERTY_GET(_AttributeName);
+    CK_PROPERTY_GET(_Base);
+    CK_PROPERTY_GET(_Final);
+    CK_PROPERTY_GET(_Component);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ByteAttribute_BaseFinal, _AttributeName, _Base, _Final, _Component);
+};
+
+CK_DEFINE_CUSTOM_FORMATTER(FCk_Fragment_ByteAttribute_BaseFinal, [&]()
+{
+    return ck::Format
+    (
+        TEXT("{} [B{}|F{}][{}]"),
+        InObj.Get_AttributeName(),
+        InObj.Get_Base(),
+        InObj.Get_Final(),
+        InObj.Get_Component()
+    );
+});
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(Blueprintable)
 class CKATTRIBUTE_API UCk_Fragment_ByteAttribute_Rep : public UCk_Ecs_ReplicatedObject_UE
 {
@@ -208,28 +252,12 @@ public:
     CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_ByteAttribute_Rep);
 
 public:
-    friend class ck::FProcessor_ByteAttribute_Replicate;
-
-public:
     auto
-    Broadcast_OverrideModifier(
-        FGameplayTag InModifierName,
+    Broadcast_AddOrUpdate(
         FGameplayTag InAttributeName,
-        uint8 InNewDelta,
-        ECk_MinMaxCurrent InAttributeComponent) -> void;
-
-    auto
-    Broadcast_AddModifier(
-        FGameplayTag InModifierName,
-        const FCk_Fragment_ByteAttributeModifier_ParamsData& InParams) -> void;
-
-    auto
-    Broadcast_RemoveModifier(
-        FGameplayTag InModifierName,
-        FGameplayTag InAttributeName,
-        ECk_MinMaxCurrent InAttributeComponent) -> void;
-
-    // TODO: 'permanent' modifiers
+        uint8 InBase,
+        uint8 InFinal,
+        ECk_MinMaxCurrent InComponent) -> void;
 
 private:
     auto
@@ -240,30 +268,19 @@ private:
     GetLifetimeReplicatedProps(
         TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
 
+public:
+    auto
+    Request_TryUpdateReplicatedAttributes() -> void;
+
 private:
     UFUNCTION()
     void
-    OnRep_PendingModifiers_Add();
+    OnRep_Updated();
 
-    UFUNCTION()
-    void
-    OnRep_PendingModifiers_Remove();
-
-    UFUNCTION()
-    void
-    OnRep_PendingModifiers_Override();
-
-    UPROPERTY(ReplicatedUsing = OnRep_PendingModifiers_Add)
-    TArray<FCk_Fragment_ByteAttribute_PendingModifier> _PendingAddModifiers;
-    int32 _NextPendingAddModifier = 0;
-
-    UPROPERTY(ReplicatedUsing = OnRep_PendingModifiers_Remove)
-    TArray<FCk_Fragment_ByteAttribute_RemovePendingModifier> _PendingRemoveModifiers;
-    int32 _NextPendingRemoveModifier = 0;
-
-    UPROPERTY(ReplicatedUsing = OnRep_PendingModifiers_Override)
-    TArray<FCk_Fragment_ByteAttribute_OverrideModifier> _PendingOverrideModifiers;
-    int32 _NextPendingOverrideModifiers = 0;
+private:
+    UPROPERTY(ReplicatedUsing = OnRep_Updated);
+    TArray<FCk_Fragment_ByteAttribute_BaseFinal> _AttributesToReplicate;
+    TArray<FCk_Fragment_ByteAttribute_BaseFinal> _AttributesToReplicate_Previous;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
