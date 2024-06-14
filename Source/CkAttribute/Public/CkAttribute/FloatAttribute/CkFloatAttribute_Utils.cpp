@@ -81,7 +81,7 @@ auto
         {
             InAttributeOwnerEntity.Try_Transform<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>([&](TObjectPtr<UCk_Fragment_FloatAttribute_Rep>& InRepComp)
             {
-                InRepComp->OnRep_Updated();
+                InRepComp->Request_TryUpdateReplicatedAttributes();
             });
         }
     }

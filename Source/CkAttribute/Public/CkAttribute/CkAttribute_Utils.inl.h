@@ -107,7 +107,6 @@ namespace ck
         { return; }
 
         InHandle.AddOrGet<typename AttributeFragmentType::FTag_MayRequireReplication>();
-
     }
 
     // --------------------------------------------------------------------------------------------------------------------

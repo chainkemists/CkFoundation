@@ -6,44 +6,6 @@
 #include "Net/UnrealNetwork.h"
 #include "Net/Core/PushModel/PushModel.h"
 
-#include <GameplayTagsManager.h>
-
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace ck_label
-{
-    struct FModifierTag final : public FGameplayTagNativeAdder
-    {
-    protected:
-        auto AddTags() -> void override
-        {
-            auto& Manager = UGameplayTagsManager::Get();
-
-            _Base = Manager.AddNativeGameplayTag(TEXT("Ck.Label.FloatModifier.Replication.Base"));
-            _Final = Manager.AddNativeGameplayTag(TEXT("Ck.Label.FloatModifier.Replication.Final"));
-        }
-
-    private:
-        FGameplayTag _Base;
-        FGameplayTag _Final;
-
-        static FModifierTag _Tags;
-
-    public:
-        static auto Get_BaseTag() -> FGameplayTag
-        {
-            return _Tags._Base;
-        }
-
-        static auto Get_FinalTag() -> FGameplayTag
-        {
-            return _Tags._Final;
-        }
-    };
-
-    FModifierTag FModifierTag::_Tags;
-}
-
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -74,7 +36,7 @@ auto
 
     const auto& ToReplicate = FCk_Fragment_FloatAttribute_BaseFinal{InAttributeName, InBase, InFinal, InComponent};
 
-    if (NOT Found)
+    if (ck::Is_NOT_Valid(Found, ck::IsValid_Policy_NullptrOnly{}))
     {
         _AttributesToReplicate.Emplace(ToReplicate);
     }
@@ -111,6 +73,14 @@ auto
 
 auto
     UCk_Fragment_FloatAttribute_Rep::
+    Request_TryUpdateReplicatedAttributes()
+    -> void
+{
+    OnRep_Updated();
+}
+
+auto
+    UCk_Fragment_FloatAttribute_Rep::
     OnRep_Updated()
     -> void
 {
@@ -120,14 +90,15 @@ auto
     if (GetWorld()->IsNetMode(NM_DedicatedServer))
     { return; }
 
-    for (auto Index = 0; Index < _AttributesToReplicate.Num(); ++Index)
+    for (auto Index = _AttributesToReplicate_Previous.Num(); Index < _AttributesToReplicate.Num(); ++Index)
     {
         const auto& AttributeToReplicate = _AttributesToReplicate[Index];
         auto AttributeEntity = UCk_Utils_FloatAttribute_UE::TryGet(Get_AssociatedEntity(), AttributeToReplicate.Get_AttributeName());
 
         if (ck::Is_NOT_Valid(AttributeEntity))
         {
-            ck::attribute::Verbose(TEXT("Could NOT find Attribute [{}]"), AttributeToReplicate.Get_AttributeName());
+            ck::attribute::Verbose(TEXT("Could NOT find FLOAT Attribute [{}]. Float Attribute replication PENDING..."),
+                AttributeToReplicate.Get_AttributeName());
             return;
         }
     }
@@ -139,44 +110,60 @@ auto
 
         if (NOT _AttributesToReplicate_Previous.IsValidIndex(Index))
         {
-            ck::attribute::Log(TEXT("Replicating Attribute [{}] for the FIRST time to [{}|{}]"), AttributeToReplicate.Get_AttributeName(),
+            ck::attribute::Verbose(TEXT("Replicating FLOAT Attribute [{}] for the FIRST time to [{}|{}]"), AttributeToReplicate.Get_AttributeName(),
                 AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Final());
 
             // Update the attribute
             UCk_Utils_FloatAttribute_UE::Request_Override(AttributeEntity, AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Component());
 
-            CK_ENSURE_IF_NOT(ck::Is_NOT_Valid(UCk_Utils_FloatAttributeModifier_UE::TryGet(AttributeEntity, ck_label::FModifierTag::Get_FinalTag(), AttributeToReplicate.Get_Component())),
-                TEXT("Did not expect a Final modifier to already exist"))
+            const auto& MaybeModifier = UCk_Utils_FloatAttributeModifier_UE::TryGet(AttributeEntity, ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
+                AttributeToReplicate.Get_Component());
+
+            CK_ENSURE_IF_NOT(ck::Is_NOT_Valid(MaybeModifier), TEXT("Did not expect a Final Modifier [{}] to already exist on FLOAT Attribute [{}]"),
+                ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), AttributeEntity)
             { continue; }
 
-            UCk_Utils_FloatAttributeModifier_UE::Add(AttributeEntity, ck_label::FModifierTag::Get_FinalTag(), FCk_Fragment_FloatAttributeModifier_ParamsData{
-                AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base(),
-                ECk_ArithmeticOperations_Basic::Add,
-                ECk_ModifierOperation_RevocablePolicy::Revocable,
-                AttributeToReplicate.Get_Component()
-            });
+            UCk_Utils_FloatAttributeModifier_UE::Add
+            (
+                AttributeEntity,
+                ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
+                FCk_Fragment_FloatAttributeModifier_ParamsData
+                {
+                    AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base(),
+                    ECk_ArithmeticOperations_Basic::Add,
+                    ECk_ModifierOperation_RevocablePolicy::Revocable,
+                    AttributeToReplicate.Get_Component()
+                }
+            );
 
             continue;
         }
 
         if (_AttributesToReplicate_Previous[Index] != AttributeToReplicate)
         {
-            ck::attribute::Log(TEXT("Replicating Attribute [{}] and UPDATING it to [{}|{}]"), AttributeToReplicate.Get_AttributeName(),
+            ck::attribute::Verbose(TEXT("Replicating FLOAT Attribute [{}] and UPDATING it to [{}|{}]"), AttributeToReplicate.Get_AttributeName(),
                 AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Final());
 
             UCk_Utils_FloatAttribute_UE::Request_Override(
                 AttributeEntity, AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Component());
 
-            auto AttributeModifier = UCk_Utils_FloatAttributeModifier_UE::TryGet(AttributeEntity, ck_label::FModifierTag::Get_FinalTag(), AttributeToReplicate.Get_Component());
+            auto AttributeModifier = UCk_Utils_FloatAttributeModifier_UE::TryGet(AttributeEntity,
+                ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), AttributeToReplicate.Get_Component());
 
             if (ck::Is_NOT_Valid(AttributeModifier))
             {
-                UCk_Utils_FloatAttributeModifier_UE::Add(AttributeEntity, ck_label::FModifierTag::Get_FinalTag(), FCk_Fragment_FloatAttributeModifier_ParamsData{
-                    AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base(),
-                    ECk_ArithmeticOperations_Basic::Add,
-                    ECk_ModifierOperation_RevocablePolicy::Revocable,
-                    AttributeToReplicate.Get_Component()
-                });
+                UCk_Utils_FloatAttributeModifier_UE::Add
+                (
+                    AttributeEntity,
+                    ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
+                    FCk_Fragment_FloatAttributeModifier_ParamsData
+                    {
+                        AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base(),
+                        ECk_ArithmeticOperations_Basic::Add,
+                        ECk_ModifierOperation_RevocablePolicy::Revocable,
+                        AttributeToReplicate.Get_Component()
+                    }
+                );
             }
             else
             {
@@ -187,7 +174,8 @@ auto
             continue;
         }
 
-        ck::attribute::Log(TEXT("IGNORING Attribute [{}] as there is no change"), AttributeToReplicate.Get_AttributeName());
+        ck::attribute::Verbose(TEXT("IGNORING FLOAT Attribute [{}] as there is no change between [{}] and [{}]"),
+            AttributeToReplicate.Get_AttributeName());
     }
 
     _AttributesToReplicate_Previous = _AttributesToReplicate;
