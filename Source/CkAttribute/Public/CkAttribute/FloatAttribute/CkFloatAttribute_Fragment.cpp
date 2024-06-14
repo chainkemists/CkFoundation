@@ -6,53 +6,92 @@
 #include "Net/UnrealNetwork.h"
 #include "Net/Core/PushModel/PushModel.h"
 
-// --------------------------------------------------------------------------------------------------------------------
-auto
-    UCk_Fragment_FloatAttribute_Rep::
-    Broadcast_AddModifier(
-        const FGameplayTag InModifierName,
-        const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams)
-    -> void
-{
-    MARK_PROPERTY_DIRTY_FROM_NAME(UCk_Fragment_FloatAttribute_Rep, _PendingAddModifiers, this);
-    _PendingAddModifiers.Emplace(FCk_Fragment_FloatAttribute_PendingModifier{InModifierName, InParams});
-}
-
-auto
-    UCk_Fragment_FloatAttribute_Rep::
-    Broadcast_RemoveModifier(
-        FGameplayTag InModifierName,
-        FGameplayTag InAttributeName,
-        ECk_MinMaxCurrent InAttributeComponent)
-    -> void
-{
-    MARK_PROPERTY_DIRTY_FROM_NAME(UCk_Fragment_FloatAttribute_Rep, _PendingRemoveModifiers, this);
-    _PendingRemoveModifiers.Emplace(FCk_Fragment_FloatAttribute_RemovePendingModifier{InAttributeName, InModifierName, InAttributeComponent});
-}
-
-auto
-    UCk_Fragment_FloatAttribute_Rep::
-    Broadcast_OverrideModifier(
-        FGameplayTag InModifierName,
-        FGameplayTag InAttributeName,
-        float InNewDelta,
-        ECk_MinMaxCurrent InAttributeComponent)
-    -> void
-{
-    MARK_PROPERTY_DIRTY_FROM_NAME(UCk_Fragment_FloatAttribute_Rep, _PendingOverrideModifiers, this);
-    _PendingOverrideModifiers.Emplace(FCk_Fragment_FloatAttribute_OverrideModifier{InAttributeName, InModifierName, InNewDelta, InAttributeComponent});
-}
+#include <GameplayTagsManager.h>
 
 // --------------------------------------------------------------------------------------------------------------------
+
+namespace ck_label
+{
+    struct FModifierTag final : public FGameplayTagNativeAdder
+    {
+    protected:
+        auto AddTags() -> void override
+        {
+            auto& Manager = UGameplayTagsManager::Get();
+
+            _Base = Manager.AddNativeGameplayTag(TEXT("Ck.Label.FloatModifier.Replication.Base"));
+            _Final = Manager.AddNativeGameplayTag(TEXT("Ck.Label.FloatModifier.Replication.Final"));
+        }
+
+    private:
+        FGameplayTag _Base;
+        FGameplayTag _Final;
+
+        static FModifierTag _Tags;
+
+    public:
+        static auto Get_BaseTag() -> FGameplayTag
+        {
+            return _Tags._Base;
+        }
+
+        static auto Get_FinalTag() -> FGameplayTag
+        {
+            return _Tags._Final;
+        }
+    };
+
+    FModifierTag FModifierTag::_Tags;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Fragment_FloatAttribute_BaseFinal::
+    operator==(
+        const ThisType& InOther) const
+    -> bool
+{
+    return _AttributeName == InOther.Get_AttributeName() &&
+        _Component == Get_Component() &&
+        FMath::IsNearlyEqual(_Base, InOther.Get_Base()) &&
+        FMath::IsNearlyEqual(_Final, InOther.Get_Final());
+}
+
+auto
+    UCk_Fragment_FloatAttribute_Rep::
+    Broadcast_AddOrUpdate(
+        FGameplayTag InAttributeName,
+        float InBase,
+        float InFinal,
+        ECk_MinMaxCurrent InComponent)
+    -> void
+{
+    const auto Found = _AttributesToReplicate.FindByPredicate([&](const FCk_Fragment_FloatAttribute_BaseFinal& InElement)
+    {
+        return InElement.Get_AttributeName() == InAttributeName;
+    });
+
+    const auto& ToReplicate = FCk_Fragment_FloatAttribute_BaseFinal{InAttributeName, InBase, InFinal, InComponent};
+
+    if (NOT Found)
+    {
+        _AttributesToReplicate.Emplace(ToReplicate);
+    }
+    else
+    {
+        *Found = ToReplicate;
+    }
+
+    MARK_PROPERTY_DIRTY_FROM_NAME(UCk_Fragment_FloatAttribute_Rep, _AttributesToReplicate, this);
+}
 
 auto
     UCk_Fragment_FloatAttribute_Rep::
     PostLink()
     -> void
 {
-    OnRep_PendingModifiers_Add();
-    OnRep_PendingModifiers_Remove();
-    OnRep_PendingModifiers_Override();
+    OnRep_Updated();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -67,14 +106,12 @@ auto
 
     constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
 
-    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingAddModifiers, Params);
-    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingRemoveModifiers, Params);
-    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingOverrideModifiers, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _AttributesToReplicate, Params);
 }
 
 auto
     UCk_Fragment_FloatAttribute_Rep::
-    OnRep_PendingModifiers_Add()
+    OnRep_Updated()
     -> void
 {
     if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
@@ -83,128 +120,77 @@ auto
     if (GetWorld()->IsNetMode(NM_DedicatedServer))
     { return; }
 
-    for (auto Index = _NextPendingAddModifier; Index < _PendingAddModifiers.Num(); ++Index)
+    for (auto Index = 0; Index < _AttributesToReplicate.Num(); ++Index)
     {
-        const auto& Modifier = _PendingAddModifiers[Index];
-        const auto& AttributeName = Modifier.Get_Params().Get_TargetAttributeName();
+        const auto& AttributeToReplicate = _AttributesToReplicate[Index];
+        auto AttributeEntity = UCk_Utils_FloatAttribute_UE::TryGet(Get_AssociatedEntity(), AttributeToReplicate.Get_AttributeName());
 
-        CK_LOG_ERROR_IF_NOT(ck::attribute, ck::IsValid(AttributeName),
-            TEXT("Received a FLOAT AddModifier Request from the SERVER with ModifierName [{}] for a TargetAttribute with INVALID name.{}"),
-            Modifier.Get_ModifierName(), ck::Context(this))
-        { continue; }
-
-        auto Attribute = UCk_Utils_FloatAttribute_UE::TryGet(_AssociatedEntity, AttributeName);
-
-        CK_LOG_ERROR_IF_NOT(ck::attribute, ck::IsValid(Attribute),
-            TEXT("Received a FLOAT AddModifier Request from the SERVER with ModifierName [{}] for a TargetAttribute with name [{}] "
-                "but could NOT find that Attribute on [{}]"),
-            Modifier.Get_ModifierName(), AttributeName, Get_AssociatedEntity())
-        { continue; }
-
-        UCk_Utils_FloatAttributeModifier_UE::Add(Attribute, Modifier.Get_ModifierName(), Modifier.Get_Params());
+        if (ck::Is_NOT_Valid(AttributeEntity))
+        {
+            ck::attribute::Verbose(TEXT("Could NOT find Attribute [{}]"), AttributeToReplicate.Get_AttributeName());
+            return;
+        }
     }
-    _NextPendingAddModifier = _PendingAddModifiers.Num();
-}
 
-auto
-    UCk_Fragment_FloatAttribute_Rep::
-    OnRep_PendingModifiers_Remove()
-    -> void
-{
-    if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
-    { return; }
-
-    if (GetWorld()->IsNetMode(NM_DedicatedServer))
-    { return; }
-
-    for (auto Index = _NextPendingRemoveModifier; Index < _PendingRemoveModifiers.Num(); ++Index)
+    for (auto Index = 0; Index < _AttributesToReplicate.Num(); ++Index)
     {
-        const auto& Modifier = _PendingRemoveModifiers[Index];
-        const auto& AttributeName = Modifier.Get_AttributeName();
+        const auto& AttributeToReplicate = _AttributesToReplicate[Index];
+        auto AttributeEntity = UCk_Utils_FloatAttribute_UE::TryGet(Get_AssociatedEntity(), AttributeToReplicate.Get_AttributeName());
 
-        CK_LOG_ERROR_IF_NOT(ck::attribute, ck::IsValid(AttributeName),
-            TEXT("Received a FLOAT RemoveModifier from the SERVER with Modifier [{}] for a TargetAttribute with INVALID name.{}"),
-            Modifier.Get_ModifierName(),
-            ck::Context(this))
-        { continue; }
+        if (NOT _AttributesToReplicate_Previous.IsValidIndex(Index))
+        {
+            ck::attribute::Log(TEXT("Replicating Attribute [{}] for the FIRST time to [{}|{}]"), AttributeToReplicate.Get_AttributeName(),
+                AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Final());
 
-        const auto& Attribute = UCk_Utils_FloatAttribute_UE::TryGet(_AssociatedEntity, AttributeName);
+            // Update the attribute
+            UCk_Utils_FloatAttribute_UE::Request_Override(AttributeEntity, AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Component());
 
-        CK_LOG_ERROR_IF_NOT(ck::attribute, ck::IsValid(Attribute),
-            TEXT("Received a FLOAT RemoveModifier Request from the SERVER with ModifierName [{}] for a TargetAttribute with name [{}] "
-                "but could NOT find that Attribute on [{}]"),
-            Modifier.Get_ModifierName(), AttributeName, Get_AssociatedEntity())
-        { continue; }
+            CK_ENSURE_IF_NOT(ck::Is_NOT_Valid(UCk_Utils_FloatAttributeModifier_UE::TryGet(AttributeEntity, ck_label::FModifierTag::Get_FinalTag(), AttributeToReplicate.Get_Component())),
+                TEXT("Did not expect a Final modifier to already exist"))
+            { continue; }
 
-        const auto& ModifierName = Modifier.Get_ModifierName();
-        const auto& Component = Modifier.Get_Component();
+            UCk_Utils_FloatAttributeModifier_UE::Add(AttributeEntity, ck_label::FModifierTag::Get_FinalTag(), FCk_Fragment_FloatAttributeModifier_ParamsData{
+                AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base(),
+                ECk_ArithmeticOperations_Basic::Add,
+                ECk_ModifierOperation_RevocablePolicy::Revocable,
+                AttributeToReplicate.Get_Component()
+            });
 
-        auto ModifierEntity = UCk_Utils_FloatAttributeModifier_UE::TryGet_If
-        (
-            Attribute,
-            ModifierName,
-            Component,
-            ck::algo::Is_NOT_DestructionPhase{ECk_EntityLifetime_DestructionPhase::InitiatedOrConfirmed}
-        );
+            continue;
+        }
 
-        CK_LOG_ERROR_IF_NOT(ck::attribute, ck::IsValid(ModifierEntity),
-            TEXT("Received a FLOAT RemoveModifier Request from the SERVER with ModifierName [{}] for a TargetAttribute [{}] but the Modifier does NOT exist.{}"),
-            ModifierName, AttributeName, ck::Context(Get_AssociatedEntity()))
-        { continue; }
+        if (_AttributesToReplicate_Previous[Index] != AttributeToReplicate)
+        {
+            ck::attribute::Log(TEXT("Replicating Attribute [{}] and UPDATING it to [{}|{}]"), AttributeToReplicate.Get_AttributeName(),
+                AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Final());
 
-        UCk_Utils_FloatAttributeModifier_UE::Remove(ModifierEntity);
+            UCk_Utils_FloatAttribute_UE::Request_Override(
+                AttributeEntity, AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Component());
+
+            auto AttributeModifier = UCk_Utils_FloatAttributeModifier_UE::TryGet(AttributeEntity, ck_label::FModifierTag::Get_FinalTag(), AttributeToReplicate.Get_Component());
+
+            if (ck::Is_NOT_Valid(AttributeModifier))
+            {
+                UCk_Utils_FloatAttributeModifier_UE::Add(AttributeEntity, ck_label::FModifierTag::Get_FinalTag(), FCk_Fragment_FloatAttributeModifier_ParamsData{
+                    AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base(),
+                    ECk_ArithmeticOperations_Basic::Add,
+                    ECk_ModifierOperation_RevocablePolicy::Revocable,
+                    AttributeToReplicate.Get_Component()
+                });
+            }
+            else
+            {
+                UCk_Utils_FloatAttributeModifier_UE::Override(
+                    AttributeModifier, AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Component());
+            }
+
+            continue;
+        }
+
+        ck::attribute::Log(TEXT("IGNORING Attribute [{}] as there is no change"), AttributeToReplicate.Get_AttributeName());
     }
-    _NextPendingRemoveModifier = _PendingRemoveModifiers.Num();
-}
 
-auto
-    UCk_Fragment_FloatAttribute_Rep::
-    OnRep_PendingModifiers_Override()
-    -> void
-{
-    if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
-    { return; }
-
-    if (GetWorld()->IsNetMode(NM_DedicatedServer))
-    { return; }
-
-    for (auto Index = _NextPendingOverrideModifiers; Index < _PendingOverrideModifiers.Num(); ++Index)
-    {
-        const auto& Modifier = _PendingOverrideModifiers[Index];
-        const auto& AttributeName = Modifier.Get_AttributeName();
-
-        CK_LOG_ERROR_IF_NOT(ck::attribute, ck::IsValid(AttributeName),
-            TEXT("Received a FLOAT Override Request from the SERVER with ModifierName [{}] for a TargetAttribute with INVALID name.{}"),
-            Modifier.Get_ModifierName(), ck::Context(this))
-        { continue; }
-
-        auto Attribute = UCk_Utils_FloatAttribute_UE::TryGet(_AssociatedEntity, AttributeName);
-
-        CK_LOG_ERROR_IF_NOT(ck::attribute, ck::IsValid(Attribute),
-            TEXT("Received a FLOAT Override Request from the SERVER with ModifierName [{}] for a TargetAttribute with name [{}] "
-                "but could NOT find that Attribute on [{}]"),
-            Modifier.Get_ModifierName(), AttributeName, Get_AssociatedEntity())
-        { continue; }
-
-        const auto& ModifierName = Modifier.Get_ModifierName();
-        const auto& Component = Modifier.Get_Component();
-
-        auto ModifierEntity = UCk_Utils_FloatAttributeModifier_UE::TryGet_If
-        (
-            Attribute,
-            ModifierName,
-            Component,
-            ck::algo::Is_NOT_DestructionPhase{ECk_EntityLifetime_DestructionPhase::InitiatedOrConfirmed}
-        );
-
-        CK_LOG_ERROR_IF_NOT(ck::attribute, ck::IsValid(ModifierEntity),
-            TEXT("Received a FLOAT Override Request from the SERVER with ModifierName [{}] for a TargetAttribute [{}] but the Modifier does NOT exist.{}"),
-            ModifierName, AttributeName, ck::Context(Get_AssociatedEntity()))
-        { continue; }
-
-        UCk_Utils_FloatAttributeModifier_UE::Override(ModifierEntity, Modifier.Get_NewDelta(), Component);
-    }
-    _NextPendingOverrideModifiers = _PendingOverrideModifiers.Num();
+    _AttributesToReplicate_Previous = _AttributesToReplicate;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
