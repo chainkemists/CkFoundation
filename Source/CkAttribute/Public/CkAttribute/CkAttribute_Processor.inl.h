@@ -1,10 +1,12 @@
 #pragma once
 
-#include "CkAttribute_Processor.h"
-#include "CkCore/Format/CkFormat.h"
 #include "CkAttribute/CkAttribute_Log.h"
 #include "CkAttribute/CkAttribute_Utils.h"
+
+#include "CkCore/Format/CkFormat.h"
 #include "CkCore/Payload/CkPayload.h"
+
+#include "CkNet/CkNet_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -82,6 +84,19 @@ namespace ck::detail
         const auto BaseValue = InAttributeCurrent._Base;
         const auto FinalValue = InAttributeCurrent._Final;
 
+        if (InHandle.template Has<ck::FTag_ReplicatedAttribute>() && UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle))
+        {
+            using AttributePreviousType = ck::TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
+            auto& PreviousValue = InHandle.template AddOrGet<AttributePreviousType>();
+
+            if (PreviousValue.Get_Base() != BaseValue || PreviousValue.Get_Final() != FinalValue)
+            { TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle); }
+
+            PreviousValue = AttributePreviousType{BaseValue, FinalValue};
+
+            return;
+        }
+
         const auto FinalValue_Min = InAttributeMin._Final;
 
         InAttributeCurrent._Base = TAttributeMinMax<AttributeDataType>::Max(BaseValue, FinalValue_Min);
@@ -95,6 +110,7 @@ namespace ck::detail
             PreviousValue = AttributePreviousType{BaseValue, FinalValue};
 
             TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle);
+            TUtils_Attribute<T_DerivedAttributeCurrent>::Request_TryReplicateAttribute(InHandle);
         }
     }
 
@@ -113,6 +129,19 @@ namespace ck::detail
         const auto BaseValue = InAttributeCurrent._Base;
         const auto FinalValue = InAttributeCurrent._Final;
 
+        if (InHandle.template Has<ck::FTag_ReplicatedAttribute>() && UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle))
+        {
+            using AttributePreviousType = ck::TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
+            auto& PreviousValue = InHandle.template AddOrGet<AttributePreviousType>();
+
+            if (PreviousValue.Get_Base() != BaseValue || PreviousValue.Get_Final() != FinalValue)
+            { TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle); }
+
+            PreviousValue = AttributePreviousType{BaseValue, FinalValue};
+
+            return;
+        }
+
         const auto FinalValue_Max = InAttributeMax._Final;
 
         InAttributeCurrent._Base = TAttributeMinMax<AttributeDataType>::Min(BaseValue, FinalValue_Max);
@@ -126,7 +155,33 @@ namespace ck::detail
             PreviousValue = AttributePreviousType{BaseValue, FinalValue};
 
             TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle);
+            TUtils_Attribute<T_DerivedAttributeCurrent>::Request_TryReplicateAttribute(InHandle);
         }
+    }
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_DerivedAttribute_ReplicatedFragment>
+    auto
+        TProcessor_Attribute_Replicate<T_DerivedProcessor, T_DerivedAttribute, T_DerivedAttribute_ReplicatedFragment>::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const T_DerivedAttribute& InAttribute) const
+            -> void
+    {
+        auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+
+        UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<T_DerivedAttribute_ReplicatedFragment>(
+            LifetimeOwner, [&](T_DerivedAttribute_ReplicatedFragment* InRepComp)
+        {
+            const auto& AttributeName = UCk_Utils_GameplayLabel_UE::Get_Label(InHandle);
+            const auto& BaseValue = InAttribute.Get_Base();
+            const auto& FinalValue = InAttribute.Get_Final();
+            const auto ComponentType = T_DerivedAttribute::ComponentTagType;
+
+            InRepComp->Broadcast_AddOrUpdate(AttributeName, BaseValue, FinalValue, ComponentType);
+        });
+
+        InHandle.template Remove<MarkedDirtyBy>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -167,6 +222,7 @@ namespace ck::detail
         );
 
         TUtils_Attribute<AttributeFragmentType>::Request_FireSignals(InHandle);
+        TUtils_Attribute<AttributeFragmentType>::Request_TryReplicateAttribute(InHandle);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -471,6 +527,32 @@ namespace ck
     template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttribute, typename T_MulticastType>
     auto
         TProcessor_Attribute_FireSignals_CurrentMinMax<T_DerivedAttribute, T_MulticastType>::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        _Min.Tick(InDeltaT);
+        _Max.Tick(InDeltaT);
+        _Current.Tick(InDeltaT);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttribute, typename
+        T_Attribute_ReplicatedFragment>
+    TProcessor_Attribute_Replicate_All<T_DerivedAttribute, T_Attribute_ReplicatedFragment>::
+    TProcessor_Attribute_Replicate_All(
+        RegistryType InRegistry)
+        : _Current(InRegistry)
+        , _Min(InRegistry)
+        , _Max(InRegistry)
+    {
+    }
+
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttribute, typename
+        T_Attribute_ReplicatedFragment>
+    auto
+        TProcessor_Attribute_Replicate_All<T_DerivedAttribute, T_Attribute_ReplicatedFragment>::
         Tick(
             TimeType InDeltaT)
         -> void
