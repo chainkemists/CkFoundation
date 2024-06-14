@@ -40,8 +40,19 @@ auto
     InWorld.Add<ck::FProcessor_ByteAttribute_FireSignals>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_FloatAttribute_FireSignals>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_VectorAttribute_FireSignals>(InWorld.Get_Registry());
+}
 
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Attribute_ProcessorInjector_Replicate::
+    DoInjectProcessors(
+        EcsWorldType& InWorld)
+    -> void
+{
+    InWorld.Add<ck::FProcessor_ByteAttribute_Replicate>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_FloatAttribute_Replicate>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_VectorAttribute_Replicate>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
