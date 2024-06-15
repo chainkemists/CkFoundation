@@ -68,6 +68,10 @@ namespace ck
             HandleType& InHandle) -> void;
 
         static auto
+        Request_TryClamp(
+            HandleType& InHandle) -> void;
+
+        static auto
         Request_FireSignals(
             HandleType& InHandle) -> void;
 
