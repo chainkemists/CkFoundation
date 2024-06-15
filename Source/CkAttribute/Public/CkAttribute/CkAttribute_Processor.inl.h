@@ -221,6 +221,7 @@ namespace ck::detail
             }
         );
 
+        TUtils_Attribute<AttributeFragmentType>::Request_TryClamp(InHandle);
         TUtils_Attribute<AttributeFragmentType>::Request_FireSignals(InHandle);
         TUtils_Attribute<AttributeFragmentType>::Request_TryReplicateAttribute(InHandle);
     }
@@ -582,6 +583,8 @@ namespace ck
     {
         _MinClamp.Tick(InDeltaT);
         _MaxClamp.Tick(InDeltaT);
+
+        UCk_Utils_EntityLifetime_UE::Get_TransientEntity(_Registry).Clear<FTag_MayRequireClamping>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
