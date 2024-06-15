@@ -75,10 +75,10 @@ private:
 
 public:
     CK_PROPERTY_GET(_Object);
-    CK_PROPERTY_GET(_Outer);
-    CK_PROPERTY_GET(_RenameFlags);
+    CK_PROPERTY(_Outer);
+    CK_PROPERTY(_RenameFlags);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Utils_Object_SetOuter_Params, _Object, _Outer, _RenameFlags);
+    CK_DEFINE_CONSTRUCTORS(FCk_Utils_Object_SetOuter_Params, _Object);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
