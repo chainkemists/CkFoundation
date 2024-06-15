@@ -173,6 +173,27 @@ public:
               meta = (DevelopmentOnly))
     static void
     Request_DebugResumeExecution();
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|EditorOnly",
+              DisplayName = "[Ck] Request Redraw Level Editing Viewports",
+              meta = (DevelopmentOnly))
+    static void
+    Request_RedrawLevelEditingViewports();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|EditorOnly",
+              DisplayName = "[Ck] Get Is Commandlet/Cooking",
+              meta = (DevelopmentOnly))
+    static bool
+    Get_IsCommandletOrCooking();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|EditorOnly",
+              DisplayName = "[Ck] Get Is Cooking By The Book",
+              meta = (DevelopmentOnly))
+    static bool
+    Get_IsCookingByTheBook();
 };
 
 // --------------------------------------------------------------------------------------------------------------------

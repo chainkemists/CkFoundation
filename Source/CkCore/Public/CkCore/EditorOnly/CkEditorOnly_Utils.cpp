@@ -6,7 +6,8 @@
 #include <UnrealEdGlobals.h>
 
 #include <Editor/UnrealEdEngine.h>
-
+#include <Editor.h>
+#include <UnrealEd.h>
 #include <Logging/MessageLog.h>
 #include <Logging/TokenizedMessage.h>
 
@@ -119,7 +120,7 @@ auto
     -> void
 {
 #if WITH_EDITOR
-    if (GUnrealEd)
+    if (ck::IsValid(GUnrealEd, ck::IsValid_Policy_NullptrOnly{}))
     { GUnrealEd->PlayWorld->bDebugPauseExecution = true; }
 #endif
 }
@@ -130,9 +131,51 @@ auto
     -> void
 {
 #if WITH_EDITOR
-    if (GUnrealEd)
+    if (ck::IsValid(GUnrealEd, ck::IsValid_Policy_NullptrOnly{}))
     { GUnrealEd->PlayWorld->bDebugPauseExecution = false; }
 #endif
+}
+
+auto
+    UCk_Utils_EditorOnly_UE::
+    Request_RedrawLevelEditingViewports()
+    -> void
+{
+#if WITH_EDITOR
+    if (ck::IsValid(GEditor, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        constexpr auto InvalidateHitProxies = false;
+        GEditor->RedrawLevelEditingViewports(InvalidateHitProxies);
+    }
+#endif
+}
+
+auto
+    UCk_Utils_EditorOnly_UE::
+    Get_IsCommandletOrCooking()
+    -> bool
+{
+    return FApp::IsUnattended() || IsRunningCommandlet() || Get_IsCookingByTheBook();
+}
+
+auto
+    UCk_Utils_EditorOnly_UE::
+    Get_IsCookingByTheBook()
+    -> bool
+{
+#if WITH_EDITOR
+    if (ck::Is_NOT_Valid(GUnrealEd, ck::IsValid_Policy_NullptrOnly{}))
+    { return {}; }
+
+    const auto& CookServer = GUnrealEd->CookServer.Get();
+
+    if (ck::Is_NOT_Valid(CookServer, ck::IsValid_Policy_NullptrOnly{}))
+    { return {}; }
+
+    return CookServer->IsCookByTheBookRunning();
+#endif
+
+    return false;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
