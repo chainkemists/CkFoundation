@@ -87,6 +87,7 @@ namespace ck::detail
             TProcessor_Attribute_MinClamp<T_DerivedProcessor, T_DerivedAttributeCurrent, T_DerivedAttributeMin>,
             T_DerivedAttributeCurrent,
             T_DerivedAttributeMin,
+            FTag_MayRequireClamping,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -97,7 +98,7 @@ namespace ck::detail
         using AttributeFragmentType_Min     = T_DerivedAttributeMin;
         using AttributeDataType             = typename AttributeFragmentType_Current::AttributeDataType;
         using ThisType                      = TProcessor_Attribute_MinClamp<T_DerivedProcessor, AttributeFragmentType_Current, AttributeFragmentType_Min>;
-        using Super                         = TProcessor<ThisType, AttributeFragmentType_Current, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using Super                         = TProcessor<ThisType, AttributeFragmentType_Current, MarkedDirtyBy, FTag_MayRequireClamping, CK_IGNORE_PENDING_KILL>;
         using HandleType                    = typename Super::HandleType;
         using TimeType                      = typename Super::TimeType;
 
@@ -122,6 +123,7 @@ namespace ck::detail
             TProcessor_Attribute_MaxClamp<T_DerivedProcessor, T_DerivedAttributeCurrent, T_DerivedAttributeMax>,
             T_DerivedAttributeCurrent,
             T_DerivedAttributeMax,
+            FTag_MayRequireClamping,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -132,7 +134,7 @@ namespace ck::detail
         using AttributeFragmentType_Max     = T_DerivedAttributeMax;
         using AttributeDataType             = typename AttributeFragmentType_Current::AttributeDataType;
         using ThisType                      = TProcessor_Attribute_MaxClamp<T_DerivedProcessor, AttributeFragmentType_Current, AttributeFragmentType_Max>;
-        using Super                         = TProcessor<ThisType, AttributeFragmentType_Current, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using Super                         = TProcessor<ThisType, AttributeFragmentType_Current, MarkedDirtyBy, FTag_MayRequireClamping, CK_IGNORE_PENDING_KILL>;
         using HandleType                    = typename Super::HandleType;
         using TimeType                      = typename Super::TimeType;
 

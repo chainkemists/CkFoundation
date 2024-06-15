@@ -83,6 +83,19 @@ namespace ck
     template <typename T_DerivedAttribute>
     auto
         TUtils_Attribute<T_DerivedAttribute>::
+        Request_TryClamp(
+            HandleType& InHandle)
+        -> void
+    {
+        if (NOT Ensure(InHandle))
+        { return; }
+
+        InHandle.AddOrGet<FTag_MayRequireClamping>();
+    }
+
+    template <typename T_DerivedAttribute>
+    auto
+        TUtils_Attribute<T_DerivedAttribute>::
         Request_FireSignals(
             HandleType& InHandle)
         -> void

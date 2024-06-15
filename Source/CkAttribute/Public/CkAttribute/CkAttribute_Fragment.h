@@ -33,6 +33,7 @@ namespace ck
 namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_ReplicatedAttribute);
+    CK_DEFINE_ECS_TAG(FTag_MayRequireClamping);
 
     template <typename T_DerivedAttribute>
     class TUtils_Attribute;
