@@ -14,6 +14,10 @@
 #include <Engine/DataTable.h>
 #include <Engine/CurveTable.h>
 
+#if WITH_EDITOR
+#include <UnrealEdMisc.h>
+#endif
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_format_default::details
@@ -259,6 +263,20 @@ CK_DEFINE_CUSTOM_FORMATTER_T(TOptional<T>, [&]()
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(EAppReturnType::Type);
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ETickingGroup);
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(EComponentMobility::Type);
+
+#if WITH_EDITOR
+CK_DEFINE_CUSTOM_FORMATTER(EMapChangeType, [&]()
+{
+    switch (InObj)
+    {
+        case EMapChangeType::NewMap: { return TEXT("NewMap"); }
+        case EMapChangeType::LoadMap: { return TEXT("LoadMap"); }
+        case EMapChangeType::TearDownWorld: { return TEXT("TearDownWorld"); }
+        case EMapChangeType::SaveMap: { return TEXT("SaveMap"); }
+        default:  { return TEXT("Unknown"); }
+    }
+});
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
 

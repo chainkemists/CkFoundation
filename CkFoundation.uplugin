@@ -176,6 +176,17 @@
 				"Linux"
 			]
 		},
+
+		{
+			"Name": "CkEditorToolbar",
+			"Type": "UncookedOnly",
+			"LoadingPhase": "PreDefault",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
 		{
 			"Name": "CkEntityBridge",
 			"Type": "Runtime",
