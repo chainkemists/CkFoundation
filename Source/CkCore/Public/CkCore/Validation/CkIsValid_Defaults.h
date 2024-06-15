@@ -17,6 +17,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TSubclassOf);
+CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TSoftClassPtr);
 CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TScriptInterface);
 CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TWeakInterfacePtr);
 CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TWeakObjectPtr);
@@ -138,6 +139,11 @@ CK_DEFINE_CUSTOM_IS_VALID_T(T, T*, ck::IsValid_Policy_NullptrOnly, [=](const T* 
 CK_DEFINE_CUSTOM_IS_VALID_T(T, TSubclassOf<T>, ck::IsValid_Policy_Default, [=](const TSubclassOf<T>& InObj)
 {
     return ck::IsValid(InObj.Get(), ck::IsValid_Policy_NullptrOnly{});
+});
+
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TSoftClassPtr<T>, ck::IsValid_Policy_Default, [=](const TSoftClassPtr<T>& InObj)
+{
+    return InObj.IsValid();
 });
 
 CK_DEFINE_CUSTOM_IS_VALID_T(T, TSharedPtr<T>, ck::IsValid_Policy_Default, [=](const TSharedPtr<T>& InPtr)
