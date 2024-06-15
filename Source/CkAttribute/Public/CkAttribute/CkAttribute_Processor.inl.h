@@ -92,8 +92,6 @@ namespace ck::detail
             if (PreviousValue.Get_Base() != BaseValue || PreviousValue.Get_Final() != FinalValue)
             { TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle); }
 
-            PreviousValue = AttributePreviousType{BaseValue, FinalValue};
-
             return;
         }
 
@@ -136,8 +134,6 @@ namespace ck::detail
 
             if (PreviousValue.Get_Base() != BaseValue || PreviousValue.Get_Final() != FinalValue)
             { TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle); }
-
-            PreviousValue = AttributePreviousType{BaseValue, FinalValue};
 
             return;
         }
