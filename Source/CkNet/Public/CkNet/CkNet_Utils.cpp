@@ -412,7 +412,7 @@ auto
         const UObject* InContext)
     -> FCk_Time
 {
-    const auto& PrimaryPlayerState = UCk_Utils_Game_UE::Get_PrimaryPlayerState_AsClient(InContext);
+    const auto& PrimaryPlayerState = Cast<ACk_PlayerState_UE>(UCk_Utils_Game_UE::Get_PrimaryPlayerState_AsClient(InContext));
 
     if (ck::Is_NOT_Valid(PrimaryPlayerState))
     { return {}; }
@@ -426,7 +426,7 @@ auto
         const UObject* InContext)
     -> FCk_Time
 {
-    const auto& PrimaryPlayerState = UCk_Utils_Game_UE::Get_PrimaryPlayerState_AsClient(InContext);
+    const auto& PrimaryPlayerState = Cast<ACk_PlayerState_UE>(UCk_Utils_Game_UE::Get_PrimaryPlayerState_AsClient(InContext));
 
     if (ck::Is_NOT_Valid(PrimaryPlayerState))
     { return {}; }
@@ -479,7 +479,7 @@ auto
     Get_PingRangeHistoryEntries()
     -> TArray<FCk_PlayerState_PingRange_History_Entry>
 {
-    const auto& PrimaryPlayerState = UCk_Utils_Game_UE::Get_PrimaryPlayerState_AsClient(nullptr);
+    const auto& PrimaryPlayerState = Cast<ACk_PlayerState_UE>(UCk_Utils_Game_UE::Get_PrimaryPlayerState_AsClient(nullptr));
 
     if (ck::Is_NOT_Valid(PrimaryPlayerState))
     { return {}; }
