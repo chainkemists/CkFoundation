@@ -77,3 +77,79 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_GameplayTagStack_UE::
+    Request_AddStack(
+        FCk_GameplayTagStackContainer& InStackContainer,
+        const FCk_GameplayTagStack& InStack)
+    -> void
+{
+    std::ignore = InStackContainer.AddStack(InStack);
+}
+
+auto
+    UCk_Utils_GameplayTagStack_UE::
+    Request_RemoveStack(
+        FCk_GameplayTagStackContainer& InStackContainer,
+        const FCk_GameplayTagStack& InStack)
+ -> void
+{
+    std::ignore = InStackContainer.RemoveStack(InStack);
+}
+
+auto
+    UCk_Utils_GameplayTagStack_UE::
+    Get_ContainsTag(
+        const FCk_GameplayTagStackContainer& InStackContainer,
+        const FGameplayTag& InTag)
+    -> bool
+{
+    return InStackContainer.Get_ContainsTag(InTag);
+}
+
+auto
+    UCk_Utils_GameplayTagStack_UE::
+    Get_StackCount(
+        const FCk_GameplayTagStackContainer& InStackContainer,
+        const FGameplayTag& InTag)
+    -> int32
+{
+    return InStackContainer.Get_StackCount(InTag);
+}
+
+auto
+    UCk_Utils_GameplayTagStack_UE::
+    Make_GameplayTagStackContainer(
+        const TArray<FCk_GameplayTagStack>& InStacks)
+    -> FCk_GameplayTagStackContainer
+{
+    auto GameplayTagStackContainer = FCk_GameplayTagStackContainer{};
+
+    for (const auto& Stack : InStacks)
+    {
+        GameplayTagStackContainer.AddStack(Stack);
+    }
+
+    return GameplayTagStackContainer;
+}
+
+auto
+    UCk_Utils_GameplayTagStack_UE::
+    Break_GameplayTagStackContainer(
+        const FCk_GameplayTagStackContainer& InStackContainer)
+    -> TArray<FCk_GameplayTagStack>
+{
+    return InStackContainer.Get_Stacks();
+}
+
+auto
+    UCk_Utils_GameplayTagStack_UE::
+    Break_GameplayTagStackContainer_AsMap(
+        const FCk_GameplayTagStackContainer& InStackContainer)
+    -> TMap<FGameplayTag, int32>
+{
+    return InStackContainer.Get_TagToCountMap();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
