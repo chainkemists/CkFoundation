@@ -35,7 +35,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Game|Utils",
+              Category = "Ck|Utils|Game",
               DisplayName = "[Ck] Get Game Status",
               meta     = (WorldContext="InWorldContextObject"))
     static ECk_GameStatus
@@ -44,7 +44,7 @@ public:
         bool InEnsureWorldIsValid = false);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Game|Utils",
+              Category = "Ck|Utils|Game",
               DisplayName = "[Ck] Get Is In Game",
               meta     = (WorldContext="InWorldContextObject"))
     static bool
@@ -53,7 +53,7 @@ public:
         bool InEnsureWorldIsValid = false);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Game|Utils",
+              Category = "Ck|Utils|Game",
               DisplayName = "[Ck] Get Is PIE",
               meta     = (WorldContext="InWorldContextObject"))
     static bool
@@ -62,7 +62,7 @@ public:
         bool InEnsureWorldIsValid = false);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Game|Utils",
+              Category = "Ck|Utils|Game",
               DisplayName = "[Ck] Get World For Object",
               meta     = (WorldContext="InContextObject"))
     static UWorld*
@@ -70,7 +70,7 @@ public:
         const UObject* InContextObject);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Game|Utils",
+              Category = "Ck|Utils|Game",
               DisplayName = "[Ck] Get Game Instance",
               meta     = (WorldContext="InWorldContextObject"))
     static UGameInstance*
@@ -78,7 +78,7 @@ public:
         const UObject* InWorldContextObject);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Game|Utils",
+              Category = "Ck|Utils|Game",
               DisplayName = "[Ck] Get Primary Player State (As Client)",
               meta     = (WorldContext="InWorldContextObject"))
     static ACk_PlayerState_UE*
@@ -86,7 +86,7 @@ public:
         const UObject* InWorldContextObject);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Game|Utils",
+              Category = "Ck|Utils|Game",
               DisplayName = "[Ck] Get Primary Player Controller",
               meta     = (WorldContext="InWorldContextObject"))
     static APlayerController*

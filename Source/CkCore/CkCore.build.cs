@@ -25,6 +25,7 @@ public class CkCore : CkModuleRules
                 "Core",
                 "GameplayTags",
                 "MessageLog",
+                "NetCore",
                 "StructUtils",
 
                 "CkBuildConfig",
@@ -37,9 +38,9 @@ public class CkCore : CkModuleRules
 
         if (Target.bBuildEditor)
         {
-			PublicDependencyModuleNames.AddRange(
-				new string[]
-				{
+            PublicDependencyModuleNames.AddRange(
+                new string[]
+                {
                     "UnrealEd"
                 }
                 );
