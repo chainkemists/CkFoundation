@@ -81,7 +81,7 @@ public:
               Category = "Ck|Utils|Game",
               DisplayName = "[Ck] Get Primary Player State (As Client)",
               meta     = (WorldContext="InWorldContextObject"))
-    static ACk_PlayerState_UE*
+    static APlayerState*
     Get_PrimaryPlayerState_AsClient(
         const UObject* InWorldContextObject);
 
