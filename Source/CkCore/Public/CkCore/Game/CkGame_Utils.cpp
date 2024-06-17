@@ -153,7 +153,7 @@ auto
     UCk_Utils_Game_UE::
     Get_PrimaryPlayerState_AsClient(
         const UObject* InWorldContextObject)
-    -> ACk_PlayerState_UE*
+    -> APlayerState*
 {
     const auto& PrimaryPlayerController = Get_PrimaryPlayerController(InWorldContextObject);
 
@@ -163,17 +163,11 @@ auto
     if (PrimaryPlayerController->HasAuthority())
     { return {}; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(PrimaryPlayerController->PlayerState),
-        TEXT("Invalid PlayerState for Primary Player Controller [{}]."),
-        PrimaryPlayerController)
-    { return {}; }
-
-    const auto& PlayerState = Cast<ACk_PlayerState_UE>(PrimaryPlayerController->PlayerState);
+    const auto& PlayerState = PrimaryPlayerController->PlayerState;
 
     CK_ENSURE_IF_NOT(ck::IsValid(PlayerState),
-        TEXT("Could not Cast [{0}] to [{1}]. Is the current PlayerState [{0}] derived from [{1}]?"),
-        PrimaryPlayerController->PlayerState,
-        ck::Get_RuntimeTypeToString<ACk_PlayerState_UE>())
+        TEXT("Invalid PlayerState for Primary Player Controller [{}]."),
+        PrimaryPlayerController)
     { return {}; }
 
     return PlayerState;
