@@ -541,21 +541,10 @@ auto
         ECk_MinMaxCurrent InComponent)
     -> FCk_Handle_FloatAttributeModifier
 {
-#define ENSURE_IS_UNIQUE(_Utils_)\
-    CK_ENSURE_IF_NOT(_Utils_::Get_IsModifierUnique(InAttributeModifierEntity) == ECk_Unique::Unique,\
-        TEXT("Modifier [{}] is NOT unique for Attribute [{}][{}] with Owner [{}].\n"\
-             "Overriding non-unique Modifiers affect only the last non-unique Modifier on Clients."),\
-        InAttributeModifierEntity,\
-        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttributeModifierEntity),\
-        InComponent,\
-        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttributeModifierEntity)))\
-    { return InAttributeModifierEntity; }
-
     switch (InComponent)
     {
         case ECk_MinMaxCurrent::Min:
         {
-            ENSURE_IS_UNIQUE(FloatAttributeModifier_Utils_Min);
             FloatAttributeModifier_Utils_Min::Override
             (
                 InAttributeModifierEntity,
@@ -565,7 +554,6 @@ auto
         }
         case ECk_MinMaxCurrent::Max:
         {
-            ENSURE_IS_UNIQUE(FloatAttributeModifier_Utils_Max);
             FloatAttributeModifier_Utils_Max::Override
             (
                 InAttributeModifierEntity,
@@ -575,7 +563,6 @@ auto
         }
         case ECk_MinMaxCurrent::Current:
         {
-            ENSURE_IS_UNIQUE(FloatAttributeModifier_Utils_Current);
             FloatAttributeModifier_Utils_Current::Override
             (
                 InAttributeModifierEntity,
@@ -584,7 +571,6 @@ auto
             break;
         }
     }
-#undef ENSURE_IS_UNIQUE
 
     return InAttributeModifierEntity;
 }
