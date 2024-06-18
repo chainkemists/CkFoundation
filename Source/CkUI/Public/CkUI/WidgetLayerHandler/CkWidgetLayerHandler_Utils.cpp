@@ -65,6 +65,17 @@ auto
 
 auto
     UCk_Utils_WidgetLayerHandler_UE::
+    Request_AddToLayerNamedSlot(
+        FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Request_WidgetLayerHandler_AddToLayerNamedSlot& InRequest)
+    -> FCk_Handle_WidgetLayerHandler
+{
+    ck::UUtils_Signal_WidgetLayerHandler_OnAddToLayerNamedSlot::Broadcast(InHandle, ck::MakePayload(InHandle, InRequest.Get_Layer(), InRequest.Get_WidgetInstance(), InRequest.Get_NamedSlotName()));
+    return InHandle;
+}
+
+auto
+    UCk_Utils_WidgetLayerHandler_UE::
     BindTo_OnPushToLayer(
         FCk_Handle_WidgetLayerHandler& InHandle,
         ECk_Signal_BindingPolicy InBindingPolicy,
@@ -156,6 +167,30 @@ auto
     -> FCk_Handle_WidgetLayerHandler
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_WidgetLayerHandler_OnClearLayer, InHandle, InDelegate);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_WidgetLayerHandler_UE::
+    BindTo_OnAddToLayerNamedSlot(
+        FCk_Handle_WidgetLayerHandler& InHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_WidgetLayerHandler_OnAddToLayerNamedSlot& InDelegate)
+    -> FCk_Handle_WidgetLayerHandler
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_WidgetLayerHandler_OnAddToLayerNamedSlot, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_WidgetLayerHandler_UE::
+    UnbindFrom_OnAddToLayerNamedSlot(
+        FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Delegate_WidgetLayerHandler_OnAddToLayerNamedSlot& InDelegate)
+    -> FCk_Handle_WidgetLayerHandler
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_WidgetLayerHandler_OnAddToLayerNamedSlot, InHandle, InDelegate);
     return InHandle;
 }
 

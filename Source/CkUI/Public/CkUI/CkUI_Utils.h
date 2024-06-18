@@ -30,6 +30,17 @@ public:
     ForEachWidgetAndChildren_IncludingUserWidgets(
         UWidget* InWidget,
         T_Predicate InPred) -> void;
+
+    UFUNCTION(BlueprintCallable,
+        DisplayName = "[Ck] Find Named Slot And Insert Widget",
+        Category = "Ck|Utils|UI",
+        meta=(AdvancedDisplay=bEnsureSlotFound))
+    static UPanelSlot*
+    FindNamedSlotAndInsertWidget(
+        UUserWidget* InSourceWidget,
+        UUserWidget* InInsertedWidget,
+        FName InNamedSlotName,
+        bool bEnsureSlotFound = true);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

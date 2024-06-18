@@ -58,6 +58,15 @@ namespace ck
         FCk_Delegate_WidgetLayerHandler_OnClearLayer_MC,
         FCk_Handle_WidgetLayerHandler,
         FGameplayTag);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKUI_API,
+        WidgetLayerHandler_OnAddToLayerNamedSlot,
+        FCk_Delegate_WidgetLayerHandler_OnAddToLayerNamedSlot_MC,
+        FCk_Handle_WidgetLayerHandler,
+        FGameplayTag,
+        TObjectPtr<UCk_UserWidget_UE>,
+        FName);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
