@@ -174,7 +174,7 @@ auto
     FilterActors_ByPredicate(
         const TArray<AActor*>& InActors,
         const FInstancedStruct& InOptionalPayload,
-        FCk_Predicate_InActor_OutResult InPredicate)
+        const FCk_Predicate_InActor_OutResult& InPredicate)
     -> TArray<AActor*>
 {
     return ck::algo::Filter(InActors, [&](AActor* InActor)
@@ -207,10 +207,22 @@ auto
 
 auto
     UCk_Utils_CompositeAlgos_UE::
+    FilterActors_ByIsEcsReady(
+        const TArray<AActor*>& InActors)
+    -> TArray<AActor*>
+{
+    return ck::algo::Filter(InActors, [&](AActor* InActor)
+    {
+        return ck::IsValid(InActor) && UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(InActor);
+    });
+}
+
+auto
+    UCk_Utils_CompositeAlgos_UE::
     FilterEntities_ByPredicate(
         const TArray<FCk_Handle>& InEntities,
         const FInstancedStruct& InOptionalPayload,
-        FCk_Predicate_InHandle_OutResult InPredicate)
+        const FCk_Predicate_InHandle_OutResult& InPredicate)
     -> TArray<FCk_Handle>
 {
     return ck::algo::Filter(InEntities, [&](const FCk_Handle& InEntity)
@@ -246,7 +258,7 @@ auto
     SortActors_ByPredicate(
         TArray<AActor*>& InActors,
         const FInstancedStruct& InOptionalPayload,
-        FCk_Predicate_In2Actors_OutResult InPredicate)
+        const FCk_Predicate_In2Actors_OutResult& InPredicate)
     -> void
 {
     ck::algo::Sort(InActors, [&](AActor* InA, AActor* InB) -> bool
@@ -302,7 +314,7 @@ auto
     SortEntities_ByPredicate(
         TArray<FCk_Handle>& InEntities,
         const FInstancedStruct& InOptionalPayload,
-        FCk_Predicate_In2Handles_OutResult InPredicate)
+        const FCk_Predicate_In2Handles_OutResult& InPredicate)
     -> void
 {
     ck::algo::Sort(InEntities, [&](const FCk_Handle& InA, const FCk_Handle& InB) -> bool
@@ -421,7 +433,10 @@ auto
 {
     return ck::algo::Transform<TArray<FCk_Handle>>(InActors, [](AActor* InActor) -> FCk_Handle
     {
-        CK_ENSURE_IF_NOT(UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(InActor), TEXT("Actor [{}] is NOT Ecs Ready when trying to transform"), InActor)
+        if (ck::Is_NOT_Valid(InActor))
+        { return {}; }
+
+        if (NOT UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(InActor))
         { return {}; }
 
         return UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(InActor);
@@ -436,7 +451,10 @@ auto
 {
     return ck::algo::Transform<TArray<AActor*>>(InEntities, [](const FCk_Handle& InEntity) -> AActor*
     {
-        CK_ENSURE_IF_NOT(UCk_Utils_OwningActor_UE::Has(InEntity), TEXT("Entity [{}] is MISSING an OwningActor Fragment when trying to transform"), InEntity)
+        if (ck::Is_NOT_Valid(InEntity))
+        { return {}; }
+
+        if (NOT UCk_Utils_OwningActor_UE::Has(InEntity))
         { return {}; }
 
         return UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InEntity);
