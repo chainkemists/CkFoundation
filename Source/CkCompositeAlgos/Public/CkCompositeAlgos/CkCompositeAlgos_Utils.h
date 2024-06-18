@@ -119,14 +119,20 @@ private:
     FilterActors_ByPredicate(
         const TArray<AActor*>& InActors,
         const FInstancedStruct& InOptionalPayload,
-        FCk_Predicate_InActor_OutResult InPredicate);
+        const FCk_Predicate_InActor_OutResult& InPredicate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Algos",
-              DisplayName = "[Ck] Filter Actors By IsValid",
-              meta=(AutoCreateRefTerm="InOptionalPayload"))
+              DisplayName = "[Ck] Filter Actors By IsValid")
     static TArray<AActor*>
     FilterActors_ByIsValid(
+        const TArray<AActor*>& InActors);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Algos",
+              DisplayName = "[Ck] Filter Actors By IsEcsReady")
+    static TArray<AActor*>
+    FilterActors_ByIsEcsReady(
         const TArray<AActor*>& InActors);
 
     UFUNCTION(BlueprintCallable,
@@ -137,7 +143,7 @@ private:
     FilterEntities_ByPredicate(
         const TArray<FCk_Handle>& InEntities,
         const FInstancedStruct& InOptionalPayload,
-        FCk_Predicate_InHandle_OutResult InPredicate);
+        const FCk_Predicate_InHandle_OutResult& InPredicate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Algos",
@@ -155,7 +161,7 @@ private:
     SortActors_ByPredicate(
         UPARAM(ref) TArray<AActor*>& InActors,
         const FInstancedStruct& InOptionalPayload,
-        FCk_Predicate_In2Actors_OutResult InPredicate);
+        const FCk_Predicate_In2Actors_OutResult& InPredicate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Algos",
@@ -174,7 +180,7 @@ private:
     SortEntities_ByPredicate(
         UPARAM(ref) TArray<FCk_Handle>& InEntities,
         const FInstancedStruct& InOptionalPayload,
-        FCk_Predicate_In2Handles_OutResult InPredicate);
+        const FCk_Predicate_In2Handles_OutResult& InPredicate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Algos",
