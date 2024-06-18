@@ -120,8 +120,8 @@ private:
     ECk_Ecs_EntityMap_Policy _EntityMapPolicy = ECk_Ecs_EntityMap_Policy::DoNotLog;
 
 public:
-    CK_PROPERTY_GET(_HandleDebuggerBehavior);
-    CK_PROPERTY_GET(_EntityMapPolicy);
+    CK_PROPERTY(_HandleDebuggerBehavior);
+    CK_PROPERTY(_EntityMapPolicy);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -139,6 +139,12 @@ public:
               Category = "Ck|Utils|Ecs|Settings")
     static ECk_Ecs_HandleDebuggerBehavior
     Get_HandleDebuggerBehavior();
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ecs|Settings")
+    static void
+    Set_HandleDebuggerBehavior(
+        ECk_Ecs_HandleDebuggerBehavior InHandleDebuggerBehavior);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ecs|Settings")
