@@ -88,6 +88,14 @@ public:
 		UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
 		const FCk_Request_WidgetLayerHandler_ClearLayer& InRequest);
 
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+        DisplayName="[Ck][WidgetLayerHandler] Request Add Widget To Layer NamedSlot")
+    static FCk_Handle_WidgetLayerHandler
+    Request_AddToLayerNamedSlot(
+        UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Request_WidgetLayerHandler_AddToLayerNamedSlot& InRequest);
+
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|WidgetLayerHandler",
@@ -160,6 +168,24 @@ public:
     UnbindFrom_OnClearLayer(
         UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
         const FCk_Delegate_WidgetLayerHandler_OnClearLayer& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|WidgetLayerHandler",
+        DisplayName = "[Ck][WidgetLayerHandler] Bind To OnAddToLayerNamedSlot")
+    static FCk_Handle_WidgetLayerHandler
+    BindTo_OnAddToLayerNamedSlot(
+        UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_WidgetLayerHandler_OnAddToLayerNamedSlot& InDelegate);
+    
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|WidgetLayerHandler",
+        DisplayName = "[Ck][WidgetLayerHandler] Unbind From OnAddToLayerNamedSlot")
+    static FCk_Handle_WidgetLayerHandler
+    UnbindFrom_OnAddToLayerNamedSlot(
+        UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Delegate_WidgetLayerHandler_OnAddToLayerNamedSlot& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
