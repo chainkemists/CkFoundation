@@ -24,7 +24,7 @@ auto
     Get_HandleDebuggerBehavior()
     -> ECk_Ecs_HandleDebuggerBehavior
 {
-    const auto Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_UserSettings_UE>();
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_UserSettings_UE>();
 
     if (ck::Is_NOT_Valid(Settings))
     { return ECk_Ecs_HandleDebuggerBehavior::Disable; }
@@ -34,10 +34,24 @@ auto
 
 auto
     UCk_Utils_Ecs_Settings_UE::
+    Set_HandleDebuggerBehavior(
+        ECk_Ecs_HandleDebuggerBehavior InHandleDebuggerBehavior)
+    -> void
+{
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_UserSettings_UE>();
+
+    if (ck::Is_NOT_Valid(Settings))
+    { return; }
+
+    Settings->Set_HandleDebuggerBehavior(InHandleDebuggerBehavior);
+}
+
+auto
+    UCk_Utils_Ecs_Settings_UE::
     Get_EntityMapPolicy()
     -> ECk_Ecs_EntityMap_Policy
 {
-    const auto Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_UserSettings_UE>();
+    const auto& Settings = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_UserSettings_UE>();
 
     if (ck::Is_NOT_Valid(Settings))
     { return ECk_Ecs_EntityMap_Policy::DoNotLog; }
