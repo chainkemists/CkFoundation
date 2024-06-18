@@ -121,6 +121,36 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKUI_API FCk_Request_WidgetLayerHandler_AddToLayerNamedSlot
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_WidgetLayerHandler_AddToLayerNamedSlot);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "UI.WidgetLayer"))
+    FGameplayTag _Layer;
+
+    // TODO: If this ever ends up deferred, we will need to make sure the widget doesn't get garbage collected in flight
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    TObjectPtr<UCk_UserWidget_UE> _WidgetInstance;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FName _NamedSlotName;
+    
+public:
+    CK_PROPERTY_GET(_Layer);    
+    CK_PROPERTY_GET(_WidgetInstance);
+    CK_PROPERTY_GET(_NamedSlotName);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_WidgetLayerHandler_AddToLayerNamedSlot, _Layer, _WidgetInstance, _NamedSlotName);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Delegate_WidgetLayerHandler_OnPushToLayer,
     FCk_Handle_WidgetLayerHandler, InHandle,
@@ -164,5 +194,19 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_WidgetLayerHandler_OnClearLayer_MC,
     FCk_Handle_WidgetLayerHandler, InHandle,
     FGameplayTag, Layer);
+
+DECLARE_DYNAMIC_DELEGATE_FourParams(
+    FCk_Delegate_WidgetLayerHandler_OnAddToLayerNamedSlot,
+    FCk_Handle_WidgetLayerHandler, InHandle,
+    FGameplayTag, Layer,
+    UCk_UserWidget_UE*, WidgetInstance,
+    FName, NamedSlotName);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(
+    FCk_Delegate_WidgetLayerHandler_OnAddToLayerNamedSlot_MC,
+    FCk_Handle_WidgetLayerHandler, InHandle,
+    FGameplayTag, Layer,
+    UCk_UserWidget_UE*, WidgetInstance,
+    FName, NamedSlotName);
 
 // --------------------------------------------------------------------------------------------------------------------
