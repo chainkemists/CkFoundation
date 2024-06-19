@@ -43,7 +43,7 @@ namespace ck
         FCk_Delegate_WidgetLayerHandler_OnPushToLayer_Instanced_MC,
         FCk_Handle_WidgetLayerHandler,
         FGameplayTag,
-        TObjectPtr<UCk_UserWidget_UE>);
+        TWeakObjectPtr<UCk_UserWidget_UE>);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKUI_API,
@@ -61,11 +61,20 @@ namespace ck
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKUI_API,
-        WidgetLayerHandler_OnAddToLayerNamedSlot,
-        FCk_Delegate_WidgetLayerHandler_OnAddToLayerNamedSlot_MC,
+        WidgetLayerHandler_OnAddWidgetToLayerNamedSlot,
+        FCk_Delegate_WidgetLayerHandler_OnAddWidgetToLayerNamedSlot_MC,
         FCk_Handle_WidgetLayerHandler,
         FGameplayTag,
-        TObjectPtr<UCk_UserWidget_UE>,
+        TSoftClassPtr<UCk_UserWidget_UE>,
+        FName);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKUI_API,
+        WidgetLayerHandler_OnAddWidgetInstanceToLayerNamedSlot,
+        FCk_Delegate_WidgetLayerHandler_OnAddWidgetInstanceToLayerNamedSlot_MC,
+        FCk_Handle_WidgetLayerHandler,
+        FGameplayTag,
+        TWeakObjectPtr<UCk_UserWidget_UE>,
         FName);
 }
 
