@@ -207,6 +207,42 @@ auto
 
 auto
     UCk_Utils_Sensor_UE::
+    Get_RelativeTransform(
+        const FCk_Handle_Sensor& InSensorEntity)
+    -> FTransform
+{
+    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_RelativeTransform();
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    Get_RelativeLocation(
+        const FCk_Handle_Sensor& InSensorEntity)
+    -> FVector
+{
+    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_RelativeTransform().GetLocation();
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    Get_RelativeRotation(
+        const FCk_Handle_Sensor& InSensorEntity)
+    -> FRotator
+{
+    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_RelativeTransform().GetRotation().Rotator();
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    Get_RelativeScale(
+        const FCk_Handle_Sensor& InSensorEntity)
+    -> FVector
+{
+    return InSensorEntity.Get<ck::FFragment_Sensor_Params>().Get_Params().Get_RelativeTransform().GetScale3D();
+}
+
+auto
+    UCk_Utils_Sensor_UE::
     Get_EnableDisable(
         const FCk_Handle_Sensor& InSensorEntity)
     -> ECk_EnableDisable
