@@ -67,7 +67,7 @@ private:
 
     // TODO: If this ever ends up deferred, we will need to make sure the widget doesn't get garbage collected in flight
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCk_UserWidget_UE> _WidgetInstance;
+    TWeakObjectPtr<UCk_UserWidget_UE> _WidgetInstance;
 
     public:
     CK_PROPERTY_GET(_Layer);
@@ -122,12 +122,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKUI_API FCk_Request_WidgetLayerHandler_AddToLayerNamedSlot
+struct CKUI_API FCk_Request_WidgetLayerHandler_AddWidgetInstanceToLayerNamedSlot
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Request_WidgetLayerHandler_AddToLayerNamedSlot);
+    CK_GENERATED_BODY(FCk_Request_WidgetLayerHandler_AddWidgetInstanceToLayerNamedSlot);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "UI.WidgetLayer"))
@@ -135,7 +135,7 @@ private:
 
     // TODO: If this ever ends up deferred, we will need to make sure the widget doesn't get garbage collected in flight
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCk_UserWidget_UE> _WidgetInstance;
+    TWeakObjectPtr<UCk_UserWidget_UE> _WidgetInstance;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FName _NamedSlotName;
@@ -146,7 +146,36 @@ public:
     CK_PROPERTY_GET(_NamedSlotName);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_WidgetLayerHandler_AddToLayerNamedSlot, _Layer, _WidgetInstance, _NamedSlotName);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_WidgetLayerHandler_AddWidgetInstanceToLayerNamedSlot, _Layer, _WidgetInstance, _NamedSlotName);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKUI_API FCk_Request_WidgetLayerHandler_AddWidgetToLayerNamedSlot
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_WidgetLayerHandler_AddWidgetToLayerNamedSlot);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "UI.WidgetLayer"))
+    FGameplayTag _Layer;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    TSoftClassPtr<UCk_UserWidget_UE> _WidgetClass;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FName _NamedSlotName;
+    
+public:
+    CK_PROPERTY_GET(_Layer);    
+    CK_PROPERTY_GET(_WidgetClass);
+    CK_PROPERTY_GET(_NamedSlotName);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_WidgetLayerHandler_AddWidgetToLayerNamedSlot, _Layer, _WidgetClass, _NamedSlotName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -196,14 +225,28 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FGameplayTag, Layer);
 
 DECLARE_DYNAMIC_DELEGATE_FourParams(
-    FCk_Delegate_WidgetLayerHandler_OnAddToLayerNamedSlot,
+    FCk_Delegate_WidgetLayerHandler_OnAddWidgetToLayerNamedSlot,
+    FCk_Handle_WidgetLayerHandler, InHandle,
+    FGameplayTag, Layer,
+    TSoftClassPtr<UCk_UserWidget_UE>, WidgetClass,
+    FName, NamedSlotName);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(
+    FCk_Delegate_WidgetLayerHandler_OnAddWidgetToLayerNamedSlot_MC,
+    FCk_Handle_WidgetLayerHandler, InHandle,
+    FGameplayTag, Layer,
+    TSoftClassPtr<UCk_UserWidget_UE>, WidgetClass,
+    FName, NamedSlotName);
+
+DECLARE_DYNAMIC_DELEGATE_FourParams(
+    FCk_Delegate_WidgetLayerHandler_OnAddWidgetInstanceToLayerNamedSlot,
     FCk_Handle_WidgetLayerHandler, InHandle,
     FGameplayTag, Layer,
     UCk_UserWidget_UE*, WidgetInstance,
     FName, NamedSlotName);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(
-    FCk_Delegate_WidgetLayerHandler_OnAddToLayerNamedSlot_MC,
+    FCk_Delegate_WidgetLayerHandler_OnAddWidgetInstanceToLayerNamedSlot_MC,
     FCk_Handle_WidgetLayerHandler, InHandle,
     FGameplayTag, Layer,
     UCk_UserWidget_UE*, WidgetInstance,
