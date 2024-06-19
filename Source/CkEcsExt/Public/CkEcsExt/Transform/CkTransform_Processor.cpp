@@ -34,7 +34,7 @@ namespace ck
             NOT PreviousTransform.Equals(RootCompTransform))
         {
             InTransform._Transform = RootCompTransform;
-            InHandle.Add<ck::FTag_Transform_Updated>();
+            UCk_Utils_Transform_UE::Request_TransformUpdated(InHandle);
         }
     }
 
@@ -88,7 +88,7 @@ namespace ck
             NOT PreviousTransform.Equals(NewTransform))
         {
             ecs_extension::VeryVerbose(TEXT("Updated Transform [Old: {} | New: {}] of Entity [{}]"), PreviousTransform, NewTransform, InHandle);
-            InHandle.Add<ck::FTag_Transform_Updated>();
+            UCk_Utils_Transform_UE::Request_TransformUpdated(InHandle);
         }
         else
         {
