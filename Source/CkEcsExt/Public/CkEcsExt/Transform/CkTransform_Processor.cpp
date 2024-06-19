@@ -249,7 +249,8 @@ namespace ck
 
             constexpr auto Sweep = false;
 
-            const auto NewRotation = DeltaRotation + RootComponent->GetComponentRotation();
+            const auto NewQuat = DeltaRotation.Quaternion() * RootComponent->GetComponentRotation().Quaternion();
+            const auto& NewRotation = NewQuat.Rotator();
 
             switch (InRequest.Get_LocalWorld())
             {
