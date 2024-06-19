@@ -28,15 +28,22 @@ auto
 {
     CK_REP_OBJ_EXECUTE_IF_VALID([&]()
     {
-        const auto HandleTransform = UCk_Utils_Transform_UE::CastChecked(_AssociatedEntity);
+        auto HandleTransform = UCk_Utils_Transform_UE::CastChecked(_AssociatedEntity);
         const auto& CurrentLocation = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(HandleTransform);
 
-        auto HandleTransformInterpolation = UCk_Utils_TransformInterpolation_UE::CastChecked(_AssociatedEntity);
-        UCk_Utils_TransformInterpolation_UE::Request_SetInterpolationGoal_LocationOffset
-        (
-            HandleTransformInterpolation,
-            _Location - CurrentLocation
-        );
+        if (UCk_Utils_TransformInterpolation_UE::Has(HandleTransform))
+        {
+            auto HandleTransformInterpolation = UCk_Utils_TransformInterpolation_UE::CastChecked(_AssociatedEntity);
+            UCk_Utils_TransformInterpolation_UE::Request_SetInterpolationGoal_LocationOffset
+            (
+                HandleTransformInterpolation,
+                _Location - CurrentLocation
+            );
+            return;
+        }
+
+        UCk_Utils_Transform_UE::Request_SetLocation(
+            HandleTransform, FCk_Request_Transform_SetLocation{_Location});
     });
 }
 
@@ -46,15 +53,22 @@ auto
 {
     CK_REP_OBJ_EXECUTE_IF_VALID([&]()
     {
-        const auto HandleTransform = UCk_Utils_Transform_UE::CastChecked(_AssociatedEntity);
+        auto HandleTransform = UCk_Utils_Transform_UE::CastChecked(_AssociatedEntity);
         const auto& CurrentRotation = UCk_Utils_Transform_UE::Get_EntityCurrentRotation(HandleTransform);
 
-        auto HandleTransformInterpolation = UCk_Utils_TransformInterpolation_UE::CastChecked(_AssociatedEntity);
-        UCk_Utils_TransformInterpolation_UE::Request_SetInterpolationGoal_RotationOffset
-        (
-            HandleTransformInterpolation,
-            _Rotation.Rotator() - CurrentRotation
-        );
+        if (UCk_Utils_TransformInterpolation_UE::Has(HandleTransform))
+        {
+            auto HandleTransformInterpolation = UCk_Utils_TransformInterpolation_UE::CastChecked(_AssociatedEntity);
+            UCk_Utils_TransformInterpolation_UE::Request_SetInterpolationGoal_RotationOffset
+            (
+                HandleTransformInterpolation,
+                _Rotation.Rotator() - CurrentRotation
+            );
+
+            return;
+        }
+
+        UCk_Utils_Transform_UE::Request_SetRotation(HandleTransform, FCk_Request_Transform_SetRotation{_Rotation.Rotator()});
     });
 }
 
