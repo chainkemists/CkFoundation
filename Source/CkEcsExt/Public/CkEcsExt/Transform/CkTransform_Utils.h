@@ -19,6 +19,14 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck
+{
+    class FProcessor_Transform_Update;
+    class FProcessor_Transform_HandleRequests;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable)
 class CKECSEXT_API UCk_Utils_Transform_UE : public UCk_Utils_Ecs_Net_UE
 {
@@ -27,6 +35,10 @@ class CKECSEXT_API UCk_Utils_Transform_UE : public UCk_Utils_Ecs_Net_UE
 public:
     CK_GENERATED_BODY(UCk_Utils_Transform_UE);
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Transform);
+
+public:
+    friend class ck::FProcessor_Transform_Update;
+    friend class ck::FProcessor_Transform_HandleRequests;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -170,6 +182,11 @@ private:
         UPARAM(ref) FCk_Handle& InHandle,
         const FTransform& InInitialTransform,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
+
+private:
+    static auto
+    Request_TransformUpdated(
+            FCk_Handle_Transform& InHandle) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
