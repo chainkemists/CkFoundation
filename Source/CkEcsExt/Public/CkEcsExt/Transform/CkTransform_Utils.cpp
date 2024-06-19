@@ -153,7 +153,7 @@ auto
         if (auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
             ck::IsValid(RootComponentFragment))
         {
-            return RootComponentFragment.Get_RootComponent()->GetComponentToWorld().GetLocation();
+            return RootComponentFragment.Get_RootComponent()->GetComponentLocation();
         }
     }
 
@@ -171,7 +171,7 @@ auto
         if (auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
             ck::IsValid(RootComponentFragment))
         {
-            return RootComponentFragment.Get_RootComponent()->GetComponentToWorld().GetRotation().Rotator();
+            return RootComponentFragment.Get_RootComponent()->GetComponentRotation();
         }
     }
 
@@ -189,7 +189,7 @@ auto
         if (auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
             ck::IsValid(RootComponentFragment))
         {
-            return RootComponentFragment.Get_RootComponent()->GetComponentToWorld().GetScale3D();
+            return RootComponentFragment.Get_RootComponent()->GetComponentScale();
         }
     }
 
@@ -255,6 +255,15 @@ auto
     -> void
 {
     Add(InHandle, InInitialTransform, InReplicates);
+}
+
+auto
+    UCk_Utils_Transform_UE::
+    Request_TransformUpdated(
+        FCk_Handle_Transform& InHandle)
+    -> void
+{
+    InHandle.AddOrGet<ck::FTag_Transform_Updated>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
