@@ -169,6 +169,34 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
+              DisplayName = "[Ck][Sensor] Get Relative Transform")
+    static FTransform
+    Get_RelativeTransform(
+        const FCk_Handle_Sensor& InSensorEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Sensor",
+              DisplayName = "[Ck][Sensor] Get Relative Location")
+    static FVector
+    Get_RelativeLocation(
+        const FCk_Handle_Sensor& InSensorEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Sensor",
+              DisplayName = "[Ck][Sensor] Get Relative Rotation")
+    static FRotator
+    Get_RelativeRotation(
+        const FCk_Handle_Sensor& InSensorEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Sensor",
+              DisplayName = "[Ck][Sensor] Get Relative Scale")
+    static FVector
+    Get_RelativeScale(
+        const FCk_Handle_Sensor& InSensorEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Sensor",
               DisplayName = "[Ck][Sensor] Get Enable Disable")
     static ECk_EnableDisable
     Get_EnableDisable(

@@ -210,6 +210,42 @@ auto
 
 auto
     UCk_Utils_Marker_UE::
+    Get_RelativeTransform(
+        const FCk_Handle_Marker& InMarkerEntity)
+    -> FTransform
+{
+    return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_Params().Get_RelativeTransform();
+}
+
+auto
+    UCk_Utils_Marker_UE::
+    Get_RelativeLocation(
+        const FCk_Handle_Marker& InMarkerEntity)
+    -> FVector
+{
+    return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_Params().Get_RelativeTransform().GetLocation();
+}
+
+auto
+    UCk_Utils_Marker_UE::
+    Get_RelativeRotation(
+        const FCk_Handle_Marker& InMarkerEntity)
+    -> FRotator
+{
+    return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_Params().Get_RelativeTransform().GetRotation().Rotator();
+}
+
+auto
+    UCk_Utils_Marker_UE::
+    Get_RelativeScale(
+        const FCk_Handle_Marker& InMarkerEntity)
+    -> FVector
+{
+    return InMarkerEntity.Get<ck::FFragment_Marker_Params>().Get_Params().Get_RelativeTransform().GetScale3D();
+}
+
+auto
+    UCk_Utils_Marker_UE::
     Get_EnableDisable(
         const FCk_Handle_Marker& InMarkerEntity)
     -> ECk_EnableDisable
