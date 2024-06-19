@@ -267,13 +267,13 @@ auto
     -> FCk_Handle_TransformInterpolation
 {
     InHandle.Add<ck::FFragment_TransformInterpolation_Params>(FCk_TransformInterpolation_ParamsData{InParams});
-    return ck::StaticCast<FCk_Handle_TransformInterpolation>(InHandle);
+    return Cast(InHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(TransformInterpolation, UCk_Utils_TransformInterpolation_UE,
-    FCk_Handle_TransformInterpolation, ck::FFragment_Transform_Params);
+    FCk_Handle_TransformInterpolation, ck::FFragment_TransformInterpolation_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 
