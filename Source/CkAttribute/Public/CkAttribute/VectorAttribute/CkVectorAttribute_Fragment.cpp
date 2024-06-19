@@ -95,12 +95,13 @@ auto
     for (auto Index = _AttributesToReplicate_Previous.Num(); Index < _AttributesToReplicate.Num(); ++Index)
     {
         const auto& AttributeToReplicate = _AttributesToReplicate[Index];
-        auto AttributeEntity = UCk_Utils_VectorAttribute_UE::TryGet(Get_AssociatedEntity(), AttributeToReplicate.Get_AttributeName());
 
-        if (ck::Is_NOT_Valid(AttributeEntity))
+        if (const auto& AttributeEntity = UCk_Utils_VectorAttribute_UE::TryGet(Get_AssociatedEntity(), AttributeToReplicate.Get_AttributeName());
+            ck::Is_NOT_Valid(AttributeEntity))
         {
-            ck::attribute::Verbose(TEXT("Could NOT find FLOAT Attribute [{}]. Vector Attribute replication PENDING..."),
+            ck::attribute::Verbose(TEXT("Could NOT find VECTOR Attribute [{}]. Vector Attribute replication PENDING..."),
                 AttributeToReplicate.Get_AttributeName());
+
             return;
         }
     }
@@ -112,7 +113,7 @@ auto
 
         if (NOT _AttributesToReplicate_Previous.IsValidIndex(Index))
         {
-            ck::attribute::Verbose(TEXT("Replicating FLOAT Attribute [{}] for the FIRST time to [{}|{}]"), AttributeToReplicate.Get_AttributeName(),
+            ck::attribute::Verbose(TEXT("Replicating VECTOR Attribute [{}] for the FIRST time to [{}|{}]"), AttributeToReplicate.Get_AttributeName(),
                 AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Final());
 
             UCk_Utils_VectorAttribute_UE::Request_Override(AttributeEntity, AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Component());
@@ -120,7 +121,7 @@ auto
             const auto& MaybeModifier = UCk_Utils_VectorAttributeModifier_UE::TryGet(AttributeEntity, ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
                 AttributeToReplicate.Get_Component());
 
-            CK_ENSURE_IF_NOT(ck::Is_NOT_Valid(MaybeModifier), TEXT("Did not expect a Final Modifier [{}] to already exist on FLOAT Attribute [{}]"),
+            CK_ENSURE_IF_NOT(ck::Is_NOT_Valid(MaybeModifier), TEXT("Did not expect a Final Modifier [{}] to already exist on VECTOR Attribute [{}]"),
                 ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), AttributeEntity)
             { continue; }
 
@@ -142,16 +143,20 @@ auto
 
         if (_AttributesToReplicate_Previous[Index] != AttributeToReplicate)
         {
-            ck::attribute::Verbose(TEXT("Replicating FLOAT Attribute [{}] and UPDATING it to [{}|{}]"), AttributeToReplicate.Get_AttributeName(),
+            ck::attribute::Verbose(TEXT("Replicating VECTOR Attribute [{}] and UPDATING it to [{}|{}]"), AttributeToReplicate.Get_AttributeName(),
                 AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Final());
 
             UCk_Utils_VectorAttribute_UE::Request_Override(
                 AttributeEntity, AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Component());
 
-            auto AttributeModifier = UCk_Utils_VectorAttributeModifier_UE::TryGet(AttributeEntity,
+            if (auto AttributeModifier = UCk_Utils_VectorAttributeModifier_UE::TryGet(AttributeEntity,
                 ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), AttributeToReplicate.Get_Component());
-
-            if (ck::Is_NOT_Valid(AttributeModifier))
+                ck::IsValid(AttributeModifier))
+            {
+                UCk_Utils_VectorAttributeModifier_UE::Override(
+                    AttributeModifier, AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Component());
+            }
+            else
             {
                 UCk_Utils_VectorAttributeModifier_UE::Add
                 (
@@ -166,16 +171,11 @@ auto
                     }
                 );
             }
-            else
-            {
-                UCk_Utils_VectorAttributeModifier_UE::Override(
-                    AttributeModifier, AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Component());
-            }
 
             continue;
         }
 
-        ck::attribute::Verbose(TEXT("IGNORING FLOAT Attribute [{}] as there is no change between [{}] and [{}]"),
+        ck::attribute::Verbose(TEXT("IGNORING VECTOR Attribute [{}] as there is no change between [{}] and [{}]"),
             AttributeToReplicate.Get_AttributeName());
     }
 

@@ -66,9 +66,8 @@ auto
 {
     if (InHandle.Has<ck::FFragment_MovementComponent>())
     {
-        const auto& MovementComponent = InHandle.Get<ck::FFragment_MovementComponent>();
-
-        if (ck::IsValid(MovementComponent))
+        if (const auto& MovementComponent = InHandle.Get<ck::FFragment_MovementComponent>();
+            ck::IsValid(MovementComponent))
         {
             return MovementComponent.Get_MovementComponent()->Velocity;
         }
@@ -84,18 +83,16 @@ auto
         const FVector& InNewVelocity)
     -> void
 {
-    if (InHandle.Has<ck::FFragment_MovementComponent>())
-    {
-        const auto& MovementComponent = InHandle.Get<ck::FFragment_MovementComponent>();
-
-        if (ck::IsValid(MovementComponent))
-        {
-            MovementComponent.Get_MovementComponent()->Velocity = InNewVelocity;
-            return;
-        }
-    }
-
     InHandle.Get<ck::FFragment_Velocity_Current>()._CurrentVelocity = InNewVelocity;
+
+    if (NOT InHandle.Has<ck::FFragment_MovementComponent>())
+    { return; }
+
+    if (const auto& MovementComponent = InHandle.Get<ck::FFragment_MovementComponent>();
+        ck::IsValid(MovementComponent))
+    {
+        MovementComponent.Get_MovementComponent()->Velocity = InNewVelocity;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
