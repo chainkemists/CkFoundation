@@ -1,5 +1,7 @@
 #include "CkTime.h"
 
+#include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
+
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Game/CkGame_Utils.h"
 
@@ -67,10 +69,11 @@ auto
         const ThisType& InOther) const
     -> float
 {
-    if (CK_ENSURE(InOther.Get_Seconds() == 0.f,
-        TEXT("Division of Time [{}] by zero!"), *this))
-    { return 0; }
-    return _Seconds / InOther._Seconds;
+    CK_ENSURE_IF_NOT(NOT UCk_Utils_Arithmetic_UE::Get_IsNearlyEqual(InOther.Get_Seconds(), 0.0f),
+        TEXT("Division of Time [{}] by zero!"), *this)
+    { return 0.0f; }
+
+    return _Seconds / InOther.Get_Seconds();
 }
 
 auto
@@ -79,10 +82,11 @@ auto
         float InOther) const
     -> ThisType
 {
-    if (CK_ENSURE(InOther == 0.f,
-        TEXT("Division of Time [{}] by zero!"), *this))
-    { return ThisType{0.f}; }
-    return ThisType{_Seconds / InOther};
+    CK_ENSURE_IF_NOT(NOT UCk_Utils_Arithmetic_UE::Get_IsNearlyEqual(InOther, 0.0f),
+        TEXT("Division of Time [{}] by zero!"), *this)
+    { return ZeroSecond(); }
+
+    return ThisType{ _Seconds / InOther };
 }
 
 auto
@@ -91,10 +95,11 @@ auto
         int32 InOther) const
     -> ThisType
 {
-    if (CK_ENSURE(InOther == 0,
-        TEXT("Division of Time [{}] by zero!"), *this))
-    { return ThisType{0.f}; }
-    return ThisType{_Seconds / InOther};
+    CK_ENSURE_IF_NOT(NOT UCk_Utils_Arithmetic_UE::Get_IsNearlyEqual(InOther, 0),
+        TEXT("Division of Time [{}] by zero!"), *this)
+    { return ZeroSecond(); }
+
+    return ThisType{ _Seconds / static_cast<float>(InOther) };
 }
 
 auto
