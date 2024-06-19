@@ -2,11 +2,34 @@
 
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Validation/CkIsValid.h"
+#include "CkCore/Format/CkFormat.h"
 
 #include <Blueprint/WidgetTree.h>
 #include <Kismet/BlueprintFunctionLibrary.h>
 
 #include "CkUI_Utils.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_UI_NamedSlot_SearchRecursive : uint8
+{
+    NonRecursive,
+    Recursive
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UI_NamedSlot_SearchRecursive);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_UI_NamedSlot_EnsureSlotIsFound : uint8
+{
+    EnsureSlotIsFound,
+    AllowSlotNotFound
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UI_NamedSlot_EnsureSlotIsFound);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -30,7 +53,31 @@ public:
     ForEachWidgetAndChildren_IncludingUserWidgets(
         UWidget* InWidget,
         T_Predicate InPred) -> void;
+    
+    UFUNCTION(BlueprintCallable,
+        DisplayName = "[Ck] Find Named Slot",
+        Category = "Ck|Utils|UI")
+    static UNamedSlot*
+    FindNamedSlot(
+        UUserWidget* InSourceWidget,
+        FName InNamedSlotName,
+        ECk_UI_NamedSlot_SearchRecursive InIsRecursive = ECk_UI_NamedSlot_SearchRecursive::NonRecursive);
 
+    UFUNCTION(BlueprintCallable,
+        DisplayName = "[Ck] Is Named Slot Occupied",
+        Category = "Ck|Utils|UI")
+    static bool
+    IsNamedSlotOccupied(
+		UNamedSlot* InNamedSlot);
+
+    UFUNCTION(BlueprintCallable,
+        DisplayName = "[Ck] Insert Widget To Named Slot",
+        Category = "Ck|Utils|UI")
+    static UPanelSlot*
+    InsertWidgetToNamedSlot(
+        UNamedSlot* InNamedSlot,
+        UUserWidget* InInsertedWidget);
+    
     UFUNCTION(BlueprintCallable,
         DisplayName = "[Ck] Find Named Slot And Insert Widget",
         Category = "Ck|Utils|UI",
@@ -40,7 +87,8 @@ public:
         UUserWidget* InSourceWidget,
         UUserWidget* InInsertedWidget,
         FName InNamedSlotName,
-        bool bEnsureSlotFound = true);
+        ECk_UI_NamedSlot_SearchRecursive InIsRecursive = ECk_UI_NamedSlot_SearchRecursive::NonRecursive,
+        ECk_UI_NamedSlot_EnsureSlotIsFound InEnsureSlotIsFound = ECk_UI_NamedSlot_EnsureSlotIsFound::EnsureSlotIsFound);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
