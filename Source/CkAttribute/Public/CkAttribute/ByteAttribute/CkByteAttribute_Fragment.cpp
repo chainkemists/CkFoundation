@@ -95,12 +95,13 @@ auto
     for (auto Index = _AttributesToReplicate_Previous.Num(); Index < _AttributesToReplicate.Num(); ++Index)
     {
         const auto& AttributeToReplicate = _AttributesToReplicate[Index];
-        auto AttributeEntity = UCk_Utils_ByteAttribute_UE::TryGet(Get_AssociatedEntity(), AttributeToReplicate.Get_AttributeName());
 
-        if (ck::Is_NOT_Valid(AttributeEntity))
+        if (const auto& AttributeEntity = UCk_Utils_ByteAttribute_UE::TryGet(Get_AssociatedEntity(), AttributeToReplicate.Get_AttributeName());
+            ck::Is_NOT_Valid(AttributeEntity))
         {
             ck::attribute::Verbose(TEXT("Could NOT find BYTE Attribute [{}]. BYTE Attribute replication PENDING..."),
                 AttributeToReplicate.Get_AttributeName());
+
             return;
         }
     }
@@ -150,10 +151,14 @@ auto
             UCk_Utils_ByteAttribute_UE::Request_Override(
                 AttributeEntity, AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Component());
 
-            auto AttributeModifier = UCk_Utils_ByteAttributeModifier_UE::TryGet(AttributeEntity,
+            if (auto AttributeModifier = UCk_Utils_ByteAttributeModifier_UE::TryGet(AttributeEntity,
                 ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), AttributeToReplicate.Get_Component());
-
-            if (ck::Is_NOT_Valid(AttributeModifier))
+                ck::IsValid(AttributeModifier))
+            {
+                UCk_Utils_ByteAttributeModifier_UE::Override(
+                    AttributeModifier, AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Component());
+            }
+            else
             {
                 const auto Difference = AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base();
 
@@ -169,11 +174,6 @@ auto
                         AttributeToReplicate.Get_Component()
                     }
                 );
-            }
-            else
-            {
-                UCk_Utils_ByteAttributeModifier_UE::Override(
-                    AttributeModifier, AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Component());
             }
 
             continue;
