@@ -65,12 +65,23 @@ auto
 
 auto
     UCk_Utils_WidgetLayerHandler_UE::
-    Request_AddToLayerNamedSlot(
+    Request_AddWidgetToLayerNamedSlot(
         FCk_Handle_WidgetLayerHandler& InHandle,
-        const FCk_Request_WidgetLayerHandler_AddToLayerNamedSlot& InRequest)
+        const FCk_Request_WidgetLayerHandler_AddWidgetToLayerNamedSlot& InRequest)
     -> FCk_Handle_WidgetLayerHandler
 {
-    ck::UUtils_Signal_WidgetLayerHandler_OnAddToLayerNamedSlot::Broadcast(InHandle, ck::MakePayload(InHandle, InRequest.Get_Layer(), InRequest.Get_WidgetInstance(), InRequest.Get_NamedSlotName()));
+    ck::UUtils_Signal_WidgetLayerHandler_OnAddWidgetToLayerNamedSlot::Broadcast(InHandle, ck::MakePayload(InHandle, InRequest.Get_Layer(), InRequest.Get_WidgetClass(), InRequest.Get_NamedSlotName()));
+    return InHandle;
+}
+
+auto
+    UCk_Utils_WidgetLayerHandler_UE::
+    Request_AddWidgetInstanceToLayerNamedSlot(
+        FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Request_WidgetLayerHandler_AddWidgetInstanceToLayerNamedSlot& InRequest)
+    -> FCk_Handle_WidgetLayerHandler
+{
+    ck::UUtils_Signal_WidgetLayerHandler_OnAddWidgetInstanceToLayerNamedSlot::Broadcast(InHandle, ck::MakePayload(InHandle, InRequest.Get_Layer(), InRequest.Get_WidgetInstance(), InRequest.Get_NamedSlotName()));
     return InHandle;
 }
 
@@ -172,25 +183,49 @@ auto
 
 auto
     UCk_Utils_WidgetLayerHandler_UE::
-    BindTo_OnAddToLayerNamedSlot(
+    BindTo_OnAddWidgetToLayerNamedSlot(
         FCk_Handle_WidgetLayerHandler& InHandle,
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_WidgetLayerHandler_OnAddToLayerNamedSlot& InDelegate)
+        const FCk_Delegate_WidgetLayerHandler_OnAddWidgetToLayerNamedSlot& InDelegate)
     -> FCk_Handle_WidgetLayerHandler
 {
-    CK_SIGNAL_BIND(ck::UUtils_Signal_WidgetLayerHandler_OnAddToLayerNamedSlot, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    CK_SIGNAL_BIND(ck::UUtils_Signal_WidgetLayerHandler_OnAddWidgetToLayerNamedSlot, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
     return InHandle;
 }
 
 auto
     UCk_Utils_WidgetLayerHandler_UE::
-    UnbindFrom_OnAddToLayerNamedSlot(
+    UnbindFrom_OnAddWidgetToLayerNamedSlot(
         FCk_Handle_WidgetLayerHandler& InHandle,
-        const FCk_Delegate_WidgetLayerHandler_OnAddToLayerNamedSlot& InDelegate)
+        const FCk_Delegate_WidgetLayerHandler_OnAddWidgetToLayerNamedSlot& InDelegate)
     -> FCk_Handle_WidgetLayerHandler
 {
-    CK_SIGNAL_UNBIND(ck::UUtils_Signal_WidgetLayerHandler_OnAddToLayerNamedSlot, InHandle, InDelegate);
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_WidgetLayerHandler_OnAddWidgetToLayerNamedSlot, InHandle, InDelegate);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_WidgetLayerHandler_UE::
+    BindTo_OnAddWidgetInstanceToLayerNamedSlot(
+        FCk_Handle_WidgetLayerHandler& InHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_WidgetLayerHandler_OnAddWidgetInstanceToLayerNamedSlot& InDelegate)
+    -> FCk_Handle_WidgetLayerHandler
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_WidgetLayerHandler_OnAddWidgetInstanceToLayerNamedSlot, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_WidgetLayerHandler_UE::
+    UnbindFrom_OnAddWidgetInstanceToLayerNamedSlot(
+        FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Delegate_WidgetLayerHandler_OnAddWidgetInstanceToLayerNamedSlot& InDelegate)
+    -> FCk_Handle_WidgetLayerHandler
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_WidgetLayerHandler_OnAddWidgetInstanceToLayerNamedSlot, InHandle, InDelegate);
     return InHandle;
 }
 
