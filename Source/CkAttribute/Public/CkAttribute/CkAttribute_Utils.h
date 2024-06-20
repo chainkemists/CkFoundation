@@ -103,6 +103,7 @@ namespace ck
             using TFragment_RecordOfAttributeModifiers<HandleType>::TFragment_RecordOfAttributeModifiers;};
 
         struct RecordOfAttributeModifiers_Utils : TUtils_RecordOfEntities<DerivedRecordType>{};
+        CK_DEFINE_ENTITY_HOLDER_AND_UTILS(Utils_ExistingOverrideModifierEntity, FExistingOverrideModifierEntity);
 
     public:
         static auto
