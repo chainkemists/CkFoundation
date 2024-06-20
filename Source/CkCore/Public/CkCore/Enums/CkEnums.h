@@ -560,3 +560,16 @@ enum class ECk_Unique : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Unique);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Lifetime : uint8
+{
+    UntilDestroyed,
+    AfterOneFrame,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Lifetime);
+
+// --------------------------------------------------------------------------------------------------------------------
