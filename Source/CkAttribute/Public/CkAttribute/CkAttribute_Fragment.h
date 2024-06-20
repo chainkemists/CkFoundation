@@ -26,6 +26,20 @@ namespace ck
         static auto Get_BaseTag() -> FGameplayTag;
         static auto Get_FinalTag() -> FGameplayTag;
     };
+
+    struct FAttributeModifier_Tags final : public FGameplayTagNativeAdder
+    {
+    protected:
+        auto AddTags() -> void override;
+
+    private:
+        FGameplayTag _Override;
+
+        static FAttributeModifier_Tags _Tags;
+
+    public:
+        static auto Get_Override() -> FGameplayTag;
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
