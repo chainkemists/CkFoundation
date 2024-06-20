@@ -80,11 +80,7 @@ auto
 
     const auto& CurrentTime = UCk_Utils_Time_UE::Get_WorldTime
     (
-        FCk_Utils_Time_GetWorldTime_Params
-        {
-            this, GetWorld(),
-            ECk_Time_WorldTimeType::RealTime
-        }
+        FCk_Utils_Time_GetWorldTime_Params{GetWorld()}.Set_TimeType(ECk_Time_WorldTimeType::RealTime)
     );
 
     _PingRange.Request_HandleNewPing(FCk_Time{InPing}, CurrentTime.Get_WorldTime());
