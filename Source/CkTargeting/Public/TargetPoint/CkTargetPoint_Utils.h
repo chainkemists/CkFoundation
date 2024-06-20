@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Enums/CkEnums.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 
@@ -24,7 +25,8 @@ public:
     static FCk_Handle_Transform
     Create(
         const FCk_Handle& InOwner,
-        const FTransform& InTransform);
+        const FTransform& InTransform,
+        ECk_Lifetime InLifetime = ECk_Lifetime::UntilDestroyed);
 
     // Transient means that the onus of destroying the TargetPoint is now on the user
     UFUNCTION(BlueprintCallable,
@@ -34,7 +36,8 @@ public:
     static FCk_Handle_Transform
     Create_Transient(
         const FTransform& InTransform,
-        const UObject* InWorldContextObject);
+        const UObject* InWorldContextObject,
+        ECk_Lifetime InLifetime = ECk_Lifetime::UntilDestroyed);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
