@@ -12,11 +12,15 @@ auto
     UCk_Utils_TargetPoint_UE::
     Create(
         const FCk_Handle& InOwner,
-        const FTransform& InTransform)
+        const FTransform& InTransform,
+        ECk_Lifetime InLifetime)
     -> FCk_Handle_Transform
 {
     auto TargetPointEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
     UCk_Utils_Handle_UE::Set_DebugName(TargetPointEntity, *ck::Format_UE(TEXT("TARGET POINT: [{}]"), InTransform));
+
+    if (InLifetime == ECk_Lifetime::AfterOneFrame)
+    { UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(TargetPointEntity); }
 
     return UCk_Utils_Transform_UE::Add(TargetPointEntity, InTransform, ECk_Replication::DoesNotReplicate);
 }
@@ -25,7 +29,8 @@ auto
     UCk_Utils_TargetPoint_UE::
     Create_Transient(
         const FTransform& InTransform,
-        const UObject* InWorldContextObject)
+        const UObject* InWorldContextObject,
+        ECk_Lifetime InLifetime)
     -> FCk_Handle_Transform
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InWorldContextObject),
@@ -35,7 +40,10 @@ auto
     const auto& TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(InWorldContextObject->GetWorld());
 
     auto TargetPointEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity);
-    UCk_Utils_Handle_UE::Set_DebugName(TargetPointEntity, *ck::Format_UE(TEXT("TARGET POINT: [{}]"), InTransform));
+    UCk_Utils_Handle_UE::Set_DebugName(TargetPointEntity, *ck::Format_UE(TEXT("(Transient) TARGET POINT: [{}]"), InTransform));
+
+    if (InLifetime == ECk_Lifetime::AfterOneFrame)
+    { UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(TargetPointEntity); }
 
     return UCk_Utils_Transform_UE::Add(TargetPointEntity, InTransform, ECk_Replication::DoesNotReplicate);
 }
