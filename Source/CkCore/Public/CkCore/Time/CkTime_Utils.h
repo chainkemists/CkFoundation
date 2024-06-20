@@ -16,11 +16,11 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<const UObject> _Object   = nullptr;
+    TWeakObjectPtr<const UObject> _Object   = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<UWorld> _World    = nullptr;
+    TWeakObjectPtr<UWorld> _World    = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -29,10 +29,14 @@ private:
 public:
     CK_PROPERTY_GET(_Object);
     CK_PROPERTY_GET(_World);
-    CK_PROPERTY_GET(_TimeType);
+    CK_PROPERTY(_TimeType);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Utils_Time_GetWorldTime_Params, _Object, _World, _TimeType);
+    CK_DEFINE_CONSTRUCTORS(FCk_Utils_Time_GetWorldTime_Params, _Object);
+    CK_DEFINE_CONSTRUCTOR(FCk_Utils_Time_GetWorldTime_Params, _World);
+
+    explicit FCk_Utils_Time_GetWorldTime_Params(UObject* InObject);
+    explicit FCk_Utils_Time_GetWorldTime_Params(UWorld* InWorld);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -166,44 +170,45 @@ public:
               Category = "Ck|Utils|Time",
               meta = (CompactNodeTitle = "/", KeyWords = "divide"))
     static float
-    Divide(const FCk_Time& InA,
+    Divide(
+        const FCk_Time& InA,
         const FCk_Time& InB);
 
-	UFUNCTION(BlueprintPure,
-	          DisplayName = "[Ck] Time / float",
-	          Category = "Ck|Utils|Time",
-	          meta = (CompactNodeTitle = "/", KeyWords = "divide"))
-	static FCk_Time
-	Divide_TimeFloat(
-		const FCk_Time& InA,
-		float InB);
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Time / float",
+              Category = "Ck|Utils|Time",
+              meta = (CompactNodeTitle = "/", KeyWords = "divide"))
+    static FCk_Time
+    Divide_TimeFloat(
+        const FCk_Time& InA,
+        float InB);
 
-	UFUNCTION(BlueprintPure,
-	          DisplayName = "[Ck] Time / int",
-	          Category = "Ck|Utils|Time",
-	          meta = (CompactNodeTitle = "/", KeyWords = "divide"))
-	static FCk_Time
-		Divide_TimeInt(
-		const FCk_Time& InA,
-		int32 InB);
-	
-	UFUNCTION(BlueprintPure,
-			  DisplayName = "[Ck] Time * float",
-			  Category = "Ck|Utils|Time",
-			  meta = (CompactNodeTitle = "*", KeyWords = "multiply"))
-	static FCk_Time
-	Multiply_TimeFloat(
-		const FCk_Time& InA,
-		float InB);
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Time / int",
+              Category = "Ck|Utils|Time",
+              meta = (CompactNodeTitle = "/", KeyWords = "divide"))
+    static FCk_Time
+    Divide_TimeInt(
+        const FCk_Time& InA,
+        int32 InB);
 
-	UFUNCTION(BlueprintPure,
-		  DisplayName = "[Ck] Time * int",
-		  Category = "Ck|Utils|Time",
-		  meta = (CompactNodeTitle = "*", KeyWords = "multiply"))
-	static FCk_Time
-	Multiply_TimeInt(
-		const FCk_Time& InA,
-		int32 InB);
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Time * float",
+              Category = "Ck|Utils|Time",
+              meta = (CompactNodeTitle = "*", KeyWords = "multiply"))
+    static FCk_Time
+    Multiply_TimeFloat(
+        const FCk_Time& InA,
+        float InB);
+
+    UFUNCTION(BlueprintPure,
+          DisplayName = "[Ck] Time * int",
+          Category = "Ck|Utils|Time",
+          meta = (CompactNodeTitle = "*", KeyWords = "multiply"))
+    static FCk_Time
+    Multiply_TimeInt(
+        const FCk_Time& InA,
+        int32 InB);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Time == Time",

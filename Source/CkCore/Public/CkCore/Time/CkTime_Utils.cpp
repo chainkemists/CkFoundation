@@ -4,6 +4,22 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+FCk_Utils_Time_GetWorldTime_Params::
+    FCk_Utils_Time_GetWorldTime_Params(
+        UObject* InObject)
+    : _Object(InObject)
+{
+}
+
+FCk_Utils_Time_GetWorldTime_Params::
+    FCk_Utils_Time_GetWorldTime_Params(
+        UWorld* InWorld)
+    : _World(InWorld)
+{
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_Time_UE::
     Conv_TimeToText(
@@ -71,8 +87,8 @@ auto
         const FCk_Utils_Time_GetWorldTime_Params& InParams)
     -> FCk_Utils_Time_GetWorldTime_Result
 {
-    const auto& IsParamsWorldValid  = IsValid(InParams.Get_World());
-    const auto& IsParamsObjectValid = IsValid(InParams.Get_Object());
+    const auto& IsParamsWorldValid  = ck::IsValid(InParams.Get_World());
+    const auto& IsParamsObjectValid = ck::IsValid(InParams.Get_Object());
 
     CK_ENSURE_IF_NOT(IsParamsWorldValid || IsParamsObjectValid, TEXT("The UObject or the UWorld must be valid to get the correct time"))
     { return {}; }
@@ -80,7 +96,7 @@ auto
     const auto& World = [&]() -> const UWorld*
     {
         if (IsParamsWorldValid)
-        { return InParams.Get_World(); }
+        { return InParams.Get_World().Get(); }
 
         return InParams.Get_Object()->GetWorld();
     }();
