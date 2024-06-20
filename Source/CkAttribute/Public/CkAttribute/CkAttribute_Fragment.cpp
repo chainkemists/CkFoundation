@@ -38,6 +38,32 @@ namespace ck
     {
         return _Tags._Final;
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    FAttributeModifier_Tags FAttributeModifier_Tags::_Tags;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FAttributeModifier_Tags::
+        AddTags()
+        -> void
+    {
+        auto& Manager = UGameplayTagsManager::Get();
+
+        _Override = Manager.AddNativeGameplayTag(TEXT("Ck.AttributeModifier.Override"));
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FAttributeModifier_Tags::
+        Get_Override()
+        -> FGameplayTag
+    {
+        return _Tags._Override;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

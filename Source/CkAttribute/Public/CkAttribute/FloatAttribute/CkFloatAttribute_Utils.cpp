@@ -372,8 +372,14 @@ auto
         UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute), InAttributeComponent)
     { return {}; }
 
-    UCk_Utils_FloatAttributeModifier_UE::Add(InAttribute, {}, FCk_Fragment_FloatAttributeModifier_ParamsData{
-        Delta, ECk_ArithmeticOperations_Basic::Add, ECk_ModifierOperation_RevocablePolicy::NotRevocable, InAttributeComponent});
+    UCk_Utils_FloatAttributeModifier_UE::Add(InAttribute, ck::FAttributeModifier_Tags::Get_Override(),
+        FCk_Fragment_FloatAttributeModifier_ParamsData
+        {
+            Delta,
+            ECk_ArithmeticOperations_Basic::Add,
+            ECk_ModifierOperation_RevocablePolicy::NotRevocable,
+            InAttributeComponent
+        });
 
     return InAttribute;
 }
