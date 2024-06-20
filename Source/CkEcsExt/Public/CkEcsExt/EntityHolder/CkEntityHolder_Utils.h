@@ -31,6 +31,13 @@ namespace ck
     };
 }
 
+#define CK_DEFINE_ENTITY_HOLDER_UTILS(_UtilsName_, _NameOfEntityHolder_)\
+    using _UtilsName_ = TUtils_EntityHolder<_NameOfEntityHolder_>
+
+#define CK_DEFINE_ENTITY_HOLDER_AND_UTILS(_UtilsName_, _NameOfEntityHolder_)\
+    CK_DEFINE_ENTITY_HOLDER(_NameOfEntityHolder_);                          \
+    CK_DEFINE_ENTITY_HOLDER_UTILS(_UtilsName_, _NameOfEntityHolder_)
+
 // ------------------------------------------------------------Owning--------------------------------------------------------
 // Definitions
 
