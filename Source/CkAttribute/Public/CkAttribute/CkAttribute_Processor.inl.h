@@ -567,6 +567,7 @@ namespace ck
             RegistryType InRegistry)
         : _MinClamp(InRegistry)
         , _MaxClamp(InRegistry)
+        , _Registry(InRegistry)
     {
     }
 
