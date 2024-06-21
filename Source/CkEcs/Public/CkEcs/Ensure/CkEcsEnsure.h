@@ -16,7 +16,7 @@ public:
               Category = "Ck|Utils|Ensure",
               DisplayName = "[Ck] Ensure IsValid Entity",
               meta     = (DevelopmentOnly, ExpandEnumAsExecs = "OutHitStatus", DefaultToSelf = "InContext", HidePin = "InContext"))
-    static void
+    static void // not returning FCk_Handle because this Node is DevelopmentOnly
     EnsureMsgf_IsValid(
         const FCk_Handle& InHandle,
         FText InMsg,
