@@ -90,6 +90,9 @@ namespace ck
         using EnableDisableRequestType = FCk_Request_Sensor_EnableDisable;
         using EnableDisableRequestList = TOptional<EnableDisableRequestType>;
 
+        using ResizeRequestType = FCk_Request_Sensor_Resize;
+        using ResizeRequestList = TOptional<ResizeRequestType>;
+
         using BeginOverlapRequestType = FCk_Request_Sensor_OnBeginOverlap;
         using BeginOverlapNoMarkerRequestType = FCk_Request_Sensor_OnBeginOverlap_NonMarker;
 
@@ -101,10 +104,12 @@ namespace ck
 
     private:
         EnableDisableRequestList _EnableDisableRequest;
+        ResizeRequestList _ResizeRequest;
         BeginOrEndOverlapRequestList _BeginOrEndOverlapRequests;
 
     public:
         CK_PROPERTY_GET(_EnableDisableRequest);
+        CK_PROPERTY_GET(_ResizeRequest);
         CK_PROPERTY_GET(_BeginOrEndOverlapRequests);
     };
 
