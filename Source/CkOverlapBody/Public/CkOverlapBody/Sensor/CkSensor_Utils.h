@@ -267,6 +267,14 @@ public:
         UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
         const FCk_Request_Sensor_EnableDisable& InRequest);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              DisplayName = "[Ck][Sensor] Request Resize")
+    static FCk_Handle_Sensor
+    Request_Resize(
+        UPARAM(ref) FCk_Handle_Sensor& InSensorEntity,
+        const FCk_Request_Sensor_Resize& InRequest);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Sensor",

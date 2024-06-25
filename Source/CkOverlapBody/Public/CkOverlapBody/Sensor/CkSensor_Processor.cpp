@@ -64,7 +64,7 @@ namespace ck
             Params.Get_SensorName(),
             SensorLifetimeOwner,
             PhysicsParams.Get_CollisionProfileName()
-        ) {};
+        ) {}
 
         switch (const auto& ShapeType = ShapeParams.Get_ShapeDimensions().Get_ShapeType())
         {
@@ -131,6 +131,12 @@ namespace ck
         {
             algo::ForEachRequest(InRequests._EnableDisableRequest,
             [&](const FFragment_Sensor_Requests::EnableDisableRequestType& InRequest) -> void
+            {
+                DoHandleRequest(InHandle, InCurrentComp, InParamsComp, InRequest);
+            }, policy::DontResetContainer{});
+
+            algo::ForEachRequest(InRequests._ResizeRequest,
+            [&](const FFragment_Sensor_Requests::ResizeRequestType& InRequest) -> void
             {
                 DoHandleRequest(InHandle, InCurrentComp, InParamsComp, InRequest);
             }, policy::DontResetContainer{});
@@ -223,6 +229,91 @@ namespace ck
             HandleType InSensorEntity,
             FFragment_Sensor_Current& InCurrentComp,
             const FFragment_Sensor_Params& InParamsComp,
+            const FCk_Request_Sensor_Resize& InRequest)
+        -> void
+    {
+        const auto& ParamsShapeType = InParamsComp.Get_Params().Get_ShapeParams().Get_ShapeDimensions().Get_ShapeType();
+        const auto& NewSensorDimensions = InRequest.Get_NewSensorDimensions();
+        const auto& ShapeType = NewSensorDimensions.Get_ShapeType();
+
+        CK_ENSURE_IF_NOT(ParamsShapeType == ShapeType,
+            TEXT("Sensor [{}] received a RESIZE using Shape [{}] that does NOT match the Sensor's Shape [{}]"),
+            InSensorEntity,
+            ShapeType,
+            ParamsShapeType)
+        { return; }
+
+        const auto& Sensor = InCurrentComp.Get_Sensor().Get();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(Sensor), TEXT("Entity [{}] has an Invalid Sensor stored!"), InSensorEntity)
+        { return; }
+
+        switch (ShapeType)
+        {
+            case ECk_ShapeType::Box:
+            {
+                const auto& BoxSensor = Cast<UCk_Sensor_ActorComponent_Box_UE>(Sensor);
+                CK_ENSURE_IF_NOT(ck::IsValid(BoxSensor), TEXT("Sensor [{}] is NOT a BOX"), InSensorEntity)
+                { return; }
+
+                const auto& NewBoxExtents = NewSensorDimensions.Get_BoxExtents().Get_Extents();
+                if (FVector::PointsAreSame(BoxSensor->GetScaledBoxExtent(), NewBoxExtents))
+                { return; }
+
+                constexpr auto UpdateOverlaps = true;
+                BoxSensor->SetBoxExtent(NewBoxExtents, UpdateOverlaps);
+
+                break;
+            }
+            case ECk_ShapeType::Sphere:
+            {
+                const auto& SphereSensor = Cast<UCk_Sensor_ActorComponent_Sphere_UE>(Sensor);
+                CK_ENSURE_IF_NOT(ck::IsValid(SphereSensor), TEXT("Sensor [{}] is NOT a SPHERE"), InSensorEntity)
+                { return; }
+
+                const auto& NewSphereRadius = NewSensorDimensions.Get_SphereRadius().Get_Radius();
+                if (FMath::IsNearlyEqual(SphereSensor->GetScaledSphereRadius(), NewSphereRadius))
+                { return; }
+
+                constexpr auto UpdateOverlaps = true;
+                SphereSensor->SetSphereRadius(NewSphereRadius, UpdateOverlaps);
+
+                break;
+            }
+            case ECk_ShapeType::Capsule:
+            {
+                const auto& CapsuleSensor = Cast<UCk_Sensor_ActorComponent_Capsule_UE>(Sensor);
+                CK_ENSURE_IF_NOT(ck::IsValid(CapsuleSensor), TEXT("Sensor [{}] is NOT a CAPSULE"), InSensorEntity)
+                { return; }
+
+                const auto& NewCapsuleSize = NewSensorDimensions.Get_CapsuleSize();
+                const auto& NewCapsuleRadius = NewCapsuleSize.Get_Radius();
+                const auto& NewCapsuleHalfHeight = NewCapsuleSize.Get_HalfHeight();
+
+                if (FMath::IsNearlyEqual(CapsuleSensor->GetScaledCapsuleHalfHeight(), NewCapsuleHalfHeight) &&
+                    FMath::IsNearlyEqual(CapsuleSensor->GetScaledCapsuleRadius(), NewCapsuleRadius))
+                { return; }
+
+                constexpr auto UpdateOverlaps = true;
+                CapsuleSensor->SetCapsuleRadius(NewCapsuleRadius, UpdateOverlaps);
+                CapsuleSensor->SetCapsuleHalfHeight(NewCapsuleHalfHeight, UpdateOverlaps);
+
+                break;
+            }
+            default:
+            {
+                CK_INVALID_ENUM(ShapeType);
+                break;
+            }
+        }
+    }
+
+    auto
+        FProcessor_Sensor_HandleRequests::
+        DoHandleRequest(
+            HandleType InSensorEntity,
+            FFragment_Sensor_Current& InCurrentComp,
+            const FFragment_Sensor_Params& InParamsComp,
             const FCk_Request_Sensor_OnBeginOverlap& InRequest)
             -> void
     {
@@ -230,12 +321,10 @@ namespace ck
         const auto& OverlappedMarkerName    = OverlappedMarkerDetails.Get_MarkerName();
         const auto& OverlappedMarkerEntity  = OverlappedMarkerDetails.Get_MarkerEntity();
 
-        const auto& SensorName           = InRequest.Get_SensorDetails().Get_SensorName();
-        const auto& SensorFilteringInfo  = InParamsComp.Get_Params().Get_FilteringParams().Get_MarkerNames();
+        const auto& SensorFilteringInfo = InParamsComp.Get_Params().Get_FilteringParams().Get_MarkerNames();
 
         CK_ENSURE_IF_NOT(ck::IsValid(OverlappedMarkerEntity, ck::IsValid_Policy_IncludePendingKill{}),
-            TEXT("Sensor [Name: {} | Entity: {}] received BeginOverlap with Marker [{}] that has an INVALID Entity"),
-            SensorName,
+            TEXT("Sensor [{}] received BeginOverlap with Marker [{}] that has an INVALID Entity"),
             InSensorEntity,
             OverlappedMarkerName)
         { return; }
@@ -253,20 +342,16 @@ namespace ck
             IsMarkerEntity_Not_PendingKill)
         {
             CK_ENSURE_IF_NOT(OverlappedMarkerEnableDisable == ECk_EnableDisable::Enable,
-                TEXT("Sensor [Name: {} | Entity: {}] received BeginOverlap with Marker [Name: {} | Entity: {}] that is DISABLED"),
-                SensorName,
+                TEXT("Sensor [{}] received BeginOverlap with Marker [{}] that is DISABLED"),
                 InSensorEntity,
-                OverlappedMarkerName,
                 OverlappedMarkerEntity)
             { return; }
         }
 
         overlap_body::VeryVerbose
         (
-            TEXT("Sensor [Name: {} | Entity: {}] BeginOverlap with Marker [Name: {} | Entity: {}]"),
-            SensorName,
+            TEXT("Sensor [{}] BeginOverlap with Marker [{}]"),
             InSensorEntity,
-            OverlappedMarkerName,
             OverlappedMarkerEntity
         );
 
@@ -298,12 +383,10 @@ namespace ck
         const auto& OverlappedMarkerName    = OverlappedMarkerDetails.Get_MarkerName();
         const auto& OverlappedMarkerEntity  = OverlappedMarkerDetails.Get_MarkerEntity();
 
-        const auto& SensorName           = InRequest.Get_SensorDetails().Get_SensorName();
         const auto& SensorFilteringInfo  = InParamsComp.Get_Params().Get_FilteringParams().Get_MarkerNames();
 
         CK_ENSURE_IF_NOT(ck::IsValid(OverlappedMarkerEntity, ck::IsValid_Policy_IncludePendingKill{}),
-            TEXT("Sensor [Name: {} | Entity: {}] received EndOverlap with Marker [{}] that has an INVALID Entity"),
-            SensorName,
+            TEXT("Sensor [{}] received EndOverlap with Marker [{}] that has an INVALID Entity"),
             InSensorEntity,
             OverlappedMarkerName)
         { return; }
@@ -316,10 +399,8 @@ namespace ck
 
         overlap_body::VeryVerbose
         (
-            TEXT("Sensor [Name: {} | Entity: {}] EndOverlap with Marker [Name: {} | Entity: {}]"),
-            SensorName,
+            TEXT("Sensor [{}] EndOverlap with Marker [{}]"),
             InSensorEntity,
-            OverlappedMarkerName,
             OverlappedMarkerEntity
         );
 
@@ -357,8 +438,7 @@ namespace ck
 
         overlap_body::VeryVerbose
         (
-            TEXT("Sensor [Name: {} | Entity: {}] BeginOverlap with Non-Marker [{}]"),
-            InRequest.Get_SensorDetails().Get_SensorName(),
+            TEXT("Sensor [{}] BeginOverlap with Non-Marker [{}]"),
             InSensorEntity,
             OverlapDetails
         );
@@ -400,8 +480,7 @@ namespace ck
 
         overlap_body::VeryVerbose
         (
-            TEXT("Sensor [Name: {} | Entity: {}] EndOverlap with Non-Marker [{}]"),
-            InRequest.Get_SensorDetails().Get_SensorName(),
+            TEXT("Sensor [{}] EndOverlap with Non-Marker [{}]"),
             InSensorEntity,
             OverlapDetails
         );
@@ -424,7 +503,7 @@ namespace ck
         FProcessor_Sensor_UpdateTransform::
         ForEachEntity(
             TimeType,
-            HandleType                      InSensorEntity,
+            HandleType InSensorEntity,
             const FFragment_Sensor_Current& InCurrentComp,
             const FFragment_Sensor_Params&  InParamsComp)
             -> void
@@ -509,7 +588,7 @@ namespace ck
         }
         else
         {
-            ck::overlap_body::Verbose(TEXT("Expected Sensor Actor Component of Entity [{}] to still exist during the Teardown process. "
+            overlap_body::Verbose(TEXT("Expected Sensor Actor Component of Entity [{}] to still exist during the Teardown process. "
                 "However, it's possible that that the Actor and it's components were pulled from under us on Client machines due to the way "
                 "destruction is handled in Unreal."), InCurrentComp.Get_AttachedEntityAndActor().Get_Handle());
         }

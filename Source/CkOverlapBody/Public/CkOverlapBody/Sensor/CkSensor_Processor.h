@@ -69,6 +69,12 @@ namespace ck
             HandleType InSensorEntity,
             FFragment_Sensor_Current& InCurrentComp,
             const FFragment_Sensor_Params& InParamsComp,
+            const FCk_Request_Sensor_Resize& InRequest) -> void;
+
+        static auto DoHandleRequest(
+            HandleType InSensorEntity,
+            FFragment_Sensor_Current& InCurrentComp,
+            const FFragment_Sensor_Params& InParamsComp,
             const FCk_Request_Sensor_OnBeginOverlap& InRequest) -> void;
 
         static auto DoHandleRequest(
