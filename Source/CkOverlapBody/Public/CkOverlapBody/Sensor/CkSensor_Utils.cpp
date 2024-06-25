@@ -336,6 +336,18 @@ auto
 
 auto
     UCk_Utils_Sensor_UE::
+    Request_Resize(
+        FCk_Handle_Sensor& InSensorEntity,
+        const FCk_Request_Sensor_Resize& InRequest)
+    -> FCk_Handle_Sensor
+{
+    InSensorEntity.AddOrGet<ck::FFragment_Sensor_Requests>()._ResizeRequest = InRequest;
+
+    return InSensorEntity;
+}
+
+auto
+    UCk_Utils_Sensor_UE::
     BindTo_OnEnableDisable(
         FCk_Handle_Sensor& InSensorEntity,
         ECk_Signal_BindingPolicy InBindingPolicy,

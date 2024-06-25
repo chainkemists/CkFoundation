@@ -200,6 +200,28 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKOVERLAPBODY_API FCk_Request_Marker_Resize
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Marker_Resize);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_ShapeDimensions _NewMarkerDimensions;
+
+public:
+    CK_PROPERTY_GET(_NewMarkerDimensions)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Marker_Resize, _NewMarkerDimensions);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKOVERLAPBODY_API FCk_Request_Marker_EnableDisable
 {
     GENERATED_BODY()
