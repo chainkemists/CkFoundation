@@ -131,30 +131,136 @@ namespace ck
     {
         InMarkerEntity.CopyAndRemove(InRequestsComp, [&](const FFragment_Marker_Requests& InRequests)
         {
-            ck::algo::ForEachRequest(InRequests._Requests,
-            [&](const FFragment_Marker_Requests::RequestType& InRequest) -> void
+            algo::ForEachRequest(InRequests._EnableDisableRequest,
+            [&](const FFragment_Marker_Requests::EnableDisableRequestType& InRequest) -> void
             {
-                const auto& CurrentEnableDisable = InCurrentComp.Get_EnableDisable();
-                const auto& NewEnableDisable = InRequest.Get_EnableDisable();
+                DoHandleRequest(InMarkerEntity, InCurrentComp, InParamsComp, InRequest);
+            }, policy::DontResetContainer{});
 
-                if (CurrentEnableDisable == NewEnableDisable)
-                { return; }
-
-                InCurrentComp._EnableDisable = NewEnableDisable;
-                const auto& CollisionEnabled = NewEnableDisable == ECk_EnableDisable::Enable
-                                                 ? ECollisionEnabled::QueryOnly
-                                                 : ECollisionEnabled::NoCollision;
-
-                const auto& Params     = InParamsComp.Get_Params();
-                const auto& MarkerName = Params.Get_MarkerName();
-                const auto& Marker     = InCurrentComp.Get_Marker().Get();
-
-                UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(Marker, NewEnableDisable);
-                UCk_Utils_Physics_UE::Request_SetCollisionEnabled(Marker, CollisionEnabled);
-
-                UUtils_Signal_OnMarkerEnableDisable::Broadcast(InMarkerEntity, MakePayload(InCurrentComp.Get_AttachedEntityAndActor().Get_Handle(), MarkerName, NewEnableDisable));
+            algo::ForEachRequest(InRequests._ResizeRequest,
+            [&](const FFragment_Marker_Requests::ResizeRequestType& InRequest) -> void
+            {
+                DoHandleRequest(InMarkerEntity, InCurrentComp, InParamsComp, InRequest);
             }, policy::DontResetContainer{});
         });
+    }
+
+    auto
+        FProcessor_Marker_HandleRequests::
+        DoHandleRequest(
+            HandleType InMarkerEntity,
+            FFragment_Marker_Current& InCurrentComp,
+            const FFragment_Marker_Params& InParamsComp,
+            const FCk_Request_Marker_EnableDisable& InRequest)
+        -> void
+    {
+        const auto& CurrentEnableDisable = InCurrentComp.Get_EnableDisable();
+        const auto& NewEnableDisable = InRequest.Get_EnableDisable();
+
+        if (CurrentEnableDisable == NewEnableDisable)
+        { return; }
+
+        InCurrentComp._EnableDisable = NewEnableDisable;
+        const auto& CollisionEnabled = NewEnableDisable == ECk_EnableDisable::Enable
+                                         ? ECollisionEnabled::QueryOnly
+                                         : ECollisionEnabled::NoCollision;
+
+        const auto& Params     = InParamsComp.Get_Params();
+        const auto& MarkerName = Params.Get_MarkerName();
+        const auto& Marker     = InCurrentComp.Get_Marker().Get();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(Marker), TEXT("Entity [{}] has an Invalid Marker stored!"), InMarkerEntity)
+        { return; }
+
+        UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(Marker, NewEnableDisable);
+        UCk_Utils_Physics_UE::Request_SetCollisionEnabled(Marker, CollisionEnabled);
+
+        UUtils_Signal_OnMarkerEnableDisable::Broadcast(InMarkerEntity, MakePayload(InCurrentComp.Get_AttachedEntityAndActor().Get_Handle(), MarkerName, NewEnableDisable));
+    }
+
+    auto
+        FProcessor_Marker_HandleRequests::
+        DoHandleRequest(
+            HandleType InMarkerEntity,
+            FFragment_Marker_Current& InCurrentComp,
+            const FFragment_Marker_Params& InParamsComp,
+            const FCk_Request_Marker_Resize& InRequest)
+        -> void
+    {
+        const auto& ParamsShapeType = InParamsComp.Get_Params().Get_ShapeParams().Get_ShapeDimensions().Get_ShapeType();
+        const auto& NewMarkerDimensions = InRequest.Get_NewMarkerDimensions();
+        const auto& ShapeType = NewMarkerDimensions.Get_ShapeType();
+
+        CK_ENSURE_IF_NOT(ParamsShapeType == ShapeType,
+            TEXT("Marker [{}] received a RESIZE using Shape [{}] that does NOT match the Marker's Shape [{}]"),
+            InMarkerEntity,
+            ShapeType,
+            ParamsShapeType)
+        { return; }
+
+        const auto& Marker = InCurrentComp.Get_Marker().Get();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(Marker), TEXT("Entity [{}] has an Invalid Marker stored!"), InMarkerEntity)
+        { return; }
+
+        switch (ShapeType)
+        {
+            case ECk_ShapeType::Box:
+            {
+                const auto& BoxMarker = Cast<UCk_Marker_ActorComponent_Box_UE>(Marker);
+                CK_ENSURE_IF_NOT(ck::IsValid(BoxMarker), TEXT("Marker [{}] is NOT a BOX"), InMarkerEntity)
+                { return; }
+
+                const auto& NewBoxExtents = NewMarkerDimensions.Get_BoxExtents().Get_Extents();
+                if (FVector::PointsAreSame(BoxMarker->GetScaledBoxExtent(), NewBoxExtents))
+                { return; }
+
+                constexpr auto UpdateOverlaps = true;
+                BoxMarker->SetBoxExtent(NewBoxExtents, UpdateOverlaps);
+
+                break;
+            }
+            case ECk_ShapeType::Sphere:
+            {
+                const auto& SphereMarker = Cast<UCk_Marker_ActorComponent_Sphere_UE>(Marker);
+                CK_ENSURE_IF_NOT(ck::IsValid(SphereMarker), TEXT("Marker [{}] is NOT a SPHERE"), InMarkerEntity)
+                { return; }
+
+                const auto& NewSphereRadius = NewMarkerDimensions.Get_SphereRadius().Get_Radius();
+                if (FMath::IsNearlyEqual(SphereMarker->GetScaledSphereRadius(), NewSphereRadius))
+                { return; }
+
+                constexpr auto UpdateOverlaps = true;
+                SphereMarker->SetSphereRadius(NewSphereRadius, UpdateOverlaps);
+
+                break;
+            }
+            case ECk_ShapeType::Capsule:
+            {
+                const auto& CapsuleMarker = Cast<UCk_Marker_ActorComponent_Capsule_UE>(Marker);
+                CK_ENSURE_IF_NOT(ck::IsValid(CapsuleMarker), TEXT("Marker [{}] is NOT a CAPSULE"), InMarkerEntity)
+                { return; }
+
+                const auto& NewCapsuleSize = NewMarkerDimensions.Get_CapsuleSize();
+                const auto& NewCapsuleRadius = NewCapsuleSize.Get_Radius();
+                const auto& NewCapsuleHalfHeight = NewCapsuleSize.Get_HalfHeight();
+
+                if (FMath::IsNearlyEqual(CapsuleMarker->GetScaledCapsuleHalfHeight(), NewCapsuleHalfHeight) &&
+                    FMath::IsNearlyEqual(CapsuleMarker->GetScaledCapsuleRadius(), NewCapsuleRadius))
+                { return; }
+
+                constexpr auto UpdateOverlaps = true;
+                CapsuleMarker->SetCapsuleRadius(NewCapsuleRadius, UpdateOverlaps);
+                CapsuleMarker->SetCapsuleHalfHeight(NewCapsuleHalfHeight, UpdateOverlaps);
+
+                break;
+            }
+            default:
+            {
+                CK_INVALID_ENUM(ShapeType);
+                break;
+            }
+        }
     }
 
     auto

@@ -82,14 +82,19 @@ namespace ck
         friend class UCk_Utils_Marker_UE;
 
     public:
-        using RequestType = FCk_Request_Marker_EnableDisable;
-        using RequestList = TOptional<RequestType>;
+        using EnableDisableRequestType = FCk_Request_Marker_EnableDisable;
+        using EnableDisableRequestList = TOptional<EnableDisableRequestType>;
+
+        using ResizeRequestType = FCk_Request_Marker_Resize;
+        using ResizeRequestList = TOptional<ResizeRequestType>;
 
     private:
-        RequestList _Requests;
+        EnableDisableRequestList _EnableDisableRequest;
+        ResizeRequestList _ResizeRequest;
 
     public:
-        CK_PROPERTY_GET(_Requests);
+        CK_PROPERTY_GET(_EnableDisableRequest);
+        CK_PROPERTY_GET(_ResizeRequest);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
