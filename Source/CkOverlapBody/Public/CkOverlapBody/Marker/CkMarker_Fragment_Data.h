@@ -52,13 +52,6 @@ public:
     CK_GENERATED_BODY(FCk_Marker_BasicDetails);
 
 public:
-    FCk_Marker_BasicDetails() = default;
-    FCk_Marker_BasicDetails(
-        FGameplayTag InMarkerName,
-        FCk_Handle_Marker InMarkerEntity,
-        FCk_EntityOwningActor_BasicDetails InMarkerAttachedEntityAndActor);
-
-public:
     auto operator==(const ThisType& InOther) const -> bool;
     CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
 
@@ -79,6 +72,9 @@ public:
     CK_PROPERTY_GET(_MarkerName);
     CK_PROPERTY_GET(_MarkerEntity);
     CK_PROPERTY_GET(_MarkerAttachedEntityAndActor);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Marker_BasicDetails, _MarkerName, _MarkerEntity, _MarkerAttachedEntityAndActor);
 };
 
 auto CKOVERLAPBODY_API GetTypeHash(const FCk_Marker_BasicDetails& InObj) -> uint32;
@@ -93,12 +89,6 @@ struct CKOVERLAPBODY_API FCk_Marker_DebugInfo
 public:
     CK_GENERATED_BODY(FCk_Marker_DebugInfo);
 
-public:
-    FCk_Marker_DebugInfo() = default;
-    FCk_Marker_DebugInfo(
-        float InLineThickness,
-        FColor InDebugLineColor);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -111,6 +101,9 @@ private:
 public:
     CK_PROPERTY_GET(_LineThickness);
     CK_PROPERTY_GET(_DebugLineColor);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Marker_DebugInfo, _LineThickness, _DebugLineColor);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -122,14 +115,6 @@ struct CKOVERLAPBODY_API FCk_Marker_PhysicsInfo
 
 public:
     CK_GENERATED_BODY(FCk_Marker_PhysicsInfo);
-
-public:
-    FCk_Marker_PhysicsInfo() = default;
-    FCk_Marker_PhysicsInfo(
-        ECk_CollisionDetectionType   InCollisionType,
-        ECk_NavigationEffect         InNavigationEffect,
-        ECk_ComponentOverlapBehavior InOverlapBehavior,
-        FName                        InCollisionProfileName);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -153,6 +138,9 @@ public:
     CK_PROPERTY_GET(_NavigationEffect);
     CK_PROPERTY_GET(_OverlapBehavior);
     CK_PROPERTY_GET(_CollisionProfileName);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Marker_PhysicsInfo, _CollisionType, _NavigationEffect, _OverlapBehavior, _CollisionProfileName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -197,11 +185,6 @@ struct CKOVERLAPBODY_API FCk_Marker_ShapeInfo
 public:
     CK_GENERATED_BODY(FCk_Marker_ShapeInfo);
 
-public:
-    FCk_Marker_ShapeInfo() = default;
-    explicit FCk_Marker_ShapeInfo(
-        FCk_ShapeDimensions InShapeDimensions);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -209,6 +192,9 @@ private:
 
 public:
     CK_PROPERTY_GET(_ShapeDimensions)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Marker_ShapeInfo, _ShapeDimensions);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -221,10 +207,6 @@ struct CKOVERLAPBODY_API FCk_Request_Marker_EnableDisable
 public:
     CK_GENERATED_BODY(FCk_Request_Marker_EnableDisable);
 
-public:
-    FCk_Request_Marker_EnableDisable() = default;
-    explicit FCk_Request_Marker_EnableDisable(ECk_EnableDisable InEnableDisable);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -232,6 +214,9 @@ private:
 
 public:
     CK_PROPERTY_GET(_EnableDisable)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Marker_EnableDisable, _EnableDisable);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -125,13 +125,6 @@ public:
     CK_GENERATED_BODY(FCk_Sensor_BasicDetails);
 
 public:
-    FCk_Sensor_BasicDetails() = default;
-    FCk_Sensor_BasicDetails(
-        FGameplayTag InSensorName,
-        FCk_Handle InSensorEntity,
-        FCk_EntityOwningActor_BasicDetails InSensorAttachedEntityAndActor);
-
-public:
     auto operator==(const ThisType& InOther) const -> bool;
     CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
 
@@ -152,6 +145,9 @@ public:
     CK_PROPERTY_GET(_SensorName);
     CK_PROPERTY_GET(_SensorEntity);
     CK_PROPERTY_GET(_SensorAttachedEntityAndActor);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Sensor_BasicDetails, _SensorName, _SensorEntity, _SensorAttachedEntityAndActor);
 };
 
 auto CKOVERLAPBODY_API GetTypeHash(const FCk_Sensor_BasicDetails& InObj) -> uint32;
@@ -165,12 +161,6 @@ struct CKOVERLAPBODY_API FCk_Sensor_MarkerOverlapInfo
 
 public:
     CK_GENERATED_BODY(FCk_Sensor_MarkerOverlapInfo);
-
-public:
-    FCk_Sensor_MarkerOverlapInfo() = default;
-    FCk_Sensor_MarkerOverlapInfo(
-        FCk_Marker_BasicDetails InMarkerDetails,
-        FCk_Sensor_BeginOverlap_UnrealDetails InOverlapDetails);
 
 public:
     auto operator==(const ThisType& InOther) const -> bool;
@@ -188,6 +178,9 @@ private:
 public:
     CK_PROPERTY_GET(_MarkerDetails)
     CK_PROPERTY_GET(_OverlapDetails)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Sensor_MarkerOverlapInfo, _MarkerDetails, _OverlapDetails);
 };
 
 auto CKOVERLAPBODY_API GetTypeHash(const FCk_Sensor_MarkerOverlapInfo& InObj) -> uint32;
@@ -203,11 +196,6 @@ public:
     CK_GENERATED_BODY(FCk_Sensor_NonMarkerOverlapInfo);
 
 public:
-    FCk_Sensor_NonMarkerOverlapInfo() = default;
-    explicit FCk_Sensor_NonMarkerOverlapInfo(
-        const FCk_Sensor_BeginOverlap_UnrealDetails& InOverlapDetails);
-
-public:
     auto operator==(const ThisType& InOther) const -> bool;
     CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
 
@@ -218,6 +206,9 @@ private:
 
 public:
     CK_PROPERTY_GET(_OverlapDetails)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Sensor_NonMarkerOverlapInfo, _OverlapDetails);
 };
 
 auto CKOVERLAPBODY_API GetTypeHash(const FCk_Sensor_NonMarkerOverlapInfo& InObj) -> uint32;
@@ -235,11 +226,6 @@ public:
 public:
     using SensorOverlapInfoType = FCk_Sensor_MarkerOverlapInfo;
     using SensorOverlapInfoList = TMap<FCk_Marker_BasicDetails, SensorOverlapInfoType>;
-
-public:
-    FCk_Sensor_MarkerOverlaps() = default;
-    explicit FCk_Sensor_MarkerOverlaps(
-        const SensorOverlapInfoList& InOverlaps);
 
 public:
     auto Process_Add(
@@ -261,6 +247,9 @@ private:
 
 public:
     CK_PROPERTY_GET(_Overlaps);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Sensor_MarkerOverlaps, _Overlaps);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -278,11 +267,6 @@ public:
     using SensorOverlapInfoList = TSet<SensorOverlapInfoType>;
 
 public:
-    FCk_Sensor_NonMarkerOverlaps() = default;
-    explicit FCk_Sensor_NonMarkerOverlaps(
-        const SensorOverlapInfoList& InOverlaps);
-
-public:
     auto Process_Add(
         const SensorOverlapInfoType& InOverlap) -> ThisType&;
 
@@ -296,6 +280,9 @@ private:
 
 public:
     CK_PROPERTY_GET(_Overlaps);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Sensor_NonMarkerOverlaps, _Overlaps);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -307,12 +294,6 @@ struct CKOVERLAPBODY_API FCk_Sensor_DebugInfo
 
 public:
     CK_GENERATED_BODY(FCk_Sensor_DebugInfo);
-
-public:
-    FCk_Sensor_DebugInfo() = default;
-    FCk_Sensor_DebugInfo(
-        float InLineThickness,
-        FColor InDebugLineColor);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -326,6 +307,9 @@ private:
 public:
     CK_PROPERTY_GET(_LineThickness);
     CK_PROPERTY_GET(_DebugLineColor);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Sensor_DebugInfo, _LineThickness, _DebugLineColor);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -337,14 +321,6 @@ struct CKOVERLAPBODY_API FCk_Sensor_PhysicsInfo
 
 public:
     CK_GENERATED_BODY(FCk_Sensor_PhysicsInfo);
-
-public:
-    FCk_Sensor_PhysicsInfo() = default;
-    FCk_Sensor_PhysicsInfo(
-        ECk_CollisionDetectionType   InCollisionType,
-        ECk_NavigationEffect         InNavigationEffect,
-        ECk_ComponentOverlapBehavior InOverlapBehavior,
-        FName                        InCollisionProfileName);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -368,6 +344,9 @@ public:
     CK_PROPERTY_GET(_NavigationEffect);
     CK_PROPERTY_GET(_OverlapBehavior);
     CK_PROPERTY_GET(_CollisionProfileName);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Sensor_PhysicsInfo, _CollisionType, _NavigationEffect, _OverlapBehavior, _CollisionProfileName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -412,11 +391,6 @@ struct CKOVERLAPBODY_API FCk_Sensor_ShapeInfo
 public:
     CK_GENERATED_BODY(FCk_Sensor_ShapeInfo);
 
-public:
-    FCk_Sensor_ShapeInfo() = default;
-    explicit FCk_Sensor_ShapeInfo(
-        const FCk_ShapeDimensions& InShapeDimensions);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -424,6 +398,9 @@ private:
 
 public:
     CK_PROPERTY_GET(_ShapeDimensions)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Sensor_ShapeInfo, _ShapeDimensions);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -461,10 +438,6 @@ struct CKOVERLAPBODY_API FCk_Request_Sensor_EnableDisable
 public:
     CK_GENERATED_BODY(FCk_Request_Sensor_EnableDisable);
 
-public:
-    FCk_Request_Sensor_EnableDisable() = default;
-    explicit FCk_Request_Sensor_EnableDisable(ECk_EnableDisable InEnableDisable);
-
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -472,6 +445,9 @@ private:
 
 public:
     CK_PROPERTY_GET(_EnableDisable)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Sensor_EnableDisable, _EnableDisable);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -498,13 +474,6 @@ struct CKOVERLAPBODY_API FCk_Request_Sensor_OnBeginOverlap
 public:
     CK_GENERATED_BODY(FCk_Request_Sensor_OnBeginOverlap);
 
-public:
-    FCk_Request_Sensor_OnBeginOverlap() = default;
-    explicit FCk_Request_Sensor_OnBeginOverlap(
-        FCk_Marker_BasicDetails InMarkerDetails,
-        FCk_Sensor_BasicDetails InSensorDetails,
-        FCk_Sensor_BeginOverlap_UnrealDetails InOverlapDetails);
-
 private:
     FCk_Marker_BasicDetails _MarkerDetails;
     FCk_Sensor_BasicDetails _SensorDetails;
@@ -514,6 +483,9 @@ public:
     CK_PROPERTY_GET(_MarkerDetails)
     CK_PROPERTY_GET(_SensorDetails)
     CK_PROPERTY_GET(_OverlapDetails)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Sensor_OnBeginOverlap, _MarkerDetails, _SensorDetails, _OverlapDetails);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -526,12 +498,6 @@ struct CKOVERLAPBODY_API FCk_Request_Sensor_OnBeginOverlap_NonMarker
 public:
     CK_GENERATED_BODY(FCk_Request_Sensor_OnBeginOverlap_NonMarker);
 
-public:
-    FCk_Request_Sensor_OnBeginOverlap_NonMarker() = default;
-    explicit FCk_Request_Sensor_OnBeginOverlap_NonMarker(
-        FCk_Sensor_BasicDetails InSensorDetails,
-        FCk_Sensor_BeginOverlap_UnrealDetails InOverlapDetails);
-
 private:
     FCk_Sensor_BasicDetails _SensorDetails;
     FCk_Sensor_BeginOverlap_UnrealDetails _OverlapDetails;
@@ -539,6 +505,9 @@ private:
 public:
     CK_PROPERTY_GET(_SensorDetails)
     CK_PROPERTY_GET(_OverlapDetails)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Sensor_OnBeginOverlap_NonMarker, _SensorDetails, _OverlapDetails);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -551,13 +520,6 @@ struct CKOVERLAPBODY_API FCk_Request_Sensor_OnEndOverlap
 public:
     CK_GENERATED_BODY(FCk_Request_Sensor_OnEndOverlap);
 
-public:
-    FCk_Request_Sensor_OnEndOverlap() = default;
-    FCk_Request_Sensor_OnEndOverlap(
-        FCk_Marker_BasicDetails InMarkerDetails,
-        FCk_Sensor_BasicDetails InSensorDetails,
-        FCk_Sensor_EndOverlap_UnrealDetails InOverlapDetails);
-
 private:
     FCk_Marker_BasicDetails _MarkerDetails;
     FCk_Sensor_BasicDetails _SensorDetails;
@@ -567,6 +529,9 @@ public:
     CK_PROPERTY_GET(_MarkerDetails)
     CK_PROPERTY_GET(_SensorDetails)
     CK_PROPERTY_GET(_OverlapDetails)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Sensor_OnEndOverlap, _MarkerDetails, _SensorDetails, _OverlapDetails);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -579,12 +544,6 @@ struct CKOVERLAPBODY_API FCk_Request_Sensor_OnEndOverlap_NonMarker
 public:
     CK_GENERATED_BODY(FCk_Request_Sensor_OnEndOverlap_NonMarker);
 
-public:
-    FCk_Request_Sensor_OnEndOverlap_NonMarker() = default;
-    FCk_Request_Sensor_OnEndOverlap_NonMarker(
-        FCk_Sensor_BasicDetails InSensorDetails,
-        FCk_Sensor_EndOverlap_UnrealDetails InOverlapDetails);
-
 private:
     FCk_Sensor_BasicDetails _SensorDetails;
     FCk_Sensor_EndOverlap_UnrealDetails _OverlapDetails;
@@ -592,6 +551,9 @@ private:
 public:
     CK_PROPERTY_GET(_SensorDetails)
     CK_PROPERTY_GET(_OverlapDetails)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Sensor_OnEndOverlap_NonMarker, _SensorDetails, _OverlapDetails);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -603,13 +565,6 @@ struct CKOVERLAPBODY_API FCk_Sensor_Payload_OnBeginOverlap
 
 public:
     CK_GENERATED_BODY(FCk_Sensor_Payload_OnBeginOverlap);
-
-public:
-    FCk_Sensor_Payload_OnBeginOverlap() = default;
-    FCk_Sensor_Payload_OnBeginOverlap(
-        FCk_Sensor_BasicDetails InSensorDetails,
-        FCk_Marker_BasicDetails InMarkerDetails,
-        FCk_Sensor_BeginOverlap_UnrealDetails InOverlapDetails);
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
@@ -628,6 +583,9 @@ public:
     CK_PROPERTY_GET(_SensorDetails);
     CK_PROPERTY_GET(_MarkerDetails);
     CK_PROPERTY_GET(_OverlapDetails);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Sensor_Payload_OnBeginOverlap, _SensorDetails, _MarkerDetails, _OverlapDetails);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -652,12 +610,6 @@ struct CKOVERLAPBODY_API FCk_Sensor_Payload_OnBeginOverlap_NonMarker
 public:
     CK_GENERATED_BODY(FCk_Sensor_Payload_OnBeginOverlap_NonMarker);
 
-public:
-    FCk_Sensor_Payload_OnBeginOverlap_NonMarker() = default;
-    FCk_Sensor_Payload_OnBeginOverlap_NonMarker(
-        FCk_Sensor_BasicDetails InSensorDetails,
-        FCk_Sensor_BeginOverlap_UnrealDetails InOverlapDetails);
-
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
@@ -670,6 +622,9 @@ private:
 public:
     CK_PROPERTY_GET(_SensorDetails);
     CK_PROPERTY_GET(_OverlapDetails);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Sensor_Payload_OnBeginOverlap_NonMarker, _SensorDetails, _OverlapDetails);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -694,13 +649,6 @@ struct CKOVERLAPBODY_API FCk_Sensor_Payload_OnEndOverlap
 public:
     CK_GENERATED_BODY(FCk_Sensor_Payload_OnEndOverlap);
 
-public:
-    FCk_Sensor_Payload_OnEndOverlap() = default;
-    FCk_Sensor_Payload_OnEndOverlap(
-        FCk_Sensor_BasicDetails InSensorDetails,
-        FCk_Marker_BasicDetails InMarkerDetails,
-        FCk_Sensor_EndOverlap_UnrealDetails InOverlapDetails);
-
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
@@ -718,6 +666,9 @@ public:
     CK_PROPERTY_GET(_SensorDetails);
     CK_PROPERTY_GET(_MarkerDetails);
     CK_PROPERTY_GET(_OverlapDetails);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Sensor_Payload_OnEndOverlap, _SensorDetails, _MarkerDetails, _OverlapDetails);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -742,12 +693,6 @@ struct CKOVERLAPBODY_API FCk_Sensor_Payload_OnEndOverlap_NonMarker
 public:
     CK_GENERATED_BODY(FCk_Sensor_Payload_OnEndOverlap_NonMarker);
 
-public:
-    FCk_Sensor_Payload_OnEndOverlap_NonMarker() = default;
-    FCk_Sensor_Payload_OnEndOverlap_NonMarker(
-        FCk_Sensor_BasicDetails InSensorDetails,
-        FCk_Sensor_EndOverlap_UnrealDetails InOverlapDetails);
-
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
@@ -760,6 +705,9 @@ private:
 public:
     CK_PROPERTY_GET(_SensorDetails);
     CK_PROPERTY_GET(_OverlapDetails);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Sensor_Payload_OnEndOverlap_NonMarker, _SensorDetails, _OverlapDetails);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
