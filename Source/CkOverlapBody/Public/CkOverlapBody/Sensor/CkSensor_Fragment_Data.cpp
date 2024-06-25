@@ -331,17 +331,6 @@ FCk_Sensor_EndOverlap_UnrealDetails::
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Sensor_BasicDetails::
-    FCk_Sensor_BasicDetails(
-        FGameplayTag InSensorName,
-        FCk_Handle InSensorEntity,
-        FCk_EntityOwningActor_BasicDetails InSensorAttachedEntityAndActor)
-    : _SensorName(InSensorName)
-    , _SensorEntity(InSensorEntity)
-    , _SensorAttachedEntityAndActor(InSensorAttachedEntityAndActor)
-{
-}
-
 auto
     FCk_Sensor_BasicDetails::
     operator==(const ThisType& InOther) const
@@ -362,15 +351,6 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Sensor_MarkerOverlapInfo::
-    FCk_Sensor_MarkerOverlapInfo(
-        FCk_Marker_BasicDetails InMarkerDetails,
-        FCk_Sensor_BeginOverlap_UnrealDetails InOverlapDetails)
-    : _MarkerDetails(InMarkerDetails)
-    , _OverlapDetails(InOverlapDetails)
-{
-}
-
 auto
     FCk_Sensor_MarkerOverlapInfo::
     operator==(const ThisType& InOther) const
@@ -389,13 +369,6 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Sensor_NonMarkerOverlapInfo::
-    FCk_Sensor_NonMarkerOverlapInfo(
-    const FCk_Sensor_BeginOverlap_UnrealDetails& InOverlapDetails)
-    : _OverlapDetails(InOverlapDetails)
-{
-}
-
 auto
     FCk_Sensor_NonMarkerOverlapInfo::
     operator==(const ThisType& InOther) const
@@ -413,13 +386,6 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-
-FCk_Sensor_MarkerOverlaps::
-    FCk_Sensor_MarkerOverlaps(
-    const SensorOverlapInfoList& InOverlaps)
-    : _Overlaps(InOverlaps)
-{
-}
 
 auto
     FCk_Sensor_MarkerOverlaps::
@@ -465,13 +431,6 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Sensor_NonMarkerOverlaps::
-    FCk_Sensor_NonMarkerOverlaps(
-    const SensorOverlapInfoList& InOverlaps)
-    : _Overlaps(InOverlaps)
-{
-}
-
 auto
     FCk_Sensor_NonMarkerOverlaps::
     Process_Add(
@@ -496,32 +455,6 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Sensor_DebugInfo::
-    FCk_Sensor_DebugInfo(
-        float InLineThickness,
-        FColor InDebugLineColor)
-    : _LineThickness(InLineThickness)
-    , _DebugLineColor(InDebugLineColor)
-{
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-FCk_Sensor_PhysicsInfo::
-    FCk_Sensor_PhysicsInfo(
-        ECk_CollisionDetectionType InCollisionType,
-        ECk_NavigationEffect InNavigationEffect,
-        ECk_ComponentOverlapBehavior InOverlapBehavior,
-        FName InCollisionProfileName)
-    : _CollisionType(InCollisionType)
-    , _NavigationEffect(InNavigationEffect)
-    , _OverlapBehavior(InOverlapBehavior)
-    , _CollisionProfileName(InCollisionProfileName)
-{
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     FCk_Sensor_AttachmentInfo::
     Get_AttachmentPolicy() const
@@ -532,123 +465,10 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Sensor_ShapeInfo::
-    FCk_Sensor_ShapeInfo(
-    const FCk_ShapeDimensions& InShapeDimensions)
-            : _ShapeDimensions(InShapeDimensions)
-{
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 FCk_Sensor_FilteringInfo::
     FCk_Sensor_FilteringInfo(
     const TArray<FGameplayTag>& InMarkerNames)
     : _MarkerNames(InMarkerNames)
-{
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-FCk_Request_Sensor_EnableDisable::
-    FCk_Request_Sensor_EnableDisable(
-        ECk_EnableDisable InEnableDisable)
-    : _EnableDisable(InEnableDisable)
-{
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-FCk_Request_Sensor_OnBeginOverlap::
-    FCk_Request_Sensor_OnBeginOverlap(
-        FCk_Marker_BasicDetails InMarkerDetails,
-        FCk_Sensor_BasicDetails InSensorDetails,
-        FCk_Sensor_BeginOverlap_UnrealDetails InOverlapDetails)
-    : _MarkerDetails(InMarkerDetails)
-    , _SensorDetails(InSensorDetails)
-    , _OverlapDetails(InOverlapDetails)
-{
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-FCk_Request_Sensor_OnBeginOverlap_NonMarker::
-    FCk_Request_Sensor_OnBeginOverlap_NonMarker(
-        FCk_Sensor_BasicDetails InSensorDetails,
-        FCk_Sensor_BeginOverlap_UnrealDetails InOverlapDetails)
-    : _SensorDetails(InSensorDetails)
-    , _OverlapDetails(InOverlapDetails)
-{
-}
-// --------------------------------------------------------------------------------------------------------------------
-
-FCk_Request_Sensor_OnEndOverlap::
-    FCk_Request_Sensor_OnEndOverlap(
-        FCk_Marker_BasicDetails InMarkerDetails,
-        FCk_Sensor_BasicDetails InSensorDetails,
-        FCk_Sensor_EndOverlap_UnrealDetails InOverlapDetails)
-    : _MarkerDetails(InMarkerDetails)
-    , _SensorDetails(InSensorDetails)
-    , _OverlapDetails(InOverlapDetails)
-{
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-FCk_Request_Sensor_OnEndOverlap_NonMarker::
-    FCk_Request_Sensor_OnEndOverlap_NonMarker(
-        FCk_Sensor_BasicDetails InSensorDetails,
-        FCk_Sensor_EndOverlap_UnrealDetails InOverlapDetails)
-    : _SensorDetails(InSensorDetails)
-    , _OverlapDetails(InOverlapDetails)
-{
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-FCk_Sensor_Payload_OnBeginOverlap::
-    FCk_Sensor_Payload_OnBeginOverlap(
-        FCk_Sensor_BasicDetails InSensorDetails,
-        FCk_Marker_BasicDetails InMarkerDetails,
-        FCk_Sensor_BeginOverlap_UnrealDetails InOverlapDetails)
-    : _SensorDetails(InSensorDetails)
-    , _MarkerDetails(InMarkerDetails)
-    , _OverlapDetails(InOverlapDetails)
-{
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-FCk_Sensor_Payload_OnBeginOverlap_NonMarker::
-    FCk_Sensor_Payload_OnBeginOverlap_NonMarker(
-        FCk_Sensor_BasicDetails InSensorDetails,
-        FCk_Sensor_BeginOverlap_UnrealDetails InOverlapDetails)
-    : _SensorDetails(InSensorDetails)
-    , _OverlapDetails(InOverlapDetails)
-{
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-FCk_Sensor_Payload_OnEndOverlap::
-    FCk_Sensor_Payload_OnEndOverlap(
-        FCk_Sensor_BasicDetails InSensorDetails,
-        FCk_Marker_BasicDetails InMarkerDetails,
-        FCk_Sensor_EndOverlap_UnrealDetails InOverlapDetails)
-    : _SensorDetails(InSensorDetails)
-    , _MarkerDetails(InMarkerDetails)
-    , _OverlapDetails(InOverlapDetails)
-{
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-FCk_Sensor_Payload_OnEndOverlap_NonMarker::
-    FCk_Sensor_Payload_OnEndOverlap_NonMarker(
-        FCk_Sensor_BasicDetails InSensorDetails,
-        FCk_Sensor_EndOverlap_UnrealDetails InOverlapDetails)
-    : _SensorDetails(InSensorDetails)
-    , _OverlapDetails(InOverlapDetails)
 {
 }
 
