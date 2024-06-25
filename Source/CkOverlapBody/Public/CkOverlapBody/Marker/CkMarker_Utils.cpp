@@ -278,7 +278,19 @@ auto
         const FCk_Request_Marker_EnableDisable& InRequest)
     -> FCk_Handle_Marker
 {
-    InMarkerEntity.AddOrGet<ck::FFragment_Marker_Requests>()._Requests = InRequest;
+    InMarkerEntity.AddOrGet<ck::FFragment_Marker_Requests>()._EnableDisableRequest = InRequest;
+    return InMarkerEntity;
+}
+
+auto
+    UCk_Utils_Marker_UE::
+    Request_Resize(
+        FCk_Handle_Marker& InMarkerEntity,
+        const FCk_Request_Marker_Resize& InRequest)
+    -> FCk_Handle_Marker
+{
+    InMarkerEntity.AddOrGet<ck::FFragment_Marker_Requests>()._ResizeRequest = InRequest;
+
     return InMarkerEntity;
 }
 
