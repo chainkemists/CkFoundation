@@ -57,6 +57,19 @@ namespace ck
             FFragment_Marker_Current& InCurrentComp,
             const FFragment_Marker_Params& InParamsComp,
             const FFragment_Marker_Requests& InRequestsComp) const -> void;
+
+    private:
+        static auto DoHandleRequest(
+            HandleType InMarkerEntity,
+            FFragment_Marker_Current& InCurrentComp,
+            const FFragment_Marker_Params& InParamsComp,
+            const FCk_Request_Marker_EnableDisable& InRequest) -> void;
+
+        static auto DoHandleRequest(
+            HandleType InMarkerEntity,
+            FFragment_Marker_Current& InCurrentComp,
+            const FFragment_Marker_Params& InParamsComp,
+            const FCk_Request_Marker_Resize& InRequest) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

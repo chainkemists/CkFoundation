@@ -226,6 +226,14 @@ public:
         UPARAM(ref) FCk_Handle_Marker& InMarkerEntity,
         const FCk_Request_Marker_EnableDisable& InRequest);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              DisplayName = "[Ck][Marker] Request Resize")
+    static FCk_Handle_Marker
+    Request_Resize(
+        UPARAM(ref) FCk_Handle_Marker& InMarkerEntity,
+        const FCk_Request_Marker_Resize& InRequest);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Marker",

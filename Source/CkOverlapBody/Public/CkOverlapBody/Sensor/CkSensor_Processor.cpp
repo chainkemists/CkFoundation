@@ -160,6 +160,9 @@ namespace ck
     {
         const auto& Sensor = InCurrentComp.Get_Sensor().Get();
 
+        CK_ENSURE_IF_NOT(ck::IsValid(Sensor), TEXT("Entity [{}] has an Invalid Sensor stored!"), InSensorEntity)
+        { return; }
+
         const auto SensorBasicDetails =  FCk_Sensor_BasicDetails
         {
             InParamsComp.Get_Params().Get_SensorName(),
@@ -206,9 +209,6 @@ namespace ck
 
         const auto& Params     = InParamsComp.Get_Params();
         const auto& SensorName = Params.Get_SensorName();
-
-        CK_ENSURE_IF_NOT(ck::IsValid(Sensor), TEXT("Entity [{}] has an Invalid Sensor stored!"), InSensorEntity)
-        { return; }
 
         if (NewEnableDisable == ECk_EnableDisable::Disable)
         {
