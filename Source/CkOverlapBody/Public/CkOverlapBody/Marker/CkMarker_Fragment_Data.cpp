@@ -8,17 +8,6 @@ UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_Marker, TEXT("Marker"));
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Marker_BasicDetails::
-    FCk_Marker_BasicDetails(
-        FGameplayTag InMarkerName,
-        FCk_Handle_Marker InMarkerEntity,
-        FCk_EntityOwningActor_BasicDetails InMarkerAttachedEntityAndActor)
-    : _MarkerName(InMarkerName)
-    , _MarkerEntity(MoveTemp(InMarkerEntity))
-    , _MarkerAttachedEntityAndActor(InMarkerAttachedEntityAndActor)
-{
-}
-
 auto
     FCk_Marker_BasicDetails::
     operator==(const ThisType& InOther) const
@@ -39,54 +28,12 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FCk_Marker_DebugInfo::
-    FCk_Marker_DebugInfo(
-        float InLineThickness,
-        FColor InDebugLineColor)
-    : _LineThickness(InLineThickness)
-    , _DebugLineColor(InDebugLineColor)
-{
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-FCk_Marker_PhysicsInfo::
-    FCk_Marker_PhysicsInfo(
-        ECk_CollisionDetectionType InCollisionType,
-        ECk_NavigationEffect InNavigationEffect,
-        ECk_ComponentOverlapBehavior InOverlapBehavior,
-        FName InCollisionProfileName)
-    : _CollisionType(InCollisionType)
-    , _NavigationEffect(InNavigationEffect)
-    , _OverlapBehavior(InOverlapBehavior)
-    , _CollisionProfileName(InCollisionProfileName)
-{
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     FCk_Marker_AttachmentInfo::
     Get_AttachmentPolicy() const
     -> ECk_Marker_AttachmentPolicy
 {
     return static_cast<ECk_Marker_AttachmentPolicy>(_AttachmentPolicyFlags);
-}
-
-FCk_Marker_ShapeInfo::
-    FCk_Marker_ShapeInfo(
-        FCk_ShapeDimensions InShapeDimensions)
-        : _ShapeDimensions(InShapeDimensions)
-{
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-FCk_Request_Marker_EnableDisable::
-    FCk_Request_Marker_EnableDisable(
-        ECk_EnableDisable InEnableDisable)
-    : _EnableDisable(InEnableDisable)
-{
 }
 
 // --------------------------------------------------------------------------------------------------------------------
