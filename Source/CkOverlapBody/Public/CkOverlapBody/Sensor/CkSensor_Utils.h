@@ -260,6 +260,25 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Sensor",
+              DisplayName = "[Ck][Sensor] Sort Marker Overlaps (By Distance)")
+    static void
+    SortMarkerOverlaps_ByDistance(
+        const FVector& InOrigin,
+        UPARAM(ref) TArray<FCk_Sensor_MarkerOverlapInfo>& InMarkerOverlaps,
+        ECk_DistanceSortingPolicy InSortingPolicy = ECk_DistanceSortingPolicy::ClosestToFarthest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Sensor",
+              DisplayName = "[Ck][Sensor] Sort Non-Marker Overlaps (By Distance)")
+    static void
+    SortNonMarkerOverlaps_ByDistance(
+        const FVector& InOrigin,
+        UPARAM(ref) TArray<FCk_Sensor_NonMarkerOverlapInfo>& InMarkerOverlaps,
+        ECk_DistanceSortingPolicy InSortingPolicy = ECk_DistanceSortingPolicy::ClosestToFarthest);
+
+public:
+    UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName = "[Ck][Sensor] Request Enable/Disable")
     static FCk_Handle_Sensor
