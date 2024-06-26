@@ -828,6 +828,44 @@ auto
     return NOT Get_IsFrontOf(InA, InB);
 }
 
+auto
+    UCk_Utils_ActorVector3_UE::
+    Get_DotProductBetweenActors(
+        const AActor* InA,
+        const AActor* InB,
+        ECk_Direction_3D InDirectionToUseForA)
+    -> float
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InA), TEXT("Unable to get DotProductBetweenActors. Actor InA is [{}]"), InA)
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InB), TEXT("Unable to get DotProductBetweenActors. Actor InB is [{}]"), InB)
+    { return {}; }
+
+    const auto& DirectionVectorOfA = UCk_Utils_Vector3_UE::Get_WorldDirection(InDirectionToUseForA);
+
+    return Get_DotProductBetweenActorsBasedOnDirection(InA, InB, DirectionVectorOfA);
+}
+
+auto
+    UCk_Utils_ActorVector3_UE::
+    Get_DotProductBetweenActorsBasedOnDirection(
+        const AActor* InA,
+        const AActor* InB,
+        const FVector& InDirectionToUseForA)
+    -> float
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InA), TEXT("Unable to get DotProductBetweenActorsBasedOnDirection. Actor InA is [{}]"), InA)
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InB), TEXT("Unable to get DotProductBetweenActorsBasedOnDirection. Actor InB is [{}]"), InB)
+    { return {}; }
+
+    const auto& DirectionAndLength = Get_DirectionAndLengthBetweenActors(InB, InA);
+
+    return ck_vector::Dot(InDirectionToUseForA, DirectionAndLength.Get_Direction());
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
