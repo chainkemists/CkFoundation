@@ -279,6 +279,86 @@ auto
 
 auto
     UCk_Utils_Sensor_UE::
+    SortMarkerOverlaps_ByDistance(
+        const FVector& InOrigin,
+        TArray<FCk_Sensor_MarkerOverlapInfo>& InMarkerOverlaps,
+        ECk_DistanceSortingPolicy InSortingPolicy)
+    -> void
+{
+    ck::algo::Sort(InMarkerOverlaps, [&](const FCk_Sensor_MarkerOverlapInfo& InA, const FCk_Sensor_MarkerOverlapInfo& InB)
+    {
+        constexpr auto IncludePendingKill = true;
+
+        const auto& ActorA = InA.Get_OverlapDetails().Get_OtherActor().Get(IncludePendingKill);
+        const auto& ActorB = InB.Get_OverlapDetails().Get_OtherActor().Get(IncludePendingKill);
+
+        if (ck::Is_NOT_Valid(ActorA) || ck::Is_NOT_Valid(ActorB))
+        { return false; }
+
+        const auto& DistanceA = FVector::DistSquared(InOrigin, ActorA->GetActorLocation());
+        const auto& DistanceB = FVector::DistSquared(InOrigin, ActorB->GetActorLocation());
+
+        switch (InSortingPolicy)
+        {
+            case ECk_DistanceSortingPolicy::ClosestToFarthest:
+            {
+                return DistanceA < DistanceB;
+            }
+            case ECk_DistanceSortingPolicy::FarthestToClosest:
+            {
+                return DistanceA > DistanceB;
+            }
+            default:
+            {
+                CK_INVALID_ENUM(InSortingPolicy);
+                return false;
+            }
+        }
+    });
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    SortNonMarkerOverlaps_ByDistance(
+        const FVector& InOrigin,
+        TArray<FCk_Sensor_NonMarkerOverlapInfo>& InMarkerOverlaps,
+        ECk_DistanceSortingPolicy InSortingPolicy)
+    -> void
+{
+    ck::algo::Sort(InMarkerOverlaps, [&](const FCk_Sensor_NonMarkerOverlapInfo& InA, const FCk_Sensor_NonMarkerOverlapInfo& InB)
+    {
+        constexpr auto IncludePendingKill = true;
+
+        const auto& ActorA = InA.Get_OverlapDetails().Get_OtherActor().Get(IncludePendingKill);
+        const auto& ActorB = InB.Get_OverlapDetails().Get_OtherActor().Get(IncludePendingKill);
+
+        if (ck::Is_NOT_Valid(ActorA) || ck::Is_NOT_Valid(ActorB))
+        { return false; }
+
+        const auto& DistanceA = FVector::DistSquared(InOrigin, ActorA->GetActorLocation());
+        const auto& DistanceB = FVector::DistSquared(InOrigin, ActorB->GetActorLocation());
+
+        switch (InSortingPolicy)
+        {
+            case ECk_DistanceSortingPolicy::ClosestToFarthest:
+            {
+                return DistanceA < DistanceB;
+            }
+            case ECk_DistanceSortingPolicy::FarthestToClosest:
+            {
+                return DistanceA > DistanceB;
+            }
+            default:
+            {
+                CK_INVALID_ENUM(InSortingPolicy);
+                return false;
+            }
+        }
+    });
+}
+
+auto
+    UCk_Utils_Sensor_UE::
     Get_HasMarkerOverlaps(
         const FCk_Handle_Sensor& InSensorEntity)
     -> bool
