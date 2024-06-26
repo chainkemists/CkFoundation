@@ -392,7 +392,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Is Actor In Front Of",
-              Category = "Ck|Utils|Math|Vector3")
+              Category = "Ck|Utils|Math|Actor")
     static bool
     Get_IsFrontOf(
         const AActor* InA,
@@ -400,11 +400,29 @@ public:
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Is Actor Behind Of",
-              Category = "Ck|Utils|Math|Vector3")
+              Category = "Ck|Utils|Math|Actor")
     static bool
     Get_IsBehindOf(
         const AActor* InA,
         const AActor* InB);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Dot Product Between Actors",
+              Category = "Ck|Utils|Math|Actor")
+    static float
+    Get_DotProductBetweenActors(
+         const AActor* InA,
+         const AActor* InB,
+         ECk_Direction_3D InDirectionToUseForA = ECk_Direction_3D::Forward);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Dot Product Between Actors Based on Direction",
+              Category = "Ck|Utils|Math|Actor")
+    static float
+    Get_DotProductBetweenActorsBasedOnDirection(
+         const AActor* InA,
+         const AActor* InB,
+         const FVector& InDirectionToUseForA);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
