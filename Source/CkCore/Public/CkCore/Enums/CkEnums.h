@@ -573,3 +573,14 @@ enum class ECk_Lifetime : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Lifetime);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_ForwardVectorSource : uint8
+{
+    CharacterForward,
+    Velocity,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ForwardVectorSource);
+
+// --------------------------------------------------------------------------------------------------------------------
