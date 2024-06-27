@@ -405,7 +405,7 @@ auto
     UCk_Utils_AbilityOwner_UE::
     Get_SpecificActiveTagCount(
         const FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        const FGameplayTag&            InTag)
+        FGameplayTag InTag)
     -> int32
 {
     return InAbilityOwnerHandle.Get<ck::FFragment_AbilityOwner_Current>().Get_SpecificActiveTagCount(InAbilityOwnerHandle, InTag);
