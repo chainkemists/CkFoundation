@@ -254,7 +254,7 @@ public:
     static int32
     Get_SpecificActiveTagCount(
         const FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        const FGameplayTag& InTag);
+        FGameplayTag InTag);
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
