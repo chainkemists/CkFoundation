@@ -171,7 +171,9 @@ namespace ck
                     return FCk_ResourceLoader_LoadedObject{InObjectRefSoft, ObjectToLoadHardRef};
                 });
 
-                DoOnObjectBatchLoaded(InHandle, FCk_ResourceLoader_LoadedObjectBatch{LoadedObjects});
+                const auto UniqueLoadedObjects = TSet(LoadedObjects).Array();
+                    
+                DoOnObjectBatchLoaded(InHandle, FCk_ResourceLoader_LoadedObjectBatch{UniqueLoadedObjects, LoadedObjects});
 
                 break;
             }
@@ -228,16 +230,31 @@ namespace ck
         auto LoadedAssets = TArray<UObject*>{};
         StreamingHandle->GetLoadedAssets(LoadedAssets);
 
-        const auto LoadedObjects = algo::Transform<TArray<FCk_ResourceLoader_LoadedObject>>(LoadedAssets,
-        [&](UObject* InLoadedAsset)
+        auto PathToLoadedAssetsMap = TMap<FSoftObjectPath,UObject*>{};
+        for (const auto& LoadedAsset : LoadedAssets)
         {
-            const auto LoadedObjectSoftRef = FCk_ResourceLoader_ObjectReference_Soft{FSoftObjectPath(InLoadedAsset)};
-            const auto LoadedObjectHardRef = FCk_ResourceLoader_ObjectReference_Hard{InLoadedAsset};
+            PathToLoadedAssetsMap.Add(FSoftObjectPath(LoadedAsset), LoadedAsset);
+        }
+        
+        const auto LoadedObjects = algo::Transform<TArray<FCk_ResourceLoader_LoadedObject>>(InObjectBatchStreamed,
+        [&](const FCk_ResourceLoader_ObjectReference_Soft& LoadedObjectSoftRef)
+        {
+            FSoftObjectPath SoftObjectPath = LoadedObjectSoftRef.Get_SoftObjectPath();
+            auto LoadedAsset = PathToLoadedAssetsMap.Find(SoftObjectPath);
+
+            CK_ENSURE_IF_NOT(ck::IsValid(LoadedAsset, ck::IsValid_Policy_NullptrOnly{}),
+                TEXT("Failed to load asset [{}]!"),
+                SoftObjectPath.GetAssetPathString())
+            { return FCk_ResourceLoader_LoadedObject{}; }
+            
+            const auto LoadedObjectHardRef = FCk_ResourceLoader_ObjectReference_Hard{*LoadedAsset};
 
             return FCk_ResourceLoader_LoadedObject{LoadedObjectSoftRef, LoadedObjectHardRef}.Set_StreamableHandle(StreamingHandle);
         });
 
-        const auto LoadedObjectBatch = FCk_ResourceLoader_LoadedObjectBatch{LoadedObjects}.Set_StreamableHandle(StreamingHandle);
+        const auto UniqueLoadedObjects = TSet(LoadedObjects).Array();
+
+        const auto LoadedObjectBatch = FCk_ResourceLoader_LoadedObjectBatch{UniqueLoadedObjects, LoadedObjects}.Set_StreamableHandle(StreamingHandle);
         DoOnObjectBatchLoaded(InHandle, LoadedObjectBatch);
     }
 
@@ -279,7 +296,7 @@ namespace ck
             TEXT("Could not retrieve Resource Loader subsystem! Unable to Track Loaded Object Batch"))
         { return; }
 
-        for (const auto& LoadedObject : InObjectBatchLoaded.Get_LoadedObjects())
+        for (const auto& LoadedObject : InObjectBatchLoaded.Get_UniqueLoadedObjects())
         {
             ResourceLoaderSubsystem->Request_TrackResource(LoadedObject);
         }
