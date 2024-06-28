@@ -127,17 +127,21 @@ public:
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
-    TArray<FCk_ResourceLoader_LoadedObject> _LoadedObjects;
+    TArray<FCk_ResourceLoader_LoadedObject> _UniqueLoadedObjects;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    TArray<FCk_ResourceLoader_LoadedObject> _AllOrderedLoadedObjects;
 
 private:
     TSharedPtr<FStreamableHandle> _StreamableHandle;
 
 public:
-    CK_PROPERTY_GET(_LoadedObjects);
+    CK_PROPERTY_GET(_UniqueLoadedObjects);
+    CK_PROPERTY_GET(_AllOrderedLoadedObjects);
     CK_PROPERTY(_StreamableHandle);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_ResourceLoader_LoadedObjectBatch, _LoadedObjects);
+    CK_DEFINE_CONSTRUCTORS(FCk_ResourceLoader_LoadedObjectBatch, _UniqueLoadedObjects, _AllOrderedLoadedObjects);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
