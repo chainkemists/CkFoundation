@@ -73,7 +73,7 @@ private:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimAsset",
-              DisplayName="[Ck][AnimAsset] Try Get AnimAsset (By Name)")
+              DisplayName="[Ck][AnimAsset] Try Get AnimAsset")
     static FCk_Handle_AnimAsset
     TryGet_AnimAsset(
         const FCk_Handle& InAnimAssetOwnerEntity,
