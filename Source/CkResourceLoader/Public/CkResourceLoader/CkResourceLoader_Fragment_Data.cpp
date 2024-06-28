@@ -102,7 +102,8 @@ auto
         const ThisType& InOther) const
     -> bool
 {
-    return Get_LoadedObjects() == InOther.Get_LoadedObjects();
+    return Get_UniqueLoadedObjects() == InOther.Get_UniqueLoadedObjects() &&
+        Get_AllOrderedLoadedObjects() == InOther.Get_AllOrderedLoadedObjects();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
