@@ -1,5 +1,7 @@
 #include "CkEntity.h"
 
+#include "CkEcs/CkEcsLog.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 FCk_Entity::
@@ -96,7 +98,9 @@ auto
         FCk_Entity InEntity)
     -> uint32
 {
-    return GetTypeHash(InEntity.Get_ID());
+    auto Hash = GetTypeHash(InEntity.Get_ID());
+    ck::ecs::Error(TEXT("Entity [{}] Hash is [{}]"), InEntity, Hash);
+    return Hash;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

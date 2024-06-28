@@ -1,5 +1,7 @@
 #include "CkHandle.h"
 
+#include "CkEcs/CkEcsLog.h"
+
 #include "CkCore/Object/CkObject_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -343,6 +345,8 @@ auto
     if (ck::Is_NOT_Valid(InHandle))
     { return GetTypeHash(InHandle.Get_Entity()); }
 
+    const auto Hash = GetTypeHash(InHandle.Get_Entity()) + GetTypeHash(InHandle.Get_Registry());
+    ck::ecs::Error(TEXT("Handle [{}] Hash is [{}]"), InHandle, Hash);
     return GetTypeHash(InHandle.Get_Entity()) + GetTypeHash(InHandle.Get_Registry());
 }
 
