@@ -44,6 +44,22 @@ public:
         FCk_Handle InHandle,
         const FCk_Request_ResourceLoader_LoadObjectBatch& InRequest,
         const FCk_Delegate_ResourceLoader_OnObjectBatchLoaded& InDelegate);
+    
+	UFUNCTION(BlueprintPure,
+	    DisplayName = "[Ck] Convert Soft Class Reference To Soft Resource Loader Object Reference",
+        Category = "Ck|Utils|ResourceLoader",
+	    meta = (CompactNodeTitle = "->"))
+	static FCk_ResourceLoader_ObjectReference_Soft
+    Conv_SoftObjRefToSoftResourceLoaderObjectReference(
+        TSoftClassPtr<UObject> SoftClassReference);
+
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Transform Soft Class References To Soft Resource Loader Object References",
+        Category = "Ck|Utils|ResourceLoader",
+        meta = (CompactNodeTitle = "Transform_ToSoftResourceLoaderRefs"))
+    static TArray<FCk_ResourceLoader_ObjectReference_Soft>
+    TransformSoftClassReferences_ToSoftResourceLoaderObjectReferences(
+        const TArray<TSoftClassPtr<UObject>>& InReferences);
 
 private:
     static auto DoAddPendingObject(

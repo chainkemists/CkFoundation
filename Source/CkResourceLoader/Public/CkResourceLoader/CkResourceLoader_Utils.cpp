@@ -36,6 +36,28 @@ auto
 
 auto
     UCk_Utils_ResourceLoader_UE::
+    Conv_SoftObjRefToSoftResourceLoaderObjectReference(
+        TSoftClassPtr<> SoftClassReference)
+    -> FCk_ResourceLoader_ObjectReference_Soft
+{
+    const auto SoftClassPath = FSoftClassPath(SoftClassReference.ToString());
+    return FCk_ResourceLoader_ObjectReference_Soft(SoftClassPath);
+}
+
+auto
+    UCk_Utils_ResourceLoader_UE::
+    TransformSoftClassReferences_ToSoftResourceLoaderObjectReferences(
+        const TArray<TSoftClassPtr<UObject>>& InReferences)
+    -> TArray<FCk_ResourceLoader_ObjectReference_Soft>
+{
+    return ck::algo::Transform<TArray<FCk_ResourceLoader_ObjectReference_Soft>>(InReferences, [](TSoftClassPtr<UObject> InSoftClass) -> FCk_ResourceLoader_ObjectReference_Soft
+    {
+        return Conv_SoftObjRefToSoftResourceLoaderObjectReference(InSoftClass);
+    });
+}
+
+auto
+    UCk_Utils_ResourceLoader_UE::
     DoAddPendingObject(
         FCk_Handle InHandle,
         const FCk_ResourceLoader_PendingObject& InPendingObject)

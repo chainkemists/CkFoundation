@@ -163,7 +163,7 @@ namespace ck
             }
             case ECk_ResourceLoader_LoadingPolicy::Synchronous:
             {
-                const auto LoadedObjects = algo::Transform<TArray<FCk_ResourceLoader_LoadedObject>>(ObjectToLoadSoftRefs,
+                const auto& LoadedObjects = algo::Transform<TArray<FCk_ResourceLoader_LoadedObject>>(ObjectToLoadSoftRefs,
                 [&](const FCk_ResourceLoader_ObjectReference_Soft& InObjectRefSoft)
                 {
                     const auto& ObjectToLoadPath   = InObjectRefSoft.Get_SoftObjectPath();
@@ -236,23 +236,31 @@ namespace ck
             PathToLoadedAssetsMap.Add(FSoftObjectPath(LoadedAsset), LoadedAsset);
         }
         
-        const auto LoadedObjects = algo::Transform<TArray<FCk_ResourceLoader_LoadedObject>>(InObjectBatchStreamed,
+        const auto& LoadedObjects = algo::Transform<TArray<FCk_ResourceLoader_LoadedObject>>(InObjectBatchStreamed,
         [&](const FCk_ResourceLoader_ObjectReference_Soft& LoadedObjectSoftRef)
+            -> FCk_ResourceLoader_LoadedObject
         {
             FSoftObjectPath SoftObjectPath = LoadedObjectSoftRef.Get_SoftObjectPath();
-            auto LoadedAsset = PathToLoadedAssetsMap.Find(SoftObjectPath);
+            const auto FoundLoadedAsset = PathToLoadedAssetsMap.Find(SoftObjectPath);
 
-            CK_ENSURE_IF_NOT(ck::IsValid(LoadedAsset, ck::IsValid_Policy_NullptrOnly{}),
+            CK_ENSURE_IF_NOT(ck::IsValid(FoundLoadedAsset, ck::IsValid_Policy_NullptrOnly{}),
                 TEXT("Failed to load asset [{}]!"),
                 SoftObjectPath.GetAssetPathString())
-            { return FCk_ResourceLoader_LoadedObject{}; }
+            { return {}; }
             
-            const auto LoadedObjectHardRef = FCk_ResourceLoader_ObjectReference_Hard{*LoadedAsset};
+            const auto LoadedObjectHardRef = FCk_ResourceLoader_ObjectReference_Hard{*FoundLoadedAsset};
 
             return FCk_ResourceLoader_LoadedObject{LoadedObjectSoftRef, LoadedObjectHardRef}.Set_StreamableHandle(StreamingHandle);
         });
 
-        const auto UniqueLoadedObjects = TSet(LoadedObjects).Array();
+        const auto UniqueLoadedObjects = algo::Transform<TArray<FCk_ResourceLoader_LoadedObject>>(LoadedAssets,
+        [&](UObject* InLoadedAsset)
+        {
+            const auto LoadedObjectSoftRef = FCk_ResourceLoader_ObjectReference_Soft{FSoftObjectPath(InLoadedAsset)};
+            const auto LoadedObjectHardRef = FCk_ResourceLoader_ObjectReference_Hard{InLoadedAsset};
+
+            return FCk_ResourceLoader_LoadedObject{LoadedObjectSoftRef, LoadedObjectHardRef}.Set_StreamableHandle(StreamingHandle);
+        });
 
         const auto LoadedObjectBatch = FCk_ResourceLoader_LoadedObjectBatch{UniqueLoadedObjects, LoadedObjects}.Set_StreamableHandle(StreamingHandle);
         DoOnObjectBatchLoaded(InHandle, LoadedObjectBatch);
