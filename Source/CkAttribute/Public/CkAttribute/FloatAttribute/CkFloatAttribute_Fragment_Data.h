@@ -174,7 +174,7 @@ private:
     ECk_MinMaxCurrent _Component = ECk_MinMaxCurrent::Current;
 
 public:
-    CK_PROPERTY_GET(_ModifierDelta);
+    CK_PROPERTY(_ModifierDelta);
     CK_PROPERTY(_TargetAttributeName);
     CK_PROPERTY_GET(_ModifierOperation);
     CK_PROPERTY_GET(_ModifierOperation_RevocablePolicy);

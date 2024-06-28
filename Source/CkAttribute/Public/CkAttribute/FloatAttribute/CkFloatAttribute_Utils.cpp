@@ -1,5 +1,4 @@
 #include "CkFloatAttribute_Utils.h"
-#include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
 
 #include "CkAttribute/CkAttribute_Log.h"
 #include "CkCore/Algorithms/CkAlgorithms.h"
@@ -471,26 +470,34 @@ auto
     auto ParamsToUse = InParams;
     ParamsToUse.Set_TargetAttributeName(UCk_Utils_GameplayLabel_UE::Get_Label(InAttribute));
 
-    auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute);
     const auto& ModifierOperation = ParamsToUse.Get_ModifierOperation();
     const auto& AttributeComponent = ParamsToUse.Get_Component();
+    const auto& RevocablePolicy = InParams.Get_ModifierOperation_RevocablePolicy();
 
     CK_ENSURE_IF_NOT(UCk_Utils_FloatAttribute_UE::Has_Component(InAttribute, AttributeComponent),
         TEXT("Float Attribute [{}] with Owner [{}] does NOT have a [{}] component. Cannot Add Modifier"),
         InAttribute,
-        LifetimeOwner,
+        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute),
         AttributeComponent)
     { return {}; }
 
-    if (InParams.Get_ModifierOperation_RevocablePolicy() == ECk_ModifierOperation_RevocablePolicy::NotRevocable &&
-        FMath::IsNearlyZero(ParamsToUse.Get_ModifierDelta()) &&
-        (ModifierOperation == ECk_ArithmeticOperations_Basic::Add || ModifierOperation  == ECk_ArithmeticOperations_Basic::Subtract))
-    { return {}; }
+    if (RevocablePolicy == ECk_ModifierOperation_RevocablePolicy::NotRevocable)
+    {
+        if (FMath::IsNearlyZero(ParamsToUse.Get_ModifierDelta()) &&
+            (ModifierOperation == ECk_ArithmeticOperations_Basic::Add || ModifierOperation  == ECk_ArithmeticOperations_Basic::Subtract))
+        { return {}; }
 
-    if (InParams.Get_ModifierOperation_RevocablePolicy() == ECk_ModifierOperation_RevocablePolicy::NotRevocable &&
-        FMath::IsNearlyEqual(ParamsToUse.Get_ModifierDelta(), 1.0f) &&
-        (ModifierOperation == ECk_ArithmeticOperations_Basic::Multiply || ModifierOperation == ECk_ArithmeticOperations_Basic::Divide))
-    { return {}; }
+        if (FMath::IsNearlyEqual(ParamsToUse.Get_ModifierDelta(), 1.0f) &&
+            (ModifierOperation == ECk_ArithmeticOperations_Basic::Multiply || ModifierOperation == ECk_ArithmeticOperations_Basic::Divide))
+        { return {}; }
+    }
+
+    CK_ENSURE_IF_NOT((ModifierOperation == ECk_ArithmeticOperations_Basic::Divide ? NOT FMath::IsNearlyZero(ParamsToUse.Get_ModifierDelta()) : true),
+        TEXT("Trying to ADD a new Modifier [{}][{}] for Float Attribute [{}] which DIVIDES by 0. Setting it to 1 in non-shipping build"),
+        InModifierName, AttributeComponent, InAttribute)
+    {
+        ParamsToUse.Set_ModifierDelta(1.0f);
+    }
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttribute);
     auto NewModifierEntity = ck::StaticCast<FCk_Handle_FloatAttributeModifier>(NewEntity);
@@ -500,38 +507,17 @@ auto
     {
         case ECk_MinMaxCurrent::Min:
         {
-            FloatAttributeModifier_Utils_Min::Add
-            (
-                NewModifierEntity,
-                ParamsToUse.Get_ModifierDelta(),
-                ParamsToUse.Get_ModifierOperation(),
-                ParamsToUse.Get_ModifierOperation_RevocablePolicy()
-            );
-
+            FloatAttributeModifier_Utils_Min::Add(NewModifierEntity, ParamsToUse.Get_ModifierDelta(),ModifierOperation, RevocablePolicy);
             break;
         }
         case ECk_MinMaxCurrent::Max:
         {
-            FloatAttributeModifier_Utils_Max::Add
-            (
-                NewModifierEntity,
-                ParamsToUse.Get_ModifierDelta(),
-                ParamsToUse.Get_ModifierOperation(),
-                ParamsToUse.Get_ModifierOperation_RevocablePolicy()
-            );
-
+            FloatAttributeModifier_Utils_Max::Add(NewModifierEntity, ParamsToUse.Get_ModifierDelta(),ModifierOperation, RevocablePolicy);
             break;
         }
         case ECk_MinMaxCurrent::Current:
         {
-            FloatAttributeModifier_Utils_Current::Add
-            (
-                NewModifierEntity,
-                ParamsToUse.Get_ModifierDelta(),
-                ParamsToUse.Get_ModifierOperation(),
-                ParamsToUse.Get_ModifierOperation_RevocablePolicy()
-            );
-
+            FloatAttributeModifier_Utils_Current::Add(NewModifierEntity, ParamsToUse.Get_ModifierDelta(),ModifierOperation, RevocablePolicy);
             break;
         }
     }
@@ -551,29 +537,38 @@ auto
     {
         case ECk_MinMaxCurrent::Min:
         {
-            FloatAttributeModifier_Utils_Min::Override
-            (
-                InAttributeModifierEntity,
-                InNewDelta
-            );
+            const auto& ModifierOperation = FloatAttributeModifier_Utils_Min::Get_ModifierOperation(InAttributeModifierEntity);
+
+            CK_ENSURE_IF_NOT((ModifierOperation == ECk_ArithmeticOperations_Basic::Divide ? NOT FMath::IsNearlyZero(InNewDelta) : true),
+                TEXT("Trying to OVERRIDE existing Float Attribute Modifier [{}][{}] with new value which would DIVIDE by 0. Ignoring the change in non-shipping build"),
+                InAttributeModifierEntity, InComponent)
+            { return InAttributeModifierEntity; }
+
+            FloatAttributeModifier_Utils_Min::Override(InAttributeModifierEntity, InNewDelta);
             break;
         }
         case ECk_MinMaxCurrent::Max:
         {
-            FloatAttributeModifier_Utils_Max::Override
-            (
-                InAttributeModifierEntity,
-                InNewDelta
-            );
+            const auto& ModifierOperation = FloatAttributeModifier_Utils_Max::Get_ModifierOperation(InAttributeModifierEntity);
+
+            CK_ENSURE_IF_NOT((ModifierOperation == ECk_ArithmeticOperations_Basic::Divide ? NOT FMath::IsNearlyZero(InNewDelta) : true),
+                TEXT("Trying to OVERRIDE existing Float Attribute Modifier [{}][{}] with new value which would DIVIDE by 0. Ignoring the change in non-shipping build"),
+                InAttributeModifierEntity, InComponent)
+            { return InAttributeModifierEntity; }
+
+            FloatAttributeModifier_Utils_Max::Override(InAttributeModifierEntity, InNewDelta);
             break;
         }
         case ECk_MinMaxCurrent::Current:
         {
-            FloatAttributeModifier_Utils_Current::Override
-            (
-                InAttributeModifierEntity,
-                InNewDelta
-            );
+            const auto& ModifierOperation = FloatAttributeModifier_Utils_Current::Get_ModifierOperation(InAttributeModifierEntity);
+
+            CK_ENSURE_IF_NOT((ModifierOperation == ECk_ArithmeticOperations_Basic::Divide ? NOT FMath::IsNearlyZero(InNewDelta) : true),
+                TEXT("Trying to OVERRIDE existing Float Attribute Modifier [{}][{}] with new value which would DIVIDE by 0. Ignoring the change in non-shipping build"),
+                InAttributeModifierEntity, InComponent)
+            { return InAttributeModifierEntity; }
+
+            FloatAttributeModifier_Utils_Current::Override(InAttributeModifierEntity, InNewDelta);
             break;
         }
     }
@@ -681,28 +676,11 @@ auto
         FCk_Handle_FloatAttributeModifier& InAttributeModifierEntity)
     -> FCk_Handle_FloatAttribute
 {
-    auto AttributeModifierOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttributeModifierEntity);
-    auto AttributeEntity = UCk_Utils_FloatAttribute_UE::CastChecked(AttributeModifierOwnerEntity);
-    auto AttributeOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(AttributeEntity);
-
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAttributeModifierEntity);
 
-    const auto& AttributeComponent = [InAttributeModifierEntity]() -> ECk_MinMaxCurrent
-    {
-        if (FloatAttributeModifier_Utils_Current::Has(InAttributeModifierEntity))
-        { return ECk_MinMaxCurrent::Current; }
+    auto AttributeModifierOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttributeModifierEntity);
 
-        if (FloatAttributeModifier_Utils_Min::Has(InAttributeModifierEntity))
-        { return ECk_MinMaxCurrent::Min; }
-
-        if (FloatAttributeModifier_Utils_Max::Has(InAttributeModifierEntity))
-        { return ECk_MinMaxCurrent::Max; }
-
-        CK_TRIGGER_ENSURE(TEXT("Float Attribute Modifier Entity [{}] does NOT have Min, Max or Current"), InAttributeModifierEntity);
-        return ECk_MinMaxCurrent::Current;
-    }();
-
-    return AttributeEntity;
+    return UCk_Utils_FloatAttribute_UE::CastChecked(AttributeModifierOwnerEntity);
 }
 
 auto
