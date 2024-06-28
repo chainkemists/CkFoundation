@@ -77,7 +77,7 @@ private:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|GameplayTagStack",
               DisplayName = "[Ck] Add Stack to GameplayTagStackContainer")
-    void
+    static void
     Request_AddStack(
         UPARAM(ref) FCk_GameplayTagStackContainer& InStackContainer,
         const FCk_GameplayTagStack& InStack);
@@ -85,23 +85,23 @@ private:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|GameplayTagStack",
               DisplayName = "[Ck] Remove Stack from GameplayTagStackContainer")
-    void
+    static void
     Request_RemoveStack(
         UPARAM(ref) FCk_GameplayTagStackContainer& InStackContainer,
         const FCk_GameplayTagStack& InStack);
 
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|GameplayTagStack",
               DisplayName = "[Ck] Get Contains Tag in GameplayTagStackContainer")
-    bool
+    static bool
     Get_ContainsTag(
         const FCk_GameplayTagStackContainer& InStackContainer,
         const FGameplayTag& InTag);
 
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|GameplayTagStack",
               DisplayName = "[Ck] Get Stack Count in GameplayTagStackContainer")
-    int32
+    static int32
     Get_StackCount(
         const FCk_GameplayTagStackContainer& InStackContainer,
         const FGameplayTag& InTag);
