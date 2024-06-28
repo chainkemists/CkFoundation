@@ -229,6 +229,9 @@ namespace ck
             AttributeDataType InNewModifierDelta)
         -> void
     {
+        if (NOT Ensure(InHandle))
+        { return; }
+
         auto& ModifierFragment = InHandle.template Get<AttributeModifierFragmentType>();
         ModifierFragment._ModifierDelta = InNewModifierDelta;
 
@@ -266,6 +269,12 @@ namespace ck
             const HandleType& InHandle)
         -> const AttributeDataType&
     {
+        if (NOT Ensure(InHandle))
+        {
+            static AttributeDataType Invalid;
+            return Invalid;
+        }
+
         return InHandle.template Get<AttributeModifierFragmentType>().Get_ModifierDelta();
     }
 
@@ -274,9 +283,12 @@ namespace ck
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Get_IsModifierUnique(
             const HandleType& InHandle)
-            -> ECk_Unique
+        -> ECk_Unique
     {
-        const auto AttributeEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        if (NOT Ensure(InHandle))
+        { return {}; }
+
+        const auto& AttributeEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         const auto& NameOfModifier = UCk_Utils_GameplayLabel_UE::Get_Label(InHandle);
 
         const auto Predicate = [&](const HandleType& InCurrentModifier)
@@ -293,6 +305,33 @@ namespace ck
         { return ECk_Unique::Unique; }
 
         return ECk_Unique::NotUnique;
+    }
+
+    template <typename T_DerivedAttributeModifier>
+    auto
+        TUtils_AttributeModifier<T_DerivedAttributeModifier>::
+        Get_ModifierOperation(
+            const HandleType& InHandle)
+        -> ECk_ArithmeticOperations_Basic
+    {
+        if (NOT Ensure(InHandle))
+        { return {}; }
+
+        if (InHandle.template Has<typename AttributeModifierFragmentType::FTag_ModifyAdd>())
+        { return ECk_ArithmeticOperations_Basic::Add; }
+
+        if (InHandle.template Has<typename AttributeModifierFragmentType::FTag_ModifySubtract>())
+        { return ECk_ArithmeticOperations_Basic::Subtract; }
+
+        if (InHandle.template Has<typename AttributeModifierFragmentType::FTag_ModifyMultiply>())
+        { return ECk_ArithmeticOperations_Basic::Multiply; }
+
+        if (InHandle.template Has<typename AttributeModifierFragmentType::FTag_ModifyDivide>())
+        { return ECk_ArithmeticOperations_Basic::Divide; }
+
+        CK_TRIGGER_ENSURE(TEXT("Attribute Modifier [{}] does not have any expected Operation tag"), InHandle);
+
+        return {};
     }
 
     template <typename T_DerivedAttributeModifier>

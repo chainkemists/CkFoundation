@@ -470,26 +470,34 @@ auto
     auto ParamsToUse = InParams;
     ParamsToUse.Set_TargetAttributeName(UCk_Utils_GameplayLabel_UE::Get_Label(InAttribute));
 
-    auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute);
     const auto& ModifierOperation = ParamsToUse.Get_ModifierOperation();
     const auto& AttributeComponent = ParamsToUse.Get_Component();
+    const auto& RevocablePolicy = InParams.Get_ModifierOperation_RevocablePolicy();
 
     CK_ENSURE_IF_NOT(UCk_Utils_ByteAttribute_UE::Has_Component(InAttribute, AttributeComponent),
         TEXT("Byte Attribute [{}] with Owner [{}] does NOT have a [{}] component. Cannot Add Modifier"),
         InAttribute,
-        LifetimeOwner,
+        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute),
         AttributeComponent)
     { return {}; }
 
-    if (InParams.Get_ModifierOperation_RevocablePolicy() == ECk_ModifierOperation_RevocablePolicy::NotRevocable &&
-        ParamsToUse.Get_ModifierDelta() == 0 &&
-        (ModifierOperation == ECk_ArithmeticOperations_Basic::Add || ModifierOperation  == ECk_ArithmeticOperations_Basic::Subtract))
-    { return {}; }
+    if (RevocablePolicy == ECk_ModifierOperation_RevocablePolicy::NotRevocable)
+    {
+        if (ParamsToUse.Get_ModifierDelta() == 0 &&
+            (ModifierOperation == ECk_ArithmeticOperations_Basic::Add || ModifierOperation  == ECk_ArithmeticOperations_Basic::Subtract))
+        { return {}; }
 
-    if (InParams.Get_ModifierOperation_RevocablePolicy() == ECk_ModifierOperation_RevocablePolicy::NotRevocable &&
-        ParamsToUse.Get_ModifierDelta() == 1 &&
-        (ModifierOperation == ECk_ArithmeticOperations_Basic::Multiply || ModifierOperation == ECk_ArithmeticOperations_Basic::Divide))
-    { return {}; }
+        if (ParamsToUse.Get_ModifierDelta() == 1 &&
+            (ModifierOperation == ECk_ArithmeticOperations_Basic::Multiply || ModifierOperation == ECk_ArithmeticOperations_Basic::Divide))
+        { return {}; }
+    }
+
+    CK_ENSURE_IF_NOT((ModifierOperation == ECk_ArithmeticOperations_Basic::Divide ? ParamsToUse.Get_ModifierDelta() != 0 : true),
+        TEXT("Trying to ADD a new Modifier [{}][{}] for Byte Attribute [{}] which DIVIDES by 0. Setting it to 1 in non-shipping build"),
+        InModifierName, AttributeComponent, InAttribute)
+    {
+        ParamsToUse.Set_ModifierDelta(1);
+    }
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttribute);
     auto NewModifierEntity = ck::StaticCast<FCk_Handle_ByteAttributeModifier>(NewEntity);
@@ -499,38 +507,17 @@ auto
     {
         case ECk_MinMaxCurrent::Min:
         {
-            ByteAttributeModifier_Utils_Min::Add
-            (
-                NewModifierEntity,
-                ParamsToUse.Get_ModifierDelta(),
-                ParamsToUse.Get_ModifierOperation(),
-                ParamsToUse.Get_ModifierOperation_RevocablePolicy()
-            );
-
+            ByteAttributeModifier_Utils_Min::Add(NewModifierEntity, ParamsToUse.Get_ModifierDelta(),ModifierOperation, RevocablePolicy);
             break;
         }
         case ECk_MinMaxCurrent::Max:
         {
-            ByteAttributeModifier_Utils_Max::Add
-            (
-                NewModifierEntity,
-                ParamsToUse.Get_ModifierDelta(),
-                ParamsToUse.Get_ModifierOperation(),
-                ParamsToUse.Get_ModifierOperation_RevocablePolicy()
-            );
-
+            ByteAttributeModifier_Utils_Max::Add(NewModifierEntity, ParamsToUse.Get_ModifierDelta(),ModifierOperation, RevocablePolicy);
             break;
         }
         case ECk_MinMaxCurrent::Current:
         {
-            ByteAttributeModifier_Utils_Current::Add
-            (
-                NewModifierEntity,
-                ParamsToUse.Get_ModifierDelta(),
-                ParamsToUse.Get_ModifierOperation(),
-                ParamsToUse.Get_ModifierOperation_RevocablePolicy()
-            );
-
+            ByteAttributeModifier_Utils_Current::Add(NewModifierEntity, ParamsToUse.Get_ModifierDelta(),ModifierOperation, RevocablePolicy);
             break;
         }
     }
@@ -550,29 +537,38 @@ auto
     {
         case ECk_MinMaxCurrent::Min:
         {
-            ByteAttributeModifier_Utils_Min::Override
-            (
-                InAttributeModifierEntity,
-                InNewDelta
-            );
+            const auto& ModifierOperation = ByteAttributeModifier_Utils_Min::Get_ModifierOperation(InAttributeModifierEntity);
+
+            CK_ENSURE_IF_NOT((ModifierOperation == ECk_ArithmeticOperations_Basic::Divide ? InNewDelta != 0 : true),
+                TEXT("Trying to OVERRIDE existing Byte Attribute Modifier [{}][{}] with new value which would DIVIDE by 0. Ignoring the change in non-shipping build"),
+                InAttributeModifierEntity, InComponent)
+            { return InAttributeModifierEntity; }
+
+            ByteAttributeModifier_Utils_Min::Override(InAttributeModifierEntity, InNewDelta);
             break;
         }
         case ECk_MinMaxCurrent::Max:
         {
-            ByteAttributeModifier_Utils_Max::Override
-            (
-                InAttributeModifierEntity,
-                InNewDelta
-            );
+            const auto& ModifierOperation = ByteAttributeModifier_Utils_Max::Get_ModifierOperation(InAttributeModifierEntity);
+
+            CK_ENSURE_IF_NOT((ModifierOperation == ECk_ArithmeticOperations_Basic::Divide ? InNewDelta != 0 : true),
+                TEXT("Trying to OVERRIDE existing Byte Attribute Modifier [{}][{}] with new value which would DIVIDE by 0. Ignoring the change in non-shipping build"),
+                InAttributeModifierEntity, InComponent)
+            { return InAttributeModifierEntity; }
+
+            ByteAttributeModifier_Utils_Max::Override(InAttributeModifierEntity, InNewDelta);
             break;
         }
         case ECk_MinMaxCurrent::Current:
         {
-            ByteAttributeModifier_Utils_Current::Override
-            (
-                InAttributeModifierEntity,
-                InNewDelta
-            );
+            const auto& ModifierOperation = ByteAttributeModifier_Utils_Current::Get_ModifierOperation(InAttributeModifierEntity);
+
+            CK_ENSURE_IF_NOT((ModifierOperation == ECk_ArithmeticOperations_Basic::Divide ? InNewDelta != 0 : true),
+                TEXT("Trying to OVERRIDE existing Byte Attribute Modifier [{}][{}] with new value which would DIVIDE by 0. Ignoring the change in non-shipping build"),
+                InAttributeModifierEntity, InComponent)
+            { return InAttributeModifierEntity; }
+
+            ByteAttributeModifier_Utils_Current::Override(InAttributeModifierEntity, InNewDelta);
             break;
         }
     }
@@ -680,28 +676,11 @@ auto
         FCk_Handle_ByteAttributeModifier& InAttributeModifierEntity)
     -> FCk_Handle_ByteAttribute
 {
-    auto AttributeModifierOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttributeModifierEntity);
-    auto AttributeEntity = UCk_Utils_ByteAttribute_UE::CastChecked(AttributeModifierOwnerEntity);
-    auto AttributeOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(AttributeEntity);
-
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAttributeModifierEntity);
 
-    const auto& AttributeComponent = [InAttributeModifierEntity]() -> ECk_MinMaxCurrent
-    {
-        if (ByteAttributeModifier_Utils_Current::Has(InAttributeModifierEntity))
-        { return ECk_MinMaxCurrent::Current; }
+    auto AttributeModifierOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttributeModifierEntity);
 
-        if (ByteAttributeModifier_Utils_Min::Has(InAttributeModifierEntity))
-        { return ECk_MinMaxCurrent::Min; }
-
-        if (ByteAttributeModifier_Utils_Max::Has(InAttributeModifierEntity))
-        { return ECk_MinMaxCurrent::Max; }
-
-        CK_TRIGGER_ENSURE(TEXT("Byte Attribute Modifier Entity [{}] does NOT have Min, Max or Current"), InAttributeModifierEntity);
-        return ECk_MinMaxCurrent::Current;
-    }();
-
-    return AttributeEntity;
+    return UCk_Utils_ByteAttribute_UE::CastChecked(AttributeModifierOwnerEntity);
 }
 
 auto
