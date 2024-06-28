@@ -134,6 +134,10 @@ namespace ck
         Get_IsModifierUnique(
             const HandleType& InHandle) -> ECk_Unique;
 
+        static auto
+        Get_ModifierOperation(
+            const HandleType& InHandle) -> ECk_ArithmeticOperations_Basic;
+
     private:
         static auto
         Request_ComputeResult(
