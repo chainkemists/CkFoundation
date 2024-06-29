@@ -179,6 +179,13 @@ public:
         UPARAM(ref) FVector& InVector,
         ECk_Vector_Axis_Swizzle InOrder);
 
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Any Axis Nearly Zero (Vec3)",
+              Category = "Ck|Utils|Math|Vector3")
+    static bool
+    Get_IsAnyAxisNearlyZero(
+        FVector InVector);
+
     // Assumes +X is Forward, +Y is Right, +Z is Up
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get World Direction",
@@ -518,6 +525,13 @@ public:
     static void
     SwizzleInplace(
         UPARAM(ref) FVector2D& InVector);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Any Axis Nearly Zero (Vec2)",
+              Category = "Ck|Utils|Math|Vector2")
+    static bool
+    Get_IsAnyAxisNearlyZero(
+        FVector2D InVector);
 
     // Assumes +X is Up, +Y is Right
     UFUNCTION(BlueprintPure,
