@@ -310,6 +310,24 @@ auto
 
 auto
     UCk_Utils_Vector3_UE::
+    Get_IsAnyAxisNearlyZero(
+        FVector InVector)
+    -> bool
+{
+    if (FMath::IsNearlyZero(InVector.X))
+    { return true; }
+
+    if (FMath::IsNearlyZero(InVector.Y))
+    { return true; }
+
+    if (FMath::IsNearlyZero(InVector.Z))
+    { return true; }
+
+    return false;
+}
+
+auto
+    UCk_Utils_Vector3_UE::
     Get_WorldDirection(
         ECk_Direction_3D InDirection)
     -> FVector
@@ -975,6 +993,21 @@ auto
     -> void
 {
     InVector = Get_Swizzle(InVector);
+}
+
+auto
+    UCk_Utils_Vector2_UE::
+    Get_IsAnyAxisNearlyZero(
+        FVector2D InVector)
+    -> bool
+{
+    if (FMath::IsNearlyZero(InVector.X))
+    { return true; }
+
+    if (FMath::IsNearlyZero(InVector.Y))
+    { return true; }
+
+    return false;
 }
 
 auto
