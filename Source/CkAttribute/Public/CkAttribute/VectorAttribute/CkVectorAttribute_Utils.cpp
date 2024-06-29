@@ -494,8 +494,8 @@ auto
     }
 
     CK_ENSURE_IF_NOT(ModifierOperation == ECk_ArithmeticOperations_Basic::Divide ? NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(ParamsToUse.Get_ModifierDelta()) : true,
-    TEXT("Trying to ADD a new Modifier [{}][{}] for Vector Attribute [{}] which DIVIDES by 0. Setting it to 1 in non-shipping build"),
-    InModifierName, AttributeComponent, InAttribute)
+        TEXT("Trying to ADD a new Modifier [{}][{}] for Vector Attribute [{}] which DIVIDES by 0. Setting it to 1 in non-shipping build"),
+        InModifierName, AttributeComponent, InAttribute)
     {
         ParamsToUse.Set_ModifierDelta(FVector::OneVector);
     }
