@@ -204,6 +204,44 @@ auto
 
 auto
     UCk_Utils_Actor_UE::
+    Get_SocketTransform(
+        AActor* InActor,
+        FName InSocketName,
+        ERelativeTransformSpace InTransformSpace)
+    -> TArray<FCk_Utils_Actor_SocketTransforms>
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to Get_HasBoneInSkeletonMesh"))
+    { return {}; }
+
+    auto Ret = TArray<FCk_Utils_Actor_SocketTransforms>{};
+
+    auto MeshComponents = TArray<UMeshComponent*>{};
+    InActor->GetComponents<UMeshComponent>(MeshComponents);
+
+    for (const auto MeshComponent : MeshComponents)
+    {
+        if (MeshComponent->DoesSocketExist(InSocketName))
+        {
+            Ret.Emplace(FCk_Utils_Actor_SocketTransforms{MeshComponent, MeshComponent->GetSocketTransform(InSocketName, InTransformSpace)});
+        }
+    }
+
+    return Ret;
+}
+
+auto
+    UCk_Utils_Actor_UE::
+    Get_SocketTransform_Exec(
+        AActor* InActor,
+        FName InSocketName,
+        ERelativeTransformSpace InTransformSpace)
+    -> TArray<FCk_Utils_Actor_SocketTransforms>
+{
+    return Get_SocketTransform(InActor, InSocketName, InTransformSpace);
+}
+
+auto
+    UCk_Utils_Actor_UE::
     Request_SetActorLabel(
         AActor* InActor,
         const FString& InNewActorLabel,
