@@ -89,6 +89,17 @@ namespace ck::algo
        return Algo::CountIf(InContainer, InFunc);
     }
 
+    template <typename T_Container, typename T_PredicateFunction>
+    auto
+        FindIndex(
+            const T_Container& InContainer,
+            T_PredicateFunction InFunc)
+        -> int32
+    {
+        using ElementType = typename T_Container::ElementType;
+        return InContainer.IndexOfByPredicate(InFunc);
+    }
+
     template <typename T_Container, typename T_UnaryFunction>
     auto
         ForEach(
@@ -388,6 +399,25 @@ namespace ck::algo
         Result.Append(Difference.data(), Difference.size());
 
         return Result;
+    }
+
+    template <typename T_ValueType>
+    auto
+        PartialSum(
+            const TArray<T_ValueType>& InWeights)
+        -> TArray<T_ValueType>
+    {
+        auto PartialSums = TArray<T_ValueType>{};
+        PartialSums.AddUninitialized(InWeights.Num());
+
+        auto CumulativeSum = 0.0f;
+        for (auto Index = 0; Index < InWeights.Num(); ++Index)
+        {
+            CumulativeSum += InWeights[Index];
+            PartialSums[Index] = CumulativeSum;
+        }
+
+        return PartialSums;
     }
 
     template <typename T_Container>
