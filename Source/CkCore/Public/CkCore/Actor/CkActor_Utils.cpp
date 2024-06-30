@@ -12,6 +12,8 @@
 
 #include "CkCore/Object/CkObject_Utils.h"
 
+#include "Components/InstancedStaticMeshComponent.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 FCk_Utils_Actor_SpawnActor_Params::
@@ -220,10 +222,25 @@ auto
 
     for (const auto MeshComponent : MeshComponents)
     {
-        if (MeshComponent->DoesSocketExist(InSocketName))
+        if (NOT MeshComponent->DoesSocketExist(InSocketName))
+        { continue; }
+
+        if (const auto InstancedStaticMesh = Cast<UInstancedStaticMeshComponent>(MeshComponent))
         {
-            Ret.Emplace(FCk_Utils_Actor_SocketTransforms{MeshComponent, MeshComponent->GetSocketTransform(InSocketName, InTransformSpace)});
+            const auto& SocketTransform = InstancedStaticMesh->GetSocketTransform(InSocketName, InTransformSpace);
+
+            for (auto Index = 0; Index < InstancedStaticMesh->GetInstanceCount(); ++Index)
+            {
+                auto InstanceTransform = FTransform{};
+                InstancedStaticMesh->GetInstanceTransform(Index, InstanceTransform);
+
+                Ret.Emplace(FCk_Utils_Actor_SocketTransforms{MeshComponent, InstanceTransform * SocketTransform});
+            }
+
+            continue;
         }
+
+        Ret.Emplace(FCk_Utils_Actor_SocketTransforms{MeshComponent, MeshComponent->GetSocketTransform(InSocketName, InTransformSpace)});
     }
 
     return Ret;
