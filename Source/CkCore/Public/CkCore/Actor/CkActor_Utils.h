@@ -5,6 +5,8 @@
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include <Components/MeshComponent.h>
+#include <Engine/LevelScriptActor.h>
 #include <CoreMinimal.h>
 #include <Kismet/BlueprintFunctionLibrary.h>
 #include <Kismet/GameplayStatics.h>
@@ -79,6 +81,32 @@ public:
     CK_PROPERTY(_CollisionHandlingOverride);
     CK_PROPERTY(_NetworkingType);
     CK_PROPERTY(_SpawnPolicy);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKCORE_API FCk_Utils_Actor_SocketTransforms
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Utils_Actor_SocketTransforms);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess))
+    TWeakObjectPtr<UMeshComponent> _ComponentWithSocket = nullptr;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess))
+    FTransform _Transform;
+
+public:
+    CK_PROPERTY_GET(_ComponentWithSocket);
+    CK_PROPERTY_GET(_Transform);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Utils_Actor_SocketTransforms, _ComponentWithSocket, _Transform);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -225,6 +253,26 @@ public:
     Get_DoesBoneExistInSkeletalMesh(
         AActor* InActor,
         FName InBoneName);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Actor",
+              DisplayName = "[Ck] Get Socket Transform",
+              meta = (DefaultToSelf = "InActor"))
+    static TArray<FCk_Utils_Actor_SocketTransforms>
+    Get_SocketTransform(
+        AActor* InActor,
+        FName InSocketName,
+        ERelativeTransformSpace InTransformSpace = RTS_World);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Actor",
+              DisplayName = "[Ck] Get Socket Transform",
+              meta = (DefaultToSelf = "InActor"))
+    static TArray<FCk_Utils_Actor_SocketTransforms>
+    Get_SocketTransform_Exec(
+        AActor* InActor,
+        FName InSocketName,
+        ERelativeTransformSpace InTransformSpace = RTS_World);
 
 public:
     /**

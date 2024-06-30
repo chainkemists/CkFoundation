@@ -1,16 +1,19 @@
 #include "CkActor_Utils.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Game/CkGame_Utils.h"
+#include "CkCore/Object/CkObject_Utils.h"
+
+#include <Components/InstancedStaticMeshComponent.h>
 #include <CoreMinimal.h>
 #include <GameFramework/Pawn.h>
 #include <Engine/World.h>
 #include <Components/SkeletalMeshComponent.h>
 #include <Components/StaticMeshComponent.h>
-
-#include "CkCore/Ensure/CkEnsure.h"
-
-#include "CkCore/Game/CkGame_Utils.h"
-
-#include "CkCore/Object/CkObject_Utils.h"
+#include <Engine/GameInstance.h>
+#include <Engine/Level.h>
+#include <Engine/StaticMesh.h>
+#include <Engine/StaticMeshSocket.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -200,6 +203,107 @@ auto
     const auto& BoneIndex      = SkeletalMeshComp->GetBoneIndex(SocketBoneName);
 
     return BoneIndex != INDEX_NONE;
+}
+
+auto
+    UCk_Utils_Actor_UE::
+    Get_SocketTransform(
+        AActor* InActor,
+        FName InSocketName,
+        ERelativeTransformSpace InTransformSpace)
+    -> TArray<FCk_Utils_Actor_SocketTransforms>
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to Get_HasBoneInSkeletonMesh"))
+    { return {}; }
+
+    auto Ret = TArray<FCk_Utils_Actor_SocketTransforms>{};
+
+    auto MeshComponents = TArray<UMeshComponent*>{};
+    InActor->GetComponents<UMeshComponent>(MeshComponents);
+
+    for (const auto MeshComponent : MeshComponents)
+    {
+        if (const auto& InstancedStaticMeshComponent = Cast<UInstancedStaticMeshComponent>(MeshComponent);
+            ck::IsValid(InstancedStaticMeshComponent))
+        {
+            const auto& StaticMesh = InstancedStaticMeshComponent->GetStaticMesh();
+
+            if (ck::Is_NOT_Valid(StaticMesh))
+            { continue; }
+
+            const auto& FoundSocket = StaticMesh->FindSocket(InSocketName);
+
+            if (ck::Is_NOT_Valid(FoundSocket, ck::IsValid_Policy_NullptrOnly{}))
+            { continue; }
+
+            const auto& InstancesCount = InstancedStaticMeshComponent->GetNumInstances();
+
+            for (auto i = 0; i < InstancesCount; ++i)
+            {
+                auto InstanceTransform = FTransform{};
+                constexpr auto WorldSpace = true;
+                InstancedStaticMeshComponent->GetInstanceTransform(i, InstanceTransform, WorldSpace);
+
+                //InstancedStaticMeshComponent->GetSocketLocation()
+                auto SocketTransform = FTransform{};
+
+                FoundSocket->GetSocketTransform(SocketTransform, InstancedStaticMeshComponent);
+
+                const auto& WorldSocketTransform = SocketTransform * InstanceTransform;
+
+                FTransform FinalTransform;
+                switch (InTransformSpace)
+                {
+                    case RTS_World:
+                        FinalTransform = WorldSocketTransform;
+                        break;
+                    case RTS_Actor:
+                        if (AActor* Owner = InstancedStaticMeshComponent->GetOwner())
+                        {
+                            FTransform ActorTransform = Owner->GetActorTransform();
+                            FinalTransform = WorldSocketTransform.GetRelativeTransform(ActorTransform);
+                        }
+                        else
+                        {
+                            FinalTransform = WorldSocketTransform; // Fallback to world if no owner
+                        }
+                        break;
+                    case RTS_Component:
+                        FinalTransform = WorldSocketTransform.GetRelativeTransform(InstancedStaticMeshComponent->GetComponentTransform());
+                        break;
+                    case RTS_ParentBoneSpace:
+                        // ParentBoneSpace is not typically used for static meshes, handle if necessary
+                        FinalTransform = WorldSocketTransform; // Default behavior
+                        break;
+                    default:
+                        FinalTransform = WorldSocketTransform; // Default to world transform
+                        break;
+                }
+
+                Ret.Emplace(FCk_Utils_Actor_SocketTransforms{MeshComponent, FinalTransform});
+            }
+
+            continue;
+        }
+
+        if (MeshComponent->DoesSocketExist(InSocketName))
+        {
+            Ret.Emplace(FCk_Utils_Actor_SocketTransforms{MeshComponent, MeshComponent->GetSocketTransform(InSocketName, InTransformSpace)});
+        }
+    }
+
+    return Ret;
+}
+
+auto
+    UCk_Utils_Actor_UE::
+    Get_SocketTransform_Exec(
+        AActor* InActor,
+        FName InSocketName,
+        ERelativeTransformSpace InTransformSpace)
+    -> TArray<FCk_Utils_Actor_SocketTransforms>
+{
+    return Get_SocketTransform(InActor, InSocketName, InTransformSpace);
 }
 
 auto
