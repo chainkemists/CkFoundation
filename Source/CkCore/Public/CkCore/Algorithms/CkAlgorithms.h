@@ -52,6 +52,10 @@ namespace ck::algo
     [[nodiscard]]
     auto CountIf(const T_Container& InContainer, T_PredicateFunction InFunc) -> int32;
 
+    template <typename T_Container, typename T_PredicateFunction>
+    [[nodiscard]]
+    auto FindIndex(const T_Container& InContainer, T_PredicateFunction InFunc) -> int32;
+
     template <typename T_Container, typename T_UnaryFunction>
     auto ForEach(T_Container& InContainer, T_UnaryFunction InFunc) -> void;
 
@@ -127,6 +131,10 @@ namespace ck::algo
     template <typename T_ValueType>
     [[nodiscard]]
     auto Except(const TArray<T_ValueType>& InContainerA, const TArray<T_ValueType>& InContainerB) -> TArray<T_ValueType>;
+
+    template <typename T_ValueType>
+    [[nodiscard]]
+    auto PartialSum(const TArray<T_ValueType>& InWeights) -> TArray<T_ValueType>;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
