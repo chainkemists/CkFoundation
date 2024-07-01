@@ -324,7 +324,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_Ability_ActivationRequirementsResult _ActivationRequirementResult;
+    ECk_Ability_ActivationRequirementsResult _ActivationRequirementResult = ECk_Ability_ActivationRequirementsResult::RequirementsMet;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -612,7 +612,7 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               Category = "Name",
               meta = (AllowPrivateAccess = true, EditCondition = "_HasDisplayName"))
-    FName _DisplayName;
+    FName _DisplayName = NAME_None;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               Category = "OnGive",
