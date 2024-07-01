@@ -85,7 +85,8 @@ auto
         for (const auto Injector : Injectors.Get_ProcessorInjectors())
         {
             CK_ENSURE_IF_NOT(ck::IsValid(Injector),
-                TEXT("Encountered an INVALID Injector in ProcessorInjectors Asset [{}].{}"), ProcessorInjectors, ck::Context(this))
+                TEXT("Encountered an INVALID Injector in ProcessorInjectors Asset [{}] with Description [{}].{}"),
+                ProcessorInjectors, Injectors.Get_Description(), ck::Context(this))
             { continue; }
 
             const auto NewInjector = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_EcsWorld_ProcessorInjector_Base_UE>(this, Injector, nullptr);
