@@ -20,6 +20,18 @@ auto
 }
 
 auto
+    FCk_Ecs_ProcessorInjectors_Info::
+    Get_Description() const
+    -> FName
+{
+#if WITH_EDITORONLY_DATA
+    return _Description;
+#else
+    return TEXT("Non-editor build - No Description");
+#endif
+}
+
+auto
     UCk_Utils_Ecs_Settings_UE::
     Get_HandleDebuggerBehavior()
     -> ECk_Ecs_HandleDebuggerBehavior

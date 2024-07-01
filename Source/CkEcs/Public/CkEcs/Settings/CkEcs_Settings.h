@@ -59,6 +59,9 @@ public:
     CK_PROPERTY(_TickingGroup);
     CK_PROPERTY_GET(_MaximumNumberOfPumps);
     CK_PROPERTY_GET(_ProcessorInjectors);
+
+    auto
+    Get_Description() const -> FName;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
