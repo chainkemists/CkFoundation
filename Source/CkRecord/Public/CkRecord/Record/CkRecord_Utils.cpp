@@ -70,6 +70,16 @@ auto
 
 auto
     UCk_Utils_RecordOfEntities_UE::
+    Get_ContainsEntry(
+        const FCk_Handle& InRecordHandle,
+        const FCk_Handle& InRecordEntryHandle)
+    -> bool
+{
+    return UtilsType::Get_ContainsEntry(InRecordHandle, InRecordEntryHandle);
+}
+
+auto
+    UCk_Utils_RecordOfEntities_UE::
     ForEach_ValidEntry(
         FCk_Handle& InAbilityOwnerEntity,
         const FInstancedStruct& InOptionalPayload,
