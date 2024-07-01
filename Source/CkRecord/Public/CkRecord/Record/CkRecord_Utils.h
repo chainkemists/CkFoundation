@@ -63,6 +63,16 @@ namespace ck
             const FCk_Handle& InRecordHandle,
             const MaybeTypeSafeHandle& InRecordEntry) -> bool;
 
+        [[nodiscard]]
+        static auto
+        Get_Entries(
+            const FCk_Handle& InRecordHandle) -> TArray<RecordEntryMaybeTypeSafeHandle>;
+
+        [[nodiscard]]
+        static auto
+        Get_ValidEntries(
+            const FCk_Handle& InRecordHandle) -> TArray<RecordEntryMaybeTypeSafeHandle>;
+
     public:
         template <typename T_Predicate>
         [[nodiscard]]
@@ -266,6 +276,43 @@ namespace ck
         });
 
         return ExtensionContainEntry;
+    }
+
+    template <typename T_DerivedRecord>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        Get_Entries(
+            const FCk_Handle& InRecordHandle)
+        -> TArray<RecordEntryMaybeTypeSafeHandle>
+    {
+        if (NOT InRecordHandle.Has<RecordType>())
+        { return {}; }
+
+        const auto& Fragment = InRecordHandle.Get<RecordType>();
+        auto Entries = Fragment.Get_RecordEntries();
+
+        RecordOfEntityExtensions_Utils::ForEach_Entry(InRecordHandle,
+        [&](const FCk_Handle_EntityExtension& InEntityExtension)
+        {
+            Entries.Append(Get_Entries(InEntityExtension));
+        });
+
+        return Entries;
+    }
+
+    template <typename T_DerivedRecord>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        Get_ValidEntries(
+            const FCk_Handle& InRecordHandle)
+        -> TArray<RecordEntryMaybeTypeSafeHandle>
+    {
+        const auto& Entries = Get_Entries(InRecordHandle);
+
+        return ck::algo::Filter(Entries, [](const RecordEntryMaybeTypeSafeHandle& InRecordEntry) -> bool
+        {
+           return ck::IsValid(InRecordEntry);
+        });
     }
 
     template <typename T_DerivedRecord>
@@ -760,7 +807,7 @@ public:
         const FCk_Handle& InHandle);
 
 public:
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][Record] Get Has Valid Entry If",
               Category = "Ck|Utils|Record",
               meta=(AutoCreateRefTerm="InOptionalPayload"))
@@ -770,7 +817,7 @@ public:
         const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InHandle_OutResult InPredicate);
 
-    UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintPure,
               DisplayName = "[Ck][Record] Get Valid Entry If",
               Category = "Ck|Utils|Record",
               meta=(AutoCreateRefTerm="InOptionalPayload"))
@@ -779,6 +826,14 @@ public:
         const FCk_Handle& InRecordHandle,
         const FInstancedStruct& InOptionalPayload,
         FCk_Predicate_InHandle_OutResult InPredicate);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][Record] Get Contains Entry",
+              Category = "Ck|Utils|Record")
+    static bool
+    Get_ContainsEntry(
+        const FCk_Handle& InRecordHandle,
+        const FCk_Handle& InRecordEntryHandle);
 
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck][Record] For Each Valid Entry",
