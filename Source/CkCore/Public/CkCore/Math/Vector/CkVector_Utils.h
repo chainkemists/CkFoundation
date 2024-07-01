@@ -49,11 +49,11 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
         meta=(AllowPrivateAccess))
-    FVector _Result;
+    FVector _Result = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
         meta=(AllowPrivateAccess))
-    FVector _ActorLocation;
+    FVector _ActorLocation = FVector::ZeroVector;
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_LocationResultWithActorLocation, _Result, _ActorLocation);
