@@ -1,8 +1,11 @@
 #include "CkVectorAttribute_Utils.h"
 
 #include "CkAttribute/CkAttribute_Log.h"
+
 #include "CkCore/Math/Vector/CkVector_Utils.h"
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
+
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment.h"
 
@@ -538,6 +541,9 @@ auto
     {
         case ECk_MinMaxCurrent::Min:
         {
+            if (UCk_Utils_Arithmetic_UE::Get_IsNearlyEqual(VectorAttributeModifier_Utils_Min::Get_ModifierDeltaValue(InAttributeModifierEntity), InNewDelta))
+            { return InAttributeModifierEntity; }
+
             const auto& ModifierOperation = VectorAttributeModifier_Utils_Min::Get_ModifierOperation(InAttributeModifierEntity);
 
             CK_ENSURE_IF_NOT((ModifierOperation == ECk_ArithmeticOperations_Basic::Divide ? NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(InNewDelta) : true),
@@ -550,6 +556,9 @@ auto
         }
         case ECk_MinMaxCurrent::Max:
         {
+            if (UCk_Utils_Arithmetic_UE::Get_IsNearlyEqual(VectorAttributeModifier_Utils_Max::Get_ModifierDeltaValue(InAttributeModifierEntity), InNewDelta))
+            { return InAttributeModifierEntity; }
+
             const auto& ModifierOperation = VectorAttributeModifier_Utils_Max::Get_ModifierOperation(InAttributeModifierEntity);
 
             CK_ENSURE_IF_NOT((ModifierOperation == ECk_ArithmeticOperations_Basic::Divide ? NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(InNewDelta) : true),
@@ -562,6 +571,9 @@ auto
         }
         case ECk_MinMaxCurrent::Current:
         {
+            if (UCk_Utils_Arithmetic_UE::Get_IsNearlyEqual(VectorAttributeModifier_Utils_Current::Get_ModifierDeltaValue(InAttributeModifierEntity), InNewDelta))
+            { return InAttributeModifierEntity; }
+
             const auto& ModifierOperation = VectorAttributeModifier_Utils_Current::Get_ModifierOperation(InAttributeModifierEntity);
 
             CK_ENSURE_IF_NOT((ModifierOperation == ECk_ArithmeticOperations_Basic::Divide ? NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(InNewDelta) : true),
