@@ -439,9 +439,6 @@ auto
         const FCk_Delegate_AbilityOwner_OnAbilityGivenOrNot& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
-    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot,
-        InRequest.PopulateRequestHandle(InAbilityOwnerHandle), InDelegate);
-
     Request_GiveAbility(InAbilityOwnerHandle, InRequest, InDelegate);
 
     CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAbilityOwnerHandle),
@@ -492,9 +489,6 @@ auto
         const FCk_Delegate_AbilityOwner_OnAbilityRevokedOrNot& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
-    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityRevokedOrNot,
-        InRequest.PopulateRequestHandle(InAbilityOwnerHandle), InDelegate);
-
     Request_RevokeAbility(InAbilityOwnerHandle, InRequest, InDelegate);
 
     CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAbilityOwnerHandle),
