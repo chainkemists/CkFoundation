@@ -1,6 +1,9 @@
 #pragma once
 
 #include "CkAttribute_Utils.h"
+
+#include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
+
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -233,6 +236,10 @@ namespace ck
         { return; }
 
         auto& ModifierFragment = InHandle.template Get<AttributeModifierFragmentType>();
+
+        if (UCk_Utils_Arithmetic_UE::Get_IsNearlyEqual(ModifierFragment._ModifierDelta, InNewModifierDelta))
+        { return; }
+
         ModifierFragment._ModifierDelta = InNewModifierDelta;
 
         auto LifetimeOwnerAsAttributeEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
