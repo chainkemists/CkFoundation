@@ -259,6 +259,15 @@ private:
     FCk_Handle_AbilityOwner
     DoGet_AbilityOwnerEntity();
 
+    // Non-const by design to avoid errors where this is called on the CDO and the Ability Handle is Invalid
+    UFUNCTION(BlueprintCallable,
+              BlueprintPure = true,
+              Category = "Ck|Ability|Script",
+              DisplayName = "[Ck][AbilityScript] Get Context Entity With Actor",
+              meta = (CompactNodeTitle="ContextEntityWithActor", HideSelfPin = true))
+    FCk_Handle
+    DoGet_ContextEntityWithActor();
+
 public:
     UFUNCTION(BlueprintCallable,
               BlueprintPure = true,
