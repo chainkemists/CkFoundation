@@ -1,21 +1,22 @@
 #include "CkEditorToolbar_Subsystem.h"
 
+#include "CkResourceLoader/CkResourceLoader_Processor.h"
+#include "CkResourceLoader/CkResourceLoader_Utils.h"
+
 #include "CkEditorToolbar/Settings/CkEditorToolbar_Settings.h"
 
-#include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkCore/Format/CkFormat.h"
+#include "CkCore/Object/CkObject_Utils.h"
 
-#include "CkEditorToolbar/Settings/CkEditorToolbar_Settings.h"
 #include "CkEditorToolbar/CkEditorToolbar_Log.h"
 
 #include "CkUI/CkUI_Utils.h"
 
-#include <Blueprint/WidgetTree.h>
+#include "Blueprint/UserWidget.h"
 #include <EditorUtilityWidget.h>
 #include <LevelEditor.h>
 #include <Components/Widget.h>
-#include "Blueprint/UserWidget.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -33,6 +34,9 @@ auto
 
     if (UCk_Utils_EditorOnly_UE::Get_IsCommandletOrCooking())
     { return; }
+
+    _World.Add<ck::FProcessor_ResourceLoader_HandleRequests>(_World.Get_Registry());
+    _AssetLoaderEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_World.Get_Registry());
 
     // When changing the map, clean up and refresh the toolbar appropriately
     auto& LevelEditorModule = FModuleManager::LoadModuleChecked<FLevelEditorModule>(TEXT("LevelEditor"));
@@ -251,7 +255,17 @@ auto
                 if (ck::Is_NOT_Valid(ToolbarUtilityWidget))
                 { continue; }
 
-                const auto& Widget = EditorToolbarSubsystem->Request_CreateToolbarWidget(ToolbarUtilityWidget);
+                UCk_Utils_ResourceLoader_UE::Request_LoadObject
+                (
+                    _AssetLoaderEntity,
+                    FCk_Request_ResourceLoader_LoadObject{FCk_ResourceLoader_ObjectReference_Soft{ToolbarUtilityWidget}}
+                    .Set_LoadingPolicy(ECk_ResourceLoader_LoadingPolicy::Synchronous),
+                    {}
+                );
+
+                _World.Tick(FCk_Time::ZeroSecond());
+
+                const auto& Widget = EditorToolbarSubsystem->Request_CreateToolbarWidget(ToolbarUtilityWidget.ResolveClass());
 
                 const auto& GeneratedWidgetName = ck::Format_UE(TEXT("CkEditorToolbar_{}"), ToolbarUtilityWidget.ToString());
 
