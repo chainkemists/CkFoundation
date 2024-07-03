@@ -6,6 +6,26 @@
 
 auto
     UCk_Utils_Core_UserSettings_UE::
+    Get_DefaultDebugNameVerbosity()
+    -> ECk_DebugNameVerbosity_Policy
+{
+#if NOT CK_DEBUG_NAME_FORCE_VERBOSE
+    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Core_UserSettings_UE>()->Get_DefaultDebugNameVerbosity();
+#else
+    return ECk_DebugNameVerbosity_Policy::Verbose;
+#endif
+}
+
+auto
+    UCk_Utils_Core_UserSettings_UE::
+    Get_EnsureBreakInBlueprintsPolicy()
+    -> ECk_EnsureBreakInBlueprints_Policy
+{
+    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Core_UserSettings_UE>()->Get_EnsureBreakInBlueprintsPolicy();
+}
+
+auto
+    UCk_Utils_Core_UserSettings_UE::
     Get_EnsureDisplayPolicy()
     -> ECk_EnsureDisplay_Policy
 {
@@ -26,22 +46,44 @@ auto
 
 auto
     UCk_Utils_Core_UserSettings_UE::
-    Get_DefaultDebugNameVerbosity()
-    -> ECk_DebugNameVerbosity_Policy
+    Set_DefaultDebugNameVerbosity(
+        [[maybe_unused]]
+        ECk_DebugNameVerbosity_Policy InNewPolicy)
+    -> void
 {
 #if NOT CK_DEBUG_NAME_FORCE_VERBOSE
-    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Core_UserSettings_UE>()->Get_DefaultDebugNameVerbosity();
-#else
-    return ECk_DebugNameVerbosity_Policy::Verbose;
+    UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Core_UserSettings_UE>()->Set_DefaultDebugNameVerbosity(InNewPolicy);
 #endif
 }
 
 auto
     UCk_Utils_Core_UserSettings_UE::
-    Get_EnsureBreakInBlueprintsPolicy()
-    -> ECk_EnsureBreakInBlueprints_Policy
+    Set_EnsureBreakInBlueprintsPolicy(
+        ECk_EnsureBreakInBlueprints_Policy InNewPolicy)
+    -> void
 {
-    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Core_UserSettings_UE>()->Get_EnsureBreakInBlueprintsPolicy();
+    UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Core_UserSettings_UE>()->Set_EnsureBreakInBlueprintsPolicy(InNewPolicy);
+}
+
+auto
+    UCk_Utils_Core_UserSettings_UE::
+    Set_EnsureDisplayPolicy(
+        [[maybe_unused]]
+        ECk_EnsureDisplay_Policy InNewPolicy)
+    -> void
+{
+#if WITH_EDITOR
+    UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Core_UserSettings_UE>()->Set_EnsureDisplayPolicy(InNewPolicy);
+#endif
+}
+
+auto
+    UCk_Utils_Core_UserSettings_UE::
+    Set_EnsureDetailsPolicy(
+        ECk_EnsureDetails_Policy InNewPolicy)
+    -> void
+{
+    UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Core_UserSettings_UE>()->Set_EnsureDetailsPolicy(InNewPolicy);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
