@@ -81,7 +81,7 @@ namespace ck
 
 namespace ck::algo
 {
-    struct MatchesAnyAbilityActivationCancelledTags
+    struct MatchesAnyAbilityActivationCancelledTagsOnSelf
     {
     public:
         auto operator()(const FCk_Handle& InHandle) const -> bool;
@@ -90,7 +90,21 @@ namespace ck::algo
         FGameplayTagContainer _Tags;
 
     public:
-        CK_DEFINE_CONSTRUCTOR(MatchesAnyAbilityActivationCancelledTags, _Tags);
+        CK_DEFINE_CONSTRUCTOR(MatchesAnyAbilityActivationCancelledTagsOnSelf, _Tags);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct MatchesAnyAbilityActivationCancelledTagsOnOwner
+    {
+    public:
+        auto operator()(const FCk_Handle& InHandle) const -> bool;
+
+    private:
+        FGameplayTagContainer _Tags;
+
+    public:
+        CK_DEFINE_CONSTRUCTOR(MatchesAnyAbilityActivationCancelledTagsOnOwner, _Tags);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
