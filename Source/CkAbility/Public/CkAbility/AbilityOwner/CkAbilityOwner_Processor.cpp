@@ -714,7 +714,7 @@ namespace ck
                 // Try Deactivate our own Ability if we have one
                 if (UCk_Utils_Ability_UE::Has(InAbilityOwnerEntity))
                 {
-                    if (const auto Condition = algo::MatchesAnyAbilityActivationCancelledTags{GrantedTags};
+                    if (const auto Condition = algo::MatchesAnyAbilityActivationCancelledTagsOnSelf{GrantedTags};
                         Condition(InAbilityOwnerEntity))
                     {
                         auto MyOwner = UCk_Utils_AbilityOwner_UE::CastChecked(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityOwnerEntity));
@@ -745,7 +745,7 @@ namespace ck
 
                         DoHandleRequest(InAbilityOwnerEntity, InAbilityOwnerComp, FCk_Request_AbilityOwner_DeactivateAbility{InAbilityEntityToCancel});
                     },
-                    algo::MatchesAnyAbilityActivationCancelledTags{GrantedTags}
+                    algo::MatchesAnyAbilityActivationCancelledTagsOnOwner{GrantedTags}
                 );
 
                 UCk_Utils_Ability_UE::DoActivate(InAbilityOwnerEntity, InAbilityToActivateEntity, InRequest.Get_OptionalPayload());
@@ -1024,7 +1024,7 @@ namespace ck
                 UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(InHandle,
                     FCk_Request_AbilityOwner_DeactivateAbility{InAbilityEntityToCancel}, {});
             },
-            algo::MatchesAnyAbilityActivationCancelledTags{ActiveTags}
+            algo::MatchesAnyAbilityActivationCancelledTagsOnOwner{ActiveTags}
         );
 
         if (InAbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags(InHandle))
