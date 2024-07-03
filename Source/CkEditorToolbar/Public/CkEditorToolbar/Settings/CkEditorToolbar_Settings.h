@@ -36,8 +36,8 @@ public:
     CK_GENERATED_BODY(FCk_EditorToolbar_ExtensionWidgets);
 
 private:
-    UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
-    TArray<TSoftClassPtr<UEditorUtilityWidget>> _UtilityWidgets;
+    UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true, MetaClass="EditorUtilityWidget"))
+    TArray<FSoftClassPath> _UtilityWidgets;
 
 public:
     CK_PROPERTY_GET(_UtilityWidgets);
