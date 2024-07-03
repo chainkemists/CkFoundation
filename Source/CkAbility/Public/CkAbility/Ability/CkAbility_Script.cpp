@@ -483,6 +483,14 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
+    DoGet_ContextEntityWithActor()
+    -> FCk_Handle
+{
+    return UCk_Utils_OwningActor_UE::TryGet_Entity_OwningActor_InOwnershipChain(DoGet_AbilityEntity());
+}
+
+auto
+    UCk_Ability_Script_PDA::
     Get_Data() const
     -> const FCk_Ability_Script_Data&
 {
