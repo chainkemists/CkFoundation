@@ -66,7 +66,7 @@ class CKCORE_API UCk_Core_UserSettings_UE : public UCk_Plugin_UserSettings_UE
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Core_ProjectSettings_UE);
+    CK_GENERATED_BODY(UCk_Core_UserSettings_UE);
 
 private:
     UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Debug",
@@ -86,10 +86,10 @@ private:
     ECk_EnsureDetails_Policy _EnsureDetailsPolicy = ECk_EnsureDetails_Policy::MessageAndStackTrace;
 
 public:
-    CK_PROPERTY_GET(_DefaultDebugNameVerbosity);
-    CK_PROPERTY_GET(_EnsureDisplayPolicy);
-    CK_PROPERTY_GET(_EnsureDetailsPolicy);
-    CK_PROPERTY_GET(_EnsureBreakInBlueprintsPolicy);
+    CK_PROPERTY(_DefaultDebugNameVerbosity);
+    CK_PROPERTY(_EnsureDisplayPolicy);
+    CK_PROPERTY(_EnsureDetailsPolicy);
+    CK_PROPERTY(_EnsureBreakInBlueprintsPolicy);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -100,13 +100,59 @@ class CKCORE_API UCk_Utils_Core_ProjectSettings_UE
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class CKCORE_API UCk_Utils_Core_UserSettings_UE
+UCLASS()
+class CKCORE_API UCk_Utils_Core_UserSettings_UE : public UBlueprintFunctionLibrary
 {
+    GENERATED_BODY()
+
 public:
-    static auto Get_DefaultDebugNameVerbosity() -> ECk_DebugNameVerbosity_Policy;
-    static auto Get_EnsureBreakInBlueprintsPolicy() -> ECk_EnsureBreakInBlueprints_Policy;
-    static auto Get_EnsureDisplayPolicy() -> ECk_EnsureDisplay_Policy;
-    static auto Get_EnsureDetailsPolicy() -> ECk_EnsureDetails_Policy;
+    CK_GENERATED_BODY(UCk_Utils_Core_UserSettings_UE);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Core|Settings")
+    static ECk_DebugNameVerbosity_Policy
+    Get_DefaultDebugNameVerbosity();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Core|Settings")
+    static ECk_EnsureBreakInBlueprints_Policy
+    Get_EnsureBreakInBlueprintsPolicy();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Core|Settings")
+    static ECk_EnsureDisplay_Policy
+    Get_EnsureDisplayPolicy();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Core|Settings")
+    static ECk_EnsureDetails_Policy
+    Get_EnsureDetailsPolicy();
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ecs|Settings")
+    static void
+    Set_DefaultDebugNameVerbosity(
+        ECk_DebugNameVerbosity_Policy InNewPolicy);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ecs|Settings")
+    static void
+    Set_EnsureBreakInBlueprintsPolicy(
+        ECk_EnsureBreakInBlueprints_Policy InNewPolicy);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ecs|Settings")
+    static void
+    Set_EnsureDisplayPolicy(
+        ECk_EnsureDisplay_Policy InNewPolicy);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ecs|Settings")
+    static void
+    Set_EnsureDetailsPolicy(
+        ECk_EnsureDetails_Policy InNewPolicy);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
