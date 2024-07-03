@@ -67,7 +67,8 @@ public:
 class CKEDITORTOOLBAR_API UCk_Utils_EditorToolbar_Settings_UE
 {
 public:
-    static auto Get_ToolbarExtensionWidgets() -> TMap<ECk_EditorToolbar_ExtensionPoint, FCk_EditorToolbar_ExtensionWidgets>;
+    static auto
+    Get_ToolbarExtensionWidgets() -> TMap<ECk_EditorToolbar_ExtensionPoint, FCk_EditorToolbar_ExtensionWidgets>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

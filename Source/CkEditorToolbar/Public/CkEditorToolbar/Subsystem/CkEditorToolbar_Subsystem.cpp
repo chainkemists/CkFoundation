@@ -129,7 +129,7 @@ auto
         if (const auto& Widget = Kvp.Value;
             ck::IsValid(Widget))
         {
-            // Make the widgets no longer owned by the world so they can get GC'd
+            // Make the widgets no longer owned by the world, so they can get GC'd
             UCk_Utils_Object_UE::Request_TrySetOuter
             (
                 FCk_Utils_Object_SetOuter_Params{Widget}
@@ -280,9 +280,9 @@ auto
     Request_CleanupToolbarExtensions()
     -> void
 {
-    for (auto i = 0; i < static_cast<int32>(ECk_EditorToolbar_ExtensionPoint::Count); ++i)
+    for (auto Index = 0; Index < static_cast<int32>(ECk_EditorToolbar_ExtensionPoint::Count); ++Index)
     {
-        Request_ExtendMenuAtToolbarExtensionPoint(static_cast<ECk_EditorToolbar_ExtensionPoint>(i), [&](UToolMenu* InMenu)
+        Request_ExtendMenuAtToolbarExtensionPoint(static_cast<ECk_EditorToolbar_ExtensionPoint>(Index), [&](UToolMenu* InMenu)
         {
             auto& Section = InMenu->FindOrAddSection(_ToolbarExtensionSectionName);
             Section.Blocks.Empty();
