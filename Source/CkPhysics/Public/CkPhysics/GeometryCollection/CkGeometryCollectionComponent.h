@@ -1,6 +1,6 @@
 #pragma once
 
-#include "GeometryCollectionComponent.h"
+#include <GeometryCollection/GeometryCollectionComponent.h>
 
 #include "CkGeometryCollectionComponent.generated.h"
 
