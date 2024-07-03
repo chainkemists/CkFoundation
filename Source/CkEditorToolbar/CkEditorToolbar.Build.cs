@@ -36,9 +36,11 @@ public class CkEditorToolbar : CkModuleRules
             "UMG",
 
             "CkCore",
+            "CkEcs",
             "CkLog",
+			"CkResourceLoader",
             "CkSettings",
-            "CkUI",
+            "CkUI"
         });
     }
 }

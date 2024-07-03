@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkEcsWorld.h"
+
 #include "CkEditorToolbar/Settings/CkEditorToolbar_Settings.h"
 
 #include "CkCore/Macros/CkMacros.h"
@@ -64,6 +66,10 @@ private:
 
 private:
     static FName _ToolbarExtensionSectionName;
+
+private:
+    ck::FEcsWorld _World;
+    FCk_Handle _AssetLoaderEntity;
 
 private:
     UPROPERTY(Transient)
