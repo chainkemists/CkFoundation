@@ -46,11 +46,18 @@ public:
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Probability",
+        DisplayName = "[Ck] Get Random Index by Weight (RandomStream)")
+    static FCk_Utils_Probability_RandomIndexByWeight_Result
+    Get_RandomIndexByWeight_Stream(
+        const TArray<double>& InWeights,
+        const FRandomStream& InRandomStream);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Probability",
         DisplayName = "[Ck] Get Random Index by Weight")
     static FCk_Utils_Probability_RandomIndexByWeight_Result
     Get_RandomIndexByWeight(
-        const TArray<double>& InWeights,
-        const FRandomStream& InRandomStream);
+        const TArray<double>& InWeights);
 
 };
 
