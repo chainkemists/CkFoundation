@@ -738,17 +738,14 @@ namespace ck
         if (NOT UCk_Utils_RecordEntry_UE::Ensure(InRecordEntry))
         { return; }
 
-        const auto& RecordEntryLabel = UCk_Utils_GameplayLabel_UE::Get_Label(InRecordEntry);
-
         {
             auto& RecordFragment = InRecordHandle.Get<RecordType>();
             const auto& RemovalSuccess = RecordFragment._RecordEntries.Remove(InRecordEntry);
 
             CK_ENSURE_IF_NOT(RemovalSuccess,
-                TEXT("The Record [{}] couldn't remove the RecordEntry [{}] with name [{}]. Does the RecordEntry exist in the Record?"),
+                TEXT("The Record [{}] couldn't remove the RecordEntry [{}]. Does the RecordEntry exist in the Record?"),
                 InRecordHandle,
-                InRecordEntry,
-                RecordEntryLabel)
+                InRecordEntry)
             { return; }
         }
 
@@ -759,10 +756,9 @@ namespace ck
             RecordEntryFragment._DisconnectionFuncs.Remove(InRecordHandle);
 
             CK_ENSURE_IF_NOT(RemovalSuccess,
-                TEXT("The RecordEntry [{}] with name [{}] does NOT have the Record [{}] even though the Record had the RecordEntry. "
+                TEXT("The RecordEntry [{}] does NOT have the Record [{}] even though the Record had the RecordEntry. "
                     "Somehow the RecordEntry was out of sync with the Record."),
                 InRecordEntry,
-                RecordEntryLabel,
                 InRecordHandle)
             { return; }
         }
