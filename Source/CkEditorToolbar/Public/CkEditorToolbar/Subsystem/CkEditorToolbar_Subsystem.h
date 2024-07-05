@@ -1,14 +1,15 @@
 #pragma once
 
-#include "CkEcsWorld.h"
+#include "CkCore/Macros/CkMacros.h"
+
+#include "CkEcs/World/CkEcsWorld.h"
 
 #include "CkEditorToolbar/Settings/CkEditorToolbar_Settings.h"
-
-#include "CkCore/Macros/CkMacros.h"
 
 #include <CoreMinimal.h>
 #include <EditorSubsystem.h>
 #include <EditorUtilityWidget.h>
+
 #include <Widgets/SWidget.h>
 
 #include "CkEditorToolbar_Subsystem.generated.h"
