@@ -25,7 +25,8 @@ public:
         const FInstancedStruct& InOptionalParams) const -> void;
 
 public:
-    UFUNCTION(BlueprintCallable)
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|ConstructionScript")
     static FCk_Handle
     Request_Construct(
         UPARAM(ref) FCk_Handle& InHandle,
