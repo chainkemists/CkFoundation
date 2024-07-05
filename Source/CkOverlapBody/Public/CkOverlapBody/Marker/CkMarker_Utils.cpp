@@ -246,6 +246,39 @@ auto
 
 auto
     UCk_Utils_Marker_UE::
+    Get_WorldTransform(
+        const FCk_Handle_Marker& InMarkerEntity)
+    -> FTransform
+{
+    auto Shape = Get_ShapeComponent(InMarkerEntity);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Shape),
+        TEXT("Unable to Get_WorldTransform of Marker. Marker Entity [{}] Shape [{}] is NOT valid."), InMarkerEntity, Shape)
+    { return {}; }
+
+    return Shape->GetComponentTransform();
+}
+
+auto
+    UCk_Utils_Marker_UE::
+    Get_WorldLocation(
+        const FCk_Handle_Marker& InMarkerEntity)
+    -> FVector
+{
+    return Get_WorldTransform(InMarkerEntity).GetLocation();
+}
+
+auto
+    UCk_Utils_Marker_UE::
+    Get_WorldRotation(
+        const FCk_Handle_Marker& InMarkerEntity)
+    -> FRotator
+{
+    return Get_WorldTransform(InMarkerEntity).Rotator();
+}
+
+auto
+    UCk_Utils_Marker_UE::
     Get_EnableDisable(
         const FCk_Handle_Marker& InMarkerEntity)
     -> ECk_EnableDisable

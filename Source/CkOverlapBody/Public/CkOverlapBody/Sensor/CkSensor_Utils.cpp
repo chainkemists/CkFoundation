@@ -243,6 +243,39 @@ auto
 
 auto
     UCk_Utils_Sensor_UE::
+    Get_WorldTransform(
+        const FCk_Handle_Sensor& InSensorEntity)
+    -> FTransform
+{
+    auto Shape = Get_ShapeComponent(InSensorEntity);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Shape),
+        TEXT("Unable to Get_WorldTransform of Sensor. Sensor Entity [{}] Shape [{}] is NOT valid."), InSensorEntity, Shape)
+    { return {}; }
+
+    return Shape->GetComponentTransform();
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    Get_WorldLocation(
+        const FCk_Handle_Sensor& InSensorEntity)
+    -> FVector
+{
+    return Get_WorldTransform(InSensorEntity).GetLocation();
+}
+
+auto
+    UCk_Utils_Sensor_UE::
+    Get_WorldRotation(
+        const FCk_Handle_Sensor& InSensorEntity)
+    -> FRotator
+{
+    return Get_WorldTransform(InSensorEntity).Rotator();
+}
+
+auto
+    UCk_Utils_Sensor_UE::
     Get_EnableDisable(
         const FCk_Handle_Sensor& InSensorEntity)
     -> ECk_EnableDisable
