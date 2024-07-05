@@ -198,6 +198,27 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Marker",
+              DisplayName = "[Ck][Marker] Get World Transform")
+    static FTransform
+    Get_WorldTransform(
+        const FCk_Handle_Marker& InMarkerEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Marker",
+              DisplayName = "[Ck][Marker] Get World Location")
+    static FVector
+    Get_WorldLocation(
+        const FCk_Handle_Marker& InMarkerEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Marker",
+              DisplayName = "[Ck][Marker] Get World Rotation")
+    static FRotator
+    Get_WorldRotation(
+        const FCk_Handle_Marker& InMarkerEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Marker",
               DisplayName = "[Ck][Marker] Get Enable Disable")
     static ECk_EnableDisable
     Get_EnableDisable(

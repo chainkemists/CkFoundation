@@ -197,6 +197,27 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
+              DisplayName = "[Ck][Sensor] Get World Transform")
+    static FTransform
+    Get_WorldTransform(
+        const FCk_Handle_Sensor& InSensorEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Sensor",
+              DisplayName = "[Ck][Sensor] Get World Location")
+    static FVector
+    Get_WorldLocation(
+        const FCk_Handle_Sensor& InSensorEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Sensor",
+              DisplayName = "[Ck][Sensor] Get World Rotation")
+    static FRotator
+    Get_WorldRotation(
+        const FCk_Handle_Sensor& InSensorEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Sensor",
               DisplayName = "[Ck][Sensor] Get Enable Disable")
     static ECk_EnableDisable
     Get_EnableDisable(
