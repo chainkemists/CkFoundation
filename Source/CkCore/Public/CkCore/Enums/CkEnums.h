@@ -584,3 +584,14 @@ enum class ECk_ForwardVectorSource : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ForwardVectorSource);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_TaskDoneBehavior : uint8
+{
+    Deactivate,
+    Nothing,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_TaskDoneBehavior);
+
+// --------------------------------------------------------------------------------------------------------------------
