@@ -79,6 +79,11 @@ namespace ck
 
     public:
         auto
+        DoTick(
+            TimeType InDeltaT) -> void;
+
+    public:
+        auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,

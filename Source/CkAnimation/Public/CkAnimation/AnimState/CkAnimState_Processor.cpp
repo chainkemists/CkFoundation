@@ -15,8 +15,6 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        _TransientEntity.Clear<FTag_AnimState_Updated>();
-
         TProcessor::DoTick(InDeltaT);
 
         _TransientEntity.Clear<MarkedDirtyBy>();
@@ -64,7 +62,7 @@ namespace ck
         if (NewAnimStateCurrent != PreviousAnimStateCurrent)
         {
             animation::VeryVerbose(TEXT("Updated AnimState [Old: {} | New: {}] of Entity [{}]"), PreviousAnimStateCurrent, NewAnimStateCurrent, InHandle);
-            InHandle.Add<ck::FTag_AnimState_Updated>();
+            InHandle.AddOrGet<ck::FTag_AnimState_Updated>();
         }
     }
 
@@ -103,6 +101,7 @@ namespace ck
         FProcessor_AnimState_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
+
             FFragment_AnimState_Current& InComp,
             const FCk_Request_AnimState_SetState& InRequest)
         -> void
@@ -192,6 +191,17 @@ namespace ck
                 FCk_Payload_AnimState_OnOverlayChanged{InHandle, PreviousAnimOverlay, NewAnimOverlay}));
     }
 
+    auto
+        FProcessor_AnimState_Replicate::
+        DoTick(
+            TimeType InDeltaT)
+        -> void
+    {
+        TProcessor::DoTick(InDeltaT);
+
+        _TransientEntity.Clear<FTag_AnimState_Updated>();
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
@@ -206,17 +216,10 @@ namespace ck
         // TODO: Remove usage of UpdateReplicatedFragment once the processor is tagged to only run on Server
         UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_AnimState_Rep>(InHandle, [&](UCk_Fragment_AnimState_Rep* InRepComp)
         {
-            if (EnumHasAnyFlags(InCurrent.Get_ComponentsModified(), ECk_AnimStateComponents::Goal))
-            { InRepComp->_AnimGoal = InCurrent.Get_AnimGoal(); }
-
-            if (EnumHasAnyFlags(InCurrent.Get_ComponentsModified(), ECk_AnimStateComponents::State))
-            { InRepComp->_AnimState = InCurrent.Get_AnimState(); }
-
-            if (EnumHasAnyFlags(InCurrent.Get_ComponentsModified(), ECk_AnimStateComponents::Cluster))
-            { InRepComp->_AnimCluster = InCurrent.Get_AnimCluster(); }
-
-            if (EnumHasAnyFlags(InCurrent.Get_ComponentsModified(), ECk_AnimStateComponents::Overlay))
-            { InRepComp->_AnimOverlay = InCurrent.Get_AnimOverlay(); }
+            InRepComp->_AnimGoal = InCurrent.Get_AnimGoal();
+            InRepComp->_AnimState = InCurrent.Get_AnimState();
+            InRepComp->_AnimCluster = InCurrent.Get_AnimCluster();
+            InRepComp->_AnimOverlay = InCurrent.Get_AnimOverlay();
 
             InCurrent.Set_ComponentsModified(ECk_AnimStateComponents::None);
         });
