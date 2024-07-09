@@ -133,7 +133,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Lifetime",
-              DisplayName = "[Ck][Transform] Unbind From OnDestroy")
+              DisplayName = "[Ck][Lifetime] Unbind From OnDestroy")
     static void
     UnbindFrom_OnUpdate(
         UPARAM(ref) FCk_Handle& InHandle,
