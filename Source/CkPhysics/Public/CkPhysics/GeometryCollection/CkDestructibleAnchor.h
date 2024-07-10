@@ -50,3 +50,41 @@ private:
 public:
     CK_PROPERTY_GET(_FieldShape);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(MinimalAPI)
+class UCk_UniformKinematic : public UUniformInteger
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_UniformKinematic);
+
+public:
+    UCk_UniformKinematic();
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(MinimalAPI)
+class UCk_BoxFalloff : public UBoxFalloff
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_BoxFalloff);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(MinimalAPI)
+class UCk_CullingField : public UCullingField
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_CullingField);
+};
+
+// --------------------------------------------------------------------------------------------------------------------

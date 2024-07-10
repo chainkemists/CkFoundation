@@ -17,3 +17,12 @@ UCk_DestructibleAnchor_ActorComponent_UE::
     bHiddenInGame = true;
     bUseDefaultCollision = false;
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCk_UniformKinematic::
+    UCk_UniformKinematic()
+        : Super()
+{
+    Magnitude = 2.0f; //EObjectStateTypeEnum::Chaos_Object_Kinematic
+}
