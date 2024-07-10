@@ -4,6 +4,8 @@
 
 #include "CkGeometryCollectionComponent.generated.h"
 
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(meta = (BlueprintSpawnableComponent), MinimalAPI)
 class UCk_GeometryCollectionComponent : public UGeometryCollectionComponent
 {
@@ -16,3 +18,5 @@ public:
     // Required for Replicating Geometry Collections
     void Request_EnableAsyncPhysics();
 };
+
+// --------------------------------------------------------------------------------------------------------------------
