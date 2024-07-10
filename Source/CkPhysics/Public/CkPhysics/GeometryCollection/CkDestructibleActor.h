@@ -7,6 +7,7 @@
 
 UCLASS(BlueprintType)
 class ACk_Destructible : public AActor
+class ACk_Destructible : public AFieldSystemActor
 {
     GENERATED_BODY()
 
