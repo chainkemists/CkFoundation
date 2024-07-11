@@ -267,6 +267,11 @@ auto
         ECk_MinMaxCurrent InAttributeComponent)
     -> FVector
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InAttribute),
+        TEXT("Vector Attribute [{}] is INVALID"),
+        InAttribute)
+    { return {}; }
+    
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Vector Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
@@ -300,6 +305,11 @@ auto
         ECk_MinMaxCurrent InAttributeComponent)
     -> FVector
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InAttribute),
+        TEXT("Vector Attribute [{}] is INVALID"),
+        InAttribute)
+    { return {}; }
+    
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Vector Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
@@ -332,6 +342,11 @@ auto
         ECk_MinMaxCurrent InAttributeComponent)
     -> FVector
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InAttribute),
+        TEXT("Vector Attribute [{}] is INVALID"),
+        InAttribute)
+    { return {}; }
+    
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Vector Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
@@ -366,9 +381,14 @@ auto
         ECk_MinMaxCurrent InAttributeComponent)
     -> FCk_Handle_VectorAttribute
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InAttribute),
+        TEXT("Vector Attribute [{}] is INVALID"),
+        InAttribute)
+    { return {}; }
+    
     const auto CurrentBaseValue = Get_BaseValue(InAttribute, InAttributeComponent);
     const auto Delta = InNewBaseValue - CurrentBaseValue;
-
+    
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Vector Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
