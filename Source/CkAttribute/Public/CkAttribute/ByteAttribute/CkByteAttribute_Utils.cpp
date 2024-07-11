@@ -266,6 +266,11 @@ auto
         ECk_MinMaxCurrent InAttributeComponent)
     -> uint8
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InAttribute),
+        TEXT("Byte Attribute [{}] is INVALID"),
+        InAttribute)
+    { return {}; }
+    
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Byte Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
@@ -299,6 +304,11 @@ auto
         ECk_MinMaxCurrent InAttributeComponent)
     -> uint8
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InAttribute),
+        TEXT("Byte Attribute [{}] is INVALID"),
+        InAttribute)
+    { return {}; }
+    
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Byte Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
@@ -331,6 +341,11 @@ auto
         ECk_MinMaxCurrent InAttributeComponent)
     -> uint8
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InAttribute),
+        TEXT("Byte Attribute [{}] is INVALID"),
+        InAttribute)
+    { return {}; }
+    
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Byte Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
@@ -365,6 +380,11 @@ auto
         ECk_MinMaxCurrent InAttributeComponent)
     -> FCk_Handle_ByteAttribute
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InAttribute),
+        TEXT("Byte Attribute [{}] is INVALID"),
+        InAttribute)
+    { return {}; }
+    
     const auto CurrentBaseValue = Get_BaseValue(InAttribute, InAttributeComponent);
     const uint8 Delta = InNewBaseValue - CurrentBaseValue;
 
