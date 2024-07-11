@@ -87,6 +87,22 @@ auto
 #endif
 }
 
+auto
+    UCk_Utils_Handle_UE::
+    Get_DebugName(
+        const FCk_Handle& InHandle)
+    -> FName
+{
+#if CK_ECS_DISABLE_HANDLE_DEBUGGING
+    return {};
+#else
+    if (NOT InHandle.Has<DEBUG_NAME>())
+    { return FName(Conv_HandleToString(InHandle)); }
+
+    return InHandle.Get<DEBUG_NAME>().Get_Name();
+#endif
+}
+
 UE_ENABLE_OPTIMIZATION_SHIP
 
 auto
