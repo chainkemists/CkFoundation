@@ -6,7 +6,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(meta = (BlueprintSpawnableComponent), MinimalAPI)
+UCLASS(Blueprintable, BlueprintType, meta = (BlueprintSpawnableComponent), MinimalAPI)
 class UCk_GeometryCollectionComponent : public UGeometryCollectionComponent
 {
     GENERATED_BODY()

@@ -7,6 +7,7 @@ UCk_GeometryCollectionComponent::
     bEnableReplication = true;
     bEnableAbandonAfterLevel = true;
     ReplicationAbandonAfterLevel = 1;
+    bNotifyBreaks = true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
