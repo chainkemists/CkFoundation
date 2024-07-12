@@ -17,18 +17,7 @@ namespace ck
             const FCk_Handle_AbilityOwner& InAbilityOwner) const
         -> FGameplayTagContainer
     {
-        auto ActiveTags = _ActiveTags.GetExplicitGameplayTags();
-
-        RecordOfEntityExtensions_Utils::ForEach_Entry(InAbilityOwner, [&](FCk_Handle_EntityExtension InEntityExtension)
-        {
-            if (const auto EntityExtensionAsAbilityOwnerHandle = UCk_Utils_AbilityOwner_UE::Cast(InEntityExtension);
-                ck::IsValid(EntityExtensionAsAbilityOwnerHandle))
-            {
-                ActiveTags.AppendTags(UCk_Utils_AbilityOwner_UE::Get_ActiveTags(EntityExtensionAsAbilityOwnerHandle));
-            }
-        });
-
-        return ActiveTags;
+        return Get_ActiveTagsRecursive(InAbilityOwner, false);
     }
 
     auto
@@ -77,18 +66,7 @@ namespace ck
             const FGameplayTag& InTag) const
         -> int32
     {
-        auto Count = _ActiveTags.GetTagCount(InTag);
-
-        RecordOfEntityExtensions_Utils::ForEach_Entry(InAbilityOwner, [&](FCk_Handle_EntityExtension InEntityExtension)
-        {
-            if (const auto EntityExtensionAsAbilityOwnerHandle = UCk_Utils_AbilityOwner_UE::Cast(InEntityExtension);
-                ck::IsValid(EntityExtensionAsAbilityOwnerHandle))
-            {
-                Count += UCk_Utils_AbilityOwner_UE::Get_SpecificActiveTagCount(EntityExtensionAsAbilityOwnerHandle, InTag);
-            }
-        });
-
-        return Count;
+        return Get_SpecificActiveTagCountRecursive(InAbilityOwner, InTag, false);
     }
 
     auto
@@ -191,6 +169,69 @@ namespace ck
                 UCk_Utils_AbilityOwner_UE::Request_TagsUpdated(ExtensionOwnerAsAbilityOwner);
             }
         }
+    }
+
+    auto
+        FFragment_AbilityOwner_Current::
+        Get_ActiveTagsRecursive(
+            const FCk_Handle_AbilityOwner& InAbilityOwner,
+            bool InIgnoreRelevantTagsFromAbilityOwner) const
+        -> FGameplayTagContainer
+    {
+        auto ActiveTags = _ActiveTags.GetExplicitGameplayTags();
+
+        if (InIgnoreRelevantTagsFromAbilityOwner)
+        {
+            ActiveTags.RemoveTags(_RelevantTagsFromAbilityOwner);
+        }
+
+        RecordOfEntityExtensions_Utils::ForEach_Entry(InAbilityOwner, [&](FCk_Handle_EntityExtension InEntityExtension)
+        {
+            if (const auto EntityExtensionAsAbilityOwnerHandle = UCk_Utils_AbilityOwner_UE::Cast(InEntityExtension);
+                ck::IsValid(EntityExtensionAsAbilityOwnerHandle) &&
+                InEntityExtension.Has<ck::FFragment_AbilityOwner_Current>())
+            {
+                const auto EntityExtensionAbilityOwnerFragment = InEntityExtension.Get<ck::FFragment_AbilityOwner_Current>();
+                ActiveTags.AppendTags(EntityExtensionAbilityOwnerFragment.Get_ActiveTagsRecursive(EntityExtensionAsAbilityOwnerHandle, true));
+            }
+        });
+
+        return ActiveTags;
+    }
+
+    auto
+        FFragment_AbilityOwner_Current::
+        Get_SpecificActiveTagCountRecursive(
+            const FCk_Handle_AbilityOwner& InAbilityOwner,
+            const FGameplayTag& InTag,
+            bool InIgnoreRelevantTagsFromAbilityOwner) const
+        -> int32
+    {
+        auto Count = _ActiveTags.GetTagCount(InTag);
+
+        if (InIgnoreRelevantTagsFromAbilityOwner)
+        {
+            for (const auto& RelevantTag : _RelevantTagsFromAbilityOwner)
+            {
+                if (InTag.MatchesTag(RelevantTag))
+                {
+                    Count--;
+                }
+            }
+        }
+
+        RecordOfEntityExtensions_Utils::ForEach_Entry(InAbilityOwner, [&](FCk_Handle_EntityExtension InEntityExtension)
+        {
+            if (const auto EntityExtensionAsAbilityOwnerHandle = UCk_Utils_AbilityOwner_UE::Cast(InEntityExtension);
+                ck::IsValid(EntityExtensionAsAbilityOwnerHandle) &&
+                InEntityExtension.Has<ck::FFragment_AbilityOwner_Current>())
+            {
+                const auto EntityExtensionAbilityOwnerFragment = InEntityExtension.Get<ck::FFragment_AbilityOwner_Current>();
+                Count += EntityExtensionAbilityOwnerFragment.Get_SpecificActiveTagCountRecursive(EntityExtensionAsAbilityOwnerHandle, InTag, true);
+            }
+        });
+
+        return Count;
     }
 }
 
