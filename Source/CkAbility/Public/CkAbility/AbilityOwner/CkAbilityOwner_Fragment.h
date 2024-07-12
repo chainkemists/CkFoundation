@@ -53,7 +53,10 @@ namespace ck
         FGameplayTagContainer _PreviousTags_IncludingAllEntityExtensions;
         FGameplayTagContainer _ActiveTags_IncludingAllEntityExtensions;
 
+        FGameplayTagContainer _RelevantTagsFromAbilityOwner;
+
         friend class FProcessor_AbilityOwner_Teardown;
+        friend class UCk_Utils_AbilityOwner_UE; // Needed for _RelevantTagsFromAbilityOwner, remove if we remove this variable 
 
     public:
         auto Get_ActiveTags(
@@ -86,6 +89,15 @@ namespace ck
         static auto
         DoTry_TagsUpdatedOnExtensionOwner(
             const FCk_Handle_AbilityOwner& InAbilityOwner) -> void;
+
+        auto Get_ActiveTagsRecursive(
+            const FCk_Handle_AbilityOwner& InAbilityOwner,
+            bool InIgnoreRelevantTagsFromAbilityOwner) const -> FGameplayTagContainer;
+
+        auto Get_SpecificActiveTagCountRecursive(
+            const FCk_Handle_AbilityOwner& InAbilityOwner,
+            const FGameplayTag& InTag,
+            bool InIgnoreRelevantTagsFromAbilityOwner) const -> int32;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

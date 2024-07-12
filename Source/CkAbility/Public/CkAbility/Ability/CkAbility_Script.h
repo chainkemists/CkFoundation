@@ -276,6 +276,14 @@ public:
               meta = (Keywords = "params, data"))
     const FCk_Ability_Script_Data&
     Get_Data() const;
+    
+    UFUNCTION(BlueprintCallable,
+          Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+          DisplayName = "[Ck][AbilityScript] Sync Tags With Ability Owner",
+          BlueprintInternalUseOnly)
+    void
+    SyncTagsWithAbilityOwner(
+        const FGameplayTagContainer& InRelevantTags);
 
 private:
     UPROPERTY(EditDefaultsOnly,

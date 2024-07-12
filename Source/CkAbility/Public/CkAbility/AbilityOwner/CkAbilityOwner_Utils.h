@@ -22,6 +22,8 @@ class CKABILITY_API UCk_Utils_AbilityOwner_UE : public UCk_Utils_Ecs_Base_UE
 {
     GENERATED_BODY()
 
+    friend class UCk_Ability_Script_PDA;
+
 public:
     struct RecordOfAbilities_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfAbilities> {};
 
@@ -412,6 +414,13 @@ public:
     Request_GiveReplicatedAbility(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_GiveReplicatedAbility& InRequest) -> FCk_Handle_AbilityOwner;
+
+private:
+    static auto
+    SyncTagsWithAbilityOwner(
+        FCk_Handle_Ability& InAbility,
+        FCk_Handle_AbilityOwner& InAbilityOwner,
+        const FGameplayTagContainer& InRelevantTags) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
