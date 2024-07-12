@@ -501,6 +501,17 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
+    SyncTagsWithAbilityOwner(
+        const FGameplayTagContainer& InRelevantTags)
+    -> void
+{
+    UCk_Utils_AbilityOwner_UE::SyncTagsWithAbilityOwner(_AbilityHandle, _AbilityOwnerHandle, InRelevantTags);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Ability_Script_PDA::
     DoDebugSet_Activated()
     -> void
 {

@@ -681,4 +681,53 @@ auto
     return InAbilityOwnerHandle;
 }
 
+auto
+    UCk_Utils_AbilityOwner_UE::SyncTagsWithAbilityOwner(
+        FCk_Handle_Ability& InAbility,
+        FCk_Handle_AbilityOwner& InAbilityOwner,
+        const FGameplayTagContainer& InRelevantTags) -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAbility),
+        TEXT("Ability handle [{}] is INVALID."), InAbility)
+    { return; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InAbilityOwner),
+        TEXT("AbilityOwner handle [{}] is INVALID."), InAbilityOwner)
+    { return; }
+    
+    auto AbilityHandleAsOwner = Cast(InAbility);
+    
+    if (NOT ck::IsValid(AbilityHandleAsOwner))
+    { return; }
+    
+    auto& RelevantTagsFromAbilityOwner = AbilityHandleAsOwner.AddOrGet<ck::FFragment_AbilityOwner_Current>()._RelevantTagsFromAbilityOwner;
+
+    const auto& OwnerTags = InAbilityOwner.AddOrGet<ck::FFragment_AbilityOwner_Current>().Get_ActiveTags(InAbilityOwner);
+
+    FGameplayTagContainer TagsToAppend, TagsToRemove;
+
+    for (const auto& Tag : OwnerTags)
+    {
+        if (Tag.MatchesAny(InRelevantTags) &&
+            NOT RelevantTagsFromAbilityOwner.HasTagExact(Tag))
+        {
+            TagsToAppend.AddTag(Tag);
+        }
+    }
+    RelevantTagsFromAbilityOwner.AppendTags(TagsToAppend);
+
+    for (const auto& Tag : RelevantTagsFromAbilityOwner)
+    {
+        if (Tag.MatchesAny(InRelevantTags) &&
+            NOT OwnerTags.HasTagExact(Tag))
+        {
+            TagsToRemove.AddTag(Tag);
+        }
+    }
+    RelevantTagsFromAbilityOwner.RemoveTags(TagsToRemove);
+
+    AbilityHandleAsOwner.AddOrGet<ck::FFragment_AbilityOwner_Current>().AppendTags(InAbilityOwner, TagsToAppend);
+    AbilityHandleAsOwner.AddOrGet<ck::FFragment_AbilityOwner_Current>().RemoveTags(InAbilityOwner, TagsToRemove);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
