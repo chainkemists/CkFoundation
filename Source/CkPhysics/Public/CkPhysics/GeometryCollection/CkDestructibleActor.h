@@ -1,5 +1,6 @@
 #pragma once
-#include "CkGeometryCollectionComponent.h"
+
+#include "CkPhysics/GeometryCollection/CkGeometryCollectionComponent.h"
 
 #include "CkDestructibleActor.generated.h"
 
@@ -7,6 +8,7 @@
 
 class UCk_UniformKinematic;
 class UCk_DestructibleAnchor_ActorComponent_UE;
+class UCk_EntityBridge_ActorComponent_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -30,7 +32,7 @@ private:
     DoRequest_DeleteAllFieldNodes() const -> void;
 
 private:
-    UPROPERTY(Category=Destructible, VisibleAnywhere, BlueprintReadOnly,
+    UPROPERTY(Category=Destructible, EditDefaultsOnly, BlueprintReadOnly,
         meta=(AllowPrivateAccess = "true"))
     TObjectPtr<UCk_GeometryCollectionComponent> _GeometryCollection;
 
