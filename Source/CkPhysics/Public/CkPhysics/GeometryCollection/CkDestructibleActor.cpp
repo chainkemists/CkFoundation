@@ -2,6 +2,10 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include "CkEcs/OwningActor/CkOwningActor_Fragment_Data.h"
+
+#include "CkEntityBridge/CkEntityBridge_ConstructionScript.h"
+
 #include "CkPhysics/GeometryCollection/CkDestructibleAnchor.h"
 
 #include <Field/FieldSystemObjects.h>
@@ -39,6 +43,9 @@ auto
         const FTransform& Transform)
     -> void
 {
+    if (GetWorld()->IsNetMode(NM_Client))
+    { return; }
+
     DoRequest_DeleteAllFieldNodes();
     GetFieldSystemComponent()->ResetFieldSystem();
 
