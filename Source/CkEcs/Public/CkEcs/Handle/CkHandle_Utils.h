@@ -74,11 +74,10 @@ public:
         FCk_Handle& InHandle,
         FName InDebugName,
         ECk_Override InOverride = ECk_Override::Override) -> void;
-    
+
     UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck] Get Debug Name",
-              Category = "Ck|Utils|Handle",
-              meta = (CompactNodeTitle = "BREAK", DevelopmentOnly))
+              DisplayName = "[Ck] Get Entity Debug Name",
+              Category = "Ck|Utils|Handle")
     static FName
     Get_DebugName(
         const FCk_Handle& InHandle);
