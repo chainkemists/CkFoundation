@@ -25,6 +25,10 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Targetable);
 
 private:
+    friend class ck::FProcessor_Targetable_Setup;
+    friend class UCk_Utils_Targeter_UE;
+
+private:
     struct RecordOfTargetables_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfTargetables> {};
 
 public:
@@ -184,6 +188,15 @@ public:
     UnbindFrom_OnEnableDisable(
         UPARAM(ref) FCk_Handle_Targetable& InTargetable,
         const FCk_Delegate_Targetable_OnEnableDisable& InDelegate);
+
+private:
+    static auto
+    Get_TargetableIsReady(
+        const FCk_Handle_Targetable& InTargetable) -> bool;
+    
+    static auto
+    Set_TargetableIsReady(
+        FCk_Handle_Targetable& InTargetable) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

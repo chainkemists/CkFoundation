@@ -102,16 +102,21 @@ auto
     Get_CanTarget(
         const FCk_Handle_Targeter& InTargeter,
         const FCk_Handle_Targetable& InTarget)
-    -> bool
+    -> ECk_Targetable_Status
 {
     if (UCk_Utils_Targetable_UE::Get_EnableDisable(InTarget) == ECk_EnableDisable::Disable)
-    { return false; }
+    { return ECk_Targetable_Status::CannotTarget; }
+
+    if (NOT UCk_Utils_Targetable_UE::Get_TargetableIsReady(InTarget))
+    { return ECk_Targetable_Status::NotYetReady; }
 
     const auto& TargetingQuery    =  InTargeter.Get<ck::FFragment_Targeter_Params>().Get_Params().Get_TargetingQuery();
     const auto& TargetabilityTags = UCk_Utils_Targetable_UE::Get_TargetabilityTags(InTarget);
     const auto& QueryResult       = TargetingQuery.Matches(TargetabilityTags);
 
-    return QueryResult;
+    return QueryResult ?
+        ECk_Targetable_Status::CanTarget :
+        ECk_Targetable_Status::CannotTarget;
 }
 
 auto

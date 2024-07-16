@@ -3,6 +3,7 @@
 #include "CkActor/ActorModifier/CkActorModifier_Fragment_Data.h"
 #include "CkActor/ActorModifier/CkActorModifier_Utils.h"
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "Targetable/CkTargetable_Utils.h"
 
 #include "CkTargeting/CkTargeting_Log.h"
 
@@ -98,6 +99,7 @@ namespace ck
                     SceneComp->AddLocalOffset(LocalOffset);
 
                     InHandle.Get<FFragment_Targetable_Current>()._AttachmentNode = SceneComp;
+                    UCk_Utils_Targetable_UE::Set_TargetableIsReady(InHandle);
                 }),
             {},
             {}
