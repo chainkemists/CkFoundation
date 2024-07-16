@@ -67,45 +67,119 @@ auto
     UCk_Utils_Net_UE::
     Get_IsActorLocallyControlled(
         AActor* InActor)
-    -> bool
+    -> ECk_Utils_Net_IsLocallyControlled_Result
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to Get_IsActorLocallyControlled"))
-    { return {}; }
+    { return ECk_Utils_Net_IsLocallyControlled_Result::IsNotValidPawn; }
 
     const auto& ActorAsPawn = Cast<APawn>(InActor);
     if (ck::Is_NOT_Valid(ActorAsPawn))
-    { return {}; }
+    { return ECk_Utils_Net_IsLocallyControlled_Result::IsNotValidPawn; }
 
-    return ActorAsPawn->IsLocallyControlled();
+    return ActorAsPawn->IsLocallyControlled()
+            ? ECk_Utils_Net_IsLocallyControlled_Result::IsLocallyControlled
+            : ECk_Utils_Net_IsLocallyControlled_Result::IsNotLocallyControlled;
 }
 
 auto
     UCk_Utils_Net_UE::
-    Get_IsActorLocallyControlledByPlayer(
+    Get_IsActorPlayerControlled(
         AActor* InActor)
-    -> bool
+    -> ECk_Utils_Net_IsPlayerControlled_Result
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to Get_IsActorLocallyControlledByPlayer"))
-    { return {}; }
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to Get_IsActorPlayerControlled"))
+    { return ECk_Utils_Net_IsPlayerControlled_Result::IsNotValidPawn; }
 
     const auto& ActorAsPawn = Cast<APawn>(InActor);
     if (ck::Is_NOT_Valid(ActorAsPawn))
-    { return {}; }
+    { return ECk_Utils_Net_IsPlayerControlled_Result::IsNotValidPawn; }
 
-    return ActorAsPawn->IsLocallyControlled() && ActorAsPawn->IsPlayerControlled();
+    return ActorAsPawn->IsPlayerControlled()
+            ? ECk_Utils_Net_IsPlayerControlled_Result::IsPlayerControlled
+            : ECk_Utils_Net_IsPlayerControlled_Result::IsNotPayerControlled;
+}
+
+auto
+    UCk_Utils_Net_UE::
+    Get_IsActorBotControlled(
+        AActor* InActor)
+    -> ECk_Utils_Net_IsBotControlled_Result
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to Get_IsActorBotControlled"))
+    { return ECk_Utils_Net_IsBotControlled_Result::IsNotValidPawn; }
+
+    const auto& ActorAsPawn = Cast<APawn>(InActor);
+    if (ck::Is_NOT_Valid(ActorAsPawn))
+    { return ECk_Utils_Net_IsBotControlled_Result::IsNotValidPawn; }
+
+    return ActorAsPawn->IsBotControlled()
+            ? ECk_Utils_Net_IsBotControlled_Result::IsBotControlled
+            : ECk_Utils_Net_IsBotControlled_Result::IsNotBotControlled;
+}
+
+auto
+    UCk_Utils_Net_UE::
+    Get_IsActorLocallyControlled_ByPlayer(
+        AActor* InActor)
+    -> ECk_Utils_Net_IsLocallyControlled_Result
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to Get_IsActorLocallyControlled_ByPlayer"))
+    { return ECk_Utils_Net_IsLocallyControlled_Result::IsNotValidPawn; }
+
+    const auto& ActorAsPawn = Cast<APawn>(InActor);
+    if (ck::Is_NOT_Valid(ActorAsPawn))
+    { return ECk_Utils_Net_IsLocallyControlled_Result::IsNotValidPawn; }
+
+    return ActorAsPawn->IsLocallyControlled() && ActorAsPawn->IsPlayerControlled()
+            ? ECk_Utils_Net_IsLocallyControlled_Result::IsLocallyControlled
+            : ECk_Utils_Net_IsLocallyControlled_Result::IsNotLocallyControlled;
+}
+
+auto
+    UCk_Utils_Net_UE::
+    Get_IsEntityPlayerControlled(
+        const FCk_Handle& InEntity)
+    -> ECk_Utils_Net_IsPlayerControlled_Result
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InEntity), TEXT("Invalid Entity supplied to Get_IsEntityPlayerControlled"))
+    { return ECk_Utils_Net_IsPlayerControlled_Result::IsNotValidPawn; }
+
+    if (NOT UCk_Utils_OwningActor_UE::Has(InEntity))
+    { return ECk_Utils_Net_IsPlayerControlled_Result::IsNotValidPawn; }
+
+    const auto& EntityOwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InEntity);
+
+    return Get_IsActorPlayerControlled(EntityOwningActor);
+}
+
+auto
+    UCk_Utils_Net_UE::
+    Get_IsEntityBotControlled(
+        const FCk_Handle& InEntity)
+    -> ECk_Utils_Net_IsBotControlled_Result
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InEntity), TEXT("Invalid Entity supplied to Get_IsEntityBotControlled"))
+    { return ECk_Utils_Net_IsBotControlled_Result::IsNotValidPawn; }
+
+    if (NOT UCk_Utils_OwningActor_UE::Has(InEntity))
+    { return ECk_Utils_Net_IsBotControlled_Result::IsNotValidPawn; }
+
+    const auto& EntityOwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InEntity);
+
+    return Get_IsActorBotControlled(EntityOwningActor);
 }
 
 auto
     UCk_Utils_Net_UE::
     Get_IsEntityLocallyControlled(
         const FCk_Handle& InEntity)
-    -> bool
+    -> ECk_Utils_Net_IsLocallyControlled_Result
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InEntity), TEXT("Invalid Entity supplied to Get_IsEntityLocallyControlled"))
-    { return {}; }
+    { return ECk_Utils_Net_IsLocallyControlled_Result::IsNotValidPawn; }
 
     if (NOT UCk_Utils_OwningActor_UE::Has(InEntity))
-    { return {}; }
+    { return ECk_Utils_Net_IsLocallyControlled_Result::IsNotValidPawn; }
 
     const auto& EntityOwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InEntity);
 
@@ -114,19 +188,19 @@ auto
 
 auto
     UCk_Utils_Net_UE::
-    Get_IsEntityLocallyControlledByPlayer(
+    Get_IsEntityLocallyControlled_ByPlayer(
         const FCk_Handle& InEntity)
-    -> bool
+    -> ECk_Utils_Net_IsLocallyControlled_Result
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InEntity), TEXT("Invalid Entity supplied to Get_IsEntityLocallyControlledByPlayer"))
-    { return {}; }
+    CK_ENSURE_IF_NOT(ck::IsValid(InEntity), TEXT("Invalid Entity supplied to Get_IsEntityLocallyControlled_ByPlayer"))
+    { return ECk_Utils_Net_IsLocallyControlled_Result::IsNotValidPawn; }
 
     if (NOT UCk_Utils_OwningActor_UE::Has(InEntity))
-    { return {}; }
+    { return ECk_Utils_Net_IsLocallyControlled_Result::IsNotValidPawn; }
 
     const auto& EntityOwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InEntity);
 
-    return Get_IsActorLocallyControlledByPlayer(EntityOwningActor);
+    return Get_IsActorLocallyControlled_ByPlayer(EntityOwningActor);
 }
 
 auto
