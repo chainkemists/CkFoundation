@@ -102,16 +102,22 @@ auto
     Get_CanTarget(
         const FCk_Handle_Targeter& InTargeter,
         const FCk_Handle_Targetable& InTarget)
-    -> bool
+    -> ECk_Targetable_Status
 {
     if (UCk_Utils_Targetable_UE::Get_EnableDisable(InTarget) == ECk_EnableDisable::Disable)
-    { return false; }
+    { return ECk_Targetable_Status::CannotTarget; }
+
+    // Adding attachment node is deferred and may happen after setup is run, but we should not try to target this until attachment node has been added
+    if (NOT InTarget.Has<ck::FTag_Targetable_IsReady>())
+    { return ECk_Targetable_Status::NotYetReady; }
 
     const auto& TargetingQuery    =  InTargeter.Get<ck::FFragment_Targeter_Params>().Get_Params().Get_TargetingQuery();
     const auto& TargetabilityTags = UCk_Utils_Targetable_UE::Get_TargetabilityTags(InTarget);
     const auto& QueryResult       = TargetingQuery.Matches(TargetabilityTags);
 
-    return QueryResult;
+    return QueryResult ?
+        ECk_Targetable_Status::CanTarget :
+        ECk_Targetable_Status::CannotTarget;
 }
 
 auto

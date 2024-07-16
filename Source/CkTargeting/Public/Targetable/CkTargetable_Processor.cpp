@@ -98,6 +98,7 @@ namespace ck
                     SceneComp->AddLocalOffset(LocalOffset);
 
                     InHandle.Get<FFragment_Targetable_Current>()._AttachmentNode = SceneComp;
+                    InHandle.Add<FTag_Targetable_IsReady>();
                 }),
             {},
             {}
