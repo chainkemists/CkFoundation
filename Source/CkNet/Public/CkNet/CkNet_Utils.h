@@ -16,6 +16,42 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_Utils_Net_IsLocallyControlled_Result : uint8
+{
+    IsLocallyControlled,
+    IsNotLocallyControlled,
+    IsNotValidPawn,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Utils_Net_IsLocallyControlled_Result);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Utils_Net_IsPlayerControlled_Result : uint8
+{
+    IsPlayerControlled,
+    IsNotPayerControlled,
+    IsNotValidPawn
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Utils_Net_IsPlayerControlled_Result);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Utils_Net_IsBotControlled_Result : uint8
+{
+    IsBotControlled,
+    IsNotBotControlled,
+    IsNotValidPawn
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Utils_Net_IsBotControlled_Result);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable)
 class CKNET_API UCk_Utils_Net_UE : public UBlueprintFunctionLibrary
 {
@@ -61,30 +97,60 @@ public:
               Category = "Ck|Utils|Net",
               DisplayName = "[Ck] Get Is Actor Locally Controlled",
               meta = (DefaultToSelf = "InActor"))
-    static bool
+    static ECk_Utils_Net_IsLocallyControlled_Result
     Get_IsActorLocallyControlled(
+        AActor* InActor);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net",
+              DisplayName = "[Ck] Get Is Actor Player Controlled",
+              meta = (DefaultToSelf = "InActor"))
+    static ECk_Utils_Net_IsPlayerControlled_Result
+    Get_IsActorPlayerControlled(
+        AActor* InActor);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net",
+              DisplayName = "[Ck] Get Is Actor Bot Controlled",
+              meta = (DefaultToSelf = "InActor"))
+    static ECk_Utils_Net_IsBotControlled_Result
+    Get_IsActorBotControlled(
         AActor* InActor);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Net",
               DisplayName = "[Ck] Get Is Actor Locally Controlled (By Player)",
               meta = (DefaultToSelf = "InActor"))
-    static bool
-    Get_IsActorLocallyControlledByPlayer(
+    static ECk_Utils_Net_IsLocallyControlled_Result
+    Get_IsActorLocallyControlled_ByPlayer(
         AActor* InActor);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Net",
               DisplayName = "[Ck] Get Is Entity Locally Controlled")
-    static bool
+    static ECk_Utils_Net_IsLocallyControlled_Result
     Get_IsEntityLocallyControlled(
         const FCk_Handle& InEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Net",
+              DisplayName = "[Ck] Get Is Entity Player Controlled")
+    static ECk_Utils_Net_IsPlayerControlled_Result
+    Get_IsEntityPlayerControlled(
+        const FCk_Handle& InEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net",
+              DisplayName = "[Ck] Get Is Entity Bot Controlled")
+    static ECk_Utils_Net_IsBotControlled_Result
+    Get_IsEntityBotControlled(
+        const FCk_Handle& InEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Net",
               DisplayName = "[Ck] Get Is Entity Locally Controlled (By Player)")
-    static bool
-    Get_IsEntityLocallyControlledByPlayer(
+    static ECk_Utils_Net_IsLocallyControlled_Result
+    Get_IsEntityLocallyControlled_ByPlayer(
         const FCk_Handle& InEntity);
 
 public:
