@@ -96,7 +96,7 @@ namespace ck
             const auto Handle = ck::MakeHandle(InEntity, InHandle);
             const auto Targetable = UCk_Utils_Targetable_UE::Cast(Handle);
 
-            if (NOT UCk_Utils_Targeter_UE::Get_CanTarget(InHandle, Targetable))
+            if (UCk_Utils_Targeter_UE::Get_CanTarget(InHandle, Targetable) != ECk_Targetable_Status::CanTarget)
             { return; }
 
             ValidTargets.Add(FCk_Targetable_BasicInfo{Targetable, UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Targetable)});
