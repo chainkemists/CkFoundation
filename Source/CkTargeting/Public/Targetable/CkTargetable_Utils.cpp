@@ -199,4 +199,22 @@ auto
     return InTargetable;
 }
 
+auto
+    UCk_Utils_Targetable_UE::
+    Get_TargetableIsReady(
+        const FCk_Handle_Targetable& InTargetable)
+    -> bool
+{
+    return InTargetable.Has<ck::FTag_Targetable_IsReady>();
+}
+
+auto
+    UCk_Utils_Targetable_UE::
+    Set_TargetableIsReady(
+        FCk_Handle_Targetable& InTargetable)
+    -> void
+{
+    InTargetable.Add<ck::FTag_Targetable_IsReady>();
+}
+
 // --------------------------------------------------------------------------------------------------------------------

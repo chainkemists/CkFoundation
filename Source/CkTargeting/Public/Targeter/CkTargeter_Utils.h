@@ -125,7 +125,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Targeter",
               DisplayName="[Ck][Targeter] Get Can Target")
-    static bool
+    static ECk_Targetable_Status
     Get_CanTarget(
         const FCk_Handle_Targeter& InTargeter,
         const FCk_Handle_Targetable& InTarget);

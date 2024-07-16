@@ -17,6 +17,18 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Targetable);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_Targetable_Status : uint8
+{
+    CanTarget,
+    CannotTarget,
+    NotYetReady
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Targetable_Status);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKTARGETING_API FCk_Targetable_BasicInfo
 {

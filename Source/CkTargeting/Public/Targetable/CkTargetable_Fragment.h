@@ -16,6 +16,7 @@ class UCk_Utils_Targetable_UE;
 namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_Targetable_NeedsSetup);
+    CK_DEFINE_ECS_TAG(FTag_Targetable_IsReady);
 
     // --------------------------------------------------------------------------------------------------------------------
 
