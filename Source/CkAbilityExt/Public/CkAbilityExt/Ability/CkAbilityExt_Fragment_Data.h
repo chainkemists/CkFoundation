@@ -55,7 +55,10 @@ enum class ECk_Ability_ActivationTrigger_Policy : uint8
     TriggeredByEvent,
 
     // Attempt to Activate the Ability any time tags are added or removed
-    TriggeredAutomatically
+    TriggeredAutomatically,
+
+    // Attempt to Activate the Ability based on AbilityEvents received by the Ability Owner OR any time tags are added or removed
+    TriggeredByEventOrAutomatically
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_ActivationTrigger_Policy);
