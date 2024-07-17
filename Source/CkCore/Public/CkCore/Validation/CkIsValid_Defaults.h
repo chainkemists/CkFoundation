@@ -114,6 +114,11 @@ CK_DEFINE_CUSTOM_IS_VALID(FGuid, ck::IsValid_Policy_Default, [=](FGuid InGuid)
     return InGuid.IsValid();
 });
 
+CK_DEFINE_CUSTOM_IS_VALID(FNetworkGUID, ck::IsValid_Policy_Default, [=](FNetworkGUID InGuid)
+{
+    return InGuid.IsValid();
+});
+
 CK_DEFINE_CUSTOM_IS_VALID(FGameplayTag, ck::IsValid_Policy_Default, [=](FGameplayTag InGameplayTag)
 {
     return InGameplayTag.IsValid();
