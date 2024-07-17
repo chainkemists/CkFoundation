@@ -29,6 +29,7 @@ CK_DEFINE_CUSTOM_FORMATTER(FString, [InObj]() { return *InObj; });
 CK_DEFINE_CUSTOM_FORMATTER(FName,   [&]() { return InObj.ToString(); });
 CK_DEFINE_CUSTOM_FORMATTER(FText,   [&]() { return InObj.ToString(); });
 CK_DEFINE_CUSTOM_FORMATTER(FGuid,   [&]() { return InObj.ToString(); });
+CK_DEFINE_CUSTOM_FORMATTER(FNetworkGUID,   [&]() { return InObj.ToString(); });
 CK_DEFINE_CUSTOM_FORMATTER(FKey,   [&]() { return InObj.ToString(); });
 CK_DEFINE_CUSTOM_FORMATTER(FInputChord,   [&]() { return InObj.GetInputText(); });
 CK_DEFINE_CUSTOM_FORMATTER(FSoftObjectPath,   [&]() { return InObj.GetAssetName(); });
