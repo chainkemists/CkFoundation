@@ -149,6 +149,9 @@ auto
 
     const auto& EntityOwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InEntity);
 
+    if (ck::Is_NOT_Valid(EntityOwningActor))
+    { return ECk_Utils_Net_IsPlayerControlled_Result::IsNotValidPawn; }
+
     return Get_IsActorPlayerControlled(EntityOwningActor);
 }
 
@@ -165,6 +168,9 @@ auto
     { return ECk_Utils_Net_IsBotControlled_Result::IsNotValidPawn; }
 
     const auto& EntityOwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InEntity);
+
+    if (ck::Is_NOT_Valid(EntityOwningActor))
+    { return ECk_Utils_Net_IsBotControlled_Result::IsNotValidPawn; }
 
     return Get_IsActorBotControlled(EntityOwningActor);
 }
@@ -183,6 +189,9 @@ auto
 
     const auto& EntityOwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InEntity);
 
+    if (ck::Is_NOT_Valid(EntityOwningActor))
+    { return ECk_Utils_Net_IsLocallyControlled_Result::IsNotValidPawn; }
+
     return Get_IsActorLocallyControlled(EntityOwningActor);
 }
 
@@ -199,6 +208,9 @@ auto
     { return ECk_Utils_Net_IsLocallyControlled_Result::IsNotValidPawn; }
 
     const auto& EntityOwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InEntity);
+
+    if (ck::Is_NOT_Valid(EntityOwningActor))
+    { return ECk_Utils_Net_IsLocallyControlled_Result::IsNotValidPawn; }
 
     return Get_IsActorLocallyControlled_ByPlayer(EntityOwningActor);
 }
@@ -234,8 +246,8 @@ auto
     {
         case ECk_Net_ReplicationType::LocalOnly:
         {
-            auto MaybeActor = UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor_Recursive(InEntity);
-            if (ck::IsValid(MaybeActor))
+            if (const auto& MaybeActor = UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor_Recursive(InEntity);
+                ck::IsValid(MaybeActor))
             {
                 if (MaybeActor->GetLocalRole() == ROLE_AutonomousProxy)
                 { return true; }
