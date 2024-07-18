@@ -90,7 +90,7 @@ namespace ck
 
         auto ValidTargets = TArray<FCk_Targetable_BasicInfo>{};
 
-        InHandle.View<FFragment_Targetable_Params, FFragment_Targetable_Current, CK_IGNORE_PENDING_KILL>()
+        InHandle.View<FFragment_Targetable_Params, FFragment_Targetable_Current, FTag_Targetable_IsReady, CK_IGNORE_PENDING_KILL>()
         .ForEach([&](FCk_Entity InEntity, const FFragment_Targetable_Params&, const FFragment_Targetable_Current&)
         {
             const auto Handle = ck::MakeHandle(InEntity, InHandle);
