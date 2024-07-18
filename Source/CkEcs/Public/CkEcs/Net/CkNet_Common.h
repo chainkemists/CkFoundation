@@ -8,10 +8,18 @@
 UENUM(BlueprintType)
 enum class ECk_Net_ReplicationType : uint8
 {
-    LocalOnly,
-    LocalAndHost,
+    // Replicates on machine(s) that locally owns the object (NOTE: the Player is Local to BOTH Client and Server)
+    LocalOnly UMETA(DisplayName="Local Only (Has Authority)"),
+    // Replicates on machine(s) that locally owns the object AND the Host
+    LocalAndHost UMETA(DisplayName="Local (Has Authority) AND Host"),
+    // Replicates on the Host only
     HostOnly,
+    // Replicates on Clients only
     ClientsOnly,
+    // Replicates on Client ONLY IF the Client has authority
+    LocalClientOnly,
+    // Replicates on REMOTE Clients only
+    RemoteClientsOnly,
     All
 };
 
