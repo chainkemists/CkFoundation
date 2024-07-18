@@ -270,6 +270,14 @@ auto
         {
             return Get_EntityNetMode(InEntity) == ECk_Net_NetModeType::Client;
         }
+        case ECk_Net_ReplicationType::LocalClientOnly:
+        {
+            return Get_HasAuthority(InEntity) && Get_IsEntityNetMode_Client(InEntity);
+        }
+        case ECk_Net_ReplicationType::RemoteClientsOnly:
+        {
+            return NOT Get_HasAuthority(InEntity) && Get_IsEntityNetMode_Client(InEntity);
+        }
         case ECk_Net_ReplicationType::All:
         {
             return true;
@@ -383,7 +391,21 @@ auto
         }
         case ECk_Net_ReplicationType::ClientsOnly:
         {
-            if (NetRole != ECk_Net_NetModeType::Host)
+            if (NetRole == ECk_Net_NetModeType::Client)
+            { return true; }
+
+            break;
+        }
+        case ECk_Net_ReplicationType::LocalClientOnly:
+        {
+            if (IsLocallyOwned && NetRole == ECk_Net_NetModeType::Client)
+            { return true; }
+
+            break;
+        }
+        case ECk_Net_ReplicationType::RemoteClientsOnly:
+        {
+            if (NOT IsLocallyOwned && NetRole == ECk_Net_NetModeType::Client)
             { return true; }
 
             break;
