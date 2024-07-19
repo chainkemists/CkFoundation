@@ -28,13 +28,33 @@ protected:
 
 public:
     UFUNCTION(Server, Reliable)
-    void Server_Request_RunConsoleCommand(
+    void Server_Request_RunConsoleCommandOnServer(
+        const FString&  InCommand);
+
+    UFUNCTION(Server, Reliable)
+    void Server_Request_RunConsoleCommandOnAll(
+        const FString&  InCommand);
+
+    UFUNCTION(NetMulticast, Reliable)
+    void MC_Request_RunConsoleCommandOnAll(
         const FString&  InCommand);
 
 private:
+    auto RunConsoleCommand(
+        const FString& InCommand)
+        -> void;
+    
     UFUNCTION(NetMulticast, Reliable)
     void MC_Request_OutputOnAll(
-        const FString& InCommandOutput);
+        const FString& InCommandOutput,
+        const FString& InNetModeName,
+        const FString& InContext);
+
+    UFUNCTION(Server, Reliable)
+    void Server_Request_OutputOnAll(
+        const FString& InCommandOutput,
+        const FString& InNetModeName,
+        const FString& InContext);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -68,6 +88,26 @@ public:
     UFUNCTION(BlueprintCallable)
     void
     Request_RunConsoleCommand_OnServer(
+        const FString& InCommand);
+
+    UFUNCTION()
+    void
+    RunConsoleCommand_OnServerAndOwningClient(
+        const TArray<FString>& InCommands);
+
+    UFUNCTION(BlueprintCallable)
+    void
+    Request_RunConsoleCommand_OnServerAndOwningClient(
+        const FString& InCommand);
+
+    UFUNCTION()
+    void
+    RunConsoleCommand_OnAll(
+        const TArray<FString>& InCommands);
+
+    UFUNCTION(BlueprintCallable)
+    void
+    Request_RunConsoleCommand_OnAll(
         const FString& InCommand);
 
 private:

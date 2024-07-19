@@ -38,25 +38,79 @@ auto
 
 auto
     ACk_ConsoleCommandsHelper_UE::
-    Server_Request_RunConsoleCommand_Implementation(
+    Server_Request_RunConsoleCommandOnServer_Implementation(
         const FString& InCommand)
     -> void
 {
-    ck::console_commands::Log(TEXT("Running Console Command [{}] on the SERVER.{}"), InCommand, ck::Context(this));
+    RunConsoleCommand(InCommand);
+}
 
-    constexpr auto WriteToConsole = false;
-    const auto& Output = GetWorld()->GetFirstPlayerController()->ConsoleCommand(InCommand, WriteToConsole);
+auto
+    ACk_ConsoleCommandsHelper_UE::
+    Server_Request_RunConsoleCommandOnAll_Implementation(
+        const FString& InCommand)
+    -> void
+{
+    MC_Request_RunConsoleCommandOnAll(InCommand);
+}
 
-    MC_Request_OutputOnAll(Output);
+auto
+    ACk_ConsoleCommandsHelper_UE::
+    MC_Request_RunConsoleCommandOnAll_Implementation(
+        const FString& InCommand)
+    -> void
+{
+    RunConsoleCommand(InCommand);
 }
 
 auto
     ACk_ConsoleCommandsHelper_UE::
     MC_Request_OutputOnAll_Implementation(
-        const FString& InCommandOutput)
+        const FString& InCommandOutput,
+        const FString& InNetModeName,
+        const FString& InContext)
     -> void
 {
-    ck::console_commands::Log(TEXT("Console Command on Server Output: [{}]"), InCommandOutput);
+    ck::console_commands::Log(TEXT("Console Command on the {} Output: [{}]{}"), InNetModeName, InCommandOutput, InContext);
+}
+
+auto
+    ACk_ConsoleCommandsHelper_UE::
+    Server_Request_OutputOnAll_Implementation(
+        const FString& InCommandOutput,
+        const FString& InNetModeName,
+        const FString& InContext)
+    -> void
+{
+    MC_Request_OutputOnAll(InCommandOutput, InNetModeName, InContext);
+}
+
+auto
+    ACk_ConsoleCommandsHelper_UE::
+    RunConsoleCommand(
+        const FString& InCommand)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(GetWorld()),
+        TEXT("World is INVALID"))
+    { return; }
+    
+    CK_ENSURE_IF_NOT(ck::IsValid(GetWorld()->GetFirstPlayerController()),
+        TEXT("World [{}] first player controller is INVALID"))
+    { return; }
+    
+    const auto& NetModeString = HasAuthority() ? TEXT("SERVER") : TEXT("CLIENT");
+    const auto& ContextString = ck::Format_UE(TEXT("{}"), ck::Context(this));
+
+    ck::console_commands::Log(TEXT("Running Console Command [{}] on the {}.{}"),
+        InCommand,
+        NetModeString,
+        ContextString);
+
+    constexpr auto WriteToConsole = false;
+    const auto& Output = GetWorld()->GetFirstPlayerController()->ConsoleCommand(InCommand, WriteToConsole);
+    
+    Server_Request_OutputOnAll(Output, NetModeString, ContextString);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -81,6 +135,22 @@ auto
         TEXT("RunConsoleCommand_OnServer"),
         TEXT("Runs console commands on Server"),
         FConsoleCommandWithArgsDelegate::CreateUObject(this, &UCk_ConsoleCommands_Subsystem_UE::RunConsoleCommand_OnServer),
+        ECVF_Default
+    );
+
+    _ConsoleCommand = IConsoleManager::Get().RegisterConsoleCommand
+    (
+        TEXT("RunConsoleCommand_OnAll"),
+        TEXT("Runs console commands on all instances (Server + Clients)"),
+        FConsoleCommandWithArgsDelegate::CreateUObject(this, &UCk_ConsoleCommands_Subsystem_UE::RunConsoleCommand_OnAll),
+        ECVF_Default
+    );
+
+    _ConsoleCommand = IConsoleManager::Get().RegisterConsoleCommand
+    (
+        TEXT("RunConsoleCommand_OnServerAndOwner"),
+        TEXT("Runs console commands on Server and Owning Client"),
+        FConsoleCommandWithArgsDelegate::CreateUObject(this, &UCk_ConsoleCommands_Subsystem_UE::RunConsoleCommand_OnServerAndOwningClient),
         ECVF_Default
     );
 
@@ -118,7 +188,7 @@ auto
         const TArray<FString>& InCommand)
     -> void
 {
-    const auto Command = FString::Join(InCommand, TEXT(" "));
+    const auto& Command = FString::Join(InCommand, TEXT(" "));
 
     Request_RunConsoleCommand_OnServer(Command);
 }
@@ -131,7 +201,70 @@ auto
 {
     ck::algo::ForEachIsValid(_ConsoleCommandsHelper, [&](const TObjectPtr<ACk_ConsoleCommandsHelper_UE> InHelper)
     {
-        InHelper->Server_Request_RunConsoleCommand(InCommand);
+        InHelper->Server_Request_RunConsoleCommandOnServer(InCommand);
+    });
+}
+
+auto
+    UCk_ConsoleCommands_Subsystem_UE::
+    RunConsoleCommand_OnServerAndOwningClient(
+        const TArray<FString>& InCommands)
+    -> void
+{
+    const auto& Command = FString::Join(InCommands, TEXT(" "));
+
+    Request_RunConsoleCommand_OnServerAndOwningClient(Command);
+}
+
+auto
+    UCk_ConsoleCommands_Subsystem_UE::
+    Request_RunConsoleCommand_OnServerAndOwningClient(
+        const FString& InCommand)
+    -> void
+{
+    ck::algo::ForEachIsValid(_ConsoleCommandsHelper, [&](const TObjectPtr<ACk_ConsoleCommandsHelper_UE> InHelper)
+    {
+        ck::console_commands::Log(TEXT("Running Console Command [{}] on the OWNING CLIENT"),
+            InCommand);
+
+        constexpr auto WriteToConsole = false;
+
+        CK_ENSURE_IF_NOT(ck::IsValid(GetWorld()),
+            TEXT("World is INVALID"))
+        { return; }
+        
+        CK_ENSURE_IF_NOT(ck::IsValid(GetWorld()->GetFirstPlayerController()),
+            TEXT("World [{}] first player controller is INVALID"))
+        { return; }
+        
+        const auto& Output = GetWorld()->GetFirstPlayerController()->ConsoleCommand(InCommand, WriteToConsole);
+
+        ck::console_commands::Log(TEXT("Console Command on OWNING CLIENT Output: [{}]"), Output);
+        
+        InHelper->Server_Request_RunConsoleCommandOnServer(InCommand);
+    });
+}
+
+auto
+    UCk_ConsoleCommands_Subsystem_UE::
+    RunConsoleCommand_OnAll(
+        const TArray<FString>& InCommands)
+    -> void
+{
+    const auto& Command = FString::Join(InCommands, TEXT(" "));
+
+    Request_RunConsoleCommand_OnAll(Command);
+}
+
+auto
+    UCk_ConsoleCommands_Subsystem_UE::
+    Request_RunConsoleCommand_OnAll(
+        const FString& InCommand)
+    -> void
+{
+    ck::algo::ForEachIsValid(_ConsoleCommandsHelper, [&](const TObjectPtr<ACk_ConsoleCommandsHelper_UE> InHelper)
+    {
+        InHelper->Server_Request_RunConsoleCommandOnAll(InCommand);
     });
 }
 
