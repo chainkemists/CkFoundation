@@ -83,6 +83,7 @@ auto
         case ECk_Player_ID::Seven: { Assign<ECk_Player_ID::Seven>(InHandle); break; }
         case ECk_Player_ID::Eight: { Assign<ECk_Player_ID::Eight>(InHandle); break; }
         case ECk_Player_ID::Unassigned: { Assign<ECk_Player_ID::Eight>(InHandle); break; }
+        case ECk_Player_ID::Unassigned: { Assign<ECk_Player_ID::Unassigned>(InHandle); break; }
         default:
         {
            CK_INVALID_ENUM(InPlayerID);
@@ -127,7 +128,7 @@ auto
         case ECk_Player_ID::Six: { return Get_IsAssignedTo<ECk_Player_ID::Six>(InHandle); }
         case ECk_Player_ID::Seven: { return Get_IsAssignedTo<ECk_Player_ID::Seven>(InHandle); }
         case ECk_Player_ID::Eight: { return Get_IsAssignedTo<ECk_Player_ID::Eight>(InHandle); }
-        case ECk_Player_ID::Unassigned: { return Get_IsAssignedTo<ECk_Player_ID::Eight>(InHandle); }
+        case ECk_Player_ID::Unassigned: { return Get_IsAssignedTo<ECk_Player_ID::Unassigned>(InHandle); }
         default:
         {
            CK_INVALID_ENUM(InPlayerID);
