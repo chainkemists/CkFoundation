@@ -38,7 +38,7 @@ public:
               DisplayName="[Ck][Team] Assign to Team")
     static FCk_Handle_Team
     Assign(
-        UPARAM(ref) FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle_Team& InHandle,
         ECk_Team_ID InTeamID);
 
     UFUNCTION(BlueprintCallable,
@@ -47,7 +47,7 @@ public:
               DisplayName="[Ck][Team] Unassign from Team")
     static FCk_Handle_Team
     Unassign(
-        UPARAM(ref) FCk_Handle& InHandle);
+        UPARAM(ref) FCk_Handle_Team& InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Relationship|Team",

@@ -39,7 +39,7 @@ public:
               DisplayName="[Ck][Player] Assign to Player")
     static FCk_Handle_Player
     Assign(
-        UPARAM(ref) FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle_Player& InHandle,
         ECk_Player_ID InPlayerID,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 

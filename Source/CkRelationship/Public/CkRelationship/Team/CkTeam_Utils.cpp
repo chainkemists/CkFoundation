@@ -57,7 +57,7 @@ auto
 auto
     UCk_Utils_Team_UE::
     Assign(
-        FCk_Handle& InHandle,
+        FCk_Handle_Team& InHandle,
         ECk_Team_ID InTeamID)
     -> FCk_Handle_Team
 {
@@ -104,7 +104,7 @@ auto
 auto
     UCk_Utils_Team_UE::
     Unassign(
-        FCk_Handle& InHandle)
+        FCk_Handle_Team& InHandle)
     -> FCk_Handle_Team
 {
     return Assign(InHandle, ECk_Team_ID::Unassigned);

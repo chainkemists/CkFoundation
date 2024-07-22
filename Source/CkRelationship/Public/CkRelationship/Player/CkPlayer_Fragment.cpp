@@ -61,7 +61,8 @@ auto
     if (_PlayerID == ECk_Player_ID::Unassigned)
     { return; }
 
-    UCk_Utils_Player_UE::Assign(Entity, _PlayerID);
+    auto PlayerEntity = UCk_Utils_Player_UE::Cast(Entity);
+    UCk_Utils_Player_UE::Assign(PlayerEntity, _PlayerID);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -55,12 +55,12 @@ auto
 auto
     UCk_Utils_Player_UE::
     Assign(
-        FCk_Handle& InHandle,
+        FCk_Handle_Player& InHandle,
         ECk_Player_ID InPlayerID,
         ECk_Replication InReplicates)
     -> FCk_Handle_Player
 {
-    const auto OldID = Has(InHandle) ? Get_ID(Cast(InHandle)) : ECk_Player_ID::Unassigned;
+    const auto OldID = Get_ID(Cast(InHandle));
 
     if (OldID == InPlayerID)
     { return Cast(InHandle); } // TODO: performing the cast twice (on in Get_ID above), can we fix this?
