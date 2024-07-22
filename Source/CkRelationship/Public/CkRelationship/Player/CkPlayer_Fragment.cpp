@@ -1,0 +1,67 @@
+#include "CkPlayer_Fragment.h"
+
+#include "CkRelationship/Player/CkPlayer_Utils.h"
+
+#include <Net/UnrealNetwork.h>
+#include <Net/Core/PushModel/PushModel.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+auto
+    UCk_Fragment_Player_Rep::
+    Broadcast_Assign(
+        ECk_Player_ID InPlayerID)
+    -> void
+{
+    _PlayerID = InPlayerID;
+    MARK_PROPERTY_DIRTY_FROM_NAME(UCk_Fragment_Player_Rep, _PlayerID, this);
+}
+
+auto
+    UCk_Fragment_Player_Rep::
+    PostLink()
+    -> void
+{
+    Super::PostLink();
+
+    OnRep_Updated();
+}
+
+auto
+    UCk_Fragment_Player_Rep::
+    GetLifetimeReplicatedProps(
+        TArray<FLifetimeProperty>& OutLifetimeProps) const
+    -> void
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
+
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PlayerID, Params);
+}
+
+auto
+    UCk_Fragment_Player_Rep::
+    OnRep_Updated()
+    -> void
+{
+    auto Entity = Get_AssociatedEntity();
+
+    if (ck::Is_NOT_Valid(Entity))
+    { return; }
+
+    if (GetWorld()->IsNetMode(NM_DedicatedServer))
+    { return; }
+
+    if (UCk_Utils_Player_UE::Has(Entity))
+    {
+        auto PlayerEntity = UCk_Utils_Player_UE::Cast(Entity);
+        UCk_Utils_Player_UE::Unassign(PlayerEntity);
+    }
+
+    if (_PlayerID == ECk_Player_ID::Unassigned)
+    { return; }
+
+    UCk_Utils_Player_UE::Assign(Entity, _PlayerID);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
