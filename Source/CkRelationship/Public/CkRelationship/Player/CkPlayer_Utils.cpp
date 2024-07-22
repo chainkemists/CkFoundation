@@ -73,16 +73,15 @@ auto
 
     switch (InPlayerID)
     {
-        case ECk_Player_ID::Zero: { Assign<ECk_Player_ID::Zero>(InHandle); break; }
-        case ECk_Player_ID::One: { Assign<ECk_Player_ID::One>(InHandle); break; }
-        case ECk_Player_ID::Two: { Assign<ECk_Player_ID::Two>(InHandle); break; }
-        case ECk_Player_ID::Three: { Assign<ECk_Player_ID::Three>(InHandle); break; }
-        case ECk_Player_ID::Four: { Assign<ECk_Player_ID::Four>(InHandle); break; }
-        case ECk_Player_ID::Five: { Assign<ECk_Player_ID::Five>(InHandle); break; }
-        case ECk_Player_ID::Six: { Assign<ECk_Player_ID::Six>(InHandle); break; }
-        case ECk_Player_ID::Seven: { Assign<ECk_Player_ID::Seven>(InHandle); break; }
-        case ECk_Player_ID::Eight: { Assign<ECk_Player_ID::Eight>(InHandle); break; }
-        case ECk_Player_ID::Unassigned: { Assign<ECk_Player_ID::Eight>(InHandle); break; }
+        case ECk_Player_ID::Zero:       { Assign<ECk_Player_ID::Zero>(InHandle); break; }
+        case ECk_Player_ID::One:        { Assign<ECk_Player_ID::One>(InHandle); break; }
+        case ECk_Player_ID::Two:        { Assign<ECk_Player_ID::Two>(InHandle); break; }
+        case ECk_Player_ID::Three:      { Assign<ECk_Player_ID::Three>(InHandle); break; }
+        case ECk_Player_ID::Four:       { Assign<ECk_Player_ID::Four>(InHandle); break; }
+        case ECk_Player_ID::Five:       { Assign<ECk_Player_ID::Five>(InHandle); break; }
+        case ECk_Player_ID::Six:        { Assign<ECk_Player_ID::Six>(InHandle); break; }
+        case ECk_Player_ID::Seven:      { Assign<ECk_Player_ID::Seven>(InHandle); break; }
+        case ECk_Player_ID::Eight:      { Assign<ECk_Player_ID::Eight>(InHandle); break; }
         case ECk_Player_ID::Unassigned: { Assign<ECk_Player_ID::Unassigned>(InHandle); break; }
         default:
         {
@@ -155,35 +154,16 @@ auto
 {
     using namespace ck;
 
-    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Zero>>())
-    { return ECk_Player_ID::Zero; }
-
-    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::One>>())
-    { return ECk_Player_ID::One; }
-
-    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Two>>())
-    { return ECk_Player_ID::Two; }
-
-    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Three>>())
-    { return ECk_Player_ID::Three; }
-
-    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Four>>())
-    { return ECk_Player_ID::Four; }
-
-    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Five>>())
-    { return ECk_Player_ID::Five; }
-
-    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Six>>())
-    { return ECk_Player_ID::Six; }
-
-    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Seven>>())
-    { return ECk_Player_ID::Seven; }
-
-    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Eight>>())
-    { return ECk_Player_ID::Eight; }
-
-    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Unassigned>>())
-    { return ECk_Player_ID::Unassigned; }
+    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Zero>>())       { return ECk_Player_ID::Zero; }
+    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::One>>())        { return ECk_Player_ID::One; }
+    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Two>>())        { return ECk_Player_ID::Two; }
+    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Three>>())      { return ECk_Player_ID::Three; }
+    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Four>>())       { return ECk_Player_ID::Four; }
+    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Five>>())       { return ECk_Player_ID::Five; }
+    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Six>>())        { return ECk_Player_ID::Six; }
+    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Seven>>())      { return ECk_Player_ID::Seven; }
+    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Eight>>())      { return ECk_Player_ID::Eight; }
+    if (InHandle.Has<FTag_PlayerID<ECk_Player_ID::Unassigned>>()) { return ECk_Player_ID::Unassigned; }
 
     CK_TRIGGER_ENSURE(TEXT("Entity [{}] has been assigned an out of range Player ID"), InHandle);
 
