@@ -61,7 +61,8 @@ auto
     if (_TeamID == ECk_Team_ID::Unassigned)
     { return; }
 
-    UCk_Utils_Team_UE::Assign(Entity, _TeamID);
+    auto TeamEntity = UCk_Utils_Team_UE::Cast(Entity);
+    UCk_Utils_Team_UE::Assign(TeamEntity, _TeamID);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
