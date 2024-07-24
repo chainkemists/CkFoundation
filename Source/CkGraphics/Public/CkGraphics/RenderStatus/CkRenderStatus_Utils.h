@@ -46,7 +46,7 @@ public:
               DisplayName="[Ck][RenderStatus] Request Query Rendered Actors")
     static void
     Request_QueryRenderedActors(
-        FCk_Handle InHandle,
+        const FCk_Handle& InAnyValidHandle,
         const FCk_Request_RenderStatus_QueryRenderedActors& InRequest,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Delegate_RenderStatus_OnRenderedActorsQueried& InDelegate);

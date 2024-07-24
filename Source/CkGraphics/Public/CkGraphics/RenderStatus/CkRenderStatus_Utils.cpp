@@ -68,13 +68,13 @@ auto
 auto
     UCk_Utils_RenderStatus_UE::
     Request_QueryRenderedActors(
-        FCk_Handle InHandle,
+        const FCk_Handle& InAnyValidHandle,
         const FCk_Request_RenderStatus_QueryRenderedActors& InRequest,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Delegate_RenderStatus_OnRenderedActorsQueried& InDelegate)
     -> void
 {
-    auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
+    auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAnyValidHandle);
 
     RequestEntity.AddOrGet<ck::FFragment_RenderStatus_Requests>()._Requests.Add(InRequest);
     UCk_Utils_Variables_InstancedStruct_UE::Set(RequestEntity, FGameplayTag::EmptyTag, InOptionalPayload);
