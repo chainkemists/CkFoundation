@@ -490,6 +490,8 @@ auto
         const FCk_Fragment_ByteAttributeModifier_ParamsData& InParams)
     -> FCk_Handle_ByteAttributeModifier
 {
+    QUICK_SCOPE_CYCLE_COUNTER(Add_Byte_Modifier)
+    
     auto ParamsToUse = InParams;
     ParamsToUse.Set_TargetAttributeName(UCk_Utils_GameplayLabel_UE::Get_Label(InAttribute));
 

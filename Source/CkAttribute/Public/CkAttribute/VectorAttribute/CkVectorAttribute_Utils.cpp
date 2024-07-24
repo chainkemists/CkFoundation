@@ -491,6 +491,8 @@ auto
         const FCk_Fragment_VectorAttributeModifier_ParamsData& InParams)
     -> FCk_Handle_VectorAttributeModifier
 {
+    QUICK_SCOPE_CYCLE_COUNTER(Add_Vector_Modifier)
+    
     auto ParamsToUse = InParams;
     ParamsToUse.Set_TargetAttributeName(UCk_Utils_GameplayLabel_UE::Get_Label(InAttribute));
 

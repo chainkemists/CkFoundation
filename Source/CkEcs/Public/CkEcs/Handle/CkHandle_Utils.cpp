@@ -72,6 +72,8 @@ auto
         ECk_Override InOverride)
     -> void
 {
+    QUICK_SCOPE_CYCLE_COUNTER(Set_DebugName)
+
 #if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
     if (NOT InHandle.Has<DEBUG_NAME>())
     {

@@ -19,6 +19,8 @@ auto
         ECk_EntityLifetime_DestructionBehavior InDestructionBehavior)
     -> void
 {
+    QUICK_SCOPE_CYCLE_COUNTER(Request_Destroy_Entity)
+    
     if (ck::Is_NOT_Valid(InHandle))
     { return; }
 
@@ -306,6 +308,8 @@ auto
         PostEntityCreatedFunc InFunc)
     -> HandleType
 {
+    QUICK_SCOPE_CYCLE_COUNTER(Request_Create_Entity)
+    
     const auto& NewEntity = InRegistry.CreateEntity();
     InRegistry.Add<ck::FTag_EntityJustCreated>(NewEntity);
 
@@ -327,6 +331,8 @@ auto
         PostEntityCreatedFunc InFunc)
     -> HandleType
 {
+    QUICK_SCOPE_CYCLE_COUNTER(Request_Create_Entity)
+    
     const auto& NewEntity = InRegistry.CreateEntity(InEntityHint.Get_Entity());
     InRegistry.Add<ck::FTag_EntityJustCreated>(NewEntity);
 
