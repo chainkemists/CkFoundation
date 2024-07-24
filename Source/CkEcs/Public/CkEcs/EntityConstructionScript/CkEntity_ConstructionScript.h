@@ -26,7 +26,8 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|ConstructionScript")
+              Category = "Ck|ConstructionScript",
+              DisplayName = "[Ck] Request Construct Sub-ConstructionScript")
     static FCk_Handle
     Request_Construct(
         UPARAM(ref) FCk_Handle& InHandle,
