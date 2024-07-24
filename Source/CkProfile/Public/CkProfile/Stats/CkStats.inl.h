@@ -29,22 +29,23 @@ namespace ck
         GetDescription()
         -> const TCHAR*
     {
-        // Description _ideally_ would not be shown when we turn on on-screen stats by `stat mystats` command. Otherwise,
-        // the full type (if templated) takes up too much room and truncates the useful name of the stat. If we are able
-        // to figure out a way to not display the description on-screen but have it still be there in Insights, that would
-        // be ideal. Until then, return nothing.
-
-        //static auto Description = []()
-        //{
-        //    auto CleanName = cleantype::clean<ValueType>();
-        //    return FString{static_cast<int32>(CleanName.length()), CleanName.data()};
-        //}();
-
+        
+// This option enables setting the description to the type name which is
+// desired for Insights, but may be too long for the `stat mystats` command
+#if CK_ENABLE_STAT_DESCRIPTION
+        
+        static auto Description = []()
+        {
+            auto CleanName = cleantype::clean<ValueType>();
+            return FString{static_cast<int32>(CleanName.length()), CleanName.data()};
+        }();
+#else
         static auto Description = []()
         {
             return FString{};
         }();
-
+#endif
+        
         return *Description;
     }
 
