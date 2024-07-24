@@ -490,6 +490,8 @@ auto
         const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams)
     -> FCk_Handle_FloatAttributeModifier
 {
+    QUICK_SCOPE_CYCLE_COUNTER(Add_Float_Modifier)
+    
     auto ParamsToUse = InParams;
     ParamsToUse.Set_TargetAttributeName(UCk_Utils_GameplayLabel_UE::Get_Label(InAttribute));
 
