@@ -29,7 +29,8 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName="[Ck][Decal] Create New Decal (From Actor)")
+              DisplayName="[Ck][Decal] Create New Decal (From Actor)",
+              meta = (DevelopmentOnly))
     static FCk_Handle_Decal
     Create_FromActor(
         const FCk_Handle& InAnyValidHandle,
