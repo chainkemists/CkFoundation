@@ -42,6 +42,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Decal_Current);
 
     private:
+        // For convenience so we don't have to go through the actor to get the Decal comp
         TWeakObjectPtr<UDecalComponent> _DecalComponent;
 
     public:

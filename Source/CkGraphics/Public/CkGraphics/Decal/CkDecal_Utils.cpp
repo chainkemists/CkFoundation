@@ -37,7 +37,7 @@ auto
         const FTransform& InTransform)
     -> FCk_Handle_Decal
 {
-    // TODO: Make this deferred
+    // TODO: Defer the creation of the Decal Actor
 
     auto DecalEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAnyValidHandle);
 
@@ -97,6 +97,8 @@ auto
         const FCk_Fragment_Decal_ParamsData& InDecalParams)
     -> FCk_Handle_Decal
 {
+    // TODO: Defer the creation of the Decal Actor
+
     auto DecalEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAnyValidHandle);
 
     UCk_Utils_Actor_UE::Request_SpawnActor

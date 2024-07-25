@@ -28,7 +28,7 @@ private:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Decal",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][Decal] Create New Decal (From Actor)")
     static FCk_Handle_Decal
     Create_FromActor(
@@ -37,7 +37,7 @@ public:
         const FTransform& InTransform);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Decal",
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][Decal] Create New Decal")
     static FCk_Handle_Decal
     Create(
