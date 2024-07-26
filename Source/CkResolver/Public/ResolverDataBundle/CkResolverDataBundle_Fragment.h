@@ -16,7 +16,7 @@ class UCk_Utils_ResolverDataBundle_UE;
 
 namespace ck
 {
-    CK_DEFINE_ECS_TAG(FTag_Resolver_StartNewPhase);
+    CK_DEFINE_ECS_TAG(FTag_ResolverDataBundle_StartNewPhase);
     CK_DEFINE_ECS_TAG(FTag_ResolverDataBundle_OperationsResolved);
     CK_DEFINE_ECS_TAG(FTag_ResolverDataBundle_CalculateDone);
 

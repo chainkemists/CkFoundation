@@ -60,6 +60,53 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(ResolverDataBundle, UCk_Utils_ResolverDa
 
 auto
     UCk_Utils_ResolverDataBundle_UE::
+    Get_Name(
+        const FCk_Handle_ResolverDataBundle& InDataBundle)
+    -> FGameplayTag
+{
+    return InDataBundle.Get<FCk_Fragment_ResolverDataBundle_ParamsData>().Get_BundleName();
+}
+
+auto
+    UCk_Utils_ResolverDataBundle_UE::
+    Get_Instigator(
+        const FCk_Handle_ResolverDataBundle& InDataBundle)
+    -> FCk_Handle_ResolverSource
+{
+    return InDataBundle.Get<FCk_Fragment_ResolverDataBundle_ParamsData>().Get_Instigator();
+}
+
+auto
+    UCk_Utils_ResolverDataBundle_UE::
+    Get_Target(
+        const FCk_Handle_ResolverDataBundle& InDataBundle)
+    -> FCk_Handle_ResolverTarget
+{
+    return InDataBundle.Get<FCk_Fragment_ResolverDataBundle_ParamsData>().Get_Target();
+}
+
+auto
+    UCk_Utils_ResolverDataBundle_UE::
+    Get_Causer(
+        const FCk_Handle_ResolverDataBundle& InDataBundle)
+    -> FCk_Handle
+{
+    return InDataBundle.Get<FCk_Fragment_ResolverDataBundle_ParamsData>().Get_Causer();
+}
+
+auto
+    UCk_Utils_ResolverDataBundle_UE::
+    Get_Phases(
+        const FCk_Handle_ResolverDataBundle& InDataBundle)
+    -> TArray<FCk_Fragment_ResolverDataBundle_PhaseInfo>
+{
+    return InDataBundle.Get<FCk_Fragment_ResolverDataBundle_ParamsData>().Get_Phases();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ResolverDataBundle_UE::
     Request_AddOperation_Modifier(
         FCk_Handle_ResolverDataBundle& InDataBundle,
         const FRequest_ResolverDataBundle_ModifierOperation& InRequest)
@@ -230,7 +277,7 @@ auto
     if (InCurrentPhaseIndex + 1 == InNumTotalPhases)
     { return; }
 
-    InResolverDataBundle.Add<ck::FTag_Resolver_StartNewPhase>();
+    InResolverDataBundle.Add<ck::FTag_ResolverDataBundle_StartNewPhase>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

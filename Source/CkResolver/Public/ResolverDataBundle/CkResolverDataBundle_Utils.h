@@ -74,6 +74,42 @@ private:
         FCk_Handle InHandle);
 
 public:
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|ResolverDataBundle",
+        DisplayName="[Ck][Resolver] Get DataBundle Name")
+    static FGameplayTag
+    Get_Name(
+        const FCk_Handle_ResolverDataBundle& InDataBundle);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|ResolverDataBundle",
+        DisplayName="[Ck][Resolver] Get DataBundle Instigator")
+    static FCk_Handle_ResolverSource
+    Get_Instigator(
+        const FCk_Handle_ResolverDataBundle& InDataBundle);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|ResolverDataBundle",
+        DisplayName="[Ck][Resolver] Get DataBundle Target")
+    static FCk_Handle_ResolverTarget
+    Get_Target(
+        const FCk_Handle_ResolverDataBundle& InDataBundle);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|ResolverDataBundle",
+        DisplayName="[Ck][Resolver] Get DataBundle Causer")
+    static FCk_Handle
+    Get_Causer(
+        const FCk_Handle_ResolverDataBundle& InDataBundle);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|ResolverDataBundle",
+        DisplayName="[Ck][Resolver] Get DataBundle Phases")
+    static TArray<FCk_Fragment_ResolverDataBundle_PhaseInfo>
+    Get_Phases(
+        const FCk_Handle_ResolverDataBundle& InDataBundle);
+
+public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ResolverDataBundle",
         DisplayName="[Ck][Resolver] Request Add Operation (Modifier)")

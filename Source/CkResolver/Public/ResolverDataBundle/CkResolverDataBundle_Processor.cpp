@@ -26,8 +26,6 @@ namespace ck
         -> void
     {
         TProcessor::DoTick(InDeltaT);
-
-        _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
     auto
@@ -46,8 +44,11 @@ namespace ck
 
         CK_ENSURE_IF_NOT(InCurrent._CurrentPhaseIndex < InParams.Get_Params().Get_Phases().Num() - 1,
             TEXT("Unable to Start a New Phase for the ResolverSource [{}] with ResolverCause [{}] since we are already on the final phase [{}]"),
-            InHandle, InParams.Get_Params().Get_ResolverCause(), PhaseNamePrevious)
+            InHandle, InParams.Get_Params().Get_Causer(), PhaseNamePrevious)
         { return; }
+
+        InHandle.Try_Remove<FTag_ResolverDataBundle_CalculateDone>();
+        InHandle.Try_Remove<FTag_ResolverDataBundle_OperationsResolved>();
 
         InCurrent._CurrentPhaseIndex++;
 
@@ -243,7 +244,7 @@ namespace ck
 
         const auto& Instigator = InParams.Get_Params().Get_Instigator();
         const auto& Target = InParams.Get_Params().Get_Target();
-        const auto& ResolverCause = InParams.Get_Params().Get_ResolverCause();
+        const auto& ResolverCause = InParams.Get_Params().Get_Causer();
         const auto& PhaseName = InParams.Get_Params().Get_Phases()[InCurrent.Get_CurrentPhaseIndex()].Get_PhaseName();
 
         const auto PostCalculatePayload = FPayload_ResolverDataBundle_OnResolved{}

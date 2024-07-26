@@ -219,15 +219,7 @@ private:
     // This is the character/bullet/sword/grenade/etc. that is the ResolverCause
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    FCk_Handle _ResolverCause;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "Resolver.Metadata"))
-    FGameplayTagContainer _InitialMetadata;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    TArray<FCk_ResolverDataBundle_ModifierOperation> _InitialModifierOperations;
+    FCk_Handle _Causer;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -237,12 +229,10 @@ public:
     CK_PROPERTY_GET(_BundleName);
     CK_PROPERTY_GET(_Instigator);
     CK_PROPERTY_GET(_Target);
-    CK_PROPERTY_GET(_ResolverCause);
-    CK_PROPERTY(_InitialMetadata);
-    CK_PROPERTY(_InitialModifierOperations);
+    CK_PROPERTY_GET(_Causer);
     CK_PROPERTY_GET(_Phases);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ResolverDataBundle_ParamsData, _BundleName, _Instigator, _Target, _ResolverCause, _Phases);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ResolverDataBundle_ParamsData, _BundleName, _Instigator, _Target, _Causer, _Phases);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
