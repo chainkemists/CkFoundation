@@ -35,6 +35,8 @@ private:
 
 public:
     CK_PROPERTY_GET(_DataBundle);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_ResolverTarget_InitiateNewResolution, _DataBundle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

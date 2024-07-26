@@ -68,7 +68,7 @@ private:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ResolverDataBundle",
         DisplayName="[Ck][Resolver] Handle -> ResolverDataBundle Handle",
-        meta = (CompactNodeTitle = "<AsAbilityOwner>", BlueprintAutocast))
+        meta = (CompactNodeTitle = "<AsResolverDataBundle>", BlueprintAutocast))
     static FCk_Handle_ResolverDataBundle
     DoCastChecked(
         FCk_Handle InHandle);

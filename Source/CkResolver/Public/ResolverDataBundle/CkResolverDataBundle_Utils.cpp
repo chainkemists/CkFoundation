@@ -1,5 +1,7 @@
 #include "CkResolverDataBundle_Utils.h"
 
+#include "CkFloatAttribute_Utils.h"
+
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
 #include "ResolverDataBundle/CkResolverDataBundle_Fragment.h"
@@ -22,6 +24,26 @@ auto
 
     const auto& Params = NewEntity.Add<ck::FFragment_ResolverDataBundle_Params>(InParams);
     auto& Current = NewEntity.Add<ck::FFragment_ResolverDataBundle_Current>();
+
+    // Add the attributes we need for damage calculation
+    // Formula = (BaseDamage + BonusDamage) * TotalScalarDamage
+    UCk_Utils_FloatAttribute_UE::Add(
+        NewEntity,
+        FCk_Fragment_FloatAttribute_ParamsData(
+            TAG_Label_ResolverDataBundle_BaseValue,
+            0.0f));
+
+    UCk_Utils_FloatAttribute_UE::Add(
+        NewEntity,
+        FCk_Fragment_FloatAttribute_ParamsData(
+            TAG_Label_ResolverDataBundle_BonusValue,
+            0.0f));
+
+    UCk_Utils_FloatAttribute_UE::Add(
+        NewEntity,
+        FCk_Fragment_FloatAttribute_ParamsData(
+            TAG_Label_ResolverDataBundle_TotalScalarValue,
+            1.0f));
 
     auto DataBundleEntity = Cast(NewEntity);
     DoTryStartNewPhase(DataBundleEntity, Params.Get_Params().Get_Phases().Num(), Current.Get_CurrentPhaseIndex());
@@ -67,6 +89,7 @@ auto
         const FCk_Delegate_ResolverDataBundle_OnPhaseStart& InDelegate)
     -> FCk_Handle_ResolverDataBundle
 {
+    CK_SIGNAL_BIND(ck::UUtils_Signal_ResolverDataBundle_PhaseStart, InDataBundle, InDelegate, InBindingPolicy, InPostFireBehavior);
     return InDataBundle;
 }
 
@@ -77,6 +100,7 @@ auto
         const FCk_Delegate_ResolverDataBundle_OnPhaseStart& InDelegate)
     -> FCk_Handle_ResolverDataBundle
 {
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_ResolverDataBundle_PhaseStart, InDataBundle, InDelegate);
     return InDataBundle;
 }
 
@@ -89,6 +113,7 @@ auto
         const FCk_Delegate_ResolverDataBundle_OnPhaseComplete& InDelegate)
     -> FCk_Handle_ResolverDataBundle
 {
+    CK_SIGNAL_BIND(ck::UUtils_Signal_ResolverDataBundle_PhaseComplete, InDataBundle, InDelegate, InBindingPolicy, InPostFireBehavior);
     return InDataBundle;
 }
 
@@ -99,6 +124,7 @@ auto
         const FCk_Delegate_ResolverDataBundle_OnPhaseComplete& InDelegate)
     -> FCk_Handle_ResolverDataBundle
 {
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_ResolverDataBundle_PhaseComplete, InDataBundle, InDelegate);
     return InDataBundle;
 }
 

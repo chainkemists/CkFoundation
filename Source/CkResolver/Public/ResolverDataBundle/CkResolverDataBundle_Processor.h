@@ -124,6 +124,9 @@ namespace ck
         CK_IGNORE_PENDING_KILL>
     {
     public:
+        using MarkedDirtyBy = FTag_ResolverDataBundle_OperationsResolved;
+
+    public:
         using TProcessor::TProcessor;
 
     public:

@@ -63,8 +63,6 @@ namespace ck
             TimeType InDeltaT) -> void
     {
         TProcessor::DoTick(InDeltaT);
-
-        _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
     auto
@@ -76,16 +74,19 @@ namespace ck
             FFragment_ResolverDataBundle_Requests& InRequestsComp) const
         -> void
     {
-        ck::algo::ForEachRequest(InRequestsComp._MutateMetadataRequests,
-        [&](const auto& InRequest)
+        InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_ResolverDataBundle_Requests& InRequests)
         {
-            DoHandleRequest(InHandle, InComp, InRequest);
-        });
+            ck::algo::ForEachRequest(InRequests._MutateMetadataRequests,
+            [&](const auto& InRequest)
+            {
+                DoHandleRequest(InHandle, InComp, InRequest);
+            });
 
-        ck::algo::ForEachRequest(InRequestsComp._MutateModifierRequests,
-        [&](const auto& InRequest)
-        {
-            DoHandleRequest(InHandle, InComp, InRequest);
+            ck::algo::ForEachRequest(InRequests._MutateModifierRequests,
+            [&](const auto& InRequest)
+            {
+                DoHandleRequest(InHandle, InComp, InRequest);
+            });
         });
     }
 
@@ -136,8 +137,6 @@ namespace ck
         -> void
     {
         TProcessor::DoTick(InDeltaT);
-
-        _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
     auto
@@ -146,62 +145,65 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_ResolverDataBundle_Current& InCurrent,
-            const FFragment_ResolverDataBundle_PendingOperations& InPendingOperations)
+            const FFragment_ResolverDataBundle_PendingOperations& InPendingOperationsComp)
         -> void
     {
-        const auto& ModifyResolverDataComponentAttribute = [&](const FCk_ResolverDataBundle_ModifierOperation& InModifierOperation)
+        InHandle.CopyAndRemove(InPendingOperationsComp, [&](const FFragment_ResolverDataBundle_PendingOperations& InPendingOperations)
         {
-            const auto AttributeModifierParams = FCk_Fragment_FloatAttributeModifier_ParamsData{
-                    InModifierOperation.Get_ModifierDelta(),
-                    InModifierOperation.Get_ModifierOperation(),
-                    ECk_ModifierOperation_RevocablePolicy::Revocable,
-                    ECk_MinMaxCurrent::Current};
-
-            const auto& ResolverDataComponentAttributeName =
-                UCk_Utils_ResolverDataBundle_UE::DoGet_ResolverDataComponentAttributeName(InModifierOperation.Get_ResolverComponent());
-
-            auto ResolverDataComponentAttribute = UCk_Utils_FloatAttribute_UE::TryGet(InHandle, ResolverDataComponentAttributeName);
-
-            UCk_Utils_FloatAttributeModifier_UE::Add(ResolverDataComponentAttribute, FGameplayTag::EmptyTag,AttributeModifierParams);
-        };
-
-        const auto& ResolvePendingMetadataOperations = [&]() -> void
-        {
-            for (const auto& MetadataOperation : InPendingOperations.Get_PendingMetadataOperations())
+            const auto& ModifyResolverDataComponentAttribute = [&](const FCk_ResolverDataBundle_ModifierOperation& InModifierOperation)
             {
-                InCurrent._MetadataTags.AppendTags(MetadataOperation.Get_TagsToAdd());
-                InCurrent._MetadataTags.RemoveTags(MetadataOperation.Get_TagsToRemove());
-            }
+                const auto AttributeModifierParams = FCk_Fragment_FloatAttributeModifier_ParamsData{
+                        InModifierOperation.Get_ModifierDelta(),
+                        InModifierOperation.Get_ModifierOperation(),
+                        ECk_ModifierOperation_RevocablePolicy::Revocable,
+                        ECk_MinMaxCurrent::Current};
 
-            for (const auto& MetadataOperation : InPendingOperations.Get_PendingMetadataOperations_Conditionals())
+                const auto& ResolverDataComponentAttributeName =
+                    UCk_Utils_ResolverDataBundle_UE::DoGet_ResolverDataComponentAttributeName(InModifierOperation.Get_ResolverComponent());
+
+                auto ResolverDataComponentAttribute = UCk_Utils_FloatAttribute_UE::TryGet(InHandle, ResolverDataComponentAttributeName);
+
+                UCk_Utils_FloatAttributeModifier_UE::Add(ResolverDataComponentAttribute, FGameplayTag::EmptyTag,AttributeModifierParams);
+            };
+
+            const auto& ResolvePendingMetadataOperations = [&]() -> void
             {
-                if (NOT MetadataOperation.Get_BundleTagRequirements().RequirementsMet(InCurrent.Get_MetadataTags()))
-                { continue; }
+                for (const auto& MetadataOperation : InPendingOperations.Get_PendingMetadataOperations())
+                {
+                    InCurrent._MetadataTags.AppendTags(MetadataOperation.Get_TagsToAdd());
+                    InCurrent._MetadataTags.RemoveTags(MetadataOperation.Get_TagsToRemove());
+                }
 
-                InCurrent._MetadataTags.AppendTags(MetadataOperation.Get_Operation().Get_TagsToAdd());
-                InCurrent._MetadataTags.RemoveTags(MetadataOperation.Get_Operation().Get_TagsToRemove());
-            }
+                for (const auto& MetadataOperation : InPendingOperations.Get_PendingMetadataOperations_Conditionals())
+                {
+                    if (NOT MetadataOperation.Get_BundleTagRequirements().RequirementsMet(InCurrent.Get_MetadataTags()))
+                    { continue; }
 
-        }; ResolvePendingMetadataOperations();
+                    InCurrent._MetadataTags.AppendTags(MetadataOperation.Get_Operation().Get_TagsToAdd());
+                    InCurrent._MetadataTags.RemoveTags(MetadataOperation.Get_Operation().Get_TagsToRemove());
+                }
 
-        const auto& ResolvePendingModifierOperations = [&]() -> void
-        {
-            for (const auto& ModifierOperation : InPendingOperations.Get_PendingModifiersOperations())
+            }; ResolvePendingMetadataOperations();
+
+            const auto& ResolvePendingModifierOperations = [&]() -> void
             {
-                ModifyResolverDataComponentAttribute(ModifierOperation);
-            }
+                for (const auto& ModifierOperation : InPendingOperations.Get_PendingModifiersOperations())
+                {
+                    ModifyResolverDataComponentAttribute(ModifierOperation);
+                }
 
-            for (const auto& ModifierOperation : InPendingOperations.Get_PendingModifiersOperations_Conditionals())
-            {
-                if (NOT ModifierOperation.Get_BundleTagRequirements().RequirementsMet(InCurrent.Get_MetadataTags()))
-                { continue; }
+                for (const auto& ModifierOperation : InPendingOperations.Get_PendingModifiersOperations_Conditionals())
+                {
+                    if (NOT ModifierOperation.Get_BundleTagRequirements().RequirementsMet(InCurrent.Get_MetadataTags()))
+                    { continue; }
 
-                ModifyResolverDataComponentAttribute(ModifierOperation.Get_Operation());
-            }
+                    ModifyResolverDataComponentAttribute(ModifierOperation.Get_Operation());
+                }
 
-        }; ResolvePendingModifierOperations();
+            }; ResolvePendingModifierOperations();
 
-        UCk_Utils_ResolverDataBundle_UE::DoMarkBundle_AsOperationsResolved(InHandle);
+            UCk_Utils_ResolverDataBundle_UE::DoMarkBundle_AsOperationsResolved(InHandle);
+        });
 
         ck::resolver::Verbose(TEXT("Resolved all Pending Operations of Damage Bundle [{}]"), InHandle);
     }
@@ -215,6 +217,8 @@ namespace ck
             FFragment_ResolverDataBundle_Current& InCurrent)
         -> void
     {
+        InHandle.Remove<MarkedDirtyBy>();
+
         const auto& ResolverDataBaseValue_AttributeName =
             UCk_Utils_ResolverDataBundle_UE::DoGet_ResolverDataComponentAttributeName(ECk_ResolverDataBundle_ModifierComponent::BaseValue);
         const auto& ResolverDataBaseValue_Attribute = UCk_Utils_FloatAttribute_UE::TryGet(InHandle, ResolverDataBaseValue_AttributeName);

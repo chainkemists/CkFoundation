@@ -58,11 +58,11 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, Categories = "Resolver.Metadata"))
-    FGameplayTagContainer _InitialMetadata;
+    TArray<FCk_ResolverDataBundle_MetadataOperation_Conditional> _InitialMetadata;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TArray<FCk_ResolverDataBundle_ModifierOperation> _InitialModifierOperations;
+    TArray<FCk_ResolverDataBundle_ModifierOperation_Conditional> _InitialModifierOperations;
 
 public:
     CK_PROPERTY_GET(_BundleName);

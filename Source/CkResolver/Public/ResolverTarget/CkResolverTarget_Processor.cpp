@@ -16,8 +16,6 @@ namespace ck
         -> void
     {
         TProcessor::DoTick(InDeltaT);
-
-        _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
     auto
@@ -25,13 +23,16 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_ResolverTarget_Requests& InRequests) const
+            FFragment_ResolverTarget_Requests& InRequestsComp) const
         -> void
     {
-        ck::algo::ForEachRequest(InRequests._ResolverRequests,
-        [&](const auto& InRequest)
+        InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_ResolverTarget_Requests& InRequests)
         {
-            DoHandleRequest(InHandle, InRequest);
+            ck::algo::ForEachRequest(InRequests._ResolverRequests,
+            [&](const auto& InRequest)
+            {
+                DoHandleRequest(InHandle, InRequest);
+            });
         });
     }
 
@@ -42,6 +43,9 @@ namespace ck
             const FCk_Request_ResolverTarget_InitiateNewResolution& InNewResolution)
         -> void
     {
+        UUtils_Signal_ResolverTarget_OnNewResolverDataBundle::Broadcast(InNewResolution.GetAndDestroyRequestHandle(),
+            MakePayload(InHandle, InNewResolution.Get_DataBundle()));
+
         UUtils_Signal_ResolverTarget_OnNewResolverDataBundle::Broadcast(InHandle,
             MakePayload(InHandle, InNewResolution.Get_DataBundle()));
     }

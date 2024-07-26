@@ -5,7 +5,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_ResolverTarget_ProcessorInjector_UE::
+    UCk_ResolverTarget_ProcessorInjector_HandlRequests_UE::
     DoInjectProcessors(
         EcsWorldType& InWorld)
         -> void

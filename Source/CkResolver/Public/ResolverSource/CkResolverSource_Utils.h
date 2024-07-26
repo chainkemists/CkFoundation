@@ -45,7 +45,7 @@ public:
 
 private:
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|ResolverDataBundle",
+        Category = "Ck|Utils|ResolverSource",
         DisplayName="[Ck][ResolverSource] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_ResolverSource
@@ -54,9 +54,9 @@ private:
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|ResolverDataBundle",
+        Category = "Ck|Utils|ResolverSource",
         DisplayName="[Ck][ResolverSource] Handle -> ResolverDataBundle Handle",
-        meta = (CompactNodeTitle = "<AsAbilityOwner>", BlueprintAutocast))
+        meta = (CompactNodeTitle = "<AsResolverSource>", BlueprintAutocast))
     static FCk_Handle_ResolverSource
     DoCastChecked(
         FCk_Handle InHandle);
@@ -69,7 +69,7 @@ public:
     Request_InitiateNewResolution(
         UPARAM(ref) FCk_Handle_ResolverSource& InResolverSource,
         const FCk_Request_ResolverSource_InitiateNewResolution& InRequest,
-        const FCk_Delegate_ResolverSource_OnNewResolverDataBundle& InDelegate);
+        FCk_Delegate_ResolverSource_OnNewResolverDataBundle InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,

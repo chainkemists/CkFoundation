@@ -12,7 +12,6 @@ auto
     -> void
 {
     InHandle.Add<ck::FFragment_ResolverTarget_Params>(InParams);
-    InHandle.Add<ck::FFragment_RecordOfDataBundles>();
     RecordOfDataBundles_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 }
 
@@ -28,7 +27,7 @@ auto
     Request_InitiateNewResolution(
         FCk_Handle_ResolverTarget& InResolverTarget,
         const FCk_Request_ResolverTarget_InitiateNewResolution& InRequest,
-        const FCk_Delegate_ResolverTarget_OnNewResolverDataBundle& InDelegate)
+        FCk_Delegate_ResolverTarget_OnNewResolverDataBundle InDelegate)
     -> FCk_Handle_ResolverTarget
 {
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_ResolverTarget_OnNewResolverDataBundle,

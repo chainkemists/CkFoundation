@@ -7,7 +7,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKRESOLVER_API UCk_ResolverTarget_ProcessorInjector_UE : public UCk_EcsWorld_ProcessorInjector_Base_UE
+class CKRESOLVER_API UCk_ResolverTarget_ProcessorInjector_HandlRequests_UE : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 
