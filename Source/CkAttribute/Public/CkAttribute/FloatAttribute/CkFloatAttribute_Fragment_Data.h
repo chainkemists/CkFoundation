@@ -25,9 +25,23 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_FloatAttribute
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_FloatAttributeMagnitude_CalculationPolicy : uint8
+{
+    Linear,
+    Curve,
+    Breakpoints,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_FloatAttributeMagnitude_CalculationPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 /**
- * Struct representing a float whose magnitude is dictated by a backing attribute and a calculation policy, follows basic form of:
- * (Coefficient * (PreMultiplyAdditiveValue + [Eval'd Attribute Value According to Policy])) + PostMultiplyAdditiveValue
+ * Struct representing a float whose magnitude is dictated by a backing attribute and a calculation policy, follows one of the following forms:
+ * Linear:         (Coefficient * (PreMultiplyAdditiveValue + [Eval'd Attribute Value According to Policy])) + PostMultiplyAdditiveValue
+ * Curve:          Coefficient * Curve([Eval'd Attribute Value According to Policy])
+ * Breakpoints:    Breakpoints[floor([Eval'd Attribute Value According to Policy])],   0 if indexing below 0 and the last breakpoint if indexing above it
  */
 USTRUCT(BlueprintType)
 struct CKATTRIBUTE_API FCk_FloatAttribute_Magnitude
@@ -49,29 +63,49 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     ECk_Attribute_BaseBonusFinal _MagnitudeComponent = ECk_Attribute_BaseBonusFinal::Final;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_FloatAttributeMagnitude_CalculationPolicy _CalculationMode = ECk_FloatAttributeMagnitude_CalculationPolicy::Linear;
 
     // Coefficient to the attribute calculation
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+        meta = (AllowPrivateAccess = true, EditConditionHides,
+            EditCondition = "_CalculationMode == ECk_FloatAttributeMagnitude_CalculationPolicy::Linear || _CalculationMode == ECk_FloatAttributeMagnitude_CalculationPolicy::Curve"))
     float _Coefficient = 1.0f;
 
     // Additive value to the attribute calculation, added in BEFORE the coefficient applies
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+        meta = (AllowPrivateAccess = true, EditConditionHides,
+            EditCondition = "_CalculationMode == ECk_FloatAttributeMagnitude_CalculationPolicy::Linear"))
     float _PreMultiplyAdditiveValue = 0.0f;
 
     // Additive value to the attribute calculation, added in AFTER the coefficient applies
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+        meta = (AllowPrivateAccess = true, EditConditionHides,
+            EditCondition = "_CalculationMode == ECk_FloatAttributeMagnitude_CalculationPolicy::Linear"))
     float _PostMultiplyAdditiveValue = 0.0f;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+         meta = (AllowPrivateAccess = true, EditConditionHides,
+            EditCondition = "_CalculationMode == ECk_FloatAttributeMagnitude_CalculationPolicy::Curve"))
+    FRuntimeFloatCurve _Curve;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true, EditConditionHides,
+            EditCondition = "_CalculationMode == ECk_FloatAttributeMagnitude_CalculationPolicy::Breakpoints"))
+    TArray<float> _Breakpoints;
 
 public:
     CK_PROPERTY_GET(_AttributeName);
     CK_PROPERTY(_AttributeComponent);
     CK_PROPERTY(_MagnitudeComponent);
+    CK_PROPERTY(_CalculationMode);
     CK_PROPERTY(_Coefficient);
     CK_PROPERTY(_PreMultiplyAdditiveValue);
     CK_PROPERTY(_PostMultiplyAdditiveValue);
+    CK_PROPERTY(_Curve);
+    CK_PROPERTY(_Breakpoints);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_FloatAttribute_Magnitude, _AttributeName);
