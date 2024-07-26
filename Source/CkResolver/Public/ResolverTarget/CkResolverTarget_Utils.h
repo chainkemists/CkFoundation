@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkResolverTarget_Fragment_Data.h"
+
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
@@ -22,7 +24,7 @@ class CKRESOLVER_API UCk_Utils_ResolverTarget_UE : public UCk_Utils_Ecs_Net_UE
 
 public:
     CK_GENERATED_BODY(UCk_Utils_ResolverTarget_UE);
-    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(UCk_Utils_ResolverTarget_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_ResolverTarget);
 
 public:
     using RecordOfDataBundles_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfDataBundles>;
@@ -31,7 +33,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ResolverTarget",
               DisplayName="[Ck][ResolverTarget] Add Feature")
-    static void
+    static FCk_Handle_ResolverTarget
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_ResolverTarget_ParamsData& InParams);
@@ -42,6 +44,29 @@ public:
     static bool
     Has(
         const FCk_Handle& InHandle);
+
+    // The ResolverTarget is destroyed when the Owner is destroyed OR after 1 frame if InLifetime == AfterOneFrame
+    UFUNCTION(BlueprintCallable,
+          Category = "Ck|Utils|ResolverTarget",
+          DisplayName="[Ck][ResolverTarget] Create New ResolverTarget")
+    static FCk_Handle_ResolverTarget
+    Create(
+        const FCk_Handle& InOwner,
+        const FTransform& InTransform,
+        const FCk_Fragment_ResolverTarget_ParamsData& InParams,
+        ECk_Lifetime InLifetime = ECk_Lifetime::UntilDestroyed);
+
+    // Transient means that the onus of destroying the ResolverTarget is now on the user OR after 1 frame if InLifetime == AfterOneFrame
+    UFUNCTION(BlueprintCallable,
+          Category = "Ck|Utils|ResolverTarget",
+          DisplayName="[Ck][ResolverTarget] Create New ResolverTarget (Transient)",
+          meta = (WorldContext="InWorldContextObject"))
+    static FCk_Handle_ResolverTarget
+    Create_Transient(
+        const FTransform& InTransform,
+        const FCk_Fragment_ResolverTarget_ParamsData& InParams,
+        const UObject* InWorldContextObject,
+        ECk_Lifetime InLifetime = ECk_Lifetime::UntilDestroyed);
 
 private:
     UFUNCTION(BlueprintCallable,
@@ -60,6 +85,21 @@ private:
     static FCk_Handle_ResolverTarget
     DoCastChecked(
         FCk_Handle InHandle);
+
+public:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|ResolverTarget",
+        DisplayName="[Ck][ResolverTarget] ForEach ResolverDataBundle",
+        meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
+    static TArray<FCk_Handle_ResolverDataBundle>
+    ForEach_ResolverDataBundle(
+        UPARAM(ref) FCk_Handle_ResolverTarget& InTarget,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate);
+    static auto
+    ForEach_ResolverDataBundle(
+        FCk_Handle_ResolverTarget& InTarget,
+        const TFunction<void(FCk_Handle_ResolverDataBundle)>& InFunc) -> void;
 
 public:
     UFUNCTION(BlueprintCallable,

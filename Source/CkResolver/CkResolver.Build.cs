@@ -28,7 +28,8 @@ public class CkResolver : CkModuleRules
             "CkProvider",
             "CkRecord",
             "CkSettings",
-            "CkSignal"
+            "CkSignal",
+            "CkTargeting"
         });
     }
 }
