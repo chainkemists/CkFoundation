@@ -1,6 +1,6 @@
 #include "CkResolverDataBundle_Utils.h"
 
-#include "CkFloatAttribute_Utils.h"
+#include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
 
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
@@ -12,6 +12,7 @@ auto
     UCk_Utils_ResolverDataBundle_UE::
     Create(
         FCk_Handle& InOwner,
+        FGameplayTag InName,
         const FCk_Fragment_ResolverDataBundle_ParamsData& InParams)
     -> FCk_Handle_ResolverDataBundle
 {
@@ -20,6 +21,7 @@ auto
     { return {}; }
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    UCk_Utils_GameplayLabel_UE::Add(NewEntity, InName);
     UCk_Utils_Handle_UE::Set_DebugName(NewEntity, *ck::Format_UE(TEXT("ResolverDataBundle with Owner [{}]"), InOwner));
 
     const auto& Params = NewEntity.Add<ck::FFragment_ResolverDataBundle_Params>(InParams);
@@ -46,7 +48,7 @@ auto
             1.0f));
 
     auto DataBundleEntity = Cast(NewEntity);
-    DoTryStartNewPhase(DataBundleEntity, Params.Get_Params().Get_Phases().Num(), Current.Get_CurrentPhaseIndex());
+    std::ignore = DoTryStartNewPhase(DataBundleEntity, Params.Get_Params().Get_Phases().Num(), Current.Get_CurrentPhaseIndex());
 
     return DataBundleEntity;
 }
@@ -64,7 +66,7 @@ auto
         const FCk_Handle_ResolverDataBundle& InDataBundle)
     -> FGameplayTag
 {
-    return InDataBundle.Get<FCk_Fragment_ResolverDataBundle_ParamsData>().Get_BundleName();
+    return UCk_Utils_GameplayLabel_UE::Get_Label(InDataBundle);
 }
 
 auto
@@ -101,6 +103,18 @@ auto
     -> TArray<FCk_Fragment_ResolverDataBundle_PhaseInfo>
 {
     return InDataBundle.Get<FCk_Fragment_ResolverDataBundle_ParamsData>().Get_Phases();
+}
+
+auto
+    UCk_Utils_ResolverDataBundle_UE::
+    Get_CurrentPhase(
+        const FCk_Handle_ResolverDataBundle& InDataBundle)
+    -> FGameplayTag
+{
+    const auto& Phases = InDataBundle.Get<ck::FFragment_ResolverDataBundle_Params>().Get_Params().Get_Phases();
+    const auto& CurrentPhaseIndex = InDataBundle.Get<ck::FFragment_ResolverDataBundle_Current>().Get_CurrentPhaseIndex();
+
+    return Phases.IsValidIndex(CurrentPhaseIndex) ? Phases[CurrentPhaseIndex].Get_PhaseName() : TAG_ResolverDataBundle_InvalidPhase;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -172,6 +186,30 @@ auto
     -> FCk_Handle_ResolverDataBundle
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_ResolverDataBundle_PhaseComplete, InDataBundle, InDelegate);
+    return InDataBundle;
+}
+
+auto
+    UCk_Utils_ResolverDataBundle_UE::
+    BindTo_OnAllPhasesComplete(
+        FCk_Handle_ResolverDataBundle& InDataBundle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_ResolverDataBundle_OnAllPhasesComplete& InDelegate)
+    -> FCk_Handle_ResolverDataBundle
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_ResolverDataBundle_AllPhasesComplete, InDataBundle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InDataBundle;
+}
+
+auto
+    UCk_Utils_ResolverDataBundle_UE::
+    UnbindFrom_OnAllPhasesComplete(
+        FCk_Handle_ResolverDataBundle& InDataBundle,
+        const FCk_Delegate_ResolverDataBundle_OnAllPhasesComplete& InDelegate)
+    -> FCk_Handle_ResolverDataBundle
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_ResolverDataBundle_AllPhasesComplete, InDataBundle, InDelegate);
     return InDataBundle;
 }
 
@@ -272,12 +310,13 @@ auto
     DoTryStartNewPhase(
         FCk_Handle_ResolverDataBundle& InResolverDataBundle,
         int32 InNumTotalPhases,
-        int32 InCurrentPhaseIndex) -> void
+        int32 InCurrentPhaseIndex) -> bool
 {
     if (InCurrentPhaseIndex + 1 == InNumTotalPhases)
-    { return; }
+    { return false; }
 
     InResolverDataBundle.Add<ck::FTag_ResolverDataBundle_StartNewPhase>();
+    return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
