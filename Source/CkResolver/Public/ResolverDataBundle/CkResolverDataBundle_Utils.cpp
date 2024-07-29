@@ -33,19 +33,19 @@ auto
         NewEntity,
         FCk_Fragment_FloatAttribute_ParamsData(
             TAG_Label_ResolverDataBundle_BaseValue,
-            0.0f));
+            0.0f), ECk_Replication::DoesNotReplicate);
 
     UCk_Utils_FloatAttribute_UE::Add(
         NewEntity,
         FCk_Fragment_FloatAttribute_ParamsData(
             TAG_Label_ResolverDataBundle_BonusValue,
-            0.0f));
+            0.0f), ECk_Replication::DoesNotReplicate);
 
     UCk_Utils_FloatAttribute_UE::Add(
         NewEntity,
         FCk_Fragment_FloatAttribute_ParamsData(
             TAG_Label_ResolverDataBundle_TotalScalarValue,
-            1.0f));
+            1.0f), ECk_Replication::DoesNotReplicate);
 
     auto DataBundleEntity = Cast(NewEntity);
     std::ignore = DoTryStartNewPhase(DataBundleEntity, Params.Get_Params().Get_Phases().Num(), Current.Get_CurrentPhaseIndex());
@@ -115,6 +115,24 @@ auto
     const auto& CurrentPhaseIndex = InDataBundle.Get<ck::FFragment_ResolverDataBundle_Current>().Get_CurrentPhaseIndex();
 
     return Phases.IsValidIndex(CurrentPhaseIndex) ? Phases[CurrentPhaseIndex].Get_PhaseName() : TAG_ResolverDataBundle_InvalidPhase;
+}
+
+auto
+    UCk_Utils_ResolverDataBundle_UE::
+    Get_FinalValue(
+        const FCk_Handle_ResolverDataBundle& InDataBundle)
+    -> float
+{
+    return InDataBundle.Get<ck::FFragment_ResolverDataBundle_Current>().Get_FinalValue();
+}
+
+auto
+    UCk_Utils_ResolverDataBundle_UE::
+    Get_Metadata(
+        const FCk_Handle_ResolverDataBundle& InDataBundle)
+    -> FGameplayTagContainer
+{
+    return InDataBundle.Get<ck::FFragment_ResolverDataBundle_Current>().Get_MetadataTags();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
