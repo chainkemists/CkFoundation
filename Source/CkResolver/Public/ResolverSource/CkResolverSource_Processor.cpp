@@ -1,13 +1,12 @@
 #include "CkResolverSource_Processor.h"
 
-#include "CkResolverTarget_Fragment_Data.h"
-#include "CkResolverTarget_Utils.h"
-
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkNet/CkNet_Utils.h"
 
 #include "ResolverDataBundle/CkResolverDataBundle_Utils.h"
+
+#include "ResolverTarget/CkResolverTarget_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -51,17 +50,18 @@ namespace ck
     {
         auto Target = InNewResolution.Get_Target();
 
-        auto DataBundle = UCk_Utils_ResolverDataBundle_UE::Create(InHandle, FCk_Fragment_ResolverDataBundle_ParamsData
+        auto DataBundle = UCk_Utils_ResolverDataBundle_UE::Create(InHandle, InNewResolution.Get_BundleName(),
+            FCk_Fragment_ResolverDataBundle_ParamsData
             {
                 InNewResolution.Get_BundleName(),
                 InHandle,
                 Target,
-                InNewResolution.Get_ResolverCause(),
+                InNewResolution.Get_Causer(),
                 InParams.Get_Params().Get_ResolutionPhases()
             });
 
         UUtils_Signal_ResolverSource_OnNewResolverDataBundle::Broadcast(InNewResolution.GetAndDestroyRequestHandle(),
-            MakePayload(InHandle, InNewResolution.Get_ResolverCause(), DataBundle));
+            MakePayload(InHandle, InNewResolution.Get_Causer(), DataBundle));
 
         for (const auto& ModifierOperation : InNewResolution.Get_InitialModifierOperations())
         {
@@ -76,7 +76,7 @@ namespace ck
         }
 
         UUtils_Signal_ResolverSource_OnNewResolverDataBundle::Broadcast(InHandle,
-            MakePayload(InHandle, InNewResolution.Get_ResolverCause(), DataBundle));
+            MakePayload(InHandle, InNewResolution.Get_Causer(), DataBundle));
 
         UCk_Utils_ResolverTarget_UE::Request_InitiateNewResolution(Target, FCk_Request_ResolverTarget_InitiateNewResolution{DataBundle}, {});
     }

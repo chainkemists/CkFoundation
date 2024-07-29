@@ -87,6 +87,15 @@ private:
         FCk_Handle InHandle);
 
 public:
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|ResolverSource",
+        DisplayName="[Ck][ResolverSource] Try Get DataBundles (By Name)")
+    static TArray<FCk_Handle_ResolverDataBundle>
+    Get_DataBundles(
+        const FCk_Handle_ResolverSource& InSource,
+        UPARAM(meta=(Categories = "Resolver.DataBundle.Name")) FGameplayTag InName);
+
+public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ResolverSource",
         DisplayName="[Ck][ResolverSource] ForEach ResolverDataBundle",

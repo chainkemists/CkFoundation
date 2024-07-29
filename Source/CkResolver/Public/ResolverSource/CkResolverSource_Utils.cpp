@@ -1,10 +1,11 @@
 #include "CkResolverSource_Utils.h"
 
-#include "CkTargetPoint_Utils.h"
-
 #include "ResolverDataBundle/CkResolverDataBundle_Fragment.h"
+#include "ResolverDataBundle/CkResolverDataBundle_Utils.h"
 
 #include "ResolverSource/CkResolverSource_Fragment.h"
+
+#include "TargetPoint/CkTargetPoint_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -16,7 +17,7 @@ auto
     -> FCk_Handle_ResolverSource
 {
     InHandle.Add<ck::FFragment_ResolverSource_Params>(InParams);
-    RecordOfDataBundles_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
+    RecordOfDataBundles_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::Default);
 
     return Cast(InHandle);
 }
@@ -52,9 +53,23 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(ResolverSource, UCk_Utils_ResolverSource_UE, FCk_Handle_ResolverSource,
-    ck::FFragment_ResolverSource_Params, ck::FFragment_RecordOfDataBundles)
+    ck::FFragment_ResolverSource_Params)
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ResolverSource_UE::
+    Get_DataBundles(
+        const FCk_Handle_ResolverSource& InSource,
+        FGameplayTag InName)
+    -> TArray<FCk_Handle_ResolverDataBundle>
+{
+    return RecordOfDataBundles_Utils::Get_ValidEntries_If(InSource,
+    [InName](const FCk_Handle& InHandle)
+    {
+        return UCk_Utils_GameplayLabel_UE::Get_Label(InHandle) == InName;
+    });
+}
 
 auto
     UCk_Utils_ResolverSource_UE::
