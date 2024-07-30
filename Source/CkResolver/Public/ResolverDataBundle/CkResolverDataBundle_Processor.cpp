@@ -245,6 +245,7 @@ namespace ck
         const auto& PhaseName = UCk_Utils_ResolverDataBundle_UE::Get_CurrentPhase(InHandle);
 
         const auto Payload = FCk_Payload_ResolverDataBundle_Resolved{}
+            .Set_DataBundle(InHandle)
             .Set_Instigator(Instigator)
             .Set_Target(Target)
             .Set_ResolverCause(ResolverCause)
