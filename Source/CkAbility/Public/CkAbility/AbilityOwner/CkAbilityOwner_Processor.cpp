@@ -276,6 +276,15 @@ namespace ck
                 }
                 else
                 {
+                     ability::Verbose
+                    (
+                        TEXT("Skipping Giving Ability [{}] with Script [{}] because AbilityOwner [{}] NetMode is NOT host but the feature replication policy is set to [{}]"),
+                        AbilityEntityConfig,
+                        AbilityScriptClass,
+                        InAbilityOwnerEntity,
+                        AbilityData.Get_NetworkSettings().Get_FeatureReplicationPolicy()
+                    );
+                    
                     return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven;
                 }
             }
