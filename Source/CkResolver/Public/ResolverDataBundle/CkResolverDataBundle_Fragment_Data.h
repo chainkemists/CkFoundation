@@ -285,6 +285,10 @@ public:
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
+    FCk_Handle_ResolverDataBundle _DataBundle;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
     FCk_Handle_ResolverSource _Instigator;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite,
@@ -304,6 +308,7 @@ private:
     FGameplayTagContainer _Metadata;
 
 public:
+    CK_PROPERTY(_DataBundle);
     CK_PROPERTY(_Instigator);
     CK_PROPERTY(_Target);
     CK_PROPERTY(_ResolverCause);
