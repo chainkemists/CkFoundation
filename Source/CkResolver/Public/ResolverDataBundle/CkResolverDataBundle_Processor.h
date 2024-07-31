@@ -119,13 +119,12 @@ namespace ck
         FCk_Handle_ResolverDataBundle,
         FFragment_ResolverDataBundle_Params,
         FFragment_ResolverDataBundle_Current,
-        // we explicitly want to look for StartNewPhase because it's possible there were never any operations at all in a Phase
-        FTag_ResolverDataBundle_StartNewPhase,
+        ck::TExclude<FFragment_ResolverDataBundle_Requests>,
+        ck::TExclude<FFragment_ResolverDataBundle_PendingOperations>,
+        ck::TExclude<FTag_ResolverDataBundle_CalculateDone>,
+        ck::TExclude<FTag_ResolverDataBundle_StartNewPhase>,
         CK_IGNORE_PENDING_KILL>
     {
-    public:
-        using MarkedDirtyBy = FTag_ResolverDataBundle_StartNewPhase;
-
     public:
         using TProcessor::TProcessor;
 

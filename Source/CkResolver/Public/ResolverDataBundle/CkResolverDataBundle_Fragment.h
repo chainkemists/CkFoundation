@@ -14,6 +14,10 @@ class UCk_Utils_ResolverDataBundle_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_ResolverDataBundle_InvalidPhase);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_ResolverDataBundle_StartNewPhase);
@@ -127,7 +131,12 @@ namespace ck
         FCk_Delegate_ResolverDataBundle_OnPhaseComplete_MC,
         FCk_Handle_ResolverDataBundle,
         FGameplayTag,
-        FPayload_ResolverDataBundle_OnResolved);
+        FCk_Payload_ResolverDataBundle_Resolved);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRESOLVER_API, ResolverDataBundle_AllPhasesComplete,
+        FCk_Delegate_ResolverDataBundle_OnAllPhasesComplete_MC,
+        FCk_Handle_ResolverDataBundle,
+        FCk_Payload_ResolverDataBundle_Resolved);
 
     // --------------------------------------------------------------------------------------------------------------------
 

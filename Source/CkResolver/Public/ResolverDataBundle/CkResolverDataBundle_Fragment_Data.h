@@ -130,11 +130,11 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "ResolverDataBundle.Metadata"))
+              meta = (AllowPrivateAccess = true, Categories = "Resolver.DataBundle.Metadata"))
     FGameplayTagContainer _TagsToAdd;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "ResolverDataBundle.Metadata"))
+              meta = (AllowPrivateAccess = true, Categories = "Resolver.DataBundle.Metadata"))
     FGameplayTagContainer _TagsToRemove;
 
 public:
@@ -178,7 +178,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "ResolverPhase"))
+              meta = (AllowPrivateAccess = true, Categories = "Resolver.DataBundle.Phase"))
     FGameplayTag _PhaseName;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -203,7 +203,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "Resolver.DataBundle"))
+              meta = (AllowPrivateAccess = true, Categories = "Resolver.DataBundle.Name"))
     FGameplayTag _BundleName;
 
     // This is the Entity that ultimately owns the outgoing Resolver
@@ -226,7 +226,6 @@ private:
     TArray<FCk_Fragment_ResolverDataBundle_PhaseInfo> _Phases;
 
 public:
-    CK_PROPERTY_GET(_BundleName);
     CK_PROPERTY_GET(_Instigator);
     CK_PROPERTY_GET(_Target);
     CK_PROPERTY_GET(_Causer);
@@ -276,12 +275,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKRESOLVER_API FPayload_ResolverDataBundle_OnResolved
+struct CKRESOLVER_API FCk_Payload_ResolverDataBundle_Resolved
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FPayload_ResolverDataBundle_OnResolved);
+    CK_GENERATED_BODY(FCk_Payload_ResolverDataBundle_Resolved);
 
 private:
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite,
@@ -330,22 +329,24 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Delegate_ResolverDataBundle_OnPhaseComplete,
     FCk_Handle_ResolverDataBundle, InDataBundle,
     FGameplayTag, InPhase,
-    FPayload_ResolverDataBundle_OnResolved, InPayload);
+    FCk_Payload_ResolverDataBundle_Resolved, InPayload);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
     FCk_Delegate_ResolverDataBundle_OnPhaseComplete_MC,
     FCk_Handle_ResolverDataBundle, InDataBundle,
     FGameplayTag, InPhase,
-    FPayload_ResolverDataBundle_OnResolved, InPayload);
+    FCk_Payload_ResolverDataBundle_Resolved, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_ResolverDataBundle_OnAllPhasesComplete,
-    FCk_Handle_ResolverDataBundle, InDataBundle);
+    FCk_Handle_ResolverDataBundle, InDataBundle,
+    FCk_Payload_ResolverDataBundle_Resolved, InPayload);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_ResolverDataBundle_OnAllPhasesComplete_MC,
-    FCk_Handle_ResolverDataBundle, InDataBundle);
+    FCk_Handle_ResolverDataBundle, InDataBundle,
+    FCk_Payload_ResolverDataBundle_Resolved, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
