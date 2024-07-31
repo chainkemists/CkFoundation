@@ -109,6 +109,13 @@ public:
     Get_Phases(
         const FCk_Handle_ResolverDataBundle& InDataBundle);
 
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|ResolverDataBundle",
+        DisplayName="[Ck][Resolver] Get DataBundle Phases")
+    static FGameplayTag
+    Get_CurrentPhase(
+        const FCk_Handle_ResolverDataBundle& InDataBundle);
+
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ResolverDataBundle",
@@ -163,6 +170,24 @@ public:
         UPARAM(ref) FCk_Handle_ResolverDataBundle& InDataBundle,
         const FCk_Delegate_ResolverDataBundle_OnPhaseComplete& InDelegate);
 
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|ResolverDataBundle",
+        DisplayName="[Ck][Resolver] Bind to OnAllPhasesComplete")
+    static FCk_Handle_ResolverDataBundle
+    BindTo_OnAllPhasesComplete(
+        UPARAM(ref) FCk_Handle_ResolverDataBundle& InDataBundle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_ResolverDataBundle_OnAllPhasesComplete& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|ResolverDataBundle",
+        DisplayName="[Ck][Resolver] Unbind from OnAllPhasesComplete")
+    static FCk_Handle_ResolverDataBundle
+    UnbindFrom_OnAllPhasesComplete(
+        UPARAM(ref) FCk_Handle_ResolverDataBundle& InDataBundle,
+        const FCk_Delegate_ResolverDataBundle_OnAllPhasesComplete& InDelegate);
+
 private:
     [[nodiscard]]
     static auto
@@ -203,11 +228,12 @@ private:
     DoMarkBundle_AsCalculateDone(
         FCk_Handle_ResolverDataBundle& InResolverDataBundle) -> FCk_Handle_ResolverDataBundle;
 
+    [[nodiscard]]
     static auto
     DoTryStartNewPhase(
         FCk_Handle_ResolverDataBundle& InResolverDataBundle,
         int32 InNumTotalPhases,
-        int32 InCurrentPhaseIndex) -> void;
+        int32 InCurrentPhaseIndex) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
