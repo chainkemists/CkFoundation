@@ -73,6 +73,13 @@ namespace ck
         Get_ValidEntries(
             const FCk_Handle& InRecordHandle) -> TArray<RecordEntryMaybeTypeSafeHandle>;
 
+        template <typename T_Predicate>
+        [[nodiscard]]
+        static auto
+        Get_ValidEntries_If(
+            const FCk_Handle& InRecordHandle,
+            T_Predicate InPredicate) -> TArray<RecordEntryMaybeTypeSafeHandle>;
+
     public:
         template <typename T_Predicate>
         [[nodiscard]]
@@ -309,10 +316,45 @@ namespace ck
     {
         const auto& Entries = Get_Entries(InRecordHandle);
 
-        return ck::algo::Filter(Entries, [](const RecordEntryMaybeTypeSafeHandle& InRecordEntry) -> bool
+        auto FilteredEntries = ck::algo::Filter(Entries, [](const RecordEntryMaybeTypeSafeHandle& InRecordEntry) -> bool
         {
            return ck::IsValid(InRecordEntry);
         });
+
+        RecordOfEntityExtensions_Utils::ForEach_Entry(InRecordHandle,
+        [&](const FCk_Handle_EntityExtension& InEntityExtension)
+        {
+            FilteredEntries.Append(Get_ValidEntries(InEntityExtension));
+        });
+
+        return FilteredEntries;
+    }
+
+    template <typename T_DerivedRecord>
+    template <typename T_Predicate>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        Get_ValidEntries_If(
+            const FCk_Handle& InRecordHandle,
+            T_Predicate InPredicate)
+        -> TArray<RecordEntryMaybeTypeSafeHandle>
+    {
+        const auto& Entries = Get_Entries(InRecordHandle);
+
+        auto FilteredEntries = TArray<RecordEntryMaybeTypeSafeHandle>{};
+
+        RecordOfEntityExtensions_Utils::ForEach_Entry(InRecordHandle,
+        [&](const FCk_Handle_EntityExtension& InEntityExtension)
+        {
+            FilteredEntries = ck::algo::Filter(Entries, [InPredicate](const RecordEntryMaybeTypeSafeHandle& InRecordEntry) -> bool
+            {
+               return ck::IsValid(InRecordEntry) && InPredicate(InRecordEntry);
+            });
+
+            FilteredEntries.Append(Get_ValidEntries(InEntityExtension));
+        });
+
+        return FilteredEntries;
     }
 
     template <typename T_DerivedRecord>
