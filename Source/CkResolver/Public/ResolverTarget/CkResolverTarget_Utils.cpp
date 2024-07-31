@@ -1,8 +1,8 @@
 #include "CkResolverTarget_Utils.h"
 
-#include "CkTargetPoint_Utils.h"
-
 #include "ResolverTarget/CkResolverTarget_Fragment.h"
+
+#include "TargetPoint/CkTargetPoint_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -14,7 +14,6 @@ auto
     -> FCk_Handle_ResolverTarget
 {
     InHandle.Add<ck::FFragment_ResolverTarget_Params>(InParams);
-    RecordOfDataBundles_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
     return Cast(InHandle);
 }
 
@@ -49,7 +48,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(ResolverTarget, UCk_Utils_ResolverTarget_UE, FCk_Handle_ResolverTarget,
-    ck::FFragment_ResolverTarget_Params, ck::FFragment_RecordOfDataBundles)
+    ck::FFragment_ResolverTarget_Params)
 
 // --------------------------------------------------------------------------------------------------------------------
 
