@@ -117,6 +117,20 @@ public:
     Get_CurrentPhase(
         const FCk_Handle_ResolverDataBundle& InDataBundle);
 
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|ResolverDataBundle",
+        DisplayName="[Ck][Resolver] Get DataBundle Final Value")
+    static float
+    Get_FinalValue(
+        const FCk_Handle_ResolverDataBundle& InDataBundle);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|ResolverDataBundle",
+        DisplayName="[Ck][Resolver] Get DataBundle Metadata")
+    static FGameplayTagContainer
+    Get_Metadata(
+        const FCk_Handle_ResolverDataBundle& InDataBundle);
+
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ResolverDataBundle",
