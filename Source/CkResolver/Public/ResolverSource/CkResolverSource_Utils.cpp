@@ -16,7 +16,7 @@ auto
     -> FCk_Handle_ResolverSource
 {
     InHandle.Add<ck::FFragment_ResolverSource_Params>(InParams);
-    RecordOfDataBundles_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
+    RecordOfDataBundles_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::Default);
 
     return Cast(InHandle);
 }
@@ -52,7 +52,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(ResolverSource, UCk_Utils_ResolverSource_UE, FCk_Handle_ResolverSource,
-    ck::FFragment_ResolverSource_Params, ck::FFragment_RecordOfDataBundles)
+    ck::FFragment_ResolverSource_Params)
 
 // --------------------------------------------------------------------------------------------------------------------
 
