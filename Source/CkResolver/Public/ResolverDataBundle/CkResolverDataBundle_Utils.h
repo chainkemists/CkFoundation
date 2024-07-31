@@ -45,6 +45,7 @@ public:
     static FCk_Handle_ResolverDataBundle
     Create(
         UPARAM(ref) FCk_Handle& InOwner,
+        UPARAM(meta=(Categories = "Resolver.DataBundle.Name")) FGameplayTag InName,
         const FCk_Fragment_ResolverDataBundle_ParamsData& InParams);
 
 public:
