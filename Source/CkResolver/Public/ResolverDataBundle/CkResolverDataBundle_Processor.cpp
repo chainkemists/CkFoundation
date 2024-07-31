@@ -232,7 +232,7 @@ namespace ck
         const auto& ResolverDataTotalScalarValue_Attribute = UCk_Utils_FloatAttribute_UE::TryGet(InHandle, ResolverDataTotalScalarValue_AttributeName);
         const auto& ResolverDataTotalScalarValue = UCk_Utils_FloatAttribute_UE::Get_FinalValue(ResolverDataTotalScalarValue_Attribute);
 
-        const auto& CalculatedFinalValue = (ResolverDataBaseValue + ResolverDataBonusValue) * ResolverDataTotalScalarValue;
+        const auto& CalculatedFinalValue = FMath::Max((ResolverDataBaseValue + ResolverDataBonusValue) * ResolverDataTotalScalarValue, 0);
         InCurrent._FinalValue = CalculatedFinalValue;
 
         resolver::Verbose(TEXT("Calculated Final Value [{}] of ResolverData Bundle [{}]"), CalculatedFinalValue, InHandle);
@@ -244,19 +244,12 @@ namespace ck
         const auto& ResolverCause = InParams.Get_Params().Get_Causer();
         const auto& PhaseName = UCk_Utils_ResolverDataBundle_UE::Get_CurrentPhase(InHandle);
 
-        const auto PostCalculatePayload = FCk_Payload_ResolverDataBundle_Resolved{}
+        const auto Payload = FCk_Payload_ResolverDataBundle_Resolved{}
             .Set_Instigator(Instigator)
             .Set_Target(Target)
             .Set_ResolverCause(ResolverCause)
             .Set_FinalValue(CalculatedFinalValue)
             .Set_Metadata(InCurrent.Get_MetadataTags());
-
-        const auto Payload = FCk_Payload_ResolverDataBundle_Resolved{}
-                              .Set_Instigator(Instigator)
-                              .Set_Target(Target)
-                              .Set_ResolverCause(ResolverCause)
-                              .Set_FinalValue(CalculatedFinalValue)
-                              .Set_Metadata(InCurrent.Get_MetadataTags());
 
         UUtils_Signal_ResolverDataBundle_PhaseComplete::Broadcast(InHandle, ck::MakePayload(InHandle, PhaseName, Payload));
 
