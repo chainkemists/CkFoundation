@@ -12,7 +12,7 @@
 auto
     UCk_Utils_ResolverSource_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_ResolverSource_ParamsData& InParams)
     -> FCk_Handle_ResolverSource
 {
@@ -110,7 +110,7 @@ auto
     Request_InitiateNewResolution(
         FCk_Handle_ResolverSource& InResolverSource,
         const FCk_Request_ResolverSource_InitiateNewResolution& InRequest,
-        FCk_Delegate_ResolverSource_OnNewResolverDataBundle InDelegate)
+        const FCk_Delegate_ResolverSource_OnNewResolverDataBundle InDelegate)
     -> FCk_Handle_ResolverSource
 {
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_ResolverSource_OnNewResolverDataBundle,
