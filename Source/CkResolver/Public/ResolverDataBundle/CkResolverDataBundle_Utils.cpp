@@ -33,19 +33,19 @@ auto
         NewEntity,
         FCk_Fragment_FloatAttribute_ParamsData(
             TAG_Label_ResolverDataBundle_BaseValue,
-            0.0f));
+            0.0f), ECk_Replication::DoesNotReplicate);
 
     UCk_Utils_FloatAttribute_UE::Add(
         NewEntity,
         FCk_Fragment_FloatAttribute_ParamsData(
             TAG_Label_ResolverDataBundle_BonusValue,
-            0.0f));
+            0.0f), ECk_Replication::DoesNotReplicate);
 
     UCk_Utils_FloatAttribute_UE::Add(
         NewEntity,
         FCk_Fragment_FloatAttribute_ParamsData(
             TAG_Label_ResolverDataBundle_TotalScalarValue,
-            1.0f));
+            1.0f), ECk_Replication::DoesNotReplicate);
 
     auto DataBundleEntity = Cast(NewEntity);
     std::ignore = DoTryStartNewPhase(DataBundleEntity, Params.Get_Params().Get_Phases().Num(), Current.Get_CurrentPhaseIndex());
