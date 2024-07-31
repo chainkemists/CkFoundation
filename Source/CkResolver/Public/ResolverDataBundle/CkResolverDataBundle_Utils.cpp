@@ -117,6 +117,24 @@ auto
     return Phases.IsValidIndex(CurrentPhaseIndex) ? Phases[CurrentPhaseIndex].Get_PhaseName() : TAG_ResolverDataBundle_InvalidPhase;
 }
 
+auto
+    UCk_Utils_ResolverDataBundle_UE::
+    Get_FinalValue(
+        const FCk_Handle_ResolverDataBundle& InDataBundle)
+    -> float
+{
+    return InDataBundle.Get<ck::FFragment_ResolverDataBundle_Current>().Get_FinalValue();
+}
+
+auto
+    UCk_Utils_ResolverDataBundle_UE::
+    Get_Metadata(
+        const FCk_Handle_ResolverDataBundle& InDataBundle)
+    -> FGameplayTagContainer
+{
+    return InDataBundle.Get<ck::FFragment_ResolverDataBundle_Current>().Get_MetadataTags();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
