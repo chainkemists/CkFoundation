@@ -1,6 +1,6 @@
 #include "CkResolverDataBundle_Utils.h"
 
-#include "CkFloatAttribute_Utils.h"
+#include "CkAttribute/FloatAttribute/CkFloatAttribute_Utils.h"
 
 #include "CkEcs/Handle/CkHandle_Utils.h"
 
@@ -12,6 +12,7 @@ auto
     UCk_Utils_ResolverDataBundle_UE::
     Create(
         FCk_Handle& InOwner,
+        FGameplayTag InName,
         const FCk_Fragment_ResolverDataBundle_ParamsData& InParams)
     -> FCk_Handle_ResolverDataBundle
 {
@@ -20,6 +21,7 @@ auto
     { return {}; }
 
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+    UCk_Utils_GameplayLabel_UE::Add(NewEntity, InName);
     UCk_Utils_Handle_UE::Set_DebugName(NewEntity, *ck::Format_UE(TEXT("ResolverDataBundle with Owner [{}]"), InOwner));
 
     const auto& Params = NewEntity.Add<ck::FFragment_ResolverDataBundle_Params>(InParams);
@@ -64,7 +66,7 @@ auto
         const FCk_Handle_ResolverDataBundle& InDataBundle)
     -> FGameplayTag
 {
-    return InDataBundle.Get<FCk_Fragment_ResolverDataBundle_ParamsData>().Get_BundleName();
+    return UCk_Utils_GameplayLabel_UE::Get_Label(InDataBundle);
 }
 
 auto
