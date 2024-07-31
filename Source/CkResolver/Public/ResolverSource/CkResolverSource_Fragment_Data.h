@@ -44,7 +44,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "ResolverDataBundle"))
+              meta = (AllowPrivateAccess = true, Categories = "Resolver.DataBundle.Name"))
     FGameplayTag _BundleName;
 
     // target must always be present - if there is no valid target, create one through the Resolver Utils
@@ -54,10 +54,10 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    FCk_Handle _ResolverCause;
+    FCk_Handle _Causer;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "Resolver.Metadata"))
+              meta = (AllowPrivateAccess = true))
     TArray<FCk_ResolverDataBundle_MetadataOperation_Conditional> _InitialMetadata;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -67,7 +67,7 @@ private:
 public:
     CK_PROPERTY_GET(_BundleName);
     CK_PROPERTY_GET(_Target);
-    CK_PROPERTY_GET(_ResolverCause);
+    CK_PROPERTY_GET(_Causer);
     CK_PROPERTY_GET(_InitialMetadata);
     CK_PROPERTY_GET(_InitialModifierOperations);
 };

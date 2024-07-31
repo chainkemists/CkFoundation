@@ -35,7 +35,7 @@ public:
           DisplayName="[Ck][ResolverSource] Add Feature")
     static FCk_Handle_ResolverSource
     Add(
-        UPARAM(ref) FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_ResolverSource_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
