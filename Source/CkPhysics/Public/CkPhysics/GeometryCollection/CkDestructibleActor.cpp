@@ -18,17 +18,17 @@ ACk_Destructible::
 {
     // The following settings are crucial for the replication of the geometry collection
     // TODO: We definitely do NOT want destructible Actors to always be relevant. For now, we just want things to work.
-    bAlwaysRelevant = true;
-    bReplicates = true;
-    bNetLoadOnClient = true;
-    SetReplicatingMovement(true);
+    bAlwaysRelevant = false;
+    bReplicates = false;
+    bNetLoadOnClient = false;
+    SetReplicatingMovement(false);
 
     // Optimized network settings to reduce the network load of replicated destruction
     NetUpdateFrequency = 250.0f;
     MinNetUpdateFrequency = 10.0f;
     NetPriority = 0.01f; // destruction should be the lowest priority
 
-    bReplicateUsingRegisteredSubObjectList = true;
+    bReplicateUsingRegisteredSubObjectList = false;
 
     _GeometryCollection = CreateDefaultSubobject<UCk_GeometryCollectionComponent>(TEXT("Ck_GeometryCollection"));
     _GeometryCollection->Request_EnableAsyncPhysics();
@@ -43,8 +43,8 @@ auto
         const FTransform& Transform)
     -> void
 {
-    if (GetWorld()->IsNetMode(NM_Client))
-    { return; }
+    //if (GetWorld()->IsNetMode(NM_Client))
+    //{ return; }
 
     DoRequest_DeleteAllFieldNodes();
     GetFieldSystemComponent()->ResetFieldSystem();
