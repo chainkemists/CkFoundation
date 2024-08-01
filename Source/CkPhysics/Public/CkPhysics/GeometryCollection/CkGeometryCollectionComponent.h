@@ -13,7 +13,7 @@ class UCk_GeometryCollectionComponent : public UGeometryCollectionComponent
 
 public:
     UCk_GeometryCollectionComponent(
-    	const FObjectInitializer& InObjectInitializer = FObjectInitializer::Get());
+        const FObjectInitializer& InObjectInitializer = FObjectInitializer::Get());
     
     virtual void OnCreatePhysicsState() override;
     
