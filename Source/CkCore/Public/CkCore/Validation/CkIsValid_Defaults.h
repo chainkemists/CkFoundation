@@ -134,6 +134,16 @@ CK_DEFINE_CUSTOM_IS_VALID(FInstancedStruct, ck::IsValid_Policy_Default, [=](cons
     return InInstancedStruct.IsValid();
 });
 
+CK_DEFINE_CUSTOM_IS_VALID(FBox, ck::IsValid_Policy_Default, [=](const FBox& InBox3D)
+{
+    return static_cast<bool>(InBox3D.IsValid);
+});
+
+CK_DEFINE_CUSTOM_IS_VALID(FBox2D, ck::IsValid_Policy_Default, [=](const FBox2D& InBox2D)
+{
+    return static_cast<bool>(InBox2D.bIsValid);
+});
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_CUSTOM_IS_VALID_T(T, T*, ck::IsValid_Policy_NullptrOnly, [=](const T* InObj)
