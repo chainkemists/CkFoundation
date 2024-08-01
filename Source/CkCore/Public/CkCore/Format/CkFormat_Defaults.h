@@ -88,6 +88,28 @@ CK_DEFINE_CUSTOM_FORMATTER(FQuat, [&]()
     );
 });
 
+CK_DEFINE_CUSTOM_FORMATTER(FBox, [&]()
+{
+    return ck::Format
+    (
+        TEXT("Min:{}, Max:{}, IsValid:{}"),
+        InObj.Min,
+        InObj.Max,
+        InObj.IsValid
+    );
+});
+
+CK_DEFINE_CUSTOM_FORMATTER(FBox2D, [&]()
+{
+    return ck::Format
+    (
+        TEXT("Min:{}, Max:{}, IsValid:{}"),
+        InObj.Min,
+        InObj.Max,
+        InObj.bIsValid
+    );
+});
+
 CK_DEFINE_CUSTOM_FORMATTER(FTransform, [&]()
 {
     return ck::Format
