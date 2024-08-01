@@ -19,7 +19,7 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Character_UE);
 
 public:
-    UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Add Character Half-Height To Location",
               Category = "Ck|Utils|Character")
     static FVector
@@ -27,7 +27,7 @@ public:
         ACharacter* InCharacter,
         FVector InLocation);
 
-    UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Subtract Character Half-Height From Location",
               Category = "Ck|Utils|Character")
     static FVector
@@ -35,7 +35,7 @@ public:
         ACharacter* InCharacter,
         FVector InLocation);
 
-    UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Add Capsule Half-Height To Location",
               Category = "Ck|Utils|Character")
     static FVector
@@ -43,7 +43,7 @@ public:
         UCapsuleComponent* InCapsule,
         FVector InLocation);
 
-    UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Subtract Capsule Half-Height From Location",
               Category = "Ck|Utils|Character")
     static FVector
