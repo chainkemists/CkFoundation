@@ -136,7 +136,7 @@ public:
         const FVector InCenter,
         FVector InExtent,
         FLinearColor InLineColor,
-        const FRotator InRotation=FRotator::ZeroRotator,
+        const FRotator InRotation = FRotator::ZeroRotator,
         float InDuration = 0.0f,
         float InThickness = 5.0f);
 
@@ -207,6 +207,30 @@ public:
         class AActor* InTestBaseActor = nullptr,
         FLinearColor InTextColor = FLinearColor::White,
         float InDuration = 0.f);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable)
+class CKCORE_API UCk_Utils_DebugDraw_Screen_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_DebugDraw_Screen_UE);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Rect (On Screen)",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugRect_OnScreen(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FBox2D& InRect,
+        FLinearColor InRectColor = FLinearColor::White);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
