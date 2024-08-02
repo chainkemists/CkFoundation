@@ -3,6 +3,7 @@
 #include "CkCore/Debug/CkDebugDraw_Subsystem.h"
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Format/CkFormat.h"
+#include "CkCore/Math/Geometry/CkGeometry_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include <GameFramework/HUD.h>
@@ -337,7 +338,81 @@ auto
     if (ck::Is_NOT_Valid(DebugDrawSubsystem))
     { return; }
 
-    DebugDrawSubsystem->Request_DrawRect_OnScreen(FCk_Request_DebugDrawOnScreen_Rect{InRect}.Set_RectColor(InRectColor));
+    DebugDrawSubsystem->Request_DrawRect_OnScreen(
+        FCk_Request_DebugDrawOnScreen_Rect{InRect}
+        .Set_RectColor(InRectColor));
+}
+
+auto
+    UCk_Utils_DebugDraw_Screen_UE::
+    DrawDebugHollowRect_OnScreen(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FBox2D& InRect,
+        FLinearColor InRectColor,
+        float InLineThickness)
+    -> void
+{
+    if (const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
+        ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
+    { return; }
+
+    if (ck::Is_NOT_Valid(InWorldContextObject))
+    { return; }
+
+    const auto& World = InWorldContextObject->GetWorld();
+
+    if (ck::Is_NOT_Valid(World))
+    { return; }
+
+    const auto& DebugDrawSubsystem = World->GetSubsystem<UCk_DebugDraw_WorldSubsystem_UE>();
+
+    if (ck::Is_NOT_Valid(DebugDrawSubsystem))
+    { return; }
+
+    UCk_Utils_Geometry2D_UE::ForEach_BoxEdges(InRect, [&](const FCk_LineSegment2D& InLineSegment)
+    {
+        DebugDrawSubsystem->Request_DrawLine_OnScreen(
+            FCk_Request_DebugDrawOnScreen_Line{InLineSegment.Get_LineStart(), InLineSegment.Get_LineEnd()}
+            .Set_LineColor(InRectColor)
+            .Set_LineThickness(InLineThickness));
+    });
+}
+
+auto
+    UCk_Utils_DebugDraw_Screen_UE::
+    DrawDebugLine_OnScreen(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        FVector2D InLineStart,
+        FVector2D InLineEnd,
+        FLinearColor InLineColor,
+        float InLineThickness)
+    -> void
+{
+    if (const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
+        ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
+    { return; }
+
+    if (ck::Is_NOT_Valid(InWorldContextObject))
+    { return; }
+
+    const auto& World = InWorldContextObject->GetWorld();
+
+    if (ck::Is_NOT_Valid(World))
+    { return; }
+
+    const auto& DebugDrawSubsystem = World->GetSubsystem<UCk_DebugDraw_WorldSubsystem_UE>();
+
+    if (ck::Is_NOT_Valid(DebugDrawSubsystem))
+    { return; }
+
+    DebugDrawSubsystem->Request_DrawLine_OnScreen(
+        FCk_Request_DebugDrawOnScreen_Line{InLineStart, InLineEnd}
+        .Set_LineColor(InLineColor)
+        .Set_LineThickness(InLineThickness));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
