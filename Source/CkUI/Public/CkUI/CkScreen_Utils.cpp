@@ -159,8 +159,8 @@ auto
 
     const auto& ScreenViewportSize = [&]()
     {
-        int32 OutScreenSizeX;
-        int32 OutScreenSizeY;
+        auto OutScreenSizeX = 0;
+        auto OutScreenSizeY = 0;
 
         InPlayerController->GetViewportSize(OutScreenSizeX, OutScreenSizeY);
 
@@ -169,7 +169,7 @@ auto
 
     const auto& ViewportSize = [&]()
     {
-        FVector2D OutViewportSize;
+        auto OutViewportSize = FVector2D{};
         USlateBlueprintLibrary::ScreenToViewport(InPlayerController, ScreenViewportSize, OutViewportSize);
 
         return OutViewportSize;
