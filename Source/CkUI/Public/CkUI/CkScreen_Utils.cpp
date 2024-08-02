@@ -15,8 +15,8 @@ auto
     UCk_Utils_Screen_UE::
     ProjectWorldLocationToWidgetPositionCoords(
         APlayerController* InPlayerController,
-        const FVector&     InWorldLocation,
-        FVector2D&         OutViewportPosition)
+        FVector InWorldLocation,
+        FVector2D& OutViewportPosition)
     -> bool
 {
     OutViewportPosition = FVector2D::ZeroVector;
@@ -24,22 +24,21 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Invalid PlayerController"))
     { return false; }
 
-    FVector outPixelLocation;
-    constexpr bool playerViewportRelative = false;
+    auto OutPixelLocation = FVector{};
+    constexpr auto bPlayerViewportRelative = false;
 
-    const auto& projectionSuccess = InPlayerController->ProjectWorldLocationToScreenWithDistance(InWorldLocation, outPixelLocation, playerViewportRelative);
-
-    if (NOT projectionSuccess)
+    if (const auto& ProjectionSuccess = InPlayerController->ProjectWorldLocationToScreenWithDistance(InWorldLocation, OutPixelLocation, bPlayerViewportRelative);
+        NOT ProjectionSuccess)
     { return false; }
 
-    const auto& ScreenPosition = FVector2D(FMath::RoundToInt(outPixelLocation.X), FMath::RoundToInt(outPixelLocation.Y));
+    const auto& ScreenPosition = FVector2D(FMath::RoundToInt(OutPixelLocation.X), FMath::RoundToInt(OutPixelLocation.Y));
 
-    FVector2D outViewportPosition2D;
+    auto OutViewportPosition2D = FVector2D{};
 
-    USlateBlueprintLibrary::ScreenToViewport(InPlayerController, ScreenPosition, outViewportPosition2D);
+    USlateBlueprintLibrary::ScreenToViewport(InPlayerController, ScreenPosition, OutViewportPosition2D);
 
-    OutViewportPosition.X = outViewportPosition2D.X;
-    OutViewportPosition.Y = outViewportPosition2D.Y;
+    OutViewportPosition.X = OutViewportPosition2D.X;
+    OutViewportPosition.Y = OutViewportPosition2D.Y;
 
     return true;
 }
@@ -48,7 +47,7 @@ auto
     UCk_Utils_Screen_UE::
     FindScreenEdgeLocationForWorldLocation(
         UObject* InWorldContextObject,
-        const FVector& InLocation,
+        FVector InLocation,
         float InEdgePercent,
         FVector2D InViewportCenterLoc,
         FVector2D& OutScreenPosition,
@@ -62,122 +61,121 @@ auto
     if(ck::Is_NOT_Valid(GEngine))
     { return; }
 
-    const auto& world = GEngine->GetWorldFromContextObject(InWorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
-    if(ck::Is_NOT_Valid(world))
+    if(const auto& World = GEngine->GetWorldFromContextObject(InWorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
+        ck::Is_NOT_Valid(World))
     { return; }
 
-    const auto& playerController = InWorldContextObject ? UGameplayStatics::GetPlayerController(InWorldContextObject, 0) : nullptr;
-    if(ck::Is_NOT_Valid(playerController))
+    const auto& PlayerController = InWorldContextObject ? UGameplayStatics::GetPlayerController(InWorldContextObject, 0) : nullptr;
+    if(ck::Is_NOT_Valid(PlayerController))
     { return; }
 
-    const auto& viewportSize = DoGet_PlayerControllerViewportSize(InWorldContextObject, playerController);
-    const auto& viewportCenter = FVector2D(viewportSize.X * InViewportCenterLoc.X, viewportSize.Y * InViewportCenterLoc.Y);
+    const auto& ViewportSize = DoGet_PlayerControllerViewportSize(PlayerController);
+    const auto& ViewportCenter = FVector2D(ViewportSize.X * InViewportCenterLoc.X, ViewportSize.Y * InViewportCenterLoc.Y);
 
-    FVector outCameraLoc;
-    FRotator outCameraRot;
+    auto OutCameraLoc = FVector{};
+    auto OutCameraRot = FRotator{};
 
-    playerController->GetPlayerViewPoint(outCameraLoc, outCameraRot);
+    PlayerController->GetPlayerViewPoint(OutCameraLoc, OutCameraRot);
 
-    const auto& cameraToLoc = InLocation - outCameraLoc;
-    const auto& forwardVec = outCameraRot.Vector();
-    const auto& offset = cameraToLoc.GetSafeNormal();
+    const auto& CameraToLoc = InLocation - OutCameraLoc;
+    const auto& ForwardVec = OutCameraRot.Vector();
+    const auto& Offset = CameraToLoc.GetSafeNormal();
 
-    const auto& dotProduct = FVector::DotProduct(forwardVec, offset);
-    const auto& isLocationBehindCamera = dotProduct < 0;
+    const auto& DotProduct = FVector::DotProduct(ForwardVec, Offset);
+    const auto& IsLocationBehindCamera = DotProduct < 0;
 
-    FVector2D outTempScreenPosition;
+    auto OutTempScreenPosition = FVector2D{};
 
-    if (isLocationBehindCamera)
+    if (IsLocationBehindCamera)
     {
-        const auto& invertedCameraToLoc = cameraToLoc * -1.f;
-        const auto& newWorldLocationToProject = outCameraLoc + invertedCameraToLoc;
+        const auto& invertedCameraToLoc = CameraToLoc * -1.f;
+        const auto& newWorldLocationToProject = OutCameraLoc + invertedCameraToLoc;
 
-        ProjectWorldLocationToWidgetPositionCoords(playerController, newWorldLocationToProject, outTempScreenPosition);
+        ProjectWorldLocationToWidgetPositionCoords(PlayerController, newWorldLocationToProject, OutTempScreenPosition);
 
-        outTempScreenPosition.X = viewportSize.X - outTempScreenPosition.X;
-        outTempScreenPosition.Y = viewportSize.Y - outTempScreenPosition.Y;
+        OutTempScreenPosition.X = ViewportSize.X - OutTempScreenPosition.X;
+        OutTempScreenPosition.Y = ViewportSize.Y - OutTempScreenPosition.Y;
     }
     else
     {
-        ProjectWorldLocationToWidgetPositionCoords(playerController, InLocation, outTempScreenPosition);
+        ProjectWorldLocationToWidgetPositionCoords(PlayerController, InLocation, OutTempScreenPosition);
     }
 
     // Check to see if it's on screen. If it is, ProjectWorldLocationToWidgetPositionCoords is all we need, return it.
-    if (outTempScreenPosition.X >= 0.f && outTempScreenPosition.X <= viewportSize.X && outTempScreenPosition.Y >= 0.f && outTempScreenPosition.Y <= viewportSize.Y && NOT isLocationBehindCamera)
+    if (OutTempScreenPosition.X >= 0.f && OutTempScreenPosition.X <= ViewportSize.X && OutTempScreenPosition.Y >= 0.f && OutTempScreenPosition.Y <= ViewportSize.Y && NOT IsLocationBehindCamera)
     {
-        OutScreenPosition = outTempScreenPosition;
+        OutScreenPosition = OutTempScreenPosition;
         OutIsOnScreen = true;
         return;
     }
 
-    outTempScreenPosition -= viewportCenter;
+    OutTempScreenPosition -= ViewportCenter;
 
-    const auto& angleRadians = FMath::Atan2(outTempScreenPosition.Y, outTempScreenPosition.X) - FMath::DegreesToRadians(90.f);
+    const auto& AngleRadians = FMath::Atan2(OutTempScreenPosition.Y, OutTempScreenPosition.X) - FMath::DegreesToRadians(90.f);
 
-    OutRotationAngleDegrees = FMath::RadiansToDegrees(angleRadians) + 180.f;
+    OutRotationAngleDegrees = FMath::RadiansToDegrees(AngleRadians) + 180.f;
 
-    const auto& cos = cosf(angleRadians);
-    const auto& sin = -sinf(angleRadians);
+    const auto& Cos = cosf(AngleRadians);
+    const auto& Sin = -sinf(AngleRadians);
 
-    outTempScreenPosition = FVector2D(viewportCenter.X + (sin * 150.f), viewportCenter.Y + cos * 150.f);
+    OutTempScreenPosition = FVector2D(ViewportCenter.X + (Sin * 150.f), ViewportCenter.Y + Cos * 150.f);
 
-    const auto& cotangent = cos / sin;
+    const auto& Cotangent = Cos / Sin;
 
-    const auto& clampedEdgePercent = FMath::Clamp(InEdgePercent, 0.0f, 1.0f);
-    const auto& screenBounds = FVector2D(viewportCenter * clampedEdgePercent);
+    const auto& ClampedEdgePercent = FMath::Clamp(InEdgePercent, 0.0f, 1.0f);
+    const auto& ScreenBounds = FVector2D(ViewportCenter * ClampedEdgePercent);
 
-    if (cos > 0)
+    if (Cos > 0)
     {
-        outTempScreenPosition = FVector2D(screenBounds.Y / cotangent, screenBounds.Y);
+        OutTempScreenPosition = FVector2D(ScreenBounds.Y / Cotangent, ScreenBounds.Y);
     }
     else
     {
-        outTempScreenPosition = FVector2D(-screenBounds.Y / cotangent, -screenBounds.Y);
+        OutTempScreenPosition = FVector2D(-ScreenBounds.Y / Cotangent, -ScreenBounds.Y);
     }
 
-    if (outTempScreenPosition.X > screenBounds.X)
+    if (OutTempScreenPosition.X > ScreenBounds.X)
     {
-        outTempScreenPosition = FVector2D(screenBounds.X, screenBounds.X * cotangent);
+        OutTempScreenPosition = FVector2D(ScreenBounds.X, ScreenBounds.X * Cotangent);
     }
-    else if (outTempScreenPosition.X < -screenBounds.X)
+    else if (OutTempScreenPosition.X < -ScreenBounds.X)
     {
-        outTempScreenPosition = FVector2D(-screenBounds.X, -screenBounds.X * cotangent);
+        OutTempScreenPosition = FVector2D(-ScreenBounds.X, -ScreenBounds.X * Cotangent);
     }
 
-    outTempScreenPosition += viewportCenter;
+    OutTempScreenPosition += ViewportCenter;
 
-    OutScreenPosition = outTempScreenPosition;
+    OutScreenPosition = OutTempScreenPosition;
 }
 
 auto
     UCk_Utils_Screen_UE::
     DoGet_PlayerControllerViewportSize(
-        UObject* InWorldContextObject,
         APlayerController* InPlayerController)
     -> FVector2D
 {
     if(ck::Is_NOT_Valid(InPlayerController))
     { return {}; }
 
-    const auto& screenViewportSize = [InPlayerController]()
+    const auto& ScreenViewportSize = [&]()
     {
-        int32 outScreenSizeX;
-        int32 outScreenSizeY;
+        int32 OutScreenSizeX;
+        int32 OutScreenSizeY;
 
-        InPlayerController->GetViewportSize(outScreenSizeX, outScreenSizeY);
+        InPlayerController->GetViewportSize(OutScreenSizeX, OutScreenSizeY);
 
-        return FVector2D(outScreenSizeX, outScreenSizeY);
+        return FVector2D(OutScreenSizeX, OutScreenSizeY);
     }();
 
-    const auto& viewportSize = [InWorldContextObject, screenViewportSize]()
+    const auto& ViewportSize = [&]()
     {
-        FVector2D outViewportSize;
-        USlateBlueprintLibrary::ScreenToViewport(InWorldContextObject, screenViewportSize, outViewportSize);
+        FVector2D OutViewportSize;
+        USlateBlueprintLibrary::ScreenToViewport(InPlayerController, ScreenViewportSize, OutViewportSize);
 
-        return outViewportSize;
+        return OutViewportSize;
     }();
 
-    return viewportSize;
+    return ViewportSize;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
