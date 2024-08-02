@@ -15,6 +15,8 @@ auto
         const FBox& InBox3D)
     -> FBox2D
 {
+    // Inspired from (plugin) Cog's FCogWindowHelper::ComputeBoundingBoxScreenPosition function (CogWindowHelper.cpp)
+
     CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Cannot Project Box3D [{}] to screen because the supplied PlayerController is INVALID"), InBox3D)
     { return {}; }
 
@@ -32,7 +34,7 @@ auto
     for (const auto& BoxVertex : BoxVertices)
     {
         constexpr auto PlayerViewportRelative = false;
-        FVector2D ScreenLocation;
+        auto ScreenLocation = FVector2D{};
 
         if (NOT InPlayerController->ProjectWorldLocationToScreen(BoxVertex, ScreenLocation, PlayerViewportRelative))
         { FBox2D{}; }
@@ -45,21 +47,13 @@ auto
 
     const auto& ViewportSize = [&]()
     {
-        int32 OutScreenSizeX;
-        int32 OutScreenSizeY;
+        auto OutScreenSizeX = 0;
+        auto OutScreenSizeY = 0;
 
         InPlayerController->GetViewportSize(OutScreenSizeX, OutScreenSizeY);
 
         return FVector2D(OutScreenSizeX, OutScreenSizeY);
     }();
-
-    //const auto& ScreenViewportSize = [&]()
-    //{
-    //    FVector2D outViewportSize;
-    //    USlateBlueprintLibrary::ScreenToViewport(InPlayerController, ViewportSize, outViewportSize);
-
-    //    return outViewportSize;
-    //}();
 
     // Prevent getting large values when the camera get close to the target
     BoundingBoxScreenSpace_Min.X = FMath::Max(-ViewportSize.X, BoundingBoxScreenSpace_Min.X);
