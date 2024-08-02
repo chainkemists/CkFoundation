@@ -333,7 +333,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Direction Vector From Actor",
-              Category = "Ck|Utils|Math|Actor")
+              Category = "Ck|Utils|Math|Vector3|Actor")
     static FVector
     Get_DirectionVectorFromActor(
          const AActor* InActor,
@@ -341,7 +341,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Distance Between Actors",
-              Category = "Ck|Utils|Math|Actor")
+              Category = "Ck|Utils|Math|Vector3|Actor")
     static float
     Get_DistanceBetweenActors(
         const AActor* InA,
@@ -349,7 +349,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Distance To/From Actor",
-              Category = "Ck|Utils|Math|Actor")
+              Category = "Ck|Utils|Math|Vector3|Actor")
     static float
     Get_DistanceFromActor(
         const AActor* InA,
@@ -357,7 +357,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Direction And Length (Between Actors)",
-              Category = "Ck|Utils|Math|Actor")
+              Category = "Ck|Utils|Math|Vector3|Actor")
     static FCk_DirectionAndLength
     Get_DirectionAndLengthBetweenActors(
         const AActor* InTo,
@@ -365,7 +365,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Direction And Length (From Actor)",
-              Category = "Ck|Utils|Math|Actor")
+              Category = "Ck|Utils|Math|Vector3|Actor")
     static FCk_DirectionAndLength
     Get_DirectionAndLengthFromActor(
         const FVector& InTo,
@@ -373,7 +373,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Direction And Length (To Actor)",
-              Category = "Ck|Utils|Math|Actor")
+              Category = "Ck|Utils|Math|Vector3|Actor")
     static FCk_DirectionAndLength
     Get_DirectionAndLengthToActor(
         const AActor* InTo,
@@ -381,7 +381,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Location From Actor In Direction",
-              Category = "Ck|Utils|Math|Actor")
+              Category = "Ck|Utils|Math|Vector3|Actor")
     static FCk_LocationResultWithActorLocation
     Get_LocationFromActorInDirection(
         const AActor* InActor,
@@ -390,7 +390,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Location From Actor In Fixed Direction",
-              Category = "Ck|Utils|Math|Actor")
+              Category = "Ck|Utils|Math|Vector3|Actor")
     static FCk_LocationResultWithActorLocation
     Get_LocationFromActorInFixedDirection(
         const AActor* InActor,
@@ -399,7 +399,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Is Actor In Front Of",
-              Category = "Ck|Utils|Math|Actor")
+              Category = "Ck|Utils|Math|Vector3|Actor")
     static bool
     Get_IsFrontOf(
         const AActor* InA,
@@ -407,7 +407,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Is Actor Behind Of",
-              Category = "Ck|Utils|Math|Actor")
+              Category = "Ck|Utils|Math|Vector3|Actor")
     static bool
     Get_IsBehindOf(
         const AActor* InA,
@@ -415,7 +415,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Dot Product Between Actors",
-              Category = "Ck|Utils|Math|Actor")
+              Category = "Ck|Utils|Math|Vector3|Actor")
     static float
     Get_DotProductBetweenActors(
          const AActor* InA,
@@ -424,7 +424,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Dot Product Between Actors Based on Direction",
-              Category = "Ck|Utils|Math|Actor")
+              Category = "Ck|Utils|Math|Vector3|Actor")
     static float
     Get_DotProductBetweenActorsBasedOnDirection(
          const AActor* InA,

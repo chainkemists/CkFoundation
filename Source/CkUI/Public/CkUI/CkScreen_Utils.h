@@ -23,7 +23,7 @@ public:
     static bool
     ProjectWorldLocationToWidgetPositionCoords(
         APlayerController* InPlayerController,
-        const FVector& InWorldLocation,
+        FVector InWorldLocation,
         FVector2D& OutViewportPosition);
 
     /**
@@ -43,7 +43,7 @@ public:
     static void
     FindScreenEdgeLocationForWorldLocation(
         UObject* InWorldContextObject,
-        const FVector& InLocation,
+        FVector InLocation,
         float InEdgePercent,
         FVector2D InViewportCenterLoc,
         FVector2D& OutScreenPosition,
@@ -52,7 +52,6 @@ public:
 
 private:
     static auto DoGet_PlayerControllerViewportSize(
-        UObject* InWorldContextObject,
         APlayerController* InPlayerController) -> FVector2D;
 };
 
