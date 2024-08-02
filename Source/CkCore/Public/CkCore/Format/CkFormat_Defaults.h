@@ -76,6 +76,39 @@ CK_DEFINE_CUSTOM_FORMATTER(FVector2D, [&]()
     );
 });
 
+CK_DEFINE_CUSTOM_FORMATTER(FIntVector, [&]()
+{
+    return ck::Format
+    (
+        TEXT("X:{}, Y:{}, Z:{}"),
+        InObj.X,
+        InObj.Y,
+        InObj.Z
+    );
+});
+
+CK_DEFINE_CUSTOM_FORMATTER(FIntVector2, [&]()
+{
+    return ck::Format
+    (
+        TEXT("X:{}, Y:{}"),
+        InObj.X,
+        InObj.Y
+    );
+});
+
+CK_DEFINE_CUSTOM_FORMATTER(FIntVector4, [&]()
+{
+    return ck::Format
+    (
+        TEXT("X:{}, Y:{}, Z:{}, W:{}"),
+        InObj.X,
+        InObj.Y,
+        InObj.Z,
+        InObj.W
+    );
+});
+
 CK_DEFINE_CUSTOM_FORMATTER(FQuat, [&]()
 {
     return ck::Format
