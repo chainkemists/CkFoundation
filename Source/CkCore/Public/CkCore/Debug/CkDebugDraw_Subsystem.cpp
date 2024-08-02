@@ -1,5 +1,7 @@
 #include "CkDebugDraw_Subsystem.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/TypeTraits/CkTypeTraits.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include <GameFramework/HUD.h>
@@ -45,7 +47,16 @@ auto
         const FCk_Request_DebugDrawOnScreen_Rect& InRequest)
     -> void
 {
-    _PendingRequests_DrawRect.Add(InRequest);
+    _PendingDrawRequests.Emplace(InRequest);
+}
+
+auto
+    UCk_DebugDraw_WorldSubsystem_UE::
+    Request_DrawLine_OnScreen(
+        const FCk_Request_DebugDrawOnScreen_Line& InRequest)
+    -> void
+{
+    _PendingDrawRequests.Emplace(InRequest);
 }
 
 auto
@@ -55,19 +66,46 @@ auto
         UCanvas* InCanvas)
     -> void
 {
-    auto DrawRectRequests = TArray<FCk_Request_DebugDrawOnScreen_Rect>{};
-    Swap(_PendingRequests_DrawRect, DrawRectRequests);
+    auto DrawRequests = decltype(_PendingDrawRequests){};
+    Swap(_PendingDrawRequests, DrawRequests);
 
     if (ck::Is_NOT_Valid(InHUD))
     { return; }
 
-    for (const auto& Request : DrawRectRequests)
+    ck::algo::ForEachRequest(DrawRequests, ck::Visitor([&](const auto& RequestVariant)
     {
-        const auto& Rect = Request.Get_Rect();
-        const auto& RectColor = Request.Get_RectColor();
+        DoHandleRequest(InHUD, InCanvas, RequestVariant);
+    }));
+}
 
-        InHUD->DrawRect(RectColor, Rect.Min.X, Rect.Min.Y, Rect.GetExtent().X * 2.0f, Rect.GetExtent().Y * 2.0f);
-    }
+auto
+    UCk_DebugDraw_WorldSubsystem_UE::
+    DoHandleRequest(
+        AHUD* InHUD,
+        UCanvas* InCanvas,
+        const FCk_Request_DebugDrawOnScreen_Rect& InRequest)
+    -> void
+{
+    const auto& Rect = InRequest.Get_Rect();
+    const auto& RectColor = InRequest.Get_RectColor();
+
+    InHUD->DrawRect(RectColor, Rect.Min.X, Rect.Min.Y, Rect.GetExtent().X * 2.0f, Rect.GetExtent().Y * 2.0f);
+}
+
+auto
+    UCk_DebugDraw_WorldSubsystem_UE::
+    DoHandleRequest(
+        AHUD* InHUD,
+        UCanvas* InCanvas,
+        const FCk_Request_DebugDrawOnScreen_Line& InRequest)
+    -> void
+{
+    const auto& LineStart = InRequest.Get_LineStart();
+    const auto& LineEnd = InRequest.Get_LineEnd();
+    const auto& LineColor = InRequest.Get_LineColor();
+    const auto& LineThickness = InRequest.Get_LineThickness();
+
+    InHUD->DrawLine(LineStart.X, LineStart.Y, LineEnd.X, LineEnd.Y, LineColor, LineThickness);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

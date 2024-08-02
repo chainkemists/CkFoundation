@@ -231,6 +231,33 @@ public:
         ECk_LogVerbosity InOptionalLogVerbosity,
         const FBox2D& InRect,
         FLinearColor InRectColor = FLinearColor::White);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Hollow Rect (On Screen)",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugHollowRect_OnScreen(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FBox2D& InRect,
+        FLinearColor InRectColor = FLinearColor::White,
+        float InLineThickness = 1.0f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Line (On Screen)",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugLine_OnScreen(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        FVector2D InLineStart,
+        FVector2D InLineEnd,
+        FLinearColor InLineColor = FLinearColor::White,
+        float InLineThickness = 1.0f);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
