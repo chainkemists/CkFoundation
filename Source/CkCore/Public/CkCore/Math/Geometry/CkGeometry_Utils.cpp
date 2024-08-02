@@ -13,21 +13,21 @@ auto
     UCk_Utils_Geometry_UE::
     Project_Box_ToScreen(
         APlayerController* InPlayerController,
-        const FBox& InBox3D)
+        const FBox& InBox)
     -> FBox2D
 {
     // Inspired from (plugin) Cog's FCogWindowHelper::ComputeBoundingBoxScreenPosition function (CogWindowHelper.cpp)
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Cannot Project Box3D [{}] to screen because the supplied PlayerController is INVALID"), InBox3D)
+    CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController), TEXT("Cannot project Box3D [{}] to screen because the supplied PlayerController is INVALID"), InBox)
     { return {}; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InBox3D), TEXT("Cannot Project Box3D [{}] to screen because it is INVALID"), InBox3D)
+    CK_ENSURE_IF_NOT(ck::IsValid(InBox), TEXT("Cannot project Box3D [{}] to screen because it is INVALID"), InBox)
     { return {}; }
 
     auto BoundingBoxScreenSpace_Min = FVector2D{ FLT_MAX, FLT_MAX };
     auto BoundingBoxScreenSpace_Max = FVector2D{ -FLT_MAX, -FLT_MAX };
 
-    ForEach_BoxVertices(InBox3D, [&](const FVector& InBoxVertex)
+    ForEach_BoxVertices(InBox, [&](const FVector& InBoxVertex)
     {
         constexpr auto PlayerViewportRelative = false;
         auto ScreenLocation = FVector2D{};
@@ -63,10 +63,10 @@ auto
 auto
     UCk_Utils_Geometry_UE::
     Get_Box_Vertices(
-        const FBox& InBox3D)
+        const FBox& InBox)
     -> TArray<FVector>
 {
-    if (ck::Is_NOT_Valid(InBox3D))
+    CK_ENSURE_IF_NOT(ck::IsValid(InBox), TEXT("Cannot calculate Box3D Vertices because it is INVALID"))
     { return {}; }
 
     const auto& Result = [&]()
@@ -78,7 +78,7 @@ auto
 
 
         FVector BoxVertices[BoxVerticesCount];
-        InBox3D.GetVertices(BoxVertices);
+        InBox.GetVertices(BoxVertices);
 
         for (const auto& Vertex : BoxVertices)
         {
@@ -94,10 +94,10 @@ auto
 auto
     UCk_Utils_Geometry_UE::
     Get_Box_Edges(
-        const FBox& InBox3D)
+        const FBox& InBox)
     -> TArray<FCk_LineSegment>
 {
-    if (ck::Is_NOT_Valid(InBox3D))
+    CK_ENSURE_IF_NOT(ck::IsValid(InBox), TEXT("Cannot calculate Box3D Edges because it is INVALID"))
     { return {}; }
 
     const auto BoxEdges = TArray
@@ -108,7 +108,7 @@ auto
         FIntVector2{4, 6}, FIntVector2{5, 7}, FIntVector2{6, 7}
     };
 
-    const auto& BoxVertices = Get_Box_Vertices(InBox3D);
+    const auto& BoxVertices = Get_Box_Vertices(InBox);
 
     return ck::algo::Transform<TArray<FCk_LineSegment>>(BoxEdges, [&](const FIntVector2& InBoxEdge)
     {
@@ -117,6 +117,18 @@ auto
 
         return FCk_LineSegment{ EdgeStart, EdgeEnd };
     });
+}
+
+auto
+    UCk_Utils_Geometry_UE::
+    Get_Box_Volume(
+        const FBox& InBox)
+    -> float
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InBox), TEXT("Cannot calculate Box3D Volume because it is INVALID"))
+    { return {}; }
+
+    return InBox.GetVolume();
 }
 
 auto
@@ -144,7 +156,7 @@ auto
         TFunction<void(const FCk_LineSegment&)> InFunc)
     -> ECk_SucceededFailed
 {
-    if (ck::Is_NOT_Valid(InBox))
+    CK_ENSURE_IF_NOT(ck::IsValid(InBox), TEXT("Cannot iteratate over the Box3D Edges because it is INVALID"))
     { return ECk_SucceededFailed::Failed; }
 
     for (const auto& Edge : Get_Box_Edges(InBox))
@@ -162,12 +174,12 @@ auto
         TFunction<void(const FVector&)> InFunc)
     -> ECk_SucceededFailed
 {
-    if (ck::Is_NOT_Valid(InBox))
+    CK_ENSURE_IF_NOT(ck::IsValid(InBox), TEXT("Cannot iteratate over the Box3D Vertices because it is INVALID"))
     { return ECk_SucceededFailed::Failed; }
 
-    for (const auto& BoxVertex : Get_Box_Vertices(InBox))
+    for (const auto& Vertex : Get_Box_Vertices(InBox))
     {
-        InFunc(BoxVertex);
+        InFunc(Vertex);
     }
 
     return ECk_SucceededFailed::Succeeded;
@@ -178,18 +190,18 @@ auto
 auto
     UCk_Utils_Geometry2D_UE::
     Get_Box_Vertices(
-        const FBox2D& InBox2D)
+        const FBox2D& InBox)
     -> TArray<FVector2D>
 {
-    if (ck::Is_NOT_Valid(InBox2D))
+    if (ck::Is_NOT_Valid(InBox))
     { return {}; }
 
     const auto BoxVertices = TArray
     {
-        InBox2D.Min,
-        FVector2D(InBox2D.Max.X, InBox2D.Min.Y),
-        FVector2D(InBox2D.Min.X, InBox2D.Max.Y),
-        InBox2D.Max
+        InBox.Min,
+        FVector2D(InBox.Max.X, InBox.Min.Y),
+        FVector2D(InBox.Min.X, InBox.Max.Y),
+        InBox.Max
     };
 
     return BoxVertices;
@@ -198,10 +210,10 @@ auto
 auto
     UCk_Utils_Geometry2D_UE::
     Get_Box_Edges(
-        const FBox2D& InBox2D)
+        const FBox2D& InBox)
     -> TArray<FCk_LineSegment2D>
 {
-    if (ck::Is_NOT_Valid(InBox2D))
+    CK_ENSURE_IF_NOT(ck::IsValid(InBox), TEXT("Cannot retrieve the Box3D Vertices because it is INVALID"))
     { return {}; }
 
     const auto BoxEdges = TArray
@@ -210,7 +222,7 @@ auto
         FIntVector2{3, 2}, FIntVector2{2, 0}
     };
 
-    const auto& BoxVertices = Get_Box_Vertices(InBox2D);
+    const auto& BoxVertices = Get_Box_Vertices(InBox);
 
     return ck::algo::Transform<TArray<FCk_LineSegment2D>>(BoxEdges, [&](const FIntVector2& InBoxEdge)
     {
@@ -219,6 +231,50 @@ auto
 
         return FCk_LineSegment2D{ EdgeStart, EdgeEnd };
     });
+}
+
+auto
+    UCk_Utils_Geometry2D_UE::
+    Get_Box_Area(
+        const FBox2D& InBox)
+    -> float
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InBox), TEXT("Cannot calculate the Box3D Area because it is INVALID"), InBox)
+    { return {}; }
+
+    return InBox.GetArea();
+}
+
+auto
+    UCk_Utils_Geometry2D_UE::
+    Get_Box_Overlap(
+        const FBox2D& InBoxA,
+        const FBox2D& InBoxB)
+    -> FBox2D
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InBoxA), TEXT("Cannot calculate the Box3D Overlap because Box A is INVALID"))
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InBoxB), TEXT("Cannot calculate the Box3D Overlap because Box B is INVALID"))
+    { return {}; }
+
+    return InBoxA.Overlap(InBoxB);
+}
+
+auto
+    UCk_Utils_Geometry2D_UE::
+    Get_Box_Intersects(
+        const FBox2D& InBoxA,
+        const FBox2D& InBoxB)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InBoxA), TEXT("Cannot calculate Box3D Intersects because Box A is INVALID"))
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InBoxB), TEXT("Cannot calculate Box3D Intersects because Box B is INVALID"))
+    { return {}; }
+
+    return InBoxA.Intersect(InBoxB);
 }
 
 auto
@@ -245,12 +301,12 @@ auto
         TFunction<void(const FVector2D&)> InFunc)
     -> ECk_SucceededFailed
 {
-    if (ck::Is_NOT_Valid(InBox))
+    CK_ENSURE_IF_NOT(ck::IsValid(InBox), TEXT("Cannot iterate over Box2D Vertices because it is INVALID"))
     { return ECk_SucceededFailed::Failed; }
 
-    for (const auto& BoxVertex : Get_Box_Vertices(InBox))
+    for (const auto& Vertex : Get_Box_Vertices(InBox))
     {
-        InFunc(BoxVertex);
+        InFunc(Vertex);
     }
 
     return ECk_SucceededFailed::Succeeded;
@@ -263,7 +319,7 @@ auto
         TFunction<void(const FCk_LineSegment2D&)> InFunc)
     -> ECk_SucceededFailed
 {
-    if (ck::Is_NOT_Valid(InBox))
+    CK_ENSURE_IF_NOT(ck::IsValid(InBox), TEXT("Cannot iterate over Box2D Edges because it is INVALID"))
     { return ECk_SucceededFailed::Failed; }
 
     for (const auto& Edge : Get_Box_Edges(InBox))
