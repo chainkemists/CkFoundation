@@ -76,21 +76,28 @@ public:
     static FBox2D
     Project_Box_ToScreen(
         APlayerController* InPlayerController,
-        const FBox& InBox3D);
+        const FBox& InBox);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Box3D Vertices",
               Category = "Ck|Utils|Math|Geometry")
     static TArray<FVector>
     Get_Box_Vertices(
-        const FBox& InBox3D);
+        const FBox& InBox);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Box3D Edges",
               Category = "Ck|Utils|Math|Geometry")
     static TArray<FCk_LineSegment>
     Get_Box_Edges(
-        const FBox& InBox3D);
+        const FBox& InBox);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Box3D Volume",
+              Category = "Ck|Utils|Math|Geometry")
+    static float
+    Get_Box_Volume(
+        const FBox& InBox);
 
 private:
     UFUNCTION(BlueprintPure,
@@ -133,14 +140,37 @@ public:
               Category = "Ck|Utils|Math|Geometry2D")
     static TArray<FVector2D>
     Get_Box_Vertices(
-        const FBox2D& InBox2D);
+        const FBox2D& InBox);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Box2D Edges",
               Category = "Ck|Utils|Math|Geometry2D")
     static TArray<FCk_LineSegment2D>
     Get_Box_Edges(
-        const FBox2D& InBox2D);
+        const FBox2D& InBox);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Box2D Area",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static float
+    Get_Box_Area(
+        const FBox2D& InBox);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Box2D Overlap",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static FBox2D
+    Get_Box_Overlap(
+        const FBox2D& InBoxA,
+        const FBox2D& InBoxB);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Box2D Intersects",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static bool
+    Get_Box_Intersects(
+        const FBox2D& InBoxA,
+        const FBox2D& InBoxB);
 
 private:
     UFUNCTION(BlueprintPure,
