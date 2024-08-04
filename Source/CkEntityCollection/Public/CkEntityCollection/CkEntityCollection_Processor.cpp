@@ -56,7 +56,7 @@ namespace ck
     {
         using CollectionRecordOfEntitiesUtilsType = UCk_Utils_EntityCollection_UE::EntityCollections_RecordOfEntities_Utils;
 
-        const auto& EntitiesToAdd = InRequest.Get_EntitiesToAdd();
+        const auto& EntitiesToAdd = ck::algo::Filter(InRequest.Get_EntitiesToAdd(), ck::algo::IsValidEntityHandle{});
 
         if (EntitiesToAdd.IsEmpty())
         { return; }
@@ -82,7 +82,7 @@ namespace ck
     {
         using CollectionRecordOfEntitiesUtilsType = UCk_Utils_EntityCollection_UE::EntityCollections_RecordOfEntities_Utils;
 
-        const auto& EntitiesToRemove = InRequest.Get_EntitiesToRemove();
+        const auto& EntitiesToRemove = ck::algo::Filter(InRequest.Get_EntitiesToRemove(), ck::algo::IsValidEntityHandle{});
 
         if (EntitiesToRemove.IsEmpty())
         { return; }
