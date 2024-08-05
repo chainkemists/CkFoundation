@@ -148,6 +148,14 @@ auto
     OutIsValidBox = static_cast<bool>(InBox.IsValid);
 }
 
+auto
+    UCk_Utils_Geometry_UE::
+    Get_IsValid_Box(
+        const FBox& InBox)
+    -> bool
+{
+    return ck::IsValid(InBox);
+}
 
 auto
     UCk_Utils_Geometry_UE::
@@ -279,6 +287,16 @@ auto
 
 auto
     UCk_Utils_Geometry2D_UE::
+    Make_Box_WithOrigin(
+        FVector2D InOrigin,
+        FVector2D InExtents)
+    -> FBox2D
+{
+    return FBox2D{InOrigin - InExtents, InOrigin + InExtents};
+}
+
+auto
+    UCk_Utils_Geometry2D_UE::
     Break_Box_WithCenterAndExtents(
         const FBox2D& InBox,
         FVector2D& OutMin,
@@ -292,6 +310,15 @@ auto
     OutMax = InBox.Max,
     InBox.GetCenterAndExtents(OutCenter, InExtents);
     OutIsValidBox = static_cast<bool>(InBox.bIsValid);
+}
+
+auto
+    UCk_Utils_Geometry2D_UE::
+    Get_IsValid_Box(
+        const FBox2D& InBox)
+    -> bool
+{
+    return ck::IsValid(InBox);
 }
 
 auto
@@ -337,6 +364,7 @@ auto
     Get_ActorBounds_ByComponentClass(
         AActor* InActor,
         TSubclassOf<USceneComponent> InComponentToAllow,
+        bool InOnlyCollidingComponents,
         bool InIncludeFromChildActors)
     -> FBox
 {
@@ -362,7 +390,7 @@ auto
             if (NOT InSceneComponent->IsRegistered())
             { return; }
 
-            if (NOT InSceneComponent->IsCollisionEnabled())
+            if (InOnlyCollidingComponents && NOT InSceneComponent->IsCollisionEnabled())
             { return; }
 
             Bounds += InSceneComponent->Bounds.GetBox();

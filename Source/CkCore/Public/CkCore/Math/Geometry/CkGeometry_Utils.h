@@ -112,6 +112,14 @@ private:
         FVector& InExtents,
         bool& OutIsValidBox);
 
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Valid (Box3D)",
+              Category = "Ck|Utils|Math|Geometry",
+              meta = (CompactNodeTitle = "IsValid"))
+    static bool
+    Get_IsValid_Box(
+        const FBox& InBox);
+
 public:
     static auto
     ForEach_BoxEdges(
@@ -174,6 +182,14 @@ public:
 
 private:
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Make Box2D (With Origin)",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static FBox2D
+    Make_Box_WithOrigin(
+        FVector2D InOrigin,
+        FVector2D InExtents);
+
+    UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Break Box2D (With Center And Extents)",
               Category = "Ck|Utils|Math|Geometry2D")
     static void
@@ -184,6 +200,14 @@ private:
         FVector2D& OutCenter,
         FVector2D& InExtents,
         bool& OutIsValidBox);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Valid (Box2D)",
+              Category = "Ck|Utils|Math|Geometry2D",
+              meta = (CompactNodeTitle = "IsValid"))
+    static bool
+    Get_IsValid_Box(
+        const FBox2D& InBox);
 
 public:
     static auto
@@ -215,6 +239,7 @@ public:
     Get_ActorBounds_ByComponentClass(
         AActor* InActor,
         TSubclassOf<USceneComponent> InComponentToAllow,
+        bool InOnlyCollidingComponents = true,
         bool InIncludeFromChildActors = true);
 };
 
