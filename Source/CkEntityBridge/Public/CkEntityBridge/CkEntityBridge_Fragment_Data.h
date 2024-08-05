@@ -55,6 +55,12 @@ private:
     auto
     DoGet_EntityConstructionScript() const -> class UCk_Entity_ConstructionScript_PDA* override;
 
+protected:
+#if WITH_EDITOR
+    auto IsDataValid(
+        class FDataValidationContext& Context) const -> EDataValidationResult override;
+#endif
+
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
               meta = (AllowPrivateAccess = true, ExposeOnSpawn = true))
@@ -76,6 +82,12 @@ public:
 private:
     auto
     DoGet_EntityConstructionScript() const ->  class UCk_Entity_ConstructionScript_PDA* override;
+
+protected:
+#if WITH_EDITOR
+    auto IsDataValid(
+        class FDataValidationContext& Context) const -> EDataValidationResult override;
+#endif
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,

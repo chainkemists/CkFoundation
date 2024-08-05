@@ -8,6 +8,7 @@
 
 #include "CkCore/Object/CkObject_Utils.h"
 
+#include <Misc/DataValidation.h>
 #include <UObject/ObjectSaveContext.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -85,5 +86,28 @@ auto
 {
     return _EntityConstructionScript;
 }
+
+#if WITH_EDITOR
+auto
+    UCk_Ability_EntityConfig_PDA::
+    IsDataValid(
+        FDataValidationContext& Context) const
+    -> EDataValidationResult
+{
+    auto Result = Super::IsDataValid(Context);
+
+    if (IsTemplate())
+    { return Result; }
+
+    if (ck::Is_NOT_Valid(_EntityConstructionScript))
+    {
+        Context.AddError(FText::FromString(ck::Format_UE(TEXT("Ability Entity Bridge Config [{}] is missing an Entity Construction Script"), this)));
+
+        Result = CombineDataValidationResults(Result, EDataValidationResult::Invalid);
+    }
+
+    return Result;
+}
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
