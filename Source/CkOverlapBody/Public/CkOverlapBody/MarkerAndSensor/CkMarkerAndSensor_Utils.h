@@ -49,21 +49,21 @@ public:
     template <typename T_MarkerOrSensorCompType, typename T_MarkerOrSensorParams>
     static auto
     Add_MarkerOrSensor_ActorComponent(
-        FCk_Handle InMarkerOrSensorEntity,
+        FCk_Handle& InMarkerOrSensorEntity,
         const FCk_EntityOwningActor_BasicDetails& InMarkerOrSensorAttachedEntityAndActor,
         const T_MarkerOrSensorParams& InMarkerOrSensorParams) -> void;
 
     template <typename T_MarkerOrSensorCompType, ECk_ShapeType T_MarkerOrSensorShapeType, typename T_MarkerOrSensorParams>
     static auto
     Add_MarkerOrSensor_ActorComponent(
-        FCk_Handle InMarkerOrSensorEntity,
+        FCk_Handle& InMarkerOrSensorEntity,
         const FCk_EntityOwningActor_BasicDetails& InMarkerOrSensorAttachedEntityAndActor,
         const T_MarkerOrSensorParams& InMarkerOrSensorParams) -> void;
 
     template <typename T_MarkerOrSensorCompType, typename T_MarkerOrSensorParams, ECk_ShapeType T_MarkerOrSensorShapeType>
     static auto
     Make_MarkerOrSensor_InitializerFunction(
-        FCk_Handle InMarkerOrSensorEntity,
+        FCk_Handle& InMarkerOrSensorEntity,
         const T_MarkerOrSensorParams& InMarkerOrSensorParams) -> InitializerFuncType;
 
     template <typename T_MarkerOrSensorCompType, typename T_MarkerOrSensorPhysicsParams>
@@ -84,26 +84,26 @@ private:
     template <typename T_MarkerOrSensorCompType, typename T_MarkerOrSensorParams, ECk_ShapeType T_MarkerOrSensorShapeType>
     static auto
     DoAdd_MarkerOrSensor_ActorComponent(
-        FCk_Handle InMarkerOrSensorEntity,
+        FCk_Handle& InMarkerOrSensorEntity,
         const FCk_EntityOwningActor_BasicDetails& InMarkerOrSensorAttachedEntityAndActor,
         const T_MarkerOrSensorParams& InMarkerOrSensorParams) -> void;
 
     template <typename T_MarkerOrSensorCompType, typename T_MarkerOrSensorParams, ECk_ShapeType T_MarkerOrSensorShapeType, std::enable_if_t<ECk_ShapeType::Box == T_MarkerOrSensorShapeType, uint8> = 0>
     static auto
     DoMake_MarkerOrSensor_InitializerFunction(
-        FCk_Handle InMarkerOrSensorEntity,
+        FCk_Handle& InMarkerOrSensorEntity,
         const T_MarkerOrSensorParams& InMarkerOrSensorParams) -> InitializerFuncType;
 
     template <typename T_MarkerOrSensorCompType, typename T_MarkerOrSensorParams, ECk_ShapeType T_MarkerOrSensorShapeType, std::enable_if_t<ECk_ShapeType::Sphere == T_MarkerOrSensorShapeType, uint8> = 0>
     static auto
     DoMake_MarkerOrSensor_InitializerFunction(
-        FCk_Handle InMarkerOrSensorEntity,
+        FCk_Handle& InMarkerOrSensorEntity,
         const T_MarkerOrSensorParams& InMarkerOrSensorParams) -> InitializerFuncType;
 
     template <typename T_MarkerOrSensorCompType, typename T_MarkerOrSensorParams, ECk_ShapeType T_MarkerOrSensorShapeType, std::enable_if_t<ECk_ShapeType::Capsule == T_MarkerOrSensorShapeType, uint8> = 0>
     static auto
     DoMake_MarkerOrSensor_InitializerFunction(
-        FCk_Handle InMarkerOrSensorEntity,
+        FCk_Handle& InMarkerOrSensorEntity,
         const T_MarkerOrSensorParams& InMarkerOrSensorParams) -> InitializerFuncType;
 };
 
@@ -239,7 +239,7 @@ template <typename T_MarkerOrSensorCompType, typename T_MarkerOrSensorParams>
 auto
     UCk_Utils_MarkerAndSensor_UE::
     Add_MarkerOrSensor_ActorComponent(
-        FCk_Handle InMarkerOrSensorEntity,
+        FCk_Handle& InMarkerOrSensorEntity,
         const FCk_EntityOwningActor_BasicDetails& InMarkerOrSensorAttachedEntityAndActor,
         const T_MarkerOrSensorParams& InMarkerOrSensorParams)
     -> void
@@ -266,7 +266,7 @@ template <typename T_MarkerOrSensorCompType, ECk_ShapeType T_MarkerOrSensorShape
 auto
     UCk_Utils_MarkerAndSensor_UE::
     Add_MarkerOrSensor_ActorComponent(
-        FCk_Handle InMarkerOrSensorEntity,
+        FCk_Handle& InMarkerOrSensorEntity,
         const FCk_EntityOwningActor_BasicDetails& InMarkerOrSensorAttachedEntityAndActor,
         const T_MarkerOrSensorParams& InMarkerOrSensorParams)
     -> void
@@ -278,7 +278,7 @@ template <typename T_MarkerOrSensorCompType, typename T_MarkerOrSensorParams, EC
 auto
     UCk_Utils_MarkerAndSensor_UE::
     DoAdd_MarkerOrSensor_ActorComponent(
-        FCk_Handle InMarkerOrSensorEntity,
+        FCk_Handle& InMarkerOrSensorEntity,
         const FCk_EntityOwningActor_BasicDetails& InMarkerOrSensorAttachedEntityAndActor,
         const T_MarkerOrSensorParams& InMarkerOrSensorParams)
     -> void
@@ -313,25 +313,15 @@ auto
         MarkerOrSensorAttachedActor)
     { return; }
 
-    const auto& ActorScale            = MarkerOrSensorAttachedActor->GetActorScale3D();
-    const auto& ActorScaleXNearlyZero = FMath::IsNearlyZero(ActorScale.X);
-    const auto& ActorScaleYNearlyZero = FMath::IsNearlyZero(ActorScale.Y);
-    const auto& ActorScaleZNearlyZero = FMath::IsNearlyZero(ActorScale.Z);
-
     const auto Make_MarkerOrSensor_ComponentParams = [&]() -> FCk_AddActorComponent_Params
     {
-        const auto& AttachmentType = InMarkerOrSensorParams.Get_AttachmentParams().Get_AttachmentType() ==
-                                     ECk_ActorComponent_AttachmentPolicy::DoNotAttach
-                                         ? ECk_ActorComponent_AttachmentPolicy::DoNotAttach
-                                         : ECk_ActorComponent_AttachmentPolicy::Attach;
-
         static constexpr auto IsComponentTickEnabled = true;
 
         return FCk_AddActorComponent_Params{ShapeHolderComponent}
                 .Set_IsTickEnabled(IsComponentTickEnabled)
                 .Set_TickInterval(FCk_Time::ZeroSecond())
                 .Set_AttachmentSocket(NAME_None)
-                .Set_AttachmentType(AttachmentType);
+                .Set_AttachmentType(InMarkerOrSensorParams.Get_AttachmentParams().Get_AttachmentType());
     };
 
     UCk_Utils_ActorModifier_UE::Request_AddActorComponent
@@ -350,7 +340,7 @@ template <typename T_MarkerOrSensorCompType, typename T_MarkerOrSensorParams, EC
 auto
     UCk_Utils_MarkerAndSensor_UE::
     Make_MarkerOrSensor_InitializerFunction(
-        FCk_Handle InMarkerOrSensorEntity,
+        FCk_Handle& InMarkerOrSensorEntity,
         const T_MarkerOrSensorParams& InMarkerOrSensorParams) -> InitializerFuncType
 {
     return DoMake_MarkerOrSensor_InitializerFunction<T_MarkerOrSensorCompType, T_MarkerOrSensorParams, T_MarkerOrSensorShapeType>(InMarkerOrSensorEntity, InMarkerOrSensorParams);
@@ -360,7 +350,7 @@ template <typename T_MarkerOrSensorCompType, typename T_MarkerOrSensorParams, EC
 auto
     UCk_Utils_MarkerAndSensor_UE::
     DoMake_MarkerOrSensor_InitializerFunction(
-        FCk_Handle InMarkerOrSensorEntity,
+        FCk_Handle& InMarkerOrSensorEntity,
         const T_MarkerOrSensorParams& InMarkerOrSensorParams)
     -> InitializerFuncType
 {
@@ -402,17 +392,17 @@ auto
             }
         }
 
-        const auto& PhysicsParams = InMarkerOrSensorParams.Get_PhysicsParams();
-        const auto& StartingState = InMarkerOrSensorParams.Get_StartingState();
-
-        Set_MarkerOrSensor_PhysicsParams(MarkerOrSensorComp, PhysicsParams, StartingState);
-
         const auto& BoxExtents = InMarkerOrSensorParams.Get_ShapeParams().Get_ShapeDimensions().Get_BoxExtents().Get_Extents();
 
         MarkerOrSensorComp->SetBoxExtent(BoxExtents);
         MarkerOrSensorComp->AddLocalTransform(InMarkerOrSensorParams.Get_RelativeTransform());
         // we never want scale to affect our Sensors/Markers
         MarkerOrSensorComp->SetWorldScale3D(FVector::OneVector);
+
+        const auto& PhysicsParams = InMarkerOrSensorParams.Get_PhysicsParams();
+        const auto& StartingState = InMarkerOrSensorParams.Get_StartingState();
+
+        Set_MarkerOrSensor_PhysicsParams(MarkerOrSensorComp, PhysicsParams, StartingState);
 
         if (InMarkerOrSensorParams.Get_AttachmentParams().Get_AttachmentType() == ECk_ActorComponent_AttachmentPolicy::DoNotAttach)
         {
@@ -437,7 +427,7 @@ template <typename T_MarkerOrSensorCompType, typename T_MarkerOrSensorParams, EC
 auto
     UCk_Utils_MarkerAndSensor_UE::
     DoMake_MarkerOrSensor_InitializerFunction(
-        FCk_Handle InMarkerOrSensorEntity,
+        FCk_Handle& InMarkerOrSensorEntity,
         const T_MarkerOrSensorParams& InMarkerOrSensorParams)
     -> InitializerFuncType
 {
@@ -479,15 +469,17 @@ auto
             }
         }
 
-        const auto& PhysicsParams = InMarkerOrSensorParams.Get_PhysicsParams();
-        const auto& StartingState = InMarkerOrSensorParams.Get_StartingState();
-
-        Set_MarkerOrSensor_PhysicsParams(MarkerOrSensorComp, PhysicsParams, StartingState);
-
         const auto& SphereRadius = InMarkerOrSensorParams.Get_ShapeParams().Get_ShapeDimensions().Get_SphereRadius().Get_Radius();
 
         MarkerOrSensorComp->SetSphereRadius(SphereRadius);
         MarkerOrSensorComp->AddLocalTransform(InMarkerOrSensorParams.Get_RelativeTransform());
+        // we never want scale to affect our Sensors/Markers
+        MarkerOrSensorComp->SetWorldScale3D(FVector::OneVector);
+
+        const auto& PhysicsParams = InMarkerOrSensorParams.Get_PhysicsParams();
+        const auto& StartingState = InMarkerOrSensorParams.Get_StartingState();
+
+        Set_MarkerOrSensor_PhysicsParams(MarkerOrSensorComp, PhysicsParams, StartingState);
 
         if (InMarkerOrSensorParams.Get_AttachmentParams().Get_AttachmentType() == ECk_ActorComponent_AttachmentPolicy::DoNotAttach)
         {
@@ -512,7 +504,7 @@ template <typename T_MarkerOrSensorCompType, typename T_MarkerOrSensorParams, EC
 auto
     UCk_Utils_MarkerAndSensor_UE::
     DoMake_MarkerOrSensor_InitializerFunction(
-        FCk_Handle InMarkerOrSensorEntity,
+        FCk_Handle& InMarkerOrSensorEntity,
         const T_MarkerOrSensorParams& InMarkerOrSensorParams)
     -> InitializerFuncType
 {
@@ -554,16 +546,18 @@ auto
             }
         }
 
-        const auto& PhysicsParams = InMarkerOrSensorParams.Get_PhysicsParams();
-        const auto& StartingState = InMarkerOrSensorParams.Get_StartingState();
-
-        Set_MarkerOrSensor_PhysicsParams(MarkerOrSensorComp, PhysicsParams, StartingState);
-
         const auto& CapsuleSize = InMarkerOrSensorParams.Get_ShapeParams().Get_ShapeDimensions().Get_CapsuleSize();
 
         MarkerOrSensorComp->SetCapsuleRadius(CapsuleSize.Get_Radius());
         MarkerOrSensorComp->SetCapsuleHalfHeight(CapsuleSize.Get_HalfHeight());
         MarkerOrSensorComp->AddLocalTransform(InMarkerOrSensorParams.Get_RelativeTransform());
+        // we never want scale to affect our Sensors/Markers
+        MarkerOrSensorComp->SetWorldScale3D(FVector::OneVector);
+
+        const auto& PhysicsParams = InMarkerOrSensorParams.Get_PhysicsParams();
+        const auto& StartingState = InMarkerOrSensorParams.Get_StartingState();
+
+        Set_MarkerOrSensor_PhysicsParams(MarkerOrSensorComp, PhysicsParams, StartingState);
 
         if (InMarkerOrSensorParams.Get_AttachmentParams().Get_AttachmentType() == ECk_ActorComponent_AttachmentPolicy::DoNotAttach)
         {
