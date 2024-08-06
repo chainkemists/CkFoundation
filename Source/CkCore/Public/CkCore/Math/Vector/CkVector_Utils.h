@@ -89,10 +89,18 @@ public:
         float InDistanceFromOriginInDirection = 500.0f);
 
     UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck] Get Angle Between Vectors (Vec3)",
+              DisplayName = "[Ck] Get Angle Between Vectors (Vec3 | Degrees)",
               Category = "Ck|Utils|Math|Vector3")
     static float
-    Get_AngleBetweenVectors(
+    Get_AngleBetweenVectors_Degrees(
+        const FVector& InA,
+        const FVector& InB);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Angle Between Vectors (Vec3 | Radians)",
+              Category = "Ck|Utils|Math|Vector3")
+    static float
+    Get_AngleBetweenVectors_Radians(
         const FVector& InA,
         const FVector& InB);
 
@@ -461,10 +469,18 @@ public:
         float InDistanceFromOriginInDirection);
 
     UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck] Get Angle Between Vectors (Vec2)",
+              DisplayName = "[Ck] Get Angle Between Vectors (Vec2 | Degrees)",
               Category = "Ck|Utils|Math|Vector2")
     static float
-    Get_AngleBetweenVectors(
+    Get_AngleBetweenVectors_Degrees(
+        const FVector2D& InA,
+        const FVector2D& InB);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Angle Between Vectors (Vec2 | Radians)",
+              Category = "Ck|Utils|Math|Vector2")
+    static float
+    Get_AngleBetweenVectors_Radians(
         const FVector2D& InA,
         const FVector2D& InB);
 

@@ -60,6 +60,20 @@ public:
         ECk_EasingMethod InEasingMethod);
 
     UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Angle From Dot Product (Degrees)",
+              Category = "Ck|Utils|Math|Arithmetic")
+    static float
+    Get_AngleFromDotProduct_Degrees(
+        float InDotProduct);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Angle From Dot Product (Radians)",
+              Category = "Ck|Utils|Math|Arithmetic")
+    static float
+    Get_AngleFromDotProduct_Radians(
+        float InDotProduct);
+
+    UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Round Float To Float",
               Category = "Ck|Utils|Math|Arithmetic")
     static float
