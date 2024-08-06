@@ -161,12 +161,22 @@ auto
 
 auto
     UCk_Utils_Vector3_UE::
-    Get_AngleBetweenVectors(
+    Get_AngleBetweenVectors_Degrees(
         const FVector& InA,
         const FVector& InB)
     -> float
 {
-    return FMath::RadiansToDegrees(acosf(ck_vector::Dot(InA, InB)));
+    return UCk_Utils_Arithmetic_UE::Get_AngleFromDotProduct_Degrees(ck_vector::Dot(InA, InB));
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    Get_AngleBetweenVectors_Radians(
+        const FVector& InA,
+        const FVector& InB)
+    -> float
+{
+    return UCk_Utils_Arithmetic_UE::Get_AngleFromDotProduct_Radians(ck_vector::Dot(InA, InB));
 }
 
 auto
@@ -919,12 +929,22 @@ auto
 
 auto
     UCk_Utils_Vector2_UE::
-    Get_AngleBetweenVectors(
+    Get_AngleBetweenVectors_Degrees(
         const FVector2D& InA,
         const FVector2D& InB)
     -> float
 {
-    return FMath::RadiansToDegrees(acosf(ck_vector::Dot(InA, InB)));
+    return UCk_Utils_Arithmetic_UE::Get_AngleFromDotProduct_Degrees(ck_vector::Dot(InA, InB));
+}
+
+auto
+    UCk_Utils_Vector2_UE::
+    Get_AngleBetweenVectors_Radians(
+        const FVector2D& InA,
+        const FVector2D& InB)
+    -> float
+{
+    return UCk_Utils_Arithmetic_UE::Get_AngleFromDotProduct_Radians(ck_vector::Dot(InA, InB));
 }
 
 auto
