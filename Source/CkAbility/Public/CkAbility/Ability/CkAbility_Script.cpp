@@ -486,7 +486,12 @@ auto
     DoGet_ContextEntityWithActor()
     -> FCk_Handle
 {
-    return UCk_Utils_OwningActor_UE::TryGet_Entity_OwningActor_InOwnershipChain(DoGet_AbilityEntity());
+    if (ck::Is_NOT_Valid(_ContextEntityWithActor, ck::IsValid_Policy_OptionalEngagedOnly{}))
+    {
+        _ContextEntityWithActor = UCk_Utils_OwningActor_UE::TryGet_Entity_OwningActor_InOwnershipChain(DoGet_AbilityEntity());
+    }
+
+    return *_ContextEntityWithActor;
 }
 
 auto
