@@ -35,6 +35,7 @@ CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TSoftObjectPtr);
 
 CK_DEFINE_CUSTOM_IS_VALID_POLICY(IsValid_Policy_IncludePendingKill);
 CK_DEFINE_CUSTOM_IS_VALID_POLICY(IsValid_Policy_NullptrOnly);
+CK_DEFINE_CUSTOM_IS_VALID_POLICY(IsValid_Policy_OptionalEngagedOnly);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -239,6 +240,11 @@ CK_DEFINE_CUSTOM_IS_VALID_T(T, TOptional<T>, ck::IsValid_Policy_NullptrOnly, [=]
 {
     static_assert(std::is_pointer_v<T>, "Type T is NOT a pointer. IsValid_Policy_NullptrOnly is not applicable");
     return ck::IsValid(InOptional.GetValue(), ck::IsValid_Policy_NullptrOnly{});
+});
+
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TOptional<T>, ck::IsValid_Policy_OptionalEngagedOnly, [=](const TOptional<T>& InOptional)
+{
+    return InOptional.IsSet();
 });
 
 // --------------------------------------------------------------------------------------------------------------------
