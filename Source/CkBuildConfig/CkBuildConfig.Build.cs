@@ -33,6 +33,7 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_MEMORY_TRACKING=0");
                         PublicDefinitions.Add("CK_COPY_NET_PARAMS_ON_EVERY_ENTITY=1");
                         PublicDefinitions.Add("CK_ENABLE_STAT_DESCRIPTION=1");
+                        PublicDefinitions.Add("CK_VALIDATE_GAMEPLAYTAG_STALENESS=1");
                         break;
                     case UnrealTargetConfiguration.Debug:
                         PublicDefinitions.Add("CK_BYPASS_ENSURES=0");
@@ -42,6 +43,7 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_MEMORY_TRACKING=0");
                         PublicDefinitions.Add("CK_COPY_NET_PARAMS_ON_EVERY_ENTITY=1");
                         PublicDefinitions.Add("CK_ENABLE_STAT_DESCRIPTION=1");
+                        PublicDefinitions.Add("CK_VALIDATE_GAMEPLAYTAG_STALENESS=1");
                         break;
                     case UnrealTargetConfiguration.DebugGame:
                         PublicDefinitions.Add("CK_BYPASS_ENSURES=0");
@@ -51,6 +53,7 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_MEMORY_TRACKING=0");
                         PublicDefinitions.Add("CK_COPY_NET_PARAMS_ON_EVERY_ENTITY=1");
                         PublicDefinitions.Add("CK_ENABLE_STAT_DESCRIPTION=1");
+                        PublicDefinitions.Add("CK_VALIDATE_GAMEPLAYTAG_STALENESS=1");
                         break;
                     case UnrealTargetConfiguration.Development:
                         PublicDefinitions.Add("CK_BYPASS_ENSURES=0");
@@ -60,6 +63,7 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_MEMORY_TRACKING=0");
                         PublicDefinitions.Add("CK_COPY_NET_PARAMS_ON_EVERY_ENTITY=1");
                         PublicDefinitions.Add("CK_ENABLE_STAT_DESCRIPTION=1");
+                        PublicDefinitions.Add("CK_VALIDATE_GAMEPLAYTAG_STALENESS=1");
                         break;
                     case UnrealTargetConfiguration.Test:
                         PublicDefinitions.Add("CK_BYPASS_ENSURES=0");
@@ -69,6 +73,7 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_MEMORY_TRACKING=0");
                         PublicDefinitions.Add("CK_COPY_NET_PARAMS_ON_EVERY_ENTITY=0");
                         PublicDefinitions.Add("CK_ENABLE_STAT_DESCRIPTION=1");
+                        PublicDefinitions.Add("CK_VALIDATE_GAMEPLAYTAG_STALENESS=1");
                         break;
                     case UnrealTargetConfiguration.Shipping:
                         PublicDefinitions.Add("CK_BYPASS_ENSURES=1");
@@ -78,6 +83,7 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_MEMORY_TRACKING=0");
                         PublicDefinitions.Add("CK_COPY_NET_PARAMS_ON_EVERY_ENTITY=0");
                         PublicDefinitions.Add("CK_ENABLE_STAT_DESCRIPTION=1");
+                        PublicDefinitions.Add("CK_VALIDATE_GAMEPLAYTAG_STALENESS=0");
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
