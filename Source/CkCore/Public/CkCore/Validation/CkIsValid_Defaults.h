@@ -11,6 +11,7 @@
 #include <Engine/DataTable.h>
 #include <Framework/Commands/InputChord.h>
 #include <UObject/WeakInterfacePtr.h>
+#include <GameplayTagsManager.h>
 
 #include <type_traits>
 
@@ -110,20 +111,28 @@ CK_DEFINE_CUSTOM_IS_VALID(FInputChord, ck::IsValid_Policy_Default, [=](const FIn
     return InInputChord.IsValidChord();
 });
 
-CK_DEFINE_CUSTOM_IS_VALID(FGuid, ck::IsValid_Policy_Default, [=](FGuid InGuid)
+CK_DEFINE_CUSTOM_IS_VALID(FGuid, ck::IsValid_Policy_Default, [=](const FGuid& InGuid)
 {
     return InGuid.IsValid();
 });
 
-CK_DEFINE_CUSTOM_IS_VALID(FNetworkGUID, ck::IsValid_Policy_Default, [=](FNetworkGUID InGuid)
+CK_DEFINE_CUSTOM_IS_VALID(FNetworkGUID, ck::IsValid_Policy_Default, [=](const FNetworkGUID& InGuid)
 {
     return InGuid.IsValid();
 });
 
-CK_DEFINE_CUSTOM_IS_VALID(FGameplayTag, ck::IsValid_Policy_Default, [=](FGameplayTag InGameplayTag)
+#if CK_VALIDATE_GAMEPLAYTAG_STALENESS
+CK_DEFINE_CUSTOM_IS_VALID(FGameplayTag, ck::IsValid_Policy_Default, [=](const FGameplayTag& InGameplayTag)
+{
+    constexpr auto ErrorIfNotFound = false;
+    return UGameplayTagsManager::Get().RequestGameplayTag(InGameplayTag.GetTagName(), ErrorIfNotFound).IsValid();
+});
+#else
+CK_DEFINE_CUSTOM_IS_VALID(FGameplayTag, ck::IsValid_Policy_Default, [=](const FGameplayTag& InGameplayTag)
 {
     return InGameplayTag.IsValid();
 });
+#endif
 
 CK_DEFINE_CUSTOM_IS_VALID(FGameplayTagContainer, ck::IsValid_Policy_Default, [=](const FGameplayTagContainer& InGameplayTagContainer)
 {

@@ -166,6 +166,22 @@ CK_DEFINE_CUSTOM_FORMATTER(FTimespan, [&]()
     );
 });
 
+#if CK_VALIDATE_GAMEPLAYTAG_STALENESS
+CK_DEFINE_CUSTOM_FORMATTER(FGameplayTag, [&]()
+{
+    if (ck::IsValid(InObj))
+    {
+        return ck::Format(TEXT("{}"), InObj.ToString());
+    }
+
+    if (InObj.GetTagName() != NAME_None)
+    {
+        return ck::Format(TEXT("{}[STALE]"), InObj.ToString());
+    }
+
+    return ck::Format(TEXT("TAG_NOT_SET"));
+});
+#elif
 CK_DEFINE_CUSTOM_FORMATTER(FGameplayTag, [&]()
 {
     if (ck::IsValid(InObj))
@@ -175,6 +191,7 @@ CK_DEFINE_CUSTOM_FORMATTER(FGameplayTag, [&]()
 
     return ck::Format(TEXT("TAG_NOT_SET"));
 });
+#endif
 
 CK_DEFINE_CUSTOM_FORMATTER(FGameplayTagContainer, [&]()
 {
