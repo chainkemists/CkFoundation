@@ -370,4 +370,13 @@ auto
     InMarkerEntity.Add<ck::FTag_Marker_UpdateTransform>();
 }
 
+auto
+    UCk_Utils_Marker_UE::
+    Request_MarkMarker_AsSetupComplete(
+        FCk_Handle_Marker& InMarkerEntity)
+    -> void
+{
+    InMarkerEntity.Add<ck::FTag_Marker_SetupComplete>();
+}
+
 // --------------------------------------------------------------------------------------------------------------------

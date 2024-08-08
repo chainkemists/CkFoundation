@@ -8,7 +8,6 @@
 
 #include "CkOverlapBody/Marker/CkMarker_Fragment.h"
 #include "CkOverlapBody/Marker/CkMarker_Fragment_Data.h"
-#include "CkOverlapBody/MarkerAndSensor/CkMarkerAndSensor_Utils.h"
 
 #include "CkRecord/Record/CkRecord_Utils.h"
 
@@ -38,6 +37,7 @@ private:
 public:
     friend class ck::FProcessor_Marker_Setup;
     friend class UCk_Utils_Ecs_Base_UE;
+    friend class UCk_Utils_MarkerAndSensor_UE;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -281,6 +281,10 @@ private:
 
     static auto
     Request_MarkMarker_AsNeedToUpdateTransform(
+        FCk_Handle_Marker& InMarkerEntity) -> void;
+
+    static auto
+    Request_MarkMarker_AsSetupComplete(
         FCk_Handle_Marker& InMarkerEntity) -> void;
 };
 

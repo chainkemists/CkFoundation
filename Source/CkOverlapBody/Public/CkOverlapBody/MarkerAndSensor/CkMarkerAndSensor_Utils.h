@@ -10,7 +10,9 @@
 #include "CkGraphics/CkGraphics_Utils.h"
 
 #include "CkOverlapBody/Marker/CkMarker_Fragment.h"
+#include "CkOverlapBody/Marker/CkMarker_Utils.h"
 #include "CkOverlapBody/Sensor/CkSensor_Fragment.h"
+#include "CkOverlapBody/Sensor/CkSensor_Utils.h"
 
 #include "CkPhysics/CkPhysics_Common.h"
 #include "CkPhysics/CkPhysics_Utils.h"
@@ -373,11 +375,15 @@ auto
             case ECk_OverlapBody_Type::Marker:
             {
                 InMarkerOrSensorEntity.Get<ck::FFragment_Marker_Current>()._Marker = Cast<UShapeComponent>(InActorComp);
+                auto MarkerEntity = UCk_Utils_Marker_UE::Cast(InMarkerOrSensorEntity);
+                UCk_Utils_Marker_UE::Request_MarkMarker_AsSetupComplete(MarkerEntity);
                 break;
             }
             case ECk_OverlapBody_Type::Sensor:
             {
                 InMarkerOrSensorEntity.Get<ck::FFragment_Sensor_Current>()._Sensor = Cast<UShapeComponent>(InActorComp);
+                auto SensorEntity = UCk_Utils_Sensor_UE::Cast(InMarkerOrSensorEntity);
+                UCk_Utils_Sensor_UE::Request_MarkSensor_AsSetupComplete(SensorEntity);
                 break;
             }
             case ECk_OverlapBody_Type::Other:
@@ -450,11 +456,15 @@ auto
             case ECk_OverlapBody_Type::Marker:
             {
                 InMarkerOrSensorEntity.Get<ck::FFragment_Marker_Current>()._Marker = Cast<UShapeComponent>(InActorComp);
+                auto MarkerEntity = UCk_Utils_Marker_UE::Cast(InMarkerOrSensorEntity);
+                UCk_Utils_Marker_UE::Request_MarkMarker_AsSetupComplete(MarkerEntity);
                 break;
             }
             case ECk_OverlapBody_Type::Sensor:
             {
                 InMarkerOrSensorEntity.Get<ck::FFragment_Sensor_Current>()._Sensor = Cast<UShapeComponent>(InActorComp);
+                auto SensorEntity = UCk_Utils_Sensor_UE::Cast(InMarkerOrSensorEntity);
+                UCk_Utils_Sensor_UE::Request_MarkSensor_AsSetupComplete(SensorEntity);
                 break;
             }
             case ECk_OverlapBody_Type::Other:
@@ -527,11 +537,15 @@ auto
             case ECk_OverlapBody_Type::Marker:
             {
                 InMarkerOrSensorEntity.Get<ck::FFragment_Marker_Current>()._Marker = Cast<UShapeComponent>(InActorComp);
+                auto MarkerEntity = UCk_Utils_Marker_UE::Cast(InMarkerOrSensorEntity);
+                UCk_Utils_Marker_UE::Request_MarkMarker_AsSetupComplete(MarkerEntity);
                 break;
             }
             case ECk_OverlapBody_Type::Sensor:
             {
                 InMarkerOrSensorEntity.Get<ck::FFragment_Sensor_Current>()._Sensor = Cast<UShapeComponent>(InActorComp);
+                auto SensorEntity = UCk_Utils_Sensor_UE::Cast(InMarkerOrSensorEntity);
+                UCk_Utils_Sensor_UE::Request_MarkSensor_AsSetupComplete(SensorEntity);
                 break;
             }
             case ECk_OverlapBody_Type::Other:

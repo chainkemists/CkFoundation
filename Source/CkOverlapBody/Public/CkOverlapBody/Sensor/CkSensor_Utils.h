@@ -4,7 +4,6 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkOverlapBody/MarkerAndSensor/CkMarkerAndSensor_Utils.h"
 #include "CkOverlapBody/Sensor/CkSensor_Fragment.h"
 
 #include "CkRecord/Record/CkRecord_Utils.h"
@@ -37,6 +36,7 @@ private:
 public:
     friend class ck::FProcessor_Sensor_Setup;
     friend class UCk_Utils_Ecs_Base_UE;
+    friend class UCk_Utils_MarkerAndSensor_UE;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -430,6 +430,10 @@ private:
 
     static auto
     Request_MarkSensor_AsNeedToUpdateTransform(
+        FCk_Handle_Sensor& InSensorHandle) -> void;
+
+    static auto
+    Request_MarkSensor_AsSetupComplete(
         FCk_Handle_Sensor& InSensorHandle) -> void;
 };
 

@@ -651,4 +651,13 @@ auto
     InSensorHandle.Add<ck::FTag_Sensor_UpdateTransform>();
 }
 
+auto
+    UCk_Utils_Sensor_UE::
+    Request_MarkSensor_AsSetupComplete(
+        FCk_Handle_Sensor& InSensorHandle)
+    -> void
+{
+    InSensorHandle.Add<ck::FTag_Sensor_SetupComplete>();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
