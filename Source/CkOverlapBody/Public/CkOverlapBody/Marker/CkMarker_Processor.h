@@ -42,6 +42,7 @@ namespace ck
             FFragment_Marker_Current,
             FFragment_Marker_Params,
             FFragment_Marker_Requests,
+            FTag_Marker_SetupComplete,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -79,6 +80,7 @@ namespace ck
             FCk_Handle_Marker,
             FFragment_Marker_Current,
             FFragment_Marker_Params,
+            FTag_Marker_SetupComplete,
             CK_IF_INITIATE_CONFIRM_KILL>
     {
     public:
@@ -103,6 +105,7 @@ namespace ck
             FFragment_Marker_Current,
             FFragment_Marker_Params,
             FTag_Marker_UpdateTransform,
+            FTag_Marker_SetupComplete,
             CK_IGNORE_PENDING_KILL>
     {
     public:
