@@ -42,6 +42,7 @@ namespace ck
             FFragment_Sensor_Current,
             FFragment_Sensor_Params,
             FFragment_Sensor_Requests,
+            FTag_Sensor_SetupComplete,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -104,6 +105,7 @@ namespace ck
             FFragment_Sensor_Current,
             FFragment_Sensor_Params,
             FTag_Sensor_UpdateTransform,
+            FTag_Sensor_SetupComplete,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -124,6 +126,7 @@ namespace ck
             FCk_Handle_Sensor,
             FFragment_Sensor_Current,
             FFragment_Sensor_Params,
+            FTag_Sensor_SetupComplete,
             CK_IF_INITIATE_CONFIRM_KILL>
     {
     public:
