@@ -17,6 +17,7 @@ namespace ck
     struct FFragment_ResolverDataBundle_Current;
     struct FFragment_ResolverDataBundle_Params;
 
+    class FProcessor_ResolverDataBundle_StartNewPhase;
     class FProcessor_ResolverDataBundle_HandleRequests;
     class FProcessor_ResolverDataBundle_ResolveOperations;
     class FProcessor_ResolverDataBundle_Calculate;
@@ -34,6 +35,7 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_ResolverDataBundle);
 
 public:
+    friend class ck::FProcessor_ResolverDataBundle_StartNewPhase;
     friend class ck::FProcessor_ResolverDataBundle_HandleRequests;
     friend class ck::FProcessor_ResolverDataBundle_ResolveOperations;
     friend class ck::FProcessor_ResolverDataBundle_Calculate;
@@ -250,12 +252,9 @@ private:
     DoMarkBundle_AsCalculateDone(
         FCk_Handle_ResolverDataBundle& InResolverDataBundle) -> FCk_Handle_ResolverDataBundle;
 
-    [[nodiscard]]
     static auto
     DoTryStartNewPhase(
-        FCk_Handle_ResolverDataBundle& InResolverDataBundle,
-        int32 InNumTotalPhases,
-        int32 InCurrentPhaseIndex) -> bool;
+        FCk_Handle_ResolverDataBundle& InResolverDataBundle) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
