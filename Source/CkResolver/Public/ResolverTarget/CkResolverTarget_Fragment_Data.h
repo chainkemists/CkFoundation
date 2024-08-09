@@ -20,6 +20,8 @@ public:
     CK_GENERATED_BODY(FCk_Fragment_ResolverTarget_ParamsData);
 };
 
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKRESOLVER_API FCk_Request_ResolverTarget_InitiateNewResolution : public FCk_Request_Base
 {
