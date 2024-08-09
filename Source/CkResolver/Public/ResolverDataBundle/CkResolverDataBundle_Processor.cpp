@@ -50,7 +50,7 @@ namespace ck
                 .Set_DataBundle(InHandle)
                 .Set_Instigator(Params.Get_Instigator())
                 .Set_Target(Params.Get_Target())
-                .Set_ResolverCause(Params.Get_Causer())
+                .Set_Causer(Params.Get_Causer())
                 .Set_FinalValue(InCurrent.Get_FinalValue())
                 .Set_Metadata(InCurrent.Get_MetadataTags());
 
@@ -259,7 +259,7 @@ namespace ck
             .Set_DataBundle(InHandle)
             .Set_Instigator(Instigator)
             .Set_Target(Target)
-            .Set_ResolverCause(ResolverCause)
+            .Set_Causer(ResolverCause)
             .Set_FinalValue(CalculatedFinalValue)
             .Set_Metadata(InCurrent.Get_MetadataTags());
 
