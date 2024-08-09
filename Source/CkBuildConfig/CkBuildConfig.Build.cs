@@ -82,7 +82,7 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_ECS_DISABLE_HANDLE_DEBUGGING=1");
                         PublicDefinitions.Add("CK_MEMORY_TRACKING=0");
                         PublicDefinitions.Add("CK_COPY_NET_PARAMS_ON_EVERY_ENTITY=0");
-                        PublicDefinitions.Add("CK_ENABLE_STAT_DESCRIPTION=1");
+                        PublicDefinitions.Add("CK_ENABLE_STAT_DESCRIPTION=0");
                         PublicDefinitions.Add("CK_VALIDATE_GAMEPLAYTAG_STALENESS=0");
                         break;
                     default:
