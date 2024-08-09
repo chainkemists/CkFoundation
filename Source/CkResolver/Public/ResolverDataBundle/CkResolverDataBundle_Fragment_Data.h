@@ -38,7 +38,7 @@ enum class ECk_ResolverDataBundle_ModifierComponent : uint8
 {
     BaseValue,
     BonusValue,
-    TotalScalar
+    TotalMultiplier
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ResolverDataBundle_ModifierComponent);
@@ -47,7 +47,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ResolverDataBundle_ModifierComponent);
 
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Label_ResolverDataBundle_BaseValue);
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Label_ResolverDataBundle_BonusValue);
-UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Label_ResolverDataBundle_TotalScalarValue);
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Label_ResolverDataBundle_TotalMultiplierValue);
 
 // --------------------------------------------------------------------------------------------------------------------
 
