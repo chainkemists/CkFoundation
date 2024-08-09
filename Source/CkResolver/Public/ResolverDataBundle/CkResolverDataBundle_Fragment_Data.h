@@ -296,8 +296,12 @@ private:
     FCk_Handle_ResolverTarget _Target;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, DeprecatedProperty))
     FCk_Handle _ResolverCause;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, DeprecatedProperty))
+    FCk_Handle _Causer;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -311,9 +315,15 @@ public:
     CK_PROPERTY(_DataBundle);
     CK_PROPERTY(_Instigator);
     CK_PROPERTY(_Target);
-    CK_PROPERTY(_ResolverCause);
     CK_PROPERTY(_FinalValue);
     CK_PROPERTY(_Metadata);
+
+    CK_PROPERTY_GET(_Causer);
+
+public:
+    auto
+    Set_Causer(
+        const FCk_Handle& InCauser) -> ThisType&;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

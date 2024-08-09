@@ -11,3 +11,14 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_Label_ResolverDataBundle_Phase_Default, TEXT("Resolve
 
 
 // --------------------------------------------------------------------------------------------------------------------
+auto
+    FCk_Payload_ResolverDataBundle_Resolved::
+    Set_Causer(
+        const FCk_Handle& InCauser)
+    -> ThisType&
+{
+    _ResolverCause = InCauser;
+    _Causer = InCauser;
+
+    return *this;
+}

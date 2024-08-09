@@ -148,7 +148,7 @@ auto
         .Set_DataBundle(InDataBundle)
         .Set_Instigator(Params.Get_Instigator())
         .Set_Target(Params.Get_Target())
-        .Set_ResolverCause(Params.Get_Causer())
+        .Set_Causer(Params.Get_Causer())
         .Set_FinalValue(Current.Get_FinalValue())
         .Set_Metadata(Current.Get_MetadataTags());
 
