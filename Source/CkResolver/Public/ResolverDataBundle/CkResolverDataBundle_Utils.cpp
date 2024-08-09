@@ -48,7 +48,7 @@ auto
             1.0f), ECk_Replication::DoesNotReplicate);
 
     auto DataBundleEntity = Cast(NewEntity);
-    std::ignore = DoTryStartNewPhase(DataBundleEntity, Params.Get_Params().Get_Phases().Num(), Current.Get_CurrentPhaseIndex());
+    DoTryStartNewPhase(DataBundleEntity);
 
     return DataBundleEntity;
 }
@@ -346,15 +346,9 @@ auto
 auto
     UCk_Utils_ResolverDataBundle_UE::
     DoTryStartNewPhase(
-        FCk_Handle_ResolverDataBundle& InResolverDataBundle,
-        int32 InNumTotalPhases,
-        int32 InCurrentPhaseIndex) -> bool
+        FCk_Handle_ResolverDataBundle& InResolverDataBundle) -> void
 {
-    if (InCurrentPhaseIndex + 1 == InNumTotalPhases)
-    { return false; }
-
     InResolverDataBundle.Add<ck::FTag_ResolverDataBundle_StartNewPhase>();
-    return true;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

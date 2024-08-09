@@ -39,18 +39,31 @@ namespace ck
         const auto& PhaseNamePrevious = Phases.IsValidIndex(InCurrent.Get_CurrentPhaseIndex()) ?
             Phases[InCurrent.Get_CurrentPhaseIndex()].Get_PhaseName() : TAG_ResolverDataBundle_InvalidPhase;
 
-        CK_ENSURE_IF_NOT(Phases.IsValidIndex(InCurrent.Get_CurrentPhaseIndex() + 1),
-            TEXT("Unable to Start a New Phase for the ResolverSource [{}] with ResolverCause [{}] since we are already on the final phase [{}]"),
-            InHandle, InParams.Get_Params().Get_Causer(), PhaseNamePrevious)
-        { return; }
-
-        InHandle.Try_Remove<FTag_ResolverDataBundle_CalculateDone>();
-        InHandle.Try_Remove<FTag_ResolverDataBundle_OperationsResolved>();
-
         InCurrent._CurrentPhaseIndex++;
 
-        const auto& PhaseName = InParams.Get_Params().Get_Phases()[InCurrent.Get_CurrentPhaseIndex()].Get_PhaseName();
-        UUtils_Signal_ResolverDataBundle_PhaseStart::Broadcast(InHandle, ck::MakePayload(InHandle, PhaseName));
+        if (NOT Phases.IsValidIndex(InCurrent._CurrentPhaseIndex))
+        {
+            UCk_Utils_ResolverDataBundle_UE::DoMarkBundle_AsCalculateDone(InHandle);
+
+            const auto& Params = InParams.Get_Params();
+            const auto Payload = FCk_Payload_ResolverDataBundle_Resolved{}
+                .Set_DataBundle(InHandle)
+                .Set_Instigator(Params.Get_Instigator())
+                .Set_Target(Params.Get_Target())
+                .Set_ResolverCause(Params.Get_Causer())
+                .Set_FinalValue(InCurrent.Get_FinalValue())
+                .Set_Metadata(InCurrent.Get_MetadataTags());
+
+            UUtils_Signal_ResolverDataBundle_AllPhasesComplete::Broadcast(InHandle, ck::MakePayload(InHandle, Payload));
+        }
+        else
+        {
+            InHandle.Try_Remove<FTag_ResolverDataBundle_CalculateDone>();
+            InHandle.Try_Remove<FTag_ResolverDataBundle_OperationsResolved>();
+
+            const auto& PhaseName = InParams.Get_Params().Get_Phases()[InCurrent.Get_CurrentPhaseIndex()].Get_PhaseName();
+            UUtils_Signal_ResolverDataBundle_PhaseStart::Broadcast(InHandle, ck::MakePayload(InHandle, PhaseName));
+        }
 
         InHandle.Remove<MarkedDirtyBy>();
     }
@@ -237,8 +250,6 @@ namespace ck
 
         resolver::Verbose(TEXT("Calculated Final Value [{}] of ResolverData Bundle [{}]"), CalculatedFinalValue, InHandle);
 
-        UCk_Utils_ResolverDataBundle_UE::DoMarkBundle_AsCalculateDone(InHandle);
-
         const auto& Instigator = InParams.Get_Params().Get_Instigator();
         const auto& Target = InParams.Get_Params().Get_Target();
         const auto& ResolverCause = InParams.Get_Params().Get_Causer();
@@ -254,11 +265,9 @@ namespace ck
 
         UUtils_Signal_ResolverDataBundle_PhaseComplete::Broadcast(InHandle, ck::MakePayload(InHandle, PhaseName, Payload));
 
-        if (NOT UCk_Utils_ResolverDataBundle_UE::DoTryStartNewPhase(InHandle,
-            InParams.Get_Params().Get_Phases().Num(),
-            InCurrent.Get_CurrentPhaseIndex()))
+        if (NOT InHandle.Has<FFragment_ResolverDataBundle_Requests>())
         {
-            UUtils_Signal_ResolverDataBundle_AllPhasesComplete::Broadcast(InHandle, ck::MakePayload(InHandle, Payload));
+            UCk_Utils_ResolverDataBundle_UE::DoTryStartNewPhase(InHandle);
         }
     }
 }
