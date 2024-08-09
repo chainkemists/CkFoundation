@@ -6,8 +6,6 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
-#include "CkProvider/Public/CkProvider/CkProvider_Data.h"
-
 #include <GameplayTagContainer.h>
 #include <NativeGameplayTags.h>
 
@@ -222,7 +220,7 @@ private:
     FCk_Handle _Causer;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, TitleProperty = _PhaseName))
     TArray<FCk_Fragment_ResolverDataBundle_PhaseInfo> _Phases;
 
 public:

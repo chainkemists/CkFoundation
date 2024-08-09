@@ -190,7 +190,11 @@ namespace ck
                 for (const auto& MetadataOperation : InPendingOperations.Get_PendingMetadataOperations_Conditionals())
                 {
                     if (NOT MetadataOperation.Get_BundleTagRequirements().RequirementsMet(InCurrent.Get_MetadataTags()))
-                    { continue; }
+                    {
+                        resolver::Verbose(TEXT("IGNORING MetadataOperation for DataBundle [{}] with Owner [{}] because the requirements are NOT met"),
+                            InHandle, UCk_Utils_ResolverDataBundle_UE::Get_Instigator(InHandle));
+                        continue;
+                    }
 
                     InCurrent._MetadataTags.AppendTags(MetadataOperation.Get_Operation().Get_TagsToAdd());
                     InCurrent._MetadataTags.RemoveTags(MetadataOperation.Get_Operation().Get_TagsToRemove());
@@ -208,7 +212,11 @@ namespace ck
                 for (const auto& ModifierOperation : InPendingOperations.Get_PendingModifiersOperations_Conditionals())
                 {
                     if (NOT ModifierOperation.Get_BundleTagRequirements().RequirementsMet(InCurrent.Get_MetadataTags()))
-                    { continue; }
+                    {
+                        resolver::Verbose(TEXT("IGNORING ModifierOperation for DataBundle [{}] with Owner [{}] because the requirements are NOT met"),
+                            InHandle, UCk_Utils_ResolverDataBundle_UE::Get_Instigator(InHandle));
+                        continue;
+                    }
 
                     ModifyResolverDataComponentAttribute(ModifierOperation.Get_Operation());
                 }
