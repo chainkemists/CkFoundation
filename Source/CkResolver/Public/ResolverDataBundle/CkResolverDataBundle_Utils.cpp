@@ -44,7 +44,7 @@ auto
     UCk_Utils_FloatAttribute_UE::Add(
         NewEntity,
         FCk_Fragment_FloatAttribute_ParamsData(
-            TAG_Label_ResolverDataBundle_TotalScalarValue,
+            TAG_Label_ResolverDataBundle_TotalMultiplierValue,
             1.0f), ECk_Replication::DoesNotReplicate);
 
     auto DataBundleEntity = Cast(NewEntity);
@@ -267,9 +267,9 @@ auto
         {
             return TAG_Label_ResolverDataBundle_BonusValue;
         }
-        case ECk_ResolverDataBundle_ModifierComponent::TotalScalar:
+        case ECk_ResolverDataBundle_ModifierComponent::TotalMultiplier:
         {
-            return TAG_Label_ResolverDataBundle_TotalScalarValue;
+            return TAG_Label_ResolverDataBundle_TotalMultiplierValue;
         }
         default:
         {

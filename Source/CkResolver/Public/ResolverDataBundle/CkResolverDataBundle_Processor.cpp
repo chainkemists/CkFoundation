@@ -241,7 +241,7 @@ namespace ck
         const auto& ResolverDataBonusValue = UCk_Utils_FloatAttribute_UE::Get_FinalValue(ResolverDataBonusValue_Attribute);
 
         const auto& ResolverDataTotalScalarValue_AttributeName =
-            UCk_Utils_ResolverDataBundle_UE::DoGet_ResolverDataComponentAttributeName(ECk_ResolverDataBundle_ModifierComponent::TotalScalar);
+            UCk_Utils_ResolverDataBundle_UE::DoGet_ResolverDataComponentAttributeName(ECk_ResolverDataBundle_ModifierComponent::TotalMultiplier);
         const auto& ResolverDataTotalScalarValue_Attribute = UCk_Utils_FloatAttribute_UE::TryGet(InHandle, ResolverDataTotalScalarValue_AttributeName);
         const auto& ResolverDataTotalScalarValue = UCk_Utils_FloatAttribute_UE::Get_FinalValue(ResolverDataTotalScalarValue_Attribute);
 
