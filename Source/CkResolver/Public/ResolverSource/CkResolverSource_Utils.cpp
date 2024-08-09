@@ -64,11 +64,7 @@ auto
         FGameplayTag InName)
     -> TArray<FCk_Handle_ResolverDataBundle>
 {
-    return RecordOfDataBundles_Utils::Get_ValidEntries_If(InSource,
-    [InName](const FCk_Handle& InHandle)
-    {
-        return UCk_Utils_GameplayLabel_UE::Get_Label(InHandle) == InName;
-    });
+    return RecordOfDataBundles_Utils::Get_ValidEntries_If(InSource, ck::algo::MatchesGameplayLabelExact{InName});
 }
 
 auto
