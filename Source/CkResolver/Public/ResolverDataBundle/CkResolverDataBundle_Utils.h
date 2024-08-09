@@ -131,6 +131,13 @@ public:
     Get_Metadata(
         const FCk_Handle_ResolverDataBundle& InDataBundle);
 
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|ResolverDataBundle",
+        DisplayName="[Ck][Resolver] Get Resolved Payload")
+    static FCk_Payload_ResolverDataBundle_Resolved
+    Get_Resolved_Payload(
+        const FCk_Handle_ResolverDataBundle& InDataBundle);
+
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ResolverDataBundle",

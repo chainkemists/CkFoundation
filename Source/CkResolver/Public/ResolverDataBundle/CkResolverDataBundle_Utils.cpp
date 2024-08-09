@@ -135,6 +135,26 @@ auto
     return InDataBundle.Get<ck::FFragment_ResolverDataBundle_Current>().Get_MetadataTags();
 }
 
+auto
+    UCk_Utils_ResolverDataBundle_UE::
+    Get_Resolved_Payload(
+        const FCk_Handle_ResolverDataBundle& InDataBundle)
+    -> FCk_Payload_ResolverDataBundle_Resolved
+{
+    const auto& Params = InDataBundle.Get<ck::FFragment_ResolverDataBundle_Params>().Get_Params();
+    const auto& Current = InDataBundle.Get<ck::FFragment_ResolverDataBundle_Current>();
+
+    const auto Payload = FCk_Payload_ResolverDataBundle_Resolved{}
+        .Set_DataBundle(InDataBundle)
+        .Set_Instigator(Params.Get_Instigator())
+        .Set_Target(Params.Get_Target())
+        .Set_ResolverCause(Params.Get_Causer())
+        .Set_FinalValue(Current.Get_FinalValue())
+        .Set_Metadata(Current.Get_MetadataTags());
+
+    return Payload;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
