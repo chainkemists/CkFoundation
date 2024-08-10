@@ -18,16 +18,6 @@ auto
 
 auto
     UCk_Fragment_Player_Rep::
-    PostLink()
-    -> void
-{
-    Super::PostLink();
-
-    OnRep_Updated();
-}
-
-auto
-    UCk_Fragment_Player_Rep::
     GetLifetimeReplicatedProps(
         TArray<FLifetimeProperty>& OutLifetimeProps) const
     -> void
@@ -55,6 +45,10 @@ auto
     if (UCk_Utils_Player_UE::Has(Entity))
     {
         auto PlayerEntity = UCk_Utils_Player_UE::Cast(Entity);
+
+        if (UCk_Utils_Player_UE::Get_IsAssignedTo(PlayerEntity, _PlayerID))
+        { return; }
+
         UCk_Utils_Player_UE::Unassign(PlayerEntity);
     }
 

@@ -18,16 +18,6 @@ auto
 
 auto
     UCk_Fragment_Team_Rep::
-    PostLink()
-    -> void
-{
-    Super::PostLink();
-
-    OnRep_Updated();
-}
-
-auto
-    UCk_Fragment_Team_Rep::
     GetLifetimeReplicatedProps(
         TArray<FLifetimeProperty>& OutLifetimeProps) const
     -> void
@@ -55,6 +45,10 @@ auto
     if (UCk_Utils_Team_UE::Has(Entity))
     {
         auto TeamEntity = UCk_Utils_Team_UE::Cast(Entity);
+
+        if (UCk_Utils_Team_UE::Get_IsAssignedTo(TeamEntity, _TeamID))
+        { return; }
+
         UCk_Utils_Team_UE::Unassign(TeamEntity);
     }
 

@@ -69,10 +69,6 @@ public:
 
 private:
     auto
-    PostLink() -> void override;;
-
-private:
-    auto
     GetLifetimeReplicatedProps(
         TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
 
@@ -83,7 +79,7 @@ private:
 
 private:
     UPROPERTY(ReplicatedUsing = OnRep_Updated);
-    ECk_Player_ID _PlayerID;
+    ECk_Player_ID _PlayerID = ECk_Player_ID::Unassigned;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
