@@ -56,16 +56,22 @@ namespace ck
     {
         using CollectionRecordOfEntitiesUtilsType = UCk_Utils_EntityCollection_UE::EntityCollections_RecordOfEntities_Utils;
 
-        const auto& EntitiesToAdd = ck::algo::Filter(InRequest.Get_EntitiesToAdd(), ck::algo::IsValidEntityHandle{});
+        const auto& EntitiesToAdd = ck::algo::Filter(InRequest.Get_EntitiesToAdd(), [&](const FCk_Handle& InEntity)
+        {
+            if (ck::Is_NOT_Valid(InEntity))
+            { return false; }
+
+            if (CollectionRecordOfEntitiesUtilsType::Get_ContainsEntry(InHandle, InEntity))
+            { return false; }
+
+            return true;
+        });
 
         if (EntitiesToAdd.IsEmpty())
         { return; }
 
         for (auto EntityToAdd : EntitiesToAdd)
         {
-            if (CollectionRecordOfEntitiesUtilsType::Get_ContainsEntry(InHandle, EntityToAdd))
-            { continue; }
-
             CollectionRecordOfEntitiesUtilsType::Request_Connect(InHandle, EntityToAdd);
         }
 
@@ -82,16 +88,22 @@ namespace ck
     {
         using CollectionRecordOfEntitiesUtilsType = UCk_Utils_EntityCollection_UE::EntityCollections_RecordOfEntities_Utils;
 
-        const auto& EntitiesToRemove = ck::algo::Filter(InRequest.Get_EntitiesToRemove(), ck::algo::IsValidEntityHandle{});
+        const auto& EntitiesToRemove = ck::algo::Filter(InRequest.Get_EntitiesToRemove(), [&](const FCk_Handle& InEntity)
+        {
+            if (ck::Is_NOT_Valid(InEntity))
+            { return false; }
+
+            if (NOT CollectionRecordOfEntitiesUtilsType::Get_ContainsEntry(InHandle, InEntity))
+            { return false; }
+
+            return true;
+        });
 
         if (EntitiesToRemove.IsEmpty())
         { return; }
 
         for (auto EntityToRemove : EntitiesToRemove)
         {
-            if (NOT CollectionRecordOfEntitiesUtilsType::Get_ContainsEntry(InHandle, EntityToRemove))
-            { continue; }
-
             CollectionRecordOfEntitiesUtilsType::Request_Disconnect(InHandle, EntityToRemove);
         }
 
