@@ -34,7 +34,7 @@ namespace ck
 }
 
 #define CK_DEFINE_ENTITY_HOLDER(_NameOfEntityHolder_)      \
-struct _NameOfEntityHolder_ : public FFragment_EntityHolder\
+struct _NameOfEntityHolder_ : public ck::FFragment_EntityHolder\
 {                                                          \
     using FFragment_EntityHolder::FFragment_EntityHolder;  \
 }
