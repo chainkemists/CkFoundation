@@ -7,12 +7,13 @@
 #include <CoreMinimal.h>
 #include <GameplayTagContainer.h>
 #include <InputCoreTypes.h>
+#include <NativeGameplayTags.h>
 #include <AssetRegistry/AssetData.h>
+#include <Engine/CollisionProfile.h>
+#include <Engine/CurveTable.h>
+#include <Engine/DataTable.h>
 #include <Framework/Commands/InputChord.h>
 #include <GameFramework/Actor.h>
-#include <Engine/CollisionProfile.h>
-#include <Engine/DataTable.h>
-#include <Engine/CurveTable.h>
 
 #if WITH_EDITOR
 #include <UnrealEdMisc.h>
@@ -164,6 +165,11 @@ CK_DEFINE_CUSTOM_FORMATTER(FTimespan, [&]()
         InObj.GetMinutes(),
         InObj.GetSeconds()
     );
+});
+
+CK_DEFINE_CUSTOM_FORMATTER(FNativeGameplayTag, [&]()
+{
+    return ck::Format(TEXT("{}"), InObj.GetTag());
 });
 
 #if CK_VALIDATE_GAMEPLAYTAG_STALENESS
