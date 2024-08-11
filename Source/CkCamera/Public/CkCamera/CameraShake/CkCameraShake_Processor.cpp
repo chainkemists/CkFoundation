@@ -1,9 +1,12 @@
 #include "CkCameraShake_Processor.h"
 
+#include "CkCamera/CkCamera_Log.h"
+
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
-#include "CkCamera/CkCamera_Log.h"
 #include "CkNet/CkNet_Utils.h"
+
+#include <Kismet/GameplayStatics.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
