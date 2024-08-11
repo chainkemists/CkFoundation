@@ -59,7 +59,9 @@ auto
     auto& Params = InHandle.Get<ck::FFragment_AbilityOwner_Params>();
     auto DefaultAbilities = Params.Get_Params().Get_DefaultAbilities();
     DefaultAbilities.Append(InDefaultAbilities);
-    Params = ck::FFragment_AbilityOwner_Params{FCk_Fragment_AbilityOwner_ParamsData{DefaultAbilities}};
+    Params = ck::FFragment_AbilityOwner_Params{
+        FCk_Fragment_AbilityOwner_ParamsData{DefaultAbilities}
+            .Set_DefaultAbilities_Instanced(Params.Get_Params().Get_DefaultAbilities_Instanced())};
 
     return Cast(InHandle);
 }
