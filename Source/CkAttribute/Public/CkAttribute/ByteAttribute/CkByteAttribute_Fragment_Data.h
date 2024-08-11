@@ -60,7 +60,10 @@ public:
 public:
     CK_PROPERTY_GET(_Name);
     CK_PROPERTY_GET(_BaseValue);
-    CK_PROPERTY_GET(_MinMax);
+
+    CK_PROPERTY(_MinMax);
+    CK_PROPERTY_SET(_MinValue);
+    CK_PROPERTY_SET(_MaxValue);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ByteAttribute_ParamsData, _Name, _BaseValue);
