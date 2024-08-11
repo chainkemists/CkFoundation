@@ -28,7 +28,7 @@ public:
               Category = "Ck|Utils|Variables|Bool")
     static bool
     Get(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_SucceededFailed& OutSuccessFail);
 
@@ -37,7 +37,7 @@ public:
               Category = "Ck|Utils|Variables|Bool")
     static void
     Set(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         bool InValue);
 
@@ -88,7 +88,7 @@ public:
               Category = "Ck|Utils|Variables|Int32")
     static int32
     Get(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_SucceededFailed& OutSuccessFail);
 
@@ -97,7 +97,7 @@ public:
               Category = "Ck|Utils|Variables|Int32")
     static void
     Set(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         int32 InValue);
 
@@ -148,7 +148,7 @@ public:
               Category = "Ck|Utils|Variables|Int64")
     static int64
     Get(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_SucceededFailed& OutSuccessFail);
 
@@ -157,7 +157,7 @@ public:
               Category = "Ck|Utils|Variables|Int64")
     static void
     Set(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         int64 InValue);
 
@@ -208,7 +208,7 @@ public:
               Category = "Ck|Utils|Variables|Float")
     static float
     Get(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_SucceededFailed& OutSuccessFail);
 
@@ -217,7 +217,7 @@ public:
               Category = "Ck|Utils|Variables|Float")
     static void
     Set(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         float InValue);
 
@@ -268,7 +268,7 @@ public:
               Category = "Ck|Utils|Variables|Name")
     static FName
     Get(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_SucceededFailed& OutSuccessFail);
 
@@ -277,7 +277,7 @@ public:
               Category = "Ck|Utils|Variables|Name")
     static void
     Set(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         FName InValue);
 
@@ -328,7 +328,7 @@ public:
               Category = "Ck|Utils|Variables|String")
     static const FString&
     Get(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_SucceededFailed& OutSuccessFail);
 
@@ -337,7 +337,7 @@ public:
               Category = "Ck|Utils|Variables|String")
     static void
     Set(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         const FString& InValue);
 
@@ -388,7 +388,7 @@ public:
               Category = "Ck|Utils|Variables|Text")
     static FText
     Get(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_SucceededFailed& OutSuccessFail);
 
@@ -397,7 +397,7 @@ public:
               Category = "Ck|Utils|Variables|Text")
     static void
     Set(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         FText InValue);
 
@@ -448,7 +448,7 @@ public:
               Category = "Ck|Utils|Variables|Vec3")
     static FVector
     Get(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_SucceededFailed& OutSuccessFail);
 
@@ -457,7 +457,7 @@ public:
               Category = "Ck|Utils|Variables|Vec3")
     static void
     Set(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         FVector InValue);
 
@@ -508,7 +508,7 @@ public:
               Category = "Ck|Utils|Variables|Vec2")
     static FVector2D
     Get(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_SucceededFailed& OutSuccessFail);
 
@@ -517,7 +517,7 @@ public:
               Category = "Ck|Utils|Variables|Vec2")
     static void
     Set(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         FVector2D InValue);
 
@@ -568,7 +568,7 @@ public:
               Category = "Ck|Utils|Variables|Rotator")
     static FRotator
     Get(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_SucceededFailed& OutSuccessFail);
 
@@ -577,7 +577,7 @@ public:
               Category = "Ck|Utils|Variables|Rotator")
     static void
     Set(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         FRotator InValue);
 
@@ -628,7 +628,7 @@ public:
               Category = "Ck|Utils|Variables|Transform")
     static const FTransform&
     Get(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_SucceededFailed& OutSuccessFail);
 
@@ -637,7 +637,7 @@ public:
               Category = "Ck|Utils|Variables|Transform")
     static void
     Set(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         const FTransform& InValue);
 
@@ -699,14 +699,14 @@ public:
               meta=(CustomStructureParam = "InValue", BlueprintInternalUseOnly = true))
     static void
     INTERNAL__Set(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         const int32& InValue);
     DECLARE_FUNCTION(execINTERNAL__Set);
 
     static void
     Set(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         const FInstancedStruct& InValue);
 
@@ -767,7 +767,7 @@ public:
 
     static const FInstancedStruct&
     Get(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         ECk_SucceededFailed& OutSuccessFail);
 };
@@ -793,7 +793,7 @@ public:
               meta = (DeterminesOutputType = "InObject"))
     static UObject*
     Get(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         TSubclassOf<UObject> InObject,
         ECk_SucceededFailed& OutSuccessFail);
@@ -803,7 +803,7 @@ public:
               Category = "Ck|Utils|Variables|UObject")
     static void
     Set(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         UObject* InValue);
 
@@ -857,9 +857,10 @@ public:
               meta = (DeterminesOutputType = "InObject"))
     static TSubclassOf<UObject>
     Get(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         TSubclassOf<UObject> InObject,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -867,7 +868,7 @@ public:
               Category = "Ck|Utils|Variables|SubclassOf")
     static void
     Set(
-        FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         TSubclassOf<UObject> InValue);
 
