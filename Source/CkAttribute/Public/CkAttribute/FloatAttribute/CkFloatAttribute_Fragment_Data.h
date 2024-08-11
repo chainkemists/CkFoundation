@@ -63,7 +63,7 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     ECk_Attribute_BaseBonusFinal _MagnitudeComponent = ECk_Attribute_BaseBonusFinal::Final;
-    
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     ECk_FloatAttributeMagnitude_CalculationPolicy _CalculationMode = ECk_FloatAttributeMagnitude_CalculationPolicy::Linear;
@@ -85,7 +85,7 @@ private:
         meta = (AllowPrivateAccess = true, EditConditionHides,
             EditCondition = "_CalculationMode == ECk_FloatAttributeMagnitude_CalculationPolicy::Linear"))
     float _PostMultiplyAdditiveValue = 0.0f;
-    
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
          meta = (AllowPrivateAccess = true, EditConditionHides,
             EditCondition = "_CalculationMode == ECk_FloatAttributeMagnitude_CalculationPolicy::Curve"))
@@ -149,7 +149,10 @@ public:
 public:
     CK_PROPERTY_GET(_Name);
     CK_PROPERTY_GET(_BaseValue);
-    CK_PROPERTY_GET(_MinMax);
+
+    CK_PROPERTY(_MinMax);
+    CK_PROPERTY_SET(_MinValue);
+    CK_PROPERTY_SET(_MaxValue);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttribute_ParamsData, _Name, _BaseValue);
