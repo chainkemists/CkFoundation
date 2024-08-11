@@ -4,14 +4,16 @@
 
 #include <CoreMinimal.h>
 #include <GameplayTagContainer.h>
+#include <GameplayTagsManager.h>
 #include <InputCoreTypes.h>
 #include <InstancedStruct.h>
+#include <NativeGameplayTags.h>
 #include <Curves/CurveFloat.h>
 #include <Engine/CurveTable.h>
 #include <Engine/DataTable.h>
 #include <Framework/Commands/InputChord.h>
+#include <Misc/NetworkGuid.h>
 #include <UObject/WeakInterfacePtr.h>
-#include <GameplayTagsManager.h>
 
 #include <type_traits>
 
@@ -119,6 +121,11 @@ CK_DEFINE_CUSTOM_IS_VALID(FGuid, ck::IsValid_Policy_Default, [=](const FGuid& In
 CK_DEFINE_CUSTOM_IS_VALID(FNetworkGUID, ck::IsValid_Policy_Default, [=](const FNetworkGUID& InGuid)
 {
     return InGuid.IsValid();
+});
+
+CK_DEFINE_CUSTOM_IS_VALID(FNativeGameplayTag, ck::IsValid_Policy_Default, [=](const FNativeGameplayTag& InGameplayTag)
+{
+    return ck::IsValid(InGameplayTag.GetTag());
 });
 
 #if CK_VALIDATE_GAMEPLAYTAG_STALENESS
