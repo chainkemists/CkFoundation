@@ -222,8 +222,6 @@ namespace ck
                 }
 
             }; ResolvePendingModifierOperations();
-
-            UCk_Utils_ResolverDataBundle_UE::DoMarkBundle_AsOperationsResolved(InHandle);
         });
 
         ck::resolver::Verbose(TEXT("Resolved all Pending Operations of Damage Bundle [{}]"), InHandle);
@@ -271,12 +269,10 @@ namespace ck
             .Set_FinalValue(CalculatedFinalValue)
             .Set_Metadata(InCurrent.Get_MetadataTags());
 
-        UUtils_Signal_ResolverDataBundle_PhaseComplete::Broadcast(InHandle, ck::MakePayload(InHandle, PhaseName, Payload));
+        UCk_Utils_ResolverDataBundle_UE::DoMarkBundle_AsOperationsResolved(InHandle);
+        UCk_Utils_ResolverDataBundle_UE::DoTryStartNewPhase(InHandle);
 
-        if (NOT InHandle.Has<FFragment_ResolverDataBundle_Requests>())
-        {
-            UCk_Utils_ResolverDataBundle_UE::DoTryStartNewPhase(InHandle);
-        }
+        UUtils_Signal_ResolverDataBundle_PhaseComplete::Broadcast(InHandle, ck::MakePayload(InHandle, PhaseName, Payload));
     }
 }
 
