@@ -119,6 +119,18 @@ auto
 
 auto
     UCk_Utils_ResolverDataBundle_UE::
+    Get_NextPhase(
+        const FCk_Handle_ResolverDataBundle& InDataBundle)
+    -> FGameplayTag
+{
+    const auto& Phases = InDataBundle.Get<ck::FFragment_ResolverDataBundle_Params>().Get_Params().Get_Phases();
+    const auto& NextPhaseIndex = InDataBundle.Get<ck::FFragment_ResolverDataBundle_Current>().Get_CurrentPhaseIndex() + 1;
+
+    return Phases.IsValidIndex(NextPhaseIndex) ? Phases[NextPhaseIndex].Get_PhaseName() : TAG_ResolverDataBundle_InvalidPhase;
+}
+
+auto
+    UCk_Utils_ResolverDataBundle_UE::
     Get_FinalValue(
         const FCk_Handle_ResolverDataBundle& InDataBundle)
     -> float
