@@ -33,7 +33,8 @@ enum class ECk_EditorGraph_DefaultPinType : uint8
     Then,
     Exec,
     Result,
-    Self
+    Self,
+    OutputDelegate
 };
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EditorGraph_DefaultPinType);
 
@@ -58,12 +59,14 @@ public:
     CK_GENERATED_BODY(UCk_Utils_EditorGraph_UE);
 
 public:
-    using GraphPinType           = TOptional<UEdGraphPin*>;
-    using GraphPinListType       = std::initializer_list<GraphPinType>;
-    using GraphPinPairType       = std::pair<GraphPinType, GraphPinType>;
-    using GraphPinPairListType   = std::initializer_list<GraphPinPairType>;
-    using CompilerContextOptType = TOptional<FKismetCompilerContext*>;
-    using MultiplePinsFuncType   = std::function<ECk_SucceededFailed(const UEdGraphSchema_K2*, const GraphPinType&, const GraphPinType&)>;
+    using GraphPinType             = TOptional<UEdGraphPin*>;
+    using GraphPinListType         = std::initializer_list<GraphPinType>;
+    using GraphPinPairType         = std::pair<GraphPinType, GraphPinType>;
+    using GraphPinPairListType     = std::initializer_list<GraphPinPairType>;
+    using CompilerContextOptType   = TOptional<FKismetCompilerContext*>;
+    using MultiplePinsFuncType     = TFunction<ECk_SucceededFailed(const UEdGraphSchema_K2*, const GraphPinType&, const GraphPinType&)>;
+    using NodePinPredicateFuncType = TFunction<bool(const UEdGraphPin*)>;
+    using NodePinUnaryFuncType     = TFunction<void(UEdGraphPin*)>;
 
 public:
     UFUNCTION(BlueprintPure,
@@ -114,6 +117,10 @@ public:
     Get_Pin_Self(
         const UEdGraphNode& InGraphNode) -> GraphPinType;
 
+    static auto
+    Get_Pin_OutputDelegate(
+        const UEdGraphNode& InGraphNode) -> GraphPinType;
+
 public:
     template <typename T_Enum>
     static auto
@@ -142,6 +149,18 @@ public:
     static auto
     Request_ForceRefreshNode(
         UEdGraphNode& InGraphNode) -> void;
+
+public:
+    static auto
+    ForEach_NodePins(
+        UEdGraphNode& InGraphNode,
+        const NodePinUnaryFuncType& InFunc) -> void;
+
+    static auto
+    ForEach_NodePins_If(
+        UEdGraphNode& InGraphNode,
+        const NodePinPredicateFuncType& InPredicate,
+        const NodePinUnaryFuncType& InFunc) -> void;
 
 private:
     static auto

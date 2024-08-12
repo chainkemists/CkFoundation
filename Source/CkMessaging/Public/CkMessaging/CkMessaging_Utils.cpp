@@ -52,7 +52,7 @@ auto
     Broadcast(
         FCk_Handle& InHandle,
         FGameplayTag InMessageName,
-        const FInstancedStruct& InPayload)
+        FInstancedStruct InPayload)
     -> void
 {
     RecordOfMessengers_Utils::AddIfMissing(InHandle);
