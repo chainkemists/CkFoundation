@@ -43,9 +43,14 @@ private:
               meta = (AllowPrivateAccess = true))
     TObjectPtr<UAnimationAsset> _Animation;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FName _SectionName = NAME_None;
+
 public:
     CK_PROPERTY_GET(_Animation);
     CK_PROPERTY_GET(_ID);
+    CK_PROPERTY_GET(_SectionName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
