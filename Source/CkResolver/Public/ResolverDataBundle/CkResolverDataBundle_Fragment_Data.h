@@ -227,7 +227,7 @@ private:
         meta = (AllowPrivateAccess = true))
     FCk_Handle_ResolverTarget _Target;
 
-    // This is the character/bullet/sword/grenade/etc. that is the ResolverCause
+    // This is the character/bullet/sword/grenade/etc. that is the Causer
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
     FCk_Handle _Causer;
@@ -311,7 +311,7 @@ private:
     FCk_Handle _ResolverCause;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, DeprecatedProperty))
+              meta = (AllowPrivateAccess = true))
     FCk_Handle _Causer;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite,
