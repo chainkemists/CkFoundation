@@ -43,7 +43,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ResolverDataBundle",
-              DisplayName="[Ck][Resolver] Create ResolverDataBundle")
+              DisplayName="[Ck][ResolverDataBundle] Create New")
     static FCk_Handle_ResolverDataBundle
     Create(
         UPARAM(ref) FCk_Handle& InOwner,
@@ -53,7 +53,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ResolverDataBundle",
-              DisplayName="[Ck][Resolver] Has ResolverDataBundle")
+              DisplayName="[Ck][ResolverDataBundle] Has Feature")
     static bool
     Has(
         const FCk_Handle& InHandle);
@@ -61,7 +61,7 @@ public:
 private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][Resolver] Cast",
+        DisplayName="[Ck][ResolverDataBundle] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_ResolverDataBundle
     DoCast(
@@ -70,7 +70,7 @@ private:
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][Resolver] Handle -> ResolverDataBundle Handle",
+        DisplayName="[Ck][ResolverDataBundle] Handle -> ResolverDataBundle Handle",
         meta = (CompactNodeTitle = "<AsResolverDataBundle>", BlueprintAutocast))
     static FCk_Handle_ResolverDataBundle
     DoCastChecked(
@@ -79,70 +79,70 @@ private:
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][Resolver] Get DataBundle Name")
+        DisplayName="[Ck][ResolverDataBundle] Get Name")
     static FGameplayTag
     Get_Name(
         const FCk_Handle_ResolverDataBundle& InDataBundle);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][Resolver] Get DataBundle Instigator")
+        DisplayName="[Ck][ResolverDataBundle] Get Instigator")
     static FCk_Handle_ResolverSource
     Get_Instigator(
         const FCk_Handle_ResolverDataBundle& InDataBundle);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][Resolver] Get DataBundle Target")
+        DisplayName="[Ck][ResolverDataBundle] Get Target")
     static FCk_Handle_ResolverTarget
     Get_Target(
         const FCk_Handle_ResolverDataBundle& InDataBundle);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][Resolver] Get DataBundle Causer")
+        DisplayName="[Ck][ResolverDataBundle] Get Causer")
     static FCk_Handle
     Get_Causer(
         const FCk_Handle_ResolverDataBundle& InDataBundle);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][Resolver] Get DataBundle Phases")
+        DisplayName="[Ck][ResolverDataBundle] Get Phases")
     static TArray<FCk_Fragment_ResolverDataBundle_PhaseInfo>
     Get_Phases(
         const FCk_Handle_ResolverDataBundle& InDataBundle);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][Resolver] Get DataBundle Current Phase")
+        DisplayName="[Ck][ResolverDataBundle] Get Current Phase")
     static FGameplayTag
     Get_CurrentPhase(
         const FCk_Handle_ResolverDataBundle& InDataBundle);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][Resolver] Get DataBundle Next Phase")
+        DisplayName="[Ck][ResolverDataBundle] Get Next Phase")
     static FGameplayTag
     Get_NextPhase(
         const FCk_Handle_ResolverDataBundle& InDataBundle);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][Resolver] Get DataBundle Final Value")
+        DisplayName="[Ck][ResolverDataBundle] Get Final Value")
     static float
     Get_FinalValue(
         const FCk_Handle_ResolverDataBundle& InDataBundle);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][Resolver] Get DataBundle Metadata")
+        DisplayName="[Ck][ResolverDataBundle] Get Metadata")
     static FGameplayTagContainer
     Get_Metadata(
         const FCk_Handle_ResolverDataBundle& InDataBundle);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][Resolver] Get Resolved Payload")
+        DisplayName="[Ck][ResolverDataBundle] Get Resolved Payload")
     static FCk_Payload_ResolverDataBundle_Resolved
     Get_Resolved_Payload(
         const FCk_Handle_ResolverDataBundle& InDataBundle);
@@ -150,7 +150,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][Resolver] Request Add Operation (Modifier)")
+        DisplayName="[Ck][ResolverDataBundle] Request Add Operation (Modifier)")
     static FCk_Handle_ResolverDataBundle
     Request_AddOperation_Modifier(
         UPARAM(ref) FCk_Handle_ResolverDataBundle& InDataBundle,
@@ -159,7 +159,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][Resolver] Request Add Operation (Metadata)")
+        DisplayName="[Ck][ResolverDataBundle] Request Add Operation (Metadata)")
     static FCk_Handle_ResolverDataBundle
     Request_AddOperation_Metadata(
         UPARAM(ref) FCk_Handle_ResolverDataBundle& InDataBundle,
@@ -169,7 +169,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][Resolver] Bind to OnPhaseStart")
+        DisplayName="[Ck][ResolverDataBundle] Bind to OnPhaseStart")
     static FCk_Handle_ResolverDataBundle
     BindTo_OnPhaseStart(
         UPARAM(ref) FCk_Handle_ResolverDataBundle& InDataBundle,
@@ -179,7 +179,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][Resolver] Unbind from OnPhaseStart")
+        DisplayName="[Ck][ResolverDataBundle] Unbind from OnPhaseStart")
     static FCk_Handle_ResolverDataBundle
     UnbindFrom_OnPhaseStart(
         UPARAM(ref) FCk_Handle_ResolverDataBundle& InDataBundle,
@@ -187,7 +187,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][Resolver] Bind to OnPhaseComplete")
+        DisplayName="[Ck][ResolverDataBundle] Bind to OnPhaseComplete")
     static FCk_Handle_ResolverDataBundle
     BindTo_OnPhaseComplete(
         UPARAM(ref) FCk_Handle_ResolverDataBundle& InDataBundle,
@@ -197,7 +197,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][Resolver] Unbind from OnPhaseComplete")
+        DisplayName="[Ck][ResolverDataBundle] Unbind from OnPhaseComplete")
     static FCk_Handle_ResolverDataBundle
     UnbindFrom_OnPhaseComplete(
         UPARAM(ref) FCk_Handle_ResolverDataBundle& InDataBundle,
@@ -205,7 +205,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][Resolver] Bind to OnAllPhasesComplete")
+        DisplayName="[Ck][ResolverDataBundle] Bind to OnAllPhasesComplete")
     static FCk_Handle_ResolverDataBundle
     BindTo_OnAllPhasesComplete(
         UPARAM(ref) FCk_Handle_ResolverDataBundle& InDataBundle,
@@ -215,7 +215,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][Resolver] Unbind from OnAllPhasesComplete")
+        DisplayName="[Ck][ResolverDataBundle] Unbind from OnAllPhasesComplete")
     static FCk_Handle_ResolverDataBundle
     UnbindFrom_OnAllPhasesComplete(
         UPARAM(ref) FCk_Handle_ResolverDataBundle& InDataBundle,
