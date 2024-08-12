@@ -31,12 +31,13 @@ UCLASS(Abstract, BlueprintType, EditInlineNew)
 class CKMESSAGING_API UCk_Message_Definition_PDA : public UCk_DataAsset_PDA
 {
     GENERATED_BODY()
-     
+
 public:
     CK_GENERATED_BODY(UCk_Message_Definition_PDA);
 
 public:
     friend class UCk_K2Node_Message_Broadcast;
+    friend class UCk_K2Node_Message_Listen;
 
 protected:
 #if WITH_EDITOR

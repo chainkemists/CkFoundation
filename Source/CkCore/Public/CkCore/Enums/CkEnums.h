@@ -14,6 +14,36 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck
+{
+    template<typename T_Enum>
+    auto
+    Get_EnumValueByName(
+        FName InEnumValueAsName,
+        const TCHAR* InEnum)
+    -> TOptional<T_Enum>
+    {
+        const auto* EnumType = FindFirstObjectSafe<UEnum>(InEnum, EFindFirstObjectOptions::ExactClass);
+
+        if (ck::Is_NOT_Valid(EnumType, ck::IsValid_Policy_NullptrOnly{}))
+        { return {}; }
+
+        const auto& EnumValue = EnumType->GetValueByName(InEnumValueAsName);
+        return static_cast<T_Enum>(EnumValue);
+    }
+
+    template<typename T_Enum>
+    auto
+    Get_EnumValueByName(
+        FName InEnumValueAsName)
+    -> TOptional<T_Enum>
+    {
+        return Get_EnumValueByName<T_Enum>(InEnumValueAsName, FEnumToString<T_Enum>::Get_AsTChar());
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UENUM(BlueprintType)
 enum class ECk_SourceOrTarget : uint8
 {
@@ -604,36 +634,6 @@ enum class ECk_TaskDoneBehavior : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_TaskDoneBehavior);
-
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace ck
-{
-    template<typename T_Enum>
-    auto
-    Get_EnumValueByName(
-        FName InEnumValueAsName,
-        const TCHAR* InEnum)
-    -> TOptional<T_Enum>
-    {
-        const auto* EnumType = FindFirstObjectSafe<UEnum>(InEnum, EFindFirstObjectOptions::ExactClass);
-
-        if (EnumType == nullptr)
-        { return {}; }
-
-        const auto& EnumValue = EnumType->GetValueByName(InEnumValueAsName);
-        return static_cast<T_Enum>(EnumValue);
-    }
-
-    template<typename T_Enum>
-    auto
-    Get_EnumValueByName(
-        FName InEnumValueAsName)
-    -> TOptional<T_Enum>
-    {
-        return Get_EnumValueByName<T_Enum>(InEnumValueAsName, FEnumToString<T_Enum>::Get_AsTChar());
-    }
-}
 
 // --------------------------------------------------------------------------------------------------------------------
 UENUM(BlueprintType)
