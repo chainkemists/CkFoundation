@@ -70,8 +70,7 @@ auto
         { return false; }
 
         return InPinToCompare->PinName == InPinName;
-
-    }, ck::policy::ReturnOptional{});
+    });
 
     if (ck::Is_NOT_Valid(FoundPin))
     { return {}; }
@@ -151,6 +150,18 @@ auto
 
             return Res;
         }
+        case ECk_EditorGraph_DefaultPinType::OutputDelegate:
+        {
+            const auto& Res = InGraphNode.FindPin(TEXT("OutputDelegate"));
+
+            if (ck::Is_NOT_Valid(Res, ck::IsValid_Policy_NullptrOnly{}))
+            { return {}; }
+
+            CK_ENSURE_IF_NOT(Res->Direction == EGPD_Output, TEXT("The [{}] pin's direction is invalid"), InPinType)
+            { return {}; }
+
+            return Res;
+        }
         default:
         {
             CK_INVALID_ENUM(InPinType);
@@ -199,6 +210,15 @@ auto
 
 auto
     UCk_Utils_EditorGraph_UE::
+    Get_Pin_OutputDelegate(
+        const UEdGraphNode& InGraphNode)
+    -> GraphPinType
+{
+    return Get_Pin(InGraphNode, ECk_EditorGraph_DefaultPinType::OutputDelegate);
+}
+
+auto
+    UCk_Utils_EditorGraph_UE::
     Request_LinkPins(
         FKismetCompilerContext& InCompilerContext,
         GraphPinPairListType InGraphPins,
@@ -208,18 +228,18 @@ auto
     for (const auto& PinPair : InGraphPins)
     {
         if (DoModifyMultiplePins(InCompilerContext, PinPair,
-        [&](const UEdGraphSchema_K2* InSchema, const GraphPinType& InSourcePin, const GraphPinType& InIntermediatePin)
+        [&](const UEdGraphSchema_K2* InSchema, const GraphPinType& InSourcePin, const GraphPinType& InTargetIntermediatePin)
         {
             switch(InLinkType)
             {
                 case ECk_EditorGraph_PinLinkType::Move:
                 {
-                    if (NOT InCompilerContext.MovePinLinksToIntermediate(**InSourcePin, **InIntermediatePin).CanSafeConnect())
+                    if (NOT InCompilerContext.MovePinLinksToIntermediate(**InSourcePin, **InTargetIntermediatePin).CanSafeConnect())
                     {
                         InCompilerContext.MessageLog.Error(*ck::Format_UE(
                             TEXT("Could NOT Move from Pin [{}] to Pin [{}]. MovePinLinksToIntermediate FAILED."),
                             (*InSourcePin)->GetName(),
-                            (*InIntermediatePin)->GetName()));
+                            (*InTargetIntermediatePin)->GetName()));
                         return ECk_SucceededFailed::Failed;
                     }
 
@@ -227,12 +247,12 @@ auto
                 }
                 case ECk_EditorGraph_PinLinkType::Copy:
                 {
-                    if (NOT InCompilerContext.CopyPinLinksToIntermediate(**InSourcePin, **InIntermediatePin).CanSafeConnect())
+                    if (NOT InCompilerContext.CopyPinLinksToIntermediate(**InSourcePin, **InTargetIntermediatePin).CanSafeConnect())
                     {
                         InCompilerContext.MessageLog.Error(*ck::Format_UE(
                             TEXT("Could NOT Copy from Pin [{}] to Pin [{}]. CopyPinLinksToIntermediate FAILED."),
                             (*InSourcePin)->GetName(),
-                            (*InIntermediatePin)->GetName()));
+                            (*InTargetIntermediatePin)->GetName()));
                         return ECk_SucceededFailed::Failed;
                     }
 
@@ -342,6 +362,33 @@ auto
 
 auto
     UCk_Utils_EditorGraph_UE::
+    ForEach_NodePins(
+        UEdGraphNode& InGraphNode,
+        const NodePinUnaryFuncType& InFunc)
+    -> void
+{
+    ck::algo::ForEachIsValid(InGraphNode.Pins, InFunc, ck::IsValid_Policy_NullptrOnly{});
+}
+
+auto
+    UCk_Utils_EditorGraph_UE::
+    ForEach_NodePins_If(
+        UEdGraphNode& InGraphNode,
+        const NodePinPredicateFuncType& InPredicate,
+        const NodePinUnaryFuncType& InFunc)
+    -> void
+{
+    ck::algo::ForEachIsValid(InGraphNode.Pins, [&](UEdGraphPin* InGraphPin)
+    {
+        if (InPredicate(InGraphPin))
+        {
+            InFunc(InGraphPin);
+        }
+    }, ck::IsValid_Policy_NullptrOnly{});
+}
+
+auto
+    UCk_Utils_EditorGraph_UE::
     DoModifyMultiplePins(
         FKismetCompilerContext& InCompilerContext,
         GraphPinPairType InGraphPins,
@@ -363,7 +410,7 @@ auto
 
     if (ck::Is_NOT_Valid(InGraphPins.second))
     {
-        InCompilerContext.MessageLog.Error(*ck::Format_UE(TEXT("InIntermediatePin is INVALID. Subsequent operation will fail.")));
+        InCompilerContext.MessageLog.Error(*ck::Format_UE(TEXT("InTargetIntermediatePin is INVALID. Subsequent operation will fail.")));
         return ECk_SucceededFailed::Failed;
     }
 

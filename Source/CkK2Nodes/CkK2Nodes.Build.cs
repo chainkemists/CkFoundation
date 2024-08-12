@@ -27,7 +27,7 @@ public class CkK2Nodes : CkModuleRules
             "CkEditorGraph",
             "CkLog",
             "CkMessaging",
-            "CkVariables"
+            "CkVariables",
         });
 
         if (Target.Type == TargetRules.TargetType.Editor)
@@ -40,7 +40,8 @@ public class CkK2Nodes : CkModuleRules
                     "AssetTools",
                     "KismetCompiler",
                     "GraphEditor",
-                    "BlueprintGraph"
+                    "BlueprintGraph",
+                    "StructUtilsEngine",
                 });
         }
     }

@@ -39,11 +39,12 @@ public:
         const int32& InValue);
     DECLARE_FUNCTION(execINTERNAL__Broadcast);
 
-    static auto
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly)
+    static void
     Broadcast(
-        FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InMessageName,
-        const FInstancedStruct& InPayload) -> void;
+        FInstancedStruct InPayload);
 
 public:
     UFUNCTION(BlueprintCallable,

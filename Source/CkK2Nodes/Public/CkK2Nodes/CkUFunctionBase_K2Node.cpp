@@ -42,7 +42,8 @@ auto
         DoGet_Menu_NodeTitle(),
         DoGet_Menu_SlateIcon()
     );
-    check(Spawner != nullptr);
+
+    check(ck::IsValid(Spawner));
 
     InActionRegistrar.AddBlueprintAction(Action, Spawner);
 }
