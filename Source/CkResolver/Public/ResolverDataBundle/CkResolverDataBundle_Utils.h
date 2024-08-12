@@ -114,9 +114,16 @@ public:
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ResolverDataBundle",
-        DisplayName="[Ck][Resolver] Get DataBundle Phase")
+        DisplayName="[Ck][Resolver] Get DataBundle Current Phase")
     static FGameplayTag
     Get_CurrentPhase(
+        const FCk_Handle_ResolverDataBundle& InDataBundle);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|ResolverDataBundle",
+        DisplayName="[Ck][Resolver] Get DataBundle Next Phase")
+    static FGameplayTag
+    Get_NextPhase(
         const FCk_Handle_ResolverDataBundle& InDataBundle);
 
     UFUNCTION(BlueprintPure,
