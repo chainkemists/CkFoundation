@@ -62,6 +62,19 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ResolverDataBundle_AllowedOperationsInPhase)
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_ResolverDataBundle_PhaseSelection : uint8
+{
+    // ThisPhase operations can only be added when the current phase is NOT COMPLETE yet
+    ThisPhase,
+    // NextPhase operations can only be added when the current phase is complete and a new Phase has NOT yet begun
+    NextPhase
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ResolverDataBundle_PhaseSelection);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKRESOLVER_API FCk_ResolverDataBundle_ModifierOperation
 {

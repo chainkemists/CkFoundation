@@ -147,6 +147,7 @@ public:
     static FCk_Handle_ResolverDataBundle
     Request_AddOperation_Modifier(
         UPARAM(ref) FCk_Handle_ResolverDataBundle& InDataBundle,
+        ECk_ResolverDataBundle_PhaseSelection InPhase,
         const FRequest_ResolverDataBundle_ModifierOperation& InRequest);
 
     UFUNCTION(BlueprintCallable,
@@ -155,6 +156,7 @@ public:
     static FCk_Handle_ResolverDataBundle
     Request_AddOperation_Metadata(
         UPARAM(ref) FCk_Handle_ResolverDataBundle& InDataBundle,
+        ECk_ResolverDataBundle_PhaseSelection InPhase,
         const FRequest_ResolverDataBundle_MetadataOperation& InRequest);
 
 public:

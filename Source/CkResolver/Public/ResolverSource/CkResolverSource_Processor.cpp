@@ -70,12 +70,14 @@ namespace ck
         for (const auto& ModifierOperation : InNewResolution.Get_InitialModifierOperations())
         {
             UCk_Utils_ResolverDataBundle_UE::Request_AddOperation_Modifier(DataBundle,
+                ECk_ResolverDataBundle_PhaseSelection::ThisPhase,
                 FRequest_ResolverDataBundle_ModifierOperation{}.Set_ModifierOperation(ModifierOperation));
         }
 
         for (const auto& MetadataOperation : InNewResolution.Get_InitialMetadata())
         {
             UCk_Utils_ResolverDataBundle_UE::Request_AddOperation_Metadata(DataBundle,
+                ECk_ResolverDataBundle_PhaseSelection::ThisPhase,
                 FRequest_ResolverDataBundle_MetadataOperation{}.Set_MetadataOperation(MetadataOperation));
         }
 
