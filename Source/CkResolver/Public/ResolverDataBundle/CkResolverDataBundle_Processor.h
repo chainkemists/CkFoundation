@@ -123,6 +123,7 @@ namespace ck
         ck::TExclude<FFragment_ResolverDataBundle_PendingOperations>,
         ck::TExclude<FTag_ResolverDataBundle_CalculateDone>,
         ck::TExclude<FTag_ResolverDataBundle_StartNewPhase>,
+        ck::TExclude<FFragment_ResolverDataBundle_Requests>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
