@@ -93,7 +93,7 @@ public:
               meta = (DefaultToSelf = "InActor"))
     static bool
     Get_IsActorEcsReady(
-        AActor* InActor);
+        const AActor* InActor);
 
 private:
     UFUNCTION(BlueprintPure,
