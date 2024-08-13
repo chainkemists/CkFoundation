@@ -28,7 +28,7 @@ enum class ECk_Team_ID : uint8
     Seven,
     Eight,
 
-    Unassigned
+    Unassigned = 255
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Team_ID);

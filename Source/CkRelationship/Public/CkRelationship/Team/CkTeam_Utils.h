@@ -137,7 +137,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Relationship|Team",
-              DisplayName="[Ck][Team] Has Team Assigned To")
+              DisplayName="[Ck][Team] Has Feature")
     static bool
     Has(
         const FCk_Handle& InHandle);
