@@ -139,7 +139,7 @@ auto
 auto
     UCk_Utils_OwningActor_UE::
     Get_IsActorEcsReady(
-        AActor* InActor)
+        const AActor* InActor)
     -> bool
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Cannot check if Actor is ECS ready because it is invalid!"))
