@@ -67,6 +67,10 @@ public:
     Broadcast_Assign(
         ECk_Player_ID InPlayerID) -> void;
 
+protected:
+    auto
+    PostLink() -> void override;
+
 private:
     auto
     GetLifetimeReplicatedProps(
