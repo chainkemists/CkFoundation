@@ -31,6 +31,19 @@ auto
 
 auto
     UCk_Fragment_Team_Rep::
+    PostLink()
+    -> void
+{
+    Super::PostLink();
+
+    if (NOT UCk_Utils_Team_UE::Get_IsAssignedTo(UCk_Utils_Team_UE::Cast(Get_AssociatedEntity()), ECk_Team_ID::Unassigned))
+    { return; }
+
+    OnRep_Updated();
+}
+
+auto
+    UCk_Fragment_Team_Rep::
     OnRep_Updated()
     -> void
 {
