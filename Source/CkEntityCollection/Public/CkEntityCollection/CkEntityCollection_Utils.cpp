@@ -69,7 +69,7 @@ auto
         const FCk_Handle_EntityCollection& InEntityCollectionHandle)
     -> TArray<FCk_Handle>
 {
-    return EntityCollections_RecordOfEntities_Utils::Get_Entries(InEntityCollectionHandle);
+    return EntityCollections_RecordOfEntities_Utils::Get_ValidEntries(InEntityCollectionHandle);
 }
 
 auto
@@ -166,7 +166,7 @@ auto
     InEntityCollectionHandle.Try_Remove<ck::FFragment_EntityCollections_RecordOfEntities_Previous>();
     EntityCollections_RecordOfEntities_Previous_Utils::AddIfMissing(InEntityCollectionHandle);
 
-    EntityCollections_RecordOfEntities_Utils::ForEach_Entry(InEntityCollectionHandle, [&](FCk_Handle InEntry)
+    EntityCollections_RecordOfEntities_Utils::ForEach_ValidEntry(InEntityCollectionHandle, [&](FCk_Handle InEntry)
     {
         EntityCollections_RecordOfEntities_Previous_Utils::Request_Connect(InEntityCollectionHandle, InEntry);
     });
