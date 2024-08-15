@@ -76,6 +76,10 @@ public:
     Broadcast_Assign(
         ECk_Team_ID InTeamID) -> void;
 
+protected:
+    auto
+    PostLink() -> void override;
+
 private:
     auto
     GetLifetimeReplicatedProps(
