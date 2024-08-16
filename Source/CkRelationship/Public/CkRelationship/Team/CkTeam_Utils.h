@@ -119,6 +119,13 @@ public:
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "|Ck|Utils|Relationship|Team",
+              DisplayName="[Ck][Team] Get Actors Of Same Team")
+    static TArray<AActor*>
+    Get_ActorsOfSameTeam(
+        UPARAM(ref) FCk_Handle_Team& InHandle);
+
 public:
     template <typename T_Func>
     static auto

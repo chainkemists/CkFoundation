@@ -263,6 +263,24 @@ auto
 
 auto
     UCk_Utils_Team_UE::
+    Get_ActorsOfSameTeam(
+        FCk_Handle_Team& InHandle)
+    -> TArray<AActor*>
+{
+    TArray<AActor*> SameTeamActors;
+    for (const auto& Entity : ForEachEntity_OnSameTeam(InHandle, Get_ID(InHandle), {}, {}))
+    {
+        const auto& EntityActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(Entity);
+        if (ck::IsValid(EntityActor))
+        {
+            SameTeamActors.Add(EntityActor);
+        }
+    }
+    return SameTeamActors;
+}
+
+auto
+    UCk_Utils_Team_UE::
     BindTo_OnTeamChanged(
         FCk_Handle& InHandle,
         ECk_Signal_BindingPolicy InBindingPolicy,
