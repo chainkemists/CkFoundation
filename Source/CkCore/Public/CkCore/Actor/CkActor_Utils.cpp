@@ -236,13 +236,13 @@ auto
                 auto InstanceTransform = FTransform{};
                 InstancedStaticMesh->GetInstanceTransform(Index, InstanceTransform);
 
-                Ret.Emplace(FCk_Utils_Actor_SocketTransforms{MeshComponent, InstanceTransform * SocketTransform});
+                Ret.Emplace(FCk_Utils_Actor_SocketTransforms{MeshComponent, InstanceTransform * SocketTransform, InSocketName});
             }
 
             continue;
         }
 
-        Ret.Emplace(FCk_Utils_Actor_SocketTransforms{MeshComponent, MeshComponent->GetSocketTransform(InSocketName, InTransformSpace)});
+        Ret.Emplace(FCk_Utils_Actor_SocketTransforms{MeshComponent, MeshComponent->GetSocketTransform(InSocketName, InTransformSpace), InSocketName});
     }
 
     return Ret;
@@ -257,6 +257,64 @@ auto
     -> TArray<FCk_Utils_Actor_SocketTransforms>
 {
     return Get_SocketTransform(InActor, InSocketName, InTransformSpace);
+}
+
+auto
+    UCk_Utils_Actor_UE::
+    Get_SocketTransform_UsingPrefix(
+        AActor* InActor,
+        FName InSocketNamePrefix,
+        TEnumAsByte<ESearchCase::Type> InSearchCase,
+        ERelativeTransformSpace InTransformSpace)
+    -> TArray<FCk_Utils_Actor_SocketTransforms>
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to Get_SocketTransform_UsingPrefix"))
+    { return {}; }
+
+    auto Ret = TArray<FCk_Utils_Actor_SocketTransforms>{};
+
+    auto MeshComponents = TArray<UMeshComponent*>{};
+    InActor->GetComponents<UMeshComponent>(MeshComponents);
+
+    for (const auto MeshComponent : MeshComponents)
+    {
+        for (const auto& SocketName : MeshComponent->GetAllSocketNames())
+        {
+            if (NOT SocketName.ToString().StartsWith(InSocketNamePrefix.ToString(), InSearchCase))
+            { continue; }
+
+            if (const auto InstancedStaticMesh = Cast<UInstancedStaticMeshComponent>(MeshComponent))
+            {
+                const auto& SocketTransform = InstancedStaticMesh->GetSocketTransform(SocketName, InTransformSpace);
+
+                for (auto Index = 0; Index < InstancedStaticMesh->GetInstanceCount(); ++Index)
+                {
+                    auto InstanceTransform = FTransform{};
+                    InstancedStaticMesh->GetInstanceTransform(Index, InstanceTransform);
+
+                    Ret.Emplace(FCk_Utils_Actor_SocketTransforms{MeshComponent, InstanceTransform * SocketTransform, SocketName});
+                }
+
+                continue;
+            }
+
+            Ret.Emplace(FCk_Utils_Actor_SocketTransforms{MeshComponent, MeshComponent->GetSocketTransform(SocketName, InTransformSpace), SocketName});
+        }
+    }
+
+    return Ret;
+}
+
+auto
+    UCk_Utils_Actor_UE::
+    Get_SocketTransform_UsingPrefix_Exec(
+        AActor* InActor,
+        FName InSocketNamePrefix,
+        TEnumAsByte<ESearchCase::Type> InSearchCase,
+        ERelativeTransformSpace InTransformSpace)
+    -> TArray<FCk_Utils_Actor_SocketTransforms>
+{
+    return Get_SocketTransform_UsingPrefix(InActor, InSocketNamePrefix, InSearchCase, InTransformSpace);
 }
 
 auto

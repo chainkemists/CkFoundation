@@ -100,11 +100,16 @@ private:
         meta = (AllowPrivateAccess))
     FTransform _Transform;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess))
+    FName _Name;
+
 public:
     CK_PROPERTY_GET(_ComponentWithSocket);
     CK_PROPERTY_GET(_Transform);
+    CK_PROPERTY_GET(_Name);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Utils_Actor_SocketTransforms, _ComponentWithSocket, _Transform);
+    CK_DEFINE_CONSTRUCTORS(FCk_Utils_Actor_SocketTransforms, _ComponentWithSocket, _Transform, _Name);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -270,6 +275,28 @@ public:
     Get_SocketTransform_Exec(
         AActor* InActor,
         FName InSocketName,
+        ERelativeTransformSpace InTransformSpace = RTS_World);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Actor",
+              DisplayName = "[Ck] Get Socket Transform (Using Prefix)",
+              meta = (DefaultToSelf = "InActor"))
+    static TArray<FCk_Utils_Actor_SocketTransforms>
+    Get_SocketTransform_UsingPrefix(
+        AActor* InActor,
+        FName InSocketNamePrefix,
+        TEnumAsByte<ESearchCase::Type> InSearchCase = ESearchCase::IgnoreCase,
+        ERelativeTransformSpace InTransformSpace = RTS_World);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Actor",
+              DisplayName = "[Ck] Get Socket Transform (Using Prefix)",
+              meta = (DefaultToSelf = "InActor"))
+    static TArray<FCk_Utils_Actor_SocketTransforms>
+    Get_SocketTransform_UsingPrefix_Exec(
+        AActor* InActor,
+        FName InSocketNamePrefix,
+        TEnumAsByte<ESearchCase::Type> InSearchCase = ESearchCase::IgnoreCase,
         ERelativeTransformSpace InTransformSpace = RTS_World);
 
 public:
