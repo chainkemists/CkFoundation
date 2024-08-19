@@ -1,5 +1,3 @@
-#include "CkGeometryCollection_Fragment.h"
+#pragma once
 
 // --------------------------------------------------------------------------------------------------------------------
-
-CK_INTENTIONALLY_EMPTY()
