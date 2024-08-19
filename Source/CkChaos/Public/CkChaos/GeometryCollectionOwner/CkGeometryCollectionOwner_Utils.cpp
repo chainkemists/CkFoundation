@@ -2,6 +2,7 @@
 
 #include "CkChaos/CkChaos_Log.h"
 #include "CkChaos/GeometryCollection/CkGeometryCollection_Fragment.h"
+#include "CkChaos/GeometryCollection/CkGeometryCollection_Utils.h"
 #include "CkChaos/GeometryCollectionOwner/CkGeometryCollectionOwner_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -36,10 +37,14 @@ auto
     return Cast(InHandle);
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(GeometryCollectionOwner,
     UCk_Utils_GeometryCollectionOwner_UE,
     FCk_Handle_GeometryCollectionOwner,
     ck::FFragment_RecordOfGeometryCollections)
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_GeometryCollectionOwner_UE::
@@ -70,6 +75,66 @@ auto
     -> void
 {
     ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(InOwner, InFunc);
+}
+
+auto
+    UCk_Utils_GeometryCollectionOwner_UE::
+    Request_CrumbleNonActiveClusters(
+        FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner)
+    -> FCk_Handle_GeometryCollectionOwner
+{
+    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_GeometryCollectionOwner_Rep>(InGeometryCollectionOwner,
+    [&](UCk_Fragment_GeometryCollectionOwner_Rep* InRepComp)
+    {
+        InRepComp->Broadcast_CrumbleNonActiveClusters();
+    });
+
+    ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(InGeometryCollectionOwner, [&](FCk_Handle_GeometryCollection InGc)
+    {
+        UCk_Utils_GeometryCollection_UE::Request_CrumbleNonAnchoredClusters(InGc);
+    });
+
+    return InGeometryCollectionOwner;
+}
+
+auto
+    UCk_Utils_GeometryCollectionOwner_UE::
+    Request_RemoveAllAnchors(
+        FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner)
+    -> FCk_Handle_GeometryCollectionOwner
+{
+    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_GeometryCollectionOwner_Rep>(InGeometryCollectionOwner,
+    [&](UCk_Fragment_GeometryCollectionOwner_Rep* InRepComp)
+    {
+        InRepComp->Broadcast_RemoveAllAnchors();
+    });
+
+    ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(InGeometryCollectionOwner, [&](FCk_Handle_GeometryCollection InGc)
+    {
+        UCk_Utils_GeometryCollection_UE::Request_RemoveAllAnchors(InGc);
+    });
+
+    return InGeometryCollectionOwner;
+}
+
+auto
+    UCk_Utils_GeometryCollectionOwner_UE::
+    Request_CrumbleNonActiveClustersAndRemoveAllAnchors(
+        FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner)
+        -> FCk_Handle_GeometryCollectionOwner
+{
+    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_GeometryCollectionOwner_Rep>(InGeometryCollectionOwner,
+    [&](UCk_Fragment_GeometryCollectionOwner_Rep* InRepComp)
+    {
+        InRepComp->Broadcast_RemoveAllAnchorsAndCrumbleNonActiveClusters();
+    });
+
+    ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(InGeometryCollectionOwner, [&](FCk_Handle_GeometryCollection InGc)
+    {
+        UCk_Utils_GeometryCollection_UE::Request_RemoveAllAnchorsAndCrumbleNonAnchoredClusters(InGc);
+    });
+
+    return InGeometryCollectionOwner;
 }
 
 auto

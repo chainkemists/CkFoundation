@@ -32,6 +32,33 @@ auto
 
 auto
     UCk_Fragment_GeometryCollectionOwner_Rep::
+    Broadcast_CrumbleNonActiveClusters()
+    -> void
+{
+    ++_CrumbleNonActiveClustersRequest;
+    MARK_PROPERTY_DIRTY_FROM_NAME(UCk_Fragment_GeometryCollectionOwner_Rep, _CrumbleNonActiveClustersRequest, this);
+}
+
+auto
+    UCk_Fragment_GeometryCollectionOwner_Rep::
+    Broadcast_RemoveAllAnchors()
+    -> void
+{
+    ++_RemoveAllAnchors;
+    MARK_PROPERTY_DIRTY_FROM_NAME(UCk_Fragment_GeometryCollectionOwner_Rep, _RemoveAllAnchors, this);
+}
+
+auto
+    UCk_Fragment_GeometryCollectionOwner_Rep::
+    Broadcast_RemoveAllAnchorsAndCrumbleNonActiveClusters()
+    -> void
+{
+    ++_RemoveAllAnchorsAndCrumbleNonActiveClusters;
+    MARK_PROPERTY_DIRTY_FROM_NAME(UCk_Fragment_GeometryCollectionOwner_Rep, _RemoveAllAnchorsAndCrumbleNonActiveClusters, this);
+}
+
+auto
+    UCk_Fragment_GeometryCollectionOwner_Rep::
     GetLifetimeReplicatedProps(
         TArray<FLifetimeProperty>& OutLifetimeProps) const
     -> void
@@ -40,6 +67,9 @@ auto
 
     constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
 
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _CrumbleNonActiveClustersRequest, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _RemoveAllAnchors, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _RemoveAllAnchorsAndCrumbleNonActiveClusters, Params);
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _Strain, Params);
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _AoE, Params);
 }
@@ -81,4 +111,52 @@ auto
             );
         });
     }
+}
+
+auto
+    UCk_Fragment_GeometryCollectionOwner_Rep::
+    OnRep_CrumbleNonActiveClustersRequest()
+    -> void
+{
+    auto Entity = Get_AssociatedEntity();
+
+    if (ck::Is_NOT_Valid(Entity))
+    { return; }
+
+    ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(Entity, [&](FCk_Handle_GeometryCollection InGc)
+    {
+        UCk_Utils_GeometryCollection_UE::Request_CrumbleNonAnchoredClusters(InGc);
+    });
+}
+
+auto
+    UCk_Fragment_GeometryCollectionOwner_Rep::
+    OnRep_RemoveAllAnchors()
+    -> void
+{
+    auto Entity = Get_AssociatedEntity();
+
+    if (ck::Is_NOT_Valid(Entity))
+    { return; }
+
+    ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(Entity, [&](FCk_Handle_GeometryCollection InGc)
+    {
+        UCk_Utils_GeometryCollection_UE::Request_RemoveAllAnchors(InGc);
+    });
+}
+
+auto
+    UCk_Fragment_GeometryCollectionOwner_Rep::
+    OnRep_CrumbleNonActiveClustersAndRemoveAllAnchors()
+    -> void
+{
+    auto Entity = Get_AssociatedEntity();
+
+    if (ck::Is_NOT_Valid(Entity))
+    { return; }
+
+    ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(Entity, [&](FCk_Handle_GeometryCollection InGc)
+    {
+        UCk_Utils_GeometryCollection_UE::Request_RemoveAllAnchorsAndCrumbleNonAnchoredClusters(InGc);
+    });
 }
