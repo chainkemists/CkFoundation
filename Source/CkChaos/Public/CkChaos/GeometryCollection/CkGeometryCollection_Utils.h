@@ -25,7 +25,7 @@ public:
         DisplayName="[Ck][Chaos] Add Feature")
     static FCk_Handle_GeometryCollection
     Add(
-        UPARAM(ref) FCk_Handle_GeometryCollectionOwner InHandle,
+        UPARAM(ref) FCk_Handle_GeometryCollectionOwner& InHandle,
         const FCk_Fragment_GeometryCollection_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
@@ -69,6 +69,13 @@ public:
     Request_ApplyAoE(
         UPARAM(ref) FCk_Handle_GeometryCollection& InGeometryCollection,
         const FCk_Request_GeometryCollection_ApplyAoE& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Chaos|GeometryCollection",
+              DisplayName="[Ck][GeometryCollection] Request Crumble NonAnchoredClusters")
+    static FCk_Handle_GeometryCollection
+    Request_CrumbleNonAnchoredClusters(
+        UPARAM(ref) FCk_Handle_GeometryCollection& InGeometryCollection);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

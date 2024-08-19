@@ -9,8 +9,9 @@
 
 namespace ck
 {
-    class CKCHAOS_API FProcessor_GeometryCollection_HandleRequests : public TProcessor<
+    class CKCHAOS_API FProcessor_GeometryCollection_HandleRequests : public ck_exp::TProcessor<
             FProcessor_GeometryCollection_HandleRequests,
+            FCk_Handle_GeometryCollection,
             FFragment_GeometryCollection_Params,
             FFragment_GeometryCollection_Requests,
             CK_IGNORE_PENDING_KILL>
@@ -20,11 +21,6 @@ namespace ck
 
     public:
         using TProcessor::TProcessor;
-
-    public:
-        auto
-        DoTick(
-            TimeType InDeltaT) -> void;
 
     public:
         auto
@@ -46,6 +42,29 @@ namespace ck
             HandleType InHandle,
             const FFragment_GeometryCollection_Params& InParams,
             const FCk_Request_GeometryCollection_ApplyAoE& InRequest) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKCHAOS_API FProcessor_GeometryCollection_CrumbleNonActiveClusters : public ck_exp::TProcessor<
+            FProcessor_GeometryCollection_CrumbleNonActiveClusters,
+            FCk_Handle_GeometryCollection,
+            FFragment_GeometryCollection_Params,
+            FTag_GeometryCollection_CrumbleNonAnchoredClusters,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FFragment_GeometryCollection_Requests;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_GeometryCollection_Params& InParams) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
