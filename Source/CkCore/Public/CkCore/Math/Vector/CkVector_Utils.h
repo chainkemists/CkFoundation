@@ -326,6 +326,15 @@ public:
     Get_AddNoise(
         const FVector& InVector,
         FVector InNoiseHalfRange);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Point in Radius",
+              Category = "Ck|Utils|Math|Vector3")
+    static bool
+    Get_IsPointInRadius(
+        const FVector& InPoint,
+        const FVector& InMeasureRadiusFrom,
+        float InRadius);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -604,6 +613,15 @@ public:
     static ECk_CardinalAndOrdinalDirection
     Get_ClosestCardinalAndOrdinalDirection(
         const FVector2D& InVector);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Point in Radius",
+              Category = "Ck|Utils|Math|Vector2")
+    static bool
+    Get_IsPointInRadius(
+        const FVector2D& InPoint,
+        const FVector2D& InMeasureRadiusFrom,
+        float InRadius);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
