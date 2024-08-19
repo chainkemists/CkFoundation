@@ -151,6 +151,17 @@ namespace ck::algo
         ForEachIsValid(InContainer.begin(), InContainer.end(), InFunc);
     }
 
+    template <typename T_Container, typename T_UnaryFunction, ck::IsValidPolicy T_IsValidPolicy>
+    auto
+        ForEachIsValid(
+            T_Container& InContainer,
+            T_UnaryFunction InFunc,
+            T_IsValidPolicy)
+        -> void
+    {
+        ForEachIsValid(InContainer.begin(), InContainer.end(), InFunc, [](auto InObj) { return ck::IsValid(InObj, T_IsValidPolicy{}); });
+    }
+
     template <typename T_ItrType, typename T_UnaryFunction, typename T_Validator>
     auto
         ForEachIsValid(
