@@ -17,6 +17,10 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
+    CK_DEFINE_ECS_TAG(FTag_GeometryCollection_CrumbleNonAnchoredClusters);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKCHAOS_API FFragment_GeometryCollection_Params
     {
     public:
