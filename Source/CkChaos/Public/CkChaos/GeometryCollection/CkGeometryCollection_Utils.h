@@ -76,6 +76,13 @@ public:
     static FCk_Handle_GeometryCollection
     Request_CrumbleNonAnchoredClusters(
         UPARAM(ref) FCk_Handle_GeometryCollection& InGeometryCollection);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Chaos|GeometryCollection",
+              DisplayName="[Ck][GeometryCollection] Request Remove All Anchors")
+    static FCk_Handle_GeometryCollection
+    Request_RemoveAllAnchors(
+        UPARAM(ref) FCk_Handle_GeometryCollection& InGeometryCollection);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
