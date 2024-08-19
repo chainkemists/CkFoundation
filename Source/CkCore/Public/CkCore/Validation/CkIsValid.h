@@ -9,6 +9,9 @@
 namespace ck
 {
     struct IsValid_Policy { };
+
+    template <typename T>
+    concept IsValidPolicy = std::is_base_of_v<ck::IsValid_Policy, T>;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
