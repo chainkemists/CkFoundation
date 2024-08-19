@@ -42,6 +42,68 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Chaos, UCk_Utils_GeometryCollection_UE, 
 
 auto
     UCk_Utils_GeometryCollection_UE::
+    Get_AreAllClustersAnchored(
+        const FCk_Handle_GeometryCollection& InGeometryCollection)
+    -> bool
+{
+    const auto GeometryCollectionComponent = Get_GeometryCollectionComponent(InGeometryCollection);
+
+    CK_ENSURE_IF_NOT(ck::IsValid(GeometryCollectionComponent), TEXT("Unable to iterate over clusters of GeometryCollection [{}] because its"
+        " GeometryCollectionComponent [{}] is INVALID"), InGeometryCollection, GeometryCollectionComponent)
+    { return {}; }
+
+    if (ck::Is_NOT_Valid(GeometryCollectionComponent->RestCollection))
+    { return true; }
+
+    const auto& PhysProxy = GeometryCollectionComponent->GetPhysicsProxy();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(PhysProxy, ck::IsValid_Policy_NullptrOnly{}),
+        TEXT("Unable to iterate over clusters of GeometryCollection [{}] because its Phys Proxy of the Geometry Collection Component [{}] is INVALID"),
+        InGeometryCollection, GeometryCollectionComponent)
+    { return true; }
+
+    auto RbdSolver = PhysProxy->GetSolver<Chaos::FPhysicsSolver>();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(RbdSolver, ck::IsValid_Policy_NullptrOnly{}),
+        TEXT("Unable to iterate over clusters of GeometryCollection [{}] because its RbdSolver of the Geometry Collection Component [{}] is INVALID"),
+        InGeometryCollection, GeometryCollectionComponent)
+    { return true; }
+
+    // Relevant comment from base code FRigidClustering::BreakClustersByProxy:
+    // we should probably have a way to retrieve all the active clusters per proxy instead of having to do this iteration
+    for (auto& Clustering = RbdSolver->GetEvolution()->GetRigidClustering();
+         const auto ClusteredHandle : Clustering.GetTopLevelClusterParents())
+    {
+        if (ck::Is_NOT_Valid(ClusteredHandle, ck::IsValid_Policy_NullptrOnly{}))
+        { continue; }
+
+        if (ClusteredHandle->PhysicsProxy() == PhysProxy)
+        {
+            if (ClusteredHandle->ObjectState() != Chaos::EObjectStateType::Kinematic)
+            { return false; }
+        }
+    }
+    return true;
+}
+
+auto
+    UCk_Utils_GeometryCollection_UE::
+    Get_GeometryCollectionComponent(
+        const FCk_Handle_GeometryCollection& InGeometryCollection)
+    -> UGeometryCollectionComponent*
+{
+    const auto& Ptr = InGeometryCollection.Get<ck::FFragment_GeometryCollection_Params>().Get_Params().Get_GeometryCollection();
+
+    if (ck::Is_NOT_Valid(Ptr))
+    { return nullptr; }
+
+    return Ptr.Get();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_GeometryCollection_UE::
     Request_ApplyStrainAndVelocity(
         FCk_Handle_GeometryCollection& InGeometryCollection,
         const FCk_Request_GeometryCollection_ApplyStrain& InRequest)
