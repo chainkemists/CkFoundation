@@ -9,7 +9,7 @@
 auto
     UCk_Utils_GeometryCollectionOwner_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         ECk_Replication InReplicates)
     -> FCk_Handle_GeometryCollectionOwner
 {
@@ -24,7 +24,7 @@ auto
     {
         ck::chaos::VeryVerbose
         (
-            TEXT("Skipping creation of Ability Owner Rep Fragment on Entity [{}] because it's set to [{}]"),
+            TEXT("Skipping creation of GeometryCollectionOwner Rep Fragment on Entity [{}] because it's set to [{}]"),
             InHandle,
             InReplicates
         );
@@ -131,7 +131,8 @@ auto
 
     ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(InGeometryCollectionOwner, [&](FCk_Handle_GeometryCollection InGc)
     {
-        UCk_Utils_GeometryCollection_UE::Request_RemoveAllAnchorsAndCrumbleNonAnchoredClusters(InGc);
+        UCk_Utils_GeometryCollection_UE::Request_RemoveAllAnchors(InGc);
+        UCk_Utils_GeometryCollection_UE::Request_CrumbleNonAnchoredClusters(InGc);
     });
 
     return InGeometryCollectionOwner;

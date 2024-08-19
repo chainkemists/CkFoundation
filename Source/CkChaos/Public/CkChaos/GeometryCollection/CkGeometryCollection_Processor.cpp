@@ -7,8 +7,6 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
-#include "CkNet/CkNet_Utils.h"
-
 #include "GeometryCollection/GeometryCollectionComponent.h"
 
 #include "PhysicsProxy/GeometryCollectionPhysicsProxy.h"
@@ -20,8 +18,8 @@ namespace ck_geometrycollection_processor
     auto
     Get_ParticlesInRadius(
         const FGeometryCollectionPhysicsProxy* Proxy,
-        FVector InLocation,
-        float InRadius)
+        const FVector& InLocation,
+        const float InRadius)
     -> decltype(Proxy->GetUnorderedParticles_Internal())
     {
         using ClusterHandleType = FGeometryCollectionPhysicsProxy::FClusterHandle;
@@ -29,15 +27,14 @@ namespace ck_geometrycollection_processor
         // TODO: Do we need to call `_External` for external strains?
         const auto& Particles = Proxy->GetUnorderedParticles_Internal();
 
-        auto ParticlesInRadius = decltype(Particles){};
-
-        ck::algo::ForEachIsValid(Particles, [&](ClusterHandleType* InValidHandle)
+        auto ParticlesInRadius = ck::algo::Filter(Particles,
+        [&](ClusterHandleType* InValidHandle)
         {
-            if (UCk_Utils_Vector3_UE::Get_IsPointInRadius(InValidHandle->GetX(), InLocation, InRadius))
-            {
-                ParticlesInRadius.Emplace(InValidHandle);
-            }
-        }, ck::IsValid_Policy_NullptrOnly{});
+            if (ck::Is_NOT_Valid(InValidHandle, ck::IsValid_Policy_NullptrOnly{}))
+            { return false; }
+
+            return UCk_Utils_Vector3_UE::Get_IsPointInRadius(InValidHandle->GetX(), InLocation, InRadius);
+        });
 
         return ParticlesInRadius;
     }
@@ -95,22 +92,22 @@ namespace ck
                 if (const auto& ClusteredParticle = InValidHandle->CastToClustered();
                     ck::IsValid(ClusteredParticle, ck::IsValid_Policy_NullptrOnly{}))
                 {
-                    if (const auto& Strain = InRequest.Get_InternalStrain(); Strain > 0)
+                    if (const auto& Strain = InRequest.Get_InternalStrain(); Strain > 0.0f)
                     {
                         const auto& NewInternalStrain = ClusteredParticle->GetInternalStrains() - Strain;
                         RigidClustering.SetInternalStrain(ClusteredParticle, FMath::Max(0, NewInternalStrain));
                     }
 
-                    if (const auto& Strain = InRequest.Get_ExternalStrain(); Strain > 0)
+                    if (const auto& Strain = InRequest.Get_ExternalStrain(); Strain > 0.0f)
                     {
                         const auto& NewExternalStrain = Strain;
                         RigidClustering.SetExternalStrain(ClusteredParticle, FMath::Max(0, NewExternalStrain));
                     }
 
-                    if (const auto& Velocity = InRequest.Get_LinearVelocity(); Velocity.SquaredLength() > 0)
+                    if (const auto& Velocity = InRequest.Get_LinearVelocity(); Velocity.SquaredLength() > 0.0f)
                     { InValidHandle->SetV(InValidHandle->GetV() + Velocity); }
 
-                    if (const auto& AngularVelocity = InRequest.Get_AngularVelocity(); AngularVelocity.SquaredLength() > 0)
+                    if (const auto& AngularVelocity = InRequest.Get_AngularVelocity(); AngularVelocity.SquaredLength() > 0.0f)
                     { InValidHandle->SetW(InValidHandle->GetW() + AngularVelocity); }
                 }
             });
@@ -144,28 +141,28 @@ namespace ck
             {
                 Chaos::FRigidClustering& RigidClustering = RbdSolver->GetEvolution()->GetRigidClustering();
 
-                if (const auto& ClusteredParticle = Particle->CastToClustered())
+                if (const auto& ClusteredParticle = Particle->CastToClustered();
+                    ck::IsValid(ClusteredParticle, ck::IsValid_Policy_NullptrOnly{}))
                 {
                     auto Direction = Particle->GetTransformPQ().GetLocation() - InRequest.Get_Location();
-                    const auto& Distance = Direction.Length();
                     Direction.Normalize();
 
-                    if (const auto& Strain = InRequest.Get_ExternalStrain(); Strain > 0)
+                    if (const auto& Strain = InRequest.Get_ExternalStrain(); Strain > 0.0f)
                     {
                         const auto& NewStrain = Strain;
                         RigidClustering.SetExternalStrain(ClusteredParticle, FMath::Max(ClusteredParticle->GetExternalStrain(), NewStrain));
                     }
 
-                    if (const auto& Strain = InRequest.Get_InternalStrain(); Strain > 0)
+                    if (const auto& Strain = InRequest.Get_InternalStrain(); Strain > 0.0f)
                     {
                         const Chaos::FRealSingle NewInternalStrain = ClusteredParticle->GetInternalStrains() - Strain;
                         RigidClustering.SetInternalStrain(ClusteredParticle, FMath::Max(0, NewInternalStrain));
                     }
 
-                    if (const auto& Speed = InRequest.Get_LinearSpeed(); Speed.SquaredLength() > 0)
+                    if (const auto& Speed = InRequest.Get_LinearSpeed(); Speed > 0.0f)
                     { Particle->SetV(Particle->GetV() + Direction * Speed); }
 
-                    if (const auto& Speed = InRequest.Get_AngularSpeed(); Speed.SquaredLength() > 0)
+                    if (const auto& Speed = InRequest.Get_AngularSpeed(); Speed > 0.0f)
                     { Particle->SetW(Particle->GetW() + Direction * Speed); }
                 }
             });
@@ -191,21 +188,22 @@ namespace ck
             InHandle, GeometryCollectionComponent)
         { return; }
 
-        // If Geometry Collection is not set
-        if (ck::Is_NOT_Valid(GeometryCollectionComponent->RestCollection))
+        CK_ENSURE_IF_NOT(ck::IsValid(GeometryCollectionComponent->RestCollection),
+            TEXT("Unable to CrumbleNonActiveClusters of GeometryCollection [{}] because the Geometry Collection Component [{}] RestCollection [{}] is INVALID"),
+            InHandle, GeometryCollectionComponent, GeometryCollectionComponent->RestCollection)
         { return; }
 
         const auto& PhysProxy = GeometryCollectionComponent->GetPhysicsProxy();
 
         CK_ENSURE_IF_NOT(ck::IsValid(PhysProxy, ck::IsValid_Policy_NullptrOnly{}),
-            TEXT("Unable to CrumbleNonActiveClusters of GeometryCollection [{}] because the of Geometry Collection Component [{}] is INVALID"),
+            TEXT("Unable to CrumbleNonActiveClusters of GeometryCollection [{}] because the Physics Proxy of the Geometry Collection Component [{}]"),
             InHandle, GeometryCollectionComponent)
         { return; }
 
         auto RbdSolver = PhysProxy->GetSolver<Chaos::FPhysicsSolver>();
 
         CK_ENSURE_IF_NOT(ck::IsValid(RbdSolver, ck::IsValid_Policy_NullptrOnly{}),
-            TEXT("Unable to CrumbleNonActiveClusters of GeometryCollection [{}] because the RbdSolver of Geometry Collection Component [{}] is INVALID"),
+            TEXT("Unable to CrumbleNonActiveClusters of GeometryCollection [{}] because the RbdSolver of the Geometry Collection Component [{}] is INVALID"),
             InHandle, GeometryCollectionComponent)
         { return; }
 
@@ -215,17 +213,14 @@ namespace ck
 
             // Relevant comment from base code FRigidClustering::BreakClustersByProxy:
             // we should probably have a way to retrieve all the active clusters per proxy instead of having to do this iteration
-            for (Chaos::FPBDRigidClusteredParticleHandle* ClusteredHandle : Clustering.GetTopLevelClusterParents())
+            ck::algo::ForEachIsValid(Clustering.GetTopLevelClusterParents(), [&](Chaos::FPBDRigidClusteredParticleHandle* ClusteredHandle)
             {
-                if (ck::Is_NOT_Valid(ClusteredHandle, ck::IsValid_Policy_NullptrOnly{}))
-                { continue; }
-
                 if (ClusteredHandle->PhysicsProxy() == PhysProxy)
                 {
                     if (ClusteredHandle->ObjectState() != Chaos::EObjectStateType::Kinematic)
                     { Clustering.BreakCluster(ClusteredHandle); }
                 }
-            }
+            }, ck::IsValid_Policy_NullptrOnly{});
         });
     }
 
@@ -239,7 +234,7 @@ namespace ck
             const FFragment_GeometryCollection_Params& InParams) const
         -> void
     {
-        InHandle.Remove<FTag_GeometryCollection_RemoveAllAnchors>();
+        InHandle.Remove<MarkedDirtyBy>();
 
         const auto GeometryCollectionComponent = InParams.Get_Params().Get_GeometryCollection();
 
