@@ -71,4 +71,14 @@ auto
     InGeometryCollection.AddOrGet<ck::FTag_GeometryCollection_CrumbleNonAnchoredClusters>();
     return InGeometryCollection;
 }
+
+auto
+    UCk_Utils_GeometryCollection_UE::
+    Request_RemoveAllAnchors(
+        FCk_Handle_GeometryCollection& InGeometryCollection)
+    -> FCk_Handle_GeometryCollection
+{
+    InGeometryCollection.AddOrGet<ck::FTag_GeometryCollection_RemoveAllAnchors>();
+    return InGeometryCollection;
+}
 // --------------------------------------------------------------------------------------------------------------------

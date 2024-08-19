@@ -228,6 +228,28 @@ namespace ck
     }
 
     // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_GeometryCollection_RemoveAllAnchors::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_GeometryCollection_Params& InParams) const
+        -> void
+    {
+        InHandle.Remove<FTag_GeometryCollection_RemoveAllAnchors>();
+
+        const auto GeometryCollectionComponent = InParams.Get_Params().Get_GeometryCollection();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(GeometryCollectionComponent),
+            TEXT("Unable to CrumbleNonActiveClusters of GeometryCollection [{}] because the Geometry Collection Component [{}] is INVALID"),
+            InHandle, GeometryCollectionComponent)
+        { return; }
+
+        GeometryCollectionComponent->RemoveAllAnchors();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------

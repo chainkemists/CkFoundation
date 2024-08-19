@@ -18,6 +18,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_ECS_TAG(FTag_GeometryCollection_CrumbleNonAnchoredClusters);
+    CK_DEFINE_ECS_TAG(FTag_GeometryCollection_RemoveAllAnchors);
 
     // --------------------------------------------------------------------------------------------------------------------
 
