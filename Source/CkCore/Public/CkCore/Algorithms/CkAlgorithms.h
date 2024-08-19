@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/TypeTraits/CkTypeTraits.h"
+#include "CkCore/Validation/CkIsValid.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -70,6 +71,9 @@ namespace ck::algo
 
     template <typename T_Container, typename T_UnaryFunction>
     auto ForEachIsValid(T_Container& InContainer, T_UnaryFunction InFunc) -> void;
+
+    template <typename T_Container, typename T_UnaryFunction, ck::IsValidPolicy T_IsValidPolicy>
+    auto ForEachIsValid(T_Container& InContainer, T_UnaryFunction InFunc, T_IsValidPolicy) -> void;
 
     template <typename T_ItrType, typename T_UnaryFunction, typename T_Validator>
     auto ForEachIsValid(T_ItrType InItrBegin, T_ItrType InItrEnd, T_UnaryFunction InFunc, T_Validator InValidator) -> void;
