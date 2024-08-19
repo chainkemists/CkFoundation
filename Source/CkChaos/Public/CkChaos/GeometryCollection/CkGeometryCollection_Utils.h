@@ -54,6 +54,21 @@ private:
         FCk_Handle InHandle);
 
 public:
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Chaos|GeometryCollection",
+        DisplayName="[Ck][GeometryCollection] Get Are All Clusters Anchored")
+    static bool
+    Get_AreAllClustersAnchored(
+        const FCk_Handle_GeometryCollection& InGeometryCollection);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Chaos|GeometryCollection",
+        DisplayName="[Ck][GeometryCollection] Get GeometryCollection Component")
+    static UGeometryCollectionComponent*
+    Get_GeometryCollectionComponent(
+        const FCk_Handle_GeometryCollection& InGeometryCollection);
+
+public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Chaos|GeometryCollection",
               DisplayName="[Ck][GeometryCollection] Request Apply Strain and Velocity")
