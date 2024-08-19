@@ -104,6 +104,17 @@ auto
 
 auto
     UCk_Utils_EntityCollection_UE::
+    ForEach_EntityCollection_If(
+        FCk_Handle& InEntityCollectionOwnerEntity,
+        const TFunction<void(FCk_Handle_EntityCollection)>& InFunc,
+        const TFunction<bool(FCk_Handle_EntityCollection)>& InPredicate)
+    -> void
+{
+    RecordOfEntityCollections_Utils::ForEach_ValidEntry_If(InEntityCollectionOwnerEntity, InFunc, InPredicate);
+}
+
+auto
+    UCk_Utils_EntityCollection_UE::
     Request_AddEntities(
         FCk_Handle_EntityCollection& InEntityCollectionHandle,
         const FCk_Request_EntityCollection_AddEntities& InRequest)

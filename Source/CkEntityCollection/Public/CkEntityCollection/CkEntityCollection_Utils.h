@@ -127,6 +127,12 @@ public:
         FCk_Handle& InEntityCollectionOwnerEntity,
         const TFunction<void(FCk_Handle_EntityCollection)>& InFunc) -> void;
 
+    static auto
+    ForEach_EntityCollection_If(
+        FCk_Handle& InEntityCollectionOwnerEntity,
+        const TFunction<void(FCk_Handle_EntityCollection)>& InFunc,
+        const TFunction<bool(FCk_Handle_EntityCollection)>& InPredicate) -> void;
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
