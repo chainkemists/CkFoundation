@@ -19,8 +19,8 @@ namespace ck
             FFragment_Timer_Requests& InRequestsComp) const
         -> void
     {
-        const auto RequestsCopy = InRequestsComp._ManipulateRequests;
-        InRequestsComp._ManipulateRequests.Reset();
+        const auto RequestsCopy = InRequestsComp._Requests;
+        InRequestsComp._Requests.Reset();
 
         algo::ForEachRequest(RequestsCopy, ck::Visitor(
         [&](const auto& InRequestVariant) -> void
@@ -28,7 +28,7 @@ namespace ck
             DoHandleRequest(InDeltaT, InTimerEntity, InCurrentComp, InParamsComp, InRequestVariant);
         }), policy::DontResetContainer{});
 
-        if (InRequestsComp._ManipulateRequests.IsEmpty())
+        if (InRequestsComp._Requests.IsEmpty())
         {
             InTimerEntity.Remove<MarkedDirtyBy>();
         }
