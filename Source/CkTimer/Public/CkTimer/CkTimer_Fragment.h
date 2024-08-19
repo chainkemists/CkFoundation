@@ -80,10 +80,10 @@ namespace ck
         using RequestList = TArray<RequestType>;
 
     private:
-        RequestList _ManipulateRequests;
+        RequestList _Requests;
 
     public:
-        CK_PROPERTY_GET(_ManipulateRequests);
+        CK_PROPERTY_GET(_Requests);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
