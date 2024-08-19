@@ -49,15 +49,6 @@ namespace ck
 {
     auto
         FProcessor_GeometryCollection_HandleRequests::
-        DoTick(
-            TimeType InDeltaT)
-        -> void
-    {
-        TProcessor::DoTick(InDeltaT);
-    }
-
-    auto
-        FProcessor_GeometryCollection_HandleRequests::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -176,6 +167,63 @@ namespace ck
                     { Particle->SetW(Particle->GetW() + Direction * Speed); }
                 }
             });
+        });
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_GeometryCollection_CrumbleNonActiveClusters::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_GeometryCollection_Params& InParams) const
+            -> void
+    {
+        InHandle.Remove<FTag_GeometryCollection_CrumbleNonAnchoredClusters>();
+
+        const auto GeometryCollectionComponent = InParams.Get_Params().Get_GeometryCollection();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(GeometryCollectionComponent),
+            TEXT("Unable to CrumbleNonActiveClusters of GeometryCollection [{}] because the Geometry Collection Component [{}] is INVALID"),
+            InHandle, GeometryCollectionComponent)
+        { return; }
+
+        // If Geometry Collection is not set
+        if (ck::Is_NOT_Valid(GeometryCollectionComponent->RestCollection))
+        { return; }
+
+        const auto& PhysProxy = GeometryCollectionComponent->GetPhysicsProxy();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(PhysProxy, ck::IsValid_Policy_NullptrOnly{}),
+            TEXT("Unable to CrumbleNonActiveClusters of GeometryCollection [{}] because the of Geometry Collection Component [{}] is INVALID"),
+            InHandle, GeometryCollectionComponent)
+        { return; }
+
+        auto RbdSolver = PhysProxy->GetSolver<Chaos::FPhysicsSolver>();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(RbdSolver, ck::IsValid_Policy_NullptrOnly{}),
+            TEXT("Unable to CrumbleNonActiveClusters of GeometryCollection [{}] because the RbdSolver of Geometry Collection Component [{}] is INVALID"),
+            InHandle, GeometryCollectionComponent)
+        { return; }
+
+        RbdSolver->EnqueueCommandImmediate([PhysProxy, RbdSolver]()
+        {
+            Chaos::FRigidClustering& Clustering = RbdSolver->GetEvolution()->GetRigidClustering();
+
+            // Relevant comment from base code FRigidClustering::BreakClustersByProxy:
+            // we should probably have a way to retrieve all the active clusters per proxy instead of having to do this iteration
+            for (Chaos::FPBDRigidClusteredParticleHandle* ClusteredHandle : Clustering.GetTopLevelClusterParents())
+            {
+                if (ck::Is_NOT_Valid(ClusteredHandle, ck::IsValid_Policy_NullptrOnly{}))
+                { continue; }
+
+                if (ClusteredHandle->PhysicsProxy() == PhysProxy)
+                {
+                    if (ClusteredHandle->ObjectState() != Chaos::EObjectStateType::Kinematic)
+                    { Clustering.BreakCluster(ClusteredHandle); }
+                }
+            }
         });
     }
 

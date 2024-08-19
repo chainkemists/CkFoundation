@@ -1,19 +1,22 @@
 #include "CkGeometryCollection_Utils.h"
 
-#include "CkChaos/CkChaos_Log.h"
 #include "CkChaos/GeometryCollection/CkGeometryCollection_Fragment.h"
+#include "CkChaos/GeometryCollectionOwner/CkGeometryCollectionOwner_Fragment.h"
+
+#include <GeometryCollection/GeometryCollectionComponent.h>
+#include <PhysicsProxy/GeometryCollectionPhysicsProxy.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_GeometryCollection_UE::
     Add(
-        FCk_Handle_GeometryCollectionOwner InOwner,
+        FCk_Handle_GeometryCollectionOwner& InOwner,
         const FCk_Fragment_GeometryCollection_ParamsData& InParams)
     -> FCk_Handle_GeometryCollection
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_GeometryCollection()),
-        TEXT("Unable to add new GeoemtryCollection to [{}] because the GeometryCollection [{}] is INVALID"),
+        TEXT("Unable to add new GeometryCollection to [{}] because the GeometryCollection [{}] is INVALID"),
         InOwner, InParams.Get_GeometryCollection())
     { return {}; }
 
@@ -59,4 +62,13 @@ auto
     return InGeometryCollection;
 }
 
+auto
+    UCk_Utils_GeometryCollection_UE::
+    Request_CrumbleNonAnchoredClusters(
+        FCk_Handle_GeometryCollection& InGeometryCollection)
+    -> FCk_Handle_GeometryCollection
+{
+    InGeometryCollection.AddOrGet<ck::FTag_GeometryCollection_CrumbleNonAnchoredClusters>();
+    return InGeometryCollection;
+}
 // --------------------------------------------------------------------------------------------------------------------
