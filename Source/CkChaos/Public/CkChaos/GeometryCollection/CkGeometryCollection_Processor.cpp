@@ -75,7 +75,9 @@ namespace ck
     {
         const auto& Proxy = InParams.Get_Params().Get_GeometryCollection()->GetPhysicsProxy();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(Proxy, ck::IsValid_Policy_NullptrOnly{}), TEXT("TODO MESSAGE"))
+        CK_ENSURE_IF_NOT(ck::IsValid(Proxy, ck::IsValid_Policy_NullptrOnly{}),
+            TEXT("Unable to ApplyStrain to GeometryCollection [{}] because the PhysProxy of Geometry Collection Component [{}] is INVALID"),
+            InHandle, InParams.Get_Params().Get_GeometryCollection())
         { return; }
 
         const auto& ParticlesInRadius = ck_geometrycollection_processor::Get_ParticlesInRadius(Proxy,
@@ -125,7 +127,9 @@ namespace ck
     {
         const auto& Proxy = InParams.Get_Params().Get_GeometryCollection()->GetPhysicsProxy();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(Proxy, ck::IsValid_Policy_NullptrOnly{}), TEXT("TODO MESSAGE"))
+        CK_ENSURE_IF_NOT(ck::IsValid(Proxy, ck::IsValid_Policy_NullptrOnly{}),
+            TEXT("Unable to ApplyStrain to GeometryCollection [{}] because the PhysProxy of Geometry Collection Component [{}] is INVALID"),
+            InHandle, InParams.Get_Params().Get_GeometryCollection())
         { return; }
 
         const auto& ParticlesInRadius = ck_geometrycollection_processor::Get_ParticlesInRadius(Proxy, InRequest.Get_Location(), InRequest.Get_Radius());
@@ -148,16 +152,14 @@ namespace ck
 
                     if (const auto& Strain = InRequest.Get_ExternalStrain(); Strain > 0)
                     {
-                        const auto& NewStrain = ClusteredParticle->GetExternalStrain() - Strain;
-                        RigidClustering.SetExternalStrain(ClusteredParticle,
-                            FMath::Max(ClusteredParticle->GetExternalStrain(), NewStrain));
+                        const auto& NewStrain = Strain;
+                        RigidClustering.SetExternalStrain(ClusteredParticle, FMath::Max(ClusteredParticle->GetExternalStrain(), NewStrain));
                     }
 
                     if (const auto& Strain = InRequest.Get_InternalStrain(); Strain > 0)
                     {
                         const Chaos::FRealSingle NewInternalStrain = ClusteredParticle->GetInternalStrains() - Strain;
-                        RigidClustering.SetInternalStrain(ClusteredParticle,
-                            FMath::Max(0, NewInternalStrain));
+                        RigidClustering.SetInternalStrain(ClusteredParticle, FMath::Max(0, NewInternalStrain));
                     }
 
                     if (const auto& Speed = InRequest.Get_LinearSpeed(); Speed.SquaredLength() > 0)
