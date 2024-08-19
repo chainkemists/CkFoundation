@@ -18,7 +18,6 @@ public:
     CK_GENERATED_BODY(UCk_Utils_TargetPoint_UE);
 
 public:
-    // The TargetPoint is destroyed when the Owner is destroyed
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|TargetPoint",
               DisplayName="[Ck][TargetPoint] Create New TargetPoint")
@@ -28,14 +27,32 @@ public:
         const FTransform& InTransform,
         ECk_Lifetime InLifetime = ECk_Lifetime::UntilDestroyed);
 
-    // Transient means that the onus of destroying the TargetPoint is now on the user
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|TargetPoint",
+              DisplayName="[Ck][TargetPoint] Create New TargetPoint (From Location)")
+    static FCk_Handle_Transform
+    Create_FromLocation(
+        const FCk_Handle& InOwner,
+        const FVector& InLocation,
+        ECk_Lifetime InLifetime = ECk_Lifetime::UntilDestroyed);
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|TargetPoint",
               DisplayName="[Ck][TargetPoint] Create New TargetPoint (Transient)",
-              meta = (WorldContext="InWorldContextObject"))
+              meta = (WorldContext="InWorldContextObject", DefaultToSelf="InWorldContextObject"))
     static FCk_Handle_Transform
     Create_Transient(
         const FTransform& InTransform,
+        const UObject* InWorldContextObject,
+        ECk_Lifetime InLifetime = ECk_Lifetime::UntilDestroyed);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|TargetPoint",
+              DisplayName="[Ck][TargetPoint] Create New TargetPoint (Transient | FromLocation)",
+              meta = (WorldContext="InWorldContextObject", DefaultToSelf="InWorldContextObject"))
+    static FCk_Handle_Transform
+    Create_Transient_FromLocation(
+        const FVector& InLocation,
         const UObject* InWorldContextObject,
         ECk_Lifetime InLifetime = ECk_Lifetime::UntilDestroyed);
 };
