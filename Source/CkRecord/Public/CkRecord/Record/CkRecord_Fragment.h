@@ -49,10 +49,10 @@ namespace ck
     };
 }
 
-#define CK_DEFINE_RECORD_OF_ENTITIES(_NameOfRecord_, _HandleType_)     \
+#define CK_DEFINE_RECORD_OF_ENTITIES(_NameOfRecord_, _HandleType_)         \
 struct _NameOfRecord_ : public ck::TFragment_RecordOfEntities<_HandleType_>\
-{                                                                      \
-    using TFragment_RecordOfEntities::TFragment_RecordOfEntities;      \
+{                                                                          \
+    using TFragment_RecordOfEntities::TFragment_RecordOfEntities;          \
 }
 
 // --------------------------------------------------------------------------------------------------------------------

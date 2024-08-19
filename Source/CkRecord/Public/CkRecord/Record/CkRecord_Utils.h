@@ -809,6 +809,16 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#define CK_DEFINE_RECORD_OF_ENTITIES_UTILS(_NameOfUtils_, _NameOfRecord_) \
+using _NameOfUtils_ = ck::TUtils_RecordOfEntities<_NameOfRecord_>
+
+#define CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS(_NameOfUtils_, _NameOfRecord_, _HandleType_) \
+CK_DEFINE_RECORD_OF_ENTITIES(_NameOfRecord_, _HandleType_);\
+CK_DEFINE_RECORD_OF_ENTITIES_UTILS(_NameOfUtils_, _NameOfRecord_)
+
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable)
 class CKRECORD_API UCk_Utils_RecordOfEntities_UE : public UBlueprintFunctionLibrary
 {
