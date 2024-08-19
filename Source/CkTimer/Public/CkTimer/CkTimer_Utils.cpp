@@ -190,7 +190,7 @@ auto
         FCk_Handle_Timer& InTimerEntity)
     -> FCk_Handle_Timer
 {
-    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(
+    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(
         FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Reset});
 
     return InTimerEntity;
@@ -202,7 +202,7 @@ auto
         FCk_Handle_Timer& InTimerEntity)
     -> FCk_Handle_Timer
 {
-    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(
+    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(
         FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Complete});
 
     return InTimerEntity;
@@ -214,7 +214,7 @@ auto
         FCk_Handle_Timer& InTimerEntity)
     -> FCk_Handle_Timer
 {
-    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(
+    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(
         FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Stop});
 
     return InTimerEntity;
@@ -226,7 +226,7 @@ auto
         FCk_Handle_Timer& InTimerEntity)
     -> FCk_Handle_Timer
 {
-    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(
+    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(
         FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Pause});
 
     return InTimerEntity;
@@ -238,7 +238,7 @@ auto
         FCk_Handle_Timer& InTimerEntity)
     -> FCk_Handle_Timer
 {
-    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(
+    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(
         FCk_Request_Timer_Manipulate{ECk_Timer_Manipulate::Resume});
 
     return InTimerEntity;
@@ -251,7 +251,7 @@ auto
         FCk_Request_Timer_Jump InRequest)
     -> FCk_Handle_Timer
 {
-    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(InRequest);
+    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(InRequest);
 
     return InTimerEntity;
 }
@@ -263,7 +263,7 @@ auto
         FCk_Request_Timer_Consume InRequest)
     -> FCk_Handle_Timer
 {
-    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._ManipulateRequests.Emplace(InRequest);
+    InTimerEntity.AddOrGet<ck::FFragment_Timer_Requests>()._Requests.Emplace(InRequest);
 
     return InTimerEntity;
 }
