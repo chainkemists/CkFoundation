@@ -631,6 +631,17 @@ auto
 }
 
 auto
+    UCk_Utils_Vector3_UE::
+    Get_IsPointInRadius(
+        const FVector& InPoint,
+        const FVector& InMeasureRadiusFrom,
+        const float InRadius)
+    -> bool
+{
+    return ck_vector::LengthSquared(InPoint - InMeasureRadiusFrom) <= FMath::Square(InRadius);
+}
+
+auto
     UCk_Utils_ActorVector3_UE::
     Get_DirectionVectorFromActor(
         const AActor*    InActor,
@@ -1272,6 +1283,17 @@ auto
     { return ECk_CardinalAndOrdinalDirection::North; }
 
     return FoundDirection->first;
+}
+
+auto
+    UCk_Utils_Vector2_UE::
+    Get_IsPointInRadius(
+        const FVector2D& InPoint,
+        const FVector2D& InMeasureRadiusFrom,
+        const float InRadius)
+    -> bool
+{
+    return ck_vector::LengthSquared(InPoint - InMeasureRadiusFrom) <= FMath::Square(InRadius);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
