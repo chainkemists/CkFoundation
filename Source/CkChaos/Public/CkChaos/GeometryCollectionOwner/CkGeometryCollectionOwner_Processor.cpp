@@ -21,22 +21,32 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
+        FProcessor_GeometryCollectionOwner_Setup::DoTick(
+            TimeType InDeltaT)
+            -> void
+    {
+        TProcessor::DoTick(InDeltaT);
+
+        _TransientEntity.Clear<MarkedDirtyBy>();
+    }
+
+    auto
         FProcessor_GeometryCollectionOwner_Setup::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle) const
         -> void
     {
-        const auto& BasicDetails = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(InHandle);
+        const auto& Actor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
 
-        CK_ENSURE_IF_NOT(ck::IsValid(BasicDetails.Get_Actor()),
-            TEXT("OwningActor [{}] of [{}] is NOT valid"), BasicDetails.Get_Actor(), InHandle)
+        CK_ENSURE_IF_NOT(ck::IsValid(Actor),
+            TEXT("OwningActor [{}] of [{}] is NOT valid"), Actor, InHandle)
         { return; }
 
         const auto& GCs = [&]
         {
             auto Ret = TArray<UGeometryCollectionComponent*>{};
-            BasicDetails.Get_Actor()->GetComponents<UGeometryCollectionComponent>(Ret);
+            Actor->GetComponents<UGeometryCollectionComponent>(Ret);
 
             return Ret;
         }();
@@ -45,8 +55,6 @@ namespace ck
         {
             UCk_Utils_GeometryCollection_UE::Add(InHandle, FCk_Fragment_GeometryCollection_ParamsData{InGeometryCollection});
         });
-
-        InHandle.Remove<FTag_GeometryCollectionOwner_RequiresSetup>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -1,10 +1,10 @@
 #pragma once
 
 #include "CkChaos/GeometryCollection/CkGeometryCollection_Fragment_Data.h"
+#include "CkChaos/GeometryCollectionOwner/CkGeometryCollectionOwner_Fragment_Data.h"
 
 #include "CkECS/Handle/CkHandle.h"
 #include "CkNet/CkNet_Utils.h"
-#include "CkSignal/CkSignal_Fragment_Data.h"
 
 #include "CkGeometryCollection_Utils.generated.h"
 
@@ -20,17 +20,14 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_GeometryCollection);
 
 public:
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|Chaos|GeometryCollection",
-        DisplayName="[Ck][Chaos] Add Feature")
-    static FCk_Handle_GeometryCollection
+    static auto
     Add(
-        UPARAM(ref) FCk_Handle_GeometryCollectionOwner& InHandle,
-        const FCk_Fragment_GeometryCollection_ParamsData& InParams);
+        FCk_Handle_GeometryCollectionOwner& InHandle,
+        const FCk_Fragment_GeometryCollection_ParamsData& InParams) -> FCk_Handle_GeometryCollection;
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Chaos",
-              DisplayName="[Ck][Chaos] Has Feature")
+              Category = "Ck|Utils|Chaos|GeometryCollection",
+              DisplayName="[Ck][GeometryCollection] Has Feature")
     static bool
     Has(
         const FCk_Handle& InHandle);
@@ -38,7 +35,7 @@ public:
 private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Chaos|GeometryCollection",
-        DisplayName="[Ck][Chaos] Cast",
+        DisplayName="[Ck][GeometryCollection] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_GeometryCollection
     DoCast(
@@ -97,13 +94,6 @@ public:
               DisplayName="[Ck][GeometryCollection] Request Remove All Anchors")
     static FCk_Handle_GeometryCollection
     Request_RemoveAllAnchors(
-        UPARAM(ref) FCk_Handle_GeometryCollection& InGeometryCollection);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Chaos|GeometryCollection",
-              DisplayName="[Ck][GeometryCollection] Request Remove All Anchors And Crumble Non Anchored Clusters")
-    static FCk_Handle_GeometryCollection
-    Request_RemoveAllAnchorsAndCrumbleNonAnchoredClusters(
         UPARAM(ref) FCk_Handle_GeometryCollection& InGeometryCollection);
 };
 

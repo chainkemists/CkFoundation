@@ -69,21 +69,24 @@ auto
         InGeometryCollection, GeometryCollectionComponent)
     { return true; }
 
+    CK_ENSURE_IF_NOT(ck::IsValid(RbdSolver->GetEvolution(), ck::IsValid_Policy_NullptrOnly{}),
+        TEXT("Unable to iterate over clusters of GeometryCollection [{}] because its RbdSolver's Evolution of the Geometry Collection Component [{}] is INVALID"),
+        InGeometryCollection, GeometryCollectionComponent)
+    { return true; }
+
     // Relevant comment from base code FRigidClustering::BreakClustersByProxy:
     // we should probably have a way to retrieve all the active clusters per proxy instead of having to do this iteration
-    for (auto& Clustering = RbdSolver->GetEvolution()->GetRigidClustering();
-         const auto ClusteredHandle : Clustering.GetTopLevelClusterParents())
+    return ck::algo::AllOf(RbdSolver->GetEvolution()->GetRigidClustering().GetTopLevelClusterParents(),
+    [&](const Chaos::FPBDRigidClusteredParticleHandle* ClusteredHandle)
     {
         if (ck::Is_NOT_Valid(ClusteredHandle, ck::IsValid_Policy_NullptrOnly{}))
-        { continue; }
+        { return true; }
 
-        if (ClusteredHandle->PhysicsProxy() == PhysProxy)
-        {
-            if (ClusteredHandle->ObjectState() != Chaos::EObjectStateType::Kinematic)
-            { return false; }
-        }
-    }
-    return true;
+        if (ClusteredHandle->PhysicsProxy() != PhysProxy)
+        { return true; }
+
+        return ClusteredHandle->ObjectState() == Chaos::EObjectStateType::Kinematic;
+    });
 }
 
 auto
@@ -93,9 +96,6 @@ auto
     -> UGeometryCollectionComponent*
 {
     const auto& Ptr = InGeometryCollection.Get<ck::FFragment_GeometryCollection_Params>().Get_Params().Get_GeometryCollection();
-
-    if (ck::Is_NOT_Valid(Ptr))
-    { return nullptr; }
 
     return Ptr.Get();
 }
@@ -141,17 +141,6 @@ auto
     -> FCk_Handle_GeometryCollection
 {
     InGeometryCollection.AddOrGet<ck::FTag_GeometryCollection_RemoveAllAnchors>();
-    return InGeometryCollection;
-}
-
-auto
-    UCk_Utils_GeometryCollection_UE::
-    Request_RemoveAllAnchorsAndCrumbleNonAnchoredClusters(
-        FCk_Handle_GeometryCollection& InGeometryCollection)
-    -> FCk_Handle_GeometryCollection
-{
-    Request_CrumbleNonAnchoredClusters(InGeometryCollection);
-    Request_RemoveAllAnchors(InGeometryCollection);
     return InGeometryCollection;
 }
 
