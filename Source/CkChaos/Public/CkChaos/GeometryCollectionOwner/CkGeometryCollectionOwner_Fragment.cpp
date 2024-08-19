@@ -111,6 +111,25 @@ auto
             );
         });
     }
+
+    for (; _AoE_LastValidIndex < _AoE.Num(); ++_AoE_LastValidIndex)
+    {
+        ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(Entity, [&](FCk_Handle_GeometryCollection InGc)
+        {
+            const auto& Request = _AoE[_Strain_LastValidIndex];
+            UCk_Utils_GeometryCollection_UE::Request_ApplyAoE(InGc, FCk_Request_GeometryCollection_ApplyAoE
+                {
+                    Request.Get_Location(),
+                    Request.Get_Request()->Get_Radius()
+                }
+                .Set_InternalStrain(Request.Get_Request()->Get_InternalStrain())
+                .Set_ExternalStrain(Request.Get_Request()->Get_ExternalStrain())
+                .Set_LinearSpeed(Request.Get_Request()->Get_LinearSpeed())
+                .Set_AngularSpeed(Request.Get_Request()->Get_AngularSpeed())
+            );
+        });
+    }
+
 }
 
 auto

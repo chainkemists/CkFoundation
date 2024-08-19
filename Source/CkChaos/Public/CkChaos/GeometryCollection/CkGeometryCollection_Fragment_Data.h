@@ -104,11 +104,11 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess=true))
-    FVector _LinearSpeed = FVector::ZeroVector;
+    float _LinearSpeed = 0.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess=true))
-    FVector _AngularSpeed = FVector::ZeroVector;
+    float _AngularSpeed = 0.0f;
 
     // TODO: drive the strains using a curve
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
