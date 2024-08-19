@@ -25,6 +25,10 @@ namespace ck
 
     public:
         auto
+        DoTick(TimeType InDeltaT) -> void;
+
+    public:
+        auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle) const -> void;
@@ -32,10 +36,11 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKCHAOS_API FProcessor_GeometryCollectionOwner_HandleRequests : public TProcessor<
-            FProcessor_GeometryCollectionOwner_HandleRequests,
-            FFragment_GeometryCollectionOwner_Requests,
-            CK_IGNORE_PENDING_KILL>
+    class CKCHAOS_API FProcessor_GeometryCollectionOwner_HandleRequests : public ck_exp::TProcessor<
+        FProcessor_GeometryCollectionOwner_HandleRequests,
+        FCk_Handle_GeometryCollectionOwner,
+        FFragment_GeometryCollectionOwner_Requests,
+        CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FFragment_GeometryCollectionOwner_Requests;
@@ -69,11 +74,12 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKCHAOS_API FProcessor_GeometryCollectionOwner_Replicate : public TProcessor<
-            FProcessor_GeometryCollectionOwner_Replicate,
-            TObjectPtr<UCk_Fragment_GeometryCollectionOwner_Rep>,
-            FFragment_GeometryCollection_ReplicationRequests,
-            CK_IGNORE_PENDING_KILL>
+    class CKCHAOS_API FProcessor_GeometryCollectionOwner_Replicate : public ck_exp::TProcessor<
+        FProcessor_GeometryCollectionOwner_Replicate,
+        FCk_Handle_GeometryCollectionOwner,
+        TObjectPtr<UCk_Fragment_GeometryCollectionOwner_Rep>,
+        FFragment_GeometryCollection_ReplicationRequests,
+        CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FFragment_GeometryCollection_ReplicationRequests;

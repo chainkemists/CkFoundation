@@ -30,7 +30,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true))
+        meta=(AllowPrivateAccess=true, UIMin = "0.0", ClampMin = "0.0"))
     float _Radius = 0.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -42,11 +42,11 @@ private:
     FVector _AngularVelocity = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true))
+        meta=(AllowPrivateAccess=true, UIMin = "0.0", ClampMin = "0.0"))
     float _InternalStrain = 0.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true))
+        meta=(AllowPrivateAccess=true, UIMin = "0.0", ClampMin = "0.0"))
     float _ExternalStrain = 0.0f;
 
 public:
@@ -69,24 +69,24 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true))
+        meta=(AllowPrivateAccess=true, UIMin = "0.0", ClampMin = "0.0"))
     float _Radius = 0.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true))
-    FVector _LinearSpeed = FVector::ZeroVector;
+        meta=(AllowPrivateAccess=true, UIMin = "0.0", ClampMin = "0.0"))
+    float _LinearSpeed = 0.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true))
-    FVector _AngularSpeed = FVector::ZeroVector;
+        meta=(AllowPrivateAccess=true, UIMin = "0.0", ClampMin = "0.0"))
+    float _AngularSpeed = 0.0f;
 
     // TODO: drive the strains using a curve
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true))
+        meta=(AllowPrivateAccess=true, UIMin = "0.0", ClampMin = "0.0"))
     float _InternalStrain = 0.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true))
+        meta=(AllowPrivateAccess=true, UIMin = "0.0", ClampMin = "0.0"))
     float _ExternalStrain = 0.0f;
 
 public:
@@ -110,7 +110,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess=true))
-    FVector _Location;
+    FVector _Location = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess=true))
@@ -136,7 +136,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess=true))
-    FVector _Location;
+    FVector _Location = FVector::ZeroVector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess=true))
