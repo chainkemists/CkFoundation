@@ -11,6 +11,8 @@ auto
     -> void
 {
     InWorld.Add<ck::FProcessor_GeometryCollection_HandleRequests>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_GeometryCollection_RemoveAllAnchors>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_GeometryCollection_CrumbleNonActiveClusters>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
