@@ -1,5 +1,3 @@
-#include "CkGeometryCollection_Fragment.h"
+#include "CkChaos_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
-
-CK_INTENTIONALLY_EMPTY()
