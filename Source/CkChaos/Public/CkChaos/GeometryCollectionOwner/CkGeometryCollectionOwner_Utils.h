@@ -25,7 +25,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Chaos|GeometryCollection",
-        DisplayName="[Ck][GC-Owner] Add Feature")
+        DisplayName="[Ck][GeometryCollectionOwner] Add Feature")
     static FCk_Handle_GeometryCollectionOwner
     Add(
         UPARAM(ref) FCk_Handle InHandle,
@@ -33,7 +33,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Chaos",
-              DisplayName="[Ck][Chaos] Has Feature")
+              DisplayName="[Ck][GeometryCollectionOwner] Has Feature")
     static bool
     Has(
         const FCk_Handle& InHandle);
@@ -50,7 +50,7 @@ private:
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Chaos|GeometryCollection",
-        DisplayName="[Ck][GeometryCollection] Handle -> Chaos Handle",
+        DisplayName="[Ck][GeometryCollectionOwner] Handle -> Chaos Handle",
         meta = (CompactNodeTitle = "<AsChaos>", BlueprintAutocast))
     static FCk_Handle_GeometryCollectionOwner
     DoCastChecked(
@@ -59,7 +59,7 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Chaos|GeometryCollection",
-              DisplayName="[Ck][GeometryCollection] For Each",
+              DisplayName="[Ck][GeometryCollectionOwner] For Each",
               meta=(AutoCreateRefTerm="InDelegate, InOptionalPayload"))
     static TArray<FCk_Handle_GeometryCollection>
     ForEach_GeometryCollection(
@@ -74,7 +74,28 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Chaos|GeometryCollection",
-              DisplayName="[Ck][GeometryCollection] Request Apply Strain and Velocity (From DataAsset)")
+              DisplayName="[Ck][GeometryCollectionOwner] Request Crumble NonActive Clusters")
+    static FCk_Handle_GeometryCollectionOwner
+    Request_CrumbleNonActiveClusters(
+        UPARAM(ref) FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Chaos|GeometryCollection",
+              DisplayName="[Ck][GeometryCollectionOwner] Request RemoveAllAnchors")
+    static FCk_Handle_GeometryCollectionOwner
+    Request_RemoveAllAnchors(
+        UPARAM(ref) FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Chaos|GeometryCollection",
+              DisplayName="[Ck][GeometryCollectionOwner] Request Crumble NonActive Clusters and RemoveAllAnchors")
+    static FCk_Handle_GeometryCollectionOwner
+    Request_CrumbleNonActiveClustersAndRemoveAllAnchors(
+        UPARAM(ref) FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Chaos|GeometryCollection",
+              DisplayName="[Ck][GeometryCollectionOwner] Request Apply Strain and Velocity (From DataAsset)")
     static FCk_Handle_GeometryCollectionOwner
     Request_ApplyStrainAndVelocity(
         UPARAM(ref) FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner,
@@ -82,7 +103,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Chaos|GeometryCollection",
-              DisplayName="[Ck][GeometryCollection] Request Apply AoE (From DataAsset)")
+              DisplayName="[Ck][GeometryCollectionOwner] Request Apply AoE (From DataAsset)")
     static FCk_Handle_GeometryCollectionOwner
     Request_ApplyAoE(
         UPARAM(ref) FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner,

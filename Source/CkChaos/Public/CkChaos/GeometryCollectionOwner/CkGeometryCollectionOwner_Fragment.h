@@ -100,6 +100,15 @@ public:
     Broadcast_ApplyAoE(
         const FCk_Request_GeometryCollection_ApplyAoE_Replicated& InApplyAoE) -> void;
 
+    auto
+    Broadcast_CrumbleNonActiveClusters() -> void;
+
+    auto
+    Broadcast_RemoveAllAnchors() -> void;
+
+    auto
+    Broadcast_RemoveAllAnchorsAndCrumbleNonActiveClusters() -> void;
+
 public:
     auto
     GetLifetimeReplicatedProps(
@@ -114,7 +123,28 @@ private:
     void
     OnRep_Updated();
 
+    UFUNCTION()
+    void
+    OnRep_CrumbleNonActiveClustersRequest();
+
+    UFUNCTION()
+    void
+    OnRep_RemoveAllAnchors();
+
+    UFUNCTION()
+    void
+    OnRep_CrumbleNonActiveClustersAndRemoveAllAnchors();
+
 private:
+    UPROPERTY(ReplicatedUsing = OnRep_CrumbleNonActiveClustersRequest);
+    int32 _CrumbleNonActiveClustersRequest = 0;
+
+    UPROPERTY(ReplicatedUsing = OnRep_RemoveAllAnchors);
+    int32 _RemoveAllAnchors = 0;
+
+    UPROPERTY(ReplicatedUsing = OnRep_CrumbleNonActiveClustersAndRemoveAllAnchors);
+    int32 _RemoveAllAnchorsAndCrumbleNonActiveClusters = 0;
+
     UPROPERTY(ReplicatedUsing = OnRep_Updated);
     TArray<FCk_Request_GeometryCollection_ApplyStrain_Replicated> _Strain;
     int32 _Strain_LastValidIndex = 0;
