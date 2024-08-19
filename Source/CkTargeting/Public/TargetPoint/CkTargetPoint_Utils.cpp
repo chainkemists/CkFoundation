@@ -27,6 +27,28 @@ auto
 
 auto
     UCk_Utils_TargetPoint_UE::
+    Create_FromLocation(
+        const FCk_Handle& InOwner,
+        const FVector& InLocation,
+        ECk_Lifetime InLifetime)
+    -> FCk_Handle_Transform
+{
+    return Create(InOwner, FTransform{InLocation}, InLifetime);
+}
+
+auto
+    UCk_Utils_TargetPoint_UE::
+    Create_Transient_FromLocation(
+        const FVector& InLocation,
+        const UObject* InWorldContextObject,
+        ECk_Lifetime InLifetime)
+    -> FCk_Handle_Transform
+{
+    return Create_Transient(FTransform{InLocation}, InWorldContextObject, InLifetime);
+}
+
+auto
+    UCk_Utils_TargetPoint_UE::
     Create_Transient(
         const FTransform& InTransform,
         const UObject* InWorldContextObject,
