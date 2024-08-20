@@ -142,7 +142,7 @@ auto
     UCk_Utils_GeometryCollectionOwner_UE::
     Request_ApplyStrainAndVelocity(
         FCk_Handle_GeometryCollectionOwner& InGeometryCollection,
-        const FCk_Request_GeometryCollection_ApplyStrain_Replicated& InRequest)
+        const FCk_Request_GeometryCollectionOwner_ApplyStrain_Replicated& InRequest)
     -> FCk_Handle_GeometryCollectionOwner
 {
     InGeometryCollection.AddOrGet<ck::FFragment_GeometryCollectionOwner_Requests>()._Requests.Emplace(InRequest);
@@ -153,7 +153,7 @@ auto
     UCk_Utils_GeometryCollectionOwner_UE::
     Request_ApplyAoE(
         FCk_Handle_GeometryCollectionOwner& InGeometryCollection,
-        const FCk_Request_GeometryCollection_ApplyAoE_Replicated& InRequest)
+        const FCk_Request_GeometryCollectionOwner_ApplyAoE_Replicated& InRequest)
     -> FCk_Handle_GeometryCollectionOwner
 {
     InGeometryCollection.AddOrGet<ck::FFragment_GeometryCollectionOwner_Requests>()._Requests.Emplace(InRequest);
