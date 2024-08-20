@@ -13,7 +13,7 @@
 auto
     UCk_Fragment_GeometryCollectionOwner_Rep::
     Broadcast_ApplyStrain(
-        const FCk_Request_GeometryCollection_ApplyStrain_Replicated& InApplyStrain)
+        const FCk_Request_GeometryCollectionOwner_ApplyStrain_Replicated& InApplyStrain)
     -> void
 {
     _Strain.Emplace(InApplyStrain);
@@ -23,7 +23,7 @@ auto
 auto
     UCk_Fragment_GeometryCollectionOwner_Rep::
     Broadcast_ApplyAoE(
-        const FCk_Request_GeometryCollection_ApplyAoE_Replicated& InAoE)
+        const FCk_Request_GeometryCollectionOwner_ApplyAoE_Replicated& InAoE)
     -> void
 {
     _AoE.Emplace(InAoE);

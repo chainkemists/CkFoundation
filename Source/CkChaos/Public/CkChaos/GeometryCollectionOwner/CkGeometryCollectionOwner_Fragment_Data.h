@@ -21,12 +21,12 @@ class UGeometryCollectionComponent;
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(BlueprintType)
-class CKCHAOS_API UCk_Request_GeometryCollection_ApplyStrain_PDA : public UCk_DataAsset_PDA
+class CKCHAOS_API UCk_Request_GeometryCollectionOwner_ApplyStrain_PDA : public UCk_DataAsset_PDA
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Request_GeometryCollection_ApplyStrain_PDA);
+    CK_GENERATED_BODY(UCk_Request_GeometryCollectionOwner_ApplyStrain_PDA);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -60,12 +60,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(BlueprintType)
-class CKCHAOS_API UCk_Request_GeometryCollection_ApplyAoE_PDA : public UCk_DataAsset_PDA
+class CKCHAOS_API UCk_Request_GeometryCollectionOwner_ApplyAoE_PDA : public UCk_DataAsset_PDA
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Request_GeometryCollection_ApplyAoE_PDA);
+    CK_GENERATED_BODY(UCk_Request_GeometryCollectionOwner_ApplyAoE_PDA);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -100,12 +100,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKCHAOS_API FCk_Request_GeometryCollection_ApplyStrain_Replicated : public FCk_Request_Base
+struct CKCHAOS_API FCk_Request_GeometryCollectionOwner_ApplyStrain_Replicated : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Request_GeometryCollection_ApplyStrain_Replicated);
+    CK_GENERATED_BODY(FCk_Request_GeometryCollectionOwner_ApplyStrain_Replicated);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -114,24 +114,24 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess=true))
-    TWeakObjectPtr<UCk_Request_GeometryCollection_ApplyStrain_PDA> _Request;
+    TWeakObjectPtr<UCk_Request_GeometryCollectionOwner_ApplyStrain_PDA> _Request;
 
 public:
     CK_PROPERTY_GET(_Location);
     CK_PROPERTY_GET(_Request);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_GeometryCollection_ApplyStrain_Replicated, _Location, _Request);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_GeometryCollectionOwner_ApplyStrain_Replicated, _Location, _Request);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKCHAOS_API FCk_Request_GeometryCollection_ApplyAoE_Replicated : public FCk_Request_Base
+struct CKCHAOS_API FCk_Request_GeometryCollectionOwner_ApplyAoE_Replicated : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Request_GeometryCollection_ApplyAoE_Replicated);
+    CK_GENERATED_BODY(FCk_Request_GeometryCollectionOwner_ApplyAoE_Replicated);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -140,13 +140,13 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess=true))
-    TWeakObjectPtr<UCk_Request_GeometryCollection_ApplyAoE_PDA> _Request;
+    TWeakObjectPtr<UCk_Request_GeometryCollectionOwner_ApplyAoE_PDA> _Request;
 
 public:
     CK_PROPERTY_GET(_Location);
     CK_PROPERTY_GET(_Request);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_GeometryCollection_ApplyAoE_Replicated, _Location, _Request);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_GeometryCollectionOwner_ApplyAoE_Replicated, _Location, _Request);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
