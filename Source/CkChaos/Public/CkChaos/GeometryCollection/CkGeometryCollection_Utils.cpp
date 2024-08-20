@@ -104,20 +104,9 @@ auto
 
 auto
     UCk_Utils_GeometryCollection_UE::
-    Request_ApplyStrainAndVelocity(
+    Request_ApplyRadialStrain(
         FCk_Handle_GeometryCollection& InGeometryCollection,
-        const FCk_Request_GeometryCollection_ApplyStrain& InRequest)
-    -> FCk_Handle_GeometryCollection
-{
-    InGeometryCollection.AddOrGet<ck::FFragment_GeometryCollection_Requests>()._Requests.Emplace(InRequest);
-    return InGeometryCollection;
-}
-
-auto
-    UCk_Utils_GeometryCollection_UE::
-    Request_ApplyAoE(
-        FCk_Handle_GeometryCollection& InGeometryCollection,
-        const FCk_Request_GeometryCollection_ApplyAoE& InRequest)
+        const FCk_Request_GeometryCollection_ApplyRadialStrain& InRequest)
     -> FCk_Handle_GeometryCollection
 {
     InGeometryCollection.AddOrGet<ck::FFragment_GeometryCollection_Requests>()._Requests.Emplace(InRequest);

@@ -67,65 +67,13 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_GeometryCollection_Params& InParams,
-            const FCk_Request_GeometryCollection_ApplyStrain& InRequest)
+            const FCk_Request_GeometryCollection_ApplyRadialStrain& InRequest)
         -> void
     {
         const auto& Proxy = InParams.Get_Params().Get_GeometryCollection()->GetPhysicsProxy();
 
         CK_ENSURE_IF_NOT(ck::IsValid(Proxy, ck::IsValid_Policy_NullptrOnly{}),
-            TEXT("Unable to ApplyStrain to GeometryCollection [{}] because the PhysProxy of Geometry Collection Component [{}] is INVALID"),
-            InHandle, InParams.Get_Params().Get_GeometryCollection())
-        { return; }
-
-        const auto& ParticlesInRadius = ck_geometrycollection_processor::Get_ParticlesInRadius(Proxy,
-            InRequest.Get_Location(), InRequest.Get_Radius());
-
-        const auto RbdSolver = Proxy->GetSolver<Chaos::FPhysicsSolver>();
-        using ClusterHandleType = FGeometryCollectionPhysicsProxy::FClusterHandle;
-
-        ck::algo::ForEach(ParticlesInRadius, [&](ClusterHandleType* InValidHandle)
-        {
-            RbdSolver->EnqueueCommandImmediate([=]
-            {
-                Chaos::FRigidClustering& RigidClustering = RbdSolver->GetEvolution()->GetRigidClustering();
-
-                if (const auto& ClusteredParticle = InValidHandle->CastToClustered();
-                    ck::IsValid(ClusteredParticle, ck::IsValid_Policy_NullptrOnly{}))
-                {
-                    if (const auto& Strain = InRequest.Get_InternalStrain(); Strain > 0.0f)
-                    {
-                        const auto& NewInternalStrain = ClusteredParticle->GetInternalStrains() - Strain;
-                        RigidClustering.SetInternalStrain(ClusteredParticle, FMath::Max(0, NewInternalStrain));
-                    }
-
-                    if (const auto& Strain = InRequest.Get_ExternalStrain(); Strain > 0.0f)
-                    {
-                        const auto& NewExternalStrain = Strain;
-                        RigidClustering.SetExternalStrain(ClusteredParticle, FMath::Max(0, NewExternalStrain));
-                    }
-
-                    if (const auto& Velocity = InRequest.Get_LinearVelocity(); Velocity.SquaredLength() > 0.0f)
-                    { InValidHandle->SetV(InValidHandle->GetV() + Velocity); }
-
-                    if (const auto& AngularVelocity = InRequest.Get_AngularVelocity(); AngularVelocity.SquaredLength() > 0.0f)
-                    { InValidHandle->SetW(InValidHandle->GetW() + AngularVelocity); }
-                }
-            });
-        });
-    }
-
-    auto
-        FProcessor_GeometryCollection_HandleRequests::
-        DoHandleRequest(
-            HandleType InHandle,
-            const FFragment_GeometryCollection_Params& InParams,
-            const FCk_Request_GeometryCollection_ApplyAoE& InRequest)
-        -> void
-    {
-        const auto& Proxy = InParams.Get_Params().Get_GeometryCollection()->GetPhysicsProxy();
-
-        CK_ENSURE_IF_NOT(ck::IsValid(Proxy, ck::IsValid_Policy_NullptrOnly{}),
-            TEXT("Unable to ApplyStrain to GeometryCollection [{}] because the PhysProxy of Geometry Collection Component [{}] is INVALID"),
+            TEXT("Unable to ApplyRadialStrain to GeometryCollection [{}] because the PhysProxy of Geometry Collection Component [{}] is INVALID"),
             InHandle, InParams.Get_Params().Get_GeometryCollection())
         { return; }
 

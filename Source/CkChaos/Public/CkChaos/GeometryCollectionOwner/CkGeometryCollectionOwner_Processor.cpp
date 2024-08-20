@@ -87,34 +87,7 @@ namespace ck
         FProcessor_GeometryCollectionOwner_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FCk_Request_GeometryCollectionOwner_ApplyStrain_Replicated& InRequest)
-        -> void
-    {
-        CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_Request()),
-            TEXT("Unable to ApplyStrain on [{}] GeometryCollection because the Request DataAsset [{}] is INVALID"),
-            InHandle, InRequest.Get_Request())
-        { return; }
-
-        ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(InHandle, [&](FCk_Handle_GeometryCollection InGc)
-        {
-            const auto& Settings = InRequest.Get_Request();
-            const auto& Request = FCk_Request_GeometryCollection_ApplyStrain{InRequest.Get_Location(), Settings->Get_Radius()}
-            .Set_LinearVelocity(Settings->Get_LinearVelocity())
-            .Set_AngularVelocity(Settings->Get_AngularVelocity())
-            .Set_InternalStrain(Settings->Get_InternalStrain())
-            .Set_ExternalStrain(Settings->Get_ExternalStrain());
-
-            UCk_Utils_GeometryCollection_UE::Request_ApplyStrainAndVelocity(InGc, Request);
-        });
-
-        InHandle.AddOrGet<FFragment_GeometryCollection_ReplicationRequests>()._Requests.Emplace(InRequest);
-    }
-
-    auto
-        FProcessor_GeometryCollectionOwner_HandleRequests::
-        DoHandleRequest(
-            HandleType InHandle,
-            const FCk_Request_GeometryCollectionOwner_ApplyAoE_Replicated& InRequest)
+            const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InRequest)
         -> void
     {
         CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_Request()),
@@ -125,21 +98,19 @@ namespace ck
         ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(InHandle, [&](FCk_Handle_GeometryCollection InGc)
         {
             const auto& Settings = InRequest.Get_Request();
-            const auto& Request = FCk_Request_GeometryCollection_ApplyAoE{InRequest.Get_Location(), Settings->Get_Radius()}
+            const auto& Request = FCk_Request_GeometryCollection_ApplyRadialStrain{InRequest.Get_Location(), Settings->Get_Radius()}
             .Set_LinearSpeed(Settings->Get_LinearSpeed())
             .Set_AngularSpeed(Settings->Get_AngularSpeed())
             .Set_InternalStrain(Settings->Get_InternalStrain())
             .Set_ExternalStrain(Settings->Get_ExternalStrain());
 
-            UCk_Utils_GeometryCollection_UE::Request_ApplyAoE(InGc, Request);
+            UCk_Utils_GeometryCollection_UE::Request_ApplyRadialStrain(InGc, Request);
         });
 
         InHandle.AddOrGet<FFragment_GeometryCollection_ReplicationRequests>()._Requests.Emplace(InRequest);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
-
-    template<class... Ts> struct overload : Ts... { using Ts::operator()...; };
 
     auto
         FProcessor_GeometryCollectionOwner_Replicate::
@@ -152,24 +123,16 @@ namespace ck
     {
         InHandle.CopyAndRemove(InRequestComp, [&](FFragment_GeometryCollection_ReplicationRequests& InRequests)
         {
-            algo::ForEachRequest(InRequests._Requests, ck::Visitor(overload
+            algo::ForEachRequest(InRequests._Requests, ck::Visitor(ck::algo::Overload
             {
-                [&](const FCk_Request_GeometryCollectionOwner_ApplyStrain_Replicated& InRequest)
+                [&](const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InRequest)
                 {
                     UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_GeometryCollectionOwner_Rep>(InHandle,
                     [&](UCk_Fragment_GeometryCollectionOwner_Rep* InRepComp)
                     {
-                        InRepComp->Broadcast_ApplyStrain(InRequest);
+                        InRepComp->Broadcast_ApplyRadianStrain(InRequest);
                     });
-                },
-                [&](const FCk_Request_GeometryCollectionOwner_ApplyAoE_Replicated& InRequest)
-                {
-                    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_GeometryCollectionOwner_Rep>(InHandle,
-                    [&](UCk_Fragment_GeometryCollectionOwner_Rep* InRepComp)
-                    {
-                        InRepComp->Broadcast_ApplyAoE(InRequest);
-                    });
-                },
+                }
             }));
         });
     }
