@@ -27,6 +27,18 @@ auto
         {
             InComp->SetGenerateOverlapEvents(true);
             InComp->UpdateOverlapsImpl();
+
+            auto OverlappingComponents = TArray<UPrimitiveComponent*>();
+            InComp->GetOverlappingComponents(OverlappingComponents);
+            for (const auto& OverlappingComponent : OverlappingComponents)
+            {
+                const auto OverlapLocation = InComp->GetComponentLocation();
+                const auto OverlapNormal = (OverlapLocation - OverlappingComponent->GetComponentLocation()).GetSafeNormal();
+                const auto& HitResult = FHitResult(OverlappingComponent->GetOwner(), OverlappingComponent, OverlapLocation, OverlapNormal);
+                const auto& OverlapInfo = FOverlapInfo(HitResult);
+                InComp->BeginComponentOverlap(OverlapInfo, true);
+            }
+
             break;
         }
         case ECk_EnableDisable::Disable:
@@ -245,4 +257,3 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-
