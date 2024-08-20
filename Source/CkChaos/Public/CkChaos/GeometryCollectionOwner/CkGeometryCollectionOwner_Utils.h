@@ -99,7 +99,7 @@ public:
     static FCk_Handle_GeometryCollectionOwner
     Request_ApplyStrainAndVelocity(
         UPARAM(ref) FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner,
-        const FCk_Request_GeometryCollection_ApplyStrain_Replicated& InRequest);
+        const FCk_Request_GeometryCollectionOwner_ApplyStrain_Replicated& InRequest);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Chaos|GeometryCollection|Owner",
@@ -107,7 +107,7 @@ public:
     static FCk_Handle_GeometryCollectionOwner
     Request_ApplyAoE(
         UPARAM(ref) FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner,
-        const FCk_Request_GeometryCollection_ApplyAoE_Replicated& InRequest);
+        const FCk_Request_GeometryCollectionOwner_ApplyAoE_Replicated& InRequest);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

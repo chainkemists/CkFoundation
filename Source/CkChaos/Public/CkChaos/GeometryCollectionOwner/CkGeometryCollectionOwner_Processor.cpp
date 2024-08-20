@@ -87,7 +87,7 @@ namespace ck
         FProcessor_GeometryCollectionOwner_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FCk_Request_GeometryCollection_ApplyStrain_Replicated& InRequest)
+            const FCk_Request_GeometryCollectionOwner_ApplyStrain_Replicated& InRequest)
         -> void
     {
         CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_Request()),
@@ -114,7 +114,7 @@ namespace ck
         FProcessor_GeometryCollectionOwner_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FCk_Request_GeometryCollection_ApplyAoE_Replicated& InRequest)
+            const FCk_Request_GeometryCollectionOwner_ApplyAoE_Replicated& InRequest)
         -> void
     {
         CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_Request()),
@@ -154,7 +154,7 @@ namespace ck
         {
             algo::ForEachRequest(InRequests._Requests, ck::Visitor(overload
             {
-                [&](const FCk_Request_GeometryCollection_ApplyStrain_Replicated& InRequest)
+                [&](const FCk_Request_GeometryCollectionOwner_ApplyStrain_Replicated& InRequest)
                 {
                     UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_GeometryCollectionOwner_Rep>(InHandle,
                     [&](UCk_Fragment_GeometryCollectionOwner_Rep* InRepComp)
@@ -162,7 +162,7 @@ namespace ck
                         InRepComp->Broadcast_ApplyStrain(InRequest);
                     });
                 },
-                [&](const FCk_Request_GeometryCollection_ApplyAoE_Replicated& InRequest)
+                [&](const FCk_Request_GeometryCollectionOwner_ApplyAoE_Replicated& InRequest)
                 {
                     UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_GeometryCollectionOwner_Rep>(InHandle,
                     [&](UCk_Fragment_GeometryCollectionOwner_Rep* InRepComp)
