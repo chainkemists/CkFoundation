@@ -11,21 +11,37 @@ public class CkK2Nodes : CkModuleRules
 
         PublicDependencyModuleNames.AddRange(new string[]
         {
-            "BlueprintGraph",
             "Core",
             "CoreUObject",
             "Engine",
-            "KismetCompiler",
-            "PropertyEditor",
+            "Slate",
+            "SlateCore",
+            "InputCore",
             "StructUtils",
-            "UnrealEd",
+            "ToolMenus",
+            "GameplayTags",
 
             "CkAbility",
             "CkCore",
             "CkEcs",
+            "CkEditorGraph",
             "CkLog",
             "CkMessaging",
             "CkVariables"
         });
+
+        if (Target.Type == TargetRules.TargetType.Editor)
+        {
+            PrivateDependencyModuleNames.AddRange(
+                new string[]
+                {
+                    "UnrealEd",
+                    "EditorStyle",
+                    "AssetTools",
+                    "KismetCompiler",
+                    "GraphEditor",
+                    "BlueprintGraph"
+                });
+        }
     }
 }
