@@ -21,6 +21,9 @@ namespace ck::algo
     {
         return TToTransform<std::_Remove_cvref_t<T_Container>>{InContainer};
     }
+
+    // for usage with std::visit and defining the handlers inline
+    template<class... Ts> struct Overload : Ts... { using Ts::operator()...; };
 }
 
 namespace ck::algo
