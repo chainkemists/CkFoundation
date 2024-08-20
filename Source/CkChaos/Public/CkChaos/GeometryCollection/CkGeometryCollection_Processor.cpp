@@ -108,10 +108,10 @@ namespace ck
                     }
 
                     if (const auto& Speed = InRequest.Get_LinearSpeed(); Speed > 0.0f)
-                    { Particle->SetV(Particle->GetV() + Direction * Speed); }
+                    { Particle->SetV(Direction * Speed); }
 
                     if (const auto& Speed = InRequest.Get_AngularSpeed(); Speed > 0.0f)
-                    { Particle->SetW(Particle->GetW() + Direction * Speed); }
+                    { Particle->SetW(Direction * Speed); }
                 }
             });
         });
