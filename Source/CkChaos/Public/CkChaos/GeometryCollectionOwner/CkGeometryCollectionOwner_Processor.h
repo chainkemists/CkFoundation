@@ -18,7 +18,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using MarkedDirtyBy = FFragment_GeometryCollection_ReplicationRequests;
+        using MarkedDirtyBy = FTag_GeometryCollectionOwner_RequiresSetup;
 
     public:
         using TProcessor::TProcessor;
