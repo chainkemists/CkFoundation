@@ -196,7 +196,16 @@
 				"Linux"
 			]
 		},
-
+		{
+			"Name": "CkEditorGraph",
+			"Type": "UncookedOnly",
+			"LoadingPhase": "PreDefault",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
 		{
 			"Name": "CkEditorToolbar",
 			"Type": "UncookedOnly",
