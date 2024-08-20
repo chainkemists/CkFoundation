@@ -70,8 +70,7 @@ namespace ck
     public:
         using RequestType = std::variant
         <
-            FCk_Request_GeometryCollection_ApplyStrain,
-            FCk_Request_GeometryCollection_ApplyAoE
+            FCk_Request_GeometryCollection_ApplyRadialStrain
         >;
         using RequestList = TArray<RequestType>;
 

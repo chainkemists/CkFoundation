@@ -21,51 +21,12 @@ class UGeometryCollectionComponent;
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(BlueprintType)
-class CKCHAOS_API UCk_Request_GeometryCollectionOwner_ApplyStrain_PDA : public UCk_DataAsset_PDA
+class CKCHAOS_API UCk_Request_GeometryCollectionOwner_ApplyRadialStrain_PDA : public UCk_DataAsset_PDA
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Request_GeometryCollectionOwner_ApplyStrain_PDA);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true, UIMin = "0.0", ClampMin = "0.0"))
-    float _Radius = 0.0f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true))
-    FVector _LinearVelocity = FVector::ZeroVector;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true))
-    FVector _AngularVelocity = FVector::ZeroVector;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true, UIMin = "0.0", ClampMin = "0.0"))
-    float _InternalStrain = 0.0f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true, UIMin = "0.0", ClampMin = "0.0"))
-    float _ExternalStrain = 0.0f;
-
-public:
-    CK_PROPERTY_GET(_Radius);
-    CK_PROPERTY_GET(_LinearVelocity);
-    CK_PROPERTY_GET(_AngularVelocity);
-    CK_PROPERTY_GET(_InternalStrain);
-    CK_PROPERTY_GET(_ExternalStrain);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(BlueprintType)
-class CKCHAOS_API UCk_Request_GeometryCollectionOwner_ApplyAoE_PDA : public UCk_DataAsset_PDA
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_Request_GeometryCollectionOwner_ApplyAoE_PDA);
+    CK_GENERATED_BODY(UCk_Request_GeometryCollectionOwner_ApplyRadialStrain_PDA);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -100,12 +61,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKCHAOS_API FCk_Request_GeometryCollectionOwner_ApplyStrain_Replicated : public FCk_Request_Base
+struct CKCHAOS_API FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Request_GeometryCollectionOwner_ApplyStrain_Replicated);
+    CK_GENERATED_BODY(FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -114,39 +75,13 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess=true))
-    TWeakObjectPtr<UCk_Request_GeometryCollectionOwner_ApplyStrain_PDA> _Request;
+    TWeakObjectPtr<UCk_Request_GeometryCollectionOwner_ApplyRadialStrain_PDA> _Request;
 
 public:
     CK_PROPERTY_GET(_Location);
     CK_PROPERTY_GET(_Request);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_GeometryCollectionOwner_ApplyStrain_Replicated, _Location, _Request);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKCHAOS_API FCk_Request_GeometryCollectionOwner_ApplyAoE_Replicated : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_GeometryCollectionOwner_ApplyAoE_Replicated);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true))
-    FVector _Location = FVector::ZeroVector;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true))
-    TWeakObjectPtr<UCk_Request_GeometryCollectionOwner_ApplyAoE_PDA> _Request;
-
-public:
-    CK_PROPERTY_GET(_Location);
-    CK_PROPERTY_GET(_Request);
-
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_GeometryCollectionOwner_ApplyAoE_Replicated, _Location, _Request);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated, _Location, _Request);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

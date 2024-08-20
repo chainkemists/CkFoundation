@@ -68,30 +68,22 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Chaos|GeometryCollection",
-              DisplayName="[Ck][GeometryCollection] Request Apply Strain and Velocity")
+              DisplayName="[Ck][GeometryCollection] Request Apply Radial Strain (NOT Replicated)")
     static FCk_Handle_GeometryCollection
-    Request_ApplyStrainAndVelocity(
+    Request_ApplyRadialStrain(
         UPARAM(ref) FCk_Handle_GeometryCollection& InGeometryCollection,
-        const FCk_Request_GeometryCollection_ApplyStrain& InRequest);
+        const FCk_Request_GeometryCollection_ApplyRadialStrain& InRequest);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Chaos|GeometryCollection",
-              DisplayName="[Ck][GeometryCollection] Request Apply AoE")
-    static FCk_Handle_GeometryCollection
-    Request_ApplyAoE(
-        UPARAM(ref) FCk_Handle_GeometryCollection& InGeometryCollection,
-        const FCk_Request_GeometryCollection_ApplyAoE& InRequest);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Chaos|GeometryCollection",
-              DisplayName="[Ck][GeometryCollection] Request Crumble NonAnchoredClusters")
+              DisplayName="[Ck][GeometryCollection] Request Crumble NonAnchoredClusters (NOT Replicated)")
     static FCk_Handle_GeometryCollection
     Request_CrumbleNonAnchoredClusters(
         UPARAM(ref) FCk_Handle_GeometryCollection& InGeometryCollection);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Chaos|GeometryCollection",
-              DisplayName="[Ck][GeometryCollection] Request Remove All Anchors")
+              DisplayName="[Ck][GeometryCollection] Request Remove All Anchors (NOT Replicated)")
     static FCk_Handle_GeometryCollection
     Request_RemoveAllAnchors(
         UPARAM(ref) FCk_Handle_GeometryCollection& InGeometryCollection);

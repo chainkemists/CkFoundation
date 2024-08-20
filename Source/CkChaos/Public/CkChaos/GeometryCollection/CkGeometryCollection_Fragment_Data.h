@@ -42,58 +42,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKCHAOS_API FCk_Request_GeometryCollection_ApplyStrain : public FCk_Request_Base
+struct CKCHAOS_API FCk_Request_GeometryCollection_ApplyRadialStrain : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Request_GeometryCollection_ApplyStrain);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true))
-    FVector _Location;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true, UIMin = "0.0", ClampMin = "0.0"))
-    float _Radius = 0.0f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true))
-    FVector _LinearVelocity = FVector::ZeroVector;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true))
-    FVector _AngularVelocity = FVector::ZeroVector;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true, UIMin = "0.0", ClampMin = "0.0"))
-    float _InternalStrain = 0.0f;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true, UIMin = "0.0", ClampMin = "0.0"))
-    float _ExternalStrain = 0.0f;
-
-public:
-    CK_PROPERTY_GET(_Location);
-    CK_PROPERTY_GET(_Radius);
-    CK_PROPERTY(_LinearVelocity);
-    CK_PROPERTY(_AngularVelocity);
-    CK_PROPERTY(_InternalStrain);
-    CK_PROPERTY(_ExternalStrain);
-
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_GeometryCollection_ApplyStrain, _Location, _Radius);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKCHAOS_API FCk_Request_GeometryCollection_ApplyAoE : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_GeometryCollection_ApplyAoE);
+    CK_GENERATED_BODY(FCk_Request_GeometryCollection_ApplyRadialStrain);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -129,7 +83,7 @@ public:
     CK_PROPERTY(_InternalStrain);
     CK_PROPERTY(_ExternalStrain);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_GeometryCollection_ApplyAoE, _Location, _Radius);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_GeometryCollection_ApplyRadialStrain, _Location, _Radius);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

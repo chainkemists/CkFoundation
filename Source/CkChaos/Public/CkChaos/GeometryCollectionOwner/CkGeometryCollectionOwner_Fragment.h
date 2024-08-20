@@ -31,8 +31,7 @@ namespace ck
     public:
         using RequestType = std::variant
         <
-            FCk_Request_GeometryCollectionOwner_ApplyStrain_Replicated,
-            FCk_Request_GeometryCollectionOwner_ApplyAoE_Replicated
+            FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated
         >;
         using RequestList = TArray<RequestType>;
 
@@ -61,8 +60,7 @@ namespace ck
     public:
         using RequestType = std::variant
         <
-            FCk_Request_GeometryCollectionOwner_ApplyStrain_Replicated,
-            FCk_Request_GeometryCollectionOwner_ApplyAoE_Replicated
+            FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated
         >;
         using RequestList = TArray<RequestType>;
 
@@ -93,12 +91,8 @@ public:
 
 public:
     auto
-    Broadcast_ApplyStrain(
-        const FCk_Request_GeometryCollectionOwner_ApplyStrain_Replicated& InApplyStrain) -> void;
-
-    auto
-    Broadcast_ApplyAoE(
-        const FCk_Request_GeometryCollectionOwner_ApplyAoE_Replicated& InApplyAoE) -> void;
+    Broadcast_ApplyRadianStrain(
+        const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InApplyRadialStrain) -> void;
 
     auto
     Broadcast_CrumbleNonActiveClusters() -> void;
@@ -146,12 +140,8 @@ private:
     int32 _RemoveAllAnchorsAndCrumbleNonActiveClusters = 0;
 
     UPROPERTY(ReplicatedUsing = OnRep_Updated);
-    TArray<FCk_Request_GeometryCollectionOwner_ApplyStrain_Replicated> _Strain;
-    int32 _Strain_LastValidIndex = 0;
-
-    UPROPERTY(ReplicatedUsing = OnRep_Updated);
-    TArray<FCk_Request_GeometryCollectionOwner_ApplyAoE_Replicated> _AoE;
-    int32 _AoE_LastValidIndex = 0;
+    TArray<FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated> _RadialStrains;
+    int32 _RadialStrains_LastValidIndex = 0;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
