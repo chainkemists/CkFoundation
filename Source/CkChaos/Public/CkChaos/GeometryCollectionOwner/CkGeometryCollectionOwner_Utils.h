@@ -74,40 +74,25 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Chaos|GeometryCollection|Owner",
-        DisplayName="[Ck][GeometryCollectionOwner] Request Crumble NonActive Clusters")
+        DisplayName="[Ck][GeometryCollectionOwner] Request Crumble NonActive Clusters (Replicated)")
     static FCk_Handle_GeometryCollectionOwner
     Request_CrumbleNonActiveClusters(
         UPARAM(ref) FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Chaos|GeometryCollection|Owner",
-        DisplayName="[Ck][GeometryCollectionOwner] Request RemoveAllAnchors")
+        DisplayName="[Ck][GeometryCollectionOwner] Request RemoveAllAnchors (Replicated)")
     static FCk_Handle_GeometryCollectionOwner
     Request_RemoveAllAnchors(
         UPARAM(ref) FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Chaos|GeometryCollection|Owner",
-        DisplayName="[Ck][GeometryCollectionOwner] Request Crumble NonActive Clusters and RemoveAllAnchors")
+        DisplayName="[Ck][GeometryCollectionOwner] Request Apply Radial Strain (Replicated)")
     static FCk_Handle_GeometryCollectionOwner
-    Request_CrumbleNonActiveClustersAndRemoveAllAnchors(
-        UPARAM(ref) FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner);
-
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|Chaos|GeometryCollection|Owner",
-        DisplayName="[Ck][GeometryCollectionOwner] Request Apply Strain and Velocity (From DataAsset)")
-    static FCk_Handle_GeometryCollectionOwner
-    Request_ApplyStrainAndVelocity(
+    Request_ApplyRadianStrain(
         UPARAM(ref) FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner,
-        const FCk_Request_GeometryCollectionOwner_ApplyStrain_Replicated& InRequest);
-
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|Chaos|GeometryCollection|Owner",
-        DisplayName="[Ck][GeometryCollectionOwner] Request Apply AoE (From DataAsset)")
-    static FCk_Handle_GeometryCollectionOwner
-    Request_ApplyAoE(
-        UPARAM(ref) FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner,
-        const FCk_Request_GeometryCollectionOwner_ApplyAoE_Replicated& InRequest);
+        const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InRequest);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

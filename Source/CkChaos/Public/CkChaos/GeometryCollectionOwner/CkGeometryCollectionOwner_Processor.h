@@ -64,12 +64,7 @@ namespace ck
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            const FCk_Request_GeometryCollectionOwner_ApplyStrain_Replicated& InRequest) -> void;
-
-        static auto
-        DoHandleRequest(
-            HandleType InHandle,
-            const FCk_Request_GeometryCollectionOwner_ApplyAoE_Replicated& InRequest) -> void;
+            const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InRequest) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

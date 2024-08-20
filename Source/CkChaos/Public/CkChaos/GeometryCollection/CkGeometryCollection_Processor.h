@@ -35,13 +35,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_GeometryCollection_Params& InParams,
-            const FCk_Request_GeometryCollection_ApplyStrain& InRequest) -> void;
-
-        static auto
-        DoHandleRequest(
-            HandleType InHandle,
-            const FFragment_GeometryCollection_Params& InParams,
-            const FCk_Request_GeometryCollection_ApplyAoE& InRequest) -> void;
+            const FCk_Request_GeometryCollection_ApplyRadialStrain& InRequest) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -284,7 +284,7 @@ namespace ck
                         InAbilityOwnerEntity,
                         AbilityData.Get_NetworkSettings().Get_FeatureReplicationPolicy()
                     );
-                    
+
                     return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven;
                 }
             }

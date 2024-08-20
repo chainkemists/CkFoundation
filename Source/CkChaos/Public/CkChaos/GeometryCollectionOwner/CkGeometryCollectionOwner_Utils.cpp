@@ -119,41 +119,9 @@ auto
 
 auto
     UCk_Utils_GeometryCollectionOwner_UE::
-    Request_CrumbleNonActiveClustersAndRemoveAllAnchors(
-        FCk_Handle_GeometryCollectionOwner& InGeometryCollectionOwner)
-        -> FCk_Handle_GeometryCollectionOwner
-{
-    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_GeometryCollectionOwner_Rep>(InGeometryCollectionOwner,
-    [&](UCk_Fragment_GeometryCollectionOwner_Rep* InRepComp)
-    {
-        InRepComp->Broadcast_RemoveAllAnchorsAndCrumbleNonActiveClusters();
-    });
-
-    ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(InGeometryCollectionOwner, [&](FCk_Handle_GeometryCollection InGc)
-    {
-        UCk_Utils_GeometryCollection_UE::Request_RemoveAllAnchors(InGc);
-        UCk_Utils_GeometryCollection_UE::Request_CrumbleNonAnchoredClusters(InGc);
-    });
-
-    return InGeometryCollectionOwner;
-}
-
-auto
-    UCk_Utils_GeometryCollectionOwner_UE::
-    Request_ApplyStrainAndVelocity(
+    Request_ApplyRadianStrain(
         FCk_Handle_GeometryCollectionOwner& InGeometryCollection,
-        const FCk_Request_GeometryCollectionOwner_ApplyStrain_Replicated& InRequest)
-    -> FCk_Handle_GeometryCollectionOwner
-{
-    InGeometryCollection.AddOrGet<ck::FFragment_GeometryCollectionOwner_Requests>()._Requests.Emplace(InRequest);
-    return InGeometryCollection;
-}
-
-auto
-    UCk_Utils_GeometryCollectionOwner_UE::
-    Request_ApplyAoE(
-        FCk_Handle_GeometryCollectionOwner& InGeometryCollection,
-        const FCk_Request_GeometryCollectionOwner_ApplyAoE_Replicated& InRequest)
+        const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InRequest)
     -> FCk_Handle_GeometryCollectionOwner
 {
     InGeometryCollection.AddOrGet<ck::FFragment_GeometryCollectionOwner_Requests>()._Requests.Emplace(InRequest);

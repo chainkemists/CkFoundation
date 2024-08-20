@@ -12,22 +12,12 @@
 
 auto
     UCk_Fragment_GeometryCollectionOwner_Rep::
-    Broadcast_ApplyStrain(
-        const FCk_Request_GeometryCollectionOwner_ApplyStrain_Replicated& InApplyStrain)
+    Broadcast_ApplyRadianStrain(
+        const FCk_Request_GeometryCollectionOwner_ApplyRadialStrain_Replicated& InRadialStrain)
     -> void
 {
-    _Strain.Emplace(InApplyStrain);
-    MARK_PROPERTY_DIRTY_FROM_NAME(UCk_Fragment_GeometryCollectionOwner_Rep, _Strain, this);
-}
-
-auto
-    UCk_Fragment_GeometryCollectionOwner_Rep::
-    Broadcast_ApplyAoE(
-        const FCk_Request_GeometryCollectionOwner_ApplyAoE_Replicated& InAoE)
-    -> void
-{
-    _AoE.Emplace(InAoE);
-    MARK_PROPERTY_DIRTY_FROM_NAME(UCk_Fragment_GeometryCollectionOwner_Rep, _AoE, this);
+    _RadialStrains.Emplace(InRadialStrain);
+    MARK_PROPERTY_DIRTY_FROM_NAME(UCk_Fragment_GeometryCollectionOwner_Rep, _RadialStrains, this);
 }
 
 auto
@@ -70,8 +60,7 @@ auto
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _CrumbleNonActiveClustersRequest, Params);
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _RemoveAllAnchors, Params);
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _RemoveAllAnchorsAndCrumbleNonActiveClusters, Params);
-    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _Strain, Params);
-    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _AoE, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _RadialStrains, Params);
 }
 
 auto
@@ -94,30 +83,12 @@ auto
     if (ck::Is_NOT_Valid(Entity))
     { return; }
 
-    for (; _Strain_LastValidIndex < _Strain.Num(); ++_Strain_LastValidIndex)
+    for (; _RadialStrains_LastValidIndex < _RadialStrains.Num(); ++_RadialStrains_LastValidIndex)
     {
         ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(Entity, [&](FCk_Handle_GeometryCollection InGc)
         {
-            const auto& Request = _Strain[_Strain_LastValidIndex];
-            UCk_Utils_GeometryCollection_UE::Request_ApplyStrainAndVelocity(InGc, FCk_Request_GeometryCollection_ApplyStrain
-                {
-                    Request.Get_Location(),
-                    Request.Get_Request()->Get_Radius()
-                }
-                .Set_InternalStrain(Request.Get_Request()->Get_InternalStrain())
-                .Set_ExternalStrain(Request.Get_Request()->Get_ExternalStrain())
-                .Set_LinearVelocity(Request.Get_Request()->Get_LinearVelocity())
-                .Set_AngularVelocity(Request.Get_Request()->Get_AngularVelocity())
-            );
-        });
-    }
-
-    for (; _AoE_LastValidIndex < _AoE.Num(); ++_AoE_LastValidIndex)
-    {
-        ck::FUtils_RecordOfGeometryCollections::ForEach_ValidEntry(Entity, [&](FCk_Handle_GeometryCollection InGc)
-        {
-            const auto& Request = _AoE[_Strain_LastValidIndex];
-            UCk_Utils_GeometryCollection_UE::Request_ApplyAoE(InGc, FCk_Request_GeometryCollection_ApplyAoE
+            const auto& Request = _RadialStrains[_RadialStrains_LastValidIndex];
+            UCk_Utils_GeometryCollection_UE::Request_ApplyRadialStrain(InGc, FCk_Request_GeometryCollection_ApplyRadialStrain
                 {
                     Request.Get_Location(),
                     Request.Get_Request()->Get_Radius()
