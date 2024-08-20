@@ -127,6 +127,34 @@ public:
     static FString
     Get_SoftObjectAssetPath(
         const TSoftObjectPtr<UObject>& InSoftObject);
+
+public:
+    template <typename T_Char>
+    constexpr T_Char
+    static Get_FileName(T_Char InPath)
+    {
+        T_Char File = InPath;
+        while (*InPath)
+        {
+            if (*InPath++ == '/')
+            {
+                File = InPath;
+            }
+        }
+        return File;
+    }
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// char to wchar_t trick taken from: https://stackoverflow.com/a/14421702
+#define CK_WIDE2(x) L##x
+#define CK_WIDE1(x) CK_WIDE2(x)
+#define WFILE CK_WIDE1(__FILE__)
+
+#define CK_UTILS_IO_GET_FILENAME() UCk_Utils_IO_UE::Get_FileName(WFILE)
+
+#define CK_UTILS_IO_GET_LOCTEXT(InKey, InText)\
+    FInternationalization::ForUseOnlyByLocMacroAndGraphNodeTextLiterals_CreateText(InText, CK_UTILS_IO_GET_FILENAME(), InKey)
 
 // --------------------------------------------------------------------------------------------------------------------
