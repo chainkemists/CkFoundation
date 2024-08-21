@@ -269,6 +269,124 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
+    UCk_Utils_Transform_TypeUnsafe_UE::
+    Request_SetLocation(
+        FCk_Handle& InHandle,
+        const FCk_Request_Transform_SetLocation& InRequest)
+    -> void
+{
+    auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
+    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return; }
+    UCk_Utils_Transform_UE::Request_SetLocation(TransformHandle, InRequest);
+}
+
+auto
+    UCk_Utils_Transform_TypeUnsafe_UE::
+    Request_AddLocationOffset(
+        FCk_Handle& InHandle,
+        const FCk_Request_Transform_AddLocationOffset& InRequest)
+    -> void
+{
+    auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
+    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return; }
+    UCk_Utils_Transform_UE::Request_AddLocationOffset(TransformHandle, InRequest);
+}
+
+auto
+    UCk_Utils_Transform_TypeUnsafe_UE::
+    Request_SetRotation(
+        FCk_Handle& InHandle,
+        const FCk_Request_Transform_SetRotation& InRequest)
+    -> void
+{
+    auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
+    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return; }
+    UCk_Utils_Transform_UE::Request_SetRotation(TransformHandle, InRequest);
+}
+
+auto
+    UCk_Utils_Transform_TypeUnsafe_UE::
+    Request_AddRotationOffset(
+        FCk_Handle& InHandle,
+        const FCk_Request_Transform_AddRotationOffset& InRequest)
+    -> void
+{
+    auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
+    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return; }
+    UCk_Utils_Transform_UE::Request_AddRotationOffset(TransformHandle, InRequest);
+}
+
+auto
+    UCk_Utils_Transform_TypeUnsafe_UE::
+    Request_SetScale(
+        FCk_Handle& InHandle,
+        const FCk_Request_Transform_SetScale& InRequest)
+    -> void
+{
+    auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
+    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return; }
+    UCk_Utils_Transform_UE::Request_SetScale(TransformHandle, InRequest);
+}
+
+auto
+    UCk_Utils_Transform_TypeUnsafe_UE::
+    Request_SetTransform(
+        FCk_Handle& InHandle,
+        const FCk_Request_Transform_SetTransform& InRequest)
+    -> void
+{
+    auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
+    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return; }
+    UCk_Utils_Transform_UE::Request_SetTransform(TransformHandle, InRequest);
+}
+
+auto
+    UCk_Utils_Transform_TypeUnsafe_UE::
+    Get_EntityCurrentTransform(
+        const FCk_Handle& InHandle)
+    -> FTransform
+{
+    auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
+    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return {}; }
+    return UCk_Utils_Transform_UE::Get_EntityCurrentTransform(TransformHandle);
+}
+
+auto
+    UCk_Utils_Transform_TypeUnsafe_UE::
+    Get_EntityCurrentLocation(
+        const FCk_Handle& InHandle)
+    -> FVector
+{
+    auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
+    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return {}; }
+    return UCk_Utils_Transform_UE::Get_EntityCurrentLocation(TransformHandle);
+}
+
+auto
+    UCk_Utils_Transform_TypeUnsafe_UE::
+    Get_EntityCurrentRotation(
+        const FCk_Handle& InHandle)
+    -> FRotator
+{
+    auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
+    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return {}; }
+    return UCk_Utils_Transform_UE::Get_EntityCurrentRotation(TransformHandle);
+}
+
+auto
+    UCk_Utils_Transform_TypeUnsafe_UE::
+    Get_EntityCurrentScale(
+        const FCk_Handle& InHandle)
+    -> FVector
+{
+    auto TransformHandle = UCk_Utils_Transform_UE::Cast(InHandle);
+    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle), TEXT("Handle [{}] does NOT have Transform"), InHandle) { return {}; }
+    return UCk_Utils_Transform_UE::Get_EntityCurrentScale(TransformHandle);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
     UCk_Utils_TransformInterpolation_UE::
     Add(
         FCk_Handle& InHandle,
