@@ -16,6 +16,22 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_GeometryCollec
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_GeometryCollection_ObjectState : uint8
+{
+    Uninitialized = 0,
+    Sleeping = 1,
+    Kinematic = 2,
+    Static = 3,
+    Dynamic = 4,
+
+    NoChange
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_GeometryCollection_ObjectState);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 class UGeometryCollectionComponent;
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -75,6 +91,10 @@ private:
         meta=(AllowPrivateAccess=true, UIMin = "0.0", ClampMin = "0.0"))
     float _ExternalStrain = 0.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess=true))
+    ECk_GeometryCollection_ObjectState _ChangeParticleStateTo = ECk_GeometryCollection_ObjectState::NoChange;
+
 public:
     CK_PROPERTY_GET(_Location);
     CK_PROPERTY_GET(_Radius);
@@ -82,6 +102,7 @@ public:
     CK_PROPERTY(_AngularSpeed);
     CK_PROPERTY(_InternalStrain);
     CK_PROPERTY(_ExternalStrain);
+    CK_PROPERTY(_ChangeParticleStateTo);
 
     CK_DEFINE_CONSTRUCTORS(FCk_Request_GeometryCollection_ApplyRadialStrain, _Location, _Radius);
 };
