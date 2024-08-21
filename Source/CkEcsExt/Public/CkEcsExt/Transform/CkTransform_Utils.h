@@ -191,6 +191,96 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Transform is a bit special and is one of the few Features that works on type-unsafe Entities as well
+UCLASS(NotBlueprintable)
+class CKECSEXT_API UCk_Utils_Transform_TypeUnsafe_UE : public UCk_Utils_Ecs_Net_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_Transform_TypeUnsafe_UE);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Transform",
+              DisplayName = "[Ck][Transform] Request Set Location")
+    static void
+    Request_SetLocation(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Request_Transform_SetLocation& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Transform",
+              DisplayName = "[Ck][Transform] Request Add Location Offset")
+    static void
+    Request_AddLocationOffset(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Request_Transform_AddLocationOffset& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Transform",
+              DisplayName = "[Ck][Transform] Request Set Rotation")
+    static void
+    Request_SetRotation(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Request_Transform_SetRotation& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Transform",
+              DisplayName = "[Ck][Transform] Request Add Rotation Offset")
+    static void
+    Request_AddRotationOffset(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Request_Transform_AddRotationOffset& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Transform",
+              DisplayName = "[Ck][Transform] Request Set Scale")
+    static void
+    Request_SetScale(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Request_Transform_SetScale&  InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Transform",
+              DisplayName = "[Ck][Transform] Request Set Transform")
+    static void
+    Request_SetTransform(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Request_Transform_SetTransform& InRequest);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Transform",
+              DisplayName = "[Ck][Transform] Get Transform")
+    static FTransform
+    Get_EntityCurrentTransform(
+        const FCk_Handle& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Transform",
+              DisplayName = "[Ck][Transform] Get Location")
+    static FVector
+    Get_EntityCurrentLocation(
+        const FCk_Handle& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Transform",
+              DisplayName = "[Ck][Transform] Get Rotation")
+    static FRotator
+    Get_EntityCurrentRotation(
+        const FCk_Handle& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Transform",
+              DisplayName = "[Ck][Transform] Get Scale")
+    static FVector
+    Get_EntityCurrentScale(
+        const FCk_Handle& InHandle);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable)
 class CKECSEXT_API UCk_Utils_TransformInterpolation_UE : public UCk_Utils_Ecs_Net_UE
 {
