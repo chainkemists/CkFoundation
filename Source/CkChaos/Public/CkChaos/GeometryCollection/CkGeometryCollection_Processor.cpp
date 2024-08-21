@@ -89,30 +89,45 @@ namespace ck
             {
                 Chaos::FRigidClustering& RigidClustering = RbdSolver->GetEvolution()->GetRigidClustering();
 
-                if (const auto& ClusteredParticle = Particle->CastToClustered();
-                    ck::IsValid(ClusteredParticle, ck::IsValid_Policy_NullptrOnly{}))
+                const auto& ClusteredParticle = Particle->CastToClustered();
+
+                if (ck::Is_NOT_Valid(ClusteredParticle, ck::IsValid_Policy_NullptrOnly{}))
+                { return; }
+
+                switch(InRequest.Get_ChangeParticleStateTo())
                 {
-                    auto Direction = Particle->GetTransformPQ().GetLocation() - InRequest.Get_Location();
-                    Direction.Normalize();
-
-                    if (const auto& Strain = InRequest.Get_ExternalStrain(); Strain > 0.0f)
-                    {
-                        const auto& NewStrain = Strain;
-                        RigidClustering.SetExternalStrain(ClusteredParticle, FMath::Max(ClusteredParticle->GetExternalStrain(), NewStrain));
-                    }
-
-                    if (const auto& Strain = InRequest.Get_InternalStrain(); Strain > 0.0f)
-                    {
-                        const Chaos::FRealSingle NewInternalStrain = ClusteredParticle->GetInternalStrains() - Strain;
-                        RigidClustering.SetInternalStrain(ClusteredParticle, FMath::Max(0, NewInternalStrain));
-                    }
-
-                    if (const auto& Speed = InRequest.Get_LinearSpeed(); Speed > 0.0f)
-                    { Particle->SetV(Direction * Speed); }
-
-                    if (const auto& Speed = InRequest.Get_AngularSpeed(); Speed > 0.0f)
-                    { Particle->SetW(Direction * Speed); }
+                    case ECk_GeometryCollection_ObjectState::Uninitialized: Particle->SetObjectStateLowLevel(Chaos::EObjectStateType::Uninitialized); break;
+                    case ECk_GeometryCollection_ObjectState::Sleeping:      Particle->SetObjectStateLowLevel(Chaos::EObjectStateType::Sleeping); break;
+                    case ECk_GeometryCollection_ObjectState::Kinematic:     Particle->SetObjectStateLowLevel(Chaos::EObjectStateType::Kinematic); break;
+                    case ECk_GeometryCollection_ObjectState::Static:        Particle->SetObjectStateLowLevel(Chaos::EObjectStateType::Static); break;
+                    case ECk_GeometryCollection_ObjectState::Dynamic:       Particle->SetObjectStateLowLevel(Chaos::EObjectStateType::Dynamic); break;
+                    case ECk_GeometryCollection_ObjectState::NoChange: break;
                 }
+
+                auto Direction = Particle->GetTransformPQ().GetLocation() - InRequest.Get_Location();
+                Direction.Normalize();
+
+                if (const auto& Strain = InRequest.Get_ExternalStrain();
+                    Strain > 0.0f)
+                {
+                    const auto& NewStrain = Strain;
+                    RigidClustering.SetExternalStrain(ClusteredParticle, FMath::Max(ClusteredParticle->GetExternalStrain(), NewStrain));
+                }
+
+                if (const auto& Strain = InRequest.Get_InternalStrain();
+                    Strain > 0.0f)
+                {
+                    const Chaos::FRealSingle NewInternalStrain = ClusteredParticle->GetInternalStrains() - Strain;
+                    RigidClustering.SetInternalStrain(ClusteredParticle, FMath::Max(0, NewInternalStrain));
+                }
+
+                if (const auto& Speed = InRequest.Get_LinearSpeed();
+                    Speed > 0.0f)
+                { Particle->SetV(Direction * Speed); }
+
+                if (const auto& Speed = InRequest.Get_AngularSpeed();
+                    Speed > 0.0f)
+                { Particle->SetW(Direction * Speed); }
             });
         });
     }

@@ -102,7 +102,8 @@ namespace ck
             .Set_LinearSpeed(Settings->Get_LinearSpeed())
             .Set_AngularSpeed(Settings->Get_AngularSpeed())
             .Set_InternalStrain(Settings->Get_InternalStrain())
-            .Set_ExternalStrain(Settings->Get_ExternalStrain());
+            .Set_ExternalStrain(Settings->Get_ExternalStrain())
+            .Set_ChangeParticleStateTo(Settings->Get_ChangeParticleStateTo());
 
             UCk_Utils_GeometryCollection_UE::Request_ApplyRadialStrain(InGc, Request);
         });

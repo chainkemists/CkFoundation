@@ -6,6 +6,8 @@
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
+#include "CkChaos/GeometryCollection/CkGeometryCollection_Fragment_Data.h"
+
 #include "CkGeometryCollectionOwner_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -50,12 +52,17 @@ private:
         meta=(AllowPrivateAccess=true, UIMin = "0.0", ClampMin = "0.0"))
     float _ExternalStrain = 0.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess=true))
+    ECk_GeometryCollection_ObjectState _ChangeParticleStateTo = ECk_GeometryCollection_ObjectState::NoChange;
+
 public:
     CK_PROPERTY_GET(_Radius);
     CK_PROPERTY_GET(_LinearSpeed);
     CK_PROPERTY_GET(_AngularSpeed);
     CK_PROPERTY_GET(_InternalStrain);
     CK_PROPERTY_GET(_ExternalStrain);
+    CK_PROPERTY_GET(_ChangeParticleStateTo);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
