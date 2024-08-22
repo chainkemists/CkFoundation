@@ -107,6 +107,7 @@ auto
         FCk_Handle_Team& InHandle)
     -> FCk_Handle_Team
 {
+    InHandle.Remove<ck::FTag_OnTeamAssigned_Setup>();
     return Assign(InHandle, ECk_Team_ID::Unassigned);
 }
 
@@ -329,5 +330,84 @@ auto
     InHandle.Remove<ck::FFragment_TeamInfo>();
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Team_Listener_UE::
+    BindTo_OnTeamAssignedToAnyEntity(
+        FCk_Handle& InHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_TeamAssigned& InDelegate)
+    -> FCk_Handle
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_TeamAssigned, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    InHandle.AddOrGet<ck::FTag_TeamListener>();
+    return InHandle;
+}
+
+auto
+UCk_Utils_Team_Listener_UE::
+UnbindFrom_OnTeamAssigned(
+    FCk_Handle& InHandle,
+    const FCk_Delegate_TeamAssigned& InDelegate)
+    -> FCk_Handle
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_TeamAssigned, InHandle, InDelegate);
+    // TODO: figure out a bullet-proof way to remove the FTag_TeamListener if ALL the delegates have been unbound
+    return InHandle;
+}
+
+auto
+    UCk_Utils_Team_Listener_UE::
+    BindTo_OnTeamAssignedToAnyEntity_OnSameTeam(
+        FCk_Handle_Team& InHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_TeamAssigned& InDelegate)
+    -> FCk_Handle
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_TeamAssigned_OnSameTeam, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    InHandle.AddOrGet<ck::FTag_TeamListener>();
+    return InHandle;
+}
+
+auto
+    UCk_Utils_Team_Listener_UE::
+    UnbindFrom_OnTeamAssignedToAnyEntity_OnSameTeam(
+        FCk_Handle_Team& InHandle,
+        const FCk_Delegate_TeamAssigned& InDelegate)
+    -> FCk_Handle
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_TeamAssigned_OnSameTeam, InHandle, InDelegate);
+    // TODO: figure out a bullet-proof way to remove the FTag_TeamListener if ALL the delegates have been unbound
+    return InHandle;
+}
+
+auto
+UCk_Utils_Team_Listener_UE::
+BindTo_OnTeamAssignedToAnyEntity_OnOpposingTeam(
+    FCk_Handle_Team& InHandle,
+    ECk_Signal_BindingPolicy InBindingPolicy,
+    ECk_Signal_PostFireBehavior InPostFireBehavior,
+    const FCk_Delegate_TeamAssigned& InDelegate)
+    -> FCk_Handle
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_TeamAssigned_OnOpposingTeam, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    InHandle.AddOrGet<ck::FTag_TeamListener>();
+    return InHandle;
+}
+
+auto
+UCk_Utils_Team_Listener_UE::
+UnbindFrom_OnTeamAssignedToAnyEntity_OnOpposingTeam(
+    FCk_Handle_Team& InHandle,
+    const FCk_Delegate_TeamAssigned& InDelegate)
+    -> FCk_Handle
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_TeamAssigned_OnOpposingTeam, InHandle, InDelegate);
+    // TODO: figure out a bullet-proof way to remove the FTag_TeamListener if ALL the delegates have been unbound
+    return InHandle;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
