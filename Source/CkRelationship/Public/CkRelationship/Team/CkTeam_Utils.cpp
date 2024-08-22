@@ -107,7 +107,6 @@ auto
         FCk_Handle_Team& InHandle)
     -> FCk_Handle_Team
 {
-    InHandle.Remove<ck::FTag_OnTeamAssigned_Setup>();
     return Assign(InHandle, ECk_Team_ID::Unassigned);
 }
 
@@ -307,6 +306,8 @@ auto
     -> void
 {
     using namespace ck;
+
+    InHandle.Try_Remove<ck::FTag_OnTeamAssigned_Setup>();
 
     switch (const auto& TeamID = Get_ID(InHandle))
     {
