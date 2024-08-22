@@ -21,6 +21,8 @@ CK_DEFINE_CUSTOM_FORMATTER(FGenericTeamId, [&]()
 
 namespace ck
 {
+    CK_DEFINE_ECS_TAG(FTag_OnTeamAssigned_Setup);
+
     // --------------------------------------------------------------------------------------------------------------------
 
     /*
@@ -64,7 +66,8 @@ namespace ck
 
 namespace ck
 {
-    CK_DEFINE_ECS_TAG(FTag_OnTeamAssignedSignal_Setup);
+    CK_DEFINE_ECS_TAG(FTag_TeamListener);
+    CK_DEFINE_ECS_TAG(FTag_TeamListener_Setup);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRELATIONSHIP_API, TeamAssigned, FCk_Delegate_TeamAssigned_MC,
         FCk_Handle_Team, ECk_Team_ID);
