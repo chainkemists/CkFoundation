@@ -117,7 +117,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(FloatAttribute, UCk_Utils_FloatAttribute_UE, FCk_Handle_FloatAttribute, ck::FFragment_FloatAttribute_Current);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_FloatAttribute_UE, FCk_Handle_FloatAttribute, ck::FFragment_FloatAttribute_Current);
 
 // --------------------------------------------------------------------------------------------------------------------
 

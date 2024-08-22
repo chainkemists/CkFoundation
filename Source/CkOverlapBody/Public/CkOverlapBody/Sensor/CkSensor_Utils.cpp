@@ -72,7 +72,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Sensor, UCk_Utils_Sensor_UE, FCk_Handle_Sensor, ck::FFragment_Sensor_Params, ck::FFragment_Sensor_Current);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Sensor_UE, FCk_Handle_Sensor, ck::FFragment_Sensor_Params, ck::FFragment_Sensor_Current);
 
 // --------------------------------------------------------------------------------------------------------------------
 

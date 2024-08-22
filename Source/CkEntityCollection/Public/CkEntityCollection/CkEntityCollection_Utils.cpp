@@ -49,7 +49,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(EntityCollection, UCk_Utils_EntityCollection_UE, FCk_Handle_EntityCollection, ck::FFragment_EntityCollection_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_EntityCollection_UE, FCk_Handle_EntityCollection, ck::FFragment_EntityCollection_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 

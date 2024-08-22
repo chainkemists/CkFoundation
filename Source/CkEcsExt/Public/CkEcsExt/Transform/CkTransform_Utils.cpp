@@ -54,7 +54,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Transform, UCk_Utils_Transform_UE, FCk_Handle_Transform, ck::FFragment_Transform);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Transform_UE, FCk_Handle_Transform, ck::FFragment_Transform);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -399,8 +399,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(TransformInterpolation, UCk_Utils_TransformInterpolation_UE,
-    FCk_Handle_TransformInterpolation, ck::FFragment_TransformInterpolation_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_TransformInterpolation_UE, FCk_Handle_TransformInterpolation, ck::FFragment_TransformInterpolation_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 

@@ -54,7 +54,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Targeter, UCk_Utils_Targeter_UE, FCk_Handle_Targeter, ck::FFragment_Targeter_Current, ck::FFragment_Targeter_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Targeter_UE, FCk_Handle_Targeter, ck::FFragment_Targeter_Current, ck::FFragment_Targeter_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 

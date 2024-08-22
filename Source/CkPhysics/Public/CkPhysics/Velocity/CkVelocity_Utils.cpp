@@ -54,7 +54,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Velocity, UCk_Utils_Velocity_UE, FCk_Handle_Velocity, ck::FFragment_Velocity_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Velocity_UE, FCk_Handle_Velocity, ck::FFragment_Velocity_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 

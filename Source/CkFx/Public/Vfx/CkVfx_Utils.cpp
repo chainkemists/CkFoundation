@@ -57,7 +57,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Vfx, UCk_Utils_Vfx_UE, FCk_Handle_Vfx, ck::FFragment_Vfx_Current, ck::FFragment_Vfx_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Vfx_UE, FCk_Handle_Vfx, ck::FFragment_Vfx_Current, ck::FFragment_Vfx_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 

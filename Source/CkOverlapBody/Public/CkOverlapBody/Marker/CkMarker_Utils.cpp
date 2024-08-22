@@ -75,7 +75,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Marker, UCk_Utils_Marker_UE, FCk_Handle_Marker, ck::FFragment_Marker_Params, ck::FFragment_Marker_Current);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Marker_UE, FCk_Handle_Marker, ck::FFragment_Marker_Params, ck::FFragment_Marker_Current);
 
 // --------------------------------------------------------------------------------------------------------------------
 

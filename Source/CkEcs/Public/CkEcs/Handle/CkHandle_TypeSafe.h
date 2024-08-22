@@ -130,7 +130,7 @@ static_assert
 // NOTES:
 // - the ... are the Fragments for the Has check (see other usages)
 // - the FCk_Handle _should_ be passed by ref but isn't because passing by ref makes BlueprintAutoCast to not work
-#define CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(_FeatureName_, _ClassType_, _HandleType_, ...)           \
+#define CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(_ClassType_, _HandleType_, ...)                          \
 auto                                                                                                     \
     _ClassType_::                                                                                        \
     Has(                                                                                                 \

@@ -4,7 +4,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(WidgetLayerHandler, UCk_Utils_WidgetLayerHandler_UE, FCk_Handle_WidgetLayerHandler, ck::FFragment_WidgetLayerHandler_Params)
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_WidgetLayerHandler_UE, FCk_Handle_WidgetLayerHandler, ck::FFragment_WidgetLayerHandler_Params)
 
 // --------------------------------------------------------------------------------------------------------------------
 
