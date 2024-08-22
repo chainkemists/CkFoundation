@@ -62,6 +62,22 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck
+{
+    CK_DEFINE_ECS_TAG(FTag_OnTeamAssignedSignal_Setup);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRELATIONSHIP_API, TeamAssigned, FCk_Delegate_TeamAssigned_MC,
+        FCk_Handle_Team, ECk_Team_ID);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRELATIONSHIP_API, TeamAssigned_OnOpposingTeam, FCk_Delegate_TeamAssigned_MC,
+        FCk_Handle_Team, ECk_Team_ID);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRELATIONSHIP_API, TeamAssigned_OnSameTeam, FCk_Delegate_TeamAssigned_MC,
+        FCk_Handle_Team, ECk_Team_ID);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(Blueprintable)
 class CKRELATIONSHIP_API UCk_Fragment_Team_Rep : public UCk_Ecs_ReplicatedObject_UE
 {
