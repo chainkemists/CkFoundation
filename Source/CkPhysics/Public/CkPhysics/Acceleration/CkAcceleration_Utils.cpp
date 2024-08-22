@@ -40,7 +40,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Acceleration, UCk_Utils_Acceleration_UE,
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Acceleration_UE,
     FCk_Handle_Acceleration, ck::FFragment_Acceleration_Params, ck::FFragment_Acceleration_Current);
 
 // --------------------------------------------------------------------------------------------------------------------

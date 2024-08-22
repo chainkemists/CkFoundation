@@ -6,7 +6,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Team, UCk_Utils_Team_UE, FCk_Handle_Team, ck::FFragment_TeamInfo)
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Team_UE, FCk_Handle_Team, ck::FFragment_TeamInfo)
 
 // --------------------------------------------------------------------------------------------------------------------
 

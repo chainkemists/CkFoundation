@@ -39,7 +39,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(AnimAsset, UCk_Utils_AnimAsset_UE, FCk_Handle_AnimAsset, ck::FFragment_AnimAsset_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_AnimAsset_UE, FCk_Handle_AnimAsset, ck::FFragment_AnimAsset_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 

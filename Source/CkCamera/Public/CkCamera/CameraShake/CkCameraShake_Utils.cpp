@@ -51,7 +51,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(CameraShake, UCk_Utils_CameraShake_UE, FCk_Handle_CameraShake, ck::FFragment_CameraShake_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_CameraShake_UE, FCk_Handle_CameraShake, ck::FFragment_CameraShake_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 

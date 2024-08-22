@@ -4,7 +4,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Player, UCk_Utils_Player_UE, FCk_Handle_Player, ck::FFragment_PlayerInfo)
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Player_UE, FCk_Handle_Player, ck::FFragment_PlayerInfo)
 
 // --------------------------------------------------------------------------------------------------------------------
 

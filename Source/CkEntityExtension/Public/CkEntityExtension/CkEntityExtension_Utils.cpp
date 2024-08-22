@@ -25,7 +25,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(EntityExtension, UCk_Utils_EntityExtension_UE, FCk_Handle_EntityExtension, ck::FFragment_EntityExtension_Params)
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_EntityExtension_UE, FCk_Handle_EntityExtension, ck::FFragment_EntityExtension_Params)
 
 // --------------------------------------------------------------------------------------------------------------------
 

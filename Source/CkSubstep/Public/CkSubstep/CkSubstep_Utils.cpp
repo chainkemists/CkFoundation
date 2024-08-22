@@ -20,7 +20,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Substep, UCk_Utils_Substep_UE, FCk_Handle_Substep, ck::FFragment_Substep_Params, ck::FFragment_Substep_Current)
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Substep_UE, FCk_Handle_Substep, ck::FFragment_Substep_Params, ck::FFragment_Substep_Current)
 
 // --------------------------------------------------------------------------------------------------------------------
 
