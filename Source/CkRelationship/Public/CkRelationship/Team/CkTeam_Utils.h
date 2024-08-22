@@ -137,7 +137,7 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Relationship|Team",
-              DisplayName="[Ck][Team] Has Feature")
+              DisplayName="[Ck][Team] Has Team Assigned To")
     static bool
     Has(
         const FCk_Handle& InHandle);
@@ -285,6 +285,7 @@ auto
     -> void
 {
     InHandle.Add<ck::FTag_TeamID<T_ID>>();
+    InHandle.Add<ck::FTag_OnTeamAssigned_Setup>();
     InHandle.AddOrGet<ck::FFragment_TeamInfo>(T_ID);
 }
 
@@ -339,3 +340,67 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UCLASS()
+class CKRELATIONSHIP_API UCk_Utils_Team_Listener_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_Team_Listener_UE);
+
+public:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Relationship|Team",
+        DisplayName="[Ck][Team] Bind To On Team Assigned to ANY Entity")
+    static FCk_Handle
+    BindTo_OnTeamAssignedToAnyEntity(
+        UPARAM(ref) FCk_Handle& InHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_TeamAssigned& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Relationship|Team",
+        DisplayName="[Ck][Team] Unbind From On Team Assigned to ANY Entity")
+    static FCk_Handle
+    UnbindFrom_OnTeamAssigned(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Delegate_TeamAssigned& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Relationship|Team",
+        DisplayName="[Ck][Team] Bind To On Team Assigned to ANY Entity (Same Team)")
+    static FCk_Handle
+    BindTo_OnTeamAssignedToAnyEntity_OnSameTeam(
+        UPARAM(ref) FCk_Handle_Team& InHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_TeamAssigned& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Relationship|Team",
+        DisplayName="[Ck][Team] Unbind From On Team Assigned to ANY Entity (Same Team)")
+    static FCk_Handle
+    UnbindFrom_OnTeamAssignedToAnyEntity_OnSameTeam(
+        UPARAM(ref) FCk_Handle_Team& InHandle,
+        const FCk_Delegate_TeamAssigned& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Relationship|Team",
+        DisplayName="[Ck][Team] Bind To On Team Assigned to ANY Entity (Opposing Team)")
+    static FCk_Handle
+    BindTo_OnTeamAssignedToAnyEntity_OnOpposingTeam(
+        UPARAM(ref) FCk_Handle_Team& InHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_TeamAssigned& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Relationship|Team",
+        DisplayName="[Ck][Team] Unbind From On Team Assigned to ANY Entity (Opposing Team)")
+    static FCk_Handle
+    UnbindFrom_OnTeamAssignedToAnyEntity_OnOpposingTeam(
+        UPARAM(ref) FCk_Handle_Team& InHandle,
+        const FCk_Delegate_TeamAssigned& InDelegate);
+};
