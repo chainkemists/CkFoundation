@@ -7,7 +7,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKRELATIONSHIP_API UCk_Team_ProcessorInjector_UE : public UCk_EcsWorld_ProcessorInjector_Base_UE
+class CKRELATIONSHIP_API UCk_Team_ProcessorInjector_Setup_UE : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 
