@@ -5,7 +5,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(AnimState, UCk_Utils_AnimState_UE, FCk_Handle_AnimState, ck::FFragment_AnimState_Current)
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_AnimState_UE, FCk_Handle_AnimState, ck::FFragment_AnimState_Current)
 
 // --------------------------------------------------------------------------------------------------------------------
 

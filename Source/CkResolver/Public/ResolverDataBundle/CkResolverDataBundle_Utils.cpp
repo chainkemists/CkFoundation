@@ -55,7 +55,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(ResolverDataBundle, UCk_Utils_ResolverDataBundle_UE, FCk_Handle_ResolverDataBundle,
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_ResolverDataBundle_UE, FCk_Handle_ResolverDataBundle,
     ck::FFragment_ResolverDataBundle_Params, ck::FFragment_ResolverDataBundle_Current)
 
 // --------------------------------------------------------------------------------------------------------------------

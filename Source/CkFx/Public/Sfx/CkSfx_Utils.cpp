@@ -54,7 +54,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Sfx, UCk_Utils_Sfx_UE, FCk_Handle_Sfx, ck::FFragment_Sfx_Current, ck::FFragment_Sfx_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Sfx_UE, FCk_Handle_Sfx, ck::FFragment_Sfx_Current, ck::FFragment_Sfx_Params);
 
 // --------------------------------------------------------------------------------------------------------------------
 

@@ -52,7 +52,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(ResolverSource, UCk_Utils_ResolverSource_UE, FCk_Handle_ResolverSource,
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_ResolverSource_UE, FCk_Handle_ResolverSource,
     ck::FFragment_ResolverSource_Params)
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -35,7 +35,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(Chaos, UCk_Utils_GeometryCollection_UE, FCk_Handle_GeometryCollection,
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_GeometryCollection_UE, FCk_Handle_GeometryCollection,
     ck::FFragment_GeometryCollection_Params, ck::FFragment_GeometryCollection_Current)
 
 // --------------------------------------------------------------------------------------------------------------------

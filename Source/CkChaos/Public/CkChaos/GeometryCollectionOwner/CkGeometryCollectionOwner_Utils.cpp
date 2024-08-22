@@ -39,10 +39,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(GeometryCollectionOwner,
-    UCk_Utils_GeometryCollectionOwner_UE,
-    FCk_Handle_GeometryCollectionOwner,
-    ck::FFragment_RecordOfGeometryCollections)
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_GeometryCollectionOwner_UE, FCk_Handle_GeometryCollectionOwner, ck::FFragment_RecordOfGeometryCollections)
 
 // --------------------------------------------------------------------------------------------------------------------
 
