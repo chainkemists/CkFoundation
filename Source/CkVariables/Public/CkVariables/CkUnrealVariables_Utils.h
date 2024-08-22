@@ -42,8 +42,8 @@ public:
         bool InValue);
 
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Bool] Get Value (By Name)",
-              Category = "Ck|Utils|Variables|Bool")
+        DisplayName="[Ck][Bool] Get Value (By Name)",
+        Category = "Ck|Utils|Variables|Bool")
     static bool
     Get_ByName(
         const FCk_Handle& InHandle,
@@ -52,7 +52,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Bool] Set Value (By Name)",
-              Category = "Ck|Utils|Variables|Bool")
+              Category = "Ck|Utils|Variables|Bool",
+              meta=(DeprecatedFunction))
     static void
     Set_ByName(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -112,7 +113,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Int32] Set Value (By Name)",
-              Category = "Ck|Utils|Variables|Int32")
+              Category = "Ck|Utils|Variables|Int32",
+              meta=(DeprecatedFunction))
     static void
     Set_ByName(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -172,7 +174,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Int64] Set Value (By Name)",
-              Category = "Ck|Utils|Variables|Int64")
+              Category = "Ck|Utils|Variables|Int64",
+              meta=(DeprecatedFunction))
     static void
     Set_ByName(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -232,7 +235,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Float] Set Value (By Name)",
-              Category = "Ck|Utils|Variables|Float")
+              Category = "Ck|Utils|Variables|Float",
+              meta=(DeprecatedFunction))
     static void
     Set_ByName(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -292,7 +296,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Name] Set Value (By Name)",
-              Category = "Ck|Utils|Variables|Name")
+              Category = "Ck|Utils|Variables|Name",
+              meta=(DeprecatedFunction))
     static void
     Set_ByName(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -352,7 +357,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][String] Set Value (By Name)",
-              Category = "Ck|Utils|Variables|String")
+              Category = "Ck|Utils|Variables|String",
+              meta=(DeprecatedFunction))
     static void
     Set_ByName(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -412,7 +418,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Text] Set Value (By Name)",
-              Category = "Ck|Utils|Variables|Text")
+              Category = "Ck|Utils|Variables|Text",
+              meta=(DeprecatedFunction))
     static void
     Set_ByName(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -472,7 +479,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Vec3] Set Value (By Name)",
-              Category = "Ck|Utils|Variables|Vec3")
+              Category = "Ck|Utils|Variables|Vec3",
+              meta=(DeprecatedFunction))
     static void
     Set_ByName(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -532,7 +540,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Vec2] Set Value (By Name)",
-              Category = "Ck|Utils|Variables|Vec2")
+              Category = "Ck|Utils|Variables|Vec2",
+              meta=(DeprecatedFunction))
     static void
     Set_ByName(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -592,7 +601,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Rotator] Set Value (By Name)",
-              Category = "Ck|Utils|Variables|Rotator")
+              Category = "Ck|Utils|Variables|Rotator",
+              meta=(DeprecatedFunction))
     static void
     Set_ByName(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -652,7 +662,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Transform] Set Value (By Name)",
-              Category = "Ck|Utils|Variables|Transform")
+              Category = "Ck|Utils|Variables|Transform",
+              meta=(DeprecatedFunction))
     static void
     Set_ByName(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -820,7 +831,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][UObject] Set Value (By Name)",
-              Category = "Ck|Utils|Variables|UObject")
+              Category = "Ck|Utils|Variables|UObject",
+              meta=(DeprecatedFunction))
     static void
     Set_ByName(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -885,7 +897,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][SubclassOf] Set Value (By Name)",
-              Category = "Ck|Utils|Variables|SubclassOf")
+              Category = "Ck|Utils|Variables|SubclassOf",
+              meta=(DeprecatedFunction))
     static void
     Set_ByName(
         UPARAM(ref) FCk_Handle& InHandle,
