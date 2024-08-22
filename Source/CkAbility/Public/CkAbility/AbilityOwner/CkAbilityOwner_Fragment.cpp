@@ -182,7 +182,13 @@ namespace ck
 
         if (InIgnoreRelevantTagsFromAbilityOwner)
         {
-            ActiveTags.RemoveTags(_RelevantTagsFromAbilityOwner);
+            for (const auto& Tag : _RelevantTagsFromAbilityOwner)
+            {
+                if (_ActiveTags.GetTagCount(Tag) == 1)
+                {
+                    ActiveTags.RemoveTag(Tag);
+                }
+            }
         }
 
         RecordOfEntityExtensions_Utils::ForEach_Entry(InAbilityOwner, [&](FCk_Handle_EntityExtension InEntityExtension)
@@ -292,4 +298,3 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-
