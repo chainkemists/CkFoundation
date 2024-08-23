@@ -1,6 +1,7 @@
 #include "CkGeometryCollection_Processor.h"
 
 #include "CkChaos/GeometryCollection/CkGeometryCollection_Utils.h"
+#include "CkChaos/Settings/CkChaos_Settings.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Math/Vector/CkVector_Utils.h"
@@ -77,7 +78,12 @@ namespace ck
             InHandle, InParams.Get_Params().Get_GeometryCollection())
         { return; }
 
-        const auto& ParticlesInRadius = ck_geometrycollection_processor::Get_ParticlesInRadius(Proxy, InRequest.Get_Location(), InRequest.Get_Radius());
+        const auto MaximumRadiusToUse = UCk_Utils_Chaos_Settings_UE::Get_MaximumRadialDamageDeltaRadiusPerFrame();
+        auto MaybeNewRequest = InRequest;
+
+        MaybeNewRequest.Set_IncrementalRadius(MaybeNewRequest.Get_IncrementalRadius() + MaximumRadiusToUse);
+        const auto& ParticlesInRadius = ck_geometrycollection_processor::Get_ParticlesInRadius(Proxy, InRequest.Get_Location(),
+            MaybeNewRequest.Get_IncrementalRadius() < InRequest.Get_Radius() ? MaybeNewRequest.Get_IncrementalRadius() : InRequest.Get_Radius());
 
         const auto RbdSolver = Proxy->GetSolver<Chaos::FPhysicsSolver>();
 
@@ -130,6 +136,11 @@ namespace ck
                 { Particle->SetW(Direction * Speed); }
             });
         });
+
+        if (MaybeNewRequest.Get_IncrementalRadius() < InRequest.Get_Radius())
+        {
+            UCk_Utils_GeometryCollection_UE::Request_ApplyRadialStrain(InHandle, MaybeNewRequest);
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
