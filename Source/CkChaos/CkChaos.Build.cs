@@ -13,6 +13,7 @@ public class CkChaos : CkModuleRules
         {
             "Core",
             "CoreUObject",
+            "DeveloperSettings",
             "Engine",
             "GameplayTags",
             "StructUtils",
