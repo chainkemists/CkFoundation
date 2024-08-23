@@ -10,6 +10,13 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck
+{
+    class FProcessor_GeometryCollection_HandleRequests;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKCHAOS_API FCk_Handle_GeometryCollection : public FCk_Handle_TypeSafe { GENERATED_BODY()  CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_GeometryCollection); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_GeometryCollection);
@@ -63,6 +70,9 @@ struct CKCHAOS_API FCk_Request_GeometryCollection_ApplyRadialStrain : public FCk
     GENERATED_BODY()
 
 public:
+    friend class ck::FProcessor_GeometryCollection_HandleRequests;
+
+public:
     CK_GENERATED_BODY(FCk_Request_GeometryCollection_ApplyRadialStrain);
 
 private:
@@ -94,6 +104,12 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess=true))
     ECk_GeometryCollection_ObjectState _ChangeParticleStateTo = ECk_GeometryCollection_ObjectState::NoChange;
+
+private:
+    float _IncrementalRadius = 0.0f;
+
+private:
+    CK_PROPERTY(_IncrementalRadius);
 
 public:
     CK_PROPERTY_GET(_Location);
