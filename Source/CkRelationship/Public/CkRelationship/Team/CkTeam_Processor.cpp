@@ -64,10 +64,10 @@ ck
             }
         });
 
-        InHandle.View<FTag_TeamListener>().ForEach([&](EntityType InTeamEntity)
+        InHandle.View<FTag_TeamListener>().ForEach([&](EntityType InOtherEntity)
         {
-            const auto TeamHandle = MakeHandle(InTeamEntity, InHandle);
-            UUtils_Signal_TeamAssigned::Broadcast(InHandle, MakePayload(InHandle, InTeamInfo.Get_TeamID()));
+            const auto OtherHandle = MakeHandle(InOtherEntity, InHandle);
+            UUtils_Signal_TeamAssigned::Broadcast(OtherHandle, MakePayload(InHandle, InTeamInfo.Get_TeamID()));
         });
 
         InHandle.Remove<FTag_OnTeamAssigned_Setup>();

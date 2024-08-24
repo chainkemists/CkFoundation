@@ -107,6 +107,7 @@ auto
         FCk_Handle_Team& InHandle)
     -> FCk_Handle_Team
 {
+    InHandle.Remove<ck::FTag_OnTeamAssigned_Setup>();
     return Assign(InHandle, ECk_Team_ID::Unassigned);
 }
 
@@ -307,8 +308,6 @@ auto
 {
     using namespace ck;
 
-    InHandle.Try_Remove<ck::FTag_OnTeamAssigned_Setup>();
-
     switch (const auto& TeamID = Get_ID(InHandle))
     {
         case ECk_Team_ID::Zero: { InHandle.Remove<FTag_TeamID<ECk_Team_ID::Zero>>(); break; }
@@ -343,7 +342,7 @@ auto
     -> FCk_Handle
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_TeamAssigned, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
-    InHandle.AddOrGet<ck::FTag_TeamListener>();
+    DoAddTeamListener(InHandle);
     return InHandle;
 }
 
@@ -369,7 +368,7 @@ auto
     -> FCk_Handle
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_TeamAssigned_OnSameTeam, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
-    InHandle.AddOrGet<ck::FTag_TeamListener>();
+    DoAddTeamListener(InHandle);
     return InHandle;
 }
 
@@ -395,7 +394,7 @@ BindTo_OnTeamAssignedToAnyEntity_OnOpposingTeam(
     -> FCk_Handle
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_TeamAssigned_OnOpposingTeam, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
-    InHandle.AddOrGet<ck::FTag_TeamListener>();
+    DoAddTeamListener(InHandle);
     return InHandle;
 }
 
@@ -409,6 +408,19 @@ UnbindFrom_OnTeamAssignedToAnyEntity_OnOpposingTeam(
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_TeamAssigned_OnOpposingTeam, InHandle, InDelegate);
     // TODO: figure out a bullet-proof way to remove the FTag_TeamListener if ALL the delegates have been unbound
     return InHandle;
+}
+
+auto
+    UCk_Utils_Team_Listener_UE::
+    DoAddTeamListener(
+        FCk_Handle& InHandle)
+    -> void
+{
+    if (NOT InHandle.Has<ck::FTag_TeamListener>())
+    {
+        InHandle.AddOrGet<ck::FTag_TeamListener_Setup>();
+        InHandle.AddOrGet<ck::FTag_TeamListener>();
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
