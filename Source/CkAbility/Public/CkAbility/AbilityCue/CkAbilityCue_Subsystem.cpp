@@ -124,6 +124,8 @@ auto
     // We cannot create the replicated Actors right here. We need to wait until BeginPlay
     _PostLoginDelegateHandle = FGameModeEvents::GameModePostLoginEvent.AddUObject(this, &UCk_AbilityCueReplicator_Subsystem_UE::OnLoginEvent);
 
+    _PostLoadMapWithWorldDelegateHandle = FCoreUObjectDelegates::PostLoadMapWithWorld.AddUObject(this, &UCk_AbilityCueReplicator_Subsystem_UE::OnPostLoadMapWithWorld);
+
     // TODO: GameInstance Subsystems are not ready yet. Investigate what the lifetime of Subsystems is
     //const auto& GameSessionSubsystem = UCk_Utils_Game_UE::Get_GameInstance(this)->GetSubsystem<UCk_GameSession_Subsystem_UE>();
 
@@ -147,6 +149,7 @@ auto
     Super::Deinitialize();
 
     FGameModeEvents::GameModePostLoginEvent.Remove(_PostLoginDelegateHandle);
+    FCoreUObjectDelegates::PostLoadMapWithWorld.Remove(_PostLoadMapWithWorldDelegateHandle);
 }
 
 auto
@@ -196,28 +199,71 @@ auto
 
 auto
     UCk_AbilityCueReplicator_Subsystem_UE::
+    DoSpawnCueReplicatorActorsForPlayerController(
+        APlayerController* InPlayerController)
+    -> void
+{
+    auto AlreadyContainsPC = false;
+    _ValidPlayerControllers.Add(InPlayerController, &AlreadyContainsPC);
+
+    if (AlreadyContainsPC)
+    { return; }
+
+    for (auto Index = 0; Index < NumberOfReplicators; ++Index)
+    {
+        auto* AbilityCueReplicator = GetWorld()->SpawnActor<ACk_AbilityCueReplicator_UE>();
+        _AbilityCueReplicators.Emplace(AbilityCueReplicator);
+    }
+}
+
+auto
+    UCk_AbilityCueReplicator_Subsystem_UE::
     OnLoginEvent(
         AGameModeBase* InGameModeBase,
         APlayerController* InPlayerController)
     -> void
 {
+    DoSpawnCueReplicatorActorsForPlayerController(InPlayerController);
+}
+
+auto
+    UCk_AbilityCueReplicator_Subsystem_UE::
+    OnPostLoadMapWithWorld(
+        UWorld* InWorld)
+    -> void
+{
+    // NOTE: If Seamless Travel is enabled this (World) Subsystem will not be torn-down, but any spawned CueReplicator Actors will be destroyed.
+    // Instead of adding the CueReplicator Actors to the list of actors that persist through the travel, we re-create them once the new world is loaded.
+    // 'OnSwapPlayerControllers' from the GameMode is called before we enter this function, which means all available PC are the new ones created for
+    // the world we just traveled to.
+
+    if (ck::Is_NOT_Valid(InWorld))
+    { return; }
+
+    if (GetWorld()->IsNetMode(NM_Client))
+    { return; }
+
+    _NextAvailableReplicator = 0;
+
+    for (const auto& ValidPlayerControllersList = _ValidPlayerControllers.Array();
+         const auto& PC : ValidPlayerControllersList)
     {
-        auto* AbilityCueReplicator = GetWorld()->SpawnActor<ACk_AbilityCueReplicator_UE>();
-        AbilityCueReplicator->SetOwner(InPlayerController);
-        _ClientToServerAbilityCueReplicators.Emplace
-        (
-            AbilityCueReplicator
-        );
+        if (ck::IsValid(PC) && PC->GetWorld() == InWorld)
+        { continue; }
+
+        _ValidPlayerControllers.Remove(PC);
+        _AbilityCueReplicators = ck::algo::Filter(_AbilityCueReplicators, [&](const ACk_AbilityCueReplicator_UE* InCueReplicator)
+        {
+            if (ck::Is_NOT_Valid(InCueReplicator))
+            { return false; }
+
+            return InCueReplicator->GetWorld() == PC->GetWorld();
+        });
     }
 
-    for (auto Index = 0; Index < NumberOfReplicators; ++Index)
+    for (auto It = InWorld->GetPlayerControllerIterator(); It; ++It)
     {
-        auto* AbilityCueReplicator = GetWorld()->SpawnActor<ACk_AbilityCueReplicator_UE>();
-
-        _AbilityCueReplicators.Emplace
-        (
-            AbilityCueReplicator
-        );
+       DoSpawnCueReplicatorActorsForPlayerController(It->Get());
     }
 }
 
