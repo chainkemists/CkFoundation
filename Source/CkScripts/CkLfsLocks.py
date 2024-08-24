@@ -22,11 +22,6 @@ class GitLFSManager:
         self.repo_root_button = tk.Button(self.repo_frame, text="Browse...", command=self.browse_folder)
         self.repo_root_button.pack(side='left', padx=5)
 
-        # Checkbox for listing all files vs locked files
-        self.list_all_files_var = tk.BooleanVar(value=False)
-        self.list_all_files_checkbutton = tk.Checkbutton(self.repo_frame, text="List all files", variable=self.list_all_files_var, command=self.async_list_lfs_files_and_locks)
-        self.list_all_files_checkbutton.pack(side='left', padx=5)
-
         # Search bar and filter
         self.search_frame = tk.Frame(root)
         self.search_frame.pack(fill='x', padx=10, pady=5)
@@ -68,10 +63,6 @@ class GitLFSManager:
         # List locks button
         self.list_locks_button = tk.Button(self.button_frame, text="List Git LFS Files and Locks", command=self.async_list_lfs_files_and_locks)
         self.list_locks_button.pack(side='left', padx=10)
-
-        # Lock files button
-        self.lock_files_button = tk.Button(self.button_frame, text="Lock Selected Files", command=self.lock_files)
-        self.lock_files_button.pack(side='left', padx=10)
 
         # Unlock files button
         self.unlock_files_button = tk.Button(self.button_frame, text="Unlock Selected Files", command=self.unlock_files)
@@ -117,7 +108,7 @@ class GitLFSManager:
             if result.returncode == 0:
                 return result.stdout
             else:
-                messagebox.showerror("Error", f"Command failed: {result.stderr}")
+                # messagebox.showerror("Error", f"Command failed: {result.stderr}")
                 return None
         except Exception as e:
             messagebox.showerror("Error", str(e))
@@ -125,7 +116,8 @@ class GitLFSManager:
 
     def update_filter(self, event=None):
         for item in self._detached:
-            self.locked_tree.reattach(item, '', 'end')
+            if self.locked_tree.exists(item):
+                self.locked_tree.reattach(item, '', 'end')
 
         search_term = self.search_entry.get().lower()
         for item in self.locked_tree.get_children():
@@ -138,6 +130,8 @@ class GitLFSManager:
             else:
                 self.locked_tree.detach(item)
                 self._detached.add(item)
+
+        self.sort_by_column(self.locked_tree, "User")
 
     def get_column_index(self, column_name):
         column_mapping = {
@@ -177,38 +171,31 @@ class GitLFSManager:
         threading.Thread(target=self.list_lfs_files_and_locks).start()
 
     def list_lfs_files_and_locks(self):
-        output_files = self.run_git_command(['git', 'lfs', 'ls-files', '--all'], cwd=self.repo_root_entry.get())
+        _detached = set()
+        #output_files = self.run_git_command(['git', 'lfs', 'ls-files', '--all'], cwd=self.repo_root_entry.get())
         output_locks = self.run_git_command(['git', 'lfs', 'locks'], cwd=self.repo_root_entry.get())
+        locks = output_locks.strip().split('\n')[0:]  # Skip header line
 
-        if output_files:
-            self.locks_data = []
-            files = [line.split()[-1] for line in output_files.strip().split('\n') if line]
+        rows_to_insert = []
+        if output_locks:
+            for lock in locks:
+                parts = lock.split()
+                file_path = parts[0]
+                user = parts[1]
 
-            locks_dict = {}
-            if output_locks:
-                locks = output_locks.strip().split('\n')[1:]  # Skip header line
-                for lock in locks:
-                    parts = lock.split()
-                    file_path = parts[0]
-                    user = parts[1]
-                    locks_dict[file_path] = user
+                self.locks_data.append((user, file_path, file_path))
+                if user and user not in self.user_colors:
+                    self.user_colors[user] = self.color_palette[self.color_index % len(self.color_palette)]
+                    self.color_index += 1
 
-            rows_to_insert = []
-            for file_path in files:
                 file_name = os.path.basename(file_path)
-                user = locks_dict.get(file_path, "")
-                if self.list_all_files_var.get() or user:
-                    self.locks_data.append((user, file_name, file_path))
-                    if user and user not in self.user_colors:
-                        self.user_colors[user] = self.color_palette[self.color_index % len(self.color_palette)]
-                        self.color_index += 1
-                    rows_to_insert.append((user, file_name, file_path))
+                dir_name = os.path.dirname(file_path)
+                rows_to_insert.append((user, file_name, dir_name))
 
-            self.root.after(0, self.update_treeview, rows_to_insert)
-        else:
-            self.root.after(0, messagebox.showinfo, "Info", "No Git LFS files found.")
-
+        self.root.after(0, self.update_treeview, rows_to_insert)
         self.root.after(0, self.enable_buttons)
+        self.update_filter()
+        return
 
     def update_treeview(self, rows):
         self.locked_tree.delete(*self.locked_tree.get_children())
@@ -217,35 +204,6 @@ class GitLFSManager:
             self.locked_tree.insert('', 'end', values=row, tags=(user,))
             self.locked_tree.tag_configure(user, background=self.user_colors.get(user, "#FFFFFF"))
         self.sort_by_column(self.locked_tree, 'User')
-
-    def lock_files(self):
-        selected_items = self.locked_tree.selection()
-        if not selected_items:
-            messagebox.showinfo("Info", "No files selected to lock.")
-            return
-
-        locked_files = []
-        failed_files = []
-
-        for item in selected_items:
-            file_info = self.locked_tree.item(item, 'values')
-            file_path = file_info[2]
-            output = self.run_git_command(['git', 'lfs', 'lock', file_path], cwd=self.repo_root_entry.get())
-            if output:
-                locked_files.append(file_path)
-            else:
-                failed_files.append(file_path)
-
-        summary_message = "Locking operation completed:\n"
-        if locked_files:
-            summary_message += "Successfully locked {} file(s):\n{}\n".format(len(locked_files), "\n".join(locked_files))
-        if failed_files:
-            summary_message += "Failed to lock {} file(s):\n{}".format(len(failed_files), "\n".join(failed_files))
-        if not locked_files and not failed_files:
-            summary_message = "No files selected to lock or failed to lock all files."
-
-        messagebox.showinfo("Summary", summary_message)
-        self.async_list_lfs_files_and_locks()
 
     def unlock_files(self):
         selected_items = self.locked_tree.selection()
@@ -258,7 +216,7 @@ class GitLFSManager:
 
         for item in selected_items:
             file_info = self.locked_tree.item(item, 'values')
-            file_path = file_info[2]
+            file_path = os.path.join(file_info[2], file_info[1])
             output = self.run_git_command(['git', 'lfs', 'unlock', file_path], cwd=self.repo_root_entry.get())
             if output:
                 unlocked_files.append(file_path)
@@ -287,7 +245,7 @@ class GitLFSManager:
 
         for item in selected_items:
             file_info = self.locked_tree.item(item, 'values')
-            file_path = file_info[2]
+            file_path = os.path.join(file_info[2], file_info[1])
             output = self.run_git_command(['git', 'lfs', 'unlock', '--force', file_path], cwd=self.repo_root_entry.get())
             if output:
                 force_unlocked_files.append(file_path)
@@ -307,14 +265,12 @@ class GitLFSManager:
 
     def disable_buttons(self):
         self.list_locks_button.config(state='disabled')
-        self.lock_files_button.config(state='disabled')
         self.unlock_files_button.config(state='disabled')
         self.force_unlock_button.config(state='disabled')
         self.search_entry.config(state='disabled')
 
     def enable_buttons(self):
         self.list_locks_button.config(state='normal')
-        self.lock_files_button.config(state='normal')
         self.unlock_files_button.config(state='normal')
         self.force_unlock_button.config(state='normal')
         self.search_entry.config(state='normal')
