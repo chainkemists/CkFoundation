@@ -86,23 +86,33 @@ public:
 
 private:
     auto
+    DoSpawnCueReplicatorActorsForPlayerController(
+        APlayerController* InPlayerController) -> void;
+
+private:
+    auto
     OnLoginEvent(
         AGameModeBase* InGameModeBase,
         APlayerController* InPlayerController) -> void;
 
-private:
-    UPROPERTY(Transient)
-    TArray<TObjectPtr<ACk_AbilityCueReplicator_UE>> _ClientToServerAbilityCueReplicators;
+    auto
+    OnPostLoadMapWithWorld(
+        UWorld* InWorld) -> void;
 
+private:
     UPROPERTY(Transient)
     TArray<TObjectPtr<ACk_AbilityCueReplicator_UE>> _AbilityCueReplicators;
     int32                                           _NextAvailableReplicator = 0;
+
+    UPROPERTY(Transient)
+    TSet<TWeakObjectPtr<APlayerController>> _ValidPlayerControllers;
 
     // TODO: drive this through a tuner
     static constexpr int32 NumberOfReplicators = 4;
 
 private:
-    FDelegateHandle                                 _PostLoginDelegateHandle;
+    FDelegateHandle _PostLoginDelegateHandle;
+    FDelegateHandle _PostLoadMapWithWorldDelegateHandle;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
