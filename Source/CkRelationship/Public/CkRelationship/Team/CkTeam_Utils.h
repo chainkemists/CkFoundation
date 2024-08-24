@@ -403,4 +403,9 @@ public:
     UnbindFrom_OnTeamAssignedToAnyEntity_OnOpposingTeam(
         UPARAM(ref) FCk_Handle_Team& InHandle,
         const FCk_Delegate_TeamAssigned& InDelegate);
+
+private:
+    static auto
+    DoAddTeamListener(
+        FCk_Handle& InHandle) -> void;
 };
