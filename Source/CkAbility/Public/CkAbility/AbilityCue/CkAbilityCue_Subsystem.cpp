@@ -257,6 +257,9 @@ auto
             if (ck::Is_NOT_Valid(InCueReplicator))
             { return false; }
 
+            if (ck::Is_NOT_Valid(PC))
+            { return true; }
+
             return InCueReplicator->GetWorld() == PC->GetWorld();
         });
     }
