@@ -54,7 +54,7 @@ public:
     // ReSharper disable once CppInconsistentNaming
     static constexpr auto in_place_delete = true;
 
-    using DebugWrapperPtrType = TSharedPtr<FCk_DebugWrapper, ESPMode::NotThreadSafe>;
+    using DebugWrapperPtrType = std::shared_ptr<FCk_DebugWrapper>;
 
 public:
     template <typename T_Fragment>

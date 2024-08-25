@@ -955,11 +955,11 @@ auto
     auto FragmentInfo = DebugWrapperPtrType{};
     if constexpr (std::is_empty_v<T_Fragment>)
     {
-        FragmentInfo = MakeShared<TCk_DebugWrapper<T_Fragment>, ESPMode::NotThreadSafe>(nullptr);
+        FragmentInfo = std::make_shared<TCk_DebugWrapper<T_Fragment>>(nullptr);
     }
     else
     {
-        FragmentInfo = TSharedPtr<TCk_DebugWrapper<T_Fragment>, ESPMode::NotThreadSafe>
+        FragmentInfo = std::shared_ptr<TCk_DebugWrapper<T_Fragment>>
         { new TCk_DebugWrapper<T_Fragment>(&InHandle.Get<T_Fragment, ck::IsValid_Policy_IncludePendingKill>()) };
     }
 

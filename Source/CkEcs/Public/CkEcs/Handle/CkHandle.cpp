@@ -205,7 +205,9 @@ auto
 }
 
 auto
-    FCk_Handle::operator->() const -> TOptional<FCk_Registry>
+    FCk_Handle::
+    operator->() const
+    -> TOptional<FCk_Registry>
 {
     return _Registry;
 }
