@@ -45,7 +45,7 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-struct FEntity_FragmentMapper
+struct CKECS_API FEntity_FragmentMapper
 {
 public:
     CK_GENERATED_BODY(FEntity_FragmentMapper);
@@ -54,7 +54,8 @@ public:
     // ReSharper disable once CppInconsistentNaming
     static constexpr auto in_place_delete = true;
 
-    using DebugWrapperPtrType = TSharedPtr<FCk_DebugWrapper, ESPMode::NotThreadSafe>;
+    // using raw pointer instead of smart pointers due to natvis complexity limits
+    using DebugWrapperPtrType = FCk_DebugWrapper*;
 
 public:
     template <typename T_Fragment>
@@ -62,6 +63,9 @@ public:
 
     template <typename T_Fragment>
     auto Remove_FragmentInfo() const -> void;
+
+public:
+    ~FEntity_FragmentMapper();
 
 private:
     mutable TArray<DebugWrapperPtrType> _AllFragments;

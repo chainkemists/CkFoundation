@@ -1,3 +1,9 @@
 #include "CkHandle_Debugging.h"
 
-CK_INTENTIONALLY_EMPTY()
+// --------------------------------------------------------------------------------------------------------------------
+
+FEntity_FragmentMapper::
+    ~FEntity_FragmentMapper()
+{
+    for (const auto Pointer : _AllFragments) { delete Pointer; }
+}

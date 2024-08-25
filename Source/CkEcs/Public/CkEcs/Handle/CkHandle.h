@@ -280,10 +280,12 @@ namespace ck
     auto CKECS_API MakeHandle(FCk_Handle InEntity, FCk_Handle InValidHandle) -> FCk_Handle;
 
     auto CKECS_API IsValid(FCk_Entity InEntity, FCk_Handle InValidHandle) -> bool;
-    auto CKECS_API IsValid(FCk_Handle InEntity, FCk_Handle InValidHandle) -> bool;
+    auto CKECS_API IsValid(
+        const FCk_Handle& InEntity, FCk_Handle InValidHandle) -> bool;
 
     auto CKECS_API GetEntity(FCk_Entity InEntity) -> FCk_Entity;
-    auto CKECS_API GetEntity(FCk_Handle InEntity) -> FCk_Entity;
+    auto CKECS_API GetEntity(
+        const FCk_Handle& InEntity) -> FCk_Entity;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -952,19 +954,16 @@ auto
     Add_FragmentInfo(const FCk_Handle& InHandle) const
     -> void
 {
-    auto FragmentInfo = DebugWrapperPtrType{};
-    if constexpr (std::is_empty_v<T_Fragment>)
+    const auto FragmentInfo = [&]() -> DebugWrapperPtrType
     {
-        FragmentInfo = MakeShared<TCk_DebugWrapper<T_Fragment>, ESPMode::NotThreadSafe>(nullptr);
-    }
-    else
-    {
-        FragmentInfo = TSharedPtr<TCk_DebugWrapper<T_Fragment>, ESPMode::NotThreadSafe>
-        { new TCk_DebugWrapper<T_Fragment>(&InHandle.Get<T_Fragment, ck::IsValid_Policy_IncludePendingKill>()) };
-    }
+        if constexpr (std::is_empty_v<T_Fragment>)
+        { return new TCk_DebugWrapper<T_Fragment>(nullptr); }
+        else
+        { return new TCk_DebugWrapper<T_Fragment>(&InHandle.Get<T_Fragment, ck::IsValid_Policy_IncludePendingKill>()); }
+    }();
 
     _FragmentNames.Emplace(FragmentInfo->Get_FragmentName(InHandle));
-    _AllFragments.Emplace(MoveTemp(FragmentInfo));
+    _AllFragments.Emplace(FragmentInfo);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
