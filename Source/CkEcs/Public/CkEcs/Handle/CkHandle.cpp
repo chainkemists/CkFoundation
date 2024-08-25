@@ -205,7 +205,9 @@ auto
 }
 
 auto
-    FCk_Handle::operator->() const -> TOptional<FCk_Registry>
+    FCk_Handle::
+    operator->() const
+    -> TOptional<FCk_Registry>
 {
     return _Registry;
 }
@@ -410,7 +412,7 @@ namespace ck
 
     auto
         IsValid(
-            FCk_Entity InEntity,
+            const FCk_Entity InEntity,
             FCk_Handle InValidHandle)
         -> bool
     {
@@ -419,7 +421,7 @@ namespace ck
 
     auto
         IsValid(
-            FCk_Handle InEntity,
+            const FCk_Handle& InEntity,
             FCk_Handle InValidHandle)
         -> bool
     {
@@ -436,7 +438,7 @@ namespace ck
 
     auto
         GetEntity(
-            FCk_Handle InEntity)
+            const FCk_Handle& InEntity)
         -> FCk_Entity
     {
         return InEntity.Get_Entity();
