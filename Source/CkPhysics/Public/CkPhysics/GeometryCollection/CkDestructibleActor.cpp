@@ -43,9 +43,6 @@ auto
         const FTransform& Transform)
     -> void
 {
-    //if (GetWorld()->IsNetMode(NM_Client))
-    //{ return; }
-
     DoRequest_DeleteAllFieldNodes();
     GetFieldSystemComponent()->ResetFieldSystem();
 
