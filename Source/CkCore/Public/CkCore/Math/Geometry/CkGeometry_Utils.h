@@ -180,6 +180,14 @@ public:
         const FBox2D& InBoxA,
         const FBox2D& InBoxB);
 
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Point In Box2D",
+              Category = "Ck|Utils|Math|Geometry2D")
+    static bool
+    Get_IsPointInBox(
+        const FBox2D& InBox,
+        const FVector2D& InPoint);
+
 private:
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Make Box2D (With Origin)",
