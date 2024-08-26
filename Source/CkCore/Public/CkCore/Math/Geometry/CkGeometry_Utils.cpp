@@ -221,7 +221,7 @@ auto
         const FBox2D& InBox)
     -> TArray<FCk_LineSegment2D>
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InBox), TEXT("Cannot retrieve the Box3D Vertices because it is INVALID"))
+    CK_ENSURE_IF_NOT(ck::IsValid(InBox), TEXT("Cannot retrieve the Box2D Vertices because it is INVALID"))
     { return {}; }
 
     const auto BoxEdges = TArray
@@ -247,7 +247,7 @@ auto
         const FBox2D& InBox)
     -> float
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InBox), TEXT("Cannot calculate the Box3D Area because it is INVALID"), InBox)
+    CK_ENSURE_IF_NOT(ck::IsValid(InBox), TEXT("Cannot calculate the Box2D Area because it is INVALID"), InBox)
     { return {}; }
 
     return InBox.GetArea();
@@ -260,10 +260,10 @@ auto
         const FBox2D& InBoxB)
     -> FBox2D
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InBoxA), TEXT("Cannot calculate the Box3D Overlap because Box A is INVALID"))
+    CK_ENSURE_IF_NOT(ck::IsValid(InBoxA), TEXT("Cannot calculate the Box2D Overlap because Box A is INVALID"))
     { return {}; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InBoxB), TEXT("Cannot calculate the Box3D Overlap because Box B is INVALID"))
+    CK_ENSURE_IF_NOT(ck::IsValid(InBoxB), TEXT("Cannot calculate the Box2D Overlap because Box B is INVALID"))
     { return {}; }
 
     return InBoxA.Overlap(InBoxB);
@@ -276,13 +276,26 @@ auto
         const FBox2D& InBoxB)
     -> bool
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InBoxA), TEXT("Cannot calculate Box3D Intersects because Box A is INVALID"))
+    CK_ENSURE_IF_NOT(ck::IsValid(InBoxA), TEXT("Cannot calculate Box2D Intersects because Box A is INVALID"))
     { return {}; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InBoxB), TEXT("Cannot calculate Box3D Intersects because Box B is INVALID"))
+    CK_ENSURE_IF_NOT(ck::IsValid(InBoxB), TEXT("Cannot calculate Box2D Intersects because Box B is INVALID"))
     { return {}; }
 
     return InBoxA.Intersect(InBoxB);
+}
+
+auto
+    UCk_Utils_Geometry2D_UE::
+    Get_IsPointInBox(
+        const FBox2D& InBox,
+        const FVector2D& InPoint)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InBox), TEXT("Cannot calculate if Point [{}] is inside Box2D because the Box is INVALID"), InPoint)
+    { return {}; }
+
+    return InPoint.X >= InBox.Min.X && InPoint.X <= InBox.Max.X && InPoint.Y >= InBox.Min.Y && InPoint.Y <= InBox.Max.Y;
 }
 
 auto
