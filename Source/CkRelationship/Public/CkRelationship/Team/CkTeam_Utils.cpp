@@ -107,7 +107,7 @@ auto
         FCk_Handle_Team& InHandle)
     -> FCk_Handle_Team
 {
-    InHandle.Remove<ck::FTag_OnTeamAssigned_Setup>();
+    InHandle.Try_Remove<ck::FTag_OnTeamAssigned_Setup>();
     return Assign(InHandle, ECk_Team_ID::Unassigned);
 }
 
@@ -327,6 +327,7 @@ auto
         }
     }
 
+    InHandle.Try_Remove<ck::FTag_OnTeamAssigned_Setup>();
     InHandle.Remove<ck::FFragment_TeamInfo>();
 }
 
