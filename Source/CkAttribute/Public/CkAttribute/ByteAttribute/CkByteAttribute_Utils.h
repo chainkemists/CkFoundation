@@ -230,8 +230,7 @@ public:
     static FCk_Handle_ByteAttributeModifier
     Override(
         UPARAM(ref) FCk_Handle_ByteAttributeModifier& InAttributeModifierEntity,
-        uint8 InNewDelta,
-        ECk_MinMaxCurrent InComponent = ECk_MinMaxCurrent::Current);
+        uint8 InNewDelta);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AttributeModifier|Byte",

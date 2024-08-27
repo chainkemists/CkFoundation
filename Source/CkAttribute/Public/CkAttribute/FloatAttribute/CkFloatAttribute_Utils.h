@@ -230,8 +230,7 @@ public:
     static FCk_Handle_FloatAttributeModifier
     Override(
         UPARAM(ref) FCk_Handle_FloatAttributeModifier& InAttributeModifierEntity,
-        float InNewDelta,
-        ECk_MinMaxCurrent InComponent = ECk_MinMaxCurrent::Current);
+        float InNewDelta);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AttributeModifier|Float",

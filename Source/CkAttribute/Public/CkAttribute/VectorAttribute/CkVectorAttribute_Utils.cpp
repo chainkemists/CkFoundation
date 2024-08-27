@@ -7,7 +7,6 @@
 #include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 
@@ -82,7 +81,8 @@ auto
     {
         if (UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_VectorAttribute_Rep>(InAttributeOwnerEntity))
         {
-            InAttributeOwnerEntity.Try_Transform<TObjectPtr<UCk_Fragment_VectorAttribute_Rep>>([&](TObjectPtr<UCk_Fragment_VectorAttribute_Rep>& InRepComp)
+            InAttributeOwnerEntity.Try_Transform<TObjectPtr<UCk_Fragment_VectorAttribute_Rep>>(
+            [&]( const TObjectPtr<UCk_Fragment_VectorAttribute_Rep>& InRepComp)
             {
                 InRepComp->Request_TryUpdateReplicatedAttributes();
             });
@@ -271,7 +271,7 @@ auto
         TEXT("Vector Attribute [{}] is INVALID"),
         InAttribute)
     { return {}; }
-    
+
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Vector Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
@@ -309,7 +309,7 @@ auto
         TEXT("Vector Attribute [{}] is INVALID"),
         InAttribute)
     { return {}; }
-    
+
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Vector Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
@@ -346,7 +346,7 @@ auto
         TEXT("Vector Attribute [{}] is INVALID"),
         InAttribute)
     { return {}; }
-    
+
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Vector Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
@@ -385,10 +385,10 @@ auto
         TEXT("Vector Attribute [{}] is INVALID"),
         InAttribute)
     { return {}; }
-    
+
     const auto CurrentBaseValue = Get_BaseValue(InAttribute, InAttributeComponent);
     const auto Delta = InNewBaseValue - CurrentBaseValue;
-    
+
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Vector Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
@@ -492,7 +492,7 @@ auto
     -> FCk_Handle_VectorAttributeModifier
 {
     QUICK_SCOPE_CYCLE_COUNTER(Add_Vector_Modifier)
-    
+
     auto ParamsToUse = InParams;
     ParamsToUse.Set_TargetAttributeName(UCk_Utils_GameplayLabel_UE::Get_Label(InAttribute));
 
@@ -555,11 +555,10 @@ auto
     UCk_Utils_VectorAttributeModifier_UE::
     Override(
         FCk_Handle_VectorAttributeModifier& InAttributeModifierEntity,
-        FVector InNewDelta,
-        ECk_MinMaxCurrent InComponent)
+        const FVector InNewDelta)
     -> FCk_Handle_VectorAttributeModifier
 {
-    switch (InComponent)
+    switch (const auto Component = InAttributeModifierEntity.Get<ECk_MinMaxCurrent>())
     {
         case ECk_MinMaxCurrent::Min:
         {
@@ -570,7 +569,7 @@ auto
 
             CK_ENSURE_IF_NOT((ModifierOperation == ECk_ArithmeticOperations_Basic::Divide ? NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(InNewDelta) : true),
                 TEXT("Trying to OVERRIDE existing Vector Attribute Modifier [{}][{}] with new value which would DIVIDE by 0. Ignoring the change in non-shipping build"),
-                InAttributeModifierEntity, InComponent)
+                InAttributeModifierEntity, Component)
             { return InAttributeModifierEntity; }
 
             VectorAttributeModifier_Utils_Min::Override(InAttributeModifierEntity, InNewDelta);
@@ -585,7 +584,7 @@ auto
 
             CK_ENSURE_IF_NOT((ModifierOperation == ECk_ArithmeticOperations_Basic::Divide ? NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(InNewDelta) : true),
                 TEXT("Trying to OVERRIDE existing Vector Attribute Modifier [{}][{}] with new value which would DIVIDE by 0. Ignoring the change in non-shipping build"),
-                InAttributeModifierEntity, InComponent)
+                InAttributeModifierEntity, Component)
             { return InAttributeModifierEntity; }
 
             VectorAttributeModifier_Utils_Max::Override(InAttributeModifierEntity, InNewDelta);
@@ -600,7 +599,7 @@ auto
 
             CK_ENSURE_IF_NOT((ModifierOperation == ECk_ArithmeticOperations_Basic::Divide ? NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(InNewDelta) : true),
                 TEXT("Trying to OVERRIDE existing Vector Attribute Modifier [{}][{}] with new value which would DIVIDE by 0. Ignoring the change in non-shipping build"),
-                InAttributeModifierEntity, InComponent)
+                InAttributeModifierEntity, Component)
             { return InAttributeModifierEntity; }
 
             VectorAttributeModifier_Utils_Current::Override(InAttributeModifierEntity, InNewDelta);

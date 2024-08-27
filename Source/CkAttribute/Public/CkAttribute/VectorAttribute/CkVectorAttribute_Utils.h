@@ -230,8 +230,7 @@ public:
     static FCk_Handle_VectorAttributeModifier
     Override(
         UPARAM(ref) FCk_Handle_VectorAttributeModifier& InAttributeModifierEntity,
-        FVector InNewDelta,
-        ECk_MinMaxCurrent InComponent = ECk_MinMaxCurrent::Current);
+        FVector InNewDelta);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AttributeModifier|Vector",
