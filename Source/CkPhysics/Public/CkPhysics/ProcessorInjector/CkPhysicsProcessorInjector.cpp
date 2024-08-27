@@ -3,6 +3,7 @@
 #include "CkPhysics/Acceleration/CkAcceleration_Processor.h"
 #include "CkPhysics/AutoReorient/CkAutoReorient_Processor.h"
 #include "CkPhysics/EulerIntegrator/CkEulerIntegrator_Processor.h"
+#include "CkPhysics/PredictedVelocity/CkPredictedVelocity_Processor.h"
 #include "CkPhysics/Velocity/CkVelocity_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -31,6 +32,8 @@ auto
 
     InWorld.Add<ck::FProcessor_EulerIntegrator_Update>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_EulerIntegrator_DoOnePredictiveUpdate>(InWorld.Get_Registry());
+
+    InWorld.Add<ck::FProcessor_PredictedVelocity_Update>(InWorld.Get_Registry());
 
     InWorld.Add<ck::FProcessor_Velocity_Clamp>(InWorld.Get_Registry());
 }

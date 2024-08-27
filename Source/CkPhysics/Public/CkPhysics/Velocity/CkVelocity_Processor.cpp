@@ -4,6 +4,8 @@
 #include "CkCore/Math/ValueRange/CkValueRange.h"
 #include "CkCore/Math/Vector/CkVector_Utils.h"
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
+
+#include "CkPhysics/PredictedVelocity/CkPredictedVelocity_Utils.h"
 #include "CkPhysics/Velocity/CkVelocity_Utils.h"
 
 #include "GameFramework/Character.h"
@@ -42,6 +44,12 @@ namespace ck
                     ck::IsValid(MovementComponent))
                 {
                     InHandle.Add<ck::FFragment_MovementComponent>(MovementComponent);
+                }
+                // If there isn't a movement component, use predicted velocity feature to track velocity
+                // Since velocity is replicated, we only need predicted velocity on auth
+                else if (UCk_Utils_Net_UE::Get_EntityNetMode(InHandle) == ECk_Net_NetModeType::Host)
+                {
+                    UCk_Utils_PredictedVelocity_UE::Add(InHandle, {});
                 }
             }
         }
