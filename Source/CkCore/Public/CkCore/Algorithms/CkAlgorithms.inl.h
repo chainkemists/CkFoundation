@@ -9,6 +9,9 @@
 
 #include <Algo/Count.h>
 #include <Algo/Sort.h>
+#include <Algo/Find.h>
+#include <Algo/MaxElement.h>
+#include <Algo/MinElement.h>
 
 #include <algorithm>
 
@@ -56,6 +59,109 @@ namespace ck::algo
         -> bool
     {
         return std::any_of(InItrBegin, InItrEnd, InFunc);
+    }
+
+    template <typename T_ItrType, typename T_UnaryFunction>
+    auto
+        FindIf(
+            T_ItrType InItrBegin,
+            T_ItrType InItrEnd,
+            T_UnaryFunction InFunc)
+        -> T_ItrType
+    {
+        return std::find_if(InItrBegin, InItrEnd, InFunc);
+    }
+
+    template <typename T_ItrType, typename T_UnaryFunction>
+    auto
+        FindIf(
+            T_ItrType InItrBegin,
+            T_ItrType InItrEnd,
+            T_UnaryFunction InFunc)
+        -> TOptional<decltype(*InItrBegin)>
+    {
+        auto Ret = std::find_if(InItrBegin, InItrEnd, InFunc);
+
+        if (Ret == InItrEnd)
+        { return {}; }
+
+        return *Ret;
+    }
+
+    template <typename T_ValueType, typename T_UnaryFunction>
+    auto
+        FindIf(
+            const TArray<T_ValueType>& InArray,
+            T_UnaryFunction InFunc)
+        -> TOptional<typename TArray<T_ValueType>::ElementType>
+    {
+        const auto* Found = InArray.FindByPredicate(InFunc);
+
+        if (ck::Is_NOT_Valid(Found, ck::IsValid_Policy_NullptrOnly{}))
+        { return {}; }
+
+        return *Found;
+    }
+
+    template <typename T_Container, typename T_ProjectionType>
+    auto
+        MaxElement(
+            T_Container& InContainer,
+            T_ProjectionType InProj)
+        -> TOptional<std::remove_reference_t<decltype(*Algo::MaxElement(InContainer, InProj))>>
+    {
+        auto MaxElement = AlgoImpl::MaxElementBy(InContainer, MoveTemp(InProj), TLess<>());
+
+        if (ck::Is_NOT_Valid(MaxElement, ck::IsValid_Policy_NullptrOnly{}))
+        { return {}; }
+
+        return *MaxElement;
+    }
+
+    template <typename T_Container, typename T_ProjectionType>
+    auto
+        MinElement(
+            T_Container& InContainer,
+            T_ProjectionType InProj)
+        -> TOptional<std::remove_reference_t<decltype(*Algo::MinElement(InContainer, InProj))>>
+    {
+        auto MinElement = AlgoImpl::MinElementBy(InContainer, MoveTemp(InProj), TLess<>());
+
+        if (ck::Is_NOT_Valid(MinElement, ck::IsValid_Policy_NullptrOnly{}))
+        { return {}; }
+
+        return *MinElement;
+    }
+
+    template <typename T_ValueType, typename T_ComparatorType>
+    auto
+        MinElement(
+            TArray<T_ValueType>& InContainer,
+            T_ComparatorType InFunc)
+        -> TOptional<T_ValueType>
+    {
+        const auto& MinElement = Algo::MinElement(InContainer, InFunc);
+
+        if (ck::Is_NOT_Valid(MinElement, ck::IsValid_Policy_NullptrOnly{}))
+        { return {}; }
+
+        return *MinElement;
+    }
+
+    template <typename T_ValueType, typename T_ComparatorType, typename T_ProjectionFunction>
+    auto
+        MinElement(
+            TArray<T_ValueType>& InContainer,
+            T_ComparatorType InFunc,
+            T_ProjectionFunction InProj)
+        -> TOptional<T_ValueType>
+    {
+        const auto& MinElement = Algo::MinElementBy(InContainer, InProj, InFunc);
+
+        if (ck::Is_NOT_Valid(MinElement, ck::IsValid_Policy_NullptrOnly{}))
+        { return {}; }
+
+        return *MinElement;
     }
 
     template <typename T_Container, typename T_PredicateFunction>

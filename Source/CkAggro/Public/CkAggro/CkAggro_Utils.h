@@ -29,7 +29,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName="[Aggro] Add New Aggro")
+              DisplayName="[Ck][Aggro] Add New Aggro")
     static FCk_Handle_Aggro
     Add(
         UPARAM(ref) FCk_Handle& InHandle,

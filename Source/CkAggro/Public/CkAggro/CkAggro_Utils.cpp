@@ -75,20 +75,14 @@ auto
         const FCk_Handle& InAggroOwnerEntity)
     -> FCk_Handle_Aggro
 {
-    auto Ret = FCk_Handle_Aggro{};
-    auto HighestScore = std::numeric_limits<float>::max();
+    const auto& AllAggroEntities = RecordOfAggro_Utils::Get_ValidEntries(InAggroOwnerEntity);
 
-    RecordOfAggro_Utils::ForEach_ValidEntry(InAggroOwnerEntity, [&](const FCk_Handle_Aggro& InAggro)
-    {
-        const auto Score = Get_AggroScore(InAggro);
-        if (HighestScore > Get_AggroScore(InAggro))
-        {
-            HighestScore = Score;
-            Ret = InAggro;
-        }
-    });
+    const auto& HighestAggro = ck::algo::MaxElement(AllAggroEntities, [&](const FCk_Handle_Aggro& InAggro) { return Get_AggroScore(InAggro); });
 
-    return Ret;
+    if (ck::Is_NOT_Valid(HighestAggro))
+    { return {}; }
+
+    return *HighestAggro;
 }
 
 auto
@@ -97,20 +91,14 @@ auto
         const FCk_Handle& InAggroOwnerEntity)
     -> FCk_Handle_Aggro
 {
-    auto Ret = FCk_Handle_Aggro{};
-    auto LowestScore = std::numeric_limits<float>::max();
+    const auto& AllAggroEntities = RecordOfAggro_Utils::Get_ValidEntries(InAggroOwnerEntity);
 
-    RecordOfAggro_Utils::ForEach_ValidEntry(InAggroOwnerEntity, [&](const FCk_Handle_Aggro& InAggro)
-    {
-        const auto Score = Get_AggroScore(InAggro);
-        if (LowestScore > Get_AggroScore(InAggro))
-        {
-            LowestScore = Score;
-            Ret = InAggro;
-        }
-    });
+    const auto& LowestAggro = ck::algo::MinElement(AllAggroEntities, [&](const FCk_Handle_Aggro& InAggro) { return Get_AggroScore(InAggro); });
 
-    return Ret;
+    if (ck::Is_NOT_Valid(LowestAggro))
+    { return {}; }
+
+    return *LowestAggro;
 }
 
 auto
