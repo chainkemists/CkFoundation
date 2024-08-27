@@ -153,6 +153,7 @@ namespace ck
         { return; }
 
         InHandle.template Add<AttributeModifierFragmentType>(InModifierDelta);
+        InHandle.template Add<ECk_MinMaxCurrent>(AttributeFragmentType::ComponentTagType);
 
         switch (InModifierOperation)
         {

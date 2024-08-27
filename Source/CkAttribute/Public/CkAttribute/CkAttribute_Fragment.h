@@ -287,7 +287,8 @@ namespace ck
 
     public:
         TFragment_AttributeModifier() = default;
-        explicit TFragment_AttributeModifier(
+        explicit
+        TFragment_AttributeModifier(
             AttributeDataType InModifierDelta);
 
     private:
