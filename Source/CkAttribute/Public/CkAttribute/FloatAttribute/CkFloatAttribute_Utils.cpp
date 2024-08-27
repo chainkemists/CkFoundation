@@ -81,7 +81,8 @@ auto
     {
         if (UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_FloatAttribute_Rep>(InAttributeOwnerEntity))
         {
-            InAttributeOwnerEntity.Try_Transform<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>([&](TObjectPtr<UCk_Fragment_FloatAttribute_Rep>& InRepComp)
+            InAttributeOwnerEntity.Try_Transform<TObjectPtr<UCk_Fragment_FloatAttribute_Rep>>(
+            [&](const TObjectPtr<UCk_Fragment_FloatAttribute_Rep>& InRepComp)
             {
                 InRepComp->Request_TryUpdateReplicatedAttributes();
             });
@@ -270,7 +271,7 @@ auto
         TEXT("Float Attribute [{}] is INVALID"),
         InAttribute)
     { return {}; }
-    
+
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Float Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
@@ -308,7 +309,7 @@ auto
         TEXT("Float Attribute [{}] is INVALID"),
         InAttribute)
     { return {}; }
-    
+
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Float Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
@@ -345,7 +346,7 @@ auto
         TEXT("Float Attribute [{}] is INVALID"),
         InAttribute)
     { return {}; }
-    
+
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Float Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
@@ -384,7 +385,7 @@ auto
         TEXT("Float Attribute [{}] is INVALID"),
         InAttribute)
     { return {}; }
-    
+
     const auto CurrentBaseValue = Get_BaseValue(InAttribute, InAttributeComponent);
     const auto Delta = InNewBaseValue - CurrentBaseValue;
 
@@ -491,7 +492,7 @@ auto
     -> FCk_Handle_FloatAttributeModifier
 {
     QUICK_SCOPE_CYCLE_COUNTER(Add_Float_Modifier)
-    
+
     auto ParamsToUse = InParams;
     ParamsToUse.Set_TargetAttributeName(UCk_Utils_GameplayLabel_UE::Get_Label(InAttribute));
 
@@ -554,11 +555,10 @@ auto
     UCk_Utils_FloatAttributeModifier_UE::
     Override(
         FCk_Handle_FloatAttributeModifier& InAttributeModifierEntity,
-        float InNewDelta,
-        ECk_MinMaxCurrent InComponent)
+        float InNewDelta)
     -> FCk_Handle_FloatAttributeModifier
 {
-    switch (InComponent)
+    switch (const auto Component = InAttributeModifierEntity.Get<ECk_MinMaxCurrent>())
     {
         case ECk_MinMaxCurrent::Min:
         {
@@ -569,7 +569,7 @@ auto
 
             CK_ENSURE_IF_NOT((ModifierOperation == ECk_ArithmeticOperations_Basic::Divide ? NOT FMath::IsNearlyZero(InNewDelta) : true),
                 TEXT("Trying to OVERRIDE existing Float Attribute Modifier [{}][{}] with new value which would DIVIDE by 0. Ignoring the change in non-shipping build"),
-                InAttributeModifierEntity, InComponent)
+                InAttributeModifierEntity, Component)
             { return InAttributeModifierEntity; }
 
             FloatAttributeModifier_Utils_Min::Override(InAttributeModifierEntity, InNewDelta);
@@ -584,7 +584,7 @@ auto
 
             CK_ENSURE_IF_NOT((ModifierOperation == ECk_ArithmeticOperations_Basic::Divide ? NOT FMath::IsNearlyZero(InNewDelta) : true),
                 TEXT("Trying to OVERRIDE existing Float Attribute Modifier [{}][{}] with new value which would DIVIDE by 0. Ignoring the change in non-shipping build"),
-                InAttributeModifierEntity, InComponent)
+                InAttributeModifierEntity, Component)
             { return InAttributeModifierEntity; }
 
             FloatAttributeModifier_Utils_Max::Override(InAttributeModifierEntity, InNewDelta);
@@ -599,7 +599,7 @@ auto
 
             CK_ENSURE_IF_NOT((ModifierOperation == ECk_ArithmeticOperations_Basic::Divide ? NOT FMath::IsNearlyZero(InNewDelta) : true),
                 TEXT("Trying to OVERRIDE existing Float Attribute Modifier [{}][{}] with new value which would DIVIDE by 0. Ignoring the change in non-shipping build"),
-                InAttributeModifierEntity, InComponent)
+                InAttributeModifierEntity, Component)
             { return InAttributeModifierEntity; }
 
             FloatAttributeModifier_Utils_Current::Override(InAttributeModifierEntity, InNewDelta);
