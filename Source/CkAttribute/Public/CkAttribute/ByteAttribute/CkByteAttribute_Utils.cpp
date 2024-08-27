@@ -81,7 +81,8 @@ auto
     {
         if (UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_ByteAttribute_Rep>(InAttributeOwnerEntity))
         {
-            InAttributeOwnerEntity.Try_Transform<TObjectPtr<UCk_Fragment_ByteAttribute_Rep>>([&](TObjectPtr<UCk_Fragment_ByteAttribute_Rep>& InRepComp)
+            InAttributeOwnerEntity.Try_Transform<TObjectPtr<UCk_Fragment_ByteAttribute_Rep>>(
+            [&](const TObjectPtr<UCk_Fragment_ByteAttribute_Rep>& InRepComp)
             {
                 InRepComp->Request_TryUpdateReplicatedAttributes();
             });
@@ -270,7 +271,7 @@ auto
         TEXT("Byte Attribute [{}] is INVALID"),
         InAttribute)
     { return {}; }
-    
+
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Byte Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
@@ -308,7 +309,7 @@ auto
         TEXT("Byte Attribute [{}] is INVALID"),
         InAttribute)
     { return {}; }
-    
+
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Byte Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
@@ -345,7 +346,7 @@ auto
         TEXT("Byte Attribute [{}] is INVALID"),
         InAttribute)
     { return {}; }
-    
+
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Byte Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
@@ -384,7 +385,7 @@ auto
         TEXT("Byte Attribute [{}] is INVALID"),
         InAttribute)
     { return {}; }
-    
+
     const auto CurrentBaseValue = Get_BaseValue(InAttribute, InAttributeComponent);
     const uint8 Delta = InNewBaseValue - CurrentBaseValue;
 
@@ -491,7 +492,7 @@ auto
     -> FCk_Handle_ByteAttributeModifier
 {
     QUICK_SCOPE_CYCLE_COUNTER(Add_Byte_Modifier)
-    
+
     auto ParamsToUse = InParams;
     ParamsToUse.Set_TargetAttributeName(UCk_Utils_GameplayLabel_UE::Get_Label(InAttribute));
 
@@ -554,11 +555,10 @@ auto
     UCk_Utils_ByteAttributeModifier_UE::
     Override(
         FCk_Handle_ByteAttributeModifier& InAttributeModifierEntity,
-        uint8 InNewDelta,
-        ECk_MinMaxCurrent InComponent)
+        uint8 InNewDelta)
     -> FCk_Handle_ByteAttributeModifier
 {
-    switch (InComponent)
+    switch (const auto Component = InAttributeModifierEntity.Get<ECk_MinMaxCurrent>())
     {
         case ECk_MinMaxCurrent::Min:
         {
@@ -569,7 +569,7 @@ auto
 
             CK_ENSURE_IF_NOT((ModifierOperation == ECk_ArithmeticOperations_Basic::Divide ? InNewDelta != 0 : true),
                 TEXT("Trying to OVERRIDE existing Byte Attribute Modifier [{}][{}] with new value which would DIVIDE by 0. Ignoring the change in non-shipping build"),
-                InAttributeModifierEntity, InComponent)
+                InAttributeModifierEntity, Component)
             { return InAttributeModifierEntity; }
 
             ByteAttributeModifier_Utils_Min::Override(InAttributeModifierEntity, InNewDelta);
@@ -584,7 +584,7 @@ auto
 
             CK_ENSURE_IF_NOT((ModifierOperation == ECk_ArithmeticOperations_Basic::Divide ? InNewDelta != 0 : true),
                 TEXT("Trying to OVERRIDE existing Byte Attribute Modifier [{}][{}] with new value which would DIVIDE by 0. Ignoring the change in non-shipping build"),
-                InAttributeModifierEntity, InComponent)
+                InAttributeModifierEntity, Component)
             { return InAttributeModifierEntity; }
 
             ByteAttributeModifier_Utils_Max::Override(InAttributeModifierEntity, InNewDelta);
@@ -599,7 +599,7 @@ auto
 
             CK_ENSURE_IF_NOT((ModifierOperation == ECk_ArithmeticOperations_Basic::Divide ? InNewDelta != 0 : true),
                 TEXT("Trying to OVERRIDE existing Byte Attribute Modifier [{}][{}] with new value which would DIVIDE by 0. Ignoring the change in non-shipping build"),
-                InAttributeModifierEntity, InComponent)
+                InAttributeModifierEntity, Component)
             { return InAttributeModifierEntity; }
 
             ByteAttributeModifier_Utils_Current::Override(InAttributeModifierEntity, InNewDelta);

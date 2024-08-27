@@ -156,7 +156,7 @@ auto
                 ck::IsValid(AttributeModifier))
             {
                 UCk_Utils_ByteAttributeModifier_UE::Override(
-                    AttributeModifier, AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Component());
+                    AttributeModifier, AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base());
             }
             else
             {
