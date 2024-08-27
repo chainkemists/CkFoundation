@@ -3,6 +3,9 @@
 #include "CkCore/TypeTraits/CkTypeTraits.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include <Algo/MaxElement.h>
+#include <Algo/MinElement.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::algo
@@ -43,6 +46,26 @@ namespace ck::algo
     template <typename T_ItrType, typename T_PredicateFunction>
     [[nodiscard]]
     auto AnyOf(T_ItrType InItrBegin, T_ItrType InItrEnd, T_PredicateFunction InFunc) -> bool;
+
+    template <typename T_ItrType, typename T_UnaryFunction>
+    [[nodiscard]]
+    auto FindIf(T_ItrType InItrBegin, T_ItrType InItrEnd, T_UnaryFunction InFunc) -> T_ItrType;
+
+    template <typename T_ItrType, typename T_UnaryFunction>
+    [[nodiscard]]
+    auto FindIf(T_ItrType InItrBegin, T_ItrType InItrEnd, T_UnaryFunction InFunc) -> TOptional<decltype(*InItrBegin)>;
+
+    template <typename T_ValueType, typename T_UnaryFunction>
+    [[nodiscard]]
+    auto FindIf(const TArray<T_ValueType>& InArray, T_UnaryFunction InFunc) -> TOptional<typename TArray<T_ValueType>::ElementType>;
+
+    template <typename T_Container, typename T_ProjectionType>
+    [[nodiscard]]
+    auto MaxElement(T_Container& InContainer, T_ProjectionType InProj) -> TOptional<std::remove_reference_t<decltype(*Algo::MaxElement(InContainer, InProj))>>;
+
+    template <typename T_Container, typename T_ProjectionType>
+    [[nodiscard]]
+    auto MinElement(T_Container& InContainer, T_ProjectionType InProj) -> TOptional<std::remove_reference_t<decltype(*Algo::MinElement(InContainer, InProj))>>;
 
     template <typename T_Container, typename T_PredicateFunction>
     [[nodiscard]]
