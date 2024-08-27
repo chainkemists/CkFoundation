@@ -87,9 +87,8 @@ namespace ck
         }();
 
         const auto& ToTarget = TargetLoc - ProjectileStartingLoc;
-        const auto& ScaledProjectileSpeed = ProjectileSpeed * InDeltaT.Get_Seconds();
 
-        const auto& A = FVector::DotProduct(TargetVel, TargetVel) - (ScaledProjectileSpeed * ScaledProjectileSpeed);
+        const auto& A = FVector::DotProduct(TargetVel, TargetVel) - (ProjectileSpeed * ProjectileSpeed);
         const auto& B = FVector::DotProduct(TargetVel, ToTarget) * 2.0f;
         const auto& C = FVector::DotProduct(ToTarget, ToTarget);
 
