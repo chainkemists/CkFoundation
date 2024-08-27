@@ -33,7 +33,7 @@ auto
 {
     const auto Found = _AttributesToReplicate.FindByPredicate([&](const FCk_Fragment_FloatAttribute_BaseFinal& InElement)
     {
-        return InElement.Get_AttributeName() == InAttributeName;
+        return InElement.Get_AttributeName() == InAttributeName && InElement.Get_Component() == InComponent;
     });
 
     const auto& ToReplicate = FCk_Fragment_FloatAttribute_BaseFinal{InAttributeName, InBase, InFinal, InComponent};
@@ -109,6 +109,7 @@ auto
     for (auto Index = 0; Index < _AttributesToReplicate.Num(); ++Index)
     {
         const auto& AttributeToReplicate = _AttributesToReplicate[Index];
+
         auto AttributeEntity = UCk_Utils_FloatAttribute_UE::TryGet(Get_AssociatedEntity(), AttributeToReplicate.Get_AttributeName());
 
         if (NOT _AttributesToReplicate_Previous.IsValidIndex(Index))
@@ -154,7 +155,7 @@ auto
                 ck::IsValid(AttributeModifier))
             {
                 UCk_Utils_FloatAttributeModifier_UE::Override(
-                    AttributeModifier, AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Component());
+                    AttributeModifier, AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base());
             }
             else
             {

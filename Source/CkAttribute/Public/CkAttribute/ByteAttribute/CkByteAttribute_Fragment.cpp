@@ -33,7 +33,7 @@ auto
 {
     const auto Found = _AttributesToReplicate.FindByPredicate([&](const FCk_Fragment_ByteAttribute_BaseFinal& InElement)
     {
-        return InElement.Get_AttributeName() == InAttributeName;
+        return InElement.Get_AttributeName() == InAttributeName && InElement.Get_Component() == InComponent;
     });
 
     const auto& ToReplicate = FCk_Fragment_ByteAttribute_BaseFinal{InAttributeName, InBase, InFinal, InComponent};
