@@ -17,7 +17,6 @@ public class CkAggro : CkModuleRules
             "StructUtils",
             "GameplayTags",
 
-            "CkAggro",
             "CkAttribute",
             "CkCore",
             "CkEcs",
