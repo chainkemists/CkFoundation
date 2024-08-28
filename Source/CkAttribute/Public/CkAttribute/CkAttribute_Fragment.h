@@ -99,6 +99,9 @@ namespace ck::detail
     class TProcessor_AttributeModifier_NotRevocableDivide_Compute;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_Override_Compute;
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_Teardown;
 }
 
@@ -173,6 +176,9 @@ namespace ck
 
         template <typename, typename>
         friend class detail::TProcessor_AttributeModifier_NotRevocableDivide_Compute;
+
+        template <typename, typename>
+        friend class detail::TProcessor_AttributeModifier_Override_Compute;
 
     public:
         CK_GENERATED_BODY(TFragment_Attribute<T_HandleType COMMA T_AttributeType COMMA T_ComponentTag>);
@@ -277,6 +283,7 @@ namespace ck
         CK_DEFINE_ECS_TAG(FTag_ModifyDivide);
         CK_DEFINE_ECS_TAG(FTag_IsRevocableModification);
         CK_DEFINE_ECS_TAG(FTag_IsNotRevocableModification);
+        CK_DEFINE_ECS_TAG(FTag_IsOverrideModification);
         CK_DEFINE_ECS_TAG(FTag_ComputeResult);
 
     public:

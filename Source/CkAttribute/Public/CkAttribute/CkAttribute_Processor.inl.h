@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkAttribute/CkAttribute_Log.h"
+#include "CkAttribute/CkAttribute_Processor.h"
 #include "CkAttribute/CkAttribute_Utils.h"
 
 #include "CkCore/Format/CkFormat.h"
@@ -334,6 +335,36 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    auto
+        TProcessor_AttributeModifier_Override_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const AttributeModifierFragmentType& InAttributeModifier) const -> void
+    {
+        auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
+
+        attribute::VeryVerbose
+        (
+            TEXT("OVERRIDING AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]"),
+            InHandle,
+            AttributeFragmentType::ComponentTagType,
+            TargetEntity
+        );
+
+        AttributeComp._Base = InAttributeModifier.Get_ModifierDelta();
+
+        // TODO: move this to the Tick() of TProcessor_AttributeModifier_RevocableAdditive_Compute
+        // technically, the following is 'correct' but it's confusing as to why we are resetting the Final in this processor
+        AttributeComp._Final = AttributeComp._Base;
+
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
     auto
         TProcessor_AttributeModifier_RevocableMultiply_Compute<T_DerivedProcessor, T_AttributeModifierFragment>::
@@ -445,10 +476,13 @@ namespace ck::detail
         TProcessor_AttributeModifier_ComputeAll(
             RegistryType InRegistry)
         : Super(InRegistry)
+        , _Override_Compute(InRegistry)
+
         , _NotRevocableAdd_Compute(InRegistry)
         , _NotRevocableSubtract_Compute(InRegistry)
         , _NotRevocableMultiply_Compute(InRegistry)
         , _NotRevocableDivide_Compute(InRegistry)
+
         , _RevocableAdd_Compute(InRegistry)
         , _RevocableSubtract_Compute(InRegistry)
         , _RevocableMultiply_Compute(InRegistry)
@@ -463,6 +497,8 @@ namespace ck::detail
             TimeType InDeltaT)
         -> void
     {
+        _Override_Compute.Tick(InDeltaT);
+
         _NotRevocableAdd_Compute.Tick(InDeltaT);
         _NotRevocableSubtract_Compute.Tick(InDeltaT);
         _NotRevocableMultiply_Compute.Tick(InDeltaT);

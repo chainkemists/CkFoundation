@@ -372,6 +372,44 @@ namespace ck::detail
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_AttributeModifier_Override_Compute : public TProcessor<
+            TProcessor_AttributeModifier_Override_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
+            T_DerivedAttributeModifier,
+            typename T_DerivedAttributeModifier::FTag_ModifyAdd,
+            typename T_DerivedAttributeModifier::FTag_IsOverrideModification,
+            typename T_DerivedAttributeModifier::FTag_ComputeResult,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = typename T_DerivedAttributeModifier::FTag_ComputeResult;
+
+    public:
+        using AttributeModifierFragmentType  = T_DerivedAttributeModifier;
+        using AttributeFragmentType          = typename AttributeModifierFragmentType::AttributeFragmentType;
+        using AttributeDataType              = typename AttributeFragmentType::AttributeDataType;
+        using ModificationType               = typename AttributeModifierFragmentType::FTag_ModifyAdd;
+        using IsOverrideModificationType = typename AttributeModifierFragmentType::FTag_IsOverrideModification;
+        using ThisType                       = TProcessor_AttributeModifier_Override_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
+        using Super                          = TProcessor<ThisType, AttributeModifierFragmentType, ModificationType, IsOverrideModificationType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using HandleType                     = typename Super::HandleType;
+        using TimeType                       = typename Super::TimeType;
+
+    public:
+        CK_USING_BASE_CONSTRUCTORS(Super);
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const AttributeModifierFragmentType& InAttributeModifier) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_RevocableMultiply_Compute : public TProcessor<
             TProcessor_AttributeModifier_RevocableMultiply_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
             T_DerivedAttributeModifier,
@@ -541,6 +579,9 @@ namespace ck::detail
             TimeType InDeltaT) -> void;
 
     private:
+        TProcessor_AttributeModifier_Override_Compute<
+            TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier> _Override_Compute;
+
         TProcessor_AttributeModifier_NotRevocableAdd_Compute<
             TProcessor_AttributeModifier_ComputeAll, T_DerivedAttributeModifier> _NotRevocableAdd_Compute;
         TProcessor_AttributeModifier_NotRevocableSubtract_Compute<

@@ -186,6 +186,30 @@ namespace ck
 
         switch (InModifierOperationRevocablePolicy)
         {
+            case ECk_ModifierOperation_RevocablePolicy::Override:
+            {
+                if (Utils_ExistingOverrideModifierEntity::Has(LifetimeOwnerAsAttributeEntity))
+                {
+                    if (auto MaybeExistingModifier = Utils_ExistingOverrideModifierEntity::Get_StoredEntity(LifetimeOwnerAsAttributeEntity);
+                        ck::IsValid(MaybeExistingModifier))
+                    {
+                        MaybeExistingModifier.template Try_Remove<typename AttributeModifierFragmentType::FTag_ComputeResult>();
+                        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(MaybeExistingModifier);
+                    }
+
+                    LifetimeOwnerAsAttributeEntity.template Remove<FExistingOverrideModifierEntity>();
+                }
+
+                Utils_ExistingOverrideModifierEntity::Add(LifetimeOwnerAsAttributeEntity, InHandle);
+
+                InHandle.template Add<typename AttributeModifierFragmentType::FTag_IsOverrideModification>();
+                RecordOfAttributeModifiers_Utils::AddIfMissing(LifetimeOwnerAsAttributeEntity, ECk_Record_EntryHandlingPolicy::Default);
+                RecordOfAttributeModifiers_Utils::Request_Connect(LifetimeOwnerAsAttributeEntity, InHandle);
+
+                Request_ComputeResult(InHandle);
+
+                break;
+            }
             case ECk_ModifierOperation_RevocablePolicy::NotRevocable:
             {
                 InHandle.template Add<typename AttributeModifierFragmentType::FTag_IsNotRevocableModification>();
