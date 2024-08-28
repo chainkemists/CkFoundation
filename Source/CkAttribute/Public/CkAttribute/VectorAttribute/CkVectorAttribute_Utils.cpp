@@ -386,8 +386,7 @@ auto
         InAttribute)
     { return {}; }
 
-    const auto CurrentBaseValue = Get_BaseValue(InAttribute, InAttributeComponent);
-    const auto Delta = InNewBaseValue - CurrentBaseValue;
+    const auto Delta = InNewBaseValue;
 
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Vector Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
@@ -399,8 +398,8 @@ auto
         FCk_Fragment_VectorAttributeModifier_ParamsData
         {
             Delta,
-            ECk_ArithmeticOperations_Basic::Add,
-            ECk_ModifierOperation_RevocablePolicy::NotRevocable,
+            {},
+            ECk_ModifierOperation_RevocablePolicy::Override,
             InAttributeComponent
         });
 
