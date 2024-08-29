@@ -320,7 +320,7 @@ auto
                 const auto& AbilityScriptClass = AbilityParams.Get_AbilityScriptClass();
 
                 UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityCurrent.Get_AbilityScript()->GetWorld())->
-                    Request_RemoveAbilityScript(AbilityCurrent.Get_AbilityScript().Get());
+                    Request_UntrackAbilityScript(AbilityCurrent.Get_AbilityScript().Get());
 
                 Script = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_Ability_Script_PDA>
                 (
@@ -364,11 +364,12 @@ auto
     const auto& AbilityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_Script_PDA>(AbilityScriptClass);
     const auto& AbilityArchetype = InParams.Get_AbilityArchetype().Get();
 
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptCDO), TEXT("Failed to get CDO of Ability Script of Class [{}]"), AbilityScriptClass)
+    { return; }
+
     const auto CurrentWorld = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
 
-    AbilityScriptCDO->Set_CurrentWorld(CurrentWorld);
-
-    CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptCDO), TEXT("Failed to get CDO of Ability Script of Class [{}]"), AbilityScriptClass)
+    CK_ENSURE_IF_NOT(ck::IsValid(CurrentWorld), TEXT("Invalid World for Entity [{}]"), InHandle)
     { return; }
 
     const auto& AbilityData      = InParams.Get_Data();
@@ -397,8 +398,7 @@ auto
         TEXT("Failed to create instance of Ability Script of Class [{}] with Archetype [{}]"), AbilityScriptClass, AbilityArchetype)
     { return; }
 
-    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(AbilityScriptToUse)
-    { return; }
+    AbilityScriptToUse->Set_CurrentWorld(CurrentWorld);
 
     UCk_Utils_GameplayLabel_UE::Add(InHandle, AbilityName);
 
@@ -409,10 +409,8 @@ auto
                                                         ? AbilityArchetype
                                                         : AbilityScriptCDO;
 
-    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(AbilityScriptToUse)
-    { return; }
-
-    UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityScriptToUse->GetWorld())->Request_TrackAbilityScript(AbilityScriptToUse);
+    UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(CurrentWorld)->Request_TrackAbilityScript(AbilityScriptToUse);
+    UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(CurrentWorld)->Request_TrackAbilityScript(AbilityCurrent.Get_AbilityScript_DefaultInstance().Get());
 }
 
 auto
@@ -427,7 +425,7 @@ auto
     RecordOfAbilities_Utils::Request_Connect(InAbilityOwner, InAbility);
     AbilitySource_Utils::Add(InAbility, InAbilitySource);
 
-    const auto Script = InAbility.Get<ck::FFragment_Ability_Current>().Get_AbilityScript();
+    const auto Script = InAbility.Get<ck::FFragment_Ability_Current>().Get_AbilityScript().Get();
 
     CK_ENSURE_IF_NOT(ck::IsValid(Script),
         TEXT("AbilityScript for Handle [{}] with AbilityOwner [{}] is INVALID. Unable to GIVE the Ability properly"),
@@ -457,18 +455,7 @@ auto
         return;
     }
 
-    // NOTE: Because abilities can be granted through Entity Extensions, only proceed with record disconnection & Ability
-    // destruction if the Ability was granted to the Ability Owner directly and NOT by extension (which means the Ability Owner
-    // is also the lifetime owner of the Ability)
-    if (UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbility) == InAbilityOwner)
-    {
-        if (RecordOfAbilities_Utils::Get_ContainsEntry(InAbilityOwner, InAbility))
-        { RecordOfAbilities_Utils::Request_Disconnect(InAbilityOwner, InAbility); }
-
-        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAbility);
-    }
-
-    const auto Script = Current.Get_AbilityScript();
+    const auto Script = Current.Get_AbilityScript().Get();
 
     CK_ENSURE_IF_NOT(ck::IsValid(Script),
         TEXT("AbilityScript for Handle [{}] with AbilityOwner [{}] is INVALID. Unable to REVOKE the Ability properly"),
@@ -478,15 +465,23 @@ auto
 
     Script->OnRevokeAbility();
 
-    CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(Script)
-    { return; }
-
-    UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(Script->GetWorld())->Request_RemoveAbilityScript(Script.Get());
-
-    if (const auto& AbilityDefaultInstance = Current.Get_AbilityScript_DefaultInstance().Get();
-        NOT UCk_Utils_Object_UE::Get_IsDefaultObject(AbilityDefaultInstance))
+    // NOTE: Because abilities can be granted through Entity Extensions, only proceed with record disconnection & Ability
+    // destruction if the Ability was granted to the Ability Owner directly and NOT by extension (which means the Ability Owner
+    // is also the lifetime owner of the Ability)
+    if (UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbility) == InAbilityOwner)
     {
-        UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(Script->GetWorld())->Request_RemoveAbilityScript(AbilityDefaultInstance);
+        if (RecordOfAbilities_Utils::Get_ContainsEntry(InAbilityOwner, InAbility))
+        { RecordOfAbilities_Utils::Request_Disconnect(InAbilityOwner, InAbility); }
+
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAbility);
+
+        const auto CurrentWorld = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAbility);
+
+        CK_ENSURE_IF_NOT(ck::IsValid(CurrentWorld), TEXT("Invalid World for Ability Entity [{}]"), InAbility)
+        { return; }
+
+        UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(CurrentWorld)->Request_UntrackAbilityScript(Script);
+        UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(CurrentWorld)->Request_UntrackAbilityScript(Current.Get_AbilityScript_DefaultInstance().Get());
     }
 }
 
@@ -568,7 +563,6 @@ auto
         InAbilityScriptClass)
     { return {}; }
 
-    const auto& WorldToUse = InOuter->GetWorld();
 
     const auto& CreateSubAbilityInstances = [&](const TArray<TSubclassOf<UCk_Ability_Script_PDA>>& InSubAbilityClasses)
     {

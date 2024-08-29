@@ -4,6 +4,7 @@
 #include "CkAbility/Ability/CkAbility_Script.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include <Engine/World.h>
@@ -20,21 +21,27 @@ auto
         TEXT("Unable to TrackAbility. Ability is [{}].{}"), InAbility, ck::Context(this))
     { return; }
 
+    if (UCk_Utils_Object_UE::Get_IsDefaultObject(InAbility))
+    { return; }
+
     _AbilityScripts.Add(InAbility);
 }
 
 auto
     UCk_Ability_Subsystem_UE::
-    Request_RemoveAbilityScript(
+    Request_UntrackAbilityScript(
         UCk_Ability_Script_PDA* InAbility)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InAbility),
-        TEXT("Unable to RemoveAbilityScript. Ability is [{}].{}"), InAbility, ck::Context(this))
+        TEXT("Unable to UntrackAbilityScript. Ability is [{}].{}"), InAbility, ck::Context(this))
     { return; }
 
-    ck::ability::WarningIf(_AbilityScripts.Remove(InAbility) == 0,
-        TEXT("Attempted to Remove Ability [{}] but it was never tracked.{}"), InAbility, ck::Context(this));
+    if (UCk_Utils_Object_UE::Get_IsDefaultObject(InAbility))
+    { return; }
+
+    ck::ability::WarningIf(_AbilityScripts.RemoveSingle(InAbility) == 0,
+        TEXT("Attempted to Untrack Ability Script [{}] but it was never tracked.{}"), InAbility, ck::Context(this));
 }
 
 auto
@@ -47,21 +54,27 @@ auto
         TEXT("Unable to TrackAbilityEntityConfig. Config is [{}].{}"), InAbilityEntityConfig, ck::Context(this))
     { return; }
 
+    if (UCk_Utils_Object_UE::Get_IsDefaultObject(InAbilityEntityConfig))
+    { return; }
+
     _AbilityEntityConfigs.Add(InAbilityEntityConfig);
 }
 
 auto
     UCk_Ability_Subsystem_UE::
-    Request_RemoveAbilityEntityConfig(
+    Request_UntrackAbilityEntityConfig(
         UCk_Ability_EntityConfig_PDA* InAbilityEntityConfig)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InAbilityEntityConfig),
-        TEXT("Unable to RemoveAbilityEntityConfig. Config is [{}].{}"), InAbilityEntityConfig, ck::Context(this))
+        TEXT("Unable to UntrackAbilityEntityConfig. Config is [{}].{}"), InAbilityEntityConfig, ck::Context(this))
     { return; }
 
-    ck::ability::WarningIf(_AbilityEntityConfigs.Remove(InAbilityEntityConfig) == 0,
-        TEXT("Attempted to Remove Ability Entity Config [{}] but it was never tracked.{}"), InAbilityEntityConfig, ck::Context(this));
+    if (UCk_Utils_Object_UE::Get_IsDefaultObject(InAbilityEntityConfig))
+    { return; }
+
+    ck::ability::WarningIf(_AbilityEntityConfigs.RemoveSingle(InAbilityEntityConfig) == 0,
+        TEXT("Attempted to Untrack Ability Config [{}] but it was never tracked.{}"), InAbilityEntityConfig, ck::Context(this));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
