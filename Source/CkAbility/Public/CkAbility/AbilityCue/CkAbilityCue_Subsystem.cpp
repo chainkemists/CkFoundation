@@ -2,7 +2,9 @@
 
 #include "CkAbility/CkAbility_Log.h"
 #include "CkAbility/Ability/CkAbility_Script.h"
+#include "CkAbility/Ability/CkAbility_Utils.h"
 #include "CkAbility/AbilityCue/CkAbilityCue_Fragment_Data.h"
+#include "CkAbility/AbilityOwner/CkAbilityOwner_Utils.h"
 #include "CkAbility/Settings/CkAbility_Settings.h"
 
 #include "CkCore/Actor/CkActor_Utils.h"
@@ -11,6 +13,7 @@
 #include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
 
+#include "CkEcs/Handle/CkHandle_Utils.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 #include "CkEntityBridge/CkEntityBridge_Fragment_Data.h"
@@ -21,6 +24,24 @@
 
 namespace ck_ability_cue_subsystem
 {
+    auto
+    TrySetDebugName(
+        FCk_Handle& InCueOwningEntity) -> void
+    {
+        auto CueOwningEntityAsAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(InCueOwningEntity);
+
+        if (ck::Is_NOT_Valid(CueOwningEntityAsAbilityOwner))
+        { return; }
+
+        const auto& DefaultAbilities = UCk_Utils_AbilityOwner_UE::Get_DefaultAbilities(CueOwningEntityAsAbilityOwner);
+        const auto& DefaultAbilityNames = ck::algo::Transform<TArray<FString>>(DefaultAbilities, [](const TSubclassOf<class UCk_Ability_Script_PDA>& InDefaultAbility)
+        {
+            return UCk_Utils_Debug_UE::Get_DebugName(InDefaultAbility).ToString();
+        });
+
+        UCk_Utils_Handle_UE::Set_DebugName(InCueOwningEntity,*ck::Format_UE(TEXT("Cue Owning Entity [{}]"), FString::Join(DefaultAbilityNames, TEXT(" - "))));
+    }
+
     auto
     SpawnCue(
         FGameplayTag InCueName,
@@ -53,6 +74,7 @@ namespace ck_ability_cue_subsystem
         ck::ability::Verbose(TEXT("Executing AbilityCue [{}] ConstructionScript [{}] with created Entity [{}]"), InCueName, ConstructionScript, NewEntity);
 
         ConstructionScript->Construct(NewEntity, {});
+        TrySetDebugName(NewEntity);
     }
 }
 
@@ -385,7 +407,6 @@ auto
             InAssetData.IsInstanceOf(CueTypeBlueprint->GetClass(), EResolveClass::Yes))
         {
             Request_PopulateAllAggregators();
-            return;
         }
     });
 }
