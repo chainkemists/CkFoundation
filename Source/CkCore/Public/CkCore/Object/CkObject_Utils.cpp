@@ -165,6 +165,18 @@ auto
 
 auto
     UCk_Utils_Object_UE::
+    Get_IsArchetypeObject(
+        UObject* InObject)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Invalid Object supplied to Get_IsArchetypeObject"))
+    { return {}; }
+
+    return InObject == DoGet_ClassDefaultObject(InObject->GetClass()) && InObject->HasAnyFlags(RF_ArchetypeObject);
+}
+
+auto
+    UCk_Utils_Object_UE::
     Get_ObjectNativeParentClass(
         UObject* InObject)
     -> UClass*
