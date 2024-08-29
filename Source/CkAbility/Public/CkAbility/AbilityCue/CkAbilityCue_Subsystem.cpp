@@ -28,11 +28,11 @@ namespace ck_ability_cue_subsystem
         const UCk_EcsWorld_Subsystem_UE* InSubsystem_EcsWorldSubsystem,
         const FCk_AbilityCue_Params& InParams)
     {
-        CK_LOG_ERROR_IF_NOT(ck::ability, ck::IsValid(InSubsystem_AbilityCue, ck::IsValid_Policy_NullptrOnly{}),
+        CK_LOG_ERROR_IF_NOT(ck::ability, ck::IsValid(InSubsystem_AbilityCue),
             TEXT("AbilityCue Subsystem was INVALID when trying to spawn Cue [{}]."), InCueName)
         { return; }
 
-        CK_LOG_ERROR_IF_NOT(ck::ability, ck::IsValid(InSubsystem_EcsWorldSubsystem, ck::IsValid_Policy_NullptrOnly{}),
+        CK_LOG_ERROR_IF_NOT(ck::ability, ck::IsValid(InSubsystem_EcsWorldSubsystem),
             TEXT("EcsWorld Subsystem was INVALID when trying to spawn Cue [{}]."), InCueName)
         { return; }
 
@@ -105,7 +105,7 @@ auto
     if (GetWorld()->IsNetMode(NM_DedicatedServer))
     { return; }
 
-    ck_ability_cue_subsystem::SpawnCue(InCueName, _Subsystem_AbilityCue, _Subsystem_EcsWorldSubsystem, InParams);
+    ck_ability_cue_subsystem::SpawnCue(InCueName, _Subsystem_AbilityCue.Get(), _Subsystem_EcsWorldSubsystem.Get(), InParams);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -408,7 +408,7 @@ auto
 
         const auto Object = InAssetData.GetSoftObjectPath().ResolveObject();
 
-        if (NOT ck::IsValid(Found, ck::IsValid_Policy_NullptrOnly{}))
+        if (ck::Is_NOT_Valid(Found, ck::IsValid_Policy_NullptrOnly{}))
         {
             UCk_Utils_EditorOnly_UE::Request_PushNewEditorMessage
             (

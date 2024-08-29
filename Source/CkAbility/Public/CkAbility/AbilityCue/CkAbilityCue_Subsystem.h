@@ -46,10 +46,10 @@ protected:
 
 private:
     UPROPERTY(Transient)
-    TObjectPtr<class UCk_AbilityCue_Subsystem_UE> _Subsystem_AbilityCue;
+    TWeakObjectPtr<class UCk_AbilityCue_Subsystem_UE> _Subsystem_AbilityCue;
 
     UPROPERTY(Transient)
-    TObjectPtr<class UCk_EcsWorld_Subsystem_UE> _Subsystem_EcsWorldSubsystem;
+    TWeakObjectPtr<class UCk_EcsWorld_Subsystem_UE> _Subsystem_EcsWorldSubsystem;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
