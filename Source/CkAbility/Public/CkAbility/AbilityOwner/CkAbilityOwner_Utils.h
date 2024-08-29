@@ -407,6 +407,10 @@ private:
 
 public:
     static auto
+    Get_DefaultAbilities(
+        const FCk_Handle_AbilityOwner& InAbilityOwner) -> const TArray<TSubclassOf<class UCk_Ability_Script_PDA>>&;
+
+    static auto
     Request_TagsUpdated(
         FCk_Handle_AbilityOwner& InAbilityOwner) -> void;
 

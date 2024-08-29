@@ -661,6 +661,15 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
+    Get_DefaultAbilities(
+        const FCk_Handle_AbilityOwner& InAbilityOwner)
+    -> const TArray<TSubclassOf<UCk_Ability_Script_PDA>>&
+{
+    return InAbilityOwner.Get<ck::FFragment_AbilityOwner_Params>().Get_Params().Get_DefaultAbilities();
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
     Request_TagsUpdated(
         FCk_Handle_AbilityOwner& InAbilityOwner)
     -> void
