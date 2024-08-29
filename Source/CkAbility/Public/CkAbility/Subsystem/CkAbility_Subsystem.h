@@ -25,16 +25,20 @@ public:
 
 public:
     auto
-    Request_TrackAbilityScript(class UCk_Ability_Script_PDA* InAbility) -> void;
+    Request_TrackAbilityScript(
+        class UCk_Ability_Script_PDA* InAbility) -> void;
 
     auto
-    Request_RemoveAbilityScript(class UCk_Ability_Script_PDA* InAbility) -> void;
+    Request_UntrackAbilityScript(
+        class UCk_Ability_Script_PDA* InAbility) -> void;
 
     auto
-    Request_TrackAbilityEntityConfig(class UCk_Ability_EntityConfig_PDA* InAbilityEntityConfig) -> void;
+    Request_TrackAbilityEntityConfig(
+        class UCk_Ability_EntityConfig_PDA* InAbilityEntityConfig) -> void;
 
     auto
-    Request_RemoveAbilityEntityConfig(class UCk_Ability_EntityConfig_PDA* InAbilityEntityConfig) -> void;
+    Request_UntrackAbilityEntityConfig(
+        class UCk_Ability_EntityConfig_PDA* InAbilityEntityConfig) -> void;
 
 private:
     UPROPERTY(Transient)
