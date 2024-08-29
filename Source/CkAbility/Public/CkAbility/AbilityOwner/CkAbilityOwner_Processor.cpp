@@ -194,7 +194,7 @@ namespace ck
             [InAbilityOwnerEntity, AbilityScriptClass, AbilityParams, OptionalPayload, AbilitySource, AbilityEntityConfig, InRequest]
             (FCk_Handle& InEntity) -> void
             {
-                UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityEntityConfig->GetWorld())->Request_RemoveAbilityEntityConfig(AbilityEntityConfig);
+                UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityEntityConfig->GetWorld())->Request_UntrackAbilityEntityConfig(AbilityEntityConfig);
 
                 // TODO: Since the construction of the Ability entity is deferred, if multiple Give requests of the same
                 // script class are processed in the same frame, it is possible for the CanBeGiven to NOT return the correct value
@@ -386,7 +386,7 @@ namespace ck
             const auto PostAbilityCreationFunc =
             [InAbilityOwnerEntity, AbilityScriptClass, AbilitySource, AbilityEntityConfig](FCk_Handle& InEntity) -> void
             {
-                UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityEntityConfig->GetWorld())->Request_RemoveAbilityEntityConfig(AbilityEntityConfig);
+                UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityEntityConfig->GetWorld())->Request_UntrackAbilityEntityConfig(AbilityEntityConfig);
 
                 // TODO: Since the construction of the Ability entity is deferred, if multiple Give requests of the same
                 // script class are processed in the same frame, it is possible for the CanBeGiven to NOT return the correct value
