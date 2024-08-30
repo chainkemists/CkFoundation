@@ -463,8 +463,6 @@ auto
         InAbilityOwner)
     { return; }
 
-    Script->OnRevokeAbility();
-
     // NOTE: Because abilities can be granted through Entity Extensions, only proceed with record disconnection & Ability
     // destruction if the Ability was granted to the Ability Owner directly and NOT by extension (which means the Ability Owner
     // is also the lifetime owner of the Ability)
@@ -483,6 +481,8 @@ auto
         UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(CurrentWorld)->Request_UntrackAbilityScript(Script);
         UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(CurrentWorld)->Request_UntrackAbilityScript(Current.Get_AbilityScript_DefaultInstance().Get());
     }
+
+    Script->OnRevokeAbility();
 }
 
 auto
