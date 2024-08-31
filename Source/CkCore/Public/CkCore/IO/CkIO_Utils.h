@@ -113,6 +113,20 @@ public:
     static FString
     Get_ExtractPath(
         const FString& InFullPath);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IO",
+              DisplayName = "[Ck] Get Soft Object Asset Name")
+    static FString
+    Get_SoftObjectAssetName(
+        const TSoftObjectPtr<UObject>& InSoftObject);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IO",
+              DisplayName = "[Ck] Get Soft Object Asset Path")
+    static FString
+    Get_SoftObjectAssetPath(
+        const TSoftObjectPtr<UObject>& InSoftObject);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
