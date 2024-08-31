@@ -141,4 +141,22 @@ auto
     return FPaths::GetPath(InFullPath);
 }
 
+auto
+    UCk_Utils_IO_UE::
+    Get_SoftObjectAssetName(
+        const TSoftObjectPtr<>& InSoftObject)
+    -> FString
+{
+    return InSoftObject.GetAssetName();
+}
+
+auto
+    UCk_Utils_IO_UE::
+    Get_SoftObjectAssetPath(
+        const TSoftObjectPtr<>& InSoftObject)
+    -> FString
+{
+    return InSoftObject.ToSoftObjectPath().GetAssetPathString();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
