@@ -443,6 +443,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        DisplayName = "Blocking Abilities",
         meta = (AllowPrivateAccess = true, AllowAbstract = false, MustImplement = "/Script/CkAbility.Ck_Ability_Condition_Interface"))
     TArray<TSubclassOf<class UCk_Ability_Script_PDA>> _ConditionAbilities;
 
@@ -462,6 +463,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
+        DisplayName = "Blocking Abilities",
         meta = (AllowPrivateAccess = true, AllowAbstract = false, MustImplement = "/Script/CkAbility.Ck_Ability_Condition_Interface"))
     TArray<TObjectPtr<class UCk_Ability_Script_PDA>> _ConditionAbilities;
 
@@ -626,13 +628,13 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               Category = "SubAbilities",
-              DisplayName = "Conditions",
+              DisplayName = "Blocked By",
               meta = (AllowPrivateAccess = true))
     FCk_Ability_ConditionSettings _ConditionSettings;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               Category = "SubAbilities_(Instanced)",
-              DisplayName = "Conditions",
+              DisplayName = "Blocked By",
               meta = (AllowPrivateAccess = true))
     FCk_Ability_ConditionSettings_Instanced _ConditionSettings_Instanced;
 
