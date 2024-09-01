@@ -73,6 +73,10 @@ private:
               meta = (AllowPrivateAccess = true, InvalidEnumValues="Default"))
     ECk_DebugNameVerbosity_Policy _DefaultDebugNameVerbosity = ECk_DebugNameVerbosity_Policy::Compact;
 
+    UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Debug",
+              meta = (AllowPrivateAccess = true, InvalidEnumValues="Default"))
+    int32 _MaxNumberOfBlueprintStackFrames = 50;
+
     UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Ensures",
               meta = (AllowPrivateAccess = true))
     ECk_EnsureDisplay_Policy _EnsureDisplayPolicy = ECk_EnsureDisplay_Policy::ModalDialog;
@@ -87,6 +91,7 @@ private:
 
 public:
     CK_PROPERTY(_DefaultDebugNameVerbosity);
+    CK_PROPERTY(_MaxNumberOfBlueprintStackFrames);
     CK_PROPERTY(_EnsureDisplayPolicy);
     CK_PROPERTY(_EnsureDetailsPolicy);
     CK_PROPERTY(_EnsureBreakInBlueprintsPolicy);
@@ -113,6 +118,11 @@ public:
               Category = "Ck|Utils|Core|Settings")
     static ECk_DebugNameVerbosity_Policy
     Get_DefaultDebugNameVerbosity();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Core|Settings")
+    static int32
+    Get_MaxNumberOfBlueprintStackFrames();
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Core|Settings")
