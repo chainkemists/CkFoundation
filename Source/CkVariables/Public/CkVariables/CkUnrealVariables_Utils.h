@@ -821,7 +821,7 @@ public:
     UFUNCTION(BlueprintPure,
               DisplayName="[Ck][UObject] Get Value (By Name)",
               Category = "Ck|Utils|Variables|UObject",
-              meta = (DeterminesOutputType = "InObject"))
+              meta = (DeterminesOutputType = "InObject", DeprecatedFunction))
     static UObject*
     Get_ByName(
         const FCk_Handle& InHandle,
@@ -887,7 +887,7 @@ public:
     UFUNCTION(BlueprintPure,
               DisplayName="[Ck][SubclassOf] Get Value (By Name)",
               Category = "Ck|Utils|Variables|SubclassOf",
-              meta = (DeterminesOutputType = "InObject"))
+              meta = (DeterminesOutputType = "InObject", DeprecatedFunction))
     static TSubclassOf<UObject>
     Get_ByName(
         const FCk_Handle&    InHandle,
