@@ -16,7 +16,7 @@ auto
         const FCk_Fragment_Aggro_Params& InParams)
     -> FCk_Handle_Aggro
 {
-    const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
+    const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InTarget, [&](FCk_Handle InNewEntity)
     {
         InNewEntity.Add<ck::FTag_Aggro>();
         ck::UAggroedEntity_Utils::Add(InNewEntity, InTarget);
@@ -157,6 +157,51 @@ auto
     -> void
 {
     RecordOfAggro_Utils::ForEach_ValidEntry(InAggroOwnerEntity, InFunc);
+}
+
+auto
+    UCk_Utils_Aggro_UE::
+    ForEach_Aggro_Sorted(
+        FCk_Handle& InAggroOwnerEntity,
+        const FInstancedStruct& InOptionalPayload,
+        ECk_ScoreSortingPolicy InSortingPolicy,
+        const FCk_Lambda_InHandle& InDelegate)
+    -> TArray<FCk_Handle_Aggro>
+{
+    auto Aggro = TArray<FCk_Handle_Aggro>{};
+
+    ForEach_Aggro_Sorted(InAggroOwnerEntity, InSortingPolicy, [&](FCk_Handle_Aggro InAggro)
+    {
+        if (InDelegate.IsBound())
+        { InDelegate.Execute(InAggro, InOptionalPayload); }
+        else
+        { Aggro.Emplace(InAggro); }
+    });
+
+    return Aggro;
+}
+
+auto
+    UCk_Utils_Aggro_UE::
+    ForEach_Aggro_Sorted(
+        FCk_Handle& InAggroOwnerEntity,
+        ECk_ScoreSortingPolicy InSortingPolicy,
+        const TFunction<void(FCk_Handle_Aggro)>& InFunc)
+    -> void
+{
+    auto AggroHandles = ForEach_Aggro(InAggroOwnerEntity, {}, FCk_Lambda_InHandle {});
+    ck::algo::Sort(AggroHandles, [&](const FCk_Handle_Aggro& InA, const FCk_Handle_Aggro& InB)
+    {
+        switch(InSortingPolicy)
+        {
+            case ECk_ScoreSortingPolicy::SmallestToLargest: return Get_AggroScore(InA) < Get_AggroScore(InB);
+            case ECk_ScoreSortingPolicy::LargestToSmallest: return Get_AggroScore(InA) > Get_AggroScore(InB);
+        }
+
+        return false;
+    });
+
+    ck::algo::ForEach(AggroHandles, InFunc);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

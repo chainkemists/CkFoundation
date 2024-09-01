@@ -118,6 +118,22 @@ public:
     ForEach_Aggro(
         FCk_Handle& InAggroOwnerEntity,
         const TFunction<void(FCk_Handle_Aggro)>& InFunc) -> void;
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Aggro",
+              DisplayName="[Ck][Aggro] For Each (Sorted)",
+              meta=(AutoCreateRefTerm="InDelegate, InOptionalPayload"))
+    static TArray<FCk_Handle_Aggro>
+    ForEach_Aggro_Sorted(
+        UPARAM(ref) FCk_Handle& InAggroOwnerEntity,
+        const FInstancedStruct& InOptionalPayload,
+        ECk_ScoreSortingPolicy InSortingPolicy,
+        const FCk_Lambda_InHandle& InDelegate);
+    static auto
+    ForEach_Aggro_Sorted(
+        FCk_Handle& InAggroOwnerEntity,
+        ECk_ScoreSortingPolicy InSortingPolicy,
+        const TFunction<void(FCk_Handle_Aggro)>& InFunc) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
