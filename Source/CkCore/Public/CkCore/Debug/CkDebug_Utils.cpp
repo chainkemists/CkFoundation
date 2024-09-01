@@ -162,6 +162,16 @@ auto
         ck::type_traits::AsArray)
     -> TArray<FString>
 {
+    return Get_StackTrace_Blueprint(ck::type_traits::AsArray{}, UCk_Utils_Core_UserSettings_UE::Get_MaxNumberOfBlueprintStackFrames());
+}
+
+auto
+    UCk_Utils_Debug_StackTrace_UE::
+    Get_StackTrace_Blueprint(
+        ck::type_traits::AsArray,
+        int32 InMaxFrames)
+    -> TArray<FString>
+{
     _LastStackTraceContextObject = nullptr;
 
     auto StackTrace = TArray<FString>{};
@@ -173,7 +183,7 @@ auto
     { return StackTrace; }
 
     const auto& RawStack = BlueprintExceptionTracker->GetCurrentScriptStack();
-    for (int32 FrameIdx = RawStack.Num() - 1; FrameIdx >= 0; --FrameIdx)
+    for (int32 FrameIdx = std::min(InMaxFrames, RawStack.Num()) - 1; FrameIdx >= 0; --FrameIdx)
     {
         FStringBuilderBase StringBuilder;
         RawStack[FrameIdx]->GetStackDescription(StringBuilder);
@@ -193,6 +203,16 @@ auto
         ck::type_traits::AsString)
     -> FString
 {
+    return Get_StackTrace_Blueprint(ck::type_traits::AsString{}, UCk_Utils_Core_UserSettings_UE::Get_MaxNumberOfBlueprintStackFrames());
+}
+
+auto
+    UCk_Utils_Debug_StackTrace_UE::
+    Get_StackTrace_Blueprint(
+        ck::type_traits::AsString,
+        const int32 InMaxFrames)
+    -> FString
+{
     _LastStackTraceContextObject = nullptr;
 
     auto StackTrace = FString{};
@@ -203,7 +223,7 @@ auto
     { return StackTrace; }
 
     const TArrayView<const FFrame* const>& RawStack = BlueprintExceptionTracker->GetCurrentScriptStack();
-    for (int32 FrameIdx = RawStack.Num() - 1; FrameIdx >= 0; --FrameIdx)
+    for (int32 FrameIdx = std::min(InMaxFrames, RawStack.Num()) - 1; FrameIdx >= 0; --FrameIdx)
     {
         const auto& StackDescription = RawStack[FrameIdx];
         StackTrace += ck::Format_UE

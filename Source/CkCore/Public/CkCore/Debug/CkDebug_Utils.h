@@ -106,7 +106,17 @@ public:
 
     static auto
     Get_StackTrace_Blueprint(
+        ck::type_traits::AsArray,
+        int32 InMaxFrames) -> TArray<FString>;
+
+    static auto
+    Get_StackTrace_Blueprint(
         ck::type_traits::AsString) -> FString;
+
+    static auto
+    Get_StackTrace_Blueprint(
+        ck::type_traits::AsString,
+        int32 InMaxFrames) -> FString;
 
     static auto
     Try_BreakInScript(
