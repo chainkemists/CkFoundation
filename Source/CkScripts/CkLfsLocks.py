@@ -56,6 +56,22 @@ class GitLFSManager:
         self.locked_tree.configure(yscroll=self.locked_scrollbar.set)
         self.locked_scrollbar.pack(side='right', fill='y')
 
+        # Create a log view using tkinter and add it below the TreeView and add it to self
+        self.log_frame = tk.Frame(root)
+        self.log_frame.pack(side='bottom', fill='both', expand=True, padx=10, pady=10)
+
+        self.log_view = tk.Text(self.log_frame, height=5, wrap='word')
+        self.log_view.pack(side='left', fill='both', expand=True)
+
+        self.log_scrollbar = ttk.Scrollbar(self.log_frame, orient='vertical', command=self.log_view.yview)
+        self.log_view.configure(yscroll=self.log_scrollbar.set)
+        self.log_scrollbar.pack(side='right', fill='y')
+
+        self.clear_button_frame = tk.Frame(root)
+        self.clear_button_frame.pack(side='bottom', fill='both', expand=True, padx=10, pady=10)
+        self.clear_log_button = tk.Button(self.clear_button_frame, text="Clear", command=lambda: self.log_view.delete(1.0, tk.END))
+        self.clear_log_button.pack(side='bottom', fill='both', pady=10)
+
         # Button frame
         self.button_frame = tk.Frame(root)
         self.button_frame.pack(pady=10)
@@ -108,10 +124,14 @@ class GitLFSManager:
             if result.returncode == 0:
                 return result.stdout
             else:
-                # messagebox.showerror("Error", f"Command failed: {result.stderr}")
+                # Log the command and result
+                self.log_view.insert(tk.END, f"\nCommand: {' '.join(command)}", 'command')
+                self.log_view.insert(tk.END, f"\nError: {result.stderr}", 'error')
                 return None
         except Exception as e:
-            messagebox.showerror("Error", str(e))
+            # Log the command and error message
+            self.log_view.insert(tk.END, f"\nCommand: {' '.join(command)}", 'command')
+            self.log_view.insert(tk.END, f"\nError: {str(e)}", 'error')
             return None
 
     def update_filter(self, event=None):
