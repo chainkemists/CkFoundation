@@ -105,16 +105,22 @@ namespace ck
         const auto ValidTargetList  = FCk_Targeter_TargetList{ValidTargets};
         InCurrent._CachedTargets = ValidTargetList;
 
-        if (const auto& CustomTargetFilter = InParams.Get_Params().Get_CustomTargetFilter().Get();
-            ck::IsValid(CustomTargetFilter))
+        if (NOT ValidTargets.IsEmpty())
         {
+            if (const auto& CustomTargetFilter = InParams.Get_Params().Get_CustomTargetFilter().Get();
+                ck::IsValid(CustomTargetFilter))
+            {
 #if WITH_EDITOR
-            const auto& World = UCk_Utils_TransientEntity_UE::Get_World(InHandle);
-            CustomTargetFilter->Set_CurrentWorld(World);
+                const auto& World = UCk_Utils_TransientEntity_UE::Get_World(InHandle);
+                CustomTargetFilter->Set_CurrentWorld(World);
 #endif
-            const auto& FilteredTargets = CustomTargetFilter->FilterTargets(TargeterBasicInfo, ValidTargetList);
-            const auto& SortedTargets   = CustomTargetFilter->SortTargets(TargeterBasicInfo, FilteredTargets);
-            InCurrent._CachedTargets = SortedTargets;
+                const auto& FilteredTargets = CustomTargetFilter->FilterTargets(TargeterBasicInfo, ValidTargetList);
+                const auto& SortedTargets = FilteredTargets.Get_Targets().Num() <= 1
+                                                ? FilteredTargets
+                                                : CustomTargetFilter->SortTargets(TargeterBasicInfo, FilteredTargets);
+
+                InCurrent._CachedTargets = SortedTargets;
+            }
         }
 
         UCk_Utils_Targeter_UE::Request_Cleanup(InHandle);
