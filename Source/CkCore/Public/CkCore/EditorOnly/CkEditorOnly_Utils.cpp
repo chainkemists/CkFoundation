@@ -173,9 +173,52 @@ auto
     { return {}; }
 
     return CookServer->IsCookByTheBookRunning();
-#endif
-
+#else
     return false;
+#endif
+}
+
+auto
+    UCk_Utils_EditorOnly_UE::
+    Get_PieNetModeNamePrefix(
+        const UObject* InContextObject)
+    -> FString
+{
+    static FString UnknownPieNetModeNamePrefix = TEXT("Unknown");
+
+#if WITH_EDITOR
+    if (ck::Is_NOT_Valid(GEngine))
+    { return UnknownPieNetModeNamePrefix; }
+
+    const auto& ContextWorld = GEngine->GetWorldFromContextObject(InContextObject, EGetWorldErrorMode::ReturnNull);
+
+    if (ck::Is_NOT_Valid(ContextWorld))
+    { return UnknownPieNetModeNamePrefix; }
+
+    if (ContextWorld->WorldType != EWorldType::PIE)
+    { return UnknownPieNetModeNamePrefix; }
+
+    switch(ContextWorld->GetNetMode())
+    {
+        case NM_Client:
+        {
+            return ck::Format_UE(TEXT("Client #{}"), GPlayInEditorID);
+        }
+        case NM_DedicatedServer:
+        case NM_ListenServer:
+        {
+            return TEXT("Server");
+        }
+        case NM_Standalone:
+        case NM_MAX:
+        default:
+        {
+            return UnknownPieNetModeNamePrefix;
+        }
+    }
+#else
+    return UnknownPieNetModeNamePrefix;
+#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------
