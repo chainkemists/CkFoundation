@@ -247,6 +247,11 @@ CK_DEFINE_CUSTOM_FORMATTER(FCurveTableRowHandle, [&]()
     );
 });
 
+CK_DEFINE_CUSTOM_FORMATTER(FPlayInEditorID, [&]()
+{
+    return ck::Format(TEXT("{}"), static_cast<int32>(InObj));
+});
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_CUSTOM_FORMATTER(UObject, [&]()
