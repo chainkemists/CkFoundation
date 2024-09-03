@@ -42,6 +42,9 @@ namespace ck::detail
     {
         InHandle.template Remove<MarkedDirtyBy>();
 
+        if (InAttribute.Get_Base() == InAttributePrevious.Get_Base() && InAttribute.Get_Final() == InAttributePrevious.Get_Final())
+        { return; }
+
         attribute::VeryVerbose
         (
             TEXT("Dispatching Delegates for [{}] AttributeComponent of Attribute Entity [{}]"),
@@ -60,8 +63,8 @@ namespace ck::detail
                 TPayload_Attribute_OnValueChanged<T_DerivedAttribute>
                 {
                     InHandle,
-                    InAttribute._Base,
-                    InAttribute._Final,
+                    InAttribute.Get_Base(),
+                    InAttribute.Get_Final(),
 
                     InAttributePrevious.Get_Base(),
                     InAttributePrevious.Get_Final()
