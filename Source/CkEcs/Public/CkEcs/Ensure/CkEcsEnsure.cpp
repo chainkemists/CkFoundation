@@ -11,7 +11,7 @@ auto
         const UObject* InContext)
     -> void
 {
-    if (NOT CK_ENSURE_BP(ck::IsValid(InHandle), TEXT("{}.{}"), InMsg.ToString(), ck::Context(InContext)))
+    if (NOT CK_ENSURE_BP(InContext, ck::IsValid(InHandle), TEXT("{}.{}"), InMsg, ck::Context(InContext)))
     {
         OutHitStatus = ECk_ValidInvalid::Invalid;
         return;

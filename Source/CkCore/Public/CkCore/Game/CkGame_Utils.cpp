@@ -14,7 +14,7 @@ auto
     UCk_Utils_Game_UE::
     Get_GameStatus(
         const UObject* InWorldContextObject,
-        bool           InEnsureWorldIsValid)
+        bool InEnsureWorldIsValid)
     -> ECk_GameStatus
 {
     if (Get_IsPIE(InWorldContextObject, InEnsureWorldIsValid))
@@ -30,7 +30,7 @@ auto
     UCk_Utils_Game_UE::
     Get_IsInGame(
         const UObject* InWorldContextObject,
-        bool           InEnsureWorldIsValid)
+        bool InEnsureWorldIsValid)
     -> bool
 {
     if (ck::Is_NOT_Valid(InWorldContextObject, ck::IsValid_Policy_NullptrOnly{}))
@@ -59,7 +59,7 @@ auto
     UCk_Utils_Game_UE::
     Get_IsPIE(
         const UObject* InWorldContextObject,
-        bool           InEnsureWorldIsValid)
+        bool InEnsureWorldIsValid)
     -> bool
 {
 #if WITH_EDITOR
@@ -95,9 +95,8 @@ auto
         TEXT("Unable to get the World. InContextObject is INVALID."))
     { return {}; }
 
-    auto* World = InContextObject->GetWorld();
-
-    if (ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}))
+    if (auto* World = InContextObject->GetWorld();
+        ck::IsValid(World, ck::IsValid_Policy_NullptrOnly{}))
     { return World; }
 
     if (const auto& ContextObjectOuter = InContextObject->GetOuter();
@@ -140,9 +139,8 @@ auto
         if (ck::Is_NOT_Valid(ContextWorld, ck::IsValid_Policy_NullptrOnly{}))
         { continue; }
 
-        auto* GameInstance = ContextWorld->GetGameInstance();
-
-        if (ck::IsValid(GameInstance))
+        if (auto* GameInstance = ContextWorld->GetGameInstance();
+            ck::IsValid(GameInstance))
         { return GameInstance; }
     }
 
