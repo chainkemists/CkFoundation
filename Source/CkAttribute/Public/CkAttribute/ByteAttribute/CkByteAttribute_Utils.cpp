@@ -384,15 +384,19 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InAttribute),
         TEXT("Byte Attribute [{}] is INVALID"),
         InAttribute)
-    { return {}; }
+    { return InAttribute; }
 
     const uint8 Delta = InNewBaseValue;
 
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Byte Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
-        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute), InAttributeComponent)
-    { return {}; }
+        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute),
+        InAttributeComponent)
+    { return InAttribute; }
+
+    if (Delta == Get_BaseValue(InAttribute, InAttributeComponent))
+    { return InAttribute; }
 
     UCk_Utils_ByteAttributeModifier_UE::Add(InAttribute, ck::FAttributeModifier_Tags::Get_Override(),
         FCk_Fragment_ByteAttributeModifier_ParamsData
