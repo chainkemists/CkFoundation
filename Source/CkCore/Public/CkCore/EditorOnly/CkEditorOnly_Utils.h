@@ -194,6 +194,14 @@ public:
               meta = (DevelopmentOnly))
     static bool
     Get_IsCookingByTheBook();
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|EditorOnly",
+              DisplayName = "[Ck] Get PIE Net Mode Name Prefix",
+              meta = (DevelopmentOnly, DefaultToSelf = "InContextObject"))
+    static FString
+    Get_PieNetModeNamePrefix(
+        const UObject* InContextObject);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
