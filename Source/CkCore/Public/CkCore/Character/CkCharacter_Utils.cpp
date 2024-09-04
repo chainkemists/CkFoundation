@@ -41,7 +41,9 @@ auto
         TEXT("Invalid Capsule supplied to UCk_Utils_Character_UE::Add_CapsuleHalfHeightToLocation"))
     { return InLocation; }
 
-    return FVector{ InLocation.X, InLocation.Y, InLocation.Z + InCapsule->GetScaledCapsuleHalfHeight() };
+    const auto& HalfHeight = InCapsule->GetComponentRotation().RotateVector(FVector{0, 0, InCapsule->GetScaledCapsuleHalfHeight()});
+
+    return InLocation + HalfHeight;
 }
 
 auto
