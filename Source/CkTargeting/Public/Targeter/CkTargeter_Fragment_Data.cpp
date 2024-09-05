@@ -9,17 +9,6 @@ UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_Targeter, TEXT("Targeter"));
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Provider_Targeter_ParamsData_PDA::
-    Get_Value_Implementation(
-        FCk_Handle InHandle) const
-    -> FCk_Fragment_Targeter_ParamsData
-{
-    return {};
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
     UCk_Targeter_CustomTargetFilter_PDA::
     FilterTargets_Implementation(
         const FCk_Targeter_BasicInfo& InTargeter,
@@ -65,39 +54,6 @@ auto
     -> uint32
 {
     return GetTypeHash(InObj.Get_Owner()) + GetTypeHash(InObj.Get_Targeter());
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Provider_Targeter_ParamsData_Literal_PDA::
-    Get_Value_Implementation(
-        FCk_Handle InHandle) const
-    -> FCk_Fragment_Targeter_ParamsData
-{
-    return _Value;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Provider_MultipleTargeter_ParamsData_PDA::
-    Get_Value_Implementation(
-        FCk_Handle InHandle) const
-    -> FCk_Fragment_MultipleTargeter_ParamsData
-{
-    return {};
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Provider_MultipleTargeter_ParamsData_Literal_PDA::
-    Get_Value_Implementation(
-        FCk_Handle InHandle) const
-    -> FCk_Fragment_MultipleTargeter_ParamsData
-{
-    return _Value;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

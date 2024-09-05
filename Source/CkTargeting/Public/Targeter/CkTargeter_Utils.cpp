@@ -19,6 +19,7 @@ auto
 
         InNewEntity.Add<ck::FFragment_Targeter_Params>(InParams);
         InNewEntity.Add<ck::FFragment_Targeter_Current>();
+        InNewEntity.Add<ck::FTag_Targeter_NeedsSetup>();
     });
 
     auto NewTargeterEntity = Cast(NewEntity);

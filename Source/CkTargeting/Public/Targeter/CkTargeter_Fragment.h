@@ -13,6 +13,7 @@ class UCk_Utils_Targeter_UE;
 
 namespace ck
 {
+    CK_DEFINE_ECS_TAG(FTag_Targeter_NeedsSetup);
     CK_DEFINE_ECS_TAG(FTag_Targeter_NeedsUpdate);
     CK_DEFINE_ECS_TAG(FTag_Targeter_NeedsCleanup);
 
@@ -46,6 +47,7 @@ namespace ck
     public:
         friend class FProcessor_Targeter_HandleRequests;
         friend class FProcessor_Targeter_Cleanup;
+        friend class FProcessor_Targeter_Setup;
         friend class UCk_Utils_Targeter_UE;
 
     public:
@@ -54,10 +56,12 @@ namespace ck
     private:
         TOptional<CachedTargetsType> _CachedTargets;
         ECk_Targeter_TargetingStatus _TargetingStatus = ECk_Targeter_TargetingStatus::NotTargeting;
+        TStrongObjectPtr<UCk_Targeter_CustomTargetFilter_PDA> _InstancedTargetFilter;
 
     public:
         CK_PROPERTY_GET(_CachedTargets);
         CK_PROPERTY_GET(_TargetingStatus);
+        CK_PROPERTY_GET(_InstancedTargetFilter);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

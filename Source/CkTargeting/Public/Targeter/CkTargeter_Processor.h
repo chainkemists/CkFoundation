@@ -9,6 +9,36 @@
 
 namespace ck
 {
+    class CKTARGETING_API FProcessor_Targeter_Setup : public ck_exp::TProcessor<
+            FProcessor_Targeter_Setup,
+            FCk_Handle_Targeter,
+            FFragment_Targeter_Params,
+            FFragment_Targeter_Current,
+            FTag_Targeter_NeedsSetup,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FTag_Targeter_NeedsSetup;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        DoTick(
+            TimeType InDeltaT) -> void;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            const FFragment_Targeter_Params& InParams,
+            FFragment_Targeter_Current& InCurrent) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKTARGETING_API FProcessor_Targeter_Update : public ck_exp::TProcessor<
             FProcessor_Targeter_Update,
             FCk_Handle_Targeter,
