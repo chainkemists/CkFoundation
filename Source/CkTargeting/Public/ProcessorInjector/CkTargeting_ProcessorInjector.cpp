@@ -12,6 +12,7 @@ auto
     -> void
 {
     InWorld.Add<ck::FProcessor_Targetable_Setup>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Targeter_Setup>(InWorld.Get_Registry());
 
     InWorld.Add<ck::FProcessor_Targeter_Update>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Targeter_Cleanup>(InWorld.Get_Registry());

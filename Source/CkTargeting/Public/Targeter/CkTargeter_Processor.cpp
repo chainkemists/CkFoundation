@@ -1,6 +1,8 @@
 #include "CkTargeter_Processor.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Object/CkObject_Utils.h"
+
 #include "CkEcs/TransientEntity/CkTransientEntity_Utils.h"
 
 #include "CkNet/CkNet_Utils.h"
@@ -13,6 +15,39 @@
 
 namespace ck
 {
+    auto
+        FProcessor_Targeter_Setup::
+        DoTick(
+            TimeType InDeltaT)
+        -> void
+    {
+        TProcessor::DoTick(InDeltaT);
+
+        _TransientEntity.Clear<MarkedDirtyBy>();
+    }
+
+    auto
+        FProcessor_Targeter_Setup::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            const FFragment_Targeter_Params& InParams,
+            FFragment_Targeter_Current& InCurrent) const
+        -> void
+    {
+        if (const auto& CustomTargetFilter = InParams.Get_Params().Get_CustomTargetFilter().Get();
+                ck::IsValid(CustomTargetFilter))
+        {
+            const auto& World = UCk_Utils_TransientEntity_UE::Get_World(InHandle);
+            InCurrent._InstancedTargetFilter = TStrongObjectPtr(UCk_Utils_Object_UE::Request_CloneObject(World, CustomTargetFilter));
+
+            const auto TargeterBasicInfo = FCk_Targeter_BasicInfo{InHandle, UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle)};
+            InCurrent._InstancedTargetFilter->OnFilterCreated(TargeterBasicInfo);
+        }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     auto
         FProcessor_Targeter_Update::
         ForEachEntity(
@@ -107,17 +142,13 @@ namespace ck
 
         if (NOT ValidTargets.IsEmpty())
         {
-            if (const auto& CustomTargetFilter = InParams.Get_Params().Get_CustomTargetFilter().Get();
-                ck::IsValid(CustomTargetFilter))
+            if (const auto& TargetFilter = InCurrent.Get_InstancedTargetFilter().Get();
+                ck::IsValid(TargetFilter))
             {
-#if WITH_EDITOR
-                const auto& World = UCk_Utils_TransientEntity_UE::Get_World(InHandle);
-                CustomTargetFilter->Set_CurrentWorld(World);
-#endif
-                const auto& FilteredTargets = CustomTargetFilter->FilterTargets(TargeterBasicInfo, ValidTargetList);
+                const auto& FilteredTargets = TargetFilter->FilterTargets(TargeterBasicInfo, ValidTargetList);
                 const auto& SortedTargets = FilteredTargets.Get_Targets().Num() <= 1
                                                 ? FilteredTargets
-                                                : CustomTargetFilter->SortTargets(TargeterBasicInfo, FilteredTargets);
+                                                : TargetFilter->SortTargets(TargeterBasicInfo, FilteredTargets);
 
                 InCurrent._CachedTargets = SortedTargets;
             }
