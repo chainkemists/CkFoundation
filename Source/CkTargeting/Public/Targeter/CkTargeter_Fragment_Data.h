@@ -108,7 +108,13 @@ public:
     CK_GENERATED_BODY(UCk_Targeter_CustomTargetFilter_PDA);
 
 public:
-    UFUNCTION(BlueprintCallable, BlueprintnativeEvent,
+    UFUNCTION(BlueprintImplementableEvent,
+              Category = "UCk_Targeter_CustomTargetFilter_PDA")
+    void
+    OnFilterCreated(
+        const FCk_Targeter_BasicInfo& InTargeter) const;
+
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
               BlueprintPure = false,
               Category = "UCk_Targeter_CustomTargetFilter_PDA")
     FCk_Targeter_TargetList
@@ -116,7 +122,7 @@ public:
         const FCk_Targeter_BasicInfo& InTargeter,
         const FCk_Targeter_TargetList& InUnfilteredTargets) const;
 
-    UFUNCTION(BlueprintCallable, BlueprintnativeEvent,
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
               BlueprintPure = false,
               Category = "UCk_Targeter_CustomTargetFilter_PDA")
     FCk_Targeter_TargetList
@@ -174,116 +180,6 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleTargeter_ParamsData, _TargeterParams);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(Abstract, Blueprintable, BlueprintType, EditInlineNew)
-class CKTARGETING_API UCk_Provider_Targeter_ParamsData_PDA : public UCk_Provider_PDA
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_Provider_Targeter_ParamsData_PDA);
-
-public:
-    UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
-              Category = "Ck|Provider|Targeter")
-    FCk_Fragment_Targeter_ParamsData
-    Get_Value(
-        FCk_Handle InHandle) const;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(NotBlueprintable)
-class CKTARGETING_API UCk_Provider_Targeter_ParamsData_Literal_PDA : public UCk_Provider_Targeter_ParamsData_PDA
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_Provider_Targeter_ParamsData_Literal_PDA);
-
-private:
-    auto Get_Value_Implementation(
-        FCk_Handle InHandle) const -> FCk_Fragment_Targeter_ParamsData override;
-
-private:
-    UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
-    FCk_Fragment_Targeter_ParamsData _Value;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKTARGETING_API FCk_Provider_Targeter_ParamsData
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Provider_Targeter_ParamsData);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCk_Provider_Targeter_ParamsData_PDA> _Provider;
-
-public:
-    CK_PROPERTY_GET(_Provider);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(Abstract, Blueprintable, BlueprintType, EditInlineNew)
-class CKTARGETING_API UCk_Provider_MultipleTargeter_ParamsData_PDA : public UCk_Provider_PDA
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_Provider_MultipleTargeter_ParamsData_PDA);
-
-public:
-    UFUNCTION(BlueprintCallable, BlueprintNativeEvent,
-              Category = "Ck|Provider|Targeter")
-    FCk_Fragment_MultipleTargeter_ParamsData
-    Get_Value(
-        FCk_Handle InHandle) const;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(NotBlueprintable)
-class CKTARGETING_API UCk_Provider_MultipleTargeter_ParamsData_Literal_PDA : public UCk_Provider_MultipleTargeter_ParamsData_PDA
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_Provider_MultipleTargeter_ParamsData_Literal_PDA);
-
-private:
-    auto Get_Value_Implementation(
-        FCk_Handle InHandle) const -> FCk_Fragment_MultipleTargeter_ParamsData override;
-
-private:
-    UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = true))
-    FCk_Fragment_MultipleTargeter_ParamsData _Value;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKTARGETING_API FCk_Provider_MultipleTargeter_ParamsData
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Provider_MultipleTargeter_ParamsData);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced, meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCk_Provider_MultipleTargeter_ParamsData_PDA> _Provider;
-
-public:
-    CK_PROPERTY_GET(_Provider);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
