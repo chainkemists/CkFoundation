@@ -3,12 +3,27 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Processor/CkProcessor.h"
+
 #include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
 
 #include "CkTimer/CkTimer_Fragment.h"
 #include "CkTimer/CkTimer_Log.h"
 
 // --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_STATS_GROUP(TEXT("CkTimerUpdate"), STATGROUP_CkTimerUpdate_Details, STATCAT_Advanced);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    MakeStatIdFromParams(
+        const FCk_Fragment_Timer_ParamsData& InParams)
+    -> TStatId
+{
+    const auto& StatString = ck::Format_UE(TEXT("ck_FProcessor_Timer_Update [{}]"), InParams.Get_TimerName().GetTagName().ToString());
+    return FDynamicStats::CreateStatId<STAT_GROUP_TO_FStatGroup(STATGROUP_CkTimerUpdate_Details)>(StatString);
+}
 
 auto
     UCk_Utils_Timer_UE::
@@ -17,12 +32,16 @@ auto
         const FCk_Fragment_Timer_ParamsData& InParams)
     -> FCk_Handle_Timer
 {
-     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
-     {
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
+    {
         UCk_Utils_GameplayLabel_UE::Add(InNewEntity, InParams.Get_TimerName());
 
         InNewEntity.Add<ck::FFragment_Timer_Params>(InParams);
-        InNewEntity.Add<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
+        auto& Current = InNewEntity.Add<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
+
+#if STATS
+        Current.Set_StatID(MakeStatIdFromParams(InParams));
+#endif // STATS
 
         if (InParams.Get_CountDirection() == ECk_Timer_CountDirection::CountDown)
         { InNewEntity.Add<ck::FTag_Timer_Countdown>(); }
@@ -54,7 +73,8 @@ auto
     { return Add(InTimerOwnerEntity, InParams); }
 
     MaybeExistingTimerEntity.Replace<ck::FFragment_Timer_Params>(InParams);
-    MaybeExistingTimerEntity.Replace<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
+    auto& Current = MaybeExistingTimerEntity.Replace<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
+    Current.Set_StatID(MakeStatIdFromParams(InParams));
 
     if (InParams.Get_StartingState() == ECk_Timer_State::Running)
     {
@@ -483,5 +503,4 @@ auto
     return InTimerEntity;
 }
 
-//w
 //--------------------------------------------------------------------------------------------------------------------

@@ -205,6 +205,10 @@ namespace ck
             FFragment_Timer_Current& InCurrentComp) const
         -> void
     {
+#if STATS
+        FScopeCycleCounter TimerStatCounter(InCurrentComp.Get_StatID());
+#endif // STATS
+
         auto& TimerChrono = InCurrentComp._Chrono;
 
         if (TimerChrono.Get_IsDone() && TimerChrono.Get_GoalValue() > FCk_Time::ZeroSecond())
