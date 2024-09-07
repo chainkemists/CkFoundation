@@ -107,6 +107,25 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Aggro",
+              DisplayName = "[Ck][Aggro] Bind To OnNewAggroAdded")
+    static FCk_Handle
+    BindTo_OnNewAggroAdded(
+        UPARAM(ref) FCk_Handle& InAggroOwner,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_Aggro_OnNewAggroAdded& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Aggro",
+              DisplayName = "[Ck][Aggro] Unbind From OnNewAggroAdded")
+    static FCk_Handle
+    UnbindFrom_OnNewAggroAdded(
+        UPARAM(ref) FCk_Handle& InAggroOwner,
+        const FCk_Delegate_Aggro_OnNewAggroAdded& InDelegate);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Aggro",
               DisplayName="[Ck][Aggro] For Each",
               meta=(AutoCreateRefTerm="InDelegate, InOptionalPayload"))
     static TArray<FCk_Handle_Aggro>
