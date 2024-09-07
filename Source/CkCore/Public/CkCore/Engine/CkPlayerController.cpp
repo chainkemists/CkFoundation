@@ -1,6 +1,7 @@
 #include "CkPlayerController.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Build/CkBuild_Macros.h"
 
 #include <GameFramework/PlayerState.h>
 
@@ -30,6 +31,19 @@ auto
     {
         ServerViewNextPlayer();
     }
+}
+
+auto
+    ACk_PlayerController_UE::
+    AddCheats(
+        bool InForce)
+    -> void
+{
+#if CK_BUILD_RELEASE
+    Super::AddCheats(InForce);
+#else
+    Super::AddCheats(InForce || _AddMultiplayerCheats);
+#endif
 }
 
 auto
