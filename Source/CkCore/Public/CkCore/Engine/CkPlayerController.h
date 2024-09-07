@@ -46,7 +46,7 @@ public:
 public:
     auto BeginSpectatingState() -> void override;
     auto OnRep_Pawn() -> void override;
-
+    auto AddCheats(bool InForce) -> void override;
 public:
     UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly,
               Category = "Ck|PlayerController",
@@ -58,6 +58,11 @@ public:
 private:
     UPROPERTY(EditDefaultsOnly, Category = "ACk_PlayerController_UE")
     ECk_PlayerController_Spectating_Policy _SpectatingPolicy = ECk_PlayerController_Spectating_Policy::AutoSpectate;
+
+    UPROPERTY(EditDefaultsOnly,
+              Category = "ACk_PlayerController_UE|Development",
+              DisplayName = "Add Multiplayer Cheats (In Development)")
+    bool _AddMultiplayerCheats = false;
 
 private:
     auto DoSetControllerState_Playing() -> void;
