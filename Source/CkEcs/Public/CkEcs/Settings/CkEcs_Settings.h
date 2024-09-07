@@ -112,10 +112,10 @@ public:
     CK_GENERATED_BODY(UCk_Ecs_UserSettings_UE);
 
 private:
-    // Enabling this will slow down the game's execution
-    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Debugging",
+    // This property can only be changed by the toolbar widgets
+    UPROPERTY(Config, VisibleAnywhere, BlueprintReadOnly, Category = "Debugging",
               meta = (AllowPrivateAccess = true))
-    ECk_Ecs_HandleDebuggerBehavior _HandleDebuggerBehavior = ECk_Ecs_HandleDebuggerBehavior::Disable;
+    ECk_Ecs_HandleDebuggerBehavior _HandleDebuggerBehavior = ECk_Ecs_HandleDebuggerBehavior::Enable;
 
     // EntityMap helps us link up an Entity ID with its Actor/ConstructionScript/Ability by logging all Entities that are created
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Debugging",
