@@ -1,8 +1,5 @@
 #include "CkObject_Utils.h"
 
-#include <Engine/Blueprint.h>
-#include <Engine/BlueprintGeneratedClass.h>
-
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -227,14 +224,14 @@ auto
     -> UObject*
 {
 #if WITH_EDITOR
-    const auto& BPGC = Cast<UBlueprintGeneratedClass>(InBlueprintGeneratedClass);
+    const auto& Bpgc = Cast<UBlueprintGeneratedClass>(InBlueprintGeneratedClass);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(BPGC),
+    CK_ENSURE_IF_NOT(ck::IsValid(Bpgc),
         TEXT("Class [{}] supplied to Get_ClassGeneratedByBlueprint is Invalid OR is NOT of type UBlueprintGeneratedClass!"),
         InBlueprintGeneratedClass)
     { return {}; }
 
-    return BPGC->ClassGeneratedBy;
+    return Bpgc->ClassGeneratedBy;
 #else
     return nullptr;
 #endif
