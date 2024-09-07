@@ -77,7 +77,8 @@ private:
               meta = (AllowPrivateAccess = true, InvalidEnumValues="Default"))
     int32 _MaxNumberOfBlueprintStackFrames = 50;
 
-    UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Ensures",
+    // This property can only be changed by the toolbar widgets
+    UPROPERTY(Config, VisibleAnywhere, BlueprintReadOnly, Category = "Ensures",
               meta = (AllowPrivateAccess = true))
     ECk_EnsureDisplay_Policy _EnsureDisplayPolicy = ECk_EnsureDisplay_Policy::ModalDialog;
 

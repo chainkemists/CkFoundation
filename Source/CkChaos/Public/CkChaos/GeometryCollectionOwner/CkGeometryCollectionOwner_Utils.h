@@ -51,7 +51,7 @@ private:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Chaos|GeometryCollection|Owner",
         DisplayName="[Ck][GeometryCollectionOwner] Handle -> GeometryCollectionOwner Handle",
-        meta = (CompactNodeTitle = "<AsChaos>", BlueprintAutocast))
+        meta = (CompactNodeTitle = "<AsGeometryCollectionOwner>", BlueprintAutocast))
     static FCk_Handle_GeometryCollectionOwner
     DoCastChecked(
         FCk_Handle InHandle);
