@@ -15,6 +15,8 @@ class UCk_Utils_ResolverDataBundle_UE;
 // --------------------------------------------------------------------------------------------------------------------
 
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_ResolverDataBundle_InvalidPhase);
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_ResolverDataBundle_Name_Initial);
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_ResolverDataBundle_Name_Final);
 
 // --------------------------------------------------------------------------------------------------------------------
 
