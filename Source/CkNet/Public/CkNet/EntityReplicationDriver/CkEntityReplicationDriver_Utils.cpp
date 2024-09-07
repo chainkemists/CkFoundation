@@ -161,6 +161,8 @@ auto
             const auto& RepDriver = NewEntity.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
             const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(NewEntity);
 
+            RepDriver->Set_ExpectedNumberOfDependentReplicationDrivers(Get_NumOfReplicationDriversIncludingDependents(InHandle));
+
             RepDriver->Set_ReplicationData
             (
                 FCk_EntityReplicationDriver_ReplicationData
