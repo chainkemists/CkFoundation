@@ -63,3 +63,15 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Aggro);
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Aggro_FloatAttribute_Name);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_Aggro_OnNewAggroAdded,
+    FCk_Handle, InAggroOwner,
+    FCk_Handle_Aggro, InNewAggro);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FCk_Delegate_Aggro_OnNewAggroAdded_MC,
+    FCk_Handle, InAggroOwner,
+    FCk_Handle_Aggro, InNewAggro);
+
+// --------------------------------------------------------------------------------------------------------------------

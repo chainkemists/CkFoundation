@@ -40,6 +40,8 @@ auto
     RecordOfAggro_Utils::AddIfMissing(InHandle);
     RecordOfAggro_Utils::Request_Connect(InHandle, AggroHandle);
 
+    ck::UUtils_Signal_OnNewAggroAdded::Broadcast(InHandle, ck::MakePayload(InHandle, AggroHandle));
+
     return AggroHandle;
 }
 
@@ -126,6 +128,30 @@ auto
     -> float
 {
     return UCk_Utils_FloatAttribute_UE::Get_FinalValue(Get_AggroScoreAttribute(InAggro));
+}
+
+auto
+    UCk_Utils_Aggro_UE::
+    BindTo_OnNewAggroAdded(
+        FCk_Handle& InAggroOwner,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_Aggro_OnNewAggroAdded& InDelegate)
+    -> FCk_Handle
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnNewAggroAdded, InAggroOwner, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InAggroOwner;
+}
+
+auto
+    UCk_Utils_Aggro_UE::
+    UnbindFrom_OnNewAggroAdded(
+        FCk_Handle& InAggroOwner,
+        const FCk_Delegate_Aggro_OnNewAggroAdded& InDelegate)
+    -> FCk_Handle
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnNewAggroAdded, InAggroOwner, InDelegate);
+    return InAggroOwner;
 }
 
 auto
