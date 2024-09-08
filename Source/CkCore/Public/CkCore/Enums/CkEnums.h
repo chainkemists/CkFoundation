@@ -668,3 +668,36 @@ enum class ECk_ConstructionPhase : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ConstructionPhase);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Collision : uint8
+{
+    NoCollision UMETA(DisplayName = "No Collision"),
+    QueryOnly UMETA(DisplayName = "Query Only (No Physics Collision)"),
+    PhysicsOnly UMETA(DisplayName = "Physics Only (No Query Collision)"),
+    QueryAndPhysics UMETA(DisplayName = "Collision Enabled (Query and Physics)")
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Collision);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable)
+class CKCORE_API UCk_Utils_Enum_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_Enum_UE);
+
+public:
+    static auto
+    ConvertToECollisionEnabled(
+        ECk_Collision InEnum) -> ECollisionEnabled::Type;
+
+    static auto
+    ConvertFromECollisionEnabled(
+        ECollisionEnabled::Type InEnum) -> ECk_Collision;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
