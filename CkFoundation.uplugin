@@ -87,6 +87,16 @@
 			]
 		},
 		{
+			"Name": "CkAntBridge",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
 			"Name": "CkAttribute",
 			"Type": "Runtime",
 			"LoadingPhase": "PreDefault",
@@ -298,6 +308,16 @@
 		},
 		{
 			"Name": "CkInput",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
+			"Name": "CkIsmRenderer",
 			"Type": "Runtime",
 			"LoadingPhase": "PreDefault",
 			"WhitelistPlatforms": [
