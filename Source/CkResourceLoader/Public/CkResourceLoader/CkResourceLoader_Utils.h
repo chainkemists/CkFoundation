@@ -44,12 +44,12 @@ public:
         FCk_Handle InHandle,
         const FCk_Request_ResourceLoader_LoadObjectBatch& InRequest,
         const FCk_Delegate_ResourceLoader_OnObjectBatchLoaded& InDelegate);
-    
-	UFUNCTION(BlueprintPure,
-	    DisplayName = "[Ck] Convert Soft Class Reference To Soft Resource Loader Object Reference",
+
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Convert Soft Class Reference To Soft Resource Loader Object Reference",
         Category = "Ck|Utils|ResourceLoader",
-	    meta = (CompactNodeTitle = "->"))
-	static FCk_ResourceLoader_ObjectReference_Soft
+        meta = (CompactNodeTitle = "->"))
+    static FCk_ResourceLoader_ObjectReference_Soft
     Conv_SoftObjRefToSoftResourceLoaderObjectReference(
         TSoftClassPtr<UObject> SoftClassReference);
 
@@ -62,11 +62,13 @@ public:
         const TArray<TSoftClassPtr<UObject>>& InReferences);
 
 private:
-    static auto DoAddPendingObject(
+    static auto
+    DoAddPendingObject(
         FCk_Handle InHandle,
         const FCk_ResourceLoader_PendingObject& InPendingObject) -> void;
 
-    static auto DoAddPendingObjectBatch(
+    static auto
+    DoAddPendingObjectBatch(
         FCk_Handle InHandle,
         const FCk_ResourceLoader_PendingObjectBatch& InPendingObjectBatch) -> void;
 };

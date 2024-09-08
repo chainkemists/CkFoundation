@@ -34,6 +34,7 @@ CK_DEFINE_CUSTOM_FORMATTER(FNetworkGUID,   [&]() { return InObj.ToString(); });
 CK_DEFINE_CUSTOM_FORMATTER(FKey,   [&]() { return InObj.ToString(); });
 CK_DEFINE_CUSTOM_FORMATTER(FInputChord,   [&]() { return InObj.GetInputText(); });
 CK_DEFINE_CUSTOM_FORMATTER(FSoftObjectPath,   [&]() { return InObj.GetAssetName(); });
+CK_DEFINE_CUSTOM_FORMATTER(FSoftClassPath,   [&]() { return InObj.GetAssetName(); });
 
 CK_DEFINE_CUSTOM_FORMATTER(FRandomStream, [&]()
 {
@@ -335,6 +336,22 @@ CK_DEFINE_CUSTOM_FORMATTER_T(TObjectPtr<T>, [&]()
 });
 
 CK_DEFINE_CUSTOM_FORMATTER_T(TOptional<T>, [&]()
+{
+    if (NOT ck::IsValid(InObj))
+    { return ck::Format(TEXT("nullopt")); }
+
+    return ck::Format(TEXT("{}"), *InObj);
+});
+
+CK_DEFINE_CUSTOM_FORMATTER_T(TSoftObjectPtr<T>, [&]()
+{
+    if (NOT ck::IsValid(InObj))
+    { return ck::Format(TEXT("nullopt")); }
+
+    return ck::Format(TEXT("{}"), *InObj);
+});
+
+CK_DEFINE_CUSTOM_FORMATTER_T(TSoftClassPtr<T>, [&]()
 {
     if (NOT ck::IsValid(InObj))
     { return ck::Format(TEXT("nullopt")); }
