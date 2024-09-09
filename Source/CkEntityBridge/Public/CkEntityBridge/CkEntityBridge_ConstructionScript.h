@@ -22,6 +22,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
     FCk_Delegate_OnInjectEntityConstructionParams_MC,
     FCk_SharedInstancedStruct, InParamsToInject);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+    FCk_Delegate_PreConstruct_MC,
+    FCk_Handle, InEntity);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract,
@@ -42,22 +46,35 @@ public:
     friend class UCk_Fragment_EntityReplicationDriver_Rep;
 
 protected:
-    auto OnUnregister() -> void override;
+    auto
+    OnUnregister() -> void override;
 
 protected:
-    auto Do_Construct_Implementation(
+    auto
+    Do_Construct_Implementation(
         const FCk_ActorComponent_DoConstruct_Params& InParams) -> void override;
 
 private:
-    auto TryInvoke_OnReplicationComplete(EInvoke_Caller InCaller) -> void override;
-    auto Get_EntityConstructionParamsToInject() const -> FInstancedStruct override;
+    auto
+    TryInvoke_OnPreConstruct(
+        const FCk_Handle& Entity,
+        EInvoke_Caller InCaller) const -> void override;
+
+    auto
+    TryInvoke_OnReplicationComplete(
+        EInvoke_Caller InCaller) -> void override;
+
+    auto
+    Get_EntityConstructionParamsToInject() const -> FInstancedStruct override;
 
 public:
     UFUNCTION(BlueprintCallable)
-    void Request_ReplicateNonReplicatedActor();
+    void
+    Request_ReplicateNonReplicatedActor();
 
     UFUNCTION(BlueprintCallable)
-    bool Get_IsReplicationComplete() const;
+    bool
+    Get_IsReplicationComplete() const;
 
     UPROPERTY(EditDefaultsOnly)
     ECk_Replication _Replication = ECk_Replication::Replicates;
@@ -73,9 +90,13 @@ private:
         meta = (AllowPrivateAccess))
     FCk_Delegate_OnReplicationComplete_MC _OnReplicationComplete_MC;
 
-    UPROPERTY(BlueprintAssignable, Category = "Public", DisplayName = "On Inject Entity Construction Params",
-        meta = (AllowPrivateAccess))
+    UPROPERTY(BlueprintAssignable, Category = "Public", DisplayName = "On Inject Entity Construction Params (DEPRECATED - Use PreConstruct)",
+        meta = (AllowPrivateAccess, DeprecatedProperty))
     FCk_Delegate_OnInjectEntityConstructionParams_MC _OnInjectEntityConstructionParams_MC;
+
+    UPROPERTY(BlueprintAssignable, Category = "Public", DisplayName = "On PreConstruct",
+        meta = (AllowPrivateAccess, DeprecatedProperty))
+    FCk_Delegate_PreConstruct_MC _OnPreConstruct;
 
 private:
     enum class EOnReplicationCompleteBroadcastStep
