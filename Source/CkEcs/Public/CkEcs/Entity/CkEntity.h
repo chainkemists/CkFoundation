@@ -74,10 +74,10 @@ private:
 template<>
 struct TStructOpsTypeTraits<FCk_Entity> : public TStructOpsTypeTraitsBase2<FCk_Entity>
 {
-	enum
-	{
-		WithIdenticalViaEquality = true,
-	};
+    enum
+    {
+        WithIdenticalViaEquality = true,
+    };
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -384,6 +384,16 @@ namespace ck::algo
 
 namespace ck
 {
+
+    auto
+        MakeHandle(
+            FCk_Entity InEntity,
+            const FCk_Registry& InValidHandle)
+        -> FCk_Handle
+    {
+        return FCk_Handle{InEntity, InValidHandle};
+    }
+
     auto
         MakeHandle(
             FCk_Entity InEntity,
