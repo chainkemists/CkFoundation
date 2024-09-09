@@ -43,6 +43,19 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_AntAgent_Renderer_UE, FCk_Hand
 
 auto
     UCk_Utils_AntAgent_Renderer_UE::
+    Request_RenderInstance(
+        FCk_Handle_AntAgent_Renderer& InHandle,
+        const FCk_Request_InstancedStaticMeshRenderer_NewInstance& InRequest)
+    -> FCk_Handle_AntAgent_Renderer
+{
+        InHandle.AddOrGet<ck::FFragment_InstancedStaticMeshRenderer_Requests>()._Requests.Emplace(InRequest);
+        return InHandle;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_AntAgent_Renderer_UE::
     Add(
         FCk_Handle& InHandle,
         const FCk_Fragment_AntAgent_Renderer_ParamsData& InParams)

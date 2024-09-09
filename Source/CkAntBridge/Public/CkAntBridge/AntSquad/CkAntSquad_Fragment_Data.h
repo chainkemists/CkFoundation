@@ -52,6 +52,26 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKANTBRIDGE_API FCk_Request_InstancedStaticMeshRenderer_NewInstance
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_InstancedStaticMeshRenderer_NewInstance);
+
+private:
+    // Location relative to the AntSquad Entity
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
+    FTransform _Transform;
+
+public:
+    CK_PROPERTY(_Transform);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKANTBRIDGE_API FCk_Fragment_AntSquad_ParamsData
 {
     GENERATED_BODY()
@@ -88,11 +108,16 @@ private:
         meta=(AllowPrivateAccess = true, MinClamp = 0.0f, UIMin = 0.0f))
     float _FaceAngle = 0.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true, MinClamp = 0.0f, UIMin = 0.0f))
+    FCk_Handle _AgentData;
+
 public:
     CK_PROPERTY(_RelativeLocation);
     CK_PROPERTY(_Radius);
     CK_PROPERTY(_Height);
     CK_PROPERTY(_FaceAngle);
+    CK_PROPERTY(_AgentData);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -104,7 +104,43 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_AntAgent_Renderer_Current& InCurrent) const -> void;
+            const FFragment_AntAgent_Renderer_Current& InCurrent) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKANTBRIDGE_API FProcessor_InstancedStaticMeshRenderer_HandleRequests : public ck_exp::TProcessor<
+        FProcessor_InstancedStaticMeshRenderer_HandleRequests,
+        FCk_Handle_AntAgent_Renderer,
+        FFragment_AntAgent_Renderer_Current,
+        FFragment_InstancedStaticMeshRenderer_Requests,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FFragment_InstancedStaticMeshRenderer_Requests;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto DoTick(
+            TimeType InDeltaT) -> void;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_AntAgent_Renderer_Current& InCurrent,
+            FFragment_InstancedStaticMeshRenderer_Requests& InRequestsComp) const -> void;
+
+    private:
+        static auto
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_AntAgent_Renderer_Current& InCurrent,
+            const FCk_Request_InstancedStaticMeshRenderer_NewInstance& InRequest)
+            -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

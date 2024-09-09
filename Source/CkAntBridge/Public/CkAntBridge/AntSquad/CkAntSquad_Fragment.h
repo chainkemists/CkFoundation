@@ -54,6 +54,26 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    struct CKANTBRIDGE_API FFragment_InstancedStaticMeshRenderer_Requests
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_InstancedStaticMeshRenderer_Requests);
+
+    public:
+        using RequestType = std::variant<FCk_Request_InstancedStaticMeshRenderer_NewInstance>;
+
+        using RequestList = TArray<RequestType>;
+
+    public:
+        friend class FProcessor_InstancedStaticMeshRenderer_HandleRequests;
+        friend class UCk_Utils_AntAgent_Renderer_UE;
+
+    private:
+        RequestList _Requests;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKANTBRIDGE_API FFragment_AntSquad_Params
     {
     public:

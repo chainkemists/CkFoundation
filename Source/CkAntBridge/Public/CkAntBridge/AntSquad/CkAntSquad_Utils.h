@@ -111,6 +111,16 @@ private:
     static FCk_Handle_AntAgent_Renderer
     DoCastChecked(
         FCk_Handle InHandle);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Renderer|ISM",
+              DisplayName="[Ck][IsmRenderer] Request Render Instance",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_AntAgent_Renderer
+    Request_RenderInstance(
+        UPARAM(ref) FCk_Handle_AntAgent_Renderer& InHandle,
+        const FCk_Request_InstancedStaticMeshRenderer_NewInstance& InRequest);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

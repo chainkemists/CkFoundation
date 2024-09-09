@@ -15,6 +15,7 @@ auto
     InWorld.Add<ck::FProcessor_AntAgent_Renderer_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AntAgent_Renderer_ClearInstances>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AntAgent_Renderer_Update>(InWorld.Get_Registry(), GetWorld());
+    InWorld.Add<ck::FProcessor_InstancedStaticMeshRenderer_HandleRequests>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

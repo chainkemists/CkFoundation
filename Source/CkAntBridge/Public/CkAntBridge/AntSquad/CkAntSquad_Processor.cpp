@@ -151,11 +151,14 @@ namespace ck
             const FCk_Request_AntSquad_AddAgent& InRequestAgent) const
         -> void
     {
-        constexpr auto HeroFlag = 0;
-        constexpr auto EnemyFlag = 1u << 1;
+        const auto EntityId = InRequestAgent.Get_AgentData().Get_Entity().Get_ID();
 
         const auto Agent = _AntSubsystem->AddAgent(
-            InRequestAgent.Get_RelativeLocation(), InRequestAgent.Get_Radius(), InRequestAgent.Get_Height(), InRequestAgent.Get_FaceAngle(), HeroFlag);
+            InRequestAgent.Get_RelativeLocation(),
+            InRequestAgent.Get_Radius(),
+            InRequestAgent.Get_Height(),
+            InRequestAgent.Get_FaceAngle(),
+            static_cast<int32>(EntityId));
 
         // TODO: Figure out how to cleanly validate the Agents
 
@@ -238,13 +241,60 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_AntAgent_Renderer_Current& InCurrent) const
+            const FFragment_AntAgent_Renderer_Current& InCurrent) const
         -> void
     {
         if (ck::Is_NOT_Valid(InCurrent.Get_IsmComponent()))
         { return; }
 
         InCurrent.Get_IsmComponent()->ClearInstances();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_InstancedStaticMeshRenderer_HandleRequests::
+        DoTick(
+            TimeType InDeltaT)
+        -> void
+    {
+        TProcessor::DoTick(InDeltaT);
+
+        _TransientEntity.Clear<MarkedDirtyBy>();
+    }
+
+    auto
+        FProcessor_InstancedStaticMeshRenderer_HandleRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_AntAgent_Renderer_Current& InCurrent,
+            FFragment_InstancedStaticMeshRenderer_Requests& InRequestsComp) const
+        -> void
+    {
+        const auto RequestsCopy = InRequestsComp._Requests;
+        InRequestsComp._Requests.Reset();
+
+        algo::ForEach(RequestsCopy, ck::Visitor([&](const auto& InRequestVariant)
+        {
+            DoHandleRequest(InHandle, InCurrent, InRequestVariant);
+        }));
+    }
+
+    auto
+        FProcessor_InstancedStaticMeshRenderer_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_AntAgent_Renderer_Current& InCurrent,
+            const FCk_Request_InstancedStaticMeshRenderer_NewInstance& InRequest)
+            -> void
+    {
+        const auto IsmComponent = InCurrent.Get_IsmComponent();
+
+        if (ck::Is_NOT_Valid(IsmComponent))
+        { return; }
+
+        InCurrent.Get_IsmComponent()->AddInstance(InRequest.Get_Transform());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -266,7 +316,15 @@ namespace ck
     {
         for (const auto &Agent : _AntSubsystem->GetUnderlyingAgentsList())
         {
-            const FVector Center(Agent.GetLocationLerped());
+            const auto Center = FVector{Agent.GetLocationLerped()};
+
+            const auto EntityId = Agent.GetFlag();
+            const auto RendererEntity = _Registry.Get_ValidEntity(static_cast<FCk_Entity::IdType>(EntityId));
+            auto RendererHandle = UCk_Utils_AntAgent_Renderer_UE::Cast(ck::MakeHandle(RendererEntity, _Registry));
+
+            UCk_Utils_AntAgent_Renderer_UE::Request_RenderInstance(RendererHandle,
+                FCk_Request_InstancedStaticMeshRenderer_NewInstance{}.Set_Transform(FTransform{Center}));
+
             ck_ant_squad_processor::Add_MeshInstance(_Registry, Agent.GetFlag(), FTransform(FRotator::ZeroRotator, Center, FVector::One()));
         }
     }
