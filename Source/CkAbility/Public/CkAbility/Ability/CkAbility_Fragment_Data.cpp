@@ -76,7 +76,7 @@ auto
     const auto AbilityOwnerParamsData = FCk_Fragment_AbilityOwner_ParamsData{}
                                         .Set_DefaultAbilities_Instanced(_DefaultAbilities_Instanced);
 
-    UCk_Utils_AbilityOwner_UE::Add(InHandle, AbilityOwnerParamsData);
+    UCk_Utils_AbilityOwner_UE::Add(InHandle, AbilityOwnerParamsData, ECk_Replication::DoesNotReplicate);
 }
 
 auto

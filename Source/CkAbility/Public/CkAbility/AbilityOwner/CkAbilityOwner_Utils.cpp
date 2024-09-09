@@ -449,7 +449,8 @@ auto
     { return InAbilityOwnerHandle; }
 
     CK_ENSURE_IF_NOT(UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InAbilityOwnerHandle),
-        TEXT("Cannot Give a REPLICATED Ability to Entity [{}] because it's missing the AbilityOwner Replicated Fragment"),
+        TEXT("Cannot Give a REPLICATED Ability to Entity [{}] because it's missing the AbilityOwner Replicated Fragment\n."
+             "Was the AbilityOwner feature set to Replicate when it was added?"),
         InAbilityOwnerHandle)
     { return InAbilityOwnerHandle; }
 
@@ -494,12 +495,13 @@ auto
     Request_RevokeAbility(InAbilityOwnerHandle, InRequest, InDelegate);
 
     CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAbilityOwnerHandle),
-        TEXT("Cannot Revoke a REPLICATED Ability to Entity [{}] because it is NOT a Host"),
+        TEXT("Cannot Revoke a REPLICATED Ability from Entity [{}] because it is NOT a Host"),
         InAbilityOwnerHandle)
     { return InAbilityOwnerHandle; }
 
     CK_ENSURE_IF_NOT(UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InAbilityOwnerHandle),
-        TEXT("Cannot Revoke a REPLICATED Ability to Entity [{}] because it's missing the AbilityOwner Replicated Fragment"),
+        TEXT("Cannot Revoke a REPLICATED Ability from Entity [{}] because it's missing the AbilityOwner Replicated Fragment\n."
+             "Was the AbilityOwner feature set to Replicate when it was added?"),
         InAbilityOwnerHandle)
     { return InAbilityOwnerHandle; }
 
