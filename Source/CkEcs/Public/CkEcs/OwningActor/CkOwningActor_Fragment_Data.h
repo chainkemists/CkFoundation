@@ -91,9 +91,17 @@ private:
     };
 
 private:
-    virtual auto TryInvoke_OnReplicationComplete(EInvoke_Caller) -> void {}
+    virtual auto
+    TryInvoke_OnPreConstruct(
+        const FCk_Handle& Entity,
+        EInvoke_Caller InCaller) const -> void {}
 
-    virtual auto Get_EntityConstructionParamsToInject() const -> FInstancedStruct { return {}; };
+    virtual auto
+    TryInvoke_OnReplicationComplete(
+        EInvoke_Caller) -> void {}
+
+    virtual auto
+    Get_EntityConstructionParamsToInject() const -> FInstancedStruct { return {}; };
 };
 
 // --------------------------------------------------------------------------------------------------------------------
