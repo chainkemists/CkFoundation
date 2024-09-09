@@ -571,7 +571,14 @@ auto
         {
             const auto& SubAbilityInstance = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_Ability_Script_PDA>(WorldToUse, InSubAbilityClass, nullptr, nullptr);
 
-            UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(WorldToUse)->Request_TrackAbilityScript(SubAbilityInstance);
+            // We do not need to track this new instance in the ability subsystem since the following will make sure it can't be garbage collected:
+            // *  It is initially added to an array UCk_Ability_ConstructionScript_PDA, which itself is tracked by the ability subsystem.
+            //      The reference chain prevents the ability instance from being GC'd until FProcessor_AbilityOwner_Setup is called
+            // *  In FProcessor_AbilityOwner_Setup, these instanced abilities are given and set as the ability archetype. This then calls DoCreate_AbilityEntityConfig
+            //      with this ability instance as the InAbilityArchetype, which is then stored in the UCk_Ability_ConstructionScript_PDA's AbilityParams. This prevents being GC'd
+            //      until the ability is added.
+            // *  In UCk_Utils_Ability_UE::DoAdd the ability is set as the ability's DefaultInstance and tracked in the ability subsystem. It is untracked when the ability
+            //      is revoked.
 
             return SubAbilityInstance;
         });
