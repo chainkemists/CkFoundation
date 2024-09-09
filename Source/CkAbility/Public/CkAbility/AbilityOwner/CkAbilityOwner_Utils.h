@@ -39,7 +39,7 @@ public:
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_AbilityOwner_ParamsData& InParams,
-        ECk_Replication InReplicates = ECk_Replication::Replicates);
+        ECk_Replication InReplicates = ECk_Replication::DoesNotReplicate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
