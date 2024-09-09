@@ -185,6 +185,7 @@ auto
 
         CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
 
+        TryInvoke_OnPreConstruct(Entity, EInvoke_Caller::EntityBridge);
         ConstructionScript->Construct(Entity, Get_EntityConstructionParamsToInject());
 
         if (OwningActor->GetIsReplicated() && _Replication == ECk_Replication::Replicates)
@@ -319,6 +320,7 @@ auto
 
         CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
 
+        TryInvoke_OnPreConstruct(NewEntity, EInvoke_Caller::EntityBridge);
         ConstructionScript->Construct(NewEntity, Get_EntityConstructionParamsToInject());
 
         // TODO: this is a HACK due to the way TryInvoke_OnReplicationComplete works. The function assumes that it will be called twice.
@@ -383,6 +385,7 @@ auto
 
         CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
 
+        TryInvoke_OnPreConstruct(NewEntity, EInvoke_Caller::EntityBridge);
         ConstructionScript->Construct(NewEntity, Get_EntityConstructionParamsToInject());
 
         // TODO: this is a HACK due to the way TryInvoke_OnReplicationComplete works. The function assumes that it will be called twice.
@@ -392,6 +395,16 @@ auto
     }
 
     TryInvoke_OnReplicationComplete(EInvoke_Caller::EntityBridge);
+}
+
+auto
+    UCk_EntityBridge_ActorComponent_UE::
+    TryInvoke_OnPreConstruct(
+        const FCk_Handle& Entity,
+        EInvoke_Caller InCaller) const
+    -> void
+{
+    _OnPreConstruct.Broadcast(Entity);
 }
 
 auto

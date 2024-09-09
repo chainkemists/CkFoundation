@@ -226,6 +226,7 @@ auto
 
     const auto& EntityBridgeActorComp = ReplicatedActor->GetComponentByClass<UCk_EntityBridge_ActorComponent_Base_UE>();
 
+    EntityBridgeActorComp->TryInvoke_OnPreConstruct(NewEntity, UCk_EntityBridge_ActorComponent_Base_UE::EInvoke_Caller::ReplicationDriver);
     CsWithTransform->Construct(NewEntity, EntityBridgeActorComp->Get_EntityConstructionParamsToInject());
 
     const auto& ReplicatedObjects = _ReplicationData_ReplicatedActor.Get_ReplicatedObjects();
