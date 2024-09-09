@@ -75,4 +75,7 @@ Plugins/*/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+
+# idea files
+*.idea/*
 Source/CkScripts/.idea
