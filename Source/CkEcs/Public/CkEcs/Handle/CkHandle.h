@@ -276,15 +276,37 @@ namespace ck
     // does not know or care. Another case is when we use FCk_Entity in debug builds and FCk_Handle in release
     // builds but the code that uses the handle (or entity) does not care and wants a handle back
 
-    auto CKECS_API MakeHandle(FCk_Entity InEntity, FCk_Handle InValidHandle) -> FCk_Handle;
-    auto CKECS_API MakeHandle(FCk_Handle InEntity, FCk_Handle InValidHandle) -> FCk_Handle;
+    auto CKECS_API
+    MakeHandle(
+        FCk_Entity InEntity, 
+        const FCk_Registry& InValidHandle) -> FCk_Handle;
 
-    auto CKECS_API IsValid(FCk_Entity InEntity, FCk_Handle InValidHandle) -> bool;
-    auto CKECS_API IsValid(
-        const FCk_Handle& InEntity, FCk_Handle InValidHandle) -> bool;
+    auto CKECS_API
+    MakeHandle(
+        FCk_Entity InEntity, 
+        FCk_Handle InValidHandle) -> FCk_Handle;
 
-    auto CKECS_API GetEntity(FCk_Entity InEntity) -> FCk_Entity;
-    auto CKECS_API GetEntity(
+    auto CKECS_API
+    MakeHandle(
+        FCk_Handle InEntity, 
+        FCk_Handle InValidHandle) -> FCk_Handle;
+
+    auto CKECS_API
+    IsValid(
+        FCk_Entity InEntity, 
+        FCk_Handle InValidHandle) -> bool;
+
+    auto CKECS_API
+    IsValid(
+        const FCk_Handle& InEntity, 
+        FCk_Handle InValidHandle) -> bool;
+
+    auto CKECS_API
+    GetEntity(
+        FCk_Entity InEntity) -> FCk_Entity;
+
+    auto CKECS_API
+    GetEntity(
         const FCk_Handle& InEntity) -> FCk_Entity;
 }
 
