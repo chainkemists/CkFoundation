@@ -206,7 +206,7 @@ namespace ck
         -> void
     {
 #if STATS
-        FScopeCycleCounter TimerStatCounter(InCurrentComp.Get_StatID());
+        auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
 #endif // STATS
 
         auto& TimerChrono = InCurrentComp._Chrono;
