@@ -56,9 +56,14 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKTIMER_API FProcessor_Timer_Update
-        : public ck_exp::TProcessor<FProcessor_Timer_Update, FCk_Handle_Timer, FFragment_Timer_Params,
-            FFragment_Timer_Current, FTag_Timer_NeedsUpdate, ck::TExclude<FTag_Timer_Countdown>, CK_IGNORE_PENDING_KILL>
+    class CKTIMER_API FProcessor_Timer_Update : public ck_exp::TProcessor<
+        FProcessor_Timer_Update,
+        FCk_Handle_Timer,
+        FFragment_Timer_Params,
+        FFragment_Timer_Current,
+        FTag_Timer_NeedsUpdate,
+        ck::TExclude<FTag_Timer_Countdown>,
+        CK_IGNORE_PENDING_KILL>
     {
     public:
         using MarkedDirtyBy = FTag_Timer_NeedsUpdate;
