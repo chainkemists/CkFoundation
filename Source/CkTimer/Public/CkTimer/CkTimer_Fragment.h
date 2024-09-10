@@ -56,11 +56,9 @@ namespace ck
 
     private:
         FCk_Chrono _Chrono;
-        TStatId _StatID;
 
     public:
         CK_PROPERTY_GET(_Chrono);
-        CK_PROPERTY(_StatID);
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_Timer_Current, _Chrono);

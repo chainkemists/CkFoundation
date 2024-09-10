@@ -21,7 +21,7 @@ auto
         const FCk_Fragment_Timer_ParamsData& InParams)
     -> TStatId
 {
-    const auto& StatString = ck::Format_UE(TEXT("ck_FProcessor_Timer_Update [{}]"), InParams.Get_TimerName().GetTagName().ToString());
+    const auto& StatString = ck::Format_UE(TEXT("Timer Update [{}]"), InParams.Get_TimerName());
     return FDynamicStats::CreateStatId<STAT_GROUP_TO_FStatGroup(STATGROUP_CkTimerUpdate_Details)>(StatString);
 }
 
@@ -40,7 +40,7 @@ auto
         auto& Current = InNewEntity.Add<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
 
 #if STATS
-        Current.Set_StatID(MakeStatIdFromParams(InParams));
+        InNewEntity.Add<TStatId>(MakeStatIdFromParams(InParams));
 #endif // STATS
 
         if (InParams.Get_CountDirection() == ECk_Timer_CountDirection::CountDown)
@@ -73,8 +73,11 @@ auto
     { return Add(InTimerOwnerEntity, InParams); }
 
     MaybeExistingTimerEntity.Replace<ck::FFragment_Timer_Params>(InParams);
-    auto& Current = MaybeExistingTimerEntity.Replace<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
-    Current.Set_StatID(MakeStatIdFromParams(InParams));
+    MaybeExistingTimerEntity.Replace<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
+
+#if STATS
+    MaybeExistingTimerEntity.AddOrGet<TStatId>() = MakeStatIdFromParams(InParams);
+#endif
 
     if (InParams.Get_StartingState() == ECk_Timer_State::Running)
     {
