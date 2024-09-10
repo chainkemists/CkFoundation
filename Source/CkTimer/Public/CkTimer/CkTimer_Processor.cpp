@@ -61,7 +61,12 @@ namespace ck
                 else
                 { TimerChrono.Complete(); }
 
-                UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
+                {
+#if STATS
+                    auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
+#endif // STATS
+                    UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
+                }
 
                 break;
             }
@@ -76,7 +81,12 @@ namespace ck
                 else
                 { TimerChrono.Reset(); }
 
-                UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
+                {
+#if STATS
+                    auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
+#endif // STATS
+                    UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
+                }
                 UUtils_Signal_OnTimerDone::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
 
                 break;
@@ -91,7 +101,12 @@ namespace ck
 
                 TimerChrono.Reset();
 
-                UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
+                {
+#if STATS
+                    auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
+#endif // STATS
+                    UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
+                }
 
                 break;
             }
@@ -147,7 +162,12 @@ namespace ck
             }
         }
 
-        UUtils_Signal_OnTimerUpdate::Broadcast(InHandle, MakePayload(InHandle, TimerChrono, InDeltaT));
+        {
+#if STATS
+            auto TimerStatCounter = FScopeCycleCounter{InHandle.Get<TStatId>()};
+#endif // STATS
+            UUtils_Signal_OnTimerUpdate::Broadcast(InHandle, MakePayload(InHandle, TimerChrono, InDeltaT));
+        }
     }
 
     auto
@@ -191,7 +211,12 @@ namespace ck
         }
 
         if (PreviousTimeElapsed != TimerChrono.Get_TimeElapsed())
-        { UUtils_Signal_OnTimerUpdate::Broadcast(InHandle, MakePayload(InHandle, TimerChrono, InDeltaT)); }
+        {
+#if STATS
+            auto TimerStatCounter = FScopeCycleCounter{InHandle.Get<TStatId>()};
+#endif // STATS
+            UUtils_Signal_OnTimerUpdate::Broadcast(InHandle, MakePayload(InHandle, TimerChrono, InDeltaT));
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -205,9 +230,6 @@ namespace ck
             FFragment_Timer_Current& InCurrentComp) const
         -> void
     {
-#if STATS
-        auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
-#endif // STATS
 
         auto& TimerChrono = InCurrentComp._Chrono;
 
@@ -218,7 +240,12 @@ namespace ck
 
         TimerChrono.Tick(InDeltaT);
 
-        UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
+        {
+#if STATS
+            auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
+#endif // STATS
+            UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
+        }
 
         if (NOT TimerChrono.Get_IsDone())
         { return; }
@@ -292,7 +319,12 @@ namespace ck
 
         TimerChrono.Consume(InDeltaT);
 
-        UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
+        {
+#if STATS
+            auto TimerStatCounter = FScopeCycleCounter{InTimerEntity.Get<TStatId>()};
+#endif // STATS
+            UUtils_Signal_OnTimerUpdate::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
+        }
 
         if (NOT TimerChrono.Get_IsDepleted())
         { return; }
