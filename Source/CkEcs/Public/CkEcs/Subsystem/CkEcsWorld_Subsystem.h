@@ -71,14 +71,15 @@ public:
     ACk_EcsWorld_Actor_UE();
 
 protected:
-    auto Tick(
+    auto
+    Tick(
         float DeltaSeconds) -> void override;
 
 public:
     auto
     Initialize(
         const FCk_Registry& InRegistry,
-        ETickingGroup InTickingGroup) -> void;
+        const FCk_Ecs_MetaProcessorInjectors_Info& InMetaInjectorInfo) -> void;
 
 protected:
     struct FWorldInfo
@@ -87,7 +88,9 @@ protected:
         TOptional<EcsWorldType> _EcsWorld;
     };
 
-    TArray<FWorldInfo> _WorldsToTick;
+    FWorldInfo _WorldToTick;
+    TStatId _StatId_Tick;
+    TStatId _StatId_Pump;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -149,8 +152,8 @@ private:
     UPROPERTY(BlueprintReadOnly, Transient, meta = (AllowPrivateAccess = true))
     FCk_Handle _TransientEntity;
 
-    UPROPERTY(Transient)
-    TMap<TEnumAsByte<ETickingGroup>, TObjectPtr<ACk_EcsWorld_Actor_UE>> _WorldActors;
+private:
+    TMultiMap<ETickingGroup, TArray<TStrongObjectPtr<ACk_EcsWorld_Actor_UE>>> _WorldActors;
 
 private:
     FCk_Registry _Registry;
