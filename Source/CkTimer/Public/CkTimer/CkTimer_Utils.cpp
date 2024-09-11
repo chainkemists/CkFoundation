@@ -12,7 +12,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_STATS_GROUP(TEXT("CkTimerUpdate"), STATGROUP_CkTimerUpdate_Details, STATCAT_Advanced);
+DECLARE_STATS_GROUP(TEXT("CkTimer"), STATGROUP_CkTimer_Details, STATCAT_Advanced);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -21,8 +21,8 @@ auto
         const FCk_Fragment_Timer_ParamsData& InParams)
     -> TStatId
 {
-    const auto& StatString = ck::Format_UE(TEXT("Timer Update [{}]"), InParams.Get_TimerName());
-    return FDynamicStats::CreateStatId<STAT_GROUP_TO_FStatGroup(STATGROUP_CkTimerUpdate_Details)>(StatString);
+    const auto& StatString = ck::Format_UE(TEXT("Timer Broadcast Event [{}]"), InParams.Get_TimerName());
+    return FDynamicStats::CreateStatId<STAT_GROUP_TO_FStatGroup(STATGROUP_CkTimer_Details)>(StatString);
 }
 
 auto
