@@ -95,33 +95,77 @@ protected:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract, BlueprintType, Blueprintable)
-class CKECS_API ACk_NewEcsWorld_Actor_UE final : public AInfo
+UCLASS(NotBlueprintable, NotBlueprintType)
+class CKECS_API ACk_EcsWorld_StatReplicatorActor_UE final : public AInfo
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(ACk_NewEcsWorld_Actor_UE);
+    CK_GENERATED_BODY(ACk_EcsWorld_StatReplicatorActor_UE);
 
 public:
-    using EcsWorldType = ck::FEcsWorld;
+    friend class UCk_EcsWorld_Subsystem_UE;
 
 public:
-    ACk_NewEcsWorld_Actor_UE();
+    ACk_EcsWorld_StatReplicatorActor_UE();
+
+public:
+    auto
+    GetLifetimeReplicatedProps(
+        TArray<FLifetimeProperty>&) const -> void override;
 
 protected:
     auto
     BeginPlay() -> void override;
 
     auto
-    Tick(
-        float DeltaSeconds) -> void override;
+    EndPlay(
+        const EEndPlayReason::Type EndPlayReason) -> void override;
 
-    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
-    TArray<FCk_Ecs_MetaProcessorInjectors_Info> _MetaProcessorInjectors;
+private:
+    auto
+    OnNewFrame(
+        int64 InNewFrame) -> void;
 
-protected:
-    EcsWorldType _EcsWorld;
+private:
+    UFUNCTION()
+    void
+    OnRep_ServerStatCycleCounter();
+
+private:
+    UPROPERTY(ReplicatedUsing = OnRep_ServerStatCycleCounter)
+    float _ServerStatCycleCounter;
+
+    UPROPERTY()
+    float _ClientStatCycleCounter;
+
+    UPROPERTY(Transient)
+    TWeakObjectPtr<class UCk_EcsWorld_Subsystem_UE> _EcsWorld_Subsystem;
+
+    UPROPERTY(Transient)
+    TWeakObjectPtr<class UCk_EcsWorld_StatReplicator_Subsystem_UE> _EcsWorld_StatReplicator_Subsystem;
+
+private:
+    FDelegateHandle _OnNewFrameDelegateHandle;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(BlueprintType)
+class CKECS_API UCk_EcsWorld_StatReplicator_Subsystem_UE : public UCk_Game_WorldSubsystem_Base_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_EcsWorld_StatReplicator_Subsystem_UE);
+
+public:
+    auto
+    Initialize(
+        FSubsystemCollectionBase& InCollection) -> void override;
+
+    /** Called when world is ready to start gameplay before the game mode transitions to the correct state and call BeginPlay on all actors */
+    auto OnWorldBeginPlay(UWorld& InWorld) -> void override;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -153,7 +197,8 @@ private:
     FCk_Handle _TransientEntity;
 
 private:
-    TMultiMap<ETickingGroup, TArray<TStrongObjectPtr<ACk_EcsWorld_Actor_UE>>> _WorldActors;
+    TMultiMap<ETickingGroup, TArray<TStrongObjectPtr<ACk_EcsWorld_Actor_UE>>> _WorldActors_ByTickingGroup;
+    TMap<FGameplayTag, TStrongObjectPtr<ACk_EcsWorld_Actor_UE>> _WorldActors_ByName;
 
 private:
     FCk_Registry _Registry;
