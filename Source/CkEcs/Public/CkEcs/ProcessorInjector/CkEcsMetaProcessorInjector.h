@@ -1,0 +1,139 @@
+#pragma once
+
+#include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Types/DataAsset/CkDataAsset.h"
+
+#include <Misc/DataValidation.h>
+#include <GameplayTagContainer.h>
+
+#include "CkEcsMetaProcessorInjector.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UINTERFACE(meta = (CannotImplementInterfaceInBlueprint))
+class CKECS_API UCk_MetaProcessorInjector_Interface : public UInterface { GENERATED_BODY() };
+class CKECS_API ICk_MetaProcessorInjector_Interface
+{
+    GENERATED_BODY()
+
+public:
+    virtual auto
+    Get_ProcessorInjectors() const -> TArray<TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>>;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(Abstract, NotBlueprintType, Blueprintable, EditInlineNew)
+class CKECS_API UCk_Ecs_MetaProcessorInjectorGroup_UE : public UObject, public ICk_MetaProcessorInjector_Interface
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Ecs_MetaProcessorInjectorGroup_UE);
+
+public:
+    auto
+    Get_ProcessorInjectors() const -> TArray<TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>> override;
+
+protected:
+#if WITH_EDITOR
+    auto IsDataValid(
+        class FDataValidationContext& Context) const -> EDataValidationResult override;
+#endif
+
+private:
+    UPROPERTY(EditDefaultsOnly, Instanced,
+        meta=(AllowPrivateAccess, MustImplement = "/Script/CkEcs.Ck_MetaProcessorInjector_Interface"))
+    TArray<TObjectPtr<UObject>> _SubMetaProcessorInjectors;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(Abstract, NotBlueprintType, Blueprintable, EditInlineNew)
+class CKECS_API UCk_Ecs_MetaProcessorInjector_UE : public UObject, public ICk_MetaProcessorInjector_Interface
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Ecs_MetaProcessorInjectorGroup_UE);
+
+public:
+    auto
+    Get_ProcessorInjectors() const -> TArray<TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>> override;
+
+protected:
+#if WITH_EDITOR
+    auto IsDataValid(
+        class FDataValidationContext& Context) const -> EDataValidationResult override;
+#endif
+
+private:
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
+    TArray<TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>>  _ProcessorInjectors;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKECS_API FCk_Ecs_MetaProcessorInjectors_Info
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Ecs_MetaProcessorInjectors_Info);
+
+private:
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess, Categories = "MetaProcessorInjector"))
+    FGameplayTag _Name = FGameplayTag::EmptyTag;
+
+#if WITH_EDITORONLY_DATA
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
+    FName _Description = NAME_None;
+#endif
+
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
+    TEnumAsByte<ETickingGroup> _TickingGroup = TG_PrePhysics;
+
+    // Processors can be pumped multiple times _if_ they have requests that still need to be processed
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess, ClampMin="0", UIMin="0"))
+    int32 _MaximumNumberOfPumps = 1;
+
+    UPROPERTY(EditDefaultsOnly, Instanced,
+        meta=(AllowPrivateAccess, MustImplement = "/Script/CkEcs.Ck_MetaProcessorInjector_Interface_UE"))
+    TArray<TObjectPtr<UObject>> _MetaProcessorInjectors;
+
+public:
+    auto Get_Description() const -> FName;
+    auto Get_MetaProcessorInjectors() const -> TArray<TScriptInterface<ICk_MetaProcessorInjector_Interface>>;
+
+public:
+    CK_PROPERTY(_Name);
+    CK_PROPERTY(_TickingGroup);
+    CK_PROPERTY_GET(_MaximumNumberOfPumps);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(Abstract, Blueprintable)
+class CKECS_API UCk_Ecs_ProcessorInjectors_PDA : public UCk_DataAsset_PDA
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Ecs_ProcessorInjectors_PDA);
+
+protected:
+#if WITH_EDITOR
+    auto IsDataValid(
+        class FDataValidationContext& Context) const -> EDataValidationResult override;
+#endif
+
+private:
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess, TitleProperty = "[{_TickingGroup}] - {_Name}"))
+    TArray<FCk_Ecs_MetaProcessorInjectors_Info> _MetaProcessorInjectors;
+
+public:
+    CK_PROPERTY_GET(_MetaProcessorInjectors);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
