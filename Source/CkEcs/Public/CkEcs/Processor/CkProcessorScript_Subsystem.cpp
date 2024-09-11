@@ -2,6 +2,8 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include <Engine/World.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -26,7 +28,7 @@ auto
     -> UCk_Ecs_ProcessorScript_Base_UE*
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InWorld),
-        TEXT("World is [{}]. Unable to create new ProcessorScript [{}]"), InProcessorScriptClass)
+        TEXT("World is [{}]. Unable to create new ProcessorScript [{}]"), InWorld, InProcessorScriptClass)
     { return {}; }
 
     return InWorld->GetSubsystem<UCk_ProcessorScript_Subsystem_UE>()->Request_CreateNewProcessorScript(InProcessorScriptClass);
