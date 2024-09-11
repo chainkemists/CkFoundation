@@ -11,6 +11,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+
 auto
     DEBUG_NAME::DoSet_DebugName(
         FName InDebugName,
@@ -83,6 +85,8 @@ auto
 {
     return GetHash() != InOther.GetHash();
 }
+
+#endif
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -333,6 +337,21 @@ auto
 
     if (ck::IsValid(_Fragments))
     { _Fragments->_Names = _Mapper->Get_FragmentNames(); }
+#endif
+}
+
+auto
+    FCk_Handle::
+    Get_DebugName() const
+    -> FName
+{
+#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+    if (IsValid(ck::IsValid_Policy_IncludePendingKill{}) && Has<DEBUG_NAME>())
+    { return Get<DEBUG_NAME>().Get_Name(); }
+    else
+    { return TEXT("no-debug-name"); }
+#else
+    return TEXT("no-handle-debug");
 #endif
 }
 
