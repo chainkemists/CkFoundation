@@ -89,9 +89,12 @@ private:
 #if WITH_EDITORONLY_DATA
     UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
     FName _Description = NAME_None;
-#endif
 
     UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
+    bool _CollectStatData = false;
+#endif
+
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess, InvalidEnumValues = "TG_MAX"))
     TEnumAsByte<ETickingGroup> _TickingGroup = TG_PrePhysics;
 
     // Processors can be pumped multiple times _if_ they have requests that still need to be processed
@@ -104,6 +107,7 @@ private:
 
 public:
     auto Get_Description() const -> FName;
+    auto Get_CollectStatData() const -> bool;
     auto Get_MetaProcessorInjectors() const -> TArray<TScriptInterface<ICk_MetaProcessorInjector_Interface>>;
 
 public:

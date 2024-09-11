@@ -134,6 +134,18 @@ auto
 
 auto
     FCk_Ecs_MetaProcessorInjectors_Info::
+    Get_CollectStatData() const
+    -> bool
+{
+#if WITH_EDITORONLY_DATA
+    return _CollectStatData;
+#else
+    return false;
+#endif
+}
+
+auto
+    FCk_Ecs_MetaProcessorInjectors_Info::
     Get_MetaProcessorInjectors() const -> TArray<TScriptInterface<ICk_MetaProcessorInjector_Interface>>
 {
     return ck::algo::Transform<TArray<TScriptInterface<ICk_MetaProcessorInjector_Interface>>>(_MetaProcessorInjectors, [](TObjectPtr<UObject> InSubProcessorInjector)
