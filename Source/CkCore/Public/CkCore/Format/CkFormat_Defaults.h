@@ -188,7 +188,7 @@ CK_DEFINE_CUSTOM_FORMATTER(FGameplayTag, [&]()
 
     return ck::Format(TEXT("TAG_NOT_SET"));
 });
-#elif
+#else
 CK_DEFINE_CUSTOM_FORMATTER(FGameplayTag, [&]()
 {
     if (ck::IsValid(InObj))
