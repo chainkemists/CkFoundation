@@ -54,7 +54,7 @@ auto
     {
         for (auto Pump = 0; Pump < _MaxNumberOfPumps; ++Pump)
         {
-            TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*ck::Format_UE(TEXT("ACk_EcsWorld_Actor_UE::Tick, Pump [{}/{}]"), Pump, _MaxNumberOfPumps));
+            TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*ck::Format_UE(TEXT("{} EcsWorld Tick, Pump [{}/{}]"), GetWorld()->GetNetMode() == ENetMode::NM_Client ? TEXT("Client") : TEXT("Server"), Pump, _MaxNumberOfPumps));
             _EcsWorld->Tick(FCk_Time{DeltaSeconds});
         }
     }
