@@ -359,6 +359,11 @@ CK_DEFINE_CUSTOM_FORMATTER_T(TSoftClassPtr<T>, [&]()
     return ck::Format(TEXT("{}"), *InObj);
 });
 
+CK_DEFINE_CUSTOM_FORMATTER_T(TEnumAsByte<T>, [&]()
+{
+    return ck::Format(TEXT("{}"), T(InObj.GetValue()));
+});
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(EAppReturnType::Type);
