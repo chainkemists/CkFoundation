@@ -30,7 +30,6 @@ auto
         EcsWorldType& InWorld)
     -> void
 {
-    // InWorld.Add(
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -51,12 +50,12 @@ auto
 {
     Super::Tick(DeltaSeconds);
 
-    for (auto& World : _WorldsToTick)
+    for (auto& [_MaxNumberOfPumps, _EcsWorld] : _WorldsToTick)
     {
-        for (auto Pump = 0; Pump < World._MaxNumberOfPumps; ++Pump)
+        for (auto Pump = 0; Pump < _MaxNumberOfPumps; ++Pump)
         {
-            TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*FString::Printf(TEXT("ACk_EcsWorld_Actor_UE::Tick, Pump [%d]"), Pump));
-            World._EcsWorld->Tick(FCk_Time{DeltaSeconds});
+            TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*ck::Format_UE(TEXT("ACk_EcsWorld_Actor_UE::Tick, Pump [{}/{}]"), Pump, _MaxNumberOfPumps));
+            _EcsWorld->Tick(FCk_Time{DeltaSeconds});
         }
     }
 }
@@ -68,7 +67,7 @@ auto
         ETickingGroup InTickingGroup)
     -> void
 {
-    TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*FString::Printf(TEXT("ACk_EcsWorld_Actor_UE::Initialize, ticking group: [%s]"), *UEnum::GetValueAsString(InTickingGroup)));
+    TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*ck::Format_UE(TEXT("ACk_EcsWorld_Actor_UE::Initialize, ticking group: [{}]"), InTickingGroup));
 
     SetTickGroup(InTickingGroup);
 
@@ -78,29 +77,42 @@ auto
         TEXT("Could not get a valid instance of ProcessorInjectors PDA. Check ProjectSettings -> Ecs to make sure a valid DataAsset is referenced."))
     { return; }
 
-    TRACE_BOOKMARK(TEXT("Inject Processors, ticking group: [%s]"), *UEnum::GetValueAsString(InTickingGroup));
-
-    for (auto Injectors : ProcessorInjectors->Get_ProcessorInjectors())
+    const auto& InjectProcessorsIntoWorld = [this](const TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>& InInjectorClass)
     {
-        if (Injectors.Get_TickingGroup() != InTickingGroup)
+        const auto NewInjector = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_EcsWorld_ProcessorInjector_Base_UE>(this, InInjectorClass, nullptr);
+
+        CK_ENSURE_IF_NOT(ck::IsValid(NewInjector), TEXT("Failed to instance ProcessorInjector of class [{}]"), InInjectorClass)
+        { return; }
+
+        TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*ck::Format_UE(TEXT("Injecting Native Processor from Injector [{}]"), NewInjector));
+
+        NewInjector->DoInjectProcessors(*_WorldsToTick.Last()._EcsWorld);
+    };
+
+    const auto& InjectMetaInjectorProcessors = [&](const TScriptInterface<ICk_MetaProcessorInjector_Interface>& InMetaInjector)
+    {
+        CK_ENSURE_IF_NOT(ck::IsValid(InMetaInjector),
+            TEXT("Encountered an INVALID MetaInjector in NewEcsWorld Actor [{}]"), this)
+        { return; }
+
+        for (const auto& ProcessorInjector : InMetaInjector->Get_ProcessorInjectors())
+        {
+            InjectProcessorsIntoWorld(ProcessorInjector);
+        }
+    };
+
+    for (const auto& MetaInjectorInfo : ProcessorInjectors->Get_MetaProcessorInjectors())
+    {
+        if (MetaInjectorInfo.Get_TickingGroup() != InTickingGroup)
         { continue; }
 
-        TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*FString::Printf(TEXT("Inject Processor Group [%s]"), *Injectors.Get_Description().ToString()));
+        TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*ck::Format_UE(TEXT("Inject Meta Processor [{}]"), MetaInjectorInfo.Get_Name()));
 
-        _WorldsToTick.Emplace(Injectors.Get_MaximumNumberOfPumps(), EcsWorldType{InRegistry});
+        _WorldsToTick.Emplace(MetaInjectorInfo.Get_MaximumNumberOfPumps(), EcsWorldType{InRegistry});
 
-        for (const auto Injector : Injectors.Get_ProcessorInjectors())
+        for (const auto& MetaInjector : MetaInjectorInfo.Get_MetaProcessorInjectors())
         {
-            TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*FString::Printf(TEXT("Inject Processor [%s]"), *GetNameSafe(Injector)));
-
-            CK_ENSURE_IF_NOT(ck::IsValid(Injector),
-                TEXT("Encountered an INVALID Injector in ProcessorInjectors Asset [{}] with Description [{}].{}"),
-                ProcessorInjectors, Injectors.Get_Description(), ck::Context(this))
-            { continue; }
-
-            const auto NewInjector = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_EcsWorld_ProcessorInjector_Base_UE>(this, Injector, nullptr);
-
-            NewInjector->DoInjectProcessors(*_WorldsToTick.Last()._EcsWorld);
+            InjectMetaInjectorProcessors(MetaInjector);
         }
     }
 }
@@ -116,20 +128,38 @@ ACk_NewEcsWorld_Actor_UE::
     bAlwaysRelevant = true;
 }
 
-void
-    ACk_NewEcsWorld_Actor_UE::BeginPlay()
+auto
+    ACk_NewEcsWorld_Actor_UE::
+    BeginPlay()
+    -> void
 {
-    for (auto Injectors : _ProcessorInjectors)
+    const auto& InjectProcessorsIntoWorld = [this](const TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>& InInjectorClass)
     {
-        for (const auto Injector : Injectors.Get_ProcessorInjectors())
+        const auto NewInjector = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_EcsWorld_ProcessorInjector_Base_UE>(this, InInjectorClass, nullptr);
+
+        CK_ENSURE_IF_NOT(ck::IsValid(NewInjector), TEXT("Failed to instance ProcessorInjector of class [{}]"), InInjectorClass)
+        { return; }
+
+        NewInjector->DoInjectProcessors(_EcsWorld);
+    };
+
+    const auto& InjectMetaInjectorProcessors = [&](const TScriptInterface<ICk_MetaProcessorInjector_Interface>& InMetaInjector)
+    {
+        CK_ENSURE_IF_NOT(ck::IsValid(InMetaInjector),
+            TEXT("Encountered an INVALID MetaInjector in NewEcsWorld Actor [{}]"), this)
+        { return; }
+
+        for (const auto& ProcessorInjector : InMetaInjector->Get_ProcessorInjectors())
         {
-            CK_ENSURE_IF_NOT(ck::IsValid(Injector),
-                TEXT("Encountered an INVALID Injector in NewEcsWorld Actor [{}]"), this)
-            { continue; }
+            InjectProcessorsIntoWorld(ProcessorInjector);
+        }
+    };
 
-            const auto NewInjector = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_EcsWorld_ProcessorInjector_Base_UE>(this, Injector, nullptr);
-
-            NewInjector->DoInjectProcessors(_EcsWorld);
+    for (const auto& MetaProcessorInjectorInfo : _MetaProcessorInjectors)
+    {
+        for (const auto& MetaInjector : MetaProcessorInjectorInfo.Get_MetaProcessorInjectors())
+        {
+            InjectMetaInjectorProcessors(MetaInjector);
         }
     }
 

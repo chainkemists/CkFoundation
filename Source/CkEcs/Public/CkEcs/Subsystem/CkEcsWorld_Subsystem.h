@@ -5,6 +5,7 @@
 
 #include "CkEcs/World/CkEcsWorld.h"
 #include "CkEcs/Processor/CkProcessorScript.h"
+#include "CkEcs/ProcessorInjector/CkEcsMetaProcessorInjector.h"
 
 #include <Subsystems/WorldSubsystem.h>
 #include <GameFramework/Info.h>
@@ -113,9 +114,8 @@ protected:
     Tick(
         float DeltaSeconds) -> void override;
 
-public:
     UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
-    TArray<FCk_Ecs_ProcessorInjectors_Info> _ProcessorInjectors;
+    TArray<FCk_Ecs_MetaProcessorInjectors_Info> _MetaProcessorInjectors;
 
 protected:
     EcsWorldType _EcsWorld;

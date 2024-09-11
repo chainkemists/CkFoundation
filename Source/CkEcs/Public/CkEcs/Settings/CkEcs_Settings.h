@@ -1,10 +1,15 @@
 #pragma once
 
+
+#include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
-#include "CkCore/Types/DataAsset/CkDataAsset.h"
+
+#include "CkEcs/ProcessorInjector/CkEcsMetaProcessorInjector.h"
 
 #include "CkSettings/ProjectSettings/CkProjectSettings.h"
 #include "CkSettings/UserSettings/CkUserSettings.h"
+
+#include <GameplayTagContainer.h>
 
 #include "CkEcs_Settings.generated.h"
 
@@ -20,6 +25,8 @@ enum class ECk_Ecs_HandleDebuggerBehavior : uint8
     EnableWithBlueprintDebugging
 };
 
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ecs_HandleDebuggerBehavior);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
@@ -29,58 +36,7 @@ enum class ECk_Ecs_EntityMap_Policy : uint8
     AlwaysLog
 };
 
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKECS_API FCk_Ecs_ProcessorInjectors_Info
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Ecs_ProcessorInjectors_Info);
-
-private:
-#if WITH_EDITORONLY_DATA
-    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
-    FName _Description = NAME_None;
-#endif
-
-    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
-    TEnumAsByte<ETickingGroup> _TickingGroup = TG_PrePhysics;
-
-    // Processors can be pumped multiple times _if_ they have requests that still need to be processed
-    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess, ClampMin="0", UIMin="0"))
-    int32 _MaximumNumberOfPumps = 1;
-
-    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
-    TArray<TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>>  _ProcessorInjectors;
-
-public:
-    CK_PROPERTY(_TickingGroup);
-    CK_PROPERTY_GET(_MaximumNumberOfPumps);
-    CK_PROPERTY_GET(_ProcessorInjectors);
-
-    auto
-    Get_Description() const -> FName;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(Abstract, Blueprintable)
-class CKECS_API UCk_Ecs_ProcessorInjectors_PDA : public UCk_DataAsset_PDA
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_Ecs_ProcessorInjectors_PDA);
-
-private:
-    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess, TitleProperty = "_Description"))
-    TArray<FCk_Ecs_ProcessorInjectors_Info> _ProcessorInjectors;
-
-public:
-    CK_PROPERTY_GET(_ProcessorInjectors);
-};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ecs_EntityMap_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
