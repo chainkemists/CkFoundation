@@ -2,13 +2,13 @@
 
 #include "CkAggro/CkAggro_Log.h"
 
+#include <NativeGameplayTags.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 UE_DEFINE_GAMEPLAY_TAG(TAG_Aggro_FloatAttribute_Name, TEXT("FloatAttribute.Aggro.Score"));
 
 // --------------------------------------------------------------------------------------------------------------------
-
-CK_INTENTIONALLY_EMPTY()
 
 auto
     FCk_Fragment_Aggro_Params::
@@ -17,8 +17,8 @@ auto
 {
     ck::aggro::ErrorIf(NOT (_MinMax == ECk_MinMax::Min || _MinMax == ECk_MinMax::MinMax),
         TEXT("Attempting to get a Min value of Attribute [{}] where MinMax is set to [{}]. Please address this."),
-         _MinMax,
-         TAG_Aggro_FloatAttribute_Name);
+        TAG_Aggro_FloatAttribute_Name,
+        _MinMax);
 
     return _MinValue;
 }
@@ -30,8 +30,8 @@ auto
 {
     ck::aggro::ErrorIf(NOT (_MinMax == ECk_MinMax::Max || _MinMax == ECk_MinMax::MinMax),
         TEXT("Attempting to get a Max value Attribute [{}] where MinMax is set to [{}]. Please address this."),
-         _MinMax,
-         TAG_Aggro_FloatAttribute_Name);
+        TAG_Aggro_FloatAttribute_Name,
+        _MinMax);
 
     return _MaxValue;
 }
