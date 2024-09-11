@@ -55,6 +55,7 @@ auto
     {
         for (auto Pump = 0; Pump < World._MaxNumberOfPumps; ++Pump)
         {
+            TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*FString::Printf(TEXT("ACk_EcsWorld_Actor_UE::Tick, Pump [%d]"), Pump));
             World._EcsWorld->Tick(FCk_Time{DeltaSeconds});
         }
     }
@@ -67,6 +68,8 @@ auto
         ETickingGroup InTickingGroup)
     -> void
 {
+    TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*FString::Printf(TEXT("ACk_EcsWorld_Actor_UE::Initialize, ticking group: [%s]"), *UEnum::GetValueAsString(InTickingGroup)));
+
     SetTickGroup(InTickingGroup);
 
     const auto ProcessorInjectors = UCk_Utils_Ecs_Settings_UE::Get_ProcessorInjectors();
@@ -75,15 +78,21 @@ auto
         TEXT("Could not get a valid instance of ProcessorInjectors PDA. Check ProjectSettings -> Ecs to make sure a valid DataAsset is referenced."))
     { return; }
 
+    TRACE_BOOKMARK(TEXT("Inject Processors, ticking group: [%s]"), *UEnum::GetValueAsString(InTickingGroup));
+
     for (auto Injectors : ProcessorInjectors->Get_ProcessorInjectors())
     {
         if (Injectors.Get_TickingGroup() != InTickingGroup)
         { continue; }
 
+        TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*FString::Printf(TEXT("Inject Processor Group [%s]"), *Injectors.Get_Description().ToString()));
+
         _WorldsToTick.Emplace(Injectors.Get_MaximumNumberOfPumps(), EcsWorldType{InRegistry});
 
         for (const auto Injector : Injectors.Get_ProcessorInjectors())
         {
+            TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*FString::Printf(TEXT("Inject Processor [%s]"), *GetNameSafe(Injector)));
+
             CK_ENSURE_IF_NOT(ck::IsValid(Injector),
                 TEXT("Encountered an INVALID Injector in ProcessorInjectors Asset [{}] with Description [{}].{}"),
                 ProcessorInjectors, Injectors.Get_Description(), ck::Context(this))
