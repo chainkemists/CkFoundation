@@ -69,28 +69,17 @@ static_assert
 // --------------------------------------------------------------------------------------------------------------------
 
 // we're NOT casting the derived Handle to the base FCk_Handle mainly for perf reasons (avoiding too many conversions when formatting and validating)
-#define CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(_HandleType_)                          \
-    CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(_HandleType_,                                             \
-    [&]()                                                                                             \
-    {                                                                                                 \
-        if (ck::IsValid(InObj, ck::IsValid_Policy_IncludePendingKill{}) && InObj.Has<DEBUG_NAME>())   \
-        { return ck::Format(TEXT("{}({})"), InObj.Get_Entity(), InObj.Get<DEBUG_NAME>().Get_Name()); }\
-                                                                                                      \
-        return ck::Format(TEXT("{}"), InObj.Get_Entity());                                            \
-    },                                                                                                \
-    [&]()                                                                                             \
-    {                                                                                                 \
-        if (ck::IsValid(InObj, ck::IsValid_Policy_IncludePendingKill{}) && InObj.Has<DEBUG_NAME>())   \
-        {                                                                                             \
-            return ck::Format(TEXT("{}[{}]({})"),                                                     \
-                InObj.Get_Entity(),                                                                   \
-                InObj.Get_Registry(),                                                                 \
-                InObj.Get<DEBUG_NAME>().Get_Name());                                                  \
-        }                                                                                             \
-                                                                                                      \
-        return ck::Format(TEXT("{}({})"), InObj.Get_Entity(), InObj.Get_Registry());                  \
-    });                                                                                               \
-    static_assert(sizeof(_HandleType_) == sizeof(FCk_Handle),                                         \
+#define CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(_HandleType_)                                      \
+    CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(_HandleType_,                                                         \
+    [&]()                                                                                                         \
+    {                                                                                                             \
+        return ck::Format(TEXT("{}({})"), InObj.Get_Entity(), InObj.Get_DebugName());                             \
+    },                                                                                                            \
+    [&]()                                                                                                         \
+    {                                                                                                             \
+        return ck::Format(TEXT("{}[{}]({})"), InObj.Get_Entity(), InObj.Get_Registry(), InObj.Get_DebugName());   \
+    });                                                                                                           \
+    static_assert(sizeof(_HandleType_) == sizeof(FCk_Handle),                                                     \
         "Type-Safe Handle should be EXACTLY the same size as FCk_Handle")
 
 // --------------------------------------------------------------------------------------------------------------------
