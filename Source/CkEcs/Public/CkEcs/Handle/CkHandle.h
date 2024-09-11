@@ -66,6 +66,8 @@ private:
     const DEBUG_NAME* _Fragment = nullptr;
 };
 
+#else
+
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -207,6 +209,10 @@ public:
 
 public:
     auto
+    Get_DebugName() const -> FName;
+
+public:
+    auto
     NetSerialize(
         FArchive& Ar,
         class UPackageMap* Map,
@@ -278,27 +284,27 @@ namespace ck
 
     auto CKECS_API
     MakeHandle(
-        FCk_Entity InEntity, 
+        FCk_Entity InEntity,
         const FCk_Registry& InValidHandle) -> FCk_Handle;
 
     auto CKECS_API
     MakeHandle(
-        FCk_Entity InEntity, 
+        FCk_Entity InEntity,
         FCk_Handle InValidHandle) -> FCk_Handle;
 
     auto CKECS_API
     MakeHandle(
-        FCk_Handle InEntity, 
+        FCk_Handle InEntity,
         FCk_Handle InValidHandle) -> FCk_Handle;
 
     auto CKECS_API
     IsValid(
-        FCk_Entity InEntity, 
+        FCk_Entity InEntity,
         FCk_Handle InValidHandle) -> bool;
 
     auto CKECS_API
     IsValid(
-        const FCk_Handle& InEntity, 
+        const FCk_Handle& InEntity,
         FCk_Handle InValidHandle) -> bool;
 
     auto CKECS_API
@@ -360,17 +366,11 @@ CK_DEFINE_CUSTOM_IS_VALID(FCk_Handle, ck::IsValid_Policy_IncludePendingKill, [&]
 CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(FCk_Handle,
 [&]()
 {
-    if (ck::IsValid(InObj, ck::IsValid_Policy_IncludePendingKill{}) && InObj.Has<DEBUG_NAME>())
-    { return ck::Format(TEXT("{}({})"), InObj.Get_Entity(), InObj.Get<DEBUG_NAME>().Get_Name()); }
-
-    return ck::Format(TEXT("{}"), InObj.Get_Entity());
+    return ck::Format(TEXT("{}({})"), InObj.Get_Entity(), InObj.Get_DebugName());
 },
 [&]()
 {
-    if (ck::IsValid(InObj, ck::IsValid_Policy_IncludePendingKill{}) && InObj.Has<DEBUG_NAME>())
-    { return ck::Format(TEXT("{}[{}]({})"), InObj._Entity, InObj.Get_Registry(), InObj.Get<DEBUG_NAME>().Get_Name()); }
-
-    return ck::Format(TEXT("{}({})"), InObj._Entity, InObj.Get_Registry());
+    return ck::Format(TEXT("{}[{}]({})"), InObj._Entity, InObj.Get_Registry(), InObj.Get_DebugName());
 });
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -976,6 +976,7 @@ auto
     Add_FragmentInfo(const FCk_Handle& InHandle) const
     -> void
 {
+#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
     const auto FragmentInfo = [&]() -> DebugWrapperPtrType
     {
         if constexpr (std::is_empty_v<T_Fragment>)
@@ -986,6 +987,7 @@ auto
 
     _FragmentNames.Emplace(FragmentInfo->Get_FragmentName(InHandle));
     _AllFragments.Emplace(FragmentInfo);
+#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------
