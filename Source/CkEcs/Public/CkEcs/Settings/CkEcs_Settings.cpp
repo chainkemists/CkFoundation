@@ -1,5 +1,6 @@
 #include "CkEcs_Settings.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Object/CkObject_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -17,18 +18,6 @@ auto
     { return {}; }
 
     return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ecs_ProcessorInjectors_PDA>(ProcessorInjectors);
-}
-
-auto
-    FCk_Ecs_ProcessorInjectors_Info::
-    Get_Description() const
-    -> FName
-{
-#if WITH_EDITORONLY_DATA
-    return _Description;
-#else
-    return TEXT("Non-editor build - No Description");
-#endif
 }
 
 auto
