@@ -588,6 +588,9 @@ auto
     {
         for (const auto& SubAbility : InSubAbilities)
         {
+            CK_ENSURE_IF_NOT(ck::IsValid(SubAbility), TEXT("Encountered INVALID Sub-Ability when trying to instance [{}]"), InAbilityScriptClass)
+            { continue; }
+
             // TODO: We could drive this via (yet another) settings, but the interface is already quite bloated
             if (const auto NeedsFixup = SubAbility->Implements<UCk_Ability_Cost_Interface>() ||
                                         SubAbility->Implements<UCk_Ability_Cooldown_Interface>() ||

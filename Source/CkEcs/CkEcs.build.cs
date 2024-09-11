@@ -46,7 +46,7 @@ public class CkEcs : CkModuleRules
 				"SlateCore",
 				"GameplayTags",
 				"DeveloperSettings",
-
+				"FunctionalTesting"
 				// ... add private dependencies that you statically link with here ...
 			}
 			);
