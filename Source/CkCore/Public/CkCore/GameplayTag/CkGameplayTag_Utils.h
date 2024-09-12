@@ -56,6 +56,27 @@ public:
     TryMake_LiteralGameplayTag_FromName(
         FName InTagNameAsString);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Get GameplayTag Leaf (As Name)")
+    static FName
+    Get_Leaf_AsName(
+        FGameplayTag InGameplayTag);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Get GameplayTag Leaf (As String)")
+    static FString
+    Get_Leaf_AsString(
+        FGameplayTag InGameplayTag);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Get GameplayTag Leaf (As Text)")
+    static FText
+    Get_Leaf_AsText(
+        FGameplayTag InGameplayTag);
+
 public:
     static auto
     Get_TagsWithCount_FromContainer(
