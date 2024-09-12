@@ -608,3 +608,13 @@ enum class ECk_TaskDoneBehavior : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_TaskDoneBehavior);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_ClientServer : uint8
+{
+    Client,
+    Server,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ClientServer);
+// --------------------------------------------------------------------------------------------------------------------
