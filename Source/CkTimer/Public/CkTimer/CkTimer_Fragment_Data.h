@@ -59,6 +59,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Timer_CountDirection);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_Timer_JumpDirection : uint8
+{
+    Forwards,
+    Backwards
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Timer_JumpDirection);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKTIMER_API FCk_Handle_Timer : public FCk_Handle_TypeSafe { GENERATED_BODY()  CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Timer); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Timer);
@@ -231,3 +242,20 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
 
 // --------------------------------------------------------------------------------------------------------------------
 
+DECLARE_DYNAMIC_DELEGATE_FiveParams(
+    FCk_Delegate_Timer_Jump,
+    FCk_Handle_Timer, InHandle,
+    FCk_Chrono, InChrono,
+    FCk_Time, InDeltaT,
+    ECk_Timer_JumpDirection, InJumpDirection,
+    FCk_Time, InJumpAmount);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(
+    FCk_Delegate_Timer_Jump_MC,
+    FCk_Handle_Timer, InHandle,
+    FCk_Chrono, InChrono,
+    FCk_Time, InDeltaT,
+    ECk_Timer_JumpDirection, InJumpDirection,
+    FCk_Time, InJumpAmount);
+
+// --------------------------------------------------------------------------------------------------------------------

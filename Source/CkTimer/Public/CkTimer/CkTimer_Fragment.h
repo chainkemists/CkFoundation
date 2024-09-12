@@ -99,6 +99,7 @@ namespace ck
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKTIMER_API, OnTimerDone, FCk_Delegate_Timer_MC, FCk_Handle_Timer, FCk_Chrono, FCk_Time);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKTIMER_API, OnTimerUpdate, FCk_Delegate_Timer_MC, FCk_Handle_Timer, FCk_Chrono, FCk_Time);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKTIMER_API, OnTimerDepleted, FCk_Delegate_Timer_MC, FCk_Handle_Timer, FCk_Chrono, FCk_Time);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKTIMER_API, OnTimerJump, FCk_Delegate_Timer_Jump_MC, FCk_Handle_Timer, FCk_Chrono, FCk_Time, ECk_Timer_JumpDirection, FCk_Time);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
