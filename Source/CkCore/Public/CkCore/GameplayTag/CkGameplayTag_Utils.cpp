@@ -62,6 +62,40 @@ auto
 
 auto
     UCk_Utils_GameplayTag_UE::
+    Get_Leaf_AsName(
+        FGameplayTag InGameplayTag)
+    -> FName
+{
+    return FName{Get_Leaf_AsString(InGameplayTag)};
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
+    Get_Leaf_AsString(
+        FGameplayTag InGameplayTag)
+    -> FString
+{
+    const auto& TagString = InGameplayTag.GetTagName().ToString();
+
+    int32 OutIndex = 0;
+
+    if (NOT TagString.FindLastChar(TEXT('.'), OutIndex))
+    { return InGameplayTag.GetTagName().ToString(); }
+
+    return TagString.RightChop(OutIndex + 1);
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
+    Get_Leaf_AsText(
+        FGameplayTag InGameplayTag)
+    -> FText
+{
+    return FText::FromString(Get_Leaf_AsString(InGameplayTag));
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
     Get_TagsWithCount_FromContainer(
         const FGameplayTagCountContainer& InTagContainer)
     -> TMap<FGameplayTag, int32>
