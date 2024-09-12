@@ -5,21 +5,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UE_DEFINE_GAMEPLAY_TAG(TAG_MetaProcessorInjector_JustBeforeDestructionPhase_Name, TEXT("MetaProcessorInjector.JustBeforeDestructionPhase"));
-UE_DEFINE_GAMEPLAY_TAG(TAG_MetaProcessorInjector_EntityDestructionInPhases_Name, TEXT("MetaProcessorInjector.EntityDestructionInPhases"));
-UE_DEFINE_GAMEPLAY_TAG(TAG_MetaProcessorInjector_DeltaTime_Name, TEXT("MetaProcessorInjector.DeltaTime"));
-UE_DEFINE_GAMEPLAY_TAG(TAG_MetaProcessorInjector_GameplayWithPump_Name, TEXT("MetaProcessorInjector.GameplayWithPump"));
-UE_DEFINE_GAMEPLAY_TAG(TAG_MetaProcessorInjector_GameplayWithoutPump_Name, TEXT("MetaProcessorInjector.GameplayWithoutPump"));
-UE_DEFINE_GAMEPLAY_TAG(TAG_MetaProcessorInjector_Script_Name, TEXT("MetaProcessorInjector.Script"));
-UE_DEFINE_GAMEPLAY_TAG(TAG_MetaProcessorInjector_ChaosDestruction_Name, TEXT("MetaProcessorInjector.ChaosDestruction"));
-UE_DEFINE_GAMEPLAY_TAG(TAG_MetaProcessorInjector_Physics_Name, TEXT("MetaProcessorInjector.Physics"));
-UE_DEFINE_GAMEPLAY_TAG(TAG_MetaProcessorInjector_Misc_Name, TEXT("MetaProcessorInjector.Misc"));
-UE_DEFINE_GAMEPLAY_TAG(TAG_MetaProcessorInjector_Replication_Name, TEXT("MetaProcessorInjector.Replication"));
-UE_DEFINE_GAMEPLAY_TAG(TAG_MetaProcessorInjector_EntityCreationAndDestruction_Name, TEXT("MetaProcessorInjector.EntityCreationAndDestruction"));
-UE_DEFINE_GAMEPLAY_TAG(TAG_MetaProcessorInjector_Overlap_Name, TEXT("MetaProcessorInjector.Overlap"));
-
-// --------------------------------------------------------------------------------------------------------------------
-
 auto
     ICk_MetaProcessorInjector_Interface::
     Get_ProcessorInjectors() const
@@ -134,18 +119,6 @@ auto
 
 auto
     FCk_Ecs_MetaProcessorInjectors_Info::
-    Get_CollectStatData() const
-    -> bool
-{
-#if WITH_EDITORONLY_DATA
-    return _CollectStatData;
-#else
-    return false;
-#endif
-}
-
-auto
-    FCk_Ecs_MetaProcessorInjectors_Info::
     Get_MetaProcessorInjectors() const -> TArray<TScriptInterface<ICk_MetaProcessorInjector_Interface>>
 {
     return ck::algo::Transform<TArray<TScriptInterface<ICk_MetaProcessorInjector_Interface>>>(_MetaProcessorInjectors, [](TObjectPtr<UObject> InSubProcessorInjector)
@@ -176,11 +149,11 @@ auto
 
     for (const auto& MetaInjector : _MetaProcessorInjectors)
     {
-        const auto& Name = MetaInjector.Get_Name();
+        const auto& EcsWorldTickingGroup = MetaInjector.Get_EcsWorldTickingGroup();
 
-        if (ck::Is_NOT_Valid(Name))
+        if (ck::Is_NOT_Valid(EcsWorldTickingGroup))
         {
-            PushErrorToContext(ck::Format_UE(TEXT("MetaProcessorInjector [{}] has a ProcessorInjector entry with an INVALID Name"), this));
+            PushErrorToContext(ck::Format_UE(TEXT("MetaProcessorInjector [{}] has a ProcessorInjector entry with an INVALID Ecs World Ticking Group"), this));
         }
 
         for (const auto& MetaProcessorInjector : MetaInjector.Get_MetaProcessorInjectors())
@@ -188,7 +161,7 @@ auto
             if (ck::IsValid(MetaProcessorInjector))
             { continue; }
 
-            PushErrorToContext(ck::Format_UE(TEXT("MetaProcessorInjector [{}] has an INVALID MetaProcessorInjector specified under the [{}] entry"), this, Name));
+            PushErrorToContext(ck::Format_UE(TEXT("MetaProcessorInjector [{}] has an INVALID MetaProcessorInjector specified within the Ecs World Ticking Group [{}]"), this, EcsWorldTickingGroup));
         }
     }
 

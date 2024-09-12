@@ -63,6 +63,7 @@ public:
 
 public:
     friend class UCk_EcsWorld_Subsystem_UE;
+    friend class UCk_EcsWorld_Stats_Subsystem_UE;
 
 public:
     using EcsWorldType = ck::FEcsWorld;
@@ -81,7 +82,7 @@ public:
         const FCk_Registry& InRegistry,
         const FCk_Ecs_MetaProcessorInjectors_Info& InMetaInjectorInfo) -> void;
 
-protected:
+private:
     struct FWorldInfo
     {
         int32 _MaxNumberOfPumps = 1;
@@ -89,83 +90,18 @@ protected:
     };
 
     FWorldInfo _WorldToTick;
-    TStatId _StatId_Tick;
-    TStatId _StatId_Pump;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(NotBlueprintable, NotBlueprintType)
-class CKECS_API ACk_EcsWorld_StatReplicatorActor_UE final : public AInfo
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(ACk_EcsWorld_StatReplicatorActor_UE);
-
-public:
-    friend class UCk_EcsWorld_Subsystem_UE;
-
-public:
-    ACk_EcsWorld_StatReplicatorActor_UE();
-
-public:
-    auto
-    GetLifetimeReplicatedProps(
-        TArray<FLifetimeProperty>&) const -> void override;
-
-protected:
-    auto
-    BeginPlay() -> void override;
-
-    auto
-    EndPlay(
-        const EEndPlayReason::Type EndPlayReason) -> void override;
+    TStatId _TickStatId;
+    ETickingGroup _UnrealTickingGroup;
+    FGameplayTag _EcsWorldTickingGroup;
+    ECk_Ecs_WorldStatCollection_Policy _StatCollectionPolicy = ECk_Ecs_WorldStatCollection_Policy::DoNotCollect;
 
 private:
-    auto
-    OnNewFrame(
-        int64 InNewFrame) -> void;
-
-private:
-    UFUNCTION()
-    void
-    OnRep_ServerStatCycleCounter();
-
-private:
-    UPROPERTY(ReplicatedUsing = OnRep_ServerStatCycleCounter)
-    float _ServerStatCycleCounter;
-
-    UPROPERTY()
-    float _ClientStatCycleCounter;
-
-    UPROPERTY(Transient)
-    TWeakObjectPtr<class UCk_EcsWorld_Subsystem_UE> _EcsWorld_Subsystem;
-
-    UPROPERTY(Transient)
-    TWeakObjectPtr<class UCk_EcsWorld_StatReplicator_Subsystem_UE> _EcsWorld_StatReplicator_Subsystem;
-
-private:
-    FDelegateHandle _OnNewFrameDelegateHandle;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(BlueprintType)
-class CKECS_API UCk_EcsWorld_StatReplicator_Subsystem_UE : public UCk_Game_WorldSubsystem_Base_UE
-{
-    GENERATED_BODY()
+    auto Get_TickStatName() const -> const FString&;
 
 public:
-    CK_GENERATED_BODY(UCk_EcsWorld_StatReplicator_Subsystem_UE);
-
-public:
-    auto
-    Initialize(
-        FSubsystemCollectionBase& InCollection) -> void override;
-
-    /** Called when world is ready to start gameplay before the game mode transitions to the correct state and call BeginPlay on all actors */
-    auto OnWorldBeginPlay(UWorld& InWorld) -> void override;
+    CK_PROPERTY_GET(_UnrealTickingGroup);
+    CK_PROPERTY_GET(_EcsWorldTickingGroup);
+    CK_PROPERTY_GET(_StatCollectionPolicy);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -179,6 +115,9 @@ public:
     CK_GENERATED_BODY(UCk_EcsWorld_Subsystem_UE);
 
 public:
+    friend class UCk_EcsWorld_Stats_Subsystem_UE;
+
+public:
     using EcsWorldType = ck::FEcsWorld;
 
 public:
@@ -187,18 +126,21 @@ public:
         FSubsystemCollectionBase& Collection) -> void override;
 
     /** Called when world is ready to start gameplay before the game mode transitions to the correct state and call BeginPlay on all actors */
-    auto OnWorldBeginPlay(UWorld& InWorld) -> void override;
+    auto
+    OnWorldBeginPlay(
+        UWorld& InWorld) -> void override;
 
 private:
-    auto DoSpawnWorldActors(UWorld& InWorld) -> void;
+    auto DoSpawnWorldActors(
+        UWorld& InWorld) -> void;
 
 private:
     UPROPERTY(BlueprintReadOnly, Transient, meta = (AllowPrivateAccess = true))
     FCk_Handle _TransientEntity;
 
 private:
-    TMultiMap<ETickingGroup, TArray<TStrongObjectPtr<ACk_EcsWorld_Actor_UE>>> _WorldActors_ByTickingGroup;
-    TMap<FGameplayTag, TStrongObjectPtr<ACk_EcsWorld_Actor_UE>> _WorldActors_ByName;
+    TMultiMap<ETickingGroup, TArray<TStrongObjectPtr<ACk_EcsWorld_Actor_UE>>> _WorldActors_ByUnrealTickingGroup;
+    TMap<FGameplayTag, TStrongObjectPtr<ACk_EcsWorld_Actor_UE>> _WorldActors_ByEcsWorldTickingGroup;
 
 private:
     FCk_Registry _Registry;

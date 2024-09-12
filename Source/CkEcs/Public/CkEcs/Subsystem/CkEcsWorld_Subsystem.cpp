@@ -1,5 +1,7 @@
 #include "CkEcsWorld_Subsystem.h"
 
+#include "AutomationBlueprintFunctionLibrary.h"
+
 #include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
 
@@ -9,6 +11,25 @@
 #include "CkEcs/Settings/CkEcs_Settings.h"
 
 #include <Engine/World.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UE_DEFINE_GAMEPLAY_TAG(TAG_EcsWorldTickingGroup_JustBeforeDestructionPhase_Name, TEXT("EcsWorldTickingGroup.JustBeforeDestructionPhase"));
+UE_DEFINE_GAMEPLAY_TAG(TAG_EcsWorldTickingGroup_EntityDestructionInPhases_Name, TEXT("EcsWorldTickingGroup.EntityDestructionInPhases"));
+UE_DEFINE_GAMEPLAY_TAG(TAG_EcsWorldTickingGroup_DeltaTime_Name, TEXT("EcsWorldTickingGroup.DeltaTime"));
+UE_DEFINE_GAMEPLAY_TAG(TAG_EcsWorldTickingGroup_GameplayWithPump_Name, TEXT("EcsWorldTickingGroup.GameplayWithPump"));
+UE_DEFINE_GAMEPLAY_TAG(TAG_EcsWorldTickingGroup_GameplayWithoutPump_Name, TEXT("EcsWorldTickingGroup.GameplayWithoutPump"));
+UE_DEFINE_GAMEPLAY_TAG(TAG_EcsWorldTickingGroup_Script_Name, TEXT("EcsWorldTickingGroup.Script"));
+UE_DEFINE_GAMEPLAY_TAG(TAG_EcsWorldTickingGroup_ChaosDestruction_Name, TEXT("EcsWorldTickingGroup.ChaosDestruction"));
+UE_DEFINE_GAMEPLAY_TAG(TAG_EcsWorldTickingGroup_Physics_Name, TEXT("EcsWorldTickingGroup.Physics"));
+UE_DEFINE_GAMEPLAY_TAG(TAG_EcsWorldTickingGroup_Misc_Name, TEXT("EcsWorldTickingGroup.Misc"));
+UE_DEFINE_GAMEPLAY_TAG(TAG_EcsWorldTickingGroup_Replication_Name, TEXT("EcsWorldTickingGroup.Replication"));
+UE_DEFINE_GAMEPLAY_TAG(TAG_EcsWorldTickingGroup_EntityCreationAndDestruction_Name, TEXT("EcsWorldTickingGroup.EntityCreationAndDestruction"));
+UE_DEFINE_GAMEPLAY_TAG(TAG_EcsWorldTickingGroup_Overlap_Name, TEXT("EcsWorldTickingGroup.Overlap"));
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_STATS_GROUP(TEXT("CkEcsWorldActor_Tick"), STATGROUP_CkEcsWorldActor_Tick, STATCAT_Advanced);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -45,18 +66,19 @@ ACk_EcsWorld_Actor_UE::
 
 auto
     ACk_EcsWorld_Actor_UE::
-    Tick(float DeltaSeconds)
+    Tick(
+        float DeltaSeconds)
     -> void
 {
     Super::Tick(DeltaSeconds);
 
-    for (auto& [_MaxNumberOfPumps, _EcsWorld] : _WorldsToTick)
+    const auto TickStatCounter = FScopeCycleCounter{_TickStatId};
+
+    for (auto Pump = 0; Pump < _WorldToTick._MaxNumberOfPumps; ++Pump)
     {
-        for (auto Pump = 0; Pump < _MaxNumberOfPumps; ++Pump)
-        {
-            TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*ck::Format_UE(TEXT("{} EcsWorld Tick, Pump [{}/{}]"), GetWorld()->GetNetMode() == ENetMode::NM_Client ? TEXT("Client") : TEXT("Server"), Pump, _MaxNumberOfPumps));
-            _EcsWorld->Tick(FCk_Time{DeltaSeconds});
-        }
+        TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*ck::Format_UE(TEXT("{}::Tick, Pump [{}/{}]"), GetActorLabel(), Pump, _WorldToTick._MaxNumberOfPumps));
+
+        _WorldToTick._EcsWorld->Tick(FCk_Time{DeltaSeconds});
     }
 }
 
@@ -64,18 +86,17 @@ auto
     ACk_EcsWorld_Actor_UE::
     Initialize(
         const FCk_Registry& InRegistry,
-        ETickingGroup InTickingGroup)
+        const FCk_Ecs_MetaProcessorInjectors_Info& InMetaInjectorInfo)
     -> void
 {
-    TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*ck::Format_UE(TEXT("ACk_EcsWorld_Actor_UE::Initialize, ticking group: [{}]"), InTickingGroup));
+    TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*ck::Format_UE(TEXT("{}::Initialize"), GetActorLabel()));
 
-    SetTickGroup(InTickingGroup);
-
-    const auto ProcessorInjectors = UCk_Utils_Ecs_Settings_UE::Get_ProcessorInjectors();
-
-    CK_LOG_ERROR_NOTIFY_IF_NOT(ck::ecs, ck::IsValid(ProcessorInjectors),
-        TEXT("Could not get a valid instance of ProcessorInjectors PDA. Check ProjectSettings -> Ecs to make sure a valid DataAsset is referenced."))
-    { return; }
+    _TickStatId = FDynamicStats::CreateStatId<STAT_GROUP_TO_FStatGroup(STATGROUP_CkEcsWorldActor_Tick)>(GetActorLabel());
+    _WorldToTick = FWorldInfo{InMetaInjectorInfo.Get_MaximumNumberOfPumps(), EcsWorldType{InRegistry}};
+    _EcsWorldTickingGroup = InMetaInjectorInfo.Get_EcsWorldTickingGroup();
+    _StatCollectionPolicy = InMetaInjectorInfo.Get_StatCollectionPolicy();
+    _UnrealTickingGroup = InMetaInjectorInfo.Get_UnrealTickingGroup();
+    SetTickGroup(_UnrealTickingGroup);
 
     const auto& InjectProcessorsIntoWorld = [this](const TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>& InInjectorClass)
     {
@@ -86,7 +107,7 @@ auto
 
         TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*ck::Format_UE(TEXT("Injecting Native Processor from Injector [{}]"), NewInjector));
 
-        NewInjector->DoInjectProcessors(*_WorldsToTick.Last()._EcsWorld);
+        NewInjector->DoInjectProcessors(*_WorldToTick._EcsWorld);
     };
 
     const auto& InjectMetaInjectorProcessors = [&](const TScriptInterface<ICk_MetaProcessorInjector_Interface>& InMetaInjector)
@@ -101,80 +122,22 @@ auto
         }
     };
 
-    for (const auto& MetaInjectorInfo : ProcessorInjectors->Get_MetaProcessorInjectors())
+    TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*ck::Format_UE(TEXT("Inject Meta Processor Into EcsWorldActor with EcsWorldTickingGroup [{}]"), _EcsWorldTickingGroup));
+
+    for (const auto& MetaInjector : InMetaInjectorInfo.Get_MetaProcessorInjectors())
     {
-        if (MetaInjectorInfo.Get_TickingGroup() != InTickingGroup)
-        { continue; }
-
-        TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*ck::Format_UE(TEXT("Inject Meta Processor [{}]"), MetaInjectorInfo.Get_Name()));
-
-        _WorldsToTick.Emplace(MetaInjectorInfo.Get_MaximumNumberOfPumps(), EcsWorldType{InRegistry});
-
-        for (const auto& MetaInjector : MetaInjectorInfo.Get_MetaProcessorInjectors())
-        {
-            InjectMetaInjectorProcessors(MetaInjector);
-        }
+        InjectMetaInjectorProcessors(MetaInjector);
     }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
-ACk_NewEcsWorld_Actor_UE::
-    ACk_NewEcsWorld_Actor_UE()
-{
-    PrimaryActorTick.bCanEverTick = true;
-    PrimaryActorTick.bTickEvenWhenPaused = false;
-    bReplicates = false;
-    bAlwaysRelevant = true;
-}
-
 auto
-    ACk_NewEcsWorld_Actor_UE::
-    BeginPlay()
-    -> void
+    ACk_EcsWorld_Actor_UE::
+    Get_TickStatName() const
+    -> const FString&
 {
-    const auto& InjectProcessorsIntoWorld = [this](const TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>& InInjectorClass)
-    {
-        const auto NewInjector = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_EcsWorld_ProcessorInjector_Base_UE>(this, InInjectorClass, nullptr);
-
-        CK_ENSURE_IF_NOT(ck::IsValid(NewInjector), TEXT("Failed to instance ProcessorInjector of class [{}]"), InInjectorClass)
-        { return; }
-
-        NewInjector->DoInjectProcessors(_EcsWorld);
-    };
-
-    const auto& InjectMetaInjectorProcessors = [&](const TScriptInterface<ICk_MetaProcessorInjector_Interface>& InMetaInjector)
-    {
-        CK_ENSURE_IF_NOT(ck::IsValid(InMetaInjector),
-            TEXT("Encountered an INVALID MetaInjector in NewEcsWorld Actor [{}]"), this)
-        { return; }
-
-        for (const auto& ProcessorInjector : InMetaInjector->Get_ProcessorInjectors())
-        {
-            InjectProcessorsIntoWorld(ProcessorInjector);
-        }
-    };
-
-    for (const auto& MetaProcessorInjectorInfo : _MetaProcessorInjectors)
-    {
-        for (const auto& MetaInjector : MetaProcessorInjectorInfo.Get_MetaProcessorInjectors())
-        {
-            InjectMetaInjectorProcessors(MetaInjector);
-        }
-    }
-
-    Super::BeginPlay();
-}
-
-auto
-    ACk_NewEcsWorld_Actor_UE::
-    Tick(
-        float DeltaSeconds)
-    -> void
-{
-    Super::Tick(DeltaSeconds);
-
-    _EcsWorld.Tick(FCk_Time{DeltaSeconds});
+    return GetActorLabel();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -203,7 +166,8 @@ auto
 
 auto
     UCk_EcsWorld_Subsystem_UE::
-    DoSpawnWorldActors(UWorld& InWorld)
+    DoSpawnWorldActors(
+        UWorld& InWorld)
     -> void
 {
     const auto& EcsWorldActorClass = ACk_EcsWorld_Actor_UE::StaticClass();
@@ -213,10 +177,17 @@ auto
 
     _TransientEntity.Add<TWeakObjectPtr<UWorld>>(&InWorld);
 
-    for (auto TickingGroup = TG_PrePhysics; TickingGroup < ETickingGroup::TG_NewlySpawned;
-        TickingGroup = static_cast<ETickingGroup>(TickingGroup + 1))
+    const auto ProcessorInjectors = UCk_Utils_Ecs_Settings_UE::Get_ProcessorInjectors();
+
+    CK_LOG_ERROR_NOTIFY_IF_NOT(ck::ecs, ck::IsValid(ProcessorInjectors),
+        TEXT("Could not get a valid instance of ProcessorInjectors PDA. Check ProjectSettings -> Ecs to make sure a valid DataAsset is referenced."))
+    { return; }
+
+    for (const auto& MetaInjectorInfo : ProcessorInjectors->Get_MetaProcessorInjectors())
     {
-        const auto& ActorName = ck::Format_UE(TEXT("EcsWorld_Actor_{}"), TickingGroup);
+        const auto& UnrealTickingGroup = MetaInjectorInfo.Get_UnrealTickingGroup();
+        const auto& EcsWorldTickingGroup = MetaInjectorInfo.Get_EcsWorldTickingGroup();
+        const auto& ActorName = ck::Format_UE(TEXT("[{}][{}] EcsWorld_Actor"), UnrealTickingGroup, EcsWorldTickingGroup);
 
         auto WorldActor = Cast<ACk_EcsWorld_Actor_UE>
         (
@@ -227,17 +198,40 @@ auto
                 .Set_SpawnPolicy(ECk_Utils_Actor_SpawnActorPolicy::CannotSpawnInPersistentLevel),
                 [&](AActor* InActor)
                 {
-                    const auto NewWorldActor = Cast<ACk_EcsWorld_Actor_UE>(InActor);
-                    NewWorldActor->Initialize(_Registry, TickingGroup);
+                    const auto& NewWorldActor = Cast<ACk_EcsWorld_Actor_UE>(InActor);
+                    NewWorldActor->Initialize(_Registry, MetaInjectorInfo);
                 }
             )
         );
 
-        _WorldActors.Add(TickingGroup, WorldActor);
+        CK_ENSURE_IF_NOT(ck::IsValid(WorldActor),
+            TEXT("Failed to spawn Ecs World Actor [{}]"),
+            ActorName)
+        { continue; }
+
+        if (const auto& FoundWorldActorsForTickingGroup = _WorldActors_ByUnrealTickingGroup.Find(UnrealTickingGroup);
+            ck::IsValid(FoundWorldActorsForTickingGroup, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            if (NOT FoundWorldActorsForTickingGroup->IsEmpty())
+            {
+                const auto& TickPrerequisiteActor = FoundWorldActorsForTickingGroup->Last().Get();
+                WorldActor->AddTickPrerequisiteActor(TickPrerequisiteActor);
+            }
+        }
+
+        const auto WorldActorStrongPtr = TStrongObjectPtr(WorldActor);
+        _WorldActors_ByUnrealTickingGroup.FindOrAdd(UnrealTickingGroup).Add(TStrongObjectPtr(WorldActorStrongPtr));
+
+        CK_ENSURE_IF_NOT(NOT _WorldActors_ByEcsWorldTickingGroup.Contains(EcsWorldTickingGroup),
+            TEXT("More than 1 Ecs World Actor was spawn for the Ecs World Ticking Group [{}]"),
+            EcsWorldTickingGroup)
+        { continue; }
+
+        _WorldActors_ByEcsWorldTickingGroup.Add(EcsWorldTickingGroup, WorldActorStrongPtr);
     }
 
-    CK_ENSURE_IF_NOT(NOT _WorldActors.IsEmpty(),
-        TEXT("Failed to spawn ANY EcsWorld Actors. ECS Pipeline will NOT work."))
+    CK_ENSURE_IF_NOT(NOT _WorldActors_ByUnrealTickingGroup.IsEmpty(),
+        TEXT("Failed to spawn ANY Ecs World Actors. ECS Pipeline will NOT work."))
     { return; }
 }
 
@@ -253,9 +247,9 @@ auto
         TEXT("Unable to get the EcsSubsystem to get the TransientEntity as the World is [{}]"), InWorld)
     { return {}; }
 
-    const auto Subsystem = InWorld->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+    const auto& Subsystem = InWorld->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
 
-    CK_ENSURE_IF_NOT(Subsystem,
+    CK_ENSURE_IF_NOT(ck::IsValid(Subsystem),
         TEXT("Unable to get the EcsSubsystem from the World [{}]. It's possible Get_TransientEntity is being called too early"),
         InWorld)
     { return {}; }
