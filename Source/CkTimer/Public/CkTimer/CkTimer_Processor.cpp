@@ -192,6 +192,14 @@ namespace ck
             }
         }
 
+        const auto& JumpDirection = InRequest.Get_JumpDuration().Get_Seconds() >= 0.f ? ECk_Timer_JumpDirection::Forwards : ECk_Timer_JumpDirection::Backwards;
+        const auto& JumpAmount = FCk_Time(FMath::Abs(InRequest.Get_JumpDuration().Get_Seconds()));
+        {
+#if STATS
+            auto TimerStatCounter = FScopeCycleCounter{InHandle.Get<TStatId>()};
+#endif // STATS
+            UUtils_Signal_OnTimerJump::Broadcast(InHandle, MakePayload(InHandle, TimerChrono, InDeltaT, JumpDirection, JumpAmount));
+        }
         {
 #if STATS
             auto TimerStatCounter = FScopeCycleCounter{InHandle.Get<TStatId>()};
