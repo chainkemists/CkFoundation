@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Types/DataAsset/CkDataAsset.h"
 
@@ -7,6 +8,19 @@
 #include <GameplayTagContainer.h>
 
 #include "CkEcsMetaProcessorInjector.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Ecs_WorldStatCollection_Policy : uint8
+{
+    DoNotCollect,
+    CollectOnLocalClientOnly,
+    CollectOnServerOnly,
+    CollectOnLocalClientAndServer
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ecs_WorldStatCollection_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -83,19 +97,19 @@ public:
     CK_GENERATED_BODY(FCk_Ecs_MetaProcessorInjectors_Info);
 
 private:
-    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess, Categories = "MetaProcessorInjector"))
-    FGameplayTag _Name = FGameplayTag::EmptyTag;
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess, Categories = "EcsWorldTickingGroup"))
+    FGameplayTag _EcsWorldTickingGroup = FGameplayTag::EmptyTag;
+
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess, InvalidEnumValues = "TG_MAX"))
+    TEnumAsByte<ETickingGroup> _UnrealTickingGroup = TG_PrePhysics;
 
 #if WITH_EDITORONLY_DATA
     UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
     FName _Description = NAME_None;
-
-    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
-    bool _CollectStatData = false;
 #endif
 
-    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess, InvalidEnumValues = "TG_MAX"))
-    TEnumAsByte<ETickingGroup> _TickingGroup = TG_PrePhysics;
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
+    ECk_Ecs_WorldStatCollection_Policy _StatCollectionPolicy = ECk_Ecs_WorldStatCollection_Policy::DoNotCollect;
 
     // Processors can be pumped multiple times _if_ they have requests that still need to be processed
     UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess, ClampMin="0", UIMin="0"))
@@ -107,12 +121,12 @@ private:
 
 public:
     auto Get_Description() const -> FName;
-    auto Get_CollectStatData() const -> bool;
     auto Get_MetaProcessorInjectors() const -> TArray<TScriptInterface<ICk_MetaProcessorInjector_Interface>>;
 
 public:
-    CK_PROPERTY(_Name);
-    CK_PROPERTY(_TickingGroup);
+    CK_PROPERTY(_EcsWorldTickingGroup);
+    CK_PROPERTY(_UnrealTickingGroup);
+    CK_PROPERTY(_StatCollectionPolicy);
     CK_PROPERTY_GET(_MaximumNumberOfPumps);
 };
 
@@ -133,7 +147,7 @@ protected:
 #endif
 
 private:
-    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess, TitleProperty = "[{_TickingGroup}] - {_Name}"))
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess, TitleProperty = "[{_UnrealTickingGroup}] - {_EcsWorldTickingGroup}"))
     TArray<FCk_Ecs_MetaProcessorInjectors_Info> _MetaProcessorInjectors;
 
 public:
