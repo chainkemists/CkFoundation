@@ -289,6 +289,15 @@ public:
         ECk_Signal_BindingPolicy InBindingPolicy,
         const FCk_Delegate_Timer& InDelegate);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Timer",
+              DisplayName = "[Ck][Timer] Bind To OnJump")
+    static FCk_Handle_Timer
+    BindTo_OnJump(
+        UPARAM(ref) FCk_Handle_Timer& InTimerEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        const FCk_Delegate_Timer_Jump& InDelegate);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Timer",
@@ -346,7 +355,14 @@ public:
     UnbindFrom_OnUpdate(
         UPARAM(ref) FCk_Handle_Timer& InTimerEntity,
         const FCk_Delegate_Timer& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Timer",
+              DisplayName = "[Ck][Timer] Unbind From OnJump")
+    static FCk_Handle_Timer
+    UnbindFrom_OnJump(
+        UPARAM(ref) FCk_Handle_Timer& InTimerEntity,
+        const FCk_Delegate_Timer_Jump& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-

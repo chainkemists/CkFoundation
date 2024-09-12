@@ -424,6 +424,19 @@ auto
 
 auto
     UCk_Utils_Timer_UE::
+    BindTo_OnJump(
+        FCk_Handle_Timer& InTimerEntity,
+        ECk_Signal_BindingPolicy  InBindingPolicy,
+        const FCk_Delegate_Timer_Jump& InDelegate)
+    -> FCk_Handle_Timer
+{
+    ck::UUtils_Signal_OnTimerJump::Bind(InTimerEntity, InDelegate, InBindingPolicy);
+
+    return InTimerEntity;
+}
+
+auto
+    UCk_Utils_Timer_UE::
     UnbindFrom_OnReset(
         FCk_Handle_Timer& InTimerEntity,
         const FCk_Delegate_Timer& InDelegate)
@@ -502,6 +515,18 @@ auto
     -> FCk_Handle_Timer
 {
     ck::UUtils_Signal_OnTimerUpdate::Unbind(InTimerEntity, InDelegate);
+
+    return InTimerEntity;
+}
+
+auto
+    UCk_Utils_Timer_UE::
+    UnbindFrom_OnJump(
+        FCk_Handle_Timer& InTimerEntity,
+        const FCk_Delegate_Timer_Jump& InDelegate)
+    -> FCk_Handle_Timer
+{
+    ck::UUtils_Signal_OnTimerJump::Unbind(InTimerEntity, InDelegate);
 
     return InTimerEntity;
 }
