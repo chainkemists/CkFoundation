@@ -139,7 +139,7 @@ private:
     FCk_Handle _TransientEntity;
 
 private:
-    TMultiMap<ETickingGroup, TArray<TStrongObjectPtr<ACk_EcsWorld_Actor_UE>>> _WorldActors_ByUnrealTickingGroup;
+    TMap<TEnumAsByte<ETickingGroup>, TArray<TStrongObjectPtr<ACk_EcsWorld_Actor_UE>>> _WorldActors_ByUnrealTickingGroup;
     TMap<FGameplayTag, TStrongObjectPtr<ACk_EcsWorld_Actor_UE>> _WorldActors_ByEcsWorldTickingGroup;
 
 private:

@@ -220,7 +220,7 @@ auto
         }
 
         const auto WorldActorStrongPtr = TStrongObjectPtr(WorldActor);
-        _WorldActors_ByUnrealTickingGroup.FindOrAdd(UnrealTickingGroup).Add(TStrongObjectPtr(WorldActorStrongPtr));
+        _WorldActors_ByUnrealTickingGroup.FindOrAdd(UnrealTickingGroup).Add(WorldActorStrongPtr);
 
         CK_ENSURE_IF_NOT(NOT _WorldActors_ByEcsWorldTickingGroup.Contains(EcsWorldTickingGroup),
             TEXT("More than 1 Ecs World Actor was spawn for the Ecs World Ticking Group [{}]"),
