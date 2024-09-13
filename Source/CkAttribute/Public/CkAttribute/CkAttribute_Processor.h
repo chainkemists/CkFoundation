@@ -10,24 +10,23 @@ namespace ck::detail
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_DerivedAttributeModifier>
+    template <typename T_DerivedProcessor, typename T_DerivedAttribute>
     class TProcessor_Attribute_StorePreviousValue : public TProcessor<
-            TProcessor_Attribute_StorePreviousValue<T_DerivedProcessor, T_DerivedAttribute, T_DerivedAttributeModifier>,
+            TProcessor_Attribute_StorePreviousValue<T_DerivedProcessor, T_DerivedAttribute>,
             T_DerivedAttribute,
-            typename T_DerivedAttributeModifier::AttributeFragmentType::FTag_RecomputeFinalValue,
+            typename T_DerivedAttribute::FTag_RecomputeFinalValue,
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using MarkedDirtyBy = typename T_DerivedAttributeModifier::AttributeFragmentType::FTag_RecomputeFinalValue;
+        using MarkedDirtyBy = typename T_DerivedAttribute::FTag_RecomputeFinalValue;
 
     public:
-        using AttributeModifierFragmentType = T_DerivedAttributeModifier;
-        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
-        using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
-        using ThisType                      = TProcessor_Attribute_StorePreviousValue<T_DerivedProcessor, T_DerivedAttribute, AttributeModifierFragmentType>;
-        using Super                         = TProcessor<ThisType, AttributeFragmentType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
-        using HandleType                    = typename Super::HandleType;
-        using TimeType                      = typename Super::TimeType;
+        using AttributeFragmentType = typename T_DerivedAttribute;
+        using AttributeDataType     = typename AttributeFragmentType::AttributeDataType;
+        using ThisType              = TProcessor_Attribute_StorePreviousValue<T_DerivedProcessor, T_DerivedAttribute>;
+        using Super                 = TProcessor<ThisType, AttributeFragmentType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using HandleType            = typename Super::HandleType;
+        using TimeType              = typename Super::TimeType;
 
     public:
         CK_USING_BASE_CONSTRUCTORS(Super);
@@ -146,7 +145,7 @@ namespace ck::detail
             const TimeType& InDeltaT,
             HandleType InHandle,
             AttributeFragmentType_Current& InAttributeCurrent,
-            const AttributeFragmentType_Max& InAttributeMin) const -> void;
+            const AttributeFragmentType_Max& InAttributeMax) const -> void;
 
     public:
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
@@ -165,10 +164,10 @@ namespace ck::detail
         using MarkedDirtyBy = typename T_DerivedAttribute::FTag_MayRequireReplication;
 
     public:
-        using ThisType                      = TProcessor_Attribute_Replicate<T_DerivedProcessor, T_DerivedAttribute, T_DerivedAttribute_ReplicatedFragment>;
-        using Super                         = TProcessor<ThisType, T_DerivedAttribute, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
-        using HandleType                    = typename Super::HandleType;
-        using TimeType                      = typename Super::TimeType;
+        using ThisType   = TProcessor_Attribute_Replicate<T_DerivedProcessor, T_DerivedAttribute, T_DerivedAttribute_ReplicatedFragment>;
+        using Super      = TProcessor<ThisType, T_DerivedAttribute, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using HandleType = typename Super::HandleType;
+        using TimeType   = typename Super::TimeType;
 
     public:
         CK_USING_BASE_CONSTRUCTORS(Super);
@@ -632,6 +631,45 @@ namespace ck::detail
     public:
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeRefill>
+    class TProcessor_AttributeRefill_Update : public ck_exp::TProcessor<
+            TProcessor_AttributeRefill_Update<T_DerivedProcessor, T_DerivedAttributeRefill>,
+            typename T_DerivedAttributeRefill::AttributeHandleType,
+            T_DerivedAttributeRefill,
+            typename T_DerivedAttributeRefill::AttributeFragmentType,
+            typename T_DerivedAttributeRefill::FTag_RefillRunning,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = typename T_DerivedAttributeRefill::FTag_RefillRunning;
+
+    public:
+        using AttributeRefillFragmentType = T_DerivedAttributeRefill;
+        using AttributeModifierFragmentType = typename T_DerivedAttributeRefill::AttributeModifierFragmentType;
+        using AttributeFragmentType       = typename AttributeModifierFragmentType::AttributeFragmentType;
+        using AttributeDataType           = typename AttributeFragmentType::AttributeDataType;
+        using AttributeHandleType         = typename AttributeFragmentType::HandleType;
+        using AttributeModifierHandleType = typename AttributeModifierFragmentType::HandleType;
+        using ThisType                    = TProcessor_AttributeRefill_Update<T_DerivedProcessor, T_DerivedAttributeRefill>;
+        using Super                       = ck_exp::TProcessor<ThisType,AttributeHandleType, AttributeRefillFragmentType, AttributeFragmentType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using TimeType                    = typename Super::TimeType;
+
+    public:
+        CK_USING_BASE_CONSTRUCTORS(Super);
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            AttributeHandleType InHandle,
+            const AttributeRefillFragmentType& InAttributeRefill,
+            AttributeFragmentType& InAttribute) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -742,8 +780,7 @@ namespace ck
 
         template <ECk_MinMaxCurrent T_Component>
         using TStorePreviousValueProcessorType = detail::TProcessor_Attribute_StorePreviousValue<
-            TProcessor_Attribute_RecomputeAll_CurrentMinMax, typename T_DerivedAttributeModifier<T_Component>::AttributeFragmentType,
-            T_DerivedAttributeModifier<T_Component>>;
+            TProcessor_Attribute_RecomputeAll_CurrentMinMax, typename T_DerivedAttributeModifier<T_Component>::AttributeFragmentType>;
 
     public:
         explicit
@@ -822,6 +859,32 @@ namespace ck
         TInternalProcessorType<ECk_MinMaxCurrent::Current> _Current;
         TInternalProcessorType<ECk_MinMaxCurrent::Min> _Min;
         TInternalProcessorType<ECk_MinMaxCurrent::Max> _Max;
+
+    private:
+        RegistryType _Registry;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedAttributeRefill>
+    class TProcessor_AttributeRefill_Update
+    {
+    public:
+        using TimeType     = FCk_Time;
+        using RegistryType = FCk_Registry;
+
+    public:
+        explicit
+        TProcessor_AttributeRefill_Update(
+            RegistryType InRegistry);
+
+    public:
+        auto Tick(
+            TimeType InDeltaT) -> void;
+
+    private:
+        detail::TProcessor_AttributeRefill_Update<
+            TProcessor_AttributeRefill_Update, T_DerivedAttributeRefill> _Refill_Update;
 
     private:
         RegistryType _Registry;

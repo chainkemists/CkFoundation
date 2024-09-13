@@ -53,9 +53,8 @@ namespace ck
         auto& Manager = UGameplayTagsManager::Get();
 
         _Override = Manager.AddNativeGameplayTag(TEXT("Ck.AttributeModifier.Override"));
+        _Refill = Manager.AddNativeGameplayTag(TEXT("Ck.AttributeModifier.Refill"));
     }
-
-    // --------------------------------------------------------------------------------------------------------------------
 
     auto
         FAttributeModifier_Tags::
@@ -63,6 +62,14 @@ namespace ck
         -> FGameplayTag
     {
         return _Tags._Override;
+    }
+
+    auto
+        FAttributeModifier_Tags::
+        Get_Refill()
+        -> FGameplayTag
+    {
+        return _Tags._Refill;
     }
 }
 

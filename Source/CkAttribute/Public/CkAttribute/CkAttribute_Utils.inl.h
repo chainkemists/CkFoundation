@@ -6,6 +6,8 @@
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
+#include "CkNet/CkNet_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -18,7 +20,7 @@ namespace ck
             const AttributeDataType& InBaseValue)
         -> void
     {
-        InHandle.Add<AttributeFragmentType>(InBaseValue);
+        InHandle.template Add<AttributeFragmentType>(InBaseValue);
     }
 
     template <typename T_DerivedAttribute>
@@ -28,7 +30,7 @@ namespace ck
             const HandleType& InHandle)
         -> bool
     {
-        return InHandle.Has<AttributeFragmentType>();
+        return InHandle.template Has<AttributeFragmentType>();
     }
 
     template <typename T_DerivedAttribute>
@@ -54,7 +56,7 @@ namespace ck
         if (NOT Ensure(InHandle))
         { return {}; }
 
-        return InHandle.Get<AttributeFragmentType>().Get_Base();
+        return InHandle.template Get<AttributeFragmentType>().Get_Base();
     }
 
     template <typename T_DerivedAttribute>
@@ -67,7 +69,20 @@ namespace ck
         if (NOT Ensure(InHandle))
         { return {}; }
 
-        return InHandle.Get<AttributeFragmentType>().Get_Final();
+        return InHandle.template Get<AttributeFragmentType>().Get_Final();
+    }
+
+    template <typename T_DerivedAttribute>
+    auto
+        TUtils_Attribute<T_DerivedAttribute>::
+        Get_MayRequireReplicationThisFrame(
+            const HandleType& InHandle)
+        -> bool
+    {
+        if (NOT Ensure(InHandle))
+        { return {}; }
+
+        return InHandle.template Has<typename AttributeFragmentType::FTag_MayRequireReplication>();
     }
 
     template <typename T_DerivedAttribute>
@@ -80,7 +95,7 @@ namespace ck
         if (NOT Ensure(InHandle))
         { return; }
 
-        InHandle.AddOrGet<typename AttributeFragmentType::FTag_RecomputeFinalValue>();
+        InHandle.template AddOrGet<typename AttributeFragmentType::FTag_RecomputeFinalValue>();
     }
 
     template <typename T_DerivedAttribute>
@@ -93,7 +108,7 @@ namespace ck
         if (NOT Ensure(InHandle))
         { return; }
 
-        InHandle.AddOrGet<FTag_MayRequireClamping>();
+        InHandle.template AddOrGet<FTag_MayRequireClamping>();
     }
 
     template <typename T_DerivedAttribute>
@@ -106,7 +121,7 @@ namespace ck
         if (NOT Ensure(InHandle))
         { return; }
 
-        InHandle.AddOrGet<typename AttributeFragmentType::FTag_FireSignals>();
+        InHandle.template AddOrGet<typename AttributeFragmentType::FTag_FireSignals>();
     }
 
     template <typename T_DerivedAttribute>
@@ -119,10 +134,66 @@ namespace ck
         if (NOT Ensure(InHandle))
         { return; }
 
-        if (NOT InHandle.Has<ck::FTag_ReplicatedAttribute>())
+        if (NOT InHandle.template Has<FTag_ReplicatedAttribute>())
         { return; }
 
-        InHandle.AddOrGet<typename AttributeFragmentType::FTag_MayRequireReplication>();
+        if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle))
+        { return; }
+
+        InHandle.template AddOrGet<typename AttributeFragmentType::FTag_MayRequireReplication>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedAttribute>
+    auto
+        TUtils_AttributeRefill<T_DerivedAttribute>::
+        Add(
+            HandleType& InHandle,
+            const AttributeDataType& InRefillRate,
+            ECk_Attribute_RefillState InRefillState)
+        -> void
+    {
+        InHandle.template Add<AttributeRefillFragmentType>(InRefillRate);
+        Request_SetRefillState(InHandle, InRefillState);
+    }
+
+    template <typename T_DerivedAttribute>
+    auto
+        TUtils_AttributeRefill<T_DerivedAttribute>::
+        Get_RefillState(
+            HandleType& InHandle)
+        -> ECk_Attribute_RefillState
+    {
+        if (NOT Ensure(InHandle))
+        { return {}; }
+
+        return InHandle.template Has<AttributeRefillFragmentType::FTag_RefillRunning>()
+                ? ECk_Attribute_RefillState::Running
+                : ECk_Attribute_RefillState::Paused;
+    }
+
+    template <typename T_DerivedAttributeRefill>
+    auto
+        TUtils_AttributeRefill<T_DerivedAttributeRefill>::
+        Request_SetRefillState(
+            HandleType& InHandle,
+            ECk_Attribute_RefillState InRefillState)
+        -> void
+    {
+        switch (InRefillState)
+        {
+            case ECk_Attribute_RefillState::Paused:
+            {
+                InHandle.template Try_Remove<AttributeRefillFragmentType::FTag_RefillRunning>();
+                break;
+            }
+            case ECk_Attribute_RefillState::Running:
+            {
+                InHandle.template AddOrGet<AttributeRefillFragmentType::FTag_RefillRunning>();
+                break;
+            }
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -134,7 +205,8 @@ namespace ck
             HandleType& InHandle,
             AttributeDataType InModifierDelta,
             ECk_ArithmeticOperations_Basic InModifierOperation,
-            ECk_ModifierOperation_RevocablePolicy InModifierOperationRevocablePolicy)
+            ECk_ModifierOperation_RevocablePolicy InModifierOperationRevocablePolicy,
+            ECk_AttributeValueChange_SyncPolicy InSyncPolicy)
         -> void
     {
         // Attribute fragments live on Entity (A) and AttributeModifiers live on Entities UNDER Entity (A)
@@ -235,6 +307,24 @@ namespace ck
             }
         }
 
+        switch (InSyncPolicy)
+        {
+            case ECk_AttributeValueChange_SyncPolicy::TrySyncToClients:
+            {
+                TUtils_Attribute<AttributeFragmentType>::Request_TryReplicateAttribute(LifetimeOwnerAsAttributeEntity);
+                break;
+            }
+            case ECk_AttributeValueChange_SyncPolicy::DoNotSync:
+            {
+                break;
+            }
+            default:
+            {
+                CK_INVALID_ENUM(InSyncPolicy);
+                break;
+            }
+        }
+
         TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(LifetimeOwnerAsAttributeEntity);
     }
 
@@ -258,6 +348,7 @@ namespace ck
 
         auto LifetimeOwnerAsAttributeEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(LifetimeOwnerAsAttributeEntity);
+        TUtils_Attribute<AttributeFragmentType>::Request_TryReplicateAttribute(LifetimeOwnerAsAttributeEntity);
     }
 
     template <typename T_DerivedAttributeModifier>
@@ -317,7 +408,7 @@ namespace ck
             return UCk_Utils_GameplayLabel_UE::Matches(InCurrentModifier, NameOfModifier);
         };
 
-        const auto Count = RecordOfAttributeModifiers_Utils::Get_ValidEntriesCount_If(AttributeEntity, Predicate);
+        const auto& Count = RecordOfAttributeModifiers_Utils::Get_ValidEntriesCount_If(AttributeEntity, Predicate);
 
         if (Count == 0)
         { return ECk_Unique::DoesNotExist; }

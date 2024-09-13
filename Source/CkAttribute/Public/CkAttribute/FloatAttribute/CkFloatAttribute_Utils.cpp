@@ -32,6 +32,12 @@ auto
 
     FloatAttribute_Utils_Current::Add(NewAttributeEntity, InParams.Get_BaseValue());
 
+    if (InParams.Get_EnableRefill())
+    {
+        const auto& RefillParams = InParams.Get_RefillParams();
+        FloatAttributeRefill_Utils::Add(NewAttributeEntity, RefillParams.Get_FillRate(), RefillParams.Get_StartingState());
+    }
+
     switch (InParams.Get_MinMax())
     {
         case ECk_MinMax::None:

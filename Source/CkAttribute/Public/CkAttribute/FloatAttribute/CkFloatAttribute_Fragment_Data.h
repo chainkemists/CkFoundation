@@ -114,6 +114,30 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKATTRIBUTE_API FCk_Fragment_FloatAttributeRefill_ParamsData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Fragment_FloatAttributeRefill_ParamsData);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
+    float _FillRate = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
+    ECk_Attribute_RefillState _StartingState = ECk_Attribute_RefillState::Paused;
+
+public:
+    CK_PROPERTY_GET(_FillRate);
+    CK_PROPERTY_GET(_StartingState);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKATTRIBUTE_API FCk_Fragment_FloatAttribute_ParamsData
 {
     GENERATED_BODY()
@@ -129,6 +153,15 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     float _BaseValue = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, InlineEditConditionToggle))
+    bool _EnableRefill = false;
+
+    // Non-Replicated fill rate
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess, EditCondition = "_EnableRefill"))
+    FCk_Fragment_FloatAttributeRefill_ParamsData _RefillParams;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))
@@ -149,6 +182,8 @@ public:
 public:
     CK_PROPERTY_GET(_Name);
     CK_PROPERTY_GET(_BaseValue);
+    CK_PROPERTY_GET(_EnableRefill);
+    CK_PROPERTY_GET(_RefillParams);
 
     CK_PROPERTY(_MinMax);
     CK_PROPERTY_SET(_MinValue);
