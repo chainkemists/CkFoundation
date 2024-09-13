@@ -242,12 +242,14 @@ auto
         int64 InNewFrame)
     -> void
 {
-    AsyncTask(ENamedThreads::GameThread, [this]()
+    auto WorldPtr = TWeakObjectPtr<UCk_EcsWorld_Stats_Subsystem_UE>{this};
+
+    AsyncTask(ENamedThreads::GameThread, [WorldPtr]()
     {
-        if (ck::Is_NOT_Valid(this))
+        if (ck::Is_NOT_Valid(WorldPtr))
         { return; }
 
-        if (const auto& World = this->GetWorld();
+        if (const auto& World = WorldPtr->GetWorld();
             ck::Is_NOT_Valid(World))
         { return; }
 
@@ -260,7 +262,7 @@ auto
         {
             for (const auto& StatMessage : ActiveStatGroup.FlatAggregate)
             {
-                DoTryUpdateEcsWorldStatData(StatMessage);
+                WorldPtr->DoTryUpdateEcsWorldStatData(StatMessage);
             }
         }
     });
