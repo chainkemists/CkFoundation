@@ -87,6 +87,33 @@ auto
 
 auto
     UCk_Utils_Game_UE::
+    Get_IsPIE_UnderOneProcess(
+        const UObject* InWorldContextObject,
+        bool InEnsureWorldIsValid)
+    -> bool
+{
+#if WITH_EDITOR
+    const auto& IsPIE = Get_IsPIE(InWorldContextObject, InEnsureWorldIsValid);
+
+    if (NOT IsPIE)
+    { return {}; }
+
+    const auto& PlayInSettings = GetDefault<ULevelEditorPlaySettings>();
+
+    if (ck::Is_NOT_Valid(PlayInSettings))
+    { return {}; }
+
+    auto OutRunUnderOneProcess = false;
+    std::ignore = PlayInSettings->GetRunUnderOneProcess(OutRunUnderOneProcess);
+
+    return OutRunUnderOneProcess;
+#else
+    return false;
+#endif
+}
+
+auto
+    UCk_Utils_Game_UE::
     Get_WorldForObject(
         const UObject* InContextObject)
     -> UWorld*
