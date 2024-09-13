@@ -27,6 +27,8 @@ namespace ck
         static auto Get_FinalTag() -> FGameplayTag;
     };
 
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct FAttributeModifier_Tags final : public FGameplayTagNativeAdder
     {
     protected:
@@ -34,11 +36,13 @@ namespace ck
 
     private:
         FGameplayTag _Override;
+        FGameplayTag _Refill;
 
         static FAttributeModifier_Tags _Tags;
 
     public:
         static auto Get_Override() -> FGameplayTag;
+        static auto Get_Refill() -> FGameplayTag;
     };
 }
 
@@ -103,6 +107,9 @@ namespace ck::detail
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     class TProcessor_AttributeModifier_Teardown;
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeRefill>
+    class TProcessor_AttributeRefill_Update;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -180,10 +187,14 @@ namespace ck
         template <typename, typename>
         friend class detail::TProcessor_AttributeModifier_Override_Compute;
 
+        template <typename, typename>
+        friend class detail::TProcessor_AttributeRefill_Update;
+
     public:
         CK_GENERATED_BODY(TFragment_Attribute<T_HandleType COMMA T_AttributeType COMMA T_ComponentTag>);
 
     public:
+        CK_DEFINE_ECS_TAG(FTag_StorePreviousValue);
         CK_DEFINE_ECS_TAG(FTag_RecomputeFinalValue);
         CK_DEFINE_ECS_TAG(FTag_FireSignals);
         CK_DEFINE_ECS_TAG(FTag_MayRequireReplication);
@@ -247,25 +258,6 @@ namespace ck
 
     template <typename T_HandleType, typename T_AttributeType>
     using TFragment_Attribute_Max = TFragment_Attribute<T_HandleType, T_AttributeType, ECk_MinMaxCurrent::Max>;
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedAttribute>
-    struct TFragment_Request_AttributeOverride
-    {
-        CK_GENERATED_BODY(TFragment_Request_AttributeOverride<T_DerivedAttribute>);
-
-    public:
-        using AttributeDataType = typename T_DerivedAttribute::AttributeDataType;
-
-    private:
-        AttributeDataType _NewBaseValue;
-
-    public:
-        CK_PROPERTY_GET(_NewBaseValue);
-
-        CK_DEFINE_CONSTRUCTORS(TFragment_Request_AttributeOverride, _NewBaseValue);
-    };
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -344,6 +336,33 @@ namespace ck
 
         CK_DEFINE_CONSTRUCTORS(TPayload_Attribute_OnValueChanged<T_DerivedAttribute>,
             _Handle, _BaseValue, _FinalValue, _BaseValue_Previous, _FinalValue_Previous);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedAttributeModifier>
+    struct TFragment_AttributeRefill
+    {
+    public:
+        CK_GENERATED_BODY(TFragment_AttributeRefill<T_DerivedAttributeModifier>);
+
+    public:
+        using AttributeModifierFragmentType = T_DerivedAttributeModifier;
+        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
+        using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
+        using AttributeHandleType           = typename AttributeFragmentType::HandleType;
+        using AttributeModifierHandleType   = typename AttributeModifierFragmentType::HandleType;
+
+    public:
+        CK_DEFINE_ECS_TAG(FTag_RefillRunning);
+
+    private:
+        AttributeDataType _FillRate;
+
+    public:
+        CK_PROPERTY(_FillRate);
+
+        CK_DEFINE_CONSTRUCTORS(TFragment_AttributeRefill, _FillRate);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

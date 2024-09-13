@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkAttribute_Fragment_Data.h"
+
 #include "CkAttribute/CkAttribute_Fragment.h"
 #include "CkCore/Enums/CkEnums.h"
 
@@ -16,10 +18,10 @@ namespace ck
     class TUtils_Attribute
     {
     public:
-        using AttributeFragmentType = T_DerivedAttribute;
-        using AttributeFragmentPreviousValueType = ck::TFragment_Attribute_PreviousValues<T_DerivedAttribute>;
-        using AttributeDataType     = typename AttributeFragmentType::AttributeDataType;
-        using HandleType            = FCk_Handle;
+        using AttributeFragmentType              = T_DerivedAttribute;
+        using AttributeFragmentPreviousValueType = TFragment_Attribute_PreviousValues<T_DerivedAttribute>;
+        using AttributeDataType                  = typename AttributeFragmentType::AttributeDataType;
+        using HandleType                         = FCk_Handle;
 
     public:
         template <typename>
@@ -39,6 +41,9 @@ namespace ck
 
         template <typename, typename, typename>
         friend class detail::TProcessor_Attribute_MaxClamp;
+
+        template <typename, typename>
+        friend class detail::TProcessor_AttributeRefill_Update;
 
     public:
         static auto
@@ -62,6 +67,10 @@ namespace ck
         Get_FinalValue(
             const HandleType& InHandle) -> AttributeDataType;
 
+        static auto
+        Get_MayRequireReplicationThisFrame(
+            const HandleType& InHandle) -> bool;
+
     private:
         static auto
         Request_RecomputeFinalValue(
@@ -78,6 +87,35 @@ namespace ck
         static auto
         Request_TryReplicateAttribute(
             HandleType& InHandle) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedAttributeRefill>
+    class TUtils_AttributeRefill
+    {
+    public:
+        using AttributeRefillFragmentType = T_DerivedAttributeRefill;
+        using AttributeFragmentType       = typename AttributeRefillFragmentType::AttributeFragmentType;
+        using AttributeDataType           = typename AttributeFragmentType::AttributeDataType;
+        using HandleType                  = typename AttributeFragmentType::HandleType;
+
+    public:
+        static auto
+        Add(
+            HandleType& InHandle,
+            const AttributeDataType& InRefillRate,
+            ECk_Attribute_RefillState InRefillState) -> void;
+
+        static auto
+        Get_RefillState(
+            HandleType& InHandle) -> ECk_Attribute_RefillState;
+
+    public:
+        static auto
+        Request_SetRefillState(
+            HandleType& InHandle,
+            ECk_Attribute_RefillState InRefillState) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -111,7 +149,8 @@ namespace ck
             HandleType& InHandle,
             AttributeDataType InModifierDelta,
             ECk_ArithmeticOperations_Basic InModifierOperation,
-            ECk_ModifierOperation_RevocablePolicy InModifierOperationRevocablePolicy) -> void;
+            ECk_ModifierOperation_RevocablePolicy InModifierOperationRevocablePolicy,
+            ECk_AttributeValueChange_SyncPolicy InSyncPolicy = ECk_AttributeValueChange_SyncPolicy::TrySyncToClients) -> void;
 
         static auto
         Override(
