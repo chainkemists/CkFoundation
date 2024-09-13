@@ -13,6 +13,56 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UCLASS()
+class CKECS_API ACk_EcsWorld_StatReplicatorActor_UE : public AActor
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(ACk_EcsWorld_StatReplicatorActor_UE);
+
+public:
+    friend class UCk_EcsWorld_Stats_Subsystem_UE;
+
+public:
+    ACk_EcsWorld_StatReplicatorActor_UE();
+
+public:
+    auto
+    GetLifetimeReplicatedProps(
+        TArray<FLifetimeProperty>&) const -> void override;
+
+public:
+    auto
+    Initialize(
+        const FGameplayTag& InAssociatedEcsWorldTickingGroup) -> void;
+
+protected:
+    auto
+    BeginPlay() -> void override;
+
+private:
+    UFUNCTION()
+    void
+    OnRep_AssociatedEcsWorldTickingGroupAverageCycleMs();
+
+    UFUNCTION()
+    void
+    OnRep_AssociatedEcsWorldTickingGroup();
+
+private:
+    UPROPERTY(ReplicatedUsing = OnRep_AssociatedEcsWorldTickingGroup)
+    FGameplayTag _AssociatedEcsWorldTickingGroup;
+
+    UPROPERTY(ReplicatedUsing = OnRep_AssociatedEcsWorldTickingGroupAverageCycleMs)
+    float _AssociatedEcsWorldTickingGroupAverageCycleMs = 0.0f;
+
+    UPROPERTY(Transient)
+    TWeakObjectPtr<class UCk_EcsWorld_Stats_Subsystem_UE> _EcsWorldStatsSubsystem;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(BlueprintType)
 class CKECS_API UCk_EcsWorld_Stats_Subsystem_UE : public UCk_Game_TickableWorldSubsystem_Base_UE
 {
@@ -22,12 +72,32 @@ public:
     CK_GENERATED_BODY(UCk_EcsWorld_Stats_Subsystem_UE);
 
 public:
+    friend class ACk_EcsWorld_StatReplicatorActor_UE;
+
+private:
+    struct FEcsWorldMinimalInfo
+    {
+        FGameplayTag EcsWorldTickingGroup = FGameplayTag::EmptyTag;
+    };
+
+    struct FEcsWorldStatsData
+    {
+        FEcsWorldMinimalInfo EcsWorldMinimalInfo;
+        FString TickStatName;
+        float TickInclusiveAverageCycleMs = 0.0f;
+    };
+
+public:
     auto
     Initialize(
         FSubsystemCollectionBase& InCollection) -> void override;
 
     auto
     Deinitialize() -> void override;
+
+    auto
+    ShouldCreateSubsystem(
+        UObject* Outer) const -> bool override;
 
     /** Called when world is ready to start gameplay before the game mode transitions to the correct state and call BeginPlay on all actors */
     auto
@@ -46,6 +116,13 @@ private:
     OnNewFrame(
         int64 InNewFrame) -> void;
 
+    auto
+    DoTryUpdateEcsWorldStatData(
+        const FComplexStatMessage& InStatMessage) -> void;
+
+    auto
+    DoTryEnableEcsWorldStat() const -> void;
+
 private:
     UFUNCTION(BlueprintCallable)
     TArray<FGameplayTag>
@@ -62,13 +139,8 @@ private:
     UPROPERTY(Transient)
     TWeakObjectPtr<UCk_EcsWorld_Subsystem_UE> _EcsWorldSubsystem;
 
-private:
-    struct FEcsWorldStatsData
-    {
-        FGameplayTag EcsWorldTickingGroup = FGameplayTag::EmptyTag;
-        FString EcsWorldTickStatName;
-        float TickInclusiveAverageCycleMs = 0.0f;
-    };
+    UPROPERTY(Transient)
+    TMap<FGameplayTag, TWeakObjectPtr<ACk_EcsWorld_StatReplicatorActor_UE>> _StatReplicatorActors;
 
 private:
     FDelegateHandle _OnNewFrameDelegateHandle;

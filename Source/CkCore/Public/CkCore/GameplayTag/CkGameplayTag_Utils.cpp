@@ -77,7 +77,7 @@ auto
 {
     const auto& TagString = InGameplayTag.GetTagName().ToString();
 
-    int32 OutIndex = 0;
+    auto OutIndex = 0;
 
     if (NOT TagString.FindLastChar(TEXT('.'), OutIndex))
     { return InGameplayTag.GetTagName().ToString(); }
