@@ -91,15 +91,14 @@ private:
 
     FWorldInfo _WorldToTick;
     TStatId _TickStatId;
+    FString _TickStatName;
     ETickingGroup _UnrealTickingGroup;
     FGameplayTag _EcsWorldTickingGroup;
     ECk_Ecs_WorldStatCollection_Policy _StatCollectionPolicy = ECk_Ecs_WorldStatCollection_Policy::DoNotCollect;
 
-private:
-    auto Get_TickStatName() const -> const FString&;
-
 public:
     CK_PROPERTY_GET(_UnrealTickingGroup);
+    CK_PROPERTY_GET(_TickStatName);
     CK_PROPERTY_GET(_EcsWorldTickingGroup);
     CK_PROPERTY_GET(_StatCollectionPolicy);
 };
@@ -139,7 +138,7 @@ private:
     FCk_Handle _TransientEntity;
 
 private:
-    TMultiMap<ETickingGroup, TArray<TStrongObjectPtr<ACk_EcsWorld_Actor_UE>>> _WorldActors_ByUnrealTickingGroup;
+    TMap<TEnumAsByte<ETickingGroup>, TArray<TStrongObjectPtr<ACk_EcsWorld_Actor_UE>>> _WorldActors_ByUnrealTickingGroup;
     TMap<FGameplayTag, TStrongObjectPtr<ACk_EcsWorld_Actor_UE>> _WorldActors_ByEcsWorldTickingGroup;
 
 private:
