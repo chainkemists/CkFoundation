@@ -76,7 +76,7 @@ auto
 
     for (auto Pump = 0; Pump < _WorldToTick._MaxNumberOfPumps; ++Pump)
     {
-        TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*ck::Format_UE(TEXT("{}::Tick, Pump [{}/{}]"), GetActorLabel(), Pump, _WorldToTick._MaxNumberOfPumps));
+        TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*ck::Format_UE(TEXT("{}::Tick, Pump [{}/{}]"), _TickStatName, Pump, _WorldToTick._MaxNumberOfPumps));
 
         _WorldToTick._EcsWorld->Tick(FCk_Time{DeltaSeconds});
     }
@@ -89,13 +89,15 @@ auto
         const FCk_Ecs_MetaProcessorInjectors_Info& InMetaInjectorInfo)
     -> void
 {
-    TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*ck::Format_UE(TEXT("{}::Initialize"), GetActorLabel()));
-
-    _TickStatId = FDynamicStats::CreateStatId<STAT_GROUP_TO_FStatGroup(STATGROUP_CkEcsWorldActor_Tick)>(GetActorLabel());
     _WorldToTick = FWorldInfo{InMetaInjectorInfo.Get_MaximumNumberOfPumps(), EcsWorldType{InRegistry}};
     _EcsWorldTickingGroup = InMetaInjectorInfo.Get_EcsWorldTickingGroup();
     _StatCollectionPolicy = InMetaInjectorInfo.Get_StatCollectionPolicy();
     _UnrealTickingGroup = InMetaInjectorInfo.Get_UnrealTickingGroup();
+    _TickStatName = ck::Format_UE(TEXT("[{}][{}] EcsWorld_Actor"), _UnrealTickingGroup, _EcsWorldTickingGroup);
+    _TickStatId = FDynamicStats::CreateStatId<STAT_GROUP_TO_FStatGroup(STATGROUP_CkEcsWorldActor_Tick)>(_TickStatName);
+
+    TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*ck::Format_UE(TEXT("{}::Initialize"), _TickStatName));
+
     SetTickGroup(_UnrealTickingGroup);
 
     const auto& InjectProcessorsIntoWorld = [this](const TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>& InInjectorClass)
@@ -128,16 +130,6 @@ auto
     {
         InjectMetaInjectorProcessors(MetaInjector);
     }
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    ACk_EcsWorld_Actor_UE::
-    Get_TickStatName() const
-    -> const FString&
-{
-    return GetActorLabel();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -220,7 +212,7 @@ auto
         }
 
         const auto WorldActorStrongPtr = TStrongObjectPtr(WorldActor);
-        _WorldActors_ByUnrealTickingGroup.FindOrAdd(UnrealTickingGroup).Add(TStrongObjectPtr(WorldActorStrongPtr));
+        _WorldActors_ByUnrealTickingGroup.FindOrAdd(UnrealTickingGroup).Add(WorldActorStrongPtr);
 
         CK_ENSURE_IF_NOT(NOT _WorldActors_ByEcsWorldTickingGroup.Contains(EcsWorldTickingGroup),
             TEXT("More than 1 Ecs World Actor was spawn for the Ecs World Ticking Group [{}]"),
