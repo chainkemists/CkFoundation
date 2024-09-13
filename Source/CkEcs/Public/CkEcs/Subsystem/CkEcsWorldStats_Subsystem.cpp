@@ -115,8 +115,10 @@ auto
     Deinitialize()
     -> void
 {
+#if STATS
     const auto& Stats = FStatsThreadState::GetLocalState();
     Stats.NewFrameDelegate.Remove(_OnNewFrameDelegateHandle);
+#endif
 
     Super::Deinitialize();
 }
