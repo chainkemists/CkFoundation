@@ -20,6 +20,16 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
+    UCk_Attribute_ProcessorInjector_Refill::
+    DoInjectProcessors(
+        EcsWorldType& InWorld) -> void
+{
+    InWorld.Add<ck::FProcessor_FloatAttributeRefill_Update>(InWorld.Get_Registry());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
     UCk_Attribute_ProcessorInjector::
     DoInjectProcessors(
         EcsWorldType& InWorld)

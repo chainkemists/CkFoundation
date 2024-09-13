@@ -50,6 +50,19 @@ enum class ECk_AttributeModifier_Operation : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AttributeModifier_Operation);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_AttributeValueChange_SyncPolicy : uint8
+{
+    // If this is a replicated attribute, sync the new attribute value from server to clients
+    TrySyncToClients,
+    DoNotSync
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AttributeValueChange_SyncPolicy);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
@@ -61,5 +74,16 @@ enum class ECk_Attribute_BaseBonusFinal : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Attribute_BaseBonusFinal);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Attribute_RefillState : uint8
+{
+    Running,
+    Paused
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Attribute_RefillState);
 
 // --------------------------------------------------------------------------------------------------------------------

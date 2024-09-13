@@ -13,16 +13,16 @@
 
 namespace ck::detail
 {
-    template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_DerivedAttributeModifier>
+    template <typename T_DerivedProcessor, typename T_DerivedAttribute>
     auto
-        TProcessor_Attribute_StorePreviousValue<T_DerivedProcessor, T_DerivedAttribute, T_DerivedAttributeModifier>::
+        TProcessor_Attribute_StorePreviousValue<T_DerivedProcessor, T_DerivedAttribute>::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
             AttributeFragmentType& InAttribute) const
         -> void
     {
-        using AttributePreviousType = ck::TFragment_Attribute_PreviousValues<AttributeFragmentType>;
+        using AttributePreviousType = TFragment_Attribute_PreviousValues<AttributeFragmentType>;
 
         auto& PreviousValue = InHandle.template AddOrGet<AttributePreviousType>();
         PreviousValue = AttributePreviousType{InAttribute.Get_Base(), InAttribute.Get_Final()};
@@ -88,7 +88,13 @@ namespace ck::detail
         const auto BaseValue = InAttributeCurrent._Base;
         const auto FinalValue = InAttributeCurrent._Final;
 
-        if (InHandle.template Has<ck::FTag_ReplicatedAttribute>() && UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle))
+        // Clamping on the client side is bypassed because the server might update both 'Min' and 'Current' values.
+        // In cases where 'Current' needs to match the new 'Min', if the client receives 'Current' before 'Min' and clamps it,
+        // the value could be incorrectly constrained to the previous 'Min' when 'Min' is replicated after clamping.
+        // However, if the attribute is refilling and the change does not require replication, client-side clamping is NOT bypassed.
+        if (InHandle.template Has<ck::FTag_ReplicatedAttribute>() &&
+            UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle) &&
+            TUtils_Attribute<T_DerivedAttributeCurrent>::Get_MayRequireReplicationThisFrame(InHandle))
         {
             using AttributePreviousType = ck::TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
             auto& PreviousValue = InHandle.template AddOrGet<AttributePreviousType>();
@@ -112,7 +118,6 @@ namespace ck::detail
             PreviousValue = AttributePreviousType{BaseValue, FinalValue};
 
             TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle);
-            TUtils_Attribute<T_DerivedAttributeCurrent>::Request_TryReplicateAttribute(InHandle);
         }
     }
 
@@ -131,7 +136,13 @@ namespace ck::detail
         const auto BaseValue = InAttributeCurrent._Base;
         const auto FinalValue = InAttributeCurrent._Final;
 
-        if (InHandle.template Has<ck::FTag_ReplicatedAttribute>() && UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle))
+        // Clamping on the client side is bypassed because the server might update both 'Max' and 'Current' values.
+        // In cases where 'Current' needs to match the new 'Max', if the client receives 'Current' before 'Max' and clamps it,
+        // the value could be incorrectly constrained to the previous 'Max' when 'Max' is replicated after clamping.
+        // However, if the attribute is refilling and the change does not require replication, client-side clamping is NOT bypassed.
+        if (InHandle.template Has<ck::FTag_ReplicatedAttribute>() &&
+            UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle) &&
+            TUtils_Attribute<T_DerivedAttributeCurrent>::Get_MayRequireReplicationThisFrame(InHandle))
         {
             using AttributePreviousType = ck::TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
             auto& PreviousValue = InHandle.template AddOrGet<AttributePreviousType>();
@@ -155,7 +166,6 @@ namespace ck::detail
             PreviousValue = AttributePreviousType{BaseValue, FinalValue};
 
             TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle);
-            TUtils_Attribute<T_DerivedAttributeCurrent>::Request_TryReplicateAttribute(InHandle);
         }
     }
 
@@ -223,7 +233,6 @@ namespace ck::detail
 
         TUtils_Attribute<AttributeFragmentType>::Request_TryClamp(InHandle);
         TUtils_Attribute<AttributeFragmentType>::Request_FireSignals(InHandle);
-        TUtils_Attribute<AttributeFragmentType>::Request_TryReplicateAttribute(InHandle);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -542,6 +551,35 @@ namespace ck::detail
         );
 
         TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(TargetEntity);
+        TUtils_Attribute<AttributeFragmentType>::Request_TryReplicateAttribute(TargetEntity);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeRefill>
+    auto
+        TProcessor_AttributeRefill_Update<T_DerivedProcessor, T_DerivedAttributeRefill>::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            AttributeHandleType InHandle,
+            const AttributeRefillFragmentType& InAttributeRefill,
+            AttributeFragmentType& InAttribute) const
+        -> void
+    {
+        const auto& RefillValue = InAttributeRefill.Get_FillRate() * InDeltaT.Get_Seconds();
+
+        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
+        auto NewModifierEntity = ck::StaticCast<AttributeModifierHandleType>(NewEntity);
+        UCk_Utils_GameplayLabel_UE::Add(NewModifierEntity, FAttributeModifier_Tags::Get_Refill());
+
+        TUtils_AttributeModifier<AttributeModifierFragmentType>::Add
+        (
+            NewModifierEntity,
+            RefillValue,
+            ECk_ArithmeticOperations_Basic::Add,
+            ECk_ModifierOperation_RevocablePolicy::NotRevocable,
+            ECk_AttributeValueChange_SyncPolicy::DoNotSync
+        );
     }
 }
 
@@ -549,14 +587,14 @@ namespace ck::detail
 
 namespace ck
 {
-    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttribute, typename
-        T_MulticastType>
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttribute, typename T_MulticastType>
     TProcessor_Attribute_FireSignals_CurrentMinMax<T_DerivedAttribute, T_MulticastType>::
         TProcessor_Attribute_FireSignals_CurrentMinMax(
             RegistryType InRegistry)
         : _Current(InRegistry)
         , _Min(InRegistry)
         , _Max(InRegistry)
+        , _Registry(InRegistry)
     {
     }
 
@@ -574,19 +612,18 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttribute, typename
-        T_Attribute_ReplicatedFragment>
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttribute, typename T_Attribute_ReplicatedFragment>
     TProcessor_Attribute_Replicate_All<T_DerivedAttribute, T_Attribute_ReplicatedFragment>::
     TProcessor_Attribute_Replicate_All(
         RegistryType InRegistry)
         : _Current(InRegistry)
         , _Min(InRegistry)
         , _Max(InRegistry)
+        , _Registry(InRegistry)
     {
     }
 
-    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttribute, typename
-        T_Attribute_ReplicatedFragment>
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttribute, typename T_Attribute_ReplicatedFragment>
     auto
         TProcessor_Attribute_Replicate_All<T_DerivedAttribute, T_Attribute_ReplicatedFragment>::
         Tick(
@@ -635,6 +672,7 @@ namespace ck
         , _Current(InRegistry)
         , _Min(InRegistry)
         , _Max(InRegistry)
+        , _Registry(InRegistry)
     {
     }
 
@@ -663,6 +701,7 @@ namespace ck
         : _Current(InRegistry)
         , _Min(InRegistry)
         , _Max(InRegistry)
+        , _Registry(InRegistry)
     {
     }
 
@@ -687,6 +726,7 @@ namespace ck
         : _Current(InRegistry)
         , _Min(InRegistry)
         , _Max(InRegistry)
+        , _Registry(InRegistry)
     {
     }
 
@@ -695,11 +735,32 @@ namespace ck
         TProcessor_AttributeModifier_TeardownAll_CurrentMinMax<T_DerivedAttributeModifier>::
         Tick(
             TimeType InDeltaT)
-            -> void
+        -> void
     {
         _Max.Tick(InDeltaT);
         _Min.Tick(InDeltaT);
         _Current.Tick(InDeltaT);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedAttributeRefill>
+    TProcessor_AttributeRefill_Update<T_DerivedAttributeRefill>::
+        TProcessor_AttributeRefill_Update(
+            RegistryType InRegistry)
+        : _Refill_Update(InRegistry)
+        , _Registry(InRegistry)
+    {
+    }
+
+    template <typename T_DerivedAttributeRefill>
+    auto
+        TProcessor_AttributeRefill_Update<T_DerivedAttributeRefill>::
+        Tick(
+            TimeType InDeltaT)
+        -> void
+    {
+        _Refill_Update.Tick(InDeltaT);
     }
 }
 
