@@ -63,6 +63,15 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Game",
+              DisplayName = "[Ck] Get Is PIE (Under 1 Process)",
+              meta     = (WorldContext="InWorldContextObject"))
+    static bool
+    Get_IsPIE_UnderOneProcess(
+            const UObject* InWorldContextObject,
+        bool InEnsureWorldIsValid = false);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Game",
               DisplayName = "[Ck] Get World For Object",
               meta     = (WorldContext="InContextObject"))
     static UWorld*
