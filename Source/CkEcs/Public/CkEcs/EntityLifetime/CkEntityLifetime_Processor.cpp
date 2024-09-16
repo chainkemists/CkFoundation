@@ -132,6 +132,7 @@ namespace ck
             ck::UUtils_Signal_EntityDestroyed::Broadcast(InHandle, ck::MakePayload(InHandle));
         }
 
+        TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*ck::Format_UE(TEXT("Destroying Entity for Handle [{}]"), InHandle));
         InHandle->DestroyEntity(InHandle.Get_Entity());
     }
 

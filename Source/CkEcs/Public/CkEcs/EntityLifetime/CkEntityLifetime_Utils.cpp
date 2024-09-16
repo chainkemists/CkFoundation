@@ -19,8 +19,8 @@ auto
         ECk_EntityLifetime_DestructionBehavior InDestructionBehavior)
     -> void
 {
-    QUICK_SCOPE_CYCLE_COUNTER(Request_Destroy_Entity)
-    
+    TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*ck::Format_UE(TEXT("Request Destroy Entity for Handle [{}]"), InHandle));
+
     if (ck::Is_NOT_Valid(InHandle))
     { return; }
 
@@ -98,6 +98,7 @@ auto
         const FCk_Handle& InHandle)
     -> TArray<FCk_Handle>
 {
+    TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*ck::Format_UE(TEXT("Get Lifetime Dependents for Handle [{}]"), InHandle));
     if (NOT InHandle.Has<ck::FFragment_LifetimeDependents>())
     { return {}; }
 
@@ -259,6 +260,7 @@ auto
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Cannot create Entity with Invalid Handle"))
     { return {}; }
+    TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*ck::Format_UE(TEXT("Create New Entity for Handle [{}]"), InHandle));
 
     const auto NewEntity = Request_CreateEntity(**InHandle, [&](FCk_Handle InNewEntity)
     {
