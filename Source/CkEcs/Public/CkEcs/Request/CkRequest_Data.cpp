@@ -1,6 +1,7 @@
 #include "CkRequest_Data.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -16,6 +17,8 @@ auto
     { return {}; }
 
     _RequestHandle = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
+
+    UCk_Utils_Handle_UE::Set_DebugName(_RequestHandle, *ck::Format_UE(TEXT("Request owned by [{}]"), InOwner));
 
     return _RequestHandle;
 }
