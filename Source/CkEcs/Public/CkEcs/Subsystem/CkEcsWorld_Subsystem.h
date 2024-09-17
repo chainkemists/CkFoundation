@@ -95,12 +95,14 @@ private:
     ETickingGroup _UnrealTickingGroup;
     FGameplayTag _EcsWorldTickingGroup;
     ECk_Ecs_WorldStatCollection_Policy _StatCollectionPolicy = ECk_Ecs_WorldStatCollection_Policy::DoNotCollect;
+    FName _EcsWorldDisplayName;
 
 public:
     CK_PROPERTY_GET(_UnrealTickingGroup);
     CK_PROPERTY_GET(_TickStatName);
     CK_PROPERTY_GET(_EcsWorldTickingGroup);
     CK_PROPERTY_GET(_StatCollectionPolicy);
+    CK_PROPERTY_GET(_EcsWorldDisplayName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

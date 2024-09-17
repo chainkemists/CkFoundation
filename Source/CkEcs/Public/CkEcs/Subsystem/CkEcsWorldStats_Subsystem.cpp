@@ -78,7 +78,7 @@ auto
 
     auto* FoundEcsWorldActorStatData = _EcsWorldStatsSubsystem->_EcsWorldsCollectingStats_OnServer.FindByPredicate([&](const auto& InEcsWorldActorStatData)
     {
-        return _AssociatedEcsWorldTickingGroup == InEcsWorldActorStatData.EcsWorldMinimalInfo.EcsWorldTickingGroup;
+        return _AssociatedEcsWorldTickingGroup == InEcsWorldActorStatData.EcsWorldMinimalInfo.Get_EcsWorldTickingGroup();
     });
 
     if (ck::Is_NOT_Valid(FoundEcsWorldActorStatData, ck::IsValid_Policy_NullptrOnly{}))
@@ -155,17 +155,20 @@ auto
         if (ck::Is_NOT_Valid(WorldActor))
         { continue; }
 
+        const auto& EcsWorldDisplayName  = WorldActor->Get_EcsWorldDisplayName();
         const auto& EcsWorldTickingGroup = WorldActor->Get_EcsWorldTickingGroup();
         const auto& StatCollectionPolicy = WorldActor->Get_StatCollectionPolicy();
 
         if (StatCollectionPolicy == ECk_Ecs_WorldStatCollection_Policy::CollectOnLocalClientOnly || StatCollectionPolicy == ECk_Ecs_WorldStatCollection_Policy::CollectOnLocalClientAndServer)
         {
-            _EcsWorldsCollectingStats_OnClient.Add(FEcsWorldStatsData{EcsWorldTickingGroup, WorldActor->Get_TickStatName()});
+            _EcsWorldsCollectingStats_OnClient.Add(FEcsWorldStatsData{
+                FCk_EcsWorldWithStats_MinimalInfo{EcsWorldDisplayName, EcsWorldTickingGroup}, WorldActor->Get_TickStatName()});
         }
 
         if (StatCollectionPolicy == ECk_Ecs_WorldStatCollection_Policy::CollectOnServerOnly || StatCollectionPolicy == ECk_Ecs_WorldStatCollection_Policy::CollectOnLocalClientAndServer)
         {
-            _EcsWorldsCollectingStats_OnServer.Add(FEcsWorldStatsData{EcsWorldTickingGroup, WorldActor->Get_TickStatName()});
+            _EcsWorldsCollectingStats_OnServer.Add(FEcsWorldStatsData{
+                FCk_EcsWorldWithStats_MinimalInfo{EcsWorldDisplayName, EcsWorldTickingGroup}, WorldActor->Get_TickStatName()});
         }
     }
 
@@ -183,12 +186,12 @@ auto
                     [&](AActor* InActor)
                     {
                         const auto& NewWorldActor = Cast<ACk_EcsWorld_StatReplicatorActor_UE>(InActor);
-                        NewWorldActor->Initialize(EcsWorldMinimalInfo.EcsWorldTickingGroup);
+                        NewWorldActor->Initialize(EcsWorldMinimalInfo.Get_EcsWorldTickingGroup());
                     }
                 )
             );
 
-            _StatReplicatorActors.Add(EcsWorldMinimalInfo.EcsWorldTickingGroup, EcsWorldStatReplicatorActor);
+            _StatReplicatorActors.Add(EcsWorldMinimalInfo.Get_EcsWorldTickingGroup(), EcsWorldStatReplicatorActor);
         }
 
 #if	STATS
@@ -303,7 +306,7 @@ auto
         return;
     }
 
-    const auto& EcsWorldTickingGroup = EcsWorldStat->EcsWorldMinimalInfo.EcsWorldTickingGroup;
+    const auto& EcsWorldTickingGroup = EcsWorldStat->EcsWorldMinimalInfo.Get_EcsWorldTickingGroup();
     const auto& FoundStatReplicatorActor = _StatReplicatorActors.Find(EcsWorldTickingGroup);
 
     CK_ENSURE_IF_NOT(ck::IsValid(FoundStatReplicatorActor, ck::IsValid_Policy_NullptrOnly{}),
@@ -365,13 +368,13 @@ auto
     UCk_EcsWorld_Stats_Subsystem_UE::
     Get_EcsWorldsCollectingStats(
         ECk_ClientServer InStatCollectionSource) const
-    -> TArray<FGameplayTag>
+    -> TArray<FCk_EcsWorldWithStats_MinimalInfo>
 {
     const auto& ExtractEcsWorldNames = [](const TArray<FEcsWorldStatsData>& InEcsWorldStatsDataList)
     {
-        return ck::algo::Transform<TArray<FGameplayTag>>(InEcsWorldStatsDataList, [](const FEcsWorldStatsData& InEcsWorldStatsData)
+        return ck::algo::Transform<TArray<FCk_EcsWorldWithStats_MinimalInfo>>(InEcsWorldStatsDataList, [](const FEcsWorldStatsData& InEcsWorldStatsData)
         {
-            return InEcsWorldStatsData.EcsWorldMinimalInfo.EcsWorldTickingGroup;
+            return InEcsWorldStatsData.EcsWorldMinimalInfo;
         });
     };
 
@@ -398,7 +401,7 @@ auto
     {
         const auto& FoundEcsWorldStatData = InEcsWorldStatsDataList.FindByPredicate([&](const FEcsWorldStatsData& InEcsWorldStatsData)
         {
-            return InEcsWorldStatsData.EcsWorldMinimalInfo.EcsWorldTickingGroup == InEcsWorld;
+            return InEcsWorldStatsData.EcsWorldMinimalInfo.Get_EcsWorldTickingGroup() == InEcsWorld;
         });
 
         CK_ENSURE_IF_NOT(ck::IsValid(FoundEcsWorldStatData, ck::IsValid_Policy_NullptrOnly{}),

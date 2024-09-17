@@ -93,6 +93,7 @@ auto
     _EcsWorldTickingGroup = InMetaInjectorInfo.Get_EcsWorldTickingGroup();
     _StatCollectionPolicy = InMetaInjectorInfo.Get_StatCollectionPolicy();
     _UnrealTickingGroup = InMetaInjectorInfo.Get_UnrealTickingGroup();
+    _EcsWorldDisplayName = InMetaInjectorInfo.Get_DisplayName();
     _TickStatName = ck::Format_UE(TEXT("[{}][{}] EcsWorld_Actor"), _UnrealTickingGroup, _EcsWorldTickingGroup);
     _TickStatId = FDynamicStats::CreateStatId<STAT_GROUP_TO_FStatGroup(STATGROUP_CkEcsWorldActor_Tick)>(_TickStatName);
 
