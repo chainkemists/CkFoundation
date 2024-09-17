@@ -1,6 +1,4 @@
-#pragma once
-
-#include "CkCore/Macros/CkMacros.h"
+#include "CkAggroOwner_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
