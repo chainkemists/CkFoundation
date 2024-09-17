@@ -104,6 +104,12 @@ private:
     TEnumAsByte<ETickingGroup> _UnrealTickingGroup = TG_PrePhysics;
 
 #if WITH_EDITORONLY_DATA
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess, InlineEditConditionToggle))
+    bool _HasDisplayName = false;
+
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess, EditCondition = "_HasDisplayName"))
+    FName _DisplayName = NAME_None;
+
     UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
     FName _Description = NAME_None;
 #endif
@@ -121,6 +127,7 @@ private:
 
 public:
     auto Get_Description() const -> FName;
+    auto Get_DisplayName() const -> FName;
     auto Get_MetaProcessorInjectors() const -> TArray<TScriptInterface<ICk_MetaProcessorInjector_Interface>>;
 
 public:
