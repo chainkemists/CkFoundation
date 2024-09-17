@@ -13,7 +13,6 @@ UCk_WidgetComponent_UE::
     UCk_WidgetComponent_UE()
 {
     bWantsInitializeComponent = true;
-    PrimaryComponentTick.bCanEverTick = true;
 
     this->SetGenerateOverlapEvents(false);
     bWindowFocusable = false;
@@ -70,6 +69,9 @@ auto
     -> void
 {
     Super::InitWidget();
+
+    //Enable tick for clients only
+    PrimaryComponentTick.SetTickFunctionEnable(GetWorld()->GetNetMode() != NM_DedicatedServer);
 
     if (UCk_Utils_Game_UE::Get_IsInGame(this))
     {
