@@ -13,6 +13,31 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKECS_API FCk_EcsWorldWithStats_MinimalInfo
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_EcsWorldWithStats_MinimalInfo);
+
+private:
+    UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FName _DisplayName = NAME_None;
+
+    UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FGameplayTag _EcsWorldTickingGroup = FGameplayTag::EmptyTag;
+
+public:
+    CK_PROPERTY_GET(_DisplayName);
+    CK_PROPERTY_GET(_EcsWorldTickingGroup);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_EcsWorldWithStats_MinimalInfo, _DisplayName, _EcsWorldTickingGroup);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS()
 class CKECS_API ACk_EcsWorld_StatReplicatorActor_UE : public AActor
 {
@@ -75,14 +100,9 @@ public:
     friend class ACk_EcsWorld_StatReplicatorActor_UE;
 
 private:
-    struct FEcsWorldMinimalInfo
-    {
-        FGameplayTag EcsWorldTickingGroup = FGameplayTag::EmptyTag;
-    };
-
     struct FEcsWorldStatsData
     {
-        FEcsWorldMinimalInfo EcsWorldMinimalInfo;
+        FCk_EcsWorldWithStats_MinimalInfo EcsWorldMinimalInfo;
         FString TickStatName;
         float TickInclusiveAverageCycleMs = 0.0f;
     };
@@ -125,7 +145,7 @@ private:
 
 private:
     UFUNCTION(BlueprintCallable)
-    TArray<FGameplayTag>
+    TArray<FCk_EcsWorldWithStats_MinimalInfo>
     Get_EcsWorldsCollectingStats(
         ECk_ClientServer InStatCollectionSource) const;
 
