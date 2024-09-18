@@ -336,9 +336,6 @@ namespace ck
             AttributeDataType InNewModifierDelta)
         -> void
     {
-        if (NOT Ensure(InHandle))
-        { return; }
-
         auto& ModifierFragment = InHandle.template Get<AttributeModifierFragmentType>();
 
         if (UCk_Utils_Arithmetic_UE::Get_IsNearlyEqual(ModifierFragment._ModifierDelta, InNewModifierDelta))
@@ -355,23 +352,10 @@ namespace ck
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Has(
-            const HandleType& InHandle)
+            const FCk_Handle& InHandle)
         -> bool
     {
         return InHandle.template Has<AttributeModifierFragmentType>();
-    }
-
-    template <typename T_DerivedAttributeModifier>
-    auto
-        TUtils_AttributeModifier<T_DerivedAttributeModifier>::
-        Ensure(
-            const HandleType& InHandle)
-        -> bool
-    {
-        CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have an AttributeModifier [{}]"), InHandle, ck::TypeToString<T_DerivedAttributeModifier>)
-        { return false; }
-
-        return true;
     }
 
     template <typename T_DerivedAttributeModifier>
@@ -381,12 +365,6 @@ namespace ck
             const HandleType& InHandle)
         -> const AttributeDataType&
     {
-        if (NOT Ensure(InHandle))
-        {
-            static AttributeDataType Invalid;
-            return Invalid;
-        }
-
         return InHandle.template Get<AttributeModifierFragmentType>().Get_ModifierDelta();
     }
 
@@ -397,9 +375,6 @@ namespace ck
             const HandleType& InHandle)
         -> ECk_Unique
     {
-        if (NOT Ensure(InHandle))
-        { return {}; }
-
         const auto& AttributeEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         const auto& NameOfModifier = UCk_Utils_GameplayLabel_UE::Get_Label(InHandle);
 
@@ -426,9 +401,6 @@ namespace ck
             const HandleType& InHandle)
         -> ECk_ArithmeticOperations_Basic
     {
-        if (NOT Ensure(InHandle))
-        { return {}; }
-
         if (InHandle.template Has<typename AttributeModifierFragmentType::FTag_ModifyAdd>())
         { return ECk_ArithmeticOperations_Basic::Add; }
 
@@ -453,9 +425,6 @@ namespace ck
             HandleType& InHandle)
         -> void
     {
-        if (NOT Ensure(InHandle))
-        { return; }
-
         InHandle.template AddOrGet<typename AttributeModifierFragmentType::FTag_ComputeResult>();
     }
 }

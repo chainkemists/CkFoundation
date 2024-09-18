@@ -159,11 +159,7 @@ namespace ck
 
         static auto
         Has(
-            const HandleType& InHandle) -> bool;
-
-        static auto
-        Ensure(
-            const HandleType& InHandle) -> bool;
+            const FCk_Handle& InHandle) -> bool;
 
         static auto
         Get_ModifierDeltaValue(
