@@ -302,12 +302,6 @@ public:
         const TFunction<void(FCk_Handle_ByteAttributeModifier)>& InFunc,
         const TFunction<bool(FCk_Handle_ByteAttributeModifier)>& InPredicate,
         ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current) -> void;
-
-private:
-    static auto
-    DoGet_IsModifierUnique(
-        const FCk_Handle_ByteAttributeModifier& InAttributeModifierEntity,
-        ECk_MinMaxCurrent InComponent) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
