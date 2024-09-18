@@ -17,6 +17,7 @@ namespace ck
         -> void
     {
         const auto OwnerLocation = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
+        const auto SquaredRange = FMath::Square(InParams.Get_Params().Get_AggroRange());
 
         ck::FUtils_RecordOfAggros::ForEach_ValidEntry(InHandle, [&](FCk_Handle_Aggro InAggro)
         {
@@ -29,8 +30,10 @@ namespace ck
             const auto DistanceSquared = FVector::DistSquared(OwnerLocation, CurrentLocation);
             InAggro.Get<FFragment_Aggro_Current>() = FFragment_Aggro_Current{DistanceSquared};
 
-            if (DistanceSquared > FMath::Square(InParams.Get_Params().Get_AggroRange()))
+            if (DistanceSquared > SquaredRange)
             { UCk_Utils_Aggro_UE::Request_Exclude(InAggro); }
+            else
+            { UCk_Utils_Aggro_UE::Request_Include(InAggro); }
 
             return ECk_Record_ForEachIterationResult::Continue;
         });
