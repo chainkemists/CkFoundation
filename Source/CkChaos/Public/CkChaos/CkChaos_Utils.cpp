@@ -32,7 +32,28 @@ auto
 
     const auto& Particles = static_cast<TArray<Chaos::FPBDRigidParticleHandle*>>(PhysProxy->GetUnorderedParticles_Internal());
 
-    const auto* ClosestParticle = Chaos::FRigidClustering::FindClosestParticle(Particles, InLocation);
+    const auto* ClosestParticle = [&]()
+    {
+        using namespace Chaos;
+
+        auto ClosestChildHandle = static_cast<FPBDRigidParticleHandle*>(nullptr);
+
+        auto ClosestSquaredDist = TNumericLimits<FReal>::Max();
+        for (auto ChildHandle: Particles)
+        {
+            if (ck::Is_NOT_Valid(ChildHandle, ck::IsValid_Policy_NullptrOnly{}))
+            { continue; }
+
+            const FReal SquaredDist = (ChildHandle->GetX() - InLocation).SizeSquared();
+            if (SquaredDist < ClosestSquaredDist)
+            {
+                ClosestSquaredDist = SquaredDist;
+                ClosestChildHandle = ChildHandle;
+            }
+        }
+
+        return ClosestChildHandle;
+    }();
 
     CK_ENSURE_IF_NOT(ck::IsValid(ClosestParticle, ck::IsValid_Policy_NullptrOnly{}),
         TEXT("FAILED to find any valid closest particle in Geometry Collection [{}]"),
