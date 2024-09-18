@@ -847,29 +847,4 @@ auto
     }
 }
 
-auto
-    UCk_Utils_ByteAttributeModifier_UE::
-    DoGet_IsModifierUnique(
-        const FCk_Handle_ByteAttributeModifier& InAttributeModifierEntity,
-        ECk_MinMaxCurrent InComponent)
-    -> bool
-{
-    const auto AttributeEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttributeModifierEntity);
-    const auto& NameOfModifier = UCk_Utils_GameplayLabel_UE::Get_Label(InAttributeModifierEntity);
-
-    const auto Predicate = [&](const FCk_Handle_ByteAttributeModifier& InCurrentModifier)
-    {
-        return UCk_Utils_GameplayLabel_UE::Matches(InCurrentModifier, NameOfModifier);
-    };
-
-    switch(InComponent)
-    {
-        case ECk_MinMaxCurrent::Current: return RecordOfByteAttributeModifiers_Utils_Current::Get_ValidEntriesCount_If(AttributeEntity, Predicate) < 2;
-        case ECk_MinMaxCurrent::Min: return RecordOfByteAttributeModifiers_Utils_Min::Get_ValidEntriesCount_If(AttributeEntity, Predicate) < 2;
-        case ECk_MinMaxCurrent::Max: return RecordOfByteAttributeModifiers_Utils_Max::Get_ValidEntriesCount_If(AttributeEntity, Predicate) < 2;
-    }
-
-    return {};
-}
-
 // --------------------------------------------------------------------------------------------------------------------
