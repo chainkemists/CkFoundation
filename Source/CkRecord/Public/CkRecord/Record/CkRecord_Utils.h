@@ -193,6 +193,12 @@ namespace ck
         Request_Disconnect(
             FCk_Handle& InRecordHandle,
             MaybeTypeSafeHandle& InRecordEntry) -> void;
+
+        template <typename T_BinaryPredicate>
+        static auto
+        Sort(
+            FCk_Handle& InRecordHandle,
+            T_BinaryPredicate InBinaryPredicate) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -804,6 +810,19 @@ namespace ck
                 InRecordHandle)
             { return; }
         }
+    }
+
+    template <typename T_DerivedRecord>
+    template <typename T_BinaryPredicate>
+    auto
+        TUtils_RecordOfEntities<T_DerivedRecord>::
+        Sort(
+            FCk_Handle& InRecordHandle,
+            T_BinaryPredicate InPredicate)
+            -> void
+    {
+        auto& RecordFragment = InRecordHandle.Get<RecordType>();
+        RecordFragment._RecordEntries.Sort(InPredicate);
     }
 }
 
