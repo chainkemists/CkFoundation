@@ -16,16 +16,6 @@ namespace ck
     }
 
     // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_HandleType, typename T_DerivedAttribute>
-    TFragment_AttributeModifier<T_HandleType, T_DerivedAttribute>::
-        TFragment_AttributeModifier(
-            AttributeDataType InModifierDelta)
-        : _ModifierDelta(InModifierDelta)
-    {
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------

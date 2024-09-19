@@ -404,14 +404,16 @@ auto
     if (Delta == Get_BaseValue(InAttribute, InAttributeComponent))
     { return InAttribute; }
 
-    UCk_Utils_FloatAttributeModifier_UE::Add(InAttribute, ck::FAttributeModifier_Tags::Get_Override(),
+    UCk_Utils_FloatAttributeModifier_UE::Add_NotRevocable
+    (
+        InAttribute,
+        ECk_AttributeModifier_Operation::Override,
         FCk_Fragment_FloatAttributeModifier_ParamsData
         {
             Delta,
-            {},
-            ECk_ModifierOperation_RevocablePolicy::Override,
             InAttributeComponent
-        });
+        }
+    );
 
     return InAttribute;
 }
@@ -494,70 +496,125 @@ auto
 
 auto
     UCk_Utils_FloatAttributeModifier_UE::
-    Add(
+    Add_Revocable(
         FCk_Handle_FloatAttribute& InAttribute,
         FGameplayTag InModifierName,
+        ECk_AttributeModifier_Operation InModifierOperation,
         const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams)
     -> FCk_Handle_FloatAttributeModifier
 {
-    QUICK_SCOPE_CYCLE_COUNTER(Add_Float_Modifier)
+    QUICK_SCOPE_CYCLE_COUNTER(Add_Float_Modifier_Revocable)
 
     auto ParamsToUse = InParams;
     ParamsToUse.Set_TargetAttributeName(UCk_Utils_GameplayLabel_UE::Get_Label(InAttribute));
 
-    const auto& ModifierOperation = ParamsToUse.Get_ModifierOperation();
     const auto& AttributeComponent = ParamsToUse.Get_Component();
-    const auto& RevocablePolicy = InParams.Get_ModifierOperation_RevocablePolicy();
 
     CK_ENSURE_IF_NOT(UCk_Utils_FloatAttribute_UE::Has_Component(InAttribute, AttributeComponent),
-        TEXT("Float Attribute [{}] with Owner [{}] does NOT have a [{}] component. Cannot Add Modifier"),
+        TEXT("Float Attribute [{}] with Owner [{}] does NOT have a [{}] component. Cannot Add Revocable Modifier"),
         InAttribute,
         UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute),
         AttributeComponent)
     { return {}; }
 
-    if (RevocablePolicy == ECk_ModifierOperation_RevocablePolicy::NotRevocable)
-    {
-        if (FMath::IsNearlyZero(ParamsToUse.Get_ModifierDelta()) &&
-            (ModifierOperation == ECk_ArithmeticOperations_Basic::Add || ModifierOperation  == ECk_ArithmeticOperations_Basic::Subtract))
-        { return {}; }
-
-        if (FMath::IsNearlyEqual(ParamsToUse.Get_ModifierDelta(), 1.0f) &&
-            (ModifierOperation == ECk_ArithmeticOperations_Basic::Multiply || ModifierOperation == ECk_ArithmeticOperations_Basic::Divide))
-        { return {}; }
-    }
-
-    CK_ENSURE_IF_NOT((ModifierOperation == ECk_ArithmeticOperations_Basic::Divide ? NOT FMath::IsNearlyZero(ParamsToUse.Get_ModifierDelta()) : true),
-        TEXT("Trying to ADD a new Modifier [{}][{}] for Float Attribute [{}] which DIVIDES by 0. Setting it to 1 in non-shipping build"),
+    CK_ENSURE_IF_NOT((InModifierOperation == ECk_AttributeModifier_Operation::Divide ? NOT FMath::IsNearlyZero(ParamsToUse.Get_ModifierDelta()) : true),
+        TEXT("Trying to ADD a new Revocable Modifier [{}][{}] for Float Attribute [{}] which DIVIDES by 0. Setting it to 1 in non-shipping build"),
         InModifierName, AttributeComponent, InAttribute)
     {
         ParamsToUse.Set_ModifierDelta(1.0f);
     }
 
-    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttribute);
-    auto NewModifierEntity = ck::StaticCast<FCk_Handle_FloatAttributeModifier>(NewEntity);
-    UCk_Utils_GameplayLabel_UE::Add(NewModifierEntity, InModifierName);
+    CK_ENSURE_IF_NOT(InModifierOperation != ECk_AttributeModifier_Operation::Override, TEXT("Override Revocable Float Attribute Modifier is NOT supported!"))
+    { return {}; }
 
     switch (AttributeComponent)
     {
         case ECk_MinMaxCurrent::Min:
         {
-            FloatAttributeModifier_Utils_Min::Add(NewModifierEntity, ParamsToUse.Get_ModifierDelta(),ModifierOperation, RevocablePolicy);
+            auto ModifierEntity = FloatAttributeModifier_Utils_Min::Add_Revocable(InAttribute, ParamsToUse.Get_ModifierDelta(), InModifierOperation);
+            UCk_Utils_GameplayLabel_UE::Add(ModifierEntity, InModifierName);
+            return ModifierEntity;
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            auto ModifierEntity =  FloatAttributeModifier_Utils_Max::Add_Revocable(InAttribute, ParamsToUse.Get_ModifierDelta(), InModifierOperation);
+            UCk_Utils_GameplayLabel_UE::Add(ModifierEntity, InModifierName);
+            return ModifierEntity;
+        }
+        case ECk_MinMaxCurrent::Current:
+        {
+            auto ModifierEntity =  FloatAttributeModifier_Utils_Current::Add_Revocable(InAttribute, ParamsToUse.Get_ModifierDelta(), InModifierOperation);
+            UCk_Utils_GameplayLabel_UE::Add(ModifierEntity, InModifierName);
+            return ModifierEntity;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(AttributeComponent);
+            return {};
+        }
+    }
+}
+
+auto
+    UCk_Utils_FloatAttributeModifier_UE::
+    Add_NotRevocable(
+        FCk_Handle_FloatAttribute& InAttribute,
+        ECk_AttributeModifier_Operation InModifierOperation,
+        const FCk_Fragment_FloatAttributeModifier_ParamsData& InParams)
+    -> void
+{
+    QUICK_SCOPE_CYCLE_COUNTER(Add_Float_Modifier_NotRevocable)
+
+    auto ParamsToUse = InParams;
+    ParamsToUse.Set_TargetAttributeName(UCk_Utils_GameplayLabel_UE::Get_Label(InAttribute));
+
+    const auto& AttributeComponent = ParamsToUse.Get_Component();
+
+    CK_ENSURE_IF_NOT(UCk_Utils_FloatAttribute_UE::Has_Component(InAttribute, AttributeComponent),
+        TEXT("Float Attribute [{}] with Owner [{}] does NOT have a [{}] component. Cannot Add NotRevocable Modifier"),
+        InAttribute,
+        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttribute),
+        AttributeComponent)
+    { return; }
+
+    if (FMath::IsNearlyZero(ParamsToUse.Get_ModifierDelta()) &&
+        (InModifierOperation == ECk_AttributeModifier_Operation::Add || InModifierOperation  == ECk_AttributeModifier_Operation::Subtract))
+    { return; }
+
+    if (FMath::IsNearlyEqual(ParamsToUse.Get_ModifierDelta(), 1.0f) &&
+        (InModifierOperation == ECk_AttributeModifier_Operation::Multiply || InModifierOperation == ECk_AttributeModifier_Operation::Divide))
+    { return; }
+
+    CK_ENSURE_IF_NOT((InModifierOperation == ECk_AttributeModifier_Operation::Divide ? NOT FMath::IsNearlyZero(ParamsToUse.Get_ModifierDelta()) : true),
+        TEXT("Trying to ADD a new NotRevocable Modifier [{}] for Float Attribute [{}] which DIVIDES by 0. Setting it to 1 in non-shipping build"),
+        AttributeComponent, InAttribute)
+    {
+        ParamsToUse.Set_ModifierDelta(1.0f);
+    }
+
+    switch (AttributeComponent)
+    {
+        case ECk_MinMaxCurrent::Min:
+        {
+            FloatAttributeModifier_Utils_Min::Add_NotRevocable(InAttribute, ParamsToUse.Get_ModifierDelta(), InModifierOperation);
             break;
         }
         case ECk_MinMaxCurrent::Max:
         {
-            FloatAttributeModifier_Utils_Max::Add(NewModifierEntity, ParamsToUse.Get_ModifierDelta(),ModifierOperation, RevocablePolicy);
+            FloatAttributeModifier_Utils_Max::Add_NotRevocable(InAttribute, ParamsToUse.Get_ModifierDelta(), InModifierOperation);
             break;
         }
         case ECk_MinMaxCurrent::Current:
         {
-            FloatAttributeModifier_Utils_Current::Add(NewModifierEntity, ParamsToUse.Get_ModifierDelta(),ModifierOperation, RevocablePolicy);
+            FloatAttributeModifier_Utils_Current::Add_NotRevocable(InAttribute, ParamsToUse.Get_ModifierDelta(), InModifierOperation);
+            break;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(AttributeComponent);
             break;
         }
     }
-
-    return NewModifierEntity;
 }
 
 auto

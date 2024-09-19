@@ -111,26 +111,15 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_ArithmeticOperations_Basic _ModifierOperation = ECk_ArithmeticOperations_Basic::Add;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    ECk_ModifierOperation_RevocablePolicy _ModifierOperation_RevocablePolicy = ECk_ModifierOperation_RevocablePolicy::Revocable;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
     ECk_MinMaxCurrent _Component = ECk_MinMaxCurrent::Current;
 
 public:
     CK_PROPERTY(_ModifierDelta);
     CK_PROPERTY(_TargetAttributeName);
-    CK_PROPERTY_GET(_ModifierOperation);
-    CK_PROPERTY_GET(_ModifierOperation_RevocablePolicy);
     CK_PROPERTY_GET(_Component);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ByteAttributeModifier_ParamsData, _ModifierDelta,
-        _ModifierOperation, _ModifierOperation_RevocablePolicy, _Component);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ByteAttributeModifier_ParamsData, _ModifierDelta, _Component);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

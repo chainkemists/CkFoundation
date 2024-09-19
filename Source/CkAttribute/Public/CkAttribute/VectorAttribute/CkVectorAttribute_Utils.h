@@ -217,11 +217,21 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName="[Ck][VectorAttribute] Add Modifier")
+              DisplayName="[Ck][VectorAttribute] Add Modifier (Revocable)")
     static FCk_Handle_VectorAttributeModifier
-    Add(
+    Add_Revocable(
         UPARAM(ref) FCk_Handle_VectorAttribute& InAttribute,
         FGameplayTag InModifierName,
+        UPARAM(meta = (InvalidEnumValues="Override")) ECk_AttributeModifier_Operation InModifierOperation,
+        const FCk_Fragment_VectorAttributeModifier_ParamsData& InParams);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              DisplayName="[Ck][VectorAttribute] Add Modifier (Not Revocable)")
+    static void
+    Add_NotRevocable(
+        UPARAM(ref) FCk_Handle_VectorAttribute& InAttribute,
+        ECk_AttributeModifier_Operation InModifierOperation,
         const FCk_Fragment_VectorAttributeModifier_ParamsData& InParams);
 
     UFUNCTION(BlueprintCallable,

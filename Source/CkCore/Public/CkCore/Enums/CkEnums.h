@@ -396,9 +396,7 @@ UENUM(BlueprintType)
 enum class ECk_ModifierOperation_RevocablePolicy : uint8
 {
     NotRevocable,
-    Revocable,
-
-    Override UMETA(Hidden)
+    Revocable
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ModifierOperation_RevocablePolicy);
