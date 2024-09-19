@@ -2,10 +2,8 @@
 
 #include "CkTransform_Utils.h"
 
-#include "CkEcsExt/CkEcsExt_Log.h"
-
-
-#include "Net/UnrealNetwork.h"
+#include <Net/UnrealNetwork.h>
+#include <Net/Core/PushModel/PushModel.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -17,9 +15,11 @@ auto
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    DOREPLIFETIME(ThisType, _Location);
-    DOREPLIFETIME(ThisType, _Rotation);
-    DOREPLIFETIME(ThisType, _Scale);
+    constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
+
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _Location, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _Rotation, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _Scale, Params);
 }
 
 auto
@@ -85,6 +85,36 @@ auto
             FCk_Request_Transform_SetScale{_Scale}.Set_LocalWorld(ECk_LocalWorld::World)
         );
     });
+}
+
+auto
+    UCk_Fragment_Transform_Rep::
+    Set_Location(
+        const FVector& OutLocation)
+    -> void
+{
+    _Location = OutLocation;
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _Location, this);
+}
+
+auto
+    UCk_Fragment_Transform_Rep::
+    Set_Rotation(
+        const FQuat& OutRotation)
+    -> void
+{
+    _Rotation = OutRotation;
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _Rotation, this);
+}
+
+auto
+    UCk_Fragment_Transform_Rep::
+    Set_Scale(
+        const FVector& OutScale)
+    -> void
+{
+    _Scale = OutScale;
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _Scale, this);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
