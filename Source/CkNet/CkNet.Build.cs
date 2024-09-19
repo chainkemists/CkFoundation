@@ -17,6 +17,7 @@ public class CkNet : CkModuleRules
             "DeveloperSettings",
             "GameplayTags",
             "StructUtils",
+            "NetCore",
 
             "NetworkTimeSync",
 

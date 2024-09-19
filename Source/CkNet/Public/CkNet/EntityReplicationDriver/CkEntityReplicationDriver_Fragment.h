@@ -101,7 +101,7 @@ private:
 
     UFUNCTION()
     void
-    OnRep_ExpectedNumberOfDependentReplicationDrivers();
+    OnRep_ExpectedNumberOfDependentReplicationDrivers() const;
 
 private:
     UPROPERTY(ReplicatedUsing = OnRep_ReplicationData)
@@ -134,12 +134,33 @@ private:
     int32 _NumSyncedDependentReplicationDrivers = 0;
 
 public:
+    auto
+    Set_ReplicationData(
+        const FCk_EntityReplicationDriver_ReplicationData& InReplicationData) -> void;
+
+    auto
+    Set_ReplicationData_Ability(
+        const FCk_EntityReplicationDriver_AbilityData& InReplicationData) -> void;
+
+    auto
+    Set_ReplicationData_ReplicatedActor(
+        const FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor& InReplicationData) -> void;
+
+    auto
+    Set_ReplicationData_NonReplicatedActor(
+        const FCk_EntityReplicationDriver_ConstructionInfo_NonReplicatedActor& InReplicationData) -> void;
+
+    auto
+    Set_ExpectedNumberOfDependentReplicationDrivers(
+        int32 InNumOfDependents) -> void;
+
+public:
     // TODO: reduce the exposure of this variable
-    CK_PROPERTY(_ReplicationData);
-    CK_PROPERTY(_ReplicationData_Ability);
-    CK_PROPERTY(_ReplicationData_ReplicatedActor);
-    CK_PROPERTY(_ReplicationData_NonReplicatedActor);
-    CK_PROPERTY(_ExpectedNumberOfDependentReplicationDrivers);
+    CK_PROPERTY_GET(_ReplicationData);
+    CK_PROPERTY_GET(_ReplicationData_Ability);
+    CK_PROPERTY_GET(_ReplicationData_ReplicatedActor);
+    CK_PROPERTY_GET(_ReplicationData_NonReplicatedActor);
+    CK_PROPERTY_GET(_ExpectedNumberOfDependentReplicationDrivers);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
