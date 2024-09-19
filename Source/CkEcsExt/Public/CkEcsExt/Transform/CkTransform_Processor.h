@@ -31,7 +31,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Transform& InTransform,
-            FFragment_Transform_RootComponent& InTransformRootComp) const -> void;
+            const FFragment_Transform_RootComponent& InTransformRootComp) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

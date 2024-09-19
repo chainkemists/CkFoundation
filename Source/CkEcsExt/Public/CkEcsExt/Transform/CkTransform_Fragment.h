@@ -213,9 +213,6 @@ public:
     CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_Transform_Rep);
 
 public:
-    friend class ck::FProcessor_Transform_Replicate;
-
-public:
     virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
 
 public:
@@ -237,6 +234,24 @@ private:
 
     UPROPERTY(ReplicatedUsing = OnRep_Scale)
     FVector _Scale;
+
+public:
+    auto
+    Set_Location(
+        const FVector& OutLocation) -> void;
+
+    auto
+    Set_Rotation(
+        const FQuat& OutRotation) -> void;
+
+    auto
+    Set_Scale(
+        const FVector& OutScale) -> void;
+
+public:
+    CK_PROPERTY_GET(_Location);
+    CK_PROPERTY_GET(_Rotation);
+    CK_PROPERTY_GET(_Scale);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
