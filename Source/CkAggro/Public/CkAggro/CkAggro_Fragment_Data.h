@@ -12,6 +12,17 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_Aggro_ExclusionPolicy : uint8
+{
+    IgnoreExcluded,
+    All
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Aggro_ExclusionPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct FCk_Fragment_Aggro_Params
 {
@@ -75,3 +86,28 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Handle_Aggro, InNewAggro);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
+struct CKAGGRO_API FCk_Handle_AggroOwner : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_AggroOwner); };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_AggroOwner);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct FCk_Fragment_AggroOwner_Params
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Fragment_AggroOwner_Params);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
+    float _AggroRange = 100.0f;
+
+public:
+    CK_PROPERTY_GET(_AggroRange);
+};
