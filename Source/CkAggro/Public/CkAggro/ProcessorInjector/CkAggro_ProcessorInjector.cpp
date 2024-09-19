@@ -10,6 +10,8 @@ auto
         EcsWorldType& InWorld)
         -> void
 {
+    InWorld.Add<ck::FProcessor_Aggro_DistanceScore>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Aggro_LineOfSightScore>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
