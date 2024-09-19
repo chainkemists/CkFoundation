@@ -11,7 +11,7 @@
 auto
     UCk_Utils_Aggro_UE::
     Add(
-        FCk_Handle& InHandle,
+        FCk_Handle_AggroOwner& InHandle,
         const FCk_Handle& InTarget,
         const FCk_Fragment_Aggro_Params& InParams)
     -> FCk_Handle_Aggro
@@ -20,24 +20,13 @@ auto
     {
         InNewEntity.Add<ck::FTag_Aggro>();
         ck::UAggroedEntity_Utils::Add(InNewEntity, InTarget);
-        UCk_Utils_FloatAttribute_UE::Add
-        (
-            InNewEntity,
-            FCk_Fragment_FloatAttribute_ParamsData
-            {
-                TAG_Aggro_FloatAttribute_Name,
-               InParams.Get_ScoreStartingValue()
-            }.Set_MinMax(InParams.Get_MinMax())
-            .Set_MinValue(InParams.Get_MinValue())
-            .Set_MaxValue(InParams.Get_MaxValue())
-        );
+        InNewEntity.Add<ck::FFragment_Aggro_Current>();
 
         UCk_Entity_ConstructionScript_PDA::Request_Construct(InNewEntity, InParams.Get_ConstructionScript(), {});
     });
 
     auto AggroHandle = Cast(NewEntity);
 
-    RecordOfAggro_Utils::AddIfMissing(InHandle);
     RecordOfAggro_Utils::Request_Connect(InHandle, AggroHandle);
 
     ck::UUtils_Signal_OnNewAggroAdded::Broadcast(InHandle, ck::MakePayload(InHandle, AggroHandle));
@@ -53,58 +42,6 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Aggro_UE, FCk_Handle_Aggro, ck
 
 auto
     UCk_Utils_Aggro_UE::
-    TryGet_AggroByTarget(
-        const FCk_Handle& InAggroOwnerEntity,
-        const FCk_Handle& InTarget)
-    -> FCk_Handle_Aggro
-{
-    auto Ret = FCk_Handle_Aggro{};
-
-    RecordOfAggro_Utils::ForEach_ValidEntry(InAggroOwnerEntity, [&](const FCk_Handle_Aggro& InAggro)
-    {
-        if (Get_AggroTarget(InAggro) == InTarget)
-        {
-            Ret = InAggro;
-        }
-    });
-
-    return Ret;
-}
-
-auto
-    UCk_Utils_Aggro_UE::
-    Get_HighestAggro(
-        const FCk_Handle& InAggroOwnerEntity)
-    -> FCk_Handle_Aggro
-{
-    const auto& AllAggroEntities = RecordOfAggro_Utils::Get_ValidEntries(InAggroOwnerEntity);
-
-    const auto& HighestAggro = ck::algo::MaxElement(AllAggroEntities, [&](const FCk_Handle_Aggro& InAggro) { return Get_AggroScore(InAggro); });
-
-    if (ck::Is_NOT_Valid(HighestAggro))
-    { return {}; }
-
-    return *HighestAggro;
-}
-
-auto
-    UCk_Utils_Aggro_UE::
-    Get_LowestAggro(
-        const FCk_Handle& InAggroOwnerEntity)
-    -> FCk_Handle_Aggro
-{
-    const auto& AllAggroEntities = RecordOfAggro_Utils::Get_ValidEntries(InAggroOwnerEntity);
-
-    const auto& LowestAggro = ck::algo::MinElement(AllAggroEntities, [&](const FCk_Handle_Aggro& InAggro) { return Get_AggroScore(InAggro); });
-
-    if (ck::Is_NOT_Valid(LowestAggro))
-    { return {}; }
-
-    return *LowestAggro;
-}
-
-auto
-    UCk_Utils_Aggro_UE::
     Get_AggroTarget(
         const FCk_Handle_Aggro& InAggro)
     -> FCk_Handle
@@ -114,24 +51,88 @@ auto
 
 auto
     UCk_Utils_Aggro_UE::
-    Get_AggroScoreAttribute(
-        const FCk_Handle_Aggro& InAggro)
-    -> FCk_Handle_FloatAttribute
-{
-    return UCk_Utils_FloatAttribute_UE::TryGet(InAggro, TAG_Aggro_FloatAttribute_Name);
-}
-
-auto
-    UCk_Utils_Aggro_UE::
     Get_AggroScore(
         const FCk_Handle_Aggro& InAggro)
     -> float
 {
-    return UCk_Utils_FloatAttribute_UE::Get_FinalValue(Get_AggroScoreAttribute(InAggro));
+    return InAggro.Get<ck::FFragment_Aggro_Current>().Get_Score();
 }
 
 auto
     UCk_Utils_Aggro_UE::
+    Request_Exclude(
+        FCk_Handle_Aggro& InAggro)
+    -> FCk_Handle_Aggro
+{
+    InAggro.AddOrGet<ck::FTag_Aggro_Excluded>();
+    InAggro.Get<ck::FFragment_Aggro_Current>() = ck::FFragment_Aggro_Current{std::numeric_limits<float>::max()};
+    return InAggro;
+}
+
+auto
+    UCk_Utils_Aggro_UE::
+    Request_Include(
+        FCk_Handle_Aggro& InAggro)
+    -> FCk_Handle_Aggro
+{
+    InAggro.Try_Remove<ck::FTag_Aggro_Excluded>();
+    return InAggro;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_AggroOwner_UE::
+    Add(
+        FCk_Handle& InHandle,
+        const FCk_Fragment_AggroOwner_Params& InParams)
+    -> FCk_Handle_AggroOwner
+{
+    RecordOfAggro_Utils::AddIfMissing(InHandle);
+    InHandle.Add<ck::FFragment_AggroOwner_Params>(InParams);
+    InHandle.Add<ck::FFragment_AggroOwner_Current>();
+
+    return Cast(InHandle);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_AggroOwner_UE, FCk_Handle_AggroOwner, ck::FFragment_AggroOwner_Params, ck::FFragment_AggroOwner_Current)
+
+// --------------------------------------------------------------------------------------------------------------------
+
+
+auto
+    UCk_Utils_AggroOwner_UE::
+    TryGet_AggroByTarget(
+        const FCk_Handle& InAggroOwnerEntity,
+        const FCk_Handle& InTarget)
+    -> FCk_Handle_Aggro
+{
+    auto Ret = FCk_Handle_Aggro{};
+
+    RecordOfAggro_Utils::ForEach_ValidEntry(InAggroOwnerEntity, [&](const FCk_Handle_Aggro& InAggro)
+    {
+        if (UCk_Utils_Aggro_UE::Get_AggroTarget(InAggro) == InTarget)
+        {
+            Ret = InAggro;
+        }
+    });
+
+    return Ret;
+}
+
+auto
+    UCk_Utils_AggroOwner_UE::
+    Get_BestAggro(
+        const FCk_Handle& InAggroOwnerEntity)
+    -> FCk_Handle_Aggro
+{
+    return InAggroOwnerEntity.Get<ck::FFragment_AggroOwner_Current>().Get_BestAggro();
+}
+
+auto
+    UCk_Utils_AggroOwner_UE::
     BindTo_OnNewAggroAdded(
         FCk_Handle& InAggroOwner,
         ECk_Signal_BindingPolicy InBindingPolicy,
@@ -144,7 +145,7 @@ auto
 }
 
 auto
-    UCk_Utils_Aggro_UE::
+    UCk_Utils_AggroOwner_UE::
     UnbindFrom_OnNewAggroAdded(
         FCk_Handle& InAggroOwner,
         const FCk_Delegate_Aggro_OnNewAggroAdded& InDelegate)
@@ -155,16 +156,17 @@ auto
 }
 
 auto
-    UCk_Utils_Aggro_UE::
+    UCk_Utils_AggroOwner_UE::
     ForEach_Aggro(
-        FCk_Handle& InAggroOwnerEntity,
+        const FCk_Handle& InAggroOwnerEntity,
+        ECk_Aggro_ExclusionPolicy InExclusionPolicy,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
     -> TArray<FCk_Handle_Aggro>
 {
     auto Aggro = TArray<FCk_Handle_Aggro>{};
 
-    ForEach_Aggro(InAggroOwnerEntity, [&](FCk_Handle_Aggro InAggro)
+    ForEach_Aggro(InAggroOwnerEntity, InExclusionPolicy, [&](FCk_Handle_Aggro InAggro)
     {
         if (InDelegate.IsBound())
         { InDelegate.Execute(InAggro, InOptionalPayload); }
@@ -176,19 +178,27 @@ auto
 }
 
 auto
-    UCk_Utils_Aggro_UE::
+    UCk_Utils_AggroOwner_UE::
     ForEach_Aggro(
-        FCk_Handle& InAggroOwnerEntity,
+        const FCk_Handle& InAggroOwnerEntity,
+        ECk_Aggro_ExclusionPolicy InExclusionPolicy,
         const TFunction<void(FCk_Handle_Aggro)>& InFunc)
     -> void
 {
-    RecordOfAggro_Utils::ForEach_ValidEntry(InAggroOwnerEntity, InFunc);
+    RecordOfAggro_Utils::ForEach_ValidEntry(InAggroOwnerEntity, [&](const FCk_Handle_Aggro& InAggro)
+    {
+        if (InExclusionPolicy == ECk_Aggro_ExclusionPolicy::IgnoreExcluded && InAggro.Has<ck::FTag_Aggro_Excluded>())
+        { return; }
+
+        InFunc(InAggro);
+    });
 }
 
 auto
-    UCk_Utils_Aggro_UE::
+    UCk_Utils_AggroOwner_UE::
     ForEach_Aggro_Sorted(
-        FCk_Handle& InAggroOwnerEntity,
+        const FCk_Handle& InAggroOwnerEntity,
+        ECk_Aggro_ExclusionPolicy InExclusionPolicy,
         const FInstancedStruct& InOptionalPayload,
         ECk_ScoreSortingPolicy InSortingPolicy,
         const FCk_Lambda_InHandle& InDelegate)
@@ -196,7 +206,7 @@ auto
 {
     auto Aggro = TArray<FCk_Handle_Aggro>{};
 
-    ForEach_Aggro_Sorted(InAggroOwnerEntity, InSortingPolicy, [&](FCk_Handle_Aggro InAggro)
+    ForEach_Aggro_Sorted(InAggroOwnerEntity, InExclusionPolicy, InSortingPolicy, [&](FCk_Handle_Aggro InAggro)
     {
         if (InDelegate.IsBound())
         { InDelegate.Execute(InAggro, InOptionalPayload); }
@@ -208,20 +218,23 @@ auto
 }
 
 auto
-    UCk_Utils_Aggro_UE::
+    UCk_Utils_AggroOwner_UE::
     ForEach_Aggro_Sorted(
-        FCk_Handle& InAggroOwnerEntity,
+        const FCk_Handle& InAggroOwnerEntity,
+        ECk_Aggro_ExclusionPolicy InExclusionPolicy,
         ECk_ScoreSortingPolicy InSortingPolicy,
         const TFunction<void(FCk_Handle_Aggro)>& InFunc)
     -> void
 {
-    auto AggroHandles = ForEach_Aggro(InAggroOwnerEntity, {}, FCk_Lambda_InHandle {});
+    using Utils = UCk_Utils_Aggro_UE;
+
+    auto AggroHandles = ForEach_Aggro(InAggroOwnerEntity, InExclusionPolicy, {}, FCk_Lambda_InHandle {});
     ck::algo::Sort(AggroHandles, [&](const FCk_Handle_Aggro& InA, const FCk_Handle_Aggro& InB)
     {
         switch(InSortingPolicy)
         {
-            case ECk_ScoreSortingPolicy::SmallestToLargest: return Get_AggroScore(InA) < Get_AggroScore(InB);
-            case ECk_ScoreSortingPolicy::LargestToSmallest: return Get_AggroScore(InA) > Get_AggroScore(InB);
+            case ECk_ScoreSortingPolicy::SmallestToLargest: return Utils::Get_AggroScore(InA) < Utils::Get_AggroScore(InB);
+            case ECk_ScoreSortingPolicy::LargestToSmallest: return Utils::Get_AggroScore(InA) > Utils::Get_AggroScore(InB);
         }
 
         return false;
@@ -229,5 +242,6 @@ auto
 
     ck::algo::ForEach(AggroHandles, InFunc);
 }
+
 
 // --------------------------------------------------------------------------------------------------------------------
