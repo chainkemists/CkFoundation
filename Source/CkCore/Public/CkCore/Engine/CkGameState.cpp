@@ -3,6 +3,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "Net/UnrealNetwork.h"
+#include "Net/Core/PushModel/PushModel.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -31,6 +32,7 @@ auto
     const auto& FPS = 1000.0f / FrameTime;
 
     _ServerFPS = FPS;
+    MARK_PROPERTY_DIRTY_FROM_NAME(ACk_GameState_UE, _ServerFPS, this);
 }
 
 auto
@@ -41,7 +43,9 @@ auto
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    DOREPLIFETIME(ThisType, _ServerFPS);
+    constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
+
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ServerFPS, Params);
 }
 
 auto
