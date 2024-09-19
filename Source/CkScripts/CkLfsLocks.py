@@ -139,7 +139,7 @@ class GitLFSManager:
             if self.locked_tree.exists(item):
                 self.locked_tree.reattach(item, '', 'end')
 
-        search_term = self.search_entry.get().lower()
+        search_term = self.search_entry.get().lower().strip()
         for item in self.locked_tree.get_children():
             values = self.locked_tree.item(item, 'values')
             user, file_name, file_path = values
