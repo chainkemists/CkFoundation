@@ -20,7 +20,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Transform& InTransform,
-            FFragment_Transform_RootComponent& InTransformRootComp) const
+            const FFragment_Transform_RootComponent& InTransformRootComp) const
         -> void
     {
         const auto& RootComponent = InTransformRootComp.Get_RootComponent();
@@ -379,13 +379,13 @@ namespace ck
         UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle, [&](UCk_Fragment_Transform_Rep* InRepComp)
         {
             if (EnumHasAnyFlags(InCurrent.Get_ComponentsModified(), ECk_TransformComponents::Location))
-            { InRepComp->_Location = InCurrent.Get_Transform().GetLocation(); }
+            { InRepComp->Set_Location(InCurrent.Get_Transform().GetLocation()); }
 
             if (EnumHasAnyFlags(InCurrent.Get_ComponentsModified(), ECk_TransformComponents::Rotation))
-            { InRepComp->_Rotation = InCurrent.Get_Transform().GetRotation(); }
+            { InRepComp->Set_Rotation(InCurrent.Get_Transform().GetRotation()); }
 
             if (EnumHasAnyFlags(InCurrent.Get_ComponentsModified(), ECk_TransformComponents::Scale))
-            { InRepComp->_Scale = InCurrent.Get_Transform().GetScale3D(); }
+            { InRepComp->Set_Scale(InCurrent.Get_Transform().GetScale3D()); }
 
             InCurrent.Set_ComponentsModified(ECk_TransformComponents::None);
         });
