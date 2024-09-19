@@ -65,7 +65,6 @@ class CKNET_API UCk_Fragment_EntityReplicationDriver_Rep : public UCk_Ecs_Replic
     GENERATED_BODY()
 
 public:
-    friend class UCk_Utils_EntityReplicationDriver_UE;
     CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_EntityReplicationDriver_Rep);
 
 public:
@@ -77,7 +76,7 @@ private:
     GetLifetimeReplicatedProps(
         TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
 
-private:
+public:
     UFUNCTION(Server, Reliable)
     void
     Request_Replicate_NonReplicatedActor(
