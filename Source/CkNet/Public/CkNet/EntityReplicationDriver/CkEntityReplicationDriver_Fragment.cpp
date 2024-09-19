@@ -14,6 +14,8 @@
 #include "CkNet/CkNet_Utils.h"
 #include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
 
+#include "Net/Core/PushModel/PushModel.h"
+
 #include <Engine/World.h>
 
 #include <Net/UnrealNetwork.h>
@@ -40,11 +42,13 @@ auto
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    DOREPLIFETIME(ThisType, _ReplicationData);
-    DOREPLIFETIME(ThisType, _ReplicationData_Ability);
-    DOREPLIFETIME(ThisType, _ReplicationData_ReplicatedActor);
-    DOREPLIFETIME(ThisType, _ReplicationData_NonReplicatedActor);
-    DOREPLIFETIME(ThisType, _ExpectedNumberOfDependentReplicationDrivers);
+    constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
+
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData_Ability, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData_ReplicatedActor, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData_NonReplicatedActor, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ExpectedNumberOfDependentReplicationDrivers, Params);
 }
 
 auto
@@ -365,7 +369,7 @@ auto
 
 auto
     UCk_Fragment_EntityReplicationDriver_Rep::
-    OnRep_ExpectedNumberOfDependentReplicationDrivers()
+    OnRep_ExpectedNumberOfDependentReplicationDrivers() const
     -> void
 {
     if (_NumSyncedDependentReplicationDrivers == Get_ExpectedNumberOfDependentReplicationDrivers())
@@ -386,6 +390,56 @@ auto
         const auto AssociatedEntity = Get_AssociatedEntity();
         ck::UUtils_Signal_OnDependentsReplicationComplete::Broadcast(AssociatedEntity, ck::MakePayload(AssociatedEntity));
     }
+}
+
+auto
+    UCk_Fragment_EntityReplicationDriver_Rep::
+    Set_ReplicationData(
+        const FCk_EntityReplicationDriver_ReplicationData& InReplicationData)
+    -> void
+{
+    _ReplicationData = InReplicationData;
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _ReplicationData, this);
+}
+
+auto
+    UCk_Fragment_EntityReplicationDriver_Rep::
+    Set_ReplicationData_Ability(
+        const FCk_EntityReplicationDriver_AbilityData& InReplicationData)
+    -> void
+{
+    _ReplicationData_Ability = InReplicationData;
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _ReplicationData_Ability, this);
+}
+
+auto
+    UCk_Fragment_EntityReplicationDriver_Rep::
+    Set_ReplicationData_ReplicatedActor(
+        const FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor& InReplicationData)
+    -> void
+{
+    _ReplicationData_ReplicatedActor = InReplicationData;
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _ReplicationData_ReplicatedActor, this);
+}
+
+auto
+    UCk_Fragment_EntityReplicationDriver_Rep::
+    Set_ReplicationData_NonReplicatedActor(
+        const FCk_EntityReplicationDriver_ConstructionInfo_NonReplicatedActor& InReplicationData)
+    -> void
+{
+    _ReplicationData_NonReplicatedActor = InReplicationData;
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _ReplicationData_NonReplicatedActor, this);
+}
+
+auto
+    UCk_Fragment_EntityReplicationDriver_Rep::
+    Set_ExpectedNumberOfDependentReplicationDrivers(
+        int32 InNumOfDependents)
+    -> void
+{
+    _ExpectedNumberOfDependentReplicationDrivers = InNumOfDependents;
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _ExpectedNumberOfDependentReplicationDrivers, this);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
