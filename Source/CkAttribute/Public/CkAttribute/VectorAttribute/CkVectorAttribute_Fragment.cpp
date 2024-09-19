@@ -125,15 +125,14 @@ auto
                 ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), AttributeEntity)
             { continue; }
 
-            UCk_Utils_VectorAttributeModifier_UE::Add
+            UCk_Utils_VectorAttributeModifier_UE::Add_Revocable
             (
                 AttributeEntity,
                 ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
+                ECk_AttributeModifier_Operation::Add,
                 FCk_Fragment_VectorAttributeModifier_ParamsData
                 {
                     AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base(),
-                    ECk_ArithmeticOperations_Basic::Add,
-                    ECk_ModifierOperation_RevocablePolicy::Revocable,
                     AttributeToReplicate.Get_Component()
                 }
             );
@@ -158,15 +157,14 @@ auto
             }
             else
             {
-                UCk_Utils_VectorAttributeModifier_UE::Add
+                UCk_Utils_VectorAttributeModifier_UE::Add_Revocable
                 (
                     AttributeEntity,
                     ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
+                    ECk_AttributeModifier_Operation::Add,
                     FCk_Fragment_VectorAttributeModifier_ParamsData
                     {
                         AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base(),
-                        ECk_ArithmeticOperations_Basic::Add,
-                        ECk_ModifierOperation_RevocablePolicy::Revocable,
                         AttributeToReplicate.Get_Component()
                     }
                 );
