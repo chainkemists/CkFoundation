@@ -165,10 +165,20 @@ namespace ck
         {
             const auto& ModifyResolverDataComponentAttribute = [&](const FCk_ResolverDataBundle_ModifierOperation& InModifierOperation)
             {
+                const auto& Operation = [&]() -> ECk_AttributeModifier_Operation
+                {
+                    switch (InModifierOperation.Get_ModifierOperation())
+                    {
+                        case ECk_ArithmeticOperations_Basic::Add: return ECk_AttributeModifier_Operation::Add;
+                        case ECk_ArithmeticOperations_Basic::Subtract: return ECk_AttributeModifier_Operation::Subtract;
+                        case ECk_ArithmeticOperations_Basic::Multiply: return ECk_AttributeModifier_Operation::Multiply;
+                        case ECk_ArithmeticOperations_Basic::Divide: return ECk_AttributeModifier_Operation::Divide;
+                        default: return ECk_AttributeModifier_Operation::Add;
+                    }
+                }();
+
                 const auto AttributeModifierParams = FCk_Fragment_FloatAttributeModifier_ParamsData{
                         InModifierOperation.Get_ModifierDelta(),
-                        InModifierOperation.Get_ModifierOperation(),
-                        ECk_ModifierOperation_RevocablePolicy::Revocable,
                         ECk_MinMaxCurrent::Current};
 
                 const auto& ResolverDataComponentAttributeName =
@@ -176,7 +186,7 @@ namespace ck
 
                 auto ResolverDataComponentAttribute = UCk_Utils_FloatAttribute_UE::TryGet(InHandle, ResolverDataComponentAttributeName);
 
-                UCk_Utils_FloatAttributeModifier_UE::Add(ResolverDataComponentAttribute, FGameplayTag::EmptyTag,AttributeModifierParams);
+                UCk_Utils_FloatAttributeModifier_UE::Add_Revocable(ResolverDataComponentAttribute, FGameplayTag::EmptyTag, Operation, AttributeModifierParams);
             };
 
             const auto& ResolvePendingMetadataOperations = [&]() -> void
