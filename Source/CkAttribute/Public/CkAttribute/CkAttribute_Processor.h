@@ -374,8 +374,8 @@ namespace ck::detail
     class TProcessor_AttributeModifier_Override_Compute : public TProcessor<
             TProcessor_AttributeModifier_Override_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>,
             T_DerivedAttributeModifier,
-            typename T_DerivedAttributeModifier::FTag_ModifyAdd,
-            typename T_DerivedAttributeModifier::FTag_IsOverrideModification,
+            typename T_DerivedAttributeModifier::FTag_ModifyOverride,
+            typename T_DerivedAttributeModifier::FTag_IsNotRevocableModification,
             typename T_DerivedAttributeModifier::FTag_ComputeResult,
             CK_IGNORE_PENDING_KILL>
     {
@@ -386,10 +386,10 @@ namespace ck::detail
         using AttributeModifierFragmentType  = T_DerivedAttributeModifier;
         using AttributeFragmentType          = typename AttributeModifierFragmentType::AttributeFragmentType;
         using AttributeDataType              = typename AttributeFragmentType::AttributeDataType;
-        using ModificationType               = typename AttributeModifierFragmentType::FTag_ModifyAdd;
-        using IsOverrideModificationType = typename AttributeModifierFragmentType::FTag_IsOverrideModification;
+        using ModificationType               = typename AttributeModifierFragmentType::FTag_ModifyOverride;
+        using IsNotRevocableModificationType = typename AttributeModifierFragmentType::FTag_IsNotRevocableModification;
         using ThisType                       = TProcessor_AttributeModifier_Override_Compute<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                          = TProcessor<ThisType, AttributeModifierFragmentType, ModificationType, IsOverrideModificationType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using Super                          = TProcessor<ThisType, AttributeModifierFragmentType, ModificationType, IsNotRevocableModificationType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
         using HandleType                     = typename Super::HandleType;
         using TimeType                       = typename Super::TimeType;
 

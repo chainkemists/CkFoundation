@@ -128,6 +128,7 @@ namespace ck
         using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
         using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
         using HandleType                    = typename AttributeModifierFragmentType::HandleType;
+        using AttributeHandleType           = typename AttributeFragmentType::HandleType;
 
     public:
         template <typename, typename>
@@ -141,21 +142,28 @@ namespace ck
             using TFragment_RecordOfAttributeModifiers<HandleType>::TFragment_RecordOfAttributeModifiers;};
 
         struct RecordOfAttributeModifiers_Utils : TUtils_RecordOfEntities<DerivedRecordType>{};
-        CK_DEFINE_ENTITY_HOLDER_AND_UTILS(Utils_ExistingOverrideModifierEntity, FExistingOverrideModifierEntity);
+        struct RecordOfAttributeModifiersTransient_Utils : TUtils_RecordOfEntities<DerivedRecordType>{};
 
     public:
         static auto
-        Add(
-            HandleType& InHandle,
+        Add_Revocable(
+            AttributeHandleType& InAttributeHandle,
             AttributeDataType InModifierDelta,
-            ECk_ArithmeticOperations_Basic InModifierOperation,
-            ECk_ModifierOperation_RevocablePolicy InModifierOperationRevocablePolicy,
+            ECk_AttributeModifier_Operation InModifierOperation,
+            ECk_AttributeValueChange_SyncPolicy InSyncPolicy = ECk_AttributeValueChange_SyncPolicy::TrySyncToClients) -> HandleType;
+
+        static auto
+        Add_NotRevocable(
+            AttributeHandleType& InAttributeHandle,
+            AttributeDataType InModifierDelta,
+            ECk_AttributeModifier_Operation InModifierOperation,
             ECk_AttributeValueChange_SyncPolicy InSyncPolicy = ECk_AttributeValueChange_SyncPolicy::TrySyncToClients) -> void;
 
         static auto
         Override(
             HandleType& InHandle,
-            AttributeDataType InNewModifierDelta) -> void;
+            AttributeDataType InNewModifierDelta,
+            ECk_AttributeValueChange_SyncPolicy InSyncPolicy = ECk_AttributeValueChange_SyncPolicy::TrySyncToClients) -> void;
 
         static auto
         Has(
@@ -177,6 +185,13 @@ namespace ck
         static auto
         Request_ComputeResult(
             HandleType& InHandle) -> void;
+
+        static auto
+        DoAddNewModifierToAttribute(
+            AttributeHandleType& InAttributeHandle,
+            AttributeDataType InModifierDelta,
+            ECk_AttributeModifier_Operation InModifierOperation,
+            ECk_ModifierOperation_RevocablePolicy InRevocablePolicy) -> HandleType;
     };
 }
 

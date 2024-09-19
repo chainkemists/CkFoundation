@@ -127,15 +127,14 @@ auto
 
             const auto Difference = AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base();
 
-            UCk_Utils_ByteAttributeModifier_UE::Add
+            UCk_Utils_ByteAttributeModifier_UE::Add_Revocable
             (
                 AttributeEntity,
                 ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
+                Difference >= 0 ? ECk_AttributeModifier_Operation::Add : ECk_AttributeModifier_Operation::Subtract,
                 FCk_Fragment_ByteAttributeModifier_ParamsData
                 {
                     static_cast<uint8>(std::abs(Difference)),
-                    Difference >= 0 ? ECk_ArithmeticOperations_Basic::Add : ECk_ArithmeticOperations_Basic::Subtract,
-                    ECk_ModifierOperation_RevocablePolicy::Revocable,
                     AttributeToReplicate.Get_Component()
                 }
             );
@@ -162,15 +161,14 @@ auto
             {
                 const auto Difference = AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base();
 
-                UCk_Utils_ByteAttributeModifier_UE::Add
+                UCk_Utils_ByteAttributeModifier_UE::Add_Revocable
                 (
                     AttributeEntity,
                     ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
+                    Difference >= 0 ? ECk_AttributeModifier_Operation::Add : ECk_AttributeModifier_Operation::Subtract,
                     FCk_Fragment_ByteAttributeModifier_ParamsData
                     {
                         static_cast<uint8>(std::abs(Difference)),
-                        Difference >= 0 ? ECk_ArithmeticOperations_Basic::Add : ECk_ArithmeticOperations_Basic::Subtract,
-                        ECk_ModifierOperation_RevocablePolicy::Revocable,
                         AttributeToReplicate.Get_Component()
                     }
                 );

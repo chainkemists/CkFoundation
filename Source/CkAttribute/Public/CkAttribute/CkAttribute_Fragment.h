@@ -9,6 +9,8 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+enum class ECk_AttributeModifier_Operation : uint8;
+
 namespace ck
 {
     struct FAttributeModifier_ReplicationTags final : public FGameplayTagNativeAdder
@@ -58,7 +60,6 @@ namespace ck
 
     template <typename T_DerivedAttributeModifier>
     class TUtils_AttributeModifier;
-
 }
 
 namespace ck::detail
@@ -121,8 +122,8 @@ namespace ck
     template <typename T>
     struct TAttributeMinMax
     {
-        static auto Min(T A, T B) -> T { return (A < B) ? A : B; }
-        static auto Max(T A, T B) -> T { return (B < A) ? A : B; }
+        static auto Min(const T& A, const T& B) -> const T& { return (A < B) ? A : B; }
+        static auto Max(const T& A, const T& B) -> const T& { return (B < A) ? A : B; }
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -130,10 +131,10 @@ namespace ck
     template <typename T>
     struct TAttributeModifierOperators
     {
-        static auto Add(T A, T B) -> T { return A + B; }
-        static auto Sub(T A, T B) -> T { return A - B; }
-        static auto Mul(T A, T B) -> T { return A * B; }
-        static auto Div(T A, T B) -> T { return A / B; }
+        static auto Add(const T& A, const T& B) -> T { return A + B; }
+        static auto Sub(const T& A, const T& B) -> T { return A - B; }
+        static auto Mul(const T& A, const T& B) -> T { return A * B; }
+        static auto Div(const T& A, const T& B) -> T { return A / B; }
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -273,9 +274,9 @@ namespace ck
         CK_DEFINE_ECS_TAG(FTag_ModifySubtract);
         CK_DEFINE_ECS_TAG(FTag_ModifyMultiply);
         CK_DEFINE_ECS_TAG(FTag_ModifyDivide);
+        CK_DEFINE_ECS_TAG(FTag_ModifyOverride);
         CK_DEFINE_ECS_TAG(FTag_IsRevocableModification);
         CK_DEFINE_ECS_TAG(FTag_IsNotRevocableModification);
-        CK_DEFINE_ECS_TAG(FTag_IsOverrideModification);
         CK_DEFINE_ECS_TAG(FTag_ComputeResult);
 
     public:
@@ -284,17 +285,15 @@ namespace ck
         using AttributeDataType     = typename AttributeFragmentType::AttributeDataType;
         using HandleType            = T_HandleType;
 
-    public:
-        TFragment_AttributeModifier() = default;
-        explicit
-        TFragment_AttributeModifier(
-            AttributeDataType InModifierDelta);
-
     private:
         AttributeDataType _ModifierDelta;
+        ECk_AttributeModifier_Operation _Operation = ECk_AttributeModifier_Operation::Add;
 
     public:
         CK_PROPERTY_GET(_ModifierDelta);
+        CK_PROPERTY_GET(_Operation);
+
+        CK_DEFINE_CONSTRUCTORS(TFragment_AttributeModifier, _ModifierDelta, _Operation);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -410,6 +409,29 @@ namespace ck
         TFragment_Signal_OnAttributeValueChanged<T_DerivedAttribute>,
         TFragment_Signal_UnrealMulticast_OnAttributeValueChanged_PostFireUnbind<T_DerivedAttribute, T_Multicast>
     > {};
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck::algo
+{
+    template <typename T_DerivedAttributeModifier>
+    struct MatchesAttributeModifierWithOperation
+    {
+        auto operator()(const typename T_DerivedAttributeModifier::HandleType& InModifier) const -> bool
+        {
+            if (NOT InModifier.template Has<T_DerivedAttributeModifier>())
+            { return {}; }
+
+            return InModifier.template Get<T_DerivedAttributeModifier>().Get_Operation() == _Operation;
+        }
+
+    private:
+        ECk_AttributeModifier_Operation _Operation = ECk_AttributeModifier_Operation::Add;
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(MatchesAttributeModifierWithOperation, _Operation);
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------

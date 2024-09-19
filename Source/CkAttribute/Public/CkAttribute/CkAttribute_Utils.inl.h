@@ -201,131 +201,72 @@ namespace ck
     template <typename T_DerivedAttributeModifier>
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
-        Add(
-            HandleType& InHandle,
+        Add_Revocable(
+            AttributeHandleType& InAttributeHandle,
             AttributeDataType InModifierDelta,
-            ECk_ArithmeticOperations_Basic InModifierOperation,
-            ECk_ModifierOperation_RevocablePolicy InModifierOperationRevocablePolicy,
+            ECk_AttributeModifier_Operation InModifierOperation,
+            ECk_AttributeValueChange_SyncPolicy InSyncPolicy)
+        -> HandleType
+    {
+        TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(InAttributeHandle);
+
+        if (InSyncPolicy == ECk_AttributeValueChange_SyncPolicy::TrySyncToClients)
+        { TUtils_Attribute<AttributeFragmentType>::Request_TryReplicateAttribute(InAttributeHandle); }
+
+        return DoAddNewModifierToAttribute(InAttributeHandle, InModifierDelta, InModifierOperation, ECk_ModifierOperation_RevocablePolicy::Revocable);
+    }
+
+    template <typename T_DerivedAttributeModifier>
+    auto
+        TUtils_AttributeModifier<T_DerivedAttributeModifier>::
+        Add_NotRevocable(
+            AttributeHandleType& InAttributeHandle,
+            AttributeDataType InModifierDelta,
+            ECk_AttributeModifier_Operation InModifierOperation,
             ECk_AttributeValueChange_SyncPolicy InSyncPolicy)
         -> void
     {
-        // Attribute fragments live on Entity (A) and AttributeModifiers live on Entities UNDER Entity (A)
-        // Here LifetimeOwner is Entity (A)
-        auto LifetimeOwnerAsAttributeEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-        CK_ENSURE_IF_NOT(ck::IsValid(LifetimeOwnerAsAttributeEntity),
-            TEXT("Target Entity [{}] is NOT a valid Entity when adding AttributeModifier to Handle [{}]"),
-            LifetimeOwnerAsAttributeEntity,
-            InHandle)
-        { return; }
-
-        CK_ENSURE_IF_NOT(TUtils_Attribute<AttributeFragmentType>::Has(LifetimeOwnerAsAttributeEntity),
-            TEXT("AttributeModifier Entity [{}] is targeting Entity [{}] who does NOT have an Attribute component!"),
-            InHandle,
-            LifetimeOwnerAsAttributeEntity)
-        { return; }
-
-        InHandle.template Add<AttributeModifierFragmentType>(InModifierDelta);
-        InHandle.template Add<ECk_MinMaxCurrent>(AttributeFragmentType::ComponentTagType);
-
-        switch (InModifierOperation)
+        if (auto MaybeExistingModifier = RecordOfAttributeModifiersTransient_Utils::Get_ValidEntry_If(
+            InAttributeHandle, ck::algo::MatchesAttributeModifierWithOperation<AttributeModifierFragmentType>{InModifierOperation});
+            ck::IsValid(MaybeExistingModifier))
         {
-            case ECk_ArithmeticOperations_Basic::Add:
-            {
-                InHandle.template Add<typename AttributeModifierFragmentType::FTag_ModifyAdd>();
-                break;
-            }
-            case ECk_ArithmeticOperations_Basic::Subtract:
-            {
-                InHandle.template Add<typename AttributeModifierFragmentType::FTag_ModifySubtract>();
-                break;
-            }
-            case ECk_ArithmeticOperations_Basic::Multiply:
-            {
-                InHandle.template Add<typename AttributeModifierFragmentType::FTag_ModifyMultiply>();
-                break;
-            }
-            case ECk_ArithmeticOperations_Basic::Divide:
-            {
-                InHandle.template Add<typename AttributeModifierFragmentType::FTag_ModifyDivide>();
-                break;
-            }
-            default:
-            {
-                CK_INVALID_ENUM(InModifierOperation);
-                break;
-            }
-        }
+            const auto& CurrentModifierValue = MaybeExistingModifier.template Get<AttributeModifierFragmentType>().Get_ModifierDelta();
 
-        switch (InModifierOperationRevocablePolicy)
-        {
-            case ECk_ModifierOperation_RevocablePolicy::Override:
+            switch (InModifierOperation)
             {
-                if (Utils_ExistingOverrideModifierEntity::Has(LifetimeOwnerAsAttributeEntity))
+                case ECk_AttributeModifier_Operation::Add:
+                case ECk_AttributeModifier_Operation::Subtract:
                 {
-                    if (auto MaybeExistingModifier = Utils_ExistingOverrideModifierEntity::Get_StoredEntity(LifetimeOwnerAsAttributeEntity);
-                        ck::IsValid(MaybeExistingModifier))
-                    {
-                        MaybeExistingModifier.template Try_Remove<typename AttributeModifierFragmentType::FTag_ComputeResult>();
-                        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(MaybeExistingModifier);
-                    }
-
-                    LifetimeOwnerAsAttributeEntity.template Remove<FExistingOverrideModifierEntity>();
+                    Override(MaybeExistingModifier, TAttributeModifierOperators<AttributeDataType>::Add(CurrentModifierValue, InModifierDelta), InSyncPolicy);
+                    break;
                 }
-
-                Utils_ExistingOverrideModifierEntity::Add(LifetimeOwnerAsAttributeEntity, InHandle);
-
-                InHandle.template Add<typename AttributeModifierFragmentType::FTag_IsOverrideModification>();
-                RecordOfAttributeModifiers_Utils::AddIfMissing(LifetimeOwnerAsAttributeEntity, ECk_Record_EntryHandlingPolicy::Default);
-                RecordOfAttributeModifiers_Utils::Request_Connect(LifetimeOwnerAsAttributeEntity, InHandle);
-
-                Request_ComputeResult(InHandle);
-
-                break;
+                case ECk_AttributeModifier_Operation::Multiply:
+                case ECk_AttributeModifier_Operation::Divide:
+                {
+                    Override(MaybeExistingModifier, TAttributeModifierOperators<AttributeDataType>::Mul(CurrentModifierValue, InModifierDelta), InSyncPolicy);
+                    break;
+                }
+                case ECk_AttributeModifier_Operation::Override:
+                {
+                    Override(MaybeExistingModifier, InModifierDelta, InSyncPolicy);
+                    break;
+                }
+                default:
+                {
+                    CK_INVALID_ENUM(InModifierOperation);
+                    break;
+                }
             }
-            case ECk_ModifierOperation_RevocablePolicy::NotRevocable:
-            {
-                InHandle.template Add<typename AttributeModifierFragmentType::FTag_IsNotRevocableModification>();
-                RecordOfAttributeModifiers_Utils::AddIfMissing(LifetimeOwnerAsAttributeEntity, ECk_Record_EntryHandlingPolicy::Default);
-                RecordOfAttributeModifiers_Utils::Request_Connect(LifetimeOwnerAsAttributeEntity, InHandle);
 
-                Request_ComputeResult(InHandle);
-
-                break;
-            }
-            case ECk_ModifierOperation_RevocablePolicy::Revocable:
-            {
-                InHandle.template Add<typename AttributeModifierFragmentType::FTag_IsRevocableModification>();
-                RecordOfAttributeModifiers_Utils::AddIfMissing(LifetimeOwnerAsAttributeEntity, ECk_Record_EntryHandlingPolicy::Default);
-                RecordOfAttributeModifiers_Utils::Request_Connect(LifetimeOwnerAsAttributeEntity, InHandle);
-
-                break;
-            }
-            default:
-            {
-                CK_INVALID_ENUM(InModifierOperation);
-                break;
-            }
+            return;
         }
 
-        switch (InSyncPolicy)
-        {
-            case ECk_AttributeValueChange_SyncPolicy::TrySyncToClients:
-            {
-                TUtils_Attribute<AttributeFragmentType>::Request_TryReplicateAttribute(LifetimeOwnerAsAttributeEntity);
-                break;
-            }
-            case ECk_AttributeValueChange_SyncPolicy::DoNotSync:
-            {
-                break;
-            }
-            default:
-            {
-                CK_INVALID_ENUM(InSyncPolicy);
-                break;
-            }
-        }
+        TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(InAttributeHandle);
 
-        TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(LifetimeOwnerAsAttributeEntity);
+        if (InSyncPolicy == ECk_AttributeValueChange_SyncPolicy::TrySyncToClients)
+        { TUtils_Attribute<AttributeFragmentType>::Request_TryReplicateAttribute(InAttributeHandle); }
+
+        std::ignore = DoAddNewModifierToAttribute(InAttributeHandle, InModifierDelta, InModifierOperation, ECk_ModifierOperation_RevocablePolicy::NotRevocable);
     }
 
     template <typename T_DerivedAttributeModifier>
@@ -333,7 +274,8 @@ namespace ck
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Override(
             HandleType& InHandle,
-            AttributeDataType InNewModifierDelta)
+            AttributeDataType InNewModifierDelta,
+            ECk_AttributeValueChange_SyncPolicy InSyncPolicy)
         -> void
     {
         auto& ModifierFragment = InHandle.template Get<AttributeModifierFragmentType>();
@@ -345,7 +287,11 @@ namespace ck
 
         auto LifetimeOwnerAsAttributeEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(LifetimeOwnerAsAttributeEntity);
-        TUtils_Attribute<AttributeFragmentType>::Request_TryReplicateAttribute(LifetimeOwnerAsAttributeEntity);
+
+        if (InSyncPolicy == ECk_AttributeValueChange_SyncPolicy::TrySyncToClients)
+        {
+            TUtils_Attribute<AttributeFragmentType>::Request_TryReplicateAttribute(LifetimeOwnerAsAttributeEntity);;
+        }
     }
 
     template <typename T_DerivedAttributeModifier>
@@ -378,12 +324,7 @@ namespace ck
         const auto& AttributeEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         const auto& NameOfModifier = UCk_Utils_GameplayLabel_UE::Get_Label(InHandle);
 
-        const auto Predicate = [&](const HandleType& InCurrentModifier)
-        {
-            return UCk_Utils_GameplayLabel_UE::Matches(InCurrentModifier, NameOfModifier);
-        };
-
-        const auto& Count = RecordOfAttributeModifiers_Utils::Get_ValidEntriesCount_If(AttributeEntity, Predicate);
+        const auto& Count = RecordOfAttributeModifiers_Utils::Get_ValidEntriesCount_If(AttributeEntity, ck::algo::MatchesGameplayLabelExact{NameOfModifier});
 
         if (Count == 0)
         { return ECk_Unique::DoesNotExist; }
@@ -426,6 +367,82 @@ namespace ck
         -> void
     {
         InHandle.template AddOrGet<typename AttributeModifierFragmentType::FTag_ComputeResult>();
+    }
+
+    template <typename T_DerivedAttributeModifier>
+    auto
+        TUtils_AttributeModifier<T_DerivedAttributeModifier>::
+        DoAddNewModifierToAttribute(
+            AttributeHandleType& InAttributeHandle,
+            AttributeDataType InModifierDelta,
+            ECk_AttributeModifier_Operation InModifierOperation,
+            ECk_ModifierOperation_RevocablePolicy InRevocablePolicy)
+        -> HandleType
+    {
+        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeHandle);
+        auto NewModifierEntity = ck::StaticCast<HandleType>(NewEntity);
+
+        NewModifierEntity.template Add<AttributeModifierFragmentType>(InModifierDelta, InModifierOperation);
+        NewModifierEntity.template Add<ECk_MinMaxCurrent>(AttributeFragmentType::ComponentTagType);
+
+        switch (InModifierOperation)
+        {
+            case ECk_AttributeModifier_Operation::Add:
+            {
+                NewModifierEntity.template Add<typename AttributeModifierFragmentType::FTag_ModifyAdd>();
+                break;
+            }
+            case ECk_AttributeModifier_Operation::Subtract:
+            {
+                NewModifierEntity.template Add<typename AttributeModifierFragmentType::FTag_ModifySubtract>();
+                break;
+            }
+            case ECk_AttributeModifier_Operation::Multiply:
+            {
+                NewModifierEntity.template Add<typename AttributeModifierFragmentType::FTag_ModifyMultiply>();
+                break;
+            }
+            case ECk_AttributeModifier_Operation::Divide:
+            {
+                NewModifierEntity.template Add<typename AttributeModifierFragmentType::FTag_ModifyDivide>();
+                break;
+            }
+            case ECk_AttributeModifier_Operation::Override:
+            {
+                NewModifierEntity.template Add<typename AttributeModifierFragmentType::FTag_ModifyOverride>();
+                break;
+            }
+            default:
+            {
+                CK_INVALID_ENUM(InModifierOperation);
+                break;
+            }
+        }
+
+        switch (InRevocablePolicy)
+        {
+            case ECk_ModifierOperation_RevocablePolicy::NotRevocable:
+            {
+                NewModifierEntity.template Add<typename AttributeModifierFragmentType::FTag_IsNotRevocableModification>();
+                RecordOfAttributeModifiersTransient_Utils::AddIfMissing(InAttributeHandle, ECk_Record_EntryHandlingPolicy::Default);
+                RecordOfAttributeModifiersTransient_Utils::Request_Connect(InAttributeHandle, NewModifierEntity);
+                break;
+            }
+            case ECk_ModifierOperation_RevocablePolicy::Revocable:
+            {
+                NewModifierEntity.template Add<typename AttributeModifierFragmentType::FTag_IsRevocableModification>();
+                RecordOfAttributeModifiers_Utils::AddIfMissing(InAttributeHandle, ECk_Record_EntryHandlingPolicy::Default);
+                RecordOfAttributeModifiers_Utils::Request_Connect(InAttributeHandle, NewModifierEntity);
+                break;
+            }
+            default:
+            {
+                CK_INVALID_ENUM(InModifierOperation);
+                break;
+            }
+        }
+
+        return NewModifierEntity;
     }
 }
 

@@ -231,6 +231,21 @@ namespace ck::detail
             }
         );
 
+        TUtils_AttributeModifier<AttributeModifierFragmentType>::RecordOfAttributeModifiersTransient_Utils::ForEach_ValidEntry
+        (
+            InHandle,
+            [&](auto InAttributeModifier) -> void
+            {
+                // This is necessary since all 3 types of attribute components (Min/Max/Current) are stored in the same Record.
+                // Since this processor is specialized for one of them, we need to skip over the modifiers that does NOT match it
+                // to avoid triggering an ensure.
+                if (NOT TUtils_AttributeModifier<AttributeModifierFragmentType>::Has(InAttributeModifier))
+                { return; }
+
+                TUtils_AttributeModifier<AttributeModifierFragmentType>::Request_ComputeResult(InAttributeModifier);
+            }
+        );
+
         TUtils_Attribute<AttributeFragmentType>::Request_TryClamp(InHandle);
         TUtils_Attribute<AttributeFragmentType>::Request_FireSignals(InHandle);
     }
@@ -568,16 +583,11 @@ namespace ck::detail
     {
         const auto& RefillValue = InAttributeRefill.Get_FillRate() * InDeltaT.Get_Seconds();
 
-        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
-        auto NewModifierEntity = ck::StaticCast<AttributeModifierHandleType>(NewEntity);
-        UCk_Utils_GameplayLabel_UE::Add(NewModifierEntity, FAttributeModifier_Tags::Get_Refill());
-
-        TUtils_AttributeModifier<AttributeModifierFragmentType>::Add
+        TUtils_AttributeModifier<AttributeModifierFragmentType>::Add_NotRevocable
         (
-            NewModifierEntity,
+            InHandle,
             RefillValue,
-            ECk_ArithmeticOperations_Basic::Add,
-            ECk_ModifierOperation_RevocablePolicy::NotRevocable,
+            ECk_AttributeModifier_Operation::Add,
             ECk_AttributeValueChange_SyncPolicy::DoNotSync
         );
     }

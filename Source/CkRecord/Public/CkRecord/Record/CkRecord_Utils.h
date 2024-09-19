@@ -744,9 +744,8 @@ namespace ck
                 InRecordHandle)
             { return; }
 
-            const auto& RecordEntryLabel = UCk_Utils_GameplayLabel_UE::Get_Label(InRecordEntry);
-
-            if (ck::IsValid(RecordEntryLabel))
+            if (const auto& RecordEntryLabel = UCk_Utils_GameplayLabel_UE::Get_Label(InRecordEntry);
+                ck::IsValid(RecordEntryLabel))
             {
                 CK_ENSURE_IF_NOT(NOT Get_HasValidEntry_If(InRecordHandle, ck::algo::MatchesGameplayLabelExact{RecordEntryLabel}),
                     TEXT("Cannot Connect RecordEntry [{}] to Record [{}] because there is already an entry with the GameplayLabel [{}]"),
