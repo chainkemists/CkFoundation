@@ -69,7 +69,7 @@ namespace ck
         auto& Signal = InHandle.template AddOrGet<SignalType>();
         using ReturnType = decltype(Signal._InvokeAndUnbind_Sink.template connect<T_Candidate>());
 
-        if (ck::IsValid(Signal._Payload) && (Signal._PayloadFrameNumber == GFrameCounter ||
+        if (ck::IsValid(Signal._Payload) && (Signal._PayloadFrameNumber == UCk_Utils_Time_UE::Get_FrameCounter() ||
             T_PayloadInFlightBehavior == ECk_Signal_BindingPolicy::FireIfPayloadInFlight))
         {
             // If the behavior is to Unbind, we do not need to 'connect' this candidate to the Signal
@@ -96,7 +96,6 @@ namespace ck
         {
             if (T_PayloadInFlightBehavior == ECk_Signal_BindingPolicy::IgnorePayloadInFlight)
             { return false; }
-
 
             auto TempDelegate = SignalType::template DelegateType{};
             TempDelegate.template connect<T_Candidate>(InInstance);
@@ -157,8 +156,10 @@ namespace ck
                 return Bind<T_Candidate, ECk_Signal_BindingPolicy::IgnorePayloadInFlight, ECk_Signal_PostFireBehavior::Unbind>(InHandle);
             }
             default:
+            {
                 CK_INVALID_ENUM(InPayloadInFlightBehavior);
                 break;
+            }
         }
 
         return ReturnType{};
@@ -213,8 +214,10 @@ namespace ck
                     std::forward<T_Instance>(InInstance), InHandle);
             }
             default:
+            {
                 CK_INVALID_ENUM(InPayloadInFlightBehavior);
                 break;
+            }
         }
 
         return ReturnType{};
@@ -240,7 +243,7 @@ namespace ck
             T_HandleType InHandle)
     {
         auto& Signal = InHandle.template Get<SignalType, ck::IsValid_Policy_IncludePendingKill{}>();
-        Signal._Invoke_Sink.template disconnect<T_Candidate>();
+        Signal._Invoke_Sink.template disconnect<T_Candidate>(InInstance);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -348,8 +351,10 @@ namespace ck
                 break;
             }
             default:
+            {
                 CK_INVALID_ENUM(InPayloadInFlightBehavior);
                 break;
+            }
         }
     }
 
