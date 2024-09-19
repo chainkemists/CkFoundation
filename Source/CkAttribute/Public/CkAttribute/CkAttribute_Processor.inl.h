@@ -231,21 +231,6 @@ namespace ck::detail
             }
         );
 
-        TUtils_AttributeModifier<AttributeModifierFragmentType>::RecordOfAttributeModifiersTransient_Utils::ForEach_ValidEntry
-        (
-            InHandle,
-            [&](auto InAttributeModifier) -> void
-            {
-                // This is necessary since all 3 types of attribute components (Min/Max/Current) are stored in the same Record.
-                // Since this processor is specialized for one of them, we need to skip over the modifiers that does NOT match it
-                // to avoid triggering an ensure.
-                if (NOT TUtils_AttributeModifier<AttributeModifierFragmentType>::Has(InAttributeModifier))
-                { return; }
-
-                TUtils_AttributeModifier<AttributeModifierFragmentType>::Request_ComputeResult(InAttributeModifier);
-            }
-        );
-
         TUtils_Attribute<AttributeFragmentType>::Request_TryClamp(InHandle);
         TUtils_Attribute<AttributeFragmentType>::Request_FireSignals(InHandle);
     }
@@ -261,6 +246,11 @@ namespace ck::detail
             const AttributeModifierFragmentType& InAttributeModifier) const
         -> void
     {
+        const auto& ModifierDelta = InAttributeModifier.Get_ModifierDelta();
+
+        if (ck::Is_NOT_Valid(ModifierDelta))
+        { return; }
+
         auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
 
@@ -272,7 +262,7 @@ namespace ck::detail
             TargetEntity
         );
 
-        AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Add(AttributeComp._Final, InAttributeModifier.Get_ModifierDelta());
+        AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Add(AttributeComp._Final, *ModifierDelta);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -286,6 +276,11 @@ namespace ck::detail
             const AttributeModifierFragmentType& InAttributeModifier) const
         -> void
     {
+        const auto& ModifierDelta = InAttributeModifier.Get_ModifierDelta();
+
+        if (ck::Is_NOT_Valid(ModifierDelta))
+        { return; }
+
         auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
 
@@ -297,7 +292,7 @@ namespace ck::detail
             TargetEntity
         );
 
-        AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Sub(AttributeComp._Final, InAttributeModifier.Get_ModifierDelta());
+        AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Sub(AttributeComp._Final, *ModifierDelta);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -308,8 +303,13 @@ namespace ck::detail
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier) const -> void
+            AttributeModifierFragmentType& InAttributeModifier) const -> void
     {
+        const auto& ModifierDelta = InAttributeModifier.Get_ModifierDelta();
+
+        if (ck::Is_NOT_Valid(ModifierDelta))
+        { return; }
+
         auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
 
@@ -321,13 +321,13 @@ namespace ck::detail
             TargetEntity
         );
 
-        AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Add(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
+        AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Add(AttributeComp._Base, *ModifierDelta);
 
         // TODO: move this to the Tick() of TProcessor_AttributeModifier_RevocableAdditive_Compute
         // technically, the following is 'correct' but it's confusing as to why we are resetting the Final in this processor
         AttributeComp._Final = AttributeComp._Base;
 
-        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+        InAttributeModifier._ModifierDelta.Reset();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -338,8 +338,13 @@ namespace ck::detail
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier) const -> void
+            AttributeModifierFragmentType& InAttributeModifier) const -> void
     {
+        const auto& ModifierDelta = InAttributeModifier.Get_ModifierDelta();
+
+        if (ck::Is_NOT_Valid(ModifierDelta))
+        { return; }
+
         auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
 
@@ -351,13 +356,13 @@ namespace ck::detail
             TargetEntity
         );
 
-        AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Sub(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
+        AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Sub(AttributeComp._Base, *ModifierDelta);
 
         // TODO: move this to the Tick() of TProcessor_AttributeModifier_RevocableAdditive_Compute
         // technically, the following is 'correct' but it's confusing as to why we are resetting the Final in this processor
         AttributeComp._Final = AttributeComp._Base;
 
-        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+        InAttributeModifier._ModifierDelta.Reset();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -368,8 +373,13 @@ namespace ck::detail
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier) const -> void
+            AttributeModifierFragmentType& InAttributeModifier) const -> void
     {
+        const auto& ModifierDelta = InAttributeModifier.Get_ModifierDelta();
+
+        if (ck::Is_NOT_Valid(ModifierDelta))
+        { return; }
+
         auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
 
@@ -381,13 +391,13 @@ namespace ck::detail
             TargetEntity
         );
 
-        AttributeComp._Base = InAttributeModifier.Get_ModifierDelta();
+        AttributeComp._Base = *ModifierDelta;
 
         // TODO: move this to the Tick() of TProcessor_AttributeModifier_RevocableAdditive_Compute
         // technically, the following is 'correct' but it's confusing as to why we are resetting the Final in this processor
         AttributeComp._Final = AttributeComp._Base;
 
-        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+        InAttributeModifier._ModifierDelta.Reset();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -398,9 +408,14 @@ namespace ck::detail
         ForEachEntity(
             const TimeType&,
             HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier) const
+            AttributeModifierFragmentType& InAttributeModifier) const
         -> void
     {
+        const auto& ModifierDelta = InAttributeModifier.Get_ModifierDelta();
+
+        if (ck::Is_NOT_Valid(ModifierDelta))
+        { return; }
+
         auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
 
@@ -412,7 +427,7 @@ namespace ck::detail
             TargetEntity
         );
 
-        AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Mul(AttributeComp._Final, InAttributeModifier.Get_ModifierDelta());
+        AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Mul(AttributeComp._Final, *ModifierDelta);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -426,6 +441,11 @@ namespace ck::detail
             const AttributeModifierFragmentType& InAttributeModifier) const
             -> void
     {
+        const auto& ModifierDelta = InAttributeModifier.Get_ModifierDelta();
+
+        if (ck::Is_NOT_Valid(ModifierDelta))
+        { return; }
+
         auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
 
@@ -437,7 +457,7 @@ namespace ck::detail
             TargetEntity
         );
 
-        AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Div(AttributeComp._Final, InAttributeModifier.Get_ModifierDelta());
+        AttributeComp._Final = TAttributeModifierOperators<AttributeDataType>::Div(AttributeComp._Final, *ModifierDelta);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -448,9 +468,14 @@ namespace ck::detail
         ForEachEntity(
             const TimeType&,
             HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier) const
+            AttributeModifierFragmentType& InAttributeModifier) const
         -> void
     {
+        const auto& ModifierDelta = InAttributeModifier.Get_ModifierDelta();
+
+        if (ck::Is_NOT_Valid(ModifierDelta))
+        { return; }
+
         auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
 
@@ -462,10 +487,10 @@ namespace ck::detail
             TargetEntity
         );
 
-        AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Mul(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
+        AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Mul(AttributeComp._Base, *ModifierDelta);
         AttributeComp._Final = AttributeComp._Base;
 
-        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+        InAttributeModifier._ModifierDelta.Reset();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -476,9 +501,14 @@ namespace ck::detail
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier) const
+            AttributeModifierFragmentType& InAttributeModifier) const
         -> void
     {
+        const auto& ModifierDelta = InAttributeModifier.Get_ModifierDelta();
+
+        if (ck::Is_NOT_Valid(ModifierDelta))
+        { return; }
+
         auto TargetEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         auto& AttributeComp = TargetEntity.template Get<AttributeFragmentType>();
 
@@ -490,10 +520,10 @@ namespace ck::detail
             TargetEntity
         );
 
-        AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Div(AttributeComp._Base, InAttributeModifier.Get_ModifierDelta());
+        AttributeComp._Base = TAttributeModifierOperators<AttributeDataType>::Div(AttributeComp._Base, *ModifierDelta);
         AttributeComp._Final = AttributeComp._Base;
 
-        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InHandle);
+        InAttributeModifier._ModifierDelta.Reset();
     }
 
     // --------------------------------------------------------------------------------------------------------------------

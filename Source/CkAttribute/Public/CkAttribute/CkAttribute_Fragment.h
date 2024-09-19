@@ -2,14 +2,14 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
-#include "CkEcsExt/EntityHolder/CkEntityHolder_Fragment.h"
-
 #include "CkRecord/Record/CkRecord_Fragment.h"
 #include "CkSignal/CkSignal_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 enum class ECk_AttributeModifier_Operation : uint8;
+
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
@@ -122,8 +122,8 @@ namespace ck
     template <typename T>
     struct TAttributeMinMax
     {
-        static auto Min(const T& A, const T& B) -> const T& { return (A < B) ? A : B; }
-        static auto Max(const T& A, const T& B) -> const T& { return (B < A) ? A : B; }
+        static auto Min(T A, T B) -> T { return (A < B) ? A : B; }
+        static auto Max(T A, T B) -> T { return (B < A) ? A : B; }
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -131,10 +131,10 @@ namespace ck
     template <typename T>
     struct TAttributeModifierOperators
     {
-        static auto Add(const T& A, const T& B) -> T { return A + B; }
-        static auto Sub(const T& A, const T& B) -> T { return A - B; }
-        static auto Mul(const T& A, const T& B) -> T { return A * B; }
-        static auto Div(const T& A, const T& B) -> T { return A / B; }
+        static auto Add(T A, T B) -> T { return A + B; }
+        static auto Sub(T A, T B) -> T { return A - B; }
+        static auto Mul(T A, T B) -> T { return A * B; }
+        static auto Div(T A, T B) -> T { return A / B; }
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -269,6 +269,21 @@ namespace ck
         template <typename>
         friend class TUtils_AttributeModifier;
 
+        template <typename, typename>
+        friend class detail::TProcessor_AttributeModifier_NotRevocableAdd_Compute;
+
+        template <typename, typename>
+        friend class detail::TProcessor_AttributeModifier_NotRevocableSubtract_Compute;
+
+        template <typename, typename>
+        friend class detail::TProcessor_AttributeModifier_NotRevocableMultiply_Compute;
+
+        template <typename, typename>
+        friend class detail::TProcessor_AttributeModifier_NotRevocableDivide_Compute;
+
+        template <typename, typename>
+        friend class detail::TProcessor_AttributeModifier_Override_Compute;
+
     public:
         CK_DEFINE_ECS_TAG(FTag_ModifyAdd);
         CK_DEFINE_ECS_TAG(FTag_ModifySubtract);
@@ -285,15 +300,20 @@ namespace ck
         using AttributeDataType     = typename AttributeFragmentType::AttributeDataType;
         using HandleType            = T_HandleType;
 
+    public:
+        TFragment_AttributeModifier();
+        explicit
+        TFragment_AttributeModifier(
+            AttributeDataType InModifierDelta,
+            ECk_AttributeModifier_Operation InOperation);
+
     private:
-        AttributeDataType _ModifierDelta;
-        ECk_AttributeModifier_Operation _Operation = ECk_AttributeModifier_Operation::Add;
+        TOptional<AttributeDataType> _ModifierDelta;
+        ECk_AttributeModifier_Operation _Operation;
 
     public:
         CK_PROPERTY_GET(_ModifierDelta);
         CK_PROPERTY_GET(_Operation);
-
-        CK_DEFINE_CONSTRUCTORS(TFragment_AttributeModifier, _ModifierDelta, _Operation);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -415,12 +435,15 @@ namespace ck
 
 namespace ck::algo
 {
-    template <typename T_DerivedAttributeModifier>
+    template <typename T_DerivedAttributeModifier, typename... T_Tags>
     struct MatchesAttributeModifierWithOperation
     {
         auto operator()(const typename T_DerivedAttributeModifier::HandleType& InModifier) const -> bool
         {
             if (NOT InModifier.template Has<T_DerivedAttributeModifier>())
+            { return {}; }
+
+            if (NOT InModifier.template Has_All<T_Tags...>())
             { return {}; }
 
             return InModifier.template Get<T_DerivedAttributeModifier>().Get_Operation() == _Operation;
