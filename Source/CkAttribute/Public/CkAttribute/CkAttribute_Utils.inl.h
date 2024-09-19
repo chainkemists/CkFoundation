@@ -226,8 +226,8 @@ namespace ck
             ECk_AttributeValueChange_SyncPolicy InSyncPolicy)
         -> void
     {
-        if (auto MaybeExistingModifier = RecordOfAttributeModifiersTransient_Utils::Get_ValidEntry_If(
-            InAttributeHandle, ck::algo::MatchesAttributeModifierWithOperation<AttributeModifierFragmentType>{InModifierOperation});
+        if (auto MaybeExistingModifier = RecordOfAttributeModifiers_Utils::Get_ValidEntry_If(
+            InAttributeHandle, ck::algo::MatchesAttributeModifierWithOperation<AttributeModifierFragmentType, typename AttributeModifierFragmentType::FTag_IsNotRevocableModification>{InModifierOperation});
             ck::IsValid(MaybeExistingModifier))
         {
             const auto& CurrentModifierValue = MaybeExistingModifier.template Get<AttributeModifierFragmentType>().Get_ModifierDelta();
@@ -237,13 +237,27 @@ namespace ck
                 case ECk_AttributeModifier_Operation::Add:
                 case ECk_AttributeModifier_Operation::Subtract:
                 {
-                    Override(MaybeExistingModifier, TAttributeModifierOperators<AttributeDataType>::Add(CurrentModifierValue, InModifierDelta), InSyncPolicy);
+                    if (ck::IsValid(CurrentModifierValue))
+                    {
+                        Override(MaybeExistingModifier, TAttributeModifierOperators<AttributeDataType>::Add(*CurrentModifierValue, InModifierDelta), InSyncPolicy);
+                    }
+                    else
+                    {
+                        Override(MaybeExistingModifier, InModifierDelta, InSyncPolicy);
+                    }
                     break;
                 }
                 case ECk_AttributeModifier_Operation::Multiply:
                 case ECk_AttributeModifier_Operation::Divide:
                 {
-                    Override(MaybeExistingModifier, TAttributeModifierOperators<AttributeDataType>::Mul(CurrentModifierValue, InModifierDelta), InSyncPolicy);
+                    if (ck::IsValid(CurrentModifierValue))
+                    {
+                        Override(MaybeExistingModifier, TAttributeModifierOperators<AttributeDataType>::Mul(*CurrentModifierValue, InModifierDelta), InSyncPolicy);
+                    }
+                    else
+                    {
+                        Override(MaybeExistingModifier, InModifierDelta, InSyncPolicy);
+                    }
                     break;
                 }
                 case ECk_AttributeModifier_Operation::Override:
@@ -280,7 +294,9 @@ namespace ck
     {
         auto& ModifierFragment = InHandle.template Get<AttributeModifierFragmentType>();
 
-        if (UCk_Utils_Arithmetic_UE::Get_IsNearlyEqual(ModifierFragment._ModifierDelta, InNewModifierDelta))
+        const auto& ModifierDelta = ModifierFragment.Get_ModifierDelta();
+
+        if (ck::IsValid(ModifierDelta) && UCk_Utils_Arithmetic_UE::Get_IsNearlyEqual(*ModifierDelta, InNewModifierDelta))
         { return; }
 
         ModifierFragment._ModifierDelta = InNewModifierDelta;
@@ -311,7 +327,7 @@ namespace ck
             const HandleType& InHandle)
         -> const AttributeDataType&
     {
-        return InHandle.template Get<AttributeModifierFragmentType>().Get_ModifierDelta();
+        return InHandle.template Get<AttributeModifierFragmentType>().Get_ModifierDelta().Get(AttributeDataType{});
     }
 
     template <typename T_DerivedAttributeModifier>
@@ -424,15 +440,11 @@ namespace ck
             case ECk_ModifierOperation_RevocablePolicy::NotRevocable:
             {
                 NewModifierEntity.template Add<typename AttributeModifierFragmentType::FTag_IsNotRevocableModification>();
-                RecordOfAttributeModifiersTransient_Utils::AddIfMissing(InAttributeHandle, ECk_Record_EntryHandlingPolicy::Default);
-                RecordOfAttributeModifiersTransient_Utils::Request_Connect(InAttributeHandle, NewModifierEntity);
                 break;
             }
             case ECk_ModifierOperation_RevocablePolicy::Revocable:
             {
                 NewModifierEntity.template Add<typename AttributeModifierFragmentType::FTag_IsRevocableModification>();
-                RecordOfAttributeModifiers_Utils::AddIfMissing(InAttributeHandle, ECk_Record_EntryHandlingPolicy::Default);
-                RecordOfAttributeModifiers_Utils::Request_Connect(InAttributeHandle, NewModifierEntity);
                 break;
             }
             default:
@@ -441,6 +453,9 @@ namespace ck
                 break;
             }
         }
+
+        RecordOfAttributeModifiers_Utils::AddIfMissing(InAttributeHandle, ECk_Record_EntryHandlingPolicy::Default);
+        RecordOfAttributeModifiers_Utils::Request_Connect(InAttributeHandle, NewModifierEntity);
 
         return NewModifierEntity;
     }

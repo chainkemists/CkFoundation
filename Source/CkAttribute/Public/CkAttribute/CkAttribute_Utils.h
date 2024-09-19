@@ -142,7 +142,6 @@ namespace ck
             using TFragment_RecordOfAttributeModifiers<HandleType>::TFragment_RecordOfAttributeModifiers;};
 
         struct RecordOfAttributeModifiers_Utils : TUtils_RecordOfEntities<DerivedRecordType>{};
-        struct RecordOfAttributeModifiersTransient_Utils : TUtils_RecordOfEntities<DerivedRecordType>{};
 
     public:
         static auto

@@ -16,6 +16,26 @@ namespace ck
     }
 
     // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_HandleType, typename T_DerivedAttribute>
+        TFragment_AttributeModifier<T_HandleType, T_DerivedAttribute>::
+        TFragment_AttributeModifier()
+        : _ModifierDelta(AttributeDataType{})
+        , _Operation(ECk_AttributeModifier_Operation::Add)
+    {
+    }
+
+    template <typename T_HandleType, typename T_DerivedAttribute>
+        TFragment_AttributeModifier<T_HandleType, T_DerivedAttribute>::
+        TFragment_AttributeModifier(
+            AttributeDataType InModifierDelta,
+            ECk_AttributeModifier_Operation InOperation)
+        : _ModifierDelta(InModifierDelta)
+        , _Operation(InOperation)
+    {
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------

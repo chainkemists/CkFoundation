@@ -324,7 +324,7 @@ namespace ck::detail
         auto ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier) const -> void;
+            AttributeModifierFragmentType& InAttributeModifier) const -> void;
 
     public:
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
@@ -362,7 +362,7 @@ namespace ck::detail
         auto ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier) const -> void;
+            AttributeModifierFragmentType& InAttributeModifier) const -> void;
 
     public:
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
@@ -400,7 +400,7 @@ namespace ck::detail
         auto ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier) const -> void;
+            AttributeModifierFragmentType& InAttributeModifier) const -> void;
 
     public:
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
@@ -438,7 +438,7 @@ namespace ck::detail
         auto ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier) const -> void;
+            AttributeModifierFragmentType& InAttributeModifier) const -> void;
 
     public:
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
@@ -514,7 +514,7 @@ namespace ck::detail
         auto ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier) const -> void;
+            AttributeModifierFragmentType& InAttributeModifier) const -> void;
 
     public:
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
@@ -552,7 +552,7 @@ namespace ck::detail
         auto ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            const AttributeModifierFragmentType& InAttributeModifier) const -> void;
+            AttributeModifierFragmentType& InAttributeModifier) const -> void;
 
     public:
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
