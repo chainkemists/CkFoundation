@@ -94,13 +94,23 @@ namespace ck
         InHandle.Remove<FTag_DestroyEntity_Await, ck::IsValid_Policy_IncludePendingKill>();
     }
 
+    auto
+        FProcessor_EntityLifetime_DestroyEntity::DoTick(
+            TimeType InDeltaT) -> void
+    {
+        EntitiesToDestroy.Empty();
+        Super::DoTick(InDeltaT);
+        QUICK_SCOPE_CYCLE_COUNTER(DestroyEntities)
+        _TransientEntity.Get_Registry().DestroyEntities(EntitiesToDestroy);
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
         FProcessor_EntityLifetime_DestroyEntity::
         ForEachEntity(
             TimeType InDeltaT,
-            HandleType InHandle) const
+            HandleType InHandle)
         -> void
     {
         ecs::VeryVerbose(TEXT("[DESTRUCTION] Destroying Entity [{}]"), InHandle);
@@ -132,7 +142,7 @@ namespace ck
             ck::UUtils_Signal_EntityDestroyed::Broadcast(InHandle, ck::MakePayload(InHandle));
         }
 
-        InHandle->DestroyEntity(InHandle.Get_Entity());
+        EntitiesToDestroy.Emplace(InHandle.Get_Entity());
     }
 
     // --------------------------------------------------------------------------------------------------------------------

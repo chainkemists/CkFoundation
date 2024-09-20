@@ -79,10 +79,17 @@ namespace ck
         : public TProcessor<FProcessor_EntityLifetime_DestroyEntity, FTag_DestroyEntity_Finalize>
     {
     public:
+        using Super = TProcessor;
+    public:
         using TProcessor::TProcessor;
 
+        auto DoTick(TimeType InDeltaT) -> void;
+
     public:
-        auto ForEachEntity(TimeType InDeltaT, HandleType InHandle) const -> void;
+        auto ForEachEntity(TimeType InDeltaT, HandleType InHandle) -> void;
+
+    public:
+        TArray<EntityType> EntitiesToDestroy;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
