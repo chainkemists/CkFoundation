@@ -22,6 +22,9 @@ namespace ck
             return std::forward<T>(InPayload);
         }
     };
+
+    template <typename T, TypeConverterPolicy Policy>
+    using TTypeConverterReturnType = decltype(TTypeConverter<T, Policy>{}(std::declval<T>()));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
