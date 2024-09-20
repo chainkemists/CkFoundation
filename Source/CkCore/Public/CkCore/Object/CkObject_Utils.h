@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CkCore/Ensure/CkEnsure.h"
-
+#include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkObject_Utils.generated.h"
@@ -178,6 +178,20 @@ public:
         TSubclassOf<T> InClass,
         T_Func InFunc) -> T*;
 
+    static auto
+    Request_CallFunctionByName(
+        UObject* InObject,
+        FName InFunctionName,
+        bool InEnsureFunctionExists = true) -> ECk_SucceededFailed;
+
+    template<typename T>
+    static auto
+    Request_CallFunctionByNameWithParams(
+        UObject* InObject,
+        FName InFunctionName,
+        T InParams,
+        bool InEnsureFunctionExists = true) -> ECk_SucceededFailed;
+
 public:
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Get Generated Unique Object Name",
@@ -191,7 +205,7 @@ public:
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Request Try Set Object Outer",
               Category = "Ck|Utils|Object")
-    static bool
+    static ECk_SucceededFailed
     Request_TrySetOuter(
         const FCk_Utils_Object_SetOuter_Params& InParams);
 
@@ -206,7 +220,7 @@ public:
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Request Reset All Object Properties To Default",
               Category = "Ck|Utils|Object")
-    static bool
+    static ECk_SucceededFailed
     Request_ResetAllPropertiesToDefault(
         UObject* InObject);
 
@@ -278,6 +292,13 @@ private:
     static UObject*
     DoGet_ClassDefaultObject_UpToDate(
         TSubclassOf<UObject> InObject);
+
+    static auto
+    DoRequest_CallFunctionByName(
+        UObject* InObject,
+        FName InFunctionName,
+        bool InEnsureFunctionExists = true,
+        void* InFunctionParams = nullptr) -> ECk_SucceededFailed;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -492,6 +513,19 @@ auto
     -> T*
 {
     return Request_CreateNewObject<T>(GetTransientPackage(), InClass, nullptr, InFunc);
+}
+
+template <typename T>
+auto
+    UCk_Utils_Object_UE::
+    Request_CallFunctionByNameWithParams(
+        UObject* InObject,
+        FName InFunctionName,
+        T InParams,
+        bool InEnsureFunctionExists)
+    -> ECk_SucceededFailed
+{
+    return DoRequest_CallFunctionByName(InObject, InFunctionName, InEnsureFunctionExists, &InParams);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
