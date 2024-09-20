@@ -1,5 +1,7 @@
 #include "CkRegistry.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 FCk_Registry::
@@ -46,6 +48,18 @@ auto
     -> void
 {
     _InternalRegistry->destroy(InEntity.Get_ID());
+}
+
+auto
+    FCk_Registry::DestroyEntities(
+        const TArray<EntityType>& InEntities) -> void
+{
+    const auto& EntityIDs = ck::algo::Transform<TArray<EntityType::IdType>>(InEntities,
+        [](const EntityType& Entity)
+    {
+        return Entity.Get_ID();
+    });
+    _InternalRegistry->destroy(EntityIDs.begin(), EntityIDs.end());
 }
 
 auto

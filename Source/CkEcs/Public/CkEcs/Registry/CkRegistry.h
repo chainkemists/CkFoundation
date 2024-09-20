@@ -193,6 +193,7 @@ private:
     auto CreateEntity() -> EntityType;
     auto CreateEntity(EntityType InEntityHint) -> EntityType;
     auto DestroyEntity(EntityType InEntity) -> void;
+    auto DestroyEntities(const TArray<EntityType>& InEntities) -> void;
 
 public:
     auto IsValid(EntityType InEntity) const -> bool;
