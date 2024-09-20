@@ -4,6 +4,17 @@
 
 auto
     UCk_Utils_Object_UE::
+    Request_CallFunctionByName(
+        UObject* InObject,
+        FName InFunctionName,
+        bool InEnsureFunctionExists)
+    -> ECk_SucceededFailed
+{
+    return DoRequest_CallFunctionByName(InObject, InFunctionName, InEnsureFunctionExists);
+}
+
+auto
+    UCk_Utils_Object_UE::
     Get_GeneratedUniqueName(
         UObject* InThis,
         UClass* InObj,
@@ -24,15 +35,15 @@ auto
     UCk_Utils_Object_UE::
     Request_TrySetOuter(
         const FCk_Utils_Object_SetOuter_Params& InParams)
-    -> bool
+    -> ECk_SucceededFailed
 {
     const auto& Object = InParams.Get_Object();
     CK_ENSURE_IF_NOT(ck::IsValid(Object), TEXT("Object is not valid!"))
-    { return {}; }
+    { return ECk_SucceededFailed::Failed; }
 
     const auto& Outer = InParams.Get_Outer();
     CK_ENSURE_IF_NOT(ck::IsValid(Outer), TEXT("Outer is not valid!"))
-    { return {}; }
+    { return ECk_SucceededFailed::Failed; }
 
     const auto& RenameFlag = [&]()
     {
@@ -50,9 +61,9 @@ auto
 
     if (const auto& Result = Object->Rename(nullptr, Outer, RenameFlag);
         NOT Result)
-    { return {}; }
+    { return ECk_SucceededFailed::Failed; }
 
-    return true;
+    return ECk_SucceededFailed::Succeeded;
 }
 
 auto
@@ -98,13 +109,13 @@ auto
     UCk_Utils_Object_UE::
     Request_ResetAllPropertiesToDefault(
         UObject* InObject)
-    -> bool
+    -> ECk_SucceededFailed
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Invalid Object supplied to Request_ResetAllPropertiesToDefault"))
     { return {}; }
 
     if (Get_IsDefaultObject(InObject))
-    { return true; }
+    { return ECk_SucceededFailed::Succeeded; }
 
     const auto& ObjectCDO = DoGet_ClassDefaultObject(InObject->GetClass());
 
@@ -114,7 +125,9 @@ auto
 
     const auto& Result = Request_CopyAllProperties(CopyAllPropertiesParams);
 
-    return Result == ECk_Utils_Object_CopyAllProperties_Result::Failed ? false : true;
+    return Result == ECk_Utils_Object_CopyAllProperties_Result::Failed
+                        ? ECk_SucceededFailed::Failed
+                        : ECk_SucceededFailed::Succeeded;
 }
 
 auto
@@ -224,14 +237,14 @@ auto
     -> UObject*
 {
 #if WITH_EDITOR
-    const auto& Bpgc = Cast<UBlueprintGeneratedClass>(InBlueprintGeneratedClass);
+    const auto& BPGC = Cast<UBlueprintGeneratedClass>(InBlueprintGeneratedClass);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(Bpgc),
+    CK_ENSURE_IF_NOT(ck::IsValid(BPGC),
         TEXT("Class [{}] supplied to Get_ClassGeneratedByBlueprint is Invalid OR is NOT of type UBlueprintGeneratedClass!"),
         InBlueprintGeneratedClass)
     { return {}; }
 
-    return Bpgc->ClassGeneratedBy;
+    return BPGC->ClassGeneratedBy;
 #else
     return nullptr;
 #endif
@@ -260,10 +273,41 @@ auto
 
     const auto& DefaultClass = Get_DefaultClass_UpToDate(InObject->GetClass());
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Could not get the Default Class Up-To-Date of Object [{}]"), InObject)
+    CK_ENSURE_IF_NOT(ck::IsValid(DefaultClass), TEXT("Could not get the Default Class Up-To-Date of Object [{}]"), InObject)
     { return {}; }
 
     return DefaultClass->GetDefaultObject();
+}
+
+auto
+    UCk_Utils_Object_UE::
+    DoRequest_CallFunctionByName(
+        UObject* InObject,
+        FName InFunctionName,
+        bool InEnsureFunctionExists,
+        void* InFunctionParams)
+    -> ECk_SucceededFailed
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Object is not valid!"))
+    { return ECk_SucceededFailed::Failed; }
+
+    if (auto* FoundFunction = InObject->FindFunction(InFunctionName);
+        ck::IsValid(FoundFunction))
+    {
+        InObject->ProcessEvent(FoundFunction, InFunctionParams);
+        return ECk_SucceededFailed::Succeeded;
+    }
+
+    if (InEnsureFunctionExists)
+    {
+        CK_TRIGGER_ENSURE(TEXT("Couldn't find function: [{}] in object [{}]"), InFunctionName, InObject);
+    }
+    else
+    {
+        ck::core::VeryVerbose(TEXT("Couldn't find function: [{}] in object [{}]"), InFunctionName, InObject);
+    }
+
+    return ECk_SucceededFailed::Failed;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
