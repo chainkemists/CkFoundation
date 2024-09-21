@@ -86,28 +86,49 @@ namespace ck
     public:
         using ConnectionType = entt::connection;
         using MulticastType = T_UnrealMulticast;
+        using DynamicDelegateType = typename MulticastType::FDelegate;
+        using DynamicDelegateInvocationPredicateFunc = TFunction<bool(TTypeConverterReturnType<T_Args, TypeConverterPolicy::TypeToUnreal>...)>;
+
+    public:
+        struct ConditionalDynamicDelegate
+        {
+            DynamicDelegateType UnicastDelegate;
+            DynamicDelegateInvocationPredicateFunc InvocationPredicateFunc;
+
+            auto operator==(const ConditionalDynamicDelegate& InOther) const -> bool;
+            CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ConditionalDynamicDelegate);
+        };
+
+        using DynamicDelegateInfoType = ConditionalDynamicDelegate;
 
     public:
         TFragment_Signal_UnrealMulticast() = default;
         TFragment_Signal_UnrealMulticast(const ThisType&) = delete;
         TFragment_Signal_UnrealMulticast(ThisType&& InOther) noexcept;
-        ~ TFragment_Signal_UnrealMulticast();
+        ~TFragment_Signal_UnrealMulticast();
 
     public:
         auto operator=(ThisType InOther) -> ThisType& = delete;
         auto operator=(ThisType&& InOther) noexcept -> ThisType&;
 
-    public:
-        auto DoBroadcast(T_Args&&... InArgs);
+    private:
+        auto DoBroadcast(T_Args&&... InArgs) -> void;
+        auto DoGet_IsBound() const -> bool;
+        auto DoAddToMulticast(
+            DynamicDelegateType InDelegate,
+            const DynamicDelegateInvocationPredicateFunc& InOptionalConditionalInvocationPredicate) -> void;
+        auto DoRemoveFromMulticast(
+            DynamicDelegateType InDelegate) -> void;
 
     private:
         MulticastType _Multicast;
+        TArray<ConditionalDynamicDelegate> _ConditionalInvocationList;
         ConnectionType _Connection;
         static constexpr auto PostFireBehavior = T_PostFireBehavior;
 
-    private:
         CK_PROPERTY(_Connection);
         CK_PROPERTY(_Multicast);
+        CK_PROPERTY(_ConditionalInvocationList);
     };
 }
 
