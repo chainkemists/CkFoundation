@@ -5,6 +5,7 @@
 #include "CkAbility/Ability/CkAbility_Utils.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Fragment.h"
 
+#include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/SharedValues/CkSharedValues_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -567,6 +568,25 @@ auto
     -> FCk_Handle_AbilityOwner
 {
     CK_SIGNAL_BIND(ck::UUtils_Signal_AbilityOwner_Events, InAbilityOwnerHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+
+    //auto& x = InAbilityOwnerHandle.AddOrGet<ck::FFragment_Signal_UnrealMulticast_AbilityOwner_Events>();
+    //x._InvocationList.Add(InDelegate, [](FCk_Handle_AbilityOwner InHandle, const TArray<FCk_AbilityOwner_Event>& InEvents) -> bool
+    //{
+    //    return InEvents.Num() > 1;
+    //});
+
+    //for (auto DelegateObject : x.Get_Multicast().GetAllObjectRefsEvenIfUnreachable())
+    //{
+    //    auto y = false;
+    //    y = false;
+    //    x._Multicast.GetAllObjects()
+    //
+    //    FCk_Delegate_AbilityOwner_Events z;
+    //    z.ExecuteIfBound()
+
+    //    ck::UUtils_Signal_AbilityOwner_Events::Bind()
+    //}
+
     return InAbilityOwnerHandle;
 }
 
