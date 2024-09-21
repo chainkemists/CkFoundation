@@ -54,6 +54,12 @@ if (_PostFireBehavior_ == ECk_Signal_PostFireBehavior::DoNothing) \
 else\
 { _SignalUtils_##_PostFireUnbind::Bind(_Handle_, _Delegate_, _BindingPolicy_); }
 
+#define CK_SIGNAL_BIND_WITH_CONDITION(_SignalUtils_, _Handle_, _Delegate_, _BindingPolicy_, _PostFireBehavior_, _PredicateFunc_)\
+if (_PostFireBehavior_ == ECk_Signal_PostFireBehavior::DoNothing) \
+{ _SignalUtils_::Bind(_Handle_, _Delegate_, _BindingPolicy_, _PredicateFunc_); } \
+else\
+{ _SignalUtils_##_PostFireUnbind::Bind(_Handle_, _Delegate_, _BindingPolicy_, _PredicateFunc_); }
+
 #define CK_SIGNAL_UNBIND(_SignalUtils_, _Handle_, _Delegate_)\
 _SignalUtils_::Unbind(_Handle_, _Delegate_)
 
