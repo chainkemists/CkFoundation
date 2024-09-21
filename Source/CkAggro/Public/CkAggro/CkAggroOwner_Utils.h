@@ -43,7 +43,7 @@ public:
 private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|AggroOwner",
-        DisplayName="[Ck][Aggro] Cast",
+        DisplayName="[Ck][AggroOwner] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_AggroOwner
     DoCast(
@@ -52,8 +52,8 @@ private:
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|AggroOwner",
-        DisplayName="[Ck][Aggro] Handle -> Aggro Handle",
-        meta = (CompactNodeTitle = "<AsAggro>", BlueprintAutocast))
+        DisplayName="[Ck][AggroOwner] Handle -> Aggro Owner Handle",
+        meta = (CompactNodeTitle = "<AsAggroOwner>", BlueprintAutocast))
     static FCk_Handle_AggroOwner
     DoCastChecked(
         FCk_Handle InHandle);
@@ -61,70 +61,72 @@ private:
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|AggroOwner",
-        DisplayName="[Ck][Aggro] Try Get Aggro by Target")
+        DisplayName="[Ck][AggroOwner] Try Get Aggro by Target")
     static FCk_Handle_Aggro
     TryGet_AggroByTarget(
-        const FCk_Handle& InAggroOwnerEntity,
+        const FCk_Handle_AggroOwner& InAggroOwnerEntity,
         const FCk_Handle& InTarget);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|AggroOwner",
-        DisplayName="[Ck][Aggro] Get Best Aggro")
+        DisplayName="[Ck][AggroOwner] Get Best Aggro")
     static FCk_Handle_Aggro
     Get_BestAggro(
-        const FCk_Handle& InAggroOwnerEntity);
+        const FCk_Handle_AggroOwner& InAggroOwnerEntity);
 
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|AggroOwner",
-        DisplayName = "[Ck][Aggro] Bind To OnNewAggroAdded")
+        DisplayName = "[Ck][AggroOwner] Bind To OnNewAggroAdded")
     static FCk_Handle
     BindTo_OnNewAggroAdded(
-        UPARAM(ref) FCk_Handle& InAggroOwner,
+        UPARAM(ref) FCk_Handle_AggroOwner& InAggroOwner,
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_Aggro_OnNewAggroAdded& InDelegate);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|AggroOwner",
-        DisplayName = "[Ck][Aggro] Unbind From OnNewAggroAdded")
+        DisplayName = "[Ck][AggroOwner] Unbind From OnNewAggroAdded")
     static FCk_Handle
     UnbindFrom_OnNewAggroAdded(
-        UPARAM(ref) FCk_Handle& InAggroOwner,
+        UPARAM(ref) FCk_Handle_AggroOwner& InAggroOwner,
         const FCk_Delegate_Aggro_OnNewAggroAdded& InDelegate);
 
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|AggroOwner",
-        DisplayName="[Ck][Aggro] For Each",
+        DisplayName="[Ck][AggroOwner] For Each",
         meta=(AutoCreateRefTerm="InDelegate, InOptionalPayload"))
     static TArray<FCk_Handle_Aggro>
     ForEach_Aggro(
-        const FCk_Handle& InAggroOwnerEntity,
+        const FCk_Handle_AggroOwner& InAggroOwnerEntity,
         ECk_Aggro_ExclusionPolicy InExclusionPolicy,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_Aggro(
-        const FCk_Handle& InAggroOwnerEntity,
+        const FCk_Handle_AggroOwner& InAggroOwnerEntity,
         ECk_Aggro_ExclusionPolicy InExclusionPolicy,
         const TFunction<void(FCk_Handle_Aggro)>& InFunc) -> void;
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|AggroOwner",
-        DisplayName="[Ck][Aggro] For Each (Sorted)",
+        DisplayName="[Ck][AggroOwner] For Each (Sorted)",
         meta=(AutoCreateRefTerm="InDelegate, InOptionalPayload"))
     static TArray<FCk_Handle_Aggro>
     ForEach_Aggro_Sorted(
-        const FCk_Handle& InAggroOwnerEntity,
+        const FCk_Handle_AggroOwner& InAggroOwnerEntity,
         ECk_Aggro_ExclusionPolicy InExclusionPolicy,
         const FInstancedStruct& InOptionalPayload,
         ECk_ScoreSortingPolicy InSortingPolicy,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_Aggro_Sorted(
-        const FCk_Handle& InAggroOwnerEntity,
+        const FCk_Handle_AggroOwner& InAggroOwnerEntity,
         ECk_Aggro_ExclusionPolicy InExclusionPolicy,
         ECk_ScoreSortingPolicy InSortingPolicy,
         const TFunction<void(FCk_Handle_Aggro)>& InFunc) -> void;
 };
+
+// --------------------------------------------------------------------------------------------------------------------
