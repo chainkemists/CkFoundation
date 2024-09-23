@@ -216,10 +216,10 @@ namespace ck
         // TODO: Remove usage of UpdateReplicatedFragment once the processor is tagged to only run on Server
         UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_AnimState_Rep>(InHandle, [&](UCk_Fragment_AnimState_Rep* InRepComp)
         {
-            InRepComp->_AnimGoal = InCurrent.Get_AnimGoal();
-            InRepComp->_AnimState = InCurrent.Get_AnimState();
-            InRepComp->_AnimCluster = InCurrent.Get_AnimCluster();
-            InRepComp->_AnimOverlay = InCurrent.Get_AnimOverlay();
+            InRepComp->Set_AnimGoal(InCurrent.Get_AnimGoal());
+            InRepComp->Set_AnimState(InCurrent.Get_AnimState());
+            InRepComp->Set_AnimCluster(InCurrent.Get_AnimCluster());
+            InRepComp->Set_AnimOverlay(InCurrent.Get_AnimOverlay());
 
             InCurrent.Set_ComponentsModified(ECk_AnimStateComponents::None);
         });

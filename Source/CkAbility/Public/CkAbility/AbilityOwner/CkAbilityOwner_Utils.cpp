@@ -458,7 +458,7 @@ auto
     UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(
         InAbilityOwnerHandle, [&](UCk_Fragment_AbilityOwner_Rep* InRepComp)
     {
-        InRepComp->_PendingGiveAbilityRequests.Emplace(InRequest);
+        InRepComp->Request_GiveAbility(InRequest);
     });
 
     return InAbilityOwnerHandle;
@@ -509,7 +509,7 @@ auto
     UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(
         InAbilityOwnerHandle, [&](UCk_Fragment_AbilityOwner_Rep* InRepComp)
     {
-        InRepComp->_PendingRevokeAbilityRequests.Emplace(InRequest);
+        InRepComp->Request_RevokeAbility(InRequest);
     });
 
     return InAbilityOwnerHandle;

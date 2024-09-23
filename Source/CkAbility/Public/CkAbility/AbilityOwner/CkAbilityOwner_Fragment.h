@@ -201,10 +201,9 @@ public:
     CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_AbilityOwner_Rep);
 
 public:
-    friend class UCk_Utils_AbilityOwner_UE;
-
-public:
-    auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
+    auto
+    GetLifetimeReplicatedProps(
+        TArray<FLifetimeProperty>&) const -> void override;
 
 private:
     UFUNCTION()
@@ -223,6 +222,15 @@ private:
     UPROPERTY(ReplicatedUsing = OnRep_PendingRevokeAbilityRequests)
     TArray<FCk_Request_AbilityOwner_RevokeAbility> _PendingRevokeAbilityRequests;
     int32 _NextPendingRevokeAbilityRequests = 0;
+
+public:
+    auto
+    Request_GiveAbility(
+        const FCk_Request_AbilityOwner_GiveAbility& InRequest) -> void;
+
+    auto
+    Request_RevokeAbility(
+        const FCk_Request_AbilityOwner_RevokeAbility& InRequest) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

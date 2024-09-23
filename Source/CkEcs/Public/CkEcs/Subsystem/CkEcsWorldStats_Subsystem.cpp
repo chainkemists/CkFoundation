@@ -3,6 +3,8 @@
 #include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Game/CkGame_Utils.h"
 
+#include "Net/Core/PushModel/PushModel.h"
+
 #include <Net/UnrealNetwork.h>
 
 #include <Stats/StatsData.h>
@@ -25,8 +27,10 @@ auto
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    DOREPLIFETIME(ThisType, _AssociatedEcsWorldTickingGroupAverageCycleMs);
-    DOREPLIFETIME(ThisType, _AssociatedEcsWorldTickingGroup);
+    constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
+
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _AssociatedEcsWorldTickingGroupAverageCycleMs, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _AssociatedEcsWorldTickingGroup, Params);
 }
 
 auto
@@ -39,6 +43,8 @@ auto
     { return; }
 
     _AssociatedEcsWorldTickingGroup = InAssociatedEcsWorldTickingGroup;
+
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _AssociatedEcsWorldTickingGroup, this);
 }
 
 auto
@@ -96,6 +102,16 @@ auto
     { return; }
 
     _EcsWorldStatsSubsystem->_StatReplicatorActors.Add(_AssociatedEcsWorldTickingGroup, this);
+}
+
+auto
+    ACk_EcsWorld_StatReplicatorActor_UE::
+    Set_AssociatedEcsWorldTickingGroupAverageCycleMs(
+        float InAverageCycleMs)
+    -> void
+{
+    _AssociatedEcsWorldTickingGroupAverageCycleMs = InAverageCycleMs;
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _AssociatedEcsWorldTickingGroupAverageCycleMs, this);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -239,8 +255,8 @@ auto
     if (NOT GetWorld()->IsNetMode(NM_DedicatedServer) && NOT _EcsWorldsCollectingStats_OnClient.IsEmpty())
     {
         // Enabling ANY other stat completely overrides your -nodisplay flag set earlier!
-        // If the command `stat none` is executed, it will disable our non displayed ecs world stats
-        // P.S. If the command is executed on the server well... it's GG)
+        // If the command `stat none` is executed, it will disable our non-displayed ecs world stats
+        // P.S. If the command is executed on the server well, there will be infinite recursion
         DoTryEnableEcsWorldStat();
     }
 }
@@ -330,7 +346,7 @@ auto
     if (ck::Is_NOT_Valid(StatReplicatorActorWeak))
     { return; }
 
-    StatReplicatorActorWeak->_AssociatedEcsWorldTickingGroupAverageCycleMs = StatCycleMs;
+    StatReplicatorActorWeak->Set_AssociatedEcsWorldTickingGroupAverageCycleMs(StatCycleMs);
 }
 
 auto
@@ -345,7 +361,7 @@ auto
      * Executing the command when the stat is already enabled disables it.
      * If the game is run twice with the "New Editor Window (PIE)" option, the first run will enable the option and,
      * because the game is run in the same process as the editor, when the game is run the second time the stat will already be enabled.
-     * In this case we don't want run the command again which would result in the stat being disabled.
+     * In this case we don't want to run the command again which would result in the stat getting disabled.
      */
     const auto& GameViewport = GEngine->GameViewport;
 
