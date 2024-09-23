@@ -2,10 +2,8 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 
-#include <EngineMinimal.h>
 #include <Engine/NetDriver.h>
-
-#include "Net/UnrealNetwork.h"
+#include <Iris/ReplicationSystem/ReplicationFragmentUtil.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -116,6 +114,19 @@ auto
 
     // Our Replicated UObject is ALWAYS assumed to be replicated
     return true;
+}
+
+auto
+    UCk_ReplicatedObject_UE::
+    RegisterReplicationFragments(
+        UE::Net::FFragmentRegistrationContext& Context,
+        UE::Net::EFragmentRegistrationFlags RegistrationFlags)
+    -> void
+{
+    using namespace UE::Net;
+
+    // Build descriptors and allocate PropertyReplicationFragments for this object
+    FReplicationFragmentUtil::CreateAndRegisterFragmentsForObject(this, Context, RegistrationFlags);
 }
 
 #undef CK_ENSURE_OUTER_IS_VALID_OR_RETURN
