@@ -8,6 +8,9 @@
 
 #include "CkEcs/Settings/CkEcs_Settings.h"
 
+#include "Iris/Serialization/NetSerializer.h"
+#include "Iris/Serialization/NetSerializerConfig.h"
+
 #include "CkHandle.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -72,6 +75,10 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace UE::Net { struct FCk_HandleNetSerializer; }
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta=(NoImplicitConversion, HasNativeMake, HasNativeBreak="/Script/CkEcs.Ck_Utils_Handle_UE:Break_Handle"))
 struct CKECS_API FCk_Handle
 {
@@ -79,6 +86,7 @@ struct CKECS_API FCk_Handle
 
     friend class UCk_Utils_EntityReplicationDriver_UE;
     friend class UCk_Fragment_EntityReplicationDriver_Rep;
+    friend struct UE::Net::FCk_HandleNetSerializer;
 
 public:
     CK_GENERATED_BODY(FCk_Handle);
@@ -266,6 +274,19 @@ struct TStructOpsTypeTraits<FCk_Handle> : public TStructOpsTypeTraitsBase2<FCk_H
     enum
     { WithNetSerializer = true };
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT()
+struct FCk_HandleSerializerConfig : public FNetSerializerConfig
+{
+	GENERATED_BODY()
+};
+
+namespace UE::Net
+{
+    UE_NET_DECLARE_SERIALIZER(FCk_HandleNetSerializer, CKECS_API);
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
