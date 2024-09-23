@@ -116,8 +116,12 @@ auto
     -> void
 {
 #if STATS
-    const auto& Stats = FStatsThreadState::GetLocalState();
-    Stats.NewFrameDelegate.Remove(_OnNewFrameDelegateHandle);
+    FCriticalSection CriticalSection;
+    {
+        FScopeLock Lock(&CriticalSection);
+        const auto& Stats = FStatsThreadState::GetLocalState();
+        Stats.NewFrameDelegate.Remove(_OnNewFrameDelegateHandle);
+    }
 #endif
 
     Super::Deinitialize();
@@ -195,8 +199,12 @@ auto
         }
 
 #if	STATS
-        const auto& Stats = FStatsThreadState::GetLocalState();
-        _OnNewFrameDelegateHandle = Stats.NewFrameDelegate.AddUObject(this, &ThisType::OnNewFrame);
+        FCriticalSection CriticalSection;
+        {
+            FScopeLock Lock(&CriticalSection);
+            const auto& Stats = FStatsThreadState::GetLocalState();
+            _OnNewFrameDelegateHandle = Stats.NewFrameDelegate.AddUObject(this, &ThisType::OnNewFrame);
+        }
 #endif
 
         DoTryEnableEcsWorldStat();
@@ -205,8 +213,12 @@ auto
     if (NOT InWorld.IsNetMode(NM_DedicatedServer) && NOT _EcsWorldsCollectingStats_OnClient.IsEmpty())
     {
 #if	STATS
-        const auto& Stats = FStatsThreadState::GetLocalState();
-        _OnNewFrameDelegateHandle = Stats.NewFrameDelegate.AddUObject(this, &ThisType::OnNewFrame);
+        FCriticalSection CriticalSection;
+        {
+            FScopeLock Lock(&CriticalSection);
+            const auto& Stats = FStatsThreadState::GetLocalState();
+            _OnNewFrameDelegateHandle = Stats.NewFrameDelegate.AddUObject(this, &ThisType::OnNewFrame);
+        }
 #endif
 
         DoTryEnableEcsWorldStat();
