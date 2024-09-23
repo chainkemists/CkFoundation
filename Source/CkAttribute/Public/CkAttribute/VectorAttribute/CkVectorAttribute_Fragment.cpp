@@ -47,7 +47,7 @@ auto
         *Found = ToReplicate;
     }
 
-    MARK_PROPERTY_DIRTY_FROM_NAME(UCk_Fragment_VectorAttribute_Rep, _AttributesToReplicate, this);
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _AttributesToReplicate, this);
 }
 
 auto

@@ -4,8 +4,9 @@
 
 #include "CkEntityExtension/CkEntityExtension_Utils.h"
 
-#include <Net/UnrealNetwork.h>
 #include <Engine/World.h>
+#include <Net/UnrealNetwork.h>
+#include <Net/Core/PushModel/PushModel.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -251,8 +252,10 @@ auto
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    DOREPLIFETIME(ThisType, _PendingGiveAbilityRequests);
-    DOREPLIFETIME(ThisType, _PendingRevokeAbilityRequests);
+    constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
+
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingGiveAbilityRequests, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingRevokeAbilityRequests, Params);
 }
 
 auto
@@ -295,6 +298,26 @@ auto
         UCk_Utils_AbilityOwner_UE::Request_RevokeAbility(AssociatedEntityAbilityOwner, RevokeAbilityRequest, {});
     }
     _NextPendingRevokeAbilityRequests = _PendingRevokeAbilityRequests.Num();
+}
+
+auto
+    UCk_Fragment_AbilityOwner_Rep::
+    Request_GiveAbility(
+        const FCk_Request_AbilityOwner_GiveAbility& InRequest)
+    -> void
+{
+    _PendingGiveAbilityRequests.Emplace(InRequest);
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _PendingGiveAbilityRequests, this);
+}
+
+auto
+    UCk_Fragment_AbilityOwner_Rep::
+    Request_RevokeAbility(
+        const FCk_Request_AbilityOwner_RevokeAbility& InRequest)
+    -> void
+{
+    _PendingRevokeAbilityRequests.Emplace(InRequest);
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _PendingRevokeAbilityRequests, this);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

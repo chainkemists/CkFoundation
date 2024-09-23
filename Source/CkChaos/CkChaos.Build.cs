@@ -9,6 +9,8 @@ public class CkChaos : CkModuleRules
             // ... add other private include paths required here ...
         });
 
+        SetupIrisSupport(Target);
+
         PublicDependencyModuleNames.AddRange(new string[]
         {
             "Core",

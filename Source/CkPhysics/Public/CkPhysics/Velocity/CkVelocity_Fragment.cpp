@@ -1,7 +1,9 @@
 #include "CkVelocity_Fragment.h"
 
 #include "CkPhysics/Velocity/CkVelocity_Utils.h"
-#include "Net/UnrealNetwork.h"
+
+#include <Net/UnrealNetwork.h>
+#include <Net/Core/PushModel/PushModel.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -13,7 +15,9 @@ auto
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    DOREPLIFETIME(ThisType, _Velocity);
+    constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
+
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _Velocity, Params);
 }
 
 auto
@@ -27,6 +31,16 @@ auto
         auto VelocityHandle = UCk_Utils_Velocity_UE::CastChecked(_AssociatedEntity);
         UCk_Utils_Velocity_UE::Request_OverrideVelocity(VelocityHandle, _Velocity);
     }();
+}
+
+auto
+    UCk_Fragment_Velocity_Rep::
+    Set_Velocity(
+        FVector InVelocity)
+    -> void
+{
+    _Velocity = InVelocity;
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _Velocity, this);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
