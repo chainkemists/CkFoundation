@@ -336,6 +336,8 @@ public:
     static FCk_Handle_AbilityOwner
     BindTo_OnEvents(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        FGameplayTagContainer InRelevantEvents,
+        FGameplayTagContainer InExcludedEvents,
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_AbilityOwner_Events& InDelegate);
