@@ -14,6 +14,7 @@
 #include <Framework/Commands/InputChord.h>
 #include <Misc/NetworkGuid.h>
 #include <UObject/WeakInterfacePtr.h>
+#include <UObject/StrongObjectPtr.h>
 
 #include <type_traits>
 
