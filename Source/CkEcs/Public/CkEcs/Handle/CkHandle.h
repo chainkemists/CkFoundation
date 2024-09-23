@@ -8,6 +8,9 @@
 
 #include "CkEcs/Settings/CkEcs_Settings.h"
 
+#include "Iris/Serialization/NetSerializer.h"
+#include "Iris/Serialization/NetSerializerConfig.h"
+
 #include "CkHandle.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -72,6 +75,10 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace UE::Net { struct FCk_HandleNetSerializer; }
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta=(NoImplicitConversion, HasNativeMake, HasNativeBreak="/Script/CkEcs.Ck_Utils_Handle_UE:Break_Handle"))
 struct CKECS_API FCk_Handle
 {
@@ -79,6 +86,7 @@ struct CKECS_API FCk_Handle
 
     friend class UCk_Utils_EntityReplicationDriver_UE;
     friend class UCk_Fragment_EntityReplicationDriver_Rep;
+    friend struct UE::Net::FCk_HandleNetSerializer;
 
 public:
     CK_GENERATED_BODY(FCk_Handle);
@@ -212,11 +220,11 @@ public:
     Get_DebugName() const -> FName;
 
 public:
-    auto
-    NetSerialize(
-        FArchive& Ar,
-        class UPackageMap* Map,
-        bool& bOutSuccess) -> bool;
+    //auto
+    //NetSerialize(
+    //    FArchive& Ar,
+    //    class UPackageMap* Map,
+    //    bool& bOutSuccess) -> bool;
 
 private:
     template <typename T_Fragment>
@@ -235,7 +243,7 @@ private:
     auto DoRemove_FragmentDebugInfo() -> void;
 
 protected:
-    UPROPERTY()
+    UPROPERTY(NotReplicated)
     FCk_Entity _Entity;
 
     TOptional<FCk_Registry> _Registry;
@@ -253,19 +261,32 @@ public:
 
 #if WITH_EDITORONLY_DATA
 private:
-    UPROPERTY(Transient) // needs to be a UPROPERTY so that it shows up when debugging Blueprints
+    UPROPERTY(NotReplicated, Transient) // needs to be a UPROPERTY so that it shows up when debugging Blueprints
     TWeakObjectPtr<class UCk_Handle_FragmentsDebug> _Fragments = nullptr;
 #endif
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
-template<>
-struct TStructOpsTypeTraits<FCk_Handle> : public TStructOpsTypeTraitsBase2<FCk_Handle>
+//template<>
+//struct TStructOpsTypeTraits<FCk_Handle> : public TStructOpsTypeTraitsBase2<FCk_Handle>
+//{
+//    enum
+//    { WithNetSerializer = true };
+//};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT()
+struct FCk_HandleSerializerConfig : public FNetSerializerConfig
 {
-    enum
-    { WithNetSerializer = true };
+    GENERATED_BODY()
 };
+
+namespace UE::Net
+{
+    UE_NET_DECLARE_SERIALIZER(FCk_HandleNetSerializer, CKECS_API);
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
