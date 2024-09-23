@@ -25,6 +25,9 @@ public class CkEcs : CkModuleRules
 				"Core",
 				"StructUtils",
 
+				"IrisCore",
+				"NetCore",
+
 				"CkThirdParty",
 				"CkCore",
 				"CkProfile",

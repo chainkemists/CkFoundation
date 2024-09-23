@@ -18,6 +18,9 @@ public class CkPhysics : CkModuleRules
             "GeometryCollectionEngine",
             "FieldSystemEngine",
 
+            "IrisCore",
+            "NetCore",
+
             "CkActor",
             "CkCore",
             "CkEcs",

@@ -28,6 +28,8 @@ public class CkCore : CkModuleRules
                 "NetCore",
                 "StructUtils",
 
+                "IrisCore",
+
                 "CkBuildConfig",
                 "CkLog",
                 "CkSettings",
