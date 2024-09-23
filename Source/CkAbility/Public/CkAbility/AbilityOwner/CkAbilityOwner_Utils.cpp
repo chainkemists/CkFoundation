@@ -552,8 +552,7 @@ auto
         const FCk_Request_AbilityOwner_SendEvent& InRequest)
     -> FCk_Handle_AbilityOwner
 {
-    auto& Events = InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Events>();
-    Events._Events.Emplace(InRequest.Get_Event());
+    InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Events>()._Events.Emplace(InRequest.Get_Event());
 
     return InAbilityOwnerHandle;
 }
@@ -562,30 +561,34 @@ auto
     UCk_Utils_AbilityOwner_UE::
     BindTo_OnEvents(
         FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        FGameplayTagContainer InRelevantEvents,
+        FGameplayTagContainer InExcludedEvents,
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_AbilityOwner_Events& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
-    CK_SIGNAL_BIND(ck::UUtils_Signal_AbilityOwner_Events, InAbilityOwnerHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    CK_SIGNAL_BIND_WITH_CONDITION(ck::UUtils_Signal_AbilityOwner_Events, InAbilityOwnerHandle, InDelegate, InBindingPolicy, InPostFireBehavior,
+    [InRelevantEvents COMMA InExcludedEvents](FCk_Handle_AbilityOwner InHandle, const TArray<FCk_AbilityOwner_Event>& InEvents)
+    {
+        const auto& IsWhitelistedEvent = [&InEvents COMMA InRelevantEvents]()
+        {
+            if (InRelevantEvents.IsEmpty())
+            { return true; }
 
-    //auto& x = InAbilityOwnerHandle.AddOrGet<ck::FFragment_Signal_UnrealMulticast_AbilityOwner_Events>();
-    //x._InvocationList.Add(InDelegate, [](FCk_Handle_AbilityOwner InHandle, const TArray<FCk_AbilityOwner_Event>& InEvents) -> bool
-    //{
-    //    return InEvents.Num() > 1;
-    //});
+            return ck::algo::AnyOf(InEvents,[InRelevantEvents](const FCk_AbilityOwner_Event& InEvent){ return InRelevantEvents.HasTag(InEvent.Get_EventName()); });
+        }();
 
-    //for (auto DelegateObject : x.Get_Multicast().GetAllObjectRefsEvenIfUnreachable())
-    //{
-    //    auto y = false;
-    //    y = false;
-    //    x._Multicast.GetAllObjects()
-    //
-    //    FCk_Delegate_AbilityOwner_Events z;
-    //    z.ExecuteIfBound()
+        const auto& IsBlacklistedEvent = [&InEvents COMMA InExcludedEvents]()
+        {
+            if (InExcludedEvents.IsEmpty())
+            { return false; }
 
-    //    ck::UUtils_Signal_AbilityOwner_Events::Bind()
-    //}
+            return ck::algo::AnyOf(InEvents,[InExcludedEvents](const FCk_AbilityOwner_Event& InEvent){ return InExcludedEvents.HasTag(InEvent.Get_EventName()); });
+        }();
+
+        return IsWhitelistedEvent && NOT IsBlacklistedEvent;
+    });
 
     return InAbilityOwnerHandle;
 }
