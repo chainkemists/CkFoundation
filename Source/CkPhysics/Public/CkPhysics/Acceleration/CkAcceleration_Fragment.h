@@ -148,9 +148,6 @@ public:
     CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_Acceleration_Rep);
 
 public:
-    friend class ck::FProcessor_Acceleration_Replicate;
-
-public:
     virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
 
 public:
@@ -160,6 +157,11 @@ public:
 private:
     UPROPERTY(ReplicatedUsing = OnRep_Acceleration)
     FVector _Acceleration = FVector::ZeroVector;
+
+public:
+    auto
+    Set_Acceleration(
+        FVector InAcceleration) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

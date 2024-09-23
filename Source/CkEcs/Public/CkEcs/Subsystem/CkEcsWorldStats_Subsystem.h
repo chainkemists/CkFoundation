@@ -47,9 +47,6 @@ public:
     CK_GENERATED_BODY(ACk_EcsWorld_StatReplicatorActor_UE);
 
 public:
-    friend class UCk_EcsWorld_Stats_Subsystem_UE;
-
-public:
     ACk_EcsWorld_StatReplicatorActor_UE();
 
 public:
@@ -84,6 +81,11 @@ private:
 
     UPROPERTY(Transient)
     TWeakObjectPtr<class UCk_EcsWorld_Stats_Subsystem_UE> _EcsWorldStatsSubsystem;
+
+public:
+    auto
+    Set_AssociatedEcsWorldTickingGroupAverageCycleMs(
+        float InAverageCycleMs) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

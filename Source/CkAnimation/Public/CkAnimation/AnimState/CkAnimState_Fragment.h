@@ -121,29 +121,33 @@ namespace ck { class FProcessor_AnimState_Replicate; }
 UCLASS(Blueprintable)
 class CKANIMATION_API UCk_Fragment_AnimState_Rep : public UCk_Ecs_ReplicatedObject_UE
 {
+private:
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_AnimState_Rep);
 
 public:
-    friend class ck::FProcessor_AnimState_Replicate;
+    auto
+    GetLifetimeReplicatedProps(
+        TArray<FLifetimeProperty>&) const -> void override;
 
 public:
-    virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
-
-public:
     UFUNCTION()
-    void OnRep_AnimGoal();
+    void
+    OnRep_AnimGoal();
 
     UFUNCTION()
-    void OnRep_AnimState();
+    void
+    OnRep_AnimState();
 
     UFUNCTION()
-    void OnRep_AnimCluster();
+    void
+    OnRep_AnimCluster();
 
     UFUNCTION()
-    void OnRep_AnimOverlay();
+    void
+    OnRep_AnimOverlay();
 
 private:
     UPROPERTY(ReplicatedUsing = OnRep_AnimGoal)
@@ -157,6 +161,20 @@ private:
 
     UPROPERTY(ReplicatedUsing = OnRep_AnimOverlay)
     FCk_AnimState_Overlay _AnimOverlay;
+
+public:
+    auto
+    Set_AnimGoal(
+        const FCk_AnimState_Goal& OutAnimGoal) -> void;
+    auto
+    Set_AnimState(
+        const FCk_AnimState_State& OutAnimState) -> void;
+    auto
+    Set_AnimCluster(
+        const FCk_AnimState_Cluster& OutAnimCluster) -> void;
+    auto
+    Set_AnimOverlay(
+        const FCk_AnimState_Overlay& OutAnimOverlay) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

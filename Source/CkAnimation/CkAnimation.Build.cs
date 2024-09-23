@@ -17,6 +17,9 @@ public class CkAnimation : CkModuleRules
             "GameplayTags",
             "StructUtils",
 
+            "IrisCore",
+            "NetCore",
+
             "CkCore",
             "CkEcs",
             "CkEcsExt",

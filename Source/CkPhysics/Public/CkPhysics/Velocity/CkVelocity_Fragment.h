@@ -194,9 +194,6 @@ public:
     CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_Velocity_Rep);
 
 public:
-    friend class ck::FProcessor_Velocity_Replicate;
-
-public:
     virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
 
 public:
@@ -206,6 +203,11 @@ public:
 private:
     UPROPERTY(ReplicatedUsing = OnRep_Velocity)
     FVector _Velocity = FVector::ZeroVector;
+
+public:
+    auto
+    Set_Velocity(
+        FVector InVelocity) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -22,10 +22,31 @@ public:
 public:
     auto GetOwningActor() const -> AActor*;
 
-    virtual auto CallRemoteFunction(UFunction* Function, void* Parms, FOutParmRec* OutParms, FFrame* Stack) -> bool override;
-    virtual auto GetFunctionCallspace(UFunction* Function, FFrame* Stack) -> int32 override;
-    virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
-    virtual auto IsSupportedForNetworking() const -> bool override;
+    auto
+    CallRemoteFunction(
+        UFunction* Function, 
+        void* Parms, 
+        FOutParmRec* OutParms, 
+        FFrame* Stack) -> bool override;
+
+    auto
+    GetFunctionCallspace(
+        UFunction* Function, 
+        FFrame* Stack) -> int32 override;
+
+    auto
+    GetLifetimeReplicatedProps(
+        TArray<FLifetimeProperty>& OutLifetimeProps) const -> void override;
+
+    auto
+    IsSupportedForNetworking() const -> bool override;
+
+#if UE_WITH_IRIS
+	auto
+    RegisterReplicationFragments(
+        UE::Net::FFragmentRegistrationContext& Context, 
+        UE::Net::EFragmentRegistrationFlags RegistrationFlags) -> void override;
+#endif // UE_WITH_IRIS
 };
 
 // --------------------------------------------------------------------------------------------------------------------

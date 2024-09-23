@@ -28,7 +28,7 @@ ACk_Destructible::
     MinNetUpdateFrequency = 10.0f;
     NetPriority = 0.01f; // destruction should be the lowest priority
 
-    bReplicateUsingRegisteredSubObjectList = false;
+    bReplicateUsingRegisteredSubObjectList = true;
 
     _GeometryCollection = CreateDefaultSubobject<UCk_GeometryCollectionComponent>(TEXT("Ck_GeometryCollection"));
     _GeometryCollection->Request_EnableAsyncPhysics();

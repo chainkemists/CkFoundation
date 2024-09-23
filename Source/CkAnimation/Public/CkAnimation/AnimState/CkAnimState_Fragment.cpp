@@ -2,6 +2,8 @@
 
 #include "CkAnimation/AnimState/CkAnimState_Utils.h"
 
+#include "Net/Core/PushModel/PushModel.h"
+
 #include <Net/UnrealNetwork.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -29,10 +31,12 @@ auto
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    DOREPLIFETIME(ThisType, _AnimGoal);
-    DOREPLIFETIME(ThisType, _AnimState);
-    DOREPLIFETIME(ThisType, _AnimCluster);
-    DOREPLIFETIME(ThisType, _AnimOverlay);
+    constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
+
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _AnimGoal, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _AnimState, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _AnimCluster, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _AnimOverlay, Params);
 }
 
 auto
@@ -93,6 +97,46 @@ auto
             FCk_Request_AnimState_SetOverlay{_AnimOverlay}
         );
     });
+}
+
+auto
+    UCk_Fragment_AnimState_Rep::
+    Set_AnimGoal(
+        const FCk_AnimState_Goal& OutAnimGoal)
+    -> void
+{
+    _AnimGoal = OutAnimGoal;
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _AnimGoal, this);
+}
+
+auto
+    UCk_Fragment_AnimState_Rep::
+    Set_AnimState(
+        const FCk_AnimState_State& OutAnimState)
+    -> void
+{
+    _AnimState = OutAnimState;
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _AnimState, this);
+}
+
+auto
+    UCk_Fragment_AnimState_Rep::
+    Set_AnimCluster(
+        const FCk_AnimState_Cluster& OutAnimCluster)
+    -> void
+{
+    _AnimCluster = OutAnimCluster;
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _AnimCluster, this);
+}
+
+auto
+    UCk_Fragment_AnimState_Rep::
+    Set_AnimOverlay(
+        const FCk_AnimState_Overlay& OutAnimOverlay)
+    -> void
+{
+    _AnimOverlay = OutAnimOverlay;
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _AnimOverlay, this);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
