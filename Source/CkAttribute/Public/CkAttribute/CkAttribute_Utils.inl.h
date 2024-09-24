@@ -137,9 +137,6 @@ namespace ck
         if (NOT InHandle.template Has<FTag_ReplicatedAttribute>())
         { return; }
 
-        if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle))
-        { return; }
-
         InHandle.template AddOrGet<typename AttributeFragmentType::FTag_MayRequireReplication>();
     }
 
@@ -191,6 +188,11 @@ namespace ck
             case ECk_Attribute_RefillState::Running:
             {
                 InHandle.template AddOrGet<AttributeRefillFragmentType::FTag_RefillRunning>();
+                break;
+            }
+            default:
+            {
+                CK_INVALID_ENUM(InRefillState);
                 break;
             }
         }

@@ -150,29 +150,15 @@ auto
             UCk_Utils_ByteAttribute_UE::Request_Override(
                 AttributeEntity, AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Component());
 
-            if (auto AttributeModifier = UCk_Utils_ByteAttributeModifier_UE::TryGet(AttributeEntity,
+            auto AttributeModifier = UCk_Utils_ByteAttributeModifier_UE::TryGet(AttributeEntity,
                 ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), AttributeToReplicate.Get_Component());
-                ck::IsValid(AttributeModifier))
-            {
-                UCk_Utils_ByteAttributeModifier_UE::Override(
-                    AttributeModifier, AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base());
-            }
-            else
-            {
-                const auto Difference = AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base();
 
-                UCk_Utils_ByteAttributeModifier_UE::Add_Revocable
-                (
-                    AttributeEntity,
-                    ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
-                    Difference >= 0 ? ECk_AttributeModifier_Operation::Add : ECk_AttributeModifier_Operation::Subtract,
-                    FCk_Fragment_ByteAttributeModifier_ParamsData
-                    {
-                        static_cast<uint8>(std::abs(Difference)),
-                        AttributeToReplicate.Get_Component()
-                    }
-                );
-            }
+            CK_ENSURE_IF_NOT(ck::IsValid(AttributeModifier), TEXT("Did not expect the Final Modifier [{}] to NOT exist on BYTE Attribute [{}]"),
+                ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), AttributeEntity)
+            { continue; }
+
+            UCk_Utils_ByteAttributeModifier_UE::Override(
+                AttributeModifier, AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base());
 
             continue;
         }
