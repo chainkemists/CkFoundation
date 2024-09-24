@@ -116,11 +116,15 @@ auto
     const auto& InjectMetaInjectorProcessors = [&](const TScriptInterface<ICk_MetaProcessorInjector_Interface>& InMetaInjector)
     {
         CK_ENSURE_IF_NOT(ck::IsValid(InMetaInjector),
-            TEXT("Encountered an INVALID MetaInjector in NewEcsWorld Actor [{}]"), this)
+            TEXT("Encountered an INVALID MetaInjector in EcsWorld Actor [{}]"), this)
         { return; }
 
         for (const auto& ProcessorInjector : InMetaInjector->Get_ProcessorInjectors())
         {
+            CK_ENSURE_IF_NOT(ck::IsValid(ProcessorInjector),
+                TEXT("Invalid Processor Injector found inside MetaInjector [{}] of EcsWorld Actor"), InMetaInjector, this)
+            { continue; }
+
             InjectProcessorsIntoWorld(ProcessorInjector);
         }
     };
