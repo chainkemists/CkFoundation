@@ -279,43 +279,43 @@ auto
     return *_Registry;
 }
 
-auto
-    FCk_Handle::
-    NetSerialize(
-        FArchive& Ar,
-        UPackageMap* Map,
-        bool& bOutSuccess)
-    -> bool
-{
-    if (Ar.IsSaving())
-    {
-        if (ck::IsValid(*this) && ck::Is_NOT_Valid(_ReplicationDriver))
-        {
-            if (Has<TWeakObjectPtr<class UCk_Ecs_ReplicatedObject_UE>>())
-            {
-                _ReplicationDriver = Get<TWeakObjectPtr<class UCk_Ecs_ReplicatedObject_UE>>();
-            }
-        }
-
-        Ar << _ReplicationDriver;
-    }
-
-    if (Ar.IsLoading())
-    {
-        Ar << _ReplicationDriver;
-        if (ck::IsValid(_ReplicationDriver))
-        {
-            *this = _ReplicationDriver->Get_AssociatedEntity();
-        }
-        else
-        {
-            *this = {};
-        }
-    }
-
-    bOutSuccess = true;
-    return true;
-}
+//auto
+//    FCk_Handle::
+//    NetSerialize(
+//        FArchive& Ar,
+//        UPackageMap* Map,
+//        bool& bOutSuccess)
+//    -> bool
+//{
+//    if (Ar.IsSaving())
+//    {
+//        if (ck::IsValid(*this) && ck::Is_NOT_Valid(_ReplicationDriver))
+//        {
+//            if (Has<TWeakObjectPtr<class UCk_Ecs_ReplicatedObject_UE>>())
+//            {
+//                _ReplicationDriver = Get<TWeakObjectPtr<class UCk_Ecs_ReplicatedObject_UE>>();
+//            }
+//        }
+//
+//        Ar << _ReplicationDriver;
+//    }
+//
+//    if (Ar.IsLoading())
+//    {
+//        Ar << _ReplicationDriver;
+//        if (ck::IsValid(_ReplicationDriver))
+//        {
+//            *this = _ReplicationDriver->Get_AssociatedEntity();
+//        }
+//        else
+//        {
+//            *this = {};
+//        }
+//    }
+//
+//    bOutSuccess = true;
+//    return true;
+//}
 
 auto
     FCk_Handle::
@@ -504,7 +504,27 @@ struct FCk_HandleNetSerializer
 
     inline static const FNetSerializer* _ObjectNetSerializer = &UE_NET_GET_SERIALIZER(FWeakObjectNetSerializer);
     inline static const FNetSerializerConfig* _ObjectNetSerializerConfig = UE_NET_GET_SERIALIZER_DEFAULT_CONFIG(FWeakObjectNetSerializer);
+    inline static FNetSerializerRegistryDelegates _NetSerializerRegistryDelegates;
+
+    class FNetSerializerRegistryDelegates final : private UE::Net::FNetSerializerRegistryDelegates
+    {
+    private:
+        void OnPreFreezeNetSerializerRegistry() override;
+        void OnPostFreezeNetSerializerRegistry() override;
+    };
 };
+
+void
+    FCk_HandleNetSerializer::FNetSerializerRegistryDelegates::OnPreFreezeNetSerializerRegistry()
+{
+    Net::FNetSerializerRegistryDelegates::OnPreFreezeNetSerializerRegistry();
+}
+
+void
+    FCk_HandleNetSerializer::FNetSerializerRegistryDelegates::OnPostFreezeNetSerializerRegistry()
+{
+    Net::FNetSerializerRegistryDelegates::OnPostFreezeNetSerializerRegistry();
+}
 
 UE_NET_IMPLEMENT_SERIALIZER(FCk_HandleNetSerializer);
 
@@ -577,7 +597,7 @@ auto
     }
 }
 
-static const FName PropertyNetSerializerRegistry_NAME_Handle("Handle");
+static const FName PropertyNetSerializerRegistry_NAME_Handle("Ck_Handle");
 UE_NET_IMPLEMENT_NAMED_STRUCT_NETSERIALIZER_INFO(PropertyNetSerializerRegistry_NAME_Handle, FCk_HandleNetSerializer);
 
 }

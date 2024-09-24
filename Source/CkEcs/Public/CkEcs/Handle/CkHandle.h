@@ -220,11 +220,11 @@ public:
     Get_DebugName() const -> FName;
 
 public:
-    auto
-    NetSerialize(
-        FArchive& Ar,
-        class UPackageMap* Map,
-        bool& bOutSuccess) -> bool;
+    //auto
+    //NetSerialize(
+    //    FArchive& Ar,
+    //    class UPackageMap* Map,
+    //    bool& bOutSuccess) -> bool;
 
 private:
     template <typename T_Fragment>
@@ -268,19 +268,19 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-template<>
-struct TStructOpsTypeTraits<FCk_Handle> : public TStructOpsTypeTraitsBase2<FCk_Handle>
-{
-    enum
-    { WithNetSerializer = true };
-};
+//template<>
+//struct TStructOpsTypeTraits<FCk_Handle> : public TStructOpsTypeTraitsBase2<FCk_Handle>
+//{
+//    enum
+//    { WithNetSerializer = true };
+//};
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT()
 struct FCk_HandleSerializerConfig : public FNetSerializerConfig
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 };
 
 namespace UE::Net
