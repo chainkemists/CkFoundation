@@ -149,27 +149,15 @@ auto
             UCk_Utils_FloatAttribute_UE::Request_Override(
                 AttributeEntity, AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Component());
 
-            if (auto AttributeModifier = UCk_Utils_FloatAttributeModifier_UE::TryGet(AttributeEntity,
+            auto AttributeModifier = UCk_Utils_FloatAttributeModifier_UE::TryGet(AttributeEntity,
                 ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), AttributeToReplicate.Get_Component());
-                ck::IsValid(AttributeModifier))
-            {
-                UCk_Utils_FloatAttributeModifier_UE::Override(
-                    AttributeModifier, AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base());
-            }
-            else
-            {
-                UCk_Utils_FloatAttributeModifier_UE::Add_Revocable
-                (
-                    AttributeEntity,
-                    ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
-                    ECk_AttributeModifier_Operation::Add,
-                    FCk_Fragment_FloatAttributeModifier_ParamsData
-                    {
-                        AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base(),
-                        AttributeToReplicate.Get_Component()
-                    }
-                );
-            }
+
+            CK_ENSURE_IF_NOT(ck::IsValid(AttributeModifier), TEXT("Did not expect the Final Modifier [{}] to NOT exist on FLOAT Attribute [{}]"),
+                ck::FAttributeModifier_ReplicationTags::Get_FinalTag(), AttributeEntity)
+            { continue; }
+
+            UCk_Utils_FloatAttributeModifier_UE::Override(
+                AttributeModifier, AttributeToReplicate.Get_Final() - AttributeToReplicate.Get_Base());
 
             continue;
         }
