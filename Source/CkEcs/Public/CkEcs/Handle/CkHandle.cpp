@@ -12,6 +12,7 @@
 #include <Iris/Serialization/ObjectNetSerializer.h>
 #include <Iris/Core/NetObjectReference.h>
 #include <Iris/ReplicationState/PropertyNetSerializerInfoRegistry.h>
+#include <Iris/Serialization/NetReferenceCollector.h>
 
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -489,41 +490,64 @@ struct FCk_HandleNetSerializer
     static const uint32 Version = 0;
 
     typedef FCk_Handle SourceType;
-    typedef FCk_HandleSerializerConfig ConfigType;
     typedef FNetObjectReference QuantizedType;
+
+    typedef FCk_HandleSerializerConfig ConfigType;
+
+    static constexpr bool bHasSerialize = true;
+    static constexpr bool bHasDeserialize = true;
+    static constexpr bool bHasQuantize = true;
+    static constexpr bool bHasDequantize = true;
+    static constexpr bool bIsForwardingSerializer = true;
+	static constexpr bool bHasCustomNetReference = true;
 
     static const ConfigType DefaultConfig;
 
     static void Serialize(FNetSerializationContext&, const FNetSerializeArgs&);
     static void Deserialize(FNetSerializationContext&, const FNetDeserializeArgs&);
 
+    static void SerializeDelta(FNetSerializationContext&, const FNetSerializeDeltaArgs&);
+    static void DeserializeDelta(FNetSerializationContext&, const FNetDeserializeDeltaArgs&);
+
+	static void CloneDynamicState(FNetSerializationContext&, const FNetCloneDynamicStateArgs&);
+	static void FreeDynamicState(FNetSerializationContext&, const FNetFreeDynamicStateArgs&);
+
     static void Quantize(FNetSerializationContext&, const FNetQuantizeArgs& Args);
     static void Dequantize(FNetSerializationContext&, const FNetDequantizeArgs& Args);
 
-    static bool IsEqual(FNetSerializationContext&, const FNetIsEqualArgs& Args);
+	static void CollectNetReferences(FNetSerializationContext&, const FNetCollectReferencesArgs&);
 
-    inline static const FNetSerializer* _ObjectNetSerializer = &UE_NET_GET_SERIALIZER(FWeakObjectNetSerializer);
-    inline static const FNetSerializerConfig* _ObjectNetSerializerConfig = UE_NET_GET_SERIALIZER_DEFAULT_CONFIG(FWeakObjectNetSerializer);
-    inline static FNetSerializerRegistryDelegates _NetSerializerRegistryDelegates;
+    static bool IsEqual(FNetSerializationContext&, const FNetIsEqualArgs& Args);
+	static bool Validate(FNetSerializationContext&, const FNetValidateArgs& Args);
+
+    inline static const FNetSerializer* _ObjectNetSerializer = &UE_NET_GET_SERIALIZER(FObjectNetSerializer);
+    inline static const FNetSerializerConfig* _ObjectNetSerializerConfig = UE_NET_GET_SERIALIZER_DEFAULT_CONFIG(FObjectNetSerializer);
 
     class FNetSerializerRegistryDelegates final : private UE::Net::FNetSerializerRegistryDelegates
     {
+    public:
+        ~FNetSerializerRegistryDelegates() override;
     private:
         void OnPreFreezeNetSerializerRegistry() override;
-        void OnPostFreezeNetSerializerRegistry() override;
     };
+
+    static FNetSerializerRegistryDelegates _NetSerializerRegistryDelegates;
 };
+
+static const FName PropertyNetSerializerRegistry_NAME_Handle("Ck_Handle");
+UE_NET_IMPLEMENT_NAMED_STRUCT_NETSERIALIZER_INFO(PropertyNetSerializerRegistry_NAME_Handle, FCk_HandleNetSerializer);
+
+FCk_HandleNetSerializer::FNetSerializerRegistryDelegates FCk_HandleNetSerializer::_NetSerializerRegistryDelegates;
+
+FCk_HandleNetSerializer::FNetSerializerRegistryDelegates::~FNetSerializerRegistryDelegates()
+{
+    UE_NET_UNREGISTER_NETSERIALIZER_INFO(PropertyNetSerializerRegistry_NAME_Handle);
+}
 
 void
     FCk_HandleNetSerializer::FNetSerializerRegistryDelegates::OnPreFreezeNetSerializerRegistry()
 {
-    Net::FNetSerializerRegistryDelegates::OnPreFreezeNetSerializerRegistry();
-}
-
-void
-    FCk_HandleNetSerializer::FNetSerializerRegistryDelegates::OnPostFreezeNetSerializerRegistry()
-{
-    Net::FNetSerializerRegistryDelegates::OnPostFreezeNetSerializerRegistry();
+    UE_NET_REGISTER_NETSERIALIZER_INFO(PropertyNetSerializerRegistry_NAME_Handle);
 }
 
 UE_NET_IMPLEMENT_SERIALIZER(FCk_HandleNetSerializer);
@@ -540,6 +564,73 @@ void FCk_HandleNetSerializer::Deserialize(FNetSerializationContext& Context, con
     _ObjectNetSerializer->Deserialize(Context, Args);
 }
 
+void
+    FCk_HandleNetSerializer::CloneDynamicState(
+        FNetSerializationContext& Context,
+        const FNetCloneDynamicStateArgs& Args)
+{
+	const QuantizedType& Source = *reinterpret_cast<const QuantizedType*>(Args.Source);
+	const QuantizedType& Target = *reinterpret_cast<const QuantizedType*>(Args.Target);
+}
+
+void
+    FCk_HandleNetSerializer::FreeDynamicState(
+        FNetSerializationContext& Context,
+        const FNetFreeDynamicStateArgs& Args)
+{
+}
+
+auto
+    FCk_HandleNetSerializer::
+    SerializeDelta(
+        FNetSerializationContext& Context,
+        const FNetSerializeDeltaArgs& Args)
+    -> void
+{
+	const QuantizedType& Value = *reinterpret_cast<const QuantizedType*>(Args.Source);
+	const QuantizedType& PrevValue = *reinterpret_cast<const QuantizedType*>(Args.Prev);
+
+    auto& ValuePtr = *reinterpret_cast<FCk_Handle*>(Args.Source);
+    auto& PrevValuePtr = *reinterpret_cast<FCk_Handle*>(Args.Prev);
+
+    auto& ObjectPtr = *reinterpret_cast<UObject*>(Args.Source);
+    auto& PrevObjectPtr = *reinterpret_cast<UObject*>(Args.Prev);
+
+    if (Value != PrevValue)
+    {
+        //FNetSerializeDeltaArgs NewArgs{};
+        //NewArgs.Source = Args.Source;
+        //NewArgs. = Args.Source;
+        //NewArgs.NetSerializerConfig = Args.NetSerializerConfig;
+        //_ObjectNetSerializer->DeserializeDelta(Context, NewArgs);
+    }
+}
+
+auto
+    FCk_HandleNetSerializer::
+    DeserializeDelta(
+        FNetSerializationContext& Context,
+        const FNetDeserializeDeltaArgs& Args)
+    -> void
+{
+	const QuantizedType& Value = *reinterpret_cast<const QuantizedType*>(Args.Target);
+	const QuantizedType& PrevValue = *reinterpret_cast<const QuantizedType*>(Args.Prev);
+
+    auto& ValuePtr = *reinterpret_cast<FCk_Handle*>(Args.Target);
+    auto& PrevValuePtr = *reinterpret_cast<FCk_Handle*>(Args.Prev);
+
+    auto& ObjectPtr = *reinterpret_cast<UObject*>(Args.Target);
+    auto& PrevObjectPtr = *reinterpret_cast<UObject*>(Args.Prev);
+
+    if (Value != PrevValue)
+    {
+        //FNetDeserializeArgs NewArgs{};
+        //NewArgs.Target = Args.Target;
+        //NewArgs.NetSerializerConfig = Args.NetSerializerConfig;
+        //_ObjectNetSerializer->Deserialize(Context, NewArgs);
+    }
+}
+
 auto
     FCk_HandleNetSerializer::
     Quantize(
@@ -547,13 +638,28 @@ auto
         const FNetQuantizeArgs& Args)
     -> void
 {
-    auto& Source = *reinterpret_cast<FCk_Handle*>(Args.Source);
+    //auto& Source = *reinterpret_cast<QuantizedType*>(Args.Source);
+    //auto& Target = *reinterpret_cast<QuantizedType*>(Args.Target);
 
-    auto NewArgs = FNetQuantizeArgs{};
-    NewArgs.Source = reinterpret_cast<NetSerializerValuePointer>(Source._ReplicationDriver.Get());
-    NewArgs.Target = Args.Target;
+    //if (Source.IsValid())
+    //{
+        auto& Source = *reinterpret_cast<FCk_Handle*>(Args.Source);
+        //if (Source._ReplicationDriver.IsValid())
+        //{
+            auto NewArgs = FNetQuantizeArgs{};
+            NewArgs.NetSerializerConfig = Args.NetSerializerConfig;
+            auto Object = Source._ReplicationDriver.Get();
+            NewArgs.Source = reinterpret_cast<NetSerializerValuePointer>(&Object);
+            NewArgs.Target = Args.Target;
+            _ObjectNetSerializer->Quantize(Context, NewArgs);
+        //}
+    //}
+    //else if (Target.IsValid())
+    //{
+    //    int i = 0;
+    //}
 
-    _ObjectNetSerializer->Quantize(Context, NewArgs);
+    //_ObjectNetSerializer->Quantize(Context, Args);
 }
 
 auto
@@ -563,41 +669,96 @@ auto
         const FNetDequantizeArgs& Args)
     -> void
 {
-    const QuantizedType& Source = *reinterpret_cast<const QuantizedType*>(Args.Source);
-    auto& Target = *reinterpret_cast<FCk_Handle*>(Args.Target);
+    //auto& Source = *reinterpret_cast<QuantizedType*>(Args.Source);
+    //auto& Target = *reinterpret_cast<QuantizedType*>(Args.Target);
 
-    FNetDequantizeArgs NewArgs;
-    _ObjectNetSerializer->Dequantize(Context, NewArgs);
+    //if (Target.IsValid())
+    //{
+        auto NewArgs = FNetDequantizeArgs{};
+        NewArgs.NetSerializerConfig = Args.NetSerializerConfig;
+        NewArgs.Source = Args.Source;
+        UObject* Target = nullptr;
+        NewArgs.Target = reinterpret_cast<NetSerializerValuePointer>(&Target);
+        _ObjectNetSerializer->Dequantize(Context, NewArgs);
 
-    UObject* NewTarget = reinterpret_cast<UObject*>(Args.Target);
-    Target._ReplicationDriver = Cast<UCk_Ecs_ReplicatedObject_UE>(NewTarget);
-    Target = Target._ReplicationDriver->Get_AssociatedEntity();
+        auto RepObj = Cast<UCk_Ecs_ReplicatedObject_UE>(Target);
+        //if (ck::IsValid(RepObj))
+        //{
+            auto Handle = reinterpret_cast<FCk_Handle*>(Args.Target);
+            *Handle = ck::IsValid(RepObj) ? RepObj->Get_AssociatedEntity() : FCk_Handle{};
+            Handle->_ReplicationDriver = RepObj;
+        //}
+    //}
+    //else if (Target.IsValid())
+    //{
+    //}
+
+    //auto NewArgs = FNetDequantizeArgs{};
+    //NewArgs.Source = Args.Source;
+    //NewArgs.Target = ;
+
+    //_ObjectNetSerializer->Dequantize(Context, Args);
+    //UObject* RepObj2 = reinterpret_cast<UObject*>(Args.Source);
+    //UObject* RepObj = reinterpret_cast<UObject*>(Args.Target);
+
+    //if (ck::Is_NOT_Valid(RepObj))
+    //{ return; }
+
+    //auto& Target = *reinterpret_cast<FCk_Handle*>(ExistingTarget);
+    //Target._ReplicationDriver = Cast<UCk_Ecs_ReplicatedObject_UE>(RepObj);
+    //Target = Target._ReplicationDriver->Get_AssociatedEntity();
+}
+
+void
+    FCk_HandleNetSerializer::CollectNetReferences(
+        FNetSerializationContext& Context,
+        const FNetCollectReferencesArgs& Args)
+{
+	const QuantizedType& Source = *reinterpret_cast<const QuantizedType*>(Args.Source);
+	const UObject& Object = *reinterpret_cast<const UObject*>(Args.Source);
+	const FCk_Handle& Handle = *reinterpret_cast<const FCk_Handle*>(Args.Source);
+
+    // Check if the WeakObjectPtr is valid
+	if (Source.IsValid())
+	{
+		const QuantizedType& Value = *reinterpret_cast<const QuantizedType*>(Args.Source);
+		FNetReferenceCollector& Collector = *reinterpret_cast<FNetReferenceCollector*>(Args.Collector);
+
+		const FNetReferenceInfo ReferenceInfo(FNetReferenceInfo::EResolveType::ResolveOnClient);
+		Collector.Add(ReferenceInfo, Value, Args.ChangeMaskInfo);
+	}
 }
 
 auto
-    FCk_HandleNetSerializer::
+    UE::Net::FCk_HandleNetSerializer::
     IsEqual(
         FNetSerializationContext&,
         const FNetIsEqualArgs& Args)
     -> bool
 {
-    if (Args.bStateIsQuantized)
-    {
-        const QuantizedType& Value0 = *reinterpret_cast<const QuantizedType*>(Args.Source0);
-        const QuantizedType& Value1 = *reinterpret_cast<const QuantizedType*>(Args.Source1);
+    return false;
+    //if (Args.bStateIsQuantized)
+    //{
+    //    const QuantizedType& Value0 = *reinterpret_cast<const QuantizedType*>(Args.Source0);
+    //    const QuantizedType& Value1 = *reinterpret_cast<const QuantizedType*>(Args.Source1);
 
-        return Value0 == Value1;
-    }
-    else
-    {
-        const SourceType Value0 = *reinterpret_cast<const SourceType*>(Args.Source0);
-        const SourceType Value1 = *reinterpret_cast<const SourceType*>(Args.Source1);
+    //    return Value0 == Value1;
+    //}
+    //else
+    //{
+    //    const SourceType Value0 = *reinterpret_cast<const SourceType*>(Args.Source0);
+    //    const SourceType Value1 = *reinterpret_cast<const SourceType*>(Args.Source1);
 
-        return Value0 == Value1;
-    }
+    //    return Value0 == Value1;
+    //}
 }
 
-static const FName PropertyNetSerializerRegistry_NAME_Handle("Ck_Handle");
-UE_NET_IMPLEMENT_NAMED_STRUCT_NETSERIALIZER_INFO(PropertyNetSerializerRegistry_NAME_Handle, FCk_HandleNetSerializer);
-
+bool
+    FCk_HandleNetSerializer::Validate(
+        FNetSerializationContext&,
+        const FNetValidateArgs& Args)
+{
+	const SourceType& Source = *reinterpret_cast<const SourceType*>(Args.Source);
+    return Source.IsValid(ck::IsValid_Policy_IncludePendingKill{});
+}
 }
