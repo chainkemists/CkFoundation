@@ -175,7 +175,9 @@ auto
         }
 
         ck::attribute::Verbose(TEXT("IGNORING FLOAT Attribute [{}] as there is no change between [{}] and [{}]"),
-            AttributeToReplicate.Get_AttributeName());
+            AttributeToReplicate.Get_AttributeName(),
+            _AttributesToReplicate_Previous[Index],
+            AttributeToReplicate);
     }
 
     _AttributesToReplicate_Previous = _AttributesToReplicate;
