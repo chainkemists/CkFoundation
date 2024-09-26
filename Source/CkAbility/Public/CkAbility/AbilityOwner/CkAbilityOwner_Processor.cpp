@@ -806,7 +806,7 @@ namespace ck
                 ability::Verbose(TEXT("DEACTIVATING Ability [{}] on Ability Owner [{}] IMMEDIATELY"),
                     InAbilityToActivateEntity, InAbilityOwnerEntity);
 
-                RequestsComp._Requests.Reset();
+                RequestsComp._Requests.Pop();
                 DoHandleRequest(InAbilityOwnerEntity, InAbilityOwnerComp, *PendingRequest);
             }; ProcessPossibleDeactivationRequest();
         };
