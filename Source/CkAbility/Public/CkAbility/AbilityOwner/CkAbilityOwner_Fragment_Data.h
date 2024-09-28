@@ -367,6 +367,18 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 
 // --------------------------------------------------------------------------------------------------------------------
 
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_AbilityOwner_Event,
+    FCk_Handle_AbilityOwner, InHandle,
+    const FCk_AbilityOwner_Event&, InEvent);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FCk_Delegate_AbilityOwner_Event_MC,
+    FCk_Handle_AbilityOwner, InHandle,
+    const FCk_AbilityOwner_Event&, InEvent);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 DECLARE_DYNAMIC_DELEGATE_FiveParams(
     FCk_Delegate_AbilityOwner_OnTagsUpdated,
     FCk_Handle_AbilityOwner, InHandle,

@@ -56,7 +56,7 @@ namespace ck
         FGameplayTagContainer _RelevantTagsFromAbilityOwner;
 
         friend class FProcessor_AbilityOwner_Teardown;
-        friend class UCk_Utils_AbilityOwner_UE; // Needed for _RelevantTagsFromAbilityOwner, remove if we remove this variable 
+        friend class UCk_Utils_AbilityOwner_UE; // Needed for _RelevantTagsFromAbilityOwner, remove if we remove this variable
 
     public:
         auto Get_ActiveTags(
@@ -157,6 +157,10 @@ namespace ck
         FCk_Delegate_AbilityOwner_Events_MC,
         FCk_Handle_AbilityOwner,
         TArray<FCk_AbilityOwner_Event>);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_SingleEvent,
+        FCk_Delegate_AbilityOwner_Event_MC,
+        FCk_Handle_AbilityOwner,
+        FCk_AbilityOwner_Event);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_OnTagsUpdated,
         FCk_Delegate_AbilityOwner_OnTagsUpdated_MC,
         FCk_Handle_AbilityOwner,
