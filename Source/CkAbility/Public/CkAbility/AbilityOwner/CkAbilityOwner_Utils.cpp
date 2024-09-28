@@ -606,6 +606,36 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
+    BindTo_OnSingleEvent(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        FGameplayTag InEventName,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AbilityOwner_Event& InDelegate)
+    -> FCk_Handle_AbilityOwner
+{
+    CK_SIGNAL_BIND_WITH_CONDITION(ck::UUtils_Signal_AbilityOwner_SingleEvent, InAbilityOwnerHandle, InDelegate, InBindingPolicy, InPostFireBehavior,
+    [InEventName](FCk_Handle_AbilityOwner InHandle, const FCk_AbilityOwner_Event& InEvent)
+    {
+        return InEvent.Get_EventName().MatchesTagExact(InEventName);
+    });
+
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    UnbindFrom_OnSingleEvent(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Delegate_AbilityOwner_Event& InDelegate)
+    -> FCk_Handle_AbilityOwner
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_AbilityOwner_SingleEvent, InAbilityOwnerHandle, InDelegate);
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
     BindTo_OnTagsUpdated(
         FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         ECk_Signal_BindingPolicy InBindingPolicy,
