@@ -77,6 +77,11 @@ namespace ck
             const FFragment_AbilityOwner_Events&  InAbilityOwnerEvents)
         -> void
     {
+        for (const auto& Event : InAbilityOwnerEvents.Get_Events())
+        {
+            UUtils_Signal_AbilityOwner_SingleEvent::Broadcast(InHandle, MakePayload(InHandle, Event));
+        }
+
         UUtils_Signal_AbilityOwner_Events::Broadcast(InHandle, MakePayload(InHandle, InAbilityOwnerEvents.Get_Events()));
         InHandle.Remove<MarkedDirtyBy>();
     }

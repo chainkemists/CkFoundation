@@ -352,6 +352,25 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
+              DisplayName = "[Ck][AbilityOwner] Bind To OnSingleEvent")
+    static FCk_Handle_AbilityOwner
+    BindTo_OnSingleEvent(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        FGameplayTag InEventName,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AbilityOwner_Event& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName = "[Ck][AbilityOwner] Unbind From OnSingleEvent")
+    static FCk_Handle_AbilityOwner
+    UnbindFrom_OnSingleEvent(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Delegate_AbilityOwner_Event& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
               DisplayName = "[Ck][AbilityOwner] Bind To OnTagsUpdated")
     static FCk_Handle_AbilityOwner
     BindTo_OnTagsUpdated(
