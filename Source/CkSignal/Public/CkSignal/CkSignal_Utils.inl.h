@@ -270,12 +270,7 @@ namespace ck
         const auto& ContainsDelegateWithSignature = [&]()
         {
             if (const auto& IsConditionalDelegate = InInvocationPredicate != nullptr)
-            {
-                return UnrealMulticast._ConditionalInvocationList.ContainsByPredicate([&](const ConditionalDynamicDelegateType& InDelegateInfo)
-                {
-                    return InDelegateInfo.UnicastDelegate == InDelegate;
-                });
-            }
+            { return false; }
 
             return UnrealMulticast._Multicast.Contains(InDelegate);
         }();
