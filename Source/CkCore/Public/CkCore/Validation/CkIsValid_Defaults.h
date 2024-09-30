@@ -12,9 +12,10 @@
 #include <Engine/CurveTable.h>
 #include <Engine/DataTable.h>
 #include <Framework/Commands/InputChord.h>
+#include <Iris/Core/NetObjectReference.h>
 #include <Misc/NetworkGuid.h>
-#include <UObject/WeakInterfacePtr.h>
 #include <UObject/StrongObjectPtr.h>
+#include <UObject/WeakInterfacePtr.h>
 
 #include <type_traits>
 
@@ -161,6 +162,11 @@ CK_DEFINE_CUSTOM_IS_VALID(FBox, ck::IsValid_Policy_Default, [=](const FBox& InBo
 CK_DEFINE_CUSTOM_IS_VALID(FBox2D, ck::IsValid_Policy_Default, [=](const FBox2D& InBox2D)
 {
     return static_cast<bool>(InBox2D.bIsValid);
+});
+
+CK_DEFINE_CUSTOM_IS_VALID(UE::Net::FNetObjectReference, ck::IsValid_Policy_Default, [=](const UE::Net::FNetObjectReference& InNetObjectReference)
+{
+    return InNetObjectReference.IsValid();
 });
 
 // --------------------------------------------------------------------------------------------------------------------
