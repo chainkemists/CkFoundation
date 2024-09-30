@@ -37,7 +37,8 @@ UCk_Fragment_EntityReplicationDriver_Rep::
 
     auto EcsSubsystem = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(EcsSubsystem), TEXT("ENSURE MESSAGE HERE"))
+    CK_ENSURE_IF_NOT(ck::IsValid(EcsSubsystem), TEXT("Ecs World Subsystem is NOT valid for world [{}]"),
+        World)
     { return; }
 
     _AssociatedEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(**EcsSubsystem->Get_TransientEntity(), nullptr);
