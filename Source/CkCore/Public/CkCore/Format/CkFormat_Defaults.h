@@ -370,6 +370,19 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(EAppReturnType::Type);
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ETickingGroup);
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(EComponentMobility::Type);
 
+CK_DEFINE_CUSTOM_FORMATTER(ENetMode, [&]()
+{
+    switch(InObj)
+    {
+        case NM_Standalone: return TEXT("Standalone");
+        case NM_DedicatedServer: return TEXT("Dedicated Server");
+        case NM_ListenServer: return TEXT("ListenServer");
+        case NM_Client: return TEXT("Client");
+        case NM_MAX: return TEXT("Max (INVALID)");
+        default: return TEXT("Default (INVALID)");
+    }
+});
+
 #if WITH_EDITOR
 CK_DEFINE_CUSTOM_FORMATTER(EMapChangeType, [&]()
 {
