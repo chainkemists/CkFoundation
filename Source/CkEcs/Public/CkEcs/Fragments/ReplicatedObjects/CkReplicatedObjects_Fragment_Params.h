@@ -1,4 +1,6 @@
 #pragma once
+#include "CkSignal_Log.h"
+
 #include "CkCore/ObjectReplication/CkObjectReplicatorComponent.h"
 #include "CkCore/ObjectReplication/CkReplicatedObject.h"
 
@@ -41,9 +43,13 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+DECLARE_DELEGATE_OneParam(OnAssociatedEntityPopulated, FCk_Handle);
+DECLARE_MULTICAST_DELEGATE_OneParam(OnAssociatedEntityPopulated_MC, FCk_Handle);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintType, NotBlueprintable)
-class CKECS_API UCk_Ecs_ReplicatedObject_UE
-    : public UCk_ReplicatedObject_UE
+class CKECS_API UCk_Ecs_ReplicatedObject_UE : public UCk_ReplicatedObject_UE
 {
     GENERATED_BODY()
 
@@ -52,6 +58,10 @@ public:
 
 public:
     friend struct FCk_ReplicatedObjects;
+
+public:
+    UCk_Ecs_ReplicatedObject_UE(
+        const FObjectInitializer& InObjInitializer);
 
 public:
     static auto Setup(

@@ -7,6 +7,13 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UCk_Ecs_ReplicatedObject_UE::
+    UCk_Ecs_ReplicatedObject_UE(
+        const FObjectInitializer& InObjInitializer)
+    : Super(InObjInitializer)
+{
+}
+
 auto
     UCk_Ecs_ReplicatedObject_UE::
     Setup(
