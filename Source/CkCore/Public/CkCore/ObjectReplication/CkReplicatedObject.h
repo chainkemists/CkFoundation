@@ -19,6 +19,9 @@ public:
 public:
     UCk_ReplicatedObject_UE();
 
+    UCk_ReplicatedObject_UE(
+        const FObjectInitializer& InObjInitializer);
+
 public:
     auto GetOwningActor() const -> AActor*;
 
