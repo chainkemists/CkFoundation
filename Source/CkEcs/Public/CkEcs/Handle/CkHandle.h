@@ -219,13 +219,6 @@ public:
     auto
     Get_DebugName() const -> FName;
 
-public:
-    //auto
-    //NetSerialize(
-    //    FArchive& Ar,
-    //    class UPackageMap* Map,
-    //    bool& bOutSuccess) -> bool;
-
 private:
     template <typename T_Fragment>
     requires(std::is_empty_v<T_Fragment>)
@@ -265,15 +258,6 @@ private:
     TWeakObjectPtr<class UCk_Handle_FragmentsDebug> _Fragments = nullptr;
 #endif
 };
-
-// --------------------------------------------------------------------------------------------------------------------
-
-//template<>
-//struct TStructOpsTypeTraits<FCk_Handle> : public TStructOpsTypeTraitsBase2<FCk_Handle>
-//{
-//    enum
-//    { WithNetSerializer = true };
-//};
 
 // --------------------------------------------------------------------------------------------------------------------
 
