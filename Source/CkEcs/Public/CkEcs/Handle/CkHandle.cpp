@@ -1,6 +1,6 @@
 #include "CkHandle.h"
 
-#include "NetBitArray.h"
+#include <Net/Core/NetBitArray.h>
 
 #include "CkCore/Object/CkObject_Utils.h"
 
