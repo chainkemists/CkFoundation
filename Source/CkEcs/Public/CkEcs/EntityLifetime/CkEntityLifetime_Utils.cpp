@@ -20,7 +20,7 @@ auto
     -> void
 {
     QUICK_SCOPE_CYCLE_COUNTER(Request_Destroy_Entity)
-    
+
     if (ck::Is_NOT_Valid(InHandle))
     { return; }
 
@@ -262,35 +262,7 @@ auto
 
     const auto NewEntity = Request_CreateEntity(**InHandle, [&](FCk_Handle InNewEntity)
     {
-        InNewEntity.Add<ck::FFragment_LifetimeOwner>(InHandle);
-
-#ifdef CK_COPY_NET_PARAMS_ON_EVERY_ENTITY
-        if (NOT Get_IsTransientEntity(InHandle) && InHandle.Has<ck::FFragment_Net_Params>())
-        {
-            const auto& ConnectionSettings = InHandle.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings();
-            if (ConnectionSettings.Get_NetRole() == ECk_Net_EntityNetRole::Authority)
-            {
-                InNewEntity.Add<ck::FTag_HasAuthority>();
-            }
-            if (ConnectionSettings.Get_NetMode() == ECk_Net_NetModeType::Host)
-            {
-                InNewEntity.Add<ck::FTag_NetMode_IsHost>();
-            }
-
-            InNewEntity.Add<ck::FFragment_Net_Params>(InHandle.Get<ck::FFragment_Net_Params>());
-        }
-#endif
-
-        if (InHandle.Has_Any<ck::FTag_DestroyEntity_Initiate>())
-        { InNewEntity.Add<ck::FTag_DestroyEntity_Initiate>(); }
-
-        if (InHandle.Has_Any<ck::FTag_DestroyEntity_Initiate_Confirm>())
-        { InNewEntity.Add<ck::FTag_DestroyEntity_Initiate_Confirm>(); }
-
-        // Not doing something like this because it is undefined behavior: *const_cast<FCk_Handle*>(&InHandle)
-        auto NonConstHandle = InHandle;
-
-        NonConstHandle.AddOrGet<ck::FFragment_LifetimeDependents>()._Entities.Emplace(InNewEntity);
+        Request_SetupEntityWithLifetimeOwner(InNewEntity, InHandle);
 
         if (InFunc)
         {
@@ -309,7 +281,7 @@ auto
     -> HandleType
 {
     QUICK_SCOPE_CYCLE_COUNTER(Request_Create_Entity)
-    
+
     const auto& NewEntity = InRegistry.CreateEntity();
     InRegistry.Add<ck::FTag_EntityJustCreated>(NewEntity);
 
@@ -332,7 +304,7 @@ auto
     -> HandleType
 {
     QUICK_SCOPE_CYCLE_COUNTER(Request_Create_Entity)
-    
+
     const auto& NewEntity = InRegistry.CreateEntity(InEntityHint.Get_Entity());
     InRegistry.Add<ck::FTag_EntityJustCreated>(NewEntity);
 
@@ -353,6 +325,44 @@ auto
     -> HandleType
 {
     return HandleType{InRegistry.Get_TransientEntity(), InRegistry};
+}
+
+auto
+    UCk_Utils_EntityLifetime_UE::
+    Request_SetupEntityWithLifetimeOwner(
+        FCk_Handle& InNewEntity,
+        const FCk_Handle& InLifetimeOwner)
+    -> void
+{
+    InNewEntity.Add<ck::FFragment_LifetimeOwner>(InLifetimeOwner);
+
+#ifdef CK_COPY_NET_PARAMS_ON_EVERY_ENTITY
+    if (NOT Get_IsTransientEntity(InLifetimeOwner) && InLifetimeOwner.Has<ck::FFragment_Net_Params>())
+    {
+        const auto& ConnectionSettings = InLifetimeOwner.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings();
+        if (ConnectionSettings.Get_NetRole() == ECk_Net_EntityNetRole::Authority)
+        {
+            InNewEntity.Add<ck::FTag_HasAuthority>();
+        }
+        if (ConnectionSettings.Get_NetMode() == ECk_Net_NetModeType::Host)
+        {
+            InNewEntity.Add<ck::FTag_NetMode_IsHost>();
+        }
+
+        InNewEntity.Add<ck::FFragment_Net_Params>(InLifetimeOwner.Get<ck::FFragment_Net_Params>());
+    }
+#endif
+
+    if (InLifetimeOwner.Has_Any<ck::FTag_DestroyEntity_Initiate>())
+    { InNewEntity.Add<ck::FTag_DestroyEntity_Initiate>(); }
+
+    if (InLifetimeOwner.Has_Any<ck::FTag_DestroyEntity_Initiate_Confirm>())
+    { InNewEntity.Add<ck::FTag_DestroyEntity_Initiate_Confirm>(); }
+
+    // Not doing something like this because it is undefined behavior: *const_cast<FCk_Handle*>(&InHandle)
+    auto NonConstHandle = InLifetimeOwner;
+
+    NonConstHandle.AddOrGet<ck::FFragment_LifetimeDependents>()._Entities.Emplace(InNewEntity);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
