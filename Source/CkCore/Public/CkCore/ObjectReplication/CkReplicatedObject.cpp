@@ -23,6 +23,17 @@ UCk_ReplicatedObject_UE::
     CK_SCOPE_CALL(CK_ENSURE_OUTER_IS_VALID_OR_RETURN());
 }
 
+UCk_ReplicatedObject_UE::
+    UCk_ReplicatedObject_UE(
+        const FObjectInitializer& InObjInitializer)
+    : Super(InObjInitializer)
+{
+    if (IsTemplate())
+    { return; }
+
+    CK_SCOPE_CALL(CK_ENSURE_OUTER_IS_VALID_OR_RETURN());
+}
+
 auto
     UCk_ReplicatedObject_UE::
     GetOwningActor() const
