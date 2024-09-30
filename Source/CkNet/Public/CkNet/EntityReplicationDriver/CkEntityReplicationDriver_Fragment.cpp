@@ -22,13 +22,34 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UCk_Fragment_EntityReplicationDriver_Rep::
+    UCk_Fragment_EntityReplicationDriver_Rep(
+        const FObjectInitializer& InObjInitializer)
+    : Super(InObjInitializer)
+{
+    if (IsTemplate())
+    { return; }
+
+    auto World = UObject::GetWorld();
+
+    if (ck::Is_NOT_Valid(World))
+    { return; }
+
+    auto EcsSubsystem = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(EcsSubsystem), TEXT("ENSURE MESSAGE HERE"))
+    { return; }
+
+    _AssociatedEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(**EcsSubsystem->Get_TransientEntity(), nullptr);
+}
+
 auto
     UCk_Fragment_EntityReplicationDriver_Rep::
-    Get_IsReplicationCompleteOnAllDependents()
-    -> bool
+    Get_IsReplicationCompleteOnAllDependents() const
+        -> bool
 {
-    const auto Entity = Get_AssociatedEntity();
-    if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(Entity))
+    if (const auto Entity = Get_AssociatedEntity();
+        UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(Entity))
     { return true; }
 
     return Get_ExpectedNumberOfDependentReplicationDrivers() == _NumSyncedDependentReplicationDrivers;
@@ -42,7 +63,7 @@ auto
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
+    constexpr auto Params = FDoRepLifetimeParams{COND_Custom, REPNOTIFY_Always, true};
 
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData, Params);
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData_Ability, Params);
@@ -70,6 +91,17 @@ auto
     InConstructionInfo.Set_ReplicatedObjects(ReplicatedObjects.Get_ReplicatedObjects());
 
     UCk_Utils_EntityReplicationDriver_UE::Request_ReplicateEntityOnNonReplicatedActor(Entity, InConstructionInfo);
+}
+
+auto
+    UCk_Fragment_EntityReplicationDriver_Rep::
+    GetReplicatedCustomConditionState(
+        FCustomPropertyConditionState& OutActiveState) const
+    -> void
+{
+    Super::GetReplicatedCustomConditionState(OutActiveState);
+
+    DOREPCUSTOMCONDITION_ACTIVE_FAST(ThisType, _ReplicationData, ck::IsValid(Get_AssociatedEntity()));
 }
 
 auto
@@ -109,22 +141,22 @@ auto
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OwningEntity);
+    UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(_AssociatedEntity, OwningEntity);
 
-    UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings
+    UCk_Utils_Net_UE::Add(_AssociatedEntity, FCk_Net_ConnectionSettings
     {
         ECk_Replication::Replicates,
         ECk_Net_NetModeType::Client,
         ECk_Net_EntityNetRole::Proxy
     });
 
-    NewEntity._ReplicationDriver = this;
-    NewEntity.Add<TWeakObjectPtr<UCk_Ecs_ReplicatedObject_UE>>(this);
+    _AssociatedEntity._ReplicationDriver = this;
+    _AssociatedEntity.Add<TWeakObjectPtr<UCk_Ecs_ReplicatedObject_UE>>(this);
 
     ConstructionScript->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(
-        NewEntity, ConstructionInfo.Get_OptionalParams());
+        _AssociatedEntity, ConstructionInfo.Get_OptionalParams());
 
-    UCk_Utils_ReplicatedObjects_UE::Add(NewEntity, FCk_ReplicatedObjects{}.
+    UCk_Utils_ReplicatedObjects_UE::Add(_AssociatedEntity, FCk_ReplicatedObjects{}.
         Set_ReplicatedObjects(ReplicationData.Get_ReplicatedObjectsData().Get_Objects()));
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -165,23 +197,23 @@ auto
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OwningEntity);
+    UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(_AssociatedEntity, OwningEntity);
 
-    UCk_Utils_Net_UE::Add(NewEntity, FCk_Net_ConnectionSettings
+    UCk_Utils_Net_UE::Add(_AssociatedEntity, FCk_Net_ConnectionSettings
     {
         ECk_Replication::Replicates,
         ECk_Net_NetModeType::Client,
         ECk_Net_EntityNetRole::Proxy
     });
 
-    NewEntity._ReplicationDriver = this;
-    NewEntity.Add<TWeakObjectPtr<UCk_Ecs_ReplicatedObject_UE>>(this);
+    _AssociatedEntity._ReplicationDriver = this;
+    _AssociatedEntity.Add<TWeakObjectPtr<UCk_Ecs_ReplicatedObject_UE>>(this);
 
     // For Abilities, we have to pass the information for construction to the Ability Processor. This will be removed once
     // the processor has had the chance to construct the Entity correctly
-    NewEntity.Add<FCk_EntityReplicationDriver_AbilityData>(_ReplicationData_Ability);
+    _AssociatedEntity.Add<FCk_EntityReplicationDriver_AbilityData>(_ReplicationData_Ability);
 
-    UCk_Utils_ReplicatedObjects_UE::Add(NewEntity, FCk_ReplicatedObjects{}.
+    UCk_Utils_ReplicatedObjects_UE::Add(_AssociatedEntity, FCk_ReplicatedObjects{}.
         Set_ReplicatedObjects(_ReplicationData_Ability.Get_ReplicatedObjectsData().Get_Objects()));
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -210,31 +242,30 @@ auto
     { return; }
 
     const auto WorldSubsystem = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
-    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(WorldSubsystem->Get_TransientEntity(), [&](FCk_Handle InEntity)
-    {
-        UCk_Utils_Handle_UE::Set_DebugName(InEntity, UCk_Utils_Debug_UE::Get_DebugName(ReplicatedActor, ECk_DebugNameVerbosity_Policy::Compact));
-        InEntity.Add<ck::FFragment_OwningActor_Current>(ReplicatedActor);
-        UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings
-            {
-                ECk_Replication::Replicates,
-                ECk_Net_NetModeType::Client,
-                ReplicatedActor->GetLocalRole() == ROLE_AutonomousProxy ? ECk_Net_EntityNetRole::Authority : ECk_Net_EntityNetRole::Proxy
-            });
+    UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(_AssociatedEntity, WorldSubsystem->Get_TransientEntity());
 
-        InEntity._ReplicationDriver = this;
-        InEntity.Add<TWeakObjectPtr<UCk_Ecs_ReplicatedObject_UE>>(this);
-    });
+    UCk_Utils_Handle_UE::Set_DebugName(_AssociatedEntity, UCk_Utils_Debug_UE::Get_DebugName(ReplicatedActor, ECk_DebugNameVerbosity_Policy::Compact));
+    _AssociatedEntity.Add<ck::FFragment_OwningActor_Current>(ReplicatedActor);
+    UCk_Utils_Net_UE::Add(_AssociatedEntity, FCk_Net_ConnectionSettings
+        {
+            ECk_Replication::Replicates,
+            ECk_Net_NetModeType::Client,
+            ReplicatedActor->GetLocalRole() == ROLE_AutonomousProxy ? ECk_Net_EntityNetRole::Authority : ECk_Net_EntityNetRole::Proxy
+        });
+
+    _AssociatedEntity._ReplicationDriver = this;
+    _AssociatedEntity.Add<TWeakObjectPtr<UCk_Ecs_ReplicatedObject_UE>>(this);
 
     // TODO: we need the transform
     CsWithTransform->Set_EntityInitialTransform(ReplicatedActor->GetActorTransform());
 
     const auto& EntityBridgeActorComp = ReplicatedActor->GetComponentByClass<UCk_EntityBridge_ActorComponent_Base_UE>();
 
-    EntityBridgeActorComp->TryInvoke_OnPreConstruct(NewEntity, UCk_EntityBridge_ActorComponent_Base_UE::EInvoke_Caller::ReplicationDriver);
-    CsWithTransform->Construct(NewEntity, EntityBridgeActorComp->Get_EntityConstructionParamsToInject());
+    EntityBridgeActorComp->TryInvoke_OnPreConstruct(_AssociatedEntity, UCk_EntityBridge_ActorComponent_Base_UE::EInvoke_Caller::ReplicationDriver);
+    CsWithTransform->Construct(_AssociatedEntity, EntityBridgeActorComp->Get_EntityConstructionParamsToInject());
 
     const auto& ReplicatedObjects = _ReplicationData_ReplicatedActor.Get_ReplicatedObjects();
-    UCk_Utils_ReplicatedObjects_UE::Add(NewEntity, FCk_ReplicatedObjects{}.Set_ReplicatedObjects(ReplicatedObjects));
+    UCk_Utils_ReplicatedObjects_UE::Add(_AssociatedEntity, FCk_ReplicatedObjects{}.Set_ReplicatedObjects(ReplicatedObjects));
 
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -243,7 +274,7 @@ auto
     if (const auto EntityOwningActorComponent = ReplicatedActor->GetComponentByClass<UCk_EntityOwningActor_ActorComponent_UE>();
         ck::IsValid(EntityOwningActorComponent))
     {
-        EntityOwningActorComponent->_EntityHandle = NewEntity;
+        EntityOwningActorComponent->_EntityHandle = _AssociatedEntity;
     }
     else
     {
@@ -255,7 +286,7 @@ auto
             },
             [&](UCk_EntityOwningActor_ActorComponent_UE* InComp)
             {
-                InComp->_EntityHandle = NewEntity;
+                InComp->_EntityHandle = _AssociatedEntity;
             }
         );
     }
@@ -280,7 +311,7 @@ auto
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    ck::UUtils_Signal_OnReplicationComplete::Broadcast(NewEntity, ck::MakePayload(NewEntity));
+    ck::UUtils_Signal_OnReplicationComplete::Broadcast(_AssociatedEntity, ck::MakePayload(_AssociatedEntity));
 
     // --------------------------------------------------------------------------------------------------------------------
 

@@ -68,8 +68,12 @@ public:
     CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_EntityReplicationDriver_Rep);
 
 public:
+    UCk_Fragment_EntityReplicationDriver_Rep(
+        const FObjectInitializer&);
+
+public:
     auto
-    Get_IsReplicationCompleteOnAllDependents() -> bool;
+    Get_IsReplicationCompleteOnAllDependents() const -> bool;
 
 private:
     auto
@@ -81,6 +85,11 @@ public:
     void
     Request_Replicate_NonReplicatedActor(
         FCk_EntityReplicationDriver_ConstructionInfo_NonReplicatedActor InConstructionInfo);
+
+public:
+    auto
+    GetReplicatedCustomConditionState(
+        FCustomPropertyConditionState& OutActiveState) const -> void override;
 
 private:
     UFUNCTION()
