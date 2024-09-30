@@ -181,6 +181,10 @@ public:
         const EntityIdHint& InEntityHint,
         PostEntityCreatedFunc InFunc = PostEntityCreatedFunc{}) -> HandleType;
 
+    static auto
+    Request_SetupEntityWithLifetimeOwner(
+        FCk_Handle& InNewEntity,
+        const FCk_Handle& InLifetimeOwner) -> void;
 public:
     [[nodiscard]]
     static auto
