@@ -94,37 +94,22 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))
     FVector _Location = FVector::ZeroVector;
-    //UPROPERTY()
-    //FVector_NetQuantize10 _QuantizedLocation;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))
     FVector _Normal = FVector::ZeroVector;
-    //UPROPERTY()
-    //FVector_NetQuantizeNormal _QuantizedNormal;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, NotReplicated,
         meta=(AllowPrivateAccess))
     FCk_Handle _Instigator;
-    //UPROPERTY()
-    //TWeakObjectPtr<class UCk_Fragment_EntityReplicationDriver_Rep> _Instigator_RepObj;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, NotReplicated,
         meta=(AllowPrivateAccess))
     FCk_Handle _EffectCauser;
-    //UPROPERTY()
-    //TWeakObjectPtr<class UCk_Fragment_EntityReplicationDriver_Rep> _EffectCauser_RepObj;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))
     FInstancedStruct _CustomData;
-
-//public:
-//    auto
-//    NetSerialize(
-//        FArchive& Ar,
-//        class UPackageMap* Map,
-//        bool& bOutSuccess) -> bool;
 
 public:
     CK_PROPERTY(_Location);
@@ -133,13 +118,6 @@ public:
     CK_PROPERTY(_EffectCauser);
     CK_PROPERTY(_CustomData);
 };
-
-//template<>
-//struct TStructOpsTypeTraits<FCk_AbilityCue_Params> : public TStructOpsTypeTraitsBase2<FCk_AbilityCue_Params>
-//{
-//    enum
-//    { WithNetSerializer = true };
-//};
 
 // --------------------------------------------------------------------------------------------------------------------
 
