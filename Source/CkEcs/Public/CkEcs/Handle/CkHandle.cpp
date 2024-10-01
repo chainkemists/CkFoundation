@@ -1,7 +1,5 @@
 #include "CkHandle.h"
 
-#include "NetBitArray.h"
-
 #include "CkCore/Object/CkObject_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -474,31 +472,73 @@ namespace UE::Net
 
         static const ConfigType DefaultConfig;
 
-        static void Serialize(FNetSerializationContext&, const FNetSerializeArgs&);
-        static void Deserialize(FNetSerializationContext&, const FNetDeserializeArgs&);
+        static auto
+        Serialize(
+            FNetSerializationContext&,
+            const FNetSerializeArgs&) -> void;
 
-        static void SerializeDelta(FNetSerializationContext&, const FNetSerializeDeltaArgs&);
-        static void DeserializeDelta(FNetSerializationContext&, const FNetDeserializeDeltaArgs&);
+        static auto
+        Deserialize(
+            FNetSerializationContext&,
+            const FNetDeserializeArgs&) -> void;
 
-        static void CloneDynamicState(FNetSerializationContext&, const FNetCloneDynamicStateArgs&);
-        static void FreeDynamicState(FNetSerializationContext&, const FNetFreeDynamicStateArgs&);
+        static auto
+        SerializeDelta(
+            FNetSerializationContext&,
+            const FNetSerializeDeltaArgs&) -> void;
 
-        static void Quantize(FNetSerializationContext&, const FNetQuantizeArgs& Args);
-        static void Dequantize(FNetSerializationContext&, const FNetDequantizeArgs& Args);
+        static auto
+        DeserializeDelta(
+            FNetSerializationContext&,
+            const FNetDeserializeDeltaArgs&) -> void;
 
-        static void CollectNetReferences(FNetSerializationContext&, const FNetCollectReferencesArgs&);
+        static auto
+        CloneDynamicState(
+            FNetSerializationContext&,
+            const FNetCloneDynamicStateArgs&) -> void;
 
-        static bool IsEqual(FNetSerializationContext&, const FNetIsEqualArgs& Args);
-        static bool Validate(FNetSerializationContext&, const FNetValidateArgs& Args);
+        static auto
+        FreeDynamicState(
+            FNetSerializationContext&,
+            const FNetFreeDynamicStateArgs&) -> void;
 
-        inline static const FNetSerializer* _WeakObjectNetSerializer = &UE_NET_GET_SERIALIZER(FWeakObjectNetSerializer);
+        static auto
+        Quantize(
+            FNetSerializationContext&,
+           const FNetQuantizeArgs& Args) -> void;
+
+        static auto
+        Dequantize(
+            FNetSerializationContext&,
+            const FNetDequantizeArgs& Args) -> void;
+
+        static auto
+        CollectNetReferences(
+            FNetSerializationContext&,
+            const FNetCollectReferencesArgs&) -> void;
+
+        static auto
+        IsEqual(
+            FNetSerializationContext&,
+            const FNetIsEqualArgs& Args) -> bool;
+
+        static auto
+        Validate(
+            FNetSerializationContext&,
+            const FNetValidateArgs& Args) -> bool;
+
+        inline static auto _WeakObjectNetSerializer = &UE_NET_GET_SERIALIZER(FWeakObjectNetSerializer);
+
+        // --------------------------------------------------------------------------------------------------------------------
 
         class FNetSerializerRegistryDelegates final : private UE::Net::FNetSerializerRegistryDelegates
         {
         public:
+            // ReSharper disable once CppEnforceOverridingDestructorStyle
             ~FNetSerializerRegistryDelegates() override;
         private:
-            void OnPreFreezeNetSerializerRegistry() override;
+            auto
+            OnPreFreezeNetSerializerRegistry() -> void override;
         };
 
         static FNetSerializerRegistryDelegates _NetSerializerRegistryDelegates;
@@ -506,10 +546,10 @@ namespace UE::Net
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    static const FName PropertyNetSerializerRegistry_NAME_Handle("Ck_Handle");
+    static const FName PropertyNetSerializerRegistry_Name_Handle("Ck_Handle");
     FCk_HandleNetSerializer::FNetSerializerRegistryDelegates FCk_HandleNetSerializer::_NetSerializerRegistryDelegates;
 
-    UE_NET_IMPLEMENT_NAMED_STRUCT_NETSERIALIZER_INFO(PropertyNetSerializerRegistry_NAME_Handle, FCk_HandleNetSerializer);
+    UE_NET_IMPLEMENT_NAMED_STRUCT_NETSERIALIZER_INFO(PropertyNetSerializerRegistry_Name_Handle, FCk_HandleNetSerializer);
     UE_NET_IMPLEMENT_SERIALIZER(FCk_HandleNetSerializer);
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -519,15 +559,15 @@ namespace UE::Net
     FCk_HandleNetSerializer::FNetSerializerRegistryDelegates::
         ~FNetSerializerRegistryDelegates()
     {
-        UE_NET_UNREGISTER_NETSERIALIZER_INFO(PropertyNetSerializerRegistry_NAME_Handle);
+        UE_NET_UNREGISTER_NETSERIALIZER_INFO(PropertyNetSerializerRegistry_Name_Handle);
     }
 
     auto
         FCk_HandleNetSerializer::FNetSerializerRegistryDelegates::
         OnPreFreezeNetSerializerRegistry()
-            -> void
+        -> void
     {
-        UE_NET_REGISTER_NETSERIALIZER_INFO(PropertyNetSerializerRegistry_NAME_Handle);
+        UE_NET_REGISTER_NETSERIALIZER_INFO(PropertyNetSerializerRegistry_Name_Handle);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -603,6 +643,15 @@ namespace UE::Net
         auto NewArgs = FNetQuantizeArgs{};
 
         NewArgs.NetSerializerConfig = Args.NetSerializerConfig;
+        if (ck::Is_NOT_Valid(Source._ReplicationDriver) && Source.IsValid(ck::IsValid_Policy_IncludePendingKill{}) && UCk_Utils_ReplicatedObjects_UE::Has(Source))
+        {
+            // TODO: This is a temporary fix. We need to find a better way to handle the fact that sometimes the Handle does NOT have a replicated object
+            UCk_Utils_ReplicatedObjects_UE::OnFirstValidReplicatedObject(Source, ECk_PendingKill_Policy::IncludePendingKill,
+            [&](const TWeakObjectPtr<UCk_ReplicatedObject_UE>& InRO)
+            {
+                Source._ReplicationDriver = Cast<UCk_Ecs_ReplicatedObject_UE>(InRO.Get());
+            });
+        }
         NewArgs.Source = reinterpret_cast<NetSerializerValuePointer>(&Source._ReplicationDriver);
         NewArgs.Target = Args.Target;
 
@@ -646,9 +695,8 @@ namespace UE::Net
             const FNetCollectReferencesArgs& Args)
         -> void
     {
-        const auto& Source = *reinterpret_cast<const QuantizedType*>(Args.Source);
-
-        if (ck::Is_NOT_Valid(Source))
+        if (const auto& Source = *reinterpret_cast<const QuantizedType*>(Args.Source);
+            ck::Is_NOT_Valid(Source))
         { return; }
 
         const QuantizedType& Value = *reinterpret_cast<const QuantizedType*>(Args.Source);
