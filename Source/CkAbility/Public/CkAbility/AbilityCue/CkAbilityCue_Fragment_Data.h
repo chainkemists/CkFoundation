@@ -99,11 +99,11 @@ private:
         meta=(AllowPrivateAccess))
     FVector _Normal = FVector::ZeroVector;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, NotReplicated,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))
     FCk_Handle _Instigator;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, NotReplicated,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))
     FCk_Handle _EffectCauser;
 
