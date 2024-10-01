@@ -105,12 +105,24 @@ auto
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
         TSubclassOf<UObject> InObject,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail)
     -> UObject*
 {
     OutSuccessFail = ECk_SucceededFailed::Failed;
 
-    if (NOT UtilsType::Has(InHandle, InVariableName))
+    auto MaybeEntity = UtilsType::Has(InHandle, InVariableName) ? InHandle : FCk_Handle{};
+
+    if (ck::Is_NOT_Valid(MaybeEntity) && InRecursion == ECk_Recursion::Recursive)
+    {
+        MaybeEntity = UCk_Utils_EntityLifetime_UE::Get_EntityInOwnershipChain_If(InHandle,
+        [&](const FCk_Handle& Handle)
+        {
+            return UtilsType::Has(Handle, InVariableName);
+        });
+    }
+
+    if (ck::Is_NOT_Valid(MaybeEntity))
     { return {}; }
 
     const auto& Var = UtilsType::Get(InHandle, InVariableName);
@@ -273,6 +285,56 @@ auto
         return Invalid;
     }
 
+    return InHandle.Get<FragmentType>().Get_Variables();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Variables_Entity_UE::
+    Get(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
+        ECk_SucceededFailed& OutSuccessFail)
+    -> FCk_Handle
+{
+    OutSuccessFail = ECk_SucceededFailed::Failed;
+
+    auto MaybeEntity = UtilsType::Has(InHandle, InVariableName) ? InHandle : FCk_Handle{};
+
+    if (ck::Is_NOT_Valid(MaybeEntity) && InRecursion == ECk_Recursion::Recursive)
+    {
+        MaybeEntity = UCk_Utils_EntityLifetime_UE::Get_EntityInOwnershipChain_If(InHandle,
+        [&](const FCk_Handle& Handle)
+        {
+            return UtilsType::Has(Handle, InVariableName);
+        });
+    }
+
+    if (ck::Is_NOT_Valid(MaybeEntity))
+    { return {}; }
+
+    OutSuccessFail = ECk_SucceededFailed::Succeeded;
+    return UtilsType::Get(MaybeEntity, InVariableName);
+}
+
+auto
+    UCk_Utils_Variables_Entity_UE::
+    Set(
+        FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        FCk_Handle& InValue) -> void
+{
+    return UtilsType::Set(InHandle, InVariableName, InValue);
+}
+
+auto
+    UCk_Utils_Variables_Entity_UE::
+    Get_All(
+        const FCk_Handle& InHandle)
+    -> TMap<FName, FCk_Handle>
+{
     return InHandle.Get<FragmentType>().Get_Variables();
 }
 
