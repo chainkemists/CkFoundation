@@ -16,7 +16,7 @@ ACk_EcsWorld_StatReplicatorActor_UE::
 {
     bReplicates = true;
     bAlwaysRelevant = true;
-    NetPriority = 0.1f;
+    NetPriority = 1.0f; // lower than zero triggers the ensure in ActorReplicationBridge on line 267
 }
 
 auto
