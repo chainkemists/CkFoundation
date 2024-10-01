@@ -25,6 +25,7 @@ namespace ck
 
     struct CKVARIABLES_API FFragment_Variable_UObject : public TFragment_Variables<TWeakObjectPtr<UObject>> {};
     struct CKVARIABLES_API FFragment_Variable_UObject_SubclassOf : public TFragment_Variables<TSubclassOf<UObject>> {};
+    struct CKVARIABLES_API FFragment_Variable_Entity : public TFragment_Variables<FCk_Handle> {};
 };
 
 // --------------------------------------------------------------------------------------------------------------------
