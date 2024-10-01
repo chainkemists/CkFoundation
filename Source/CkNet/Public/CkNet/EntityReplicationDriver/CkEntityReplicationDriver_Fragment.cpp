@@ -37,7 +37,8 @@ UCk_Fragment_EntityReplicationDriver_Rep::
 
     auto EcsSubsystem = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
 
-    CK_ENSURE_IF_NOT(ck::IsValid(EcsSubsystem), TEXT("ENSURE MESSAGE HERE"))
+    CK_ENSURE_IF_NOT(ck::IsValid(EcsSubsystem), TEXT("Ecs World Subsystem is NOT valid for world [{}]"),
+        World)
     { return; }
 
     _AssociatedEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(**EcsSubsystem->Get_TransientEntity(), nullptr);
@@ -141,6 +142,8 @@ auto
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    _AssociatedEntity._ReplicationDriver = this;
+
     UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(_AssociatedEntity, OwningEntity);
 
     UCk_Utils_Net_UE::Add(_AssociatedEntity, FCk_Net_ConnectionSettings
@@ -149,9 +152,6 @@ auto
         ECk_Net_NetModeType::Client,
         ECk_Net_EntityNetRole::Proxy
     });
-
-    _AssociatedEntity._ReplicationDriver = this;
-    _AssociatedEntity.Add<TWeakObjectPtr<UCk_Ecs_ReplicatedObject_UE>>(this);
 
     ConstructionScript->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(
         _AssociatedEntity, ConstructionInfo.Get_OptionalParams());
@@ -169,7 +169,8 @@ auto
     OnRep_ReplicationData_Ability()
     -> void
 {
-    if (ck::IsValid(Get_AssociatedEntity()))
+    // TODO: This is a temporary fix. We need to find a better way to handle this
+    if (_AssociatedEntity.Has<ck::FFragment_LifetimeOwner>())
     { return; }
 
     // wait for the data to be fully replicated
@@ -197,6 +198,8 @@ auto
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    _AssociatedEntity._ReplicationDriver = this;
+
     UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(_AssociatedEntity, OwningEntity);
 
     UCk_Utils_Net_UE::Add(_AssociatedEntity, FCk_Net_ConnectionSettings
@@ -205,9 +208,6 @@ auto
         ECk_Net_NetModeType::Client,
         ECk_Net_EntityNetRole::Proxy
     });
-
-    _AssociatedEntity._ReplicationDriver = this;
-    _AssociatedEntity.Add<TWeakObjectPtr<UCk_Ecs_ReplicatedObject_UE>>(this);
 
     // For Abilities, we have to pass the information for construction to the Ability Processor. This will be removed once
     // the processor has had the chance to construct the Entity correctly
@@ -241,6 +241,8 @@ auto
         ReplicatedActor)
     { return; }
 
+    _AssociatedEntity._ReplicationDriver = this;
+
     const auto WorldSubsystem = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
     UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(_AssociatedEntity, WorldSubsystem->Get_TransientEntity());
 
@@ -252,9 +254,6 @@ auto
             ECk_Net_NetModeType::Client,
             ReplicatedActor->GetLocalRole() == ROLE_AutonomousProxy ? ECk_Net_EntityNetRole::Authority : ECk_Net_EntityNetRole::Proxy
         });
-
-    _AssociatedEntity._ReplicationDriver = this;
-    _AssociatedEntity.Add<TWeakObjectPtr<UCk_Ecs_ReplicatedObject_UE>>(this);
 
     // TODO: we need the transform
     CsWithTransform->Set_EntityInitialTransform(ReplicatedActor->GetActorTransform());
