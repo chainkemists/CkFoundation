@@ -25,6 +25,10 @@
 namespace UE::Net::Private
 {
 
+    // With-editor, we need to define these functions since we can't include the cpp file. Without-editor, the static library
+    // compilations result in multiply defined symbols.
+#if WITH_EDITOR
+
 auto
     FInternalNetSerializationContext::
     Alloc(
@@ -54,6 +58,8 @@ auto
 {
     return GMalloc->Realloc(PrevAddress, NewSize, Alignment);
 }
+
+#endif
 
 }
 
