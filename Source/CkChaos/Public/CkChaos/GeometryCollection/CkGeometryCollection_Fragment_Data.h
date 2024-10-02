@@ -105,6 +105,10 @@ private:
         meta=(AllowPrivateAccess=true))
     ECk_GeometryCollection_ObjectState _ChangeParticleStateTo = ECk_GeometryCollection_ObjectState::NoChange;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess=true))
+    FRuntimeFloatCurve _NormalizedFalloffCurve = {};
+
 private:
     float _IncrementalRadius = 0.0f;
 
@@ -119,6 +123,7 @@ public:
     CK_PROPERTY(_InternalStrain);
     CK_PROPERTY(_ExternalStrain);
     CK_PROPERTY(_ChangeParticleStateTo);
+    CK_PROPERTY(_NormalizedFalloffCurve);
 
     CK_DEFINE_CONSTRUCTORS(FCk_Request_GeometryCollection_ApplyRadialStrain, _Location, _Radius);
 };
