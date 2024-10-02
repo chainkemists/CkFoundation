@@ -98,6 +98,7 @@ auto
                 .Set_LinearSpeed(Request.Get_Request()->Get_LinearSpeed())
                 .Set_AngularSpeed(Request.Get_Request()->Get_AngularSpeed())
                 .Set_ChangeParticleStateTo(Request.Get_Request()->Get_ChangeParticleStateTo())
+                .Set_NormalizedFalloffCurve(Request.Get_Request()->Get_NormalizedFalloffCurve())
             );
         });
     }
