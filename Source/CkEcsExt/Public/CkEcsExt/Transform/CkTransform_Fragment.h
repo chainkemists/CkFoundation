@@ -208,22 +208,30 @@ UCLASS(Blueprintable)
 class CKECSEXT_API UCk_Fragment_Transform_Rep : public UCk_Ecs_ReplicatedObject_UE
 {
     GENERATED_BODY()
-
 public:
     CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_Transform_Rep);
 
 public:
-    virtual auto GetLifetimeReplicatedProps(TArray<FLifetimeProperty>&) const -> void override;
+    auto
+    GetLifetimeReplicatedProps(
+        TArray<FLifetimeProperty>&) const -> void override;
+
+protected:
+    auto
+    PostLink() -> void override;
 
 public:
     UFUNCTION()
-    void OnRep_Location();
+    void
+    OnRep_Location();
 
     UFUNCTION()
-    void OnRep_Rotation();
+    void
+    OnRep_Rotation();
 
     UFUNCTION()
-    void OnRep_Scale();
+    void
+    OnRep_Scale();
 
 private:
     UPROPERTY(ReplicatedUsing = OnRep_Location)
