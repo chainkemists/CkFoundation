@@ -24,6 +24,27 @@ auto
 
 auto
     UCk_Fragment_Transform_Rep::
+    PostLink()
+    -> void
+{
+    Super::PostLink();
+
+    const auto& TransformHandle = UCk_Utils_Transform_UE::Cast(Get_AssociatedEntity());
+
+    CK_ENSURE_IF_NOT(ck::IsValid(TransformHandle),
+        TEXT("Entity [{}] with a Transform_Rep fragment does NOT have a transform fragment"),
+        Get_AssociatedEntity())
+    { return; }
+
+    // Make sure the initial values match the transforms values since a rep-notify is sent on client spawned which needs to have the correct info
+    const auto& EntityCurrentTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(TransformHandle);
+    _Location = EntityCurrentTransform.GetLocation();
+    _Rotation = EntityCurrentTransform.GetRotation();
+    _Scale = EntityCurrentTransform.GetScale3D();
+}
+
+auto
+    UCk_Fragment_Transform_Rep::
     OnRep_Location() -> void
 {
     CK_REP_OBJ_EXECUTE_IF_VALID([&]()
