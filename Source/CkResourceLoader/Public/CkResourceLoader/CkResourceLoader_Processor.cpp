@@ -58,7 +58,8 @@ namespace ck
     {
         const auto& ObjectToLoadSoftRef = InRequest.Get_ObjectReference_Soft();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(ObjectToLoadSoftRef), TEXT("Invalid Object to Load!"))
+        CK_ENSURE_IF_NOT(ck::IsValid(ObjectToLoadSoftRef), TEXT("Invalid Object to Load! Soft Ref: [{}]"),
+            InRequest.Get_ObjectReference_Soft())
         { return; }
 
         const auto& ObjectToLoadPath = ObjectToLoadSoftRef.Get_SoftObjectPath();
@@ -172,7 +173,7 @@ namespace ck
                 });
 
                 const auto UniqueLoadedObjects = TSet(LoadedObjects).Array();
-                    
+
                 DoOnObjectBatchLoaded(InHandle, FCk_ResourceLoader_LoadedObjectBatch{UniqueLoadedObjects, LoadedObjects});
 
                 break;
@@ -235,7 +236,7 @@ namespace ck
         {
             PathToLoadedAssetsMap.Add(FSoftObjectPath(LoadedAsset), LoadedAsset);
         }
-        
+
         const auto& LoadedObjects = algo::Transform<TArray<FCk_ResourceLoader_LoadedObject>>(InObjectBatchStreamed,
         [&](const FCk_ResourceLoader_ObjectReference_Soft& LoadedObjectSoftRef)
             -> FCk_ResourceLoader_LoadedObject
@@ -247,7 +248,7 @@ namespace ck
                 TEXT("Failed to load asset [{}]!"),
                 SoftObjectPath.GetAssetPathString())
             { return {}; }
-            
+
             const auto LoadedObjectHardRef = FCk_ResourceLoader_ObjectReference_Hard{*FoundLoadedAsset};
 
             return FCk_ResourceLoader_LoadedObject{LoadedObjectSoftRef, LoadedObjectHardRef}.Set_StreamableHandle(StreamingHandle);
