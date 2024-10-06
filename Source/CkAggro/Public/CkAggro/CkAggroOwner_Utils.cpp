@@ -21,6 +21,12 @@ auto
     InHandle.Add<ck::FFragment_AggroOwner_Params>(InParams);
     InHandle.Add<ck::FFragment_AggroOwner_Current>();
 
+    if (InParams.Get_FilterByDistance())
+    { InHandle.Add<ck::FTag_Aggro_Filter_Distance>(); }
+
+    if (InParams.Get_FilterByLoS())
+    { InHandle.Add<ck::FTag_Aggro_Filter_LoS>(); }
+
     return Cast(InHandle);
 }
 
@@ -74,6 +80,30 @@ auto
     -> FCk_Handle
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnNewAggroAdded, InAggroOwner, InDelegate);
+    return InAggroOwner;
+}
+
+auto
+    UCk_Utils_AggroOwner_UE::
+    BindTo_OnAggroChanged(
+        FCk_Handle_AggroOwner& InAggroOwner,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_Aggro_OnAggroChanged& InDelegate)
+    -> FCk_Handle
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnAggroChanged, InAggroOwner, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InAggroOwner;
+}
+
+auto
+    UCk_Utils_AggroOwner_UE::
+    UnbindFrom_OnAggroChanged(
+        FCk_Handle_AggroOwner& InAggroOwner,
+        const FCk_Delegate_Aggro_OnAggroChanged& InDelegate)
+    -> FCk_Handle
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnAggroChanged, InAggroOwner, InDelegate);
     return InAggroOwner;
 }
 
