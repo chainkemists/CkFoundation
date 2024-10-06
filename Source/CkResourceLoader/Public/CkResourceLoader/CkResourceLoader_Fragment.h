@@ -76,12 +76,12 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRESOURCELOADER_API, ResourceLoader_OnObjectLoaded,
-        FCk_Delegate_ResourceLoader_OnObjectLoaded_MC, FCk_Handle, FCk_Payload_ResourceLoader_OnObjectLoaded);
+        FCk_Delegate_ResourceLoader_OnObjectLoaded_MC, FCk_Payload_ResourceLoader_OnObjectLoaded);
 
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRESOURCELOADER_API, ResourceLoader_OnObjectBatchLoaded,
-        FCk_Delegate_ResourceLoader_OnObjectBatchLoaded_MC, FCk_Handle, FCk_Payload_ResourceLoader_OnObjectBatchLoaded);
+        FCk_Delegate_ResourceLoader_OnObjectBatchLoaded_MC, FCk_Payload_ResourceLoader_OnObjectBatchLoaded);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
