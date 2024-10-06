@@ -152,6 +152,26 @@ auto
 
 auto
     UCk_Utils_OwningActor_UE::
+    IsEqual(
+        const FCk_EntityOwningActor_BasicDetails& InBasicDetailsA,
+        const FCk_EntityOwningActor_BasicDetails& InBasicDetailsB)
+    -> bool
+{
+    return InBasicDetailsA == InBasicDetailsB;
+}
+
+auto
+    UCk_Utils_OwningActor_UE::
+    IsNotEqual(
+        const FCk_EntityOwningActor_BasicDetails& InBasicDetailsA,
+        const FCk_EntityOwningActor_BasicDetails& InBasicDetailsB)
+    -> bool
+{
+    return InBasicDetailsA != InBasicDetailsB;
+}
+
+auto
+    UCk_Utils_OwningActor_UE::
     Get_ActorEntityHandleFromSelf(
         const AActor* InActor)
     -> FCk_Handle
