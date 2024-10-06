@@ -241,8 +241,8 @@ namespace ck
         [&](const FCk_ResourceLoader_ObjectReference_Soft& LoadedObjectSoftRef)
             -> FCk_ResourceLoader_LoadedObject
         {
-            FSoftObjectPath SoftObjectPath = LoadedObjectSoftRef.Get_SoftObjectPath();
-            const auto FoundLoadedAsset = PathToLoadedAssetsMap.Find(SoftObjectPath);
+            const auto& SoftObjectPath = LoadedObjectSoftRef.Get_SoftObjectPath();
+            const auto& FoundLoadedAsset = PathToLoadedAssetsMap.Find(SoftObjectPath);
 
             CK_ENSURE_IF_NOT(ck::IsValid(FoundLoadedAsset, ck::IsValid_Policy_NullptrOnly{}),
                 TEXT("Failed to load asset [{}]!"),
@@ -276,7 +276,7 @@ namespace ck
     {
         const auto Payload = FCk_Payload_ResourceLoader_OnObjectLoaded{InObjectLoaded};
 
-        UUtils_Signal_ResourceLoader_OnObjectLoaded::Broadcast(InHandle, MakePayload(InHandle, Payload));
+        UUtils_Signal_ResourceLoader_OnObjectLoaded::Broadcast(InHandle, MakePayload(Payload));
 
         const auto& ResourceLoaderSubsystem = UCk_Utils_ResourceLoader_Subsystem_UE::Get_Subsystem();
 
@@ -297,7 +297,7 @@ namespace ck
     {
         const auto Payload = FCk_Payload_ResourceLoader_OnObjectBatchLoaded{InObjectBatchLoaded};
 
-        UUtils_Signal_ResourceLoader_OnObjectBatchLoaded::Broadcast(InHandle, MakePayload(InHandle, Payload));
+        UUtils_Signal_ResourceLoader_OnObjectBatchLoaded::Broadcast(InHandle, MakePayload(Payload));
 
         const auto& ResourceLoaderSubsystem = UCk_Utils_ResourceLoader_Subsystem_UE::Get_Subsystem();
 
