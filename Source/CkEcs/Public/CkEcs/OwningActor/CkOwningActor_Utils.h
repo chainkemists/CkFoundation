@@ -95,6 +95,24 @@ public:
     Get_IsActorEcsReady(
         const AActor* InActor);
 
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][OwningActor] OwningActorBasicDetails == OwningActorBasicDetails",
+              Category = "Ck|Utils|OwningActor",
+              meta = (CompactNodeTitle = "==", KeyWords = "==,equal"))
+    static bool
+    IsEqual(
+        const FCk_EntityOwningActor_BasicDetails& InBasicDetailsA,
+        const FCk_EntityOwningActor_BasicDetails& InBasicDetailsB);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck][OwningActor] OwningActorBasicDetails != OwningActorBasicDetails",
+              Category = "Ck|Utils|OwningActor",
+              meta = (CompactNodeTitle = "!=", KeyWords = "!=,not,equal"))
+    static bool
+    IsNotEqual(
+        const FCk_EntityOwningActor_BasicDetails& InBasicDetailsA,
+        const FCk_EntityOwningActor_BasicDetails& InBasicDetailsB);
+
 private:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|OwningActor",
