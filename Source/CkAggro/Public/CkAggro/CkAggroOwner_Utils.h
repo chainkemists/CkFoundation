@@ -93,6 +93,24 @@ public:
         UPARAM(ref) FCk_Handle_AggroOwner& InAggroOwner,
         const FCk_Delegate_Aggro_OnNewAggroAdded& InDelegate);
 
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|AggroOwner",
+        DisplayName = "[Ck][AggroOwner] Bind To OnAggroChanged")
+    static FCk_Handle
+    BindTo_OnAggroChanged(
+        UPARAM(ref) FCk_Handle_AggroOwner& InAggroOwner,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_Aggro_OnAggroChanged& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|AggroOwner",
+        DisplayName = "[Ck][AggroOwner] Unbind From OnAggroChanged")
+    static FCk_Handle
+    UnbindFrom_OnAggroChanged(
+        UPARAM(ref) FCk_Handle_AggroOwner& InAggroOwner,
+        const FCk_Delegate_Aggro_OnAggroChanged& InDelegate);
+
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|AggroOwner",
