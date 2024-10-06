@@ -7,7 +7,7 @@
 auto
     UCk_Utils_ResourceLoader_UE::
     Request_LoadObject(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         const FCk_Request_ResourceLoader_LoadObject& InRequest,
         const FCk_Delegate_ResourceLoader_OnObjectLoaded& InDelegate)
     -> void
@@ -22,7 +22,7 @@ auto
 auto
     UCk_Utils_ResourceLoader_UE::
     Request_LoadObjectBatch(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         const FCk_Request_ResourceLoader_LoadObjectBatch& InRequest,
         const FCk_Delegate_ResourceLoader_OnObjectBatchLoaded& InDelegate)
     -> void

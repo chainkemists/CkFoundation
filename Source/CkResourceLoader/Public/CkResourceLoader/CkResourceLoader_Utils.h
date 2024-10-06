@@ -32,7 +32,7 @@ public:
               DisplayName = "[Ck][ResourceLoader] Request Load Object")
     static void
     Request_LoadObject(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         const FCk_Request_ResourceLoader_LoadObject& InRequest,
         const FCk_Delegate_ResourceLoader_OnObjectLoaded& InDelegate);
 
@@ -41,7 +41,7 @@ public:
               DisplayName = "[Ck][ResourceLoader] Request Load Object Batch")
     static void
     Request_LoadObjectBatch(
-        FCk_Handle InHandle,
+        const FCk_Handle& InHandle,
         const FCk_Request_ResourceLoader_LoadObjectBatch& InRequest,
         const FCk_Delegate_ResourceLoader_OnObjectBatchLoaded& InDelegate);
 
