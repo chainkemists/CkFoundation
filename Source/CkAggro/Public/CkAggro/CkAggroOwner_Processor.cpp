@@ -17,7 +17,7 @@ namespace ck
         -> void
     {
         const auto OwnerLocation = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
-        const auto SquaredRange = FMath::Square(InParams.Get_Params().Get_AggroRange());
+        const auto SquaredRange = FMath::Square(InParams.Get_Params().Get_AggroFilter_Distance().Get_AggroRange());
 
         ck::FUtils_RecordOfAggros::ForEach_ValidEntry(InHandle, [&](FCk_Handle_Aggro InAggro)
         {
@@ -45,6 +45,13 @@ namespace ck
 
             return A.Get<FFragment_Aggro_Current>().Get_Score() < B.Get<FFragment_Aggro_Current>().Get_Score();
         });
+
+
+        if (NOT FUtils_RecordOfAggros::Get_Entries(InHandle).IsEmpty())
+        {
+            auto& NewBestAggro = InHandle.AddOrGet<FFragment_AggroOwner_NewBestAggro>();
+            NewBestAggro = FFragment_AggroOwner_NewBestAggro{FUtils_RecordOfAggros::Get_Entries(InHandle).Top()};
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -53,8 +60,7 @@ namespace ck
         FProcessor_Aggro_LineOfSightScore::
         ForEachEntity(
             TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_AggroOwner_Current& InCurrent) const
+            HandleType InHandle) const
         -> void
     {
         // assuming that the record is already sorted
@@ -63,8 +69,6 @@ namespace ck
         const auto OwningActorEntity = UCk_Utils_OwningActor_UE::TryGet_Entity_OwningActor_InOwnershipChain(InHandle);
         const auto Actor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(OwningActorEntity);
         const auto OwnerLocation = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
-
-        InCurrent = FFragment_AggroOwner_Current{};
 
         ck::FUtils_RecordOfAggros::ForEach_ValidEntry(InHandle, [&](FCk_Handle_Aggro InAggro)
         {
@@ -88,8 +92,31 @@ namespace ck
             if (Hit)
             { return ECk_Record_ForEachIterationResult::Continue; }
 
-            InCurrent = FFragment_AggroOwner_Current{InAggro};
+            auto& NewBestAggro = InHandle.AddOrGet<FFragment_AggroOwner_NewBestAggro>();
+            NewBestAggro = FFragment_AggroOwner_NewBestAggro{InAggro};
             return ECk_Record_ForEachIterationResult::Break;
         });
+    }
+
+    auto
+        FProcessor_Aggro_UpdateBestAggro::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_AggroOwner_Current& InCurrent,
+            const FFragment_AggroOwner_NewBestAggro& InNewBestAggro) const
+        -> void
+    {
+        const auto PrevBestAggro = InCurrent.Get_BestAggro();
+        const auto BestAggro = InNewBestAggro.Get_BestAggro();
+
+        InCurrent = FFragment_AggroOwner_Current{BestAggro};
+
+        if (PrevBestAggro != BestAggro)
+        {
+            UUtils_Signal_OnAggroChanged::Broadcast(InHandle, MakePayload(InHandle, PrevBestAggro, BestAggro));
+        }
+
+        InHandle.Remove<FFragment_AggroOwner_NewBestAggro>();
     }
 }
