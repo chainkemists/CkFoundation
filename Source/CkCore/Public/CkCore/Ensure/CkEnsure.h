@@ -18,6 +18,37 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKCORE_API FCk_Ensure_Entry
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Ensure_Entry);
+
+public:
+    auto operator==(const ThisType& InOther) const -> bool;
+    CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
+
+protected:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FName _FileName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int32 _LineNumber = 0;
+
+public:
+    CK_PROPERTY_GET(_FileName);
+    CK_PROPERTY_GET(_LineNumber);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Ensure_Entry, _FileName, _LineNumber);
+};
+
+auto CKCORE_API GetTypeHash(const FCk_Ensure_Entry& InA) -> uint8;
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKCORE_API FCk_Ensure_IgnoredEntry
 {
     GENERATED_BODY()
@@ -81,13 +112,15 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
     FCk_Delegate_OnEnsureIgnored_MC,
     const FCk_Payload_OnEnsureIgnored&, InPayload);
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_OnEnsureCountChanged,
-    int32, InNewCount);
+    int32, InNewTotalCount,
+    int32, InNewUniqueCount);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Delegate_OnEnsureCountChanged_MC,
-    int32, InNewCount);
+    int32, InNewTotalCount,
+    int32, InNewUniqueCount);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -141,6 +174,12 @@ public:
     static int32
     Get_EnsureCount();
 
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Unique Ensure Count",
+              Category = "Ck|Utils|Ensure")
+    static int32
+    Get_UniqueEnsureCount();
+
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Request Clear All Ignored Ensures",
               Category = "Ck|Utils|Ensure")
@@ -186,7 +225,13 @@ public:
         const FString& InCallstack) -> bool;
 
     static auto
-    Request_IncrementEnsureCount() -> void;
+    Request_IncrementEnsureCountAtFileAndLine(
+        FName InFile,
+        int32 InLine) -> void;
+
+    static auto
+    Request_IncrementEnsureCountWithCallstack(
+        const FString& InCallstack) -> void;
 
     static auto
     Request_IgnoreEnsureAtFileAndLineWithMessage(
@@ -246,7 +291,7 @@ public:
     if (LIKELY(ExpressionResult))                                                                                                          \
     { return true; }                                                                                                                       \
                                                                                                                                            \
-    UCk_Utils_Ensure_UE::Request_IncrementEnsureCount();                                                                                   \
+    UCk_Utils_Ensure_UE::Request_IncrementEnsureCountAtFileAndLine(__FILE__, __LINE__);                                                    \
                                                                                                                                            \
     if (UCk_Utils_Ensure_UE::Get_IsEnsureIgnored(__FILE__, __LINE__))                                                                      \
     { return false; }                                                                                                                      \
@@ -358,8 +403,6 @@ CK_TRIGGER_ENSURE(TEXT("Encountered an invalid value for Enum [{}]"), InEnsure)
     if (LIKELY(ExpressionResult))                                                                                                                                            \
     { return ExpressionResult; }                                                                                                                                             \
                                                                                                                                                                              \
-    UCk_Utils_Ensure_UE::Request_IncrementEnsureCount();                                                                                                                     \
-                                                                                                                                                                             \
     const auto IsMessageOnly = UCk_Utils_Core_UserSettings_UE::Get_EnsureDetailsPolicy() == ECk_EnsureDetails_Policy::MessageOnly;                                           \
                                                                                                                                                                              \
     const auto& Message = ck::Format_UE(InString, ##__VA_ARGS__);                                                                                                            \
@@ -370,6 +413,8 @@ CK_TRIGGER_ENSURE(TEXT("Encountered an invalid value for Enum [{}]"), InEnsure)
         IsMessageOnly ? TEXT("[BP StackTrace DISABLED]") :                                                                                                                   \
         UCk_Utils_Debug_StackTrace_UE::Get_StackTrace_Blueprint(ck::type_traits::AsString{})                                                                                 \
     );                                                                                                                                                                       \
+                                                                                                                                                                             \
+    UCk_Utils_Ensure_UE::Request_IncrementEnsureCountWithCallstack(CallStack);                                                                                               \
                                                                                                                                                                              \
     if (UCk_Utils_Ensure_UE::Get_IsEnsureIgnored_WithCallstack(CallStack))                                                                                                   \
     { return ExpressionResult; }                                                                                                                                             \
