@@ -40,6 +40,9 @@ public:
     auto
     Get_EnsureCount() const -> int32;
 
+    auto
+    Get_UniqueEnsureCount() const -> int32;
+
 public:
     auto
     BindTo_OnEnsureIgnored(
@@ -62,7 +65,13 @@ public:
     Request_ClearAllIgnoredEnsures() -> void;
 
     auto
-    Request_IncrementEnsureCount() -> void;
+    Request_IncrementEnsureCountAtFileAndLine(
+        FName InFile,
+        int32 InLine) -> void;
+
+    auto
+    Request_IncrementEnsureCountWithCallstack(
+        const FString& InCallstack) -> void;
 
     auto
     Request_IgnoreEnsureAtFileAndLineWithMessage(
@@ -81,6 +90,9 @@ public:
 
 private:
     int32                                      _NumberOfEnsuresTriggered = 0;
+    int32                                      _NumberOfUniqueEnsuresTriggered = 0;
+    TMap<FName, TSet<FCk_Ensure_Entry>>        _UniqueTriggeredEnsures;
+    TSet<FString>                              _UniqueTriggeredEnsures_BP;
     TMap<FName, TSet<FCk_Ensure_IgnoredEntry>> _IgnoredEnsures;
     TSet<FString>                              _IgnoredEnsures_BP;
 
