@@ -79,6 +79,14 @@ auto
 
 auto
     UCk_Ensure_Subsystem_UE::
+    Get_UniqueEnsureCount() const
+    -> int32
+{
+    return _NumberOfUniqueEnsuresTriggered;
+}
+
+auto
+    UCk_Ensure_Subsystem_UE::
     Get_IsEnsureIgnored(
         FName InFile,
         int32 InLine) const
@@ -186,12 +194,45 @@ auto
 
 auto
     UCk_Ensure_Subsystem_UE::
-    Request_IncrementEnsureCount()
+    Request_IncrementEnsureCountAtFileAndLine(
+        FName InFile,
+        int32 InLine)
     -> void
 {
     ++_NumberOfEnsuresTriggered;
 
-    _OnEnsureCountChanged_MC.Broadcast(_NumberOfEnsuresTriggered);
+    bool WasAlreadyAdded = false;
+
+    auto& LineSet = _UniqueTriggeredEnsures.FindOrAdd(InFile);
+    const auto& EnsureEntry = FCk_Ensure_Entry{InFile, InLine};
+    LineSet.Add(EnsureEntry, &WasAlreadyAdded);
+
+    if (NOT WasAlreadyAdded)
+    {
+        ++_NumberOfUniqueEnsuresTriggered;
+    }
+
+    _OnEnsureCountChanged_MC.Broadcast(_NumberOfEnsuresTriggered, _NumberOfUniqueEnsuresTriggered);
+}
+
+auto
+    UCk_Ensure_Subsystem_UE::
+    Request_IncrementEnsureCountWithCallstack(
+        const FString& InCallstack)
+    -> void
+{
+    ++_NumberOfEnsuresTriggered;
+
+    bool WasAlreadyAdded = false;
+
+    _UniqueTriggeredEnsures_BP.Add(InCallstack, &WasAlreadyAdded);
+
+    if (NOT WasAlreadyAdded)
+    {
+        ++_NumberOfUniqueEnsuresTriggered;
+    }
+
+    _OnEnsureCountChanged_MC.Broadcast(_NumberOfEnsuresTriggered, _NumberOfUniqueEnsuresTriggered);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

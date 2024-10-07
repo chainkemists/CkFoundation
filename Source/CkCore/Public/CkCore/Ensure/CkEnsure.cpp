@@ -12,6 +12,25 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
+    FCk_Ensure_Entry::
+    operator==(
+        const ThisType& InOther) const
+    -> bool
+{
+    return Get_LineNumber() == InOther.Get_LineNumber() && Get_FileName().IsEqual(InOther.Get_FileName());
+}
+
+auto
+    GetTypeHash(
+        const FCk_Ensure_Entry& InA)
+    -> uint8
+{
+    return GetTypeHash(InA.Get_LineNumber()) + GetTypeHash(InA.Get_FileName());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
     FCk_Ensure_IgnoredEntry::
     operator==(
         const ThisType& InOther) const
@@ -100,6 +119,19 @@ auto
     { return {}; }
 
     return EnsureSubsystem->Get_EnsureCount();
+}
+
+auto
+    UCk_Utils_Ensure_UE::
+    Get_UniqueEnsureCount()
+    -> int32
+{
+    const auto EnsureSubsystem = UCk_Ensure_Subsystem_UE::Get_Instance();
+
+    if (ck::Is_NOT_Valid(EnsureSubsystem))
+    { return {}; }
+
+    return EnsureSubsystem->Get_UniqueEnsureCount();
 }
 
 auto
@@ -245,7 +277,9 @@ auto
 
 auto
     UCk_Utils_Ensure_UE::
-    Request_IncrementEnsureCount()
+    Request_IncrementEnsureCountAtFileAndLine(
+        FName InFile,
+        int32 InLine)
     -> void
 {
     const auto EnsureSubsystem = UCk_Ensure_Subsystem_UE::Get_Instance();
@@ -253,7 +287,21 @@ auto
     if (ck::Is_NOT_Valid(EnsureSubsystem))
     { return; }
 
-    EnsureSubsystem->Request_IncrementEnsureCount();
+    EnsureSubsystem->Request_IncrementEnsureCountAtFileAndLine(InFile, InLine);
+}
+
+auto
+    UCk_Utils_Ensure_UE::
+    Request_IncrementEnsureCountWithCallstack(
+        const FString& InCallstack)
+    -> void
+{
+    const auto EnsureSubsystem = UCk_Ensure_Subsystem_UE::Get_Instance();
+
+    if (ck::Is_NOT_Valid(EnsureSubsystem))
+    { return; }
+
+    EnsureSubsystem->Request_IncrementEnsureCountWithCallstack(InCallstack);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
