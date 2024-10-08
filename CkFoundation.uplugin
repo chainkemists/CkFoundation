@@ -562,6 +562,10 @@
 			"Enabled": true
 		},
 		{
+			"Name": "Iris",
+			"Enabled": true
+		},
+		{
 			"Name": "StructUtils",
 			"Enabled": true
 		}
