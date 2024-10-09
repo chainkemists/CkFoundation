@@ -335,6 +335,24 @@ public:
         const FVector& InPoint,
         const FVector& InMeasureRadiusFrom,
         float InRadius);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Random Unit Vector In Cone (Normal Distribution | Degrees)",
+              Category = "Ck|Utils|Math|Vector3")
+    static FVector
+    Get_RandCone_NormalDistribution_Degrees(
+        const FVector& InDirection,
+        float InConeHalfAngleDegrees,
+        float InExponent);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Random Unit Vector In Cone (Normal Distribution | Radians)",
+              Category = "Ck|Utils|Math|Vector3")
+    static FVector
+    Get_RandCone_NormalDistribution_Radians(
+        const FVector& InDirection,
+        float InConeHalfAngleRadians,
+        float InExponent);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
