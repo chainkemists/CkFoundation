@@ -17,6 +17,7 @@ public class CkPhysics : CkModuleRules
             "GameplayTags",
             "GeometryCollectionEngine",
             "FieldSystemEngine",
+            "PhysicsCore",
 
             "IrisCore",
             "NetCore",
