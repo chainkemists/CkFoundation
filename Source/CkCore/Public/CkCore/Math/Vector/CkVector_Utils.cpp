@@ -642,6 +642,45 @@ auto
 }
 
 auto
+    UCk_Utils_Vector3_UE::
+    Get_RandCone_NormalDistribution_Degrees(
+        const FVector& InDirection,
+        float InConeHalfAngleDegrees,
+        float InExponent)
+    -> FVector
+{
+    if (InConeHalfAngleDegrees <= 0.0f)
+    { return InDirection.GetSafeNormal(); }
+
+    // Consider the cone a concatenation of two rotations. One "away" from the center line, and another "around" the circle.
+    // Apply the exponent to the away-from-center rotation, a larger exponent will cluster points more tightly around the center
+    const auto& FromCenter = FMath::Pow(FMath::FRand(), InExponent);
+    const auto& AngleFromCenter = FromCenter * InConeHalfAngleDegrees;
+    const auto& AngleAround = FMath::FRand() * 360.0f;
+
+    const auto& Rot = InDirection.Rotation();
+    const auto& DirQuat = FQuat{ Rot };
+    const auto& FromCenterQuat = FQuat{ FRotator{ 0.0f, AngleFromCenter, 0.0f } };
+    const auto& AroundQuat = FQuat{ FRotator{ 0.0f, 0.0, AngleAround } };
+
+    auto FinalDirectionQuat = DirQuat * AroundQuat * FromCenterQuat;
+    FinalDirectionQuat.Normalize();
+
+    return FinalDirectionQuat.RotateVector(FVector::ForwardVector);
+}
+
+auto
+    UCk_Utils_Vector3_UE::
+    Get_RandCone_NormalDistribution_Radians(
+        const FVector& InDirection,
+        float InConeHalfAngleRadians,
+        float InExponent)
+    -> FVector
+{
+    return Get_RandCone_NormalDistribution_Degrees(InDirection, FMath::RadiansToDegrees(InConeHalfAngleRadians), InExponent);
+}
+
+auto
     UCk_Utils_ActorVector3_UE::
     Get_DirectionVectorFromActor(
         const AActor*    InActor,
