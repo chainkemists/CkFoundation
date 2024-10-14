@@ -69,6 +69,26 @@ auto
 
 auto
     UCk_Utils_ResolverSource_UE::
+    Make_InitiateNewResolution(
+        const FGameplayTag& InBundleName,
+        const FCk_Handle_ResolverTarget& InTarget,
+        const FCk_Handle& InCauser,
+        const FCk_ResolverDataBundle_MetadataOperation_Conditional& InInitialMetadata,
+        const FCk_ResolverDataBundle_ModifierOperation_Conditional& InInitialModifierOperations)
+    -> FCk_Request_ResolverSource_InitiateNewResolution
+{
+    return FCk_Request_ResolverSource_InitiateNewResolution
+    {
+        InBundleName,
+        InTarget,
+        InCauser,
+        TArray{InInitialMetadata},
+        TArray{InInitialModifierOperations}
+    };
+}
+
+auto
+    UCk_Utils_ResolverSource_UE::
     ForEach_ResolverDataBundle(
         FCk_Handle_ResolverSource& InSource,
         const FInstancedStruct& InOptionalPayload,

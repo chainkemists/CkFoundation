@@ -96,6 +96,18 @@ public:
         UPARAM(meta=(Categories = "Resolver.DataBundle.Name")) FGameplayTag InName);
 
 public:
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|ResolverSource",
+        DisplayName="[Ck][ResolverSource] Make InitiateNewResolution (No Array)")
+    static FCk_Request_ResolverSource_InitiateNewResolution
+        Make_InitiateNewResolution(
+        const FGameplayTag& InBundleName,
+        const FCk_Handle_ResolverTarget& InTarget,
+        const FCk_Handle& InCauser,
+        const FCk_ResolverDataBundle_MetadataOperation_Conditional& InInitialMetadata,
+        const FCk_ResolverDataBundle_ModifierOperation_Conditional& InInitialModifierOperations);
+
+public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ResolverSource",
         DisplayName="[Ck][ResolverSource] ForEach ResolverDataBundle",
