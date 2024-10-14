@@ -14,6 +14,15 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Resolver_Variable_InstancedStruct_HitResult);
+
+// common damage tags
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Resolver_DataBundle_Phase_MainStats);
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Resolver_DataBundle_Phase_GlobalModifiers);
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Resolver_DataBundle_Phase_FinalResults);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKRESOLVER_API FCk_Fragment_ResolverSource_ParamsData
 {
@@ -70,6 +79,8 @@ public:
     CK_PROPERTY_GET(_Causer);
     CK_PROPERTY_GET(_InitialMetadata);
     CK_PROPERTY_GET(_InitialModifierOperations);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_ResolverSource_InitiateNewResolution, _BundleName, _Target, _Causer, _InitialMetadata, _InitialModifierOperations);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
