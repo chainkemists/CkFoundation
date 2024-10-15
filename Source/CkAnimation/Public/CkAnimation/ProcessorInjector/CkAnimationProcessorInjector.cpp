@@ -1,6 +1,6 @@
 #include "CkAnimationProcessorInjector.h"
 
-#include "CkAnimation/AnimState/CkAnimState_Processor.h"
+#include "CkAnimation/AnimPlan/CkAnimPlan_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -10,7 +10,7 @@ auto
         EcsWorldType& InWorld)
         -> void
 {
-    InWorld.Add<ck::FProcessor_AnimState_HandleRequests>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_AnimPlan_HandleRequests>(InWorld.Get_Registry());
 }
 
 auto
@@ -19,7 +19,7 @@ auto
         EcsWorldType& InWorld)
     -> void
 {
-    InWorld.Add<ck::FProcessor_AnimState_Replicate>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_AnimPlan_Replicate>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
