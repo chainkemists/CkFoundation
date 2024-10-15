@@ -64,7 +64,7 @@ public:
     CK_GENERATED_BODY(FCk_Fragment_AnimAsset_ParamsData);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, TitleProperty = "_ID"))
     FCk_AnimAsset_Animation _AnimationAsset;
 
 public:
