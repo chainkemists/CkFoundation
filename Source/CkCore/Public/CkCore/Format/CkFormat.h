@@ -127,6 +127,9 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
+#define CK_ANSI_TEXT(_Text_, ...)\
+    ck::Format_ANSI(TEXT(_Text_), __VA_ARGS__).c_str()
+
 // convenience macro to enable the formatter to access private members of a class/struct
 #define CK_ENABLE_CUSTOM_FORMATTER(_Class_)                  \
     friend struct fmt::formatter<_Class_, TCHAR>
