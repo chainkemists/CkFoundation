@@ -761,7 +761,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+        meta = (AllowPrivateAccess = true, TitleProperty = "_AbilityScriptClass"))
     TArray<FCk_Fragment_Ability_ParamsData> _AbilityParams;
 
 public:
