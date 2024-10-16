@@ -22,7 +22,8 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|GameplayTag",
-              DisplayName = "[Ck] Get Are Tag Requirements Met")
+              DisplayName = "[Ck] Get Are Tag Requirements Met",
+              meta = (Keywords = "container, does"))
     static bool
     Get_AreTagRequirementsMet(
         const FGameplayTagRequirements& InTagRequirements,
