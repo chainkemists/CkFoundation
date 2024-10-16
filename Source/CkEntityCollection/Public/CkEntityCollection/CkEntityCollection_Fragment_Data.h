@@ -57,6 +57,42 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKENTITYCOLLECTION_API FCk_EntityCollection_Content
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_EntityCollection_Content);
+
+public:
+    auto operator==(const ThisType& InOther) const -> bool;
+    CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, Categories = "EntityCollection"))
+    FGameplayTag _CollectionName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<FCk_Handle> _EntitiesInCollection;
+
+public:
+    CK_PROPERTY(_CollectionName);
+    CK_PROPERTY(_EntitiesInCollection);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_EntityCollection_Content, _CollectionName, _EntitiesInCollection);
+};
+
+CK_DEFINE_CUSTOM_FORMATTER(FCk_EntityCollection_Content, [&]()
+{
+    return ck::Format(TEXT("Collection: {} | {}"), InObj.Get_CollectionName(), InObj.Get_EntitiesInCollection().Num());
+});
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKENTITYCOLLECTION_API FCk_Request_EntityCollection_AddEntities
 {
     GENERATED_BODY()
@@ -71,6 +107,9 @@ private:
 
 public:
     CK_PROPERTY(_EntitiesToAdd);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_EntityCollection_AddEntities, _EntitiesToAdd);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -90,6 +129,9 @@ private:
 
 public:
     CK_PROPERTY(_EntitiesToRemove);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_EntityCollection_RemoveEntities, _EntitiesToRemove);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
