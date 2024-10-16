@@ -1,25 +1,40 @@
 #include "CkEntityCollection_Utils.h"
 
+#include "CkEntityCollection/CkEntityCollection_Log.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_EntityCollection_UE::
     Add(
-        FCk_Handle& InHandle,
-        const FCk_Fragment_EntityCollection_ParamsData& InParams)
+        FCk_Handle& InEntityCollectionOwnerEntity,
+        const FCk_Fragment_EntityCollection_ParamsData& InParams,
+        ECk_Replication InReplicates)
     -> FCk_Handle_EntityCollection
 {
-    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InNewEntity)
+    auto NewEntityCollectionEntity = CastChecked(UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InEntityCollectionOwnerEntity, [&](FCk_Handle InNewEntity)
     {
         UCk_Utils_GameplayLabel_UE::Add(InNewEntity, InParams.Get_Name());
         InNewEntity.Add<ck::FFragment_EntityCollection_Params>(InParams);
         EntityCollections_RecordOfEntities_Utils::AddIfMissing(InNewEntity);
-    });
+    }));
 
-    auto NewEntityCollectionEntity = Cast(NewEntity);
+    if (InReplicates == ECk_Replication::DoesNotReplicate)
+    {
+        ck::entity_collection::VeryVerbose
+        (
+            TEXT("Skipping creation of EntityCollection Rep Fragment on Entity [{}] because it's set to [{}]"),
+            NewEntityCollectionEntity,
+            InReplicates
+        );
+    }
+    else
+    {
+        TryAddReplicatedFragment<UCk_Fragment_EntityCollection_Rep>(InEntityCollectionOwnerEntity);
+    }
 
-    RecordOfEntityCollections_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
-    RecordOfEntityCollections_Utils::Request_Connect(InHandle, NewEntityCollectionEntity);
+    RecordOfEntityCollections_Utils::AddIfMissing(InEntityCollectionOwnerEntity, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
+    RecordOfEntityCollections_Utils::Request_Connect(InEntityCollectionOwnerEntity, NewEntityCollectionEntity);
 
     return NewEntityCollectionEntity;
 }
@@ -27,24 +42,25 @@ auto
 auto
     UCk_Utils_EntityCollection_UE::
     AddMultiple(
-        FCk_Handle& InHandle,
-        const FCk_Fragment_MultipleEntityCollection_ParamsData& InParams)
+        FCk_Handle& InEntityCollectionOwnerEntity,
+        const FCk_Fragment_MultipleEntityCollection_ParamsData& InParams,
+        ECk_Replication InReplicates)
     -> TArray<FCk_Handle_EntityCollection>
 {
     return ck::algo::Transform<TArray<FCk_Handle_EntityCollection>>(InParams.Get_EntityCollectionParams(),
     [&](const FCk_Fragment_EntityCollection_ParamsData& InEntityCollectionParams)
     {
-        return Add(InHandle, InEntityCollectionParams);
+        return Add(InEntityCollectionOwnerEntity, InEntityCollectionParams, InReplicates);
     });
 }
 
 auto
     UCk_Utils_EntityCollection_UE::
     Has_Any(
-        const FCk_Handle& InHandle)
+        const FCk_Handle& InEntityCollectionOwnerEntity)
     -> bool
 {
-    return RecordOfEntityCollections_Utils::Has(InHandle);
+    return RecordOfEntityCollections_Utils::Has(InEntityCollectionOwnerEntity);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -67,9 +83,11 @@ auto
     UCk_Utils_EntityCollection_UE::
     Get_EntitiesInCollection(
         const FCk_Handle_EntityCollection& InEntityCollectionHandle)
-    -> TArray<FCk_Handle>
+    -> FCk_EntityCollection_Content
 {
-    return EntityCollections_RecordOfEntities_Utils::Get_ValidEntries(InEntityCollectionHandle);
+    return FCk_EntityCollection_Content{
+        InEntityCollectionHandle.Get<ck::FFragment_EntityCollection_Params>().Get_Params().Get_Name(),
+        EntityCollections_RecordOfEntities_Utils::Get_ValidEntries(InEntityCollectionHandle)};
 }
 
 auto
@@ -181,6 +199,15 @@ auto
     {
         EntityCollections_RecordOfEntities_Previous_Utils::Request_Connect(InEntityCollectionHandle, InEntry);
     });
+}
+
+auto
+    UCk_Utils_EntityCollection_UE::
+    Request_TryReplicateEntityCollection(
+        FCk_Handle_EntityCollection& InEntityCollectionHandle)
+    -> void
+{
+    InEntityCollectionHandle.AddOrGet<ck::FTag_EntityCollection_MayRequireReplication>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

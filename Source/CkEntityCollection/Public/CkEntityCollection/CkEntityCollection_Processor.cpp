@@ -36,6 +36,8 @@ namespace ck
             FFragment_EntityCollection_Requests& InRequestsComp) const
         -> void
     {
+        const auto PreviousContent = UCk_Utils_EntityCollection_UE::Get_EntitiesInCollection(InHandle);
+
         InHandle.CopyAndRemove(InRequestsComp, [&](const FFragment_EntityCollection_Requests& InRequests)
         {
             ck::algo::ForEachRequest(InRequests._Requests, ck::Visitor(
@@ -44,6 +46,14 @@ namespace ck
                 DoHandleRequest(InHandle, InComp, InRequestVariant);
             }), ck::policy::DontResetContainer{});
         });
+
+        const auto UpdatedContent = UCk_Utils_EntityCollection_UE::Get_EntitiesInCollection(InHandle);
+
+        if (PreviousContent == UpdatedContent)
+        { return; }
+
+        UCk_Utils_EntityCollection_UE::Request_CollectionUpdated(InHandle);
+        UCk_Utils_EntityCollection_UE::Request_TryReplicateEntityCollection(InHandle);
     }
 
     auto
@@ -74,8 +84,6 @@ namespace ck
         {
             CollectionRecordOfEntitiesUtilsType::Request_Connect(InHandle, EntityToAdd);
         }
-
-        UCk_Utils_EntityCollection_UE::Request_CollectionUpdated(InHandle);
     }
 
     auto
@@ -106,9 +114,9 @@ namespace ck
         {
             CollectionRecordOfEntitiesUtilsType::Request_Disconnect(InHandle, EntityToRemove);
         }
-
-        UCk_Utils_EntityCollection_UE::Request_CollectionUpdated(InHandle);
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     auto
         FProcessor_EntityCollection_FireSignals::
@@ -139,6 +147,38 @@ namespace ck
             InHandle,
             MakePayload(InHandle, Previous_CollectionRecordOfEntitiesUtilsType::Get_Entries(InHandle), CollectionRecordOfEntitiesUtilsType::Get_Entries(InHandle))
         );
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_EntityCollection_Replicate::
+        DoTick(
+            TimeType InDeltaT)
+        -> void
+    {
+        TProcessor::DoTick(InDeltaT);
+
+        _TransientEntity.Clear<MarkedDirtyBy>();
+    }
+
+    auto
+        FProcessor_EntityCollection_Replicate::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityCollection_Params& InParams,
+            const FFragment_EntityCollections_RecordOfEntities&) const
+        -> void
+    {
+        auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+
+        // TODO: Remove usage of UpdateReplicatedFragment once the processor is tagged to only run on Server
+        UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_EntityCollection_Rep>(
+            LifetimeOwner, [&](UCk_Fragment_EntityCollection_Rep* InRepComp)
+        {
+            InRepComp->Broadcast_AddOrUpdate(UCk_Utils_EntityCollection_UE::Get_EntitiesInCollection(InHandle));
+        });
     }
 }
 
