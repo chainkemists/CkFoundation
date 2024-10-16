@@ -26,7 +26,7 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKENTITYCOLLECTION_API UCk_Utils_EntityCollection_UE : public UCk_Utils_Ecs_Base_UE
+class CKENTITYCOLLECTION_API UCk_Utils_EntityCollection_UE : public UCk_Utils_Ecs_Net_UE
 {
     GENERATED_BODY()
 
@@ -45,37 +45,36 @@ public:
     friend class ck::FProcessor_EntityCollection_FireSignals;
 
 public:
-    friend class UCk_Utils_Ecs_Base_UE;
-
-public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][EntityCollection] Add New EntityCollection")
     static FCk_Handle_EntityCollection
     Add(
-        UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_EntityCollection_ParamsData& InParams);
+        UPARAM(ref) FCk_Handle& InEntityCollectionOwnerEntity,
+        const FCk_Fragment_EntityCollection_ParamsData& InParams,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EntityCollection",
               DisplayName="[Ck][EntityCollection] Add Multiple New EntityCollections")
     static TArray<FCk_Handle_EntityCollection>
     AddMultiple(
-        UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_MultipleEntityCollection_ParamsData& InParams);
+        UPARAM(ref) FCk_Handle& InEntityCollectionOwnerEntity,
+        const FCk_Fragment_MultipleEntityCollection_ParamsData& InParams,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
 
 public:
     // Has Feature
     static bool
     Has(
-        const FCk_Handle& InHandle);
+        const FCk_Handle& InEntityCollectionOwnerEntity);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|EntityCollection",
         DisplayName="[Ck][EntityCollection] Has Any EntityCollection")
     static bool
     Has_Any(
-        const FCk_Handle& InHandle);
+        const FCk_Handle& InEntityCollectionOwnerEntity);
 
 public:
     UFUNCTION(BlueprintPure,
@@ -90,7 +89,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|EntityCollection",
               DisplayName="[Ck][EntityCollection] Get All Entities In Collection")
-    static TArray<FCk_Handle>
+    static FCk_EntityCollection_Content
     Get_EntitiesInCollection(
         const FCk_Handle_EntityCollection& InEntityCollectionHandle);
 
@@ -176,6 +175,10 @@ private:
 
     static auto
     Request_StorePreviousCollection(
+        FCk_Handle_EntityCollection& InEntityCollectionHandle) -> void;
+
+    static auto
+    Request_TryReplicateEntityCollection(
         FCk_Handle_EntityCollection& InEntityCollectionHandle) -> void;
 };
 

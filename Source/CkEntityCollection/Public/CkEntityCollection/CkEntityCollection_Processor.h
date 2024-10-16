@@ -97,6 +97,36 @@ namespace ck
             const FFragment_EntityCollections_RecordOfEntities_Previous&,
             const FFragment_EntityCollections_RecordOfEntities&) -> void;
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKENTITYCOLLECTION_API FProcessor_EntityCollection_Replicate : public ck_exp::TProcessor<
+            FProcessor_EntityCollection_Replicate,
+            FCk_Handle_EntityCollection,
+            FFragment_EntityCollection_Params,
+            FFragment_EntityCollections_RecordOfEntities,
+            FTag_EntityCollection_MayRequireReplication,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FTag_EntityCollection_MayRequireReplication;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        DoTick(
+            TimeType InDeltaT) -> void;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityCollection_Params& InParams,
+            const FFragment_EntityCollections_RecordOfEntities&) const -> void;
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------

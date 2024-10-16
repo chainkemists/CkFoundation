@@ -17,6 +17,9 @@ public class CkEntityCollection : CkModuleRules
             "StructUtils",
             "GameplayTags",
 
+            "IrisCore",
+            "NetCore",
+
             "CkCore",
             "CkEcs",
             "CkEcsExt",
