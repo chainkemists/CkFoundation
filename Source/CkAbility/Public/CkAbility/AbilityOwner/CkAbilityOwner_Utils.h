@@ -344,6 +344,13 @@ public:
     Request_UnblockAllSubAbilities(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AbilityOwner",
+              DisplayName="[Ck][Ability] Request Cancel All SubAbilities")
+    static FCk_Handle_AbilityOwner
+    Request_CancelAllSubAbilities(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",

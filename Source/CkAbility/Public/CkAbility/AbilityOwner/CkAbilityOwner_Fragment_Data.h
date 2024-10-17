@@ -355,6 +355,17 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Request_AbilityOwner_CancelSubAbilities : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_AbilityOwner_CancelSubAbilities);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_AbilityOwner_Events,
     FCk_Handle_AbilityOwner, InHandle,
