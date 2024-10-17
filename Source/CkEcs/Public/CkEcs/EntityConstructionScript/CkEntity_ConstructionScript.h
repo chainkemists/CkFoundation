@@ -34,6 +34,15 @@ public:
         TSubclassOf<UCk_Entity_ConstructionScript_PDA> InConstructionScript,
         const FInstancedStruct& InOptionalParams);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|ConstructionScript",
+              DisplayName = "[Ck] Request Construct Sub-ConstructionScript (Multiple)")
+    static FCk_Handle
+    Request_Construct_Multiple(
+        UPARAM(ref) FCk_Handle& InHandle,
+        TArray<TSubclassOf<UCk_Entity_ConstructionScript_PDA>> InConstructionScript,
+        const FInstancedStruct& InOptionalParams);
+
 protected:
     UFUNCTION(BlueprintNativeEvent,
               DisplayName = "Construct")
