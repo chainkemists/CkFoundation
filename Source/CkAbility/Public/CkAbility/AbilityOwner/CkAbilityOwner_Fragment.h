@@ -123,9 +123,10 @@ namespace ck
         using RevokeAbilityRequestType = FCk_Request_AbilityOwner_RevokeAbility;
         using ActivateAbilityRequestType = FCk_Request_AbilityOwner_ActivateAbility;
         using DeactivateAbilityRequestType = FCk_Request_AbilityOwner_DeactivateAbility;
+        using CancelSubAbilities = FCk_Request_AbilityOwner_CancelSubAbilities;
 
         using RequestType = std::variant<GiveAbilityRequestType, GiveAbilityReplicatedRequestType, RevokeAbilityRequestType,
-            ActivateAbilityRequestType, DeactivateAbilityRequestType>;
+            ActivateAbilityRequestType, DeactivateAbilityRequestType, CancelSubAbilities>;
         using RequestList = TArray<RequestType>;
 
     public:
