@@ -559,6 +559,26 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
+    Request_BlockAllSubAbilities(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle)
+    -> FCk_Handle_AbilityOwner
+{
+    InAbilityOwnerHandle.Add<ck::FTag_AbilityOwner_BlockSubAbilities>();
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Request_UnblockAllSubAbilities(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle)
+    -> FCk_Handle_AbilityOwner
+{
+    InAbilityOwnerHandle.Remove<ck::FTag_AbilityOwner_BlockSubAbilities>();
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
     BindTo_OnEvents(
         FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         FGameplayTagContainer InRelevantEvents,
