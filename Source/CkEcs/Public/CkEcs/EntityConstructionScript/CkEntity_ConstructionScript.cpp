@@ -43,6 +43,22 @@ auto
 
 auto
     UCk_Entity_ConstructionScript_PDA::
+    Request_Construct_Multiple(
+        FCk_Handle& InHandle,
+        TArray<TSubclassOf<UCk_Entity_ConstructionScript_PDA>> InConstructionScript,
+        const FInstancedStruct& InOptionalParams)
+    -> FCk_Handle
+{
+    for (const auto& ConstructionScript : InConstructionScript)
+    {
+        Request_Construct(InHandle, ConstructionScript, InOptionalParams);
+    }
+
+    return InHandle;
+}
+
+auto
+    UCk_Entity_ConstructionScript_PDA::
     DoConstruct_Implementation(
         FCk_Handle& InHandle,
         const FInstancedStruct& InOptionalParams) const
