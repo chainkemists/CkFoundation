@@ -16,6 +16,12 @@ class UCk_Utils_AbilityOwner_UE;
 
 namespace ck
 {
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_ECS_TAG(FTag_AbilityOwner_BlockSubAbilities);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     CK_DEFINE_ECS_TAG(FTag_AbilityOwner_NeedsSetup);
     CK_DEFINE_ECS_TAG(FTag_AbilityOwner_TagsUpdated);
 
