@@ -19,6 +19,8 @@ class UCk_Utils_Ability_UE;
 
 namespace ck
 {
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKABILITY_API FFragment_Ability_Params
     {
     public:

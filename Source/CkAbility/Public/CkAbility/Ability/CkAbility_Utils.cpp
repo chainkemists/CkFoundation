@@ -2,6 +2,7 @@
 
 #include "CkAbility/CkAbility_Log.h"
 #include "CkAbility/Ability/CkAbility_Script.h"
+#include "CkAbility/AbilityOwner/CkAbilityOwner_Fragment.h"
 #include "CkAbility/Subsystem/CkAbility_Subsystem.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Utils.h"
 #include "CkAbility/Settings/CkAbility_Settings.h"
@@ -110,6 +111,27 @@ auto
     { return {}; }
 
     const auto& AbilityOwner = Script->Get_AbilityOwnerHandle();
+
+    auto IsOwnerBlockingAbilities = [](const FCk_Handle_AbilityOwner& InOwner)
+    {
+        auto Impl = [](const FCk_Handle_AbilityOwner& InOwner, auto& Self) mutable
+        {
+            if (InOwner.Has<ck::FTag_AbilityOwner_BlockSubAbilities>())
+            { return true; }
+
+            const auto MaybeAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InOwner));
+
+            if (ck::Is_NOT_Valid(MaybeAbilityOwner))
+            { return false; }
+
+            return Self(MaybeAbilityOwner, Self);
+        };
+
+        return Impl(InOwner, Impl);
+    };
+
+    if (IsOwnerBlockingAbilities(AbilityOwner))
+    { return ECk_Ability_ActivationRequirementsResult::RequirementsNotMet_BlockedByOwner; }
 
     const auto& AbilityOwnerActiveTags = UCk_Utils_AbilityOwner_UE::Get_ActiveTags(AbilityOwner);
 

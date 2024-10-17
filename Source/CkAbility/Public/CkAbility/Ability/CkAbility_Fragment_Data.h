@@ -102,7 +102,10 @@ enum class ECk_Ability_ActivationRequirementsResult : uint8
     RequirementsNotMet_OnOwner,
 
     // Requirements were not on the Ability Owner and the Ability itself
-    RequirementsNotMet_OnOwnerAndSelf
+    RequirementsNotMet_OnOwnerAndSelf,
+
+    // Requirements were not on the Ability Owner and the Ability itself
+    RequirementsNotMet_BlockedByOwner
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_ActivationRequirementsResult);
