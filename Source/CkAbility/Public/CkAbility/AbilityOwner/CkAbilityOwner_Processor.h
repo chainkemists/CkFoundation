@@ -107,6 +107,12 @@ namespace ck
             FFragment_AbilityOwner_Current& InAbilityOwnerComp,
             const FCk_Request_AbilityOwner_DeactivateAbility& InRequest) const -> void;
 
+        auto
+        DoHandleRequest(
+            HandleType InAbilityOwnerEntity,
+            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            const FCk_Request_AbilityOwner_CancelSubAbilities& InRequest) const -> void;
+
     private:
         static auto
         DoFindAbilityByClass(

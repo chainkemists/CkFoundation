@@ -710,6 +710,21 @@ namespace ck
 
                         return ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks;
                     }
+                    case ECk_Ability_ActivationRequirementsResult::RequirementsNotMet_BlockedByOwner:
+                    {
+                        ability::Verbose
+                        (
+                            TEXT("Failed to ACTIVATE Ability [Name: {} | Entity: {}] on Ability Owner [{}] "
+                                 "because the Ability Owner has BLOCKED all SubAbilities"),
+                            AbilityToActivateName,
+                            InAbilityToActivateEntity,
+                            InAbilityOwnerEntity
+                        );
+
+                        Script->OnAbilityNotActivated(FCk_Ability_NotActivated_Info{InAbilityToActivateEntity, CanActivateAbility});
+
+                        return ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks;
+                    }
                     default:
                     {
                         CK_INVALID_ENUM(CanActivateAbility);
@@ -952,6 +967,38 @@ namespace ck
                 break;
             }
         }
+    }
+
+    auto
+        FProcessor_AbilityOwner_HandleRequests::
+        DoHandleRequest(
+            HandleType InAbilityOwnerEntity,
+            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            const FCk_Request_AbilityOwner_CancelSubAbilities& InRequest) const
+        -> void
+    {
+        UCk_Utils_AbilityOwner_UE::ForEach_Ability
+        (
+            InAbilityOwnerEntity,
+            [&](const FCk_Handle_Ability& InAbilityEntityToCancel)
+            {
+                ability::Verbose
+                (
+                    TEXT("CANCELLING Ability [Name: {} | Entity: {}] because Ability Owner [{}] requested it"),
+                    UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntityToCancel),
+                    InAbilityEntityToCancel,
+                    InAbilityOwnerEntity
+                );
+
+                if (auto MaybeAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(InAbilityEntityToCancel);
+                    ck::IsValid(MaybeAbilityOwner))
+                {
+                    UCk_Utils_AbilityOwner_UE::Request_CancelAllSubAbilities(MaybeAbilityOwner);
+                }
+
+                DoHandleRequest(InAbilityOwnerEntity, InAbilityOwnerComp, FCk_Request_AbilityOwner_DeactivateAbility{InAbilityEntityToCancel});
+            }
+        );
     }
 
     // --------------------------------------------------------------------------------------------------------------------

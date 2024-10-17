@@ -579,6 +579,16 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
+    Request_CancelAllSubAbilities(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle)
+    -> FCk_Handle_AbilityOwner
+{
+    InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(FCk_Request_AbilityOwner_CancelSubAbilities{});
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
     BindTo_OnEvents(
         FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         FGameplayTagContainer InRelevantEvents,
