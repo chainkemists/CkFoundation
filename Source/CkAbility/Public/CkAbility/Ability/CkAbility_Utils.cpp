@@ -116,7 +116,7 @@ auto
     {
         auto Impl = [](const FCk_Handle_AbilityOwner& InOwner, auto& Self) mutable
         {
-            if (InOwner.Has<ck::FTag_AbilityOwner_BlockSubAbilities>())
+            if (UCk_Utils_AbilityOwner_UE::Get_IsBlockingSubAbilities(InOwner))
             { return true; }
 
             const auto MaybeAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InOwner));
