@@ -29,6 +29,10 @@ auto
         case ECk_Team_ID::Six:        { Assign<ECk_Team_ID::Six>(InHandle); break; }
         case ECk_Team_ID::Seven:      { Assign<ECk_Team_ID::Seven>(InHandle); break; }
         case ECk_Team_ID::Eight:      { Assign<ECk_Team_ID::Eight>(InHandle); break; }
+        case ECk_Team_ID::Nine:       { Assign<ECk_Team_ID::Nine>(InHandle); break; }
+        case ECk_Team_ID::Ten:        { Assign<ECk_Team_ID::Ten>(InHandle); break; }
+        case ECk_Team_ID::Eleven:     { Assign<ECk_Team_ID::Eleven>(InHandle); break; }
+        case ECk_Team_ID::Twelve:     { Assign<ECk_Team_ID::Twelve>(InHandle); break; }
         case ECk_Team_ID::Unassigned: { Assign<ECk_Team_ID::Unassigned>(InHandle); break; }
         default:
         {
@@ -83,6 +87,10 @@ auto
         case ECk_Team_ID::Six:        { Assign<ECk_Team_ID::Six>(InHandle); break; }
         case ECk_Team_ID::Seven:      { Assign<ECk_Team_ID::Seven>(InHandle); break; }
         case ECk_Team_ID::Eight:      { Assign<ECk_Team_ID::Eight>(InHandle); break; }
+        case ECk_Team_ID::Nine:       { Assign<ECk_Team_ID::Nine>(InHandle); break; }
+        case ECk_Team_ID::Ten:        { Assign<ECk_Team_ID::Ten>(InHandle); break; }
+        case ECk_Team_ID::Eleven:     { Assign<ECk_Team_ID::Eleven>(InHandle); break; }
+        case ECk_Team_ID::Twelve:     { Assign<ECk_Team_ID::Twelve>(InHandle); break; }
         case ECk_Team_ID::Unassigned: { Assign<ECk_Team_ID::Unassigned>(InHandle); break; }
         default:
         {
@@ -129,6 +137,10 @@ auto
         case ECk_Team_ID::Six:        { return Get_IsAssignedTo<ECk_Team_ID::Six>(InHandle); }
         case ECk_Team_ID::Seven:      { return Get_IsAssignedTo<ECk_Team_ID::Seven>(InHandle); }
         case ECk_Team_ID::Eight:      { return Get_IsAssignedTo<ECk_Team_ID::Eight>(InHandle); }
+        case ECk_Team_ID::Nine:       { return Get_IsAssignedTo<ECk_Team_ID::Nine>(InHandle); }
+        case ECk_Team_ID::Ten:        { return Get_IsAssignedTo<ECk_Team_ID::Ten>(InHandle); }
+        case ECk_Team_ID::Eleven:     { return Get_IsAssignedTo<ECk_Team_ID::Eleven>(InHandle); }
+        case ECk_Team_ID::Twelve:     { return Get_IsAssignedTo<ECk_Team_ID::Twelve>(InHandle); }
         case ECk_Team_ID::Unassigned: { return Get_IsAssignedTo<ECk_Team_ID::Unassigned>(InHandle); }
         default:
         {
@@ -165,6 +177,10 @@ auto
     if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Six>>())        { return ECk_Team_ID::Six; }
     if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Seven>>())      { return ECk_Team_ID::Seven; }
     if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Eight>>())      { return ECk_Team_ID::Eight; }
+    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Nine>>())       { return ECk_Team_ID::Nine; }
+    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Ten>>())        { return ECk_Team_ID::Ten; }
+    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Eleven>>())     { return ECk_Team_ID::Eleven; }
+    if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Twelve>>())     { return ECk_Team_ID::Twelve; }
     if (InHandle.Has<FTag_TeamID<ECk_Team_ID::Unassigned>>()) { return ECk_Team_ID::Unassigned; }
 
     CK_TRIGGER_ENSURE(TEXT("Entity [{}] has been assigned an out of range Team ID"), InHandle);
@@ -319,6 +335,10 @@ auto
         case ECk_Team_ID::Six: { InHandle.Remove<FTag_TeamID<ECk_Team_ID::Six>>(); break; }
         case ECk_Team_ID::Seven: { InHandle.Remove<FTag_TeamID<ECk_Team_ID::Seven>>(); break; }
         case ECk_Team_ID::Eight: { InHandle.Remove<FTag_TeamID<ECk_Team_ID::Eight>>(); break; }
+        case ECk_Team_ID::Nine: { InHandle.Remove<FTag_TeamID<ECk_Team_ID::Nine>>(); break; }
+        case ECk_Team_ID::Ten: { InHandle.Remove<FTag_TeamID<ECk_Team_ID::Ten>>(); break; }
+        case ECk_Team_ID::Eleven: { InHandle.Remove<FTag_TeamID<ECk_Team_ID::Eleven>>(); break; }
+        case ECk_Team_ID::Twelve: { InHandle.Remove<FTag_TeamID<ECk_Team_ID::Twelve>>(); break; }
         case ECk_Team_ID::Unassigned: { InHandle.Remove<FTag_TeamID<ECk_Team_ID::Unassigned>>(); break; }
         default:
         {
