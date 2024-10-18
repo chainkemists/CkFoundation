@@ -95,16 +95,16 @@ enum class ECk_Ability_ActivationRequirementsResult : uint8
 
     RequirementsMet_ButAlreadyActive,
 
-    // Requirements were not on the Ability itself
+    // Requirements were not met on the Ability itself
     RequirementsNotMet_OnSelf,
 
-    // Requirements were not on the Ability Owner
+    // Requirements were not met on the Ability Owner
     RequirementsNotMet_OnOwner,
 
-    // Requirements were not on the Ability Owner and the Ability itself
+    // Requirements were not met on the Ability Owner and the Ability itself
     RequirementsNotMet_OnOwnerAndSelf,
 
-    // Requirements were not on the Ability Owner and the Ability itself
+    // Requirements were not met because the Ability is blocked by the Owner
     RequirementsNotMet_BlockedByOwner
 };
 

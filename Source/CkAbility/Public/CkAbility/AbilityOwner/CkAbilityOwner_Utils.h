@@ -261,6 +261,13 @@ public:
     Get_SpecificActiveTagCount(
         const FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         FGameplayTag InTag);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="[Ck][AbilityOwner] Get Is Blocking SubAbilities")
+    static bool
+    Get_IsBlockingSubAbilities(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerHandle);
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
@@ -336,21 +343,21 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AbilityOwner",
-              DisplayName="[Ck][Ability] Request Block All SubAbilities")
+              DisplayName="[Ck][AbilityOwner] Request Block All SubAbilities")
     static FCk_Handle_AbilityOwner
     Request_BlockAllSubAbilities(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AbilityOwner",
-              DisplayName="[Ck][Ability] Request Unblock All SubAbilities")
+              DisplayName="[Ck][AbilityOwner] Request Unblock All SubAbilities")
     static FCk_Handle_AbilityOwner
     Request_UnblockAllSubAbilities(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AbilityOwner",
-              DisplayName="[Ck][Ability] Request Cancel All SubAbilities")
+              DisplayName="[Ck][AbilityOwner] Request Cancel All SubAbilities")
     static FCk_Handle_AbilityOwner
     Request_CancelAllSubAbilities(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle);

@@ -424,6 +424,15 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
+    Get_IsBlockingSubAbilities(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerHandle)
+    -> bool
+{
+    return InAbilityOwnerHandle.Has<ck::FTag_AbilityOwner_BlockSubAbilities>();
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
     Request_GiveAbility(
         FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_GiveAbility& InRequest,
