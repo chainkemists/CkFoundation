@@ -17,6 +17,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck { struct FFragment_AbilityOwner_Params; }
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable)
 class CKABILITY_API UCk_Utils_AbilityOwner_UE : public UCk_Utils_Ecs_Base_UE
 {
@@ -468,6 +472,11 @@ private:
         FCk_Handle_Ability& InAbility,
         FCk_Handle_AbilityOwner& InAbilityOwner,
         const FGameplayTagContainer& InRelevantTags) -> void;
+
+    static auto
+    DoSet_ExpectedNumberOfDependentReplicationDrivers(
+        FCk_Handle& InHandle,
+        const ck::FFragment_AbilityOwner_Params& InParams) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
