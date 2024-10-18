@@ -126,7 +126,7 @@ private:
     FCk_EntityReplicationDriver_ConstructionInfo_NonReplicatedActor _ReplicationData_NonReplicatedActor;
 
     UPROPERTY(ReplicatedUsing = OnRep_ExpectedNumberOfDependentReplicationDrivers)
-    int32 _ExpectedNumberOfDependentReplicationDrivers = -1;
+    int32 _ExpectedNumberOfDependentReplicationDrivers = 0;
 
     UPROPERTY(Transient)
     TArray<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>> _PendingChildEntityConstructions;
