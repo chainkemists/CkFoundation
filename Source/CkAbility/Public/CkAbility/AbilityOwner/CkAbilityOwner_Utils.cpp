@@ -8,6 +8,8 @@
 #include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/SharedValues/CkSharedValues_Utils.h"
 
+#include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -18,9 +20,11 @@ auto
         ECk_Replication InReplicates)
     -> FCk_Handle_AbilityOwner
 {
-    InHandle.Add<ck::FFragment_AbilityOwner_Params>(InParams);
+    const auto& Params = InHandle.Add<ck::FFragment_AbilityOwner_Params>(InParams);
     InHandle.Add<ck::FFragment_AbilityOwner_Current>();
     InHandle.Add<ck::FTag_AbilityOwner_NeedsSetup>();
+
+    DoSet_ExpectedNumberOfDependentReplicationDrivers(InHandle, Params);
 
     UCk_Utils_Ability_UE::RecordOfAbilities_Utils::AddIfMissing(InHandle);
 
@@ -58,7 +62,11 @@ auto
     { return {}; }
 
     auto& Params = InHandle.Get<ck::FFragment_AbilityOwner_Params>();
+
+    DoSet_ExpectedNumberOfDependentReplicationDrivers(InHandle, Params);
+
     auto DefaultAbilities = Params.Get_Params().Get_DefaultAbilities();
+
     DefaultAbilities.Append(InDefaultAbilities);
     Params = ck::FFragment_AbilityOwner_Params{
         FCk_Fragment_AbilityOwner_ParamsData{DefaultAbilities}
@@ -563,7 +571,7 @@ auto
         FCk_Handle_AbilityOwner& InAbilityOwnerHandle)
     -> FCk_Handle_AbilityOwner
 {
-    InAbilityOwnerHandle.Add<ck::FTag_AbilityOwner_BlockSubAbilities>();
+    InAbilityOwnerHandle.AddOrGet<ck::FTag_AbilityOwner_BlockSubAbilities>();
     return InAbilityOwnerHandle;
 }
 
@@ -820,6 +828,42 @@ auto
 
     AbilityHandleAsOwner.Get<ck::FFragment_AbilityOwner_Current>().AppendTags(InAbilityOwner, TagsToAppend);
     AbilityHandleAsOwner.Get<ck::FFragment_AbilityOwner_Current>().RemoveTags(InAbilityOwner, TagsToRemove);
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    DoSet_ExpectedNumberOfDependentReplicationDrivers(
+        FCk_Handle& InHandle,
+        const ck::FFragment_AbilityOwner_Params& InParams)
+    -> void
+{
+    if (NOT InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
+    { return; }
+
+    const auto TrySettingTheExpectedNumber = [&](const UCk_Ability_Script_PDA* InScript)
+    {
+        // this has ensured on top level already
+        if (ck::Is_NOT_Valid(InScript))
+        { return; }
+
+        if (InScript->Get_Data().Get_NetworkSettings().Get_FeatureReplicationPolicy() == ECk_Ability_FeatureReplication_Policy::ReplicateAbilityFeatures)
+        {
+            auto& ReplicationDriver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
+            ReplicationDriver->Set_ExpectedNumberOfDependentReplicationDrivers(ReplicationDriver->Get_ExpectedNumberOfDependentReplicationDrivers() + 1);
+        }
+    };
+
+    for (const auto Ability : InParams.Get_Params().Get_DefaultAbilities())
+    {
+        const auto AbilityScript = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_Script_PDA>(Ability);
+        TrySettingTheExpectedNumber(AbilityScript);
+    }
+
+    for (const auto Ability : InParams.Get_Params().Get_DefaultAbilities_Instanced())
+    {
+        const auto AbilityScript = Ability;
+        TrySettingTheExpectedNumber(AbilityScript);
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
