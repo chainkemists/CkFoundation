@@ -4,9 +4,9 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_AnimPlan_Goal, TEXT("AnimPlan.Goal"));
-UE_DEFINE_GAMEPLAY_TAG_STATIC(Tag_Label_AnimPlan_Cluster, TEXT("AnimPlan.Cluster"));
-UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_AnimPlan_State, TEXT("AnimPlan.State"));
+UE_DEFINE_GAMEPLAY_TAG(TAG_Label_AnimPlan_Goal, TEXT("AnimPlan.Goal"));
+UE_DEFINE_GAMEPLAY_TAG(Tag_Label_AnimPlan_Cluster, TEXT("AnimPlan.Cluster"));
+UE_DEFINE_GAMEPLAY_TAG(TAG_Label_AnimPlan_State, TEXT("AnimPlan.State"));
 
 // --------------------------------------------------------------------------------------------------------------------
 
