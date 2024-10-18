@@ -13,6 +13,12 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+CKANIMATION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Label_AnimPlan_Goal);
+CKANIMATION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Tag_Label_AnimPlan_Cluster);
+CKANIMATION_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Label_AnimPlan_State);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKANIMATION_API FCk_Handle_AnimPlan : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_AnimPlan); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_AnimPlan);
