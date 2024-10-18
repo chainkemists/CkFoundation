@@ -27,6 +27,10 @@ enum class ECk_Team_ID : uint8
     Six,
     Seven,
     Eight,
+    Nine,
+    Ten,
+    Eleven,
+    Twelve,
 
     Unassigned = 255
 };
