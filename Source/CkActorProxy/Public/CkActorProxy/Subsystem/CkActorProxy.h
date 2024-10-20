@@ -12,6 +12,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+CKACTORPROXY_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_ActorProxy_Ability_Trigger_TrySpawn);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(Abstract, Blueprintable, BlueprintType)
 class CKACTORPROXY_API ACk_ActorProxy_UE : public AInfo
 {
