@@ -53,6 +53,14 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         const TArray<TSubclassOf<class UCk_Ability_Script_PDA>>& InDefaultAbilities);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="[Ck][AbilityOwner] Append Default Abilities (Instanced)")
+    static FCk_Handle_AbilityOwner
+    Append_DefaultAbilities_Instanced(
+        UPARAM(ref) FCk_Handle& InHandle,
+        const TArray<UCk_Ability_Script_PDA*>& InInstancedAbilities);
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
