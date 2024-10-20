@@ -53,17 +53,15 @@ auto
     -> FCk_Handle_AbilityOwner
 {
     CK_ENSURE_IF_NOT(Has(InHandle),
-        TEXT("Cannot Append to DefaultAbilities, Handle [{}] is NOT an AbilityOwner. Did you forge to call 'Add Feature'?"), InHandle)
+        TEXT("Cannot Append to DefaultAbilities, Handle [{}] is NOT an AbilityOwner. Did you forget to call 'Add Feature'?"), InHandle)
     { return {}; }
 
     CK_ENSURE_IF_NOT(InHandle.Has<ck::FTag_AbilityOwner_NeedsSetup>(),
-        TEXT("Cannot Append DefaultAbilites to Handle [{}] AFTER it's already gone through it's Setup. Call this only in the construction script"),
+        TEXT("Cannot Append DefaultAbilities to Handle [{}] AFTER it's already gone through it's Setup. Call this only in the construction script"),
         InHandle)
     { return {}; }
 
     auto& Params = InHandle.Get<ck::FFragment_AbilityOwner_Params>();
-
-    DoSet_ExpectedNumberOfDependentReplicationDrivers(InHandle, Params);
 
     auto DefaultAbilities = Params.Get_Params().Get_DefaultAbilities();
 
@@ -71,6 +69,38 @@ auto
     Params = ck::FFragment_AbilityOwner_Params{
         FCk_Fragment_AbilityOwner_ParamsData{DefaultAbilities}
             .Set_DefaultAbilities_Instanced(Params.Get_Params().Get_DefaultAbilities_Instanced())};
+
+    DoSet_ExpectedNumberOfDependentReplicationDrivers(InHandle, Params);
+
+    return Cast(InHandle);
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Append_DefaultAbilities_Instanced(
+        FCk_Handle& InHandle,
+        const TArray<UCk_Ability_Script_PDA*>& InInstancedAbilities)
+    -> FCk_Handle_AbilityOwner
+{
+    CK_ENSURE_IF_NOT(Has(InHandle),
+        TEXT("Cannot Append to DefaultAbilities, Handle [{}] is NOT an AbilityOwner. Did you forget to call 'Add Feature'?"), InHandle)
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(InHandle.Has<ck::FTag_AbilityOwner_NeedsSetup>(),
+        TEXT("Cannot Append DefaultAbilities to Handle [{}] AFTER it's already gone through it's Setup. Call this only in the construction script"),
+        InHandle)
+    { return {}; }
+
+    auto& Params = InHandle.Get<ck::FFragment_AbilityOwner_Params>();
+
+    auto DefaultAbilitiesInstanced = Params.Get_Params().Get_DefaultAbilities_Instanced();
+
+    DefaultAbilitiesInstanced.Append(InInstancedAbilities);
+    Params = ck::FFragment_AbilityOwner_Params{
+        FCk_Fragment_AbilityOwner_ParamsData{Params.Get_Params().Get_DefaultAbilities()}
+            .Set_DefaultAbilities_Instanced(DefaultAbilitiesInstanced)};
+
+    DoSet_ExpectedNumberOfDependentReplicationDrivers(InHandle, Params);
 
     return Cast(InHandle);
 }
