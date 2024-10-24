@@ -14,6 +14,7 @@ class UCk_Utils_EcsTemplate_UE;
 
 namespace ck
 {
+    CK_DEFINE_ECS_TAG(FTag_EcsTemplate_RequiresSetup);
     CK_DEFINE_ECS_TAG(FTag_EcsTemplate_Updated);
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -44,7 +45,9 @@ namespace ck
         CK_GENERATED_BODY(FFragment_EcsTemplate_Current);
 
     public:
+        friend class FProcessor_EcsTemplate_Setup;
         friend class FProcessor_EcsTemplate_HandleRequests;
+        friend class FProcessor_EcsTemplate_Teardown;
         friend class UCk_Utils_EcsTemplate_UE;
 
     private:
@@ -63,10 +66,21 @@ namespace ck
         friend class FProcessor_EcsTemplate_HandleRequests;
         friend class UCk_Utils_EcsTemplate_UE;
 
+    public:
+    	using RequestType = std::variant
+        <
+            FCk_Request_EcsTemplate_ExampleRequest
+        >;
+        using RequestList = TArray<RequestType>;
+
     private:
-        // Add your requests here
-        int32 _DummyProperty = 0;
+        RequestList _Requests;
+
+    public:
+        CK_PROPERTY_GET(_Requests);
     };
+
+	// --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------

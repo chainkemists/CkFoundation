@@ -11,10 +11,12 @@ auto
         FCk_Handle InHandle,
         const FCk_Fragment_EcsTemplate_ParamsData& InParams,
         ECk_Replication InReplicates)
-    -> void
+    -> FCk_Handle_EcsTemplate
 {
     InHandle.Add<ck::FFragment_EcsTemplate_Params>(InParams);
     InHandle.Add<ck::FFragment_EcsTemplate_Current>();
+
+	InHandle.Add<ck::FTag_EcsTemplate_RequiresSetup>();
 
     if (InReplicates == ECk_Replication::DoesNotReplicate)
     {
@@ -25,31 +27,29 @@ auto
             InReplicates
         );
 
-        return;
+        return Cast(InHandle);
     }
 
     TryAddReplicatedFragment<UCk_Fragment_EcsTemplate_Rep>(InHandle);
+	return Cast(InHandle);
 }
 
-auto
-    UCk_Utils_EcsTemplate_UE::
-    Has(
-        FCk_Handle InHandle)
-    -> bool
-{
-    return InHandle.Has<ck::FFragment_EcsTemplate_Current>();
-}
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_EcsTemplate_UE, FCk_Handle_EcsTemplate,
+    ck::FFragment_EcsTemplate_Params, ck::FFragment_EcsTemplate_Current)
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_EcsTemplate_UE::
-    Ensure(
-        FCk_Handle InHandle)
-    -> bool
+	UCk_Utils_EcsTemplate_UE::
+	Request_ExampleRequest(
+		FCk_Handle_EcsTemplate& InEcsTemplate,
+		const FCk_Request_EcsTemplate_ExampleRequest& InRequest)
+	-> FCk_Handle_EcsTemplate
 {
-    CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have EcsTemplate"), InHandle)
-    { return false; }
-
-    return true;
+	InEcsTemplate.AddOrGet<ck::FFragment_EcsTemplate_Requests>()._Requests.Emplace(InRequest);
+    return InEcsTemplate;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
