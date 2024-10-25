@@ -86,6 +86,17 @@ auto
 }
 
 auto
+	UCk_Utils_WidgetLayerHandler_UE::
+	Request_RemoveWidgetFromLayerNamedSlot(
+		FCk_Handle_WidgetLayerHandler& InHandle,
+		const FCk_Request_WidgetLayerHandler_RemoveWidgetFromLayerNamedSlot& InRequest)
+	-> FCk_Handle_WidgetLayerHandler
+{
+	ck::UUtils_Signal_WidgetLayerHandler_OnRemoveWidgetFromLayerNamedSlot::Broadcast(InHandle, ck::MakePayload(InHandle, InRequest.Get_Layer(), InRequest.Get_NamedSlotName()));
+    return InHandle;
+}
+
+auto
     UCk_Utils_WidgetLayerHandler_UE::
     BindTo_OnPushToLayer(
         FCk_Handle_WidgetLayerHandler& InHandle,
@@ -226,6 +237,30 @@ auto
     -> FCk_Handle_WidgetLayerHandler
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_WidgetLayerHandler_OnAddWidgetInstanceToLayerNamedSlot, InHandle, InDelegate);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_WidgetLayerHandler_UE::
+    BindTo_OnRemoveWidgetFromLayerNamedSlot(
+        FCk_Handle_WidgetLayerHandler& InHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_WidgetLayerHandler_OnRemoveWidgetFromLayerNamedSlot& InDelegate)
+    -> FCk_Handle_WidgetLayerHandler
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_WidgetLayerHandler_OnRemoveWidgetFromLayerNamedSlot, InHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_WidgetLayerHandler_UE::
+    UnbindFrom_OnRemoveWidgetFromLayerNamedSlot(
+        FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Delegate_WidgetLayerHandler_OnRemoveWidgetFromLayerNamedSlot& InDelegate)
+    -> FCk_Handle_WidgetLayerHandler
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_WidgetLayerHandler_OnRemoveWidgetFromLayerNamedSlot, InHandle, InDelegate);
     return InHandle;
 }
 
