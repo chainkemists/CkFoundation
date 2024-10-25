@@ -39,7 +39,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "UI.WidgetLayer"))
     FGameplayTag _Layer;
-    
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     TSoftClassPtr<UCk_UserWidget_UE> _WidgetClass;
 
@@ -90,7 +90,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "UI.WidgetLayer"))
     FGameplayTag _Layer;
-    
+
 public:
     CK_PROPERTY_GET(_Layer);
 
@@ -111,7 +111,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "UI.WidgetLayer"))
     FGameplayTag _Layer;
-    
+
 public:
     CK_PROPERTY_GET(_Layer);
 
@@ -139,14 +139,39 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FName _NamedSlotName;
-    
+
 public:
-    CK_PROPERTY_GET(_Layer);    
+    CK_PROPERTY_GET(_Layer);
     CK_PROPERTY_GET(_WidgetInstance);
     CK_PROPERTY_GET(_NamedSlotName);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_WidgetLayerHandler_AddWidgetInstanceToLayerNamedSlot, _Layer, _WidgetInstance, _NamedSlotName);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKUI_API FCk_Request_WidgetLayerHandler_RemoveWidgetFromLayerNamedSlot
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_WidgetLayerHandler_RemoveWidgetFromLayerNamedSlot);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true, Categories = "UI.WidgetLayer"))
+    FGameplayTag _Layer;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    FName _NamedSlotName;
+
+public:
+    CK_PROPERTY_GET(_Layer);
+    CK_PROPERTY_GET(_NamedSlotName);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_WidgetLayerHandler_RemoveWidgetFromLayerNamedSlot, _Layer, _NamedSlotName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -168,9 +193,9 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FName _NamedSlotName;
-    
+
 public:
-    CK_PROPERTY_GET(_Layer);    
+    CK_PROPERTY_GET(_Layer);
     CK_PROPERTY_GET(_WidgetClass);
     CK_PROPERTY_GET(_NamedSlotName);
 
@@ -250,6 +275,18 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(
     FCk_Handle_WidgetLayerHandler, InHandle,
     FGameplayTag, Layer,
     UCk_UserWidget_UE*, WidgetInstance,
+    FName, NamedSlotName);
+
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+    FCk_Delegate_WidgetLayerHandler_OnRemoveWidgetFromLayerNamedSlot,
+    FCk_Handle_WidgetLayerHandler, InHandle,
+    FGameplayTag, Layer,
+    FName, NamedSlotName);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
+    FCk_Delegate_WidgetLayerHandler_OnRemoveWidgetFromLayerNamedSlot_MC,
+    FCk_Handle_WidgetLayerHandler, InHandle,
+    FGameplayTag, Layer,
     FName, NamedSlotName);
 
 // --------------------------------------------------------------------------------------------------------------------
