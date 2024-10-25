@@ -62,7 +62,7 @@ public:
     Request_PushToLayer(
         UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
         const FCk_Request_WidgetLayerHandler_PushToLayer& InRequest);
-    
+
     UFUNCTION(BlueprintCallable,
         Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
         meta = (AutoCreateRefTerm = "InDelegate"),
@@ -95,7 +95,7 @@ public:
     Request_AddWidgetToLayerNamedSlot(
         UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
         const FCk_Request_WidgetLayerHandler_AddWidgetToLayerNamedSlot& InRequest);
-    
+
     UFUNCTION(BlueprintCallable,
         Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
         DisplayName="[Ck][WidgetLayerHandler] Request Add Widget Instance To Layer NamedSlot")
@@ -103,6 +103,14 @@ public:
     Request_AddWidgetInstanceToLayerNamedSlot(
         UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
         const FCk_Request_WidgetLayerHandler_AddWidgetInstanceToLayerNamedSlot& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+        DisplayName="[Ck][WidgetLayerHandler] Request Remove Widget From Layer NamedSlot")
+    static FCk_Handle_WidgetLayerHandler
+    Request_RemoveWidgetFromLayerNamedSlot(
+        UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Request_WidgetLayerHandler_RemoveWidgetFromLayerNamedSlot& InRequest);
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -114,7 +122,7 @@ public:
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_WidgetLayerHandler_OnPushToLayer& InDelegate);
-    
+
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|WidgetLayerHandler",
         DisplayName = "[Ck][WidgetLayerHandler] Unbind From OnPushToLayer")
@@ -132,7 +140,7 @@ public:
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_WidgetLayerHandler_OnPushToLayer_Instanced& InDelegate);
-    
+
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|WidgetLayerHandler",
         DisplayName = "[Ck][WidgetLayerHandler] Unbind From OnPushToLayer_Instanced")
@@ -150,7 +158,7 @@ public:
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_WidgetLayerHandler_OnPopFromLayer& InDelegate);
-    
+
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|WidgetLayerHandler",
         DisplayName = "[Ck][WidgetLayerHandler] Unbind From OnPopFromLayer")
@@ -158,7 +166,7 @@ public:
     UnbindFrom_OnPopFromLayer(
         UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
         const FCk_Delegate_WidgetLayerHandler_OnPopFromLayer& InDelegate);
-    
+
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|WidgetLayerHandler",
         DisplayName = "[Ck][WidgetLayerHandler] Bind To OnClearLayer")
@@ -168,7 +176,7 @@ public:
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_WidgetLayerHandler_OnClearLayer& InDelegate);
-    
+
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|WidgetLayerHandler",
         DisplayName = "[Ck][WidgetLayerHandler] Unbind From OnClearLayer")
@@ -186,7 +194,7 @@ public:
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_WidgetLayerHandler_OnAddWidgetToLayerNamedSlot& InDelegate);
-    
+
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|WidgetLayerHandler",
         DisplayName = "[Ck][WidgetLayerHandler] Unbind From OnAddWidgetToLayerNamedSlot")
@@ -204,7 +212,7 @@ public:
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_WidgetLayerHandler_OnAddWidgetInstanceToLayerNamedSlot& InDelegate);
-    
+
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|WidgetLayerHandler",
         DisplayName = "[Ck][WidgetLayerHandler] Unbind From OnAddWidgetInstanceToLayerNamedSlot")
@@ -212,6 +220,24 @@ public:
     UnbindFrom_OnAddWidgetInstanceToLayerNamedSlot(
         UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
         const FCk_Delegate_WidgetLayerHandler_OnAddWidgetInstanceToLayerNamedSlot& InDelegate);
+
+	UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|WidgetLayerHandler",
+        DisplayName = "[Ck][WidgetLayerHandler] Bind To OnRemoveWidgetFromLayerNamedSlot")
+    static FCk_Handle_WidgetLayerHandler
+    BindTo_OnRemoveWidgetFromLayerNamedSlot(
+        UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_WidgetLayerHandler_OnRemoveWidgetFromLayerNamedSlot& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|WidgetLayerHandler",
+        DisplayName = "[Ck][WidgetLayerHandler] Unbind From OnRemoveWidgetFromLayerNamedSlot")
+    static FCk_Handle_WidgetLayerHandler
+    UnbindFrom_OnRemoveWidgetFromLayerNamedSlot(
+        UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Delegate_WidgetLayerHandler_OnRemoveWidgetFromLayerNamedSlot& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
