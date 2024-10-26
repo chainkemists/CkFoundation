@@ -250,6 +250,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Actor",
+              DisplayName = "[Ck] Get Has Begun Play",
+              meta = (DefaultToSelf = "InActor"))
+    static bool
+    Get_HasBegunPlay(
+        AActor* InActor);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Actor",
               DisplayName = "[Ck] Get Does Bone Exist In Skeletal Mesh",
               meta = (DefaultToSelf = "InActor"))
     static bool
