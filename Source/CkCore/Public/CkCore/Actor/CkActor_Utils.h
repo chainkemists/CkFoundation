@@ -94,6 +94,10 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess))
+    TWeakObjectPtr<AActor> _Actor = nullptr;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess))
     TWeakObjectPtr<UMeshComponent> _ComponentWithSocket = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -105,11 +109,12 @@ private:
     FName _Name;
 
 public:
+    CK_PROPERTY_GET(_Actor);
     CK_PROPERTY_GET(_ComponentWithSocket);
     CK_PROPERTY_GET(_Transform);
     CK_PROPERTY_GET(_Name);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Utils_Actor_SocketTransforms, _ComponentWithSocket, _Transform, _Name);
+    CK_DEFINE_CONSTRUCTORS(FCk_Utils_Actor_SocketTransforms, _Actor, _ComponentWithSocket, _Transform, _Name);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -273,7 +278,8 @@ public:
     Get_SocketTransform(
         AActor* InActor,
         FName InSocketName,
-        ERelativeTransformSpace InTransformSpace = RTS_World);
+        ERelativeTransformSpace InTransformSpace = RTS_World,
+        ECk_ActorTraversalPolicy InTraversalPolicy = ECk_ActorTraversalPolicy::RootActorOnly);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Actor",
@@ -283,7 +289,8 @@ public:
     Get_SocketTransform_Exec(
         AActor* InActor,
         FName InSocketName,
-        ERelativeTransformSpace InTransformSpace = RTS_World);
+        ERelativeTransformSpace InTransformSpace = RTS_World,
+        ECk_ActorTraversalPolicy InTraversalPolicy = ECk_ActorTraversalPolicy::RootActorOnly);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Actor",
@@ -294,7 +301,8 @@ public:
         AActor* InActor,
         FName InSocketNamePrefix,
         TEnumAsByte<ESearchCase::Type> InSearchCase = ESearchCase::IgnoreCase,
-        ERelativeTransformSpace InTransformSpace = RTS_World);
+        ERelativeTransformSpace InTransformSpace = RTS_World,
+        ECk_ActorTraversalPolicy InTraversalPolicy = ECk_ActorTraversalPolicy::RootActorOnly);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Actor",
@@ -305,7 +313,8 @@ public:
         AActor* InActor,
         FName InSocketNamePrefix,
         TEnumAsByte<ESearchCase::Type> InSearchCase = ESearchCase::IgnoreCase,
-        ERelativeTransformSpace InTransformSpace = RTS_World);
+        ERelativeTransformSpace InTransformSpace = RTS_World,
+        ECk_ActorTraversalPolicy InTraversalPolicy = ECk_ActorTraversalPolicy::RootActorOnly);
 
 public:
     /**
