@@ -615,4 +615,16 @@ enum class ECk_ClientServer : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ClientServer);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_ActorTraversalPolicy : uint8
+{
+    RootActorOnly,
+    RootActorAndAllAttachedActors,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ActorTraversalPolicy);
+
 // --------------------------------------------------------------------------------------------------------------------
