@@ -184,6 +184,18 @@ auto
 
 auto
     UCk_Utils_Actor_UE::
+    Get_HasBegunPlay(
+        AActor* InActor)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to UCk_Utils_Actor_UE::Get_HasBegunPlay"))
+    { return {}; }
+
+    return InActor->HasActorBegunPlay();
+}
+
+auto
+    UCk_Utils_Actor_UE::
     Get_DoesBoneExistInSkeletalMesh(
         AActor* InActor,
         FName   InBoneName)
