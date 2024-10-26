@@ -2,6 +2,7 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include <Engine/BlueprintGeneratedClass.h>
 #include <Engine/NetDriver.h>
 #include <Iris/ReplicationSystem/ReplicationFragmentUtil.h>
 
@@ -127,6 +128,7 @@ auto
     return true;
 }
 
+#if UE_WITH_IRIS
 auto
     UCk_ReplicatedObject_UE::
     RegisterReplicationFragments(
@@ -139,6 +141,7 @@ auto
     // Build descriptors and allocate PropertyReplicationFragments for this object
     FReplicationFragmentUtil::CreateAndRegisterFragmentsForObject(this, Context, RegistrationFlags);
 }
+#endif // UE_WITH_IRIS
 
 #undef CK_ENSURE_OUTER_IS_VALID_OR_RETURN
 
