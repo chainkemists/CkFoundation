@@ -176,7 +176,7 @@ auto
         TSubclassOf<UActorComponent> InComponent)
     -> bool
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to Get_HasComponentByClass"))
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to UCk_Utils_Actor_UE::Get_HasComponentByClass"))
     { return {}; }
 
     return ck::IsValid(InActor->FindComponentByClass(InComponent));
@@ -201,7 +201,7 @@ auto
         FName   InBoneName)
     -> bool
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to Get_HasBoneInSkeletonMesh"))
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to UCk_Utils_Actor_UE::Get_HasBoneInSkeletonMesh"))
     { return {}; }
 
     const auto& SkeletalMeshComp = InActor->FindComponentByClass<USkeletalMeshComponent>();
@@ -223,38 +223,58 @@ auto
     Get_SocketTransform(
         AActor* InActor,
         FName InSocketName,
-        ERelativeTransformSpace InTransformSpace)
+        ERelativeTransformSpace InTransformSpace,
+        ECk_ActorTraversalPolicy InTraversalPolicy)
     -> TArray<FCk_Utils_Actor_SocketTransforms>
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to Get_HasBoneInSkeletonMesh"))
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to UCk_Utils_Actor_UE::Get_SocketTransform"))
     { return {}; }
 
     auto Ret = TArray<FCk_Utils_Actor_SocketTransforms>{};
 
-    auto MeshComponents = TArray<UMeshComponent*>{};
-    InActor->GetComponents<UMeshComponent>(MeshComponents);
-
-    for (const auto MeshComponent : MeshComponents)
+    const auto& GatherSocketTransforms = [&](AActor* Actor)
     {
-        if (NOT MeshComponent->DoesSocketExist(InSocketName))
-        { continue; }
+        auto MeshComponents = TArray<UMeshComponent*>{};
+        Actor->GetComponents<UMeshComponent>(MeshComponents);
 
-        if (const auto InstancedStaticMesh = Cast<UInstancedStaticMeshComponent>(MeshComponent))
+        for (const auto MeshComponent : MeshComponents)
         {
-            const auto& SocketTransform = InstancedStaticMesh->GetSocketTransform(InSocketName, InTransformSpace);
+            if (NOT MeshComponent->DoesSocketExist(InSocketName))
+            { continue; }
 
-            for (auto Index = 0; Index < InstancedStaticMesh->GetInstanceCount(); ++Index)
+            if (const auto InstancedStaticMesh = Cast<UInstancedStaticMeshComponent>(MeshComponent))
             {
-                auto InstanceTransform = FTransform{};
-                InstancedStaticMesh->GetInstanceTransform(Index, InstanceTransform);
+                const auto& SocketTransform = InstancedStaticMesh->GetSocketTransform(InSocketName, InTransformSpace);
 
-                Ret.Emplace(FCk_Utils_Actor_SocketTransforms{MeshComponent, InstanceTransform * SocketTransform, InSocketName});
+                for (auto Index = 0; Index < InstancedStaticMesh->GetInstanceCount(); ++Index)
+                {
+                    auto InstanceTransform = FTransform{};
+                    InstancedStaticMesh->GetInstanceTransform(Index, InstanceTransform);
+
+                    Ret.Emplace(FCk_Utils_Actor_SocketTransforms{Actor, MeshComponent, InstanceTransform * SocketTransform, InSocketName});
+                }
+
+                continue;
             }
 
-            continue;
+            Ret.Emplace(FCk_Utils_Actor_SocketTransforms{Actor, MeshComponent, MeshComponent->GetSocketTransform(InSocketName, InTransformSpace), InSocketName});
         }
+    };
 
-        Ret.Emplace(FCk_Utils_Actor_SocketTransforms{MeshComponent, MeshComponent->GetSocketTransform(InSocketName, InTransformSpace), InSocketName});
+    GatherSocketTransforms(InActor);
+
+    if (InTraversalPolicy == ECk_ActorTraversalPolicy::RootActorAndAllAttachedActors)
+    {
+        auto AttachedActors = TArray<AActor*>{};
+        InActor->GetAttachedActors(AttachedActors);
+
+        for (const auto& AttachedActor : AttachedActors)
+        {
+            if (ck::Is_NOT_Valid(AttachedActor))
+            { continue; }
+
+            GatherSocketTransforms(AttachedActor);
+        }
     }
 
     return Ret;
@@ -265,10 +285,11 @@ auto
     Get_SocketTransform_Exec(
         AActor* InActor,
         FName InSocketName,
-        ERelativeTransformSpace InTransformSpace)
+        ERelativeTransformSpace InTransformSpace,
+        ECk_ActorTraversalPolicy InTraversalPolicy)
     -> TArray<FCk_Utils_Actor_SocketTransforms>
 {
-    return Get_SocketTransform(InActor, InSocketName, InTransformSpace);
+    return Get_SocketTransform(InActor, InSocketName, InTransformSpace, InTraversalPolicy);
 }
 
 auto
@@ -277,40 +298,61 @@ auto
         AActor* InActor,
         FName InSocketNamePrefix,
         TEnumAsByte<ESearchCase::Type> InSearchCase,
-        ERelativeTransformSpace InTransformSpace)
+        ERelativeTransformSpace InTransformSpace,
+        ECk_ActorTraversalPolicy InTraversalPolicy)
     -> TArray<FCk_Utils_Actor_SocketTransforms>
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to Get_SocketTransform_UsingPrefix"))
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to UCk_Utils_Actor_UE::Get_SocketTransform_UsingPrefix"))
     { return {}; }
 
     auto Ret = TArray<FCk_Utils_Actor_SocketTransforms>{};
+    const auto& SocketPrefixStr = InSocketNamePrefix.ToString();
 
-    auto MeshComponents = TArray<UMeshComponent*>{};
-    InActor->GetComponents<UMeshComponent>(MeshComponents);
-
-    for (const auto MeshComponent : MeshComponents)
+    const auto& GatherSocketTransformsWithPrefix = [&](AActor* Actor)
     {
-        for (const auto& SocketName : MeshComponent->GetAllSocketNames())
+        auto MeshComponents = TArray<UMeshComponent*>{};
+        Actor->GetComponents<UMeshComponent>(MeshComponents);
+
+        for (const auto MeshComponent : MeshComponents)
         {
-            if (NOT SocketName.ToString().StartsWith(InSocketNamePrefix.ToString(), InSearchCase))
-            { continue; }
-
-            if (const auto InstancedStaticMesh = Cast<UInstancedStaticMeshComponent>(MeshComponent))
+            for (const auto& SocketName : MeshComponent->GetAllSocketNames())
             {
-                const auto& SocketTransform = InstancedStaticMesh->GetSocketTransform(SocketName, InTransformSpace);
+                if (NOT SocketName.ToString().StartsWith(SocketPrefixStr, InSearchCase))
+                { continue; }
 
-                for (auto Index = 0; Index < InstancedStaticMesh->GetInstanceCount(); ++Index)
+                if (const auto InstancedStaticMesh = Cast<UInstancedStaticMeshComponent>(MeshComponent))
                 {
-                    auto InstanceTransform = FTransform{};
-                    InstancedStaticMesh->GetInstanceTransform(Index, InstanceTransform);
+                    const auto& SocketTransform = InstancedStaticMesh->GetSocketTransform(SocketName, InTransformSpace);
 
-                    Ret.Emplace(FCk_Utils_Actor_SocketTransforms{MeshComponent, InstanceTransform * SocketTransform, SocketName});
+                    for (auto Index = 0; Index < InstancedStaticMesh->GetInstanceCount(); ++Index)
+                    {
+                        auto InstanceTransform = FTransform{};
+                        InstancedStaticMesh->GetInstanceTransform(Index, InstanceTransform);
+
+                        Ret.Emplace(FCk_Utils_Actor_SocketTransforms{Actor, MeshComponent, InstanceTransform * SocketTransform, SocketName});
+                    }
+
+                    continue;
                 }
 
-                continue;
+                Ret.Emplace(FCk_Utils_Actor_SocketTransforms{Actor, MeshComponent, MeshComponent->GetSocketTransform(SocketName, InTransformSpace), SocketName});
             }
+        }
+    };
 
-            Ret.Emplace(FCk_Utils_Actor_SocketTransforms{MeshComponent, MeshComponent->GetSocketTransform(SocketName, InTransformSpace), SocketName});
+    GatherSocketTransformsWithPrefix(InActor);
+
+    if (InTraversalPolicy == ECk_ActorTraversalPolicy::RootActorAndAllAttachedActors)
+    {
+        auto AttachedActors = TArray<AActor*>{};
+        InActor->GetAttachedActors(AttachedActors);
+
+        for (const auto& AttachedActor : AttachedActors)
+        {
+            if (ck::Is_NOT_Valid(AttachedActor))
+            { continue; }
+
+            GatherSocketTransformsWithPrefix(AttachedActor);
         }
     }
 
@@ -323,10 +365,11 @@ auto
         AActor* InActor,
         FName InSocketNamePrefix,
         TEnumAsByte<ESearchCase::Type> InSearchCase,
-        ERelativeTransformSpace InTransformSpace)
+        ERelativeTransformSpace InTransformSpace,
+        ECk_ActorTraversalPolicy InTraversalPolicy)
     -> TArray<FCk_Utils_Actor_SocketTransforms>
 {
-    return Get_SocketTransform_UsingPrefix(InActor, InSocketNamePrefix, InSearchCase, InTransformSpace);
+    return Get_SocketTransform_UsingPrefix(InActor, InSocketNamePrefix, InSearchCase, InTransformSpace, InTraversalPolicy);
 }
 
 auto
