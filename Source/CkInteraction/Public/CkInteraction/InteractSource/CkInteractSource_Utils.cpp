@@ -122,6 +122,17 @@ auto
 
 auto
 	UCk_Utils_InteractSource_UE::
+	Get_CurrentInteractions(
+		FCk_Handle_InteractSource& InHandle)
+	-> TArray<FCk_Handle_Interaction>
+{
+	auto ToRet = TArray<FCk_Handle_Interaction>{};
+	InHandle.Get<ck::FFragment_InteractSource_Current>()._InteractionFinishedSignals.GetKeys(ToRet);
+	return ToRet;
+}
+
+auto
+	UCk_Utils_InteractSource_UE::
 	TryGet(
 		const FCk_Handle& InInteractSourceOwner,
 		FGameplayTag InInteractionChannel)

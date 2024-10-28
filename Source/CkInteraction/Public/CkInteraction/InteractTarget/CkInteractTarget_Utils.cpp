@@ -185,6 +185,15 @@ auto
 
 auto
 	UCk_Utils_InteractTarget_UE::
+	Get_CurrentInteractions(
+		FCk_Handle_InteractTarget& InHandle)
+	-> TArray<FCk_Handle_Interaction>
+{
+	return UCk_Utils_Interaction_UE::ForEach(InHandle, {}, {});
+}
+
+auto
+	UCk_Utils_InteractTarget_UE::
 	TryGet(
 		const FCk_Handle& InInteractTargetOwner,
 		FGameplayTag InInteractionChannel)
