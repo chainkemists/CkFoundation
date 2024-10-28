@@ -105,6 +105,27 @@ auto
 	UCk_Utils_Interaction_UE::
 	ForEach(
 		FCk_Handle& InInteractionOwner,
+		const FInstancedStruct& InOptionalPayload,
+		const FCk_Lambda_InHandle& InDelegate)
+	-> TArray<FCk_Handle_Interaction>
+{
+	auto ToRet = TArray<FCk_Handle_Interaction>{};
+
+    ForEach(InInteractionOwner, [&](const FCk_Handle_Interaction& InInteraction)
+    {
+        if (InDelegate.IsBound())
+        { InDelegate.Execute(InInteraction, InOptionalPayload); }
+        else
+        { ToRet.Emplace(InInteraction); }
+    });
+
+    return ToRet;
+}
+
+auto
+	UCk_Utils_Interaction_UE::
+	ForEach(
+		FCk_Handle& InInteractionOwner,
 		const TFunction<void(FCk_Handle_Interaction)>& InFunc)
 	-> void
 {
