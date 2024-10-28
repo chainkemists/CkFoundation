@@ -98,6 +98,15 @@ public:
         const FCk_Handle& InTarget,
         UPARAM(meta = (Categories = "InteractionChannel")) FGameplayTag InInteractionChannel);
 
+	UFUNCTION(BlueprintCallable,
+		Category = "Ck|Utils|Interaction",
+		DisplayName="[Ck][Interaction] For Each",
+		meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
+    static TArray<FCk_Handle_Interaction>
+    ForEach(
+        UPARAM(ref) FCk_Handle& InInteractionOwner,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate);
 	static auto
     ForEach(
         FCk_Handle& InInteractionOwner,
