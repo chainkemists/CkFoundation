@@ -99,6 +99,13 @@ public:
     Get_InteractionChannel(
         const FCk_Handle_InteractSource& InHandle);
 
+	UFUNCTION(BlueprintCallable,
+		Category = "Ck|Utils|InteractSource",
+		DisplayName="[Ck][InteractSource] Get Current Interactions")
+    static TArray<FCk_Handle_Interaction>
+    Get_CurrentInteractions(
+        UPARAM(ref) FCk_Handle_InteractSource& InHandle);
+
 	UFUNCTION(BlueprintPure,
           Category = "Ck|Utils|InteractSource",
           DisplayName="[Ck][InteractSource] Try Get Interaction Source")

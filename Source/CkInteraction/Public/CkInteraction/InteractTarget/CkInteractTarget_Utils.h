@@ -125,6 +125,13 @@ public:
         const FCk_Handle_InteractTarget& InTarget,
         const FCk_Handle& InSource);
 
+	UFUNCTION(BlueprintCallable,
+		Category = "Ck|Utils|InteractTarget",
+		DisplayName="[Ck][InteractTarget] Get Current Interactions")
+    static TArray<FCk_Handle_Interaction>
+    Get_CurrentInteractions(
+        UPARAM(ref) FCk_Handle_InteractTarget& InHandle);
+
     UFUNCTION(BlueprintPure,
           Category = "Ck|Utils|InteractTarget",
           DisplayName="[Ck][InteractTarget] Try Get Interaction Target")
