@@ -476,16 +476,16 @@ FCk_Sensor_FilteringInfo::
 
 FCk_Fragment_Sensor_ParamsData::
     FCk_Fragment_Sensor_ParamsData(
-        FGameplayTag              InSensorName,
-        FCk_Sensor_FilteringInfo  InFilteringParams,
-        FCk_Sensor_ShapeInfo      InShapeParams,
-        FCk_Sensor_PhysicsInfo    InPhysicsParams,
+        FGameplayTag InSensorName,
+        FCk_Sensor_FilteringInfo InFilteringParams,
+        FCk_Sensor_ShapeInfo InShapeParams,
+        FCk_Sensor_PhysicsInfo InPhysicsParams,
         FCk_Sensor_AttachmentInfo InAttachmentParams,
-        FTransform                InRelativeTransform,
-        ECk_EnableDisable         InStartingState,
-        ECk_Net_ReplicationType   InReplicationType,
-        bool                      InShowDebug,
-        FCk_Sensor_DebugInfo      InDebugParams)
+        FTransform InRelativeTransform,
+        ECk_EnableDisable InStartingState,
+        ECk_Net_ReplicationType InReplicationType,
+        bool InShowDebug,
+        FCk_Sensor_DebugInfo InDebugParams)
     : _SensorName(InSensorName)
     , _FilteringParams(InFilteringParams)
     , _ShapeParams(InShapeParams)
@@ -524,19 +524,28 @@ auto
 {
     Super::InitializeComponent();
 
-    this->OnComponentBeginOverlap.AddDynamic(this, &ThisType::OnBeginOverlap);
-    this->OnComponentEndOverlap.AddDynamic(this, &ThisType::OnEndOverlap);
+    // If this component is ever cloned/duplicated, InitializeComponent could run on the cloned object if RegisterComponentWithWorld is called
+    // In this case, the delegates are already bound, because the duplication process also copies the bindings from the original component
+    if (NOT this->OnComponentBeginOverlap.IsAlreadyBound(this, &ThisType::OnBeginOverlap))
+    {
+        this->OnComponentBeginOverlap.AddDynamic(this, &ThisType::OnBeginOverlap);
+    }
+
+    if (NOT this->OnComponentEndOverlap.IsAlreadyBound(this, &ThisType::OnEndOverlap))
+    {
+        this->OnComponentEndOverlap.AddDynamic(this, &ThisType::OnEndOverlap);
+    }
 }
 
 auto
     UCk_Sensor_ActorComponent_Box_UE::
     OnBeginOverlap(
         UPrimitiveComponent* InOverlappedComponent,
-        AActor*              InOtherActor,
+        AActor* InOtherActor,
         UPrimitiveComponent* InOtherComp,
-        int32                InOtherBodyIndex,
-        bool                 InFromSweep,
-        const FHitResult&    InHitResult)
+        int32 InOtherBodyIndex,
+        bool InFromSweep,
+        const FHitResult& InHitResult)
     -> void
 {
     ck_sensor::DoOnBeginOverlap
@@ -554,9 +563,9 @@ auto
     UCk_Sensor_ActorComponent_Box_UE::
     OnEndOverlap(
         UPrimitiveComponent* InOverlappedComponent,
-        AActor*              InOtherActor,
+        AActor* InOtherActor,
         UPrimitiveComponent* InOtherComp,
-        int32                InOtherBodyIndex)
+        int32 InOtherBodyIndex)
     -> void
 {
     ck_sensor::DoOnEndOverlap
@@ -593,19 +602,28 @@ auto
 {
     Super::InitializeComponent();
 
-    this->OnComponentBeginOverlap.AddDynamic(this, &ThisType::OnBeginOverlap);
-    this->OnComponentEndOverlap.AddDynamic(this, &ThisType::OnEndOverlap);
+    // If this component is ever cloned/duplicated, InitializeComponent could run on the cloned object if RegisterComponentWithWorld is called
+    // In this case, the delegates are already bound, because the duplication process also copies the bindings from the original component
+    if (NOT this->OnComponentBeginOverlap.IsAlreadyBound(this, &ThisType::OnBeginOverlap))
+    {
+        this->OnComponentBeginOverlap.AddDynamic(this, &ThisType::OnBeginOverlap);
+    }
+
+    if (NOT this->OnComponentEndOverlap.IsAlreadyBound(this, &ThisType::OnEndOverlap))
+    {
+        this->OnComponentEndOverlap.AddDynamic(this, &ThisType::OnEndOverlap);
+    }
 }
 
 auto
     UCk_Sensor_ActorComponent_Sphere_UE::
     OnBeginOverlap(
         UPrimitiveComponent* InOverlappedComponent,
-        AActor*              InOtherActor,
+        AActor* InOtherActor,
         UPrimitiveComponent* InOtherComp,
-        int32                InOtherBodyIndex,
-        bool                 InFromSweep,
-        const FHitResult&    InHitResult)
+        int32 InOtherBodyIndex,
+        bool InFromSweep,
+        const FHitResult& InHitResult)
     -> void
 {
     ck_sensor::DoOnBeginOverlap
@@ -623,9 +641,9 @@ auto
     UCk_Sensor_ActorComponent_Sphere_UE::
     OnEndOverlap(
         UPrimitiveComponent* InOverlappedComponent,
-        AActor*              InOtherActor,
+        AActor* InOtherActor,
         UPrimitiveComponent* InOtherComp,
-        int32                InOtherBodyIndex)
+        int32 InOtherBodyIndex)
     -> void
 {
     ck_sensor::DoOnEndOverlap
@@ -662,19 +680,28 @@ auto
 {
     Super::InitializeComponent();
 
-    this->OnComponentBeginOverlap.AddDynamic(this, &ThisType::OnBeginOverlap);
-    this->OnComponentEndOverlap.AddDynamic(this, &ThisType::OnEndOverlap);
+    // If this component is ever cloned/duplicated, InitializeComponent could run on the cloned object if RegisterComponentWithWorld is called
+    // In this case, the delegates are already bound, because the duplication process also copies the bindings from the original component
+    if (NOT this->OnComponentBeginOverlap.IsAlreadyBound(this, &ThisType::OnBeginOverlap))
+    {
+        this->OnComponentBeginOverlap.AddDynamic(this, &ThisType::OnBeginOverlap);
+    }
+
+    if (NOT this->OnComponentEndOverlap.IsAlreadyBound(this, &ThisType::OnEndOverlap))
+    {
+        this->OnComponentEndOverlap.AddDynamic(this, &ThisType::OnEndOverlap);
+    }
 }
 
 auto
     UCk_Sensor_ActorComponent_Capsule_UE::
     OnBeginOverlap(
         UPrimitiveComponent* InOverlappedComponent,
-        AActor*              InOtherActor,
+        AActor* InOtherActor,
         UPrimitiveComponent* InOtherComp,
-        int32                InOtherBodyIndex,
-        bool                 InFromSweep,
-        const FHitResult&    InHitResult)
+        int32 InOtherBodyIndex,
+        bool InFromSweep,
+        const FHitResult& InHitResult)
     -> void
 {
     ck_sensor::DoOnBeginOverlap
@@ -692,9 +719,9 @@ auto
     UCk_Sensor_ActorComponent_Capsule_UE::
     OnEndOverlap(
         UPrimitiveComponent* InOverlappedComponent,
-        AActor*              InOtherActor,
+        AActor* InOtherActor,
         UPrimitiveComponent* InOtherComp,
-        int32                InOtherBodyIndex)
+        int32 InOtherBodyIndex)
     -> void
 {
     ck_sensor::DoOnEndOverlap
