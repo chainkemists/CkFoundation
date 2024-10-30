@@ -120,6 +120,13 @@ public:
     Get_InteractionSource(
         const FCk_Handle_Interaction& InHandle);
 
+	UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Interaction",
+        DisplayName = "[Ck][Interaction] Get Interaction Source Actor")
+    static AActor*
+    Get_InteractionSourceActor(
+        const FCk_Handle_Interaction& InHandle);
+
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Interaction",
         DisplayName = "[Ck][Interaction] Get Interaction Instigator")
@@ -132,6 +139,13 @@ public:
         DisplayName = "[Ck][Interaction] Get Interaction Target")
     static FCk_Handle
     Get_InteractionTarget(
+        const FCk_Handle_Interaction& InHandle);
+
+	UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Interaction",
+        DisplayName = "[Ck][Interaction] Get Interaction Target Actor")
+    static AActor*
+    Get_InteractionTargetActor(
         const FCk_Handle_Interaction& InHandle);
 
 	UFUNCTION(BlueprintPure,

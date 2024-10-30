@@ -143,6 +143,25 @@ auto
 
 auto
 	UCk_Utils_Interaction_UE::
+	Get_InteractionSourceActor(
+		const FCk_Handle_Interaction& InHandle)
+	-> AActor*
+{
+	const auto& InteractionSource = Get_InteractionSource(InHandle);
+
+	if (ck::Is_NOT_Valid(InteractionSource))
+	{ return {}; }
+
+	const auto& ActorEntity = UCk_Utils_OwningActor_UE::TryGet_Entity_OwningActor_InOwnershipChain(InteractionSource);
+
+	if (ck::Is_NOT_Valid(ActorEntity))
+	{ return {}; }
+
+	return UCk_Utils_OwningActor_UE::Get_EntityOwningActor(ActorEntity);
+}
+
+auto
+	UCk_Utils_Interaction_UE::
 	Get_InteractionInstigator(
 		const FCk_Handle_Interaction& InHandle)
 	-> FCk_Handle
@@ -157,6 +176,25 @@ auto
 	-> FCk_Handle
 {
 	return InHandle.Get<ck::FFragment_Interaction_Params>().Get_Params().Get_Target();
+}
+
+auto
+	UCk_Utils_Interaction_UE::
+	Get_InteractionTargetActor(
+		const FCk_Handle_Interaction& InHandle)
+	-> AActor*
+{
+	const auto& InteractionTarget = Get_InteractionTarget(InHandle);
+
+	if (ck::Is_NOT_Valid(InteractionTarget))
+	{ return {}; }
+
+	const auto& ActorEntity = UCk_Utils_OwningActor_UE::TryGet_Entity_OwningActor_InOwnershipChain(InteractionTarget);
+
+	if (ck::Is_NOT_Valid(ActorEntity))
+	{ return {}; }
+
+	return UCk_Utils_OwningActor_UE::Get_EntityOwningActor(ActorEntity);
 }
 
 auto
