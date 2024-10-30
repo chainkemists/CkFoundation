@@ -128,6 +128,11 @@ namespace ck_sensor
             { return; }
         }
 
+    	CK_ENSURE_IF_NOT(UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(SensorCompAttachedActor),
+    		TEXT("Sensor Owner Actor {} is NOT ECS ready! This means the sensor component was not added through this feature (maybe through cloning components)"),
+    		SensorCompAttachedActor)
+    	{ return; }
+
         const auto& SensorAttachedEntityAndActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails_FromActor(SensorCompAttachedActor);
         auto SensorOwningEntity = UCk_Utils_Sensor_UE::CastChecked(sensorOverlapBody->Get_OwningEntity());
         const auto& SensorName = UCk_Utils_GameplayLabel_UE::Get_Label(SensorOwningEntity);
