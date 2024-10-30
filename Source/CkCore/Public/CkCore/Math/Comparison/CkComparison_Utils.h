@@ -60,6 +60,26 @@ public:
     Get_IsInRange(
         float InNum,
         const FCk_Comparison_FloatRange& InComparison);
+
+	UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Less Than Or Nearly Equal (Float)",
+              Category = "Ck|Utils|Math|FloatComparison",
+              meta = (Keywords = "<= less nearly equal", AdvancedDisplay=ErrorTolerance))
+    static bool
+    Get_IsLessThanOrNearlyEqual(
+        float A,
+        float B,
+        float ErrorTolerance = 1.e-6f);
+
+	UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Is Greater Than Or Nearly Equal (Float)",
+              Category = "Ck|Utils|Math|FloatComparison",
+              meta = (Keywords = ">= less nearly equal", AdvancedDisplay=ErrorTolerance))
+    static bool
+    Get_IsGreaterThanOrNearlyEqual(
+        float A,
+        float B,
+        float ErrorTolerance = 1.e-6f);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

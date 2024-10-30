@@ -106,4 +106,26 @@ auto
     }
 }
 
+auto
+	UCk_Utils_FloatComparison_UE::
+	Get_IsLessThanOrNearlyEqual(
+		float A,
+		float B,
+		float ErrorTolerance)
+	-> bool
+{
+	return A <= B || FMath::IsNearlyEqual(A, B, ErrorTolerance);
+}
+
+auto
+	UCk_Utils_FloatComparison_UE::
+	Get_IsGreaterThanOrNearlyEqual(
+		float A,
+		float B,
+		float ErrorTolerance)
+	-> bool
+{
+	return A >= B || FMath::IsNearlyEqual(A, B, ErrorTolerance);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
