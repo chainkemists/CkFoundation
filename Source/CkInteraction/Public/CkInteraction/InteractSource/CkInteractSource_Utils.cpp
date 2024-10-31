@@ -106,6 +106,7 @@ auto
 	-> FCk_Handle_InteractSource
 {
 	InInteractSource.AddOrGet<ck::FFragment_InteractSource_Requests>()._Requests.Emplace(InRequest);
+	InInteractSource.Get<ck::FFragment_InteractSource_Current>()._InteractionsPendingAdd.Emplace(InRequest.Get_Interaction());
     return InInteractSource;
 }
 
@@ -122,13 +123,47 @@ auto
 
 auto
 	UCk_Utils_InteractSource_UE::
+	Get_InteractionCountPerSourcePolicy(
+		const FCk_Handle_InteractSource& InHandle)
+	-> ECk_InteractionSource_ConcurrentInteractionsPolicy
+{
+	return InHandle.Get<ck::FFragment_InteractSource_Params>().Get_Params().Get_ConcurrentInteractionsPolicy();
+}
+
+auto
+	UCk_Utils_InteractSource_UE::
 	Get_CurrentInteractions(
-		FCk_Handle_InteractSource& InHandle)
+		const FCk_Handle_InteractSource& InHandle)
 	-> TArray<FCk_Handle_Interaction>
 {
 	auto ToRet = TArray<FCk_Handle_Interaction>{};
 	InHandle.Get<ck::FFragment_InteractSource_Current>()._InteractionFinishedSignals.GetKeys(ToRet);
 	return ToRet;
+}
+
+auto
+	UCk_Utils_InteractSource_UE::
+	Get_PendingInteractions(
+		const FCk_Handle_InteractSource& InHandle)
+	-> TArray<FCk_Handle_Interaction>
+{
+	return InHandle.Get<ck::FFragment_InteractSource_Current>()._InteractionsPendingAdd;
+}
+
+auto
+	UCk_Utils_InteractSource_UE::
+	TryGet_CurrentInteractionsByTarget(
+		const FCk_Handle_InteractSource& InHandle,
+		const FCk_Handle& InTarget)
+	-> FCk_Handle_Interaction
+{
+	for (auto& InSignalPair : InHandle.Get<ck::FFragment_InteractSource_Current>()._InteractionFinishedSignals)
+	{
+		auto& InInteraction = InSignalPair.Key;
+		if (UCk_Utils_Interaction_UE::Get_InteractionTarget(InInteraction) == InTarget)
+		{ return InInteraction; }
+	}
+	return {};
 }
 
 auto

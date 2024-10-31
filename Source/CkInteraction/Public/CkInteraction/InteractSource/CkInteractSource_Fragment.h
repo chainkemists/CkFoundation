@@ -62,6 +62,9 @@ namespace ck
     private:
     	// This is also used as a set of interaction handles
     	TMap<FCk_Handle_Interaction, UUtils_Signal_Interaction_OnInteractionFinished::ConnectionType> _InteractionFinishedSignals;
+
+    	// Needed so we know if there will be an interaction that prevents us from starting a new one until we process request to start interaction
+    	TArray<FCk_Handle_Interaction> _InteractionsPendingAdd;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
