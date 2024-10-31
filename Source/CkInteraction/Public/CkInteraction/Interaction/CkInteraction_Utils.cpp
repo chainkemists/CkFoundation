@@ -210,7 +210,7 @@ auto
 	UCk_Utils_Interaction_UE::
 	Get_InteractionCompletionPolicy(
 		FCk_Handle_Interaction& InHandle)
-	-> ECk_InteractionCompletionPolicy
+	-> ECk_Interaction_CompletionPolicy
 {
 	return InHandle.Get<ck::FFragment_Interaction_Params>().Get_Params().Get_CompletionPolicy();
 }

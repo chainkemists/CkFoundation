@@ -83,6 +83,8 @@ namespace ck
     {
         auto InteractionEntity = InRequest.Get_Interaction();
 
+		InCurrent._InteractionsPendingAdd.Remove(InRequest.Get_Interaction());
+
 		UUtils_Signal_InteractSource_OnNewInteraction::Broadcast(InHandle, ck::MakePayload(InHandle, InteractionEntity));
 
 		const auto& OnInteractionFinishedConnection = UUtils_Signal_Interaction_OnInteractionFinished::Bind<&FProcessor_InteractSource_HandleRequests::OnInteractionFinished>
@@ -104,14 +106,10 @@ namespace ck
 		    const FCk_Request_InteractSource_CancelInteraction& InRequest) const
 		-> void
     {
-		for (auto& InSignalPair : InCurrent._InteractionFinishedSignals)
+		if (auto Interaction = UCk_Utils_InteractSource_UE::TryGet_CurrentInteractionsByTarget(InHandle, InRequest.Get_InteractTarget());
+			ck::IsValid(Interaction))
 		{
-			auto& InInteraction = InSignalPair.Key;
-			if (UCk_Utils_Interaction_UE::Get_InteractionTarget(InInteraction) == InRequest.Get_InteractTarget())
-			{
-				UCk_Utils_Interaction_UE::Request_EndInteraction(InInteraction, FCk_Request_Interaction_EndInteraction{ECk_SucceededFailed::Failed});
-				break;
-			}
+			UCk_Utils_Interaction_UE::Request_EndInteraction(Interaction, FCk_Request_Interaction_EndInteraction{ECk_SucceededFailed::Failed});
 		}
     }
 

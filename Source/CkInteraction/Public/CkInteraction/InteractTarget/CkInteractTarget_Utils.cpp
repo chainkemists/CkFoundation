@@ -165,6 +165,13 @@ auto
 
 		if (NOT TargetChannel.MatchesTagExact(SourceChannel))
 		{ return ECk_CanInteractWithResult::ChannelMismatch; }
+
+		// If no multiple interactions, don't allow interactions if any are current or pending
+		if (UCk_Utils_InteractSource_UE::Get_InteractionCountPerSourcePolicy(InInteractSource) == ECk_InteractionSource_ConcurrentInteractionsPolicy::SingleInteraction)
+		{
+			if (UCk_Utils_InteractSource_UE::Get_CurrentInteractions(InInteractSource).Num() + UCk_Utils_InteractSource_UE::Get_PendingInteractions(InInteractSource).Num() > 0)
+			{ return ECk_CanInteractWithResult::MultipleInteractionsDisabledForSource; }
+		}
 	}
 
 	// TODO: This only works on auth currently, will need to duplicate interact targets to allow clients to filter this way
@@ -176,9 +183,9 @@ auto
 	}
 
 	// If no multiple interactions, don't allow interactions if any are current
-	if (InTarget.Get<ck::FFragment_InteractTarget_Params>().Get_Params().Get_AllowMultipleInteractions() == ECk_InteractionCountPerTargetPolicy::SingleConcurrentInteraction &&
+	if (InTarget.Get<ck::FFragment_InteractTarget_Params>().Get_Params().Get_ConcurrentInteractionsPolicy() == ECk_InteractionTarget_ConcurrentInteractionsPolicy::SingleInteraction &&
 		UCk_Utils_Interaction_UE::RecordOfInteractions_Utils::Get_ValidEntriesCount(InTarget) > 0)
-	{ return ECk_CanInteractWithResult::MultipleInteractionsDisabled; }
+	{ return ECk_CanInteractWithResult::MultipleInteractionsDisabledForTarget; }
 
 	return ECk_CanInteractWithResult::CanInteractWith;
 }

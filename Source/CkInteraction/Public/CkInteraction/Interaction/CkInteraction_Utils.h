@@ -158,7 +158,7 @@ public:
 	UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Interaction",
         DisplayName = "[Ck][Interaction] Get Interaction Completion Policy")
-    static ECk_InteractionCompletionPolicy
+    static ECk_Interaction_CompletionPolicy
     Get_InteractionCompletionPolicy(
         UPARAM(ref) FCk_Handle_Interaction& InHandle);
 
