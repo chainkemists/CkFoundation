@@ -23,13 +23,13 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
-enum class ECk_InteractionCountPerTargetPolicy : uint8
+enum class ECk_InteractionTarget_ConcurrentInteractionsPolicy : uint8
 {
-    SingleConcurrentInteraction,
-    MultipleConcurrentInteraction
+    SingleInteraction,
+    MultipleInteractions
 };
 
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_InteractionCountPerTargetPolicy);
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_InteractionTarget_ConcurrentInteractionsPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -42,7 +42,8 @@ enum class ECk_CanInteractWithResult : uint8
     SourceNotValid,
     ChannelMismatch,
     AlreadyExists,
-    MultipleInteractionsDisabled,
+    MultipleInteractionsDisabledForTarget,
+    MultipleInteractionsDisabledForSource,
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CanInteractWithResult);
@@ -70,7 +71,7 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_InteractionCompletionPolicy _CompletionPolicy = ECk_InteractionCompletionPolicy::Timed;
+    ECk_Interaction_CompletionPolicy _CompletionPolicy = ECk_Interaction_CompletionPolicy::Timed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, EditCondition="_CompletionPolicy==ECk_InteractionCompletionPolicy::Timed", EditConditionHides))
@@ -82,14 +83,14 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_InteractionCountPerTargetPolicy _AllowMultipleInteractions = ECk_InteractionCountPerTargetPolicy::MultipleConcurrentInteraction;
+    ECk_InteractionTarget_ConcurrentInteractionsPolicy _ConcurrentInteractionsPolicy = ECk_InteractionTarget_ConcurrentInteractionsPolicy::MultipleInteractions;
 
 public:
 	CK_PROPERTY_GET(_InteractionChannel)
 	CK_PROPERTY_GET(_CompletionPolicy)
 	CK_PROPERTY_GET(_InteractionDuration)
 	CK_PROPERTY_GET(_InteractionConstructionScript)
-	CK_PROPERTY_GET(_AllowMultipleInteractions)
+	CK_PROPERTY_GET(_ConcurrentInteractionsPolicy)
 };
 
 // --------------------------------------------------------------------------------------------------------------------

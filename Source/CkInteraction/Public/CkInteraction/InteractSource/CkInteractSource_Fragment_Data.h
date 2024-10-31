@@ -22,6 +22,17 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_InteractionSource_ConcurrentInteractionsPolicy : uint8
+{
+    SingleInteraction,
+    MultipleInteractions
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_InteractionSource_ConcurrentInteractionsPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKINTERACTION_API FCk_Handle_InteractSource : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_InteractSource); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_InteractSource);
@@ -41,8 +52,13 @@ private:
               meta = (AllowPrivateAccess = true, Categories = "InteractionChannel"))
     FGameplayTag _InteractionChannel;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_InteractionSource_ConcurrentInteractionsPolicy _ConcurrentInteractionsPolicy = ECk_InteractionSource_ConcurrentInteractionsPolicy::MultipleInteractions;
+
 public:
 	CK_PROPERTY_GET(_InteractionChannel)
+    CK_PROPERTY_GET(_ConcurrentInteractionsPolicy)
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -27,14 +27,14 @@ UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_InteractionDuration_FloatAttribute_Name);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
-enum class ECk_InteractionCompletionPolicy : uint8
+enum class ECk_Interaction_CompletionPolicy : uint8
 {
     Instant,
     Timed,
 	ManuallyCompleted
 };
 
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_InteractionCompletionPolicy);
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Interaction_CompletionPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -74,7 +74,7 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_InteractionCompletionPolicy _CompletionPolicy = ECk_InteractionCompletionPolicy::Timed;
+    ECk_Interaction_CompletionPolicy _CompletionPolicy = ECk_Interaction_CompletionPolicy::Timed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, EditCondition="_CompletionPolicy==ECk_InteractionCompletionPolicy::Timed", EditConditionHides))
