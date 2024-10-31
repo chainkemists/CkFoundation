@@ -99,12 +99,31 @@ public:
     Get_InteractionChannel(
         const FCk_Handle_InteractSource& InHandle);
 
+	UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|InteractSource",
+        DisplayName = "[Ck][InteractSource] Get InteractionCountPerSourcePolicy")
+    static ECk_InteractionSource_ConcurrentInteractionsPolicy
+    Get_InteractionCountPerSourcePolicy(
+        const FCk_Handle_InteractSource& InHandle);
+
 	UFUNCTION(BlueprintCallable,
 		Category = "Ck|Utils|InteractSource",
 		DisplayName="[Ck][InteractSource] Get Current Interactions")
     static TArray<FCk_Handle_Interaction>
     Get_CurrentInteractions(
-        UPARAM(ref) FCk_Handle_InteractSource& InHandle);
+        const FCk_Handle_InteractSource& InHandle);
+
+    static TArray<FCk_Handle_Interaction>
+    Get_PendingInteractions(
+        const FCk_Handle_InteractSource& InHandle);
+
+	UFUNCTION(BlueprintCallable,
+		Category = "Ck|Utils|InteractSource",
+		DisplayName="[Ck][InteractSource] Try Get Current Interactions By Target")
+    static FCk_Handle_Interaction
+    TryGet_CurrentInteractionsByTarget(
+        const FCk_Handle_InteractSource& InHandle,
+        const FCk_Handle& InTarget);
 
 	UFUNCTION(BlueprintPure,
           Category = "Ck|Utils|InteractSource",
