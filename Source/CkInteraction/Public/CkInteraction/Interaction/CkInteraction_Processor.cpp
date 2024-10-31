@@ -31,7 +31,7 @@ namespace ck
 			const FFragment_Interaction_Params& InParams) const
 		-> void
 	{
-		if (InParams.Get_Params().Get_CompletionPolicy() == ECk_InteractionCompletionPolicy::Timed)
+		if (InParams.Get_Params().Get_CompletionPolicy() == ECk_Interaction_CompletionPolicy::Timed)
 		{
 			const auto& DurationAttributeParams = FCk_Fragment_FloatAttribute_ParamsData{
 				TAG_InteractionDuration_FloatAttribute_Name,
