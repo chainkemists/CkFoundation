@@ -60,7 +60,7 @@ namespace ck
                     ck::IsValid(OutermostActor))
                 {
                     if (OutermostActor->GetLocalRole() == ROLE_AutonomousProxy ||
-                        (OutermostActor->GetLocalRole() == ROLE_Authority && OutermostActor->GetRemoteRole() != ROLE_AutonomousProxy))
+                        (OutermostActor->GetLocalRole() == ROLE_Authority && OutermostActor->GetRemoteRole() == ROLE_AutonomousProxy))
                     { break; }
                 }
 
