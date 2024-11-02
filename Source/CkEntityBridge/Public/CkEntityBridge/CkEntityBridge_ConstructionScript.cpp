@@ -158,7 +158,7 @@ auto
             );
         }
 
-        if (NOT UCk_Utils_Actor_UE::Get_HasComponentByClass(OwningActor, UCk_ObjectReplicator_ActorComponent_UE::StaticClass()))
+        if (NOT UCk_Utils_Actor_UE::Get_HasComponent_ByClass(OwningActor, UCk_ObjectReplicator_ActorComponent_UE::StaticClass()))
         {
             UCk_Utils_Actor_UE::Request_AddNewActorComponent<UCk_ObjectReplicator_ActorComponent_UE>
             (
