@@ -222,7 +222,7 @@ auto
 {
     const auto& Blueprint = Cast<UBlueprint>(InBlueprintObject);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InBlueprintObject),
+    CK_ENSURE_IF_NOT(ck::IsValid(Blueprint),
         TEXT("Object [{}] supplied to Get_BlueprintGeneratedClass is Invalid OR is NOT of type UBlueprint!"),
         InBlueprintObject)
     { return {}; }
