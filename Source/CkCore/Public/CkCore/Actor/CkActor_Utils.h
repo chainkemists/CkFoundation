@@ -246,12 +246,21 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Actor",
-              DisplayName = "[Ck] Get Has Component By Class",
+              DisplayName = "[Ck] Get Has Component (By Class)",
               meta = (DefaultToSelf = "InActor"))
     static bool
-    Get_HasComponentByClass(
+    Get_HasComponent_ByClass(
         AActor* InActor,
         TSubclassOf<UActorComponent> InComponent);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Actor",
+              DisplayName = "[Ck] Get Has Component (By Interface)",
+              meta = (DefaultToSelf = "InActor"))
+    static bool
+    Get_HasComponent_ByInterface(
+        AActor* InActor,
+        TSubclassOf<UInterface> InInterface);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Actor",

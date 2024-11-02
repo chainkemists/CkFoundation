@@ -171,15 +171,58 @@ auto
 
 auto
     UCk_Utils_Actor_UE::
-    Get_HasComponentByClass(
+    Get_HasComponent_ByClass(
         AActor* InActor,
         TSubclassOf<UActorComponent> InComponent)
     -> bool
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to UCk_Utils_Actor_UE::Get_HasComponentByClass"))
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to UCk_Utils_Actor_UE::Get_HasComponent_ByClass"))
     { return {}; }
 
-    return ck::IsValid(InActor->FindComponentByClass(InComponent));
+    if (const auto& HasNativeComponent = ck::IsValid(InActor->FindComponentByClass(InComponent)))
+    { return true;}
+
+    auto HasBlueprintComponent = false;
+    AActor::ForEachComponentOfActorClassDefault(InActor->GetClass(), InComponent, [&](const UActorComponent* TemplateComponent)
+    {
+        if (TemplateComponent->IsA(InComponent))
+        {
+            HasBlueprintComponent = true;
+            return HasBlueprintComponent;
+        }
+
+        return false;
+    });
+
+    return HasBlueprintComponent;
+}
+
+auto
+    UCk_Utils_Actor_UE::
+    Get_HasComponent_ByInterface(
+        AActor* InActor,
+        TSubclassOf<UInterface> InInterface)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to UCk_Utils_Actor_UE::Get_HasComponent_ByInterface"))
+    { return {}; }
+
+    if (const auto& HasNativeComponent = ck::IsValid(InActor->FindComponentByInterface(InInterface)))
+    { return true;}
+
+    auto HasBlueprintComponent = false;
+    AActor::ForEachComponentOfActorClassDefault(InActor->GetClass(), UActorComponent::StaticClass(), [&](const UActorComponent* TemplateComponent)
+    {
+        if (TemplateComponent->GetClass()->ImplementsInterface(InInterface))
+        {
+            HasBlueprintComponent = true;
+            return HasBlueprintComponent;
+        }
+
+        return false;
+    });
+
+    return HasBlueprintComponent;
 }
 
 auto
