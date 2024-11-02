@@ -4,6 +4,8 @@
 
 #include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Game/CkGame_Utils.h"
+#include "CkCore/Object/CkObject_Utils.h"
 #include "CkCore/ObjectReplication/CkObjectReplicatorComponent.h"
 #include "CkEcs/CkEcsLog.h"
 
@@ -29,6 +31,44 @@ UCk_EntityBridge_ActorComponent_UE::
     PrimaryComponentTick.bCanEverTick = false;
     bReplicateUsingRegisteredSubObjectList = true;
     SetIsReplicatedByDefault(true);
+}
+
+auto
+    UCk_EntityBridge_ActorComponent_UE::
+    OnRegister()
+    -> void
+{
+    Super::OnRegister();
+
+    [this]()
+    {
+        if (IsTemplate())
+        { return; }
+
+        if (CreationMethod != EComponentCreationMethod::SimpleConstructionScript)
+        { return; }
+
+        if (UCk_Utils_Game_UE::Get_IsInGame(this))
+        { return; }
+
+        const auto& Outer = GetOuter();
+        if (ck::Is_NOT_Valid(Outer))
+        { return; }
+
+        const auto& OuterClass = Outer->GetClass();
+        if (ck::Is_NOT_Valid(OuterClass))
+        { return; }
+
+        const auto& OuterClassGeneratedByBlueprint = UCk_Utils_Object_UE::Get_ClassGeneratedByBlueprint(OuterClass);
+        if (ck::Is_NOT_Valid(OuterClass))
+        { return; }
+
+        const auto& OuterBlueprint = Cast<UBlueprint>(OuterClassGeneratedByBlueprint);
+        if (ck::Is_NOT_Valid(OuterBlueprint))
+        { return; }
+
+        UCk_Utils_EditorOnly_UE::Request_AddInterface(OuterBlueprint, UCk_Entity_ConstructionScript_Interface::StaticClass());
+    }();
 }
 
 auto
