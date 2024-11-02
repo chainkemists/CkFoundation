@@ -203,6 +203,15 @@ public:
     Get_PieNetModeNamePrefix(
         const UObject* InContextObject);
 
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|EditorOnly",
+        DisplayName = "[Ck] Get Does Blueprint Implement Interface")
+    static bool
+    Get_DoesBlueprintImplementInterface(
+        UBlueprint* InBlueprint,
+        TSubclassOf<UInterface> InInterfaceClass,
+        bool InIncludeInherited = true);
+
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|EditorOnly",
               DisplayName = "[Ck] Add Interface")
@@ -218,6 +227,14 @@ public:
     Request_RemoveInterface(
         UBlueprint* InBlueprint,
         TSubclassOf<UInterface> InInterfaceClass);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|EditorOnly",
+              DisplayName = "[Ck] Add Actor Component To Blueprint")
+    static bool
+    Request_AddActorComponentToBlueprint(
+        UBlueprint* InBlueprint,
+        TSubclassOf<UActorComponent> InComponentClass);
 
     UFUNCTION(BlueprintPure,
         DisplayName = "[Ck] Cast BlueprintClass to Interface",
