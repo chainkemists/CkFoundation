@@ -223,6 +223,24 @@ auto
 
 auto
     UCk_Utils_EditorOnly_UE::
+    Get_DoesBlueprintImplementInterface(
+        UBlueprint* InBlueprint,
+        TSubclassOf<UInterface> InInterfaceClass,
+        bool InIncludeInherited)
+    -> bool
+{
+#if WITH_EDITOR
+    if (ck::Is_NOT_Valid(InInterfaceClass) || ck::Is_NOT_Valid(InBlueprint))
+    { return {}; }
+
+    return FBlueprintEditorUtils::ImplementsInterface(InBlueprint, InIncludeInherited, InInterfaceClass);
+#else
+    return {};
+#endif
+}
+
+auto
+    UCk_Utils_EditorOnly_UE::
     Request_AddInterface(
         UBlueprint* InBlueprint,
         TSubclassOf<UInterface> InInterfaceClass)
@@ -249,6 +267,44 @@ auto
 
     FBlueprintEditorUtils::RemoveInterface(InBlueprint, InInterfaceClass->GetClassPathName());
 #endif
+}
+
+auto
+    UCk_Utils_EditorOnly_UE::
+    Request_AddActorComponentToBlueprint(
+        UBlueprint* InBlueprint,
+        TSubclassOf<UActorComponent> InComponentClass)
+    -> bool
+{
+#if WITH_EDITOR
+    if (ck::Is_NOT_Valid(InComponentClass) || ck::Is_NOT_Valid(InBlueprint))
+    { return {}; }
+
+    if (const auto& BlueprintClass = InBlueprint->GeneratedClass;
+        NOT BlueprintClass->IsChildOf(AActor::StaticClass()))
+    { return {}; }
+
+    const auto& BSCS = InBlueprint->SimpleConstructionScript;
+    if (ck::Is_NOT_Valid(BSCS))
+    { return {}; }
+
+    if (ck::algo::AnyOf(BSCS->GetAllNodes(), [&](const auto& InNode){ return ck::IsValid(InNode) && InNode->ComponentClass == InComponentClass; }))
+    { return {}; }
+
+    const auto& NewNode = BSCS->CreateNode(InComponentClass);
+    if (ck::Is_NOT_Valid(NewNode))
+    { return {}; }
+
+    NewNode->SetVariableName(FName(*InComponentClass->GetName()));
+    BSCS->AddNode(NewNode);
+
+    FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(InBlueprint);
+
+    return true;
+#else
+    return {};
+#endif
+
 }
 
 auto
