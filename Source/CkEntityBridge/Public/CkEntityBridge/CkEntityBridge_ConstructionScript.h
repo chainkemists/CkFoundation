@@ -47,6 +47,9 @@ public:
 
 protected:
     auto
+    OnRegister() -> void override;
+
+    auto
     OnUnregister() -> void override;
 
 protected:
