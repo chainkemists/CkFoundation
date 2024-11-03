@@ -14,13 +14,17 @@ auto
     UCk_Entity_ConstructionScript_PDA::
     Construct(
         FCk_Handle& InHandle,
-        const FInstancedStruct& InOptionalParams) const
+        const FInstancedStruct& InOptionalParams,
+        const TScriptInterface<ICk_Entity_ConstructionScript_Interface>& InOptionalObjectConstructionScript) const
     -> void
 {
     _CurrentWorld = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
 
     UCk_Utils_Handle_UE::Set_DebugName(
         InHandle, UCk_Utils_Debug_UE::Get_DebugName(this, ECk_DebugNameVerbosity_Policy::Compact), ECk_Override::DoNotOverride);
+
+    if (ck::IsValid(InOptionalObjectConstructionScript))
+    { InOptionalObjectConstructionScript->DoConstruct(InHandle); }
 
     DoConstruct(InHandle, InOptionalParams);
 }
@@ -37,7 +41,7 @@ auto
         TEXT("Unable to proceed with Entity Construction as the Construction Script [{}] is INVALID."), InConstructionScript)
     { return InHandle; }
 
-    UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Entity_ConstructionScript_PDA>(InConstructionScript)->Construct(InHandle, InOptionalParams);
+    UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Entity_ConstructionScript_PDA>(InConstructionScript)->Construct(InHandle, InOptionalParams, nullptr);
     return InHandle;
 }
 
