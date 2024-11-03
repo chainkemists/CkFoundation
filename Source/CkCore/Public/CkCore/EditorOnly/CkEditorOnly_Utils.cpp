@@ -2,6 +2,9 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include "Kismet2/BlueprintEditorUtils.h"
+#include "Kismet2/KismetEditorUtilities.h"
+
 #if WITH_EDITOR
 #include <UnrealEdGlobals.h>
 
@@ -218,6 +221,36 @@ auto
     }
 #else
     return UnknownPieNetModeNamePrefix;
+#endif
+}
+
+auto
+    UCk_Utils_EditorOnly_UE::
+    Request_AddInterface(
+        UBlueprint* InBlueprint,
+        TSubclassOf<UInterface> InInterfaceClass)
+    -> void
+{
+#if WITH_EDITOR
+    if (ck::Is_NOT_Valid(InInterfaceClass))
+    { return; }
+
+    FBlueprintEditorUtils::ImplementNewInterface(InBlueprint, InInterfaceClass->GetClassPathName());
+#endif
+}
+
+auto
+    UCk_Utils_EditorOnly_UE::
+    Request_RemoveInterface(
+        UBlueprint* InBlueprint,
+        TSubclassOf<UInterface> InInterfaceClass)
+    -> void
+{
+#if WITH_EDITOR
+    if (ck::Is_NOT_Valid(InInterfaceClass))
+    { return; }
+
+    FBlueprintEditorUtils::RemoveInterface(InBlueprint, InInterfaceClass->GetClassPathName());
 #endif
 }
 
