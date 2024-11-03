@@ -276,6 +276,20 @@ public:
     Get_ClassGeneratedByBlueprint(
         UClass* InBlueprintGeneratedClass);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Cast Object to Interface",
+        meta = (CompactNodeTitle = "<AsInterface>", BlueprintAutocast))
+    static UInterface*
+    Cast_ObjectToInterface(
+        UObject* InInterfaceObject);
+
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Cast Class to Interface",
+        meta = (CompactNodeTitle = "<AsInterface>", BlueprintAutocast))
+    static TSubclassOf<UInterface>
+    Cast_ClassToInterface(
+        TSubclassOf<UClass> InInterfaceClass);
+
 private:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Object",

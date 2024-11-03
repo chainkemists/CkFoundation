@@ -252,6 +252,25 @@ auto
 
 auto
     UCk_Utils_Object_UE::
+    Cast_ObjectToInterface(
+        UObject* InBlueprintGeneratedClass)
+    -> UInterface*
+{
+    return Cast<UInterface>(InBlueprintGeneratedClass);
+}
+
+auto
+    UCk_Utils_Object_UE::
+    Cast_ClassToInterface(
+        // ReSharper disable once CppPassValueParameterByConstReference
+        TSubclassOf<UClass> InInterfaceClass)
+    -> TSubclassOf<UInterface>
+{
+    return InInterfaceClass.Get();
+}
+
+auto
+    UCk_Utils_Object_UE::
     DoGet_ClassDefaultObject(
         TSubclassOf<UObject> InObject)
     -> UObject*
