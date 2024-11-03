@@ -10,6 +10,24 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UINTERFACE()
+class CKECS_API UCk_Entity_ConstructionScript_Interface : public UInterface { GENERATED_BODY() };
+class CKECS_API ICk_Entity_ConstructionScript_Interface
+{
+    GENERATED_BODY()
+
+public:
+    UFUNCTION(BlueprintNativeEvent,
+        Category = "Ck|Entity",
+        DisplayName = "ConstructionScript")
+    void
+    DoConstruct(
+        UPARAM(ref) FCk_Handle& InHandle) const;
+
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(Abstract, BlueprintType, Blueprintable, EditInlineNew)
 class CKECS_API UCk_Entity_ConstructionScript_PDA : public UCk_DataAsset_PDA
 {
@@ -22,7 +40,8 @@ public:
     auto
     Construct(
         FCk_Handle& InHandle,
-        const FInstancedStruct& InOptionalParams) const -> void;
+        const FInstancedStruct& InOptionalParams,
+        const TScriptInterface<ICk_Entity_ConstructionScript_Interface>& InOptionalObjectConstructionScript = nullptr) const -> void;
 
 public:
     UFUNCTION(BlueprintCallable,
