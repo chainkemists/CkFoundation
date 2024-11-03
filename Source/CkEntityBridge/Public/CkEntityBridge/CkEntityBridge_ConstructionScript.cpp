@@ -186,7 +186,7 @@ auto
         CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
 
         TryInvoke_OnPreConstruct(Entity, EInvoke_Caller::EntityBridge);
-        ConstructionScript->Construct(Entity, Get_EntityConstructionParamsToInject());
+        ConstructionScript->Construct(Entity, Get_EntityConstructionParamsToInject(), OwningActor);
 
         if (OwningActor->GetIsReplicated() && _Replication == ECk_Replication::Replicates)
         {
@@ -321,7 +321,7 @@ auto
         CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
 
         TryInvoke_OnPreConstruct(NewEntity, EInvoke_Caller::EntityBridge);
-        ConstructionScript->Construct(NewEntity, Get_EntityConstructionParamsToInject());
+        ConstructionScript->Construct(NewEntity, Get_EntityConstructionParamsToInject(), OwningActor);
 
         // TODO: this is a HACK due to the way TryInvoke_OnReplicationComplete works. The function assumes that it will be called twice.
         // Once by the EntityBridge and once by the ReplicationDriver. However, if we don't replicate at all, then there is no ReplicationDriver
@@ -386,7 +386,7 @@ auto
         CsWithTransform->Set_EntityInitialTransform(OwningActor->GetActorTransform());
 
         TryInvoke_OnPreConstruct(NewEntity, EInvoke_Caller::EntityBridge);
-        ConstructionScript->Construct(NewEntity, Get_EntityConstructionParamsToInject());
+        ConstructionScript->Construct(NewEntity, Get_EntityConstructionParamsToInject(), OwningActor);
 
         // TODO: this is a HACK due to the way TryInvoke_OnReplicationComplete works. The function assumes that it will be called twice.
         // Once by the EntityBridge and once by the ReplicationDriver. However, if we don't replicate at all, then there is no ReplicationDriver

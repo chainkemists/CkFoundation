@@ -788,7 +788,8 @@ public:
     friend class UCk_Utils_Ability_UE;
 
 public:
-    auto DoConstruct_Implementation(
+    auto
+    DoConstruct_Implementation(
         FCk_Handle& InHandle,
         const FInstancedStruct& InOptionalParams) const -> void override;
 
