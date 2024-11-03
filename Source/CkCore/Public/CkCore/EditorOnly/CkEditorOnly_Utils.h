@@ -202,6 +202,22 @@ public:
     static FString
     Get_PieNetModeNamePrefix(
         const UObject* InContextObject);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|EditorOnly",
+              DisplayName = "[Ck] Add Interface")
+    static void
+    Request_AddInterface(
+        UBlueprint* InBlueprint,
+        TSubclassOf<UInterface> InInterfaceClass);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|EditorOnly",
+              DisplayName = "[Ck] Remove Interface")
+    static void
+    Request_RemoveInterface(
+        UBlueprint* InBlueprint,
+        TSubclassOf<UInterface> InInterfaceClass);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
