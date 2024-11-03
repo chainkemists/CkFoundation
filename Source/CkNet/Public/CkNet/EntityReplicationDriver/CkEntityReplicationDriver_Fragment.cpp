@@ -41,7 +41,7 @@ UCk_Fragment_EntityReplicationDriver_Rep::
         World)
     { return; }
 
-    _AssociatedEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(**EcsSubsystem->Get_TransientEntity(), nullptr);
+    _AssociatedEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(**EcsSubsystem->Get_TransientEntity());
 }
 
 auto
@@ -261,7 +261,7 @@ auto
     const auto& EntityBridgeActorComp = ReplicatedActor->GetComponentByClass<UCk_EntityBridge_ActorComponent_Base_UE>();
 
     EntityBridgeActorComp->TryInvoke_OnPreConstruct(_AssociatedEntity, UCk_EntityBridge_ActorComponent_Base_UE::EInvoke_Caller::ReplicationDriver);
-    CsWithTransform->Construct(_AssociatedEntity, EntityBridgeActorComp->Get_EntityConstructionParamsToInject());
+    CsWithTransform->Construct(_AssociatedEntity, EntityBridgeActorComp->Get_EntityConstructionParamsToInject(), ReplicatedActor);
 
     const auto& ReplicatedObjects = _ReplicationData_ReplicatedActor.Get_ReplicatedObjects();
     UCk_Utils_ReplicatedObjects_UE::Add(_AssociatedEntity, FCk_ReplicatedObjects{}.Set_ReplicatedObjects(ReplicatedObjects));

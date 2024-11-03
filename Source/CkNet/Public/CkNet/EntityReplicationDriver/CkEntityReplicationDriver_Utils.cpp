@@ -87,7 +87,7 @@ auto
     if (Add(NewEntity) == ECk_AddedOrNot::NotAdded)
     { return {}; }
 
-    InConstructionScript->Construct(NewEntity, {});
+    InConstructionScript->Construct(NewEntity, {}, InAbilityScriptClass->ClassDefaultObject);
 
     switch(const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(InHandle))
     {
