@@ -218,6 +218,13 @@ public:
     Request_RemoveInterface(
         UBlueprint* InBlueprint,
         TSubclassOf<UInterface> InInterfaceClass);
+
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Cast BlueprintClass to Interface",
+        meta = (CompactNodeTitle = "<AsInterface>", BlueprintAutocast))
+    static TSubclassOf<UInterface>
+    Cast_BlueprintClassToInterface(
+        TSubclassOf<UBlueprint> InInterfaceClass);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
