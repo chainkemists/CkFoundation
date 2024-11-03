@@ -43,7 +43,8 @@ public class CkCore : CkModuleRules
             PublicDependencyModuleNames.AddRange(
                 new string[]
                 {
-                    "UnrealEd"
+                    "UnrealEd",
+                    "BlueprintGraph"
                 }
                 );
         }
