@@ -254,4 +254,13 @@ auto
 #endif
 }
 
+auto
+    UCk_Utils_EditorOnly_UE::
+    Cast_BlueprintClassToInterface(
+        TSubclassOf<UBlueprint> InInterfaceClass)
+    -> TSubclassOf<UInterface>
+{
+    return InInterfaceClass.Get();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
