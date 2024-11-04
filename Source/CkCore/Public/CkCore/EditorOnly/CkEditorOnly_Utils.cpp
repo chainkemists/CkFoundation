@@ -2,18 +2,15 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 
-#include "Kismet2/BlueprintEditorUtils.h"
-#include "Kismet2/KismetEditorUtilities.h"
-
 #if WITH_EDITOR
 #include <UnrealEdGlobals.h>
 
-#include <Editor/UnrealEdEngine.h>
 #include <Editor.h>
 #include <UnrealEd.h>
+#include <Editor/UnrealEdEngine.h>
+#include <Kismet2/BlueprintEditorUtils.h>
 #include <Logging/MessageLog.h>
 #include <Logging/TokenizedMessage.h>
-
 #include <Misc/UObjectToken.h>
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION <= 2
