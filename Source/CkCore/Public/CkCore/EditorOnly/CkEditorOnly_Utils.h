@@ -1,7 +1,8 @@
 #pragma once
 
-#include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Format/CkFormat.h"
+#include "CkCore/Macros/CkMacros.h"
 
 #include <Kismet/BlueprintFunctionLibrary.h>
 
@@ -214,8 +215,9 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|EditorOnly",
-              DisplayName = "[Ck] Add Interface")
-    static void
+        DisplayName = "[Ck] Add Interface",
+        meta=(ExpandEnumAsExecs="OutResult"))
+    static ECk_SucceededFailed
     Request_AddInterface(
         UBlueprint* InBlueprint,
         TSubclassOf<UInterface> InInterfaceClass);
