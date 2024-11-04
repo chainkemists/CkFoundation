@@ -1,5 +1,6 @@
 #include "CkEditorOnly_Utils.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Ensure/CkEnsure.h"
 
 #if WITH_EDITOR
@@ -244,13 +245,22 @@ auto
     Request_AddInterface(
         UBlueprint* InBlueprint,
         TSubclassOf<UInterface> InInterfaceClass)
-    -> void
+    -> ECk_SucceededFailed
 {
 #if WITH_EDITOR
     if (ck::Is_NOT_Valid(InInterfaceClass))
-    { return; }
+    { return ECk_SucceededFailed::Failed; }
 
-    FBlueprintEditorUtils::ImplementNewInterface(InBlueprint, InInterfaceClass->GetClassPathName());
+    if (constexpr auto IncludeInherited = true;
+        Get_DoesBlueprintImplementInterface(InBlueprint, InInterfaceClass, IncludeInherited))
+    { return ECk_SucceededFailed::Failed; }
+
+    if (NOT FBlueprintEditorUtils::ImplementNewInterface(InBlueprint, InInterfaceClass->GetClassPathName()))
+    { return ECk_SucceededFailed::Failed; }
+
+    return ECk_SucceededFailed::Succeeded;
+#else
+    return ECk_SucceededFailed::Failed;
 #endif
 }
 
@@ -263,6 +273,10 @@ auto
 {
 #if WITH_EDITOR
     if (ck::Is_NOT_Valid(InInterfaceClass))
+    { return; }
+
+    if (constexpr auto IncludeInherited = true;
+        NOT Get_DoesBlueprintImplementInterface(InBlueprint, InInterfaceClass, IncludeInherited))
     { return; }
 
     FBlueprintEditorUtils::RemoveInterface(InBlueprint, InInterfaceClass->GetClassPathName());
@@ -310,6 +324,7 @@ auto
 auto
     UCk_Utils_EditorOnly_UE::
     Cast_BlueprintClassToInterface(
+        // ReSharper disable once CppPassValueParameterByConstReference
         TSubclassOf<UBlueprint> InInterfaceClass)
     -> TSubclassOf<UInterface>
 {
