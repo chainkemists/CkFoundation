@@ -25,6 +25,7 @@ auto
         -> void
 {
     InWorld.Add<ck::FProcessor_Ability_AddReplicated>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_AbilityOwner_EnsureAllAppended>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AbilityOwner_Setup>(InWorld.Get_Registry());
 
     InWorld.Add<ck::FProcessor_AbilityOwner_HandleRequests>(InWorld.Get_Registry());
