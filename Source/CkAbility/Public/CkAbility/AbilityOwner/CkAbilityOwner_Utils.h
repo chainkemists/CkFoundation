@@ -56,7 +56,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
               DisplayName="[Ck][AbilityOwner] Append Default Abilities (Instanced)")
-    static FCk_Handle_AbilityOwner
+    static void
     Append_DefaultAbilities_Instanced(
         UPARAM(ref) FCk_Handle& InHandle,
         const TArray<UCk_Ability_Script_PDA*>& InInstancedAbilities);
