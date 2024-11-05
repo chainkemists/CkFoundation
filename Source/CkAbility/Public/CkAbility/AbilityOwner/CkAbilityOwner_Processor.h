@@ -9,6 +9,29 @@
 
 namespace ck
 {
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKABILITY_API FProcessor_AbilityOwner_EnsureAllAppended : public ck_exp::TProcessor<
+            FProcessor_AbilityOwner_EnsureAllAppended,
+            FCk_Handle,
+            FCk_Fragment_AbilityOwner_ParamsData,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FTag_AbilityOwner_NeedsSetup;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            const FCk_Fragment_AbilityOwner_ParamsData& InExtraParams) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKABILITY_API FProcessor_AbilityOwner_Setup : public ck_exp::TProcessor<
             FProcessor_AbilityOwner_Setup,
             FCk_Handle_AbilityOwner,
