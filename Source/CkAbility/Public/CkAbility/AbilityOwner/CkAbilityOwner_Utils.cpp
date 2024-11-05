@@ -20,7 +20,17 @@ auto
         ECk_Replication InReplicates)
     -> FCk_Handle_AbilityOwner
 {
-    const auto& Params = InHandle.Add<ck::FFragment_AbilityOwner_Params>(InParams);
+    auto AppendedParams = InParams;
+
+    if (InHandle.Has<FCk_Fragment_AbilityOwner_ParamsData>())
+    {
+        auto& ParamsToAppend = InHandle.Get<FCk_Fragment_AbilityOwner_ParamsData>();
+        AppendedParams.Request_Append(InParams.Get_DefaultAbilities());
+        AppendedParams.Request_Append(InParams.Get_DefaultAbilities_Instanced());
+    }
+
+    const auto& Params = InHandle.Add<ck::FFragment_AbilityOwner_Params>(AppendedParams);
+
     InHandle.Add<ck::FFragment_AbilityOwner_Current>();
     InHandle.Add<ck::FTag_AbilityOwner_NeedsSetup>();
 
@@ -50,11 +60,15 @@ auto
     Append_DefaultAbilities(
         FCk_Handle& InHandle,
         const TArray<TSubclassOf<class UCk_Ability_Script_PDA>>& InDefaultAbilities)
-    -> FCk_Handle_AbilityOwner
+    -> FCk_Handle_AbilityOwner // TODO: [P0] Get rid of this return value since we can no longer guarantee the Handle is an AbilityOwner
 {
-    CK_ENSURE_IF_NOT(Has(InHandle),
-        TEXT("Cannot Append to DefaultAbilities, Handle [{}] is NOT an AbilityOwner. Did you forget to call 'Add Feature'?"), InHandle)
-    { return {}; }
+    // if we do NOT have the AbilityOwner yet, store the Abilities to append
+    if (NOT Has(InHandle))
+    {
+        auto& AbilitiesToAppend = InHandle.AddOrGet<FCk_Fragment_AbilityOwner_ParamsData>();
+        AbilitiesToAppend.Request_Append(InDefaultAbilities);
+        return {};
+    }
 
     CK_ENSURE_IF_NOT(InHandle.Has<ck::FTag_AbilityOwner_NeedsSetup>(),
         TEXT("Cannot Append DefaultAbilities to Handle [{}] AFTER it's already gone through it's Setup. Call this only in the construction script"),
@@ -80,16 +94,20 @@ auto
     Append_DefaultAbilities_Instanced(
         FCk_Handle& InHandle,
         const TArray<UCk_Ability_Script_PDA*>& InInstancedAbilities)
-    -> FCk_Handle_AbilityOwner
+    -> void
 {
-    CK_ENSURE_IF_NOT(Has(InHandle),
-        TEXT("Cannot Append to DefaultAbilities, Handle [{}] is NOT an AbilityOwner. Did you forget to call 'Add Feature'?"), InHandle)
-    { return {}; }
+    // if we do NOT have the AbilityOwner yet, store the Abilities to append
+    if (NOT Has(InHandle))
+    {
+        auto& AbilitiesToAppend = InHandle.AddOrGet<FCk_Fragment_AbilityOwner_ParamsData>();
+        AbilitiesToAppend.Request_Append(InInstancedAbilities);
+        return;
+    }
 
     CK_ENSURE_IF_NOT(InHandle.Has<ck::FTag_AbilityOwner_NeedsSetup>(),
         TEXT("Cannot Append DefaultAbilities to Handle [{}] AFTER it's already gone through it's Setup. Call this only in the construction script"),
         InHandle)
-    { return {}; }
+    { return; }
 
     auto& Params = InHandle.Get<ck::FFragment_AbilityOwner_Params>();
 
@@ -101,8 +119,6 @@ auto
             .Set_DefaultAbilities_Instanced(DefaultAbilitiesInstanced)};
 
     DoSet_ExpectedNumberOfDependentReplicationDrivers(InHandle, Params);
-
-    return Cast(InHandle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
