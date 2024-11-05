@@ -3,7 +3,8 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FCk_Fragment_AbilityOwner_ParamsData::Request_Append(
+    FCk_Fragment_AbilityOwner_ParamsData::
+    Request_Append(
         const TArray<TSubclassOf<class UCk_Ability_Script_PDA>>& InAbilities)
     -> void
 {
@@ -11,7 +12,8 @@ auto
 }
 
 auto
-    FCk_Fragment_AbilityOwner_ParamsData::Request_Append(
+    FCk_Fragment_AbilityOwner_ParamsData::
+    Request_Append(
         const TArray<UCk_Ability_Script_PDA*>& InAbilities)
     -> void
 {

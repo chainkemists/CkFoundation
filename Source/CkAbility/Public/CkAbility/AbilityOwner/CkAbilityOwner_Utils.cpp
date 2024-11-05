@@ -25,8 +25,8 @@ auto
     if (InHandle.Has<FCk_Fragment_AbilityOwner_ParamsData>())
     {
         auto& ParamsToAppend = InHandle.Get<FCk_Fragment_AbilityOwner_ParamsData>();
-        AppendedParams.Request_Append(InParams.Get_DefaultAbilities());
-        AppendedParams.Request_Append(InParams.Get_DefaultAbilities_Instanced());
+        AppendedParams.Request_Append(ParamsToAppend.Get_DefaultAbilities());
+        AppendedParams.Request_Append(ParamsToAppend.Get_DefaultAbilities_Instanced());
     }
 
     const auto& Params = InHandle.Add<ck::FFragment_AbilityOwner_Params>(AppendedParams);
