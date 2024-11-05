@@ -21,6 +21,22 @@
 namespace ck
 {
     auto
+        FProcessor_AbilityOwner_EnsureAllAppended::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            const FCk_Fragment_AbilityOwner_ParamsData& InExtraParams) const
+        -> void
+    {
+        CK_ENSURE(UCk_Utils_AbilityOwner_UE::Has(InHandle),
+            TEXT("Handle [{}] has pending Abilities to Append but does not have an AbilityOwner Feature!"), InHandle);
+
+        InHandle.Remove<FCk_Fragment_AbilityOwner_ParamsData>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_AbilityOwner_Setup::
         Tick(
             TimeType InDeltaT)
