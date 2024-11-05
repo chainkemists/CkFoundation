@@ -41,7 +41,7 @@ public:
     Construct(
         FCk_Handle& InHandle,
         const FInstancedStruct& InOptionalParams,
-        const TScriptInterface<ICk_Entity_ConstructionScript_Interface>& InOptionalObjectConstructionScript = nullptr) const -> void;
+        const UObject* InOptionalObjectConstructionScript = nullptr) const -> void;
 
 public:
     UFUNCTION(BlueprintCallable,
