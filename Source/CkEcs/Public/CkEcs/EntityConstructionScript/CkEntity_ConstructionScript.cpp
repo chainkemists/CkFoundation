@@ -15,7 +15,7 @@ auto
     Construct(
         FCk_Handle& InHandle,
         const FInstancedStruct& InOptionalParams,
-        const TScriptInterface<ICk_Entity_ConstructionScript_Interface>& InOptionalObjectConstructionScript) const
+        const UObject* InOptionalObjectConstructionScript) const
     -> void
 {
     _CurrentWorld = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
@@ -23,8 +23,10 @@ auto
     UCk_Utils_Handle_UE::Set_DebugName(
         InHandle, UCk_Utils_Debug_UE::Get_DebugName(this, ECk_DebugNameVerbosity_Policy::Compact), ECk_Override::DoNotOverride);
 
-    if (ck::IsValid(InOptionalObjectConstructionScript))
-    { InOptionalObjectConstructionScript->DoConstruct(InHandle); }
+    if (ck::IsValid(InOptionalObjectConstructionScript) && InOptionalObjectConstructionScript->Implements<UCk_Entity_ConstructionScript_Interface>())
+    {
+        ICk_Entity_ConstructionScript_Interface::Execute_DoConstruct(InOptionalObjectConstructionScript, InHandle);
+    }
 
     DoConstruct(InHandle, InOptionalParams);
 }
