@@ -21,7 +21,6 @@ UCLASS(Abstract, BlueprintType, Blueprintable, meta = (DisableNativeTick))
 class CKUI_API UCk_UserWidget_UE : public UCommonActivatableWidget
 {
     GENERATED_BODY()
-
 public:
     CK_GENERATED_BODY(UCk_UserWidget_UE);
 
@@ -56,6 +55,7 @@ protected:
 
 protected:
     virtual void NativeDestruct() override;
+    virtual void NativeOnDeactivated() override;
 
 protected:
     UPROPERTY(Transient, BlueprintReadOnly,
