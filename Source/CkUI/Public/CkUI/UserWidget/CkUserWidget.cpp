@@ -201,5 +201,15 @@ auto
     }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
+auto
+    UCk_UserWidget_UE::
+    NativeOnDeactivated() -> void
+{
+    if (const auto& BindActor = Get_BindActor().Get();
+        ck::IsValid(BindActor))
+    { UnbindFromActor(Get_BindActor().Get()); }
 
+    Super::NativeOnDeactivated();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
