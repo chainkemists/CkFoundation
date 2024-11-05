@@ -2,6 +2,24 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    FCk_Fragment_AbilityOwner_ParamsData::Request_Append(
+        const TArray<TSubclassOf<class UCk_Ability_Script_PDA>>& InAbilities)
+    -> void
+{
+    _DefaultAbilities.Append(InAbilities);
+}
+
+auto
+    FCk_Fragment_AbilityOwner_ParamsData::Request_Append(
+        const TArray<UCk_Ability_Script_PDA*>& InAbilities)
+    -> void
+{
+    _DefaultAbilities_Instanced.Append(InAbilities);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 FCk_Request_AbilityOwner_RevokeAbility::
     FCk_Request_AbilityOwner_RevokeAbility(
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass)

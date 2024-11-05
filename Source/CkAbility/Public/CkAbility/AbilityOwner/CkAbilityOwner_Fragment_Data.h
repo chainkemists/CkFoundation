@@ -129,6 +129,15 @@ public:
     CK_PROPERTY(_DefaultAbilities_Instanced);
 
     CK_DEFINE_CONSTRUCTORS(FCk_Fragment_AbilityOwner_ParamsData, _DefaultAbilities);
+
+public:
+    auto
+    Request_Append(
+        const TArray<TSubclassOf<class UCk_Ability_Script_PDA>>& InAbilities) -> void;
+
+    auto
+    Request_Append(
+        const TArray<UCk_Ability_Script_PDA*>& InAbilities) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
