@@ -461,7 +461,7 @@ namespace ck
         RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InHandle,
         [&](FCk_Handle_EntityExtension InEntityExtension)
         {
-            DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InEntityExtension, InFunc);
+            ForEach_Entry(InEntityExtension, InFunc);
         });
     }
 
@@ -479,7 +479,7 @@ namespace ck
         RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InHandle,
         [&](FCk_Handle_EntityExtension InEntityExtension)
         {
-            DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InEntityExtension, InFunc);
+            ForEach_Entry(InEntityExtension, InFunc);
         });
     }
 
@@ -498,7 +498,7 @@ namespace ck
         RecordOfEntityExtensions_Utils::DoForEach_Entry_If<IsValid_Policy_IncludePendingKill>(InRecordHandle,
         [&](FCk_Handle_EntityExtension InEntityExtension)
         {
-            DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InEntityExtension, InFunc);
+            ForEach_Entry_If(InEntityExtension, InFunc);
         });
     }
 
@@ -517,7 +517,7 @@ namespace ck
         RecordOfEntityExtensions_Utils::DoForEach_Entry_If<IsValid_Policy_IncludePendingKill>(InRecordHandle,
         [&](FCk_Handle_EntityExtension InEntityExtension)
         {
-            DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InEntityExtension, InFunc);
+            ForEach_Entry_If(InEntityExtension, InFunc);
         });
     }
 
@@ -537,7 +537,7 @@ namespace ck
         RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_Default>(InHandle,
         [&](FCk_Handle_EntityExtension InEntityExtension)
         {
-            DoForEach_Entry<IsValid_Policy_Default>(InEntityExtension, InFunc);
+            ForEach_ValidEntry(InEntityExtension, InFunc);
         });
     }
 
@@ -555,7 +555,7 @@ namespace ck
         RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_Default>(InHandle,
         [&](FCk_Handle_EntityExtension InEntityExtension)
         {
-            DoForEach_Entry<IsValid_Policy_Default>(InEntityExtension, InFunc);
+            ForEach_ValidEntry(InEntityExtension, InFunc);
         });
     }
 
@@ -574,7 +574,7 @@ namespace ck
         RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_Default>(InRecordHandle,
         [&](FCk_Handle_EntityExtension InEntityExtension)
         {
-            DoForEach_Entry_If<IsValid_Policy_Default>(InEntityExtension, InFunc, InPredicate);
+            ForEach_ValidEntry_If(InEntityExtension, InFunc, InPredicate);
         });
     }
 
@@ -593,7 +593,7 @@ namespace ck
         RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_Default>(InRecordHandle,
         [&](FCk_Handle_EntityExtension InEntityExtension)
         {
-            DoForEach_Entry_If<IsValid_Policy_Default>(InEntityExtension, InFunc, InPredicate);
+            ForEach_ValidEntry_If(InEntityExtension, InFunc, InPredicate);
         });
     }
 
