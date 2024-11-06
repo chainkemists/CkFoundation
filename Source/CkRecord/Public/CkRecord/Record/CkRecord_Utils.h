@@ -276,8 +276,9 @@ namespace ck
         { return true; }
 
         auto ExtensionContainEntry = false;
-        RecordOfEntityExtensions_Utils::ForEach_Entry(InRecordHandle,
-        [&](const FCk_Handle_EntityExtension& InEntityExtension)
+
+        RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InRecordHandle,
+        [&](FCk_Handle InEntityExtension)
         {
             if (Get_ContainsEntry(InEntityExtension, InRecordEntry))
             {
@@ -304,8 +305,8 @@ namespace ck
         const auto& Fragment = InRecordHandle.Get<RecordType>();
         auto Entries = Fragment.Get_RecordEntries();
 
-        RecordOfEntityExtensions_Utils::ForEach_Entry(InRecordHandle,
-        [&](const FCk_Handle_EntityExtension& InEntityExtension)
+        RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InRecordHandle,
+        [&](FCk_Handle InEntityExtension)
         {
             Entries.Append(Get_Entries(InEntityExtension));
         });
@@ -327,8 +328,8 @@ namespace ck
            return ck::IsValid(InRecordEntry);
         });
 
-        RecordOfEntityExtensions_Utils::ForEach_Entry(InRecordHandle,
-        [&](const FCk_Handle_EntityExtension& InEntityExtension)
+        RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InRecordHandle,
+        [&](FCk_Handle InEntityExtension)
         {
             FilteredEntries.Append(Get_ValidEntries(InEntityExtension));
         });
@@ -349,15 +350,15 @@ namespace ck
 
         auto FilteredEntries = TArray<RecordEntryMaybeTypeSafeHandle>{};
 
-        RecordOfEntityExtensions_Utils::ForEach_Entry(InRecordHandle,
-        [&](const FCk_Handle_EntityExtension& InEntityExtension)
+        RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InRecordHandle,
+        [&](FCk_Handle InEntityExtension)
         {
             FilteredEntries = ck::algo::Filter(Entries, [InPredicate](const RecordEntryMaybeTypeSafeHandle& InRecordEntry) -> bool
             {
                return ck::IsValid(InRecordEntry) && InPredicate(InRecordEntry);
             });
 
-            FilteredEntries.Append(Get_ValidEntries(InEntityExtension));
+            FilteredEntries.Append(Get_ValidEntries_If(InEntityExtension, InPredicate));
         });
 
         return FilteredEntries;
@@ -379,8 +380,8 @@ namespace ck
             Count = algo::CountIf(Fragment.Get_RecordEntries(), InPredicate);
         }
 
-        RecordOfEntityExtensions_Utils::ForEach_Entry(InRecordHandle,
-        [&](const FCk_Handle_EntityExtension& InEntityExtension)
+        RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InRecordHandle,
+        [&](FCk_Handle InEntityExtension)
         {
             Count += Get_ValidEntriesCount_If(InEntityExtension, InPredicate);
         });
@@ -432,7 +433,8 @@ namespace ck
         if (ck::IsValid(MaybeValidEntry))
         { return MaybeValidEntry; }
 
-        RecordOfEntityExtensions_Utils::ForEach_Entry(InRecordHandle, [&](FCk_Handle_EntityExtension InEntityExtension)
+        RecordOfEntityExtensions_Utils::DoForEach_Entry<IsValid_Policy_IncludePendingKill>(InRecordHandle,
+        [&](FCk_Handle InEntityExtension)
         {
             MaybeValidEntry = Get_ValidEntry_If(InEntityExtension, InPredicate);
 
