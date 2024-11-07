@@ -9,6 +9,7 @@
 
 #include <GameplayTagContainer.h>
 #include <Animation/AnimationAsset.h>
+#include <Animation/BlendSpace.h>
 
 #include "CkAnimAsset_Fragment_Data.generated.h"
 
@@ -45,12 +46,17 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
+    TObjectPtr<UBlendSpace> _BlendSpace;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
     FName _SectionName = NAME_None;
 
 public:
     CK_PROPERTY_GET(_Animation);
     CK_PROPERTY_GET(_ID);
-    CK_PROPERTY_GET(_SectionName);
+    CK_PROPERTY(_BlendSpace);
+    CK_PROPERTY(_SectionName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
