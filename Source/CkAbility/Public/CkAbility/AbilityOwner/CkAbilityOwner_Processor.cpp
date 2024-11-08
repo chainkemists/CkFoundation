@@ -90,16 +90,18 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
-            const FFragment_AbilityOwner_Events&  InAbilityOwnerEvents)
+            FFragment_AbilityOwner_Events&  InAbilityOwnerEvents)
         -> void
     {
-        for (const auto& Event : InAbilityOwnerEvents.Get_Events())
+        const auto CopiedEvents = InAbilityOwnerEvents.Get_Events();
+        InHandle.Remove<MarkedDirtyBy>();
+
+        for (const auto& Event : CopiedEvents)
         {
             UUtils_Signal_AbilityOwner_SingleEvent::Broadcast(InHandle, MakePayload(InHandle, Event));
         }
 
-        UUtils_Signal_AbilityOwner_Events::Broadcast(InHandle, MakePayload(InHandle, InAbilityOwnerEvents.Get_Events()));
-        InHandle.Remove<MarkedDirtyBy>();
+        UUtils_Signal_AbilityOwner_Events::Broadcast(InHandle, MakePayload(InHandle, CopiedEvents));
     }
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -73,7 +73,7 @@ namespace ck
         static auto ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
-            const FFragment_AbilityOwner_Events&  InAbilityOwnerEvents) -> void;
+            FFragment_AbilityOwner_Events&  InAbilityOwnerEvents) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
