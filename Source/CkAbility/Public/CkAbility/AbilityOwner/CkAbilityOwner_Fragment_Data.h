@@ -154,6 +154,38 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKABILITY_API FCk_Request_AbilityOwner_AddAndGiveExistingAbility : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_AbilityOwner_AddAndGiveExistingAbility);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Ability _Ability;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _AbilitySource;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Ability_Payload_OnGranted _OptionalPayload;
+
+public:
+    CK_PROPERTY_GET(_Ability)
+    CK_PROPERTY_GET(_AbilitySource)
+    CK_PROPERTY(_OptionalPayload)
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_AbilityOwner_AddAndGiveExistingAbility, _Ability, _AbilitySource);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKABILITY_API FCk_Request_AbilityOwner_GiveAbility : public FCk_Request_Base
 {
     GENERATED_BODY()

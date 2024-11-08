@@ -118,6 +118,7 @@ namespace ck
         friend class UCk_Utils_AbilityOwner_UE;
 
     public:
+        using AddOrGiveAbilityRequestType = FCk_Request_AbilityOwner_AddAndGiveExistingAbility;
         using GiveAbilityRequestType = FCk_Request_AbilityOwner_GiveAbility;
         using GiveAbilityReplicatedRequestType = FCk_Request_AbilityOwner_GiveReplicatedAbility;
         using RevokeAbilityRequestType = FCk_Request_AbilityOwner_RevokeAbility;
@@ -125,8 +126,8 @@ namespace ck
         using DeactivateAbilityRequestType = FCk_Request_AbilityOwner_DeactivateAbility;
         using CancelSubAbilities = FCk_Request_AbilityOwner_CancelSubAbilities;
 
-        using RequestType = std::variant<GiveAbilityRequestType, GiveAbilityReplicatedRequestType, RevokeAbilityRequestType,
-            ActivateAbilityRequestType, DeactivateAbilityRequestType, CancelSubAbilities>;
+        using RequestType = std::variant<AddOrGiveAbilityRequestType, GiveAbilityRequestType, GiveAbilityReplicatedRequestType,
+            RevokeAbilityRequestType, ActivateAbilityRequestType, DeactivateAbilityRequestType, CancelSubAbilities>;
         using RequestList = TArray<RequestType>;
 
     public:
@@ -215,6 +216,10 @@ public:
 private:
     UFUNCTION()
     void
+    OnRep_PendingAddOrGiveExistingAbilityRequests();
+
+    UFUNCTION()
+    void
     OnRep_PendingGiveAbilityRequests();
 
     UFUNCTION()
@@ -222,6 +227,10 @@ private:
     OnRep_PendingRevokeAbilityRequests();
 
 private:
+    UPROPERTY(ReplicatedUsing = OnRep_PendingAddOrGiveExistingAbilityRequests)
+    TArray<FCk_Request_AbilityOwner_AddAndGiveExistingAbility> _PendingAddAndGiveExistingAbilityRequests;
+    int32 _NextPendingAddGiveExistingAbilityRequests = 0;
+
     UPROPERTY(ReplicatedUsing = OnRep_PendingGiveAbilityRequests)
     TArray<FCk_Request_AbilityOwner_GiveAbility> _PendingGiveAbilityRequests;
     int32 _NextPendingGiveAbilityRequests = 0;
@@ -231,6 +240,10 @@ private:
     int32 _NextPendingRevokeAbilityRequests = 0;
 
 public:
+    auto
+    Request_AddAndGiveExistingAbility(
+        const FCk_Request_AbilityOwner_AddAndGiveExistingAbility& InRequest) -> void;
+
     auto
     Request_GiveAbility(
         const FCk_Request_AbilityOwner_GiveAbility& InRequest) -> void;

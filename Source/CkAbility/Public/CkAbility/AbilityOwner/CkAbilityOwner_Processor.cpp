@@ -137,6 +137,79 @@ namespace ck
         }
     }
 
+    auto
+        FProcessor_AbilityOwner_HandleRequests::DoHandleRequest(
+            HandleType& InAbilityOwnerEntity,
+            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            const FCk_Request_AbilityOwner_AddAndGiveExistingAbility& InRequest) const
+            -> void
+    {
+        const auto AbilityGivenOrNot = [&]() -> ECk_AbilityOwner_AbilityGivenOrNot
+        {
+            auto AbilityEntity = InRequest.Get_Ability();
+            auto AbilityOwnerEntity = InAbilityOwnerEntity;
+            const auto& AbilitySource = InRequest.Get_AbilitySource();
+            const auto& OptionalPayload = InRequest.Get_OptionalPayload();
+
+            ability::VeryVerbose
+            (
+                TEXT("Giving Ability [Class: {} | Entity: {}] to Ability Owner [{}]"),
+                UCk_Utils_Ability_UE::Get_ScriptClass(AbilityEntity),
+                AbilityEntity,
+                AbilityOwnerEntity
+            );
+
+            {
+                const auto& AbilityOnGiveSettings = UCk_Utils_Ability_UE::Get_OnGiveSettings(AbilityEntity);
+                const auto& GrantedTags = AbilityOnGiveSettings.Get_OnGiveSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
+
+                // HACK: need a non-const handle as we're unable to make the lambda mutable
+                auto NonConstAbilityOwnerEntity = InAbilityOwnerEntity;
+                auto& AbilityOwnerComp = NonConstAbilityOwnerEntity.Get<FFragment_AbilityOwner_Current>();
+                AbilityOwnerComp.AppendTags(InAbilityOwnerEntity, GrantedTags);
+
+                if (AbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags())
+                {
+                    UCk_Utils_AbilityOwner_UE::Request_TagsUpdated(NonConstAbilityOwnerEntity);
+                }
+            }
+
+            UCk_Utils_Ability_UE::DoGive(AbilityOwnerEntity, AbilityEntity, AbilitySource, OptionalPayload);
+
+            if (InRequest.Get_IsRequestHandleValid())
+            {
+                UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
+                    InRequest.GetAndDestroyRequestHandle(), MakePayload(AbilityOwnerEntity, AbilityEntity,
+                        ECk_AbilityOwner_AbilityGivenOrNot::Given));
+            }
+
+            UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
+                AbilityOwnerEntity, MakePayload(AbilityOwnerEntity, AbilityEntity, ECk_AbilityOwner_AbilityGivenOrNot::Given));
+
+            if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(AbilityEntity).Get_ActivationPolicy();
+                ActivationPolicy == ECk_Ability_Activation_Policy::ActivateOnGranted)
+            {
+                UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(
+                    AbilityOwnerEntity,
+                    FCk_Request_AbilityOwner_ActivateAbility{AbilityEntity}
+                    .Set_OptionalPayload(FCk_Ability_Payload_OnActivate{}.Set_ContextEntity(AbilityOwnerEntity)),
+                    {});
+            }
+
+            return ECk_AbilityOwner_AbilityGivenOrNot::Given;
+        }();
+
+        if (AbilityGivenOrNot == ECk_AbilityOwner_AbilityGivenOrNot::NotGiven)
+        {
+            UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
+                InRequest.GetAndDestroyRequestHandle(), MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{},
+                    ECk_AbilityOwner_AbilityGivenOrNot::NotGiven));
+
+            UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
+                InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{}, ECk_AbilityOwner_AbilityGivenOrNot::NotGiven));
+        }
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     auto

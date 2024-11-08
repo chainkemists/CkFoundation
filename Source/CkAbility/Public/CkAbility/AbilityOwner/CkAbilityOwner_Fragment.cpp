@@ -254,8 +254,30 @@ auto
 
     constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
 
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingAddAndGiveExistingAbilityRequests, Params);
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingGiveAbilityRequests, Params);
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingRevokeAbilityRequests, Params);
+}
+
+auto
+    UCk_Fragment_AbilityOwner_Rep::
+    OnRep_PendingAddOrGiveExistingAbilityRequests()
+    -> void
+{
+    if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
+    { return; }
+
+    if (GetWorld()->IsNetMode(NM_DedicatedServer))
+    { return; }
+
+    auto AssociatedEntityAbilityOwner = ck::StaticCast<FCk_Handle_AbilityOwner>(_AssociatedEntity);
+
+    for (auto Index = _NextPendingAddGiveExistingAbilityRequests; Index < _PendingAddAndGiveExistingAbilityRequests.Num(); ++Index)
+    {
+        const auto& Request = _PendingAddAndGiveExistingAbilityRequests[Index];
+        UCk_Utils_AbilityOwner_UE::Request_AddAndGiveExistingAbility(AssociatedEntityAbilityOwner, Request, {});
+    }
+    _NextPendingAddGiveExistingAbilityRequests = _PendingAddAndGiveExistingAbilityRequests.Num();
 }
 
 auto
@@ -298,6 +320,16 @@ auto
         UCk_Utils_AbilityOwner_UE::Request_RevokeAbility(AssociatedEntityAbilityOwner, RevokeAbilityRequest, {});
     }
     _NextPendingRevokeAbilityRequests = _PendingRevokeAbilityRequests.Num();
+}
+
+auto
+    UCk_Fragment_AbilityOwner_Rep::
+    Request_AddAndGiveExistingAbility(
+        const FCk_Request_AbilityOwner_AddAndGiveExistingAbility& InRequest)
+    -> void
+{
+    _PendingAddAndGiveExistingAbilityRequests.Emplace(InRequest);
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _PendingGiveAbilityRequests, this);
 }
 
 auto
