@@ -26,6 +26,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_AbilitySearch_Policy);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_AbilityOwner_DestructionOnRevoke_Policy : uint8
+{
+    DestroyOnRevoke,
+    DoNotDestroyOnRevoke
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_DestructionOnRevoke_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_AbilityOwner_AbilityGivenOrNot : uint8
 {
     Given,
@@ -248,10 +259,15 @@ private:
                   EditCondition="_SearchPolicy == ECk_AbilityOwner_AbilitySearchPolicy::SearchByHandle"))
     FCk_Handle_Ability _AbilityHandle;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_AbilityOwner_DestructionOnRevoke_Policy _DestructionPolicy = ECk_AbilityOwner_DestructionOnRevoke_Policy::DestroyOnRevoke;
+
 public:
     CK_PROPERTY_GET(_SearchPolicy);
     CK_PROPERTY_GET(_AbilityClass);
     CK_PROPERTY_GET(_AbilityHandle);
+    CK_PROPERTY(_DestructionPolicy);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
