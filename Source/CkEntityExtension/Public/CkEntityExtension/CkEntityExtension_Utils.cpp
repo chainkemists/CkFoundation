@@ -23,6 +23,19 @@ auto
     return EntityExtension;
 }
 
+auto
+    UCk_Utils_EntityExtension_UE::
+    Remove(
+        FCk_Handle& InExtensionOwner,
+        FCk_Handle_EntityExtension& InEntityToRemoveAsExtension)
+    -> FCk_Handle_EntityExtension
+{
+    RecordOfEntityExtensions_Utils::Request_Disconnect(InExtensionOwner, InEntityToRemoveAsExtension);
+    InEntityToRemoveAsExtension.Remove<ck::FFragment_EntityExtension_Params>();
+
+    return InEntityToRemoveAsExtension;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_EntityExtension_UE, FCk_Handle_EntityExtension, ck::FFragment_EntityExtension_Params)
