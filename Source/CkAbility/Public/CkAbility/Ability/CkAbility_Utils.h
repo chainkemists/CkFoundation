@@ -194,7 +194,8 @@ private:
     static auto
     DoRevoke(
         FCk_Handle_AbilityOwner& InAbilityOwner,
-        FCk_Handle_Ability& InAbility) -> void;
+        FCk_Handle_Ability& InAbility,
+        ECk_AbilityOwner_DestructionOnRevoke_Policy InDestructionPolicy) -> void;
 
     static auto
     DoGet_CanBeGiven(
