@@ -37,6 +37,14 @@ public:
         UPARAM(ref) FCk_Handle& InEntityToAddAsExtension,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|EntityExtension",
+              DisplayName="[Ck][EntityExtension] Remove Entity As Extension")
+    static FCk_Handle_EntityExtension
+    Remove(
+        UPARAM(ref) FCk_Handle& InExtensionOwner,
+        UPARAM(ref) FCk_Handle_EntityExtension& InEntityToRemoveAsExtension);
+
 public:
     // Has Feature
     static bool
