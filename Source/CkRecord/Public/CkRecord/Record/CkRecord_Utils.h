@@ -800,9 +800,12 @@ namespace ck
 
         {
             auto& RecordEntryFragment = InRecordEntry.template Get<ck::FFragment_RecordEntry>();
-            const auto& RemovalSuccess = RecordEntryFragment._Records.Remove(InRecordHandle);
+            const auto& RemovalSuccess = RecordEntryFragment._Records.RemoveSingle(InRecordHandle);
 
-            RecordEntryFragment._DisconnectionFuncs.Remove(InRecordHandle);
+            if (NOT RecordEntryFragment._Records.Contains(InRecordHandle))
+            {
+                RecordEntryFragment._DisconnectionFuncs.Remove(InRecordHandle);
+            }
 
             CK_ENSURE_IF_NOT(RemovalSuccess,
                 TEXT("The RecordEntry [{}] does NOT have the Record [{}] even though the Record had the RecordEntry. "
