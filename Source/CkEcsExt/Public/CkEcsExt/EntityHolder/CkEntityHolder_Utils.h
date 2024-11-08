@@ -28,6 +28,10 @@ namespace ck
 
         static auto Get_StoredEntity(
             const HandleType& InHandle) -> HandleType;
+
+        static auto Request_ReplaceStoredEntity(
+            HandleType& InHandle,
+            const EntityType& InEntityToStore) -> void;
     };
 }
 
@@ -91,6 +95,18 @@ namespace ck
         const auto& StoredEntity     = EntityHolderComp.Get_Entity();
 
         return StoredEntity;
+    }
+
+    template <typename T_DerivedCompType>
+    auto
+        TUtils_EntityHolder<T_DerivedCompType>::
+        Request_ReplaceStoredEntity(
+            HandleType& InHandle,
+            const EntityType& InEntityToStore)
+        -> void
+    {
+        auto& StoredEntity = InHandle.Get<CompType>();
+        StoredEntity = CompType{InEntityToStore};
     }
 }
 
