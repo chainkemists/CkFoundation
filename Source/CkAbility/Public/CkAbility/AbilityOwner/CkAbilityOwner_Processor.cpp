@@ -536,7 +536,7 @@ namespace ck
                 }
             }
 
-            UCk_Utils_Ability_UE::DoRevoke(InAbilityOwnerEntity, InAbilityEntity);
+            UCk_Utils_Ability_UE::DoRevoke(InAbilityOwnerEntity, InAbilityEntity, InRequest.Get_DestructionPolicy());
 
             if (InRequest.Get_IsRequestHandleValid())
             {

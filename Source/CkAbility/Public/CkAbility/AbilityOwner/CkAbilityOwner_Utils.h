@@ -459,13 +459,15 @@ private:
               Category = "Ck|Utils|Ability|Owner")
     static FCk_Request_AbilityOwner_RevokeAbility
     Make_Request_RevokeAbility_ByClass(
-        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass);
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass,
+        ECk_AbilityOwner_DestructionOnRevoke_Policy InDestructionPolicy = ECk_AbilityOwner_DestructionOnRevoke_Policy::DestroyOnRevoke);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner")
     static FCk_Request_AbilityOwner_RevokeAbility
     Make_Request_RevokeAbility_ByEntity(
-        const FCk_Handle_Ability& InAbilityEntity);
+        const FCk_Handle_Ability& InAbilityEntity,
+        ECk_AbilityOwner_DestructionOnRevoke_Policy InDestructionPolicy = ECk_AbilityOwner_DestructionOnRevoke_Policy::DestroyOnRevoke);
 
 public:
     static auto

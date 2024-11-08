@@ -792,19 +792,21 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     Make_Request_RevokeAbility_ByClass(
-        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass)
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass,
+        ECk_AbilityOwner_DestructionOnRevoke_Policy InDestructionPolicy)
     -> FCk_Request_AbilityOwner_RevokeAbility
 {
-    return FCk_Request_AbilityOwner_RevokeAbility{InAbilityScriptClass};
+    return FCk_Request_AbilityOwner_RevokeAbility{InAbilityScriptClass}.Set_DestructionPolicy(InDestructionPolicy);
 }
 
 auto
     UCk_Utils_AbilityOwner_UE::
     Make_Request_RevokeAbility_ByEntity(
-        const FCk_Handle_Ability& InAbilityEntity)
+        const FCk_Handle_Ability& InAbilityEntity,
+        ECk_AbilityOwner_DestructionOnRevoke_Policy InDestructionPolicy)
     -> FCk_Request_AbilityOwner_RevokeAbility
 {
-    return FCk_Request_AbilityOwner_RevokeAbility{InAbilityEntity};
+    return FCk_Request_AbilityOwner_RevokeAbility{InAbilityEntity}.Set_DestructionPolicy(InDestructionPolicy);
 }
 
 auto

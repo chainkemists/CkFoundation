@@ -465,14 +465,16 @@ auto
     UCk_Utils_Ability_UE::
     DoRevoke(
         FCk_Handle_AbilityOwner& InAbilityOwner,
-        FCk_Handle_Ability& InAbility)
+        FCk_Handle_Ability& InAbility,
+        ECk_AbilityOwner_DestructionOnRevoke_Policy InDestructionPolicy)
     -> void
 {
     const auto& Current = InAbility.Get<ck::FFragment_Ability_Current>();
     if (Current.Get_Status() == ECk_Ability_Status::Active)
     {
         UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(InAbilityOwner, FCk_Request_AbilityOwner_DeactivateAbility{InAbility}, {});
-        UCk_Utils_AbilityOwner_UE::Request_RevokeAbility(InAbilityOwner, FCk_Request_AbilityOwner_RevokeAbility{InAbility}, {});
+        UCk_Utils_AbilityOwner_UE::Request_RevokeAbility(InAbilityOwner,
+            FCk_Request_AbilityOwner_RevokeAbility{InAbility}.Set_DestructionPolicy(InDestructionPolicy), {});
 
         return;
     }
@@ -485,14 +487,15 @@ auto
         InAbilityOwner)
     { return; }
 
-    // NOTE: Because abilities can be granted through Entity Extensions, only proceed with record disconnection & Ability
-    // destruction if the Ability was granted to the Ability Owner directly and NOT by extension (which means the Ability Owner
-    // is also the lifetime owner of the Ability)
-    if (UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbility) == InAbilityOwner)
-    {
-        if (RecordOfAbilities_Utils::Get_ContainsEntry(InAbilityOwner, InAbility))
-        { RecordOfAbilities_Utils::Request_Disconnect(InAbilityOwner, InAbility); }
+    if (RecordOfAbilities_Utils::Get_ContainsEntry(InAbilityOwner, InAbility))
+    { RecordOfAbilities_Utils::Request_Disconnect(InAbilityOwner, InAbility); }
 
+    // NOTE: Because abilities can be granted through Entity Extensions, only proceed with Ability destruction if
+    // the Ability was granted to the Ability Owner directly and NOT by extension (which means the Ability Owner
+    // is also the lifetime owner of the Ability)
+    if (InDestructionPolicy == ECk_AbilityOwner_DestructionOnRevoke_Policy::DestroyOnRevoke &&
+        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbility) == InAbilityOwner)
+    {
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAbility);
 
         const auto CurrentWorld = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAbility);
