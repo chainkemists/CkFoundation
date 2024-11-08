@@ -279,6 +279,27 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              DisplayName="[Ck][AbilityOwner] Request Add and Give Existing Ability",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_AbilityOwner
+    Request_AddAndGiveExistingAbility(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Request_AbilityOwner_AddAndGiveExistingAbility& InRequest,
+        const FCk_Delegate_AbilityOwner_OnAbilityGivenOrNot& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              BlueprintAuthorityOnly,
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              DisplayName="[Ck][AbilityOwner] Request Add and Give Existing Ability (Replicated)",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_AbilityOwner
+        Request_AddAndGiveExistingAbility_Replicated(
+            UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+            const FCk_Request_AbilityOwner_AddAndGiveExistingAbility& InRequest,
+            const FCk_Delegate_AbilityOwner_OnAbilityGivenOrNot& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][AbilityOwner] Request Give Ability",
               meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AbilityOwner

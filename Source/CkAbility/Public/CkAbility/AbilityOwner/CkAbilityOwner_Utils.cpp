@@ -479,6 +479,62 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
+    Request_AddAndGiveExistingAbility(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Request_AbilityOwner_AddAndGiveExistingAbility& InRequest,
+        const FCk_Delegate_AbilityOwner_OnAbilityGivenOrNot& InDelegate)
+    -> FCk_Handle_AbilityOwner
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_Ability()),
+        TEXT("Unable to process AddAndGiveExistingAbility on Handle [{}] as the AbilityHandle [{}] is INVALID.{}"),
+        InAbilityOwnerHandle, InRequest.Get_Ability(), ck::Context(InDelegate.GetFunctionName()))
+    { return {}; }
+
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot,
+        InRequest.PopulateRequestHandle(InAbilityOwnerHandle), InDelegate);
+
+    InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
+
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Request_AddAndGiveExistingAbility_Replicated(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Request_AbilityOwner_AddAndGiveExistingAbility& InRequest,
+        const FCk_Delegate_AbilityOwner_OnAbilityGivenOrNot& InDelegate)
+    -> FCk_Handle_AbilityOwner
+{
+    Request_AddAndGiveExistingAbility(InAbilityOwnerHandle, InRequest, InDelegate);
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAbilityOwnerHandle),
+        TEXT("Cannot REPLICATE AddAndGive am EXISTING Ability to Entity [{}] because it is NOT a Host"),
+        InAbilityOwnerHandle)
+    { return InAbilityOwnerHandle; }
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InAbilityOwnerHandle),
+        TEXT("Cannot REPLICATE AddAndGive an existing Ability to Entity [{}] because it's missing the AbilityOwner Replicated Fragment\n."
+             "Was the AbilityOwner feature set to Replicate when it was added?"),
+        InAbilityOwnerHandle)
+    { return InAbilityOwnerHandle; }
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_EntityReplication(InRequest.Get_Ability()) == ECk_Replication::Replicates,
+        TEXT("Cannot REPLICATE AddAndGive an existing Ability to Entity [{}] because the EXISTING Ability [{}] is NOT replicated."),
+        InAbilityOwnerHandle, InRequest.Get_Ability())
+    { return InAbilityOwnerHandle; }
+
+    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(
+        InAbilityOwnerHandle, [&](UCk_Fragment_AbilityOwner_Rep* InRepComp)
+    {
+        InRepComp->Request_AddAndGiveExistingAbility(InRequest);
+    });
+
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
     Request_GiveAbility(
         FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_GiveAbility& InRequest,
