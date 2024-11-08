@@ -38,7 +38,7 @@ namespace ck
         // TODO: Use FCk_DebuggableEntity when available [OBS-845]
         using HandleType = FCk_Handle;
         using EntityType = HandleType;
-        using RecordsListType = TSet<EntityType>;
+        using RecordsListType = TArray<EntityType>;
 
         using DestructionCleanupFuncType = TFunction<void(FCk_Handle, FCk_Handle)>;
         using DestructionCleanupFuncMap = TMap<EntityType, DestructionCleanupFuncType>;
