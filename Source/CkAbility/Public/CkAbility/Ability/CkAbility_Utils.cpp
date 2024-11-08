@@ -13,6 +13,8 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
 
+#include "CkEntityExtension/CkEntityExtension_Utils.h"
+
 #include <Engine/World.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -445,7 +447,15 @@ auto
     -> void
 {
     RecordOfAbilities_Utils::Request_Connect(InAbilityOwner, InAbility);
-    AbilitySource_Utils::Add(InAbility, InAbilitySource);
+
+    if (AbilitySource_Utils::Has(InAbility))
+    {
+        AbilitySource_Utils::Request_ReplaceStoredEntity(InAbility, InAbilitySource);
+    }
+    else
+    {
+        AbilitySource_Utils::Add(InAbility, InAbilitySource);
+    }
 
     const auto Script = InAbility.Get<ck::FFragment_Ability_Current>().Get_AbilityScript().Get();
 
