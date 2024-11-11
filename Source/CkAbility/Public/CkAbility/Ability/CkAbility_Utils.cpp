@@ -447,15 +447,7 @@ auto
     -> void
 {
     RecordOfAbilities_Utils::Request_Connect(InAbilityOwner, InAbility);
-
-    if (AbilitySource_Utils::Has(InAbility))
-    {
-        AbilitySource_Utils::Request_ReplaceStoredEntity(InAbility, InAbilitySource);
-    }
-    else
-    {
-        AbilitySource_Utils::Add(InAbility, InAbilitySource);
-    }
+    AbilitySource_Utils::AddOrReplace(InAbility, InAbilitySource);
 
     const auto Script = InAbility.Get<ck::FFragment_Ability_Current>().Get_AbilityScript().Get();
 

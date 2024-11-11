@@ -9,8 +9,7 @@ auto
     UCk_Utils_EntityExtension_UE::
     Add(
         FCk_Handle& InExtensionOwner,
-        FCk_Handle& InEntityToAddAsExtension,
-        ECk_Replication InReplicates)
+        FCk_Handle& InEntityToAddAsExtension)
     -> FCk_Handle_EntityExtension
 {
     RecordOfEntityExtensions_Utils::AddIfMissing(InExtensionOwner);

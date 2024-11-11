@@ -34,8 +34,7 @@ public:
     static FCk_Handle_EntityExtension
     Add(
         UPARAM(ref) FCk_Handle& InExtensionOwner,
-        UPARAM(ref) FCk_Handle& InEntityToAddAsExtension,
-        ECk_Replication InReplicates = ECk_Replication::Replicates);
+        UPARAM(ref) FCk_Handle& InEntityToAddAsExtension);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EntityExtension",
