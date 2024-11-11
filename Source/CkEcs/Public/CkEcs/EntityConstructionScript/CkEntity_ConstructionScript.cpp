@@ -14,7 +14,6 @@ auto
     UCk_Entity_ConstructionScript_PDA::
     Construct(
         FCk_Handle& InHandle,
-        const FInstancedStruct& InOptionalParams,
         const UObject* InOptionalObjectConstructionScript) const
     -> void
 {
@@ -28,7 +27,7 @@ auto
         ICk_Entity_ConstructionScript_Interface::Execute_DoConstruct(InOptionalObjectConstructionScript, InHandle);
     }
 
-    DoConstruct(InHandle, InOptionalParams);
+    DoConstruct(InHandle);
 }
 
 auto
@@ -43,7 +42,7 @@ auto
         TEXT("Unable to proceed with Entity Construction as the Construction Script [{}] is INVALID."), InConstructionScript)
     { return InHandle; }
 
-    UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Entity_ConstructionScript_PDA>(InConstructionScript)->Construct(InHandle, InOptionalParams, nullptr);
+    UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Entity_ConstructionScript_PDA>(InConstructionScript)->Construct(InHandle, nullptr);
     return InHandle;
 }
 
@@ -61,15 +60,6 @@ auto
     }
 
     return InHandle;
-}
-
-auto
-    UCk_Entity_ConstructionScript_PDA::
-    DoConstruct_Implementation(
-        FCk_Handle& InHandle,
-        const FInstancedStruct& InOptionalParams) const
-    -> void
-{
 }
 
 // --------------------------------------------------------------------------------------------------------------------

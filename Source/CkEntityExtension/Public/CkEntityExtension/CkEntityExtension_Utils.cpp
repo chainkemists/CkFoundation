@@ -14,11 +14,31 @@ auto
     -> FCk_Handle_EntityExtension
 {
     RecordOfEntityExtensions_Utils::AddIfMissing(InExtensionOwner);
-    InEntityToAddAsExtension.Add<ck::FFragment_EntityExtension_Params>(InExtensionOwner);
+    auto& Params = InEntityToAddAsExtension.AddOrGet<ck::FFragment_EntityExtension_Params>();
+    Params = ck::FFragment_EntityExtension_Params{InExtensionOwner};
 
     auto EntityExtension = CastChecked(InEntityToAddAsExtension);
 
     RecordOfEntityExtensions_Utils::Request_Connect(InExtensionOwner, EntityExtension);
+
+    if (InReplicates == ECk_Replication::DoesNotReplicate)
+    {
+        ck::entity_extension::VeryVerbose
+        (
+            TEXT("Skipping creation of EntityExtension Rep Fragment on Entity [{}] because it's set to [{}]"),
+            InEntityToAddAsExtension,
+            InReplicates
+        );
+
+        return EntityExtension;
+    }
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_EntityReplication(InExtensionOwner) == ECk_Replication::Replicates,
+        TEXT("ExtensionOwner [{}] is NOT replicated and thus the Extension CANNOT be added to the Owner [{}] on remote machines"),
+        InExtensionOwner, InEntityToAddAsExtension)
+    { return EntityExtension; }
+
+    TryAddReplicatedFragment<UCk_Fragment_EntityExtension_Rep>(InEntityToAddAsExtension);
 
     return EntityExtension;
 }
@@ -32,6 +52,11 @@ auto
 {
     RecordOfEntityExtensions_Utils::Request_Disconnect(InExtensionOwner, InEntityToRemoveAsExtension);
     InEntityToRemoveAsExtension.Remove<ck::FFragment_EntityExtension_Params>();
+
+    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_EntityExtension_Rep>(
+        InEntityToRemoveAsExtension, [&](UCk_Fragment_EntityExtension_Rep* InRepComp)
+    {
+    });
 
     return InEntityToRemoveAsExtension;
 }

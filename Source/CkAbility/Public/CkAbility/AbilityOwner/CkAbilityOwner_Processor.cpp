@@ -542,7 +542,7 @@ namespace ck
             UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityEntityConfig->GetWorld())->Request_TrackAbilityEntityConfig(AbilityEntityConfig);
 
             auto ReplicatedAbilityEntity = InRequest.Get_ReplicatedEntityToUse();
-            AbilityConstructionScript->Construct(ReplicatedAbilityEntity, {}, InRequest.Get_AbilityScriptClass()->ClassDefaultObject);
+            AbilityConstructionScript->Construct(ReplicatedAbilityEntity, InRequest.Get_AbilityScriptClass()->ClassDefaultObject);
             PostAbilityCreationFunc(ReplicatedAbilityEntity);
 
             return ECk_AbilityOwner_AbilityGivenOrNot::Given;

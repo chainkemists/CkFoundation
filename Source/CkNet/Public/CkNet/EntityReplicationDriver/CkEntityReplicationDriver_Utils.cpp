@@ -87,7 +87,7 @@ auto
     if (Add(NewEntity) == ECk_AddedOrNot::NotAdded)
     { return {}; }
 
-    InConstructionScript->Construct(NewEntity, {}, InAbilityScriptClass->ClassDefaultObject);
+    InConstructionScript->Construct(NewEntity, InAbilityScriptClass->ClassDefaultObject);
 
     switch(const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(InHandle))
     {
@@ -152,7 +152,7 @@ auto
     { return {}; }
 
     InConstructionInfo.Get_ConstructionScript()->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(
-        NewEntity, InConstructionInfo.Get_OptionalParams());
+        NewEntity);
 
     switch(const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(InHandle))
     {
@@ -215,7 +215,7 @@ auto
 
     const auto& RepDriver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
 
-    switch(const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(InHandle))
+    switch(UCk_Utils_Net_UE::Get_EntityNetMode(InHandle))
     {
     case ECk_Net_NetModeType::None:
         break;

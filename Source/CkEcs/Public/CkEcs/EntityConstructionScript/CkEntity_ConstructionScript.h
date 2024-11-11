@@ -29,7 +29,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, BlueprintType, Blueprintable, EditInlineNew)
-class CKECS_API UCk_Entity_ConstructionScript_PDA : public UCk_DataAsset_PDA
+class CKECS_API UCk_Entity_ConstructionScript_PDA : public UCk_DataAsset_PDA, public ICk_Entity_ConstructionScript_Interface
 {
     GENERATED_BODY()
 
@@ -40,7 +40,6 @@ public:
     auto
     Construct(
         FCk_Handle& InHandle,
-        const FInstancedStruct& InOptionalParams,
         const UObject* InOptionalObjectConstructionScript = nullptr) const -> void;
 
 public:
@@ -61,14 +60,6 @@ public:
         UPARAM(ref) FCk_Handle& InHandle,
         TArray<TSubclassOf<UCk_Entity_ConstructionScript_PDA>> InConstructionScript,
         const FInstancedStruct& InOptionalParams);
-
-protected:
-    UFUNCTION(BlueprintNativeEvent,
-              DisplayName = "Construct")
-    void
-    DoConstruct(
-        UPARAM(ref) FCk_Handle& InHandle,
-        const FInstancedStruct& InOptionalParams) const;
 
 private:
     UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))

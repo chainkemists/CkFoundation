@@ -3,6 +3,7 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkEcs/Entity/CkEntity.h"
+#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 #include "CkEcs/Handle/CkHandle.h"
 
 #include "CkEntityReplicationDriver_Fragment_Data.generated.h"
@@ -130,14 +131,9 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess=true))
-    TSubclassOf<UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess=true))
-    FInstancedStruct _OptionalParams;
+    TScriptInterface<ICk_Entity_ConstructionScript_Interface> _ConstructionScript;
 
 public:
-    CK_PROPERTY(_OptionalParams);
     CK_PROPERTY_GET(_ConstructionScript);
 
     CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_ConstructionInfo, _ConstructionScript);

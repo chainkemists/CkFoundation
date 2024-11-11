@@ -63,7 +63,7 @@ namespace ck
         if (InRequest.Get_PreBuildFunc())
         { InRequest.Get_PreBuildFunc() (NewEntity); }
 
-        EntityConfig->Build(NewEntity, InRequest.Get_OptionalBuildParams());
+        EntityConfig->Build(NewEntity);
 
         if (InRequest.Get_PostSpawnFunc())
         { InRequest.Get_PostSpawnFunc()(NewEntity); }

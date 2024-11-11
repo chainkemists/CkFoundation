@@ -23,20 +23,22 @@ public:
     CK_GENERATED_BODY(UCk_EntityBridge_Config_Base_PDA);
 
 public:
-    auto Build(
-        FCk_Handle InEntity,
-        const FInstancedStruct& InOptionalParams) const -> void;
+    auto
+    Build(
+        const FCk_Handle& InEntity) const -> void;
 
     [[nodiscard]]
-    auto Get_EntityConstructionScript() const -> class UCk_Entity_ConstructionScript_PDA*;
+    auto
+    Get_EntityConstructionScript() const -> class UCk_Entity_ConstructionScript_PDA*;
 
 protected:
-    virtual auto DoBuild(
-        FCk_Handle InHandle,
-        const FInstancedStruct& InOptionalParams) const -> void;
+    virtual auto
+    DoBuild(
+        FCk_Handle InHandle) const -> void;
 
     [[nodiscard]]
-    virtual auto DoGet_EntityConstructionScript() const -> class UCk_Entity_ConstructionScript_PDA*;
+    virtual auto
+    DoGet_EntityConstructionScript() const -> class UCk_Entity_ConstructionScript_PDA*;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -117,10 +119,6 @@ private:
               meta = (AllowPrivateAccess = true))
     const UCk_EntityBridge_Config_Base_PDA* _EntityConfig = nullptr;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    FInstancedStruct _OptionalBuildParams;
-
     // TODO:
     // - add an owner
     // - then, in the construction script, have an enum REMOTE, LOCAL, ALL
@@ -132,7 +130,6 @@ private:
 
 public:
     CK_PROPERTY_GET(_EntityConfig);
-    CK_PROPERTY(_OptionalBuildParams);
     CK_PROPERTY(_PreBuildFunc);
     CK_PROPERTY(_PostSpawnFunc);
 

@@ -6,7 +6,7 @@
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
 
-//#include "CkEntityExtension_Fragment.generated.h"
+#include "CkEntityExtension_Fragment.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -39,3 +39,26 @@ namespace ck
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(Blueprintable)
+class CKENTITYEXTENSION_API UCk_Fragment_EntityExtension_Rep : public UCk_Ecs_ReplicatedObject_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_EntityExtension_Rep);
+
+public:
+    auto
+    GetLifetimeReplicatedProps(
+        TArray<FLifetimeProperty>&) const -> void override;
+
+private:
+    UFUNCTION()
+    void
+    OnRep_ExtensionOwnerChanged();
+
+private:
+    UPROPERTY(ReplicatedUsing = OnRep_ExtensionOwnerChanged)
+    FCk_Handle _NewExtensionOwner;
+};
