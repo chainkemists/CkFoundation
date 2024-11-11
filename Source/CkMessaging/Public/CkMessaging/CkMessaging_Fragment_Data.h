@@ -26,3 +26,49 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
     FInstancedStruct, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(Abstract, BlueprintType, EditInlineNew)
+class CKMESSAGING_API UCk_Message_Definition_PDA : public UCk_DataAsset_PDA
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Message_Definition_PDA);
+
+public:
+    friend class UCk_K2Node_Message_Broadcast;
+
+protected:
+#if WITH_EDITOR
+    auto IsDataValid(
+        class FDataValidationContext& Context) const -> EDataValidationResult override;
+#endif
+
+private:
+    UPROPERTY(EditDefaultsOnly, meta = (AllowPrivateAccess = true, Categories = "Message"))
+    FGameplayTag _MessageName;
+
+public:
+    CK_PROPERTY_GET(_MessageName);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct FCk_Message_Definition
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Message_Definition);
+
+private:
+    UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = true))
+    TObjectPtr<UCk_Message_Definition_PDA> _MessageObject;
+
+public:
+    CK_PROPERTY(_MessageObject);
+
+};
+
+// --------------------------------------------------------------------------------------------------------------------
