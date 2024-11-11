@@ -181,7 +181,7 @@ auto
         InModifierEntity.Add<ck::FTag_AccelerationModifier_NeedsSetup>();
 
         UCk_Utils_GameplayLabel_UE::Add(InModifierEntity, InModifierName);
-        UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::Add(InModifierEntity, InAccelerationOwnerEntity);
+        UCk_Utils_Acceleration_UE::AccelerationTarget_Utils::AddOrReplace(InModifierEntity, InAccelerationOwnerEntity);
         UCk_Utils_Acceleration_UE::Add(InModifierEntity, InParams.Get_AccelerationParams());
     });
 

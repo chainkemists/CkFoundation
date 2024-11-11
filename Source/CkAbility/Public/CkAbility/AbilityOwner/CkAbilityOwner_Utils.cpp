@@ -509,7 +509,7 @@ auto
     Request_AddAndGiveExistingAbility(InAbilityOwnerHandle, InRequest, InDelegate);
 
     CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAbilityOwnerHandle),
-        TEXT("Cannot REPLICATE AddAndGive am EXISTING Ability to Entity [{}] because it is NOT a Host"),
+        TEXT("Cannot REPLICATE AddAndGive an EXISTING Ability to Entity [{}] because it is NOT a Host"),
         InAbilityOwnerHandle)
     { return InAbilityOwnerHandle; }
 

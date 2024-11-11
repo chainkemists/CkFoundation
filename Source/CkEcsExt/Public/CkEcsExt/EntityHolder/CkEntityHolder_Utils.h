@@ -16,7 +16,7 @@ namespace ck
         using HandleType = FCk_Handle;
 
     public:
-        static auto Add(
+        static auto AddOrReplace(
             HandleType& InHandle,
             const EntityType& InEntityToStore) -> void;
 
@@ -28,10 +28,6 @@ namespace ck
 
         static auto Get_StoredEntity(
             const HandleType& InHandle) -> HandleType;
-
-        static auto Request_ReplaceStoredEntity(
-            HandleType& InHandle,
-            const EntityType& InEntityToStore) -> void;
     };
 }
 
@@ -50,12 +46,13 @@ namespace ck
     template <typename T_DerivedCompType>
     auto
         TUtils_EntityHolder<T_DerivedCompType>::
-        Add(
+        AddOrReplace(
             HandleType& InHandle,
             const EntityType& InEntityToStore)
         -> void
     {
-        InHandle.Add<CompType>(InEntityToStore);
+        auto& Fragment = InHandle.AddOrGet<CompType>();
+        Fragment._Entity = InEntityToStore;
     }
 
     template <typename T_DerivedCompType>
@@ -95,18 +92,6 @@ namespace ck
         const auto& StoredEntity     = EntityHolderComp.Get_Entity();
 
         return StoredEntity;
-    }
-
-    template <typename T_DerivedCompType>
-    auto
-        TUtils_EntityHolder<T_DerivedCompType>::
-        Request_ReplaceStoredEntity(
-            HandleType& InHandle,
-            const EntityType& InEntityToStore)
-        -> void
-    {
-        auto& StoredEntity = InHandle.Get<CompType>();
-        StoredEntity = CompType{InEntityToStore};
     }
 }
 

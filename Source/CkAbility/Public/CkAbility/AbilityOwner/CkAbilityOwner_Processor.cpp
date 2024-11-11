@@ -138,11 +138,12 @@ namespace ck
     }
 
     auto
-        FProcessor_AbilityOwner_HandleRequests::DoHandleRequest(
+        FProcessor_AbilityOwner_HandleRequests::
+        DoHandleRequest(
             HandleType& InAbilityOwnerEntity,
             FFragment_AbilityOwner_Current& InAbilityOwnerComp,
             const FCk_Request_AbilityOwner_AddAndGiveExistingAbility& InRequest) const
-            -> void
+        -> void
     {
         const auto AbilityGivenOrNot = [&]() -> ECk_AbilityOwner_AbilityGivenOrNot
         {
