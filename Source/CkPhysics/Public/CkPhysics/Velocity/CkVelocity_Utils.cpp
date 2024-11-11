@@ -212,7 +212,7 @@ auto
         InModifierEntity.Add<ck::FTag_VelocityModifier_NeedsSetup>();
 
         UCk_Utils_GameplayLabel_UE::Add(InModifierEntity, InModifierName);
-        UCk_Utils_Velocity_UE::VelocityTarget_Utils::Add(InModifierEntity, InVelocityOwnerEntity);
+        UCk_Utils_Velocity_UE::VelocityTarget_Utils::AddOrReplace(InModifierEntity, InVelocityOwnerEntity);
         UCk_Utils_Velocity_UE::Add(InModifierEntity, InParams.Get_VelocityParams());
     });
 

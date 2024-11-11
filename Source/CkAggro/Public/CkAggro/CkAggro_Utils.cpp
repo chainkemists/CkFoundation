@@ -21,7 +21,7 @@ auto
     const auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InTarget, [&](FCk_Handle InNewEntity)
     {
         InNewEntity.Add<ck::FTag_Aggro>();
-        ck::UAggroedEntity_Utils::Add(InNewEntity, InTarget);
+        ck::UAggroedEntity_Utils::AddOrReplace(InNewEntity, InTarget);
         InNewEntity.Add<ck::FFragment_Aggro_Current>();
 
         UCk_Entity_ConstructionScript_PDA::Request_Construct(InNewEntity, InParams.Get_ConstructionScript(), {});
