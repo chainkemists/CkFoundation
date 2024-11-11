@@ -31,7 +31,7 @@ UCLASS(Abstract, BlueprintType, EditInlineNew)
 class CKMESSAGING_API UCk_Message_Definition_PDA : public UCk_DataAsset_PDA
 {
     GENERATED_BODY()
-
+     
 public:
     CK_GENERATED_BODY(UCk_Message_Definition_PDA);
 
@@ -44,12 +44,22 @@ protected:
         class FDataValidationContext& Context) const -> EDataValidationResult override;
 #endif
 
+    auto GetPrimaryAssetId() const -> FPrimaryAssetId override;
+
 private:
-    UPROPERTY(EditDefaultsOnly, meta = (AllowPrivateAccess = true, Categories = "Message"))
+    UPROPERTY(EditDefaultsOnly, AssetRegistrySearchable,
+        meta = (AllowPrivateAccess = true, Categories = "Message"))
     FGameplayTag _MessageName;
+
+    /*Dirty hack to trick the asset manager to associate this asset with a specific type.*/
+    UPROPERTY(EditDefaultsOnly,
+        Category="Developer Settings", AssetRegistrySearchable, AdvancedDisplay,
+        meta = (AllowPrivateAccess = true))
+    FName _AssetRegistryCategory = TEXT("Messages");
 
 public:
     CK_PROPERTY_GET(_MessageName);
+    CK_PROPERTY_GET(_AssetRegistryCategory);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
