@@ -32,4 +32,12 @@ auto
 }
 #endif
 
+auto
+    UCk_Message_Definition_PDA::
+    GetPrimaryAssetId() const
+    -> FPrimaryAssetId
+{
+    return FPrimaryAssetId(_AssetRegistryCategory, GetFName());
+}
+
 // --------------------------------------------------------------------------------------------------------------------
