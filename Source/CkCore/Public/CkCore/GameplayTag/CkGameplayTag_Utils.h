@@ -57,6 +57,7 @@ public:
     TryMake_LiteralGameplayTag_FromName(
         FName InTagNameAsString);
 
+public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|GameplayTag",
               DisplayName = "[Ck] Get GameplayTag Leaf (As Name)")
@@ -76,6 +77,34 @@ public:
               DisplayName = "[Ck] Get GameplayTag Leaf (As Text)")
     static FText
     Get_Leaf_AsText(
+        FGameplayTag InGameplayTag);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Get GameplayTag Root (As Name)")
+    static FName
+    Get_Root_AsName(
+        FGameplayTag InGameplayTag);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Get GameplayTag Root (As String)")
+    static FString
+    Get_Root_AsString(
+        FGameplayTag InGameplayTag);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Get GameplayTag Root (As Tag)")
+    static FGameplayTag
+    Get_Root_AsTag(
+        FGameplayTag InGameplayTag);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Get GameplayTag Root (As Text)")
+    static FText
+    Get_Root_AsText(
         FGameplayTag InGameplayTag);
 
 public:
