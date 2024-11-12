@@ -80,7 +80,7 @@ auto
     auto OutIndex = 0;
 
     if (NOT TagString.FindLastChar(TEXT('.'), OutIndex))
-    { return InGameplayTag.GetTagName().ToString(); }
+    { return TagString; }
 
     return TagString.RightChop(OutIndex + 1);
 }
@@ -92,6 +92,49 @@ auto
     -> FText
 {
     return FText::FromString(Get_Leaf_AsString(InGameplayTag));
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
+    Get_Root_AsName(
+        FGameplayTag InGameplayTag)
+    -> FName
+{
+    return FName{Get_Root_AsString(InGameplayTag)};
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
+    Get_Root_AsString(
+        FGameplayTag InGameplayTag)
+    -> FString
+{
+    const auto& TagString = InGameplayTag.GetTagName().ToString();
+
+    auto OutIndex = 0;
+
+    if (NOT TagString.FindChar(TEXT('.'), OutIndex))
+    { return TagString; }
+
+    return TagString.Left(OutIndex);
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
+    Get_Root_AsTag(
+        FGameplayTag InGameplayTag)
+    -> FGameplayTag
+{
+    return Make_LiteralGameplayTag_FromString(Get_Root_AsString(InGameplayTag));
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
+    Get_Root_AsText(
+        FGameplayTag InGameplayTag)
+    -> FText
+{
+    return FText::FromString(Get_Root_AsString(InGameplayTag));
 }
 
 auto
