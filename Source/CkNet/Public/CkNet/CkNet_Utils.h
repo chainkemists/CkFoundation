@@ -201,14 +201,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               DisplayName="[Ck] Get Net Role",
-              Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
+              Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext"))
     static ECk_Net_NetModeType
     Get_NetRole(
         const UObject* InContext = nullptr);
 
     UFUNCTION(BlueprintPure,
               DisplayName="[Ck] Get Object Net Mode",
-              Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
+              Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext"))
     static ECk_Net_NetModeType
     Get_NetMode(
         const UObject* InContext = nullptr);
@@ -237,28 +237,28 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               DisplayName="[Ck] Get Min Ping",
-              Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
+              Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext"))
     static FCk_Time
     Get_MinPing(
         const UObject* InContext = nullptr);
 
     UFUNCTION(BlueprintPure,
               DisplayName="[Ck] Get Max Ping",
-              Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
+              Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext"))
     static FCk_Time
     Get_MaxPing(
         const UObject* InContext = nullptr);
 
     UFUNCTION(BlueprintPure,
               DisplayName="[Ck] Get Average Ping",
-              Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
+              Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext"))
     static FCk_Time
     Get_AveragePing(
         const UObject* InContext = nullptr);
 
     UFUNCTION(BlueprintPure,
               DisplayName="[Ck] Get Average Latency",
-              Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext", HidePin = "InContext"))
+              Category = "Ck|Utils|Net", meta = (DefaultToSelf = "InContext"))
     static FCk_Time
     Get_AverageLatency(
         const UObject* InContext = nullptr);
