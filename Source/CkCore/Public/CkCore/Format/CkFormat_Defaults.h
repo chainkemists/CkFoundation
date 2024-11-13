@@ -14,6 +14,7 @@
 #include <Engine/DataTable.h>
 #include <Framework/Commands/InputChord.h>
 #include <GameFramework/Actor.h>
+#include <StructUtils.h>
 
 #if WITH_EDITOR
 #include <UnrealEdMisc.h>
@@ -251,6 +252,11 @@ CK_DEFINE_CUSTOM_FORMATTER(FCurveTableRowHandle, [&]()
 CK_DEFINE_CUSTOM_FORMATTER(FPlayInEditorID, [&]()
 {
     return ck::Format(TEXT("{}"), static_cast<int32>(InObj));
+});
+
+CK_DEFINE_CUSTOM_FORMATTER(FInstancedStruct, [&]()
+{
+    return ck::Format(TEXT("{}"), InObj.GetScriptStruct());
 });
 
 // --------------------------------------------------------------------------------------------------------------------
