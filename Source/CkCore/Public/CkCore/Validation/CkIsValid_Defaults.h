@@ -36,6 +36,7 @@ CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TUniquePtr);
 CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TObjectPtr);
 CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TSoftObjectPtr);
 CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TStrongObjectPtr);
+CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TInstancedStruct);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -226,6 +227,11 @@ CK_DEFINE_CUSTOM_IS_VALID_T(T, TSoftObjectPtr<T>, ck::IsValid_Policy_Default, [=
 CK_DEFINE_CUSTOM_IS_VALID_T(T, TScriptInterface<T>, ck::IsValid_Policy_Default, [=](const TScriptInterface<T>& InScriptInterface)
 {
     return ck::IsValid(InScriptInterface.GetObject()) && InScriptInterface.GetInterface() != nullptr;
+});
+
+CK_DEFINE_CUSTOM_IS_VALID_T(T, TInstancedStruct<T>, ck::IsValid_Policy_Default, [=](const TInstancedStruct<T>& InInstancedStruct)
+{
+    return InInstancedStruct.IsValid();
 });
 
 CK_DEFINE_CUSTOM_IS_VALID_T(T, TStrongObjectPtr<T>, ck::IsValid_Policy_Default, [=](const TStrongObjectPtr<T>& InObj)
