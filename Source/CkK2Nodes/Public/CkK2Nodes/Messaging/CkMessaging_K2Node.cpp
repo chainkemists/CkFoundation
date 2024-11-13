@@ -156,8 +156,8 @@ auto
         );
     }
 
-    const auto& MessageDefinitionCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Message_Definition_PDA>(_MessageDefinition);
-    if (ck::Is_NOT_Valid(MessageDefinitionCDO->Get_MessageName()))
+    const auto& MessageName = _MessageDefinition->Get_MessageName();
+    if (ck::Is_NOT_Valid(_MessageDefinition->Get_MessageName()))
     {
         return CK_UTILS_IO_GET_LOCTEXT
         (
@@ -166,10 +166,19 @@ auto
         );
     }
 
+    if (ck::Is_NOT_Valid(_MessageDefinition->Get_MessagePayload()))
+    {
+        return CK_UTILS_IO_GET_LOCTEXT
+        (
+            TEXT("UCk_K2Node_Message_Broadcast"),
+            TEXT("[Ck][Messaging] Broadcast New Message (INVALID Message Payload)")
+        );
+    }
+
     return CK_UTILS_IO_GET_LOCTEXT
     (
         TEXT("UCk_K2Node_Message_Broadcast"),
-        *ck::Format_UE(TEXT("[Ck][Messaging] Broadcast New Message ({})"), MessageDefinitionCDO->Get_MessageName())
+        *ck::Format_UE(TEXT("[Ck][Messaging] Broadcast New Message ({})"), MessageName)
     );
 }
 
@@ -181,29 +190,6 @@ auto
 {
     OutColor = GetDefault<UGraphEditorSettings>()->FunctionCallNodeTitleColor;
     return FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("Kismet.AllClasses.FunctionIcon"));
-}
-
-auto
-    UCk_K2Node_Message_Broadcast::
-    GetNodeContextMenuActions(
-        UToolMenu* Menu,
-        UGraphNodeContextMenuContext* Context) const
-    -> void
-{
-    Super::GetNodeContextMenuActions(Menu, Context);
-
-    FToolMenuSection& Section = Menu->AddSection("CkFoundation", FText::FromString(TEXT("Messaging")));
-    Section.AddMenuEntry(
-        "RefreshNode",
-        FText::FromString(TEXT("Refresh")),
-        FText::FromString(TEXT("Refresh this node")),
-        FSlateIcon(),
-        FUIAction(
-            FExecuteAction::CreateUObject(const_cast<UCk_K2Node_Message_Broadcast*>(this), &UCk_K2Node_Message_Broadcast::RefreshTemplateMessageDefinition),
-            FCanExecuteAction(),
-            FIsActionChecked()
-        )
-    );
 }
 
 auto
@@ -228,34 +214,12 @@ auto
 
 auto
     UCk_K2Node_Message_Broadcast::
-    AutowireNewNode(
-        UEdGraphPin* FromPin)
-    -> void
-{
-    if (ck::Is_NOT_Valid(FromPin, ck::IsValid_Policy_NullptrOnly{}))
-    { return; }
-
-    Super::AutowireNewNode(FromPin);
-}
-
-auto
-    UCk_K2Node_Message_Broadcast::
     ReallocatePinsDuringReconstruction(
         TArray<UEdGraphPin*>& InOldPins)
     -> void
 {
     AllocateDefaultPins();
-    CreatePinsFromMessageDefinition();
     RestoreSplitPins(InOldPins);
-}
-
-auto
-    UCk_K2Node_Message_Broadcast::
-    ReconstructNode()
-    -> void
-{
-    Super::ReconstructNode();
-    CreatePinsFromMessageDefinition();
 }
 
 auto
@@ -263,12 +227,16 @@ auto
     DoAllocate_DefaultPins()
     -> void
 {
+    auto HandlePinParams = FCreatePinParams{};
+    HandlePinParams.bIsReference = true;
+
     CreatePin
     (
         EGPD_Input,
         UEdGraphSchema_K2::PC_Struct,
         FCk_Handle::StaticStruct(),
-        ck_k2node_messaging::PinName_Handle
+        ck_k2node_messaging::PinName_Handle,
+        HandlePinParams
     );
 
     CreatePinsFromMessageDefinition();
@@ -288,28 +256,18 @@ auto
         return;
     }
 
-    const auto& MessageDefinitionCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Message_Definition_PDA>(_MessageDefinition);
-    if (ck::Is_NOT_Valid(MessageDefinitionCDO->Get_MessageName()))
+    const auto& MessageName = _MessageDefinition->Get_MessageName();
+    if (ck::Is_NOT_Valid(MessageName))
     {
         InCompilerContext.MessageLog.Error(*LOCTEXT("Invalid Message Definition Name", "Message Definition @@ has an Invalid Message Name. @@").ToString(), _MessageDefinition, this);
         return;
     }
 
-    // Setup SpawnObject Node
-    auto* SpawnObject_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
-    SpawnObject_Node->FunctionReference.SetExternalMember
-    (
-        GET_FUNCTION_NAME_CHECKED(UGameplayStatics, SpawnObject),
-        UGameplayStatics::StaticClass()
-    );
-    SpawnObject_Node->AllocateDefaultPins();
-    InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(SpawnObject_Node, this);
-
-    if (auto* ObjectClassPin = SpawnObject_Node->FindPin(TEXT("ObjectClass"));
-        ck::IsValid(ObjectClassPin, ck::IsValid_Policy_NullptrOnly{}))
+    const auto& MessagePayload = _MessageDefinition->Get_MessagePayload();
+    if (ck::Is_NOT_Valid(MessagePayload))
     {
-        InCompilerContext.GetSchema()->TrySetDefaultValue(*ObjectClassPin, _MessageDefinition->GetClassPathName().ToString());
-        UCk_Utils_EditorGraph_UE::Request_ForceRefreshNode(*SpawnObject_Node);
+        InCompilerContext.MessageLog.Error(*LOCTEXT("Invalid Message Definition Payload", "Message Definition @@ has an Invalid Message Payload. @@").ToString(), _MessageDefinition, this);
+        return;
     }
 
     // Setup BroadcastMessage Node
@@ -322,13 +280,13 @@ auto
     BroadcastMessage_Node->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(BroadcastMessage_Node, this);
 
-    if (const auto* MessageName_Property = FindFProperty<FProperty>(_MessageDefinition, TEXT("_MessageName"));
+    if (const auto* MessageName_Property = FindFProperty<FProperty>(_MessageDefinition->GetClass(), TEXT("_MessageName"));
         ck::IsValid(MessageName_Property))
     {
         if (auto* MessageName_InputPin = BroadcastMessage_Node->FindPin(TEXT("InMessageName"));
             ck::IsValid(MessageName_InputPin, ck::IsValid_Policy_NullptrOnly{}))
         {
-            if (auto MessageName_PropertyValue = MessageName_Property->ContainerPtrToValuePtr<decltype(MessageDefinitionCDO->_MessageName)>(MessageDefinitionCDO);
+            if (auto MessageName_PropertyValue = MessageName_Property->ContainerPtrToValuePtr<decltype(_MessageDefinition->_MessageName)>(_MessageDefinition);
                 ck::IsValid(MessageName_PropertyValue, ck::IsValid_Policy_NullptrOnly{}))
             {
                 InCompilerContext.GetSchema()->TrySetDefaultValue(*MessageName_InputPin, MessageName_PropertyValue->ToString());
@@ -337,36 +295,53 @@ auto
         }
     }
 
-    const auto& SpawnObjectResultPin  = UCk_Utils_EditorGraph_UE::Get_Pin_Result(*SpawnObject_Node);
-
-    if (ck::IsValid(SpawnObjectResultPin))
-    {
-        (*SpawnObjectResultPin)->PinType.PinSubCategoryObject = _MessageDefinition->GetAuthoritativeClass();
-    }
-
-    // Link the 'N' SetByVar nodes that were spawned for each properties different from the CDO
-    auto* LastThenFollowingSetByVarPin = FKismetCompilerUtilities::GenerateAssignmentNodes
-    (
-        InCompilerContext,
-        InSourceGraph,
-        SpawnObject_Node,
-        this,
-        *SpawnObjectResultPin,
-        _MessageDefinition
-    );
-
     // Setup MakeInstancedStruct Node
     auto* MakeInstancedStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     MakeInstancedStruct_Node->SetFromFunction(UStructUtilsFunctionLibrary::StaticClass()->FindFunctionByName(GET_FUNCTION_NAME_CHECKED(UStructUtilsFunctionLibrary, MakeInstancedStruct)));
     MakeInstancedStruct_Node->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(MakeInstancedStruct_Node, this);
 
-    // Setup MakeMessageDefinition Struct Node
-    auto* MakeMessageDefinitionStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_MakeStruct>(this, InSourceGraph);
-    MakeMessageDefinitionStruct_Node->StructType = FCk_Message_Definition::StaticStruct();
-    MakeMessageDefinitionStruct_Node->AllocateDefaultPins();
-    MakeMessageDefinitionStruct_Node->bMadeAfterOverridePinRemoval = true;
-    InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(MakeMessageDefinitionStruct_Node, this);
+    // Setup MessagePayload MakeStruct Node
+    auto* MakeMessageDefinition_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_MakeStruct>(this, InSourceGraph);
+    auto ScriptStruct = const_cast<UScriptStruct*>(_MessageDefinition->Get_MessagePayload().GetScriptStruct());
+    MakeMessageDefinition_Node->StructType = ScriptStruct;
+    MakeMessageDefinition_Node->AllocateDefaultPins();
+    MakeMessageDefinition_Node->bMadeAfterOverridePinRemoval = true;
+    InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(MakeMessageDefinition_Node, this);
+
+    UCk_Utils_EditorGraph_UE::ForEach_NodePins(*MakeMessageDefinition_Node, [&](UEdGraphPin* InGraphPin)
+    {
+        if (InGraphPin->Direction != EGPD_Input)
+        { return; }
+
+        const auto& GraphPinName = InGraphPin->PinName;
+
+        if (const auto& ThisNodeMatchingInputPin = UCk_Utils_EditorGraph_UE::Get_Pin(GraphPinName, ECk_EditorGraph_PinDirection::Input, *this);
+            ck::IsValid(ThisNodeMatchingInputPin))
+        {
+            if ((*ThisNodeMatchingInputPin)->LinkedTo.IsEmpty())
+            {
+                UCk_Utils_EditorGraph_UE::Request_CopyPinValues
+                (
+                    InCompilerContext,
+                    {
+                        { ThisNodeMatchingInputPin, InGraphPin, },
+                    }
+                );
+
+                return;
+            }
+
+            UCk_Utils_EditorGraph_UE::Request_LinkPins
+            (
+                InCompilerContext,
+                {
+                    { ThisNodeMatchingInputPin, InGraphPin, },
+                },
+                ECk_EditorGraph_PinLinkType::Move
+            );
+        }
+    });
 
     // Connect everything together
     if (UCk_Utils_EditorGraph_UE::Request_TryCreateConnection
@@ -374,15 +349,7 @@ auto
         InCompilerContext,
         {
             {
-                LastThenFollowingSetByVarPin,
-                UCk_Utils_EditorGraph_UE::Get_Pin_Exec(*MakeInstancedStruct_Node),
-            },
-            {
-                UCk_Utils_EditorGraph_UE::Get_Pin_Result(*SpawnObject_Node),
-                UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("_MessageObject"), ECk_EditorGraph_PinDirection::Input, *MakeMessageDefinitionStruct_Node)
-            },
-            {
-                UCk_Utils_EditorGraph_UE::Get_Pin(FCk_Message_Definition::StaticStruct()->GetFName(), ECk_EditorGraph_PinDirection::Output, *MakeMessageDefinitionStruct_Node),
+                UCk_Utils_EditorGraph_UE::Get_Pin(ScriptStruct->GetFName(), ECk_EditorGraph_PinDirection::Output, *MakeMessageDefinition_Node),
                 UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("Value"), ECk_EditorGraph_PinDirection::Input, *MakeInstancedStruct_Node)
             },
             {
@@ -406,7 +373,7 @@ auto
             },
             {
                 UCk_Utils_EditorGraph_UE::Get_Pin_Exec(*this),
-                UCk_Utils_EditorGraph_UE::Get_Pin_Exec(*SpawnObject_Node)
+                UCk_Utils_EditorGraph_UE::Get_Pin_Exec(*MakeInstancedStruct_Node)
             },
             {
                 UCk_Utils_EditorGraph_UE::Get_Pin_Then(*this),
@@ -433,7 +400,7 @@ auto
 
 auto
     UCk_K2Node_Message_Broadcast::
-    RefreshTemplateMessageDefinition()
+    RefreshMessageDefinition()
     -> void
 {
     ReconstructNode();
@@ -448,43 +415,49 @@ auto
     if (ck::Is_NOT_Valid(_MessageDefinition))
     { return; }
 
-    const auto& MessageDefinitionCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Message_Definition_PDA>(_MessageDefinition);
+    const auto& MessagePayload = _MessageDefinition->Get_MessagePayload();
 
-    const auto* K2Schema = GetDefault<UEdGraphSchema_K2>();
+    if (ck::Is_NOT_Valid(MessagePayload))
+    { return; }
 
-    for (TFieldIterator<FProperty> PropIt(_MessageDefinition, EFieldIteratorFlags::ExcludeSuper); PropIt; ++PropIt)
+    const auto& CreatePinFromProperty = [this](const FProperty* InProperty, const uint8* InContainer)
     {
-        auto* Property = *PropIt;
+        auto* Pin = CreatePin(EGPD_Input, NAME_None, InProperty->GetFName());
 
-        const bool IsDelegate = Property->IsA(FMulticastDelegateProperty::StaticClass());
-        const bool IsExposedToSpawn = UEdGraphSchema_K2::IsPropertyExposedOnSpawn(Property);
-        const bool IsSettableExternally = !Property->HasAnyPropertyFlags(CPF_DisableEditOnInstance);
+        if (ck::Is_NOT_Valid(Pin, ck::IsValid_Policy_NullptrOnly{}))
+        { return; }
+
+        Pin->PinFriendlyName = InProperty->GetDisplayNameText();
+        const auto* K2Schema = GetDefault<UEdGraphSchema_K2>();
+
+        K2Schema->ConvertPropertyToPinType(InProperty, Pin->PinType);
+
+        if (K2Schema->PinDefaultValueIsEditable(*Pin))
+        {
+            auto DefaultValueAsString = FString{};
+            const auto& DefaultValueSet = FBlueprintEditorUtils::PropertyValueToString(InProperty, InContainer, DefaultValueAsString, this);
+            check(DefaultValueSet);
+
+            K2Schema->SetPinAutogeneratedDefaultValue(Pin, DefaultValueAsString);
+        }
+
+        K2Schema->ConstructBasicPinTooltip(*Pin, InProperty->GetToolTipText(), Pin->PinToolTip);
+    };
+
+    auto* StructData = MessagePayload.GetMemory();
+    auto* StructType = MessagePayload.GetScriptStruct();
+
+    for (TFieldIterator<FProperty> It(StructType); It; ++It)
+    {
+        auto* Property = *It;
 
         if (Property->HasAnyPropertyFlags(CPF_Parm) ||
             NOT FBlueprintEditorUtils::PropertyStillExists(Property) ||
             NOT Property->HasAllPropertyFlags(CPF_BlueprintVisible) ||
-            NOT IsExposedToSpawn ||
-            NOT IsSettableExternally ||
-            IsDelegate ||
             ck::IsValid(FindPin(Property->GetFName()), ck::IsValid_Policy_NullptrOnly{}))
         { continue; }
 
-        if (auto* Pin = CreatePin(EGPD_Input, NAME_None, Property->GetFName());
-            ck::IsValid(Pin, ck::IsValid_Policy_NullptrOnly{}))
-        {
-            K2Schema->ConvertPropertyToPinType(Property, Pin->PinType);
-
-            if (K2Schema->PinDefaultValueIsEditable(*Pin))
-            {
-                auto DefaultValueAsString = FString{};
-                const auto& DefaultValueSet = FBlueprintEditorUtils::PropertyValueToString(Property, reinterpret_cast<const uint8*>(MessageDefinitionCDO), DefaultValueAsString, this);
-                check(DefaultValueSet);
-
-                K2Schema->SetPinAutogeneratedDefaultValue(Pin, DefaultValueAsString);
-            }
-
-            K2Schema->ConstructBasicPinTooltip(*Pin, Property->GetToolTipText(), Pin->PinToolTip);
-        }
+        CreatePinFromProperty(Property, StructData);
     }
 }
 
@@ -542,8 +515,8 @@ auto
         );
     }
 
-    const auto& MessageDefinitionCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Message_Definition_PDA>(_MessageDefinition);
-    if (ck::Is_NOT_Valid(MessageDefinitionCDO->Get_MessageName()))
+    const auto& MessageName = _MessageDefinition->Get_MessageName();
+    if (ck::Is_NOT_Valid(MessageName))
     {
         return CK_UTILS_IO_GET_LOCTEXT
         (
@@ -552,10 +525,19 @@ auto
         );
     }
 
+    if (ck::Is_NOT_Valid(_MessageDefinition->Get_MessagePayload()))
+    {
+        return CK_UTILS_IO_GET_LOCTEXT
+        (
+            TEXT("UCk_K2Node_Message_Listen"),
+            TEXT("[Ck][Messaging] Listen For New Message (INVALID Message Payload)")
+        );
+    }
+
     return CK_UTILS_IO_GET_LOCTEXT
     (
         TEXT("UCk_K2Node_Message_Listen"),
-        *ck::Format_UE(TEXT("[Ck][Messaging] Listen For New Message ({})"), MessageDefinitionCDO->Get_MessageName())
+        *ck::Format_UE(TEXT("[Ck][Messaging] Listen For New Message ({})"), MessageName)
     );
 }
 
@@ -567,29 +549,6 @@ auto
 {
     OutColor = GetDefault<UGraphEditorSettings>()->FunctionCallNodeTitleColor;
     return FSlateIcon(FAppStyle::GetAppStyleSetName(), TEXT("Kismet.LatentActionIcon"));
-}
-
-auto
-    UCk_K2Node_Message_Listen::
-    GetNodeContextMenuActions(
-        UToolMenu* Menu,
-        UGraphNodeContextMenuContext* Context) const
-    -> void
-{
-    Super::GetNodeContextMenuActions(Menu, Context);
-
-    FToolMenuSection& Section = Menu->AddSection("CkFoundation", FText::FromString(TEXT("Messaging")));
-    Section.AddMenuEntry(
-        "RefreshNode",
-        FText::FromString(TEXT("Refresh")),
-        FText::FromString(TEXT("Refresh this node")),
-        FSlateIcon(),
-        FUIAction(
-            FExecuteAction::CreateUObject(const_cast<UCk_K2Node_Message_Listen*>(this), &UCk_K2Node_Message_Listen::RefreshTemplateMessageDefinition),
-            FCanExecuteAction(),
-            FIsActionChecked()
-        )
-    );
 }
 
 auto
@@ -614,24 +573,11 @@ auto
 
 auto
     UCk_K2Node_Message_Listen::
-    AutowireNewNode(
-        UEdGraphPin* FromPin)
-    -> void
-{
-    if (ck::Is_NOT_Valid(FromPin, ck::IsValid_Policy_NullptrOnly{}))
-    { return; }
-
-    Super::AutowireNewNode(FromPin);
-}
-
-auto
-    UCk_K2Node_Message_Listen::
     ReallocatePinsDuringReconstruction(
         TArray<UEdGraphPin*>& InOldPins)
     -> void
 {
     AllocateDefaultPins();
-    CreatePinsFromMessageDefinition();
     RestoreSplitPins(InOldPins);
 }
 
@@ -640,12 +586,16 @@ auto
     DoAllocate_DefaultPins()
     -> void
 {
+    auto HandlePinParams = FCreatePinParams{};
+    HandlePinParams.bIsReference = true;
+
     CreatePin
     (
         EGPD_Input,
         UEdGraphSchema_K2::PC_Struct,
         FCk_Handle::StaticStruct(),
-        ck_k2node_messaging::PinName_Handle
+        ck_k2node_messaging::PinName_Handle,
+        HandlePinParams
     );
 
     CreatePin
@@ -675,15 +625,6 @@ auto
 
 auto
     UCk_K2Node_Message_Listen::
-    ReconstructNode()
-    -> void
-{
-    Super::ReconstructNode();
-    CreatePinsFromMessageDefinition();
-}
-
-auto
-    UCk_K2Node_Message_Listen::
     DoExpandNode(
         FKismetCompilerContext& InCompilerContext,
         UEdGraph* InSourceGraph,
@@ -696,10 +637,17 @@ auto
         return;
     }
 
-    const auto& MessageDefinitionCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Message_Definition_PDA>(_MessageDefinition);
-    if (ck::Is_NOT_Valid(MessageDefinitionCDO->Get_MessageName()))
+    const auto& MessageName = _MessageDefinition->Get_MessageName();
+    if (ck::Is_NOT_Valid(MessageName))
     {
         InCompilerContext.MessageLog.Error(*LOCTEXT("Invalid Message Definition Name", "Message Definition @@ has an Invalid Message Name. @@").ToString(), _MessageDefinition, this);
+        return;
+    }
+
+    const auto& MessagePayload = _MessageDefinition->Get_MessagePayload();
+    if (ck::Is_NOT_Valid(MessagePayload))
+    {
+        InCompilerContext.MessageLog.Error(*LOCTEXT("Invalid Message Definition Payload", "Message Definition @@ has an Invalid Message Payload. @@").ToString(), _MessageDefinition, this);
         return;
     }
 
@@ -739,13 +687,13 @@ auto
     BindFunction_Node->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(BindFunction_Node, this);
 
-    if (const auto* MessageName_Property = FindFProperty<FProperty>(_MessageDefinition, TEXT("_MessageName"));
+    if (const auto* MessageName_Property = FindFProperty<FProperty>(_MessageDefinition->GetClass(), TEXT("_MessageName"));
         ck::IsValid(MessageName_Property))
     {
         if (auto* MessageName_InputPin = BindFunction_Node->FindPin(TEXT("InMessageName"));
             ck::IsValid(MessageName_InputPin, ck::IsValid_Policy_NullptrOnly{}))
         {
-            if (auto MessageName_PropertyValue = MessageName_Property->ContainerPtrToValuePtr<decltype(MessageDefinitionCDO->_MessageName)>(MessageDefinitionCDO);
+            if (auto MessageName_PropertyValue = MessageName_Property->ContainerPtrToValuePtr<decltype(_MessageDefinition->_MessageName)>(_MessageDefinition);
                 ck::IsValid(MessageName_PropertyValue, ck::IsValid_Policy_NullptrOnly{}))
             {
                 InCompilerContext.GetSchema()->TrySetDefaultValue(*MessageName_InputPin, MessageName_PropertyValue->ToString());
@@ -764,16 +712,16 @@ auto
     UnbindFunction_Node->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(UnbindFunction_Node, this);
 
-    if (const auto* MessageName_Property = FindFProperty<FProperty>(_MessageDefinition, TEXT("_MessageName"));
+    if (const auto* MessageName_Property = FindFProperty<FProperty>(_MessageDefinition->GetClass(), TEXT("_MessageName"));
         ck::IsValid(MessageName_Property))
     {
-        if (auto* MessageNameInputPin = UnbindFunction_Node->FindPin(TEXT("InMessageName"));
-            ck::IsValid(MessageNameInputPin, ck::IsValid_Policy_NullptrOnly{}))
+        if (auto* MessageName_InputPin = UnbindFunction_Node->FindPin(TEXT("InMessageName"));
+            ck::IsValid(MessageName_InputPin, ck::IsValid_Policy_NullptrOnly{}))
         {
-            if (auto MessageName_PropertyValue = MessageName_Property->ContainerPtrToValuePtr<decltype(MessageDefinitionCDO->_MessageName)>(MessageDefinitionCDO);
+            if (auto MessageName_PropertyValue = MessageName_Property->ContainerPtrToValuePtr<decltype(_MessageDefinition->_MessageName)>(_MessageDefinition);
                 ck::IsValid(MessageName_PropertyValue, ck::IsValid_Policy_NullptrOnly{}))
             {
-                InCompilerContext.GetSchema()->TrySetDefaultValue(*MessageNameInputPin, MessageName_PropertyValue->ToString());
+                InCompilerContext.GetSchema()->TrySetDefaultValue(*MessageName_InputPin, MessageName_PropertyValue->ToString());
                 UCk_Utils_EditorGraph_UE::Request_ForceRefreshNode(*UnbindFunction_Node);
             }
         }
@@ -792,7 +740,7 @@ auto
     if (auto* Message_Pin = TriggerEnsure_Node->FindPin(TEXT("InMsg"));
         ck::IsValid(Message_Pin, ck::IsValid_Policy_NullptrOnly{}))
     {
-        InCompilerContext.GetSchema()->TrySetDefaultValue(*Message_Pin, ck::Format_UE(TEXT("Received a Message that was NOT of the expected type [{}]"), _MessageDefinition));
+        InCompilerContext.GetSchema()->TrySetDefaultValue(*Message_Pin, ck::Format_UE(TEXT("Received a Message Payload that was NOT of the expected type [{}]"), _MessageDefinition));
         UCk_Utils_EditorGraph_UE::Request_ForceRefreshNode(*TriggerEnsure_Node);
     }
 
@@ -802,60 +750,33 @@ auto
     GetInstancedStruct_Node->AllocateDefaultPins();
     InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(GetInstancedStruct_Node, this);
 
-    // Setup BreakMessageDefinition Struct Node
-    auto* BreakMessageDefinitionStruct_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_BreakStruct>(this, InSourceGraph);
-    BreakMessageDefinitionStruct_Node->StructType = FCk_Message_Definition::StaticStruct();
-    BreakMessageDefinitionStruct_Node->AllocateDefaultPins();
-    BreakMessageDefinitionStruct_Node->bMadeAfterOverridePinRemoval = true;
-    InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(BreakMessageDefinitionStruct_Node, this);
+    // Setup MessagePayload BreakStruct Node
+    auto* BreakMessageDefinition_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_BreakStruct>(this, InSourceGraph);
+    auto ScriptStruct = const_cast<UScriptStruct*>(_MessageDefinition->Get_MessagePayload().GetScriptStruct());
+    BreakMessageDefinition_Node->StructType = ScriptStruct;
+    BreakMessageDefinition_Node->AllocateDefaultPins();
+    BreakMessageDefinition_Node->bMadeAfterOverridePinRemoval = true;
+    InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(BreakMessageDefinition_Node, this);
 
-    // Add a cast node so we can call the getter function with a pin of the right class
-    auto* CastNode = InCompilerContext.SpawnIntermediateNode<UK2Node_DynamicCast>(this, InSourceGraph);
-    CastNode->TargetType = _MessageDefinition;
-    CastNode->SetPurity(false);
-    CastNode->AllocateDefaultPins();
-    InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(CastNode, this);
-    const auto& CastResultPinName = UEdGraphSchema_K2::PN_CastedValuePrefix + _MessageDefinition->GetDisplayNameText().ToString();
-
-    const auto& IsOutputPinPredicate = [](const UEdGraphPin* InGraphPin) -> bool
+    UCk_Utils_EditorGraph_UE::ForEach_NodePins(*BreakMessageDefinition_Node, [&](UEdGraphPin* InGraphPin)
     {
-        return InGraphPin->Direction == EGPD_Output;
-    };
-
-    UCk_Utils_EditorGraph_UE::ForEach_NodePins_If(*this, IsOutputPinPredicate, [&](const UEdGraphPin* InGraphPin)
-    {
-        if (InGraphPin->PinType.PinCategory == UEdGraphSchema_K2::PC_Exec)
+        if (InGraphPin->Direction != EGPD_Output)
         { return; }
 
         const auto& GraphPinName = InGraphPin->PinName;
 
-        auto* GetVariableNode = InCompilerContext.SpawnIntermediateNode<UK2Node_VariableGet>(CastNode, InSourceGraph);
-        constexpr auto IsConsideredSelfContext = false;
-        GetVariableNode->VariableReference.SetFromField<FProperty>(CastNode->TargetType->FindPropertyByName(GraphPinName), IsConsideredSelfContext, CastNode->TargetType);
-        GetVariableNode->AllocateDefaultPins();
-
-        UCk_Utils_EditorGraph_UE::Request_TryCreateConnection
-        (
-            InCompilerContext,
-            {
+        if (const auto& ThisNodeMatchingOutputPin = UCk_Utils_EditorGraph_UE::Get_Pin(GraphPinName, ECk_EditorGraph_PinDirection::Output, *this);
+            ck::IsValid(ThisNodeMatchingOutputPin))
+        {
+            UCk_Utils_EditorGraph_UE::Request_LinkPins
+            (
+                InCompilerContext,
                 {
-                    UCk_Utils_EditorGraph_UE::Get_Pin_Self(*GetVariableNode),
-                    UCk_Utils_EditorGraph_UE::Get_Pin(*CastResultPinName, ECk_EditorGraph_PinDirection::Output, *CastNode),
+                    { ThisNodeMatchingOutputPin, InGraphPin, },
                 },
-            }
-        );
-
-        UCk_Utils_EditorGraph_UE::Request_LinkPins
-        (
-            InCompilerContext,
-            {
-                {
-                    UCk_Utils_EditorGraph_UE::Get_Pin(GraphPinName, ECk_EditorGraph_PinDirection::Output, *this),
-                    UCk_Utils_EditorGraph_UE::Get_Pin(GraphPinName, ECk_EditorGraph_PinDirection::Output, *GetVariableNode),
-                },
-            },
-            ECk_EditorGraph_PinLinkType::Move
-        );
+                ECk_EditorGraph_PinLinkType::Move
+            );
+        }
     });
 
     // Connect everything together
@@ -872,20 +793,12 @@ auto
                 UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("InstancedStruct"), ECk_EditorGraph_PinDirection::Input, *GetInstancedStruct_Node)
             },
             {
-                UCk_Utils_EditorGraph_UE::Get_Pin(FCk_Message_Definition::StaticStruct()->GetFName(), ECk_EditorGraph_PinDirection::Input, *BreakMessageDefinitionStruct_Node),
+                UCk_Utils_EditorGraph_UE::Get_Pin(ScriptStruct->GetFName(), ECk_EditorGraph_PinDirection::Input, *BreakMessageDefinition_Node),
                 UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("Value"), ECk_EditorGraph_PinDirection::Output, *GetInstancedStruct_Node)
             },
             {
-                UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("_MessageObject"), ECk_EditorGraph_PinDirection::Output, *BreakMessageDefinitionStruct_Node),
-                CastNode->GetCastSourcePin()
-            },
-            {
-                UCk_Utils_EditorGraph_UE::Get_Pin_Exec(*CastNode),
-                UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("Valid"), ECk_EditorGraph_PinDirection::Output, *GetInstancedStruct_Node)
-            },
-            {
                 UCk_Utils_EditorGraph_UE::Get_Pin_Exec(*TriggerEnsure_Node),
-                UCk_Utils_EditorGraph_UE::Get_Pin(UEdGraphSchema_K2::PN_CastFailed, ECk_EditorGraph_PinDirection::Output, *CastNode)
+                UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("NotValid"), ECk_EditorGraph_PinDirection::Output, *GetInstancedStruct_Node)
             },
             {
                 UCk_Utils_EditorGraph_UE::Get_Pin_OutputDelegate(*CustomEventNode),
@@ -902,10 +815,6 @@ auto
     (
         InCompilerContext,
         {
-            /*{
-                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_messaging::PinName_Handle, ECk_EditorGraph_PinDirection::Input, *this),
-                BindFunction_Node->FindPin(TEXT("InHandle"))
-            },*/
             {
                 UCk_Utils_EditorGraph_UE::Get_Pin_Exec(*this),
                 UCk_Utils_EditorGraph_UE::Get_Pin_Exec(*BindFunction_Node)
@@ -916,7 +825,7 @@ auto
             },
             {
                 UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_messaging::PinName_MessageReceived, ECk_EditorGraph_PinDirection::Output, *this),
-                UCk_Utils_EditorGraph_UE::Get_Pin_Then(*CastNode)
+                UCk_Utils_EditorGraph_UE::Get_Pin(TEXT("Valid"), ECk_EditorGraph_PinDirection::Output, *GetInstancedStruct_Node)
             },
             {
                 UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_messaging::PinName_StopListening, ECk_EditorGraph_PinDirection::Input, *this),
@@ -959,18 +868,21 @@ auto
 
 auto
     UCk_K2Node_Message_Listen::
-    RefreshTemplateMessageDefinition()
+    RefreshMessageDefinition()
     -> void
 {
     ReconstructNode();
     GetGraph()->NotifyGraphChanged();
 }
 
-bool UCk_K2Node_Message_Listen::IsCompatibleWithGraph(UEdGraph const* InGraph) const
+auto
+    UCk_K2Node_Message_Listen::
+    IsCompatibleWithGraph(
+        UEdGraph const* InGraph) const
+    -> bool
 {
     if (ck::Is_NOT_Valid(InGraph))
     { return Super::IsCompatibleWithGraph(InGraph); }
-
 
     const auto& OuterBlueprint = InGraph->GetTypedOuter<UBlueprint>();
     if (ck::Is_NOT_Valid(OuterBlueprint))
@@ -987,43 +899,49 @@ auto
     if (ck::Is_NOT_Valid(_MessageDefinition))
     { return; }
 
-    const auto& MessageDefinitionCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Message_Definition_PDA>(_MessageDefinition);
+    const auto& MessagePayload = _MessageDefinition->Get_MessagePayload();
 
-    const auto* K2Schema = GetDefault<UEdGraphSchema_K2>();
+    if (ck::Is_NOT_Valid(MessagePayload))
+    { return; }
 
-    for (TFieldIterator<FProperty> PropIt(_MessageDefinition, EFieldIteratorFlags::ExcludeSuper); PropIt; ++PropIt)
+    const auto& CreatePinFromProperty = [this](const FProperty* InProperty, const uint8* InContainer)
     {
-        auto* Property = *PropIt;
+        auto* Pin = CreatePin(EGPD_Output, NAME_None, InProperty->GetFName());
 
-        const bool IsDelegate = Property->IsA(FMulticastDelegateProperty::StaticClass());
-        const bool IsExposedToSpawn = UEdGraphSchema_K2::IsPropertyExposedOnSpawn(Property);
-        const bool IsSettableExternally = !Property->HasAnyPropertyFlags(CPF_DisableEditOnInstance);
+        if (ck::Is_NOT_Valid(Pin, ck::IsValid_Policy_NullptrOnly{}))
+        { return; }
+
+        Pin->PinFriendlyName = InProperty->GetDisplayNameText();
+        const auto* K2Schema = GetDefault<UEdGraphSchema_K2>();
+
+        K2Schema->ConvertPropertyToPinType(InProperty, Pin->PinType);
+
+        if (K2Schema->PinDefaultValueIsEditable(*Pin))
+        {
+            auto DefaultValueAsString = FString{};
+            const auto& DefaultValueSet = FBlueprintEditorUtils::PropertyValueToString(InProperty, InContainer, DefaultValueAsString, this);
+            check(DefaultValueSet);
+
+            K2Schema->SetPinAutogeneratedDefaultValue(Pin, DefaultValueAsString);
+        }
+
+        K2Schema->ConstructBasicPinTooltip(*Pin, InProperty->GetToolTipText(), Pin->PinToolTip);
+    };
+
+    auto* StructData = MessagePayload.GetMemory();
+    auto* StructType = MessagePayload.GetScriptStruct();
+
+    for (TFieldIterator<FProperty> It(StructType); It; ++It)
+    {
+        auto* Property = *It;
 
         if (Property->HasAnyPropertyFlags(CPF_Parm) ||
             NOT FBlueprintEditorUtils::PropertyStillExists(Property) ||
             NOT Property->HasAllPropertyFlags(CPF_BlueprintVisible) ||
-            NOT IsExposedToSpawn ||
-            NOT IsSettableExternally ||
-            IsDelegate ||
             ck::IsValid(FindPin(Property->GetFName()), ck::IsValid_Policy_NullptrOnly{}))
         { continue; }
 
-        if (auto* Pin = CreatePin(EGPD_Output, NAME_None, Property->GetFName());
-            ck::IsValid(Pin, ck::IsValid_Policy_NullptrOnly{}))
-        {
-            K2Schema->ConvertPropertyToPinType(Property, Pin->PinType);
-
-            if (K2Schema->PinDefaultValueIsEditable(*Pin))
-            {
-                auto DefaultValueAsString = FString{};
-                const auto& DefaultValueSet = FBlueprintEditorUtils::PropertyValueToString(Property, reinterpret_cast<const uint8*>(MessageDefinitionCDO), DefaultValueAsString, this);
-                check(DefaultValueSet);
-
-                K2Schema->SetPinAutogeneratedDefaultValue(Pin, DefaultValueAsString);
-            }
-
-            K2Schema->ConstructBasicPinTooltip(*Pin, Property->GetToolTipText(), Pin->PinToolTip);
-        }
+        CreatePinFromProperty(Property, StructData);
     }
 }
 

@@ -28,6 +28,13 @@ auto
         Result = CombineDataValidationResults(Result, EDataValidationResult::Invalid);
     }
 
+    if (ck::Is_NOT_Valid(_MessagePayload))
+    {
+        Context.AddError(FText::FromString(ck::Format_UE(TEXT("Message Definition [{}] is missing a valid Message Payload"), this)));
+
+        Result = CombineDataValidationResults(Result, EDataValidationResult::Invalid);
+    }
+
     return Result;
 }
 #endif

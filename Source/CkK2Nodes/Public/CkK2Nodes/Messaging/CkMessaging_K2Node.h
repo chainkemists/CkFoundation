@@ -55,14 +55,10 @@ public:
     auto GetIconAndTint(FLinearColor& OutColor) const -> FSlateIcon override;
     // End of UEdGraphNode implementation
 
-    auto GetNodeContextMenuActions(UToolMenu* InMenu, UGraphNodeContextMenuContext* InContext) const -> void override;
-
     // K2Node implementation
     auto GetMenuCategory() const -> FText override;
     auto IsNodePure() const -> bool override;
-    auto AutowireNewNode(UEdGraphPin* FromPin) -> void override;
     auto ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*>& InOldPins) -> void override;
-    auto ReconstructNode() -> void override;
     // End of K2Node implementation
 
 protected:
@@ -80,13 +76,13 @@ protected:
 
 public:
     UFUNCTION()
-    void RefreshTemplateMessageDefinition();
+    void RefreshMessageDefinition();
 
     void CreatePinsFromMessageDefinition();
 
 public:
-    UPROPERTY(EditAnywhere)
-    TSubclassOf<UCk_Message_Definition_PDA> _MessageDefinition;
+    UPROPERTY(EditDefaultsOnly)
+    TObjectPtr<UCk_Message_Definition_PDA> _MessageDefinition;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -109,15 +105,11 @@ public:
     bool IsCompatibleWithGraph(UEdGraph const* InGraph) const override;
     // End of UEdGraphNode implementation
 
-    auto GetNodeContextMenuActions(UToolMenu* InMenu, UGraphNodeContextMenuContext* InContext) const -> void override;
-
     // K2Node implementation
     auto GetMenuCategory() const -> FText override;
     auto IsNodePure() const -> bool override;
-    auto AutowireNewNode(UEdGraphPin* FromPin) -> void override;
     auto ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*>& InOldPins) -> void override;
     auto GetCornerIcon() const -> FName override;
-    auto ReconstructNode() -> void override;
     // End of K2Node implementation
 
 protected:
@@ -135,13 +127,13 @@ protected:
 
 public:
     UFUNCTION()
-    void RefreshTemplateMessageDefinition();
+    void RefreshMessageDefinition();
 
     void CreatePinsFromMessageDefinition();
 
 public:
-    UPROPERTY(EditAnywhere)
-    TSubclassOf<UCk_Message_Definition_PDA> _MessageDefinition;
+    UPROPERTY(EditDefaultsOnly)
+    TObjectPtr<UCk_Message_Definition_PDA> _MessageDefinition;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
