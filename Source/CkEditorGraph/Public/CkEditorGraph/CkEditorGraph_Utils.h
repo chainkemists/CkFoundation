@@ -147,6 +147,11 @@ public:
         GraphPinPairListType InGraphPins) -> ECk_SucceededFailed;
 
     static auto
+    Request_CopyPinValues(
+        FKismetCompilerContext& InCompilerContext,
+        GraphPinPairListType InGraphPins) -> ECk_SucceededFailed;
+
+    static auto
     Request_ForceRefreshNode(
         UEdGraphNode& InGraphNode) -> void;
 

@@ -347,6 +347,30 @@ auto
 
 auto
     UCk_Utils_EditorGraph_UE::
+    Request_CopyPinValues(
+        FKismetCompilerContext& InCompilerContext,
+        GraphPinPairListType InGraphPins)
+    -> ECk_SucceededFailed
+{
+    for (const auto& PinPair : InGraphPins)
+    {
+        if (DoModifyMultiplePins(InCompilerContext, PinPair,
+        [](const UEdGraphSchema_K2* InSchema, const GraphPinType& InSourcePin, const GraphPinType& InTargetPin)
+        {
+            (*InTargetPin)->DefaultValue     = (*InSourcePin)->DefaultValue;
+            (*InTargetPin)->DefaultTextValue = (*InSourcePin)->DefaultTextValue;
+            (*InTargetPin)->DefaultObject    = (*InSourcePin)->DefaultObject;
+
+            return ECk_SucceededFailed::Succeeded;
+        }) == ECk_SucceededFailed::Failed)
+        { return ECk_SucceededFailed::Failed; }
+    }
+
+    return ECk_SucceededFailed::Succeeded;
+}
+
+auto
+    UCk_Utils_EditorGraph_UE::
     Request_ForceRefreshNode(
         UEdGraphNode& InGraphNode)
     -> void
