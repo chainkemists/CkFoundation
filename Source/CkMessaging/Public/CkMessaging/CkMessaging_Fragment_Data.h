@@ -27,7 +27,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract, BlueprintType, EditInlineNew)
+UCLASS(NotBlueprintable, BlueprintType, EditInlineNew)
 class CKMESSAGING_API UCk_Message_Definition_PDA : public UCk_DataAsset_PDA
 {
     GENERATED_BODY()
@@ -52,6 +52,9 @@ private:
         meta = (AllowPrivateAccess = true, Categories = "Message"))
     FGameplayTag _MessageName;
 
+    UPROPERTY(EditDefaultsOnly, meta = (ExcludeBaseStruct))
+    FInstancedStruct _MessagePayload;
+
     /*Dirty hack to trick the asset manager to associate this asset with a specific type.*/
     UPROPERTY(EditDefaultsOnly,
         Category="Developer Settings", AssetRegistrySearchable, AdvancedDisplay,
@@ -60,26 +63,8 @@ private:
 
 public:
     CK_PROPERTY_GET(_MessageName);
+    CK_PROPERTY_GET(_MessagePayload);
     CK_PROPERTY_GET(_AssetRegistryCategory);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct FCk_Message_Definition
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Message_Definition);
-
-private:
-    UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCk_Message_Definition_PDA> _MessageObject;
-
-public:
-    CK_PROPERTY(_MessageObject);
-
 };
 
 // --------------------------------------------------------------------------------------------------------------------
