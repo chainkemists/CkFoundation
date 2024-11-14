@@ -21,7 +21,7 @@ namespace ck
         using AttributeFragmentType              = T_DerivedAttribute;
         using AttributeFragmentPreviousValueType = TFragment_Attribute_PreviousValues<T_DerivedAttribute>;
         using AttributeDataType                  = typename AttributeFragmentType::AttributeDataType;
-        using AttributeHandleType                = FCk_Handle;
+        using AttributeHandleType                = typename AttributeFragmentType::HandleType;
 
     public:
         template <typename>
@@ -53,11 +53,7 @@ namespace ck
 
         static auto
         Has(
-            const AttributeHandleType& InHandle) -> bool;
-
-        static auto
-        Ensure(
-            const AttributeHandleType& InHandle) -> bool;
+            const FCk_Handle& InHandle) -> bool;
 
         static auto
         Get_BaseValue(
