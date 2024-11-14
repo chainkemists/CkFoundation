@@ -27,23 +27,10 @@ namespace ck
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Has(
-            const AttributeHandleType& InHandle)
+            const FCk_Handle& InHandle)
         -> bool
     {
         return InHandle.template Has<AttributeFragmentType>();
-    }
-
-    template <typename T_DerivedAttribute>
-    auto
-        TUtils_Attribute<T_DerivedAttribute>::
-        Ensure(
-            const AttributeHandleType& InHandle)
-        -> bool
-    {
-        CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have an Attribute [{}]"), InHandle, ck::TypeToString<T_DerivedAttribute>)
-        { return false; }
-
-        return true;
     }
 
     template <typename T_DerivedAttribute>
@@ -53,9 +40,6 @@ namespace ck
             const AttributeHandleType& InHandle)
         -> AttributeDataType
     {
-        if (NOT Ensure(InHandle))
-        { return {}; }
-
         return InHandle.template Get<AttributeFragmentType>().Get_Base();
     }
 
@@ -66,9 +50,6 @@ namespace ck
             const AttributeHandleType& InHandle)
         -> AttributeDataType
     {
-        if (NOT Ensure(InHandle))
-        { return {}; }
-
         return InHandle.template Get<AttributeFragmentType>().Get_Final();
     }
 
@@ -79,9 +60,6 @@ namespace ck
             const AttributeHandleType& InHandle)
         -> bool
     {
-        if (NOT Ensure(InHandle))
-        { return {}; }
-
         return InHandle.template Has<typename AttributeFragmentType::FTag_MayRequireReplication>();
     }
 
@@ -92,9 +70,6 @@ namespace ck
             AttributeHandleType& InHandle)
         -> void
     {
-        if (NOT Ensure(InHandle))
-        { return; }
-
         InHandle.template AddOrGet<typename AttributeFragmentType::FTag_RecomputeFinalValue>();
     }
 
@@ -105,9 +80,6 @@ namespace ck
             AttributeHandleType& InHandle)
         -> void
     {
-        if (NOT Ensure(InHandle))
-        { return; }
-
         InHandle.template AddOrGet<FTag_MayRequireClamping>();
     }
 
@@ -118,9 +90,6 @@ namespace ck
             AttributeHandleType& InHandle)
         -> void
     {
-        if (NOT Ensure(InHandle))
-        { return; }
-
         InHandle.template AddOrGet<typename AttributeFragmentType::FTag_FireSignals>();
     }
 
@@ -131,9 +100,6 @@ namespace ck
             AttributeHandleType& InHandle)
         -> void
     {
-        if (NOT Ensure(InHandle))
-        { return; }
-
         if (NOT InHandle.template Has<FTag_ReplicatedAttribute>())
         { return; }
 
@@ -303,7 +269,9 @@ namespace ck
 
         ModifierFragment._ModifierDelta = InNewModifierDelta;
 
-        auto LifetimeOwnerAsAttributeEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        auto LifetimeOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        auto LifetimeOwnerAsAttributeEntity = ck::StaticCast<AttributeHandleType>(LifetimeOwnerEntity);
+
         TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(LifetimeOwnerAsAttributeEntity);
 
         if (InSyncPolicy == ECk_AttributeValueChange_SyncPolicy::TrySyncToClients)

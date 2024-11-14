@@ -298,6 +298,7 @@ namespace ck
         using AttributeFragmentType = T_DerivedAttribute;
         using ThisType              = TFragment_AttributeModifier<T_HandleType, AttributeFragmentType>;
         using AttributeDataType     = typename AttributeFragmentType::AttributeDataType;
+        using AttributeHandleType   = typename AttributeFragmentType::HandleType;
         using HandleType            = T_HandleType;
 
     public:
