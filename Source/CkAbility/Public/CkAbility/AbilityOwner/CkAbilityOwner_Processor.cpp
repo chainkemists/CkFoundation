@@ -145,6 +145,13 @@ namespace ck
             const FCk_Request_AbilityOwner_AddAndGiveExistingAbility& InRequest) const
         -> void
     {
+        using RecordOfAbilities_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfAbilities>;
+
+        CK_ENSURE_IF_NOT(NOT RecordOfAbilities_Utils::Get_ContainsEntry(InAbilityOwnerEntity, InRequest.Get_Ability()),
+            TEXT("Cannot ADD and GIVE Ability to Ability Owner [{}] because it already has the Ability [{}]"),
+            InAbilityOwnerEntity, InRequest.Get_Ability())
+        { return; }
+
         const auto AbilityGivenOrNot = [&]() -> ECk_AbilityOwner_AbilityGivenOrNot
         {
             auto AbilityEntity = InRequest.Get_Ability();
