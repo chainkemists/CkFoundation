@@ -586,17 +586,19 @@ namespace ck::detail
         if (ck::Is_NOT_Valid(TargetEntity))
         { return; }
 
+        auto TargetAsAttributeEntity = ck::StaticCast<AttributeHandleType>(TargetEntity);
+
         attribute::VeryVerbose
         (
             TEXT("Removing REVOCABLE AttributeModifier Entity [{}] targeting [{}] AttributeComponent of Attribute Entity [{}]. "
             "Forcing final value calculation again"),
             InHandle,
             AttributeFragmentType::ComponentTagType,
-            TargetEntity
+            TargetAsAttributeEntity
         );
 
-        TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(TargetEntity);
-        TUtils_Attribute<AttributeFragmentType>::Request_TryReplicateAttribute(TargetEntity);
+        TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(TargetAsAttributeEntity);
+        TUtils_Attribute<AttributeFragmentType>::Request_TryReplicateAttribute(TargetAsAttributeEntity);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
