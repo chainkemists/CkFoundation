@@ -16,7 +16,7 @@ namespace ck
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Add(
-            HandleType& InHandle,
+            AttributeHandleType& InHandle,
             const AttributeDataType& InBaseValue)
         -> void
     {
@@ -27,7 +27,7 @@ namespace ck
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Has(
-            const HandleType& InHandle)
+            const AttributeHandleType& InHandle)
         -> bool
     {
         return InHandle.template Has<AttributeFragmentType>();
@@ -37,7 +37,7 @@ namespace ck
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Ensure(
-            const HandleType& InHandle)
+            const AttributeHandleType& InHandle)
         -> bool
     {
         CK_ENSURE_IF_NOT(Has(InHandle), TEXT("Handle [{}] does NOT have an Attribute [{}]"), InHandle, ck::TypeToString<T_DerivedAttribute>)
@@ -50,7 +50,7 @@ namespace ck
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Get_BaseValue(
-            const HandleType& InHandle)
+            const AttributeHandleType& InHandle)
         -> AttributeDataType
     {
         if (NOT Ensure(InHandle))
@@ -63,7 +63,7 @@ namespace ck
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Get_FinalValue(
-            const HandleType& InHandle)
+            const AttributeHandleType& InHandle)
         -> AttributeDataType
     {
         if (NOT Ensure(InHandle))
@@ -76,7 +76,7 @@ namespace ck
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Get_MayRequireReplicationThisFrame(
-            const HandleType& InHandle)
+            const AttributeHandleType& InHandle)
         -> bool
     {
         if (NOT Ensure(InHandle))
@@ -89,7 +89,7 @@ namespace ck
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Request_RecomputeFinalValue(
-            HandleType& InHandle)
+            AttributeHandleType& InHandle)
         -> void
     {
         if (NOT Ensure(InHandle))
@@ -102,7 +102,7 @@ namespace ck
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Request_TryClamp(
-            HandleType& InHandle)
+            AttributeHandleType& InHandle)
         -> void
     {
         if (NOT Ensure(InHandle))
@@ -115,7 +115,7 @@ namespace ck
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Request_FireSignals(
-            HandleType& InHandle)
+            AttributeHandleType& InHandle)
         -> void
     {
         if (NOT Ensure(InHandle))
@@ -128,8 +128,8 @@ namespace ck
     auto
         TUtils_Attribute<T_DerivedAttribute>::
         Request_TryReplicateAttribute(
-            HandleType& InHandle)
-            -> void
+            AttributeHandleType& InHandle)
+        -> void
     {
         if (NOT Ensure(InHandle))
         { return; }
@@ -146,7 +146,7 @@ namespace ck
     auto
         TUtils_AttributeRefill<T_DerivedAttribute>::
         Add(
-            HandleType& InHandle,
+            AttributeHandleType& InHandle,
             const AttributeDataType& InRefillRate,
             ECk_Attribute_RefillState InRefillState)
         -> void
@@ -159,7 +159,7 @@ namespace ck
     auto
         TUtils_AttributeRefill<T_DerivedAttribute>::
         Get_RefillState(
-            HandleType& InHandle)
+            AttributeHandleType& InHandle)
         -> ECk_Attribute_RefillState
     {
         if (NOT Ensure(InHandle))
@@ -174,7 +174,7 @@ namespace ck
     auto
         TUtils_AttributeRefill<T_DerivedAttributeRefill>::
         Request_SetRefillState(
-            HandleType& InHandle,
+            AttributeHandleType& InHandle,
             ECk_Attribute_RefillState InRefillState)
         -> void
     {
@@ -208,7 +208,7 @@ namespace ck
             AttributeDataType InModifierDelta,
             ECk_AttributeModifier_Operation InModifierOperation,
             ECk_AttributeValueChange_SyncPolicy InSyncPolicy)
-        -> HandleType
+        -> AttributeModifierHandleType
     {
         TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(InAttributeHandle);
 
@@ -289,7 +289,7 @@ namespace ck
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Override(
-            HandleType& InHandle,
+            AttributeModifierHandleType& InHandle,
             AttributeDataType InNewModifierDelta,
             ECk_AttributeValueChange_SyncPolicy InSyncPolicy)
         -> void
@@ -326,7 +326,7 @@ namespace ck
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Get_ModifierDeltaValue(
-            const HandleType& InHandle)
+            const AttributeModifierHandleType& InHandle)
         -> const AttributeDataType&
     {
         return InHandle.template Get<AttributeModifierFragmentType>().Get_ModifierDelta().Get(AttributeDataType{});
@@ -336,7 +336,7 @@ namespace ck
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Get_IsModifierUnique(
-            const HandleType& InHandle)
+            const AttributeModifierHandleType& InHandle)
         -> ECk_Unique
     {
         const auto& AttributeEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
@@ -357,7 +357,7 @@ namespace ck
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Get_ModifierOperation(
-            const HandleType& InHandle)
+            const AttributeModifierHandleType& InHandle)
         -> ECk_ArithmeticOperations_Basic
     {
         if (InHandle.template Has<typename AttributeModifierFragmentType::FTag_ModifyAdd>())
@@ -381,7 +381,7 @@ namespace ck
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Request_ComputeResult(
-            HandleType& InHandle)
+            AttributeModifierHandleType& InHandle)
         -> void
     {
         InHandle.template AddOrGet<typename AttributeModifierFragmentType::FTag_ComputeResult>();
@@ -395,10 +395,10 @@ namespace ck
             AttributeDataType InModifierDelta,
             ECk_AttributeModifier_Operation InModifierOperation,
             ECk_ModifierOperation_RevocablePolicy InRevocablePolicy)
-        -> HandleType
+        -> AttributeModifierHandleType
     {
         auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeHandle);
-        auto NewModifierEntity = ck::StaticCast<HandleType>(NewEntity);
+        auto NewModifierEntity = ck::StaticCast<AttributeModifierHandleType>(NewEntity);
 
         NewModifierEntity.template Add<AttributeModifierFragmentType>(InModifierDelta, InModifierOperation);
         NewModifierEntity.template Add<ECk_MinMaxCurrent>(AttributeFragmentType::ComponentTagType);
