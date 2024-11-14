@@ -49,16 +49,18 @@ public:
         ECk_DebugNameVerbosity_Policy InNameVerbosity = ECk_DebugNameVerbosity_Policy::Default);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Debug",
-              DisplayName = "[Ck] Get Debug Name (As String)")
+        Category = "Ck|Utils|Debug",
+        DisplayName = "[Ck] Get Debug Name (As String)",
+        meta=(DefaultToSelf = "InObject"))
     static FString
     Get_DebugName_AsString(
         const UObject* InObject,
         ECk_DebugNameVerbosity_Policy InNameVerbosity = ECk_DebugNameVerbosity_Policy::Default);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Debug",
-              DisplayName = "[Ck] Get Debug Name (As Text)")
+        Category = "Ck|Utils|Debug",
+        DisplayName = "[Ck] Get Debug Name (As Text)",
+        meta=(DefaultToSelf = "InObject"))
     static FText
     Get_DebugName_AsText(
         const UObject* InObject,
