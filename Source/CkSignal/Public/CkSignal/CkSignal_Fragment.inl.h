@@ -116,7 +116,7 @@ namespace ck
                 if (ShouldInvokeFunc && NOT ShouldInvokeFunc(TTypeConverter<T_Args, ck::TypeConverterPolicy::TypeToUnreal>{}(std::forward<T_Args>(InArgs))...))
                 { continue; }
 
-                ConditionalMulticast.Add(DelegateToInvoke);
+                ConditionalMulticast.AddUnique(DelegateToInvoke);
             }
 
             ConditionalMulticast.Broadcast(TTypeConverter<T_Args, TypeConverterPolicy::TypeToUnreal>{}(std::forward<T_Args>(InArgs))...);
