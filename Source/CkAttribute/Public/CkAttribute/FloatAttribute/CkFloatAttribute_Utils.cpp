@@ -149,10 +149,7 @@ auto
     auto MaybeOwner = UCk_Utils_EntityLifetime_UE::Get_EntityInOwnershipChain_If(InHandle,
     [&](const FCk_Handle& Handle)
     {
-        if (ck::IsValid(TryGet(Handle, InAttributeName)))
-        { return true; }
-
-        return false;
+        return ck::IsValid(TryGet(Handle, InAttributeName));
     });
 
     return MaybeOwner;
@@ -299,8 +296,10 @@ auto
             return FloatAttribute_Utils_Current::Get_BaseValue(InAttribute);
         }
         default:
+        {
+            CK_INVALID_ENUM(InAttributeComponent);
             return {};
-
+        }
     }
 }
 
@@ -337,7 +336,10 @@ auto
             return FloatAttribute_Utils_Current::Get_FinalValue(InAttribute) - FloatAttribute_Utils_Current::Get_BaseValue(InAttribute);
         }
         default:
+        {
+            CK_INVALID_ENUM(InAttributeComponent);
             return {};
+        }
     }
 }
 
@@ -375,7 +377,10 @@ auto
             return FloatAttribute_Utils_Current::Get_FinalValue(InAttribute);
         }
         default:
+        {
+            CK_INVALID_ENUM(InAttributeComponent);
             return {};
+        }
     }
 }
 
