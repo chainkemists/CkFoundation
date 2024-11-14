@@ -32,8 +32,8 @@ public:
     CK_GENERATED_BODY(UCk_Utils_Ability_UE);
 
 public:
-    struct RecordOfAbilities_Utils : public ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfAbilities> {};
-    struct AbilitySource_Utils : public ck::TUtils_EntityHolder<ck::FFragment_Ability_Source> {};
+    using RecordOfAbilities_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfAbilities>;
+    using AbilitySource_Utils = ck::TUtils_EntityHolder<ck::FFragment_Ability_Source>;
 
 public:
     friend class UCk_Utils_Ecs_Base_UE;
