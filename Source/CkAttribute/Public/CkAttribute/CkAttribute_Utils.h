@@ -21,7 +21,7 @@ namespace ck
         using AttributeFragmentType              = T_DerivedAttribute;
         using AttributeFragmentPreviousValueType = TFragment_Attribute_PreviousValues<T_DerivedAttribute>;
         using AttributeDataType                  = typename AttributeFragmentType::AttributeDataType;
-        using HandleType                         = FCk_Handle;
+        using AttributeHandleType                = FCk_Handle;
 
     public:
         template <typename>
@@ -48,45 +48,45 @@ namespace ck
     public:
         static auto
         Add(
-            HandleType& InHandle,
+            AttributeHandleType& InHandle,
             const AttributeDataType& InBaseValue) -> void;
 
         static auto
         Has(
-            const HandleType& InHandle) -> bool;
+            const AttributeHandleType& InHandle) -> bool;
 
         static auto
         Ensure(
-            const HandleType& InHandle) -> bool;
+            const AttributeHandleType& InHandle) -> bool;
 
         static auto
         Get_BaseValue(
-            const HandleType& InHandle) -> AttributeDataType;
+            const AttributeHandleType& InHandle) -> AttributeDataType;
 
         static auto
         Get_FinalValue(
-            const HandleType& InHandle) -> AttributeDataType;
+            const AttributeHandleType& InHandle) -> AttributeDataType;
 
         static auto
         Get_MayRequireReplicationThisFrame(
-            const HandleType& InHandle) -> bool;
+            const AttributeHandleType& InHandle) -> bool;
 
     private:
         static auto
         Request_RecomputeFinalValue(
-            HandleType& InHandle) -> void;
+            AttributeHandleType& InHandle) -> void;
 
         static auto
         Request_TryClamp(
-            HandleType& InHandle) -> void;
+            AttributeHandleType& InHandle) -> void;
 
         static auto
         Request_FireSignals(
-            HandleType& InHandle) -> void;
+            AttributeHandleType& InHandle) -> void;
 
         static auto
         Request_TryReplicateAttribute(
-            HandleType& InHandle) -> void;
+            AttributeHandleType& InHandle) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -98,23 +98,23 @@ namespace ck
         using AttributeRefillFragmentType = T_DerivedAttributeRefill;
         using AttributeFragmentType       = typename AttributeRefillFragmentType::AttributeFragmentType;
         using AttributeDataType           = typename AttributeFragmentType::AttributeDataType;
-        using HandleType                  = typename AttributeFragmentType::HandleType;
+        using AttributeHandleType         = typename AttributeFragmentType::HandleType;
 
     public:
         static auto
         Add(
-            HandleType& InHandle,
+            AttributeHandleType& InHandle,
             const AttributeDataType& InRefillRate,
             ECk_Attribute_RefillState InRefillState) -> void;
 
         static auto
         Get_RefillState(
-            HandleType& InHandle) -> ECk_Attribute_RefillState;
+            AttributeHandleType& InHandle) -> ECk_Attribute_RefillState;
 
     public:
         static auto
         Request_SetRefillState(
-            HandleType& InHandle,
+            AttributeHandleType& InHandle,
             ECk_Attribute_RefillState InRefillState) -> void;
     };
 
@@ -127,7 +127,7 @@ namespace ck
         using AttributeModifierFragmentType = T_DerivedAttributeModifier;
         using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
         using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
-        using HandleType                    = typename AttributeModifierFragmentType::HandleType;
+        using AttributeModifierHandleType   = typename AttributeModifierFragmentType::HandleType;
         using AttributeHandleType           = typename AttributeFragmentType::HandleType;
 
     public:
@@ -138,8 +138,8 @@ namespace ck
         friend class detail::TProcessor_AttributeModifier_Teardown;
 
     public:
-        struct DerivedRecordType : TFragment_RecordOfAttributeModifiers<HandleType>{
-            using TFragment_RecordOfAttributeModifiers<HandleType>::TFragment_RecordOfAttributeModifiers;};
+        struct DerivedRecordType : TFragment_RecordOfAttributeModifiers<AttributeModifierHandleType>{
+            using TFragment_RecordOfAttributeModifiers<AttributeModifierHandleType>::TFragment_RecordOfAttributeModifiers;};
 
         struct RecordOfAttributeModifiers_Utils : TUtils_RecordOfEntities<DerivedRecordType>{};
 
@@ -149,7 +149,7 @@ namespace ck
             AttributeHandleType& InAttributeHandle,
             AttributeDataType InModifierDelta,
             ECk_AttributeModifier_Operation InModifierOperation,
-            ECk_AttributeValueChange_SyncPolicy InSyncPolicy = ECk_AttributeValueChange_SyncPolicy::TrySyncToClients) -> HandleType;
+            ECk_AttributeValueChange_SyncPolicy InSyncPolicy = ECk_AttributeValueChange_SyncPolicy::TrySyncToClients) -> AttributeModifierHandleType;
 
         static auto
         Add_NotRevocable(
@@ -160,7 +160,7 @@ namespace ck
 
         static auto
         Override(
-            HandleType& InHandle,
+            AttributeModifierHandleType& InHandle,
             AttributeDataType InNewModifierDelta,
             ECk_AttributeValueChange_SyncPolicy InSyncPolicy = ECk_AttributeValueChange_SyncPolicy::TrySyncToClients) -> void;
 
@@ -170,27 +170,27 @@ namespace ck
 
         static auto
         Get_ModifierDeltaValue(
-            const HandleType& InHandle) -> const AttributeDataType&;
+            const AttributeModifierHandleType& InHandle) -> const AttributeDataType&;
 
         static auto
         Get_IsModifierUnique(
-            const HandleType& InHandle) -> ECk_Unique;
+            const AttributeModifierHandleType& InHandle) -> ECk_Unique;
 
         static auto
         Get_ModifierOperation(
-            const HandleType& InHandle) -> ECk_ArithmeticOperations_Basic;
+            const AttributeModifierHandleType& InHandle) -> ECk_ArithmeticOperations_Basic;
 
     private:
         static auto
         Request_ComputeResult(
-            HandleType& InHandle) -> void;
+            AttributeModifierHandleType& InHandle) -> void;
 
         static auto
         DoAddNewModifierToAttribute(
             AttributeHandleType& InAttributeHandle,
             AttributeDataType InModifierDelta,
             ECk_AttributeModifier_Operation InModifierOperation,
-            ECk_ModifierOperation_RevocablePolicy InRevocablePolicy) -> HandleType;
+            ECk_ModifierOperation_RevocablePolicy InRevocablePolicy) -> AttributeModifierHandleType;
     };
 }
 
