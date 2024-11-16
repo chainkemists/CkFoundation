@@ -9,6 +9,7 @@
 
 #include <BlueprintTaskTemplate.h>
 #include <NativeGameplayTags.h>
+#include <Windows.ApplicationModel.Activation.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -62,6 +63,7 @@ auto
     DoDebugSet_Activated();
 
     const auto& AbilityOwnerEntity = Get_AbilityOwnerHandle();
+    const auto AbilityOwnerNetMode = UCk_Utils_Net_UE::Get_EntityNetMode(AbilityOwnerEntity);
 
     if (const auto& NetworkSettings = Get_Data().Get_NetworkSettings();
         NetworkSettings.Get_ReplicationType() == ECk_Net_ReplicationType::LocalAndHost)
@@ -70,9 +72,9 @@ auto
         {
             case ECk_Net_NetExecutionPolicy::PreferHost:
             {
-                if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AbilityOwnerEntity))
+                if (AbilityOwnerNetMode == ECk_Net_NetModeType::Host)
                 {
-                    DoOnActivateAbility(InActivationPayload);
+                    DoOnActivateAbility(InActivationPayload, AbilityOwnerNetMode);
                 }
                 break;
             }
@@ -81,7 +83,7 @@ auto
                 if (UCk_Utils_Net_UE::Get_HasAuthority(AbilityOwnerEntity) ||
                     UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AbilityOwnerEntity))
                 {
-                    DoOnActivateAbility(InActivationPayload);
+                    DoOnActivateAbility(InActivationPayload, AbilityOwnerNetMode);
                 }
                 break;
             }
@@ -94,7 +96,7 @@ auto
     }
     else
     {
-        DoOnActivateAbility(InActivationPayload);
+        DoOnActivateAbility(InActivationPayload, AbilityOwnerNetMode);
     }
 }
 
@@ -154,6 +156,8 @@ auto
         InTask->Deactivate();
     });
 
+    const auto AbilityOwnerNetMode = UCk_Utils_Net_UE::Get_EntityNetMode(AbilityOwnerEntity);
+
     if (const auto& NetworkSettings = Get_Data().Get_NetworkSettings();
         NetworkSettings.Get_ReplicationType() == ECk_Net_ReplicationType::LocalAndHost)
     {
@@ -163,7 +167,7 @@ auto
             {
                 if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AbilityOwnerEntity))
                 {
-                    DoOnDeactivateAbility();
+                    DoOnDeactivateAbility(AbilityOwnerNetMode);
                 }
                 break;
             }
@@ -172,7 +176,7 @@ auto
                 if (UCk_Utils_Net_UE::Get_HasAuthority(AbilityOwnerEntity) ||
                     UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(AbilityOwnerEntity))
                 {
-                    DoOnDeactivateAbility();
+                    DoOnDeactivateAbility(AbilityOwnerNetMode);
                 }
                 break;
             }
@@ -185,7 +189,7 @@ auto
     }
     else
     {
-        DoOnDeactivateAbility();
+        DoOnDeactivateAbility(AbilityOwnerNetMode);
     }
 }
 
@@ -217,7 +221,9 @@ auto
 {
     DoDebugSet_Given();
 
-    DoOnGiveAbility(InOptionalPayload);
+    const auto AbilityOwnerNetMode = UCk_Utils_Net_UE::Get_EntityNetMode(Get_AbilityOwnerHandle());
+
+    DoOnGiveAbility(InOptionalPayload, AbilityOwnerNetMode);
 }
 
 auto
@@ -232,7 +238,9 @@ auto
         InTask->Deactivate();
     });
 
-    DoOnRevokeAbility();
+    const auto AbilityOwnerNetMode = UCk_Utils_Net_UE::Get_EntityNetMode(Get_AbilityOwnerHandle());
+
+    DoOnRevokeAbility(AbilityOwnerNetMode);
 }
 
 auto
