@@ -483,6 +483,18 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
+    DoGet_AbilityOwnerEntity_Self()
+    -> FCk_Handle_AbilityOwner
+{
+    CK_ENSURE_IF_NOT(UCk_Utils_AbilityOwner_UE::Has(Get_AbilityHandle()), TEXT("AbilityHandle is [{}] which is NOT an AbilityOwner.{}"),
+        Get_AbilityHandle(), ck::Context(this))
+    { return {}; }
+
+    return UCk_Utils_AbilityOwner_UE::Cast(Get_AbilityHandle());
+}
+
+auto
+    UCk_Ability_Script_PDA::
     DoGet_ContextEntityWithActor()
     -> FCk_Handle
 {
