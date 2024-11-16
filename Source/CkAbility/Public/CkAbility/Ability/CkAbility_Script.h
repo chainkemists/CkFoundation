@@ -67,7 +67,8 @@ protected:
               meta     = (DisplayName = "OnActivateAbility"))
     void
     DoOnActivateAbility(
-        const FCk_Ability_Payload_OnActivate& InActivationPayload);
+        const FCk_Ability_Payload_OnActivate& InActivationPayload,
+        ECk_Net_NetModeType InNetMode);
 
     UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|Ability|Script",
@@ -80,20 +81,23 @@ protected:
               Category = "Ck|Ability|Script",
               meta     = (DisplayName = "OnDeactivateAbility"))
     void
-    DoOnDeactivateAbility();
+    DoOnDeactivateAbility(
+        ECk_Net_NetModeType InNetMode);
 
     UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|Ability|Script",
               meta     = (DisplayName = "OnGiveAbility"))
     void
     DoOnGiveAbility(
-        const FCk_Ability_Payload_OnGranted& InOptionalPayload);
+        const FCk_Ability_Payload_OnGranted& InOptionalPayload,
+        ECk_Net_NetModeType InNetMode);
 
     UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|Ability|Script",
               meta     = (DisplayName = "OnRevokeAbility"))
     void
-    DoOnRevokeAbility();
+    DoOnRevokeAbility(
+        ECk_Net_NetModeType InNetMode);
 
     UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|Ability|Script",
@@ -264,7 +268,7 @@ private:
               BlueprintPure = true,
               Category = "Ck|Ability|Script",
               DisplayName = "[Ck][AbilityScript] Get Ability Owner Entity (Self)",
-              meta = (CompactNodeTitle="AbilityOwnerEntity", HideSelfPin = true))
+              meta = (CompactNodeTitle="AbilityOwnerEntity (Self)", HideSelfPin = true))
     FCk_Handle_AbilityOwner
     DoGet_AbilityOwnerEntity_Self();
 
