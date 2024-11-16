@@ -245,7 +245,7 @@ private:
     UFUNCTION(BlueprintCallable,
               BlueprintPure = true,
               Category = "Ck|Ability|Script",
-              DisplayName = "[Ck][AbilityScript] Get Ability Entity",
+              DisplayName = "[Ck][AbilityScript] Get Ability Entity (Self)",
               meta = (CompactNodeTitle="AbilityEntity", HideSelfPin = true))
     FCk_Handle_Ability
     DoGet_AbilityEntity();
@@ -258,6 +258,15 @@ private:
               meta = (CompactNodeTitle="AbilityOwnerEntity", HideSelfPin = true))
     FCk_Handle_AbilityOwner
     DoGet_AbilityOwnerEntity();
+
+    // Non-const by design to avoid errors where this is called on the CDO and the Ability Handle is Invalid
+    UFUNCTION(BlueprintCallable,
+              BlueprintPure = true,
+              Category = "Ck|Ability|Script",
+              DisplayName = "[Ck][AbilityScript] Get Ability Owner Entity (Self)",
+              meta = (CompactNodeTitle="AbilityOwnerEntity", HideSelfPin = true))
+    FCk_Handle_AbilityOwner
+    DoGet_AbilityOwnerEntity_Self();
 
     // Non-const by design to avoid errors where this is called on the CDO and the Ability Handle is Invalid
     UFUNCTION(BlueprintCallable,
