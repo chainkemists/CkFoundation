@@ -232,7 +232,7 @@ auto
     if (InEntity.Has<ck::FFragment_Net_Params>())
     { return InEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings().Get_NetRole(); }
 
-    return Get_EntityNetRole(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InEntity));
+    return Get_EntityNetRole(Get_LifetimeOwner(InEntity));
 }
 
 auto
@@ -247,7 +247,7 @@ auto
     if (InEntity.Has<ck::FFragment_Net_Params>())
     { return InEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings().Get_NetMode(); }
 
-    return Get_EntityNetMode(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InEntity));
+    return Get_EntityNetMode(Get_LifetimeOwner(InEntity));
 }
 
 auto
