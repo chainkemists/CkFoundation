@@ -24,11 +24,7 @@ auto
 {
     RecordOfByteAttributes_Utils::AddIfMissing(InAttributeOwnerEntity, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 
-    auto NewAttributeEntity = [&]
-    {
-        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwnerEntity);
-        return ck::StaticCast<FCk_Handle_ByteAttribute>(NewEntity);
-    }();
+    auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_ByteAttribute>(InAttributeOwnerEntity);
 
     ByteAttribute_Utils_Current::Add(NewAttributeEntity, InParams.Get_BaseValue());
 

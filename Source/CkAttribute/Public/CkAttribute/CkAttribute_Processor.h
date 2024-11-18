@@ -187,6 +187,42 @@ namespace ck::detail
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
 
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_Attribute_Refill : public ck_exp::TProcessor<
+            TProcessor_Attribute_Refill<T_DerivedProcessor, T_DerivedAttributeModifier>,
+            typename T_DerivedAttributeModifier::AttributeFragmentType::HandleType,
+            typename T_DerivedAttributeModifier::AttributeFragmentType,
+            FTag_IsRefillAttribute,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = typename FTag_IsRefillAttribute;
+
+    public:
+        using AttributeModifierFragmentType = T_DerivedAttributeModifier;
+        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
+        using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
+        using HandleType                    = typename AttributeFragmentType::HandleType;
+        using ThisType                      = TProcessor_Attribute_Refill<T_DerivedProcessor, T_DerivedAttributeModifier>;
+        using Super                         = ck_exp::TProcessor<ThisType, HandleType, AttributeFragmentType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using TimeType                      = typename Super::TimeType;
+
+    public:
+        CK_USING_BASE_CONSTRUCTORS(Super);
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            AttributeFragmentType& InAttribute) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
@@ -648,45 +684,6 @@ namespace ck::detail
     public:
         CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
     };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeRefill>
-    class TProcessor_AttributeRefill_Update : public ck_exp::TProcessor<
-            TProcessor_AttributeRefill_Update<T_DerivedProcessor, T_DerivedAttributeRefill>,
-            typename T_DerivedAttributeRefill::AttributeHandleType,
-            T_DerivedAttributeRefill,
-            typename T_DerivedAttributeRefill::AttributeFragmentType,
-            typename T_DerivedAttributeRefill::FTag_RefillRunning,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = typename T_DerivedAttributeRefill::FTag_RefillRunning;
-
-    public:
-        using AttributeRefillFragmentType = T_DerivedAttributeRefill;
-        using AttributeModifierFragmentType = typename T_DerivedAttributeRefill::AttributeModifierFragmentType;
-        using AttributeFragmentType       = typename AttributeModifierFragmentType::AttributeFragmentType;
-        using AttributeDataType           = typename AttributeFragmentType::AttributeDataType;
-        using AttributeHandleType         = typename AttributeFragmentType::HandleType;
-        using AttributeModifierHandleType = typename AttributeModifierFragmentType::HandleType;
-        using ThisType                    = TProcessor_AttributeRefill_Update<T_DerivedProcessor, T_DerivedAttributeRefill>;
-        using Super                       = ck_exp::TProcessor<ThisType,AttributeHandleType, AttributeRefillFragmentType, AttributeFragmentType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
-        using TimeType                    = typename Super::TimeType;
-
-    public:
-        CK_USING_BASE_CONSTRUCTORS(Super);
-
-    public:
-        auto ForEachEntity(
-            const TimeType& InDeltaT,
-            AttributeHandleType InHandle,
-            const AttributeRefillFragmentType& InAttributeRefill,
-            AttributeFragmentType& InAttribute) const -> void;
-
-    public:
-        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
-    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -883,16 +880,20 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedAttributeRefill>
-    class TProcessor_AttributeRefill_Update
+    template <template <ECk_MinMaxCurrent T_Component> typename T_DerivedAttributeModifier>
+    class TProcessor_Attribute_Refill
     {
     public:
         using TimeType     = FCk_Time;
         using RegistryType = FCk_Registry;
 
+        template <ECk_MinMaxCurrent T_Component>
+        using TInternalProcessorType = detail::TProcessor_Attribute_Refill<
+            TProcessor_Attribute_Refill, T_DerivedAttributeModifier<T_Component>>;
+
     public:
         explicit
-        TProcessor_AttributeRefill_Update(
+        TProcessor_Attribute_Refill(
             RegistryType InRegistry);
 
     public:
@@ -900,8 +901,9 @@ namespace ck
             TimeType InDeltaT) -> void;
 
     private:
-        detail::TProcessor_AttributeRefill_Update<
-            TProcessor_AttributeRefill_Update, T_DerivedAttributeRefill> _Refill_Update;
+        TInternalProcessorType<ECk_MinMaxCurrent::Current> _Refill_Current;
+        TInternalProcessorType<ECk_MinMaxCurrent::Min> _Refill_Min;
+        TInternalProcessorType<ECk_MinMaxCurrent::Max> _Refill_Max;
 
     private:
         RegistryType _Registry;

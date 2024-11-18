@@ -108,64 +108,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedAttribute>
-    auto
-        TUtils_AttributeRefill<T_DerivedAttribute>::
-        Add(
-            AttributeHandleType& InHandle,
-            const AttributeDataType& InRefillRate,
-            ECk_Attribute_RefillState InRefillState)
-        -> void
-    {
-        InHandle.template Add<AttributeRefillFragmentType>(InRefillRate);
-        Request_SetRefillState(InHandle, InRefillState);
-    }
-
-    template <typename T_DerivedAttribute>
-    auto
-        TUtils_AttributeRefill<T_DerivedAttribute>::
-        Get_RefillState(
-            AttributeHandleType& InHandle)
-        -> ECk_Attribute_RefillState
-    {
-        if (NOT Ensure(InHandle))
-        { return {}; }
-
-        return InHandle.template Has<AttributeRefillFragmentType::FTag_RefillRunning>()
-                ? ECk_Attribute_RefillState::Running
-                : ECk_Attribute_RefillState::Paused;
-    }
-
-    template <typename T_DerivedAttributeRefill>
-    auto
-        TUtils_AttributeRefill<T_DerivedAttributeRefill>::
-        Request_SetRefillState(
-            AttributeHandleType& InHandle,
-            ECk_Attribute_RefillState InRefillState)
-        -> void
-    {
-        switch (InRefillState)
-        {
-            case ECk_Attribute_RefillState::Paused:
-            {
-                InHandle.template Try_Remove<AttributeRefillFragmentType::FTag_RefillRunning>();
-                break;
-            }
-            case ECk_Attribute_RefillState::Running:
-            {
-                InHandle.template AddOrGet<AttributeRefillFragmentType::FTag_RefillRunning>();
-                break;
-            }
-            default:
-            {
-                CK_INVALID_ENUM(InRefillState);
-                break;
-            }
-        }
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     template <typename T_DerivedAttributeModifier>
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::

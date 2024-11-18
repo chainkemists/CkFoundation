@@ -39,16 +39,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <ECk_MinMaxCurrent T_Component>
-    struct CKATTRIBUTE_API TFragment_FloatAttributeRefill : public TFragment_AttributeRefill<TFragment_FloatAttributeModifier<T_Component>>
-    {
-        using TFragment_AttributeRefill<TFragment_FloatAttributeModifier<T_Component>>::TFragment_AttributeRefill;
-    };
-
-    using FFragment_FloatAttributeRefill = TFragment_FloatAttributeRefill<ECk_MinMaxCurrent::Current>;
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfFloatAttributes, FCk_Handle_FloatAttribute);
 
     // --------------------------------------------------------------------------------------------------------------------
