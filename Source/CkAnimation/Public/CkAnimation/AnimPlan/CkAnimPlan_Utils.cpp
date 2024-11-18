@@ -14,25 +14,12 @@ auto
         ECk_Replication InReplicates)
     -> FCk_Handle_AnimPlan
 {
-    auto NewAnimPlanEntity = CastChecked(UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAnimPlanOwnerEntity, [&](FCk_Handle InAnimPlanEntity)
-    {
-        UCk_Utils_GameplayLabel_UE::Add(InAnimPlanEntity, InParams.Get_AnimGoal());
+    auto NewAnimPlanEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_AnimPlan>(InAnimPlanOwnerEntity);
 
-        InAnimPlanEntity.Add<ck::FFragment_AnimPlan_Params>(InParams);
-        auto& Current = InAnimPlanEntity.Add<ck::FFragment_AnimPlan_Current>();
+    UCk_Utils_GameplayLabel_UE::Add(NewAnimPlanEntity, InParams.Get_AnimGoal());
 
-        if (ck::IsValid(InParams.Get_StartingAnimState()))
-        {
-            CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_StartingAnimCluster()),
-                TEXT("Adding new AnimPlan to Entity [{}] with a valid starting AnimState [{}] but an INVALID starting AnimCluster!"),
-                InAnimPlanOwnerEntity,
-                InParams.Get_StartingAnimState())
-            { return; }
-        }
-
-        Current._AnimCluster = InParams.Get_StartingAnimCluster();
-        Current._AnimState = InParams.Get_StartingAnimState();
-    }));
+    NewAnimPlanEntity.Add<ck::FFragment_AnimPlan_Params>(InParams);
+    auto& Current = NewAnimPlanEntity.Add<ck::FFragment_AnimPlan_Current>();
 
     if (InReplicates == ECk_Replication::DoesNotReplicate)
     {
@@ -50,6 +37,18 @@ auto
 
     RecordOfAnimPlans_Utils::AddIfMissing(InAnimPlanOwnerEntity, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
     RecordOfAnimPlans_Utils::Request_Connect(InAnimPlanOwnerEntity, NewAnimPlanEntity);
+
+    if (ck::IsValid(InParams.Get_StartingAnimState()))
+    {
+        CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_StartingAnimCluster()),
+            TEXT("Adding new AnimPlan to Entity [{}] with a valid starting AnimState [{}] but an INVALID starting AnimCluster!"),
+            InAnimPlanOwnerEntity,
+            InParams.Get_StartingAnimState())
+        { return NewAnimPlanEntity; }
+    }
+
+    Current._AnimCluster = InParams.Get_StartingAnimCluster();
+    Current._AnimState = InParams.Get_StartingAnimState();
 
     return NewAnimPlanEntity;
 }

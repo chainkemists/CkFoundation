@@ -11,11 +11,10 @@ auto
         const FCk_Fragment_AnimAsset_ParamsData& InParams)
     -> FCk_Handle_AnimAsset
 {
-    auto NewAnimAssetEntity = CastChecked(UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, [&](FCk_Handle InAnimAssetEntity)
-    {
-        InAnimAssetEntity.Add<ck::FFragment_AnimAsset_Params>(InParams);
-        UCk_Utils_GameplayLabel_UE::Add(InAnimAssetEntity, InParams.Get_AnimationAsset().Get_ID());
-    }));
+    auto NewAnimAssetEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_AnimAsset>(InHandle);
+
+    NewAnimAssetEntity.Add<ck::FFragment_AnimAsset_Params>(InParams);
+    UCk_Utils_GameplayLabel_UE::Add(NewAnimAssetEntity, InParams.Get_AnimationAsset().Get_ID());
 
     RecordOfAnimAssets_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
     RecordOfAnimAssets_Utils::Request_Connect(InHandle, NewAnimAssetEntity);
