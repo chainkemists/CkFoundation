@@ -12,6 +12,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+CKATTRIBUTE_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_Label_ByteAttribute);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKATTRIBUTE_API FCk_Handle_ByteAttribute : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_ByteAttribute); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_ByteAttribute);

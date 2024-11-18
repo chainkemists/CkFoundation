@@ -6,7 +6,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_VectorAttribute, TEXT("VectorAttribute"));
+UE_DEFINE_GAMEPLAY_TAG(TAG_Label_VectorAttribute, TEXT("VectorAttribute"));
 
 // --------------------------------------------------------------------------------------------------------------------
 
