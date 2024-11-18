@@ -165,6 +165,12 @@ public:
     template <typename T_TypeSafeHandle>
     [[nodiscard]]
     static auto
+    Get_LifetimeOwner_AsTypeSafe(
+        const FCk_Handle& InHandle) -> T_TypeSafeHandle;
+
+    template <typename T_TypeSafeHandle>
+    [[nodiscard]]
+    static auto
     Request_CreateEntity_AsTypeSafe(
         const FCk_Handle& InHandle) -> T_TypeSafeHandle;
 
@@ -227,10 +233,23 @@ auto
 template <typename T_TypeSafeHandle>
 auto
     UCk_Utils_EntityLifetime_UE::
+    Get_LifetimeOwner_AsTypeSafe(
+        const FCk_Handle& InHandle)
+    -> T_TypeSafeHandle
+{
+    auto LifetimeOwner = Get_LifetimeOwner(InHandle);
+    return ck::StaticCast<T_TypeSafeHandle>(LifetimeOwner);
+}
+
+template <typename T_TypeSafeHandle>
+auto
+    UCk_Utils_EntityLifetime_UE::
     Request_CreateEntity_AsTypeSafe(
         const FCk_Handle& InHandle)
     -> T_TypeSafeHandle
 {
+    QUICK_SCOPE_CYCLE_COUNTER(Request_Create_Entity)
+
     auto NewEntity = Request_CreateEntity(InHandle);
     return ck::StaticCast<T_TypeSafeHandle>(NewEntity);
 }
