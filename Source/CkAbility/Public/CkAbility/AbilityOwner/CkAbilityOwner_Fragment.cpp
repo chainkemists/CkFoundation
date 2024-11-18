@@ -261,6 +261,16 @@ auto
 
 auto
     UCk_Fragment_AbilityOwner_Rep::
+    Request_TryUpdateReplicatedFragment()
+    -> void
+{
+    OnRep_PendingAddOrGiveExistingAbilityRequests();
+    OnRep_PendingGiveAbilityRequests();
+    OnRep_PendingRevokeAbilityRequests();
+}
+
+auto
+    UCk_Fragment_AbilityOwner_Rep::
     OnRep_PendingAddOrGiveExistingAbilityRequests()
     -> void
 {
@@ -270,7 +280,12 @@ auto
     if (GetWorld()->IsNetMode(NM_DedicatedServer))
     { return; }
 
-    auto AssociatedEntityAbilityOwner = ck::StaticCast<FCk_Handle_AbilityOwner>(_AssociatedEntity);
+    auto AssociatedEntityAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(_AssociatedEntity);
+
+    // If associated entity ability owner is not yet valid or setup, we should not process replicated requests until setup calls Request_TryUpdateReplicatedFragment
+    if (ck::Is_NOT_Valid(AssociatedEntityAbilityOwner) ||
+        AssociatedEntityAbilityOwner.Has<ck::FTag_AbilityOwner_NeedsSetup>())
+    { return; }
 
     for (auto Index = _NextPendingAddGiveExistingAbilityRequests; Index < _PendingAddAndGiveExistingAbilityRequests.Num(); ++Index)
     {
@@ -291,7 +306,12 @@ auto
     if (GetWorld()->IsNetMode(NM_DedicatedServer))
     { return; }
 
-    auto AssociatedEntityAbilityOwner = ck::StaticCast<FCk_Handle_AbilityOwner>(_AssociatedEntity);
+    auto AssociatedEntityAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(_AssociatedEntity);
+
+    // If associated entity ability owner is not yet valid or setup, we should not process replicated requests until setup calls Request_TryUpdateReplicatedFragment
+    if (ck::Is_NOT_Valid(AssociatedEntityAbilityOwner) ||
+        AssociatedEntityAbilityOwner.Has<ck::FTag_AbilityOwner_NeedsSetup>())
+    { return; }
 
     for (auto Index = _NextPendingGiveAbilityRequests; Index < _PendingGiveAbilityRequests.Num(); ++Index)
     {
@@ -312,7 +332,12 @@ auto
     if (GetWorld()->IsNetMode(NM_DedicatedServer))
     { return; }
 
-    auto AssociatedEntityAbilityOwner = ck::StaticCast<FCk_Handle_AbilityOwner>(_AssociatedEntity);
+    auto AssociatedEntityAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(_AssociatedEntity);
+
+    // If associated entity ability owner is not yet valid or setup, we should not process replicated requests until setup calls Request_TryUpdateReplicatedFragment
+    if (ck::Is_NOT_Valid(AssociatedEntityAbilityOwner) ||
+        AssociatedEntityAbilityOwner.Has<ck::FTag_AbilityOwner_NeedsSetup>())
+    { return; }
 
     for (auto Index = _NextPendingRevokeAbilityRequests; Index < _PendingRevokeAbilityRequests.Num(); ++Index)
     {
