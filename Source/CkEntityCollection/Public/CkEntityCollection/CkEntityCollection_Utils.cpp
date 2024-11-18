@@ -12,12 +12,11 @@ auto
         ECk_Replication InReplicates)
     -> FCk_Handle_EntityCollection
 {
-    auto NewEntityCollectionEntity = CastChecked(UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InEntityCollectionOwnerEntity, [&](FCk_Handle InNewEntity)
-    {
-        UCk_Utils_GameplayLabel_UE::Add(InNewEntity, InParams.Get_Name());
-        InNewEntity.Add<ck::FFragment_EntityCollection_Params>(InParams);
-        EntityCollections_RecordOfEntities_Utils::AddIfMissing(InNewEntity);
-    }));
+    auto NewEntityCollectionEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_EntityCollection>(InEntityCollectionOwnerEntity);
+
+    NewEntityCollectionEntity.Add<ck::FFragment_EntityCollection_Params>(InParams);
+    UCk_Utils_GameplayLabel_UE::Add(NewEntityCollectionEntity, InParams.Get_Name());
+    EntityCollections_RecordOfEntities_Utils::AddIfMissing(NewEntityCollectionEntity);
 
     if (InReplicates == ECk_Replication::DoesNotReplicate)
     {
