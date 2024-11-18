@@ -5,6 +5,7 @@
 #include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
 #include "CkNet/CkNet_Utils.h"
 #include "CkOverlapBody/CkOverlapBody_Log.h"
+#include "CkOverlapBody/MarkerAndSensor/CkMarkerAndSensor_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -35,18 +36,16 @@ auto
         return {};
     }
 
+    auto NewSensorEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_Sensor>(InHandle);
+
     auto ParamsToUse = InParams;
     ParamsToUse.Set_ReplicationType(InReplicationType);
 
-    auto NewSensorEntity = CastChecked(UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle,
-    [&](FCk_Handle InSensorEntity)
-    {
-        InSensorEntity.Add<ck::FFragment_Sensor_Params>(ParamsToUse);
-        InSensorEntity.Add<ck::FFragment_Sensor_Current>(ParamsToUse.Get_StartingState());
-        InSensorEntity.Add<ck::FTag_Sensor_NeedsSetup>();
+    NewSensorEntity.Add<ck::FFragment_Sensor_Params>(ParamsToUse);
+    NewSensorEntity.Add<ck::FFragment_Sensor_Current>(ParamsToUse.Get_StartingState());
+    NewSensorEntity.Add<ck::FTag_Sensor_NeedsSetup>();
 
-        UCk_Utils_GameplayLabel_UE::Add(InSensorEntity, SensorName);
-    }));
+    UCk_Utils_GameplayLabel_UE::Add(NewSensorEntity, SensorName);
 
     RecordOfSensors_Utils::AddIfMissing(InHandle ,ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
     RecordOfSensors_Utils::Request_Connect(InHandle, NewSensorEntity);

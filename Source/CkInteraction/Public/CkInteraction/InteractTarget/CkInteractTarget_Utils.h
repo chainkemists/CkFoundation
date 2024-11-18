@@ -24,7 +24,7 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_InteractTarget);
 
 public:
-	using RecordOfInteractTargets_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfInteractTargets>;
+    using RecordOfInteractTargets_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfInteractTargets>;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -32,11 +32,11 @@ public:
               DisplayName="[Ck][InteractTarget] Add Interaction Target")
     static FCk_Handle_InteractTarget
     Add(
-        UPARAM(ref) FCk_Handle InInteractTargetOwner,
+        UPARAM(ref) FCk_Handle& InInteractTargetOwner,
         const FCk_Fragment_InteractTarget_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|InteractTarget",
               DisplayName="[Ck][InteractTarget] Add Multiple New Interaction Targets")
     static TArray<FCk_Handle_InteractTarget>
@@ -71,7 +71,7 @@ private:
         FCk_Handle InHandle);
 
 public:
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractTarget",
         DisplayName="[Ck][InteractTarget] Request StartInteraction")
     static FCk_Handle_InteractTarget
@@ -79,7 +79,7 @@ public:
         UPARAM(ref) FCk_Handle_InteractTarget& InInteractTarget,
         const FCk_Try_InteractTarget_StartInteraction& InRequest);
 
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractTarget",
         DisplayName="[Ck][InteractTarget] Request CancelInteraction")
     static FCk_Handle_InteractTarget
@@ -87,22 +87,22 @@ public:
         UPARAM(ref) FCk_Handle_InteractTarget& InInteractTarget,
         const FCk_Request_InteractTarget_CancelInteraction& InRequest);
 
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractTarget",
         DisplayName="[Ck][InteractTarget] Request Cancel All Interactions")
     static FCk_Handle_InteractTarget
     Request_CancelAllInteractions(
-    	UPARAM(ref) FCk_Handle_InteractTarget& InInteractTarget);
+        UPARAM(ref) FCk_Handle_InteractTarget& InInteractTarget);
 
 public:
-	UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|InteractTarget",
         DisplayName = "[Ck][InteractTarget] Get Is Enabled")
     static ECk_EnableDisable
     Get_Enabled(
         const FCk_Handle_InteractTarget& InHandle);
 
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractTarget",
         DisplayName = "[Ck][InteractTarget] Set Is Enabled")
     static void
@@ -110,14 +110,14 @@ public:
         UPARAM(ref) FCk_Handle_InteractTarget& InHandle,
         ECk_EnableDisable InEnabled);
 
-	UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|InteractTarget",
         DisplayName = "[Ck][InteractTarget] Get InteractionChannel")
     static const FGameplayTag&
     Get_InteractionChannel(
         const FCk_Handle_InteractTarget& InHandle);
 
-	UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|InteractTarget",
         DisplayName = "[Ck][InteractTarget] Get CanInteractWith")
     static ECk_CanInteractWithResult
@@ -125,9 +125,9 @@ public:
         const FCk_Handle_InteractTarget& InTarget,
         const FCk_Handle& InSource);
 
-	UFUNCTION(BlueprintCallable,
-		Category = "Ck|Utils|InteractTarget",
-		DisplayName="[Ck][InteractTarget] Get Current Interactions")
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|InteractTarget",
+        DisplayName="[Ck][InteractTarget] Get Current Interactions")
     static TArray<FCk_Handle_Interaction>
     Get_CurrentInteractions(
         UPARAM(ref) FCk_Handle_InteractTarget& InHandle);
@@ -140,7 +140,7 @@ public:
         const FCk_Handle& InInteractTargetOwner,
         UPARAM(meta = (Categories = "InteractionChannel")) FGameplayTag InInteractionChannel);
 
-	UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintPure,
           Category = "Ck|Utils|InteractTarget",
           DisplayName="[Ck][InteractTarget] Try Get Interaction from InteractTarget")
     static FCk_Handle_Interaction
@@ -149,7 +149,7 @@ public:
         const FCk_Handle& InInteractSource);
 
 public:
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractTarget",
         DisplayName = "[Ck][InteractTarget] Bind To OnNewInteraction")
     static FCk_Handle_InteractTarget
@@ -159,7 +159,7 @@ public:
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_InteractTarget_OnNewInteraction& InDelegate);
 
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractTarget",
         DisplayName = "[Ck][InteractTarget] Unbind From OnNewInteraction")
     static FCk_Handle_InteractTarget
@@ -167,7 +167,7 @@ public:
         UPARAM(ref) FCk_Handle_InteractTarget& InHandle,
         const FCk_Delegate_InteractTarget_OnNewInteraction& InDelegate);
 
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractTarget",
         DisplayName = "[Ck][InteractTarget] Bind To OnInteractionFinished")
     static FCk_Handle_InteractTarget
@@ -177,7 +177,7 @@ public:
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_InteractTarget_OnInteractionFinished& InDelegate);
 
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractTarget",
         DisplayName = "[Ck][InteractTarget] Unbind From OnInteractionFinished")
     static FCk_Handle_InteractTarget
