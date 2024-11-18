@@ -211,8 +211,7 @@ namespace ck
 
         ModifierFragment._ModifierDelta = InNewModifierDelta;
 
-        auto LifetimeOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-        auto LifetimeOwnerAsAttributeEntity = ck::StaticCast<AttributeHandleType>(LifetimeOwnerEntity);
+        auto LifetimeOwnerAsAttributeEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner_AsTypeSafe<AttributeHandleType>(InHandle);
 
         TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(LifetimeOwnerAsAttributeEntity);
 
