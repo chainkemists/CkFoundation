@@ -213,6 +213,9 @@ public:
     GetLifetimeReplicatedProps(
         TArray<FLifetimeProperty>&) const -> void override;
 
+    auto
+    Request_TryUpdateReplicatedFragment()-> void;
+
 private:
     UFUNCTION()
     void
