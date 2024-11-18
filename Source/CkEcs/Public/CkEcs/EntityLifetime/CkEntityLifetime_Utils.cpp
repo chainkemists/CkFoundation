@@ -257,6 +257,8 @@ auto
         PostEntityCreatedFunc InFunc)
     -> HandleType
 {
+    QUICK_SCOPE_CYCLE_COUNTER(Request_Create_Entity)
+
     CK_ENSURE_IF_NOT(ck::IsValid(InHandle), TEXT("Cannot create Entity with Invalid Handle"))
     { return {}; }
 
@@ -344,6 +346,7 @@ auto
         {
             InNewEntity.Add<ck::FTag_HasAuthority>();
         }
+
         if (ConnectionSettings.Get_NetMode() == ECk_Net_NetModeType::Host)
         {
             InNewEntity.Add<ck::FTag_NetMode_IsHost>();
@@ -360,9 +363,9 @@ auto
     { InNewEntity.Add<ck::FTag_DestroyEntity_Initiate_Confirm>(); }
 
     // Not doing something like this because it is undefined behavior: *const_cast<FCk_Handle*>(&InHandle)
-    auto NonConstHandle = InLifetimeOwner;
+    auto NonConstLifetimeOwnerHandle = InLifetimeOwner;
 
-    NonConstHandle.AddOrGet<ck::FFragment_LifetimeDependents>()._Entities.Emplace(InNewEntity);
+    NonConstLifetimeOwnerHandle.AddOrGet<ck::FFragment_LifetimeDependents>()._Entities.Emplace(InNewEntity);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

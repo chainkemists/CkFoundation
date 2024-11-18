@@ -169,6 +169,8 @@ namespace ck::detail
         }
     }
 
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T_DerivedProcessor, typename T_DerivedAttribute, typename T_DerivedAttribute_ReplicatedFragment>
     auto
         TProcessor_Attribute_Replicate<T_DerivedProcessor, T_DerivedAttribute, T_DerivedAttribute_ReplicatedFragment>::
@@ -192,6 +194,31 @@ namespace ck::detail
         });
 
         InHandle.template Remove<MarkedDirtyBy>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    auto
+        TProcessor_Attribute_Refill<T_DerivedProcessor, T_DerivedAttributeModifier>::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            AttributeFragmentType& InAttribute) const
+        -> void
+    {
+        const auto& RefillValue = InAttribute.Get_Final() * InDeltaT.Get_Seconds();
+
+        // The Refill Target is the attribute owner (which is an attribute)
+        auto LifetimeOwnerAsAttributeEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner_AsTypeSafe<HandleType>(InHandle);
+
+        TUtils_AttributeModifier<AttributeModifierFragmentType>::Add_NotRevocable
+        (
+            LifetimeOwnerAsAttributeEntity,
+            RefillValue,
+            ECk_AttributeModifier_Operation::Add,
+            ECk_AttributeValueChange_SyncPolicy::DoNotSync
+        );
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -599,32 +626,6 @@ namespace ck::detail
 
         TUtils_Attribute<AttributeFragmentType>::Request_RecomputeFinalValue(TargetAsAttributeEntity);
         TUtils_Attribute<AttributeFragmentType>::Request_TryReplicateAttribute(TargetAsAttributeEntity);
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
-    auto
-        TProcessor_Attribute_Refill<T_DerivedProcessor, T_DerivedAttributeModifier>::
-        ForEachEntity(
-            const TimeType& InDeltaT,
-            HandleType InHandle,
-            AttributeFragmentType& InAttribute) const
-        -> void
-    {
-        const auto& RefillValue = InAttribute.Get_Final() * InDeltaT.Get_Seconds();
-
-        // The Refill Target is the attribute owner (which is an attribute)
-        auto LifetimeOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-        auto LifetimeOwnerAsAttributeEntity = ck::StaticCast<HandleType>(LifetimeOwnerEntity);
-
-        TUtils_AttributeModifier<AttributeModifierFragmentType>::Add_NotRevocable
-        (
-            LifetimeOwnerAsAttributeEntity,
-            RefillValue,
-            ECk_AttributeModifier_Operation::Add,
-            ECk_AttributeValueChange_SyncPolicy::DoNotSync
-        );
     }
 }
 
