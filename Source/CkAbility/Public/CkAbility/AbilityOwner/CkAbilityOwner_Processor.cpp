@@ -81,6 +81,20 @@ namespace ck
                 {}
             );
         }
+
+        // it's possible that we have pending replication info
+        // This code is in Setup instead of Add since we need to have added the default abilities first
+        if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle))
+        {
+            if (UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InHandle))
+            {
+                InHandle.Try_Transform<TObjectPtr<UCk_Fragment_AbilityOwner_Rep>>(
+                [&](const TObjectPtr<UCk_Fragment_AbilityOwner_Rep>& InRepComp)
+                {
+                    InRepComp->Request_TryUpdateReplicatedFragment();
+                });
+            }
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
