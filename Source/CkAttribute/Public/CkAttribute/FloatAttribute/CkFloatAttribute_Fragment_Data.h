@@ -127,6 +127,10 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, Categories = "FloatAttribute"))
+    FGameplayTag _RefillAttributeName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))
     float _FillRate = 0.0f;
 
@@ -135,6 +139,7 @@ private:
     ECk_Attribute_RefillState _StartingState = ECk_Attribute_RefillState::Paused;
 
 public:
+    CK_PROPERTY_GET(_RefillAttributeName);
     CK_PROPERTY_GET(_FillRate);
     CK_PROPERTY_GET(_StartingState);
 };

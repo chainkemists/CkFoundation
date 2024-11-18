@@ -39,7 +39,7 @@ namespace ck
 
         // --------------------------------------------------------------------------------------------------------------------
 
-    using FProcessor_FloatAttributeRefill_Update = TProcessor_AttributeRefill_Update<FFragment_FloatAttributeRefill>;
+    using FProcessor_FloatAttribute_Refill = TProcessor_Attribute_Refill<TFragment_FloatAttributeModifier>;
 
     // --------------------------------------------------------------------------------------------------------------------
 }

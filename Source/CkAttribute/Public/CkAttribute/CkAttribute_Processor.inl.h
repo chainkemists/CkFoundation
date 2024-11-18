@@ -603,21 +603,24 @@ namespace ck::detail
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedProcessor, typename T_DerivedAttributeRefill>
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
     auto
-        TProcessor_AttributeRefill_Update<T_DerivedProcessor, T_DerivedAttributeRefill>::
+        TProcessor_Attribute_Refill<T_DerivedProcessor, T_DerivedAttributeModifier>::
         ForEachEntity(
             const TimeType& InDeltaT,
-            AttributeHandleType InHandle,
-            const AttributeRefillFragmentType& InAttributeRefill,
+            HandleType InHandle,
             AttributeFragmentType& InAttribute) const
         -> void
     {
-        const auto& RefillValue = InAttributeRefill.Get_FillRate() * InDeltaT.Get_Seconds();
+        const auto& RefillValue = InAttribute.Get_Final() * InDeltaT.Get_Seconds();
+
+        // The Refill Target is the attribute owner (which is an attribute)
+        auto LifetimeOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        auto LifetimeOwnerAsAttributeEntity = ck::StaticCast<HandleType>(LifetimeOwnerEntity);
 
         TUtils_AttributeModifier<AttributeModifierFragmentType>::Add_NotRevocable
         (
-            InHandle,
+            LifetimeOwnerAsAttributeEntity,
             RefillValue,
             ECk_AttributeModifier_Operation::Add,
             ECk_AttributeValueChange_SyncPolicy::DoNotSync
@@ -786,23 +789,28 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    template <typename T_DerivedAttributeRefill>
-    TProcessor_AttributeRefill_Update<T_DerivedAttributeRefill>::
-        TProcessor_AttributeRefill_Update(
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
+    TProcessor_Attribute_Refill<T_DerivedAttributeModifier>::
+        TProcessor_Attribute_Refill(
             RegistryType InRegistry)
-        : _Refill_Update(InRegistry)
+        : _Refill_Current(InRegistry)
+        , _Refill_Min(InRegistry)
+        , _Refill_Max(InRegistry)
         , _Registry(InRegistry)
     {
     }
 
-    template <typename T_DerivedAttributeRefill>
+
+    template <template <ECk_MinMaxCurrent T_Component> class T_DerivedAttributeModifier>
     auto
-        TProcessor_AttributeRefill_Update<T_DerivedAttributeRefill>::
+        TProcessor_Attribute_Refill<T_DerivedAttributeModifier>::
         Tick(
             TimeType InDeltaT)
         -> void
     {
-        _Refill_Update.Tick(InDeltaT);
+        _Refill_Max.Tick(InDeltaT);
+        _Refill_Min.Tick(InDeltaT);
+        _Refill_Current.Tick(InDeltaT);
     }
 }
 

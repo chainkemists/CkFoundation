@@ -24,19 +24,9 @@ auto
 {
     RecordOfFloatAttributes_Utils::AddIfMissing(InAttributeOwnerEntity, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
 
-    auto NewAttributeEntity = [&]
-    {
-        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAttributeOwnerEntity);
-        return ck::StaticCast<FCk_Handle_FloatAttribute>(NewEntity);
-    }();
+    auto NewAttributeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_AsTypeSafe<FCk_Handle_FloatAttribute>(InAttributeOwnerEntity);
 
     FloatAttribute_Utils_Current::Add(NewAttributeEntity, InParams.Get_BaseValue());
-
-    if (InParams.Get_EnableRefill())
-    {
-        const auto& RefillParams = InParams.Get_RefillParams();
-        FloatAttributeRefill_Utils::Add(NewAttributeEntity, RefillParams.Get_FillRate(), RefillParams.Get_StartingState());
-    }
 
     switch (InParams.Get_MinMax())
     {
@@ -93,6 +83,20 @@ auto
                 InRepComp->Request_TryUpdateReplicatedAttributes();
             });
         }
+    }
+
+    if (InParams.Get_EnableRefill())
+    {
+        const auto& RefillParams = InParams.Get_RefillParams();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(RefillParams.Get_RefillAttributeName()),
+            TEXT("Invalid RefillAttribute Name supplied to FLOAT Attribute [{}]. A unique and valid Name is required"),
+            NewAttributeEntity)
+        { return NewAttributeEntity; }
+
+        auto RefillAttributeEntity = Add(NewAttributeEntity, FCk_Fragment_FloatAttribute_ParamsData{RefillParams.Get_RefillAttributeName(), RefillParams.Get_FillRate()}, InReplicates);
+
+        RefillAttributeEntity.Add<ck::FTag_IsRefillAttribute>();
     }
 
     return NewAttributeEntity;
