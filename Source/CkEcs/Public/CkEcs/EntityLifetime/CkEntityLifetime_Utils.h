@@ -2,6 +2,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Params.h"
 #include "CkEcs/Registry/CkRegistry.h"
@@ -161,6 +162,12 @@ public:
         T_Predicate T_Func,
         ECk_PendingKill_Policy InPendingKillPolicy = ECk_PendingKill_Policy::ExcludePendingKill) -> FCk_Handle;
 
+    template <typename T_TypeSafeHandle>
+    [[nodiscard]]
+    static auto
+    Request_CreateEntity_AsTypeSafe(
+        const FCk_Handle& InHandle) -> T_TypeSafeHandle;
+
 public:
     [[nodiscard]]
     static auto
@@ -215,6 +222,17 @@ auto
     }
 
     return {};
+}
+
+template <typename T_TypeSafeHandle>
+auto
+    UCk_Utils_EntityLifetime_UE::
+    Request_CreateEntity_AsTypeSafe(
+        const FCk_Handle& InHandle)
+    -> T_TypeSafeHandle
+{
+    auto NewEntity = Request_CreateEntity(InHandle);
+    return ck::StaticCast<T_TypeSafeHandle>(NewEntity);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
