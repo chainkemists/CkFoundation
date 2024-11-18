@@ -6,7 +6,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_FloatAttribute, TEXT("FloatAttribute"));
+UE_DEFINE_GAMEPLAY_TAG(TAG_Label_FloatAttribute, TEXT("FloatAttribute"));
 
 // --------------------------------------------------------------------------------------------------------------------
 
