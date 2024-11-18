@@ -53,6 +53,7 @@ namespace ck
 namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_ReplicatedAttribute);
+    CK_DEFINE_ECS_TAG(FTag_IsRefillAttribute);
     CK_DEFINE_ECS_TAG(FTag_MayRequireClamping);
 
     template <typename T_DerivedAttribute>
@@ -110,7 +111,7 @@ namespace ck::detail
     class TProcessor_AttributeModifier_Teardown;
 
     template <typename T_DerivedProcessor, typename T_DerivedAttributeRefill>
-    class TProcessor_AttributeRefill_Update;
+    class TProcessor_Attribute_Refill;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -189,7 +190,7 @@ namespace ck
         friend class detail::TProcessor_AttributeModifier_Override_Compute;
 
         template <typename, typename>
-        friend class detail::TProcessor_AttributeRefill_Update;
+        friend class detail::TProcessor_Attribute_Refill;
 
     public:
         CK_GENERATED_BODY(TFragment_Attribute<T_HandleType COMMA T_AttributeType COMMA T_ComponentTag>);
@@ -356,33 +357,6 @@ namespace ck
 
         CK_DEFINE_CONSTRUCTORS(TPayload_Attribute_OnValueChanged<T_DerivedAttribute>,
             _Handle, _BaseValue, _FinalValue, _BaseValue_Previous, _FinalValue_Previous);
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedAttributeModifier>
-    struct TFragment_AttributeRefill
-    {
-    public:
-        CK_GENERATED_BODY(TFragment_AttributeRefill<T_DerivedAttributeModifier>);
-
-    public:
-        using AttributeModifierFragmentType = T_DerivedAttributeModifier;
-        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
-        using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
-        using AttributeHandleType           = typename AttributeFragmentType::HandleType;
-        using AttributeModifierHandleType   = typename AttributeModifierFragmentType::HandleType;
-
-    public:
-        CK_DEFINE_ECS_TAG(FTag_RefillRunning);
-
-    private:
-        AttributeDataType _FillRate;
-
-    public:
-        CK_PROPERTY(_FillRate);
-
-        CK_DEFINE_CONSTRUCTORS(TFragment_AttributeRefill, _FillRate);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -28,7 +28,6 @@ private:
     using FloatAttribute_Utils_Min = ck::TUtils_Attribute<ck::FFragment_FloatAttribute_Min>;
     using FloatAttribute_Utils_Max = ck::TUtils_Attribute<ck::FFragment_FloatAttribute_Max>;
     using FloatAttribute_Utils_Current = ck::TUtils_Attribute<ck::FFragment_FloatAttribute_Current>;
-    using FloatAttributeRefill_Utils = ck::TUtils_AttributeRefill<ck::FFragment_FloatAttributeRefill>;
 
     using RecordOfFloatAttributes_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfFloatAttributes>;
 

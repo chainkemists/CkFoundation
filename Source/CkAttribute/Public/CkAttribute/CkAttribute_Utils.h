@@ -43,7 +43,7 @@ namespace ck
         friend class detail::TProcessor_Attribute_MaxClamp;
 
         template <typename, typename>
-        friend class detail::TProcessor_AttributeRefill_Update;
+        friend class detail::TProcessor_Attribute_Refill;
 
     public:
         static auto
@@ -83,35 +83,6 @@ namespace ck
         static auto
         Request_TryReplicateAttribute(
             AttributeHandleType& InHandle) -> void;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    template <typename T_DerivedAttributeRefill>
-    class TUtils_AttributeRefill
-    {
-    public:
-        using AttributeRefillFragmentType = T_DerivedAttributeRefill;
-        using AttributeFragmentType       = typename AttributeRefillFragmentType::AttributeFragmentType;
-        using AttributeDataType           = typename AttributeFragmentType::AttributeDataType;
-        using AttributeHandleType         = typename AttributeFragmentType::HandleType;
-
-    public:
-        static auto
-        Add(
-            AttributeHandleType& InHandle,
-            const AttributeDataType& InRefillRate,
-            ECk_Attribute_RefillState InRefillState) -> void;
-
-        static auto
-        Get_RefillState(
-            AttributeHandleType& InHandle) -> ECk_Attribute_RefillState;
-
-    public:
-        static auto
-        Request_SetRefillState(
-            AttributeHandleType& InHandle,
-            ECk_Attribute_RefillState InRefillState) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

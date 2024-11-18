@@ -24,7 +24,7 @@ auto
     DoInjectProcessors(
         EcsWorldType& InWorld) -> void
 {
-    InWorld.Add<ck::FProcessor_FloatAttributeRefill_Update>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_FloatAttribute_Refill>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
