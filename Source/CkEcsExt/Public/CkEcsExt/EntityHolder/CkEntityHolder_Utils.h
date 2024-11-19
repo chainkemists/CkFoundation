@@ -16,18 +16,27 @@ namespace ck
         using HandleType = FCk_Handle;
 
     public:
-        static auto AddOrReplace(
+        static auto
+        AddOrReplace(
             HandleType& InHandle,
             const EntityType& InEntityToStore) -> void;
 
-        static auto Has(
+        static auto
+        Has(
             const HandleType& InHandle) -> bool;
 
-        static auto Ensure(
+        static auto
+        Ensure(
             const HandleType& InHandle) -> bool;
 
-        static auto Get_StoredEntity(
+        static auto
+        Get_StoredEntity(
             const HandleType& InHandle) -> HandleType;
+
+        template <typename T_TypeSafeHandle>
+        static auto
+        Get_StoredEntity_AsTypeSafe(
+            const HandleType& InHandle) -> T_TypeSafeHandle;
     };
 }
 
@@ -92,6 +101,19 @@ namespace ck
         const auto& StoredEntity     = EntityHolderComp.Get_Entity();
 
         return StoredEntity;
+    }
+
+    template <typename T_DerivedCompType>
+    template <typename T_TypeSafeHandle>
+    auto
+        TUtils_EntityHolder<T_DerivedCompType>::
+        Get_StoredEntity_AsTypeSafe(
+            const HandleType& InHandle)
+        -> T_TypeSafeHandle
+    {
+        auto StoredEntity = Get_StoredEntity(InHandle);
+
+        return ck::StaticCast<T_TypeSafeHandle>(StoredEntity);
     }
 }
 
