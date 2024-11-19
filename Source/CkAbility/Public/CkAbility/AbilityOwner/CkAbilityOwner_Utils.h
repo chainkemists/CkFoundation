@@ -490,6 +490,14 @@ private:
         const FCk_Handle_Ability& InAbilityEntity,
         ECk_AbilityOwner_DestructionOnRevoke_Policy InDestructionPolicy = ECk_AbilityOwner_DestructionOnRevoke_Policy::DestroyOnRevoke);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner")
+    static FCk_Request_AbilityOwner_AddAndGiveExistingAbility
+    Make_Request_AddAndGiveExistingAbility(
+        FCk_Handle_Ability InAbility,
+        FCk_Handle InAbilitySource,
+        FCk_Ability_Payload_OnGranted InOptionalPayload);
+
 public:
     static auto
     Get_DefaultAbilities(

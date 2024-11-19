@@ -153,13 +153,21 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType)
+USTRUCT(BlueprintType, meta= (HasNativeMake))
 struct CKABILITY_API FCk_Request_AbilityOwner_AddAndGiveExistingAbility : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
     CK_GENERATED_BODY(FCk_Request_AbilityOwner_AddAndGiveExistingAbility);
+
+public:
+    FCk_Request_AbilityOwner_AddAndGiveExistingAbility() = default;
+
+    explicit
+    FCk_Request_AbilityOwner_AddAndGiveExistingAbility(
+        FCk_Handle_Ability InAbility,
+        FCk_Handle InAbilitySource);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -174,13 +182,15 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Ability_Payload_OnGranted _OptionalPayload;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Net_ReplicationType _ReplicationType = ECk_Net_ReplicationType::All;
+
 public:
     CK_PROPERTY_GET(_Ability)
     CK_PROPERTY_GET(_AbilitySource)
     CK_PROPERTY(_OptionalPayload)
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_AbilityOwner_AddAndGiveExistingAbility, _Ability, _AbilitySource);
+    CK_PROPERTY(_ReplicationType)
 };
 
 // --------------------------------------------------------------------------------------------------------------------
