@@ -31,7 +31,7 @@ public:
               DisplayName="[Ck][InteractSource] Add Interaction Sources")
     static FCk_Handle_InteractSource
     Add(
-        UPARAM(ref) FCk_Handle InInteractSourceOwner,
+        UPARAM(ref) FCk_Handle& InInteractSourceOwner,
         const FCk_Fragment_InteractSource_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
