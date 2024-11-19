@@ -591,6 +591,40 @@ auto
         const FCk_Delegate_AbilityOwner_OnAbilityRevokedOrNot& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InAbilityOwnerHandle, InRequest.Get_ReplicationType()))
+    {
+        if (InRequest.Get_SearchPolicy() == ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle)
+        {
+            ck::ability::Verbose
+            (
+                TEXT("Skipping Revoking Ability [{}] because ReplicationType [{}] does not match for Entity [{}], meaning this ability shouldn't have have been added on this instance anyways"),
+                InRequest.Get_AbilityHandle(),
+                InRequest.Get_ReplicationType(),
+                InAbilityOwnerHandle
+            );
+        }
+        else
+        {
+            ck::ability::Verbose
+            (
+                TEXT("Skipping Revoking Ability with class [{}] because ReplicationType [{}] does not match for Entity [{}], meaning this ability shouldn't have have been added on this instance anyways"),
+                InRequest.Get_AbilityClass(),
+                InRequest.Get_ReplicationType(),
+                InAbilityOwnerHandle
+            );
+        }
+        return InAbilityOwnerHandle;
+    }
+
+    if (InRequest.Get_SearchPolicy() == ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle)
+    {
+        // Need to re-cast to make sure it all relevant fragments were replicated properly
+        const auto AbilityHandle = UCk_Utils_Ability_UE::Cast(InRequest.Get_AbilityHandle());
+        CK_ENSURE_IF_NOT(ck::IsValid(AbilityHandle), TEXT("AbilityHandle [{}] to Revoke on AbilityOwner [{}] is INVALID"),
+            AbilityHandle, InAbilityOwnerHandle)
+        { return InAbilityOwnerHandle; }
+    }
+
     CK_ENSURE_IF_NOT(Has_AbilityByClass(InAbilityOwnerHandle, InRequest.Get_AbilityClass()) ||
         Has_AbilityByHandle(InAbilityOwnerHandle, InRequest.Get_AbilityHandle()), TEXT("Ability [{}] does NOT exist on AbilityOwner [{}]"),
         InRequest.Get_SearchPolicy() == ECk_AbilityOwner_AbilitySearch_Policy::SearchByClass
