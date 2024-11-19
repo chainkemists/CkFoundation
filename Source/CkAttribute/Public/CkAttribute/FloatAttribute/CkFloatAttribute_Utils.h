@@ -240,17 +240,24 @@ public:
     Get_FillRate(
         const FCk_Handle_FloatAttributeRefill& InAttributeRefill);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|AttributeRefill|Float",
+              DisplayName="[Ck][FloatAttribute] Get Refill State")
+    static ECk_Attribute_RefillState
+    Get_RefillState(
+        const FCk_Handle_FloatAttributeRefill& InAttributeRefill);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeRefill|Float",
-              DisplayName="[Ck][FloatAttribute] Request Pause")
+              DisplayName="[Ck][FloatAttribute] Request Pause Refill")
     static FCk_Handle_FloatAttributeRefill
     Request_Pause(
         UPARAM(ref) FCk_Handle_FloatAttributeRefill& InAttributeRefill);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|AttributeRefill|Float",
-              DisplayName="[Ck][FloatAttribute] Request Resume")
+              DisplayName="[Ck][FloatAttribute] Request Resume Refill")
     static FCk_Handle_FloatAttributeRefill
     Request_Resume(
         UPARAM(ref) FCk_Handle_FloatAttributeRefill& InAttributeRefill);

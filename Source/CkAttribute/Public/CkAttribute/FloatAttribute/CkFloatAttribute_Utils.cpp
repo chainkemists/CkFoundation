@@ -579,6 +579,17 @@ auto
 
 auto
     UCk_Utils_FloatAttributeRefill_UE::
+    Get_RefillState(
+        const FCk_Handle_FloatAttributeRefill& InAttributeRefill)
+    -> ECk_Attribute_RefillState
+{
+    return InAttributeRefill.Has<ck::FTag_IsRefillRunning>()
+            ? ECk_Attribute_RefillState::Running
+            : ECk_Attribute_RefillState::Paused;
+}
+
+auto
+    UCk_Utils_FloatAttributeRefill_UE::
     Request_Pause(
         FCk_Handle_FloatAttributeRefill& InAttributeRefill)
     -> FCk_Handle_FloatAttributeRefill
