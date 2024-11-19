@@ -1,5 +1,8 @@
 #include "CkAbilityOwner_Fragment_Data.h"
 
+#include "CkAbility/Ability/CkAbility_Script.h"
+#include "CkAbility/Ability/CkAbility_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -28,6 +31,11 @@ FCk_Request_AbilityOwner_RevokeAbility::
     : _SearchPolicy(ECk_AbilityOwner_AbilitySearch_Policy::SearchByClass)
     , _AbilityClass(InAbilityClass)
 {
+    if (const auto& AbilityCDO = Cast<UCk_Ability_Script_PDA>(_AbilityClass.GetDefaultObject());
+        ck::IsValid(AbilityCDO))
+    {
+        _ReplicationType = AbilityCDO->Get_Data().Get_NetworkSettings().Get_ReplicationType();
+    }
 }
 
 FCk_Request_AbilityOwner_RevokeAbility::
@@ -36,6 +44,10 @@ FCk_Request_AbilityOwner_RevokeAbility::
     : _SearchPolicy(ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle)
     , _AbilityHandle(std::move(InAbilityHandle))
 {
+    if (ck::IsValid(InAbilityHandle))
+    {
+        _ReplicationType = UCk_Utils_Ability_UE::Get_NetworkSettings(InAbilityHandle).Get_ReplicationType();
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
