@@ -25,6 +25,18 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
+FCk_Request_AbilityOwner_AddAndGiveExistingAbility::
+    FCk_Request_AbilityOwner_AddAndGiveExistingAbility(
+        FCk_Handle_Ability InAbility,
+        FCk_Handle InAbilitySource)
+    : _Ability(InAbility)
+    , _AbilitySource(InAbilitySource)
+    , _ReplicationType(UCk_Utils_Ability_UE::Get_NetworkSettings(InAbility).Get_ReplicationType())
+{
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 FCk_Request_AbilityOwner_RevokeAbility::
     FCk_Request_AbilityOwner_RevokeAbility(
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass)

@@ -485,6 +485,24 @@ auto
         const FCk_Delegate_AbilityOwner_OnAbilityGivenOrNot& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InAbilityOwnerHandle, InRequest.Get_ReplicationType()))
+    {
+        ck::ability::Verbose
+        (
+            TEXT("Skipping Revoking Ability [{}] because ReplicationType [{}] does not match for Entity [{}], meaning this ability shouldn't have have been added on this instance anyways"),
+            InRequest.Get_Ability(),
+            InRequest.Get_ReplicationType(),
+            InAbilityOwnerHandle
+        );
+        return InAbilityOwnerHandle;
+    }
+
+    // Need to re-cast to make sure it all relevant fragments were replicated properly
+    const auto AbilityHandle = UCk_Utils_Ability_UE::Cast(InRequest.Get_Ability());
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityHandle), TEXT("AbilityHandle [{}] to Revoke on AbilityOwner [{}] is INVALID"),
+        AbilityHandle, InAbilityOwnerHandle)
+    { return InAbilityOwnerHandle; }
+
     CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_Ability()),
         TEXT("Unable to process AddAndGiveExistingAbility on Handle [{}] as the AbilityHandle [{}] is INVALID.{}"),
         InAbilityOwnerHandle, InRequest.Get_Ability(), ck::Context(InDelegate.GetFunctionName()))
@@ -897,6 +915,17 @@ auto
     -> FCk_Request_AbilityOwner_RevokeAbility
 {
     return FCk_Request_AbilityOwner_RevokeAbility{InAbilityEntity}.Set_DestructionPolicy(InDestructionPolicy);
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Make_Request_AddAndGiveExistingAbility(
+        FCk_Handle_Ability InAbility,
+        FCk_Handle InAbilitySource,
+        FCk_Ability_Payload_OnGranted InOptionalPayload)
+    -> FCk_Request_AbilityOwner_AddAndGiveExistingAbility
+{
+    return FCk_Request_AbilityOwner_AddAndGiveExistingAbility{InAbility, InAbilitySource}.Set_OptionalPayload(InOptionalPayload);
 }
 
 auto
