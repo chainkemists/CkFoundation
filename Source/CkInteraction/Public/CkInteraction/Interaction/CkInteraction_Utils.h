@@ -23,7 +23,7 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Interaction);
 
 public:
-	using RecordOfInteractions_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfInteractions>;
+    using RecordOfInteractions_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfInteractions>;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -31,7 +31,7 @@ public:
               DisplayName="Add Interaction")
     static FCk_Handle_Interaction
     Add(
-        UPARAM(ref) FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_Interaction_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
@@ -60,7 +60,7 @@ private:
         FCk_Handle InHandle);
 
 public:
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Interaction",
         DisplayName="[Ck][Interaction] Request End Interaction")
     static FCk_Handle_Interaction
@@ -69,7 +69,7 @@ public:
         const FCk_Request_Interaction_EndInteraction& InRequest);
 
 public:
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Interaction",
         DisplayName = "[Ck][Interaction] Bind To OnInteractionFinished")
     static FCk_Handle_Interaction
@@ -79,7 +79,7 @@ public:
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_Interaction_OnInteractionFinished& InDelegate);
 
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Interaction",
         DisplayName = "[Ck][Interaction] Unbind From OnInteractionFinished")
     static FCk_Handle_Interaction
@@ -88,7 +88,7 @@ public:
         const FCk_Delegate_Interaction_OnInteractionFinished& InDelegate);
 
 public:
-	UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintPure,
           Category = "Ck|Utils|Interaction",
           DisplayName="[Ck][Interaction] Try Get Interaction")
     static FCk_Handle_Interaction
@@ -98,29 +98,29 @@ public:
         const FCk_Handle& InTarget,
         UPARAM(meta = (Categories = "InteractionChannel")) FGameplayTag InInteractionChannel);
 
-	UFUNCTION(BlueprintCallable,
-		Category = "Ck|Utils|Interaction",
-		DisplayName="[Ck][Interaction] For Each",
-		meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Interaction",
+        DisplayName="[Ck][Interaction] For Each",
+        meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
     static TArray<FCk_Handle_Interaction>
     ForEach(
         UPARAM(ref) FCk_Handle& InInteractionOwner,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
-	static auto
+    static auto
     ForEach(
         FCk_Handle& InInteractionOwner,
         const TFunction<void(FCk_Handle_Interaction)>& InFunc) -> void;
 
 public:
-	UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Interaction",
         DisplayName = "[Ck][Interaction] Get Interaction Source")
     static FCk_Handle
     Get_InteractionSource(
         const FCk_Handle_Interaction& InHandle);
 
-	UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Interaction",
         DisplayName = "[Ck][Interaction] Get Interaction Source Actor")
     static AActor*
@@ -134,42 +134,42 @@ public:
     Get_InteractionInstigator(
         const FCk_Handle_Interaction& InHandle);
 
-	UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Interaction",
         DisplayName = "[Ck][Interaction] Get Interaction Target")
     static FCk_Handle
     Get_InteractionTarget(
         const FCk_Handle_Interaction& InHandle);
 
-	UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Interaction",
         DisplayName = "[Ck][Interaction] Get Interaction Target Actor")
     static AActor*
     Get_InteractionTargetActor(
         const FCk_Handle_Interaction& InHandle);
 
-	UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Interaction",
         DisplayName = "[Ck][Interaction] Get Interaction Channel")
     static const FGameplayTag&
     Get_InteractionChannel(
         const FCk_Handle_Interaction& InHandle);
 
-	UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Interaction",
         DisplayName = "[Ck][Interaction] Get Interaction Completion Policy")
     static ECk_Interaction_CompletionPolicy
     Get_InteractionCompletionPolicy(
         UPARAM(ref) FCk_Handle_Interaction& InHandle);
 
-	UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Interaction",
         DisplayName = "[Ck][Interaction] Get Interaction InteractionDuration")
     static FCk_Time
     Get_InteractionInteractionDuration(
         UPARAM(ref) FCk_Handle_Interaction& InHandle);
 
-	UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Interaction",
         DisplayName = "[Ck][Interaction] Get Interaction InteractionDurationAttribute")
     static FCk_Handle_FloatAttribute
