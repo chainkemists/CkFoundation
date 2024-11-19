@@ -231,11 +231,6 @@ auto
         ECk_MinMaxCurrent InAttributeComponent)
     -> bool
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InAttribute),
-        TEXT("Byte Attribute [{}] is INVALID"),
-        InAttribute)
-    { return {}; }
-
     switch (InAttributeComponent)
     {
         case ECk_MinMaxCurrent::Min:
@@ -265,11 +260,6 @@ auto
         ECk_MinMaxCurrent InAttributeComponent)
     -> uint8
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InAttribute),
-        TEXT("Byte Attribute [{}] is INVALID"),
-        InAttribute)
-    { return {}; }
-
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Byte Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
@@ -305,11 +295,6 @@ auto
         ECk_MinMaxCurrent InAttributeComponent)
     -> uint8
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InAttribute),
-        TEXT("Byte Attribute [{}] is INVALID"),
-        InAttribute)
-    { return {}; }
-
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Byte Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
@@ -345,11 +330,6 @@ auto
         ECk_MinMaxCurrent InAttributeComponent)
     -> uint8
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InAttribute),
-        TEXT("Byte Attribute [{}] is INVALID"),
-        InAttribute)
-    { return {}; }
-
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Byte Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
@@ -387,13 +367,6 @@ auto
         ECk_MinMaxCurrent InAttributeComponent)
     -> FCk_Handle_ByteAttribute
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InAttribute),
-        TEXT("Byte Attribute [{}] is INVALID"),
-        InAttribute)
-    { return InAttribute; }
-
-    const uint8 Delta = InNewBaseValue;
-
     CK_ENSURE_IF_NOT(Has_Component(InAttribute, InAttributeComponent),
         TEXT("Byte Attribute [{}] with Owner [{}] does NOT have a [{}] component"),
         InAttribute,
@@ -401,7 +374,7 @@ auto
         InAttributeComponent)
     { return InAttribute; }
 
-    if (Delta == Get_BaseValue(InAttribute, InAttributeComponent))
+    if (InNewBaseValue == Get_BaseValue(InAttribute, InAttributeComponent))
     { return InAttribute; }
 
     UCk_Utils_ByteAttributeModifier_UE::Add_NotRevocable
@@ -410,7 +383,7 @@ auto
         ECk_AttributeModifier_Operation::Override,
         FCk_Fragment_ByteAttributeModifier_ParamsData
         {
-            Delta,
+            InNewBaseValue,
             InAttributeComponent
         }
     );
@@ -717,6 +690,7 @@ auto
         }
         default:
         {
+            CK_INVALID_ENUM(InComponent);
             return {};
         }
     }
@@ -765,6 +739,7 @@ auto
         }
         default:
         {
+            CK_INVALID_ENUM(InComponent);
             return {};
         }
     }
