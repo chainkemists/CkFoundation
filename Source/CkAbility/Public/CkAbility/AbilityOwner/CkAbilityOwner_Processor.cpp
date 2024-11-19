@@ -1166,6 +1166,61 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
+        FProcessor_AbilityOwner_HandleRequests_PendingReplication::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            FFragment_AbilityOwner_Requests_PendingReplication& InAbilityRequestsComp) const
+        -> void
+    {
+        const auto RequestsCopy = InAbilityRequestsComp._Requests;
+        InAbilityRequestsComp._Requests.Reset();
+
+        algo::ForEach(RequestsCopy, ck::Visitor([&](const auto& InRequestVariant)
+        {
+            DoHandleRequest(InHandle, InAbilityOwnerComp, InRequestVariant);
+        }));
+
+        if (ck::Is_NOT_Valid(InHandle))
+        {
+            ability::Verbose(TEXT("Ability Entity [{}] was Marked Pending Kill during the handling of its requests."), InHandle);
+            return;
+        }
+
+        if (InAbilityRequestsComp.Get_Requests().IsEmpty())
+        {
+            InHandle.Remove<MarkedDirtyBy>();
+        }
+    }
+
+    auto
+        FProcessor_AbilityOwner_HandleRequests_PendingReplication::
+        DoHandleRequest(
+            HandleType& InAbilityOwnerEntity,
+            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            const FCk_Request_AbilityOwner_RevokeAbility& InRequest) const
+        -> void
+    {
+        CK_ENSURE_IF_NOT(InRequest.Get_SearchPolicy() == ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle,
+            TEXT("Currently, this particular HandleRequest is only designed to SearchByHandle"))
+        { return; }
+
+        const auto AbilityHandle = InRequest.Get_AbilityHandle();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(AbilityHandle), TEXT("AbilityHandle [{}] to Revoke on AbilityOwner [{}] is INVALID"),
+            AbilityHandle, InAbilityOwnerEntity)
+        { return; }
+
+        // TODO: this IS a 'churn' and may be costly but it shouldn't last too long since Replication will happen fairly quickly.
+        // However, perhaps this Processor could be made more efficient by repackaging the Request in a more clever way and without
+        // removing it first on each Tick
+        UCk_Utils_AbilityOwner_UE::Request_RevokeAbility(InAbilityOwnerEntity, InRequest, {});
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_AbilityOwner_TagsUpdated::
         Tick(
             TimeType InDeltaT)

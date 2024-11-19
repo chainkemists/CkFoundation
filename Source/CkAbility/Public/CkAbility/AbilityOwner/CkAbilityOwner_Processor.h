@@ -156,6 +156,37 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class CKABILITY_API FProcessor_AbilityOwner_HandleRequests_PendingReplication : public ck_exp::TProcessor<
+            FProcessor_AbilityOwner_HandleRequests_PendingReplication,
+            FCk_Handle_AbilityOwner,
+            FFragment_AbilityOwner_Current,
+            FFragment_AbilityOwner_Requests_PendingReplication,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FFragment_AbilityOwner_Requests_PendingReplication;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            FFragment_AbilityOwner_Requests_PendingReplication& InAbilityRequestsComp) const -> void;
+
+    private:
+        auto
+        DoHandleRequest(
+            HandleType& InAbilityOwnerEntity,
+            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            const FCk_Request_AbilityOwner_RevokeAbility& InRequest) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKABILITY_API FProcessor_AbilityOwner_TagsUpdated : public ck_exp::TProcessor<
             FProcessor_AbilityOwner_TagsUpdated,
             FCk_Handle_AbilityOwner,
