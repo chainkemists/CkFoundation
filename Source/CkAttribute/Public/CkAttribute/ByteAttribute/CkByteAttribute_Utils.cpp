@@ -231,6 +231,11 @@ auto
         ECk_MinMaxCurrent InAttributeComponent)
     -> bool
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InAttribute),
+        TEXT("Byte Attribute [{}] is INVALID"),
+        InAttribute)
+    { return {}; }
+
     switch (InAttributeComponent)
     {
         case ECk_MinMaxCurrent::Min:

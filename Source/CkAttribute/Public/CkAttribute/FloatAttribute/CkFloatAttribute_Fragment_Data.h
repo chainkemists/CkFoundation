@@ -29,6 +29,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_FloatAttribute
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
+struct CKATTRIBUTE_API FCk_Handle_FloatAttributeRefill : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_FloatAttributeRefill); };
+CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_FloatAttributeRefill);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UENUM(BlueprintType)
 enum class ECk_FloatAttributeMagnitude_CalculationPolicy : uint8
 {
