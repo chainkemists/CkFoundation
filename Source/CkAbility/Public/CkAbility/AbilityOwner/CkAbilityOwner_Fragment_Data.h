@@ -295,11 +295,16 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_AbilityOwner_DestructionOnRevoke_Policy _DestructionPolicy = ECk_AbilityOwner_DestructionOnRevoke_Policy::DestroyOnRevoke;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Net_ReplicationType _ReplicationType = ECk_Net_ReplicationType::All;
+
 public:
     CK_PROPERTY_GET(_SearchPolicy);
     CK_PROPERTY_GET(_AbilityClass);
     CK_PROPERTY_GET(_AbilityHandle);
     CK_PROPERTY(_DestructionPolicy);
+    CK_PROPERTY(_ReplicationType);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
