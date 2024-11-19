@@ -23,7 +23,7 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_InteractSource);
 
 public:
-	using RecordOfInteractSources_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfInteractSources>;
+    using RecordOfInteractSources_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfInteractSources>;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -35,7 +35,7 @@ public:
         const FCk_Fragment_InteractSource_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|InteractSource",
               DisplayName="[Ck][InteractSource] Add Multiple New Interaction Source")
     static TArray<FCk_Handle_InteractSource>
@@ -70,7 +70,7 @@ private:
         FCk_Handle InHandle);
 
 public:
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractSource",
         DisplayName="[Ck][InteractSource] Request Cancel Interaction")
     static FCk_Handle_InteractSource
@@ -78,37 +78,37 @@ public:
         UPARAM(ref) FCk_Handle_InteractSource& InInteractSource,
         const FCk_Request_InteractSource_CancelInteraction& InRequest);
 
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractSource",
         DisplayName="[Ck][InteractSource] Request Cancel All Interactions")
     static FCk_Handle_InteractSource
     Request_CancelAllInteractions(
         UPARAM(ref) FCk_Handle_InteractSource& InInteractSource);
 
-	// This is only meant to be called by InteractTarget
+    // This is only meant to be called by InteractTarget
     static FCk_Handle_InteractSource
     Request_StartInteraction(
         UPARAM(ref) FCk_Handle_InteractSource& InInteractSource,
         const FCk_Request_InteractSource_StartInteraction& InRequest);
 
 public:
-	UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|InteractSource",
         DisplayName = "[Ck][InteractSource] Get InteractionChannel")
     static const FGameplayTag&
     Get_InteractionChannel(
         const FCk_Handle_InteractSource& InHandle);
 
-	UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|InteractSource",
         DisplayName = "[Ck][InteractSource] Get InteractionCountPerSourcePolicy")
     static ECk_InteractionSource_ConcurrentInteractionsPolicy
     Get_InteractionCountPerSourcePolicy(
         const FCk_Handle_InteractSource& InHandle);
 
-	UFUNCTION(BlueprintCallable,
-		Category = "Ck|Utils|InteractSource",
-		DisplayName="[Ck][InteractSource] Get Current Interactions")
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|InteractSource",
+        DisplayName="[Ck][InteractSource] Get Current Interactions")
     static TArray<FCk_Handle_Interaction>
     Get_CurrentInteractions(
         const FCk_Handle_InteractSource& InHandle);
@@ -117,15 +117,15 @@ public:
     Get_PendingInteractions(
         const FCk_Handle_InteractSource& InHandle);
 
-	UFUNCTION(BlueprintCallable,
-		Category = "Ck|Utils|InteractSource",
-		DisplayName="[Ck][InteractSource] Try Get Current Interactions By Target")
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|InteractSource",
+        DisplayName="[Ck][InteractSource] Try Get Current Interactions By Target")
     static FCk_Handle_Interaction
     TryGet_CurrentInteractionsByTarget(
         const FCk_Handle_InteractSource& InHandle,
         const FCk_Handle& InTarget);
 
-	UFUNCTION(BlueprintPure,
+    UFUNCTION(BlueprintPure,
           Category = "Ck|Utils|InteractSource",
           DisplayName="[Ck][InteractSource] Try Get Interaction Source")
     static FCk_Handle_InteractSource
@@ -134,7 +134,7 @@ public:
         UPARAM(meta = (Categories = "InteractionChannel")) FGameplayTag InInteractionChannel);
 
 public:
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractSource",
         DisplayName = "[Ck][InteractSource] Bind To OnNewInteraction")
     static FCk_Handle_InteractSource
@@ -144,7 +144,7 @@ public:
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_InteractSource_OnNewInteraction& InDelegate);
 
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractSource",
         DisplayName = "[Ck][InteractSource] Unbind From OnNewInteraction")
     static FCk_Handle_InteractSource
@@ -152,7 +152,7 @@ public:
         UPARAM(ref) FCk_Handle_InteractSource& InHandle,
         const FCk_Delegate_InteractSource_OnNewInteraction& InDelegate);
 
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractSource",
         DisplayName = "[Ck][InteractSource] Bind To OnInteractionFinished")
     static FCk_Handle_InteractSource
@@ -162,7 +162,7 @@ public:
         ECk_Signal_PostFireBehavior InPostFireBehavior,
         const FCk_Delegate_InteractSource_OnInteractionFinished& InDelegate);
 
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractSource",
         DisplayName = "[Ck][InteractSource] Unbind From OnInteractionFinished")
     static FCk_Handle_InteractSource

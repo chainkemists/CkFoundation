@@ -20,7 +20,6 @@ auto
     NewInteractTargetEntity.Add<ck::FFragment_InteractTarget_Params>(InParams);
     NewInteractTargetEntity.Add<ck::FFragment_InteractTarget_Current>();
     NewInteractTargetEntity.Add<ck::FTag_InteractTarget_RequiresSetup>();
-    NewInteractTargetEntity.Add<ck::FTag_Interaction_RequiresSetup>();
 
     UCk_Utils_GameplayLabel_UE::Add(NewInteractTargetEntity, InParams.Get_InteractionChannel());
 
