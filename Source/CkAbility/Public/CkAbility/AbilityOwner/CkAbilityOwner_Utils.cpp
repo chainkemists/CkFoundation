@@ -591,6 +591,22 @@ auto
         const FCk_Delegate_AbilityOwner_OnAbilityRevokedOrNot& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
+    if (InRequest.Get_SearchPolicy() == ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle)
+    {
+        const auto AbilityHandle = InRequest.Get_AbilityHandle();
+        CK_ENSURE_IF_NOT(ck::IsValid(AbilityHandle), TEXT("AbilityHandle [{}] to Revoke on AbilityOwner [{}] is INVALID"),
+            AbilityHandle, InAbilityOwnerHandle)
+        { return InAbilityOwnerHandle; }
+
+        // The replication is delayed. Even though the AbilityOwner is the Owner, the Ability is not yet replicated fully
+        if (NOT Has_AbilityByHandle(InAbilityOwnerHandle, AbilityHandle) &&
+            UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(AbilityHandle) == InAbilityOwnerHandle)
+        {
+            InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests_PendingReplication>()._Requests.Emplace(InRequest);
+            return InAbilityOwnerHandle;
+        }
+    }
+
     CK_ENSURE_IF_NOT(Has_AbilityByClass(InAbilityOwnerHandle, InRequest.Get_AbilityClass()) ||
         Has_AbilityByHandle(InAbilityOwnerHandle, InRequest.Get_AbilityHandle()), TEXT("Ability [{}] does NOT exist on AbilityOwner [{}]"),
         InRequest.Get_SearchPolicy() == ECk_AbilityOwner_AbilitySearch_Policy::SearchByClass
