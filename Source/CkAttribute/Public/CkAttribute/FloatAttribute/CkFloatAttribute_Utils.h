@@ -140,6 +140,20 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
+              DisplayName="[Ck][FloatAttribute] Has Refill Attribute")
+    static bool
+    Has_RefillAttribute(
+        const FCk_Handle_FloatAttribute& InAttribute);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName="[Ck][FloatAttribute] Try Get Refill Attribute")
+    static FCk_Handle_FloatAttributeRefill
+    TryGet_RefillAttribute(
+        const FCk_Handle_FloatAttribute& InAttribute);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Attribute|Float",
               DisplayName="[Ck][FloatAttribute] Get Base Value")
     static float
     Get_BaseValue(
@@ -192,6 +206,54 @@ public:
         UPARAM(ref) FCk_Handle_FloatAttribute& InAttribute,
         ECk_MinMaxCurrent InAttributeComponent,
         const FCk_Delegate_FloatAttribute_OnValueChanged& InDelegate);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable)
+class CKATTRIBUTE_API UCk_Utils_FloatAttributeRefill_UE : public UCk_Utils_Ecs_Base_UE
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_FloatAttributeRefill_UE);
+    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_FloatAttributeRefill);
+
+public:
+    friend class UCk_Utils_FloatAttribute_UE;
+
+private:
+    static auto
+    Add(
+        FCk_Handle_FloatAttribute& InAttributeRefillEntity,
+        ECk_Attribute_RefillState InStartingState) -> FCk_Handle_FloatAttributeRefill;
+
+    static auto
+    Has(
+        const FCk_Handle& InAttributeOwnerEntity) -> bool;
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|AttributeRefill|Float",
+              DisplayName="[Ck][FloatAttribute] Get Fill Rate")
+    static float
+    Get_FillRate(
+        const FCk_Handle_FloatAttributeRefill& InAttributeRefill);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AttributeRefill|Float",
+              DisplayName="[Ck][FloatAttribute] Request Pause")
+    static FCk_Handle_FloatAttributeRefill
+    Request_Pause(
+        UPARAM(ref) FCk_Handle_FloatAttributeRefill& InAttributeRefill);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|AttributeRefill|Float",
+              DisplayName="[Ck][FloatAttribute] Request Resume")
+    static FCk_Handle_FloatAttributeRefill
+    Request_Resume(
+        UPARAM(ref) FCk_Handle_FloatAttributeRefill& InAttributeRefill);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
