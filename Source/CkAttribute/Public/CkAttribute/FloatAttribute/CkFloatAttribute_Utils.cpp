@@ -96,7 +96,9 @@ auto
 
         auto RefillAttributeEntity = Add(NewAttributeEntity, FCk_Fragment_FloatAttribute_ParamsData{RefillParams.Get_RefillAttributeName(), RefillParams.Get_FillRate()}, InReplicates);
 
-        RefillAttributeEntity.Add<ck::FTag_IsRefillAttribute>();
+        const auto& RefillAttributeEntityTypeSafe = UCk_Utils_FloatAttributeRefill_UE::Add(RefillAttributeEntity, RefillParams.Get_StartingState());
+
+        ck::RefillAttribute_Utils::AddOrReplace(NewAttributeEntity, RefillAttributeEntityTypeSafe);
     }
 
     return NewAttributeEntity;
@@ -245,6 +247,11 @@ auto
         ECk_MinMaxCurrent InAttributeComponent)
     -> bool
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InAttribute),
+        TEXT("Float Attribute [{}] is INVALID"),
+        InAttribute)
+    { return {}; }
+
     switch (InAttributeComponent)
     {
         case ECk_MinMaxCurrent::Min:
@@ -265,6 +272,37 @@ auto
             return {};
         }
     }
+}
+
+auto
+    UCk_Utils_FloatAttribute_UE::
+    Has_RefillAttribute(
+        const FCk_Handle_FloatAttribute& InAttribute)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAttribute),
+        TEXT("Float Attribute [{}] is INVALID"),
+        InAttribute)
+    { return {}; }
+
+    return ck::RefillAttribute_Utils::Has(InAttribute);
+}
+
+auto
+    UCk_Utils_FloatAttribute_UE::
+    TryGet_RefillAttribute(
+        const FCk_Handle_FloatAttribute& InAttribute)
+    -> FCk_Handle_FloatAttributeRefill
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAttribute),
+        TEXT("Float Attribute [{}] is INVALID"),
+        InAttribute)
+    { return {}; }
+
+    if (NOT ck::RefillAttribute_Utils::Has(InAttribute))
+    { return {}; }
+
+    return ck::RefillAttribute_Utils::Get_StoredEntity_AsTypeSafe<FCk_Handle_FloatAttributeRefill>(InAttribute);
 }
 
 auto
@@ -499,6 +537,64 @@ auto
     };
 
     return InAttribute;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_FloatAttributeRefill_UE::
+    Add(
+        FCk_Handle_FloatAttribute& InAttributeRefillEntity,
+        ECk_Attribute_RefillState InStartingState)
+    -> FCk_Handle_FloatAttributeRefill
+{
+    InAttributeRefillEntity.Add<ck::FTag_IsRefillAttribute>();
+
+    if (InStartingState == ECk_Attribute_RefillState::Running)
+    {
+        InAttributeRefillEntity.Add<ck::FTag_IsRefillRunning>();
+    }
+
+    return ck::StaticCast<FCk_Handle_FloatAttributeRefill>(InAttributeRefillEntity);
+}
+
+auto
+    UCk_Utils_FloatAttributeRefill_UE::
+    Has(
+        const FCk_Handle& InModifierEntity)
+    -> bool
+{
+    return InModifierEntity.Has_Any<ck::FTag_IsRefillAttribute>();
+}
+
+auto
+    UCk_Utils_FloatAttributeRefill_UE::
+    Get_FillRate(
+        const FCk_Handle_FloatAttributeRefill& InAttributeRefill)
+    -> float
+{
+    const auto& RefillAttributeAsFloatAttribute = UCk_Utils_FloatAttribute_UE::CastChecked(InAttributeRefill);
+    return UCk_Utils_FloatAttribute_UE::Get_FinalValue(RefillAttributeAsFloatAttribute);
+}
+
+auto
+    UCk_Utils_FloatAttributeRefill_UE::
+    Request_Pause(
+        FCk_Handle_FloatAttributeRefill& InAttributeRefill)
+    -> FCk_Handle_FloatAttributeRefill
+{
+    InAttributeRefill.Try_Remove<ck::FTag_IsRefillRunning>();
+    return InAttributeRefill;
+}
+
+auto
+    UCk_Utils_FloatAttributeRefill_UE::
+    Request_Resume(
+        FCk_Handle_FloatAttributeRefill& InAttributeRefill)
+    -> FCk_Handle_FloatAttributeRefill
+{
+    InAttributeRefill.AddOrGet<ck::FTag_IsRefillRunning>();
+    return InAttributeRefill;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

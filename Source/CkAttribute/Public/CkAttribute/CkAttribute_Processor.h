@@ -196,10 +196,11 @@ namespace ck::detail
             typename T_DerivedAttributeModifier::AttributeFragmentType::HandleType,
             typename T_DerivedAttributeModifier::AttributeFragmentType,
             FTag_IsRefillAttribute,
+            FTag_IsRefillRunning,
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using MarkedDirtyBy = typename FTag_IsRefillAttribute;
+        using MarkedDirtyBy = typename FTag_IsRefillRunning;
 
     public:
         using AttributeModifierFragmentType = T_DerivedAttributeModifier;
@@ -207,7 +208,7 @@ namespace ck::detail
         using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
         using HandleType                    = typename AttributeFragmentType::HandleType;
         using ThisType                      = TProcessor_Attribute_Refill<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                         = ck_exp::TProcessor<ThisType, HandleType, AttributeFragmentType, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using Super                         = ck_exp::TProcessor<ThisType, HandleType, AttributeFragmentType, FTag_IsRefillAttribute, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
         using TimeType                      = typename Super::TimeType;
 
     public:
