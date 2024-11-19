@@ -209,12 +209,11 @@ namespace ck::detail
     {
         const auto& RefillValue = InAttribute.Get_Final() * InDeltaT.Get_Seconds();
 
-        // The Refill Target is the attribute owner (which is an attribute)
-        auto LifetimeOwnerAsAttributeEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner_AsTypeSafe<HandleType>(InHandle);
+        auto RefillAttributeTarget = RefillAttributeTarget_Utils::Get_StoredEntity_AsTypeSafe<HandleType>(InHandle);
 
         TUtils_AttributeModifier<AttributeModifierFragmentType>::Add_NotRevocable
         (
-            LifetimeOwnerAsAttributeEntity,
+            RefillAttributeTarget,
             RefillValue,
             ECk_AttributeModifier_Operation::Add,
             ECk_AttributeValueChange_SyncPolicy::DoNotSync
