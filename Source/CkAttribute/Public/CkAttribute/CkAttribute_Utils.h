@@ -88,6 +88,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_ENTITY_HOLDER_AND_UTILS(RefillAttribute_Utils, RefillAttribute);
+    CK_DEFINE_ENTITY_HOLDER_AND_UTILS(RefillAttributeTarget_Utils, RefillAttributeTarget);
 
     // --------------------------------------------------------------------------------------------------------------------
 

@@ -94,11 +94,12 @@ auto
             NewAttributeEntity)
         { return NewAttributeEntity; }
 
-        auto RefillAttributeEntity = Add(NewAttributeEntity, FCk_Fragment_FloatAttribute_ParamsData{RefillParams.Get_RefillAttributeName(), RefillParams.Get_FillRate()}, InReplicates);
+        auto RefillAttributeEntity = Add(InAttributeOwnerEntity, FCk_Fragment_FloatAttribute_ParamsData{RefillParams.Get_RefillAttributeName(), RefillParams.Get_FillRate()}, InReplicates);
 
-        const auto& RefillAttributeEntityTypeSafe = UCk_Utils_FloatAttributeRefill_UE::Add(RefillAttributeEntity, RefillParams.Get_StartingState());
+        auto RefillAttributeEntityTypeSafe = UCk_Utils_FloatAttributeRefill_UE::Add(RefillAttributeEntity, RefillParams.Get_StartingState());
 
         ck::RefillAttribute_Utils::AddOrReplace(NewAttributeEntity, RefillAttributeEntityTypeSafe);
+        ck::RefillAttributeTarget_Utils::AddOrReplace(RefillAttributeEntityTypeSafe, NewAttributeEntity);
     }
 
     return NewAttributeEntity;
