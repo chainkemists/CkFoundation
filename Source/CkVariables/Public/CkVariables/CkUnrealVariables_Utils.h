@@ -755,6 +755,20 @@ public:
         int32& OutValue);
     DECLARE_FUNCTION(execINTERNAL__Get_ByName);
 
+    UFUNCTION(BlueprintCallable,
+              CustomThunk,
+              Displayname = "[Ck][InstancedStruct] Get Value (By Name)",
+              Category = "Ck|Utils|Variables|InstancedStruct",
+              meta=(CustomStructureParam = "OutValue", BlueprintInternalUseOnly = true, ExpandEnumAsExecs = "OutSuccessFail"))
+    static void
+    INTERNAL__Get_ByName_Exec(
+        const FCk_Handle& InHandle,
+        FName InVariableName,
+        ECk_Recursion InRecursion,
+        ECk_SucceededFailed& OutSuccessFail,
+        int32& OutValue);
+    DECLARE_FUNCTION(execINTERNAL__Get_ByName_Exec);
+
     static const FInstancedStruct&
     Get_ByName(
         const FCk_Handle& InHandle,
@@ -775,6 +789,20 @@ public:
         ECk_SucceededFailed& OutSuccessFail,
         int32& OutValue);
     DECLARE_FUNCTION(execINTERNAL__Get);
+
+    UFUNCTION(BlueprintCallable,
+              CustomThunk,
+              Displayname = "[Ck][InstancedStruct] Get Value (By GameplayTag)",
+              Category = "Ck|Utils|Variables|InstancedStruct",
+              meta=(CustomStructureParam = "OutValue", BlueprintInternalUseOnly = true, ExpandEnumAsExecs = "OutSuccessFail"))
+    static void
+    INTERNAL__Get_Exec(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
+        ECk_SucceededFailed& OutSuccessFail,
+        int32& OutValue);
+    DECLARE_FUNCTION(execINTERNAL__Get_Exec);
 
     static const FInstancedStruct&
     Get(
