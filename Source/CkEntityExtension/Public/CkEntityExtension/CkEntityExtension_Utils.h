@@ -3,7 +3,6 @@
 #include "CkECS/Handle/CkHandle.h"
 
 #include "CkEntityExtension/CkEntityExtension_Fragment.h"
-#include "CkEntityExtension/CkEntityExtension_Fragment_Data.h"
 
 #include "CkNet/CkNet_Utils.h"
 
@@ -78,6 +77,43 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|EntityExtension",
+        DisplayName="[Ck][EntityExtension] Bind to OnExtensionAdded")
+    static FCk_Handle
+    BindTo_OnExtensionAdded(
+        UPARAM(ref) FCk_Handle& InExtensionOwner,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_EntityExtension_OnExtensionAdded& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|EntityExtension",
+        DisplayName="[Ck][EntityExtension] Unbind from OnExtensionAdded")
+    static FCk_Handle
+    UnbindFrom_OnExtensionAdded(
+        UPARAM(ref) FCk_Handle& InExtensionOwner,
+        const FCk_Delegate_EntityExtension_OnExtensionAdded& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|EntityExtension",
+        DisplayName="[Ck][EntityExtension] Bind to OnExtensionRemoved")
+    static FCk_Handle
+    BindTo_OnExtensionRemoved(
+        UPARAM(ref) FCk_Handle& InExtensionOwner,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_EntityExtension_OnExtensionRemoved& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|EntityExtension",
+        DisplayName="[Ck][EntityExtension] Unbind from OnExtensionRemoved")
+    static FCk_Handle
+    UnbindFrom_OnExtensionRemoved(
+        UPARAM(ref) FCk_Handle& InExtensionOwner,
+        const FCk_Delegate_EntityExtension_OnExtensionRemoved& InDelegate);
+
+public:
+    UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EntityExtension",
               DisplayName="[Ck][EntityExtension] For Each",
               meta=(AutoCreateRefTerm="InDelegate, InOptionalPayload"))
@@ -91,6 +127,16 @@ public:
         FCk_Handle& InEntityExtensionOwner,
         const TFunction<void(FCk_Handle_EntityExtension)>& InFunc) -> void;
 
+private:
+    static auto
+    DoBoadcast_ExtensionAdded(
+        const FCk_Handle& InExtensionOwner,
+        const FCk_Handle_EntityExtension& InEntityExtension) -> void;
+
+    static auto
+    DoBoadcast_ExtensionRemoved(
+        const FCk_Handle& InExtensionOwner,
+        const FCk_Handle_EntityExtension& InEntityExtension) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

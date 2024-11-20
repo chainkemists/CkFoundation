@@ -1,12 +1,44 @@
 #pragma once
 
-#include "CkEntityExtension_Fragment_Data.h"
-
-#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
-
 #include "CkRecord/Record/CkRecord_Fragment.h"
 
-//#include "CkEntityExtension_Fragment.generated.h"
+#include "CkSignal/CkSignal_Macros.h"
+
+#include "CkEntityExtension_Fragment.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// NOTE: see Data.h file for why this is defined here
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_EntityExtension_OnExtensionAdded,
+    FCk_Handle, InExtensionOwner,
+    FCk_Handle_EntityExtension, InEntityAsExtension);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FCk_Delegate_EntityExtension_OnExtensionAdded_MC,
+    FCk_Handle, InExtensionOwner,
+    FCk_Handle_EntityExtension, InEntityAsExtension);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// NOTE: see Data.h file for why this is defined here
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_EntityExtension_OnExtensionRemoved,
+    FCk_Handle, InExtensionOwner,
+    FCk_Handle_EntityExtension, InEntityAsExtension);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FCk_Delegate_EntityExtension_OnExtensionRemoved_MC,
+    FCk_Handle, InExtensionOwner,
+    FCk_Handle_EntityExtension, InEntityAsExtension);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT()
+struct FCk_DummyStructToCompileInTheDelegates
+{
+    GENERATED_BODY()
+};
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -31,6 +63,14 @@ namespace ck
 
         CK_DEFINE_CONSTRUCTORS(FFragment_EntityExtension_Params, _ExtensionOwner);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKENTITYEXTENSION_API, OnEntityExtensionAdded,
+        FCk_Delegate_EntityExtension_OnExtensionAdded_MC, FCk_Handle, FCk_Handle_EntityExtension);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKENTITYEXTENSION_API, OnEntityExtensionRemoved,
+        FCk_Delegate_EntityExtension_OnExtensionRemoved_MC, FCk_Handle, FCk_Handle_EntityExtension);
 
     // --------------------------------------------------------------------------------------------------------------------
 
