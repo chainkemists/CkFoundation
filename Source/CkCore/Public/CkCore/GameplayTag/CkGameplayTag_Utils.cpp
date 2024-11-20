@@ -75,6 +75,14 @@ auto
         FGameplayTag InGameplayTag)
     -> FString
 {
+    static auto CachedTags = TMap<FGameplayTag, FString>{};
+
+    if (const auto& FoundCachedResult = CachedTags.Find(InGameplayTag);
+        ck::IsValid(FoundCachedResult, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        return *FoundCachedResult;
+    }
+
     const auto& TagString = InGameplayTag.GetTagName().ToString();
 
     auto OutIndex = 0;
@@ -82,7 +90,11 @@ auto
     if (NOT TagString.FindLastChar(TEXT('.'), OutIndex))
     { return TagString; }
 
-    return TagString.RightChop(OutIndex + 1);
+    const auto& Leaf = TagString.RightChop(OutIndex + 1);
+
+    CachedTags.Add(InGameplayTag, Leaf);
+
+    return Leaf;
 }
 
 auto
@@ -109,6 +121,14 @@ auto
         FGameplayTag InGameplayTag)
     -> FString
 {
+    static auto CachedTags = TMap<FGameplayTag, FString>{};
+
+    if (const auto& FoundCachedResult = CachedTags.Find(InGameplayTag);
+        ck::IsValid(FoundCachedResult, ck::IsValid_Policy_NullptrOnly{}))
+    {
+        return *FoundCachedResult;
+    }
+
     const auto& TagString = InGameplayTag.GetTagName().ToString();
 
     auto OutIndex = 0;
@@ -116,7 +136,11 @@ auto
     if (NOT TagString.FindChar(TEXT('.'), OutIndex))
     { return TagString; }
 
-    return TagString.Left(OutIndex);
+    const auto& Root = TagString.Left(OutIndex);
+
+    CachedTags.Add(InGameplayTag, Root);
+
+    return Root;
 }
 
 auto
