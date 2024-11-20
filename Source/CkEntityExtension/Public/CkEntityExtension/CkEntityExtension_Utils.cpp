@@ -19,6 +19,8 @@ auto
 
     RecordOfEntityExtensions_Utils::Request_Connect(InExtensionOwner, EntityExtension);
 
+    DoBoadcast_ExtensionAdded(InExtensionOwner, EntityExtension);
+
     return EntityExtension;
 }
 
@@ -31,6 +33,8 @@ auto
 {
     RecordOfEntityExtensions_Utils::Request_Disconnect(InExtensionOwner, InEntityToRemoveAsExtension);
     InEntityToRemoveAsExtension.Remove<ck::FFragment_EntityExtension_Params>();
+
+    DoBoadcast_ExtensionRemoved(InExtensionOwner, InEntityToRemoveAsExtension);
 
     return InEntityToRemoveAsExtension;
 }
@@ -48,6 +52,54 @@ auto
         -> FCk_Handle
 {
     return InEntityExtension.Get<ck::FFragment_EntityExtension_Params>().Get_ExtensionOwner();
+}
+
+auto
+    UCk_Utils_EntityExtension_UE::
+    BindTo_OnExtensionAdded(
+        FCk_Handle& InExtensionOwner,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_EntityExtension_OnExtensionAdded& InDelegate)
+    -> FCk_Handle
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnEntityExtensionAdded, InExtensionOwner, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InExtensionOwner;
+}
+
+auto
+    UCk_Utils_EntityExtension_UE::
+    UnbindFrom_OnExtensionAdded(
+        FCk_Handle& InExtensionOwner,
+        const FCk_Delegate_EntityExtension_OnExtensionAdded& InDelegate)
+    -> FCk_Handle
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnEntityExtensionAdded, InExtensionOwner, InDelegate);
+    return InExtensionOwner;
+}
+
+auto
+    UCk_Utils_EntityExtension_UE::
+    BindTo_OnExtensionRemoved(
+        FCk_Handle& InExtensionOwner,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_EntityExtension_OnExtensionRemoved& InDelegate)
+    -> FCk_Handle
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnEntityExtensionRemoved, InExtensionOwner, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InExtensionOwner;
+}
+
+auto
+    UCk_Utils_EntityExtension_UE::
+    UnbindFrom_OnExtensionRemoved(
+        FCk_Handle& InExtensionOwner,
+        const FCk_Delegate_EntityExtension_OnExtensionRemoved& InDelegate)
+    -> FCk_Handle
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnEntityExtensionRemoved, InExtensionOwner, InDelegate);
+    return InExtensionOwner;
 }
 
 auto
@@ -80,6 +132,36 @@ auto
     -> void
 {
     RecordOfEntityExtensions_Utils::ForEach_ValidEntry(InEntityExtensionOwner, InFunc);
+}
+
+auto
+    UCk_Utils_EntityExtension_UE::
+    DoBoadcast_ExtensionAdded(
+        const FCk_Handle& InExtensionOwner,
+        const FCk_Handle_EntityExtension& InEntityExtension)
+    -> void
+{
+    if (NOT RecordOfEntityExtensions_Utils::Has(InExtensionOwner))
+    { return; }
+
+    ck::UUtils_Signal_OnEntityExtensionAdded::Broadcast(InExtensionOwner, ck::MakePayload(InExtensionOwner, InEntityExtension));
+
+    DoBoadcast_ExtensionAdded(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InExtensionOwner), InEntityExtension);
+}
+
+auto
+    UCk_Utils_EntityExtension_UE::
+    DoBoadcast_ExtensionRemoved(
+        const FCk_Handle& InExtensionOwner,
+        const FCk_Handle_EntityExtension& InEntityExtension)
+    -> void
+{
+    if (NOT RecordOfEntityExtensions_Utils::Has(InExtensionOwner))
+    { return; }
+
+    ck::UUtils_Signal_OnEntityExtensionRemoved::Broadcast(InExtensionOwner, ck::MakePayload(InExtensionOwner, InEntityExtension));
+
+    DoBoadcast_ExtensionRemoved(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InExtensionOwner), InEntityExtension);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
