@@ -43,7 +43,7 @@ auto
     UCk_Utils_GameplayLabel_UE::
     Add(
         FCk_Handle& InHandle,
-        const FGameplayTag& InLabel)
+        FGameplayTag InLabel)
     -> void
 {
     if (Has(InHandle))

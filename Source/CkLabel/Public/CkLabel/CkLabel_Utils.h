@@ -23,7 +23,7 @@ public:
     static void
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FGameplayTag& InLabel);
+        FGameplayTag InLabel);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Label",
