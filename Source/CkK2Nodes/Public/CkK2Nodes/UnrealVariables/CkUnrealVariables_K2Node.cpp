@@ -88,6 +88,80 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
+    UCk_K2Node_Variables_GetInstancedStruct_Exec::
+    GetMenuActions(
+        FBlueprintActionDatabaseRegistrar& InActionRegistrar) const
+    -> void
+{
+    Super::GetMenuActions(InActionRegistrar);
+
+    if (const auto* Action = GetClass(); InActionRegistrar.IsOpenForRegistration(Action))
+    {
+        const auto& CustomizeLambda = [](UEdGraphNode* InNewNode, bool InIsTemplateNode, FName InFunctionName) -> void
+        {
+            auto* Node = CastChecked<UCk_K2Node_Variables_GetInstancedStruct_Exec>(InNewNode);
+            const auto* Function = UCk_Utils_Variables_InstancedStruct_UE::StaticClass()->FindFunctionByName(InFunctionName);
+            check(ck::IsValid(Function));
+
+            Node->SetFromFunction(Function);
+        };
+
+        auto* GetValueByName_NodeSpawner = UBlueprintNodeSpawner::Create(GetClass());
+        check(ck::IsValid(GetValueByName_NodeSpawner));
+
+        GetValueByName_NodeSpawner->CustomizeNodeDelegate = UBlueprintNodeSpawner::FCustomizeNodeDelegate::CreateStatic(
+            CustomizeLambda, GET_FUNCTION_NAME_CHECKED(UCk_Utils_Variables_InstancedStruct_UE, INTERNAL__Get_ByName_Exec));
+
+        InActionRegistrar.AddBlueprintAction(Action, GetValueByName_NodeSpawner);
+
+        auto* GetValueByTag_NodeSpawner = UBlueprintNodeSpawner::Create(GetClass());
+        check(ck::IsValid(GetValueByName_NodeSpawner));
+
+        GetValueByTag_NodeSpawner->CustomizeNodeDelegate = UBlueprintNodeSpawner::FCustomizeNodeDelegate::CreateStatic(
+            CustomizeLambda, GET_FUNCTION_NAME_CHECKED(UCk_Utils_Variables_InstancedStruct_UE, INTERNAL__Get_Exec));
+
+        InActionRegistrar.AddBlueprintAction(Action, GetValueByTag_NodeSpawner);
+    }
+}
+
+auto
+    UCk_K2Node_Variables_GetInstancedStruct_Exec::
+    IsNodePure() const
+    -> bool
+{
+    return false;
+}
+
+auto
+    UCk_K2Node_Variables_GetInstancedStruct_Exec::
+    IsConnectionDisallowed(
+        const UEdGraphPin* InMyPin,
+        const UEdGraphPin* InOtherPin,
+        FString& OutReason) const
+    -> bool
+{
+    if (const auto* ValuePin = FindPinChecked(FName(TEXT("OutValue")));
+        InMyPin == ValuePin && InMyPin->PinType.PinCategory == UEdGraphSchema_K2::PC_Wildcard)
+    {
+        if (InOtherPin->PinType.PinCategory != UEdGraphSchema_K2::PC_Struct)
+        {
+            OutReason = TEXT("Value must be a Struct");
+            return true;
+        }
+
+        if (InOtherPin->PinType.ContainerType != EPinContainerType::None)
+        {
+            OutReason = TEXT("Value cannot be an Array/Set/Map");
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
     UCk_K2Node_Variables_SetInstancedStruct::
     GetMenuActions(
         FBlueprintActionDatabaseRegistrar& InActionRegistrar) const
