@@ -116,24 +116,25 @@ auto
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_ENSURE_IF_NOT(ck::IsValid(_ReplicationData.Get_OwningEntityDriver()),
+    const auto& OwningEntityDriver = _ReplicationData.Get_OwningEntityDriver();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(OwningEntityDriver),
         TEXT("OwningEntityDriver is NOT valid. Somehow the ReplicationDriver was NOT added to the OwningEntity but WAS "
             "added to the child Entity.{}"), ck::Context(this))
     { return; }
 
-    const auto OwningEntity = _ReplicationData.Get_OwningEntityDriver()->Get_AssociatedEntity();
+    const auto OwningEntity = OwningEntityDriver->Get_AssociatedEntity();
 
     // wait on the owning entity to fully replicate
     if (ck::Is_NOT_Valid(OwningEntity))
     {
-        _ReplicationData.Get_OwningEntityDriver()->_PendingChildEntityConstructions.Emplace(this);
+        OwningEntityDriver->_PendingChildEntityConstructions.Emplace(this);
         return;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    const auto& ReplicationData = _ReplicationData;
-    const auto& ConstructionInfo = ReplicationData.Get_ConstructionInfo();
+    const auto& ConstructionInfo = _ReplicationData.Get_ConstructionInfo();
 
     const auto& ConstructionScript = ConstructionInfo.Get_ConstructionScript();
     CK_ENSURE_IF_NOT(ck::IsValid(ConstructionScript),
@@ -157,18 +158,19 @@ auto
         _AssociatedEntity, ConstructionInfo.Get_OptionalParams());
 
     UCk_Utils_ReplicatedObjects_UE::Add(_AssociatedEntity, FCk_ReplicatedObjects{}.
-        Set_ReplicatedObjects(ReplicationData.Get_ReplicatedObjectsData().Get_Objects()));
+        Set_ReplicatedObjects(_ReplicationData.Get_ReplicatedObjectsData().Get_Objects()));
 
     // --------------------------------------------------------------------------------------------------------------------
 
     // Make sure to call this on "self" since the # of dependent rep driver include "self" as well
     DoAdd_SyncedDependentReplicationDriver();
 
-    // NOTE: The OwningEntity (and its driver) is only used when calling BuildAndReplicateEntity.
-    // This implies that the owning entity is typically already replicated and should NOT have "this" replication driver as a dependent.
-    // However, incrementing the count on the owning entity does NOT trigger the ensure check where #ExpectedDrivers > #SyncedDrivers.
-    // This behavior may indicate a potential bug elsewhere in the system.
-    _ReplicationData.Get_OwningEntityDriver()->DoAdd_SyncedDependentReplicationDriver();
+    // This is necessary in case this Replicated Entity was built from inside the OwningEntity's ConstructionScript.
+    // If that is the case, then this Replicated Entity is a dependent
+    if (_ReplicationData.Get_IsOwningEntityDriverDependentOnThis())
+    {
+        OwningEntityDriver->DoAdd_SyncedDependentReplicationDriver();
+    }
 }
 
 auto
