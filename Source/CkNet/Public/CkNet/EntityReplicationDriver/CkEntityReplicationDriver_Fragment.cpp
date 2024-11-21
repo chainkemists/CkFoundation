@@ -161,6 +161,12 @@ auto
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Make sure to call this on "self" since the # of dependent rep driver include "self" as well
+    DoAdd_SyncedDependentReplicationDriver();
+
+    // NOTE: The OwningEntity (and it's driver) is only used when calling BuildAndReplicateEntity, which means
+    // that typically the owning entity is already replicated and should NOT have "this" rep driver as a dependent. However, incrementing
+    // the count on the owning entity does NOT trigger the ensure where the #ExpectedDrivers > #SyncedDrivers, potentially pointing to another bug
     _ReplicationData.Get_OwningEntityDriver()->DoAdd_SyncedDependentReplicationDriver();
 }
 
@@ -414,7 +420,14 @@ auto
     DoAdd_SyncedDependentReplicationDriver()
     -> void
 {
-    _NumSyncedDependentReplicationDrivers++;
+    ++_NumSyncedDependentReplicationDrivers;
+
+    CK_ENSURE_IF_NOT(_NumSyncedDependentReplicationDrivers <= _ExpectedNumberOfDependentReplicationDrivers,
+        TEXT("The number of Synced Dependent Replication Drivers [{}] is greater than the expected amount of [{}]. This is likely due to faulty logic."),
+        _NumSyncedDependentReplicationDrivers,
+        _ExpectedNumberOfDependentReplicationDrivers)
+    { return; }
+
     if (_ExpectedNumberOfDependentReplicationDrivers == _NumSyncedDependentReplicationDrivers)
     {
         const auto AssociatedEntity = Get_AssociatedEntity();
