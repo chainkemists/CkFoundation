@@ -178,6 +178,9 @@ private:
     TObjectPtr<class UCk_Fragment_EntityReplicationDriver_Rep> _OwningEntityDriver;
 
     UPROPERTY()
+    bool _IsOwningEntityDriverDependentOnThis = false;
+
+    UPROPERTY()
     FCk_EntityReplicationDriver_ConstructionInfo _ConstructionInfo;
 
     UPROPERTY()
@@ -185,6 +188,7 @@ private:
 
 public:
     CK_PROPERTY(_OwningEntityDriver);
+    CK_PROPERTY(_IsOwningEntityDriverDependentOnThis);
     CK_PROPERTY_GET(_ConstructionInfo);
     CK_PROPERTY_GET(_ReplicatedObjectsData);
 
