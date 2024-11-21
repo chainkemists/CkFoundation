@@ -570,6 +570,36 @@ namespace ck
             return ECk_AbilityOwner_AbilityGivenOrNot::Given;
         }();
 
+        // HACK: The #SyncedDrivers count is incremented here instead of doing so inside the RepDriverFragment.
+        // This ensures that the increment occurs only after the replicated ability has been created and assigned.
+        // Incrementing prematurely would cause the ReplicationComplete and ReplicationCompleteAllDependents signals to fire too early.
+        // If the replicated ability is added as an EntityExtension, any attempts to manipulate extended features (e.g., Attributes)
+        // would fail because those features would not yet exist.
+        [&]()
+        {
+            const auto& ReplicatedAbilityEntity = InRequest.Get_ReplicatedEntityToUse();
+            const auto& RepDriver_ReplicatedAbilityEntity = ReplicatedAbilityEntity.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
+
+            CK_ENSURE_IF_NOT(ck::IsValid(RepDriver_ReplicatedAbilityEntity),
+                TEXT("The Replication Driver for the Replication Ability [{}] Entity is INVALID\n"
+                     "Unable to increment the count of its Owning Entity Driver's Synced Dependent Replication Drivers\n"
+                     "This might cause the Owning Entity's ReplicationComplete/ReplicationComplete_AllDependent signals to never fire"),
+                ReplicatedAbilityEntity)
+            { return; }
+
+            const auto& ReplicationData_Ability = RepDriver_ReplicatedAbilityEntity->Get_ReplicationData_Ability();
+            const auto& RepDriver_ReplicatedAbilityOwningEntity = ReplicationData_Ability.Get_OwningEntityDriver();
+
+            CK_ENSURE_IF_NOT(ck::IsValid(RepDriver_ReplicatedAbilityOwningEntity),
+                TEXT("The Replication Driver for the Replication Ability [{}] OWNING Entity is INVALID\n"
+                     "Unable to increment the count of its Owning Entity Driver's Synced Dependent Replication Drivers\n"
+                     "This might cause the Owning Entity's ReplicationComplete/ReplicationComplete_AllDependent signals to never fire"),
+                ReplicatedAbilityEntity)
+            { return; }
+
+            RepDriver_ReplicatedAbilityOwningEntity->DoAdd_SyncedDependentReplicationDriver();
+        }();
+
         if (AbilityGivenOrNot == ECk_AbilityOwner_AbilityGivenOrNot::NotGiven)
         {
             if (InRequest.Get_IsRequestHandleValid())
