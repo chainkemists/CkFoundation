@@ -164,9 +164,10 @@ auto
     // Make sure to call this on "self" since the # of dependent rep driver include "self" as well
     DoAdd_SyncedDependentReplicationDriver();
 
-    // NOTE: The OwningEntity (and it's driver) is only used when calling BuildAndReplicateEntity, which means
-    // that typically the owning entity is already replicated and should NOT have "this" rep driver as a dependent. However, incrementing
-    // the count on the owning entity does NOT trigger the ensure where the #ExpectedDrivers > #SyncedDrivers, potentially pointing to another bug
+    // NOTE: The OwningEntity (and its driver) is only used when calling BuildAndReplicateEntity.
+    // This implies that the owning entity is typically already replicated and should NOT have "this" replication driver as a dependent.
+    // However, incrementing the count on the owning entity does NOT trigger the ensure check where #ExpectedDrivers > #SyncedDrivers.
+    // This behavior may indicate a potential bug elsewhere in the system.
     _ReplicationData.Get_OwningEntityDriver()->DoAdd_SyncedDependentReplicationDriver();
 }
 
@@ -224,7 +225,12 @@ auto
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    _ReplicationData_Ability.Get_OwningEntityDriver()->DoAdd_SyncedDependentReplicationDriver();
+    // NOTE: The #SyncedDrivers count is NOT incremented here. Instead, it is handled in the FProcessor_AbilityOwner_HandleRequests processor.
+    // This ensures that the increment occurs only after the replicated ability has been created and assigned.
+    // Incrementing prematurely would cause the ReplicationComplete and ReplicationCompleteAllDependents signals to fire too early.
+    // If the replicated ability is added as an EntityExtension, any attempts to manipulate extended features (e.g., Attributes)
+    // would fail because those features would not yet exist.
+    //_ReplicationData_Ability.Get_OwningEntityDriver()->DoAdd_SyncedDependentReplicationDriver();
 }
 
 auto

@@ -24,7 +24,7 @@ auto
 
     if (InHandle.Has<FCk_Fragment_AbilityOwner_ParamsData>())
     {
-        auto& ParamsToAppend = InHandle.Get<FCk_Fragment_AbilityOwner_ParamsData>();
+        const auto& ParamsToAppend = InHandle.Get<FCk_Fragment_AbilityOwner_ParamsData>();
         AppendedParams.Request_Append(ParamsToAppend.Get_DefaultAbilities());
         AppendedParams.Request_Append(ParamsToAppend.Get_DefaultAbilities_Instanced());
     }
@@ -1016,6 +1016,8 @@ auto
     if (NOT InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
     { return; }
 
+    const auto& ReplicationDriver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
+
     const auto TrySettingTheExpectedNumber = [&](const UCk_Ability_Script_PDA* InScript)
     {
         // this has ensured on top level already
@@ -1024,7 +1026,6 @@ auto
 
         if (InScript->Get_Data().Get_NetworkSettings().Get_FeatureReplicationPolicy() == ECk_Ability_FeatureReplication_Policy::ReplicateAbilityFeatures)
         {
-            auto& ReplicationDriver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
             ReplicationDriver->Set_ExpectedNumberOfDependentReplicationDrivers(ReplicationDriver->Get_ExpectedNumberOfDependentReplicationDrivers() + 1);
         }
     };
