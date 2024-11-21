@@ -18,7 +18,7 @@ auto
     if (AddedOrNot != ECk_AddedOrNot::NotAdded)
     {
         InHandle._ReplicationDriver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
-        InHandle.Add<TWeakObjectPtr<UCk_Ecs_ReplicatedObject_UE>>(InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>());
+        InHandle.Add<TWeakObjectPtr<UCk_Ecs_ReplicatedObject_UE>>(InHandle._ReplicationDriver);
     }
     return AddedOrNot;
 }
@@ -142,9 +142,7 @@ auto
         InConstructionInfo.Get_ConstructionScript())
     { return {}; }
 
-    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
-    if (InFunc_OnCreateEntityBeforeBuild)
-    { InFunc_OnCreateEntityBeforeBuild(NewEntity); }
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, InFunc_OnCreateEntityBeforeBuild);
 
     UCk_Utils_Net_UE::Copy(InHandle, NewEntity);
 

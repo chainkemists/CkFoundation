@@ -1018,6 +1018,11 @@ auto
 
     const auto& ReplicationDriver = InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
 
+    // The expected number of dependent drivers must be cleared to avoid issues when multiple sub-CSs are executed.
+    // Each sub-CS can append additional abilities, causing the expected driver count to compound unnecessarily.
+    // This would inflate the expected number of drivers, leading to discrepancies with the actual count.
+    ReplicationDriver->Set_ExpectedNumberOfDependentReplicationDrivers(0);
+
     const auto TrySettingTheExpectedNumber = [&](const UCk_Ability_Script_PDA* InScript)
     {
         // this has ensured on top level already
