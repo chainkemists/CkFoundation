@@ -71,7 +71,7 @@ public:
 
 private:
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|AbilityOwner",
+        Category = "Ck|Utils|Ability|Owner",
         DisplayName="[Ck][AbilityOwner] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_AbilityOwner
@@ -80,7 +80,7 @@ private:
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|AbilityOwner",
+        Category = "Ck|Utils|Ability|Owner",
         DisplayName="[Ck][AbilityOwner] Handle -> AbilityOwner Handle",
         meta = (CompactNodeTitle = "<AsAbilityOwner>", BlueprintAutocast))
     static FCk_Handle_AbilityOwner
