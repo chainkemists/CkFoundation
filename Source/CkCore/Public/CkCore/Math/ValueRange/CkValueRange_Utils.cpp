@@ -77,7 +77,8 @@ auto
         const FCk_FloatRange& InRange)
     -> float
 {
-    return InRange.Get_RandomValueInRange();
+    auto RandomValue = InRange.Get_RandomValueInRange();
+    return RandomValue;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
