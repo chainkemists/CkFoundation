@@ -405,8 +405,8 @@ auto
     const auto Actor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(Entity);
 
     // TODO: Ensure check this ptr
-    Actor->GetComponentByClass<UCk_EntityBridge_ActorComponent_Base_UE>()->
-        TryInvoke_OnReplicationComplete(UCk_EntityBridge_ActorComponent_Base_UE::EInvoke_Caller::ReplicationDriver);
+    const auto& EntityBridgeActorComp = Actor->GetComponentByClass<UCk_EntityBridge_ActorComponent_Base_UE>();
+    EntityBridgeActorComp->TryInvoke_OnReplicationComplete(UCk_EntityBridge_ActorComponent_Base_UE::EInvoke_Caller::ReplicationDriver);
 }
 
 auto
