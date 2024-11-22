@@ -219,11 +219,15 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Ability_Payload_OnGranted _OptionalPayload;
 
+private:
+    ECk_ConstructionPhase _ConstructionPhase = ECk_ConstructionPhase::AfterConstruction;
+
 public:
     CK_PROPERTY_GET(_AbilityScriptClass)
     CK_PROPERTY_GET(_AbilitySource)
     CK_PROPERTY(_AbilityScriptArchetype)
     CK_PROPERTY(_OptionalPayload)
+    CK_PROPERTY(_ConstructionPhase)
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_AbilityOwner_GiveAbility, _AbilityScriptClass, _AbilitySource);
@@ -255,11 +259,15 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Handle _AbilitySource;
 
+private:
+    ECk_ConstructionPhase _ConstructionPhase = ECk_ConstructionPhase::AfterConstruction;
+
 public:
     CK_PROPERTY_GET(_AbilityScriptClass)
     CK_PROPERTY_GET(_ReplicatedEntityToUse)
-    CK_PROPERTY(_AbilityScriptArchetype)
     CK_PROPERTY_GET(_AbilitySource)
+    CK_PROPERTY(_AbilityScriptArchetype)
+    CK_PROPERTY(_ConstructionPhase)
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_AbilityOwner_GiveReplicatedAbility, _AbilityScriptClass, _ReplicatedEntityToUse, _AbilitySource);

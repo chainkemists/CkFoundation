@@ -209,25 +209,27 @@ private:
     UPROPERTY()
     TObjectPtr<class UCk_Fragment_EntityReplicationDriver_Rep> _OwningEntityDriver;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+    UPROPERTY()
     TSubclassOf<UCk_DataAsset_PDA> _AbilityScriptClass;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+    UPROPERTY()
     FCk_Handle _AbilitySource;
 
     UPROPERTY()
     FCk_EntityReplicationDriver_ReplicateObjects_Data _ReplicatedObjectsData;
+
+    UPROPERTY()
+    ECk_ConstructionPhase _AbilityConstructionPhase = ECk_ConstructionPhase::AfterConstruction;
 
 public:
     CK_PROPERTY(_OwningEntityDriver)
     CK_PROPERTY_GET(_AbilityScriptClass)
     CK_PROPERTY_GET(_AbilitySource)
     CK_PROPERTY_GET(_ReplicatedObjectsData)
+    CK_PROPERTY_GET(_AbilityConstructionPhase)
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_AbilityData, _AbilityScriptClass, _AbilitySource, _ReplicatedObjectsData);
+    CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_AbilityData, _AbilityScriptClass, _AbilitySource, _ReplicatedObjectsData, _AbilityConstructionPhase);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

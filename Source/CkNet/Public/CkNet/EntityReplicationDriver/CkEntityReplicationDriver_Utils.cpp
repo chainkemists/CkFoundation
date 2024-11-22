@@ -60,7 +60,8 @@ auto
         FCk_Handle& InHandle,
         const UCk_Entity_ConstructionScript_PDA* InConstructionScript,
         const TSubclassOf<UCk_DataAsset_PDA>& InAbilityScriptClass,
-        const FCk_Handle& InAbilitySource)
+        const FCk_Handle& InAbilitySource,
+        ECk_ConstructionPhase InAbilityConstructionPhase)
     -> FCk_Handle
 {
     if (UCk_Utils_Net_UE::Get_EntityReplication(InHandle) == ECk_Replication::DoesNotReplicate)
@@ -100,7 +101,8 @@ auto
             {
                 InAbilityScriptClass,
                 InAbilitySource,
-                FCk_EntityReplicationDriver_ReplicateObjects_Data{ReplicatedObjects.Get_ReplicatedObjects()}
+                FCk_EntityReplicationDriver_ReplicateObjects_Data{ReplicatedObjects.Get_ReplicatedObjects()},
+                InAbilityConstructionPhase
             }.Set_OwningEntityDriver(InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>()));
 
             ck::UUtils_Signal_OnReplicationComplete::Broadcast(NewEntity, ck::MakePayload(NewEntity));

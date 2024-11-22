@@ -431,9 +431,10 @@ auto
     ++_NumSyncedDependentReplicationDrivers;
 
     CK_ENSURE_IF_NOT(_NumSyncedDependentReplicationDrivers <= _ExpectedNumberOfDependentReplicationDrivers,
-        TEXT("The number of Synced Dependent Replication Drivers [{}] is greater than the expected amount of [{}]. This is likely due to faulty logic."),
+        TEXT("The number of Synced Dependent Replication Drivers [{}] is greater than the expected amount of [{}] on Associated Entity [{}]. This is likely due to faulty logic."),
         _NumSyncedDependentReplicationDrivers,
-        _ExpectedNumberOfDependentReplicationDrivers)
+        _ExpectedNumberOfDependentReplicationDrivers,
+        Get_AssociatedEntity())
     { return; }
 
     if (_ExpectedNumberOfDependentReplicationDrivers == _NumSyncedDependentReplicationDrivers)
