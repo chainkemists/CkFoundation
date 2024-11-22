@@ -103,6 +103,10 @@ auto
             this)
         { continue; }
 
+        if (const auto& BindActor = Widget->Get_BindActor().Get();
+            ck::Is_NOT_Valid(BindActor))
+        { continue; }
+
         Widget->DoUnbindFromActor(InActor);
     }
 }
