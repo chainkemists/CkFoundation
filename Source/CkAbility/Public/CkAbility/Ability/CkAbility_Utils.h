@@ -74,6 +74,13 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability",
+              DisplayName="[Ck][Ability] Get AbilityOwner")
+    static FCk_Handle_AbilityOwner
+    TryGet_Owner(
+        const FCk_Handle_Ability& InAbilityEntity);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability",
               DisplayName="[Ck][Ability] Get Source/Caster")
     static FCk_Handle
     Get_Source(
