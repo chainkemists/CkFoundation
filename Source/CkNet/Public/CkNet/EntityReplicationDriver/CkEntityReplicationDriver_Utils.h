@@ -42,7 +42,8 @@ public:
         const UCk_Entity_ConstructionScript_PDA* InConstructionScript,
         // ideally, this would be UCk_Ability_Script_PDA, however we cannot depend on it in this module
         const TSubclassOf<UCk_DataAsset_PDA>& InAbilityScriptClass,
-        const FCk_Handle& InAbilitySource) -> FCk_Handle;
+        const FCk_Handle& InAbilitySource,
+        ECk_ConstructionPhase InAbilityConstructionPhase) -> FCk_Handle;
 
     static auto
     Request_TryBuildAndReplicate(

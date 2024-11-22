@@ -657,3 +657,14 @@ enum class ECk_ActorTraversalPolicy : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ActorTraversalPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_ConstructionPhase : uint8
+{
+    DuringConstruction,
+    AfterConstruction,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ConstructionPhase);
+
+// --------------------------------------------------------------------------------------------------------------------
