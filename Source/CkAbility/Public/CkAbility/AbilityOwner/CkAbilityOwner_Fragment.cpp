@@ -97,7 +97,6 @@ namespace ck
         if (InTagsToAdd.IsEmpty())
         { return; }
 
-        _PreviousTags = _ActiveTags;
         _ActiveTags.UpdateTagCount(InTagsToAdd, 1);
 
         Do_TagsUpdated(InAbilityOwner);
@@ -110,7 +109,6 @@ namespace ck
             const FGameplayTag& InTagToAdd)
         -> void
     {
-        _PreviousTags = _ActiveTags;
         _ActiveTags.UpdateTagCount(InTagToAdd, 1);
 
         Do_TagsUpdated(InAbilityOwner);
@@ -123,7 +121,6 @@ namespace ck
             const FGameplayTag& InTagToRemove)
         -> void
     {
-        _PreviousTags = _ActiveTags;
         _ActiveTags.UpdateTagCount(InTagToRemove, -1);
 
         Do_TagsUpdated(InAbilityOwner);
@@ -139,10 +136,18 @@ namespace ck
         if (InTagsToRemove.IsEmpty())
         { return; }
 
-        _PreviousTags = _ActiveTags;
         _ActiveTags.UpdateTagCount(InTagsToRemove, -1);
 
         Do_TagsUpdated(InAbilityOwner);
+    }
+
+    auto
+        FFragment_AbilityOwner_Current::
+        UpdatePreviousTags()
+        -> void
+    {
+        _PreviousTags = _ActiveTags;
+        _PreviousTags_IncludingAllEntityExtensions = _ActiveTags_IncludingAllEntityExtensions;
     }
 
     auto
@@ -151,7 +156,6 @@ namespace ck
             FCk_Handle_AbilityOwner& InAbilityOwner)
         -> void
     {
-        _PreviousTags_IncludingAllEntityExtensions = _ActiveTags_IncludingAllEntityExtensions;
         _ActiveTags_IncludingAllEntityExtensions = Get_ActiveTags(InAbilityOwner);
 
         if (Get_AreActiveTagsDifferentThanPreviousTags())

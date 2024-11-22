@@ -90,6 +90,7 @@ namespace ck
         auto RemoveTag(
             FCk_Handle_AbilityOwner& InAbilityOwner,
             const FGameplayTag& InTagToRemove) -> void;
+        auto UpdatePreviousTags() -> void;
 
     private:
         auto
