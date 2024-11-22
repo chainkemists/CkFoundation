@@ -63,18 +63,21 @@ public:
         const FObjectInitializer& InObjInitializer);
 
 public:
-    static auto Setup(
+    static auto
+    Setup(
         UCk_Ecs_ReplicatedObject_UE* InExistingReplicatedObject,
-        AActor*                      InTopmostOwningActor,
-        const FCk_Handle&            InAssociatedEntity) -> UCk_Ecs_ReplicatedObject_UE*;
+        AActor* InTopmostOwningActor,
+        const FCk_Handle& InAssociatedEntity) -> UCk_Ecs_ReplicatedObject_UE*;
 
-    static auto Create(
+    static auto
+    Create(
         TSubclassOf<UCk_Ecs_ReplicatedObject_UE> InReplicatedObject,
         AActor* InTopmostOwningActor,
         FName InName,
         FCk_Handle InAssociatedEntity) -> UCk_Ecs_ReplicatedObject_UE*;
 
-    static auto Destroy(
+    static auto
+    Destroy(
         UCk_Ecs_ReplicatedObject_UE* InRo) -> void;
 
 public:

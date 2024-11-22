@@ -63,7 +63,8 @@ namespace ck
             UCk_Utils_AbilityOwner_UE::Request_GiveAbility
             (
                 InHandle,
-                FCk_Request_AbilityOwner_GiveAbility{DefaultAbility, InHandle},
+                FCk_Request_AbilityOwner_GiveAbility{DefaultAbility, InHandle}
+                .Set_ConstructionPhase(ECk_ConstructionPhase::DuringConstruction),
                 {}
             );
         }
@@ -77,7 +78,9 @@ namespace ck
             UCk_Utils_AbilityOwner_UE::Request_GiveAbility
             (
                 InHandle,
-                FCk_Request_AbilityOwner_GiveAbility{DefaultAbilityInstance->GetClass(), InHandle}.Set_AbilityScriptArchetype(DefaultAbilityInstance),
+                FCk_Request_AbilityOwner_GiveAbility{DefaultAbilityInstance->GetClass(), InHandle}
+                .Set_AbilityScriptArchetype(DefaultAbilityInstance)
+                .Set_ConstructionPhase(ECk_ConstructionPhase::DuringConstruction),
                 {}
             );
         }
@@ -377,7 +380,8 @@ namespace ck
                         InAbilityOwnerEntity,
                         AbilityConstructionScript,
                         AbilityScriptClass,
-                        AbilitySource
+                        AbilitySource,
+                        InRequest.Get_ConstructionPhase()
                     );
 
                     PostAbilityCreationFunc(AbilityEntity);
@@ -562,6 +566,9 @@ namespace ck
         // would fail because those features would not yet exist.
         [&]()
         {
+            if (InRequest.Get_ConstructionPhase() != ECk_ConstructionPhase::DuringConstruction)
+            { return; }
+
             const auto& ReplicatedAbilityEntity = InRequest.Get_ReplicatedEntityToUse();
             const auto& RepDriver_ReplicatedAbilityEntity = ReplicatedAbilityEntity.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
 

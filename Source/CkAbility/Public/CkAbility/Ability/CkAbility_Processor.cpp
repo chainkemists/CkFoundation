@@ -32,7 +32,8 @@ namespace ck
         { return; }
 
         UCk_Utils_AbilityOwner_UE::Request_GiveReplicatedAbility(AbilityOwner,
-            FCk_Request_AbilityOwner_GiveReplicatedAbility{AbilityScriptClass, InHandle, InReplicatedAbility.Get_AbilitySource()});
+            FCk_Request_AbilityOwner_GiveReplicatedAbility{AbilityScriptClass, InHandle, InReplicatedAbility.Get_AbilitySource()}
+            .Set_ConstructionPhase(InReplicatedAbility.Get_AbilityConstructionPhase()));
 
         InHandle.Remove<FCk_EntityReplicationDriver_AbilityData>();
     }
