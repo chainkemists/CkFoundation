@@ -969,6 +969,9 @@ auto
         const FGameplayTagContainer& InRelevantTags)
     -> void
 {
+    if (InRelevantTags.IsEmpty())
+    { return; }
+
     CK_ENSURE_IF_NOT(ck::IsValid(InAbility),
         TEXT("Ability handle [{}] is INVALID."), InAbility)
     { return; }
