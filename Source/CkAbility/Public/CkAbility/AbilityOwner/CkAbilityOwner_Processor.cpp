@@ -1181,7 +1181,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
-            const FFragment_AbilityOwner_Current& InAbilityOwnerComp) const
+            FFragment_AbilityOwner_Current& InAbilityOwnerComp) const
         -> void
     {
         const auto& ActiveTags = InAbilityOwnerComp.Get_ActiveTags(InHandle);
@@ -1228,6 +1228,7 @@ namespace ck
                 MakePayload(InHandle, PreviousTags, ActiveTags, TagsRemoved, TagsAdded));
         }
 
+        InAbilityOwnerComp.UpdatePreviousTags();
         InHandle.Remove<MarkedDirtyBy>();
     }
 
