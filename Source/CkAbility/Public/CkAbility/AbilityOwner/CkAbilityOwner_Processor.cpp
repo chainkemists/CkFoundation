@@ -189,11 +189,6 @@ namespace ck
                 auto NonConstAbilityOwnerEntity = InAbilityOwnerEntity;
                 auto& AbilityOwnerComp = NonConstAbilityOwnerEntity.Get<FFragment_AbilityOwner_Current>();
                 AbilityOwnerComp.AppendTags(InAbilityOwnerEntity, GrantedTags);
-
-                if (AbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags())
-                {
-                    UCk_Utils_AbilityOwner_UE::Request_TagsUpdated(NonConstAbilityOwnerEntity);
-                }
             }
 
             UCk_Utils_Ability_UE::DoGive(AbilityOwnerEntity, AbilityEntity, AbilitySource, OptionalPayload);
@@ -345,12 +340,7 @@ namespace ck
                     // HACK: need a non-const handle as we're unable to make the lambda mutable
                     auto NonConstAbilityOwnerEntity = InAbilityOwnerEntity;
                     auto& AbilityOwnerComp = NonConstAbilityOwnerEntity.Get<FFragment_AbilityOwner_Current>();
-                    AbilityOwnerComp.AppendTags(InAbilityOwnerEntity, GrantedTags);
-
-                    if (AbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags())
-                    {
-                        UCk_Utils_AbilityOwner_UE::Request_TagsUpdated(NonConstAbilityOwnerEntity);
-                    }
+                    AbilityOwnerComp.AppendTags(NonConstAbilityOwnerEntity, GrantedTags);
                 }
 
                 UCk_Utils_Ability_UE::DoGive(AbilityOwnerEntity, AbilityEntity, AbilitySource, OptionalPayload);
@@ -537,12 +527,7 @@ namespace ck
                     // HACK: need a non-const handle as we're unable to make the lambda mutable
                     auto NonConstAbilityOwnerEntity = InAbilityOwnerEntity;
                     auto& AbilityOwnerComp = NonConstAbilityOwnerEntity.Get<FFragment_AbilityOwner_Current>();
-                    AbilityOwnerComp.AppendTags(InAbilityOwnerEntity, GrantedTags);
-
-                    if (AbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags())
-                    {
-                        UCk_Utils_AbilityOwner_UE::Request_TagsUpdated(NonConstAbilityOwnerEntity);
-                    }
+                    AbilityOwnerComp.AppendTags(NonConstAbilityOwnerEntity, GrantedTags);
                 }
 
                 UCk_Utils_Ability_UE::DoGive(AbilityOwnerEntity, AbilityEntity, AbilitySource, {});
@@ -654,11 +639,6 @@ namespace ck
                 const auto& GrantedTags = AbilityOnGiveSettings.Get_OnGiveSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
 
                 InAbilityOwnerComp.RemoveTags(InAbilityOwnerEntity, GrantedTags);
-
-                if (InAbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags())
-                {
-                    UCk_Utils_AbilityOwner_UE::Request_TagsUpdated(InAbilityOwnerEntity);
-                }
             }
 
             UCk_Utils_Ability_UE::DoRevoke(InAbilityOwnerEntity, InAbilityEntity, InRequest.Get_DestructionPolicy());
@@ -878,11 +858,6 @@ namespace ck
 
                 InAbilityOwnerComp.AppendTags(InAbilityOwnerEntity, GrantedTags);
 
-                if (InAbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags())
-                {
-                    UCk_Utils_AbilityOwner_UE::Request_TagsUpdated(InAbilityOwnerEntity);
-                }
-
                 // Try Deactivate our own Ability if we have one
                 if (UCk_Utils_Ability_UE::Has(InAbilityOwnerEntity))
                 {
@@ -1058,11 +1033,6 @@ namespace ck
             const auto& GrantedTags = AbilityActivationSettings.Get_ActivationSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
 
             InAbilityOwnerComp.RemoveTags(InAbilityOwnerEntity, GrantedTags);
-
-            if (InAbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags())
-            {
-                UCk_Utils_AbilityOwner_UE::Request_TagsUpdated(InAbilityOwnerEntity);
-            }
 
             ability::VeryVerbose
             (
@@ -1268,7 +1238,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
-            const FFragment_AbilityOwner_Current& InCurrent) const
+            FFragment_AbilityOwner_Current& InCurrent) const
         -> void
     {
         // if we are an EntityExtension, then inform our ExtensionOwner of potentially updated tags
