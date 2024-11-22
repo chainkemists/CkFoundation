@@ -1172,8 +1172,6 @@ namespace ck
         -> void
     {
         Super::Tick(InDeltaT);
-
-        _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -1229,6 +1227,8 @@ namespace ck
             UUtils_Signal_AbilityOwner_OnTagsUpdated::Broadcast(InHandle,
                 MakePayload(InHandle, PreviousTags, ActiveTags, TagsRemoved, TagsAdded));
         }
+
+        InHandle.Remove<MarkedDirtyBy>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
