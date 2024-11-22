@@ -90,73 +90,81 @@ namespace ck
     auto
         FFragment_AbilityOwner_Current::
         AppendTags(
-            const FCk_Handle_AbilityOwner& InAbilityOwner,
+            FCk_Handle_AbilityOwner& InAbilityOwner,
             const FGameplayTagContainer& InTagsToAdd)
         -> void
     {
         if (InTagsToAdd.IsEmpty())
         { return; }
 
-        DoTry_TagsUpdatedOnExtensionOwner(InAbilityOwner);
         _PreviousTags = _ActiveTags;
         _ActiveTags.UpdateTagCount(InTagsToAdd, 1);
 
-        _PreviousTags_IncludingAllEntityExtensions = _ActiveTags_IncludingAllEntityExtensions;
-        _ActiveTags_IncludingAllEntityExtensions = Get_ActiveTags(InAbilityOwner);
+        Do_TagsUpdated(InAbilityOwner);
     }
 
     auto
         FFragment_AbilityOwner_Current::
         AddTag(
-            const FCk_Handle_AbilityOwner& InAbilityOwner,
+            FCk_Handle_AbilityOwner& InAbilityOwner,
             const FGameplayTag& InTagToAdd)
         -> void
     {
-        DoTry_TagsUpdatedOnExtensionOwner(InAbilityOwner);
         _PreviousTags = _ActiveTags;
         _ActiveTags.UpdateTagCount(InTagToAdd, 1);
 
-        _PreviousTags_IncludingAllEntityExtensions = _ActiveTags_IncludingAllEntityExtensions;
-        _ActiveTags_IncludingAllEntityExtensions = Get_ActiveTags(InAbilityOwner);
+        Do_TagsUpdated(InAbilityOwner);
     }
 
     auto
         FFragment_AbilityOwner_Current::
         RemoveTag(
-            const FCk_Handle_AbilityOwner& InAbilityOwner,
+            FCk_Handle_AbilityOwner& InAbilityOwner,
             const FGameplayTag& InTagToRemove)
         -> void
     {
-        DoTry_TagsUpdatedOnExtensionOwner(InAbilityOwner);
         _PreviousTags = _ActiveTags;
         _ActiveTags.UpdateTagCount(InTagToRemove, -1);
 
-        _PreviousTags_IncludingAllEntityExtensions = _ActiveTags_IncludingAllEntityExtensions;
-        _ActiveTags_IncludingAllEntityExtensions = Get_ActiveTags(InAbilityOwner);
+        Do_TagsUpdated(InAbilityOwner);
     }
 
     auto
         FFragment_AbilityOwner_Current::
         RemoveTags(
-            const FCk_Handle_AbilityOwner& InAbilityOwner,
+            FCk_Handle_AbilityOwner& InAbilityOwner,
             const FGameplayTagContainer& InTagsToRemove)
         -> void
     {
         if (InTagsToRemove.IsEmpty())
         { return; }
 
-        DoTry_TagsUpdatedOnExtensionOwner(InAbilityOwner);
         _PreviousTags = _ActiveTags;
         _ActiveTags.UpdateTagCount(InTagsToRemove, -1);
 
+        Do_TagsUpdated(InAbilityOwner);
+    }
+
+    auto
+        FFragment_AbilityOwner_Current::
+        Do_TagsUpdated(
+            FCk_Handle_AbilityOwner& InAbilityOwner)
+        -> void
+    {
         _PreviousTags_IncludingAllEntityExtensions = _ActiveTags_IncludingAllEntityExtensions;
         _ActiveTags_IncludingAllEntityExtensions = Get_ActiveTags(InAbilityOwner);
+
+        if (Get_AreActiveTagsDifferentThanPreviousTags())
+        {
+            UCk_Utils_AbilityOwner_UE::Request_TagsUpdated(InAbilityOwner);
+        }
+        DoTry_TagsUpdatedOnExtensionOwner(InAbilityOwner);
     }
 
     auto
         FFragment_AbilityOwner_Current::
         DoTry_TagsUpdatedOnExtensionOwner(
-            const FCk_Handle_AbilityOwner& InAbilityOwner)
+            FCk_Handle_AbilityOwner& InAbilityOwner)
         -> void
     {
         if (const auto EntityExtension = UCk_Utils_EntityExtension_UE::Cast(InAbilityOwner);
@@ -167,7 +175,8 @@ namespace ck
 
             if (ck::IsValid(ExtensionOwner))
             {
-                UCk_Utils_AbilityOwner_UE::Request_TagsUpdated(ExtensionOwnerAsAbilityOwner);
+                auto& ExtensionOwnerAbilityOwnerComp = ExtensionOwnerAsAbilityOwner.Get<FFragment_AbilityOwner_Current>();
+                ExtensionOwnerAbilityOwnerComp.Do_TagsUpdated(ExtensionOwnerAsAbilityOwner);
             }
         }
     }

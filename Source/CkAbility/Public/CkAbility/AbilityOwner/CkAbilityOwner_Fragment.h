@@ -79,22 +79,26 @@ namespace ck
             const FCk_Handle_AbilityOwner& InAbilityOwner) const -> bool;
 
         auto AppendTags(
-            const FCk_Handle_AbilityOwner& InAbilityOwner,
+            FCk_Handle_AbilityOwner& InAbilityOwner,
             const FGameplayTagContainer& InTagsToAdd) -> void;
         auto AddTag(
-            const FCk_Handle_AbilityOwner& InAbilityOwner,
+            FCk_Handle_AbilityOwner& InAbilityOwner,
             const FGameplayTag& InTagToAdd) -> void;
         auto RemoveTags(
-            const FCk_Handle_AbilityOwner& InAbilityOwner,
+            FCk_Handle_AbilityOwner& InAbilityOwner,
             const FGameplayTagContainer& InTagsToRemove) -> void;
         auto RemoveTag(
-            const FCk_Handle_AbilityOwner& InAbilityOwner,
+            FCk_Handle_AbilityOwner& InAbilityOwner,
             const FGameplayTag& InTagToRemove) -> void;
 
     private:
-        static auto
+        auto
+        Do_TagsUpdated(
+            FCk_Handle_AbilityOwner& InAbilityOwner) -> void;
+
+        auto
         DoTry_TagsUpdatedOnExtensionOwner(
-            const FCk_Handle_AbilityOwner& InAbilityOwner) -> void;
+            FCk_Handle_AbilityOwner& InAbilityOwner) -> void;
 
         auto Get_ActiveTagsRecursive(
             const FCk_Handle_AbilityOwner& InAbilityOwner,
