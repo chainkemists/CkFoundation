@@ -100,23 +100,6 @@ public:
     Promise_OnReplicationCompleteAllDependents(
         UPARAM(ref) FCk_Handle& InEntity,
         const FCk_Delegate_EntityReplicationDriver_OnReplicationComplete& InDelegate);
-
-private:
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|ReplicationDriver",
-              meta = (NativeMakeFunc, DeprecatedFunction, DeprecationMessage="FCk_HandleReplicator is Obsolete. FCk_Handle can now replicate"))
-    static FCk_HandleReplicator
-    Make_HandleReplicator(
-        UPARAM(ref) FCk_Handle& InHandle);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|ReplicationDriver",
-              meta = (NativeMakeFunc, DeprecatedFunction, DeprecationMessage="FCk_HandleReplicator is Obsolete. FCk_Handle can now replicate"))
-    static void
-    Break_HandleReplicator(
-        const FCk_HandleReplicator& InHandleReplicator,
-        FCk_Handle& OutHandle);
-
 };
 
 // --------------------------------------------------------------------------------------------------------------------
