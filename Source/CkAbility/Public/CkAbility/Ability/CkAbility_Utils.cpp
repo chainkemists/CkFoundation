@@ -25,6 +25,21 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Ability_UE, FCk_Handle_Ability
 
 auto
     UCk_Utils_Ability_UE::
+    TryGet_Owner(
+        const FCk_Handle_Ability& InAbilityEntity)
+    -> FCk_Handle_AbilityOwner
+{
+    const auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityEntity);
+
+    if (ck::Is_NOT_Valid(LifetimeOwner))
+    { return {}; }
+
+    const auto AbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(LifetimeOwner);
+    return AbilityOwner;
+}
+
+auto
+    UCk_Utils_Ability_UE::
     Get_Source(
         const FCk_Handle_Ability& InAbilityEntity)
     -> FCk_Handle
