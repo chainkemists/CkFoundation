@@ -198,7 +198,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
-            const FFragment_AbilityOwner_Current& InCurrent) const -> void;
+            FFragment_AbilityOwner_Current& InCurrent) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
