@@ -304,36 +304,4 @@ auto
         InEntity, InDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFlight);
 }
 
-auto
-    UCk_Utils_EntityReplicationDriver_UE::
-    Make_HandleReplicator(
-        FCk_Handle& InHandle)
-    -> FCk_HandleReplicator
-{
-    auto EntityReplicator = FCk_HandleReplicator{};
-
-    TryUpdateReplicatedFragment<UCk_Fragment_EntityReplicationDriver_Rep>(InHandle,
-    [&](UCk_Fragment_EntityReplicationDriver_Rep* InRepDriver)
-    {
-        EntityReplicator = FCk_HandleReplicator{InHandle, InRepDriver};
-    });
-
-    CK_LOG_ERROR_IF_NOT(ck::net, ck::IsValid(EntityReplicator.Get_Handle_RepObj()),
-        TEXT("Entity [{}] CANNOT be replicated since it does NOT have a valid [{}]"), InHandle,
-        ck::Get_RuntimeTypeToString<UCk_Fragment_EntityReplicationDriver_Rep>())
-    { return {}; }
-
-    return EntityReplicator;
-}
-
-auto
-    UCk_Utils_EntityReplicationDriver_UE::
-    Break_HandleReplicator(
-        const FCk_HandleReplicator& InHandleReplicator,
-        FCk_Handle& OutHandle)
-    -> void
-{
-    OutHandle = InHandleReplicator.Get_Handle();
-}
-
 // --------------------------------------------------------------------------------------------------------------------
