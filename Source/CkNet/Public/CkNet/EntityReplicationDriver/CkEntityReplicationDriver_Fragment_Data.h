@@ -9,48 +9,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType, meta = (
-    HasNativeMake = "/Script/CkNet.Ck_Utils_EntityReplicationDriver_UE:Make_HandleReplicator",
-    HasNativeBreak = "/Script/CkNet.Ck_Utils_EntityReplicationDriver_UE:Break_HandleReplicator"))
-struct CKNET_API FCk_HandleReplicator
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_HandleReplicator);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, NotReplicated,
-        meta=(AllowPrivateAccess))
-    FCk_Handle _Handle;
-    UPROPERTY()
-    TWeakObjectPtr<class UCk_Fragment_EntityReplicationDriver_Rep> _Handle_RepObj;
-
-public:
-    auto
-    NetSerialize(
-        FArchive& Ar,
-        class UPackageMap* Map,
-        bool& bOutSuccess) -> bool;
-
-public:
-    CK_PROPERTY_GET(_Handle);
-    CK_PROPERTY_GET(_Handle_RepObj);
-
-    CK_DEFINE_CONSTRUCTORS(FCk_HandleReplicator, _Handle, _Handle_RepObj);
-};
-
-template<>
-struct TStructOpsTypeTraits<FCk_HandleReplicator> : public TStructOpsTypeTraitsBase2<FCk_HandleReplicator>
-{
-    enum
-    { WithNetSerializer = true };
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
 USTRUCT(BlueprintType)
 struct CKNET_API FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor
 {
@@ -68,7 +26,7 @@ private:
     TObjectPtr<class UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
 
     UPROPERTY()
-    TArray<TWeakObjectPtr<UCk_ReplicatedObject_UE>> _ReplicatedObjects;
+    TArray<TWeakObjectPtr<class UCk_ReplicatedObject_UE>> _ReplicatedObjects;
 
 public:
     CK_PROPERTY_GET(_ReplicatedActor);
