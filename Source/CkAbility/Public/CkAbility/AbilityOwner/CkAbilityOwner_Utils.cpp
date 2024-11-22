@@ -1005,8 +1005,8 @@ auto
     const auto& TagsToRemove = Get_FilteredTags(RelevantTagsFromAbilityOwner, InRelevantTags, OwnerTags);
     RelevantTagsFromAbilityOwner.RemoveTags(TagsToRemove);
 
-    AbilityHandleAsOwner.Get<ck::FFragment_AbilityOwner_Current>().AppendTags(InAbilityOwner, TagsToAppend);
-    AbilityHandleAsOwner.Get<ck::FFragment_AbilityOwner_Current>().RemoveTags(InAbilityOwner, TagsToRemove);
+    AbilityHandleAsOwner.Get<ck::FFragment_AbilityOwner_Current>().AppendTags(AbilityHandleAsOwner, TagsToAppend);
+    AbilityHandleAsOwner.Get<ck::FFragment_AbilityOwner_Current>().RemoveTags(AbilityHandleAsOwner, TagsToRemove);
 }
 
 auto
