@@ -281,6 +281,15 @@ private:
     FCk_Handle
     DoGet_ContextEntityWithActor();
 
+    // Non-const by design to avoid errors where this is called on the CDO and the Ability Handle is Invalid
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Ability|Script",
+              DisplayName = "[Ck][AbilityScript] Get Ability NetMode",
+              meta = (HideSelfPin = true, ExpandEnumAsExecs = "OutAbilityNetMode", Keywords = "Switch"))
+    void
+    DoGet_AbilityNetMode(
+        ECk_Net_NetModeType& OutAbilityNetMode);
+
 public:
     UFUNCTION(BlueprintCallable,
               BlueprintPure = true,
