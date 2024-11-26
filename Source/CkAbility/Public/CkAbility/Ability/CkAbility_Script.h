@@ -67,8 +67,7 @@ protected:
               meta     = (DisplayName = "OnActivateAbility"))
     void
     DoOnActivateAbility(
-        const FCk_Ability_Payload_OnActivate& InActivationPayload,
-        ECk_Net_NetModeType InNetMode);
+        const FCk_Ability_Payload_OnActivate& InActivationPayload);
 
     UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|Ability|Script",
@@ -81,23 +80,20 @@ protected:
               Category = "Ck|Ability|Script",
               meta     = (DisplayName = "OnDeactivateAbility"))
     void
-    DoOnDeactivateAbility(
-        ECk_Net_NetModeType InNetMode);
+    DoOnDeactivateAbility();
 
     UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|Ability|Script",
               meta     = (DisplayName = "OnGiveAbility"))
     void
     DoOnGiveAbility(
-        const FCk_Ability_Payload_OnGranted& InOptionalPayload,
-        ECk_Net_NetModeType InNetMode);
+        const FCk_Ability_Payload_OnGranted& InOptionalPayload);
 
     UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|Ability|Script",
               meta     = (DisplayName = "OnRevokeAbility"))
     void
-    DoOnRevokeAbility(
-        ECk_Net_NetModeType InNetMode);
+    DoOnRevokeAbility();
 
     UFUNCTION(BlueprintImplementableEvent,
               Category = "Ck|Ability|Script",
