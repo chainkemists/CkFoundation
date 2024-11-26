@@ -30,7 +30,7 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Net_ReplicationType);
 UENUM(BlueprintType)
 enum class ECk_Net_NetModeType : uint8
 {
-    None  ,
+    Unknown,
     Client,
     Host  ,
 };
