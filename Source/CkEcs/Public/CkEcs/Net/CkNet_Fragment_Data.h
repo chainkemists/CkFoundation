@@ -31,7 +31,7 @@ public:
 
 private:
     ECk_Replication _Replication = ECk_Replication::DoesNotReplicate;
-    ECk_Net_NetModeType _NetMode = ECk_Net_NetModeType::None;
+    ECk_Net_NetModeType _NetMode = ECk_Net_NetModeType::Unknown;
     ECk_Net_EntityNetRole _NetRole = ECk_Net_EntityNetRole::None;
 
 public:

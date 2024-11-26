@@ -242,7 +242,7 @@ auto
     -> ECk_Net_NetModeType
 {
     if (ck::Is_NOT_Valid(InEntity))
-    { return ECk_Net_NetModeType::None; }
+    { return ECk_Net_NetModeType::Unknown; }
 
     if (InEntity.Has<ck::FFragment_Net_Params>())
     { return InEntity.Get<ck::FFragment_Net_Params>().Get_ConnectionSettings().Get_NetMode(); }

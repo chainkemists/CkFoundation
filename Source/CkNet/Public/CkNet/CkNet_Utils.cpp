@@ -474,7 +474,7 @@ auto
     case NM_MAX:
     default:
         CK_TRIGGER_ENSURE(TEXT("Invalid NetMode for [{}]."), InContext);
-        return ECk_Net_NetModeType::None;
+        return ECk_Net_NetModeType::Unknown;
     }
 }
 
