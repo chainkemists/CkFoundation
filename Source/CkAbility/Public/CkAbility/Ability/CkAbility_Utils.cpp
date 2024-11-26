@@ -29,13 +29,12 @@ auto
         const FCk_Handle_Ability& InAbilityEntity)
     -> FCk_Handle_AbilityOwner
 {
-    const auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityEntity);
+    const auto& AbilityScript = InAbilityEntity.Get<ck::FFragment_Ability_Current>().Get_AbilityScript();
 
-    if (ck::Is_NOT_Valid(LifetimeOwner))
+    if (ck::Is_NOT_Valid(AbilityScript))
     { return {}; }
 
-    const auto AbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(LifetimeOwner);
-    return AbilityOwner;
+    return AbilityScript->Get_AbilityOwnerHandle();
 }
 
 auto
