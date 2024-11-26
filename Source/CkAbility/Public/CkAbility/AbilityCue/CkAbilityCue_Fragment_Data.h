@@ -68,11 +68,11 @@ public:
 
 private:
     UPROPERTY(Transient, EditInstanceOnly,
-        meta=(AllowPrivateAccess, DisplayThumbnail="false", ForceInlineRow))
+        meta=(AllowPrivateAccess, DisplayThumbnail="false", ForceInlineRow, ReadOnlyKeys))
     TMap<FGameplayTag, FSoftObjectPath> _AbilityCues;
 
     UPROPERTY(Transient, EditInstanceOnly,
-        meta=(AllowPrivateAccess, DisplayThumbnail="false", ForceInlineRow))
+        meta=(AllowPrivateAccess, DisplayThumbnail="false", ForceInlineRow, ReadOnlyKeys))
     TMap<FGameplayTag, TObjectPtr<UCk_AbilityCue_Config_PDA>> _AbilityCueConfigs;
 
 public:
