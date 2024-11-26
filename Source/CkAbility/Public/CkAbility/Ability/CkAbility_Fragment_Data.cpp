@@ -76,7 +76,15 @@ auto
     const auto AbilityOwnerParamsData = FCk_Fragment_AbilityOwner_ParamsData{}
                                         .Set_DefaultAbilities_Instanced(_DefaultAbilities_Instanced);
 
-    UCk_Utils_AbilityOwner_UE::Add(InHandle, AbilityOwnerParamsData, ECk_Replication::DoesNotReplicate);
+    const auto& AbilityNetworkSettings = Get_AbilityParams().Get_Data().Get_NetworkSettings();
+    const auto& AbilityFeatureReplicationPolicy = AbilityNetworkSettings.Get_FeatureReplicationPolicy();
+
+
+    const auto& AbilityOwnerFeatureReplication = AbilityFeatureReplicationPolicy == ECk_Ability_FeatureReplication_Policy::ReplicateAbilityFeatures
+                                                    ? ECk_Replication::Replicates
+                                                    : ECk_Replication::DoesNotReplicate;
+
+    UCk_Utils_AbilityOwner_UE::Add(InHandle, AbilityOwnerParamsData, AbilityOwnerFeatureReplication);
 }
 
 auto
