@@ -516,6 +516,19 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
+    DoGet_AbilityNetMode(
+        ECk_Net_NetModeType& OutAbilityNetMode) -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
+        TEXT("AbilityHandle is [{}]. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
+        Get_AbilityHandle(), ck::Context(this))
+    { return; }
+
+    OutAbilityNetMode = UCk_Utils_Net_UE::Get_EntityNetMode(Get_AbilityHandle());
+}
+
+auto
+    UCk_Ability_Script_PDA::
     Get_Data() const
     -> const FCk_Ability_Script_Data&
 {
