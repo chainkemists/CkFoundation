@@ -110,7 +110,7 @@ auto
 
             break;
         }
-        case ECk_Net_NetModeType::None:
+        case ECk_Net_NetModeType::Unknown:
         default:
             CK_INVALID_ENUM(NetMode);
             break;
@@ -181,7 +181,7 @@ auto
 
             break;
         }
-        case ECk_Net_NetModeType::None:
+        case ECk_Net_NetModeType::Unknown:
         default:
             CK_INVALID_ENUM(NetMode);
             break;
@@ -224,7 +224,7 @@ auto
 
     switch(const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(InHandle))
     {
-    case ECk_Net_NetModeType::None:
+    case ECk_Net_NetModeType::Unknown:
         break;
     case ECk_Net_NetModeType::Client:
         RepDriver->Request_Replicate_NonReplicatedActor(InConstructionInfo);
