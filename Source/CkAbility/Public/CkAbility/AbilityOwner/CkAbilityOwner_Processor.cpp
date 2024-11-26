@@ -164,14 +164,23 @@ namespace ck
     {
         using RecordOfAbilities_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfAbilities>;
 
-        CK_ENSURE_IF_NOT(NOT RecordOfAbilities_Utils::Get_ContainsEntry(InAbilityOwnerEntity, InRequest.Get_Ability()),
-            TEXT("Cannot ADD and GIVE Ability to Ability Owner [{}] because it already has the Ability [{}]"),
-            InAbilityOwnerEntity, InRequest.Get_Ability())
+        const auto& AbilityToAddAndGive = InRequest.Get_Ability();
+
+        CK_ENSURE_IF_NOT(NOT RecordOfAbilities_Utils::Get_ContainsEntry(InAbilityOwnerEntity, AbilityToAddAndGive),
+            TEXT("Cannot ADD and GIVE Ability [{}] to Ability Owner [{}] because it already has this Ability"),
+            AbilityToAddAndGive, InAbilityOwnerEntity)
+        { return; }
+
+        const auto& CurrentOwnerOfAbilityToAddAndGive = UCk_Utils_Ability_UE::TryGet_Owner(AbilityToAddAndGive);
+
+        CK_ENSURE_IF_NOT(ck::Is_NOT_Valid(CurrentOwnerOfAbilityToAddAndGive),
+            TEXT("Cannot ADD and GIVE Ability [{}] to Ability Owner [{}] because it still belongs to Ability Owner [{}]"),
+            AbilityToAddAndGive, InAbilityOwnerEntity, CurrentOwnerOfAbilityToAddAndGive)
         { return; }
 
         const auto AbilityGivenOrNot = [&]() -> ECk_AbilityOwner_AbilityGivenOrNot
         {
-            auto AbilityEntity = InRequest.Get_Ability();
+            auto AbilityEntity = AbilityToAddAndGive;
             auto AbilityOwnerEntity = InAbilityOwnerEntity;
             const auto& AbilitySource = InRequest.Get_AbilitySource();
             const auto& OptionalPayload = InRequest.Get_OptionalPayload();
