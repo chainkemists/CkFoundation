@@ -504,6 +504,7 @@ auto
     { return; }
 
     Script->OnRevokeAbility();
+    Script->_AbilityOwnerHandle = {};
 
     if (RecordOfAbilities_Utils::Get_ContainsEntry(InAbilityOwner, InAbility))
     { RecordOfAbilities_Utils::Request_Disconnect(InAbilityOwner, InAbility); }
@@ -511,25 +512,19 @@ auto
     // NOTE: Because abilities can be granted through Entity Extensions, only proceed with Ability destruction if
     // the Ability was granted to the Ability Owner directly and NOT by extension (which means the Ability Owner
     // is also the lifetime owner of the Ability)
-    [&]()
+    if (InDestructionPolicy == ECk_AbilityOwner_DestructionOnRevoke_Policy::DestroyOnRevoke &&
+    UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbility) == InAbilityOwner)
     {
-        if (InDestructionPolicy == ECk_AbilityOwner_DestructionOnRevoke_Policy::DestroyOnRevoke &&
-        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbility) == InAbilityOwner)
-        {
-            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAbility);
+        UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAbility);
 
-            const auto CurrentWorld = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAbility);
+        const auto CurrentWorld = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAbility);
 
-            CK_ENSURE_IF_NOT(ck::IsValid(CurrentWorld), TEXT("Invalid World for Ability Entity [{}]"), InAbility)
-            { return; }
+        CK_ENSURE_IF_NOT(ck::IsValid(CurrentWorld), TEXT("Invalid World for Ability Entity [{}]"), InAbility)
+        { return; }
 
-            UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(CurrentWorld)->Request_UntrackAbilityScript(Script);
-            UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(CurrentWorld)->Request_UntrackAbilityScript(Current.Get_AbilityScript_DefaultInstance().Get());
-        }
-    }();
-
-    Script->_AbilityOwnerHandle = {};
-    Script->_AbilityHandle = {};
+        UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(CurrentWorld)->Request_UntrackAbilityScript(Script);
+        UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(CurrentWorld)->Request_UntrackAbilityScript(Current.Get_AbilityScript_DefaultInstance().Get());
+    }
 }
 
 auto

@@ -5,6 +5,8 @@
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Utils.h"
 #include "CkAbility/Settings/CkAbility_Settings.h"
 
+#include "CkCore/Object/CkObject_Utils.h"
+
 #include "CkNet/CkNet_Utils.h"
 
 #include <BlueprintTaskTemplate.h>
@@ -444,9 +446,18 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    DoGet_Status()
+    DoGet_Status() const
     -> ECk_Ability_Status
 {
+    if (_Data.Get_InstancingPolicy() != ECk_Ability_InstancingPolicy::NotInstanced)
+    {
+        CK_ENSURE_IF_NOT(NOT UCk_Utils_Object_UE::Get_IsDefaultObject(this),
+            TEXT("Cannot call UCk_Ability_Script_PDA::DoGet_Status on the CDO of the AbilityScript with InstancingPolicy [{}].\n"
+                 "This is because the necessary Ability and AbilityOwner Handles will always be INVALID.{}"),
+            ck::Context(this))
+        { return {}; }
+    }
+
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
         TEXT("AbilityHandle is [{}]. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
         Get_AbilityHandle(), ck::Context(this))
@@ -457,9 +468,18 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    DoGet_AbilityEntity()
+    DoGet_AbilityEntity() const
     -> FCk_Handle_Ability
 {
+    if (_Data.Get_InstancingPolicy() != ECk_Ability_InstancingPolicy::NotInstanced)
+    {
+        CK_ENSURE_IF_NOT(NOT UCk_Utils_Object_UE::Get_IsDefaultObject(this),
+            TEXT("Cannot call UCk_Ability_Script_PDA::DoGet_AbilityEntity on the CDO of the AbilityScript with InstancingPolicy [{}].\n"
+                 "This is because the necessary Ability and AbilityOwner Handles will always be INVALID.{}"),
+            _Data.Get_InstancingPolicy(), ck::Context(this))
+        { return {}; }
+    }
+
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle(), ck::IsValid_Policy_IncludePendingKill{}),
         TEXT("AbilityHandle is [{}]. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
         Get_AbilityHandle(), ck::Context(this))
@@ -470,9 +490,18 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    DoGet_AbilityOwnerEntity()
+    DoGet_AbilityOwnerEntity() const
     -> FCk_Handle_AbilityOwner
 {
+    if (_Data.Get_InstancingPolicy() != ECk_Ability_InstancingPolicy::NotInstanced)
+    {
+        CK_ENSURE_IF_NOT(NOT UCk_Utils_Object_UE::Get_IsDefaultObject(this),
+            TEXT("Cannot call UCk_Ability_Script_PDA::DoGet_AbilityOwnerEntity on the CDO of the AbilityScript with InstancingPolicy [{}].\n"
+                 "This is because the necessary Ability and AbilityOwner Handles will always be INVALID.{}"),
+            _Data.Get_InstancingPolicy(), ck::Context(this))
+        { return {}; }
+    }
+
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityOwnerHandle(), ck::IsValid_Policy_IncludePendingKill{}),
         TEXT("AbilityOwnerHandle is [{}]. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
         Get_AbilityOwnerHandle(), ck::Context(this))
@@ -483,9 +512,18 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    DoGet_AbilityOwnerEntity_Self()
+    DoGet_AbilityOwnerEntity_Self() const
     -> FCk_Handle_AbilityOwner
 {
+    if (_Data.Get_InstancingPolicy() != ECk_Ability_InstancingPolicy::NotInstanced)
+    {
+        CK_ENSURE_IF_NOT(NOT UCk_Utils_Object_UE::Get_IsDefaultObject(this),
+            TEXT("Cannot call UCk_Ability_Script_PDA::DoGet_AbilityOwnerEntity_Self on the CDO of the AbilityScript with InstancingPolicy [{}].\n"
+                 "This is because the necessary Ability and AbilityOwner Handles will always be INVALID.{}"),
+            _Data.Get_InstancingPolicy(), ck::Context(this))
+        { return {}; }
+    }
+
     CK_ENSURE_IF_NOT(UCk_Utils_AbilityOwner_UE::Has(Get_AbilityHandle()), TEXT("AbilityHandle is [{}] which is NOT an AbilityOwner.{}"),
         Get_AbilityHandle(), ck::Context(this))
     { return {}; }
@@ -509,8 +547,17 @@ auto
 auto
     UCk_Ability_Script_PDA::
     DoGet_AbilityNetMode(
-        ECk_Net_NetModeType& OutAbilityNetMode) -> void
+        ECk_Net_NetModeType& OutAbilityNetMode) const
+    -> void
 {
+    if (_Data.Get_InstancingPolicy() != ECk_Ability_InstancingPolicy::NotInstanced)
+    {
+        CK_ENSURE_IF_NOT(NOT UCk_Utils_Object_UE::Get_IsDefaultObject(this),
+            TEXT("Cannot call UCk_Ability_Script_PDA::DoGet_AbilityNetMode on the CDO of the AbilityScript with InstancingPolicy [{}].\n"
+                 "This is because the necessary Ability and AbilityOwner Handles will always be INVALID.{}"),
+            _Data.Get_InstancingPolicy(), ck::Context(this))
+        { return; }
+    }
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
         TEXT("AbilityHandle is [{}]. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
         Get_AbilityHandle(), ck::Context(this))
