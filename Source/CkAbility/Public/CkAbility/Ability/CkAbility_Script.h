@@ -232,43 +232,34 @@ public:
         class UBlueprintTaskTemplate* InTask);
 
 private:
-    // Non-const by design to avoid errors where this is called on the CDO and the Ability Handle is Invalid
-    UFUNCTION(BlueprintCallable,
-              BlueprintPure = true,
+    UFUNCTION(BlueprintPure,
               Category = "Ck|Ability|Script",
               DisplayName = "[Ck][AbilityScript] Get Ability Status",
               meta = (CompactNodeTitle="STATUS_ThisAbility", HideSelfPin = true))
     ECk_Ability_Status
-    DoGet_Status();
+    DoGet_Status() const;
 
-    // Non-const by design to avoid errors where this is called on the CDO and the Ability Handle is Invalid
-    UFUNCTION(BlueprintCallable,
-              BlueprintPure = true,
+    UFUNCTION(BlueprintPure,
               Category = "Ck|Ability|Script",
               DisplayName = "[Ck][AbilityScript] Get Ability Entity (Self)",
               meta = (CompactNodeTitle="AbilityEntity", HideSelfPin = true))
     FCk_Handle_Ability
-    DoGet_AbilityEntity();
+    DoGet_AbilityEntity() const;
 
-    // Non-const by design to avoid errors where this is called on the CDO and the Ability Handle is Invalid
-    UFUNCTION(BlueprintCallable,
-              BlueprintPure = true,
+    UFUNCTION(BlueprintPure,
               Category = "Ck|Ability|Script",
               DisplayName = "[Ck][AbilityScript] Get Ability Owner Entity",
               meta = (CompactNodeTitle="AbilityOwnerEntity", HideSelfPin = true))
     FCk_Handle_AbilityOwner
-    DoGet_AbilityOwnerEntity();
+    DoGet_AbilityOwnerEntity() const;
 
-    // Non-const by design to avoid errors where this is called on the CDO and the Ability Handle is Invalid
-    UFUNCTION(BlueprintCallable,
-              BlueprintPure = true,
+    UFUNCTION(BlueprintPure,
               Category = "Ck|Ability|Script",
               DisplayName = "[Ck][AbilityScript] Get Ability Owner Entity (Self)",
               meta = (CompactNodeTitle="AbilityOwnerEntity (Self)", HideSelfPin = true))
     FCk_Handle_AbilityOwner
-    DoGet_AbilityOwnerEntity_Self();
+    DoGet_AbilityOwnerEntity_Self() const;
 
-    // Non-const by design to avoid errors where this is called on the CDO and the Ability Handle is Invalid
     UFUNCTION(BlueprintCallable,
               BlueprintPure = true,
               Category = "Ck|Ability|Script",
@@ -277,14 +268,14 @@ private:
     FCk_Handle
     DoGet_ContextEntityWithActor();
 
-    // Non-const by design to avoid errors where this is called on the CDO and the Ability Handle is Invalid
     UFUNCTION(BlueprintCallable,
+              BlueprintPure = false,
               Category = "Ck|Ability|Script",
               DisplayName = "[Ck][AbilityScript] Get Ability NetMode",
               meta = (HideSelfPin = true, ExpandEnumAsExecs = "OutAbilityNetMode", Keywords = "Switch"))
     void
     DoGet_AbilityNetMode(
-        ECk_Net_NetModeType& OutAbilityNetMode);
+        ECk_Net_NetModeType& OutAbilityNetMode) const;
 
 public:
     UFUNCTION(BlueprintCallable,
