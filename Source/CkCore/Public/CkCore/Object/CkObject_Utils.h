@@ -246,14 +246,14 @@ public:
               Category = "Ck|Utils|Object")
     static bool
     Get_IsDefaultObject(
-        UObject* InObject);
+        const UObject* InObject);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Is Archetype Object",
               Category = "Ck|Utils|Object")
     static bool
     Get_IsArchetypeObject(
-        UObject* InObject);
+        const UObject* InObject);
 
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Object Native Parent Class",

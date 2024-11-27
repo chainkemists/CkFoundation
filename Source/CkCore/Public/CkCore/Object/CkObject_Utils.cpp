@@ -167,7 +167,7 @@ auto
 auto
     UCk_Utils_Object_UE::
     Get_IsDefaultObject(
-        UObject* InObject)
+        const UObject* InObject)
     -> bool
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Invalid Object supplied to Get_IsDefaultObject"))
@@ -179,7 +179,7 @@ auto
 auto
     UCk_Utils_Object_UE::
     Get_IsArchetypeObject(
-        UObject* InObject)
+        const UObject* InObject)
     -> bool
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Invalid Object supplied to Get_IsArchetypeObject"))
