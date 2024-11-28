@@ -124,6 +124,7 @@ namespace ck
 
     public:
         using AddOrGiveAbilityRequestType = FCk_Request_AbilityOwner_AddAndGiveExistingAbility;
+        using TransferAbilityRequestType = FCk_Request_AbilityOwner_TransferExistingAbility;
         using GiveAbilityRequestType = FCk_Request_AbilityOwner_GiveAbility;
         using GiveAbilityReplicatedRequestType = FCk_Request_AbilityOwner_GiveReplicatedAbility;
         using RevokeAbilityRequestType = FCk_Request_AbilityOwner_RevokeAbility;
@@ -132,7 +133,7 @@ namespace ck
         using CancelSubAbilities = FCk_Request_AbilityOwner_CancelSubAbilities;
 
         using RequestType = std::variant<AddOrGiveAbilityRequestType, GiveAbilityRequestType, GiveAbilityReplicatedRequestType,
-            RevokeAbilityRequestType, ActivateAbilityRequestType, DeactivateAbilityRequestType, CancelSubAbilities>;
+            RevokeAbilityRequestType, ActivateAbilityRequestType, DeactivateAbilityRequestType, CancelSubAbilities, TransferAbilityRequestType>;
         using RequestList = TArray<RequestType>;
 
     public:
@@ -201,6 +202,12 @@ namespace ck
         FCk_Handle_AbilityOwner,
         FCk_Handle_Ability,
         ECk_AbilityOwner_AbilityDeactivatedOrNot);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_OnAbilityTransferredOrNot,
+        FCk_Delegate_AbilityOwner_OnAbilityTransferedOrNot_MC,
+        FCk_Handle_AbilityOwner,
+        FCk_Handle_AbilityOwner,
+        FCk_Handle_Ability,
+        ECk_AbilityOwner_AbilityTransferredOrNot);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -228,6 +235,10 @@ private:
 
     UFUNCTION()
     void
+    OnRep_PendingTransferExistingAbilityRequests();
+
+    UFUNCTION()
+    void
     OnRep_PendingGiveAbilityRequests();
 
     UFUNCTION()
@@ -238,6 +249,10 @@ private:
     UPROPERTY(ReplicatedUsing = OnRep_PendingAddOrGiveExistingAbilityRequests)
     TArray<FCk_Request_AbilityOwner_AddAndGiveExistingAbility> _PendingAddAndGiveExistingAbilityRequests;
     int32 _NextPendingAddGiveExistingAbilityRequests = 0;
+
+    UPROPERTY(ReplicatedUsing = OnRep_PendingTransferExistingAbilityRequests)
+    TArray<FCk_Request_AbilityOwner_TransferExistingAbility> _PendingTransferExistingAbilityRequests;
+    int32 _NextPendingTransferExistingAbilityRequests = 0;
 
     UPROPERTY(ReplicatedUsing = OnRep_PendingGiveAbilityRequests)
     TArray<FCk_Request_AbilityOwner_GiveAbility> _PendingGiveAbilityRequests;
@@ -251,6 +266,10 @@ public:
     auto
     Request_AddAndGiveExistingAbility(
         const FCk_Request_AbilityOwner_AddAndGiveExistingAbility& InRequest) -> void;
+
+    auto
+    Request_TransferExistingAbility(
+        const FCk_Request_AbilityOwner_TransferExistingAbility& InRequest) -> void;
 
     auto
     Request_GiveAbility(

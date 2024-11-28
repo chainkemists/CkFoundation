@@ -157,7 +157,6 @@ auto
         const auto ActivationRequirements    = ActivationSettingsOnOwner.Get_RequiredTagsOnAbilityOwner();
         const auto ActivationBlockers        = ActivationSettingsOnOwner.Get_BlockedByTagsOnAbilityOwner();
 
-
         return AbilityOwnerActiveTags.HasAllExact(ActivationRequirements) && NOT AbilityOwnerActiveTags.HasAnyExact(ActivationBlockers);
     }();
 

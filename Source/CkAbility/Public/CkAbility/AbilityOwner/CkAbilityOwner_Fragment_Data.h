@@ -48,6 +48,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_AbilityGivenOrNot);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_AbilityOwner_AbilityTransferredOrNot : uint8
+{
+    Transferred,
+    NotTransferred
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityOwner_AbilityTransferredOrNot);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_AbilityOwner_AbilityRevokedOrNot : uint8
 {
     Revoked,
@@ -153,7 +164,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType, meta= (HasNativeMake))
+USTRUCT(BlueprintType, meta= (HasNativeMake = "/Script/CkAbility.Ck_Utils_AbilityOwner_UE:Make_Request_AddAndGiveExistingAbility"))
 struct CKABILITY_API FCk_Request_AbilityOwner_AddAndGiveExistingAbility : public FCk_Request_Base
 {
     GENERATED_BODY()
@@ -182,15 +193,61 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Ability_Payload_OnGranted _OptionalPayload;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+private:
     ECk_Net_ReplicationType _ReplicationType = ECk_Net_ReplicationType::All;
 
 public:
     CK_PROPERTY_GET(_Ability)
     CK_PROPERTY_GET(_AbilitySource)
     CK_PROPERTY(_OptionalPayload)
-    CK_PROPERTY(_ReplicationType)
+    CK_PROPERTY_GET(_ReplicationType)
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType, meta= (HasNativeMake = "/Script/CkAbility.Ck_Utils_AbilityOwner_UE:Make_Request_TransferExistingAbility"))
+struct CKABILITY_API FCk_Request_AbilityOwner_TransferExistingAbility : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_AbilityOwner_TransferExistingAbility);
+
+public:
+    FCk_Request_AbilityOwner_TransferExistingAbility() = default;
+
+    explicit
+    FCk_Request_AbilityOwner_TransferExistingAbility(
+        FCk_Handle_Ability InAbility,
+        FCk_Handle InAbilitySource,
+        FCk_Handle_AbilityOwner InTransferTarget);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_Ability _Ability;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle_AbilityOwner _TransferTarget;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _AbilitySource;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Ability_Payload_OnGranted _OptionalPayload;
+
+private:
+    ECk_Net_ReplicationType _ReplicationType = ECk_Net_ReplicationType::All;
+
+public:
+    CK_PROPERTY_GET(_Ability)
+    CK_PROPERTY_GET(_AbilitySource)
+    CK_PROPERTY_GET(_TransferTarget)
+    CK_PROPERTY(_OptionalPayload)
+    CK_PROPERTY_GET(_ReplicationType)
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -313,8 +370,7 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_AbilityOwner_DestructionOnRevoke_Policy _DestructionPolicy = ECk_AbilityOwner_DestructionOnRevoke_Policy::DestroyOnRevoke;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+private:
     ECk_Net_ReplicationType _ReplicationType = ECk_Net_ReplicationType::All;
 
 public:
@@ -322,7 +378,7 @@ public:
     CK_PROPERTY_GET(_AbilityClass);
     CK_PROPERTY_GET(_AbilityHandle);
     CK_PROPERTY(_DestructionPolicy);
-    CK_PROPERTY(_ReplicationType);
+    CK_PROPERTY_GET(_ReplicationType);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -499,6 +555,22 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
     FCk_Handle_AbilityOwner, InAbilityOwner,
     FCk_Handle_Ability, InMaybeValidAbility,
     ECk_AbilityOwner_AbilityGivenOrNot, InGivenOrNot);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_FourParams(
+    FCk_Delegate_AbilityOwner_OnAbilityTransferredOrNot,
+    FCk_Handle_AbilityOwner, InAbilityOwner,
+    FCk_Handle_AbilityOwner, InTransferTarget,
+    FCk_Handle_Ability, InMaybeValidAbility,
+    ECk_AbilityOwner_AbilityTransferredOrNot, InTransferredOrNot);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(
+    FCk_Delegate_AbilityOwner_OnAbilityTransferedOrNot_MC,
+    FCk_Handle_AbilityOwner, InAbilityOwner,
+    FCk_Handle_AbilityOwner, InTransferTarget,
+    FCk_Handle_Ability, InMaybeValidAbility,
+    ECk_AbilityOwner_AbilityTransferredOrNot, InTransferredOrNot);
 
 // --------------------------------------------------------------------------------------------------------------------
 

@@ -268,6 +268,7 @@ auto
     constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
 
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingAddAndGiveExistingAbilityRequests, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingTransferExistingAbilityRequests, Params);
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingGiveAbilityRequests, Params);
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingRevokeAbilityRequests, Params);
 }
@@ -278,6 +279,7 @@ auto
     -> void
 {
     OnRep_PendingAddOrGiveExistingAbilityRequests();
+    OnRep_PendingTransferExistingAbilityRequests();
     OnRep_PendingGiveAbilityRequests();
     OnRep_PendingRevokeAbilityRequests();
 }
@@ -306,6 +308,32 @@ auto
         UCk_Utils_AbilityOwner_UE::Request_AddAndGiveExistingAbility(AssociatedEntityAbilityOwner, Request, {});
     }
     _NextPendingAddGiveExistingAbilityRequests = _PendingAddAndGiveExistingAbilityRequests.Num();
+}
+
+auto
+    UCk_Fragment_AbilityOwner_Rep::
+    OnRep_PendingTransferExistingAbilityRequests()
+    -> void
+{
+    if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
+    { return; }
+
+    if (GetWorld()->IsNetMode(NM_DedicatedServer))
+    { return; }
+
+    auto AssociatedEntityAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(_AssociatedEntity);
+
+    // If associated entity ability owner is not yet valid or setup, we should not process replicated requests until setup calls Request_TryUpdateReplicatedFragment
+    if (ck::Is_NOT_Valid(AssociatedEntityAbilityOwner) ||
+        AssociatedEntityAbilityOwner.Has<ck::FTag_AbilityOwner_NeedsSetup>())
+    { return; }
+
+    for (auto Index = _NextPendingTransferExistingAbilityRequests; Index < _PendingTransferExistingAbilityRequests.Num(); ++Index)
+    {
+        const auto& Request = _PendingTransferExistingAbilityRequests[Index];
+        UCk_Utils_AbilityOwner_UE::Request_TransferExistingAbility(AssociatedEntityAbilityOwner, Request, {});
+    }
+    _NextPendingTransferExistingAbilityRequests = _PendingTransferExistingAbilityRequests.Num();
 }
 
 auto
@@ -367,7 +395,17 @@ auto
     -> void
 {
     _PendingAddAndGiveExistingAbilityRequests.Emplace(InRequest);
-    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _PendingGiveAbilityRequests, this);
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _PendingAddAndGiveExistingAbilityRequests, this);
+}
+
+auto
+    UCk_Fragment_AbilityOwner_Rep::
+    Request_TransferExistingAbility(
+        const FCk_Request_AbilityOwner_TransferExistingAbility& InRequest)
+    -> void
+{
+    _PendingTransferExistingAbilityRequests.Emplace(InRequest);
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _PendingTransferExistingAbilityRequests, this);
 }
 
 auto

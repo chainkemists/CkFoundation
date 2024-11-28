@@ -162,45 +162,48 @@ namespace ck
             const FCk_Request_AbilityOwner_AddAndGiveExistingAbility& InRequest) const
         -> void
     {
-        using RecordOfAbilities_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfAbilities>;
-
-        const auto& AbilityToAddAndGive = InRequest.Get_Ability();
-        const auto& AbilityToAddAndGiveLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(AbilityToAddAndGive);
-
-        CK_ENSURE_IF_NOT(NOT RecordOfAbilities_Utils::Get_ContainsEntry(InAbilityOwnerEntity, AbilityToAddAndGive),
-            TEXT("Cannot ADD and GIVE Ability [{}] to Ability Owner [{}] because it already has this Ability"),
-            AbilityToAddAndGive, InAbilityOwnerEntity)
-        { return; }
-
-        const auto& CurrentOwnerOfAbilityToAddAndGive = UCk_Utils_Ability_UE::TryGet_Owner(AbilityToAddAndGive);
-
-        CK_ENSURE_IF_NOT(ck::Is_NOT_Valid(CurrentOwnerOfAbilityToAddAndGive),
-            TEXT("Cannot ADD and GIVE Ability [{}] to Ability Owner [{}] because it still belongs to Ability Owner [{}]"),
-            AbilityToAddAndGive, InAbilityOwnerEntity, CurrentOwnerOfAbilityToAddAndGive)
-        { return; }
-
-        CK_ENSURE_IF_NOT(InAbilityOwnerEntity == AbilityToAddAndGiveLifetimeOwner,
-            TEXT("Cannot ADD and GIVE Ability [{}] to Ability Owner [{}] because it's LifetimeOwner belongs to [{}], which is NOT the Ability Owner"),
-            AbilityToAddAndGive, InAbilityOwnerEntity, AbilityToAddAndGiveLifetimeOwner)
-        { return; }
+        using RecordOfAbilities_Utils = UCk_Utils_AbilityOwner_UE::RecordOfAbilities_Utils;
+        auto AbilityToAddAndGive = InRequest.Get_Ability();
 
         const auto AbilityGivenOrNot = [&]() -> ECk_AbilityOwner_AbilityGivenOrNot
         {
-            auto AbilityEntity = AbilityToAddAndGive;
-            auto AbilityOwnerEntity = InAbilityOwnerEntity;
+            const auto& AbilityToAddAndGiveLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(AbilityToAddAndGive);
+
+            CK_ENSURE_IF_NOT(ck::IsValid(AbilityToAddAndGive),
+                TEXT("INVALID Ability to ADD and GIVE to Ability Owner [{}]"),
+                InAbilityOwnerEntity)
+            { return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven; }
+
+            CK_ENSURE_IF_NOT(NOT RecordOfAbilities_Utils::Get_ContainsEntry(InAbilityOwnerEntity, AbilityToAddAndGive),
+                TEXT("Cannot ADD and GIVE Ability [{}] to Ability Owner [{}] because it already has this Ability"),
+                AbilityToAddAndGive, InAbilityOwnerEntity)
+            { return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven; }
+
+            const auto& CurrentOwnerOfAbilityToAddAndGive = UCk_Utils_Ability_UE::TryGet_Owner(AbilityToAddAndGive);
+
+            CK_ENSURE_IF_NOT(ck::Is_NOT_Valid(CurrentOwnerOfAbilityToAddAndGive),
+                TEXT("Cannot ADD and GIVE Ability [{}] to Ability Owner [{}] because it still belongs to Ability Owner [{}]"),
+                AbilityToAddAndGive, InAbilityOwnerEntity, CurrentOwnerOfAbilityToAddAndGive)
+            { return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven; }
+
+            CK_ENSURE_IF_NOT(InAbilityOwnerEntity == AbilityToAddAndGiveLifetimeOwner,
+                TEXT("Cannot ADD and GIVE Ability [{}] to Ability Owner [{}] because it's LifetimeOwner belongs to [{}], which is NOT the Ability Owner"),
+                AbilityToAddAndGive, InAbilityOwnerEntity, AbilityToAddAndGiveLifetimeOwner)
+            { return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven; }
+
             const auto& AbilitySource = InRequest.Get_AbilitySource();
             const auto& OptionalPayload = InRequest.Get_OptionalPayload();
 
             ability::VeryVerbose
             (
                 TEXT("Giving Ability [Class: {} | Entity: {}] to Ability Owner [{}]"),
-                UCk_Utils_Ability_UE::Get_ScriptClass(AbilityEntity),
-                AbilityEntity,
-                AbilityOwnerEntity
+                UCk_Utils_Ability_UE::Get_ScriptClass(AbilityToAddAndGive),
+                AbilityToAddAndGive,
+                InAbilityOwnerEntity
             );
 
             {
-                const auto& AbilityOnGiveSettings = UCk_Utils_Ability_UE::Get_OnGiveSettings(AbilityEntity);
+                const auto& AbilityOnGiveSettings = UCk_Utils_Ability_UE::Get_OnGiveSettings(AbilityToAddAndGive);
                 const auto& GrantedTags = AbilityOnGiveSettings.Get_OnGiveSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
 
                 // HACK: need a non-const handle as we're unable to make the lambda mutable
@@ -209,25 +212,25 @@ namespace ck
                 AbilityOwnerComp.AppendTags(InAbilityOwnerEntity, GrantedTags);
             }
 
-            UCk_Utils_Ability_UE::DoGive(AbilityOwnerEntity, AbilityEntity, AbilitySource, OptionalPayload);
+            UCk_Utils_Ability_UE::DoGive(InAbilityOwnerEntity, AbilityToAddAndGive, AbilitySource, OptionalPayload);
 
             if (InRequest.Get_IsRequestHandleValid())
             {
                 UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
-                    InRequest.GetAndDestroyRequestHandle(), MakePayload(AbilityOwnerEntity, AbilityEntity,
+                    InRequest.GetAndDestroyRequestHandle(), MakePayload(InAbilityOwnerEntity, AbilityToAddAndGive,
                         ECk_AbilityOwner_AbilityGivenOrNot::Given));
             }
 
             UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
-                AbilityOwnerEntity, MakePayload(AbilityOwnerEntity, AbilityEntity, ECk_AbilityOwner_AbilityGivenOrNot::Given));
+                InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, AbilityToAddAndGive, ECk_AbilityOwner_AbilityGivenOrNot::Given));
 
-            if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(AbilityEntity).Get_ActivationPolicy();
+            if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(AbilityToAddAndGive).Get_ActivationPolicy();
                 ActivationPolicy == ECk_Ability_Activation_Policy::ActivateOnGranted)
             {
                 UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(
-                    AbilityOwnerEntity,
-                    FCk_Request_AbilityOwner_ActivateAbility{AbilityEntity}
-                    .Set_OptionalPayload(FCk_Ability_Payload_OnActivate{}.Set_ContextEntity(AbilityOwnerEntity)),
+                    InAbilityOwnerEntity,
+                    FCk_Request_AbilityOwner_ActivateAbility{AbilityToAddAndGive}
+                    .Set_OptionalPayload(FCk_Ability_Payload_OnActivate{}.Set_ContextEntity(InAbilityOwnerEntity)),
                     {});
             }
 
@@ -237,15 +240,93 @@ namespace ck
         if (AbilityGivenOrNot == ECk_AbilityOwner_AbilityGivenOrNot::NotGiven)
         {
             UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
-                InRequest.GetAndDestroyRequestHandle(), MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{},
+                InRequest.GetAndDestroyRequestHandle(), MakePayload(InAbilityOwnerEntity, AbilityToAddAndGive,
                     ECk_AbilityOwner_AbilityGivenOrNot::NotGiven));
 
             UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
-                InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{}, ECk_AbilityOwner_AbilityGivenOrNot::NotGiven));
+                InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, AbilityToAddAndGive, ECk_AbilityOwner_AbilityGivenOrNot::NotGiven));
         }
     }
 
-    // --------------------------------------------------------------------------------------------------------------------
+    auto
+        FProcessor_AbilityOwner_HandleRequests::
+        DoHandleRequest(
+            HandleType& InAbilityOwnerEntity,
+            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            const FCk_Request_AbilityOwner_TransferExistingAbility& InRequest) const
+        -> void
+    {
+        using RecordOfAbilities_Utils = UCk_Utils_AbilityOwner_UE::RecordOfAbilities_Utils;
+
+        auto AbilityToTransfer = InRequest.Get_Ability();
+        auto TransferTarget = InRequest.Get_TransferTarget();
+
+        const auto& AbilityTransferredOrNot = [&]() -> ECk_AbilityOwner_AbilityTransferredOrNot
+        {
+            CK_ENSURE_IF_NOT(ck::IsValid(AbilityToTransfer),
+                TEXT("INVALID Ability to TRANSFER from Ability Owner [{}]"),
+                InAbilityOwnerEntity)
+            { return ECk_AbilityOwner_AbilityTransferredOrNot::NotTransferred; }
+
+            CK_ENSURE_IF_NOT(ck::IsValid(TransferTarget), TEXT("INVALID Target to TRANSFER Ability [{}] from Ability Owner [{}] to"),
+                AbilityToTransfer, InAbilityOwnerEntity)
+            { return ECk_AbilityOwner_AbilityTransferredOrNot::NotTransferred; }
+
+            if (TransferTarget == InAbilityOwnerEntity)
+            { return ECk_AbilityOwner_AbilityTransferredOrNot::NotTransferred; }
+
+            CK_ENSURE_IF_NOT(RecordOfAbilities_Utils::Get_ContainsEntry(InAbilityOwnerEntity, AbilityToTransfer),
+                TEXT("Cannot TRANSFER Ability [{}] from Ability Owner [{}] to [{}] because it does NOT have such an ability"),
+                AbilityToTransfer, InAbilityOwnerEntity, TransferTarget)
+            { return ECk_AbilityOwner_AbilityTransferredOrNot::NotTransferred; }
+
+            CK_ENSURE_IF_NOT(NOT RecordOfAbilities_Utils::Get_ContainsEntry(TransferTarget, AbilityToTransfer),
+                TEXT("Cannot TRANSFER Ability [{}] from Ability Owner [{}] to [{}] because the recipient already has this ability"),
+                AbilityToTransfer, InAbilityOwnerEntity, TransferTarget)
+            { return ECk_AbilityOwner_AbilityTransferredOrNot::NotTransferred; }
+
+            DoHandleRequest(InAbilityOwnerEntity, InAbilityOwnerComp,
+                FCk_Request_AbilityOwner_DeactivateAbility{AbilityToTransfer});
+
+            DoHandleRequest(InAbilityOwnerEntity, InAbilityOwnerComp,
+                FCk_Request_AbilityOwner_RevokeAbility{AbilityToTransfer}
+                .Set_DestructionPolicy(ECk_AbilityOwner_DestructionOnRevoke_Policy::DoNotDestroyOnRevoke));
+
+            UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(AbilityToTransfer, TransferTarget);
+
+            DoHandleRequest(TransferTarget, TransferTarget.Get<FFragment_AbilityOwner_Current>(),
+                FCk_Request_AbilityOwner_AddAndGiveExistingAbility
+                {
+                    AbilityToTransfer,
+                    InRequest.Get_AbilitySource()
+                }.Set_OptionalPayload(InRequest.Get_OptionalPayload())
+            );
+
+            if (InRequest.Get_IsRequestHandleValid())
+            {
+                UUtils_Signal_AbilityOwner_OnAbilityTransferredOrNot::Broadcast(
+                    InRequest.GetAndDestroyRequestHandle(),
+                    MakePayload(InAbilityOwnerEntity, TransferTarget, AbilityToTransfer, ECk_AbilityOwner_AbilityTransferredOrNot::Transferred));
+            }
+
+            UUtils_Signal_AbilityOwner_OnAbilityTransferredOrNot::Broadcast(
+                InAbilityOwnerEntity,
+                MakePayload(InAbilityOwnerEntity, TransferTarget, AbilityToTransfer, ECk_AbilityOwner_AbilityTransferredOrNot::Transferred));
+
+            return ECk_AbilityOwner_AbilityTransferredOrNot::Transferred;
+        }();
+
+        if (AbilityTransferredOrNot == ECk_AbilityOwner_AbilityTransferredOrNot::NotTransferred)
+        {
+            UUtils_Signal_AbilityOwner_OnAbilityTransferredOrNot::Broadcast(
+                InRequest.GetAndDestroyRequestHandle(),
+                MakePayload(InAbilityOwnerEntity, TransferTarget, AbilityToTransfer, ECk_AbilityOwner_AbilityTransferredOrNot::NotTransferred));
+
+            UUtils_Signal_AbilityOwner_OnAbilityTransferredOrNot::Broadcast(
+                InAbilityOwnerEntity,
+                MakePayload(InAbilityOwnerEntity, TransferTarget, AbilityToTransfer, ECk_AbilityOwner_AbilityTransferredOrNot::NotTransferred));
+        }
+    }
 
     auto
         FProcessor_AbilityOwner_HandleRequests::
