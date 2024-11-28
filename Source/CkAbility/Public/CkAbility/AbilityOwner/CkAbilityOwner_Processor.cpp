@@ -165,6 +165,7 @@ namespace ck
         using RecordOfAbilities_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfAbilities>;
 
         const auto& AbilityToAddAndGive = InRequest.Get_Ability();
+        const auto& AbilityToAddAndGiveLifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(AbilityToAddAndGive);
 
         CK_ENSURE_IF_NOT(NOT RecordOfAbilities_Utils::Get_ContainsEntry(InAbilityOwnerEntity, AbilityToAddAndGive),
             TEXT("Cannot ADD and GIVE Ability [{}] to Ability Owner [{}] because it already has this Ability"),
@@ -176,6 +177,11 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::Is_NOT_Valid(CurrentOwnerOfAbilityToAddAndGive),
             TEXT("Cannot ADD and GIVE Ability [{}] to Ability Owner [{}] because it still belongs to Ability Owner [{}]"),
             AbilityToAddAndGive, InAbilityOwnerEntity, CurrentOwnerOfAbilityToAddAndGive)
+        { return; }
+
+        CK_ENSURE_IF_NOT(InAbilityOwnerEntity == AbilityToAddAndGiveLifetimeOwner,
+            TEXT("Cannot ADD and GIVE Ability [{}] to Ability Owner [{}] because it's LifetimeOwner belongs to [{}], which is NOT the Ability Owner"),
+            AbilityToAddAndGive, InAbilityOwnerEntity, AbilityToAddAndGiveLifetimeOwner)
         { return; }
 
         const auto AbilityGivenOrNot = [&]() -> ECk_AbilityOwner_AbilityGivenOrNot
