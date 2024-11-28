@@ -300,6 +300,26 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              DisplayName="[Ck][AbilityOwner] Request Transfer Existing Ability",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_AbilityOwner
+    Request_TransferExistingAbility(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Request_AbilityOwner_TransferExistingAbility& InRequest,
+        const FCk_Delegate_AbilityOwner_OnAbilityTransferredOrNot& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              DisplayName="[Ck][AbilityOwner] Request Transfer Existing Ability (Replicated)",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_AbilityOwner
+    Request_TransferExistingAbility_Replicated(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Request_AbilityOwner_TransferExistingAbility& InRequest,
+        const FCk_Delegate_AbilityOwner_OnAbilityTransferredOrNot& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][AbilityOwner] Request Give Ability",
               meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AbilityOwner
@@ -491,11 +511,22 @@ private:
         ECk_AbilityOwner_DestructionOnRevoke_Policy InDestructionPolicy = ECk_AbilityOwner_DestructionOnRevoke_Policy::DestroyOnRevoke);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Ability|Owner")
+              Category = "Ck|Utils|Ability|Owner",
+              meta = (NativeMakeFunc))
     static FCk_Request_AbilityOwner_AddAndGiveExistingAbility
     Make_Request_AddAndGiveExistingAbility(
-        FCk_Handle_Ability InAbility,
-        FCk_Handle InAbilitySource,
+        const FCk_Handle_Ability& InAbility,
+        const FCk_Handle& InAbilitySource,
+        FCk_Ability_Payload_OnGranted InOptionalPayload);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Ability|Owner",
+              meta = (NativeMakeFunc))
+    static FCk_Request_AbilityOwner_TransferExistingAbility
+    Make_Request_TransferExistingAbility(
+        const FCk_Handle_Ability& InAbility,
+        const FCk_Handle_AbilityOwner& InTransferTarget,
+        const FCk_Handle& InAbilitySource,
         FCk_Ability_Payload_OnGranted InOptionalPayload);
 
 public:
@@ -509,7 +540,7 @@ public:
 
     static auto
     Request_GiveReplicatedAbility(
-        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_GiveReplicatedAbility& InRequest) -> FCk_Handle_AbilityOwner;
 
 private:

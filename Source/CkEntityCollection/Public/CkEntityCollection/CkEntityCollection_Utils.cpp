@@ -84,9 +84,10 @@ auto
         const FCk_Handle_EntityCollection& InEntityCollectionHandle)
     -> FCk_EntityCollection_Content
 {
-    return FCk_EntityCollection_Content{
-        InEntityCollectionHandle.Get<ck::FFragment_EntityCollection_Params>().Get_Params().Get_Name(),
-        EntityCollections_RecordOfEntities_Utils::Get_ValidEntries(InEntityCollectionHandle)};
+    const auto& CollectionName = InEntityCollectionHandle.Get<ck::FFragment_EntityCollection_Params>().Get_Params().Get_Name();
+    const auto& CollectionContent = EntityCollections_RecordOfEntities_Utils::Get_ValidEntries(InEntityCollectionHandle);
+
+    return FCk_EntityCollection_Content{CollectionName, CollectionContent};
 }
 
 auto
