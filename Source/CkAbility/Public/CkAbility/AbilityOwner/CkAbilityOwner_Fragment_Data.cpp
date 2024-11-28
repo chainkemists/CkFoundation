@@ -39,6 +39,22 @@ FCk_Request_AbilityOwner_AddAndGiveExistingAbility::
 
 // --------------------------------------------------------------------------------------------------------------------
 
+FCk_Request_AbilityOwner_TransferExistingAbility::
+    FCk_Request_AbilityOwner_TransferExistingAbility(
+        FCk_Handle_Ability InAbility,
+        FCk_Handle InAbilitySource,
+        FCk_Handle_AbilityOwner InTransferTarget)
+    : _Ability(InAbility)
+    , _TransferTarget(InTransferTarget)
+    , _AbilitySource(InAbilitySource)
+    , _ReplicationType(ck::IsValid(InAbility) ?
+        UCk_Utils_Ability_UE::Get_NetworkSettings(InAbility).Get_ReplicationType() :
+        ECk_Net_ReplicationType::All)
+{
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 FCk_Request_AbilityOwner_RevokeAbility::
     FCk_Request_AbilityOwner_RevokeAbility(
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass)

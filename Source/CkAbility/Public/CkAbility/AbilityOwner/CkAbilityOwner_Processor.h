@@ -110,6 +110,12 @@ namespace ck
         DoHandleRequest(
             HandleType& InAbilityOwnerEntity,
             FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            const FCk_Request_AbilityOwner_TransferExistingAbility& InRequest) const -> void;
+
+        auto
+        DoHandleRequest(
+            HandleType& InAbilityOwnerEntity,
+            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
             const FCk_Request_AbilityOwner_GiveAbility& InRequest) const -> void;
 
         auto

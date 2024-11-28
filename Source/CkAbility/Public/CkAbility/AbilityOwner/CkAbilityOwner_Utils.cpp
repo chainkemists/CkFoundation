@@ -489,7 +489,7 @@ auto
     {
         ck::ability::Verbose
         (
-            TEXT("Skipping Revoking Ability [{}] because ReplicationType [{}] does not match for Entity [{}], meaning this ability shouldn't have have been added on this instance anyways"),
+            TEXT("Skipping AddAndGiving Ability [{}] because ReplicationType [{}] does not match for Entity [{}], meaning this ability shouldn't have have been added on this instance anyways"),
             InRequest.Get_Ability(),
             InRequest.Get_ReplicationType(),
             InAbilityOwnerHandle
@@ -499,14 +499,14 @@ auto
 
     // Need to re-cast to make sure it all relevant fragments were replicated properly
     const auto AbilityHandle = UCk_Utils_Ability_UE::Cast(InRequest.Get_Ability());
-    CK_ENSURE_IF_NOT(ck::IsValid(AbilityHandle), TEXT("AbilityHandle [{}] to Revoke on AbilityOwner [{}] is INVALID"),
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityHandle), TEXT("AbilityHandle [{}] to AddAndGive on AbilityOwner [{}] is INVALID"),
         AbilityHandle, InAbilityOwnerHandle)
     { return InAbilityOwnerHandle; }
 
     CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_Ability()),
         TEXT("Unable to process AddAndGiveExistingAbility on Handle [{}] as the AbilityHandle [{}] is INVALID.{}"),
         InAbilityOwnerHandle, InRequest.Get_Ability(), ck::Context(InDelegate.GetFunctionName()))
-    { return {}; }
+    { return InAbilityOwnerHandle; }
 
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot,
         InRequest.PopulateRequestHandle(InAbilityOwnerHandle), InDelegate);
@@ -532,13 +532,13 @@ auto
     { return InAbilityOwnerHandle; }
 
     CK_ENSURE_IF_NOT(UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InAbilityOwnerHandle),
-        TEXT("Cannot REPLICATE AddAndGive an existing Ability to Entity [{}] because it's missing the AbilityOwner Replicated Fragment.\n"
+        TEXT("Cannot REPLICATE AddAndGive an EXISTING Ability to Entity [{}] because it's missing the AbilityOwner Replicated Fragment.\n"
              "Was the AbilityOwner feature set to Replicate when it was added?"),
         InAbilityOwnerHandle)
     { return InAbilityOwnerHandle; }
 
     CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_EntityReplication(InRequest.Get_Ability()) == ECk_Replication::Replicates,
-        TEXT("Cannot REPLICATE AddAndGive an existing Ability to Entity [{}] because the EXISTING Ability [{}] is NOT replicated."),
+        TEXT("Cannot REPLICATE AddAndGive an EXISTING Ability to Entity [{}] because the EXISTING Ability [{}] is NOT replicated."),
         InAbilityOwnerHandle, InRequest.Get_Ability())
     { return InAbilityOwnerHandle; }
 
@@ -546,6 +546,80 @@ auto
         InAbilityOwnerHandle, [&](UCk_Fragment_AbilityOwner_Rep* InRepComp)
     {
         InRepComp->Request_AddAndGiveExistingAbility(InRequest);
+    });
+
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Request_TransferExistingAbility(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Request_AbilityOwner_TransferExistingAbility& InRequest,
+        const FCk_Delegate_AbilityOwner_OnAbilityTransferredOrNot& InDelegate)
+    -> FCk_Handle_AbilityOwner
+{
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InAbilityOwnerHandle, InRequest.Get_ReplicationType()))
+    {
+        ck::ability::Verbose
+        (
+            TEXT("Skipping Transfering Ability [{}] because ReplicationType [{}] does not match for Entity [{}], meaning this ability shouldn't have have been added on this instance anyways"),
+            InRequest.Get_Ability(),
+            InRequest.Get_ReplicationType(),
+            InAbilityOwnerHandle
+        );
+        return InAbilityOwnerHandle;
+    }
+
+    // Need to re-cast to make sure it all relevant fragments were replicated properly
+    const auto AbilityHandle = UCk_Utils_Ability_UE::Cast(InRequest.Get_Ability());
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityHandle), TEXT("AbilityHandle [{}] to Transfer on AbilityOwner [{}] is INVALID"),
+        AbilityHandle, InAbilityOwnerHandle)
+    { return InAbilityOwnerHandle; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_Ability()),
+        TEXT("Unable to process TransferExistingAbility on Handle [{}] as the AbilityHandle [{}] is INVALID.{}"),
+        InAbilityOwnerHandle, InRequest.Get_Ability(), ck::Context(InDelegate.GetFunctionName()))
+    { return InAbilityOwnerHandle; }
+
+    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityTransferredOrNot,
+        InRequest.PopulateRequestHandle(InAbilityOwnerHandle), InDelegate);
+
+    InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
+
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Request_TransferExistingAbility_Replicated(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Request_AbilityOwner_TransferExistingAbility& InRequest,
+        const FCk_Delegate_AbilityOwner_OnAbilityTransferredOrNot& InDelegate)
+    -> FCk_Handle_AbilityOwner
+{
+    Request_TransferExistingAbility(InAbilityOwnerHandle, InRequest, InDelegate);
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAbilityOwnerHandle),
+        TEXT("Cannot REPLICATE Transfer an EXISTING Ability to Entity [{}] because it is NOT a Host"),
+        InAbilityOwnerHandle)
+    { return InAbilityOwnerHandle; }
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InAbilityOwnerHandle),
+        TEXT("Cannot REPLICATE Transfer an EXISTING Ability to Entity [{}] because it's missing the AbilityOwner Replicated Fragment.\n"
+             "Was the AbilityOwner feature set to Replicate when it was added?"),
+        InAbilityOwnerHandle)
+    { return InAbilityOwnerHandle; }
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_EntityReplication(InRequest.Get_Ability()) == ECk_Replication::Replicates,
+        TEXT("Cannot REPLICATE Transfer an EXISTING Ability to Entity [{}] because the EXISTING Ability [{}] is NOT replicated."),
+        InAbilityOwnerHandle, InRequest.Get_Ability())
+    { return InAbilityOwnerHandle; }
+
+    UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(
+        InAbilityOwnerHandle, [&](UCk_Fragment_AbilityOwner_Rep* InRepComp)
+    {
+        InRepComp->Request_TransferExistingAbility(InRequest);
     });
 
     return InAbilityOwnerHandle;
@@ -920,12 +994,24 @@ auto
 auto
     UCk_Utils_AbilityOwner_UE::
     Make_Request_AddAndGiveExistingAbility(
-        FCk_Handle_Ability InAbility,
-        FCk_Handle InAbilitySource,
+        const FCk_Handle_Ability& InAbility,
+        const FCk_Handle& InAbilitySource,
         FCk_Ability_Payload_OnGranted InOptionalPayload)
     -> FCk_Request_AbilityOwner_AddAndGiveExistingAbility
 {
     return FCk_Request_AbilityOwner_AddAndGiveExistingAbility{InAbility, InAbilitySource}.Set_OptionalPayload(InOptionalPayload);
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Make_Request_TransferExistingAbility(
+        const FCk_Handle_Ability& InAbility,
+        const FCk_Handle_AbilityOwner& InTransferTarget,
+        const FCk_Handle& InAbilitySource,
+        FCk_Ability_Payload_OnGranted InOptionalPayload)
+    -> FCk_Request_AbilityOwner_TransferExistingAbility
+{
+    return FCk_Request_AbilityOwner_TransferExistingAbility{InAbility, InAbilitySource, InTransferTarget}.Set_OptionalPayload(InOptionalPayload);
 }
 
 auto
