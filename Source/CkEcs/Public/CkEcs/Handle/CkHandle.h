@@ -371,10 +371,16 @@ CK_DEFINE_CUSTOM_IS_VALID(FCk_Handle, ck::IsValid_Policy_IncludePendingKill, [&]
 CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(FCk_Handle,
 [&]()
 {
+    if (InObj.Get_Entity().Get_IsTombstone())
+    { return ck::Format(TEXT("{}"), InObj.Get_Entity()); }
+
     return ck::Format(TEXT("{}({})"), InObj.Get_Entity(), InObj.Get_DebugName());
 },
 [&]()
 {
+    if (InObj.Get_Entity().Get_IsTombstone())
+    { return ck::Format(TEXT("{}"), InObj.Get_Entity()); }
+
     return ck::Format(TEXT("{}[{}]({})"), InObj._Entity, InObj.Get_Registry(), InObj.Get_DebugName());
 });
 
