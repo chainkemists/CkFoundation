@@ -198,6 +198,12 @@ public:
     Request_SetupEntityWithLifetimeOwner(
         FCk_Handle& InNewEntity,
         const FCk_Handle& InLifetimeOwner) -> void;
+
+    static auto
+    Request_TransferLifetimeOwner(
+        FCk_Handle& InEntity,
+        const FCk_Handle& InNewLifetimeOwner) -> void;
+
 public:
     [[nodiscard]]
     static auto
