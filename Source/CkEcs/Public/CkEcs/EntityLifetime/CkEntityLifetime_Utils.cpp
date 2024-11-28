@@ -368,4 +368,33 @@ auto
     NonConstLifetimeOwnerHandle.AddOrGet<ck::FFragment_LifetimeDependents>()._Entities.Emplace(InNewEntity);
 }
 
+auto
+    UCk_Utils_EntityLifetime_UE::
+    Request_TransferLifetimeOwner(
+        FCk_Handle& InEntity,
+        const FCk_Handle& InNewLifetimeOwner)
+    -> void
+{
+    const auto& CurrentLifetimeOwner = InEntity.Get<ck::FFragment_LifetimeOwner>();
+    auto CurrentLifetimeOwnerEntity = CurrentLifetimeOwner.Get_Entity();
+
+    if (InNewLifetimeOwner == CurrentLifetimeOwnerEntity)
+    { return; }
+
+    CurrentLifetimeOwnerEntity.Get<ck::FFragment_LifetimeDependents>()._Entities.RemoveSingle(InEntity);
+
+    InEntity.Replace<ck::FFragment_LifetimeOwner>(InNewLifetimeOwner);
+
+    if (InNewLifetimeOwner.Has_Any<ck::FTag_DestroyEntity_Initiate>())
+    { InEntity.AddOrGet<ck::FTag_DestroyEntity_Initiate>(); }
+
+    if (InNewLifetimeOwner.Has_Any<ck::FTag_DestroyEntity_Initiate_Confirm>())
+    { InEntity.AddOrGet<ck::FTag_DestroyEntity_Initiate_Confirm>(); }
+
+    // Not doing something like this because it is undefined behavior: *const_cast<FCk_Handle*>(&InHandle)
+    auto NonConstNewLifetimeOwnerHandle = InNewLifetimeOwner;
+
+    NonConstNewLifetimeOwnerHandle.AddOrGet<ck::FFragment_LifetimeDependents>()._Entities.Emplace(InEntity);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
