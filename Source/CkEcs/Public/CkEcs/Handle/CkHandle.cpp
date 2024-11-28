@@ -314,10 +314,18 @@ auto
     -> FName
 {
 #if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
-    if (IsValid(ck::IsValid_Policy_IncludePendingKill{}) && Has<DEBUG_NAME>())
+    if (NOT IsValid(ck::IsValid_Policy_IncludePendingKill{}))
+    {
+        if (NOT ck::IsValid(_Registry))
+        { return TEXT("no-debug-name-invalid-registry"); }
+
+        return TEXT("no-debug-name-invalid-handle");
+    }
+
+    if (Has<DEBUG_NAME>())
     { return Get<DEBUG_NAME>().Get_Name(); }
-    else
-    { return TEXT("no-debug-name"); }
+
+    return TEXT("no-debug-name");
 #else
     return TEXT("no-handle-debug");
 #endif

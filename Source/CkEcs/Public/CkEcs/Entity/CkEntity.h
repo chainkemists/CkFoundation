@@ -99,7 +99,7 @@ static_assert
 CK_DEFINE_CUSTOM_FORMATTER(FCk_Entity, [&]()
 {
     if (InObj.Get_IsTombstone())
-    { return ck::Format(TEXT("Tombstone")); }
+    { return ck::Format(TEXT("TOMBSTONE")); }
 
     return ck::Format
     (
