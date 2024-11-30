@@ -48,16 +48,16 @@ public:
     CK_GENERATED_BODY(FCk_Fragment_InteractSource_ParamsData);
 
 private:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, Categories = "InteractionChannel"))
     FGameplayTag _InteractionChannel;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     ECk_InteractionSource_ConcurrentInteractionsPolicy _ConcurrentInteractionsPolicy = ECk_InteractionSource_ConcurrentInteractionsPolicy::MultipleInteractions;
 
 public:
-	CK_PROPERTY_GET(_InteractionChannel)
+    CK_PROPERTY_GET(_InteractionChannel)
     CK_PROPERTY_GET(_ConcurrentInteractionsPolicy)
 };
 
@@ -73,7 +73,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, TitleProperty = "_InteractionChannel"))
     TArray<FCk_Fragment_InteractSource_ParamsData> _InteractSourceParams;
 
 public:
@@ -97,16 +97,18 @@ public:
     CK_GENERATED_BODY(FCk_Request_InteractSource_StartInteraction);
 
 private:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Handle_Interaction _Interaction;
 
 public:
-	CK_PROPERTY(_Interaction)
+    CK_PROPERTY(_Interaction)
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_InteractSource_StartInteraction, _Interaction);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
 struct CKINTERACTION_API FCk_Request_InteractSource_CancelInteraction : public FCk_Request_Base
@@ -120,12 +122,12 @@ public:
     CK_GENERATED_BODY(FCk_Request_InteractSource_CancelInteraction);
 
 private:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Handle _InteractTarget;
 
 public:
-	CK_PROPERTY(_InteractTarget)
+    CK_PROPERTY(_InteractTarget)
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Request_InteractSource_CancelInteraction, _InteractTarget);
