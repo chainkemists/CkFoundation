@@ -57,6 +57,236 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
+    UCk_Ability_Trait_UE::
+    AllowMultipleCopiesInAbilityScript() const
+    -> bool
+{
+    return DoAllowMultipleCopiesInAbilityScript();
+}
+
+auto
+    UCk_Ability_Trait_UE::
+    OnOwningAbilityCreated(
+        FCk_Handle_Ability& InAbility)
+    -> void
+{
+    DoOnOwningAbilityCreated(InAbility);
+}
+
+auto
+    UCk_Ability_Trait_UE::
+    OnOwningAbilityGiven(
+        FCk_Handle_Ability& InAbility,
+        FCk_Handle_AbilityOwner& InAbilityOwner)
+    -> void
+{
+    DoOnOwningAbilityGiven(InAbility, InAbilityOwner);
+}
+
+auto
+    UCk_Ability_Trait_UE::
+    OnOwningAbilityActivated(
+        FCk_Handle_Ability& InAbility,
+        FCk_Handle_AbilityOwner& InAbilityOwner)
+    -> void
+{
+    DoOnOwningAbilityActivated(InAbility, InAbilityOwner);
+}
+
+auto
+    UCk_Ability_Trait_UE::
+    OnOwningAbilityDeactivated(
+        FCk_Handle_Ability& InAbility,
+        FCk_Handle_AbilityOwner& InAbilityOwner)
+    -> void
+{
+    DoOnOwningAbilityDeactivated(InAbility, InAbilityOwner);
+}
+
+auto
+    UCk_Ability_Trait_UE::
+    OnOwningAbilityRevoked(
+        FCk_Handle_Ability& InAbility,
+        FCk_Handle_AbilityOwner& InAbilityOwner)
+    -> void
+{
+    DoOnOwningAbilityRevoked(InAbility, InAbilityOwner);
+}
+
+auto
+    UCk_Ability_Trait_UE::
+    DoOnOwningAbilityCreated_Implementation(
+        FCk_Handle_Ability InAbility)
+    -> void
+{
+}
+
+auto
+    UCk_Ability_Trait_UE::
+    DoOnOwningAbilityGiven_Implementation(
+        FCk_Handle_Ability InAbility,
+        FCk_Handle_AbilityOwner InAbilityOwner)
+    -> void
+{
+}
+
+auto
+    UCk_Ability_Trait_UE::
+    DoOnOwningAbilityActivated_Implementation(
+        FCk_Handle_Ability InAbility,
+        FCk_Handle_AbilityOwner InAbilityOwner)
+    -> void
+{
+}
+
+auto
+    UCk_Ability_Trait_UE::
+    DoOnOwningAbilityDeactivated_Implementation(
+        FCk_Handle_Ability InAbility,
+        FCk_Handle_AbilityOwner InAbilityOwner)
+    -> void
+{
+}
+
+auto
+    UCk_Ability_Trait_UE::
+    DoOnOwningAbilityRevoked_Implementation(
+        FCk_Handle_Ability InAbility,
+        FCk_Handle_AbilityOwner InAbilityOwner)
+    -> void
+{
+}
+
+auto
+    UCk_Ability_Trait_UE::
+    DoAllowMultipleCopiesInAbilityScript_Implementation() const
+    -> bool
+{
+    return false;
+}
+
+auto
+    UCk_Ability_Trait_UE::
+    DoGet_OwningAbilityEntity() const
+    -> FCk_Handle_Ability
+{
+    return Get_OwningAbilityHandle();
+}
+
+auto
+    UCk_Ability_Trait_UE::
+    DoGet_OwningAbilityOwnerEntity() const
+    -> FCk_Handle_AbilityOwner
+{
+    return UCk_Utils_Ability_UE::TryGet_Owner(Get_OwningAbilityHandle());;
+}
+
+auto
+    UCk_Ability_Trait_UE::
+    DoRequest_ActivateOwningAbility(
+        FCk_Ability_Payload_OnActivate InActivationPayload)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(Get_OwningAbilityHandle()),
+        TEXT("Ability Handle stored inside Trait is [{}]. Cannot Activate Owning Ability.{}"),
+        Get_OwningAbilityHandle(), ck::Context(this))
+    { return; }
+
+    auto AbilityOwner = UCk_Utils_Ability_UE::TryGet_Owner(Get_OwningAbilityHandle());
+
+    UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(
+        AbilityOwner,
+        FCk_Request_AbilityOwner_ActivateAbility{Get_OwningAbilityHandle()}.Set_OptionalPayload(InActivationPayload),
+        {});
+}
+
+auto
+    UCk_Ability_Trait_UE::
+    DoRequest_DeactivateOwningAbility()
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(Get_OwningAbilityHandle()),
+        TEXT("Ability Handle stored inside Trait is [{}]. Cannot Deactivate Owning Ability.{}"),
+        Get_OwningAbilityHandle(), ck::Context(this))
+    { return; }
+
+    auto AbilityOwner = UCk_Utils_Ability_UE::TryGet_Owner(Get_OwningAbilityHandle());
+
+    UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(
+        AbilityOwner,
+        FCk_Request_AbilityOwner_DeactivateAbility{Get_OwningAbilityHandle()},
+        {});
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+#if WITH_EDITOR
+auto
+    UCk_Ability_Script_PDA::
+    PostEditChangeChainProperty(
+        FPropertyChangedChainEvent& PropertyChangedChainEvent)
+    -> void
+{
+    Super::PostEditChangeChainProperty(PropertyChangedChainEvent);
+
+    const auto& PropertyName = PropertyChangedChainEvent.GetPropertyName();
+
+    if (PropertyName != GET_MEMBER_NAME_CHECKED(FCk_Ability_Script_Data, _AbilityTraits))
+    { return; }
+
+    auto& AbilityTraits = _Data._AbilityTraits;
+    const auto& AbilityTraitIndexFromProperty = PropertyChangedChainEvent.GetArrayIndex(PropertyName.ToString());
+
+    if (NOT AbilityTraits.IsValidIndex(AbilityTraitIndexFromProperty))
+    { return; }
+
+    const auto& EditingTraitObject = AbilityTraits[AbilityTraitIndexFromProperty];
+
+    if (ck::Is_NOT_Valid(EditingTraitObject))
+    { return; }
+
+    if (EditingTraitObject->AllowMultipleCopiesInAbilityScript())
+    { return; }
+
+    for (auto OtherObjectIndex = 0; OtherObjectIndex < AbilityTraits.Num(); ++OtherObjectIndex)
+    {
+        const auto& OtherTraitObject = AbilityTraits[OtherObjectIndex];
+
+        if (ck::Is_NOT_Valid(OtherTraitObject))
+        { continue; }
+
+        if (EditingTraitObject != OtherTraitObject && EditingTraitObject->GetClass() == OtherTraitObject->GetClass())
+        {
+            UCk_Utils_EditorOnly_UE::Request_PushNewEditorMessage
+            (
+                FCk_Utils_EditorOnly_PushNewEditorMessage_Params
+                {
+                    TEXT("CkAbility"),
+                    FCk_MessageSegments
+                    {
+                        {
+                            FCk_TokenizedMessage
+                            {
+                                ck::Format_UE(TEXT("Ability Trait [{}] does NOT support multiple copied of itself"), EditingTraitObject)
+                            }
+                            .Set_TargetObject(this)
+                        }
+                    }
+                }
+                .Set_MessageSeverity(ECk_EditorMessage_Severity::Error)
+                .Set_MessageLogDisplayPolicy(ECk_EditorMessage_MessageLog_DisplayPolicy::DoNotFocus)
+                .Set_ToastNotificationDisplayPolicy(ECk_EditorMessage_ToastNotification_DisplayPolicy::Display)
+            );
+
+            AbilityTraits[AbilityTraitIndexFromProperty] = nullptr;
+
+            return;
+        }
+    }
+}
+#endif
+
+auto
     UCk_Ability_Script_PDA::
     OnActivateAbility(
         const FCk_Ability_Payload_OnActivate& InActivationPayload)

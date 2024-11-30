@@ -602,6 +602,7 @@ public:
 
 public:
     friend class UCk_Utils_Ability_UE;
+    friend class UCk_Ability_Script_PDA;
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -618,6 +619,11 @@ private:
               Category = "Name",
               meta = (AllowPrivateAccess = true, EditCondition = "_HasDisplayName"))
     FName _DisplayName = NAME_None;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Instanced,
+              Category = "Traits",
+              meta = (AllowPrivateAccess = true))
+    TArray<TObjectPtr<class UCk_Ability_Trait_UE>> _AbilityTraits;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               Category = "OnGive",
@@ -700,6 +706,7 @@ private:
 
 public:
     CK_PROPERTY_GET(_AbilityName);
+    CK_PROPERTY(_AbilityTraits);
     CK_PROPERTY(_HasDisplayName);
     CK_PROPERTY(_DisplayName);
     CK_PROPERTY(_OnGiveSettings);

@@ -216,6 +216,12 @@ private:
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         const FCk_Handle& InAbilitySource) -> void;
 
+    static auto
+    DoForEach_Traits(
+        FCk_Handle_Ability& InAbility,
+        FCk_Handle_AbilityOwner& InAbilityOwner,
+        TFunction<void(UCk_Ability_Trait_UE*, FCk_Handle_Ability&, FCk_Handle_AbilityOwner&)> InFunc) -> void;
+
 private:
     static UCk_Ability_EntityConfig_PDA*
     DoCreate_AbilityEntityConfig(

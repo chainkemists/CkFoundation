@@ -8,6 +8,132 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UCLASS(Abstract, EditInlineNew, Blueprintable, BlueprintType)
+class CKABILITY_API UCk_Ability_Trait_UE : public UObject
+{
+    GENERATED_BODY()
+
+    friend class UCk_Utils_Ability_UE;
+
+public:
+    CK_GENERATED_BODY(UCk_Ability_Trait_UE);
+
+public:
+    auto
+    AllowMultipleCopiesInAbilityScript() const -> bool;
+
+    auto
+    OnOwningAbilityCreated(
+        FCk_Handle_Ability& InAbility) -> void;
+
+    auto
+    OnOwningAbilityGiven(
+        FCk_Handle_Ability& InAbility,
+        FCk_Handle_AbilityOwner& InAbilityOwner) -> void;
+
+    auto
+    OnOwningAbilityActivated(
+        FCk_Handle_Ability& InAbility,
+        FCk_Handle_AbilityOwner& InAbilityOwner) -> void;
+
+    auto
+    OnOwningAbilityDeactivated(
+        FCk_Handle_Ability& InAbility,
+        FCk_Handle_AbilityOwner& InAbilityOwner) -> void;
+
+    auto
+    OnOwningAbilityRevoked(
+        FCk_Handle_Ability& InAbility,
+        FCk_Handle_AbilityOwner& InAbilityOwner) -> void;
+
+protected:
+    UFUNCTION(BlueprintNativeEvent,
+        Category = "Ck|Ability|Trait|DevelopmentOnly",
+        DisplayName = "AllowMultipleCopiesInAbilityScript",
+        meta = (DevelopmentOnly))
+    bool
+    DoAllowMultipleCopiesInAbilityScript() const;
+
+    UFUNCTION(BlueprintNativeEvent,
+        Category = "Ck|Ability|Trait",
+        DisplayName = "OnOwningAbilityCreated")
+    void
+    DoOnOwningAbilityCreated(
+        FCk_Handle_Ability InAbility);
+
+    UFUNCTION(BlueprintNativeEvent,
+        Category = "Ck|Ability|Trait",
+        DisplayName = "OnOwningAbilityGiven")
+    void
+    DoOnOwningAbilityGiven(
+        FCk_Handle_Ability InAbility,
+        FCk_Handle_AbilityOwner InAbilityOwner);
+
+    UFUNCTION(BlueprintNativeEvent,
+        Category = "Ck|Ability|Trait",
+        DisplayName = "OnOwningAbilityActivated")
+    void
+    DoOnOwningAbilityActivated(
+        FCk_Handle_Ability InAbility,
+        FCk_Handle_AbilityOwner InAbilityOwner);
+
+    UFUNCTION(BlueprintNativeEvent,
+        Category = "Ck|Ability|Trait",
+        DisplayName = "OnOwningAbilityDeactivated")
+    void
+    DoOnOwningAbilityDeactivated(
+        FCk_Handle_Ability InAbility,
+        FCk_Handle_AbilityOwner InAbilityOwner);
+
+    UFUNCTION(BlueprintNativeEvent,
+        Category = "Ck|Ability|Trait",
+        DisplayName = "OnOwningAbilityRevoked")
+    void
+    DoOnOwningAbilityRevoked(
+        FCk_Handle_Ability InAbility,
+        FCk_Handle_AbilityOwner InAbilityOwner);
+
+protected:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Ability|Trait",
+              DisplayName = "[Ck][AbilityTrait] Get Owning Ability Entity",
+              meta = (CompactNodeTitle="OwningAbilityEntity", HideSelfPin = true))
+    FCk_Handle_Ability
+    DoGet_OwningAbilityEntity() const;
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Ability|Script",
+              DisplayName = "[Ck][AbilityScript] Get Owning Ability Owner Entity",
+              meta = (CompactNodeTitle="OwningAbilityOwnerEntity", HideSelfPin = true))
+    FCk_Handle_AbilityOwner
+    DoGet_OwningAbilityOwnerEntity() const;
+
+protected:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Ability|Trait",
+              DisplayName = "[Ck][AbilityTrait] Request Activate Owning Ability",
+              meta = (CompactNodeTitle="TRYACTIVATE_OwningAbility", HideSelfPin = true))
+    void
+    DoRequest_ActivateOwningAbility(
+        FCk_Ability_Payload_OnActivate InActivationPayload);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Ability|Trait",
+              DisplayName = "[Ck][AbilityTrait] Request Deactivate Owning Ability",
+              meta = (CompactNodeTitle="DEACTIVATE_OwningAbility", HideSelfPin = true))
+    void
+    DoRequest_DeactivateOwningAbility();
+
+private:
+    UPROPERTY(Transient)
+    FCk_Handle_Ability _OwningAbilityHandle;
+
+public:
+    CK_PROPERTY_GET(_OwningAbilityHandle);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // This Object itself is NOT replicated. It may be 'implicitly' replicated through the Ability's replicated fragment
 // The interface is purposefully similar to GAS' Gameplay Ability.
 // We chose to use the term 'Activate/Deactivate Ability' as opposed to 'Start/End Ability' since it evokes a more immediate process
@@ -20,6 +146,12 @@ class CKABILITY_API UCk_Ability_Script_PDA : public UCk_DataAsset_PDA
 
 public:
     CK_GENERATED_BODY(UCk_Ability_Script_PDA);
+
+public:
+#if WITH_EDITOR
+    auto PostEditChangeChainProperty(
+        FPropertyChangedChainEvent& PropertyChangedEvent) -> void override;
+#endif
 
 public:
     auto

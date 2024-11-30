@@ -21,6 +21,25 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
+    struct CKABILITY_API FFragment_Ability_DisplayInfo
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Ability_DisplayInfo);
+
+        friend UCk_Utils_Ability_UE;
+
+    private:
+        FName _DisplayName;
+
+    public:
+        CK_PROPERTY_GET(_DisplayName);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Ability_DisplayInfo, _DisplayName)
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKABILITY_API FFragment_Ability_Params
     {
     public:

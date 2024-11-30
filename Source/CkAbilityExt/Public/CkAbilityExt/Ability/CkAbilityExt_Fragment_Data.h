@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkAbility/Ability/CkAbility_Script.h"
+
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Fragment_Data.h"
 
 #include "CkCore/Enums/CkEnums.h"
@@ -339,6 +341,60 @@ private:
 
 public:
     CK_PROPERTY_GET(_Conditions);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// When the owning Ability is given, the owner of the Ability will be granted this set of Tags.
+UCLASS(NotBlueprintable, NotBlueprintType, DisplayName = "Grant Ability Owner Tags When Given")
+class CKABILITYEXT_API UCk_GrantAbilityOwnerTagsWhenGiven_Ability_Trait_UE : public UCk_Ability_Trait_UE
+{
+    GENERATED_BODY()
+
+    friend class UCk_Utils_Ability_UE;
+
+public:
+    CK_GENERATED_BODY(UCk_GrantAbilityOwnerTagsWhenGiven_Ability_Trait_UE);
+
+protected:
+    auto
+    DoOnOwningAbilityGiven_Implementation(
+        FCk_Handle_Ability InAbility,
+        FCk_Handle_AbilityOwner InAbilityOwner) -> void override;
+
+private:
+    UPROPERTY(EditDefaultsOnly,
+              meta = (AllowPrivateAccess = true))
+    FGameplayTagContainer _TagsToGrant;
+
+public:
+    CK_PROPERTY_GET(_TagsToGrant);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable, NotBlueprintType, DisplayName = "Display Information")
+class CKABILITYEXT_API UCk_DisplayInfo_Ability_Trait_UE : public UCk_Ability_Trait_UE
+{
+    GENERATED_BODY()
+
+    friend class UCk_Utils_Ability_UE;
+
+public:
+    CK_GENERATED_BODY(UCk_DisplayInfo_Ability_Trait_UE);
+
+protected:
+    auto
+    DoOnOwningAbilityCreated_Implementation(
+        FCk_Handle_Ability InAbility) -> void override;
+
+private:
+    UPROPERTY(EditDefaultsOnly,
+              meta = (AllowPrivateAccess = true))
+    FName _DisplayName;
+
+public:
+    CK_PROPERTY_GET(_DisplayName);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

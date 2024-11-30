@@ -52,9 +52,13 @@ auto
         const FCk_Handle_Ability& InAbilityEntity)
     -> FName
 {
-    const auto& AbilityParams = InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params().Get_Data();
+    if (InAbilityEntity.Has<ck::FFragment_Ability_DisplayInfo>())
+    {
+        return InAbilityEntity.Get<ck::FFragment_Ability_DisplayInfo>().Get_DisplayName();
+    }
 
-    if (AbilityParams.Get_HasDisplayName())
+    if (const auto& AbilityParams = InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params().Get_Data();
+        AbilityParams.Get_HasDisplayName())
     { return AbilityParams.Get_DisplayName(); }
 
     if (NOT UCk_Utils_GameplayLabel_UE::Get_IsUnnamedLabel(InAbilityEntity))
@@ -289,6 +293,12 @@ auto
     Script->_AbilityHandle = InAbilityEntity;
     Script->_AbilityOwnerHandle = InAbilityOwnerEntity;
 
+    DoForEach_Traits(InAbilityEntity, Script->_AbilityOwnerHandle,
+    [](UCk_Ability_Trait_UE* InAbilityTrait, FCk_Handle_Ability& InAbility, FCk_Handle_AbilityOwner& InAbilityOwner)
+    {
+        InAbilityTrait->OnOwningAbilityActivated(InAbility, InAbilityOwner);
+    });
+
     Script->OnActivateAbility(InOptionalPayload);
 
     ck::UUtils_Signal_OnAbilityActivated::Broadcast(InAbilityEntity, ck::MakePayload(InAbilityEntity, InOptionalPayload));
@@ -314,6 +324,13 @@ auto
     { return; }
 
     AbilityCurrent._Status = ECk_Ability_Status::NotActive;
+
+    DoForEach_Traits(InAbilityEntity, InAbilityOwnerEntity,
+    [](UCk_Ability_Trait_UE* InAbilityTrait, FCk_Handle_Ability& InAbility, FCk_Handle_AbilityOwner& InAbilityOwner)
+    {
+        InAbilityTrait->OnOwningAbilityDeactivated(InAbility, InAbilityOwner);
+    });
+
     Script->OnDeactivateAbility();
 
     ck::UUtils_Signal_OnAbilityDeactivated::Broadcast(InAbilityEntity, ck::MakePayload(InAbilityEntity));
@@ -448,6 +465,16 @@ auto
 
     UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(CurrentWorld)->Request_TrackAbilityScript(AbilityScriptToUse);
     UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(CurrentWorld)->Request_TrackAbilityScript(AbilityCurrent.Get_AbilityScript_DefaultInstance().Get());
+
+    auto AbilityHandle = Cast(InHandle);
+    auto InvalidAbilityOwnerHandle = FCk_Handle_AbilityOwner{};
+
+    DoForEach_Traits(AbilityHandle, InvalidAbilityOwnerHandle,
+    [](UCk_Ability_Trait_UE* InAbilityTrait, FCk_Handle_Ability& InAbility, FCk_Handle_AbilityOwner&)
+    {
+        InAbilityTrait->_OwningAbilityHandle = InAbility;
+        InAbilityTrait->OnOwningAbilityCreated(InAbility);
+    });
 }
 
 auto
@@ -472,6 +499,13 @@ auto
 
     Script->_AbilityOwnerHandle = InAbilityOwner;
     Script->_AbilityHandle = InAbility;
+
+    DoForEach_Traits(InAbility, InAbilityOwner,
+    [](UCk_Ability_Trait_UE* InAbilityTrait, FCk_Handle_Ability& InAbility, FCk_Handle_AbilityOwner& InAbilityOwner)
+    {
+        InAbilityTrait->_OwningAbilityHandle = InAbility;
+        InAbilityTrait->OnOwningAbilityGiven(InAbility, InAbilityOwner);
+    });
 
     Script->OnGiveAbility(InOptionalPayload);
 }
@@ -501,6 +535,12 @@ auto
         InAbility,
         InAbilityOwner)
     { return; }
+
+    DoForEach_Traits(InAbility, InAbilityOwner,
+    [](UCk_Ability_Trait_UE* InAbilityTrait, FCk_Handle_Ability& InAbility, FCk_Handle_AbilityOwner& InAbilityOwner)
+    {
+        InAbilityTrait->OnOwningAbilityRevoked(InAbility, InAbilityOwner);
+    });
 
     Script->OnRevokeAbility();
     Script->_AbilityOwnerHandle = {};
@@ -560,6 +600,28 @@ auto
     { return; }
 
     AbilityScriptCDO->DoOnNotGiven(InAbilityOwnerEntity, InAbilitySource);
+}
+
+auto
+    UCk_Utils_Ability_UE::
+    DoForEach_Traits(
+        FCk_Handle_Ability& InAbility,
+        FCk_Handle_AbilityOwner& InAbilityOwner,
+        TFunction<void(UCk_Ability_Trait_UE*, FCk_Handle_Ability&, FCk_Handle_AbilityOwner&)> InFunc)
+    -> void
+{
+    const auto& AbilityScript = InAbility.Get<ck::FFragment_Ability_Current>().Get_AbilityScript();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityScript),
+        TEXT("INVALID Ability Script! Cannot iterate over its Ability Traits"))
+    { return; }
+
+    const auto& AbilityTraits =AbilityScript->Get_Data().Get_AbilityTraits();
+
+    ck::algo::ForEachIsValid(AbilityTraits, [&](UCk_Ability_Trait_UE* InAbilityTrait)
+    {
+        InFunc(InAbilityTrait, InAbility, InAbilityOwner);
+    });
 }
 
 auto
