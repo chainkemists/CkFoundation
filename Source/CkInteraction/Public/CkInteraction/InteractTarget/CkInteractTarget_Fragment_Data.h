@@ -65,32 +65,32 @@ public:
     CK_GENERATED_BODY(FCk_Fragment_InteractTarget_ParamsData);
 
 private:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, Categories = "InteractionChannel"))
     FGameplayTag _InteractionChannel;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     ECk_Interaction_CompletionPolicy _CompletionPolicy = ECk_Interaction_CompletionPolicy::Timed;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, EditCondition="_CompletionPolicy==ECk_InteractionCompletionPolicy::Timed", EditConditionHides))
     FCk_Time _InteractionDuration;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     TSubclassOf<UCk_Entity_ConstructionScript_PDA> _InteractionConstructionScript;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     ECk_InteractionTarget_ConcurrentInteractionsPolicy _ConcurrentInteractionsPolicy = ECk_InteractionTarget_ConcurrentInteractionsPolicy::MultipleInteractions;
 
 public:
-	CK_PROPERTY_GET(_InteractionChannel)
-	CK_PROPERTY_GET(_CompletionPolicy)
-	CK_PROPERTY_GET(_InteractionDuration)
-	CK_PROPERTY_GET(_InteractionConstructionScript)
-	CK_PROPERTY_GET(_ConcurrentInteractionsPolicy)
+    CK_PROPERTY_GET(_InteractionChannel)
+    CK_PROPERTY_GET(_CompletionPolicy)
+    CK_PROPERTY_GET(_InteractionDuration)
+    CK_PROPERTY_GET(_InteractionConstructionScript)
+    CK_PROPERTY_GET(_ConcurrentInteractionsPolicy)
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -105,7 +105,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+              meta = (AllowPrivateAccess = true, TitleProperty = "_InteractionChannel"))
     TArray<FCk_Fragment_InteractTarget_ParamsData> _InteractTargetParams;
 
 public:
@@ -129,17 +129,17 @@ public:
     CK_GENERATED_BODY(FCk_Try_InteractTarget_StartInteraction);
 
 private:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Handle _InteractSource;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Handle _InteractInstigator;
 
 public:
-	CK_PROPERTY(_InteractSource)
-	CK_PROPERTY(_InteractInstigator)
+    CK_PROPERTY(_InteractSource)
+    CK_PROPERTY(_InteractInstigator)
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Try_InteractTarget_StartInteraction, _InteractSource, _InteractInstigator);
@@ -148,24 +148,24 @@ public:
 USTRUCT(BlueprintType)
 struct CKINTERACTION_API FCk_Request_InteractTarget_CancelInteraction : public FCk_Request_Base
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	friend class ck::FProcessor_InteractTarget_HandleRequests;
+    friend class ck::FProcessor_InteractTarget_HandleRequests;
 
 public:
-	CK_GENERATED_BODY(FCk_Request_InteractTarget_CancelInteraction);
+    CK_GENERATED_BODY(FCk_Request_InteractTarget_CancelInteraction);
 
 private:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,
-			  meta = (AllowPrivateAccess = true))
-	FCk_Handle _InteractSource;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _InteractSource;
 
 public:
-	CK_PROPERTY(_InteractSource)
+    CK_PROPERTY(_InteractSource)
 
 public:
-	CK_DEFINE_CONSTRUCTORS(FCk_Request_InteractTarget_CancelInteraction, _InteractSource);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_InteractTarget_CancelInteraction, _InteractSource);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

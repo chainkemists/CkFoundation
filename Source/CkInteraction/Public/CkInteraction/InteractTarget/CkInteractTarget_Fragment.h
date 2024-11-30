@@ -61,9 +61,9 @@ namespace ck
         friend class UCk_Utils_InteractTarget_UE;
 
     private:
-    	TMap<FCk_Handle_Interaction, UUtils_Signal_Interaction_OnInteractionFinished::ConnectionType> _InteractionFinishedSignals;
+        TMap<FCk_Handle_Interaction, UUtils_Signal_Interaction_OnInteractionFinished::ConnectionType> _InteractionFinishedSignals;
 
-    	ECk_EnableDisable _Enabled = ECk_EnableDisable::Enable;
+        ECk_EnableDisable _Enabled = ECk_EnableDisable::Enable;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -78,7 +78,7 @@ namespace ck
         friend class UCk_Utils_InteractTarget_UE;
 
     public:
-    	using RequestType = std::variant
+        using RequestType = std::variant
         <
             FCk_Try_InteractTarget_StartInteraction,
             FCk_Request_InteractTarget_CancelInteraction
@@ -92,16 +92,16 @@ namespace ck
         CK_PROPERTY_GET(_Requests);
     };
 
-	// --------------------------------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------------------
 
-	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKINTERACTION_API,
         InteractTarget_OnNewInteraction,
         FCk_Delegate_InteractTarget_OnNewInteraction_MC,
         FCk_Handle_InteractTarget,
         FCk_Handle_Interaction);
 
-	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKINTERACTION_API,
         InteractTarget_OnInteractionFinished,
         FCk_Delegate_InteractTarget_OnInteractionFinished_MC,
