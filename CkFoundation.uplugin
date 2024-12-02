@@ -97,6 +97,16 @@
 			]
 		},
 		{
+			"Name": "CkBallistics",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
 			"Name": "CkCamera",
 			"Type": "Runtime",
 			"LoadingPhase": "PreDefault",
@@ -582,6 +592,10 @@
 		},
 		{
 			"Name": "Iris",
+			"Enabled": true
+		},
+		{
+			"Name": "RMPP",
 			"Enabled": true
 		},
 		{
