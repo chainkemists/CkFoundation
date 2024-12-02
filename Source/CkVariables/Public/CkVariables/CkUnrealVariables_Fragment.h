@@ -20,6 +20,7 @@ namespace ck
     struct CKVARIABLES_API FFragment_Variable_Vector2D : public TFragment_Variables<FVector2D> {};
     struct CKVARIABLES_API FFragment_Variable_Rotator : public TFragment_Variables<FRotator> {};
     struct CKVARIABLES_API FFragment_Variable_Transform : public TFragment_Variables<FTransform, const FTransform&> {};
+    struct CKVARIABLES_API FFragment_Variable_GameplayTag : public TFragment_Variables<FGameplayTag> {};
 
     struct CKVARIABLES_API FFragment_Variable_InstancedStruct : public TFragment_Variables<FInstancedStruct, const FInstancedStruct&> {};
 

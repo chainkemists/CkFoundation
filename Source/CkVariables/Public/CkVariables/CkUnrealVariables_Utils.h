@@ -814,6 +814,67 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
+class CKVARIABLES_API UCk_Utils_Variables_GameplayTag_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_Variables_GameplayTag_UE);
+
+public:
+    using FragmentType = ck::FFragment_Variable_GameplayTag;
+    using UtilsType = ck::TUtils_Variables<FragmentType>;
+
+public:
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][GameplayTag] Get Value (By GameplayTag)",
+              Category = "Ck|Utils|Variables|GameplayTag")
+    static const FGameplayTag
+    Get(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][GameplayTag] Set Value (By GameplayTag)",
+              Category = "Ck|Utils|Variables|GameplayTag")
+    static void
+    Set(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        FGameplayTag InValue);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][GameplayTag] Get Value (By Name)",
+              Category = "Ck|Utils|Variables|GameplayTag")
+    static const FGameplayTag
+    Get_ByName(
+        const FCk_Handle& InHandle,
+        FName InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][GameplayTag] Set Value (By Name)",
+              Category = "Ck|Utils|Variables|GameplayTag",
+              meta=(DeprecatedFunction))
+    static void
+    Set_ByName(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FName InVariableName,
+        FGameplayTag InValue);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][GameplayTag] Get All Variables",
+              Category = "Ck|Utils|Variables|GameplayTag",
+              meta=(DevelopmentOnly))
+    static const TMap<FName, FGameplayTag>&
+    Get_All(
+        const FCk_Handle& InHandle);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable)
 class CKVARIABLES_API UCk_Utils_Variables_UObject_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
