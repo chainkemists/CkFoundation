@@ -181,7 +181,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
               DisplayName="[Ck][AbilityOwner] For Each Ability",
-              meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
+              meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate", KeyWords = "get,all,abilities"))
     static TArray<FCk_Handle_Ability>
     ForEach_Ability(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
@@ -195,7 +195,7 @@ public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
               DisplayName="[Ck][AbilityOwner] For Each Ability If",
-              meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
+              meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate", KeyWords = "get,abilities"))
     static TArray<FCk_Handle_Ability>
     ForEach_Ability_If(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
