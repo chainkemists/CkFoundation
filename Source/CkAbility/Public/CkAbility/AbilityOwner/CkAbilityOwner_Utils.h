@@ -512,7 +512,7 @@ private:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              meta = (NativeMakeFunc))
+              meta = (NativeMakeFunc, AutoCreateRefTerm = "InAbilitySource"))
     static FCk_Request_AbilityOwner_AddAndGiveExistingAbility
     Make_Request_AddAndGiveExistingAbility(
         const FCk_Handle_Ability& InAbility,
@@ -521,7 +521,7 @@ private:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              meta = (NativeMakeFunc))
+              meta = (NativeMakeFunc, AutoCreateRefTerm = "InAbilitySource"))
     static FCk_Request_AbilityOwner_TransferExistingAbility
     Make_Request_TransferExistingAbility(
         const FCk_Handle_Ability& InAbility,
