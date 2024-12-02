@@ -194,6 +194,7 @@ private:
     FCk_Ability_Payload_OnGranted _OptionalPayload;
 
 private:
+    UPROPERTY()
     ECk_Net_ReplicationType _ReplicationType = ECk_Net_ReplicationType::All;
 
 public:
@@ -240,6 +241,7 @@ private:
     FCk_Ability_Payload_OnGranted _OptionalPayload;
 
 private:
+    UPROPERTY()
     ECk_Net_ReplicationType _ReplicationType = ECk_Net_ReplicationType::All;
 
 public:
@@ -371,6 +373,7 @@ private:
     ECk_AbilityOwner_DestructionOnRevoke_Policy _DestructionPolicy = ECk_AbilityOwner_DestructionOnRevoke_Policy::DestroyOnRevoke;
 
 private:
+    UPROPERTY()
     ECk_Net_ReplicationType _ReplicationType = ECk_Net_ReplicationType::All;
 
 public:
