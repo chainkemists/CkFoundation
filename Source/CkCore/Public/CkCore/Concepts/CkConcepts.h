@@ -1,8 +1,7 @@
 #pragma once
 
+#include "CkCore/Entt/Entt.h"
 #include "CkCore/Time/CkTime.h"
-
-#include "entt/entt.hpp"
 
 namespace ck::concepts
 {
