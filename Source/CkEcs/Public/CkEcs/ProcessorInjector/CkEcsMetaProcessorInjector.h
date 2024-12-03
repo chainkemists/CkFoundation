@@ -122,7 +122,7 @@ private:
     int32 _MaximumNumberOfPumps = 1;
 
     UPROPERTY(EditDefaultsOnly, Instanced,
-        meta=(AllowPrivateAccess, MustImplement = "/Script/CkEcs.Ck_MetaProcessorInjector_Interface_UE"))
+        meta=(AllowPrivateAccess, MustImplement = "/Script/CkEcs.Ck_MetaProcessorInjector_Interface"))
     TArray<TObjectPtr<UObject>> _MetaProcessorInjectors;
 
 public:
