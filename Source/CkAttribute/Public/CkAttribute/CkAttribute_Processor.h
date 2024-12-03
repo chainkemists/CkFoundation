@@ -162,6 +162,7 @@ namespace ck::detail
             typename T_DerivedAttribute::HandleType,
             T_DerivedAttribute,
             typename T_DerivedAttribute::FTag_MayRequireReplication,
+            ck::TExclude<typename T_DerivedAttribute::FTag_RecomputeFinalValue>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -171,7 +172,7 @@ namespace ck::detail
         using AttributeFragmentType = T_DerivedAttribute;
         using HandleType            = typename AttributeFragmentType::HandleType;
         using ThisType              = TProcessor_Attribute_Replicate<T_DerivedProcessor, T_DerivedAttribute, T_DerivedAttribute_ReplicatedFragment>;
-        using Super                 = ck_exp::TProcessor<ThisType, HandleType, T_DerivedAttribute, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using Super                 = ck_exp::TProcessor<ThisType, HandleType, T_DerivedAttribute, MarkedDirtyBy, ck::TExclude<typename T_DerivedAttribute::FTag_RecomputeFinalValue>, CK_IGNORE_PENDING_KILL>;
         using TimeType              = typename Super::TimeType;
 
     public:
