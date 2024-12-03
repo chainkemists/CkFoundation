@@ -17,6 +17,10 @@
 #include "../core/type_traits.hpp"
 #include "fwd.hpp"
 
+//++Ck
+#undef max
+//--Ck
+
 namespace entt {
 
 /**
