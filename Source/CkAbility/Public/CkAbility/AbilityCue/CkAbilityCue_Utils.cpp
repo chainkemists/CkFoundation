@@ -66,11 +66,6 @@ auto
 
     if (ck::IsValid(InInstigator))
     {
-        CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_EntityReplication(InInstigator) == ECk_Replication::Replicates,
-            TEXT("Constructing AbilityCue Params with Instigator Entity [{}] which is NOT replicated! AbilityCue using these params will NOT work as expected"),
-            InInstigator)
-        {}
-
         AbilityCueParams.Set_Instigator(InInstigator);
     }
 
