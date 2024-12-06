@@ -875,6 +875,67 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
+class CKVARIABLES_API UCk_Utils_Variables_GameplayTagContainer_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_Variables_GameplayTagContainer_UE);
+
+public:
+    using FragmentType = ck::FFragment_Variable_GameplayTagContainer;
+    using UtilsType = ck::TUtils_Variables<FragmentType>;
+
+public:
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][GameplayTagContainer] Get Value (By GameplayTag)",
+              Category = "Ck|Utils|Variables|GameplayTagContainer")
+    static const FGameplayTagContainer
+    Get(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][GameplayTagContainer] Set Value (By GameplayTag)",
+              Category = "Ck|Utils|Variables|GameplayTagContainer")
+    static void
+    Set(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        FGameplayTagContainer InValue);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][GameplayTagContainer] Get Value (By Name)",
+              Category = "Ck|Utils|Variables|GameplayTagContainer")
+    static const FGameplayTagContainer
+    Get_ByName(
+        const FCk_Handle& InHandle,
+        FName InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][GameplayTagContainer] Set Value (By Name)",
+              Category = "Ck|Utils|Variables|GameplayTagContainer",
+              meta=(DeprecatedFunction))
+    static void
+    Set_ByName(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FName InVariableName,
+        FGameplayTagContainer InValue);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][GameplayTagContainer] Get All Variables",
+              Category = "Ck|Utils|Variables|GameplayTagContainer",
+              meta=(DevelopmentOnly))
+    static const TMap<FName, FGameplayTagContainer>&
+    Get_All(
+        const FCk_Handle& InHandle);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable)
 class CKVARIABLES_API UCk_Utils_Variables_UObject_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
