@@ -469,6 +469,96 @@ public:
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Delegate_AbilityOwner_OnTagsUpdated& InDelegate);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName = "[Ck][AbilityOwner] Bind To OnAbilityGiven")
+    static FCk_Handle_AbilityOwner
+    BindTo_OnAbilityGiven(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AbilityOwner_OnAbilityGiven& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName = "[Ck][AbilityOwner] Unbind From OnAbilityGiven")
+    static FCk_Handle_AbilityOwner
+    UnbindFrom_OnAbilityGiven(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Delegate_AbilityOwner_OnAbilityGiven& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName = "[Ck][AbilityOwner] Bind To OnAbilityRevoked")
+    static FCk_Handle_AbilityOwner
+    BindTo_OnAbilityRevoked(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AbilityOwner_OnAbilityRevoked& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName = "[Ck][AbilityOwner] Unbind From OnAbilityRevoked")
+    static FCk_Handle_AbilityOwner
+    UnbindFrom_OnAbilityRevoked(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Delegate_AbilityOwner_OnAbilityRevoked& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName = "[Ck][AbilityOwner] Bind To OnAbilityRevoked")
+    static FCk_Handle_AbilityOwner
+    BindTo_OnAbilityActivated(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AbilityOwner_OnAbilityActivated& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName = "[Ck][AbilityOwner] Unbind From OnAbilityActivated")
+    static FCk_Handle_AbilityOwner
+    UnbindFrom_OnAbilityActivated(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Delegate_AbilityOwner_OnAbilityActivated& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName = "[Ck][AbilityOwner] Bind To OnAbilityRevoked")
+    static FCk_Handle_AbilityOwner
+    BindTo_OnAbilityDeactivated(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AbilityOwner_OnAbilityDeactivated& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName = "[Ck][AbilityOwner] Unbind From OnAbilityDeactivated")
+    static FCk_Handle_AbilityOwner
+    UnbindFrom_OnAbilityDeactivated(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Delegate_AbilityOwner_OnAbilityDeactivated& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName = "[Ck][AbilityOwner] Bind To OnAbilityTransferred")
+    static FCk_Handle_AbilityOwner
+    BindTo_OnAbilityTransferred(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AbilityOwner_OnAbilityTransferred& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName = "[Ck][AbilityOwner] Unbind From OnAbilityTransferred")
+    static FCk_Handle_AbilityOwner
+    UnbindFrom_OnAbilityTransferred(
+        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Delegate_AbilityOwner_OnAbilityTransferred& InDelegate);
+
 private:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner")

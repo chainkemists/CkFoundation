@@ -935,6 +935,126 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
+    BindTo_OnAbilityGiven(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AbilityOwner_OnAbilityGiven& InDelegate)
+    -> FCk_Handle_AbilityOwner
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_AbilityOwner_OnAbilityGiven, InAbilityOwnerHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    UnbindFrom_OnAbilityGiven(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Delegate_AbilityOwner_OnAbilityGiven& InDelegate)
+    -> FCk_Handle_AbilityOwner
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_AbilityOwner_OnAbilityGiven, InAbilityOwnerHandle, InDelegate);
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    BindTo_OnAbilityRevoked(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AbilityOwner_OnAbilityRevoked& InDelegate)
+    -> FCk_Handle_AbilityOwner
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_AbilityOwner_OnAbilityRevoked, InAbilityOwnerHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    UnbindFrom_OnAbilityRevoked(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Delegate_AbilityOwner_OnAbilityRevoked& InDelegate)
+    -> FCk_Handle_AbilityOwner
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_AbilityOwner_OnAbilityRevoked, InAbilityOwnerHandle, InDelegate);
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    BindTo_OnAbilityActivated(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AbilityOwner_OnAbilityActivated& InDelegate)
+    -> FCk_Handle_AbilityOwner
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_AbilityOwner_OnAbilityActivated, InAbilityOwnerHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    UnbindFrom_OnAbilityActivated(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Delegate_AbilityOwner_OnAbilityActivated& InDelegate)
+    -> FCk_Handle_AbilityOwner
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_AbilityOwner_OnAbilityActivated, InAbilityOwnerHandle, InDelegate);
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    BindTo_OnAbilityDeactivated(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AbilityOwner_OnAbilityDeactivated& InDelegate)
+    -> FCk_Handle_AbilityOwner
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_AbilityOwner_OnAbilityDeactivated, InAbilityOwnerHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    UnbindFrom_OnAbilityDeactivated(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Delegate_AbilityOwner_OnAbilityDeactivated& InDelegate)
+    -> FCk_Handle_AbilityOwner
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_AbilityOwner_OnAbilityDeactivated, InAbilityOwnerHandle, InDelegate);
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    BindTo_OnAbilityTransferred(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_AbilityOwner_OnAbilityTransferred& InDelegate)
+    -> FCk_Handle_AbilityOwner
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_AbilityOwner_OnAbilityTransferred, InAbilityOwnerHandle, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    UnbindFrom_OnAbilityTransferred(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Delegate_AbilityOwner_OnAbilityTransferred& InDelegate)
+    -> FCk_Handle_AbilityOwner
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_AbilityOwner_OnAbilityTransferred, InAbilityOwnerHandle, InDelegate);
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
     Make_Request_ActivateAbility_ByClass(
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass,
         FCk_Ability_Payload_OnActivate InOptionalPayload)

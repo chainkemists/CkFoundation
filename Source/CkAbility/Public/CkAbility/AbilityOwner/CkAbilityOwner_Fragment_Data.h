@@ -561,6 +561,18 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
 
 // --------------------------------------------------------------------------------------------------------------------
 
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_AbilityOwner_OnAbilityGiven,
+    FCk_Handle_AbilityOwner, InAbilityOwner,
+    FCk_Handle_Ability, InAbility);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FCk_Delegate_AbilityOwner_OnAbilityGiven_MC,
+    FCk_Handle_AbilityOwner, InAbilityOwner,
+    FCk_Handle_Ability, InAbility);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 DECLARE_DYNAMIC_DELEGATE_FourParams(
     FCk_Delegate_AbilityOwner_OnAbilityTransferredOrNot,
     FCk_Handle_AbilityOwner, InAbilityOwner,
@@ -569,11 +581,25 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(
     ECk_AbilityOwner_AbilityTransferredOrNot, InTransferredOrNot);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(
-    FCk_Delegate_AbilityOwner_OnAbilityTransferedOrNot_MC,
+    FCk_Delegate_AbilityOwner_OnAbilityTransferredOrNot_MC,
     FCk_Handle_AbilityOwner, InAbilityOwner,
     FCk_Handle_AbilityOwner, InTransferTarget,
     FCk_Handle_Ability, InMaybeValidAbility,
     ECk_AbilityOwner_AbilityTransferredOrNot, InTransferredOrNot);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+    FCk_Delegate_AbilityOwner_OnAbilityTransferred,
+    FCk_Handle_AbilityOwner, InAbilityOwner,
+    FCk_Handle_AbilityOwner, InTransferTarget,
+    FCk_Handle_Ability, InAbility);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
+    FCk_Delegate_AbilityOwner_OnAbilityTransferred_MC,
+    FCk_Handle_AbilityOwner, InAbilityOwner,
+    FCk_Handle_AbilityOwner, InTransferTarget,
+    FCk_Handle_Ability, InAbility);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -591,6 +617,18 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
 
 // --------------------------------------------------------------------------------------------------------------------
 
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_AbilityOwner_OnAbilityRevoked,
+    FCk_Handle_AbilityOwner, InAbilityOwner,
+    FCk_Handle_Ability, InAbility);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FCk_Delegate_AbilityOwner_OnAbilityRevoked_MC,
+    FCk_Handle_AbilityOwner, InAbilityOwner,
+    FCk_Handle_Ability, InAbility);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Delegate_AbilityOwner_OnAbilityActivatedOrNot,
     FCk_Handle_AbilityOwner, InAbilityOwner,
@@ -605,6 +643,18 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
 
 // --------------------------------------------------------------------------------------------------------------------
 
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_AbilityOwner_OnAbilityActivated,
+    FCk_Handle_AbilityOwner, InAbilityOwner,
+    FCk_Handle_Ability, InAbility);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FCk_Delegate_AbilityOwner_OnAbilityActivated_MC,
+    FCk_Handle_AbilityOwner, InAbilityOwner,
+    FCk_Handle_Ability, InAbility);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Delegate_AbilityOwner_OnAbilityDeactivatedOrNot,
     FCk_Handle_AbilityOwner, InAbilityOwner,
@@ -616,5 +666,17 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
     FCk_Handle_AbilityOwner, InAbilityOwner,
     FCk_Handle_Ability, InAbility,
     ECk_AbilityOwner_AbilityDeactivatedOrNot, InDeactivatedOrNot);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_AbilityOwner_OnAbilityDeactivated,
+    FCk_Handle_AbilityOwner, InAbilityOwner,
+    FCk_Handle_Ability, InAbility);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FCk_Delegate_AbilityOwner_OnAbilityDeactivated_MC,
+    FCk_Handle_AbilityOwner, InAbilityOwner,
+    FCk_Handle_Ability, InAbility);
 
 // --------------------------------------------------------------------------------------------------------------------
