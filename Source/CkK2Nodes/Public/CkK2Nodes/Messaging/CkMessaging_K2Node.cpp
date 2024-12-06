@@ -33,6 +33,8 @@
 namespace ck_k2node_messaging
 {
     static auto PinName_Handle = TEXT("Handle");
+    static auto PinName_HandleToUnbind = TEXT("HandleToUnbind");
+    static auto PinName_OutHandle = TEXT("OutHandle");
     static auto PinName_MessageReceived = TEXT("MessageReceived");
     static auto PinName_StopListening = TEXT("StopListening");
 }
@@ -561,6 +563,14 @@ auto
         ck_k2node_messaging::PinName_MessageReceived
     );
 
+    CreatePin
+    (
+        EGPD_Output,
+        UEdGraphSchema_K2::PC_Struct,
+        FCk_Handle::StaticStruct(),
+        ck_k2node_messaging::PinName_OutHandle
+    );
+
     CreatePinsFromMessageDefinition();
 
     CreatePin
@@ -568,6 +578,15 @@ auto
         EGPD_Input,
         UEdGraphSchema_K2::PC_Exec,
         ck_k2node_messaging::PinName_StopListening
+    );
+
+    CreatePin
+    (
+        EGPD_Input,
+        UEdGraphSchema_K2::PC_Struct,
+        FCk_Handle::StaticStruct(),
+        ck_k2node_messaging::PinName_HandleToUnbind,
+        HandlePinParams
     );
 }
 
@@ -786,6 +805,10 @@ auto
             {
                 UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_messaging::PinName_StopListening, ECk_EditorGraph_PinDirection::Input, *this),
                 UCk_Utils_EditorGraph_UE::Get_Pin_Exec(*UnbindFunction_Node)
+            },
+            {
+                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_messaging::PinName_OutHandle, ECk_EditorGraph_PinDirection::Output, *this),
+                OutHandlePin
             }
         },
         ECk_EditorGraph_PinLinkType::Move
@@ -800,7 +823,7 @@ auto
                 BindFunction_Node->FindPin(TEXT("InHandle"))
             },
             {
-                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_messaging::PinName_Handle, ECk_EditorGraph_PinDirection::Input, *this),
+                UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_messaging::PinName_HandleToUnbind, ECk_EditorGraph_PinDirection::Input, *this),
                 UnbindFunction_Node->FindPin(TEXT("InHandle"))
             },
         },
