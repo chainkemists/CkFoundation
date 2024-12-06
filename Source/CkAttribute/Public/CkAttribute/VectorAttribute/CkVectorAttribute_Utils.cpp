@@ -226,6 +226,39 @@ auto
 
 auto
     UCk_Utils_VectorAttribute_UE::
+    ForEach_ByName(
+        FCk_Handle& InAttributeOwner,
+        FGameplayTag InAttributeName,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate)
+    -> TArray<FCk_Handle_VectorAttribute>
+{
+    auto Ret = TArray<FCk_Handle_VectorAttribute>{};
+
+    ForEach_ByName(InAttributeOwner, InAttributeName, [&](FCk_Handle_VectorAttribute InAttribute)
+    {
+        if (InDelegate.IsBound())
+        { InDelegate.Execute(InAttribute, InOptionalPayload); }
+
+        Ret.Emplace(InAttribute);
+    });
+
+    return Ret;
+}
+
+auto
+    UCk_Utils_VectorAttribute_UE::
+    ForEach_ByName(
+        FCk_Handle& InAttributeOwner,
+        FGameplayTag InAttributeName,
+        const TFunction<void(FCk_Handle_VectorAttribute)>& InFunc)
+    -> void
+{
+    ForEach_If(InAttributeOwner, InFunc, ck::algo::MatchesGameplayLabelExact{InAttributeName});
+}
+
+auto
+    UCk_Utils_VectorAttribute_UE::
     Has_Component(
         const FCk_Handle_VectorAttribute& InAttribute,
         ECk_MinMaxCurrent InAttributeComponent)

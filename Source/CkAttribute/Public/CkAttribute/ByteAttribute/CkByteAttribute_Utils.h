@@ -129,6 +129,22 @@ public:
         const TFunction<void(FCk_Handle_ByteAttribute)>& InFunc,
         const TFunction<bool(FCk_Handle_ByteAttribute)>& InPredicate) -> void;
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Byte",
+              DisplayName="[Ck][ByteAttribute] For Each (By Name)",
+              meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
+    static TArray<FCk_Handle_ByteAttribute>
+    ForEach_ByName(
+        UPARAM(ref) FCk_Handle& InAttributeOwner,
+        UPARAM(meta = (Categories = "ByteAttribute")) FGameplayTag InAttributeName,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate);
+    static auto
+    ForEach_ByName(
+        FCk_Handle& InAttributeOwner,
+        FGameplayTag InAttributeName,
+        const TFunction<void(FCk_Handle_ByteAttribute)>& InFunc) -> void;
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Byte",
