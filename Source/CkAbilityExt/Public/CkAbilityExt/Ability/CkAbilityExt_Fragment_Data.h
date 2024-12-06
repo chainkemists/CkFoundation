@@ -342,3 +342,27 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKABILITYEXT_API FCk_Ability_Effect_CueData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Ability_Effect_CueData);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
+    FGameplayTag _AbilityName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
+    TSubclassOf<UCk_Ability_Script_PDA> _AbilityClass;
+
+public:
+    CK_PROPERTY_GET(_AbilityName);
+    CK_PROPERTY_GET(_AbilityClass);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
