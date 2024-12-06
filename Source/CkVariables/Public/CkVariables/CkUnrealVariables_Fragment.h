@@ -21,6 +21,7 @@ namespace ck
     struct CKVARIABLES_API FFragment_Variable_Rotator : public TFragment_Variables<FRotator> {};
     struct CKVARIABLES_API FFragment_Variable_Transform : public TFragment_Variables<FTransform, const FTransform&> {};
     struct CKVARIABLES_API FFragment_Variable_GameplayTag : public TFragment_Variables<FGameplayTag> {};
+    struct CKVARIABLES_API FFragment_Variable_GameplayTagContainer : public TFragment_Variables<FGameplayTagContainer> {};
 
     struct CKVARIABLES_API FFragment_Variable_InstancedStruct : public TFragment_Variables<FInstancedStruct, const FInstancedStruct&> {};
 

@@ -97,6 +97,7 @@ CK_UTILS_VARIABLES_DEFINITION(UCk_Utils_Variables_Rotator_UE, FRotator);
 CK_UTILS_VARIABLES_DEFINITION(UCk_Utils_Variables_Transform_UE, const FTransform&);
 CK_UTILS_VARIABLES_DEFINITION(UCk_Utils_Variables_InstancedStruct_UE, const FInstancedStruct&);
 CK_UTILS_VARIABLES_DEFINITION(UCk_Utils_Variables_GameplayTag_UE, const FGameplayTag);
+CK_UTILS_VARIABLES_DEFINITION(UCk_Utils_Variables_GameplayTagContainer_UE, const FGameplayTagContainer);
 
 // --------------------------------------------------------------------------------------------------------------------
 
