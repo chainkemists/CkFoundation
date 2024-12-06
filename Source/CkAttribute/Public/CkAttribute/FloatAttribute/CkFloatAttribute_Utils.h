@@ -129,6 +129,22 @@ public:
         const TFunction<void(FCk_Handle_FloatAttribute)>& InFunc,
         const TFunction<bool(FCk_Handle_FloatAttribute)>& InPredicate) -> void;
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Attribute|Float",
+              DisplayName="[Ck][FloatAttribute] For Each (By Name)",
+              meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate"))
+    static TArray<FCk_Handle_FloatAttribute>
+    ForEach_ByName(
+        UPARAM(ref) FCk_Handle& InAttributeOwner,
+        UPARAM(meta = (Categories = "FloatAttribute")) FGameplayTag InAttributeName,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate);
+    static auto
+    ForEach_ByName(
+        FCk_Handle& InAttributeOwner,
+        FGameplayTag InAttributeName,
+        const TFunction<void(FCk_Handle_FloatAttribute)>& InFunc) -> void;
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",
