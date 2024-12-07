@@ -176,7 +176,7 @@ private:
     static auto
     DoAdd(
         FCk_Handle& InHandle,
-        const FCk_Fragment_Ability_ParamsData& InParams) -> void;
+        const FCk_Fragment_Ability_ParamsData& InParams) -> FCk_Handle_Ability;
 
 // TODO: Move these back to the processor ?
 private:
