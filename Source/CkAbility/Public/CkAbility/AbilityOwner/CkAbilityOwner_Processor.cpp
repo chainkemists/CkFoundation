@@ -414,9 +414,6 @@ namespace ck
                     AbilityOwnerEntity
                 );
 
-                UCk_Utils_Handle_UE::Set_DebugName(AbilityEntity,
-                    UCk_Utils_Debug_UE::Get_DebugName(AbilityParams.Get_AbilityScriptClass(), ECk_DebugNameVerbosity_Policy::Compact));
-
                 {
                     const auto& AbilityOnGiveSettings = UCk_Utils_Ability_UE::Get_OnGiveSettings(AbilityEntity);
                     const auto& GrantedTags = AbilityOnGiveSettings.Get_OnGiveSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
@@ -599,9 +596,6 @@ namespace ck
                     AbilityEntity,
                     AbilityOwnerEntity
                 );
-
-                UCk_Utils_Handle_UE::Set_DebugName(AbilityEntity,
-                    UCk_Utils_Debug_UE::Get_DebugName(AbilityScriptClass, ECk_DebugNameVerbosity_Policy::Compact));
 
                 {
                     const auto& AbilityOnGiveSettings = UCk_Utils_Ability_UE::Get_OnGiveSettings(AbilityEntity);
