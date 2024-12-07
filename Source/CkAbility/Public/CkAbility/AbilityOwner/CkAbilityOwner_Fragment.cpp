@@ -267,7 +267,6 @@ auto
 
     constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
 
-    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingAddAndGiveExistingAbilityRequests, Params);
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingTransferExistingAbilityRequests, Params);
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingGiveAbilityRequests, Params);
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _PendingRevokeAbilityRequests, Params);
@@ -278,36 +277,9 @@ auto
     Request_TryUpdateReplicatedFragment()
     -> void
 {
-    OnRep_PendingAddOrGiveExistingAbilityRequests();
     OnRep_PendingTransferExistingAbilityRequests();
     OnRep_PendingGiveAbilityRequests();
     OnRep_PendingRevokeAbilityRequests();
-}
-
-auto
-    UCk_Fragment_AbilityOwner_Rep::
-    OnRep_PendingAddOrGiveExistingAbilityRequests()
-    -> void
-{
-    if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
-    { return; }
-
-    if (GetWorld()->IsNetMode(NM_DedicatedServer))
-    { return; }
-
-    auto AssociatedEntityAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(_AssociatedEntity);
-
-    // If associated entity ability owner is not yet valid or setup, we should not process replicated requests until setup calls Request_TryUpdateReplicatedFragment
-    if (ck::Is_NOT_Valid(AssociatedEntityAbilityOwner) ||
-        AssociatedEntityAbilityOwner.Has<ck::FTag_AbilityOwner_NeedsSetup>())
-    { return; }
-
-    for (auto Index = _NextPendingAddGiveExistingAbilityRequests; Index < _PendingAddAndGiveExistingAbilityRequests.Num(); ++Index)
-    {
-        const auto& Request = _PendingAddAndGiveExistingAbilityRequests[Index];
-        UCk_Utils_AbilityOwner_UE::Request_AddAndGiveExistingAbility(AssociatedEntityAbilityOwner, Request, {});
-    }
-    _NextPendingAddGiveExistingAbilityRequests = _PendingAddAndGiveExistingAbilityRequests.Num();
 }
 
 auto
@@ -386,16 +358,6 @@ auto
         UCk_Utils_AbilityOwner_UE::Request_RevokeAbility(AssociatedEntityAbilityOwner, RevokeAbilityRequest, {});
     }
     _NextPendingRevokeAbilityRequests = _PendingRevokeAbilityRequests.Num();
-}
-
-auto
-    UCk_Fragment_AbilityOwner_Rep::
-    Request_AddAndGiveExistingAbility(
-        const FCk_Request_AbilityOwner_AddAndGiveExistingAbility& InRequest)
-    -> void
-{
-    _PendingAddAndGiveExistingAbilityRequests.Emplace(InRequest);
-    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _PendingAddAndGiveExistingAbilityRequests, this);
 }
 
 auto
