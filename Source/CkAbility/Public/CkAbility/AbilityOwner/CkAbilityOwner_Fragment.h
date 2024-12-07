@@ -252,10 +252,6 @@ public:
 private:
     UFUNCTION()
     void
-    OnRep_PendingAddOrGiveExistingAbilityRequests();
-
-    UFUNCTION()
-    void
     OnRep_PendingTransferExistingAbilityRequests();
 
     UFUNCTION()
@@ -267,10 +263,6 @@ private:
     OnRep_PendingRevokeAbilityRequests();
 
 private:
-    UPROPERTY(ReplicatedUsing = OnRep_PendingAddOrGiveExistingAbilityRequests)
-    TArray<FCk_Request_AbilityOwner_AddAndGiveExistingAbility> _PendingAddAndGiveExistingAbilityRequests;
-    int32 _NextPendingAddGiveExistingAbilityRequests = 0;
-
     UPROPERTY(ReplicatedUsing = OnRep_PendingTransferExistingAbilityRequests)
     TArray<FCk_Request_AbilityOwner_TransferExistingAbility> _PendingTransferExistingAbilityRequests;
     int32 _NextPendingTransferExistingAbilityRequests = 0;
@@ -284,10 +276,6 @@ private:
     int32 _NextPendingRevokeAbilityRequests = 0;
 
 public:
-    auto
-    Request_AddAndGiveExistingAbility(
-        const FCk_Request_AbilityOwner_AddAndGiveExistingAbility& InRequest) -> void;
-
     auto
     Request_TransferExistingAbility(
         const FCk_Request_AbilityOwner_TransferExistingAbility& InRequest) -> void;
