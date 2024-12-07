@@ -279,27 +279,6 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName="[Ck][AbilityOwner] Request Add and Give Existing Ability",
-              meta = (AutoCreateRefTerm = "InDelegate"))
-    static FCk_Handle_AbilityOwner
-    Request_AddAndGiveExistingAbility(
-        UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-        const FCk_Request_AbilityOwner_AddAndGiveExistingAbility& InRequest,
-        const FCk_Delegate_AbilityOwner_OnAbilityGivenOrNot& InDelegate);
-
-    UFUNCTION(BlueprintCallable,
-              BlueprintAuthorityOnly,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName="[Ck][AbilityOwner] Request Add and Give Existing Ability (Replicated)",
-              meta = (AutoCreateRefTerm = "InDelegate"))
-    static FCk_Handle_AbilityOwner
-    Request_AddAndGiveExistingAbility_Replicated(
-            UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
-            const FCk_Request_AbilityOwner_AddAndGiveExistingAbility& InRequest,
-            const FCk_Delegate_AbilityOwner_OnAbilityGivenOrNot& InDelegate);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][AbilityOwner] Request Transfer Existing Ability",
               meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_AbilityOwner
@@ -507,7 +486,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName = "[Ck][AbilityOwner] Bind To OnAbilityRevoked")
+              DisplayName = "[Ck][AbilityOwner] Bind To OnAbilityActivated")
     static FCk_Handle_AbilityOwner
     BindTo_OnAbilityActivated(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
@@ -525,7 +504,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName = "[Ck][AbilityOwner] Bind To OnAbilityRevoked")
+              DisplayName = "[Ck][AbilityOwner] Bind To OnAbilityDeactivated")
     static FCk_Handle_AbilityOwner
     BindTo_OnAbilityDeactivated(
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
@@ -590,24 +569,13 @@ private:
               Category = "Ck|Utils|Ability|Owner")
     static FCk_Request_AbilityOwner_RevokeAbility
     Make_Request_RevokeAbility_ByClass(
-        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass,
-        ECk_AbilityOwner_DestructionOnRevoke_Policy InDestructionPolicy = ECk_AbilityOwner_DestructionOnRevoke_Policy::DestroyOnRevoke);
+        TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner")
     static FCk_Request_AbilityOwner_RevokeAbility
     Make_Request_RevokeAbility_ByEntity(
-        const FCk_Handle_Ability& InAbilityEntity,
-        ECk_AbilityOwner_DestructionOnRevoke_Policy InDestructionPolicy = ECk_AbilityOwner_DestructionOnRevoke_Policy::DestroyOnRevoke);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Ability|Owner",
-              meta = (NativeMakeFunc, AutoCreateRefTerm = "InAbilitySource"))
-    static FCk_Request_AbilityOwner_AddAndGiveExistingAbility
-    Make_Request_AddAndGiveExistingAbility(
-        const FCk_Handle_Ability& InAbility,
-        const FCk_Handle& InAbilitySource,
-        FCk_Ability_Payload_OnGranted InOptionalPayload);
+        const FCk_Handle_Ability& InAbilityEntity);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",

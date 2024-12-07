@@ -164,37 +164,22 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-USTRUCT(BlueprintType, meta= (HasNativeMake = "/Script/CkAbility.Ck_Utils_AbilityOwner_UE:Make_Request_AddAndGiveExistingAbility"))
+// This is an internal request as part of the TransferAbility request handling
 struct CKABILITY_API FCk_Request_AbilityOwner_AddAndGiveExistingAbility : public FCk_Request_Base
 {
-    GENERATED_BODY()
-
 public:
     CK_GENERATED_BODY(FCk_Request_AbilityOwner_AddAndGiveExistingAbility);
 
 public:
-    FCk_Request_AbilityOwner_AddAndGiveExistingAbility() = default;
-
     explicit
     FCk_Request_AbilityOwner_AddAndGiveExistingAbility(
         FCk_Handle_Ability InAbility,
         FCk_Handle InAbilitySource);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
     FCk_Handle_Ability _Ability;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
     FCk_Handle _AbilitySource;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
     FCk_Ability_Payload_OnGranted _OptionalPayload;
-
-private:
-    UPROPERTY()
     ECk_Net_ReplicationType _ReplicationType = ECk_Net_ReplicationType::All;
 
 public:
@@ -368,11 +353,10 @@ private:
                   EditCondition="_SearchPolicy == ECk_AbilityOwner_AbilitySearchPolicy::SearchByHandle"))
     FCk_Handle_Ability _AbilityHandle;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
+private:
+    UPROPERTY()
     ECk_AbilityOwner_DestructionOnRevoke_Policy _DestructionPolicy = ECk_AbilityOwner_DestructionOnRevoke_Policy::DestroyOnRevoke;
 
-private:
     UPROPERTY()
     ECk_Net_ReplicationType _ReplicationType = ECk_Net_ReplicationType::All;
 
@@ -397,10 +381,12 @@ public:
 public:
     FCk_Request_AbilityOwner_ActivateAbility() = default;
 
-    explicit FCk_Request_AbilityOwner_ActivateAbility(
+    explicit
+    FCk_Request_AbilityOwner_ActivateAbility(
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass);
 
-    explicit FCk_Request_AbilityOwner_ActivateAbility(
+    explicit
+    FCk_Request_AbilityOwner_ActivateAbility(
         FCk_Handle_Ability InAbilityHandle);
 
 private:

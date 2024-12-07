@@ -288,16 +288,12 @@ namespace ck
 
             UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(AbilityToTransfer, TransferTarget);
 
-            DoHandleRequest
-            (
-                TransferTarget,
-                TransferTarget.Get<FFragment_AbilityOwner_Current>(),
+            DoHandleRequest(TransferTarget, TransferTarget.Get<FFragment_AbilityOwner_Current>(),
                 FCk_Request_AbilityOwner_AddAndGiveExistingAbility
                 {
                     AbilityToTransfer,
                     InRequest.Get_AbilitySource()
-                }.Set_OptionalPayload(InRequest.Get_OptionalPayload())
-            );
+                }.Set_OptionalPayload(InRequest.Get_OptionalPayload()));
 
             return ECk_AbilityOwner_AbilityTransferredOrNot::Transferred;
         }();
