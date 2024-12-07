@@ -11,6 +11,8 @@
 #include "CkCore/Object/CkObject_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
+
 #include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
 
 #include "CkEntityExtension/CkEntityExtension_Utils.h"
@@ -392,22 +394,22 @@ auto
     DoAdd(
         FCk_Handle& InHandle,
         const FCk_Fragment_Ability_ParamsData& InParams)
-    -> void
+    -> FCk_Handle_Ability
 {
     const auto& AbilityScriptClass = InParams.Get_AbilityScriptClass();
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptClass), TEXT("Invalid Ability Script Class"))
-    { return; }
+    { return {}; }
 
     const auto& AbilityScriptCDO = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_Script_PDA>(AbilityScriptClass);
     const auto& AbilityArchetype = InParams.Get_AbilityArchetype().Get();
 
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptCDO), TEXT("Failed to get CDO of Ability Script of Class [{}]"), AbilityScriptClass)
-    { return; }
+    { return {}; }
 
     const auto CurrentWorld = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
 
     CK_ENSURE_IF_NOT(ck::IsValid(CurrentWorld), TEXT("Invalid World for Entity [{}]"), InHandle)
-    { return; }
+    { return {}; }
 
     const auto& AbilityData      = InParams.Get_Data();
     const auto& AbilityName      = AbilityData.Get_AbilityName();
@@ -424,7 +426,7 @@ auto
             ReplicationType
         );
 
-        return;
+        return {};
     }
 
     const auto& AbilityScriptToUse = InstancingPolicy == ECk_Ability_InstancingPolicy::NotInstanced
@@ -433,11 +435,9 @@ auto
 
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityScriptToUse),
         TEXT("Failed to create instance of Ability Script of Class [{}] with Archetype [{}]"), AbilityScriptClass, AbilityArchetype)
-    { return; }
+    { return {}; }
 
     AbilityScriptToUse->Set_CurrentWorld(CurrentWorld);
-
-    UCk_Utils_GameplayLabel_UE::Add(InHandle, AbilityName);
 
     InHandle.Add<ck::FFragment_Ability_Params>(InParams);
     auto& AbilityCurrent = InHandle.Add<ck::FFragment_Ability_Current>(AbilityScriptToUse);
@@ -446,8 +446,15 @@ auto
                                                         ? AbilityArchetype
                                                         : AbilityScriptCDO;
 
+    const auto& HandleAsAbility = Cast(InHandle);
+
+    UCk_Utils_GameplayLabel_UE::Add(InHandle, AbilityName);
+    UCk_Utils_Handle_UE::Set_DebugName(InHandle, Get_DisplayName(HandleAsAbility));
+
     UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(CurrentWorld)->Request_TrackAbilityScript(AbilityScriptToUse);
     UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(CurrentWorld)->Request_TrackAbilityScript(AbilityCurrent.Get_AbilityScript_DefaultInstance().Get());
+
+    return HandleAsAbility;
 }
 
 auto
