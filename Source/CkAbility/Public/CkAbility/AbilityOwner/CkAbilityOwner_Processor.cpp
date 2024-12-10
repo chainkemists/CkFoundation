@@ -274,17 +274,18 @@ namespace ck
                 AbilityToTransfer, InAbilityOwnerEntity, TransferTarget)
             { return ECk_AbilityOwner_AbilityTransferredOrNot::NotTransferred; }
 
-            CK_ENSURE_IF_NOT(NOT RecordOfAbilities_Utils::Get_ContainsEntry(TransferTarget, AbilityToTransfer),
-                TEXT("Cannot TRANSFER Ability [{}] from Ability Owner [{}] to [{}] because the recipient already has this ability"),
-                AbilityToTransfer, InAbilityOwnerEntity, TransferTarget)
-            { return ECk_AbilityOwner_AbilityTransferredOrNot::NotTransferred; }
-
             DoHandleRequest(InAbilityOwnerEntity, InAbilityOwnerComp,
                 FCk_Request_AbilityOwner_DeactivateAbility{AbilityToTransfer});
 
             DoHandleRequest(InAbilityOwnerEntity, InAbilityOwnerComp,
                 FCk_Request_AbilityOwner_RevokeAbility{AbilityToTransfer}
                 .Set_DestructionPolicy(ECk_AbilityOwner_DestructionOnRevoke_Policy::DoNotDestroyOnRevoke));
+
+            CK_ENSURE_IF_NOT(NOT RecordOfAbilities_Utils::Get_ContainsEntry(TransferTarget, AbilityToTransfer),
+                TEXT("Cannot TRANSFER Ability [{}] from Ability Owner [{}] to [{}] because the recipient already has this ability"
+                     "A request to remove the ability from the source was made, but the recipient somehow still has the ability (possibly by extension?)"),
+                AbilityToTransfer, InAbilityOwnerEntity, TransferTarget)
+            { return ECk_AbilityOwner_AbilityTransferredOrNot::NotTransferred; }
 
             UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(AbilityToTransfer, TransferTarget);
 
