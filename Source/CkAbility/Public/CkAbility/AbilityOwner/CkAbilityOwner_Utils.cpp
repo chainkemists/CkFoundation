@@ -734,7 +734,7 @@ auto
         FCk_Handle_AbilityOwner& InAbilityOwnerHandle)
     -> FCk_Handle_AbilityOwner
 {
-    InAbilityOwnerHandle.AddOrGet<ck::FTag_AbilityOwner_BlockSubAbilities>();
+    InAbilityOwnerHandle.Add<ck::FTag_AbilityOwner_BlockSubAbilities>();
     return InAbilityOwnerHandle;
 }
 
