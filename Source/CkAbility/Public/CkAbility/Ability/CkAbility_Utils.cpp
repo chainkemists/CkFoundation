@@ -519,7 +519,7 @@ auto
     // the Ability was granted to the Ability Owner directly and NOT by extension (which means the Ability Owner
     // is also the lifetime owner of the Ability)
     if (InDestructionPolicy == ECk_AbilityOwner_DestructionOnRevoke_Policy::DestroyOnRevoke &&
-    UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbility) == InAbilityOwner)
+        UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbility) == InAbilityOwner)
     {
         UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAbility);
 
