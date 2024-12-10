@@ -15,6 +15,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+struct FCk_Registry;
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     class FProcessor_EntityLifetime_DestroyEntity;
@@ -26,6 +30,22 @@ namespace ck
     // usage: Registry.View<CompA, CompB, TExclude<CompC>>().ForEach(...)
     template <typename... T_Args>
     struct TExclude { using ValueType = entt::type_list<T_Args...>; };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKECS_API FTag_CountedTag
+    {
+        friend struct FCk_Registry;
+
+    public:
+        CK_GENERATED_BODY(FTag_CountedTag);
+
+    private:
+        int32 _Count = 0;
+
+    public:
+        CK_PROPERTY_GET(_Count);
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -249,7 +269,7 @@ auto
         return Invalid_Fragment;
     }
 
-    CK_ENSURE_IF_NOT(Has<T_FragmentType>(InEntity) == false,
+    CK_ENSURE_IF_NOT(Has<T_FragmentType>(InEntity) == false && (std::is_base_of_v<ck::FTag_CountedTag, T_FragmentType>) == false,
         TEXT("Fragment [{}] already exists in Entity [{}]."),
         ck::TypeToString<T_FragmentType>, InEntity)
     {
@@ -267,8 +287,20 @@ auto
     }
     else
     {
-        auto& Fragment = _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID(), std::forward<T_Args>(InArgs)...);
-        return Fragment;
+        if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_FragmentType>)
+        {
+            auto& Fragment = Has<T_FragmentType>(InEntity) ?
+                Get<T_FragmentType>(InEntity) :
+                _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID(), std::forward<T_Args>(InArgs)...);
+
+            ++Fragment._Count;
+            return Fragment;
+        }
+        else
+        {
+            auto& Fragment = _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID(), std::forward<T_Args>(InArgs)...);
+            return Fragment;
+        }
     }
 }
 
@@ -366,6 +398,15 @@ auto
         TEXT("Unable to Remove Fragment/Tag. Fragment/Tag [{}] does NOT exist in Entity [{}]."),
         ck::TypeToString<T_Fragment>, InEntity)
     { return; }
+
+    if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_Fragment>)
+    {
+        auto& Fragment = Get<T_Fragment>(InEntity);
+        --Fragment._Count;
+
+        if (Fragment._Count != 0)
+        { return; }
+    }
 
     _InternalRegistry->remove<T_Fragment>(InEntity.Get_ID());
 }
