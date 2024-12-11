@@ -88,6 +88,9 @@ namespace ck::detail
         const auto BaseValue = InAttributeCurrent._Base;
         const auto FinalValue = InAttributeCurrent._Final;
 
+        using AttributePreviousType = ck::TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
+        const auto& PreviousValue = InHandle.template Get<AttributePreviousType>();
+
         // Clamping on the client side is bypassed because the server might update both 'Min' and 'Current' values.
         // In cases where 'Current' needs to match the new 'Min', if the client receives 'Current' before 'Min' and clamps it,
         // the value could be incorrectly constrained to the previous 'Min' when 'Min' is replicated after clamping.
@@ -96,9 +99,6 @@ namespace ck::detail
             UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle) &&
             TUtils_Attribute<T_DerivedAttributeCurrent>::Get_MayRequireReplicationThisFrame(InHandle))
         {
-            using AttributePreviousType = ck::TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
-            auto& PreviousValue = InHandle.template AddOrGet<AttributePreviousType>();
-
             if (PreviousValue.Get_Base() != BaseValue || PreviousValue.Get_Final() != FinalValue)
             { TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle); }
 
@@ -110,15 +110,8 @@ namespace ck::detail
         InAttributeCurrent._Base = TAttributeMinMax<AttributeDataType>::Max(BaseValue, FinalValue_Min);
         InAttributeCurrent._Final = TAttributeMinMax<AttributeDataType>::Max(FinalValue, FinalValue_Min);
 
-        if (InAttributeCurrent._Final != FinalValue || InAttributeCurrent._Base != BaseValue)
-        {
-            using AttributePreviousType = ck::TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
-            auto& PreviousValue = InHandle.template AddOrGet<AttributePreviousType>();
-
-            PreviousValue = AttributePreviousType{BaseValue, FinalValue};
-
-            TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle);
-        }
+        if (PreviousValue.Get_Base() != BaseValue || PreviousValue.Get_Final() != FinalValue)
+        { TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle); }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -136,6 +129,9 @@ namespace ck::detail
         const auto BaseValue = InAttributeCurrent._Base;
         const auto FinalValue = InAttributeCurrent._Final;
 
+        using AttributePreviousType = ck::TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
+        auto& PreviousValue = InHandle.template Get<AttributePreviousType>();
+
         // Clamping on the client side is bypassed because the server might update both 'Max' and 'Current' values.
         // In cases where 'Current' needs to match the new 'Max', if the client receives 'Current' before 'Max' and clamps it,
         // the value could be incorrectly constrained to the previous 'Max' when 'Max' is replicated after clamping.
@@ -144,9 +140,6 @@ namespace ck::detail
             UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InHandle) &&
             TUtils_Attribute<T_DerivedAttributeCurrent>::Get_MayRequireReplicationThisFrame(InHandle))
         {
-            using AttributePreviousType = ck::TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
-            auto& PreviousValue = InHandle.template AddOrGet<AttributePreviousType>();
-
             if (PreviousValue.Get_Base() != BaseValue || PreviousValue.Get_Final() != FinalValue)
             { TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle); }
 
@@ -158,15 +151,8 @@ namespace ck::detail
         InAttributeCurrent._Base = TAttributeMinMax<AttributeDataType>::Min(BaseValue, FinalValue_Max);
         InAttributeCurrent._Final = TAttributeMinMax<AttributeDataType>::Min(FinalValue, FinalValue_Max);
 
-        if (InAttributeCurrent._Final != FinalValue || InAttributeCurrent._Base != BaseValue)
-        {
-            using AttributePreviousType = ck::TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
-            auto& PreviousValue = InHandle.template AddOrGet<AttributePreviousType>();
-
-            PreviousValue = AttributePreviousType{BaseValue, FinalValue};
-
-            TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle);
-        }
+        if (PreviousValue.Get_Base() != BaseValue || PreviousValue.Get_Final() != FinalValue)
+        { TUtils_Attribute<T_DerivedAttributeCurrent>::Request_FireSignals(InHandle); }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
