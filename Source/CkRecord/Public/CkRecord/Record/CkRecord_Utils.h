@@ -500,7 +500,7 @@ namespace ck
         RecordOfEntityExtensions_Utils::DoForEach_Entry_If<IsValid_Policy_IncludePendingKill>(InRecordHandle,
         [&](FCk_Handle_EntityExtension InEntityExtension)
         {
-            ForEach_Entry_If(InEntityExtension, InFunc);
+            ForEach_Entry_If(InEntityExtension, InFunc, InPredicate);
         });
     }
 
@@ -519,7 +519,7 @@ namespace ck
         RecordOfEntityExtensions_Utils::DoForEach_Entry_If<IsValid_Policy_IncludePendingKill>(InRecordHandle,
         [&](FCk_Handle_EntityExtension InEntityExtension)
         {
-            ForEach_Entry_If(InEntityExtension, InFunc);
+            ForEach_Entry_If(InEntityExtension, InFunc, InPredicate);
         });
     }
 
