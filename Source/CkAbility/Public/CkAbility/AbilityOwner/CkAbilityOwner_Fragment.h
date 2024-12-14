@@ -56,6 +56,8 @@ namespace ck
         FGameplayTagCountContainer _PreviousTags;
         FGameplayTagCountContainer _ActiveTags;
 
+        FGameplayTagContainer _CachedActiveExtensionTags;
+
         FGameplayTagContainer _PreviousTags_IncludingAllEntityExtensions;
         FGameplayTagContainer _ActiveTags_IncludingAllEntityExtensions;
 
@@ -98,17 +100,19 @@ namespace ck
             FCk_Handle_AbilityOwner& InAbilityOwner) -> void;
 
         auto
+        Do_CacheExtensionTags(
+            FCk_Handle_AbilityOwner& InAbilityOwner) -> void;
+
+        auto
         DoTry_TagsUpdatedOnExtensionOwner(
             FCk_Handle_AbilityOwner& InAbilityOwner) -> void;
 
-        auto Get_ActiveTagsRecursive(
-            const FCk_Handle_AbilityOwner& InAbilityOwner,
-            bool InIgnoreRelevantTagsFromAbilityOwner) const -> FGameplayTagContainer;
+        // Count of tags in this ability owner with cached extension tags and with RelevantTagsFromAbilityOwner removed
+        auto Get_ActiveTagsForExtensionCache() const -> FGameplayTagContainer;
 
-        auto Get_SpecificActiveTagCountRecursive(
-            const FCk_Handle_AbilityOwner& InAbilityOwner,
-            const FGameplayTag& InTag,
-            bool InIgnoreRelevantTagsFromAbilityOwner) const -> int32;
+        // Count of tags in this ability owner without extensions and with RelevantTagsFromAbilityOwner removed
+        auto Get_SpecificActiveTagCountForExtension(
+            const FGameplayTag& InTag) const -> int32;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
