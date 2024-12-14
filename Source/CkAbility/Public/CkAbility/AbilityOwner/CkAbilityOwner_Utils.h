@@ -257,14 +257,16 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[Ck][AbilityOwner] Get Active Tags With Count")
+              DisplayName="[Ck][AbilityOwner] Get Active Tags With Count",
+              meta=(DevelopmentOnly))
     static TMap<FGameplayTag, int32>
     Get_ActiveTagsWithCount(
         const FCk_Handle_AbilityOwner& InAbilityOwnerHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[Ck][AbilityOwner] Get Specific Active Tag Count")
+              DisplayName="[Ck][AbilityOwner] Get Specific Active Tag Count",
+              meta=(DevelopmentOnly))
     static int32
     Get_SpecificActiveTagCount(
         const FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
