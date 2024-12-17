@@ -1,4 +1,4 @@
-#include "CkActorProxy.h"
+#include "CkActorProxyAsset.h"
 
 #include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
@@ -90,9 +90,8 @@ auto
     BeginPlay()
     -> void
 {
-    const auto World = GetWorld();
-
-    if (GetWorld()->IsGameWorld())
+    if (const auto World = GetWorld();
+        ck::IsValid(World) && World->IsGameWorld())
     { DoSpawnActor(); }
 
     Super::BeginPlay();

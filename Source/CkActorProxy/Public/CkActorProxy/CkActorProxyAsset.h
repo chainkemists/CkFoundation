@@ -8,7 +8,7 @@
 
 #include <GameFramework/Info.h>
 
-#include "CkActorProxy.generated.h"
+#include "CkActorProxyAsset.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
