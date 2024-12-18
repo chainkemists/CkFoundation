@@ -79,6 +79,20 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Attribute_BaseBonusFinal);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_Attribute_Refill_Policy : uint8
+{
+    // Refill rate can be negative or positive
+    Variable UMETA(DisplayName = "Variable Rate"),
+
+    // Refill rate is absolute and ALWAYS goes to 0
+    AlwaysReturnToZero UMETA(DisplayName = "Always Returns to Zero")
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Attribute_Refill_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_Attribute_RefillState : uint8
 {
     Running,
