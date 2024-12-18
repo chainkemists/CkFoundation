@@ -138,6 +138,10 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))
+    ECk_Attribute_Refill_Policy _RefillBehavior = ECk_Attribute_Refill_Policy::Variable;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
     float _FillRate = 0.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -146,6 +150,7 @@ private:
 
 public:
     CK_PROPERTY_GET(_RefillAttributeName);
+    CK_PROPERTY_GET(_RefillBehavior);
     CK_PROPERTY_GET(_FillRate);
     CK_PROPERTY_GET(_StartingState);
 };
@@ -170,10 +175,6 @@ private:
     float _BaseValue = 0.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, InlineEditConditionToggle))
-    bool _EnableRefill = false;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))
     ECk_MinMax _MinMax = ECk_MinMax::None;
 
@@ -184,6 +185,10 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MinMax == ECk_MinMax::Max || _MinMax == ECk_MinMax::MinMax"))
     float _MaxValue = 0.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, InlineEditConditionToggle))
+    bool _EnableRefill = false;
 
     // Non-Replicated fill rate
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

@@ -54,6 +54,7 @@ namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_ReplicatedAttribute);
     CK_DEFINE_ECS_TAG(FTag_IsRefillAttribute);
+    CK_DEFINE_ECS_TAG(FTag_RefillBehaviorAlwaysToZero);
     CK_DEFINE_ECS_TAG(FTag_IsRefillRunning);
     CK_DEFINE_ECS_TAG(FTag_MayRequireClamping);
 

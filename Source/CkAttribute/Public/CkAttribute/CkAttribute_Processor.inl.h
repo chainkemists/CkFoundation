@@ -206,6 +206,35 @@ namespace ck::detail
         );
     }
 
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    auto
+        TProcessor_Attribute_Refill_AlwaysToZero<T_DerivedProcessor, T_DerivedAttributeModifier>::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            AttributeFragmentType& InAttribute) const
+        -> void
+    {
+        auto RefillValue = FMath::Abs(InAttribute.Get_Final() * InDeltaT.Get_Seconds());
+        auto RefillAttributeTarget = RefillAttributeTarget_Utils::Get_StoredEntity_AsTypeSafe<HandleType>(InHandle);
+
+        const auto AttributeValue = TUtils_Attribute<AttributeFragmentType>::Get_FinalValue(RefillAttributeTarget);
+
+        if (FMath::IsNearlyZero(AttributeValue))
+        { return; }
+
+        if (FMath::Abs(AttributeValue) < RefillValue)
+        { RefillValue = FMath::Abs(AttributeValue); }
+
+        TUtils_AttributeModifier<AttributeModifierFragmentType>::Add_NotRevocable
+        (
+            RefillAttributeTarget,
+            AttributeValue > 0 ? -RefillValue : RefillValue,
+            ECk_AttributeModifier_Operation::Add,
+            ECk_AttributeValueChange_SyncPolicy::DoNotSync
+        );
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     template <typename T_DerivedProcessor, typename T_AttributeModifierFragment>
@@ -782,6 +811,11 @@ namespace ck
         : _Refill_Current(InRegistry)
         , _Refill_Min(InRegistry)
         , _Refill_Max(InRegistry)
+
+        , _Refill_AlwaysToZero_Current(InRegistry)
+        , _Refill_AlwaysToZero_Min(InRegistry)
+        , _Refill_AlwaysToZero_Max(InRegistry)
+
         , _Registry(InRegistry)
     {
     }
@@ -797,6 +831,10 @@ namespace ck
         _Refill_Max.Tick(InDeltaT);
         _Refill_Min.Tick(InDeltaT);
         _Refill_Current.Tick(InDeltaT);
+
+        _Refill_AlwaysToZero_Max.Tick(InDeltaT);
+        _Refill_AlwaysToZero_Min.Tick(InDeltaT);
+        _Refill_AlwaysToZero_Current.Tick(InDeltaT);
     }
 }
 

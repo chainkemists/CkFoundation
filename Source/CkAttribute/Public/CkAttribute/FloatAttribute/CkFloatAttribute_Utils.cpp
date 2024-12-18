@@ -94,7 +94,20 @@ auto
             NewAttributeEntity)
         { return NewAttributeEntity; }
 
-        auto RefillAttributeEntity = Add(InAttributeOwnerEntity, FCk_Fragment_FloatAttribute_ParamsData{RefillParams.Get_RefillAttributeName(), RefillParams.Get_FillRate()}, InReplicates);
+        auto RefillAttributeEntity = Add(InAttributeOwnerEntity, FCk_Fragment_FloatAttribute_ParamsData
+            {
+                RefillParams.Get_RefillAttributeName(),
+                RefillParams.Get_RefillBehavior() == ECk_Attribute_Refill_Policy::Variable ? RefillParams.Get_FillRate() : FMath::Abs(RefillParams.Get_FillRate())
+            }, InReplicates);
+
+        if (RefillParams.Get_RefillBehavior() == ECk_Attribute_Refill_Policy::AlwaysReturnToZero)
+        {
+            CK_ENSURE(RefillParams.Get_FillRate() >= 0.0f,
+                TEXT("Refill Rate for FLOAT Attribute [{}] with Absolute Refill Behavior MUST be positive. Current Value [{}]"),
+                NewAttributeEntity, RefillParams.Get_FillRate());
+
+            RefillAttributeEntity.Add<ck::FTag_RefillBehaviorAlwaysToZero>();
+        }
 
         auto RefillAttributeEntityTypeSafe = UCk_Utils_FloatAttributeRefill_UE::Add(RefillAttributeEntity, RefillParams.Get_StartingState());
 
