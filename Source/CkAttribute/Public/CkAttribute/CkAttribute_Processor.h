@@ -197,6 +197,7 @@ namespace ck::detail
             typename T_DerivedAttributeModifier::AttributeFragmentType::HandleType,
             typename T_DerivedAttributeModifier::AttributeFragmentType,
             FTag_IsRefillAttribute,
+            TExclude<FTag_RefillBehaviorAlwaysToZero>,
             FTag_IsRefillRunning,
             CK_IGNORE_PENDING_KILL>
     {
@@ -209,7 +210,44 @@ namespace ck::detail
         using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
         using HandleType                    = typename AttributeFragmentType::HandleType;
         using ThisType                      = TProcessor_Attribute_Refill<T_DerivedProcessor, T_DerivedAttributeModifier>;
-        using Super                         = ck_exp::TProcessor<ThisType, HandleType, AttributeFragmentType, FTag_IsRefillAttribute, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using Super                         = ck_exp::TProcessor<ThisType, HandleType, AttributeFragmentType, FTag_IsRefillAttribute, TExclude<FTag_RefillBehaviorAlwaysToZero>, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
+        using TimeType                      = typename Super::TimeType;
+
+    public:
+        CK_USING_BASE_CONSTRUCTORS(Super);
+
+    public:
+        auto ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            AttributeFragmentType& InAttribute) const -> void;
+
+    public:
+        CK_ENABLE_SFINAE_THIS(T_DerivedProcessor);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    template <typename T_DerivedProcessor, typename T_DerivedAttributeModifier>
+    class TProcessor_Attribute_Refill_AlwaysToZero : public ck_exp::TProcessor<
+            TProcessor_Attribute_Refill_AlwaysToZero<T_DerivedProcessor, T_DerivedAttributeModifier>,
+            typename T_DerivedAttributeModifier::AttributeFragmentType::HandleType,
+            typename T_DerivedAttributeModifier::AttributeFragmentType,
+            FTag_IsRefillAttribute,
+            FTag_RefillBehaviorAlwaysToZero,
+            FTag_IsRefillRunning,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = typename FTag_IsRefillRunning;
+
+    public:
+        using AttributeModifierFragmentType = T_DerivedAttributeModifier;
+        using AttributeFragmentType         = typename AttributeModifierFragmentType::AttributeFragmentType;
+        using AttributeDataType             = typename AttributeFragmentType::AttributeDataType;
+        using HandleType                    = typename AttributeFragmentType::HandleType;
+        using ThisType                      = TProcessor_Attribute_Refill_AlwaysToZero<T_DerivedProcessor, T_DerivedAttributeModifier>;
+        using Super                         = ck_exp::TProcessor<ThisType, HandleType, AttributeFragmentType, FTag_IsRefillAttribute, FTag_RefillBehaviorAlwaysToZero, MarkedDirtyBy, CK_IGNORE_PENDING_KILL>;
         using TimeType                      = typename Super::TimeType;
 
     public:
@@ -893,6 +931,10 @@ namespace ck
         using TInternalProcessorType = detail::TProcessor_Attribute_Refill<
             TProcessor_Attribute_Refill, T_DerivedAttributeModifier<T_Component>>;
 
+        template <ECk_MinMaxCurrent T_Component>
+        using TInternalProcessorType_AlwaysToZero = detail::TProcessor_Attribute_Refill_AlwaysToZero<
+            TProcessor_Attribute_Refill, T_DerivedAttributeModifier<T_Component>>;
+
     public:
         explicit
         TProcessor_Attribute_Refill(
@@ -906,6 +948,10 @@ namespace ck
         TInternalProcessorType<ECk_MinMaxCurrent::Current> _Refill_Current;
         TInternalProcessorType<ECk_MinMaxCurrent::Min> _Refill_Min;
         TInternalProcessorType<ECk_MinMaxCurrent::Max> _Refill_Max;
+
+        TInternalProcessorType_AlwaysToZero<ECk_MinMaxCurrent::Current> _Refill_AlwaysToZero_Current;
+        TInternalProcessorType_AlwaysToZero<ECk_MinMaxCurrent::Min> _Refill_AlwaysToZero_Min;
+        TInternalProcessorType_AlwaysToZero<ECk_MinMaxCurrent::Max> _Refill_AlwaysToZero_Max;
 
     private:
         RegistryType _Registry;
