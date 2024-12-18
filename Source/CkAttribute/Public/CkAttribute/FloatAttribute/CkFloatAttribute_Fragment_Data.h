@@ -173,11 +173,6 @@ private:
               meta = (AllowPrivateAccess = true, InlineEditConditionToggle))
     bool _EnableRefill = false;
 
-    // Non-Replicated fill rate
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess, EditCondition = "_EnableRefill"))
-    FCk_Fragment_FloatAttributeRefill_ParamsData _RefillParams;
-
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))
     ECk_MinMax _MinMax = ECk_MinMax::None;
@@ -189,6 +184,11 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, EditConditionHides, EditCondition = "_MinMax == ECk_MinMax::Max || _MinMax == ECk_MinMax::MinMax"))
     float _MaxValue = 0.0f;
+
+    // Non-Replicated fill rate
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess, EditCondition = "_EnableRefill"))
+    FCk_Fragment_FloatAttributeRefill_ParamsData _RefillParams;
 
 public:
     auto Get_MinValue() const -> float;
