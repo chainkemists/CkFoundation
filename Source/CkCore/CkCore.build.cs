@@ -27,6 +27,7 @@ public class CkCore : CkModuleRules
                 "MessageLog",
                 "NetCore",
                 "StructUtils",
+                "ToolWidgets",
 
                 "IrisCore",
 
