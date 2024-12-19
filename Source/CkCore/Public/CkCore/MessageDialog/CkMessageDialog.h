@@ -104,6 +104,15 @@ public:
     CK_GENERATED_BODY(UCk_Utils_MessageDialog_UE);
 
 public:
+    struct DialogButton
+    {
+        FText Name;
+        FSimpleDelegate OnClicked;
+        bool IsPrimary = false;
+        bool ShouldFocus = false;
+    };
+
+public:
     UFUNCTION(BlueprintCallable,
         DisplayName = "[Ck] Open Message Dialog (Ok)",
         Category = "Ck|Utils|MessageDialog")
@@ -167,6 +176,13 @@ public:
     YesNoYesAll(
         FText InMessage,
         FText InTitle = FText::GetEmpty());
+
+public:
+    static int32
+    CustomDialog(
+        const FText& InMessage,
+        const FText& InTitle,
+        const TArray<DialogButton> InButtons);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
