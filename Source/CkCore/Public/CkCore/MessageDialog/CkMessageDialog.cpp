@@ -1,8 +1,10 @@
 #include "CkMessageDialog.h"
 
-#include <Misc/MessageDialog.h>
-
+#include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Ensure/CkEnsure.h"
+
+#include <Dialog/SCustomDialog.h>
+#include <Misc/MessageDialog.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -271,6 +273,37 @@ auto
             return ECk_MessageDialog_YesNoYesAll::No;
         }
     }
+}
+
+auto
+    UCk_Utils_MessageDialog_UE::
+    CustomDialog(
+        const FText& InMessage,
+        const FText& InTitle,
+        const TArray<DialogButton> InButtons)
+    -> int32
+{
+    CK_ENSURE_IF_NOT(NOT InButtons.IsEmpty(), TEXT("Cannot create Custom Dialog with no buttons"))
+    { return INDEX_NONE; }
+
+    const auto& Buttons = ck::algo::Transform<TArray<SCustomDialog::FButton>>(InButtons, [&](const DialogButton& InButton)
+    {
+        auto Button = SCustomDialog::FButton{InButton.Name, InButton.OnClicked};
+        Button.bIsPrimary = InButton.IsPrimary;
+        Button.bShouldFocus = InButton.ShouldFocus;
+
+        return Button;
+    });
+
+    const auto Dialog = SNew(SCustomDialog)
+        .Title(InTitle)
+        .Content()
+        [
+            SNew(STextBlock).Text(InMessage)
+        ]
+        .Buttons(Buttons);
+
+    return Dialog->ShowModal();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
