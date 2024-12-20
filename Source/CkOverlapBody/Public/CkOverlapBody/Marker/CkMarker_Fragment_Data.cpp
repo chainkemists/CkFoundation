@@ -40,15 +40,15 @@ auto
 
 FCk_Fragment_Marker_ParamsData::
     FCk_Fragment_Marker_ParamsData(
-        FGameplayTag              InMarkerName,
-        FCk_Marker_ShapeInfo      InShapeParams,
-        FCk_Marker_PhysicsInfo    InPhysicsParams,
+        FGameplayTag InMarkerName,
+        FCk_Marker_ShapeInfo InShapeParams,
+        FCk_Marker_PhysicsInfo InPhysicsParams,
         FCk_Marker_AttachmentInfo InAttachmentParams,
-        FTransform                InRelativeTransform,
-        ECk_EnableDisable         InStartingState,
-        ECk_Net_ReplicationType   InReplicationType,
-        bool                      InShowDebug,
-        FCk_Marker_DebugInfo      InDebugParams)
+        FTransform InRelativeTransform,
+        ECk_EnableDisable InStartingState,
+        ECk_Net_ReplicationType InReplicationType,
+        bool InShowDebug,
+        FCk_Marker_DebugInfo InDebugParams)
     : _MarkerName(InMarkerName)
     , _ShapeParams(InShapeParams)
     , _PhysicsParams(InPhysicsParams)

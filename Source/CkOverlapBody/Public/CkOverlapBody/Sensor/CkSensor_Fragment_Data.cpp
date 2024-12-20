@@ -394,7 +394,7 @@ auto
 
 auto
     FCk_Sensor_MarkerOverlaps::
-    Process_Add(
+    Add(
         const SensorOverlapInfoType& InOverlap)
     -> ThisType&
 {
@@ -405,7 +405,7 @@ auto
 
 auto
     FCk_Sensor_MarkerOverlaps::
-    Process_Remove(
+    Remove(
         const SensorOverlapInfoType& InOverlap)
     -> ThisType&
 {
@@ -416,7 +416,7 @@ auto
 
 auto
     FCk_Sensor_MarkerOverlaps::
-    Process_RemoveOverlapWithMarker(
+    RemoveOverlapWithMarker(
         const FCk_Marker_BasicDetails& InMarkerDetails)
     -> ThisType&
 {
@@ -438,7 +438,7 @@ auto
 
 auto
     FCk_Sensor_NonMarkerOverlaps::
-    Process_Add(
+    Add(
         const SensorOverlapInfoType& InOverlap)
     -> ThisType&
 {
@@ -449,7 +449,7 @@ auto
 
 auto
     FCk_Sensor_NonMarkerOverlaps::
-    Process_Remove(
+    Remove(
         const SensorOverlapInfoType& InOverlap)
     -> ThisType&
 {

@@ -228,13 +228,13 @@ public:
     using SensorOverlapInfoList = TMap<FCk_Marker_BasicDetails, SensorOverlapInfoType>;
 
 public:
-    auto Process_Add(
+    auto Add(
         const SensorOverlapInfoType& InOverlap) -> ThisType&;
 
-    auto Process_Remove(
+    auto Remove(
         const SensorOverlapInfoType& InOverlap) -> ThisType&;
 
-    auto Process_RemoveOverlapWithMarker(
+    auto RemoveOverlapWithMarker(
         const FCk_Marker_BasicDetails& InMarkerDetails) -> ThisType&;
 
     auto Get_HasOverlapWithMarker(
@@ -267,10 +267,10 @@ public:
     using SensorOverlapInfoList = TSet<SensorOverlapInfoType>;
 
 public:
-    auto Process_Add(
+    auto Add(
         const SensorOverlapInfoType& InOverlap) -> ThisType&;
 
-    auto Process_Remove(
+    auto Remove(
         const SensorOverlapInfoType& InOverlap) -> ThisType&;
 
 private:
