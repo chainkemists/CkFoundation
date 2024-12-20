@@ -490,6 +490,10 @@ auto
         int32 InNumOfDependents)
     -> void
 {
+    CK_ENSURE_IF_NOT(GetWorld()->GetNetMode() != NM_Client,
+        TEXT("Setting the ExpectedNumberOfDependentReplicationDrivers is only allowed on the Server.{}"), ck::Context(this))
+    { return; }
+
     _ExpectedNumberOfDependentReplicationDrivers = InNumOfDependents;
     MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _ExpectedNumberOfDependentReplicationDrivers, this);
 }

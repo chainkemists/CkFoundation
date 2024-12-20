@@ -1135,6 +1135,9 @@ auto
         const ck::FFragment_AbilityOwner_Params& InParams)
     -> void
 {
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle))
+    { return; }
+
     if (NOT InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
     { return; }
 
