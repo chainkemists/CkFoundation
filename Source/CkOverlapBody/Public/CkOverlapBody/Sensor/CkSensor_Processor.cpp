@@ -357,7 +357,7 @@ namespace ck
 
         const auto& OverlapDetails = InRequest.Get_OverlapDetails();
 
-        InCurrentComp._CurrentMarkerOverlaps.Process_Add(FCk_Sensor_MarkerOverlapInfo{ OverlappedMarkerDetails, OverlapDetails });
+        InCurrentComp._CurrentMarkerOverlaps.Add(FCk_Sensor_MarkerOverlapInfo{ OverlappedMarkerDetails, OverlapDetails });
 
         const auto& OnBeginOverlapPayload = FCk_Sensor_Payload_OnBeginOverlap
         {
@@ -406,7 +406,7 @@ namespace ck
 
         const auto& OverlapDetails = InRequest.Get_OverlapDetails();
 
-        InCurrentComp._CurrentMarkerOverlaps.Process_RemoveOverlapWithMarker(OverlappedMarkerDetails);
+        InCurrentComp._CurrentMarkerOverlaps.RemoveOverlapWithMarker(OverlappedMarkerDetails);
 
         const auto& OnEndOverlapPayload = FCk_Sensor_Payload_OnEndOverlap
         {
@@ -443,7 +443,7 @@ namespace ck
             OverlapDetails
         );
 
-        InCurrentComp._CurrentNonMarkerOverlaps.Process_Add(NonMarkerOverlapInfo);
+        InCurrentComp._CurrentNonMarkerOverlaps.Add(NonMarkerOverlapInfo);
 
         const auto& OnBeginOverlapPayload = FCk_Sensor_Payload_OnBeginOverlap_NonMarker
         {
@@ -485,7 +485,7 @@ namespace ck
             OverlapDetails
         );
 
-        InCurrentComp._CurrentNonMarkerOverlaps.Process_Remove(NonMarkerOverlapInfo);
+        InCurrentComp._CurrentNonMarkerOverlaps.Remove(NonMarkerOverlapInfo);
 
         const auto& OnEndOverlapPayload = FCk_Sensor_Payload_OnEndOverlap_NonMarker
         {
