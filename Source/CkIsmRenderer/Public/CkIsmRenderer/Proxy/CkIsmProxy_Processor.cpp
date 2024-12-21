@@ -60,14 +60,16 @@ namespace ck
 
         const auto& Params = InParams.Get_Params();
         const auto& RendererName = Params.Get_RendererName();
-        const auto MeshScale = [&]
+        const auto& RelativeTransform = [&]
         {
-            const auto& Scale = Params.Get_MeshScale();
-            CK_ENSURE_IF_NOT(NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(Scale),
-                TEXT("MeshScale has one or more axis nearly equal to 0. Setting it to 1 in non-shipping build"), Scale)
-            { return FVector::OneVector; }
+            const auto& ProxyRelativeTransform = Params.Get_RelativeTransform();
+            const auto& ProxyRelativeScale = ProxyRelativeTransform.GetScale3D();
 
-            return Scale;
+            CK_ENSURE_IF_NOT(NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(ProxyRelativeScale),
+                TEXT("IsmProxy Relative Scale has one or more axis nearly equal to 0. Setting it to 1 in non-shipping build"), ProxyRelativeScale)
+            { return FTransform{ ProxyRelativeTransform.GetRotation(), ProxyRelativeTransform.GetLocation(), FVector::OneVector }; }
+
+            return ProxyRelativeTransform;
         }();
 
         const auto& MaybeFound = Renderers.Find(RendererName);
@@ -86,13 +88,12 @@ namespace ck
             TEXT("Ism Proxy Entity [{}] does NOT have the required Transform feature. Unable to Setup the IsmProxy"), InHandle)
         { return; }
 
-        auto CurrentTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InHandle);
-        CurrentTransform.SetScale3D(MeshScale);
+        const auto& CurrentTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InHandle);
+        const auto& CombinedTransform = CurrentTransform * RelativeTransform;
 
-        if (InHandle.Has<FTag_IsmProxy_Dynamic>())
-        { RendererToUse[static_cast<int32>(ECk_Mobility::Movable)]->AddInstance(CurrentTransform); }
-        else
-        { RendererToUse[static_cast<int32>(ECk_Mobility::Static)]->AddInstance(CurrentTransform); }
+        const auto& MeshMobility = InHandle.Has<FTag_IsmProxy_Dynamic>() ? ECk_Mobility::Movable : ECk_Mobility::Static;
+
+        RendererToUse[static_cast<int32>(MeshMobility)]->AddInstance(CombinedTransform);
 
         InHandle.Remove<MarkedDirtyBy>();
     }
@@ -111,14 +112,16 @@ namespace ck
 
         const auto& Params = InParams.Get_Params();
         const auto& RendererName = Params.Get_RendererName();
-        const auto MeshScale = [&]
+        const auto& RelativeTransform = [&]
         {
-            const auto& Scale = Params.Get_MeshScale();
-            CK_ENSURE_IF_NOT(NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(Scale),
-                TEXT("MeshScale has one or more axis nearly equal to 0. Setting it to 1 in non-shipping build"), Scale)
-            { return FVector::OneVector; }
+            const auto& ProxyRelativeTransform = Params.Get_RelativeTransform();
+            const auto& ProxyRelativeScale = ProxyRelativeTransform.GetScale3D();
 
-            return Scale;
+            CK_ENSURE_IF_NOT(NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(ProxyRelativeScale),
+                TEXT("IsmProxy Relative Scale has one or more axis nearly equal to 0. Setting it to 1 in non-shipping build"), ProxyRelativeScale)
+            { return FTransform{ ProxyRelativeTransform.GetRotation(), ProxyRelativeTransform.GetLocation(), FVector::OneVector }; }
+
+            return ProxyRelativeTransform;
         }();
 
         const auto& MaybeFound = Renderers.Find(RendererName);
@@ -137,13 +140,11 @@ namespace ck
             TEXT("Ism Proxy Entity [{}] does NOT have the required Transform feature. Unable to Setup the IsmProxy"), InHandle)
         { return; }
 
-        auto CurrentTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InHandle);
-        CurrentTransform.SetScale3D(MeshScale);
+        const auto& CurrentTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InHandle);
+        const auto& CombinedTransform = CurrentTransform * RelativeTransform;
 
-        RendererToUse[static_cast<int32>(ECk_Mobility::Movable)]->AddInstance(CurrentTransform);
+        RendererToUse[static_cast<int32>(ECk_Mobility::Movable)]->AddInstance(CombinedTransform);
     }
-
-    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------
