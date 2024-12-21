@@ -39,10 +39,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKISMRENDERER_API FFragment_AntAgent_Renderer_Current
+    struct CKISMRENDERER_API FFragment_IsmRenderer_Current
     {
     public:
-        CK_GENERATED_BODY(FFragment_AntAgent_Renderer_Current);
+        CK_GENERATED_BODY(FFragment_IsmRenderer_Current);
 
     public:
         friend class FProcessor_IsmRenderer_Setup;
@@ -74,6 +74,35 @@ namespace ck
         RequestList _Requests;
     };
 
+}
+
+namespace ck
+{
+    CK_DEFINE_ECS_TAG(FTag_IsmProxy_NeedsSetup);
+    CK_DEFINE_ECS_TAG(FTag_IsmProxy_Dynamic);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // TODO: Move into Agent specific file
+    struct CKISMRENDERER_API FFragment_IsmProxy_Params
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_IsmProxy_Params);
+
+    public:
+        using ParamsType = FCk_Fragment_IsmProxy_ParamsData;
+
+    private:
+        ParamsType _Params;
+
+    public:
+        CK_PROPERTY_GET(_Params);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_IsmProxy_Params, _Params);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------
