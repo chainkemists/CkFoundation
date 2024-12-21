@@ -31,12 +31,12 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FVector _MeshScale = FVector::OneVector;
+    FTransform _RelativeTransform = FTransform::Identity;
 
 public:
     CK_PROPERTY_GET(_RendererName);
     CK_PROPERTY_GET(_Mobility);
-    CK_PROPERTY_GET(_MeshScale);
+    CK_PROPERTY_GET(_RelativeTransform);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
