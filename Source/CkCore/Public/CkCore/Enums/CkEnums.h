@@ -45,6 +45,18 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_Mobility : uint8
+{
+    Static,
+    Stationary,
+    Movable
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Mobility);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_SourceOrTarget : uint8
 {
     Source,
