@@ -58,6 +58,9 @@ auto
     InHandle.Add<ck::FFragment_IsmProxy_Params>(InParams);
     InHandle.Add<ck::FTag_IsmProxy_NeedsSetup>();
 
+    if (InParams.Get_Mobility() == ECk_Mobility::Movable)
+    { InHandle.Add<ck::FTag_IsmProxy_Dynamic>(); }
+
     return Cast(InHandle);
 }
 
