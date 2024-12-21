@@ -17,7 +17,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Renderer|ISM",
+              Category = "Ck|Utils|IsmRenderer",
               DisplayName="[Ck][IsmRenderer] Add Feature")
     static FCk_Handle_IsmRenderer
     Add(
@@ -25,7 +25,7 @@ public:
         const FCk_Fragment_IsmRenderer_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Renderer|ISM",
+              Category = "Ck|Utils|IsmRenderer",
               DisplayName="[Ck][IsmRenderer] Has Feature")
     static bool
     Has(
@@ -33,7 +33,7 @@ public:
 
 private:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Renderer|ISM",
+              Category = "Ck|Utils|IsmRenderer",
               DisplayName="[Ck][IsmRenderer] Cast",
               meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_IsmRenderer
@@ -42,7 +42,7 @@ private:
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Renderer|ISM",
+              Category = "Ck|Utils|IsmRenderer",
               DisplayName="[Ck][IsmRenderer] Handle -> Ism Renderer Handle",
               meta = (CompactNodeTitle = "<AsIsmRenderer>", BlueprintAutocast))
     static FCk_Handle_IsmRenderer
@@ -51,7 +51,7 @@ private:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Renderer|ISM",
+              Category = "Ck|Utils|IsmRenderer",
               DisplayName="[Ck][IsmRenderer] Request Render Instance",
               meta = (AutoCreateRefTerm = "InDelegate"))
     static FCk_Handle_IsmRenderer
@@ -73,7 +73,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Proxy|ISM",
+              Category = "Ck|Utils|IsmRenderer|Proxy",
               DisplayName="[Ck][IsmProxy] Add Feature")
     static FCk_Handle_IsmProxy
     Add(
@@ -81,7 +81,7 @@ public:
         const FCk_Fragment_IsmProxy_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Proxy|ISM",
+              Category = "Ck|Utils|IsmRenderer|Proxy",
               DisplayName="[Ck][IsmProxy] Has Feature")
     static bool
     Has(
@@ -89,7 +89,7 @@ public:
 
 private:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Proxy|ISM",
+              Category = "Ck|Utils|IsmRenderer|Proxy",
               DisplayName="[Ck][IsmProxy] Cast",
               meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_IsmProxy
@@ -98,7 +98,7 @@ private:
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Proxy|ISM",
+              Category = "Ck|Utils|IsmRenderer|Proxy",
               DisplayName="[Ck][IsmProxy] Handle -> IsmProxy Handle",
               meta = (CompactNodeTitle = "<AsIsmProxy>", BlueprintAutocast))
     static FCk_Handle_IsmProxy
