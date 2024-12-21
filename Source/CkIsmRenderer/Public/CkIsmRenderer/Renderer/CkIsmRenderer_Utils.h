@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkIsmRenderer/CkIsmRenderer_Fragment_Data.h"
+#include "CkIsmRenderer/Renderer/CkIsmRenderer_Fragment_Data.h"
 
 #include "CkIsmRenderer_Utils.generated.h"
 
@@ -43,7 +43,7 @@ private:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|IsmRenderer",
-              DisplayName="[Ck][IsmRenderer] Handle -> Ism Renderer Handle",
+              DisplayName="[Ck][IsmRenderer] Handle -> IsmRenderer Handle",
               meta = (CompactNodeTitle = "<AsIsmRenderer>", BlueprintAutocast))
     static FCk_Handle_IsmRenderer
     DoCastChecked(
@@ -61,47 +61,3 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-
-UCLASS()
-class CKISMRENDERER_API UCk_Utils_IsmProxy_UE : public UBlueprintFunctionLibrary
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(UCk_Utils_IsmProxy_UE);
-    CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_IsmProxy);
-
-public:
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|IsmRenderer|Proxy",
-              DisplayName="[Ck][IsmProxy] Add Feature")
-    static FCk_Handle_IsmProxy
-    Add(
-        UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_IsmProxy_ParamsData& InParams);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IsmRenderer|Proxy",
-              DisplayName="[Ck][IsmProxy] Has Feature")
-    static bool
-    Has(
-        const FCk_Handle& InHandle);
-
-private:
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|IsmRenderer|Proxy",
-              DisplayName="[Ck][IsmProxy] Cast",
-              meta = (ExpandEnumAsExecs = "OutResult"))
-    static FCk_Handle_IsmProxy
-    DoCast(
-        UPARAM(ref) FCk_Handle& InHandle,
-        ECk_SucceededFailed& OutResult);
-
-    UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IsmRenderer|Proxy",
-              DisplayName="[Ck][IsmProxy] Handle -> IsmProxy Handle",
-              meta = (CompactNodeTitle = "<AsIsmProxy>", BlueprintAutocast))
-    static FCk_Handle_IsmProxy
-    DoCastChecked(
-        FCk_Handle InHandle);
-};

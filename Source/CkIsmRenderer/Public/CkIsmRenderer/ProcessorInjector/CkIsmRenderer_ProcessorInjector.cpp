@@ -1,6 +1,7 @@
 #include "CkIsmRenderer_ProcessorInjector.h"
 
-#include "CkIsmRenderer/CkIsmRenderer_Processor.h"
+#include "CkIsmRenderer/Renderer/CkIsmRenderer_Processor.h"
+#include "CkIsmRenderer/Proxy/CkIsmProxy_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -8,7 +9,7 @@ auto
     UCk_IsmRenderer_ProcessorInjector_UE::
     DoInjectProcessors(
         EcsWorldType& InWorld)
-        -> void
+    -> void
 {
     InWorld.Add<ck::FProcessor_IsmRenderer_Setup>(InWorld.Get_Registry());
 
