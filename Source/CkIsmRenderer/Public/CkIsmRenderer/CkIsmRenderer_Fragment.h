@@ -48,10 +48,12 @@ namespace ck
         friend class FProcessor_IsmRenderer_Setup;
 
     private:
-        TWeakObjectPtr<UInstancedStaticMeshComponent> _IsmComponent;
+        TWeakObjectPtr<UInstancedStaticMeshComponent> _IsmComponent_Static;
+        TWeakObjectPtr<UInstancedStaticMeshComponent> _IsmComponent_Movable;
 
     public:
-        CK_PROPERTY_GET(_IsmComponent);
+        CK_PROPERTY_GET(_IsmComponent_Static);
+        CK_PROPERTY_GET(_IsmComponent_Movable);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
