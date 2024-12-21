@@ -6,7 +6,7 @@ auto
     UCk_Relationship_ProcessorInjector_UE::
     DoInjectProcessors(
         EcsWorldType& InWorld)
-        -> void
+    -> void
 {
 }
 

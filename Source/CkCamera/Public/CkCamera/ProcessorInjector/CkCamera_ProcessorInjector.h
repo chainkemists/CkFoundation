@@ -2,12 +2,12 @@
 
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-#include "CkResourceLoaderProcessorInjector.generated.h"
+#include "CkCamera_ProcessorInjector.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKRESOURCELOADER_API UCk_ResourceLoader_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base_UE
+class CKCAMERA_API UCk_Camera_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 

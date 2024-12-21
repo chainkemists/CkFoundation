@@ -8,7 +8,7 @@ auto
     UCk_Graphics_ProcessorInjector_UE::
     DoInjectProcessors(
         EcsWorldType& InWorld)
-        -> void
+    -> void
 {
     InWorld.Add<ck::FProcessor_RenderStatus_HandleRequests>(InWorld.Get_Registry());
 }

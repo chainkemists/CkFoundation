@@ -8,7 +8,7 @@ auto
     UCk_EntityCollection_ProcessorInjector_UE::
     DoInjectProcessors(
         EcsWorldType& InWorld)
-        -> void
+    -> void
 {
     InWorld.Add<ck::FProcessor_EntityCollection_StorePrevious>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_EntityCollection_HandleRequests>(InWorld.Get_Registry());

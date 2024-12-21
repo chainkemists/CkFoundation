@@ -9,7 +9,7 @@
 
 namespace ck
 {
-	class CKINTERACTION_API FProcessor_InteractSource_Setup : public ck_exp::TProcessor<
+    class CKINTERACTION_API FProcessor_InteractSource_Setup : public ck_exp::TProcessor<
             FProcessor_InteractSource_Setup,
             FCk_Handle_InteractSource,
             FFragment_InteractSource_Params,
@@ -25,12 +25,12 @@ namespace ck
 
     public:
         auto
-    	DoTick(
+        DoTick(
             TimeType InDeltaT) -> void;
 
     public:
         auto
-    	ForEachEntity(
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractSource_Params& InParams,
@@ -53,12 +53,12 @@ namespace ck
 
     public:
         auto
-    	DoTick(
+        DoTick(
             TimeType InDeltaT) -> void;
 
     public:
         auto
-    	ForEachEntity(
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractSource_Params& InParams,
@@ -73,7 +73,7 @@ namespace ck
             FFragment_InteractSource_Current& InCurrent,
             const FCk_Request_InteractSource_StartInteraction& InRequest) const -> void;
 
-    	auto
+        auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_InteractSource_Params& InParams,
@@ -81,15 +81,15 @@ namespace ck
             const FCk_Request_InteractSource_CancelInteraction& InRequest) const -> void;
 
     private:
-    	auto
-    	OnInteractionFinished(
-    		FCk_Handle_Interaction InteractionHandle,
-    		ECk_SucceededFailed SucceededFailed) const -> void;
+        auto
+        OnInteractionFinished(
+            FCk_Handle_Interaction InteractionHandle,
+            ECk_SucceededFailed SucceededFailed) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-	class CKINTERACTION_API FProcessor_InteractSource_Teardown : public ck_exp::TProcessor<
+    class CKINTERACTION_API FProcessor_InteractSource_Teardown : public ck_exp::TProcessor<
             FProcessor_InteractSource_Teardown,
             FCk_Handle_InteractSource,
             FFragment_InteractSource_Params,
@@ -101,14 +101,14 @@ namespace ck
 
     public:
         auto
-    	ForEachEntity(
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractSource_Params& InParams,
             FFragment_InteractSource_Current& InComp) const -> void;
     };
 
-	// --------------------------------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------------------
 
     class CKINTERACTION_API FProcessor_InteractSource_Replicate : public ck_exp::TProcessor<
             FProcessor_InteractSource_Replicate,
