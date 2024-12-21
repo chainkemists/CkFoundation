@@ -102,9 +102,9 @@ namespace ck
 
             const auto EntityId = Agent.GetFlag();
             const auto RendererEntity = _Registry.Get_ValidEntity(static_cast<FCk_Entity::IdType>(EntityId));
-            auto RendererHandle = UCk_Utils_AntAgent_Renderer_UE::Cast(ck::MakeHandle(RendererEntity, _Registry));
+            auto RendererHandle = UCk_Utils_IsmRenderer_UE::Cast(ck::MakeHandle(RendererEntity, _Registry));
 
-            UCk_Utils_AntAgent_Renderer_UE::Request_RenderInstance(RendererHandle,
+            UCk_Utils_IsmRenderer_UE::Request_RenderInstance(RendererHandle,
                 FCk_Request_IsmRenderer_NewInstance{}.Set_Transform(FTransform{Center}));
         }
     }
