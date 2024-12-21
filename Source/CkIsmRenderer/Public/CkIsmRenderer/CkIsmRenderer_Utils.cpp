@@ -7,7 +7,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_AntAgent_Renderer_UE, FCk_Handle_IsmRenderer,
-    ck::FFragment_AntAgent_Renderer_Current, ck::FFragment_IsmRenderer_Params)
+    ck::FFragment_IsmRenderer_Current, ck::FFragment_IsmRenderer_Params)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -40,8 +40,29 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_IsmRenderer_Params>(InParams);
-    InHandle.Add<ck::FFragment_AntAgent_Renderer_Current>();
+    InHandle.Add<ck::FFragment_IsmRenderer_Current>();
     InHandle.Add<ck::FTag_IsmRenderer_NeedsSetup>();
 
     return Cast(InHandle);
 }
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_IsmProxy_UE::
+    Add(
+        FCk_Handle& InHandle,
+        const FCk_Fragment_IsmProxy_ParamsData& InParams)
+    -> FCk_Handle_IsmProxy
+{
+    InHandle.Add<ck::FFragment_IsmProxy_Params>(InParams);
+    InHandle.Add<ck::FTag_IsmProxy_NeedsSetup>();
+
+    return Cast(InHandle);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_IsmProxy_UE, FCk_Handle_IsmProxy, ck::FFragment_IsmProxy_Params)
+
+// --------------------------------------------------------------------------------------------------------------------
