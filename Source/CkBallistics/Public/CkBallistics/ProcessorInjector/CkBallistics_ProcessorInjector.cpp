@@ -8,7 +8,7 @@ auto
     UCk_Ballistics_ProcessorInjector_UE::
     DoInjectProcessors(
         EcsWorldType& InWorld)
-        -> void
+    -> void
 {
     InWorld.Add<ck::FProcessor_Ballistics_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Ballistics_HandleRequests>(InWorld.Get_Registry());

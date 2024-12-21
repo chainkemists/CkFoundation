@@ -2,7 +2,7 @@
 
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-#include "CkTimerProcessorInjector.generated.h"
+#include "CkTimer_ProcessorInjector.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

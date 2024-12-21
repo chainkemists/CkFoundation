@@ -1,4 +1,4 @@
-#include "CkAttributeProcessorInjector.h"
+#include "CkAttribute_ProcessorInjector.h"
 
 #include "CkAttribute/ByteAttribute/CkByteAttribute_Processor.h"
 #include "CkAttribute/FloatAttribute/CkFloatAttribute_Processor.h"
@@ -22,7 +22,8 @@ auto
 auto
     UCk_Attribute_ProcessorInjector_Refill::
     DoInjectProcessors(
-        EcsWorldType& InWorld) -> void
+        EcsWorldType& InWorld)
+    -> void
 {
     InWorld.Add<ck::FProcessor_FloatAttribute_Refill>(InWorld.Get_Registry());
 }

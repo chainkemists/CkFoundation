@@ -8,9 +8,8 @@ auto
     UCk_Substep_ProcessorInjector::
     DoInjectProcessors(
         EcsWorldType& InWorld)
-        -> void
+    -> void
 {
-    // Add Processors here
     InWorld.Add<ck::FProcessor_Substep_Update>(InWorld.Get_Registry());
 }
 

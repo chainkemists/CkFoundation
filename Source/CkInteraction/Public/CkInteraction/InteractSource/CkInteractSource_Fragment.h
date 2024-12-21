@@ -60,11 +60,11 @@ namespace ck
         friend class UCk_Utils_InteractSource_UE;
 
     private:
-    	// This is also used as a set of interaction handles
-    	TMap<FCk_Handle_Interaction, UUtils_Signal_Interaction_OnInteractionFinished::ConnectionType> _InteractionFinishedSignals;
+        // This is also used as a set of interaction handles
+        TMap<FCk_Handle_Interaction, UUtils_Signal_Interaction_OnInteractionFinished::ConnectionType> _InteractionFinishedSignals;
 
-    	// Needed so we know if there will be an interaction that prevents us from starting a new one until we process request to start interaction
-    	TArray<FCk_Handle_Interaction> _InteractionsPendingAdd;
+        // Needed so we know if there will be an interaction that prevents us from starting a new one until we process request to start interaction
+        TArray<FCk_Handle_Interaction> _InteractionsPendingAdd;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -79,10 +79,10 @@ namespace ck
         friend class UCk_Utils_InteractSource_UE;
 
     public:
-    	using RequestType = std::variant
+        using RequestType = std::variant
         <
             FCk_Request_InteractSource_StartInteraction,
-    		FCk_Request_InteractSource_CancelInteraction
+            FCk_Request_InteractSource_CancelInteraction
         >;
         using RequestList = TArray<RequestType>;
 
@@ -93,16 +93,16 @@ namespace ck
         CK_PROPERTY_GET(_Requests);
     };
 
-	// --------------------------------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------------------
 
-	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKINTERACTION_API,
         InteractSource_OnNewInteraction,
         FCk_Delegate_InteractSource_OnNewInteraction_MC,
         FCk_Handle_InteractSource,
         FCk_Handle_Interaction);
 
-	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKINTERACTION_API,
         InteractSource_OnInteractionFinished,
         FCk_Delegate_InteractSource_OnInteractionFinished_MC,

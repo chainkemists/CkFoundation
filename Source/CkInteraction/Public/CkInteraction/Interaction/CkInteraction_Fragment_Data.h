@@ -31,7 +31,7 @@ enum class ECk_Interaction_CompletionPolicy : uint8
 {
     Instant,
     Timed,
-	ManuallyCompleted
+    ManuallyCompleted
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Interaction_CompletionPolicy);
@@ -56,27 +56,27 @@ public:
     friend class ck::FProcessor_Interaction_Setup;
 
 private:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, Categories = "InteractionChannel"))
     FGameplayTag _InteractionChannel;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Handle _Source;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Handle _Instigator;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Handle _Target;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     ECk_Interaction_CompletionPolicy _CompletionPolicy = ECk_Interaction_CompletionPolicy::Timed;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, EditCondition="_CompletionPolicy==ECk_InteractionCompletionPolicy::Timed", EditConditionHides))
     FCk_Time _InteractionDuration;
 
@@ -85,16 +85,16 @@ private:
     TSubclassOf<UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
 
 public:
-	CK_PROPERTY_GET(_InteractionChannel)
-	CK_PROPERTY_GET(_Source)
-	CK_PROPERTY_GET(_Instigator)
-	CK_PROPERTY_GET(_Target)
-	CK_PROPERTY_GET(_CompletionPolicy)
-	CK_PROPERTY_GET(_InteractionDuration)
-	CK_PROPERTY_GET(_ConstructionScript)
+    CK_PROPERTY_GET(_InteractionChannel)
+    CK_PROPERTY_GET(_Source)
+    CK_PROPERTY_GET(_Instigator)
+    CK_PROPERTY_GET(_Target)
+    CK_PROPERTY_GET(_CompletionPolicy)
+    CK_PROPERTY_GET(_InteractionDuration)
+    CK_PROPERTY_GET(_ConstructionScript)
 
 public:
-	CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Interaction_ParamsData, _InteractionChannel, _Source, _Instigator, _Target, _CompletionPolicy, _InteractionDuration, _ConstructionScript);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_Interaction_ParamsData, _InteractionChannel, _Source, _Instigator, _Target, _CompletionPolicy, _InteractionDuration, _ConstructionScript);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -133,7 +133,7 @@ public:
     CK_GENERATED_BODY(FCk_Request_Interaction_EndInteraction);
 
 private:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite,
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     ECk_SucceededFailed _SuccessFail;
 

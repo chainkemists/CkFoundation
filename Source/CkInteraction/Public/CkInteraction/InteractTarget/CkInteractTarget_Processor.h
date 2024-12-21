@@ -9,7 +9,7 @@
 
 namespace ck
 {
-	class CKINTERACTION_API FProcessor_InteractTarget_Setup : public ck_exp::TProcessor<
+    class CKINTERACTION_API FProcessor_InteractTarget_Setup : public ck_exp::TProcessor<
             FProcessor_InteractTarget_Setup,
             FCk_Handle_InteractTarget,
             FFragment_InteractTarget_Params,
@@ -25,12 +25,12 @@ namespace ck
 
     public:
         auto
-    	DoTick(
+        DoTick(
             TimeType InDeltaT) -> void;
 
     public:
         auto
-    	ForEachEntity(
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractTarget_Params& InParams,
@@ -53,12 +53,12 @@ namespace ck
 
     public:
         auto
-    	DoTick(
+        DoTick(
             TimeType InDeltaT) -> void;
 
     public:
         auto
-    	ForEachEntity(
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractTarget_Params& InParams,
@@ -73,7 +73,7 @@ namespace ck
             FFragment_InteractTarget_Current& InCurrent,
             const FCk_Try_InteractTarget_StartInteraction& InRequest) const -> void;
 
-    	auto
+        auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_InteractTarget_Params& InParams,
@@ -81,15 +81,15 @@ namespace ck
             const FCk_Request_InteractTarget_CancelInteraction& InRequest) const -> void;
 
     private:
-    	auto
-    	OnInteractionFinished(
-    		FCk_Handle_Interaction InteractionHandle,
-    		ECk_SucceededFailed SucceededFailed) const -> void;
+        auto
+        OnInteractionFinished(
+            FCk_Handle_Interaction InteractionHandle,
+            ECk_SucceededFailed SucceededFailed) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-	class CKINTERACTION_API FProcessor_InteractTarget_Teardown : public ck_exp::TProcessor<
+    class CKINTERACTION_API FProcessor_InteractTarget_Teardown : public ck_exp::TProcessor<
             FProcessor_InteractTarget_Teardown,
             FCk_Handle_InteractTarget,
             FFragment_InteractTarget_Params,
@@ -101,14 +101,14 @@ namespace ck
 
     public:
         auto
-    	ForEachEntity(
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractTarget_Params& InParams,
             FFragment_InteractTarget_Current& InComp) const -> void;
     };
 
-	// --------------------------------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------------------
 
     class CKINTERACTION_API FProcessor_InteractTarget_Replicate : public ck_exp::TProcessor<
             FProcessor_InteractTarget_Replicate,

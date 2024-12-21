@@ -9,7 +9,7 @@
 
 namespace ck
 {
-	class CKINTERACTION_API FProcessor_Interaction_Setup : public ck_exp::TProcessor<
+    class CKINTERACTION_API FProcessor_Interaction_Setup : public ck_exp::TProcessor<
             FProcessor_Interaction_Setup,
             FCk_Handle_Interaction,
             FFragment_Interaction_Params,
@@ -24,12 +24,12 @@ namespace ck
 
     public:
         auto
-    	DoTick(
+        DoTick(
             TimeType InDeltaT) -> void;
 
     public:
         auto
-    	ForEachEntity(
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Interaction_Params& InParams) const -> void;
@@ -52,12 +52,12 @@ namespace ck
 
     public:
         auto
-    	DoTick(
+        DoTick(
             TimeType InDeltaT) -> void;
 
     public:
         auto
-    	ForEachEntity(
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Interaction_Params& InParams,
@@ -73,7 +73,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-	class CKINTERACTION_API FProcessor_Interaction_Teardown : public ck_exp::TProcessor<
+    class CKINTERACTION_API FProcessor_Interaction_Teardown : public ck_exp::TProcessor<
             FProcessor_Interaction_Teardown,
             FCk_Handle_Interaction,
             FFragment_Interaction_Params,
@@ -84,7 +84,7 @@ namespace ck
 
     public:
         auto
-    	ForEachEntity(
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Interaction_Params& InParams) const -> void;
