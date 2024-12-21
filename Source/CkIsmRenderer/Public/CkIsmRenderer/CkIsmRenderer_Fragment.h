@@ -8,7 +8,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class UCk_Utils_AntAgent_Renderer_UE;
+class UCk_Utils_IsmRenderer_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -70,7 +70,7 @@ namespace ck
 
     public:
         friend class FProcessor_IsmRenderer_HandleRequests;
-        friend class UCk_Utils_AntAgent_Renderer_UE;
+        friend class UCk_Utils_IsmRenderer_UE;
 
     private:
         RequestList _Requests;

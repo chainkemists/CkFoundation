@@ -39,7 +39,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_IsmRenderer_Params& InParams,
             const FFragment_OwningActor_Current& InOwningActorCurrent) const
-            -> void
+        -> void
     {
         const auto Actor = InOwningActorCurrent.Get_EntityOwningActor();
         const auto& Params = InParams.Get_Params();
@@ -110,7 +110,7 @@ namespace ck
         if (ck::Is_NOT_Valid(InCurrent.Get_IsmComponent_Static()))
         { return; }
 
-        //InCurrent.Get_IsmComponent_Movable()->ClearInstances();
+        InCurrent.Get_IsmComponent_Movable()->ClearInstances();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -169,7 +169,7 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_IsmProxy_Setup::
+        FProcessor_IsmProxy_Static::
         DoTick(
             TimeType InDeltaT)
         -> void
@@ -191,10 +191,12 @@ namespace ck
             });
 
         TProcessor::DoTick(InDeltaT);
+
+        _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
     auto
-        FProcessor_IsmProxy_Setup::
+        FProcessor_IsmProxy_Static::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -240,21 +242,6 @@ namespace ck
         { RendererToUse[static_cast<int32>(ECk_Mobility::Static)]->AddInstance(CurrentTransform); }
 
         InHandle.Remove<MarkedDirtyBy>();
-    }
-
-    auto
-        FProcessor_IsmProxy_Dynamic::
-        DoTick(
-            TimeType InDeltaT)
-            -> void
-    {
-        for (auto Renderer : ck_sim_renderer_processor::Renderers)
-        {
-            if (ck::IsValid(Renderer.Value[static_cast<int32>(ECk_Mobility::Movable)]))
-            { Renderer.Value[static_cast<int32>(ECk_Mobility::Movable)]->ClearInstances(); }
-        }
-
-        TProcessor::DoTick(InDeltaT);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
