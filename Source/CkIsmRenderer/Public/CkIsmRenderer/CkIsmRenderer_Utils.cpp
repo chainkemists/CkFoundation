@@ -6,13 +6,13 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_AntAgent_Renderer_UE, FCk_Handle_IsmRenderer,
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_IsmRenderer_UE, FCk_Handle_IsmRenderer,
     ck::FFragment_IsmRenderer_Current, ck::FFragment_IsmRenderer_Params)
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_AntAgent_Renderer_UE::
+    UCk_Utils_IsmRenderer_UE::
     Request_RenderInstance(
         FCk_Handle_IsmRenderer& InHandle,
         const FCk_Request_IsmRenderer_NewInstance& InRequest)
@@ -25,7 +25,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_AntAgent_Renderer_UE::
+    UCk_Utils_IsmRenderer_UE::
     Add(
         FCk_Handle& InHandle,
         const FCk_Fragment_IsmRenderer_ParamsData& InParams)

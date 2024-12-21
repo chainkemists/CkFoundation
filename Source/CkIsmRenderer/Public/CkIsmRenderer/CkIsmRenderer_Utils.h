@@ -7,12 +7,12 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS()
-class CKISMRENDERER_API UCk_Utils_AntAgent_Renderer_UE : public UBlueprintFunctionLibrary
+class CKISMRENDERER_API UCk_Utils_IsmRenderer_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Utils_AntAgent_Renderer_UE);
+    CK_GENERATED_BODY(UCk_Utils_IsmRenderer_UE);
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_IsmRenderer);
 
 public:
@@ -43,8 +43,8 @@ private:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Renderer|ISM",
-              DisplayName="[Ck][IsmRenderer] Handle -> AntAgentRenderer Handle",
-              meta = (CompactNodeTitle = "<AsAntAgentRenderer>", BlueprintAutocast))
+              DisplayName="[Ck][IsmRenderer] Handle -> Ism Renderer Handle",
+              meta = (CompactNodeTitle = "<AsIsmRenderer>", BlueprintAutocast))
     static FCk_Handle_IsmRenderer
     DoCastChecked(
         FCk_Handle InHandle);
@@ -73,7 +73,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Renderer|ISM",
+              Category = "Ck|Utils|Proxy|ISM",
               DisplayName="[Ck][IsmProxy] Add Feature")
     static FCk_Handle_IsmProxy
     Add(
@@ -81,7 +81,7 @@ public:
         const FCk_Fragment_IsmProxy_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Renderer|ISM",
+              Category = "Ck|Utils|Proxy|ISM",
               DisplayName="[Ck][IsmProxy] Has Feature")
     static bool
     Has(
@@ -89,7 +89,7 @@ public:
 
 private:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Renderer|ISM",
+              Category = "Ck|Utils|Proxy|ISM",
               DisplayName="[Ck][IsmProxy] Cast",
               meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_IsmProxy
@@ -98,9 +98,9 @@ private:
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|Renderer|ISM",
-              DisplayName="[Ck][IsmProxy] Handle -> AntAgentRenderer Handle",
-              meta = (CompactNodeTitle = "<AsAntAgentRenderer>", BlueprintAutocast))
+              Category = "Ck|Utils|Proxy|ISM",
+              DisplayName="[Ck][IsmProxy] Handle -> IsmProxy Handle",
+              meta = (CompactNodeTitle = "<AsIsmProxy>", BlueprintAutocast))
     static FCk_Handle_IsmProxy
     DoCastChecked(
         FCk_Handle InHandle);

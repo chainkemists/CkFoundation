@@ -39,8 +39,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmRenderer_Params& InParams,
-            const FFragment_OwningActor_Current& InOwningActorCurrent) const
-            -> void;
+            const FFragment_OwningActor_Current& InOwningActorCurrent) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -94,8 +93,7 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IsmRenderer_Current& InCurrent,
-            const FCk_Request_IsmRenderer_NewInstance& InRequest)
-            -> void;
+            const FCk_Request_IsmRenderer_NewInstance& InRequest) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -105,8 +103,8 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKISMRENDERER_API FProcessor_IsmProxy_Setup : public ck_exp::TProcessor<
-        FProcessor_IsmProxy_Setup,
+    class CKISMRENDERER_API FProcessor_IsmProxy_Static : public ck_exp::TProcessor<
+        FProcessor_IsmProxy_Static,
         FCk_Handle_IsmProxy,
         FFragment_IsmProxy_Params,
         FTag_IsmProxy_NeedsSetup,
@@ -143,11 +141,6 @@ namespace ck
     {
     public:
         using TProcessor::TProcessor;
-
-    public:
-        auto
-        DoTick(
-            TimeType InDeltaT) -> void;
 
     public:
         auto

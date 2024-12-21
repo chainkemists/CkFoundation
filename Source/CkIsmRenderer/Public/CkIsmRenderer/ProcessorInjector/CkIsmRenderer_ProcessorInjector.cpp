@@ -10,11 +10,11 @@ auto
         EcsWorldType& InWorld)
         -> void
 {
-    InWorld.Add<ck::FProcessor_IsmRenderer_ClearInstances>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_IsmProxy_Dynamic>(InWorld.Get_Registry());
-
     InWorld.Add<ck::FProcessor_IsmRenderer_Setup>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_IsmProxy_Setup>(InWorld.Get_Registry());
+
+    InWorld.Add<ck::FProcessor_IsmRenderer_ClearInstances>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_IsmProxy_Static>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_IsmProxy_Dynamic>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
