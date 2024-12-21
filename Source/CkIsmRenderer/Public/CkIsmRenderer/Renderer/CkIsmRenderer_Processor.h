@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkIsmRenderer_Fragment.h"
+#include "CkIsmRenderer/Renderer/CkIsmRenderer_Fragment.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
@@ -12,8 +12,6 @@
 
 namespace ck
 {
-    // --------------------------------------------------------------------------------------------------------------------
-
     class CKISMRENDERER_API FProcessor_IsmRenderer_Setup : public ck_exp::TProcessor<
         FProcessor_IsmRenderer_Setup,
         FCk_Handle_IsmRenderer,
@@ -94,60 +92,6 @@ namespace ck
             HandleType& InHandle,
             const FFragment_IsmRenderer_Current& InCurrent,
             const FCk_Request_IsmRenderer_NewInstance& InRequest) -> void;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-}
-
-namespace ck
-{
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKISMRENDERER_API FProcessor_IsmProxy_Static : public ck_exp::TProcessor<
-        FProcessor_IsmProxy_Static,
-        FCk_Handle_IsmProxy,
-        FFragment_IsmProxy_Params,
-        FTag_IsmProxy_NeedsSetup,
-        CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = FTag_IsmProxy_NeedsSetup;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto
-        DoTick(
-            TimeType InDeltaT) -> void;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_IsmProxy_Params& InParams) const -> void;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKISMRENDERER_API FProcessor_IsmProxy_Dynamic : public ck_exp::TProcessor<
-        FProcessor_IsmProxy_Dynamic,
-        FCk_Handle_IsmProxy,
-        FFragment_IsmProxy_Params,
-        TExclude<FTag_IsmProxy_NeedsSetup>,
-        FTag_IsmProxy_Dynamic,
-        CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_IsmProxy_Params& InParams) const -> void;
     };
 }
 
