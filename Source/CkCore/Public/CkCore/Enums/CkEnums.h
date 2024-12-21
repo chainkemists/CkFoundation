@@ -47,9 +47,11 @@ namespace ck
 UENUM(BlueprintType)
 enum class ECk_Mobility : uint8
 {
-    Static,
+    Static = 0,
     Stationary,
-    Movable
+    Movable,
+
+    Count UMETA(Hidden)
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Mobility);
