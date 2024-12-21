@@ -2,12 +2,12 @@
 
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-#include "CkEntityBridgeProcessorInjector.generated.h"
+#include "CkResourceLoader_ProcessorInjector.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKENTITYBRIDGE_API UCk_EntityBridge_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base_UE
+class CKRESOURCELOADER_API UCk_ResourceLoader_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 

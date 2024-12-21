@@ -1,12 +1,13 @@
 #pragma once
+
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-#include "CkAbilityProcessorInjector.generated.h"
+#include "CkAnimation_ProcessorInjector.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKABILITY_API UCk_Ability_ProcessorInjector_Teardown : public UCk_EcsWorld_ProcessorInjector_Base_UE
+class CKANIMATION_API UCk_Animation_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 
@@ -19,7 +20,7 @@ protected:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKABILITY_API UCk_Ability_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base_UE
+class CKANIMATION_API UCk_Animation_ProcessorInjector_Replicate : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 

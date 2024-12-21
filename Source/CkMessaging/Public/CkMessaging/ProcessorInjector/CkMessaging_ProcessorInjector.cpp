@@ -8,7 +8,7 @@ auto
     UCk_Messaging_ProcessorInjector_UE::
     DoInjectProcessors(
         EcsWorldType& InWorld)
-        -> void
+    -> void
 {
 }
 

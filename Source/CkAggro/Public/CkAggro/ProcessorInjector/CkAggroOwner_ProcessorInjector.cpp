@@ -8,7 +8,7 @@ auto
     UCk_AggroOwner_ProcessorInjector_UE::
     DoInjectProcessors(
         EcsWorldType& InWorld)
-        -> void
+    -> void
 {
     InWorld.Add<ck::FProcessor_Aggro_DistanceScore>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Aggro_LineOfSightScore>(InWorld.Get_Registry());

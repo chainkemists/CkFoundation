@@ -1,16 +1,16 @@
-#include "CkResourceLoaderProcessorInjector.h"
+#include "CkCamera_ProcessorInjector.h"
 
-#include "CkResourceLoader/CkResourceLoader_Processor.h"
+#include "CkCamera/CameraShake/CkCameraShake_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_ResourceLoader_ProcessorInjector::
+    UCk_Camera_ProcessorInjector::
     DoInjectProcessors(
         EcsWorldType& InWorld)
-        -> void
+    -> void
 {
-    InWorld.Add<ck::FProcessor_ResourceLoader_HandleRequests>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_CameraShake_HandleRequests>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

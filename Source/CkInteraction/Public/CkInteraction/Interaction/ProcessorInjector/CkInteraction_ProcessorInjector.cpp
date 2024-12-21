@@ -8,7 +8,7 @@ auto
     UCk_Interaction_ProcessorInjector_UE::
     DoInjectProcessors(
         EcsWorldType& InWorld)
-        -> void
+    -> void
 {
     InWorld.Add<ck::FProcessor_Interaction_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Interaction_HandleRequests>(InWorld.Get_Registry());

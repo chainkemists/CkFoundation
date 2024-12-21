@@ -1,16 +1,16 @@
-#include "CkCameraProcessorInjector.h"
+#include "CkEntityBridge_ProcessorInjector.h"
 
-#include "CkCamera/CameraShake/CkCameraShake_Processor.h"
+#include "CkEntityBridge/CkEntityBridge_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Camera_ProcessorInjector::
+    UCk_EntityBridge_ProcessorInjector::
     DoInjectProcessors(
         EcsWorldType& InWorld)
-        -> void
+    -> void
 {
-    InWorld.Add<ck::FProcessor_CameraShake_HandleRequests>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_EntityBridge_HandleRequests>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

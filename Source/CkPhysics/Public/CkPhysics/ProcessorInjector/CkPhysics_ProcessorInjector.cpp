@@ -1,4 +1,4 @@
-#include "CkPhysicsProcessorInjector.h"
+#include "CkPhysics_ProcessorInjector.h"
 
 #include "CkPhysics/Acceleration/CkAcceleration_Processor.h"
 #include "CkPhysics/AutoReorient/CkAutoReorient_Processor.h"

@@ -8,13 +8,13 @@ auto
     UCk_InteractTarget_ProcessorInjector_UE::
     DoInjectProcessors(
         EcsWorldType& InWorld)
-        -> void
+    -> void
 {
     InWorld.Add<ck::FProcessor_InteractTarget_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_InteractTarget_Teardown>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_InteractTarget_HandleRequests>(InWorld.Get_Registry());
 
-	// Currently Unused
+    // Currently Unused
     // InWorld.Add<ck::FProcessor_InteractTarget_Replicate>(InWorld.Get_Registry());
 }
 

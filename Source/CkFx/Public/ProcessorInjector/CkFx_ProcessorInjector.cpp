@@ -6,7 +6,7 @@ auto
     UCk_Fx_ProcessorInjector_UE::
     DoInjectProcessors(
         EcsWorldType& InWorld)
-        -> void
+    -> void
 {
     // TODO: Add necessary processors
 }
