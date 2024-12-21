@@ -8,7 +8,7 @@ auto
     UCk_ResolverTarget_ProcessorInjector_HandlRequests_UE::
     DoInjectProcessors(
         EcsWorldType& InWorld)
-        -> void
+    -> void
 {
     InWorld.Add<ck::FProcessor_ResolverTarget_HandleRequests>(InWorld.Get_Registry());
 }

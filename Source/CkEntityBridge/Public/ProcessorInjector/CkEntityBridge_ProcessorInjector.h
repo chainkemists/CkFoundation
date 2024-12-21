@@ -2,12 +2,12 @@
 
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-#include "CkCameraProcessorInjector.generated.h"
+#include "CkEntityBridge_ProcessorInjector.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKCAMERA_API UCk_Camera_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base_UE
+class CKENTITYBRIDGE_API UCk_EntityBridge_ProcessorInjector : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 

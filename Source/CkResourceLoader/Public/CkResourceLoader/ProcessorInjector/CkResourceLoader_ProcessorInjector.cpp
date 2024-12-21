@@ -1,16 +1,16 @@
-#include "CkEntityBridgeProcessorInjector.h"
+#include "CkResourceLoader_ProcessorInjector.h"
 
-#include "CkEntityBridge/CkEntityBridge_Processor.h"
+#include "CkResourceLoader/CkResourceLoader_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_EntityBridge_ProcessorInjector::
+    UCk_ResourceLoader_ProcessorInjector::
     DoInjectProcessors(
         EcsWorldType& InWorld)
-        -> void
+    -> void
 {
-    InWorld.Add<ck::FProcessor_EntityBridge_HandleRequests>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_ResourceLoader_HandleRequests>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

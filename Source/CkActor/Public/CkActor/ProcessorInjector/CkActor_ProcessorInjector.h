@@ -2,7 +2,7 @@
 
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-#include "CkActorProcessorInjector.generated.h"
+#include "CkActor_ProcessorInjector.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

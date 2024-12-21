@@ -6,7 +6,7 @@ auto
     UCk_Aggro_ProcessorInjector_UE::
     DoInjectProcessors(
         EcsWorldType& InWorld)
-        -> void
+    -> void
 {
 }
 

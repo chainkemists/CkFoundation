@@ -14,35 +14,35 @@
 
 namespace ck
 {
-	auto
-		FProcessor_Interaction_Setup::
-		DoTick(
-			TimeType InDeltaT)
-		-> void
-	{
-		TProcessor::DoTick(InDeltaT);
-	}
+    auto
+        FProcessor_Interaction_Setup::
+        DoTick(
+            TimeType InDeltaT)
+        -> void
+    {
+        TProcessor::DoTick(InDeltaT);
+    }
 
-	auto
-		FProcessor_Interaction_Setup::
-		ForEachEntity(
-			TimeType InDeltaT,
-			HandleType InHandle,
-			const FFragment_Interaction_Params& InParams) const
-		-> void
-	{
-		if (InParams.Get_Params().Get_CompletionPolicy() == ECk_Interaction_CompletionPolicy::Timed)
-		{
-			const auto& DurationAttributeParams = FCk_Fragment_FloatAttribute_ParamsData{
-				TAG_InteractionDuration_FloatAttribute_Name,
-				InParams.Get_Params()._InteractionDuration.Get_Seconds()};
+    auto
+        FProcessor_Interaction_Setup::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Interaction_Params& InParams) const
+        -> void
+    {
+        if (InParams.Get_Params().Get_CompletionPolicy() == ECk_Interaction_CompletionPolicy::Timed)
+        {
+            const auto& DurationAttributeParams = FCk_Fragment_FloatAttribute_ParamsData{
+                TAG_InteractionDuration_FloatAttribute_Name,
+                InParams.Get_Params()._InteractionDuration.Get_Seconds()};
 
-			UCk_Utils_FloatAttribute_UE::Add(InHandle, DurationAttributeParams, ECk_Replication::DoesNotReplicate);
-		}
-		InHandle.Remove<MarkedDirtyBy>();
-	}
+            UCk_Utils_FloatAttribute_UE::Add(InHandle, DurationAttributeParams, ECk_Replication::DoesNotReplicate);
+        }
+        InHandle.Remove<MarkedDirtyBy>();
+    }
 
-	// --------------------------------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------------------
 
     auto
         FProcessor_Interaction_HandleRequests::
@@ -66,7 +66,7 @@ namespace ck
             FFragment_Interaction_Requests& InRequestsComp) const
         -> void
     {
-    	InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_Interaction_Requests& InRequests)
+        InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_Interaction_Requests& InRequests)
         {
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
             {
@@ -76,25 +76,25 @@ namespace ck
     }
 
     auto
-	    FProcessor_Interaction_HandleRequests::
-		DoHandleRequest(
-		    HandleType InHandle,
-		    const FFragment_Interaction_Params& InParams,
-		    const FCk_Request_Interaction_EndInteraction& InRequest)
-		-> void
+        FProcessor_Interaction_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_Interaction_Params& InParams,
+            const FCk_Request_Interaction_EndInteraction& InRequest)
+        -> void
     {
-		UUtils_Signal_Interaction_OnInteractionFinished::Broadcast(InHandle, ck::MakePayload(InHandle, InRequest.Get_SuccessFail()));
+        UUtils_Signal_Interaction_OnInteractionFinished::Broadcast(InHandle, ck::MakePayload(InHandle, InRequest.Get_SuccessFail()));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-	    FProcessor_Interaction_Teardown::
-		ForEachEntity(
-		    TimeType InDeltaT,
-		    HandleType InHandle,
-		    const FFragment_Interaction_Params& InParams) const
-		-> void
+        FProcessor_Interaction_Teardown::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Interaction_Params& InParams) const
+        -> void
     {
     }
 }

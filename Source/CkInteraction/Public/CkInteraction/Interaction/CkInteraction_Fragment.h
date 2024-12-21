@@ -54,7 +54,7 @@ namespace ck
         friend class UCk_Utils_Interaction_UE;
 
     private:
-    	// Currently not used by any processors, but we need at least one variable so it isn't a considered a Tag
+        // Currently not used by any processors, but we need at least one variable so it isn't a considered a Tag
         int32 _DummyProperty = 0;
     };
 
@@ -70,7 +70,7 @@ namespace ck
         friend class UCk_Utils_Interaction_UE;
 
     public:
-    	using RequestType = std::variant
+        using RequestType = std::variant
         <
             FCk_Request_Interaction_EndInteraction
         >;
@@ -85,7 +85,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKINTERACTION_API,
         Interaction_OnInteractionFinished,
         FCk_Delegate_Interaction_OnInteractionFinished_MC,

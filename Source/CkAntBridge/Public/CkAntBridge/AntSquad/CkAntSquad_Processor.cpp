@@ -1,7 +1,7 @@
 #include "CkAntSquad_Processor.h"
 
-#include "CkIsmRenderer/CkIsmRenderer_Fragment.h"
-#include "CkIsmRenderer/CkIsmRenderer_Utils.h"
+#include "CkIsmRenderer/Renderer/CkIsmRenderer_Fragment.h"
+#include "CkIsmRenderer/Renderer/CkIsmRenderer_Utils.h"
 
 #include "CkNet/CkNet_Utils.h"
 

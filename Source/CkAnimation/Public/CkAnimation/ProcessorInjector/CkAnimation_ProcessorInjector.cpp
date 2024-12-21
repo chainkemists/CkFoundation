@@ -1,4 +1,4 @@
-#include "CkAnimationProcessorInjector.h"
+#include "CkAnimation_ProcessorInjector.h"
 
 #include "CkAnimation/AnimPlan/CkAnimPlan_Processor.h"
 

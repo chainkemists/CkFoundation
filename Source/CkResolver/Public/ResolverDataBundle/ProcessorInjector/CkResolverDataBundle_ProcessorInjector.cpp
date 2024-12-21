@@ -13,14 +13,18 @@ auto
     InWorld.Add<ck::FProcessor_ResolverDataBundle_StartNewPhase>(InWorld.Get_Registry());
 }
 
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_ResolverDataBundle_ProcessorInjector_HandleRequests_UE::
     DoInjectProcessors(
         EcsWorldType& InWorld)
-        -> void
+    -> void
 {
     InWorld.Add<ck::FProcessor_ResolverDataBundle_HandleRequests>(InWorld.Get_Registry());
 }
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_ResolverDataBundle_ProcessorInjector_ResolveOperations_UE::
@@ -30,6 +34,8 @@ auto
 {
     InWorld.Add<ck::FProcessor_ResolverDataBundle_ResolveOperations>(InWorld.Get_Registry());
 }
+
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_ResolverDataBundle_ProcessorInjector_Calculate_UE::
