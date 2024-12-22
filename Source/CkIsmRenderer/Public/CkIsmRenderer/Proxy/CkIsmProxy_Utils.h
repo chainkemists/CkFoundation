@@ -48,6 +48,28 @@ private:
     static FCk_Handle_IsmProxy
     DoCastChecked(
         FCk_Handle InHandle);
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmRenderer|Proxy",
+              DisplayName="[Ck][IsmProxy] Get Associated Renderer Name")
+    static FGameplayTag
+    Get_RendererName(
+        const FCk_Handle_IsmProxy& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmRenderer|Proxy",
+              DisplayName="[Ck][IsmProxy] Get Relative Transform")
+    static FTransform
+    Get_RelativeTransform(
+        const FCk_Handle_IsmProxy& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmRenderer|Proxy",
+              DisplayName="[Ck][IsmProxy] Get Mobility")
+    static ECk_Mobility
+    Get_Mobility(
+        const FCk_Handle_IsmProxy& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
