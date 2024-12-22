@@ -55,6 +55,7 @@ enum class ECk_Mobility : uint8
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Mobility);
+ENUM_RANGE_BY_COUNT(ECk_Mobility, ECk_Mobility::Count);
 
 // --------------------------------------------------------------------------------------------------------------------
 
