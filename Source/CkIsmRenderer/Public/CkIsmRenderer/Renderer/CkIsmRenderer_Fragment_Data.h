@@ -39,11 +39,16 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_EnableDisable _CastShadows = ECk_EnableDisable::Disable;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, UIMin = 0, ClampMin = 0))
+    int32 _NumCustomData = 0;
+
 public:
     CK_PROPERTY_GET(_RendererName);
     CK_PROPERTY_GET(_Mesh);
     CK_PROPERTY_GET(_Collision);
     CK_PROPERTY_GET(_CastShadows);
+    CK_PROPERTY_GET(_NumCustomData);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
