@@ -36,6 +36,47 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKISMRENDERER_API FFragment_IsmProxy_Current
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_IsmProxy_Current);
+
+    public:
+        friend class FProcessor_IsmProxy_Static;
+        friend class FProcessor_IsmProxy_Dynamic;
+        friend class FProcessor_IsmProxy_HandleRequests;
+
+    private:
+        int32 _IsmInstanceIndex = INDEX_NONE;
+        TArray<float> _CustomDataValues;
+
+    public:
+        CK_PROPERTY_GET(_IsmInstanceIndex);
+        CK_PROPERTY_GET(_CustomDataValues);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKISMRENDERER_API FFragment_IsmProxy_Requests
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_IsmProxy_Requests);
+
+    public:
+        using SetCustomDataValueRequestType = FCk_Request_IsmProxy_SetCustomDataValue;
+        using SetCustomDataRequestType = FCk_Request_IsmProxy_SetCustomData;
+
+        using RequestType = std::variant<SetCustomDataValueRequestType, SetCustomDataRequestType>;
+        using RequestList = TArray<RequestType>;
+
+    public:
+        friend class FProcessor_IsmProxy_HandleRequests;
+        friend class UCk_Utils_IsmProxy_UE;
+
+    private:
+        RequestList _Requests;
+    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
