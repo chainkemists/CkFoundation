@@ -14,6 +14,17 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_IsmRenderer);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_Ism_RenderPolicy : uint8
+{
+    ISM UMETA (DisplayName = "Instanced Static Mesh"),
+    HISM UMETA(DisplayName = "Hierarchical Instanced Static Mesh")
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ism_RenderPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKISMRENDERER_API FCk_IsmRenderer_CullingInfo
 {
@@ -53,6 +64,10 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
+    ECk_Ism_RenderPolicy _RenderPolicy = ECk_Ism_RenderPolicy::ISM;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
     TObjectPtr<UStaticMesh> _Mesh;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -73,6 +88,7 @@ private:
 
 public:
     CK_PROPERTY_GET(_RendererName);
+    CK_PROPERTY_GET(_RenderPolicy);
     CK_PROPERTY_GET(_Mesh);
     CK_PROPERTY_GET(_Collision);
     CK_PROPERTY_GET(_CastShadows);

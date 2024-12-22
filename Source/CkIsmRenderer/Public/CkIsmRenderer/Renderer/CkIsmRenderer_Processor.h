@@ -1,12 +1,15 @@
 #pragma once
 
-#include "CkIsmRenderer/Renderer/CkIsmRenderer_Fragment.h"
+#include "CkCore/Actor/CkActor_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
+
+#include "CkIsmRenderer/CkIsmRenderer_Log.h"
+#include "CkIsmRenderer/Renderer/CkIsmRenderer_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -40,22 +43,23 @@ namespace ck
             const FFragment_OwningActor_Current& InOwningActorCurrent) const -> void;
 
     private:
+        template<typename T_IsmCompType>
         struct IsmActorComponentInitFunctor
         {
-        explicit
+            explicit
             IsmActorComponentInitFunctor(
-                FCk_Handle_IsmRenderer& InRendererEntity,
+                const FCk_Handle_IsmRenderer& InRendererEntity,
                 const FFragment_IsmRenderer_Params& InRendererParams,
                 ECk_Mobility InIsmMobility);
 
         public:
             auto
             operator()(
-                UInstancedStaticMeshComponent* InIsmActorComp) -> void;
+                T_IsmCompType* InIsmActorComp) -> void;
 
         private:
             FCk_Handle_IsmRenderer _RendererEntity;
-            ck::FFragment_IsmRenderer_Params _RendererParams;
+            FFragment_IsmRenderer_Params _RendererParams;
             ECk_Mobility _IsmMobility;
         };
     };
@@ -78,6 +82,69 @@ namespace ck
             HandleType InHandle,
             const FFragment_IsmRenderer_Current& InCurrent) const -> void;
     };
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    template <typename T_IsmCompType>
+    FProcessor_IsmRenderer_Setup::IsmActorComponentInitFunctor<T_IsmCompType>::
+        IsmActorComponentInitFunctor(
+            const FCk_Handle_IsmRenderer& InRendererEntity,
+            const FFragment_IsmRenderer_Params& InRendererParams,
+            ECk_Mobility InIsmMobility)
+        : _RendererEntity(InRendererEntity)
+        , _RendererParams(InRendererParams)
+        , _IsmMobility(InIsmMobility)
+    {
+    }
+
+    template <typename T_IsmCompType>
+    auto
+        FProcessor_IsmRenderer_Setup::IsmActorComponentInitFunctor<T_IsmCompType>::
+        operator()(
+            T_IsmCompType* InIsmActorComp)
+        -> void
+    {
+        if (ck::Is_NOT_Valid(_RendererEntity))
+        { return; }
+
+        const auto& Params = _RendererParams.Get_Params();
+        const auto& MeshPtr = Params.Get_Mesh();
+
+        switch (_IsmMobility)
+        {
+            case ECk_Mobility::Static:
+            {
+                _RendererEntity.Get<FFragment_IsmRenderer_Current>()._IsmComponent_Static = InIsmActorComp;
+                break;
+            }
+            case ECk_Mobility::Movable:
+            {
+                _RendererEntity.Get<FFragment_IsmRenderer_Current>()._IsmComponent_Movable = InIsmActorComp;
+                break;
+            }
+            case ECk_Mobility::Stationary:
+            {
+                ismrenderer::Warning(TEXT("Ism does not support mobility of type [{}]"), _IsmMobility);
+                break;
+            }
+            case ECk_Mobility::Count:
+            default:
+            {
+                CK_INVALID_ENUM(_IsmMobility);
+                break;
+            }
+        }
+
+        InIsmActorComp->SetCollisionEnabled(UCk_Utils_Enum_UE::ConvertToECollisionEnabled(Params.Get_Collision()));
+        InIsmActorComp->CastShadow = Params.Get_CastShadows() == ECk_EnableDisable::Enable;
+        InIsmActorComp->SetStaticMesh(MeshPtr);
+        InIsmActorComp->NumCustomDataFloats = Params.Get_NumCustomData();
+        InIsmActorComp->InstanceStartCullDistance = Params.Get_CullingInfo().Get_InstanceCullDistance_Start();
+        InIsmActorComp->InstanceEndCullDistance = Params.Get_CullingInfo().Get_InstanceCullDistance_End();
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
