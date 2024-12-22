@@ -41,13 +41,11 @@ namespace ck
             case ECk_Mobility::Static:
             {
                 _RendererEntity.Get<FFragment_IsmRenderer_Current>()._IsmComponent_Static = InIsmActorComp;
-                InIsmActorComp->SetMobility(EComponentMobility::Static);
                 break;
             }
             case ECk_Mobility::Movable:
             {
                 _RendererEntity.Get<FFragment_IsmRenderer_Current>()._IsmComponent_Movable = InIsmActorComp;
-                InIsmActorComp->SetMobility(EComponentMobility::Movable);
                 break;
             }
             case ECk_Mobility::Stationary:
