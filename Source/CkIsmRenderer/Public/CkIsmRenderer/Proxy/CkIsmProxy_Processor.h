@@ -16,6 +16,7 @@ namespace ck
         FProcessor_IsmProxy_Static,
         FCk_Handle_IsmProxy,
         FFragment_IsmProxy_Params,
+        FFragment_IsmProxy_Current,
         FTag_IsmProxy_NeedsSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -35,7 +36,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_IsmProxy_Params& InParams) const -> void;
+            const FFragment_IsmProxy_Params& InParams,
+            FFragment_IsmProxy_Current& InCurrent) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -44,6 +46,7 @@ namespace ck
         FProcessor_IsmProxy_Dynamic,
         FCk_Handle_IsmProxy,
         FFragment_IsmProxy_Params,
+        FFragment_IsmProxy_Current,
         TExclude<FTag_IsmProxy_NeedsSetup>,
         FTag_IsmProxy_Dynamic,
         CK_IGNORE_PENDING_KILL>
@@ -56,7 +59,50 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_IsmProxy_Params& InParams) const -> void;
+            const FFragment_IsmProxy_Params& InParams,
+            FFragment_IsmProxy_Current& InCurrent) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKISMRENDERER_API FProcessor_IsmProxy_HandleRequests : public ck_exp::TProcessor<
+        FProcessor_IsmProxy_HandleRequests,
+        FCk_Handle_IsmProxy,
+        FFragment_IsmProxy_Params,
+        FFragment_IsmProxy_Current,
+        TExclude<FTag_IsmProxy_NeedsSetup>,
+        FFragment_IsmProxy_Requests,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FFragment_IsmProxy_Requests;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_IsmProxy_Params& InParams,
+            FFragment_IsmProxy_Current& InCurrent,
+            const FFragment_IsmProxy_Requests& InRequestsComp) const -> void;
+
+    private:
+        static auto
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_IsmProxy_Params& InParams,
+            FFragment_IsmProxy_Current& InCurrent,
+            const FCk_Request_IsmProxy_SetCustomData& InRequest) -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_IsmProxy_Params& InParams,
+            FFragment_IsmProxy_Current& InCurrent,
+            const FCk_Request_IsmProxy_SetCustomDataValue& InRequest) -> void;
     };
 }
 
