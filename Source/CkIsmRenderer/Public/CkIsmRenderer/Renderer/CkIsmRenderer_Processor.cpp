@@ -7,68 +7,14 @@
 
 #include "CkNet/CkNet_Utils.h"
 
-#include "Components/InstancedStaticMeshComponent.h"
+#include <Components/InstancedStaticMeshComponent.h>
+#include <Components/HierarchicalInstancedStaticMeshComponent.h>
+#include <Misc/EnumRange.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
-    FProcessor_IsmRenderer_Setup::IsmActorComponentInitFunctor::
-        IsmActorComponentInitFunctor(
-            FCk_Handle_IsmRenderer& InRendererEntity,
-            const FFragment_IsmRenderer_Params& InRendererParams,
-            ECk_Mobility InIsmMobility)
-        : _RendererEntity(InRendererEntity)
-        , _RendererParams(InRendererParams)
-        , _IsmMobility(InIsmMobility)
-    {
-    }
-
-    auto
-        FProcessor_IsmRenderer_Setup::IsmActorComponentInitFunctor::
-        operator()(
-                UInstancedStaticMeshComponent* InIsmActorComp)
-        -> void
-    {
-        if (ck::Is_NOT_Valid(_RendererEntity))
-        { return; }
-
-        const auto& Params = _RendererParams.Get_Params();
-        const auto& MeshPtr = Params.Get_Mesh();
-
-        switch (_IsmMobility)
-        {
-            case ECk_Mobility::Static:
-            {
-                _RendererEntity.Get<FFragment_IsmRenderer_Current>()._IsmComponent_Static = InIsmActorComp;
-                break;
-            }
-            case ECk_Mobility::Movable:
-            {
-                _RendererEntity.Get<FFragment_IsmRenderer_Current>()._IsmComponent_Movable = InIsmActorComp;
-                break;
-            }
-            case ECk_Mobility::Stationary:
-            {
-                CK_TRIGGER_ENSURE(TEXT("Ism does not support mobility of type [{}]"), _IsmMobility);
-                break;
-            }
-            case ECk_Mobility::Count:
-            default:
-            {
-                CK_INVALID_ENUM(_IsmMobility);
-                break;
-            }
-        }
-
-        InIsmActorComp->SetCollisionEnabled(UCk_Utils_Enum_UE::ConvertToECollisionEnabled(Params.Get_Collision()));
-        InIsmActorComp->CastShadow = Params.Get_CastShadows() == ECk_EnableDisable::Enable;
-        InIsmActorComp->SetStaticMesh(MeshPtr);
-        InIsmActorComp->NumCustomDataFloats = Params.Get_NumCustomData();
-        InIsmActorComp->InstanceStartCullDistance = Params.Get_CullingInfo().Get_InstanceCullDistance_Start();
-        InIsmActorComp->InstanceEndCullDistance = Params.Get_CullingInfo().Get_InstanceCullDistance_End();
-    }
-
     auto
         FProcessor_IsmRenderer_Setup::
         DoTick(
@@ -89,7 +35,7 @@ namespace ck
             const FFragment_OwningActor_Current& InOwningActorCurrent) const
         -> void
     {
-        const auto Actor = InOwningActorCurrent.Get_EntityOwningActor();
+        const auto& Actor = InOwningActorCurrent.Get_EntityOwningActor().Get();
         const auto& Params = InParams.Get_Params();
 
         CK_ENSURE_IF_NOT(ck::IsValid(Actor),
@@ -104,17 +50,38 @@ namespace ck
             TEXT("The Renderer Name [{}] is INVALID. Unable to Setup the IsmRenderer"), Params.Get_RendererName())
         { return; }
 
-        UCk_Utils_Actor_UE::Request_AddNewActorComponent<UInstancedStaticMeshComponent>
-        (
-            UCk_Utils_Actor_UE::AddNewActorComponent_Params<UInstancedStaticMeshComponent>{Actor.Get()}.Set_IsUnique(false),
-            IsmActorComponentInitFunctor{InHandle, InParams, ECk_Mobility::Movable}
-        );
+        const auto AddIsmActorComponents = [&]<typename T_IsmCompTypeTag>(T_IsmCompTypeTag)
+        {
+            using T_IsmCompType = typename T_IsmCompTypeTag::type;
 
-        UCk_Utils_Actor_UE::Request_AddNewActorComponent<UInstancedStaticMeshComponent>
-        (
-            UCk_Utils_Actor_UE::AddNewActorComponent_Params<UInstancedStaticMeshComponent>{Actor.Get()}.Set_IsUnique(false),
-            IsmActorComponentInitFunctor{InHandle, InParams, ECk_Mobility::Static}
-        );
+            for (auto Mobility : TEnumRange<ECk_Mobility>())
+            {
+                UCk_Utils_Actor_UE::Request_AddNewActorComponent<T_IsmCompType>
+                (
+                    UCk_Utils_Actor_UE::AddNewActorComponent_Params<T_IsmCompType>{Actor}.Set_IsUnique(false),
+                    IsmActorComponentInitFunctor<T_IsmCompType>{InHandle, InParams, Mobility}
+                );
+            }
+        };
+
+        switch (const auto& RenderPolicy = Params.Get_RenderPolicy())
+        {
+            case ECk_Ism_RenderPolicy::ISM:
+            {
+                AddIsmActorComponents(std::type_identity<UInstancedStaticMeshComponent>{});
+                break;
+            }
+            case ECk_Ism_RenderPolicy::HISM:
+            {
+                AddIsmActorComponents(std::type_identity<UInstancedStaticMeshComponent>{});
+                break;
+            }
+            default:
+            {
+                CK_INVALID_ENUM(RenderPolicy);
+                break;
+            }
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
