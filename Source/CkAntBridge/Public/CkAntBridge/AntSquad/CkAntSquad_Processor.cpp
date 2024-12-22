@@ -104,8 +104,9 @@ namespace ck
             const auto RendererEntity = _Registry.Get_ValidEntity(static_cast<FCk_Entity::IdType>(EntityId));
             auto RendererHandle = UCk_Utils_IsmRenderer_UE::Cast(ck::MakeHandle(RendererEntity, _Registry));
 
-            UCk_Utils_IsmRenderer_UE::Request_RenderInstance(RendererHandle,
-                FCk_Request_IsmRenderer_NewInstance{}.Set_Transform(FTransform{Center}));
+            // The agent will be rendered through a proxy instead of explicitly
+            /*UCk_Utils_IsmRenderer_UE::Request_RenderInstance(RendererHandle,
+                FCk_Request_IsmRenderer_NewInstance{}.Set_Transform(FTransform{Center}));*/
         }
     }
 

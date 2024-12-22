@@ -78,41 +78,6 @@ namespace ck
             HandleType InHandle,
             const FFragment_IsmRenderer_Current& InCurrent) const -> void;
     };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKISMRENDERER_API FProcessor_IsmRenderer_HandleRequests : public ck_exp::TProcessor<
-        FProcessor_IsmRenderer_HandleRequests,
-        FCk_Handle_IsmRenderer,
-        FFragment_IsmRenderer_Current,
-        FFragment_InstancedStaticMeshRenderer_Requests,
-        CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = FFragment_InstancedStaticMeshRenderer_Requests;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto DoTick(
-            TimeType InDeltaT) -> void;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_IsmRenderer_Current& InCurrent,
-            FFragment_InstancedStaticMeshRenderer_Requests& InRequestsComp) const -> void;
-
-    private:
-        static auto
-        DoHandleRequest(
-            HandleType& InHandle,
-            const FFragment_IsmRenderer_Current& InCurrent,
-            const FCk_Request_IsmRenderer_NewInstance& InRequest) -> void;
-    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------

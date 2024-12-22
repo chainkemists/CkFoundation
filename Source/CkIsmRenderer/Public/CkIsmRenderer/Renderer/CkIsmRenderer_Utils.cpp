@@ -13,17 +13,6 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_IsmRenderer_UE, FCk_Handle_Ism
 
 auto
     UCk_Utils_IsmRenderer_UE::
-    Request_RenderInstance(
-        FCk_Handle_IsmRenderer& InHandle,
-        const FCk_Request_IsmRenderer_NewInstance& InRequest)
-    -> FCk_Handle_IsmRenderer
-{
-        InHandle.AddOrGet<ck::FFragment_InstancedStaticMeshRenderer_Requests>()._Requests.Emplace(InRequest);
-        return InHandle;
-}
-
-auto
-    UCk_Utils_IsmRenderer_UE::
     Add(
         FCk_Handle& InHandle,
         const FCk_Fragment_IsmRenderer_ParamsData& InParams)
