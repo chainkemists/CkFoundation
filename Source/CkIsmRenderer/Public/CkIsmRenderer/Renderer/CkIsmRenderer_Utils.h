@@ -50,14 +50,7 @@ private:
         FCk_Handle InHandle);
 
 public:
-    UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|IsmRenderer",
-              DisplayName="[Ck][IsmRenderer] Request Render Instance",
-              meta = (AutoCreateRefTerm = "InDelegate"))
-    static FCk_Handle_IsmRenderer
-    Request_RenderInstance(
-        UPARAM(ref) FCk_Handle_IsmRenderer& InHandle,
-        const FCk_Request_IsmRenderer_NewInstance& InRequest);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

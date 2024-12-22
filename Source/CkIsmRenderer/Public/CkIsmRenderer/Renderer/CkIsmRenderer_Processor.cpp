@@ -132,55 +132,6 @@ namespace ck
 
         InCurrent.Get_IsmComponent_Movable()->ClearInstances();
     }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProcessor_IsmRenderer_HandleRequests::
-        DoTick(
-            TimeType InDeltaT)
-        -> void
-    {
-        TProcessor::DoTick(InDeltaT);
-
-        _TransientEntity.Clear<MarkedDirtyBy>();
-    }
-
-    auto
-        FProcessor_IsmRenderer_HandleRequests::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_IsmRenderer_Current& InCurrent,
-            FFragment_InstancedStaticMeshRenderer_Requests& InRequestsComp) const
-        -> void
-    {
-        InHandle.CopyAndRemove(InRequestsComp, [&](const FFragment_InstancedStaticMeshRenderer_Requests& InRequests)
-        {
-            algo::ForEachRequest(InRequests._Requests, ck::Visitor(
-            [&](const auto& InRequestVariant) -> void
-            {
-                DoHandleRequest(InHandle, InCurrent, InRequestVariant);
-            }), policy::DontResetContainer{});
-        });
-    }
-
-    auto
-        FProcessor_IsmRenderer_HandleRequests::
-        DoHandleRequest(
-            HandleType& InHandle,
-            const FFragment_IsmRenderer_Current& InCurrent,
-            const FCk_Request_IsmRenderer_NewInstance& InRequest)
-        -> void
-    {
-        const auto IsmComponent_Static = InCurrent.Get_IsmComponent_Static();
-        const auto IsmComponent_Movable = InCurrent.Get_IsmComponent_Movable();
-
-        if (ck::Is_NOT_Valid(IsmComponent_Static) || ck::Is_NOT_Valid(IsmComponent_Movable))
-        { return; }
-
-        IsmComponent_Static->AddInstance(InRequest.Get_Transform());
-    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
