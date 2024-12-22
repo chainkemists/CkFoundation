@@ -12,8 +12,8 @@
 
 namespace ck
 {
-    class CKISMRENDERER_API FProcessor_IsmProxy_Static : public ck_exp::TProcessor<
-        FProcessor_IsmProxy_Static,
+    class CKISMRENDERER_API FProcessor_IsmProxy_Setup : public ck_exp::TProcessor<
+        FProcessor_IsmProxy_Setup,
         FCk_Handle_IsmProxy,
         FFragment_IsmProxy_Params,
         FFragment_IsmProxy_Current,
@@ -42,15 +42,18 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKISMRENDERER_API FProcessor_IsmProxy_Dynamic : public ck_exp::TProcessor<
-        FProcessor_IsmProxy_Dynamic,
+    class CKISMRENDERER_API FProcessor_IsmProxy_AddInstance : public ck_exp::TProcessor<
+        FProcessor_IsmProxy_AddInstance,
         FCk_Handle_IsmProxy,
         FFragment_IsmProxy_Params,
         FFragment_IsmProxy_Current,
         TExclude<FTag_IsmProxy_NeedsSetup>,
-        FTag_IsmProxy_Dynamic,
+        FTag_IsmProxy_NeedsInstanceAdded,
         CK_IGNORE_PENDING_KILL>
     {
+    public:
+        using MarkedDirtyBy = FTag_IsmProxy_NeedsInstanceAdded;
+
     public:
         using TProcessor::TProcessor;
 

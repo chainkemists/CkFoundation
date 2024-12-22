@@ -41,49 +41,6 @@ namespace ck_ism_proxy_processor
 
         return IsmComp;
     }
-
-    auto
-        AddInstanceForProxy(
-            const FCk_Handle_IsmProxy& InIsmProxyEntity,
-            const ck::FFragment_IsmProxy_Params& InIsmProxyParams,
-            const TArray<float> InCustomDataValues)
-        -> int32
-    {
-        CK_ENSURE_IF_NOT(UCk_Utils_Transform_UE::Has(InIsmProxyEntity),
-            TEXT("Ism Proxy Entity [{}] does NOT have the required Transform feature. Unable to render the IsmProxy"), InIsmProxyEntity)
-        { return {}; }
-
-        const auto& Params = InIsmProxyParams.Get_Params();
-        const auto& RendererName = Params.Get_RendererName();
-        const auto& Mobility = Params.Get_Mobility();
-        const auto& IsmComp = FindRendererIsmComp(RendererName, Mobility);
-
-        if (ck::Is_NOT_Valid(IsmComp))
-        { return INDEX_NONE; }
-
-        const auto& RelativeTransform = [&]
-        {
-            const auto& ProxyRelativeTransform = Params.Get_RelativeTransform();
-            const auto& ProxyRelativeScale = ProxyRelativeTransform.GetScale3D();
-
-            CK_ENSURE_IF_NOT(NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(ProxyRelativeScale),
-                TEXT("IsmProxy Relative Scale has one or more axis nearly equal to 0. Setting it to 1 in non-shipping build"), ProxyRelativeScale)
-            { return FTransform{ ProxyRelativeTransform.GetRotation(), ProxyRelativeTransform.GetLocation(), FVector::OneVector }; }
-
-            return ProxyRelativeTransform;
-        }();
-
-        const auto& CurrentTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InIsmProxyEntity);
-        const auto& CombinedTransform = CurrentTransform * RelativeTransform;
-
-        constexpr auto TransformAsWorldSpace = true;
-        const auto& InstanceIndex = IsmComp->AddInstance(CombinedTransform, TransformAsWorldSpace);
-
-        constexpr auto MarkRenderStateDirty = false;
-        IsmComp->SetCustomData(InstanceIndex, InCustomDataValues, MarkRenderStateDirty);
-
-        return InstanceIndex;
-    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -91,7 +48,7 @@ namespace ck_ism_proxy_processor
 namespace ck
 {
     auto
-        FProcessor_IsmProxy_Static::
+        FProcessor_IsmProxy_Setup::
         DoTick(
             TimeType InDeltaT)
         -> void
@@ -118,7 +75,7 @@ namespace ck
     }
 
     auto
-        FProcessor_IsmProxy_Static::
+        FProcessor_IsmProxy_Setup::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -135,16 +92,13 @@ namespace ck
         { return; }
 
         InCurrent._CustomDataValues.Init(0, IsmComp->NumCustomDataFloats);
-
-        InCurrent._IsmInstanceIndex = ck_ism_proxy_processor::AddInstanceForProxy(InHandle, InParams, InCurrent.Get_CustomDataValues());
-
-        InHandle.Remove<MarkedDirtyBy>();
+        UCk_Utils_IsmProxy_UE::Request_NeedsInstanceAdded(InHandle);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_IsmProxy_Dynamic::
+        FProcessor_IsmProxy_AddInstance::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -152,7 +106,45 @@ namespace ck
             FFragment_IsmProxy_Current& InCurrent) const
         -> void
     {
-        InCurrent._IsmInstanceIndex = ck_ism_proxy_processor::AddInstanceForProxy(InHandle, InParams, InCurrent.Get_CustomDataValues());
+        CK_ENSURE_IF_NOT(UCk_Utils_Transform_UE::Has(InHandle),
+            TEXT("Ism Proxy Entity [{}] does NOT have the required Transform feature. Unable to render the IsmProxy"), InHandle)
+        { return; }
+
+        const auto& Params = InParams.Get_Params();
+        const auto& RendererName = Params.Get_RendererName();
+        const auto& Mobility = Params.Get_Mobility();
+        const auto& IsmComp = ck_ism_proxy_processor::FindRendererIsmComp(RendererName, Mobility);
+
+        if (ck::Is_NOT_Valid(IsmComp))
+        { return; }
+
+        const auto& RelativeTransform = [&]
+        {
+            const auto& ProxyRelativeTransform = Params.Get_RelativeTransform();
+            const auto& ProxyRelativeScale = ProxyRelativeTransform.GetScale3D();
+
+            CK_ENSURE_IF_NOT(NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(ProxyRelativeScale),
+                TEXT("IsmProxy Relative Scale has one or more axis nearly equal to 0. Setting it to 1 in non-shipping build"), ProxyRelativeScale)
+            { return FTransform{ ProxyRelativeTransform.GetRotation(), ProxyRelativeTransform.GetLocation(), FVector::OneVector }; }
+
+            return ProxyRelativeTransform;
+        }();
+
+        const auto& CurrentTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InHandle);
+        const auto& CombinedTransform = CurrentTransform * RelativeTransform;
+
+        constexpr auto TransformAsWorldSpace = true;
+        const auto& InstanceIndex = IsmComp->AddInstance(CombinedTransform, TransformAsWorldSpace);
+        InCurrent._IsmInstanceIndex = InstanceIndex;
+
+        constexpr auto MarkRenderStateDirty = false;
+        IsmComp->SetCustomData(InstanceIndex, InCurrent.Get_CustomDataValues(), MarkRenderStateDirty);
+
+        // Movable ISM instances are re-add again every tick
+        if (Mobility != ECk_Mobility::Movable)
+        {
+            InHandle.Remove<MarkedDirtyBy>();
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------

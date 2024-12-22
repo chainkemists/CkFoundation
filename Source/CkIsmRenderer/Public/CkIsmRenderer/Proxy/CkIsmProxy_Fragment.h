@@ -13,7 +13,7 @@ class UCk_Utils_IsmProxy_UE;
 namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_IsmProxy_NeedsSetup);
-    CK_DEFINE_ECS_TAG(FTag_IsmProxy_Dynamic);
+    CK_DEFINE_ECS_TAG(FTag_IsmProxy_NeedsInstanceAdded);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -43,8 +43,8 @@ namespace ck
         CK_GENERATED_BODY(FFragment_IsmProxy_Current);
 
     public:
-        friend class FProcessor_IsmProxy_Static;
-        friend class FProcessor_IsmProxy_Dynamic;
+        friend class FProcessor_IsmProxy_Setup;
+        friend class FProcessor_IsmProxy_AddInstance;
         friend class FProcessor_IsmProxy_HandleRequests;
 
     private:
