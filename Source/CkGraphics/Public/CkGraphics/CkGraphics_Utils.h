@@ -42,6 +42,14 @@ public:
     Get_WasActorRecentlyRendered(
         AActor* InActor,
         FCk_Time InTimeTolerance);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName  = "[Ck] Get Is Material Child Of",
+              Category = "Ck|Utils|Graphics")
+    static bool
+    Get_IsMaterialChildOf(
+        UMaterialInterface* InMaterial,
+        UMaterialInterface* InParentMaterial);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
