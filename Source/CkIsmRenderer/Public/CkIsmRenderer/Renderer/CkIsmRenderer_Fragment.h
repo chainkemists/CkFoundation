@@ -19,7 +19,6 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // TODO: Move into Agent specific file
     struct CKISMRENDERER_API FFragment_IsmRenderer_Params
     {
     public:

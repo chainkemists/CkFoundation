@@ -38,6 +38,26 @@ namespace ck
             HandleType InHandle,
             const FFragment_IsmRenderer_Params& InParams,
             const FFragment_OwningActor_Current& InOwningActorCurrent) const -> void;
+
+    private:
+        struct IsmActorComponentInitFunctor
+        {
+        explicit
+            IsmActorComponentInitFunctor(
+                FCk_Handle_IsmRenderer& InRendererEntity,
+                const FFragment_IsmRenderer_Params& InRendererParams,
+                ECk_Mobility InIsmMobility);
+
+        public:
+            auto
+            operator()(
+                UInstancedStaticMeshComponent* InIsmActorComp) -> void;
+
+        private:
+            FCk_Handle_IsmRenderer _RendererEntity;
+            ck::FFragment_IsmRenderer_Params _RendererParams;
+            ECk_Mobility _IsmMobility;
+        };
     };
 
     // --------------------------------------------------------------------------------------------------------------------

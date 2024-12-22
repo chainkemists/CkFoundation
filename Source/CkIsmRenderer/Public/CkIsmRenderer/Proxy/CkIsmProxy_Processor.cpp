@@ -11,7 +11,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck_sim_renderer_processor
+namespace ck_ism_proxy_processor
 {
     using IsmAcArray = std::array<TWeakObjectPtr<UInstancedStaticMeshComponent>,  static_cast<int32>(ECk_Mobility::Count)>;
     static TMap<FGameplayTag, IsmAcArray> Renderers;
@@ -27,7 +27,7 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        using ck_sim_renderer_processor::Renderers;
+        using ck_ism_proxy_processor::Renderers;
 
         _TransientEntity.View<
             FFragment_IsmRenderer_Params,
@@ -35,7 +35,7 @@ namespace ck
             TExclude<FTag_IsmRenderer_NeedsSetup>>().ForEach(
             [&](FCk_Entity InHandle, const FFragment_IsmRenderer_Params& InParams, const FFragment_IsmRenderer_Current& InCurrent)
             {
-                using ck_sim_renderer_processor::IsmAcArray;
+                using ck_ism_proxy_processor::IsmAcArray;
 
                 const auto IsmArray = IsmAcArray{
                     InCurrent.Get_IsmComponent_Static(), InCurrent.Get_IsmComponent_Static(), InCurrent.Get_IsmComponent_Movable()};
@@ -56,7 +56,7 @@ namespace ck
             const FFragment_IsmProxy_Params& InParams) const
         -> void
     {
-        using ck_sim_renderer_processor::Renderers;
+        using ck_ism_proxy_processor::Renderers;
 
         const auto& Params = InParams.Get_Params();
         const auto& RendererName = Params.Get_RendererName();
@@ -108,7 +108,7 @@ namespace ck
             const FFragment_IsmProxy_Params& InParams) const
         -> void
     {
-        using ck_sim_renderer_processor::Renderers;
+        using ck_ism_proxy_processor::Renderers;
 
         const auto& Params = InParams.Get_Params();
         const auto& RendererName = Params.Get_RendererName();
