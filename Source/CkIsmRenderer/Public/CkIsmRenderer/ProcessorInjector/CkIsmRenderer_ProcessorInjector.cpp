@@ -19,3 +19,14 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_IsmRenderer_ProcessorInjector_Requests_UE::
+    DoInjectProcessors(
+        EcsWorldType& InWorld)
+    -> void
+{
+    InWorld.Add<ck::FProcessor_IsmProxy_HandleRequests>(InWorld.Get_Registry());
+}
+
+// --------------------------------------------------------------------------------------------------------------------

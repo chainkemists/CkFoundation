@@ -50,6 +50,23 @@ private:
         FCk_Handle InHandle);
 
 public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|IsmRenderer|Proxy",
+              DisplayName="[Ck][IsmProxy] Request Set Custom Data")
+    static FCk_Handle_IsmProxy
+    Request_SetCustomData(
+        UPARAM(ref) FCk_Handle_IsmProxy& InHandle,
+        const FCk_Request_IsmProxy_SetCustomData& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|IsmRenderer|Proxy",
+              DisplayName="[Ck][IsmProxy] Request Set Custom Data Value")
+    static FCk_Handle_IsmProxy
+    Request_SetCustomDataValue(
+        UPARAM(ref) FCk_Handle_IsmProxy& InHandle,
+        const FCk_Request_IsmProxy_SetCustomDataValue& InRequest);
+
+public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|IsmRenderer|Proxy",
               DisplayName="[Ck][IsmProxy] Get Associated Renderer Name")

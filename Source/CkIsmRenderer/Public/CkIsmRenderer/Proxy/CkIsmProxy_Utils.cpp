@@ -16,12 +16,35 @@ auto
     -> FCk_Handle_IsmProxy
 {
     InHandle.Add<ck::FFragment_IsmProxy_Params>(InParams);
+    InHandle.Add<ck::FFragment_IsmProxy_Current>();
     InHandle.Add<ck::FTag_IsmProxy_NeedsSetup>();
 
     if (InParams.Get_Mobility() == ECk_Mobility::Movable)
     { InHandle.Add<ck::FTag_IsmProxy_Dynamic>(); }
 
     return Cast(InHandle);
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
+    Request_SetCustomData(
+        FCk_Handle_IsmProxy& InHandle,
+        const FCk_Request_IsmProxy_SetCustomData& InRequest)
+    -> FCk_Handle_IsmProxy
+{
+    InHandle.AddOrGet<ck::FFragment_IsmProxy_Requests>()._Requests.Emplace(InRequest);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
+    Request_SetCustomDataValue(
+        FCk_Handle_IsmProxy& InHandle,
+        const FCk_Request_IsmProxy_SetCustomDataValue& InRequest)
+    -> FCk_Handle_IsmProxy
+{
+    InHandle.AddOrGet<ck::FFragment_IsmProxy_Requests>()._Requests.Emplace(InRequest);
+    return InHandle;
 }
 
 auto

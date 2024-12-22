@@ -41,6 +41,49 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(BlueprintType)
+struct CKISMRENDERER_API FCk_Request_IsmProxy_SetCustomData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_IsmProxy_SetCustomData);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<float> _CustomData;
+
+public:
+    CK_PROPERTY_GET(_CustomData);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKISMRENDERER_API FCk_Request_IsmProxy_SetCustomDataValue
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_IsmProxy_SetCustomDataValue);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, UIMin = 0, ClampMin = 0))
+    int32 _CustomDataIndex = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _CustomDataValue = 0.0f;
+
+public:
+    CK_PROPERTY_GET(_CustomDataIndex);
+    CK_PROPERTY_GET(_CustomDataValue);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 //UCLASS(Abstract, NotBlueprintable, BlueprintType)
 //class CKISMRENDERER_API UCk_Ism_Definition_PDA : public UCk_DataAsset_PDA
 //{
