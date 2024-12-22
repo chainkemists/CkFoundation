@@ -33,4 +33,49 @@ auto
     return Cast(InHandle);
 }
 
+auto
+    UCk_Utils_IsmRenderer_UE::
+    Get_RendererName(
+        const FCk_Handle_IsmRenderer& InHandle)
+    -> FGameplayTag
+{
+    return InHandle.Get<ck::FFragment_IsmRenderer_Params>().Get_Params().Get_RendererName();
+}
+
+auto
+    UCk_Utils_IsmRenderer_UE::
+    Get_MeshToRender(
+        const FCk_Handle_IsmRenderer& InHandle)
+    -> UStaticMesh*
+{
+    return InHandle.Get<ck::FFragment_IsmRenderer_Params>().Get_Params().Get_Mesh();
+}
+
+auto
+    UCk_Utils_IsmRenderer_UE::
+    Get_MeshShadowCasting(
+        const FCk_Handle_IsmRenderer& InHandle)
+    -> ECk_EnableDisable
+{
+    return InHandle.Get<ck::FFragment_IsmRenderer_Params>().Get_Params().Get_CastShadows();
+}
+
+auto
+    UCk_Utils_IsmRenderer_UE::
+    Get_MeshCollision(
+        const FCk_Handle_IsmRenderer& InHandle)
+    -> ECk_Collision
+{
+    return InHandle.Get<ck::FFragment_IsmRenderer_Params>().Get_Params().Get_Collision();
+}
+
+auto
+    UCk_Utils_IsmRenderer_UE::
+    Get_MeshNumCustomData(
+        const FCk_Handle_IsmRenderer& InHandle)
+    -> int32
+{
+    return InHandle.Get<ck::FFragment_IsmRenderer_Params>().Get_Params().Get_NumCustomData();
+}
+
 // --------------------------------------------------------------------------------------------------------------------

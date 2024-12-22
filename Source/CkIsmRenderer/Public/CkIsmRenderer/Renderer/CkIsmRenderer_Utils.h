@@ -50,7 +50,40 @@ private:
         FCk_Handle InHandle);
 
 public:
+    UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|IsmRenderer",
+              DisplayName="[Ck][IsmRenderer] Get Renderer Name")
+    static FGameplayTag
+    Get_RendererName(
+        const FCk_Handle_IsmRenderer& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmRenderer",
+              DisplayName="[Ck][IsmRenderer] Get Mesh To Render")
+    static UStaticMesh*
+    Get_MeshToRender(
+        const FCk_Handle_IsmRenderer& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmRenderer",
+              DisplayName="[Ck][IsmRenderer] Get Mesh Shadow Casting")
+    static ECk_EnableDisable
+    Get_MeshShadowCasting(
+        const FCk_Handle_IsmRenderer& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmRenderer",
+              DisplayName="[Ck][IsmRenderer] Get Mesh Collision")
+    static ECk_Collision
+    Get_MeshCollision(
+        const FCk_Handle_IsmRenderer& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmRenderer",
+              DisplayName="[Ck][IsmRenderer] Get Mesh Num Custom Data")
+    static int32
+    Get_MeshNumCustomData(
+        const FCk_Handle_IsmRenderer& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
