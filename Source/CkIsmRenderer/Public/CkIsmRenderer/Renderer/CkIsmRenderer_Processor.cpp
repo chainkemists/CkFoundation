@@ -13,6 +13,62 @@
 
 namespace ck
 {
+    FProcessor_IsmRenderer_Setup::IsmActorComponentInitFunctor::
+        IsmActorComponentInitFunctor(
+            FCk_Handle_IsmRenderer& InRendererEntity,
+            const FFragment_IsmRenderer_Params& InRendererParams,
+            ECk_Mobility InIsmMobility)
+        : _RendererEntity(InRendererEntity)
+        , _RendererParams(InRendererParams)
+        , _IsmMobility(InIsmMobility)
+    {
+    }
+
+    auto
+        FProcessor_IsmRenderer_Setup::IsmActorComponentInitFunctor::
+        operator()(
+                UInstancedStaticMeshComponent* InIsmActorComp)
+        -> void
+    {
+        if (ck::Is_NOT_Valid(_RendererEntity))
+        { return; }
+
+        const auto& Params = _RendererParams.Get_Params();
+        const auto& MeshPtr = Params.Get_Mesh();
+
+        switch (_IsmMobility)
+        {
+            case ECk_Mobility::Static:
+            {
+                _RendererEntity.Get<FFragment_IsmRenderer_Current>()._IsmComponent_Static = InIsmActorComp;
+                InIsmActorComp->SetMobility(EComponentMobility::Static);
+                break;
+            }
+            case ECk_Mobility::Movable:
+            {
+                _RendererEntity.Get<FFragment_IsmRenderer_Current>()._IsmComponent_Movable = InIsmActorComp;
+                InIsmActorComp->SetMobility(EComponentMobility::Movable);
+                break;
+            }
+            case ECk_Mobility::Stationary:
+            {
+                CK_TRIGGER_ENSURE(TEXT("Ism does not support mobility of type [{}]"), _IsmMobility);
+                break;
+            }
+            case ECk_Mobility::Count:
+            default:
+            {
+                CK_INVALID_ENUM(_IsmMobility);
+                break;
+            }
+        }
+
+        InIsmActorComp->SetCollisionEnabled(UCk_Utils_Enum_UE::ConvertToECollisionEnabled(Params.Get_Collision()));
+        InIsmActorComp->CastShadow = Params.Get_CastShadows() == ECk_EnableDisable::Enable;
+        InIsmActorComp->SetStaticMesh(MeshPtr);
+        InIsmActorComp->NumCustomDataFloats = Params.Get_NumCustomData();
+    }
+
     auto
         FProcessor_IsmRenderer_Setup::
         DoTick(
@@ -37,55 +93,27 @@ namespace ck
         const auto& Params = InParams.Get_Params();
 
         CK_ENSURE_IF_NOT(ck::IsValid(Actor),
-            TEXT("OwningActor [{}] for Handle [{}] is INVALID. Unable to Setup the AntAgent Renderer"), Actor, InHandle)
+            TEXT("OwningActor [{}] for Handle [{}] is INVALID. Unable to Setup the IsmRenderer"), Actor, InHandle)
         { return; }
 
         CK_ENSURE_IF_NOT(ck::IsValid(Params.Get_Mesh()),
-            TEXT("The Mesh [{}] is INVALID. Unable to Setup the AntAgent Renderer"), InParams.Get_Params().Get_Mesh())
+            TEXT("The Mesh [{}] is INVALID. Unable to Setup the IsmRenderer"), InParams.Get_Params().Get_Mesh())
+        { return; }
+
+        CK_ENSURE_IF_NOT(ck::IsValid(Params.Get_RendererName()),
+            TEXT("The Renderer Name [{}] is INVALID. Unable to Setup the IsmRenderer"), Params.Get_RendererName())
         { return; }
 
         UCk_Utils_Actor_UE::Request_AddNewActorComponent<UInstancedStaticMeshComponent>
         (
             UCk_Utils_Actor_UE::AddNewActorComponent_Params<UInstancedStaticMeshComponent>{Actor.Get()}.Set_IsUnique(false),
-            [=, this](UInstancedStaticMeshComponent* InISM) mutable
-            {
-                if (ck::Is_NOT_Valid(InHandle))
-                { return; }
-
-                const auto& MeshPtr = Params.Get_Mesh();
-
-                CK_ENSURE_IF_NOT(ck::IsValid(MeshPtr),
-                    TEXT("The StaticMesh [{}] is INVALID. Unable to Setup the AntAgent Renderer"), MeshPtr)
-                { return; }
-
-                InHandle.Get<FFragment_IsmRenderer_Current>()._IsmComponent_Static = InISM;
-
-                InISM->SetCollisionEnabled(UCk_Utils_Enum_UE::ConvertToECollisionEnabled(Params.Get_Collision()));
-                InISM->CastShadow = Params.Get_CastShadows() == ECk_EnableDisable::Enable;
-                InISM->SetStaticMesh(MeshPtr);
-            }
+            IsmActorComponentInitFunctor{InHandle, InParams, ECk_Mobility::Movable}
         );
 
         UCk_Utils_Actor_UE::Request_AddNewActorComponent<UInstancedStaticMeshComponent>
         (
             UCk_Utils_Actor_UE::AddNewActorComponent_Params<UInstancedStaticMeshComponent>{Actor.Get()}.Set_IsUnique(false),
-            [=, this](UInstancedStaticMeshComponent* InISM) mutable
-            {
-                if (ck::Is_NOT_Valid(InHandle))
-                { return; }
-
-                const auto& MeshPtr = Params.Get_Mesh();
-
-                CK_ENSURE_IF_NOT(ck::IsValid(MeshPtr),
-                    TEXT("The StaticMesh [{}] is INVALID. Unable to Setup the AntAgent Renderer"), MeshPtr)
-                { return; }
-
-                InHandle.Get<FFragment_IsmRenderer_Current>()._IsmComponent_Movable = InISM;
-
-                InISM->SetCollisionEnabled(UCk_Utils_Enum_UE::ConvertToECollisionEnabled(Params.Get_Collision()));
-                InISM->CastShadow = Params.Get_CastShadows() == ECk_EnableDisable::Enable;
-                InISM->SetStaticMesh(MeshPtr);
-            }
+            IsmActorComponentInitFunctor{InHandle, InParams, ECk_Mobility::Static}
         );
     }
 
@@ -99,7 +127,7 @@ namespace ck
             const FFragment_IsmRenderer_Current& InCurrent) const
         -> void
     {
-        if (ck::Is_NOT_Valid(InCurrent.Get_IsmComponent_Static()))
+        if (ck::Is_NOT_Valid(InCurrent.Get_IsmComponent_Movable()))
         { return; }
 
         InCurrent.Get_IsmComponent_Movable()->ClearInstances();
@@ -127,13 +155,14 @@ namespace ck
             FFragment_InstancedStaticMeshRenderer_Requests& InRequestsComp) const
         -> void
     {
-        const auto RequestsCopy = InRequestsComp._Requests;
-        InRequestsComp._Requests.Reset();
-
-        algo::ForEach(RequestsCopy, ck::Visitor([&](const auto& InRequestVariant)
+        InHandle.CopyAndRemove(InRequestsComp, [&](const FFragment_InstancedStaticMeshRenderer_Requests& InRequests)
         {
-            DoHandleRequest(InHandle, InCurrent, InRequestVariant);
-        }));
+            algo::ForEachRequest(InRequests._Requests, ck::Visitor(
+            [&](const auto& InRequestVariant) -> void
+            {
+                DoHandleRequest(InHandle, InCurrent, InRequestVariant);
+            }), policy::DontResetContainer{});
+        });
     }
 
     auto
@@ -150,7 +179,7 @@ namespace ck
         if (ck::Is_NOT_Valid(IsmComponent_Static) || ck::Is_NOT_Valid(IsmComponent_Movable))
         { return; }
 
-        InCurrent.Get_IsmComponent_Static()->AddInstance(InRequest.Get_Transform());
+        IsmComponent_Static->AddInstance(InRequest.Get_Transform());
     }
 }
 
