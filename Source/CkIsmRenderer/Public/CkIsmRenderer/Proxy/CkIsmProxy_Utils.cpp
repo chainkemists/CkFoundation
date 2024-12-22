@@ -24,4 +24,31 @@ auto
     return Cast(InHandle);
 }
 
+auto
+    UCk_Utils_IsmProxy_UE::
+    Get_RendererName(
+        const FCk_Handle_IsmProxy& InHandle)
+    -> FGameplayTag
+{
+    return InHandle.Get<ck::FFragment_IsmProxy_Params>().Get_Params().Get_RendererName();
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
+    Get_RelativeTransform(
+        const FCk_Handle_IsmProxy& InHandle)
+    -> FTransform
+{
+    return InHandle.Get<ck::FFragment_IsmProxy_Params>().Get_Params().Get_RelativeTransform();
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
+    Get_Mobility(
+        const FCk_Handle_IsmProxy& InHandle)
+    -> ECk_Mobility
+{
+    return InHandle.Get<ck::FFragment_IsmProxy_Params>().Get_Params().Get_Mobility();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
