@@ -93,7 +93,8 @@ namespace ck
 
         const auto& MeshMobility = InHandle.Has<FTag_IsmProxy_Dynamic>() ? ECk_Mobility::Movable : ECk_Mobility::Static;
 
-        RendererToUse[static_cast<int32>(MeshMobility)]->AddInstance(CombinedTransform);
+        constexpr auto TransformAsWorldSpace = true;
+        RendererToUse[static_cast<int32>(MeshMobility)]->AddInstance(CombinedTransform, TransformAsWorldSpace);
 
         InHandle.Remove<MarkedDirtyBy>();
     }
@@ -143,7 +144,8 @@ namespace ck
         const auto& CurrentTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InHandle);
         const auto& CombinedTransform = CurrentTransform * RelativeTransform;
 
-        RendererToUse[static_cast<int32>(ECk_Mobility::Movable)]->AddInstance(CombinedTransform);
+        constexpr auto TransformAsWorldSpace = true;
+        RendererToUse[static_cast<int32>(ECk_Mobility::Movable)]->AddInstance(CombinedTransform, TransformAsWorldSpace);
     }
 }
 
