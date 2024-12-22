@@ -6,6 +6,13 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck
+{
+    class FProcessor_IsmProxy_Setup;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS()
 class CKISMRENDERER_API UCk_Utils_IsmProxy_UE : public UBlueprintFunctionLibrary
 {
@@ -14,6 +21,9 @@ class CKISMRENDERER_API UCk_Utils_IsmProxy_UE : public UBlueprintFunctionLibrary
 public:
     CK_GENERATED_BODY(UCk_Utils_IsmProxy_UE);
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_IsmProxy);
+
+public:
+    friend class ck::FProcessor_IsmProxy_Setup;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -87,6 +97,11 @@ public:
     static ECk_Mobility
     Get_Mobility(
         const FCk_Handle_IsmProxy& InHandle);
+
+private:
+    static auto
+    Request_NeedsInstanceAdded(
+        FCk_Handle_IsmProxy& InHandle) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
