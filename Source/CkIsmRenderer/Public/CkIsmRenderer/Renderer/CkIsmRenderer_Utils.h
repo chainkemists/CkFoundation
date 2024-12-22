@@ -84,6 +84,27 @@ public:
     static int32
     Get_MeshNumCustomData(
         const FCk_Handle_IsmRenderer& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmRenderer",
+              DisplayName="[Ck][IsmRenderer] Get Current Instance Count (Total)")
+    static int32
+    Get_CurrentInstanceCount_Total(
+        const FCk_Handle_IsmRenderer& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmRenderer",
+              DisplayName="[Ck][IsmRenderer] Get Current Instance Count (Static)")
+    static int32
+    Get_CurrentInstanceCount_Static(
+        const FCk_Handle_IsmRenderer& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmRenderer",
+              DisplayName="[Ck][IsmRenderer] Get Current Instance Count (Static)")
+    static int32
+    Get_CurrentInstanceCount_Movable(
+        const FCk_Handle_IsmRenderer& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
