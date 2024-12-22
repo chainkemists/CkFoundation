@@ -4,6 +4,7 @@
 
 #include <Engine/World.h>
 #include <EngineUtils.h>
+#include <Materials/MaterialInterface.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -41,6 +42,22 @@ auto
     { return {}; }
 
     return InActor->WasRecentlyRendered(InTimeTolerance.Get_Seconds());
+}
+
+auto
+    UCk_Utils_Graphics_UE::
+    Get_IsMaterialChildOf(
+        UMaterialInterface* InMaterial,
+        UMaterialInterface* InParentMaterial)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InMaterial), TEXT("Invalid Material supplied to Get_IsMaterialChildOf"))
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InParentMaterial), TEXT("Invalid Parent Material supplied to Get_IsMaterialChildOf"))
+    { return {}; }
+
+    return InMaterial->IsDependent(InParentMaterial);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
