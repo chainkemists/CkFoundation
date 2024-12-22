@@ -78,4 +78,31 @@ auto
     return InHandle.Get<ck::FFragment_IsmRenderer_Params>().Get_Params().Get_NumCustomData();
 }
 
+auto
+    UCk_Utils_IsmRenderer_UE::
+    Get_CurrentInstanceCount_Static(
+        const FCk_Handle_IsmRenderer& InHandle)
+    -> int32
+{
+    return InHandle.Get<ck::FFragment_IsmRenderer_Current>().Get_IsmComponent_Static()->GetInstanceCount();
+}
+
+auto
+    UCk_Utils_IsmRenderer_UE::
+    Get_CurrentInstanceCount_Movable(
+        const FCk_Handle_IsmRenderer& InHandle)
+    -> int32
+{
+    return InHandle.Get<ck::FFragment_IsmRenderer_Current>().Get_IsmComponent_Movable()->GetInstanceCount();
+}
+
+auto
+    UCk_Utils_IsmRenderer_UE::
+    Get_CurrentInstanceCount_Total(
+        const FCk_Handle_IsmRenderer& InHandle)
+    -> int32
+{
+    return Get_CurrentInstanceCount_Movable(InHandle) + Get_CurrentInstanceCount_Static(InHandle);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
