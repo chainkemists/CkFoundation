@@ -65,6 +65,8 @@ namespace ck
         InIsmActorComp->CastShadow = Params.Get_CastShadows() == ECk_EnableDisable::Enable;
         InIsmActorComp->SetStaticMesh(MeshPtr);
         InIsmActorComp->NumCustomDataFloats = Params.Get_NumCustomData();
+        InIsmActorComp->InstanceStartCullDistance = Params.Get_CullingInfo().Get_InstanceCullDistance_Start();
+        InIsmActorComp->InstanceEndCullDistance = Params.Get_CullingInfo().Get_InstanceCullDistance_End();
     }
 
     auto
