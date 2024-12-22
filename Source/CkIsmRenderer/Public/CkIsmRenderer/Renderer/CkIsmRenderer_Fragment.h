@@ -55,27 +55,6 @@ namespace ck
         CK_PROPERTY_GET(_IsmComponent_Static);
         CK_PROPERTY_GET(_IsmComponent_Movable);
     };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    struct CKISMRENDERER_API FFragment_InstancedStaticMeshRenderer_Requests
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_InstancedStaticMeshRenderer_Requests);
-
-    public:
-        using RequestType = std::variant<FCk_Request_IsmRenderer_NewInstance>;
-
-        using RequestList = TArray<RequestType>;
-
-    public:
-        friend class FProcessor_IsmRenderer_HandleRequests;
-        friend class UCk_Utils_IsmRenderer_UE;
-
-    private:
-        RequestList _Requests;
-    };
-
 }
 
 // --------------------------------------------------------------------------------------------------------------------

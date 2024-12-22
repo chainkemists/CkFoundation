@@ -52,22 +52,3 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKISMRENDERER_API FCk_Request_IsmRenderer_NewInstance
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Request_IsmRenderer_NewInstance);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta=(AllowPrivateAccess = true))
-    FTransform _Transform;
-
-public:
-    CK_PROPERTY(_Transform);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
