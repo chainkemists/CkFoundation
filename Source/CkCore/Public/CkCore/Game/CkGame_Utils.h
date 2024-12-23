@@ -12,6 +12,7 @@
 class ACk_PlayerState_UE;
 class UGameInstance;
 class UWorld;
+class APlayerState;
 
 // --------------------------------------------------------------------------------------------------------------------
 
