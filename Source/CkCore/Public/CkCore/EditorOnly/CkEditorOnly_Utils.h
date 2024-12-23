@@ -215,6 +215,13 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|EditorOnly",
+        DisplayName = "[Ck] Request Abort PIE",
+        meta = (DevelopmentOnly,  Keywords = "end, play"))
+    static void
+    Request_AbortPIE();
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|EditorOnly",
         DisplayName = "[Ck] Add Interface")
     static ECk_SucceededFailed
     Request_AddInterface(
