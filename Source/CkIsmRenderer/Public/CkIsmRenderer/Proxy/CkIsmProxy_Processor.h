@@ -1,12 +1,10 @@
 #pragma once
 
-#include "CkIsmRenderer/Proxy/CkIsmProxy_Fragment.h"
-
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
-#include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
+#include "CkEcs/Net/CkNet_Fragment.h"
 #include "CkEcs/Processor/CkProcessor.h"
 
-#include "CkEcsExt/Transform/CkTransform_Fragment.h"
+#include "CkIsmRenderer/Proxy/CkIsmProxy_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -64,6 +62,31 @@ namespace ck
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
             FFragment_IsmProxy_Current& InCurrent) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKISMRENDERER_API FProcessor_IsmProxy_Teardown : public ck_exp::TProcessor<
+        FProcessor_IsmProxy_Teardown,
+        FCk_Handle_IsmProxy,
+        FFragment_IsmProxy_Params,
+        FFragment_IsmProxy_Current,
+        CK_IF_PENDING_KILL>
+    {
+    public:
+        using TProcessor::TProcessor;
+
+        auto
+        DoTick(
+            TimeType InDeltaT) -> void;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_IsmProxy_Params& InParams,
+            const FFragment_IsmProxy_Current& InCurrent) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
