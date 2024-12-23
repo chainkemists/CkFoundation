@@ -83,6 +83,14 @@ auto
 
             return;
         }
+
+        const auto AllValidEntities = ck::algo::AllOf(EntityCollectionToReplicate.Get_EntitiesInCollection(), ck::algo::IsValidEntityHandle{});
+
+        ck::entity_collection::VerboseIf(NOT AllValidEntities, TEXT("At least one invalid entity in EntityCollection [{}]. EntityCollection replication PENDING..."),
+            EntityCollectionToReplicate.Get_CollectionName());
+
+        if (NOT AllValidEntities)
+        { return; }
     }
 
     for (auto Index = 0; Index < _EntityCollectionsToReplicate.Num(); ++Index)
