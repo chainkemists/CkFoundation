@@ -1,0 +1,12 @@
+# IDEs
+.vscode
+.cache
+.vs
+
+# build
+build
+out
+CMakeUserPresets.json
+
+# macOS
+.DS_Store
