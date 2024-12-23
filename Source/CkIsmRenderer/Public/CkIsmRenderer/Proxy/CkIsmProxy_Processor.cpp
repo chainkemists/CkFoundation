@@ -55,6 +55,11 @@ namespace ck
     {
         using ck_ism_proxy_processor::Renderers;
 
+        if (UCk_Utils_Net_UE::Get_EntityNetMode(_TransientEntity) != ECk_Net_NetModeType::Client)
+        { return; }
+
+        Renderers.Empty();
+
         _TransientEntity.View<
             FFragment_IsmRenderer_Params,
             FFragment_IsmRenderer_Current,
@@ -65,6 +70,11 @@ namespace ck
 
                 const auto IsmArray = IsmAcArray{
                     InCurrent.Get_IsmComponent_Static(), InCurrent.Get_IsmComponent_Static(), InCurrent.Get_IsmComponent_Movable()};
+
+                CK_ENSURE_IF_NOT(NOT Renderers.Contains(InParams.Get_Params().Get_RendererName()),
+                    TEXT("Ism Renderer with Name [{}] already exists. Unable to add another one"),
+                    InParams.Get_Params().Get_RendererName())
+                { return; }
 
                 Renderers.Add(InParams.Get_Params().Get_RendererName(), IsmArray);
             });
