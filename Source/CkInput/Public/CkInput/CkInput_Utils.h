@@ -2,6 +2,10 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include <Kismet/BlueprintFunctionLibrary.h>
+#include <Framework/Commands/InputChord.h>
+#include <GameFramework/PlayerController.h>
+
 #include "CkInput_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
