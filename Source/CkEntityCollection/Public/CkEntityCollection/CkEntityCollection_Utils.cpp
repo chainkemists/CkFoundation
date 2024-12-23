@@ -35,6 +35,19 @@ auto
     RecordOfEntityCollections_Utils::AddIfMissing(InEntityCollectionOwnerEntity, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
     RecordOfEntityCollections_Utils::Request_Connect(InEntityCollectionOwnerEntity, NewEntityCollectionEntity);
 
+    // it's possible that we have pending replication info
+    if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Client(InEntityCollectionOwnerEntity))
+    {
+        if (UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_EntityCollection_Rep>(InEntityCollectionOwnerEntity))
+        {
+            InEntityCollectionOwnerEntity.Try_Transform<TObjectPtr<UCk_Fragment_EntityCollection_Rep>>(
+            [&](const TObjectPtr<UCk_Fragment_EntityCollection_Rep>& InRepComp)
+            {
+                InRepComp->Request_TryUpdateReplicatedEntityCollections();
+            });
+        }
+    }
+
     return NewEntityCollectionEntity;
 }
 
