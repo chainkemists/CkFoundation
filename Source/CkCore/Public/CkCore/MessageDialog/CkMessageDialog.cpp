@@ -277,6 +277,52 @@ auto
 
 auto
     UCk_Utils_MessageDialog_UE::
+    TestCustomDialog(
+        FText InMessage,
+        FText InTitle)
+    -> void
+{
+    UCk_Utils_MessageDialog_UE::CustomDialog(
+    InMessage,
+    InTitle,
+    {
+        UCk_Utils_MessageDialog_UE::DialogButton
+        {
+            FText::FromName(TEXT("Yes")),
+            FSimpleDelegate::CreateLambda([]()
+            {
+
+            })
+        },
+        UCk_Utils_MessageDialog_UE::DialogButton
+        {
+            FText::FromName(TEXT("No")),
+            FSimpleDelegate::CreateLambda([]()
+            {
+
+            })
+        },
+        UCk_Utils_MessageDialog_UE::DialogButton
+        {
+            FText::FromName(TEXT("YesAll")),
+            FSimpleDelegate::CreateLambda([]()
+            {
+
+            })
+        },
+        UCk_Utils_MessageDialog_UE::DialogButton
+        {
+            FText::FromName(TEXT("HelloSaad")),
+            FSimpleDelegate::CreateLambda([]()
+            {
+
+            })
+        }
+    });
+}
+
+auto
+    UCk_Utils_MessageDialog_UE::
     CustomDialog(
         const FText& InMessage,
         const FText& InTitle,

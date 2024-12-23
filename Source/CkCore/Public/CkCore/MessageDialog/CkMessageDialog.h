@@ -177,6 +177,14 @@ public:
         FText InMessage,
         FText InTitle = FText::GetEmpty());
 
+    UFUNCTION(BlueprintCallable,
+        DisplayName = "[Ck] Test Custom Dialog",
+        Category = "Ck|Utils|MessageDialog")
+    static void
+    TestCustomDialog(
+        FText InMessage,
+        FText InTitle = FText::GetEmpty());
+
 public:
     static int32
     CustomDialog(
