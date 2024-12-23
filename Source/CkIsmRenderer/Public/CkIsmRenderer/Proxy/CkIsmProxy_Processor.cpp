@@ -157,6 +157,41 @@ namespace ck
         }
     }
 
+    auto
+        FProcessor_IsmProxy_Teardown::
+        DoTick(
+            TimeType InDeltaT)
+            -> void
+    {
+        TProcessor::DoTick(InDeltaT);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_IsmProxy_Teardown::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_IsmProxy_Params& InParams,
+            const FFragment_IsmProxy_Current& InCurrent) const
+        -> void
+    {
+        const auto& Params = InParams.Get_Params();
+
+        const auto& RendererName = Params.Get_RendererName();
+        const auto& Mobility = Params.Get_Mobility();
+        const auto& IsmComp = ck_ism_proxy_processor::FindRendererIsmComp(RendererName, Mobility);
+
+        if (ck::Is_NOT_Valid(IsmComp))
+        { return; }
+
+        if (IsmComp->IsValidId(InCurrent.Get_IsmInstanceIndex()))
+        {
+            IsmComp->RemoveInstanceById(InCurrent.Get_IsmInstanceIndex());
+        }
+    }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
