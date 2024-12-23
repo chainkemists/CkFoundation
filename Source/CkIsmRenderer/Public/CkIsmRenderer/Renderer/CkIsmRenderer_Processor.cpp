@@ -73,7 +73,7 @@ namespace ck
             }
             case ECk_Ism_RenderPolicy::HISM:
             {
-                AddIsmActorComponents(std::type_identity<UInstancedStaticMeshComponent>{});
+                AddIsmActorComponents(std::type_identity<UHierarchicalInstancedStaticMeshComponent>{});
                 break;
             }
             default:
