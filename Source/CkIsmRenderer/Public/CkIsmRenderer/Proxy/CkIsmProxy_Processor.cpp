@@ -134,11 +134,11 @@ namespace ck
         const auto& CombinedTransform = CurrentTransform * RelativeTransform;
 
         constexpr auto TransformAsWorldSpace = true;
-        const auto& InstanceIndex = IsmComp->AddInstance(CombinedTransform, TransformAsWorldSpace);
+        const auto& InstanceIndex = IsmComp->AddInstanceById(CombinedTransform, TransformAsWorldSpace);
         InCurrent._IsmInstanceIndex = InstanceIndex;
 
         constexpr auto MarkRenderStateDirty = false;
-        IsmComp->SetCustomData(InstanceIndex, InCurrent.Get_CustomDataValues(), MarkRenderStateDirty);
+        IsmComp->SetCustomDataById(InstanceIndex, InCurrent.Get_CustomDataValues());
 
         // Movable ISM instances are re-add again every tick
         if (Mobility != ECk_Mobility::Movable)
@@ -207,7 +207,7 @@ namespace ck
             { return; }
 
             constexpr auto MarkRenderStateDirty = true;
-            IsmComp->SetCustomData(InCurrent.Get_IsmInstanceIndex(), NewCustomData, MarkRenderStateDirty);
+            IsmComp->SetCustomDataById(InCurrent.Get_IsmInstanceIndex(), NewCustomData);
         }
     }
 
@@ -245,7 +245,7 @@ namespace ck
             { return; }
 
             constexpr auto MarkRenderStateDirty = true;
-            IsmComp->SetCustomDataValue(InCurrent.Get_IsmInstanceIndex(), NewCustomDataIndex, NewCustomDataValue, MarkRenderStateDirty);
+            IsmComp->SetCustomDataValueById(InCurrent.Get_IsmInstanceIndex(), NewCustomDataIndex, NewCustomDataValue);
         }
     }
 }

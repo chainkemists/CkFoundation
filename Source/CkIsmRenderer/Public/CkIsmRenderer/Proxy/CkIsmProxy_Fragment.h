@@ -48,7 +48,7 @@ namespace ck
         friend class FProcessor_IsmProxy_HandleRequests;
 
     private:
-        int32 _IsmInstanceIndex = INDEX_NONE;
+        FPrimitiveInstanceId _IsmInstanceIndex;
         TArray<float> _CustomDataValues;
 
     public:
