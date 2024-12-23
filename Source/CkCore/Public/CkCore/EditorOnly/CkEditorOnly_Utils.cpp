@@ -242,6 +242,19 @@ auto
 
 auto
     UCk_Utils_EditorOnly_UE::
+    Request_AbortPIE()
+    -> void
+{
+#if WITH_EDITOR
+    if (ck::IsValid(GEditor))
+    {
+        GEditor->RequestEndPlayMap();
+    }
+#endif
+}
+
+auto
+    UCk_Utils_EditorOnly_UE::
     Request_AddInterface(
         UBlueprint* InBlueprint,
         TSubclassOf<UInterface> InInterfaceClass)
