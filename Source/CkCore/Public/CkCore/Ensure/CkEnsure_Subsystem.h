@@ -88,7 +88,11 @@ public:
     Request_IgnoreEnsure_WithCallstack(
         const FString& InCallstack) -> void;
 
+    auto
+    Request_IgnoreAllEnsures() -> void;
+
 private:
+    bool                                       _IgnoreAllEnsure = false;
     int32                                      _NumberOfEnsuresTriggered = 0;
     int32                                      _NumberOfUniqueEnsuresTriggered = 0;
     TMap<FName, TSet<FCk_Ensure_Entry>>        _UniqueTriggeredEnsures;

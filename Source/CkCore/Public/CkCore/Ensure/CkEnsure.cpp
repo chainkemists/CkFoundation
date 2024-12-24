@@ -263,6 +263,19 @@ auto
 
 auto
     UCk_Utils_Ensure_UE::
+    Request_IgnoreAllEnsures()
+    -> void
+{
+    const auto EnsureSubsystem = UCk_Ensure_Subsystem_UE::Get_Instance();
+
+    if (ck::Is_NOT_Valid(EnsureSubsystem))
+    { return; }
+
+    EnsureSubsystem->Request_IgnoreAllEnsures();
+}
+
+auto
+    UCk_Utils_Ensure_UE::
     Get_IsEnsureIgnored_WithCallstack(
         const FString& InCallstack)
     -> bool
