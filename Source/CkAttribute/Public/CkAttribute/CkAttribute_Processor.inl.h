@@ -88,8 +88,13 @@ namespace ck::detail
         const auto BaseValue = InAttributeCurrent._Base;
         const auto FinalValue = InAttributeCurrent._Final;
 
-        using AttributePreviousType = ck::TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
-        const auto& PreviousValue = InHandle.template Get<AttributePreviousType>();
+        using Current_AttributePreviousType = ck::TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
+
+        // If the Current has not been changed yet, but the min was then this processor will run without a PreviousValue existing for Current
+        if (NOT InHandle.template Has<Current_AttributePreviousType>())
+        { InHandle.template Add<Current_AttributePreviousType>(InAttributeCurrent.Get_Base(), InAttributeCurrent.Get_Final()); }
+
+        const auto& PreviousValue = InHandle.template Get<Current_AttributePreviousType>();
 
         // Clamping on the client side is bypassed because the server might update both 'Min' and 'Current' values.
         // In cases where 'Current' needs to match the new 'Min', if the client receives 'Current' before 'Min' and clamps it,
@@ -129,8 +134,13 @@ namespace ck::detail
         const auto BaseValue = InAttributeCurrent._Base;
         const auto FinalValue = InAttributeCurrent._Final;
 
-        using AttributePreviousType = ck::TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
-        auto& PreviousValue = InHandle.template Get<AttributePreviousType>();
+        using Current_AttributePreviousType = ck::TFragment_Attribute_PreviousValues<T_DerivedAttributeCurrent>;
+
+        // If the Current has not been changed yet, but the Max was then this processor will run without a PreviousValue existing for Current
+        if (NOT InHandle.template Has<Current_AttributePreviousType>())
+        { InHandle.template Add<Current_AttributePreviousType>(InAttributeCurrent.Get_Base(), InAttributeCurrent.Get_Final()); }
+
+        auto& PreviousValue = InHandle.template Get<Current_AttributePreviousType>();
 
         // Clamping on the client side is bypassed because the server might update both 'Max' and 'Current' values.
         // In cases where 'Current' needs to match the new 'Max', if the client receives 'Current' before 'Max' and clamps it,
