@@ -299,7 +299,12 @@ auto
         .Title(InTitle)
         .Content()
         [
-            SNew(STextBlock).Text(InMessage)
+            SNew(SBox)
+            .WidthOverride(1000.0f)
+            .HeightOverride(1000.0f)
+            [
+                SNew(STextBlock).Text(InMessage).AutoWrapText(true)
+            ]
         ]
         .Buttons(Buttons);
 
