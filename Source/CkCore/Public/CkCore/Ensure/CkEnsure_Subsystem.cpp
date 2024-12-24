@@ -27,6 +27,7 @@ auto
 {
     _Instance.Reset();
 
+    _IgnoreAllEnsure = false;
     _NumberOfEnsuresTriggered = 0;
     _IgnoredEnsures.Reset();
     _IgnoredEnsures_BP.Reset();
@@ -92,6 +93,9 @@ auto
         int32 InLine) const
     -> bool
 {
+    if (_IgnoreAllEnsure)
+    { return true; }
+
     const auto* LineSet = _IgnoredEnsures.Find(InFile);
 
     if (ck::Is_NOT_Valid(LineSet, ck::IsValid_Policy_NullptrOnly{}))
@@ -185,10 +189,21 @@ auto
 
 auto
     UCk_Ensure_Subsystem_UE::
+    Request_IgnoreAllEnsures()
+    -> void
+{
+    _IgnoreAllEnsure = true;
+}
+
+auto
+    UCk_Ensure_Subsystem_UE::
     Get_IsEnsureIgnored_WithCallstack(
         const FString& InCallstack) const
     -> bool
 {
+    if (_IgnoreAllEnsure)
+    { return true; }
+
     return ck::IsValid(_IgnoredEnsures_BP.Find(InCallstack), ck::IsValid_Policy_NullptrOnly{});
 }
 
