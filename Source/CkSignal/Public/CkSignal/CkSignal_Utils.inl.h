@@ -32,13 +32,13 @@ namespace ck
         auto&      Signal  = InHandle.template AddOrGet<SignalType, ck::IsValid_Policy_IncludePendingKill>();
         const auto Invoker = [&Signal](auto&&... InArgs)
         {
+            Signal._Payload.Emplace(std::make_tuple(std::forward<T_Args>(InArgs)...));
+            Signal._PayloadFrameNumber = UCk_Utils_Time_UE::Get_FrameCounter();
+
             Signal._Invoke_Signal.publish(InArgs...);
 
             Signal._InvokeAndUnbind_Signal.publish(InArgs...);
             Signal._InvokeAndUnbind_Sink.disconnect();
-
-            Signal._Payload.Emplace(std::make_tuple(std::forward<T_Args>(InArgs)...));
-            Signal._PayloadFrameNumber = UCk_Utils_Time_UE::Get_FrameCounter();
         };
 
         std::apply(Invoker, InPayload.Payload);
