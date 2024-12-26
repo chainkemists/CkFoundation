@@ -651,6 +651,9 @@ namespace ck
             if (InRequest.Get_ConstructionPhase() != ECk_ConstructionPhase::DuringConstruction)
             { return; }
 
+            if (NOT UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InAbilityOwnerEntity))
+            { return; }
+
             const auto& ReplicatedAbilityEntity = InRequest.Get_ReplicatedEntityToUse();
             const auto& RepDriver_ReplicatedAbilityEntity = ReplicatedAbilityEntity.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
 
