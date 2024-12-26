@@ -34,8 +34,6 @@ auto
     InHandle.Add<ck::FFragment_AbilityOwner_Current>();
     InHandle.Add<ck::FTag_AbilityOwner_NeedsSetup>();
 
-    DoSet_ExpectedNumberOfDependentReplicationDrivers(InHandle, Params);
-
     UCk_Utils_Ability_UE::RecordOfAbilities_Utils::AddIfMissing(InHandle);
 
     if (InReplicates == ECk_Replication::DoesNotReplicate)
@@ -50,6 +48,7 @@ auto
     else
     {
         UCk_Utils_Ecs_Net_UE::TryAddReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InHandle);
+        DoSet_ExpectedNumberOfDependentReplicationDrivers(InHandle, Params);
     }
 
     return Cast(InHandle);
@@ -1136,6 +1135,9 @@ auto
     -> void
 {
     if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle))
+    { return; }
+
+    if (NOT UCk_Utils_Ecs_Net_UE::Get_HasReplicatedFragment<UCk_Fragment_AbilityOwner_Rep>(InHandle))
     { return; }
 
     if (NOT InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
