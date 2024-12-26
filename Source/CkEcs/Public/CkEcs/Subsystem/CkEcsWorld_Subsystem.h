@@ -147,9 +147,27 @@ private:
     FCk_Registry _Registry;
 
 public:
+    // Should only be used by internal functions that truly require the Registry directly (i.e. usage should be RARE)
+    template <typename T_Func>
+    auto
+    Request_PerformOperationOnInternalRegistry(
+        T_Func InFunc);
+
+public:
     CK_PROPERTY_GET(_TransientEntity);
     CK_PROPERTY_GET(_Registry);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+template <typename T_Func>
+auto
+    UCk_EcsWorld_Subsystem_UE::
+    Request_PerformOperationOnInternalRegistry(
+        T_Func InFunc)
+{
+   _Registry.Request_PerformOperationOnInternalRegistry(InFunc);
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
