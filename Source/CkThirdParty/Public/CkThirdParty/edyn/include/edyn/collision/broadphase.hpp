@@ -10,7 +10,7 @@
 
 namespace edyn {
 
-class broadphase final {
+class CKTHIRDPARTY_API broadphase final {
     // Offset applied to AABBs when querying the trees.
     constexpr static auto m_aabb_offset = vector3_one * -contact_breaking_threshold;
 

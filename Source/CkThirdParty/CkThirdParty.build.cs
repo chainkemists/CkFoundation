@@ -13,6 +13,7 @@ public class CkThirdParty : ModuleRules
 				Path.Combine(ModuleDirectory, "Public/CkThirdParty/entt-3.12.2/src/"),
 				Path.Combine(ModuleDirectory, "Public/CkThirdParty/ctti/include"),
 				Path.Combine(ModuleDirectory, "Public/CkThirdParty/cleantype/src/include"),
+				Path.Combine(ModuleDirectory, "Public/CkThirdParty/edyn/include"),
 			}
 			);
 

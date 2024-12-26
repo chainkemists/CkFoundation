@@ -48,14 +48,14 @@ std::array<vector3, 2> convex_mesh::get_rotated_edge(const rotated_mesh &rmesh,
 }
 
 vector3 convex_mesh::get_edge_direction(size_t idx) const {
-    auto vertices = get_edge(idx);
-    return vertices[1] - vertices[0];
+    auto verts = get_edge(idx);
+    return verts[1] - verts[0];
 }
 
 vector3 convex_mesh::get_rotated_edge_direction(const rotated_mesh &rmesh,
                                                 size_t idx) const {
-    auto vertices = get_rotated_edge(rmesh, idx);
-    return vertices[1] - vertices[0];
+    auto verts = get_rotated_edge(rmesh, idx);
+    return verts[1] - verts[0];
 }
 
 std::array<uint32_t, 2> convex_mesh::get_edge_vertices(size_t idx) const {

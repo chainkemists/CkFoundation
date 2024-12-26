@@ -37,7 +37,7 @@ namespace edyn {
 /**
  * @brief Initialization configuration.
  */
-struct init_config {
+struct CKTHIRDPARTY_API init_config {
     // Number of worker threads to spawn. If zero, value will be taken from
     // `std::thread::hardware_concurrency`.
     size_t num_worker_threads {0};
@@ -64,6 +64,7 @@ struct init_config {
  * @brief Attaches Edyn to an EnTT registry.
  * @param registry The registry to be setup to run Edyn.
  */
+CKTHIRDPARTY_API
 void attach(entt::registry &registry, const init_config &config = {});
 
 /**
@@ -72,6 +73,7 @@ void attach(entt::registry &registry, const init_config &config = {});
  * not destroy them.
  * @param registry The registry to be freed from Edyn's context.
  */
+CKTHIRDPARTY_API
 void detach(entt::registry &registry);
 
 /**
@@ -79,6 +81,7 @@ void detach(entt::registry &registry);
  * @param registry Data source.
  * @return Fixed delta time in seconds.
  */
+CKTHIRDPARTY_API
 scalar get_fixed_dt(const entt::registry &registry);
 
 /**
@@ -86,6 +89,7 @@ scalar get_fixed_dt(const entt::registry &registry);
  * @param registry Data source.
  * @param dt Delta time in seconds.
  */
+CKTHIRDPARTY_API
 void set_fixed_dt(entt::registry &registry, scalar dt);
 
 /**
@@ -96,6 +100,7 @@ void set_fixed_dt(entt::registry &registry, scalar dt);
  * @param registry Data source.
  * @param max_steps Maximum number of steps per update.
  */
+CKTHIRDPARTY_API
 void set_max_steps_per_update(entt::registry &registry, unsigned);
 
 /**
@@ -103,18 +108,21 @@ void set_max_steps_per_update(entt::registry &registry, unsigned);
  * @param registry Data source.
  * @return Whether simulation is paused.
  */
+CKTHIRDPARTY_API
 bool is_paused(const entt::registry &registry);
 
 /**
  * @brief Pauses simulation.
  * @param registry Data source.
  */
+CKTHIRDPARTY_API
 void set_paused(entt::registry &registry, bool paused);
 
 /**
  * @brief Steps the simulation forward. Call it regularly.
  * @param registry Data source.
  */
+CKTHIRDPARTY_API
 void update(entt::registry &registry);
 
 /**
@@ -127,12 +135,14 @@ void update(entt::registry &registry);
  * @param registry Data source.
  * @param time The current time.
  */
+CKTHIRDPARTY_API
 void update(entt::registry &registry, double time);
 
 /**
  * @brief Runs a single step for a paused simulation.
  * @param registry Data source.
  */
+CKTHIRDPARTY_API
 void step_simulation(entt::registry &registry);
 
 /**
@@ -141,8 +151,10 @@ void step_simulation(entt::registry &registry);
  * @param registry Data source.
  * @param time The current time.
  */
+CKTHIRDPARTY_API
 void step_simulation(entt::registry &registry, double time);
 
+CKTHIRDPARTY_API
 execution_mode get_execution_mode(const entt::registry &registry);
 
 /**
@@ -155,6 +167,7 @@ execution_mode get_execution_mode(const entt::registry &registry);
  * @param time_func Pointer to a function that returns a timestamp in seconds.
  * Must be thread-safe.
  */
+CKTHIRDPARTY_API
 void set_time_source(entt::registry &registry, double(*time_func)(void));
 
 /**
@@ -162,6 +175,7 @@ void set_time_source(entt::registry &registry, double(*time_func)(void));
  * @param registry Data source.
  * @return Current time.
  */
+CKTHIRDPARTY_API
 double get_time(entt::registry &registry);
 
 /**
@@ -169,6 +183,7 @@ double get_time(entt::registry &registry);
  * @param registry Data source.
  * @return Function pointer.
  */
+CKTHIRDPARTY_API
 enqueue_task_t * get_enqueue_task(entt::registry &registry);
 
 /**
@@ -177,6 +192,7 @@ enqueue_task_t * get_enqueue_task(entt::registry &registry);
  * @param registry Data source.
  * @return Function pointer.
  */
+CKTHIRDPARTY_API
 enqueue_task_wait_t * get_enqueue_task_wait(entt::registry &registry);
 
 }

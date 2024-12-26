@@ -269,9 +269,9 @@ void collide(const polyhedron_shape &shA, const box_shape &shB,
             // Polygon vertex against box edge.
             EDYN_ASSERT(polygon.hull.size() == 1);
             point.pivotA = polygon.vertices[polygon.hull[0]];
-            auto edge_dir = edge_vertices[1] - edge_vertices[0];
+            auto edge_dir_2 = edge_vertices[1] - edge_vertices[0];
             vector3 pivotB_world; scalar t;
-            closest_point_line(edge_vertices[0], edge_dir, point.pivotA, t, pivotB_world);
+            closest_point_line(edge_vertices[0], edge_dir_2, point.pivotA, t, pivotB_world);
             point.pivotB = lerp(edge_vertices_local[0], edge_vertices_local[1], t);
             result.add_point(point);
         }

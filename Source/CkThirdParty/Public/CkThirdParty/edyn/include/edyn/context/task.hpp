@@ -19,8 +19,8 @@ using enqueue_task_t = void (task_delegate_t task, unsigned size, task_completio
 // execution to be finished.
 using enqueue_task_wait_t = void (task_delegate_t task, unsigned size);
 
-void enqueue_task_default(task_delegate_t task, unsigned size, task_completion_delegate_t completion);
-void enqueue_task_wait_default(task_delegate_t task, unsigned size);
+void CKTHIRDPARTY_API enqueue_task_default(task_delegate_t task, unsigned size, task_completion_delegate_t completion);
+void CKTHIRDPARTY_API enqueue_task_wait_default(task_delegate_t task, unsigned size);
 
 }
 

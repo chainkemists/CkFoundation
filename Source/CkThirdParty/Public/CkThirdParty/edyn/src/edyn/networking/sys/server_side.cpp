@@ -51,7 +51,7 @@ static void process_packet(entt::registry &registry, entt::entity client_entity,
 }
 
 template<typename T>
-void create_graph_edge(entt::registry &registry, entt::entity entity) {
+void create_graph_edge_server(entt::registry &registry, entt::entity entity) {
     if (registry.any_of<graph_edge>(entity)) return;
 
     auto &comp = registry.get<T>(entity);
@@ -63,13 +63,13 @@ void create_graph_edge(entt::registry &registry, entt::entity entity) {
 }
 
 template<typename... Ts>
-void maybe_create_graph_edge(entt::registry &registry, entt::entity entity) {
-    ((registry.any_of<Ts>(entity) ? create_graph_edge<Ts>(registry, entity) : void(0)), ...);
+void maybe_create_graph_edge_server(entt::registry &registry, entt::entity entity) {
+    ((registry.any_of<Ts>(entity) ? create_graph_edge_server<Ts>(registry, entity) : void(0)), ...);
 }
 
 template<typename... Ts>
-void maybe_create_graph_edge(entt::registry &registry, entt::entity entity, [[maybe_unused]] std::tuple<Ts...>) {
-    maybe_create_graph_edge<Ts...>(registry, entity);
+void maybe_create_graph_edge_server(entt::registry &registry, entt::entity entity, [[maybe_unused]] std::tuple<Ts...>) {
+    maybe_create_graph_edge_server<Ts...>(registry, entity);
 }
 
 static void process_packet(entt::registry &registry, entt::entity client_entity,
@@ -167,8 +167,8 @@ static void process_packet(entt::registry &registry, entt::entity client_entity,
     // for rigid bodies above.
     for (auto remote_entity : packet.entities) {
         auto local_entity = client.entity_map.at(remote_entity);
-        maybe_create_graph_edge(registry, local_entity, constraints_tuple);
-        maybe_create_graph_edge<null_constraint>(registry, local_entity);
+        maybe_create_graph_edge_server(registry, local_entity, constraints_tuple);
+        maybe_create_graph_edge_server<null_constraint>(registry, local_entity);
     }
 }
 
@@ -388,11 +388,11 @@ static void process_aabb_of_interest_entities_entered(entt::registry &registry,
         return;
     }
 
-    const auto entry_view = registry.view<asset_entry>();
     entt::sparse_set assets;
     entt::sparse_set entities;
 
     for (auto entity : aabboi.entities_entered) {
+        const auto entry_view = registry.view<asset_entry>();
         if (entry_view.contains(entity)) {
             auto [entry] = entry_view.get(entity);
 

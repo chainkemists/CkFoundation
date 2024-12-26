@@ -56,12 +56,13 @@ void raycast_service::finish_broadphase() {
 }
 
 void raycast_service::run_narrowphase(bool mt) {
-    auto index_view = m_registry->view<shape_index>();
-    auto tr_view = m_registry->view<position, orientation>();
-    auto origin_view = m_registry->view<origin>();
-    auto shape_views_tuple = get_tuple_of_shape_views(*m_registry);
 
     if (mt && m_narrow_ctx.size() > m_max_raycast_narrowphase_sequential_size) {
+        auto index_view = m_registry->view<shape_index>();
+        auto tr_view = m_registry->view<position, orientation>();
+        auto origin_view = m_registry->view<origin>();
+        auto shape_views_tuple = get_tuple_of_shape_views(*m_registry);
+
         auto *ctxes = &m_narrow_ctx;
 
         auto task_func = [ctxes, index_view, origin_view, tr_view, shape_views_tuple](unsigned start, unsigned end) {

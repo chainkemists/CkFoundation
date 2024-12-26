@@ -5,6 +5,7 @@ namespace edyn {
 
 using start_thread_func_t = void(void(*)(void *), void *);
 
+CKTHIRDPARTY_API
 void start_thread_func_default(void (*func)(void *), void *data);
 
 }
