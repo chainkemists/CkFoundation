@@ -81,6 +81,7 @@ struct rigidbody_def {
  * @param registry Data source and destination.
  * @param def Rigid body definition.
  */
+CKTHIRDPARTY_API
 void make_rigidbody(entt::entity, entt::registry &, const rigidbody_def &);
 
 /**
@@ -90,6 +91,7 @@ void make_rigidbody(entt::entity, entt::registry &, const rigidbody_def &);
  * @param def Rigid body definition.
  * @return Rigid body entity.
  */
+CKTHIRDPARTY_API
 entt::entity make_rigidbody(entt::registry &, const rigidbody_def &);
 
 /**
@@ -98,6 +100,7 @@ entt::entity make_rigidbody(entt::registry &, const rigidbody_def &);
  * @param registry Data source.
  * @param entity Rigid body entity.
  */
+CKTHIRDPARTY_API
 void clear_rigidbody(entt::registry &, entt::entity);
 
 /**
@@ -109,6 +112,7 @@ void clear_rigidbody(entt::registry &, entt::entity);
  * the entity's center/position, in world space, i.e.
  * `actual_world_space_location - position`.
  */
+CKTHIRDPARTY_API
 void rigidbody_apply_impulse(entt::registry &, entt::entity,
                              const vector3 &impulse,
                              const vector3 &rel_location);
@@ -118,14 +122,19 @@ void rigidbody_apply_impulse(entt::registry &, entt::entity,
  * @param entity Rigid body entity.
  * @param torque_impulse Torque impulse vector.
  */
+CKTHIRDPARTY_API
 void rigidbody_apply_torque_impulse(entt::registry &, entt::entity,
                                     const vector3 &torque_impulse);
 
 // TODO: Review and document these functions that properly handle kinematic movement.
+CKTHIRDPARTY_API
 void update_kinematic_position(entt::registry &, entt::entity, const vector3 &, scalar dt);
+CKTHIRDPARTY_API
 void update_kinematic_orientation(entt::registry &, entt::entity, const quaternion &, scalar dt);
+CKTHIRDPARTY_API
 void clear_kinematic_velocities(entt::registry &);
 
+CKTHIRDPARTY_API
 bool validate_rigidbody(entt::registry &, entt::entity &);
 
 /**
@@ -135,6 +144,7 @@ bool validate_rigidbody(entt::registry &, entt::entity &);
  * @param entity Rigid body entity.
  * @param mass The new rigid body mass.
  */
+CKTHIRDPARTY_API
 void set_rigidbody_mass(entt::registry &, entt::entity, scalar mass);
 
 /**
@@ -144,6 +154,7 @@ void set_rigidbody_mass(entt::registry &, entt::entity, scalar mass);
  * @param entity Rigid body entity.
  * @param inertia The new moment of inertia.
  */
+CKTHIRDPARTY_API
 void set_rigidbody_inertia(entt::registry &, entt::entity, const matrix3x3 &inertia);
 
 /**
@@ -154,6 +165,7 @@ void set_rigidbody_inertia(entt::registry &, entt::entity, const matrix3x3 &iner
  * @param entity Rigid body entity.
  * @param friction The new friction coefficient.
  */
+CKTHIRDPARTY_API
 void set_rigidbody_friction(entt::registry &, entt::entity, scalar);
 
 /**
@@ -168,6 +180,7 @@ void set_rigidbody_friction(entt::registry &, entt::entity, scalar);
  * @param entity Rigid body entity.
  * @param com Center of mass offset.
  */
+CKTHIRDPARTY_API
 void set_center_of_mass(entt::registry &, entt::entity, const vector3 &com);
 
 /**
@@ -177,6 +190,7 @@ void set_center_of_mass(entt::registry &, entt::entity, const vector3 &com);
  * @param entity Rigid body entity.
  * @return Origin location in the world.
  */
+CKTHIRDPARTY_API
 vector3 get_rigidbody_origin(const entt::registry &, entt::entity);
 
 /**
@@ -187,6 +201,7 @@ vector3 get_rigidbody_origin(const entt::registry &, entt::entity);
  * @param entity Rigid body entity.
  * @param origin location in the world.
  */
+CKTHIRDPARTY_API
 void set_rigidbody_origin(entt::registry &, entt::entity, const vector3 &origin);
 
 /**
@@ -196,6 +211,7 @@ void set_rigidbody_origin(entt::registry &, entt::entity, const vector3 &origin)
  * @param entity Rigid body entity.
  * @return Origin location in the world for presentation.
  */
+CKTHIRDPARTY_API
 vector3 get_rigidbody_present_origin(const entt::registry &, entt::entity);
 
 /**
@@ -205,6 +221,7 @@ vector3 get_rigidbody_present_origin(const entt::registry &, entt::entity);
  * @param registry Data source.
  * @param entity Rigid body entity.
  */
+CKTHIRDPARTY_API
 void rigidbody_update_origin(entt::registry &, entt::entity);
 
 /**
@@ -212,6 +229,7 @@ void rigidbody_update_origin(entt::registry &, entt::entity);
  * @param registry Data source.
  * @param entity Rigid body entity.
  */
+CKTHIRDPARTY_API
 void wake_up_entity(entt::registry &, entt::entity);
 
 /**
@@ -221,6 +239,7 @@ void wake_up_entity(entt::registry &, entt::entity);
  * @param shape_opt Optional shape. If empty, rigid body is converted into an
  * amorphous body which does not registers collisions.
  */
+CKTHIRDPARTY_API
 void rigidbody_set_shape(entt::registry &, entt::entity, std::optional<shapes_variant_t> shape_opt);
 
 /**
@@ -229,6 +248,7 @@ void rigidbody_set_shape(entt::registry &, entt::entity, std::optional<shapes_va
  * @param entity Rigid body entity.
  * @return False if rigid body is amorphous.
  */
+CKTHIRDPARTY_API
 bool rigidbody_has_shape(const entt::registry &, entt::entity);
 
 /**
@@ -243,14 +263,19 @@ bool rigidbody_has_shape(const entt::registry &, entt::entity);
  * @param entity Rigid body entity.
  * @param kind The new kind.
  */
+CKTHIRDPARTY_API
 void rigidbody_set_kind(entt::registry &, entt::entity, rigidbody_kind);
 
 }
 
 namespace edyn::internal {
+    CKTHIRDPARTY_API
     void apply_center_of_mass(entt::registry &, entt::entity, const vector3 &com);
+    CKTHIRDPARTY_API
     void rigidbody_replace_kind_tags(entt::registry &registry, entt::entity entity, rigidbody_kind kind);
+    CKTHIRDPARTY_API
     void rigidbody_assert_supports_kind(entt::registry &registry, entt::entity entity, rigidbody_kind kind);
+    CKTHIRDPARTY_API
     void rigidbody_apply_kind(entt::registry &registry, entt::entity entity, rigidbody_kind kind,
                               island_manager &isle_mgr);
 }

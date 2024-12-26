@@ -96,8 +96,8 @@ void collide(const polyhedron_shape &shA, const polyhedron_shape &shB,
 
     // Edge vs edge.
     scalar min_edge_dist = -EDYN_SCALAR_MAX;
-    scalar edge_projectionA, edge_projectionB;
-    vector3 edge_dir;
+    scalar edge_projectionA = EDYN_SCALAR_MAX, edge_projectionB = EDYN_SCALAR_MAX;
+    vector3 edge_dir = vector3_zero;
 
     for (auto edge_idxA = 0u; edge_idxA < meshA.num_edges(); ++edge_idxA) {
         auto vertex_idxA = meshA.get_edge_vertices(edge_idxA);

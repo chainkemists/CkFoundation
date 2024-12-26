@@ -63,10 +63,10 @@ struct island_solver_context {
                           scalar dt, atomic_counter_sync *counter)
         : registry(&registry)
         , island_entity(island_entity)
+        , counter_sync(counter)
+        , dt(dt)
         , num_iterations(num_iterations)
         , num_position_iterations(num_position_iterations)
-        , dt(dt)
-        , counter_sync(counter)
     {}
 
     void decrement_counter() {

@@ -25,15 +25,15 @@ namespace edyn {
 
 stepper_async::stepper_async(entt::registry &registry, double time)
     : m_registry(&registry)
+    , m_worker(registry.ctx().get<settings>(),
+        registry.ctx().get<registry_operation_context>(),
+        registry.ctx().get<material_mix_table>())
     , m_message_queue_handle(
         message_dispatcher::global().make_queue<
             msg::step_update,
             msg::raycast_response,
             msg::query_aabb_response
         >("main"))
-    , m_worker(registry.ctx().get<settings>(),
-               registry.ctx().get<registry_operation_context>(),
-               registry.ctx().get<material_mix_table>())
     , m_last_time(time)
     , m_sim_time(time)
 {

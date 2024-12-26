@@ -60,9 +60,6 @@ simulation_worker::simulation_worker(const settings &settings,
     , m_island_manager(m_registry)
     , m_poly_initializer(m_registry)
     , m_solver(m_registry)
-    , m_op_builder((*reg_op_ctx.make_reg_op_builder)(m_registry))
-    , m_op_observer((*reg_op_ctx.make_reg_op_observer)(*m_op_builder))
-    , m_importing(false)
     , m_message_queue(message_dispatcher::global().make_queue<
         msg::set_paused,
         msg::set_settings,
@@ -78,6 +75,9 @@ simulation_worker::simulation_worker(const settings &settings,
         msg::query_aabb_request,
         msg::query_aabb_of_interest_request,
         extrapolation_result>("worker"))
+    , m_op_builder((*reg_op_ctx.make_reg_op_builder)(m_registry))
+    , m_op_observer((*reg_op_ctx.make_reg_op_observer)(*m_op_builder))
+    , m_importing(false)
 {
     m_registry.ctx().emplace<contact_manifold_map>(m_registry);
     m_registry.ctx().emplace<broadphase>(m_registry);

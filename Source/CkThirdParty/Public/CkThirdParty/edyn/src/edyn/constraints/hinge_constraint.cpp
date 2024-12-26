@@ -72,7 +72,7 @@ void hinge_constraint::prepare(
     auto has_limit = angle_min < angle_max;
     auto has_spring = stiffness > 0;
     auto has_torque = torque > 0 || damping > 0;
-    vector3 hinge_axis;
+    vector3 hinge_axis = vector3_zero;
 
     if (has_limit || has_spring || has_torque) {
         hinge_axis = rotate(bodyA.orn, frame[0].column(0));

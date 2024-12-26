@@ -17,9 +17,9 @@ stepper_sequential::stepper_sequential(entt::registry &registry, double time, bo
     , m_island_manager(registry)
     , m_poly_initializer(registry)
     , m_solver(registry)
+    , m_last_time(time)
     , m_multithreaded(multithreaded)
     , m_paused(false)
-    , m_last_time(time)
 {
     m_island_manager.set_last_time(m_last_time);
 }

@@ -71,8 +71,8 @@ static void collide_polyhedron_triangle(
 
     // Edge vs edge.
     scalar min_edge_dist = -EDYN_SCALAR_MAX;
-    scalar edge_projection_poly, edge_projection_tri;
-    vector3 edge_dir;
+    scalar edge_projection_poly = EDYN_SCALAR_MAX, edge_projection_tri = EDYN_SCALAR_MAX;
+    vector3 edge_dir = vector3_zero;
 
     for (auto edge_idxA = 0u; edge_idxA < poly_mesh.num_edges(); ++edge_idxA) {
         auto vertex_idxA = poly_mesh.get_edge_vertices(edge_idxA);

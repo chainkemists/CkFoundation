@@ -41,9 +41,9 @@ extrapolation_worker::extrapolation_worker(const settings &settings,
                                            const registry_operation_context &reg_op_ctx,
                                            const material_mix_table &material_table,
                                            make_extrapolation_modified_comp_func_t *make_extrapolation_modified_comp)
-    : m_solver(m_registry)
+    : m_island_manager(m_registry)
     , m_poly_initializer(m_registry)
-    , m_island_manager(m_registry)
+    , m_solver(m_registry)
     , m_message_queue(message_dispatcher::global().make_queue<
         extrapolation_request,
         extrapolation_operation_create,

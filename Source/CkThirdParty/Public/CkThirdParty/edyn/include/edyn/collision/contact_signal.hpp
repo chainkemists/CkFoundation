@@ -15,6 +15,7 @@ namespace edyn {
  * @param registry Data source.
  * @return Sink to observe contact started events.
  */
+CKTHIRDPARTY_API
 entt::sink<entt::sigh<void(entt::entity)>> on_contact_started(entt::registry &);
 
 /**
@@ -25,6 +26,7 @@ entt::sink<entt::sigh<void(entt::entity)>> on_contact_started(entt::registry &);
  * @param registry Data source.
  * @return Sink to observe contact ended events.
  */
+CKTHIRDPARTY_API
 entt::sink<entt::sigh<void(entt::entity)>> on_contact_ended(entt::registry &);
 
 /**
@@ -35,6 +37,7 @@ entt::sink<entt::sigh<void(entt::entity)>> on_contact_ended(entt::registry &);
  * @param registry Data source.
  * @return Sink to observe contact point creation events.
  */
+CKTHIRDPARTY_API
 entt::sink<entt::sigh<void(entt::entity, contact_manifold::contact_id_type)>>
 on_contact_point_created(entt::registry &);
 
@@ -46,6 +49,7 @@ on_contact_point_created(entt::registry &);
  * @param registry Data source.
  * @return Sink to observe contact point destruction events.
  */
+CKTHIRDPARTY_API
 entt::sink<entt::sigh<void(entt::entity, contact_manifold::contact_id_type)>>
 on_contact_point_destroyed(entt::registry &);
 
