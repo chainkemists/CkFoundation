@@ -221,6 +221,11 @@ public:
     auto Get_ValidEntity(EntityType::IdType InEntity) const -> EntityType;
 
 public:
+    // Should only be used by internal functions that truly require the Registry directly (i.e. usage should be RARE)
+    template <typename T_Func>
+    auto Request_PerformOperationOnInternalRegistry(T_Func InFunc);
+
+public:
     friend auto CKECS_API GetTypeHash(const ThisType& InRegistry) -> uint32;
 
 private:
@@ -541,6 +546,15 @@ auto
     {
         return _InternalRegistry->get<T_Fragment>(InEntity.Get_ID());
     }
+}
+
+template <typename T_Func>
+auto
+    FCk_Registry::
+    Request_PerformOperationOnInternalRegistry(
+        T_Func InFunc)
+{
+    InFunc(_InternalRegistry.operator*());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
