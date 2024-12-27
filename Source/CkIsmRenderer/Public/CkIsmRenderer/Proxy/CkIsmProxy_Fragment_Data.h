@@ -31,12 +31,22 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FTransform _RelativeTransform = FTransform::Identity;
+    FVector _LocalLocationOffset = FVector::ZeroVector;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FRotator _LocalRotationOffset = FRotator::ZeroRotator;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FVector _ScaleMultiplier = FVector::OneVector;
 
 public:
     CK_PROPERTY_GET(_RendererName);
     CK_PROPERTY_GET(_Mobility);
-    CK_PROPERTY_GET(_RelativeTransform);
+    CK_PROPERTY_GET(_LocalLocationOffset);
+    CK_PROPERTY_GET(_LocalRotationOffset);
+    CK_PROPERTY_GET(_ScaleMultiplier);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

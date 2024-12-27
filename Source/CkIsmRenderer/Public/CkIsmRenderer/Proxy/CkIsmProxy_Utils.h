@@ -27,7 +27,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|IsmRenderer|Proxy",
+              Category = "Ck|Utils|IsmProxy|Proxy",
               DisplayName="[Ck][IsmProxy] Add Feature")
     static FCk_Handle_IsmProxy
     Add(
@@ -35,7 +35,7 @@ public:
         const FCk_Fragment_IsmProxy_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IsmRenderer|Proxy",
+              Category = "Ck|Utils|IsmProxy",
               DisplayName="[Ck][IsmProxy] Has Feature")
     static bool
     Has(
@@ -43,7 +43,7 @@ public:
 
 private:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|IsmRenderer|Proxy",
+              Category = "Ck|Utils|IsmProxy",
               DisplayName="[Ck][IsmProxy] Cast",
               meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_IsmProxy
@@ -52,7 +52,7 @@ private:
         ECk_SucceededFailed& OutResult);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IsmRenderer|Proxy",
+              Category = "Ck|Utils|IsmProxy",
               DisplayName="[Ck][IsmProxy] Handle -> IsmProxy Handle",
               meta = (CompactNodeTitle = "<AsIsmProxy>", BlueprintAutocast))
     static FCk_Handle_IsmProxy
@@ -61,7 +61,7 @@ private:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|IsmRenderer|Proxy",
+              Category = "Ck|Utils|IsmProxy",
               DisplayName="[Ck][IsmProxy] Request Set Custom Data")
     static FCk_Handle_IsmProxy
     Request_SetCustomData(
@@ -69,7 +69,7 @@ public:
         const FCk_Request_IsmProxy_SetCustomData& InRequest);
 
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|IsmRenderer|Proxy",
+              Category = "Ck|Utils|IsmProxy",
               DisplayName="[Ck][IsmProxy] Request Set Custom Data Value")
     static FCk_Handle_IsmProxy
     Request_SetCustomDataValue(
@@ -78,21 +78,35 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IsmRenderer|Proxy",
+              Category = "Ck|Utils|IsmProxy",
               DisplayName="[Ck][IsmProxy] Get Associated Renderer Name")
     static FGameplayTag
     Get_RendererName(
         const FCk_Handle_IsmProxy& InHandle);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IsmRenderer|Proxy",
-              DisplayName="[Ck][IsmProxy] Get Relative Transform")
-    static FTransform
-    Get_RelativeTransform(
+              Category = "Ck|Utils|IsmProxy",
+              DisplayName="[Ck][IsmProxy] Get Local Location Offset")
+    static FVector
+    Get_LocalLocationOffset(
         const FCk_Handle_IsmProxy& InHandle);
 
     UFUNCTION(BlueprintPure,
-              Category = "Ck|Utils|IsmRenderer|Proxy",
+              Category = "Ck|Utils|IsmProxy",
+              DisplayName="[Ck][IsmProxy] Get Local Rotation Offset")
+    static FRotator
+    Get_LocalRotationOffset(
+        const FCk_Handle_IsmProxy& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmProxy",
+              DisplayName="[Ck][IsmProxy] Get Scale Multiplier")
+    static FVector
+    Get_ScaleMultiplier(
+        const FCk_Handle_IsmProxy& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmProxy",
               DisplayName="[Ck][IsmProxy] Get Mobility")
     static ECk_Mobility
     Get_Mobility(
