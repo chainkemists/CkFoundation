@@ -12,6 +12,7 @@ namespace edyn {
  * @param registry Data source.
  * @return Gravity acceleration vector.
  */
+CKTHIRDPARTY_API
 vector3 get_gravity(const entt::registry &registry);
 
 /**
@@ -20,6 +21,7 @@ vector3 get_gravity(const entt::registry &registry);
  * @param registry Data source.
  * @param gravity The new default gravity acceleration.
  */
+CKTHIRDPARTY_API
 void set_gravity(entt::registry &registry, vector3 gravity);
 
 }
