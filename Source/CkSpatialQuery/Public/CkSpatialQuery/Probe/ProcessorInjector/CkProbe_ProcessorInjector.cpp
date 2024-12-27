@@ -1,6 +1,7 @@
 #include "CkProbe_ProcessorInjector.h"
 
 #include "CkSpatialQuery/Probe/CkProbe_Processor.h"
+#include "CkSpatialQuery/Subsystem/CkSpatialQuery_Subsystem.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -10,7 +11,11 @@ auto
         EcsWorldType& InWorld)
         -> void
 {
-    InWorld.Add<ck::FProcessor_Probe_Setup>(FCk_Registry{}, InWorld.Get_Registry());
+    auto PhysicsWorld = GEngine->GetEngineSubsystem<UCk_SpatialQuery_Subsystem_UE>()->Get_PhysicsWorld();
+
+    InWorld.Add<ck::FProcessor_Probe_Setup>(InWorld.Get_Registry(), PhysicsWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Probe_UpdateTransform>(InWorld.Get_Registry(), PhysicsWorld.Get_Registry());
+
     InWorld.Add<ck::FProcessor_Probe_HandleRequests>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Probe_Teardown>(InWorld.Get_Registry());
 

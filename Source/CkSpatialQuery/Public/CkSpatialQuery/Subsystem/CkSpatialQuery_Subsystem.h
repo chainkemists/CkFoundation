@@ -13,7 +13,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(BlueprintType)
-class CKSPATIALQUERY_API UCk_SpatialQuery_Subsystem_UE : public UCk_Game_TickableWorldSubsystem_Base_UE
+class CKSPATIALQUERY_API UCk_SpatialQuery_Subsystem_UE : public UEngineSubsystem
 {
     GENERATED_BODY()
 
@@ -27,11 +27,6 @@ public:
             -> void override;
 
     auto
-        Tick(
-            float InDeltaTime)
-            -> void override;
-
-    auto
         Deinitialize()
             -> void override;
 
@@ -41,10 +36,12 @@ private:
 
 private:
     edyn::init_config _Config;
-    ck::FEcsWorld _EcsWorld;
+    ck::FEcsWorld _PhysicsWorld;
+
+    inline static bool _EdynInitialized = false;
 
 public:
-    CK_PROPERTY_GET(_EcsWorld);
+    CK_PROPERTY_GET(_PhysicsWorld);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

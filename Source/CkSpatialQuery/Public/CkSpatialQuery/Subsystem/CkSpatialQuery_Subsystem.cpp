@@ -12,32 +12,12 @@ auto
         FSubsystemCollectionBase& InCollection)
     -> void
 {
-    Super::Initialize(InCollection);
-    _EcsWorldSubsystem = InCollection.InitializeDependency<UCk_EcsWorld_Subsystem_UE>();
-
     _Config = edyn::init_config{};
-    _Config.execution_mode = edyn::execution_mode::sequential;
-    _Config.num_worker_threads = 1;
+    _Config.execution_mode = edyn::execution_mode::asynchronous;
 
-    _EcsWorld.Get_Registry().Request_PerformOperationOnInternalRegistry([&](entt::registry& InRegistry)
+    _PhysicsWorld.Get_Registry().Request_PerformOperationOnInternalRegistry([&](entt::registry& InRegistry)
     {
         edyn::attach(InRegistry, _Config);
-    });
-
-    edyn::rigidbody_def{};
-}
-
-auto
-    UCk_SpatialQuery_Subsystem_UE::
-    Tick(
-        float InDeltaTime)
-    -> void
-{
-    Super::Tick(InDeltaTime);
-
-    _EcsWorld.Get_Registry().Request_PerformOperationOnInternalRegistry([&](entt::registry& InRegistry)
-    {
-        edyn::update(InRegistry);
     });
 }
 
@@ -46,12 +26,10 @@ auto
     Deinitialize()
     -> void
 {
-    _EcsWorld.Get_Registry().Request_PerformOperationOnInternalRegistry([&](entt::registry& InRegistry)
+    _PhysicsWorld.Get_Registry().Request_PerformOperationOnInternalRegistry([&](entt::registry& InRegistry)
     {
         edyn::detach(InRegistry);
     });
-
-    Super::Deinitialize();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

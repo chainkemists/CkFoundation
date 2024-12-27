@@ -48,11 +48,11 @@ namespace ck
         friend class FProcessor_Probe_Setup;
         friend class FProcessor_Probe_HandleRequests;
         friend class FProcessor_Probe_Teardown;
+        friend class FProcessor_Probe_UpdateTransform;
         friend class UCk_Utils_Probe_UE;
 
     private:
-        // Add your properties here
-        int32 _DummyProperty = 0;
+        entt::entity _Entity;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
