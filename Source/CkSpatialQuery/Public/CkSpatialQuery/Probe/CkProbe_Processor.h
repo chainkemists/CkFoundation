@@ -59,6 +59,7 @@ namespace ck
     class CKSPATIALQUERY_API FProcessor_Probe_UpdateTransform : public ck_exp::TProcessor<
             FProcessor_Probe_UpdateTransform,
             FCk_Handle_Probe,
+            FFragment_Probe_Params,
             FFragment_Probe_Current,
             CK_IGNORE_PENDING_KILL>
     {
@@ -75,6 +76,7 @@ namespace ck
             ForEachEntity(
                 TimeType InDeltaT,
                 HandleType InHandle,
+                const FFragment_Probe_Params& InParams,
                 FFragment_Probe_Current& InCurrent)
                 -> void;
 

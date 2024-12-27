@@ -9,6 +9,7 @@
 #include "CkSpatialQuery/CkSpatialQuery_Log.h"
 
 #include "edyn/edyn.hpp"
+#include "edyn/sys/update_aabbs.hpp"
 
 #include <edyn/collision/contact_signal.hpp>
 #include <edyn/util/rigidbody.hpp>
@@ -81,11 +82,11 @@ namespace ck
     }
 
     void
-        OnCreateIsland(
+        OnContactPointCreated(
             entt::registry& registry,
-            entt::entity entity)
+            edyn::contact_manifold::contact_id_type)
     {
-        ck::spatialquery::Warning(TEXT("We have a new island!"));
+        ck::spatialquery::Warning(TEXT("We have a new contact point!"));
     }
 
     auto
@@ -101,7 +102,14 @@ namespace ck
         const auto& EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
 
         auto ProbeDef = edyn::rigidbody_def{};
-        ProbeDef.kind = SetBodyToKinematic ? edyn::rigidbody_kind::rb_kinematic : edyn::rigidbody_kind::rb_dynamic;
+        ProbeDef.kind = NOT SetBodyToKinematic
+                        ? edyn::rigidbody_kind::rb_kinematic
+                        : edyn::rigidbody_kind::rb_kinematic;
+        //ProbeDef.kind = NOT SetBodyToKinematic ? edyn::rigidbody_kind::rb_kinematic : edyn::rigidbody_kind::rb_kinematic;
+        //ProbeDef.gravity = NOT SetBodyToKinematic ? edyn::vector3{0, -9.8, 0} : edyn::vector3_zero;
+        ProbeDef.gravity = NOT SetBodyToKinematic ? edyn::vector3{0, -9.8, 0} : edyn::vector3{0, 9.8, 0};
+        //ProbeDef.gravity = edyn::vector3_zero;
+        ProbeDef.material.reset();
         SetBodyToKinematic = !SetBodyToKinematic;
         //if (ProbeDef.kind == edyn::rigidbody_kind::rb_kinematic)
         //{
@@ -109,10 +117,10 @@ namespace ck
         //}
         //else
         //{
-            ProbeDef.presentation = true;
-            ProbeDef.mass = 100;
-            ProbeDef.material->friction = 0.8;
-            ProbeDef.material->restitution = 0;
+        //    ProbeDef.presentation = true;
+        //    ProbeDef.mass = 100;
+        //    ProbeDef.material->friction = 0.8;
+        //    ProbeDef.material->restitution = 0;
         //}
         ProbeDef.shape = edyn::box_shape{HalfExtents.X, HalfExtents.Y, HalfExtents.Z};
         ProbeDef.position = edyn::vector3{EntityPosition.X, EntityPosition.Y, EntityPosition.Z};
@@ -126,7 +134,7 @@ namespace ck
                 InCurrent._Entity = RbEntity;
 
                 edyn::on_contact_started(InRegistry).connect<&FProcessor_Probe_Setup::SensorContactStarted>(InRegistry);
-                InRegistry.on_construct<edyn::island_tag>().connect<&OnCreateIsland>();
+                edyn::on_contact_point_created(InRegistry).connect<&OnContactPointCreated>(InRegistry);
 
                 //edyn::rigidbody_apply_impulse(InRegistry, InCurrent._Entity, edyn::vector3{0, 100, 0},
                 //    edyn::vector3_zero);
@@ -160,28 +168,48 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Probe_Params& InParams,
             FFragment_Probe_Current& InCurrent)
             -> void
     {
-        auto EntityTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
+        const auto& HalfExtents = InParams.Get_Params().Get_HalfExtents();
+        auto EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
 
         _PhysicsRegistry.Request_PerformOperationOnInternalRegistry([&](
             entt::registry& InRegistry)
             {
+                edyn::clear_rigidbody(InRegistry, InCurrent._Entity);
+                auto ProbeDef = edyn::rigidbody_def{};
+                ProbeDef.shape = edyn::box_shape{HalfExtents.X, HalfExtents.Y, HalfExtents.Z};
+                ProbeDef.position = edyn::vector3{EntityPosition.X, EntityPosition.Y, EntityPosition.Z};
+
+                auto RbEntity = edyn::make_rigidbody(InRegistry, ProbeDef);
+                InCurrent._Entity = RbEntity;
+
                 //edyn::rigidbody_apply_impulse(InRegistry, InCurrent._Entity, edyn::vector3{0, 1000000, 0},
                 //    edyn::vector3_zero);
 
-                const auto Position = InRegistry.get<edyn::position>(InCurrent._Entity);
-                const auto Orientation = InRegistry.get<edyn::orientation>(InCurrent._Entity);
+                //if (NOT InRegistry.any_of<edyn::dynamic_tag>(InCurrent._Entity))
+                //{
+                //    //edyn::update_kinematic_position(InRegistry, InCurrent._Entity,
+                //    //    edyn::vector3{EntityTransform.X, EntityTransform.Y, EntityTransform.Z}, InDeltaT.Get_Seconds());
+                //    edyn::rigidbody_apply_impulse(InRegistry, InCurrent._Entity, edyn::vector3_one, edyn::vector3_zero);
 
-                UCk_Utils_Transform_TypeUnsafe_UE::Request_SetLocation(InHandle,
-                    FCk_Request_Transform_SetLocation{FVector{Position.x, Position.y, Position.z}});
-                UCk_Utils_Transform_TypeUnsafe_UE::Request_SetRotation(InHandle,
-                    FCk_Request_Transform_SetRotation{FRotator{FQuat{Orientation.x, Orientation.y, Orientation.z, Orientation.w}}});
+                //    CK_ENSURE(edyn::validate_rigidbody(InRegistry, InCurrent._Entity), TEXT("Rigidbody is NOT valid"));
+                //}
+                //else
+                //{
+                //const auto Position = InRegistry.get<edyn::position>(InCurrent._Entity);
+                //const auto Orientation = InRegistry.get<edyn::orientation>(InCurrent._Entity);
 
-                //edyn::update_kinematic_position(InRegistry, InCurrent._Entity,
-                //    edyn::vector3{EntityTransform.X, EntityTransform.Y, EntityTransform.Z}, InDeltaT.Get_Seconds());
+                //UCk_Utils_Transform_TypeUnsafe_UE::Request_SetLocation(InHandle,
+                //    FCk_Request_Transform_SetLocation{FVector{Position.x, Position.y, Position.z}});
+                //UCk_Utils_Transform_TypeUnsafe_UE::Request_SetRotation(InHandle,
+                //    FCk_Request_Transform_SetRotation{FRotator{FQuat{Orientation.x, Orientation.y, Orientation.z, Orientation.w}}});
+                //}
 
+                //edyn::update_aabb(InRegistry, InCurrent._Entity);
+                //edyn::update_aabbs(InRegistry);
                 //edyn::wake_up_entity(InRegistry, InCurrent._Entity);
             });
     }

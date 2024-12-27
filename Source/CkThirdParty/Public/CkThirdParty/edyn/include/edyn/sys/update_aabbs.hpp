@@ -12,6 +12,7 @@ namespace edyn {
  * polyhedrons.
  * @param registry The registry to be updated.
  */
+CKTHIRDPARTY_API
 void update_aabbs(entt::registry &registry);
 
 /**
@@ -19,8 +20,10 @@ void update_aabbs(entt::registry &registry);
  * @param registry The registry to be updated.
  * @param entity Entity to be updated.
  */
+CKTHIRDPARTY_API
 void update_aabb(entt::registry &registry, entt::entity entity);
 
+CKTHIRDPARTY_API
 void update_island_aabbs(entt::registry &registry);
 
 }
