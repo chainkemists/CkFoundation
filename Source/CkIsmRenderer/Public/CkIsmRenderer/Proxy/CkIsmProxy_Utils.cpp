@@ -55,11 +55,29 @@ auto
 
 auto
     UCk_Utils_IsmProxy_UE::
-    Get_RelativeTransform(
+    Get_LocalLocationOffset(
         const FCk_Handle_IsmProxy& InHandle)
-    -> FTransform
+    -> FVector
 {
-    return InHandle.Get<ck::FFragment_IsmProxy_Params>().Get_Params().Get_RelativeTransform();
+    return InHandle.Get<ck::FFragment_IsmProxy_Params>().Get_Params().Get_LocalLocationOffset();
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
+    Get_LocalRotationOffset(
+        const FCk_Handle_IsmProxy& InHandle)
+    -> FRotator
+{
+    return InHandle.Get<ck::FFragment_IsmProxy_Params>().Get_Params().Get_LocalRotationOffset();
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
+    Get_ScaleMultiplier(
+        const FCk_Handle_IsmProxy& InHandle)
+    -> FVector
+{
+    return InHandle.Get<ck::FFragment_IsmProxy_Params>().Get_Params().Get_ScaleMultiplier();
 }
 
 auto
