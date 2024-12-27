@@ -66,16 +66,37 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|IsmRenderer",
-              DisplayName="[Ck][IsmRenderer] Get Mesh Shadow Casting")
-    static ECk_EnableDisable
-    Get_MeshShadowCasting(
+              DisplayName="[Ck][IsmRenderer] Get Mesh Render Policy")
+    static ECk_Ism_RenderPolicy
+    Get_MeshRenderPolicy(
         const FCk_Handle_IsmRenderer& InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|IsmRenderer",
-              DisplayName="[Ck][IsmRenderer] Get Mesh Collision")
-    static ECk_Collision
-    Get_MeshCollision(
+              DisplayName="[Ck][IsmRenderer] Get Mesh Lighting Info")
+    static FCk_IsmRenderer_LightingInfo
+    Get_MeshLightingInfo(
+        const FCk_Handle_IsmRenderer& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmRenderer",
+              DisplayName="[Ck][IsmRenderer] Get Mesh Physics Info")
+    static FCk_IsmRenderer_PhysicsInfo
+    Get_MeshPhysicsInfo(
+        const FCk_Handle_IsmRenderer& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmRenderer",
+              DisplayName="[Ck][IsmRenderer] Get Mesh Materials Info")
+    static FCk_IsmRenderer_MaterialsInfo
+    Get_MeshMaterialsInfo(
+        const FCk_Handle_IsmRenderer& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|IsmRenderer",
+              DisplayName="[Ck][IsmRenderer] Get Mesh Culling Info")
+    static FCk_IsmRenderer_CullingInfo
+    Get_MeshCullingInfo(
         const FCk_Handle_IsmRenderer& InHandle);
 
     UFUNCTION(BlueprintPure,

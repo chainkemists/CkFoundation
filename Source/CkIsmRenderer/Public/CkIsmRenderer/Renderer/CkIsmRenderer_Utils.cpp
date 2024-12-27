@@ -53,20 +53,47 @@ auto
 
 auto
     UCk_Utils_IsmRenderer_UE::
-    Get_MeshShadowCasting(
+    Get_MeshRenderPolicy(
         const FCk_Handle_IsmRenderer& InHandle)
-    -> ECk_EnableDisable
+    -> ECk_Ism_RenderPolicy
 {
-    return InHandle.Get<ck::FFragment_IsmRenderer_Params>().Get_Params().Get_CastShadows();
+    return InHandle.Get<ck::FFragment_IsmRenderer_Params>().Get_Params().Get_RenderPolicy();
 }
 
 auto
     UCk_Utils_IsmRenderer_UE::
-    Get_MeshCollision(
+    Get_MeshLightingInfo(
         const FCk_Handle_IsmRenderer& InHandle)
-    -> ECk_Collision
+    -> FCk_IsmRenderer_LightingInfo
 {
-    return InHandle.Get<ck::FFragment_IsmRenderer_Params>().Get_Params().Get_Collision();
+    return InHandle.Get<ck::FFragment_IsmRenderer_Params>().Get_Params().Get_LightingInfo();
+}
+
+auto
+    UCk_Utils_IsmRenderer_UE::
+    Get_MeshPhysicsInfo(
+        const FCk_Handle_IsmRenderer& InHandle)
+    -> FCk_IsmRenderer_PhysicsInfo
+{
+    return InHandle.Get<ck::FFragment_IsmRenderer_Params>().Get_Params().Get_PhysicsInfo();
+}
+
+auto
+    UCk_Utils_IsmRenderer_UE::
+    Get_MeshMaterialsInfo(
+        const FCk_Handle_IsmRenderer& InHandle)
+    -> FCk_IsmRenderer_MaterialsInfo
+{
+    return InHandle.Get<ck::FFragment_IsmRenderer_Params>().Get_Params().Get_MaterialsInfo();
+}
+
+auto
+    UCk_Utils_IsmRenderer_UE::
+    Get_MeshCullingInfo(
+        const FCk_Handle_IsmRenderer& InHandle)
+    -> FCk_IsmRenderer_CullingInfo
+{
+    return InHandle.Get<ck::FFragment_IsmRenderer_Params>().Get_Params().Get_CullingInfo();
 }
 
 auto
