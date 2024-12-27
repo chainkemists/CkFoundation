@@ -22,6 +22,7 @@ public class CkIsmRenderer : CkModuleRules
             "CkEcsExt",
             "CkLabel",
             "CkLog",
+            "CkGraphics",
             "CkNet",
             "CkProvider",
             "CkRecord",
