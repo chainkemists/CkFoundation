@@ -271,9 +271,10 @@ namespace ck
 
         CK_ENSURE_IF_NOT(CurrentCustomData.IsValidIndex(NewCustomDataIndex),
             TEXT("Trying to set custom data value [{}] at index [{}] on Ism Proxy [{}], but it was setup to contain AT MOST [{}] elements"),
-            NewCustomDataIndex,
             NewCustomDataValue,
-            InHandle)
+            NewCustomDataIndex,
+            InHandle,
+            CurrentCustomData.Num())
         { return; }
 
         InCurrent._CustomDataValues[NewCustomDataIndex] = NewCustomDataValue;

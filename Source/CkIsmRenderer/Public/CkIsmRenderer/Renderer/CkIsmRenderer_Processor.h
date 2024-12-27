@@ -111,7 +111,7 @@ namespace ck
         { return; }
 
         const auto& Params = _RendererParams.Get_Params();
-        const auto& MeshPtr = Params.Get_Mesh();
+        const auto& MeshToRender = Params.Get_Mesh();
 
         switch (_IsmMobility)
         {
@@ -138,12 +138,41 @@ namespace ck
             }
         }
 
-        InIsmActorComp->SetCollisionEnabled(UCk_Utils_Enum_UE::ConvertToECollisionEnabled(Params.Get_Collision()));
-        InIsmActorComp->CastShadow = Params.Get_CastShadows() == ECk_EnableDisable::Enable;
-        InIsmActorComp->SetStaticMesh(MeshPtr);
+        InIsmActorComp->SetCollisionEnabled(UCk_Utils_Enum_UE::ConvertToECollisionEnabled(Params.Get_PhysicsInfo().Get_Collision()));
+        InIsmActorComp->SetCollisionProfileName(Params.Get_PhysicsInfo().Get_CollisionProfileName().Name);
+        InIsmActorComp->CastShadow = Params.Get_LightingInfo().Get_CastShadows() == ECk_EnableDisable::Enable;
+        InIsmActorComp->SetStaticMesh(MeshToRender);
         InIsmActorComp->NumCustomDataFloats = Params.Get_NumCustomData();
         InIsmActorComp->InstanceStartCullDistance = Params.Get_CullingInfo().Get_InstanceCullDistance_Start();
         InIsmActorComp->InstanceEndCullDistance = Params.Get_CullingInfo().Get_InstanceCullDistance_End();
+
+        auto MaterialSlotsOverriden = TSet<int32>{};
+
+        for (const auto& MaterialOverride : Params.Get_MaterialsInfo().Get_MaterialOverrides())
+        {
+            const auto& MaterialSlot = MaterialOverride.Get_MaterialSlot();
+            const auto& ReplacementMaterial = MaterialOverride.Get_ReplacementMaterial();
+
+            CK_ENSURE_IF_NOT(NOT MaterialSlotsOverriden.Contains(MaterialSlot),
+                TEXT("More than one Material Override target Slot #[{}] on Static Mesh [{}] for Ism Renderer [{}]"),
+                MaterialSlot,
+                MeshToRender,
+                Params.Get_RendererName())
+            { continue; }
+
+            CK_ENSURE_IF_NOT(InIsmActorComp->GetNumMaterials() > MaterialSlot,
+                TEXT("Found Material Override that targets Slot #[{}] on Static Mesh [{}] for Ism Renderer [{}]\n"
+                     "The Mesh has a maximum of [{}] Material Slots available!"),
+                MaterialSlot,
+                MeshToRender,
+                Params.Get_RendererName(),
+                InIsmActorComp->GetNumMaterials())
+            { continue; }
+
+            MaterialSlotsOverriden.Add(MaterialSlot);
+
+            InIsmActorComp->SetMaterial(MaterialSlot, ReplacementMaterial);
+        }
     }
 }
 
