@@ -142,10 +142,13 @@ namespace ck
         using Previous_CollectionRecordOfEntitiesUtilsType = UCk_Utils_EntityCollection_UE::EntityCollections_RecordOfEntities_Previous_Utils;
         using CollectionRecordOfEntitiesUtilsType = UCk_Utils_EntityCollection_UE::EntityCollections_RecordOfEntities_Utils;
 
+        const auto& PreviousContent = Previous_CollectionRecordOfEntitiesUtilsType::Get_Entries(InHandle);
+        const auto& CurrentContent = CollectionRecordOfEntitiesUtilsType::Get_Entries(InHandle);
+
         UUtils_Signal_EntityCollection_OnCollectionUpdated::Broadcast
         (
             InHandle,
-            MakePayload(InHandle, Previous_CollectionRecordOfEntitiesUtilsType::Get_Entries(InHandle), CollectionRecordOfEntitiesUtilsType::Get_Entries(InHandle))
+            MakePayload(InHandle, PreviousContent, CurrentContent)
         );
     }
 

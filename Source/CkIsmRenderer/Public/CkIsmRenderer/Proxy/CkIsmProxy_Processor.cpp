@@ -128,20 +128,20 @@ namespace ck
         if (ck::Is_NOT_Valid(IsmComp))
         { return; }
 
-        const auto& RelativeTransform = [&]
-        {
-            const auto& ProxyRelativeTransform = Params.Get_RelativeTransform();
-            const auto& ProxyRelativeScale = ProxyRelativeTransform.GetScale3D();
-
-            CK_ENSURE_IF_NOT(NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(ProxyRelativeScale),
-                TEXT("IsmProxy Relative Scale has one or more axis nearly equal to 0. Setting it to 1 in non-shipping build"), ProxyRelativeScale)
-            { return FTransform{ ProxyRelativeTransform.GetRotation(), ProxyRelativeTransform.GetLocation(), FVector::OneVector }; }
-
-            return ProxyRelativeTransform;
-        }();
-
         const auto& CurrentTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InHandle);
-        const auto& CombinedTransform = CurrentTransform * RelativeTransform;
+        const auto& CombinedTransform = [&]() -> FTransform
+        {
+            const auto& CombinedLocation = CurrentTransform.GetLocation() + Params.Get_LocalLocationOffset();
+            const auto& CombinedRotation = Params.Get_LocalRotationOffset().Quaternion() * CurrentTransform.GetRotation();
+
+            CK_ENSURE_IF_NOT(NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(Params.Get_ScaleMultiplier()),
+                TEXT("IsmProxy Scale Multiplier has one or more axis nearly equal to 0. Setting it to 1 in non-shipping build"), Params.Get_ScaleMultiplier())
+            { return FTransform{ CombinedRotation.Rotator(), CombinedLocation, FVector::OneVector }; }
+
+            const auto& CombinedScale = CurrentTransform.GetScale3D() * Params.Get_ScaleMultiplier();
+
+            return FTransform{ CombinedRotation.Rotator(), CombinedLocation, CombinedScale };
+        }();
 
         constexpr auto TransformAsWorldSpace = true;
         const auto& InstanceIndex = IsmComp->AddInstanceById(CombinedTransform, TransformAsWorldSpace);
@@ -150,7 +150,7 @@ namespace ck
         constexpr auto MarkRenderStateDirty = false;
         IsmComp->SetCustomDataById(InstanceIndex, InCurrent.Get_CustomDataValues());
 
-        // Movable ISM instances are re-add again every tick
+        // Movable ISM instances are re-added again every tick
         if (Mobility != ECk_Mobility::Movable)
         {
             InHandle.Remove<MarkedDirtyBy>();
