@@ -6,35 +6,37 @@ public class CkThirdParty : ModuleRules
 	public CkThirdParty(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+		CppStandard = CppStandardVersion.Cpp20;
 
 		PublicIncludePaths.AddRange(
-			new string[] {
-				// ... add public include paths required here ...
+			new[]
+			{
 				Path.Combine(ModuleDirectory, "Public/CkThirdParty/entt-3.12.2/src/"),
 				Path.Combine(ModuleDirectory, "Public/CkThirdParty/ctti/include"),
 				Path.Combine(ModuleDirectory, "Public/CkThirdParty/cleantype/src/include"),
+				Path.Combine(ModuleDirectory, "Public/CkThirdParty/JoltPhysics")
 			}
-			);
+		);
 
+		IWYUSupport = IWYUSupport.None;
 
-		PrivateIncludePaths.AddRange(
-			new string[] {
-				// ... add other private include paths required here ...
-			}
-			);
-
+		if (Target.Platform == UnrealTargetPlatform.Win64)
+		{
+			PublicDefinitions.Add("_HAS_EXCEPTIONS=1");
+			PublicDefinitions.Add("JPH_SHARED_LIBRARY");
+			PrivateDefinitions.Add("JPH_BUILD_SHARED_LIBRARY");
+			bUseUnity = false;
+		}
 
 		PublicDependencyModuleNames.AddRange(
-			new string[]
+			new[]
 			{
 				"Core",
-				// ... add other public dependencies that you statically link with here ...
 			}
-			);
-
+		);
 
 		PrivateDependencyModuleNames.AddRange(
-			new string[]
+			new[]
 			{
 				"CoreUObject",
 				"Engine",
@@ -42,16 +44,7 @@ public class CkThirdParty : ModuleRules
 				"SlateCore",
 				"GameplayTags",
 				"DeveloperSettings"
-				// ... add private dependencies that you statically link with here ...
 			}
-			);
-
-
-		DynamicallyLoadedModuleNames.AddRange(
-			new string[]
-			{
-				// ... add any modules that your module loads dynamically here ...
-			}
-			);
+		);
 	}
 }
