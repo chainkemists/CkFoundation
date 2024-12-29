@@ -9,6 +9,8 @@ public class CkSpatialQuery : CkModuleRules
             // ... add other private include paths required here ...
         });
 
+        PrivateDefinitions.Add("JPH_SHARED_LIBRARY");
+
         PublicDependencyModuleNames.AddRange(new string[]
         {
             "Core",
