@@ -10,6 +10,26 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+class BPLayerInterfaceImpl;
+class ObjectVsBroadPhaseLayerFilterImpl;
+class CkObjectLayerPairFilterImpl;
+class CkContactListener;
+class CkBodyActivationListener;
+
+// ReSharper disable once CppInconsistentNaming
+namespace JPH
+{
+    class TempAllocatorImpl;
+    class JobSystemThreadPool;
+    class ObjectLayerPairFilterImpl;
+    class PhysicsSystem;
+    class BodyInterface;
+
+    class Vec3;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(BlueprintType)
 class CKSPATIALQUERY_API UCk_SpatialQuery_Subsystem_UE : public UCk_Game_TickableWorldSubsystem_Base_UE
 {
@@ -36,6 +56,34 @@ public:
 private:
     UPROPERTY(Transient)
     TWeakObjectPtr<UCk_EcsWorld_Subsystem_UE> _EcsWorldSubsystem;
+
+private:
+    TUniquePtr<JPH::TempAllocatorImpl> _TempAllocator;
+    TUniquePtr<JPH::JobSystemThreadPool> _JobSystem;
+    TUniquePtr<BPLayerInterfaceImpl> _BroadPhaseLayerInterface;
+    TUniquePtr<ObjectVsBroadPhaseLayerFilterImpl> _ObjectVsBroadPhaseLayerFilter;
+    TUniquePtr<CkObjectLayerPairFilterImpl> _ObjectVsObjectFilter;
+    TSharedPtr<JPH::PhysicsSystem> _PhysicsSystem;
+
+    TUniquePtr<CkBodyActivationListener> _BodyActivationListener;
+    TUniquePtr<CkContactListener> _ContactListener;
+
+public:
+    auto
+        Get_PhysicsSystem() const
+            -> TWeakPtr<JPH::PhysicsSystem>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+namespace jolt_bridge
+{
+    static auto
+        ToVec3(
+            const FVector& InVector)
+            -> JPH::Vec3;
+    static auto
+        ToVec3(
+            const JPH::Vec3& InVector)
+            -> FVector;
+};
