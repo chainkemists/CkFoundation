@@ -60,6 +60,14 @@ public:
     Request_ExampleRequest(
         UPARAM(ref) FCk_Handle_Probe& InProbe,
         const FCk_Request_Probe_ExampleRequest& InRequest);
+
+public:
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Probe",
+        DisplayName="[Ck][Probe] IsOverlapping")
+    static bool
+    Get_IsOverlapping(
+        UPARAM(ref) FCk_Handle_Probe& InProbe);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

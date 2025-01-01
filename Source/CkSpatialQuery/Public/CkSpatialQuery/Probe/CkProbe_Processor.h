@@ -7,6 +7,11 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace JPH
+{
+    class PhysicsSystem;
+}
+
 namespace ck
 {
     class CKSPATIALQUERY_API FProcessor_Probe_Setup : public ck_exp::TProcessor<
@@ -22,8 +27,8 @@ namespace ck
 
     public:
         FProcessor_Probe_Setup(
-            const RegistryType& InPhysicsRegistry,
-            const RegistryType& InGameRegistry);
+            const RegistryType& InRegistry,
+            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
 
     public:
         auto
@@ -41,14 +46,37 @@ namespace ck
                 -> void;
 
     private:
-        static auto
-            SensorContactStarted(
-                entt::registry& registry,
-                entt::entity entity)
+        TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKSPATIALQUERY_API FProcessor_Probe_UpdateTransform : public ck_exp::TProcessor<
+            FProcessor_Probe_UpdateTransform,
+            FCk_Handle_Probe,
+            FFragment_Probe_Params,
+            FFragment_Probe_Current,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FTag_Probe_RequiresSetup;
+
+    public:
+        FProcessor_Probe_UpdateTransform(
+            const RegistryType& InRegistry,
+            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
+
+    public:
+        auto
+            ForEachEntity(
+                TimeType InDeltaT,
+                HandleType InHandle,
+                const FFragment_Probe_Params& InParams,
+                FFragment_Probe_Current& InCurrent)
                 -> void;
 
     private:
-        RegistryType _PhysicsRegistry;
+        TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
