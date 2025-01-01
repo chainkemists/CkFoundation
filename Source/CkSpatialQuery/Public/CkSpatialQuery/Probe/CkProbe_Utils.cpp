@@ -10,7 +10,7 @@ auto
     Add(
         FCk_Handle InHandle,
         const FCk_Fragment_Probe_ParamsData& InParams)
-    -> FCk_Handle_Probe
+        -> FCk_Handle_Probe
 {
     InHandle.Add<ck::FFragment_Probe_Params>(InParams);
     InHandle.Add<ck::FFragment_Probe_Current>();
@@ -32,10 +32,19 @@ auto
     Request_ExampleRequest(
         FCk_Handle_Probe& InProbe,
         const FCk_Request_Probe_ExampleRequest& InRequest)
-    -> FCk_Handle_Probe
+        -> FCk_Handle_Probe
 {
     InProbe.AddOrGet<ck::FFragment_Probe_Requests>()._Requests.Emplace(InRequest);
     return InProbe;
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    Get_IsOverlapping(
+        FCk_Handle_Probe& InProbe)
+        -> bool
+{
+    return InProbe.Has<ck::FTag_Probe_Overlapping>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

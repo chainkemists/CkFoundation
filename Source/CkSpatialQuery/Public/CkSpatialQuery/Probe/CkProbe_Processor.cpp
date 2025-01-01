@@ -7,6 +7,14 @@
 #include "CkNet/CkNet_Utils.h"
 
 #include "CkSpatialQuery/CkSpatialQuery_Log.h"
+#include "CkSpatialQuery/Subsystem/CkSpatialQuery_Subsystem.h"
+
+#include "Jolt/Jolt.h"
+#include "Jolt/Physics/PhysicsSystem.h"
+#include "Jolt/Physics/Body/Body.h"
+#include "Jolt/Physics/Body/BodyCreationSettings.h"
+#include "Jolt/Physics/Body/BodyInterface.h"
+#include "Jolt/Physics/Collision/Shape/BoxShape.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -25,12 +33,10 @@ namespace ck
 {
     FProcessor_Probe_Setup::
     FProcessor_Probe_Setup(
-        const RegistryType& InPhysicsRegistry,
-        const RegistryType& InGameRegistry)
-        : TProcessor(InGameRegistry)
-        , _PhysicsRegistry(InPhysicsRegistry)
-    {
-    }
+        const RegistryType& InRegistry,
+        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
+        : TProcessor(InRegistry)
+        , _PhysicsSystem(InPhysicsSystem) {}
 
     auto
         FProcessor_Probe_Setup::
@@ -54,16 +60,67 @@ namespace ck
     {
         const auto& HalfExtents = InParams.Get_Params().Get_HalfExtents();
         const auto& EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
+
+        using namespace JPH;
+        using namespace jolt_bridge;
+
+        auto Settings = BoxShapeSettings{ToVec3(HalfExtents)};
+        Settings.SetEmbedded();
+
+        auto ShapeResult = Settings.Create();
+        auto Shape = ShapeResult.Get();
+
+        auto ShapeSettings = BodyCreationSettings{
+            Shape,
+            ToVec3(EntityPosition),
+            Quat::sIdentity(),
+            EMotionType::Kinematic,
+            ObjectLayer{1}
+        };
+        ShapeSettings.mIsSensor = true;
+
+        auto PhysicsSystem = _PhysicsSystem.Pin();
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+        InCurrent._RigidBody = BodyInterface.CreateBody(ShapeSettings);
+        InCurrent._RigidBody->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
+        InCurrent._RigidBody->SetCollideKinematicVsNonDynamic(true);
+        BodyInterface.AddBody(InCurrent._RigidBody->GetID(), EActivation::Activate);
     }
 
+    // --------------------------------------------------------------------------------------------------------------------
+
+    FProcessor_Probe_UpdateTransform::
+    FProcessor_Probe_UpdateTransform(
+        const RegistryType& InRegistry,
+        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
+        : TProcessor(InRegistry)
+        , _PhysicsSystem(InPhysicsSystem) {}
+
     auto
-        FProcessor_Probe_Setup::
-        SensorContactStarted(
-            entt::registry& registry,
-            entt::entity entity)
+        FProcessor_Probe_UpdateTransform::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Probe_Params& InParams,
+            FFragment_Probe_Current& InCurrent)
             -> void
     {
-        ck::spatialquery::Warning(TEXT("We have contact!"));
+        using namespace jolt_bridge;
+
+        auto EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
+        auto EntityRotation = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentRotation(InHandle);
+
+        auto EntityRotationQuat = FQuat{EntityRotation};
+        auto Rot = JPH::Quat{(float)EntityRotationQuat.X, (float)EntityRotationQuat.Y, (float)EntityRotationQuat.Z, (float)EntityRotationQuat.W};
+
+        auto PhysicsSystem = _PhysicsSystem.Pin();
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+        BodyInterface.MoveKinematic(InCurrent._RigidBody->GetID(), ToVec3(EntityPosition), Rot, InDeltaT.Get_Seconds());
+
+        ck::spatialquery::Log(TEXT("Actual Position in Jolt:[{}] [{}]"), InCurrent._RigidBody->GetID().GetIndexAndSequenceNumber(),
+            ToVec3(BodyInterface.GetPosition(InCurrent._RigidBody->GetID())));
     }
 
     // --------------------------------------------------------------------------------------------------------------------

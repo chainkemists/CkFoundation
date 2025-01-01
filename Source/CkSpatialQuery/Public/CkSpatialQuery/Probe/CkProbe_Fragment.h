@@ -8,6 +8,11 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace JPH
+{
+    class Body;
+}
+
 class UCk_Utils_Probe_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -16,6 +21,7 @@ namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_Probe_RequiresSetup);
     CK_DEFINE_ECS_TAG(FTag_Probe_Updated);
+    CK_DEFINE_ECS_TAG(FTag_Probe_Overlapping);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -46,13 +52,15 @@ namespace ck
 
     public:
         friend class FProcessor_Probe_Setup;
+        friend class FProcessor_Probe_UpdateTransform;
         friend class FProcessor_Probe_HandleRequests;
         friend class FProcessor_Probe_Teardown;
         friend class UCk_Utils_Probe_UE;
 
     private:
         // Add your properties here
-        int32 _DummyProperty = 0;
+
+        JPH::Body* _RigidBody = nullptr;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
