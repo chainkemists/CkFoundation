@@ -1,11 +1,13 @@
 ﻿#include "CkUI_Utils.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
+#include "CkCore/Ensure/CkEnsure.h"
+#include "CkCore/Validation/CkIsValid.h"
 #include <Blueprint/UserWidget.h>
 #include <Components/NamedSlot.h>
 #include <Blueprint/WidgetTree.h>
 
-#include "CkCore/Ensure/CkEnsure.h"
-#include "CkCore/Validation/CkIsValid.h"
+// --------------------------------------------------------------------------------------------------------------------
 
 auto
     UCk_Utils_UI_UE::
@@ -24,39 +26,41 @@ auto
         TEXT("Named Slot name is not valid. Trying to get NamedSlot from widget [{}]"),
         InSourceWidget)
     { return {}; }
-    
+
     auto RootWidgetTree = InSourceWidget->WidgetTree.Get();
-    
+
     CK_ENSURE_IF_NOT(ck::IsValid(RootWidgetTree),
         TEXT("Widget tree of widget [{}] is not valid"),
         InSourceWidget)
     { return {}; }
-    
+
     auto Widgets = TArray<UWidget*>{};
     RootWidgetTree->GetAllWidgets(Widgets);
-    
-    const auto& FoundNamedSlot = Widgets.FindByPredicate([&](UWidget* Widget)
+
+    const auto& FoundSlotWithName = Widgets.FindByPredicate([&](UWidget* Widget)
     {
         return Widget->GetFName() == InNamedSlotName && ck::IsValid(Cast<UNamedSlot>(Widget));
     });
-    if (ck::IsValid(FoundNamedSlot, ck::IsValid_Policy_NullptrOnly{}) &&
-        ck::IsValid(Cast<UNamedSlot>(*FoundNamedSlot)))
+
+    if (ck::IsValid(FoundSlotWithName, ck::IsValid_Policy_NullptrOnly{}) &&
+        ck::IsValid(Cast<UNamedSlot>(*FoundSlotWithName)))
     {
-        return Cast<UNamedSlot>(*FoundNamedSlot);
+        return Cast<UNamedSlot>(*FoundSlotWithName);
     }
 
     if (InIsRecursive == ECk_UI_NamedSlot_SearchRecursive::NonRecursive)
     { return {}; }
-    
-    for (auto Widget : Widgets)
+
+    for (const auto& Widget : Widgets)
     {
-        if (auto UserWidget = Cast<UUserWidget>(Widget))
+        if (const auto& UserWidget = Cast<UUserWidget>(Widget))
         {
-            if (auto NamedSlot = FindNamedSlot(UserWidget, InNamedSlotName, InIsRecursive))
+            if (const auto NamedSlot = FindNamedSlot(UserWidget, InNamedSlotName, InIsRecursive))
             { return NamedSlot; }
         }
     }
-    { return {}; }
+
+    return {};
 }
 
 auto
@@ -88,7 +92,7 @@ auto
         TEXT("Widget to be inserted into NamedSlot [{}] is not valid"),
         InNamedSlot)
     { return {}; }
-    
+
     return InNamedSlot->AddChild(InInsertedWidget);
 }
 
@@ -102,24 +106,25 @@ auto
         ECk_UI_NamedSlot_EnsureSlotIsFound InEnsureSlotIsFound)
     -> UPanelSlot*
 {
-    auto NamedSlot = FindNamedSlot(InSourceWidget, InNamedSlotName, InIsRecursive);
-
-    if (ck::IsValid(NamedSlot))
+    if (auto NamedSlot = FindNamedSlot(InSourceWidget, InNamedSlotName, InIsRecursive);
+        ck::IsValid(NamedSlot))
     {
         CK_ENSURE_IF_NOT(NOT IsNamedSlotOccupied(NamedSlot),
             TEXT("Named Slot [{}] is not available for inserting a widget, already has widget [{}] present"),
             NamedSlot,
             NamedSlot->GetAllChildren().Num() > 0 ? NamedSlot->GetAllChildren()[0] : nullptr)
         { return {}; }
-        
+
         return InsertWidgetToNamedSlot(NamedSlot, InInsertedWidget);
     }
-    
+
     CK_ENSURE_IF_NOT(InEnsureSlotIsFound == ECk_UI_NamedSlot_EnsureSlotIsFound::EnsureSlotIsFound,
         TEXT("Widget [{}] does not contain named slot [{}]"),
         InSourceWidget,
         InNamedSlotName)
     {}
-    
+
     return {};
 }
+
+// --------------------------------------------------------------------------------------------------------------------

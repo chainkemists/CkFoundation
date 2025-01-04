@@ -1,15 +1,9 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
-#include "CkEcs/Entity/CkEntity.h"
-
-#include "CkEcs/Handle/CkHandle_Debugging_Data.h"
-
-#include "Subsystems/EngineSubsystem.h"
-
-#include "CkHandle_Subsystem.generated.h"
-
 #include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
+
+#include "CkEcs/Entity/CkEntity.h"
 
 #include "CkAbility_Subsystem.generated.h"
 
