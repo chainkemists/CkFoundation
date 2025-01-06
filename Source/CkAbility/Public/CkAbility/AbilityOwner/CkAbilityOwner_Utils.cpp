@@ -566,6 +566,8 @@ auto
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot,
         InRequest.PopulateRequestHandle(InAbilityOwnerHandle), InDelegate);
 
+
+    InAbilityOwnerHandle.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
     return InAbilityOwnerHandle;
 }
@@ -651,6 +653,7 @@ auto
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityRevokedOrNot,
         InRequest.PopulateRequestHandle(InAbilityOwnerHandle), InDelegate);
 
+    InAbilityOwnerHandle.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
     return InAbilityOwnerHandle;
 }
@@ -699,6 +702,7 @@ auto
             InRequest.PopulateRequestHandle(InAbilityOwnerHandle), InDelegate);
     }
 
+    InAbilityOwnerHandle.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
     return InAbilityOwnerHandle;
 }
@@ -714,6 +718,7 @@ auto
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityDeactivatedOrNot,
         InRequest.PopulateRequestHandle(InAbilityOwnerHandle), InDelegate);
 
+    InAbilityOwnerHandle.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
     return InAbilityOwnerHandle;
 }

@@ -83,6 +83,7 @@ namespace ck
             FCk_Handle_AbilityOwner,
             FFragment_AbilityOwner_Current,
             FFragment_AbilityOwner_Requests,
+            TExclude<FTag_AbilityOwner_PendingSubAbilityOperation>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -186,6 +187,25 @@ namespace ck
             TimeType InDeltaT,
             HandleType& InHandle,
             FFragment_AbilityOwner_Current& InAbilityOwnerComp) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKABILITY_API FProcessor_AbilityOwner_ClearPendingOperation : public ck_exp::TProcessor<
+            FProcessor_AbilityOwner_ClearPendingOperation,
+            FCk_Handle_AbilityOwner,
+            FTag_AbilityOwner_ClearPendingSubAbilityOperation,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            const FTag_AbilityOwner_ClearPendingSubAbilityOperation& InCountedTag) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
