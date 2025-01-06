@@ -67,6 +67,8 @@ namespace ck
                 .Set_ConstructionPhase(ECk_ConstructionPhase::DuringConstruction),
                 {}
             );
+
+            InHandle.Add<FTag_AbilityOwner_PendingSubAbilityOperation>();
         }
 
         for (const auto& Params = InAbilityOwnerParams.Get_Params(); const auto& DefaultAbilityInstance : Params.Get_DefaultAbilities_Instanced())
@@ -83,6 +85,8 @@ namespace ck
                 .Set_ConstructionPhase(ECk_ConstructionPhase::DuringConstruction),
                 {}
             );
+
+            InHandle.Add<FTag_AbilityOwner_PendingSubAbilityOperation>();
         }
 
         // It's possible that we have pending replication info
@@ -133,7 +137,7 @@ namespace ck
         -> void
     {
         const auto RequestsCopy = InAbilityRequestsComp._Requests;
-        InAbilityRequestsComp._Requests.Reset();
+        InHandle.Remove<MarkedDirtyBy>();
 
         algo::ForEach(RequestsCopy, ck::Visitor([&](const auto& InRequestVariant)
         {
@@ -146,11 +150,6 @@ namespace ck
         {
             ability::Verbose(TEXT("Ability Entity [{}] was Marked Pending Kill during the handling of its requests."), InHandle);
             return;
-        }
-
-        if (InAbilityRequestsComp.Get_Requests().IsEmpty())
-        {
-            InHandle.Remove<MarkedDirtyBy>();
         }
     }
 
@@ -212,17 +211,23 @@ namespace ck
                 AbilityOwnerComp.AppendTags(InAbilityOwnerEntity, GrantedTags);
             }
 
-            UCk_Utils_Ability_UE::DoGive(InAbilityOwnerEntity, AbilityToAddAndGive, AbilitySource, OptionalPayload);
+            InAbilityOwnerEntity.Add<FTag_AbilityOwner_PendingSubAbilityOperation>();
 
-            if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(AbilityToAddAndGive).Get_ActivationPolicy();
-                ActivationPolicy == ECk_Ability_Activation_Policy::ActivateOnGranted)
-            {
-                UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(
-                    InAbilityOwnerEntity,
-                    FCk_Request_AbilityOwner_ActivateAbility{AbilityToAddAndGive}
-                    .Set_OptionalPayload(FCk_Ability_Payload_OnActivate{}.Set_ContextEntity(InAbilityOwnerEntity)),
-                    {});
-            }
+            auto RequestGive = ck::FFragment_Ability_RequestGive{AbilitySource, OptionalPayload};
+            InRequest.Request_TransferHandleToOther(RequestGive);
+            AbilityToAddAndGive.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(RequestGive);
+
+            //UCk_Utils_Ability_UE::DoGive(InAbilityOwnerEntity, AbilityToAddAndGive, AbilitySource, OptionalPayload);
+
+            //if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(AbilityToAddAndGive).Get_ActivationPolicy();
+            //    ActivationPolicy == ECk_Ability_Activation_Policy::ActivateOnGranted)
+            //{
+            //    UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(
+            //        InAbilityOwnerEntity,
+            //        FCk_Request_AbilityOwner_ActivateAbility{AbilityToAddAndGive}
+            //        .Set_OptionalPayload(FCk_Ability_Payload_OnActivate{}.Set_ContextEntity(InAbilityOwnerEntity)),
+            //        {});
+            //}
 
             return ECk_AbilityOwner_AbilityGivenOrNot::Given;
         }();
@@ -234,12 +239,12 @@ namespace ck
                 MakePayload(InAbilityOwnerEntity, AbilityToAddAndGive, AbilityGivenOrNot));
         }
 
-        if (AbilityGivenOrNot == ECk_AbilityOwner_AbilityGivenOrNot::Given)
-        {
-            UUtils_Signal_AbilityOwner_OnAbilityGiven::Broadcast(
-                InAbilityOwnerEntity,
-                MakePayload(InAbilityOwnerEntity, AbilityToAddAndGive));
-        }
+        //if (AbilityGivenOrNot == ECk_AbilityOwner_AbilityGivenOrNot::Given)
+        //{
+        //    UUtils_Signal_AbilityOwner_OnAbilityGiven::Broadcast(
+        //        InAbilityOwnerEntity,
+        //        MakePayload(InAbilityOwnerEntity, AbilityToAddAndGive));
+        //}
     }
 
     auto
@@ -425,28 +430,43 @@ namespace ck
                     AbilityOwnerComp.AppendTags(NonConstAbilityOwnerEntity, GrantedTags);
                 }
 
-                UCk_Utils_Ability_UE::DoGive(AbilityOwnerEntity, AbilityEntity, AbilitySource, OptionalPayload);
-
-                if (InRequest.Get_IsRequestHandleValid())
+                if (InRequest.Get_ConstructionPhase() == ECk_ConstructionPhase::AfterConstruction)
                 {
-                    UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
-                        InRequest.GetAndDestroyRequestHandle(),
-                        MakePayload(AbilityOwnerEntity, AbilityEntity, ECk_AbilityOwner_AbilityGivenOrNot::Given));
+                    AbilityOwnerEntity.Add<FTag_AbilityOwner_PendingSubAbilityOperation>();
+                }
+                else
+                {
+                    CK_TRIGGER_ENSURE_IF(NOT InAbilityOwnerEntity.Has<FTag_AbilityOwner_PendingSubAbilityOperation>(),
+                        TEXT("Expected AbilityOwner [{}] to have PendingSubAbilities tag before adding sub-abilities"), InAbilityOwnerEntity)
+                    { }
                 }
 
-                UUtils_Signal_AbilityOwner_OnAbilityGiven::Broadcast(
-                    AbilityOwnerEntity,
-                    MakePayload(AbilityOwnerEntity, AbilityEntity));
+                auto RequestGive = ck::FFragment_Ability_RequestGive{AbilitySource, OptionalPayload};
+                InRequest.Request_TransferHandleToOther(RequestGive);
+                AbilityEntity.Add<ck::FFragment_Ability_RequestGive>(RequestGive);
 
-                if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(AbilityEntity).Get_ActivationPolicy();
-                    ActivationPolicy == ECk_Ability_Activation_Policy::ActivateOnGranted)
-                {
-                    UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(
-                        AbilityOwnerEntity,
-                        FCk_Request_AbilityOwner_ActivateAbility{AbilityEntity}
-                        .Set_OptionalPayload(FCk_Ability_Payload_OnActivate{}.Set_ContextEntity(AbilityOwnerEntity)),
-                        {});
-                }
+                //UCk_Utils_Ability_UE::DoGive(AbilityOwnerEntity, AbilityEntity, AbilitySource, OptionalPayload);
+
+                //if (InRequest.Get_IsRequestHandleValid())
+                //{
+                //    UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
+                //        InRequest.GetAndDestroyRequestHandle(),
+                //        MakePayload(AbilityOwnerEntity, AbilityEntity, ECk_AbilityOwner_AbilityGivenOrNot::Given));
+                //}
+
+                //UUtils_Signal_AbilityOwner_OnAbilityGiven::Broadcast(
+                //    AbilityOwnerEntity,
+                //    MakePayload(AbilityOwnerEntity, AbilityEntity));
+
+                //if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(AbilityEntity).Get_ActivationPolicy();
+                //    ActivationPolicy == ECk_Ability_Activation_Policy::ActivateOnGranted)
+                //{
+                //    UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(
+                //        AbilityOwnerEntity,
+                //        FCk_Request_AbilityOwner_ActivateAbility{AbilityEntity}
+                //        .Set_OptionalPayload(FCk_Ability_Payload_OnActivate{}.Set_ContextEntity(AbilityOwnerEntity)),
+                //        {});
+                //}
             };
 
             UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityEntityConfig->GetWorld())->Request_TrackAbilityEntityConfig(AbilityEntityConfig);
@@ -608,28 +628,43 @@ namespace ck
                     AbilityOwnerComp.AppendTags(NonConstAbilityOwnerEntity, GrantedTags);
                 }
 
-                UCk_Utils_Ability_UE::DoGive(AbilityOwnerEntity, AbilityEntity, AbilitySource, {});
-
-                if (InRequest.Get_IsRequestHandleValid())
+                if (InRequest.Get_ConstructionPhase() == ECk_ConstructionPhase::AfterConstruction)
                 {
-                    UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
-                        InRequest.GetAndDestroyRequestHandle(),
-                        MakePayload(AbilityOwnerEntity, AbilityEntity, ECk_AbilityOwner_AbilityGivenOrNot::Given));
+                    AbilityOwnerEntity.Add<FTag_AbilityOwner_PendingSubAbilityOperation>();
+                }
+                else
+                {
+                    CK_TRIGGER_ENSURE_IF(NOT InAbilityOwnerEntity.Has<FTag_AbilityOwner_PendingSubAbilityOperation>(),
+                        TEXT("Expected AbilityOwner [{}] to have PendingSubAbilities tag before adding sub-abilities"), InAbilityOwnerEntity)
+                    { }
                 }
 
-                UUtils_Signal_AbilityOwner_OnAbilityGiven::Broadcast(
-                    AbilityOwnerEntity,
-                    MakePayload(AbilityOwnerEntity, AbilityEntity));
+                auto RequestGive = ck::FFragment_Ability_RequestGive{AbilitySource, {}};
+                InRequest.Request_TransferHandleToOther(RequestGive);
+                AbilityEntity.Add<ck::FFragment_Ability_RequestGive>(RequestGive);
 
-                if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(AbilityEntity).Get_ActivationPolicy();
-                    ActivationPolicy == ECk_Ability_Activation_Policy::ActivateOnGranted)
-                {
-                    UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(
-                        AbilityOwnerEntity,
-                        FCk_Request_AbilityOwner_ActivateAbility{AbilityEntity}
-                        .Set_OptionalPayload(FCk_Ability_Payload_OnActivate{}.Set_ContextEntity(AbilityOwnerEntity)),
-                        {});
-                }
+                //UCk_Utils_Ability_UE::DoGive(AbilityOwnerEntity, AbilityEntity, AbilitySource, {});
+
+                //if (InRequest.Get_IsRequestHandleValid())
+                //{
+                //    UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
+                //        InRequest.GetAndDestroyRequestHandle(),
+                //        MakePayload(AbilityOwnerEntity, AbilityEntity, ECk_AbilityOwner_AbilityGivenOrNot::Given));
+                //}
+
+                //UUtils_Signal_AbilityOwner_OnAbilityGiven::Broadcast(
+                //    AbilityOwnerEntity,
+                //    MakePayload(AbilityOwnerEntity, AbilityEntity));
+
+                //if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(AbilityEntity).Get_ActivationPolicy();
+                //    ActivationPolicy == ECk_Ability_Activation_Policy::ActivateOnGranted)
+                //{
+                //    UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(
+                //        AbilityOwnerEntity,
+                //        FCk_Request_AbilityOwner_ActivateAbility{AbilityEntity}
+                //        .Set_OptionalPayload(FCk_Ability_Payload_OnActivate{}.Set_ContextEntity(AbilityOwnerEntity)),
+                //        {});
+                //}
             };
 
             UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityEntityConfig->GetWorld())->Request_TrackAbilityEntityConfig(AbilityEntityConfig);
@@ -724,18 +759,24 @@ namespace ck
                 InAbilityOwnerComp.RemoveTags(InAbilityOwnerEntity, GrantedTags);
             }
 
-            UCk_Utils_Ability_UE::DoRevoke(InAbilityOwnerEntity, InAbilityEntity, InRequest.Get_DestructionPolicy());
+            InAbilityOwnerEntity.Add<FTag_AbilityOwner_PendingSubAbilityOperation>();
 
-            if (InRequest.Get_IsRequestHandleValid())
-            {
-                UUtils_Signal_AbilityOwner_OnAbilityRevokedOrNot::Broadcast(
-                    InRequest.GetAndDestroyRequestHandle(),
-                    MakePayload(InAbilityOwnerEntity, InAbilityEntity, ECk_AbilityOwner_AbilityRevokedOrNot::Revoked));
-            }
+            auto RequestRevoke = ck::FFragment_Ability_RequestRevoke{InRequest.Get_DestructionPolicy()};
+            InRequest.Request_TransferHandleToOther(RequestRevoke);
+            InAbilityEntity.Add<ck::FFragment_Ability_RequestRevoke>(RequestRevoke);
 
-            UUtils_Signal_AbilityOwner_OnAbilityRevoked::Broadcast(
-                InAbilityOwnerEntity,
-                MakePayload(InAbilityOwnerEntity, InAbilityEntity));
+            //UCk_Utils_Ability_UE::DoRevoke(InAbilityOwnerEntity, InAbilityEntity, InRequest.Get_DestructionPolicy());
+
+            //if (InRequest.Get_IsRequestHandleValid())
+            //{
+            //    UUtils_Signal_AbilityOwner_OnAbilityRevokedOrNot::Broadcast(
+            //        InRequest.GetAndDestroyRequestHandle(),
+            //        MakePayload(InAbilityOwnerEntity, InAbilityEntity, ECk_AbilityOwner_AbilityRevokedOrNot::Revoked));
+            //}
+
+            //UUtils_Signal_AbilityOwner_OnAbilityRevoked::Broadcast(
+            //    InAbilityOwnerEntity,
+            //    MakePayload(InAbilityOwnerEntity, InAbilityEntity));
         };
 
         switch (const auto& SearchPolicy = InRequest.Get_SearchPolicy())
@@ -788,6 +829,19 @@ namespace ck
                 return;
             }
 
+            if (InAbilityToActivateEntity.Has<ck::FFragment_AbilityOwner_Requests>())
+            {
+                ability::Verbose
+                (
+                    TEXT("NOT Activating Ability [Entity: {}] on Ability Owner [{}] because there are Sub-Abilities with pending requests"),
+                    InAbilityToActivateEntity,
+                    InAbilityOwnerEntity
+                );
+
+                UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(InAbilityOwnerEntity, InRequest, {});
+                return;
+            }
+
             if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(InAbilityToActivateEntity, ECk_EntityLifetime_DestructionPhase::InitiatedOrConfirmed))
             {
                 ability::Verbose
@@ -806,7 +860,7 @@ namespace ck
                 return;
             }
 
-            auto& RequestsComp = InAbilityOwnerEntity.Get<FFragment_AbilityOwner_Requests>();
+            auto& RequestsComp = InAbilityOwnerEntity.AddOrGet<FFragment_AbilityOwner_Requests>();
             const auto NumRequestsBeforeActivation = RequestsComp.Get_Requests().Num();
 
             const auto AbilityActivatedOrNot = [&]() -> ECk_AbilityOwner_AbilityActivatedOrNot
@@ -974,73 +1028,79 @@ namespace ck
                     algo::MatchesAnyAbilityActivationCancelledTagsOnOwner{GrantedTags}
                 );
 
-                UCk_Utils_Ability_UE::DoActivate(InAbilityOwnerEntity, InAbilityToActivateEntity, InRequest.Get_OptionalPayload());
+                InAbilityOwnerEntity.Add<FTag_AbilityOwner_PendingSubAbilityOperation>();
+
+                auto RequestActivate = ck::FFragment_Ability_RequestActivate{InRequest.Get_OptionalPayload()};
+                InRequest.Request_TransferHandleToOther(RequestActivate);
+                InAbilityToActivateEntity.Add<ck::FFragment_Ability_RequestActivate>(RequestActivate);
+
+                //UCk_Utils_Ability_UE::DoActivate(InAbilityOwnerEntity, InAbilityToActivateEntity, InRequest.Get_OptionalPayload());
 
                 return ECk_AbilityOwner_AbilityActivatedOrNot::Activated;
             }();
 
-            if (InRequest.Get_IsRequestHandleValid())
-            {
-                UUtils_Signal_AbilityOwner_OnAbilityActivatedOrNot::Broadcast(
-                        InRequest.GetAndDestroyRequestHandle(),
-                    MakePayload(InAbilityOwnerEntity, InAbilityToActivateEntity, AbilityActivatedOrNot));
-            }
+            //if (InRequest.Get_IsRequestHandleValid())
+            //{
+            //    UUtils_Signal_AbilityOwner_OnAbilityActivatedOrNot::Broadcast(
+            //            InRequest.GetAndDestroyRequestHandle(),
+            //        MakePayload(InAbilityOwnerEntity, InAbilityToActivateEntity, AbilityActivatedOrNot));
+            //}
 
-            if (AbilityActivatedOrNot == ECk_AbilityOwner_AbilityActivatedOrNot::Activated)
-            {
-                UUtils_Signal_AbilityOwner_OnAbilityActivated::Broadcast(
-                        InAbilityOwnerEntity,
-                    MakePayload(InAbilityOwnerEntity, InAbilityToActivateEntity));
-            }
+            //if (AbilityActivatedOrNot == ECk_AbilityOwner_AbilityActivatedOrNot::Activated)
+            //{
+            //    UUtils_Signal_AbilityOwner_OnAbilityActivated::Broadcast(
+            //            InAbilityOwnerEntity,
+            //        MakePayload(InAbilityOwnerEntity, InAbilityToActivateEntity));
+            //}
 
-            // It's possible that we already have a deactivation request, if yes, process it immediately and remove it from pending requests
-            // This fixes issues caused by waiting until the deactivation request is processed to do tag changes that may be necessary for allowing/blocking subsequent requests
-            const auto ProcessPossibleDeactivationRequest = [&]
-            {
-                if (RequestsComp.Get_Requests().IsEmpty())
-                { return; }
+            //// It's possible that we already have a deactivation request, if yes, process it immediately and remove it from pending requests
+            //// This fixes issues caused by waiting until the deactivation request is processed to do tag changes that may be necessary for allowing/blocking subsequent requests
+            //const auto ProcessPossibleDeactivationRequest = [&]
+            //{
+            //    if (RequestsComp.Get_Requests().IsEmpty())
+            //    { return; }
 
-                if (const auto NewRequestsAfterActivate = RequestsComp.Get_Requests().Num() - NumRequestsBeforeActivation;
-                    NewRequestsAfterActivate == 0)
-                { return; }
+            //    if (const auto NewRequestsAfterActivate = RequestsComp.Get_Requests().Num() - NumRequestsBeforeActivation;
+            //        NewRequestsAfterActivate == 0)
+            //    { return; }
 
-                // Try to search newly added request for a deactivation for the same ability we just activated.
-                // This isn't always guaranteed to be the last/only request
-                const auto MatchingRequestIndex = [&]() -> int32
-                {
-                    for (auto Itr = NumRequestsBeforeActivation; Itr < RequestsComp.Get_Requests().Num(); ++Itr)
-                    {
-                        const auto RequestVariant = &RequestsComp.Get_Requests()[Itr];
-                        const auto PendingRequest = std::get_if<FCk_Request_AbilityOwner_DeactivateAbility>(RequestVariant);
+            //    // Try to search newly added request for a deactivation for the same ability we just activated.
+            //    // This isn't always guaranteed to be the last/only request
+            //    const auto MatchingRequestIndex = [&]() -> int32
+            //    {
+            //        for (auto Itr = NumRequestsBeforeActivation; Itr < RequestsComp.Get_Requests().Num(); ++Itr)
+            //        {
+            //            const auto RequestVariant = &RequestsComp.Get_Requests()[Itr];
+            //            const auto PendingRequest = std::get_if<FCk_Request_AbilityOwner_DeactivateAbility>(RequestVariant);
 
-                        if (ck::Is_NOT_Valid(PendingRequest, IsValid_Policy_NullptrOnly{}))
-                        { continue; }
+            //            if (ck::Is_NOT_Valid(PendingRequest, IsValid_Policy_NullptrOnly{}))
+            //            { continue; }
 
-                        if (PendingRequest->Get_AbilityHandle() == InAbilityToActivateEntity)
-                        { return Itr; }
-                    }
+            //            if (PendingRequest->Get_AbilityHandle() == InAbilityToActivateEntity)
+            //            { return Itr; }
+            //        }
 
-                    return INDEX_NONE;
-                }();
+            //        return INDEX_NONE;
+            //    }();
 
-                if (MatchingRequestIndex == INDEX_NONE)
-                { return; }
+            //    if (MatchingRequestIndex == INDEX_NONE)
+            //    { return; }
 
-                auto RequestToProcessImmediately = RequestsComp._Requests[MatchingRequestIndex];
-                RequestsComp._Requests.RemoveAt(MatchingRequestIndex);
+            //    auto RequestToProcessImmediately = RequestsComp._Requests[MatchingRequestIndex];
+            //    RequestsComp._Requests.RemoveAt(MatchingRequestIndex);
 
-                const auto PendingDeactivationRequest = std::get_if<FCk_Request_AbilityOwner_DeactivateAbility>(&RequestToProcessImmediately);
+            //    const auto PendingDeactivationRequest = std::get_if<FCk_Request_AbilityOwner_DeactivateAbility>(&RequestToProcessImmediately);
 
-                CK_ENSURE_IF_NOT(ck::IsValid(PendingDeactivationRequest, IsValid_Policy_NullptrOnly{}),
-                    TEXT("Pending Deactivation Request for ability [{}] is NOT valid even though it's validity was just checked, this should never be possible"),
-                    InAbilityToActivateEntity)
-                { return; }
+            //    CK_ENSURE_IF_NOT(ck::IsValid(PendingDeactivationRequest, IsValid_Policy_NullptrOnly{}),
+            //        TEXT("Pending Deactivation Request for ability [{}] is NOT valid even though it's validity was just checked, this should never be possible"),
+            //        InAbilityToActivateEntity)
+            //    { return; }
 
-                ability::Verbose(TEXT("DEACTIVATING Ability [{}] on Ability Owner [{}] IMMEDIATELY"),
-                    InAbilityToActivateEntity, InAbilityOwnerEntity);
+            //    ability::Verbose(TEXT("DEACTIVATING Ability [{}] on Ability Owner [{}] IMMEDIATELY"),
+            //        InAbilityToActivateEntity, InAbilityOwnerEntity);
 
-                DoHandleRequest(InAbilityOwnerEntity, InAbilityOwnerComp, *PendingDeactivationRequest);
-            }; ProcessPossibleDeactivationRequest();
+            //    DoHandleRequest(InAbilityOwnerEntity, InAbilityOwnerComp, *PendingDeactivationRequest);
+            //}; ProcessPossibleDeactivationRequest();
         };
 
         switch (const auto& SearchPolicy = InRequest.Get_SearchPolicy())
@@ -1119,17 +1179,23 @@ namespace ck
                 GrantedTags
             );
 
-            UCk_Utils_Ability_UE::DoDeactivate(InAbilityOwnerEntity, InAbilityEntity);
+            InAbilityOwnerEntity.Add<FTag_AbilityOwner_PendingSubAbilityOperation>();
 
-            if (InRequest.Get_IsRequestHandleValid())
-            {
-                UUtils_Signal_AbilityOwner_OnAbilityDeactivatedOrNot::Broadcast(
-                    InRequest.GetAndDestroyRequestHandle(),
-                    MakePayload(InAbilityOwnerEntity, InAbilityEntity, ECk_AbilityOwner_AbilityDeactivatedOrNot::Deactivated));
-            }
+            auto RequestDeactivate = ck::FFragment_Ability_RequestDeactivate{};
+            InRequest.Request_TransferHandleToOther(RequestDeactivate);
+            InAbilityEntity.Add<ck::FFragment_Ability_RequestDeactivate>(RequestDeactivate);
 
-            UUtils_Signal_AbilityOwner_OnAbilityDeactivated::Broadcast(
-                InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityEntity));
+            //UCk_Utils_Ability_UE::DoDeactivate(InAbilityOwnerEntity, InAbilityEntity);
+
+            //if (InRequest.Get_IsRequestHandleValid())
+            //{
+            //    UUtils_Signal_AbilityOwner_OnAbilityDeactivatedOrNot::Broadcast(
+            //        InRequest.GetAndDestroyRequestHandle(),
+            //        MakePayload(InAbilityOwnerEntity, InAbilityEntity, ECk_AbilityOwner_AbilityDeactivatedOrNot::Deactivated));
+            //}
+
+            //UUtils_Signal_AbilityOwner_OnAbilityDeactivated::Broadcast(
+            //    InAbilityOwnerEntity, MakePayload(InAbilityOwnerEntity, InAbilityEntity));
         };
 
         switch (const auto& SearchPolicy = InRequest.Get_SearchPolicy())

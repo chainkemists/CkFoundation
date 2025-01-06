@@ -97,6 +97,8 @@ auto
     _TickStatName = ck::Format_UE(TEXT("[{}][{}] EcsWorld_Actor"), _UnrealTickingGroup, _EcsWorldTickingGroup);
     _TickStatId = FDynamicStats::CreateStatId<STAT_GROUP_TO_FStatGroup(STATGROUP_CkEcsWorldActor_Tick)>(_TickStatName);
 
+    FApp::SetUnfocusedVolumeMultiplier(1.0f);
+
     TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*ck::Format_UE(TEXT("{}::Initialize"), _TickStatName));
 
     SetTickGroup(_UnrealTickingGroup);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkAbility/Ability/CkAbility_Fragment.h"
+#include "CkAbility/AbilityOwner/CkAbilityOwner_Fragment.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
 
@@ -28,6 +29,51 @@ namespace ck
             HandleType& InHandle,
             const FCk_EntityReplicationDriver_AbilityData& InReplicatedAbility) const -> void;
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKABILITY_API FProcessor_Ability_HandleRequests : public ck_exp::TProcessor<
+            FProcessor_Ability_HandleRequests,
+            FCk_Handle_Ability,
+            FFragment_Ability_Requests,
+            TExclude<FTag_AbilityOwner_PendingSubAbilityOperation>,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FFragment_Ability_Requests;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            const FFragment_Ability_Requests& InAbilityRequests) const -> void;
+
+    private:
+        auto
+        DoHandleRequest(
+            HandleType& InAbilityEntity,
+            const FFragment_Ability_RequestGive& InRequest) const -> void;
+
+        auto
+        DoHandleRequest(
+            HandleType& InAbilityEntity,
+            const FFragment_Ability_RequestRevoke& InRequest) const -> void;
+
+        auto
+        DoHandleRequest(
+            HandleType& InAbilityEntity,
+            const FFragment_Ability_RequestActivate& InRequest) const -> void;
+
+        auto
+        DoHandleRequest(
+            HandleType& InAbilityEntity,
+            const FFragment_Ability_RequestDeactivate& InRequest) const -> void;
+    };
+
 
     // --------------------------------------------------------------------------------------------------------------------
 

@@ -3,8 +3,11 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include "CkAbility/Ability/CkAbility_Fragment_Data.h"
+#include "CkAbility/AbilityOwner/CkAbilityOwner_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/Request/CkRequest_Data.h"
+
 #include "CkEcsExt/EntityHolder/CkEntityHolder_Fragment.h"
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
@@ -41,12 +44,108 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    struct CKABILITY_API FFragment_Ability_RequestGive : FRequest_Base
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Ability_RequestGive);
+
+        friend UCk_Utils_Ability_UE;
+
+    private:
+        FCk_Handle _AbilitySource;
+        FCk_Ability_Payload_OnGranted _Payload;
+
+    public:
+        CK_PROPERTY_GET(_AbilitySource);
+        CK_PROPERTY_GET(_Payload);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Ability_RequestGive, _AbilitySource, _Payload)
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKABILITY_API FFragment_Ability_RequestRevoke : FRequest_Base
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Ability_RequestGive);
+
+        friend UCk_Utils_Ability_UE;
+
+    private:
+        ECk_AbilityOwner_DestructionOnRevoke_Policy _DestructionPolicy = ECk_AbilityOwner_DestructionOnRevoke_Policy::DestroyOnRevoke;
+
+    public:
+        CK_PROPERTY_GET(_DestructionPolicy);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Ability_RequestRevoke, _DestructionPolicy)
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKABILITY_API FFragment_Ability_RequestActivate : FRequest_Base
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Ability_RequestActivate);
+
+        friend UCk_Utils_Ability_UE;
+
+    private:
+        FCk_Ability_Payload_OnActivate _Payload;
+
+    public:
+        CK_PROPERTY_GET(_Payload);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Ability_RequestActivate, _Payload)
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKABILITY_API FFragment_Ability_RequestDeactivate : FRequest_Base
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Ability_RequestDeactivate);
+
+        friend UCk_Utils_Ability_UE;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKABILITY_API FFragment_Ability_Requests
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Ability_Requests);
+
+    public:
+        friend class UCk_Utils_Ability_UE;
+
+    public:
+        using Give = FFragment_Ability_RequestGive;
+        using Revoke = FFragment_Ability_RequestRevoke;
+        using Activate = FFragment_Ability_RequestActivate;
+        using Deactivate = FFragment_Ability_RequestDeactivate;
+
+        using RequestType = std::variant<Give, Revoke, Activate, Deactivate>;
+        using RequestList = TArray<RequestType>;
+
+    public:
+        RequestList _Requests;
+
+    public:
+        CK_PROPERTY_GET(_Requests);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKABILITY_API FFragment_Ability_Current
     {
     public:
         CK_GENERATED_BODY(FFragment_Ability_Current);
 
         friend UCk_Utils_Ability_UE;
+        friend class FProcessor_Ability_HandleRequests;
 
     private:
         TWeakObjectPtr<UCk_Ability_Script_PDA> _AbilityScript = nullptr;
