@@ -8,6 +8,11 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck
+{
+    class FProcessor_Ability_HandleRequests;
+}
+
 // This Object itself is NOT replicated. It may be 'implicitly' replicated through the Ability's replicated fragment
 // The interface is purposefully similar to GAS' Gameplay Ability.
 // We chose to use the term 'Activate/Deactivate Ability' as opposed to 'Start/End Ability' since it evokes a more immediate process
@@ -17,6 +22,8 @@ class CKABILITY_API UCk_Ability_Script_PDA : public UCk_DataAsset_PDA
     GENERATED_BODY()
 
     friend class UCk_Utils_Ability_UE;
+
+    friend class ck::FProcessor_Ability_HandleRequests;
 
 public:
     CK_GENERATED_BODY(UCk_Ability_Script_PDA);
