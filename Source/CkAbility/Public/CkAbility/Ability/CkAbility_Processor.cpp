@@ -104,7 +104,7 @@ namespace ck
             InAbilityEntity, AbilityOwnerEntity, CurrentOwnerOfAbilityToAddAndGive)
         { return; }
 
-        DoHandleRequest(InAbilityEntity, InRequest);
+        DoHandleRequest(InAbilityEntity, FFragment_Ability_RequestGive{InRequest.Get_AbilitySource(), InRequest.Get_Payload()});
     }
 
     auto
