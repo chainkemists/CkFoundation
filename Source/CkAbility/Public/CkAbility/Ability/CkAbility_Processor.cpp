@@ -157,6 +157,7 @@ namespace ck
         if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(InHandle).
             Get_ActivationPolicy(); ActivationPolicy == ECk_Ability_Activation_Policy::ActivateOnGranted)
         {
+            AbilityOwnerEntity.Remove<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
             UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(
                 AbilityOwnerEntity,
                 FCk_Request_AbilityOwner_ActivateAbility{InHandle}
