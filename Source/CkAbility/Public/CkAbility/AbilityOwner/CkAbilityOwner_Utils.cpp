@@ -693,8 +693,11 @@ auto
         const FCk_Delegate_AbilityOwner_OnAbilityActivatedOrNot& InDelegate)
     -> FCk_Handle_AbilityOwner
 {
-    CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityActivatedOrNot,
-        InRequest.PopulateRequestHandle(InAbilityOwnerHandle), InDelegate);
+    if (InDelegate.IsBound())
+    {
+        CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityActivatedOrNot,
+            InRequest.PopulateRequestHandle(InAbilityOwnerHandle), InDelegate);
+    }
 
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
     return InAbilityOwnerHandle;
