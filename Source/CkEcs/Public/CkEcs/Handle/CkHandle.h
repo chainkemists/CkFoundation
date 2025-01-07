@@ -464,6 +464,15 @@ auto
 
     auto& NewFragment = _Registry->Add<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
 
+    if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_Fragment>)
+    {
+        // only add the debug IFF the tag was never added
+        if (NewFragment.Get_Count() == 1)
+        {
+            return NewFragment;
+        }
+    }
+
     DoAdd_FragmentDebugInfo<T_Fragment>();
     DoUpdate_FragmentDebugInfo_Blueprints();
 
@@ -505,6 +514,15 @@ auto
         if (AddDebugInfo)
         {
             auto& FragmentToReturn = _Registry->AddOrGet<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
+
+            if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_Fragment>)
+            {
+                // only add the debug IFF the tag was never added
+                if (FragmentToReturn.Get_Count() == 1)
+                {
+                    return FragmentToReturn;
+                }
+            }
 
             DoAdd_FragmentDebugInfo<T_Fragment>();
             DoUpdate_FragmentDebugInfo_Blueprints();
@@ -680,6 +698,15 @@ auto
 
     _Registry->Remove<T_Fragment>(_Entity);
 
+    if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_Fragment>)
+    {
+        // only remove from Debug IFF the counted tag no longer exists
+        if (Has<T_Fragment>())
+        {
+            return;
+        }
+    }
+
     DoRemove_FragmentDebugInfo<T_Fragment>();
 }
 
@@ -746,6 +773,15 @@ auto
     { return; }
 
     _Registry->Try_Remove<T_Fragment>(_Entity);
+
+    if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_Fragment>)
+    {
+        // only remove from Debug IFF the counted tag no longer exists
+        if (Has<T_Fragment>())
+        {
+            return;
+        }
+    }
 
     DoRemove_FragmentDebugInfo<T_Fragment>();
 }
