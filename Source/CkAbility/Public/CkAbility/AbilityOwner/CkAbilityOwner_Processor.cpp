@@ -67,6 +67,7 @@ namespace ck
                 .Set_ConstructionPhase(ECk_ConstructionPhase::DuringConstruction),
                 {}
             );
+
             InHandle.Add<FTag_AbilityOwner_PendingSubAbilityOperation>();
         }
 
