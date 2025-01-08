@@ -25,7 +25,9 @@ auto
         -> void
 {
     InWorld.Add<ck::FProcessor_AbilityOwner_ResolvePendingOperationTags>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_AbilityOwner_ResolvePendingOperationTags_DEBUG>(InWorld.Get_Registry());
+
+    // Uncomment to debug Abilities that wait until all pending operations have resolved
+    //InWorld.Add<ck::FProcessor_AbilityOwner_ResolvePendingOperationTags_DEBUG>(InWorld.Get_Registry());
 
     InWorld.Add<ck::FProcessor_Ability_AddReplicated>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AbilityOwner_EnsureAllAppended>(InWorld.Get_Registry());
