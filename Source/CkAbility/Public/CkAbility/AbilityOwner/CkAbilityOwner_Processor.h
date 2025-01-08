@@ -190,6 +190,29 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class CKABILITY_API FProcessor_AbilityOwner_ResolvePendingOperationTags : public ck_exp::TProcessor<
+            FProcessor_AbilityOwner_ResolvePendingOperationTags,
+            FCk_Handle_AbilityOwner,
+            FTag_AbilityOwner_RemovePendingSubAbilityOperation,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Super = TProcessor;
+        using MarkedDirtyBy = FTag_AbilityOwner_RemovePendingSubAbilityOperation;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            const FTag_AbilityOwner_RemovePendingSubAbilityOperation& InCountedTag) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKABILITY_API FProcessor_AbilityOwner_Teardown : public ck_exp::TProcessor<
             FProcessor_AbilityOwner_Teardown,
             FCk_Handle_AbilityOwner,
