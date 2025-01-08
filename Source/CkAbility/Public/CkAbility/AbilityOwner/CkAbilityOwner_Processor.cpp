@@ -1400,6 +1400,19 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
+        FProcessor_AbilityOwner_ResolvePendingOperationTags_DEBUG::ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            const FTag_AbilityOwner_PendingSubAbilityOperation& InCountedTag) const
+            -> void
+    {
+        ck::ability::Log(TEXT("AbilityOwner [{}] has [{}] Pending Sub-Ability Operations"),
+            InHandle, InCountedTag.Get_Count());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_AbilityOwner_Teardown::
         ForEachEntity(
             TimeType InDeltaT,
