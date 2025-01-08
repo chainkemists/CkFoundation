@@ -125,7 +125,6 @@ namespace ck
             TEXT("AbilityOwner [{}] does NOT have Pending Operations tag"), AbilityOwnerEntity);
 
         AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
-        AbilityOwnerEntity.AddOrGet<DEBUG_PendingSubAbilityOperations>()._Abilities.Emplace(std::make_pair(TEXT("RequestGive"), InHandle));
 
         // --------------------------------------------------------------------------------------------------------------------
 
@@ -190,7 +189,6 @@ namespace ck
             TEXT("AbilityOwner [{}] does NOT have Pending Operations tag"), AbilityOwnerEntity);
 
         AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
-        AbilityOwnerEntity.AddOrGet<DEBUG_PendingSubAbilityOperations>()._Abilities.Emplace(std::make_pair(TEXT("RequestRevoke"), InHandle));
 
         const auto DestructionPolicy = InRequest.Get_DestructionPolicy();
 
@@ -274,7 +272,6 @@ namespace ck
             TEXT("AbilityOwner [{}] does NOT have Pending Operations tag"), AbilityOwnerEntity);
 
         AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
-        AbilityOwnerEntity.AddOrGet<DEBUG_PendingSubAbilityOperations>()._Abilities.Emplace(std::make_pair(TEXT("RequestActivate"), InHandle));
 
         // --------------------------------------------------------------------------------------------------------------------
 
@@ -357,7 +354,6 @@ namespace ck
             TEXT("AbilityOwner [{}] does NOT have Pending Operations tag"), AbilityOwnerEntity);
 
         AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
-        AbilityOwnerEntity.AddOrGet<DEBUG_PendingSubAbilityOperations>()._Abilities.Emplace(std::make_pair(TEXT("RequestDeactivate"), InHandle));
 
         // --------------------------------------------------------------------------------------------------------------------
 
