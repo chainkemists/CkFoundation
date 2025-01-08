@@ -87,8 +87,13 @@ namespace ck
     {
         using RecordOfAbilities_Utils = UCk_Utils_AbilityOwner_UE::RecordOfAbilities_Utils;
 
-        auto AbilityOwnerEntity = UCk_Utils_AbilityOwner_UE::Cast(
-            UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityEntity));
+        auto AbilityOwnerEntity = InRequest.Get_AbilityOwner();
+
+        CK_ENSURE(AbilityOwnerEntity.Has<FTag_AbilityOwner_PendingSubAbilityOperation>(),
+            TEXT("AbilityOwner [{}] does NOT have Pending Operations tag"), AbilityOwnerEntity);
+
+        //AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
+        //AbilityOwnerEntity.AddOrGet<DEBUG_PendingSubAbilityOperations>()._Abilities.Emplace(std::make_pair(TEXT("AddAndGive"), InAbilityEntity));
 
         // --------------------------------------------------------------------------------------------------------------------
 
@@ -104,7 +109,7 @@ namespace ck
             InAbilityEntity, AbilityOwnerEntity, CurrentOwnerOfAbilityToAddAndGive)
         { return; }
 
-        DoHandleRequest(InAbilityEntity, FFragment_Ability_RequestGive{InRequest.Get_AbilitySource(), InRequest.Get_Payload()});
+        DoHandleRequest(InAbilityEntity, FFragment_Ability_RequestGive{AbilityOwnerEntity, InRequest.Get_AbilitySource(), InRequest.Get_Payload()});
     }
 
     auto
@@ -114,8 +119,13 @@ namespace ck
             const FFragment_Ability_RequestGive& InRequest) const
             -> void
     {
-        auto AbilityOwnerEntity = UCk_Utils_AbilityOwner_UE::Cast(
-            UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle));
+        auto AbilityOwnerEntity = InRequest.Get_AbilityOwner();
+
+        CK_ENSURE(AbilityOwnerEntity.Has<FTag_AbilityOwner_PendingSubAbilityOperation>(),
+            TEXT("AbilityOwner [{}] does NOT have Pending Operations tag"), AbilityOwnerEntity);
+
+        AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
+        AbilityOwnerEntity.AddOrGet<DEBUG_PendingSubAbilityOperations>()._Abilities.Emplace(std::make_pair(TEXT("RequestGive"), InHandle));
 
         // --------------------------------------------------------------------------------------------------------------------
 
@@ -157,17 +167,12 @@ namespace ck
         if (const auto& ActivationPolicy = UCk_Utils_Ability_UE::Get_ActivationSettings(InHandle).
             Get_ActivationPolicy(); ActivationPolicy == ECk_Ability_Activation_Policy::ActivateOnGranted)
         {
-            AbilityOwnerEntity.Remove<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
             UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(
                 AbilityOwnerEntity,
                 FCk_Request_AbilityOwner_ActivateAbility{InHandle}
                 .Set_OptionalPayload(FCk_Ability_Payload_OnActivate{}.Set_ContextEntity(AbilityOwnerEntity)),
                 {});
         }
-
-        // if this fires an ensure, then we have an unaccounted sub-ability (the one given here) that the Owner did NOT take into account
-        // is it possible that this is being called for an Ability given at runtime (i.e. it's NOT part of the DefaultClass default abilities?)
-        AbilityOwnerEntity.Remove<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
     }
 
     auto
@@ -179,12 +184,13 @@ namespace ck
     {
         using RecordOfAbilities_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfAbilities>;
 
-        auto AbilityOwnerEntity = UCk_Utils_AbilityOwner_UE::Cast(
-            UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle));
+        auto AbilityOwnerEntity = InRequest.Get_AbilityOwner();
 
-        // if this fires an ensure, then we have an unaccounted sub-ability (the one given here) that the Owner did NOT take into account
-        // is it possible that this is being called for an Ability given at runtime (i.e. it's NOT part of the DefaultClass default abilities?)
-        AbilityOwnerEntity.Remove<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+        CK_ENSURE(AbilityOwnerEntity.Has<FTag_AbilityOwner_PendingSubAbilityOperation>(),
+            TEXT("AbilityOwner [{}] does NOT have Pending Operations tag"), AbilityOwnerEntity);
+
+        AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
+        AbilityOwnerEntity.AddOrGet<DEBUG_PendingSubAbilityOperations>()._Abilities.Emplace(std::make_pair(TEXT("RequestRevoke"), InHandle));
 
         const auto DestructionPolicy = InRequest.Get_DestructionPolicy();
 
@@ -262,12 +268,13 @@ namespace ck
             const FFragment_Ability_RequestActivate& InRequest) const
             -> void
     {
-        auto AbilityOwnerEntity = UCk_Utils_AbilityOwner_UE::Cast(
-            UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle));
+        auto AbilityOwnerEntity = InRequest.Get_AbilityOwner();
 
-        // if this fires an ensure, then we have an unaccounted sub-ability (the one given here) that the Owner did NOT take into account
-        // is it possible that this is being called for an Ability given at runtime (i.e. it's NOT part of the DefaultClass default abilities?)
-        AbilityOwnerEntity.Remove<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+        CK_ENSURE(AbilityOwnerEntity.Has<FTag_AbilityOwner_PendingSubAbilityOperation>(),
+            TEXT("AbilityOwner [{}] does NOT have Pending Operations tag"), AbilityOwnerEntity);
+
+        AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
+        AbilityOwnerEntity.AddOrGet<DEBUG_PendingSubAbilityOperations>()._Abilities.Emplace(std::make_pair(TEXT("RequestActivate"), InHandle));
 
         // --------------------------------------------------------------------------------------------------------------------
 
@@ -344,12 +351,13 @@ namespace ck
             const FFragment_Ability_RequestDeactivate& InRequest) const
             -> void
     {
-        auto AbilityOwnerEntity = UCk_Utils_AbilityOwner_UE::Cast(
-            UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle));
+        auto AbilityOwnerEntity = InRequest.Get_AbilityOwner();
 
-        // if this fires an ensure, then we have an unaccounted sub-ability (the one given here) that the Owner did NOT take into account
-        // is it possible that this is being called for an Ability given at runtime (i.e. it's NOT part of the DefaultClass default abilities?)
-        AbilityOwnerEntity.Remove<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+        CK_ENSURE(AbilityOwnerEntity.Has<FTag_AbilityOwner_PendingSubAbilityOperation>(),
+            TEXT("AbilityOwner [{}] does NOT have Pending Operations tag"), AbilityOwnerEntity);
+
+        AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
+        AbilityOwnerEntity.AddOrGet<DEBUG_PendingSubAbilityOperations>()._Abilities.Emplace(std::make_pair(TEXT("RequestDeactivate"), InHandle));
 
         // --------------------------------------------------------------------------------------------------------------------
 
