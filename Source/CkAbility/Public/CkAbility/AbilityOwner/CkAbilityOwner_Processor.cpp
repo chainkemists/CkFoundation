@@ -67,6 +67,8 @@ namespace ck
                 .Set_ConstructionPhase(ECk_ConstructionPhase::DuringConstruction),
                 {}
             );
+
+            InHandle.Add<FTag_AbilityOwner_PendingSubAbilityOperation>();
         }
 
         for (const auto& Params = InAbilityOwnerParams.Get_Params(); const auto& DefaultAbilityInstance : Params.Get_DefaultAbilities_Instanced())
@@ -83,6 +85,8 @@ namespace ck
                 .Set_ConstructionPhase(ECk_ConstructionPhase::DuringConstruction),
                 {}
             );
+
+            InHandle.Add<FTag_AbilityOwner_PendingSubAbilityOperation>();
         }
 
         // It's possible that we have pending replication info
@@ -383,6 +387,7 @@ namespace ck
                 );
 
                 UCk_Utils_Ability_UE::DoOnNotGiven(AbilityScriptClass, InAbilityOwnerEntity, AbilitySource);
+
                 return ECk_AbilityOwner_AbilityGivenOrNot::NotGiven;
             }
 
@@ -510,6 +515,11 @@ namespace ck
 
         if (AbilityGivenOrNot == ECk_AbilityOwner_AbilityGivenOrNot::NotGiven && InRequest.Get_IsRequestHandleValid())
         {
+            if (InRequest.Get_ConstructionPhase() == ECk_ConstructionPhase::DuringConstruction)
+            {
+                InAbilityOwnerEntity.Add<FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
+            }
+
             UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
                 InRequest.GetAndDestroyRequestHandle(),
                 MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{}, ECk_AbilityOwner_AbilityGivenOrNot::NotGiven));
