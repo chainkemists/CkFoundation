@@ -37,6 +37,10 @@ namespace ck
             FCk_Handle_Ability,
             FFragment_Ability_Requests,
             TExclude<FTag_AbilityOwner_PendingSubAbilityOperation>,
+            TExclude<FFragment_AbilityOwner_Requests>,
+            TExclude<FFragment_AbilityOwner_Events>,
+            TExclude<FTag_AbilityOwner_TagsUpdated>,
+            TExclude<FTag_AbilityOwner_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
