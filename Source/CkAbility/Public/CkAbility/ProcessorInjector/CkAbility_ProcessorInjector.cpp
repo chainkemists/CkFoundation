@@ -24,6 +24,9 @@ auto
         EcsWorldType& InWorld)
         -> void
 {
+    InWorld.Add<ck::FProcessor_AbilityOwner_ResolvePendingOperationTags>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_AbilityOwner_ResolvePendingOperationTags_DEBUG>(InWorld.Get_Registry());
+
     InWorld.Add<ck::FProcessor_Ability_AddReplicated>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AbilityOwner_EnsureAllAppended>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AbilityOwner_Setup>(InWorld.Get_Registry());
