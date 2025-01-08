@@ -358,14 +358,7 @@ public:
         ReturnResult = false;                                                                                                              \
     }), false, false});                                                                                                                    \
                                                                                                                                            \
-    Buttons.Add({FText::FromString(TEXT("Break")), FSimpleDelegate::CreateLambda([&]()                                                     \
-    {                                                                                                                                      \
-        ReturnResult = ensureAlwaysMsgf(false, TEXT("[DEBUG BREAK HIT]"));                                                                 \
-        if (NOT BpStackTrace.IsEmpty())                                                                                                    \
-        {                                                                                                                                  \
-            UCk_Utils_Debug_StackTrace_UE::Try_BreakInScript(nullptr);                                                                     \
-        }                                                                                                                                  \
-    }), false, false});                                                                                                                    \
+    Buttons.Add({FText::FromString(TEXT("Break")), {}, false, false});                                                                     \
                                                                                                                                            \
     if (GIsEditor)                                                                                                                         \
     {                                                                                                                                      \
@@ -376,7 +369,14 @@ public:
         }), false, false});                                                                                                                \
     }                                                                                                                                      \
                                                                                                                                            \
-    UCk_Utils_MessageDialog_UE::CustomDialog(DialogMessage, FText::FromString(Title), Buttons);                                            \
+    if (UCk_Utils_MessageDialog_UE::CustomDialog(DialogMessage, FText::FromString(Title), Buttons) == 2)                                   \
+    {                                                                                                                                      \
+        ReturnResult = ensureAlwaysMsgf(false, TEXT("[DEBUG BREAK HIT]"));                                                                 \
+        if (NOT BpStackTrace.IsEmpty())                                                                                                    \
+        {                                                                                                                                  \
+            UCk_Utils_Debug_StackTrace_UE::Try_BreakInScript(nullptr);                                                                     \
+        }                                                                                                                                  \
+    }                                                                                                                                      \
     return ReturnResult;                                                                                                                   \
 }()
 
@@ -473,10 +473,7 @@ CK_TRIGGER_ENSURE(TEXT("Encountered an invalid value for Enum [{}]"), InEnsure)
         UCk_Utils_Ensure_UE::Request_IgnoreEnsure_WithCallstack(CallStack);                                                                             \
     }), false, false});                                                                                                                                 \
                                                                                                                                                         \
-    Buttons.Add({FText::FromString(TEXT("Break")), FSimpleDelegate::CreateLambda([&]()                                                                  \
-    {                                                                                                                                                   \
-        UCk_Utils_Debug_StackTrace_UE::Try_BreakInScript(InContext);                                                                                    \
-    }), false, false});                                                                                                                                 \
+    Buttons.Add({FText::FromString(TEXT("Break")), {}, false, false});                                                                                  \
                                                                                                                                                         \
     if (GIsEditor)                                                                                                                                      \
     {                                                                                                                                                   \
@@ -487,7 +484,10 @@ CK_TRIGGER_ENSURE(TEXT("Encountered an invalid value for Enum [{}]"), InEnsure)
         }), false, false});                                                                                                                             \
     }                                                                                                                                                   \
                                                                                                                                                         \
-    UCk_Utils_MessageDialog_UE::CustomDialog(DialogMessage, FText::FromString(Title), Buttons);                                                         \
+    if (UCk_Utils_MessageDialog_UE::CustomDialog(DialogMessage, FText::FromString(Title), Buttons) == 2)                                                \
+    {                                                                                                                                                   \
+        UCk_Utils_Debug_StackTrace_UE::Try_BreakInScript(nullptr);                                                                                      \
+    }                                                                                                                                                   \
     return ExpressionResult;                                                                                                                            \
 }()
 
