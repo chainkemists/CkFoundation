@@ -52,15 +52,17 @@ namespace ck
         friend UCk_Utils_Ability_UE;
 
     private:
+        FCk_Handle_AbilityOwner _AbilityOwner;
         FCk_Handle _AbilitySource;
         FCk_Ability_Payload_OnGranted _Payload;
 
     public:
+        CK_PROPERTY_GET(_AbilityOwner);
         CK_PROPERTY_GET(_AbilitySource);
         CK_PROPERTY_GET(_Payload);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Ability_RequestAddAndGive, _AbilitySource, _Payload)
+        CK_DEFINE_CONSTRUCTORS(FFragment_Ability_RequestAddAndGive, _AbilityOwner, _AbilitySource, _Payload)
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -72,16 +74,7 @@ namespace ck
 
         friend UCk_Utils_Ability_UE;
 
-    private:
-        FCk_Handle _AbilitySource;
-        FCk_Ability_Payload_OnGranted _Payload;
-
-    public:
-        CK_PROPERTY_GET(_AbilitySource);
-        CK_PROPERTY_GET(_Payload);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Ability_RequestGive, _AbilitySource, _Payload)
+        using FFragment_Ability_RequestAddAndGive::FFragment_Ability_RequestAddAndGive;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -94,13 +87,15 @@ namespace ck
         friend UCk_Utils_Ability_UE;
 
     private:
+        FCk_Handle_AbilityOwner _AbilityOwner;
         ECk_AbilityOwner_DestructionOnRevoke_Policy _DestructionPolicy = ECk_AbilityOwner_DestructionOnRevoke_Policy::DestroyOnRevoke;
 
     public:
+        CK_PROPERTY_GET(_AbilityOwner);
         CK_PROPERTY_GET(_DestructionPolicy);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Ability_RequestRevoke, _DestructionPolicy)
+        CK_DEFINE_CONSTRUCTORS(FFragment_Ability_RequestRevoke, _AbilityOwner, _DestructionPolicy)
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -113,13 +108,15 @@ namespace ck
         friend UCk_Utils_Ability_UE;
 
     private:
+        FCk_Handle_AbilityOwner _AbilityOwner;
         FCk_Ability_Payload_OnActivate _Payload;
 
     public:
+        CK_PROPERTY_GET(_AbilityOwner);
         CK_PROPERTY_GET(_Payload);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Ability_RequestActivate, _Payload)
+        CK_DEFINE_CONSTRUCTORS(FFragment_Ability_RequestActivate, _AbilityOwner, _Payload)
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -130,6 +127,15 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Ability_RequestDeactivate);
 
         friend UCk_Utils_Ability_UE;
+
+    private:
+        FCk_Handle_AbilityOwner _AbilityOwner;
+
+    public:
+        CK_PROPERTY_GET(_AbilityOwner);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Ability_RequestDeactivate, _AbilityOwner)
     };
 
     // --------------------------------------------------------------------------------------------------------------------
