@@ -207,9 +207,10 @@ namespace ck
                 AbilityOwnerComp.AppendTags(InAbilityOwnerEntity, GrantedTags);
             }
 
-            auto RequestGive = ck::FFragment_Ability_RequestAddAndGive{AbilitySource, OptionalPayload};
-            InRequest.Request_TransferHandleToOther(RequestGive);
-            AbilityToAddAndGive.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(RequestGive);
+            auto RequestAddAndGive = ck::FFragment_Ability_RequestAddAndGive{InAbilityOwnerEntity, AbilitySource, OptionalPayload};
+            InRequest.Request_TransferHandleToOther(RequestAddAndGive);
+            InAbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+            AbilityToAddAndGive.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(RequestAddAndGive);
 
             //UCk_Utils_Ability_UE::DoGive(InAbilityOwnerEntity, AbilityToAddAndGive, AbilitySource, OptionalPayload);
 
@@ -435,10 +436,9 @@ namespace ck
                 //    { }
                 //}
 
-                AbilityOwnerEntity.Add<FTag_AbilityOwner_PendingSubAbilityOperation>();
-
-                auto RequestGive = ck::FFragment_Ability_RequestGive{AbilitySource, OptionalPayload};
+                auto RequestGive = ck::FFragment_Ability_RequestGive{AbilityOwnerEntity, AbilitySource, OptionalPayload};
                 InRequest.Request_TransferHandleToOther(RequestGive);
+                AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
                 AbilityEntity.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(RequestGive);
 
                 //UCk_Utils_Ability_UE::DoGive(AbilityOwnerEntity, AbilityEntity, AbilitySource, OptionalPayload);
@@ -635,10 +635,9 @@ namespace ck
                 //    { }
                 //}
 
-                AbilityOwnerEntity.Add<FTag_AbilityOwner_PendingSubAbilityOperation>();
-
-                auto RequestGive = ck::FFragment_Ability_RequestGive{AbilitySource, {}};
+                auto RequestGive = ck::FFragment_Ability_RequestGive{AbilityOwnerEntity, AbilitySource, {}};
                 InRequest.Request_TransferHandleToOther(RequestGive);
+                AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
                 AbilityEntity.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(RequestGive);
 
                 //UCk_Utils_Ability_UE::DoGive(AbilityOwnerEntity, AbilityEntity, AbilitySource, {});
@@ -757,10 +756,9 @@ namespace ck
                 InAbilityOwnerComp.RemoveTags(InAbilityOwnerEntity, GrantedTags);
             }
 
-            InAbilityOwnerEntity.Add<FTag_AbilityOwner_PendingSubAbilityOperation>();
-
-            auto RequestRevoke = ck::FFragment_Ability_RequestRevoke{InRequest.Get_DestructionPolicy()};
+            auto RequestRevoke = ck::FFragment_Ability_RequestRevoke{InAbilityOwnerEntity, InRequest.Get_DestructionPolicy()};
             InRequest.Request_TransferHandleToOther(RequestRevoke);
+            InAbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
             InAbilityEntity.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(RequestRevoke);
 
             //UCk_Utils_Ability_UE::DoRevoke(InAbilityOwnerEntity, InAbilityEntity, InRequest.Get_DestructionPolicy());
@@ -1026,10 +1024,9 @@ namespace ck
                     algo::MatchesAnyAbilityActivationCancelledTagsOnOwner{GrantedTags}
                 );
 
-                InAbilityOwnerEntity.Add<FTag_AbilityOwner_PendingSubAbilityOperation>();
-
-                auto RequestActivate = ck::FFragment_Ability_RequestActivate{InRequest.Get_OptionalPayload()};
+                auto RequestActivate = ck::FFragment_Ability_RequestActivate{InAbilityOwnerEntity, InRequest.Get_OptionalPayload()};
                 InRequest.Request_TransferHandleToOther(RequestActivate);
+                InAbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
                 InAbilityToActivateEntity.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(RequestActivate);
 
                 //UCk_Utils_Ability_UE::DoActivate(InAbilityOwnerEntity, InAbilityToActivateEntity, InRequest.Get_OptionalPayload());
@@ -1177,8 +1174,9 @@ namespace ck
                 GrantedTags
             );
 
-            auto RequestDeactivate = ck::FFragment_Ability_RequestDeactivate{};
+            auto RequestDeactivate = ck::FFragment_Ability_RequestDeactivate{InAbilityOwnerEntity};
             InRequest.Request_TransferHandleToOther(RequestDeactivate);
+            InAbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
             InAbilityEntity.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(RequestDeactivate);
 
             //UCk_Utils_Ability_UE::DoDeactivate(InAbilityOwnerEntity, InAbilityEntity);
@@ -1368,6 +1366,25 @@ namespace ck
 
         InAbilityOwnerComp.UpdatePreviousTags();
         InHandle.Remove<MarkedDirtyBy>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_AbilityOwner_ResolvePendingOperationTags::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            const FTag_AbilityOwner_RemovePendingSubAbilityOperation& InCountedTag) const
+            -> void
+    {
+        auto NumPendingOperations = InCountedTag.Get_Count();
+
+        while (NumPendingOperations --> 0)
+        {
+            InHandle.Remove<FTag_AbilityOwner_PendingSubAbilityOperation>();
+            InHandle.Remove<FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
