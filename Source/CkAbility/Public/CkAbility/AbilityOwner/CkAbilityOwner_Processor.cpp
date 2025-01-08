@@ -430,20 +430,8 @@ namespace ck
                     AbilityOwnerComp.AppendTags(NonConstAbilityOwnerEntity, GrantedTags);
                 }
 
-                //if (InRequest.Get_ConstructionPhase() == ECk_ConstructionPhase::AfterConstruction)
-                //{
-                //    AbilityOwnerEntity.Add<FTag_AbilityOwner_PendingSubAbilityOperation>();
-                //}
-                //else
-                //{
-                //    CK_TRIGGER_ENSURE_IF(NOT InAbilityOwnerEntity.Has<FTag_AbilityOwner_PendingSubAbilityOperation>(),
-                //        TEXT("Expected AbilityOwner [{}] to have PendingSubAbilities tag before adding sub-abilities"), InAbilityOwnerEntity)
-                //    { }
-                //}
-
                 auto RequestGive = ck::FFragment_Ability_RequestGive{AbilityOwnerEntity, AbilitySource, OptionalPayload};
                 InRequest.Request_TransferHandleToOther(RequestGive);
-                AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
                 AbilityEntity.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(RequestGive);
 
                 //UCk_Utils_Ability_UE::DoGive(AbilityOwnerEntity, AbilityEntity, AbilitySource, OptionalPayload);
@@ -485,6 +473,16 @@ namespace ck
                         InRequest.Get_ConstructionPhase()
                     );
 
+                    if (InRequest.Get_ConstructionPhase() == ECk_ConstructionPhase::AfterConstruction)
+                    {
+                        InAbilityOwnerEntity.Add<FTag_AbilityOwner_PendingSubAbilityOperation>();
+                    }
+                    else
+                    {
+                        CK_TRIGGER_ENSURE_IF(NOT InAbilityOwnerEntity.Has<FTag_AbilityOwner_PendingSubAbilityOperation>(),
+                            TEXT("Expected AbilityOwner [{}] to have PendingSubAbilities tag before adding sub-abilities"), InAbilityOwnerEntity)
+                        { }
+                    }
                     PostAbilityCreationFunc(AbilityEntity);
                 }
                 else
@@ -503,6 +501,16 @@ namespace ck
             }
             else
             {
+                if (InRequest.Get_ConstructionPhase() == ECk_ConstructionPhase::AfterConstruction)
+                {
+                    InAbilityOwnerEntity.Add<FTag_AbilityOwner_PendingSubAbilityOperation>();
+                }
+                else
+                {
+                    CK_TRIGGER_ENSURE_IF(NOT InAbilityOwnerEntity.Has<FTag_AbilityOwner_PendingSubAbilityOperation>(),
+                        TEXT("Expected AbilityOwner [{}] to have PendingSubAbilities tag before adding sub-abilities"), InAbilityOwnerEntity)
+                    { }
+                }
                 UCk_Utils_EntityBridge_UE::Request_Spawn(InAbilityOwnerEntity,
                     FCk_Request_EntityBridge_SpawnEntity{AbilityEntityConfig}.Set_OptionalObjectConstructionScript(InRequest.Get_AbilityScriptClass()->ClassDefaultObject)
                     .Set_PostSpawnFunc(PostAbilityCreationFunc),
