@@ -283,7 +283,7 @@ auto
         {
             auto& Fragment = Has<T_FragmentType>(InEntity) ?
                 Get<T_FragmentType>(InEntity) :
-                _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID(), std::forward<T_Args>(InArgs)...);
+                _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID());
 
             ++Fragment._Count;
             return Fragment;
@@ -404,7 +404,7 @@ auto
         auto& Fragment = Get<T_Fragment>(InEntity);
         --Fragment._Count;
 
-        if (Fragment._Count != 0)
+        if (Fragment._Count > 0)
         { return; }
     }
 

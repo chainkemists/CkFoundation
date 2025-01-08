@@ -467,7 +467,7 @@ auto
     if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_Fragment>)
     {
         // only add the debug IFF the tag was never added
-        if (NewFragment.Get_Count() == 1)
+        if (NewFragment.Get_Count() > 1)
         {
             return NewFragment;
         }
@@ -513,14 +513,12 @@ auto
 
         if (AddDebugInfo)
         {
-            auto& FragmentToReturn = _Registry->AddOrGet<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
-
             if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_Fragment>)
             {
                 // only add the debug IFF the tag was never added
-                if (FragmentToReturn.Get_Count() == 1)
+                if (Fragment.Get_Count() > 1)
                 {
-                    return FragmentToReturn;
+                    return Fragment;
                 }
             }
 
@@ -569,8 +567,6 @@ auto
 
         if (AddDebugInfo)
         {
-            auto& FragmentToReturn = _Registry->AddOrGet<T_Fragment>(_Entity, std::forward<T_Args>(InArgs)...);
-
             DoAdd_FragmentDebugInfo<T_Fragment>();
             DoUpdate_FragmentDebugInfo_Blueprints();
         }
