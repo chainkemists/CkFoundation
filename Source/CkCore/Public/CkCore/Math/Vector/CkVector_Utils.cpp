@@ -128,6 +128,23 @@ namespace ck_vector
 
 auto
     UCk_Utils_Vector3_UE::
+Get_Clamped_Length(
+        const FVector& InVector,
+        FCk_FloatRange InRange)
+        -> FVector
+{
+    const auto Length = InVector.Length();
+    if (FMath::IsNearlyZero(Length))
+    {
+        return InVector;
+    }
+
+    const auto ClampedLength = InRange.Get_ClampedValue(Length);
+    return (InVector / Length) * ClampedLength;
+}
+
+auto
+    UCk_Utils_Vector3_UE::
     Get_DefaultWorldDirectionIfZero(
         const FVector&   InPotentiallyZeroVector,
         ECk_Direction_3D InDirectionToReturnIfZero)
