@@ -181,30 +181,6 @@ private:
 // TODO: Move these back to the processor ?
 private:
     static auto
-    DoActivate(
-        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
-        FCk_Handle_Ability& InAbilityEntity,
-        const FCk_Ability_Payload_OnActivate& InOptionalPayload) -> void;
-
-    static auto
-    DoDeactivate(
-        FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
-        FCk_Handle_Ability& InAbilityEntity) -> void;
-
-    static auto
-    DoGive(
-        FCk_Handle_AbilityOwner& InAbilityOwner,
-        FCk_Handle_Ability& InAbility,
-        const FCk_Handle& InAbilitySource,
-        const FCk_Ability_Payload_OnGranted& InOptionalPayload) -> void;
-
-    static auto
-    DoRevoke(
-        FCk_Handle_AbilityOwner& InAbilityOwner,
-        FCk_Handle_Ability& InAbility,
-        ECk_AbilityOwner_DestructionOnRevoke_Policy InDestructionPolicy) -> void;
-
-    static auto
     DoGet_CanBeGiven(
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass,
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,

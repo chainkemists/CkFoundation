@@ -56,31 +56,36 @@ namespace ck
             HandleType& InHandle,
             const FFragment_Ability_Requests& InAbilityRequests) const -> void;
 
-    private:
-        auto
+    public:
+        static auto
         DoHandleRequest(
             HandleType& InAbilityEntity,
-            const FFragment_Ability_RequestAddAndGive& InRequest) const -> void;
+            const FFragment_Ability_RequestAddAndGive& InRequest)
+            -> void;
 
-        auto
+        static auto
         DoHandleRequest(
             HandleType& InAbilityEntity,
-            const FFragment_Ability_RequestGive& InRequest) const -> void;
+            const FFragment_Ability_RequestGive& InRequest)
+            -> void;
 
-        auto
+        static auto
         DoHandleRequest(
             HandleType& InAbilityEntity,
-            const FFragment_Ability_RequestRevoke& InRequest) const -> void;
+            const FFragment_Ability_RequestRevoke& InRequest)
+            -> void;
 
-        auto
+        static auto
         DoHandleRequest(
             HandleType& InAbilityEntity,
-            const FFragment_Ability_RequestActivate& InRequest) const -> void;
+            const FFragment_Ability_RequestActivate& InRequest)
+            -> void;
 
-        auto
+        static auto
         DoHandleRequest(
             HandleType& InAbilityEntity,
-            const FFragment_Ability_RequestDeactivate& InRequest) const -> void;
+            const FFragment_Ability_RequestDeactivate& InRequest)
+            -> void;
     };
 
 
