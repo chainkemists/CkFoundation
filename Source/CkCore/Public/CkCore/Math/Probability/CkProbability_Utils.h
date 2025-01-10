@@ -59,6 +59,30 @@ public:
     Get_RandomIndexByWeight(
         const TArray<double>& InWeights);
 
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Probability",
+        DisplayName = "[Ck] Get Random Number Normally Distributed")
+    static float
+    Get_Random_NormalDistribution(
+        float InStandardDeviation);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Probability",
+        DisplayName = "[Ck] Get Random Number Uniformly Distributed")
+    static float
+    Get_Random_UniformDistribution(
+        float InMaxRange);
+
+    // weight of 1.0f favors Uniform Distribution from 0 to MaxRange and weight of
+    // 0.0f favors Normal Distribution from 0 to (approx) StdDev * 3
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Probability",
+        DisplayName = "[Ck] Get Random Number Normally Distributed (Weighted)")
+    static float
+    Get_Random_WeightedDistribution(
+        float InStandardDeviation,
+        float InMaxRange,
+        float InWeight = 0.0f);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
