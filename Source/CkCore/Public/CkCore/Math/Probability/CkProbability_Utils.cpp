@@ -4,6 +4,7 @@
 #include "CkCore/Ensure/CkEnsure.h"
 
 #include <numeric>
+#include <random>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -56,6 +57,49 @@ auto
     { return {}; }
 
     return FCk_Utils_Probability_RandomIndexByWeight_Result{FoundIndex, RandomNumber};
+}
+
+auto
+    UCk_Utils_Probability_UE::
+    Get_Random_NormalDistribution(
+        float InStandardDeviation)
+        -> float
+{
+    thread_local std::random_device Rd;
+    thread_local std::mt19937 Gen(Rd());
+
+    auto Distribution = std::normal_distribution{0.0f, InStandardDeviation};
+
+    return Distribution(Gen);
+}
+
+auto
+    UCk_Utils_Probability_UE::
+    Get_Random_UniformDistribution(
+        float InMax)
+        -> float
+{
+    thread_local std::random_device Rd;
+    thread_local std::mt19937 Gen(Rd());
+
+    auto Distribution = std::uniform_real_distribution{-InMax, InMax};
+
+    return Distribution(Gen);
+}
+
+auto
+    UCk_Utils_Probability_UE::
+    Get_Random_WeightedDistribution(
+        float InStandardDeviation,
+        float InMaxRange,
+        float InWeight)
+        -> float
+{
+    const auto Normal = Get_Random_NormalDistribution(InStandardDeviation);
+    const auto Uniform = Get_Random_UniformDistribution(InMaxRange);
+
+    return (Normal * InWeight) + (Uniform * (1 - InWeight));
+
 }
 
 // --------------------------------------------------------------------------------------------------------------------
