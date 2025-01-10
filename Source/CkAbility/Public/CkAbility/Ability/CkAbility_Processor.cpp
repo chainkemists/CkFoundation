@@ -82,7 +82,7 @@ namespace ck
         FProcessor_Ability_HandleRequests::
         DoHandleRequest(
             HandleType& InAbilityEntity,
-            const FFragment_Ability_RequestAddAndGive& InRequest) const
+            const FFragment_Ability_RequestAddAndGive& InRequest)
             -> void
     {
         using RecordOfAbilities_Utils = UCk_Utils_AbilityOwner_UE::RecordOfAbilities_Utils;
@@ -116,7 +116,7 @@ namespace ck
         FProcessor_Ability_HandleRequests::
         DoHandleRequest(
             HandleType& InHandle,
-            const FFragment_Ability_RequestGive& InRequest) const
+            const FFragment_Ability_RequestGive& InRequest)
             -> void
     {
         auto AbilityOwnerEntity = InRequest.Get_AbilityOwner();
@@ -178,7 +178,7 @@ namespace ck
         FProcessor_Ability_HandleRequests::
         DoHandleRequest(
             HandleType& InHandle,
-            const FFragment_Ability_RequestRevoke& InRequest) const
+            const FFragment_Ability_RequestRevoke& InRequest)
             -> void
     {
         using RecordOfAbilities_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfAbilities>;
@@ -263,7 +263,7 @@ namespace ck
         FProcessor_Ability_HandleRequests::
         DoHandleRequest(
             HandleType& InHandle,
-            const FFragment_Ability_RequestActivate& InRequest) const
+            const FFragment_Ability_RequestActivate& InRequest)
             -> void
     {
         auto AbilityOwnerEntity = InRequest.Get_AbilityOwner();
@@ -345,7 +345,7 @@ namespace ck
         FProcessor_Ability_HandleRequests::
         DoHandleRequest(
             HandleType& InHandle,
-            const FFragment_Ability_RequestDeactivate& InRequest) const
+            const FFragment_Ability_RequestDeactivate& InRequest)
             -> void
     {
         auto AbilityOwnerEntity = InRequest.Get_AbilityOwner();
@@ -480,7 +480,8 @@ namespace ck
             ck::IsValid(LifetimeOwner) ? TEXT("VALID") : TEXT("PENDING DESTROY")
         );
 
-        UCk_Utils_Ability_UE::DoDeactivate(AbilityOwner, InHandle);
+        AbilityOwner.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+        FProcessor_Ability_HandleRequests::DoHandleRequest(InHandle, FFragment_Ability_RequestDeactivate{AbilityOwner});
     }
 }
 
