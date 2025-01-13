@@ -1,5 +1,6 @@
 #include "CkGameState.h"
 
+#include "CkCore/CkCoreLog.h"
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "Net/UnrealNetwork.h"
@@ -46,6 +47,26 @@ auto
     constexpr auto Params = FDoRepLifetimeParams{COND_None, REPNOTIFY_Always, true};
 
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ServerFPS, Params);
+}
+
+auto
+    ACk_GameState_UE::
+    PostActorCreated()
+    -> void
+{
+    TRACE_BOOKMARK(TEXT("Game State Created"));
+    ck::core::Log(TEXT("Game State [{}] Created"), this);
+    Super::PostActorCreated();
+}
+
+auto
+    ACk_GameState_UE::
+    BeginPlay()
+    -> void
+{
+    TRACE_BOOKMARK(TEXT("Game State Begin Play"));
+    ck::core::Log(TEXT("Game State [{}] Begin Play"), this);
+    Super::BeginPlay();
 }
 
 auto

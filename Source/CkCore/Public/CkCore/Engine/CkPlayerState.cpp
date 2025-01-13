@@ -9,6 +9,8 @@
 #include "Engine/GameInstance.h"
 #include "TimerManager.h"
 
+#include "CkCore/CkCoreLog.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 #if CK_BUILD_TEST
@@ -84,6 +86,26 @@ auto
     );
 
     _PingRange.Request_HandleNewPing(FCk_Time{InPing}, CurrentTime.Get_WorldTime());
+}
+
+auto
+    ACk_PlayerState_UE::
+    PostActorCreated()
+    -> void
+{
+    TRACE_BOOKMARK(TEXT("Player State Created"));
+    ck::core::Log(TEXT("Player State [{}] Created"), this);
+    Super::PostActorCreated();
+}
+
+auto
+    ACk_PlayerState_UE::
+    BeginPlay()
+    -> void
+{
+    TRACE_BOOKMARK(TEXT("Player State Begin Play"));
+    ck::core::Log(TEXT("Player State [{}] Begin Play"), this);
+    Super::BeginPlay();
 }
 
 auto

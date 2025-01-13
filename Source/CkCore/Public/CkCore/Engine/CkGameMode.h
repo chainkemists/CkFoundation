@@ -20,6 +20,12 @@ protected:
     auto AllowCheats(
         APlayerController* InPlayerController) -> bool override;
 
+public:
+    auto PostActorCreated() -> void override;
+    auto InitializeHUDForPlayer_Implementation(APlayerController* NewPlayer) -> void override;
+protected:
+    auto BeginPlay() -> void override;
+
 private:
     UPROPERTY(EditDefaultsOnly,
               Category = "ACk_GameMode_UE|Development",

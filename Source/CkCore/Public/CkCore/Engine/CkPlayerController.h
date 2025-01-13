@@ -47,6 +47,11 @@ public:
     auto BeginSpectatingState() -> void override;
     auto OnRep_Pawn() -> void override;
     auto AddCheats(bool InForce) -> void override;
+    auto PostActorCreated() -> void override;
+    auto ClientSetHUD_Implementation(TSubclassOf<AHUD> NewHUDClass) -> void override;
+protected:
+    auto BeginPlay() -> void override;
+
 public:
     UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly,
               Category = "Ck|PlayerController",

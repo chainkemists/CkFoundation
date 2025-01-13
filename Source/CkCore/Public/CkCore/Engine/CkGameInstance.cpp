@@ -1,5 +1,7 @@
 #include "CkGameInstance.h"
 
+#include "CkCore/CkCoreLog.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 TWeakObjectPtr<UCk_GameInstance_UE> UCk_GameInstance_UE::_Instance;
@@ -11,6 +13,8 @@ auto
     Init()
     -> void
 {
+    TRACE_BOOKMARK(TEXT("Game Instance Init"));
+    ck::core::Log(TEXT("Game Instance [{}] Init"), this);
     Super::Init();
 
     _Instance = this;
