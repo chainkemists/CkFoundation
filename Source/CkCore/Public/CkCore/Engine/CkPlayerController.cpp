@@ -48,6 +48,37 @@ auto
 
 auto
     ACk_PlayerController_UE::
+    PostActorCreated()
+    -> void
+{
+    TRACE_BOOKMARK(TEXT("Player Controller Created"));
+    ck::core::Log(TEXT("Player Controller [{}] Created"), this);
+    Super::PostActorCreated();
+}
+
+auto
+    ACk_PlayerController_UE::
+    ClientSetHUD_Implementation(
+        TSubclassOf<AHUD> NewHUDClass)
+    -> void
+{
+    TRACE_BOOKMARK(TEXT("Player Controller Client Set HUD"));
+    ck::core::Log(TEXT("Player Controller [{}] Client Set HUD"), this);
+    Super::ClientSetHUD_Implementation(NewHUDClass);
+}
+
+auto
+    ACk_PlayerController_UE::
+    BeginPlay()
+    -> void
+{
+    TRACE_BOOKMARK(TEXT("Player Controller Begin Play"));
+    ck::core::Log(TEXT("Player Controller [{}] Begin Play"), this);
+    Super::BeginPlay();
+}
+
+auto
+    ACk_PlayerController_UE::
     Request_SetControllerState(
         ECk_PlayerController_State InState)
     -> void
@@ -137,7 +168,7 @@ auto
     -> void
 {
     constexpr auto Forward = 1;
-    
+
     if (auto* NextPlayerState = GetNextViewablePlayer(Forward);
         ck::IsValid(NextPlayerState))
     {
@@ -151,7 +182,7 @@ auto
     -> void
 {
     constexpr auto Backward = -1;
-    
+
     if (auto* PreviousPlayerState = GetNextViewablePlayer(Backward);
         ck::IsValid(PreviousPlayerState))
     {
