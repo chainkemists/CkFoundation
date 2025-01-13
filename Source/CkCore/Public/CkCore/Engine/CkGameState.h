@@ -26,6 +26,11 @@ public:
     auto GetLifetimeReplicatedProps(
             TArray<FLifetimeProperty>&) const -> void override;
 
+public:
+    auto PostActorCreated() -> void override;
+protected:
+    auto BeginPlay() -> void override;
+
 protected:
     UFUNCTION(BlueprintImplementableEvent)
     void

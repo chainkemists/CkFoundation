@@ -99,6 +99,9 @@ public:
 
 public:
     auto UpdatePing(float InPing) -> void override;
+    auto PostActorCreated() -> void override;
+protected:
+    auto BeginPlay() -> void override;
 
 public:
     auto Get_MinPing() const -> FCk_Time;
