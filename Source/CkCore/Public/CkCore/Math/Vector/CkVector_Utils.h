@@ -72,15 +72,6 @@ public:
 public:
     // Assumes +X is Forward, +Y is Right, +Z is Up
     UFUNCTION(BlueprintPure,
-              DisplayName = "[Ck] Clamp (Length)",
-              Category = "Ck|Utils|Math|Vector3")
-    static FVector
-    Get_Clamped_Length(
-        const FVector& InVector,
-        FCk_FloatRange InRange);
-
-    // Assumes +X is Forward, +Y is Right, +Z is Up
-    UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Default Direction If Zero (Vec3)",
               Category = "Ck|Utils|Math|Vector3")
     static FVector
