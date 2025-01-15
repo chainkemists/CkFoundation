@@ -10,8 +10,6 @@
 #include "CkNet/CkNet_Utils.h"
 
 #include <BlueprintTaskTemplate.h>
-#include <NativeGameplayTags.h>
-#include <Windows.ApplicationModel.Activation.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
