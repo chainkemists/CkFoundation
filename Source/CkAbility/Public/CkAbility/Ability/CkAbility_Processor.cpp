@@ -132,7 +132,7 @@ namespace ck
         using AbilitySource_Utils = ck::TUtils_EntityHolder<ck::FFragment_Ability_Source>;
 
         RecordOfAbilities_Utils::Request_Connect(AbilityOwnerEntity, InHandle);
-        AbilitySource_Utils::AddOrReplace(InHandle, AbilityOwnerEntity);
+        AbilitySource_Utils::AddOrReplace(InHandle, InRequest.Get_AbilitySource());
 
         const auto Script = InHandle.Get<ck::FFragment_Ability_Current>().Get_AbilityScript().Get();
 
