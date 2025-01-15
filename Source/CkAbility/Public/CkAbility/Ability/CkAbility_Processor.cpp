@@ -25,7 +25,7 @@ namespace ck
     {
         auto AbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle));
 
-        // it is possible that the AbilityOwner is NOT replicated yet
+        // It is possible that the AbilityOwner is NOT replicated yet
         if (ck::Is_NOT_Valid(AbilityOwner))
         {
             return;
@@ -91,9 +91,6 @@ namespace ck
 
         CK_ENSURE(AbilityOwnerEntity.Has<FTag_AbilityOwner_PendingSubAbilityOperation>(),
             TEXT("AbilityOwner [{}] does NOT have Pending Operations tag"), AbilityOwnerEntity);
-
-        //AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
-        //AbilityOwnerEntity.AddOrGet<DEBUG_PendingSubAbilityOperations>()._Abilities.Emplace(std::make_pair(TEXT("AddAndGive"), InAbilityEntity));
 
         // --------------------------------------------------------------------------------------------------------------------
 
