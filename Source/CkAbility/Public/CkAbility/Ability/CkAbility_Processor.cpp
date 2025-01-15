@@ -97,16 +97,25 @@ namespace ck
         CK_ENSURE_IF_NOT(NOT RecordOfAbilities_Utils::Get_ContainsEntry(AbilityOwnerEntity, InAbilityEntity),
             TEXT("Cannot ADD and GIVE Ability [{}] to Ability Owner [{}] because it already has this Ability"),
             InAbilityEntity, AbilityOwnerEntity)
-        { return; }
+        {
+            return;
+        }
 
         const auto& CurrentOwnerOfAbilityToAddAndGive = UCk_Utils_Ability_UE::TryGet_Owner(InAbilityEntity);
 
         CK_ENSURE_IF_NOT(ck::Is_NOT_Valid(CurrentOwnerOfAbilityToAddAndGive),
-            TEXT("Cannot ADD and GIVE Ability [{}] to Ability Owner [{}] because it still belongs to Ability Owner [{}]"),
+            TEXT("Cannot ADD and GIVE Ability [{}] to Ability Owner [{}] because it still belongs to Ability Owner [{}]"
+            ),
             InAbilityEntity, AbilityOwnerEntity, CurrentOwnerOfAbilityToAddAndGive)
-        { return; }
+        {
+            return;
+        }
 
-        DoHandleRequest(InAbilityEntity, FFragment_Ability_RequestGive{AbilityOwnerEntity, InRequest.Get_AbilitySource(), InRequest.Get_Payload()});
+        DoHandleRequest(InAbilityEntity, FFragment_Ability_RequestGive{
+            AbilityOwnerEntity,
+            InRequest.Get_AbilitySource(),
+            InRequest.Get_Payload()
+        });
     }
 
     auto
@@ -320,6 +329,59 @@ namespace ck
         Script->_AbilityHandle = InHandle;
         Script->_AbilityOwnerHandle = AbilityOwnerEntity;
 
+        // --------------------------------------------------------------------------------------------------------------------
+
+        auto& AbilityOwnerCurrent = AbilityOwnerEntity.Get<ck::FFragment_AbilityOwner_Current>();
+
+        const auto& AbilityToActivateName = UCk_Utils_GameplayLabel_UE::Get_Label(InHandle);
+        const auto& AbilityActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InHandle);
+        const auto& GrantedTags = AbilityActivationSettings.Get_ActivationSettingsOnOwner().
+                                                            Get_GrantTagsOnAbilityOwner();
+
+        AbilityOwnerCurrent.AppendTags(AbilityOwnerEntity, GrantedTags);
+
+        // Try Deactivate our own Ability if we have one
+        if (UCk_Utils_Ability_UE::Has(AbilityOwnerEntity))
+        {
+            if (const auto Condition = algo::MatchesAnyAbilityActivationCancelledTagsOnSelf{GrantedTags}; Condition(
+                AbilityOwnerEntity))
+            {
+                auto MyOwner = UCk_Utils_AbilityOwner_UE::CastChecked(
+                    UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(AbilityOwnerEntity));
+
+                auto AbilityOwnerAsAbility = UCk_Utils_Ability_UE::CastChecked(AbilityOwnerEntity);
+                MyOwner.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+                DoHandleRequest(AbilityOwnerAsAbility, FFragment_Ability_RequestDeactivate{MyOwner});
+            }
+        }
+
+        // Cancel All Abilities that are cancelled by the newly granted tags
+        // TODO: this is repeated multiple times in this file, move to a common function
+        // TODO: See if the new system TagsChanged can help replace this section of code
+        UCk_Utils_AbilityOwner_UE::ForEach_Ability_If
+        (
+            AbilityOwnerEntity,
+            [&](
+            const FCk_Handle_Ability& InAbilityEntityToCancel)
+            {
+                ability::Verbose
+                (
+                    TEXT(
+                        "CANCELLING Ability [Name: {} | Entity: {}] after Activating Ability [Name: {} | Entity: {}] on Ability Owner [{}]"),
+                    UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntityToCancel),
+                    InAbilityEntityToCancel,
+                    AbilityToActivateName,
+                    InHandle,
+                    AbilityOwnerEntity
+                );
+
+                DoHandleRequest(InHandle, FFragment_Ability_RequestDeactivate{AbilityOwnerEntity});
+            },
+            algo::MatchesAnyAbilityActivationCancelledTagsOnOwner{GrantedTags}
+        );
+
+        // --------------------------------------------------------------------------------------------------------------------
+
         Script->OnActivateAbility(InRequest.Get_Payload());
 
         ck::UUtils_Signal_OnAbilityActivated::Broadcast(InHandle, ck::MakePayload(InHandle, InRequest.Get_Payload()));
@@ -371,6 +433,27 @@ namespace ck
         {
             return;
         }
+
+        // --------------------------------------------------------------------------------------------------------------------
+
+        const auto& AbilityActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InHandle);
+        const auto& GrantedTags = AbilityActivationSettings.Get_ActivationSettingsOnOwner().
+                                                            Get_GrantTagsOnAbilityOwner();
+
+        auto& AbilityOwnerCurrent = AbilityOwnerEntity.Get<ck::FFragment_AbilityOwner_Current>();
+
+        AbilityOwnerCurrent.RemoveTags(AbilityOwnerEntity, GrantedTags);
+
+        ability::VeryVerbose
+        (
+            TEXT("DEACTIVATING Ability [Name: {} | Entity: {}] from Ability Owner [{}] and Removing Tags [{}]"),
+            UCk_Utils_Ability_UE::Get_ScriptClass(InHandle),
+            InHandle,
+            AbilityOwnerEntity,
+            GrantedTags
+        );
+
+        // --------------------------------------------------------------------------------------------------------------------
 
         AbilityCurrent._Status = ECk_Ability_Status::NotActive;
         Script->OnDeactivateAbility();

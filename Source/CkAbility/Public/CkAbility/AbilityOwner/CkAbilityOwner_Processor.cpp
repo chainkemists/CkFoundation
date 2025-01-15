@@ -887,45 +887,6 @@ namespace ck
                     }
                 }
 
-                InAbilityOwnerComp.AppendTags(InAbilityOwnerEntity, GrantedTags);
-
-                // Try Deactivate our own Ability if we have one
-                if (UCk_Utils_Ability_UE::Has(InAbilityOwnerEntity))
-                {
-                    if (const auto Condition = algo::MatchesAnyAbilityActivationCancelledTagsOnSelf{GrantedTags};
-                        Condition(InAbilityOwnerEntity))
-                    {
-                        auto MyOwner = UCk_Utils_AbilityOwner_UE::CastChecked(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityOwnerEntity));
-                        auto& MyOwnerAbilityOwnerCurrent = MyOwner.Get<FFragment_AbilityOwner_Current>();
-
-                        const auto AbilityOwnerAsAbility = UCk_Utils_Ability_UE::CastChecked(InAbilityOwnerEntity);
-                        DoHandleRequest(MyOwner, MyOwnerAbilityOwnerCurrent, FCk_Request_AbilityOwner_DeactivateAbility{AbilityOwnerAsAbility});
-                    }
-                }
-
-                // Cancel All Abilities that are cancelled by the newly granted tags
-                // TODO: this is repeated multiple times in this file, move to a common function
-                // TODO: See if the new system TagsChanged can help replace this section of code
-                UCk_Utils_AbilityOwner_UE::ForEach_Ability_If
-                (
-                    InAbilityOwnerEntity,
-                    [&](const FCk_Handle_Ability& InAbilityEntityToCancel)
-                    {
-                        ability::Verbose
-                        (
-                            TEXT("CANCELLING Ability [Name: {} | Entity: {}] after Activating Ability [Name: {} | Entity: {}] on Ability Owner [{}]"),
-                            UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntityToCancel),
-                            InAbilityEntityToCancel,
-                            AbilityToActivateName,
-                            InAbilityToActivateEntity,
-                            InAbilityOwnerEntity
-                        );
-
-                        DoHandleRequest(InAbilityOwnerEntity, InAbilityOwnerComp, FCk_Request_AbilityOwner_DeactivateAbility{InAbilityEntityToCancel});
-                    },
-                    algo::MatchesAnyAbilityActivationCancelledTagsOnOwner{GrantedTags}
-                );
-
                 auto RequestActivate = ck::FFragment_Ability_RequestActivate{InAbilityOwnerEntity, InRequest.Get_OptionalPayload()};
                 InRequest.Request_TransferHandleToOther(RequestActivate);
                 InAbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
@@ -996,20 +957,6 @@ namespace ck
 
                 return;
             }
-
-            const auto& AbilityActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InAbilityEntity);
-            const auto& GrantedTags = AbilityActivationSettings.Get_ActivationSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
-
-            InAbilityOwnerComp.RemoveTags(InAbilityOwnerEntity, GrantedTags);
-
-            ability::VeryVerbose
-            (
-                TEXT("DEACTIVATING Ability [Name: {} | Entity: {}] from Ability Owner [{}] and Removing Tags [{}]"),
-                UCk_Utils_Ability_UE::Get_ScriptClass(InAbilityEntity),
-                InAbilityEntity,
-                InAbilityOwnerEntity,
-                GrantedTags
-            );
 
             auto RequestDeactivate = ck::FFragment_Ability_RequestDeactivate{InAbilityOwnerEntity};
             InRequest.Request_TransferHandleToOther(RequestDeactivate);
