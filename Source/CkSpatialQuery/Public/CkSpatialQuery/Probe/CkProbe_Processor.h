@@ -117,7 +117,15 @@ namespace ck
                 HandleType InHandle,
                 const FFragment_Probe_Params& InParams,
                 FFragment_Probe_Current& InCurrent,
-                const FCk_Request_Probe_ExampleRequest& InRequest)
+                const FCk_Request_Probe_BeginOverlap& InRequest)
+                -> void;
+
+        static auto
+            DoHandleRequest(
+                HandleType InHandle,
+                const FFragment_Probe_Params& InParams,
+                FFragment_Probe_Current& InCurrent,
+                const FCk_Request_Probe_EndOverlap& InRequest)
                 -> void;
     };
 

@@ -7,6 +7,7 @@
 #include "CkNet/CkNet_Utils.h"
 
 #include "CkSpatialQuery/CkSpatialQuery_Log.h"
+#include "CkSpatialQuery/CkSpatialQuery_Utils.h"
 #include "CkSpatialQuery/Subsystem/CkSpatialQuery_Subsystem.h"
 
 #include "Jolt/Jolt.h"
@@ -15,17 +16,6 @@
 #include "Jolt/Physics/Body/BodyCreationSettings.h"
 #include "Jolt/Physics/Body/BodyInterface.h"
 #include "Jolt/Physics/Collision/Shape/BoxShape.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-
-struct EdynStruct
-{
-    CK_GENERATED_BODY(EdynStruct);
-
-    entt::entity _Entity;
-
-    CK_DEFINE_CONSTRUCTORS(EdynStruct, _Entity);
-};
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -62,9 +52,8 @@ namespace ck
         const auto& EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
 
         using namespace JPH;
-        using namespace jolt_bridge;
 
-        auto Settings = BoxShapeSettings{ToVec3(HalfExtents)};
+        auto Settings = BoxShapeSettings{jolt::Conv(HalfExtents)};
         Settings.SetEmbedded();
 
         auto ShapeResult = Settings.Create();
@@ -72,7 +61,7 @@ namespace ck
 
         auto ShapeSettings = BodyCreationSettings{
             Shape,
-            ToVec3(EntityPosition),
+            jolt::Conv(EntityPosition, jolt::Position{}),
             Quat::sIdentity(),
             EMotionType::Kinematic,
             ObjectLayer{1}
@@ -106,21 +95,25 @@ namespace ck
             FFragment_Probe_Current& InCurrent)
             -> void
     {
-        using namespace jolt_bridge;
-
         auto EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
         auto EntityRotation = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentRotation(InHandle);
 
         auto EntityRotationQuat = FQuat{EntityRotation};
-        auto Rot = JPH::Quat{(float)EntityRotationQuat.X, (float)EntityRotationQuat.Y, (float)EntityRotationQuat.Z, (float)EntityRotationQuat.W};
+        auto Rot = JPH::Quat{
+            (float)EntityRotationQuat.X,
+            (float)EntityRotationQuat.Y,
+            (float)EntityRotationQuat.Z,
+            (float)EntityRotationQuat.W
+        };
 
         auto PhysicsSystem = _PhysicsSystem.Pin();
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
-        BodyInterface.MoveKinematic(InCurrent._RigidBody->GetID(), ToVec3(EntityPosition), Rot, InDeltaT.Get_Seconds());
+        BodyInterface.MoveKinematic(InCurrent._RigidBody->GetID(), jolt::Conv(EntityPosition, jolt::Position{}), Rot, InDeltaT.Get_Seconds());
 
-        ck::spatialquery::Log(TEXT("Actual Position in Jolt:[{}] [{}]"), InCurrent._RigidBody->GetID().GetIndexAndSequenceNumber(),
-            ToVec3(BodyInterface.GetPosition(InCurrent._RigidBody->GetID())));
+        spatialquery::Log(TEXT("Actual Position in Jolt:[{}] [{}]"),
+            InCurrent._RigidBody->GetID().GetIndexAndSequenceNumber(),
+            jolt::Conv(BodyInterface.GetPosition(InCurrent._RigidBody->GetID()), jolt::Position{}));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -151,7 +144,7 @@ namespace ck
         InHandle.CopyAndRemove(InRequestsComp, [&](
             FFragment_Probe_Requests& InRequests)
             {
-                algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](
+                algo::ForEachRequest(InRequests._Requests, Visitor([&](
                     const auto& InRequest)
                     {
                         DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
@@ -165,10 +158,29 @@ namespace ck
             HandleType InHandle,
             const FFragment_Probe_Params& InParams,
             FFragment_Probe_Current& InCurrent,
-            const FCk_Request_Probe_ExampleRequest& InRequest)
+            const FCk_Request_Probe_BeginOverlap& InRequest)
             -> void
     {
-        // Add request handling logic here
+        const auto Payload = FCk_Probe_Payload_OnBeginOverlap{
+            InRequest.Get_OtherEntity(),
+            InRequest.Get_ContactPoints(),
+            InRequest.Get_ContactNormal()
+        };
+
+        UUtils_Signal_OnProbeBeginOverlap::Broadcast(InHandle, MakePayload(InHandle, Payload));
+    }
+
+    auto
+        FProcessor_Probe_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_Probe_Params& InParams,
+            FFragment_Probe_Current& InCurrent,
+            const FCk_Request_Probe_EndOverlap& InRequest)
+            -> void
+    {
+        UUtils_Signal_OnProbeEndOverlap::Broadcast(InHandle,
+            MakePayload(InHandle, FCk_Probe_Payload_OnEndOverlap{InRequest.Get_OtherEntity()}));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
