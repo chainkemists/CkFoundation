@@ -192,6 +192,7 @@ namespace ck
         FCk_Delegate_AbilityOwner_OnAbilityGivenOrNot_MC,
         FCk_Handle_AbilityOwner,
         FCk_Handle_Ability,
+        FCk_Ability_Payload_OnGranted,
         ECk_AbilityOwner_AbilityGivenOrNot);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_OnAbilityGiven,
         FCk_Delegate_AbilityOwner_OnAbilityGiven_MC,
@@ -210,6 +211,7 @@ namespace ck
         FCk_Delegate_AbilityOwner_OnAbilityActivatedOrNot_MC,
         FCk_Handle_AbilityOwner,
         FCk_Handle_Ability,
+        FCk_Ability_Payload_OnActivate,
         ECk_AbilityOwner_AbilityActivatedOrNot);
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKABILITY_API, AbilityOwner_OnAbilityActivated,
         FCk_Delegate_AbilityOwner_OnAbilityActivated_MC,

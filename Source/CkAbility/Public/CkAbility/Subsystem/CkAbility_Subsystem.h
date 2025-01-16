@@ -3,8 +3,6 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkEcs/Entity/CkEntity.h"
 
-#include "CkHandle_Subsystem.generated.h"
-
 #include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
 
 #include "CkAbility_Subsystem.generated.h"
