@@ -53,21 +53,66 @@ private:
         FCk_Handle InHandle);
 
 public:
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|Probe",
-        DisplayName="[Ck][Probe] Request ExampleRequest")
-    static FCk_Handle_Probe
-    Request_ExampleRequest(
-        UPARAM(ref) FCk_Handle_Probe& InProbe,
-        const FCk_Request_Probe_ExampleRequest& InRequest);
-
-public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Probe",
         DisplayName="[Ck][Probe] IsOverlapping")
     static bool
     Get_IsOverlapping(
-        UPARAM(ref) FCk_Handle_Probe& InProbe);
+        const FCk_Handle_Probe& InProbe);
+
+public:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Probe",
+        DisplayName="[Ck][Probe] Request Begin Overlap")
+    static FCk_Handle_Probe
+    Request_BeginOverlap(
+        UPARAM(ref) FCk_Handle_Probe& InProbe,
+        const FCk_Request_Probe_BeginOverlap& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Probe",
+        DisplayName="[Ck][Probe] Request End Overlap")
+    static FCk_Handle_Probe
+    Request_EndOverlap(
+        UPARAM(ref) FCk_Handle_Probe& InProbe,
+        const FCk_Request_Probe_EndOverlap& InRequest);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Probe",
+              DisplayName = "[Ck][Probe] Bind To OnBeginOverlap")
+    static FCk_Handle_Probe
+    BindTo_OnBeginOverlap(
+        UPARAM(ref) FCk_Handle_Probe& InProbeEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_Probe_OnBeginOverlap& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Probe",
+              DisplayName = "[Ck][Probe] Unbind From OnBeginOverlap")
+    static FCk_Handle_Probe
+    UnbindFrom_OnBeginOverlap(
+        UPARAM(ref) FCk_Handle_Probe& InProbeEntity,
+        const FCk_Delegate_Probe_OnBeginOverlap& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Probe",
+              DisplayName = "[Ck][Probe] Bind To OnEndOverlap")
+    static FCk_Handle_Probe
+    BindTo_OnEndOverlap(
+        UPARAM(ref) FCk_Handle_Probe& InProbeEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_Probe_OnEndOverlap& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Probe",
+              DisplayName = "[Ck][Probe] Unbind From OnEndOverlap")
+    static FCk_Handle_Probe
+    UnbindFrom_OnEndOverlap(
+        UPARAM(ref) FCk_Handle_Probe& InProbeEntity,
+        const FCk_Delegate_Probe_OnEndOverlap& InDelegate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

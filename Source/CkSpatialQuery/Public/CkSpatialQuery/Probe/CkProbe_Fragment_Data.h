@@ -93,7 +93,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKSPATIALQUERY_API FCk_Request_Probe_ExampleRequest : public FCk_Request_Base
+struct CKSPATIALQUERY_API FCk_Request_Probe_BeginOverlap : public FCk_Request_Base
 {
     GENERATED_BODY()
 
@@ -101,7 +101,130 @@ public:
     friend class ck::FProcessor_Probe_HandleRequests;
 
 public:
-    CK_GENERATED_BODY(FCk_Request_Probe_ExampleRequest);
+    CK_GENERATED_BODY(FCk_Request_Probe_BeginOverlap);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _OtherEntity;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<FVector> _ContactPoints;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FVector _ContactNormal;
+
+public:
+    CK_PROPERTY_GET(_OtherEntity);
+    CK_PROPERTY_GET(_ContactPoints);
+    CK_PROPERTY_GET(_ContactNormal);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Probe_BeginOverlap, _OtherEntity, _ContactPoints, _ContactNormal);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKSPATIALQUERY_API FCk_Request_Probe_EndOverlap : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    friend class ck::FProcessor_Probe_HandleRequests;
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Probe_EndOverlap);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _OtherEntity;
+
+public:
+    CK_PROPERTY_GET(_OtherEntity);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Probe_EndOverlap, _OtherEntity);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKSPATIALQUERY_API FCk_Probe_Payload_OnBeginOverlap
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Probe_Payload_OnBeginOverlap);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _OtherEntity;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<FVector> _ContactPoints;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FVector _ContactNormal;
+
+public:
+    CK_PROPERTY_GET(_OtherEntity);
+    CK_PROPERTY_GET(_ContactPoints);
+    CK_PROPERTY_GET(_ContactNormal);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Probe_Payload_OnBeginOverlap, _OtherEntity, _ContactPoints, _ContactNormal);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_Probe_OnBeginOverlap,
+    FCk_Handle_Probe, InHandle,
+    FCk_Probe_Payload_OnBeginOverlap, InPayload);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FCk_Delegate_Probe_OnBeginOverlap_MC,
+    FCk_Handle_Probe, InHandle,
+    FCk_Probe_Payload_OnBeginOverlap, InPayload);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKSPATIALQUERY_API FCk_Probe_Payload_OnEndOverlap
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Probe_Payload_OnEndOverlap);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _OtherEntity;
+
+public:
+    CK_PROPERTY_GET(_OtherEntity);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Probe_Payload_OnEndOverlap, _OtherEntity);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_Probe_OnEndOverlap,
+    FCk_Handle_Probe, InHandle,
+    FCk_Probe_Payload_OnEndOverlap, InPayload);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FCk_Delegate_Probe_OnEndOverlap_MC,
+    FCk_Handle_Probe, InHandle,
+    FCk_Probe_Payload_OnEndOverlap, InPayload);
+
