@@ -7,19 +7,10 @@ namespace ck::jolt
             FVector InVector)
             -> JoltVec3
     {
-        return JoltVec3{static_cast<float>(InVector.X), static_cast<float>(InVector.Z), static_cast<float>(InVector.Y)};
-    }
-
-    auto
-        Conv(
-            FVector InVector,
-            Position)
-            -> JoltVec3
-    {
         return JoltVec3{static_cast<float>(InVector.X), static_cast<float>(InVector.Y), static_cast<float>(InVector.Z)};
     }
 
-    static auto
+    auto
         Conv(
             Chaos::TVector<float, 3> InVector)
             -> JoltVec3
@@ -27,16 +18,7 @@ namespace ck::jolt
         return JoltVec3{InVector.X, InVector.Y, InVector.Z};
     }
 
-    static auto
-        Conv(
-            Chaos::TVector<float, 3> InVector,
-            Position)
-            -> JoltVec3
-    {
-        return JoltVec3{InVector.X, InVector.Y, InVector.Z};
-    }
-
-    static auto
+    auto
         Conv(
             JoltVec3 InVector)
             -> FVector
@@ -44,12 +26,24 @@ namespace ck::jolt
         return FVector{InVector.GetX(), InVector.GetY(), InVector.GetZ()};
     }
 
-    static auto
+    auto
         Conv(
-            JoltVec3 InVector,
-            Position)
-            -> FVector
+            FQuat InQuat)
+            -> JoltQuat
     {
-        return FVector{InVector.GetX(), InVector.GetY(), InVector.GetZ()};
+        return JoltQuat{
+            static_cast<float>(InQuat.X),
+            static_cast<float>(InQuat.Y),
+            static_cast<float>(InQuat.Z),
+            static_cast<float>(InQuat.W)
+        };
+    }
+
+    auto
+        Conv(
+            JoltQuat InQuad)
+            -> FQuat
+    {
+        return FQuat{InQuad.GetX(), InQuad.GetY(), InQuad.GetZ(), InQuad.GetW()};
     }
 };
