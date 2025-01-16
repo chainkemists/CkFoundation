@@ -4,7 +4,9 @@
 
 // Jolt includes
 #include "CkSpatialQuery/CkSpatialQuery_Log.h"
+#include "CkSpatialQuery/CkSpatialQuery_Utils.h"
 #include "CkSpatialQuery/Probe/CkProbe_Fragment.h"
+#include "CkSpatialQuery/Probe/CkProbe_Utils.h"
 
 #include <Jolt/Jolt.h>
 #include <Jolt/RegisterTypes.h>
@@ -41,12 +43,17 @@ public:
         _ObjectToBroadPhase[layers::Moving] = broad_phase_layers::Moving;
     }
 
-    auto GetNumBroadPhaseLayers() const
-        -> JPH::uint override { return broad_phase_layers::Num_Layers; }
+    auto
+        GetNumBroadPhaseLayers() const
+            -> JPH::uint override
+    {
+        return broad_phase_layers::Num_Layers;
+    }
 
-    auto GetBroadPhaseLayer(
-        JPH::ObjectLayer inLayer) const
-        -> JPH::BroadPhaseLayer override
+    auto
+        GetBroadPhaseLayer(
+            JPH::ObjectLayer inLayer) const
+            -> JPH::BroadPhaseLayer override
     {
         JPH_ASSERT(inLayer < Layers::NUM_LAYERS);
         return _ObjectToBroadPhase[inLayer];
@@ -61,10 +68,11 @@ private:
 class ObjectVsBroadPhaseLayerFilterImpl : public JPH::ObjectVsBroadPhaseLayerFilter
 {
 public:
-    auto ShouldCollide(
-        const JPH::ObjectLayer inLayer1,
-        const JPH::BroadPhaseLayer inLayer2) const
-        -> bool override
+    auto
+        ShouldCollide(
+            const JPH::ObjectLayer inLayer1,
+            const JPH::BroadPhaseLayer inLayer2) const
+            -> bool override
     {
         switch (inLayer1)
         {
@@ -82,9 +90,10 @@ public:
 class CkObjectLayerPairFilterImpl : public JPH::ObjectLayerPairFilter
 {
 public:
-    virtual bool ShouldCollide(
-        const JPH::ObjectLayer inObject1,
-        const JPH::ObjectLayer inObject2) const override
+    virtual bool
+        ShouldCollide(
+            const JPH::ObjectLayer inObject1,
+            const JPH::ObjectLayer inObject2) const override
     {
         switch (inObject1)
         {
@@ -106,24 +115,24 @@ public:
 
 public:
     // See: ContactListener
-    auto OnContactValidate(
-        const JPH::Body& inBody1,
-        const JPH::Body& inBody2,
-        JPH::RVec3Arg inBaseOffset,
-        const JPH::CollideShapeResult& inCollisionResult)
-        -> JPH::ValidateResult override
+    auto
+        OnContactValidate(
+            const JPH::Body& inBody1,
+            const JPH::Body& inBody2,
+            JPH::RVec3Arg inBaseOffset,
+            const JPH::CollideShapeResult& inCollisionResult)
+            -> JPH::ValidateResult override
     {
-        ck::spatialquery::Warning(TEXT("Contact validate callback"));
-
         return JPH::ValidateResult::AcceptAllContactsForThisBodyPair;
     }
 
-    auto OnContactAdded(
-        const JPH::Body& inBody1,
-        const JPH::Body& inBody2,
-        const JPH::ContactManifold& inManifold,
-        JPH::ContactSettings& ioSettings)
-        -> void override
+    auto
+        OnContactAdded(
+            const JPH::Body& inBody1,
+            const JPH::Body& inBody2,
+            const JPH::ContactManifold& inManifold,
+            JPH::ContactSettings& ioSettings)
+            -> void override
     {
         auto Body1Entity = _TransientEntity.Get_ValidHandle(FCk_Entity::IdType{
             static_cast<uint32>(inBody1.GetUserData())
@@ -132,46 +141,89 @@ public:
             static_cast<uint32>(inBody2.GetUserData())
         });
 
-        Body1Entity.AddOrGet<ck::FTag_Probe_Overlapping>();
-        Body2Entity.AddOrGet<ck::FTag_Probe_Overlapping>();
+        auto Body1 = UCk_Utils_Probe_UE::Cast(Body1Entity);
+        auto Body2 = UCk_Utils_Probe_UE::Cast(Body2Entity);
+
+        if (ck::IsValid(Body1))
+        {
+            auto ContactPoints = TArray<FVector>{};
+            ContactPoints.Reserve(inManifold.mRelativeContactPointsOn1.size());
+
+            for (const auto& ContactPoint : inManifold.mRelativeContactPointsOn1)
+            {
+                ContactPoints.Emplace(ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset, ck::jolt::Position{}));
+            }
+
+            UCk_Utils_Probe_UE::Request_BeginOverlap(Body1,
+                FCk_Request_Probe_BeginOverlap{Body2, ContactPoints, ck::jolt::Conv(inManifold.mWorldSpaceNormal, ck::jolt::Position{})});
+        }
+
+        if (ck::IsValid(Body2))
+        {
+            auto ContactPoints = TArray<FVector>{};
+            ContactPoints.Reserve(inManifold.mRelativeContactPointsOn1.size());
+
+            for (const auto& ContactPoint : inManifold.mRelativeContactPointsOn2)
+            {
+                ContactPoints.Emplace(ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset, ck::jolt::Position{}));
+            }
+
+            UCk_Utils_Probe_UE::Request_BeginOverlap(Body2,
+                FCk_Request_Probe_BeginOverlap{Body1, ContactPoints, ck::jolt::Conv(-inManifold.mWorldSpaceNormal, ck::jolt::Position{})});
+        }
 
         _BodyToHandle.Add(inBody1.GetID().GetIndexAndSequenceNumber(), Body1Entity);
         _BodyToHandle.Add(inBody2.GetID().GetIndexAndSequenceNumber(), Body2Entity);
 
-        ck::spatialquery::Warning(TEXT("A contact was added"));
         return;
     }
 
-    auto OnContactPersisted(
-        const JPH::Body& inBody1,
-        const JPH::Body& inBody2,
-        const JPH::ContactManifold& inManifold,
-        JPH::ContactSettings& ioSettings)
-        -> void override
+    auto
+        OnContactPersisted(
+            const JPH::Body& inBody1,
+            const JPH::Body& inBody2,
+            const JPH::ContactManifold& inManifold,
+            JPH::ContactSettings& ioSettings)
+            -> void override
     {
-        ck::spatialquery::Warning(TEXT("A contact was persisted"));
         return;
     }
 
-    auto OnContactRemoved(
-        const JPH::SubShapeIDPair& inSubShapePair)
-        -> void override
+    auto
+        OnContactRemoved(
+            const JPH::SubShapeIDPair& inSubShapePair)
+            -> void override
     {
         auto MaybeBody1Handle = _BodyToHandle.Find(inSubShapePair.GetBody1ID().GetIndexAndSequenceNumber());
 
-        if (ck::Is_NOT_Valid(MaybeBody1Handle, ck::IsValid_Policy_NullptrOnly{})) { return; }
+        if (ck::Is_NOT_Valid(MaybeBody1Handle, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            return;
+        }
 
         auto MaybeBody2Handle = _BodyToHandle.Find(inSubShapePair.GetBody2ID().GetIndexAndSequenceNumber());
 
-        if (ck::Is_NOT_Valid(MaybeBody2Handle, ck::IsValid_Policy_NullptrOnly{})) { return; }
+        if (ck::Is_NOT_Valid(MaybeBody2Handle, ck::IsValid_Policy_NullptrOnly{}))
+        {
+            return;
+        }
 
-        MaybeBody1Handle->Remove<ck::FTag_Probe_Overlapping>();
-        MaybeBody2Handle->Remove<ck::FTag_Probe_Overlapping>();
+        auto Body1 = UCk_Utils_Probe_UE::Cast(*MaybeBody1Handle);
+        auto Body2 = UCk_Utils_Probe_UE::Cast(*MaybeBody2Handle);
+
+        if (ck::IsValid(Body1))
+        {
+            UCk_Utils_Probe_UE::Request_EndOverlap(Body1, FCk_Request_Probe_EndOverlap{Body2});
+        }
+
+        if (ck::IsValid(Body2))
+        {
+            UCk_Utils_Probe_UE::Request_EndOverlap(Body2, FCk_Request_Probe_EndOverlap{Body1});
+        }
 
         _BodyToHandle.Remove(inSubShapePair.GetBody1ID().GetIndexAndSequenceNumber());
         _BodyToHandle.Remove(inSubShapePair.GetBody2ID().GetIndexAndSequenceNumber());
 
-        ck::spatialquery::Warning(TEXT("A contact was removed"));
         return;
     }
 
@@ -189,15 +241,23 @@ public:
 class CkBodyActivationListener : public JPH::BodyActivationListener
 {
 public:
-    auto OnBodyActivated(
-        const JPH::BodyID& inBodyID,
-        uint64 inBodyUserData)
-        -> void override { ck::spatialquery::Warning(TEXT("Body activated")); }
+    auto
+        OnBodyActivated(
+            const JPH::BodyID& inBodyID,
+            uint64 inBodyUserData)
+            -> void override
+    {
+        ck::spatialquery::Warning(TEXT("Body activated"));
+    }
 
-    auto OnBodyDeactivated(
-        const JPH::BodyID& inBodyID,
-        uint64 inBodyUserData)
-        -> void override { ck::spatialquery::Warning(TEXT("Body deactivated")); }
+    auto
+        OnBodyDeactivated(
+            const JPH::BodyID& inBodyID,
+            uint64 inBodyUserData)
+            -> void override
+    {
+        ck::spatialquery::Warning(TEXT("Body deactivated"));
+    }
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -259,31 +319,17 @@ auto
 auto
     UCk_SpatialQuery_Subsystem_UE::
     Deinitialize()
-        -> void { Super::Deinitialize(); }
+        -> void
+{
+    Super::Deinitialize();
+}
 
 auto
     UCk_SpatialQuery_Subsystem_UE::
     Get_PhysicsSystem() const
-        -> TWeakPtr<JPH::PhysicsSystem> { return _PhysicsSystem; }
-
-namespace jolt_bridge
+        -> TWeakPtr<JPH::PhysicsSystem>
 {
-    auto
-        ToVec3(
-            const FVector& InVector)
-            -> JPH::Vec3
-    {
-        return JPH::Vec3{
-            static_cast<float>(InVector.X),
-            static_cast<float>(InVector.Y),
-            static_cast<float>(InVector.Z)
-        };
-    }
-
-    auto
-        ToVec3(
-            const JPH::Vec3& InVector)
-            -> FVector { return FVector{InVector.GetX(), InVector.GetY(), InVector.GetZ()}; }
+    return _PhysicsSystem;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
