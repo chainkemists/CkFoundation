@@ -162,7 +162,7 @@ namespace ck
         {
             UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
                 InRequest.GetAndDestroyRequestHandle(),
-                MakePayload(AbilityOwnerEntity, InHandle, ECk_AbilityOwner_AbilityGivenOrNot::Given));
+                MakePayload(AbilityOwnerEntity, InHandle, InRequest.Get_Payload(), ECk_AbilityOwner_AbilityGivenOrNot::Given));
         }
 
         UUtils_Signal_AbilityOwner_OnAbilityGiven::Broadcast(
@@ -392,7 +392,7 @@ namespace ck
         {
             UUtils_Signal_AbilityOwner_OnAbilityActivatedOrNot::Broadcast(
                 InRequest.GetAndDestroyRequestHandle(),
-                MakePayload(AbilityOwnerEntity, InHandle, ECk_AbilityOwner_AbilityActivatedOrNot::Activated));
+                MakePayload(AbilityOwnerEntity, InHandle, InRequest.Get_Payload(), ECk_AbilityOwner_AbilityActivatedOrNot::Activated));
         }
 
         UUtils_Signal_AbilityOwner_OnAbilityActivated::Broadcast(
