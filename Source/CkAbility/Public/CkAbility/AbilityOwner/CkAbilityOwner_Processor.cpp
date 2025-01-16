@@ -211,7 +211,7 @@ namespace ck
         {
             UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
                 InRequest.GetAndDestroyRequestHandle(),
-                MakePayload(InAbilityOwnerEntity, AbilityToAddAndGive, AbilityGivenOrNot));
+                MakePayload(InAbilityOwnerEntity, AbilityToAddAndGive, InRequest.Get_OptionalPayload(), AbilityGivenOrNot));
         }
     }
 
@@ -477,7 +477,7 @@ namespace ck
 
             UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
                 InRequest.GetAndDestroyRequestHandle(),
-                MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{}, ECk_AbilityOwner_AbilityGivenOrNot::NotGiven));
+                MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{}, InRequest.Get_OptionalPayload(), ECk_AbilityOwner_AbilityGivenOrNot::NotGiven));
         }
     }
 
@@ -643,7 +643,7 @@ namespace ck
         if (AbilityGivenOrNot == ECk_AbilityOwner_AbilityGivenOrNot::NotGiven && InRequest.Get_IsRequestHandleValid())
         {
             UUtils_Signal_AbilityOwner_OnAbilityGivenOrNot::Broadcast(
-                InRequest.GetAndDestroyRequestHandle(), MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{},
+                InRequest.GetAndDestroyRequestHandle(), MakePayload(InAbilityOwnerEntity, FCk_Handle_Ability{}, FCk_Ability_Payload_OnGranted{},
                     ECk_AbilityOwner_AbilityGivenOrNot::NotGiven));
         }
     }
@@ -737,7 +737,7 @@ namespace ck
                 {
                     UUtils_Signal_AbilityOwner_OnAbilityActivatedOrNot::Broadcast(
                         InRequest.GetAndDestroyRequestHandle(),
-                        MakePayload(InAbilityOwnerEntity, InAbilityToActivateEntity, ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_AbilityNotFound));
+                        MakePayload(InAbilityOwnerEntity, InAbilityToActivateEntity, InRequest.Get_OptionalPayload(), ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_AbilityNotFound));
                 }
 
                 return;
@@ -756,7 +756,7 @@ namespace ck
                 {
                     UUtils_Signal_AbilityOwner_OnAbilityActivatedOrNot::Broadcast(
                         InRequest.GetAndDestroyRequestHandle(),
-                        MakePayload(InAbilityOwnerEntity, InAbilityToActivateEntity, ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks));
+                        MakePayload(InAbilityOwnerEntity, InAbilityToActivateEntity, InRequest.Get_OptionalPayload(), ECk_AbilityOwner_AbilityActivatedOrNot::NotActivated_FailedChecks));
                 }
                 return;
             }
