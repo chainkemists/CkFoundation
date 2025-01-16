@@ -151,11 +151,11 @@ public:
 
             for (const auto& ContactPoint : inManifold.mRelativeContactPointsOn1)
             {
-                ContactPoints.Emplace(ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset, ck::jolt::Position{}));
+                ContactPoints.Emplace(ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset));
             }
 
             UCk_Utils_Probe_UE::Request_BeginOverlap(Body1,
-                FCk_Request_Probe_BeginOverlap{Body2, ContactPoints, ck::jolt::Conv(inManifold.mWorldSpaceNormal, ck::jolt::Position{})});
+                FCk_Request_Probe_BeginOverlap{Body2, ContactPoints, ck::jolt::Conv(inManifold.mWorldSpaceNormal)});
         }
 
         if (ck::IsValid(Body2))
@@ -165,11 +165,11 @@ public:
 
             for (const auto& ContactPoint : inManifold.mRelativeContactPointsOn2)
             {
-                ContactPoints.Emplace(ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset, ck::jolt::Position{}));
+                ContactPoints.Emplace(ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset));
             }
 
             UCk_Utils_Probe_UE::Request_BeginOverlap(Body2,
-                FCk_Request_Probe_BeginOverlap{Body1, ContactPoints, ck::jolt::Conv(-inManifold.mWorldSpaceNormal, ck::jolt::Position{})});
+                FCk_Request_Probe_BeginOverlap{Body1, ContactPoints, ck::jolt::Conv(-inManifold.mWorldSpaceNormal)});
         }
 
         _BodyToHandle.Add(inBody1.GetID().GetIndexAndSequenceNumber(), Body1Entity);

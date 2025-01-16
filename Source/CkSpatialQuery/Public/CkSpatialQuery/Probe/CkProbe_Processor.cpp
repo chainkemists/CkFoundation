@@ -61,7 +61,7 @@ namespace ck
 
         auto ShapeSettings = BodyCreationSettings{
             Shape,
-            jolt::Conv(EntityPosition, jolt::Position{}),
+            jolt::Conv(EntityPosition),
             Quat::sIdentity(),
             EMotionType::Kinematic,
             ObjectLayer{1}
@@ -99,21 +99,16 @@ namespace ck
         auto EntityRotation = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentRotation(InHandle);
 
         auto EntityRotationQuat = FQuat{EntityRotation};
-        auto Rot = JPH::Quat{
-            (float)EntityRotationQuat.X,
-            (float)EntityRotationQuat.Y,
-            (float)EntityRotationQuat.Z,
-            (float)EntityRotationQuat.W
-        };
+        auto Rot = jolt::Conv(EntityRotationQuat);
 
         auto PhysicsSystem = _PhysicsSystem.Pin();
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
-        BodyInterface.MoveKinematic(InCurrent._RigidBody->GetID(), jolt::Conv(EntityPosition, jolt::Position{}), Rot, InDeltaT.Get_Seconds());
+        BodyInterface.MoveKinematic(InCurrent._RigidBody->GetID(), jolt::Conv(EntityPosition), Rot, InDeltaT.Get_Seconds());
 
         spatialquery::Log(TEXT("Actual Position in Jolt:[{}] [{}]"),
             InCurrent._RigidBody->GetID().GetIndexAndSequenceNumber(),
-            jolt::Conv(BodyInterface.GetPosition(InCurrent._RigidBody->GetID()), jolt::Position{}));
+            jolt::Conv(BodyInterface.GetPosition(InCurrent._RigidBody->GetID())));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
