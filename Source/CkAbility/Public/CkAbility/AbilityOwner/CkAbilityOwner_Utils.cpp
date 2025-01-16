@@ -496,15 +496,17 @@ auto
         return InAbilityOwnerHandle;
     }
 
-    // Need to re-cast to make sure it all relevant fragments were replicated properly
-    const auto AbilityHandle = UCk_Utils_Ability_UE::Cast(InRequest.Get_Ability());
-    CK_ENSURE_IF_NOT(ck::IsValid(AbilityHandle), TEXT("AbilityHandle [{}] to Transfer on AbilityOwner [{}] is INVALID"),
-        AbilityHandle, InAbilityOwnerHandle)
+    CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_Ability()),
+        TEXT("AbilityHandle to Transfer on AbilityOwner [{}] is INVALID on the [{}]"),
+        InAbilityOwnerHandle, UCk_Utils_Net_UE::Get_EntityNetMode(InAbilityOwnerHandle))
     { return InAbilityOwnerHandle; }
 
-    CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_Ability()),
-        TEXT("Unable to process TransferExistingAbility on Handle [{}] as the AbilityHandle [{}] is INVALID.{}"),
-        InAbilityOwnerHandle, InRequest.Get_Ability(), ck::Context(InDelegate.GetFunctionName()))
+    // Need to re-cast to make sure it all relevant fragments were replicated properly
+    const auto AbilityHandle = UCk_Utils_Ability_UE::Cast(InRequest.Get_Ability());
+    CK_ENSURE_IF_NOT(ck::IsValid(AbilityHandle),
+        TEXT("AbilityHandle [{}] to Transfer on AbilityOwner [{}] is a VALID ENTITY but is MISSING ABILITY FRAGMENTS on the [{}]\n"
+             "It's possible that the content of the Transfer requests didn't replicate fully yet"),
+        AbilityHandle, InAbilityOwnerHandle, UCk_Utils_Net_UE::Get_EntityNetMode(InAbilityOwnerHandle))
     { return InAbilityOwnerHandle; }
 
     CK_SIGNAL_BIND_REQUEST_FULFILLED(ck::UUtils_Signal_AbilityOwner_OnAbilityTransferredOrNot,
@@ -610,35 +612,32 @@ auto
 {
     if (NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InAbilityOwnerHandle, InRequest.Get_ReplicationType()))
     {
-        if (InRequest.Get_SearchPolicy() == ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle)
-        {
-            ck::ability::Verbose
-            (
-                TEXT("Skipping Revoking Ability [{}] because ReplicationType [{}] does not match for Entity [{}], meaning this ability shouldn't have have been added on this instance anyways"),
-                InRequest.Get_AbilityHandle(),
-                InRequest.Get_ReplicationType(),
-                InAbilityOwnerHandle
-            );
-        }
-        else
-        {
-            ck::ability::Verbose
-            (
-                TEXT("Skipping Revoking Ability with class [{}] because ReplicationType [{}] does not match for Entity [{}], meaning this ability shouldn't have have been added on this instance anyways"),
-                InRequest.Get_AbilityClass(),
-                InRequest.Get_ReplicationType(),
-                InAbilityOwnerHandle
-            );
-        }
+        ck::ability::Verbose
+        (
+            TEXT("Skipping Revoking Ability [{}] because ReplicationType [{}] does not match for Entity [{}], meaning this ability shouldn't have have been added on this instance anyways"),
+            InRequest.Get_SearchPolicy() == ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle
+                ? ck::Format_UE(TEXT("{}"), InRequest.Get_AbilityHandle())
+                : ck::Format_UE(TEXT("{}"), InRequest.Get_AbilityClass()),
+            InRequest.Get_ReplicationType(),
+            InAbilityOwnerHandle
+        );
+
         return InAbilityOwnerHandle;
     }
 
     if (InRequest.Get_SearchPolicy() == ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle)
     {
+        CK_ENSURE_IF_NOT(ck::IsValid(InRequest.Get_AbilityHandle()),
+            TEXT("AbilityHandle to Revoke on AbilityOwner [{}] is INVALID on the [{}]"),
+            InAbilityOwnerHandle, UCk_Utils_Net_UE::Get_EntityNetMode(InAbilityOwnerHandle))
+        { return InAbilityOwnerHandle; }
+
         // Need to re-cast to make sure it all relevant fragments were replicated properly
         const auto AbilityHandle = UCk_Utils_Ability_UE::Cast(InRequest.Get_AbilityHandle());
-        CK_ENSURE_IF_NOT(ck::IsValid(AbilityHandle), TEXT("AbilityHandle [{}] to Revoke on AbilityOwner [{}] is INVALID"),
-            AbilityHandle, InAbilityOwnerHandle)
+        CK_ENSURE_IF_NOT(ck::IsValid(AbilityHandle),
+            TEXT("AbilityHandle [{}] to Revoke on AbilityOwner [{}] is a VALID ENTITY but is MISSING ABILITY FRAGMENTS on the [{}]\n"
+                 "It's possible that the content of the Transfer requests didn't replicate fully yet"),
+            AbilityHandle, InAbilityOwnerHandle, UCk_Utils_Net_UE::Get_EntityNetMode(InAbilityOwnerHandle))
         { return InAbilityOwnerHandle; }
     }
 
