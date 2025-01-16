@@ -1,5 +1,6 @@
 #include "CkAbilityOwner_Fragment.h"
 
+#include "CkAbility/Ability/CkAbility_Utils.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Utils.h"
 
 #include "CkEntityExtension/CkEntityExtension_Utils.h"
@@ -323,8 +324,15 @@ auto
 
     for (auto Index = _NextPendingTransferExistingAbilityRequests; Index < _PendingTransferExistingAbilityRequests.Num(); ++Index)
     {
-        const auto& Request = _PendingTransferExistingAbilityRequests[Index];
-        UCk_Utils_AbilityOwner_UE::Request_TransferExistingAbility(AssociatedEntityAbilityOwner, Request, {});
+        const auto& TransferRequest = _PendingTransferExistingAbilityRequests[Index];
+
+        if (ck::Is_NOT_Valid(TransferRequest.Get_TransferTarget()) || ck::Is_NOT_Valid(TransferRequest.Get_Ability()))
+        {
+            _NextPendingRevokeAbilityRequests = Index;
+            return;
+        }
+
+        UCk_Utils_AbilityOwner_UE::Request_TransferExistingAbility(AssociatedEntityAbilityOwner, TransferRequest, {});
     }
     _NextPendingTransferExistingAbilityRequests = _PendingTransferExistingAbilityRequests.Num();
 }
@@ -376,6 +384,14 @@ auto
     for (auto Index = _NextPendingRevokeAbilityRequests; Index < _PendingRevokeAbilityRequests.Num(); ++Index)
     {
         const auto& RevokeAbilityRequest = _PendingRevokeAbilityRequests[Index];
+
+        if (RevokeAbilityRequest.Get_SearchPolicy() == ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle &&
+            ck::Is_NOT_Valid(UCk_Utils_Ability_UE::Cast(RevokeAbilityRequest.Get_AbilityHandle())))
+        {
+            _NextPendingRevokeAbilityRequests = Index;
+            return;
+        }
+
         UCk_Utils_AbilityOwner_UE::Request_RevokeAbility(AssociatedEntityAbilityOwner, RevokeAbilityRequest, {});
     }
     _NextPendingRevokeAbilityRequests = _PendingRevokeAbilityRequests.Num();
