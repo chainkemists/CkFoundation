@@ -75,15 +75,3 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-
-namespace jolt_bridge
-{
-    static auto
-        ToVec3(
-            const FVector& InVector)
-            -> JPH::Vec3;
-    static auto
-        ToVec3(
-            const JPH::Vec3& InVector)
-            -> FVector;
-};
