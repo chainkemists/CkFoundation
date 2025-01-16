@@ -9,42 +9,31 @@
 
 namespace ck::jolt
 {
-    // Differentiating between the two Conv functions is necessary.
-    // Why explicitly specify Position? Non-positional vectors should not be negated, as doing so can cause Jolt to crash.
-    struct Position {};
-
     using JoltVec3 = JPH::Vec3;
+    using JoltQuat = JPH::Quat;
 
-    static auto
+     auto
         Conv(
             FVector InVector)
             -> JoltVec3;
 
-    static auto
-        Conv(
-            FVector InVector,
-            Position)
-            -> JoltVec3;
-
-    static auto
+    auto
         Conv(
             Chaos::TVector<float, 3> InVector)
             -> JoltVec3;
 
-    static auto
-        Conv(
-            Chaos::TVector<float, 3> InVector,
-            Position)
-            -> JoltVec3;
-
-    static auto
+    auto
         Conv(
             JoltVec3 InVector)
             -> FVector;
 
-    static auto
+    auto
         Conv(
-            JoltVec3 InVector,
-            Position)
-            -> FVector;
+            FQuat InQuat)
+            -> JoltQuat;
+
+    auto
+        Conv(
+            JoltQuat InQuad)
+            -> FQuat;
 };
