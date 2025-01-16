@@ -63,7 +63,8 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Probe",
-        DisplayName="[Ck][Probe] Request Begin Overlap")
+        DisplayName="[Ck][Probe] Request Begin Overlap",
+        meta=(DevelopmentOnly))
     static FCk_Handle_Probe
     Request_BeginOverlap(
         UPARAM(ref) FCk_Handle_Probe& InProbe,
@@ -71,7 +72,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Probe",
-        DisplayName="[Ck][Probe] Request End Overlap")
+        DisplayName="[Ck][Probe] Request End Overlap",
+        meta=(DevelopmentOnly))
     static FCk_Handle_Probe
     Request_EndOverlap(
         UPARAM(ref) FCk_Handle_Probe& InProbe,
