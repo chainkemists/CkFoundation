@@ -533,16 +533,18 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+DECLARE_DYNAMIC_DELEGATE_FourParams(
     FCk_Delegate_AbilityOwner_OnAbilityGivenOrNot,
     FCk_Handle_AbilityOwner, InAbilityOwner,
     FCk_Handle_Ability, InMaybeValidAbility,
+    FCk_Ability_Payload_OnGranted, InOptionalPayload,
     ECk_AbilityOwner_AbilityGivenOrNot, InGivenOrNot);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(
     FCk_Delegate_AbilityOwner_OnAbilityGivenOrNot_MC,
     FCk_Handle_AbilityOwner, InAbilityOwner,
     FCk_Handle_Ability, InMaybeValidAbility,
+    FCk_Ability_Payload_OnGranted, InOptionalPayload,
     ECk_AbilityOwner_AbilityGivenOrNot, InGivenOrNot);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -615,16 +617,18 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_DYNAMIC_DELEGATE_ThreeParams(
+DECLARE_DYNAMIC_DELEGATE_FourParams(
     FCk_Delegate_AbilityOwner_OnAbilityActivatedOrNot,
     FCk_Handle_AbilityOwner, InAbilityOwner,
     FCk_Handle_Ability, InAbility,
+    FCk_Ability_Payload_OnActivate, InOptionalPayload,
     ECk_AbilityOwner_AbilityActivatedOrNot, InActivatedOrNot);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(
     FCk_Delegate_AbilityOwner_OnAbilityActivatedOrNot_MC,
     FCk_Handle_AbilityOwner, InAbilityOwner,
     FCk_Handle_Ability, InAbility,
+    FCk_Ability_Payload_OnActivate, InOptionalPayload,
     ECk_AbilityOwner_AbilityActivatedOrNot, InActivatedOrNot);
 
 // --------------------------------------------------------------------------------------------------------------------
