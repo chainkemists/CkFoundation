@@ -332,7 +332,7 @@ auto
             return;
         }
 
-        UCk_Utils_AbilityOwner_UE::Request_TransferExistingAbility(AssociatedEntityAbilityOwner, TransferRequest, {});
+        UCk_Utils_AbilityOwner_UE::Request_TransferExistingAbility_DeferUntilReadyOnClient(AssociatedEntityAbilityOwner, TransferRequest);
     }
     _NextPendingTransferExistingAbilityRequests = _PendingTransferExistingAbilityRequests.Num();
 }
@@ -392,7 +392,19 @@ auto
             return;
         }
 
-        UCk_Utils_AbilityOwner_UE::Request_RevokeAbility(AssociatedEntityAbilityOwner, RevokeAbilityRequest, {});
+        switch (RevokeAbilityRequest.Get_SearchPolicy())
+        {
+            case ECk_AbilityOwner_AbilitySearch_Policy::SearchByClass:
+            {
+                UCk_Utils_AbilityOwner_UE::Request_RevokeAbility(AssociatedEntityAbilityOwner, RevokeAbilityRequest, {});
+                break;
+            }
+            case ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle:
+            {
+                UCk_Utils_AbilityOwner_UE::Request_RevokeAbility_DeferUntilReadyOnClient(AssociatedEntityAbilityOwner, RevokeAbilityRequest);
+                break;
+            }
+        }
     }
     _NextPendingRevokeAbilityRequests = _PendingRevokeAbilityRequests.Num();
 }

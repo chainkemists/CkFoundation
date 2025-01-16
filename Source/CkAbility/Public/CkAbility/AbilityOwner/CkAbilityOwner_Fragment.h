@@ -151,6 +151,31 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    struct CKABILITY_API FFragment_AbilityOwner_DeferredClientRequests
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_AbilityOwner_Requests);
+
+    public:
+        friend class FProcessor_AbilityOwner_HandleRequests;
+        friend class UCk_Utils_AbilityOwner_UE;
+
+    public:
+        using TransferAbilityRequestType = FCk_Request_AbilityOwner_TransferExistingAbility;
+        using RevokeAbilityRequestType = FCk_Request_AbilityOwner_RevokeAbility;
+
+        using RequestType = std::variant<RevokeAbilityRequestType, TransferAbilityRequestType>;
+        using RequestList = TArray<RequestType>;
+
+    public:
+        RequestList _Requests;
+
+    public:
+        CK_PROPERTY_GET(_Requests);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKABILITY_API FFragment_AbilityOwner_Events
     {
     public:
