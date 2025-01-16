@@ -505,7 +505,7 @@ auto
     const auto AbilityHandle = UCk_Utils_Ability_UE::Cast(InRequest.Get_Ability());
     CK_ENSURE_IF_NOT(ck::IsValid(AbilityHandle),
         TEXT("AbilityHandle [{}] to Transfer on AbilityOwner [{}] is a VALID ENTITY but is MISSING ABILITY FRAGMENTS on the [{}]\n"
-             "It's possible that the content of the Transfer requests didn't replicate fully yet"),
+             "It's possible that the content of the Transfer request didn't replicate fully yet"),
         AbilityHandle, InAbilityOwnerHandle, UCk_Utils_Net_UE::Get_EntityNetMode(InAbilityOwnerHandle))
     { return InAbilityOwnerHandle; }
 
@@ -513,6 +513,35 @@ auto
         InRequest.PopulateRequestHandle(InAbilityOwnerHandle), InDelegate);
 
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
+
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Request_TransferExistingAbility_DeferUntilReadyOnClient(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Request_AbilityOwner_TransferExistingAbility& InRequest)
+    -> FCk_Handle_AbilityOwner
+{
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InAbilityOwnerHandle, InRequest.Get_ReplicationType()))
+    {
+        ck::ability::Verbose
+        (
+            TEXT("Skipping Transfering Ability [{}] because ReplicationType [{}] does not match for Entity [{}], meaning this ability shouldn't have have been added on this instance anyways"),
+            InRequest.Get_Ability(),
+            InRequest.Get_ReplicationType(),
+            InAbilityOwnerHandle
+        );
+        return InAbilityOwnerHandle;
+    }
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_EntityNetMode(InAbilityOwnerHandle) == ECk_Net_NetModeType::Client,
+        TEXT("Trying to Transfer an Existing Ability on Owner [{}] and wait for its content to be fully replicated, but we are NOT a Client"),
+        InAbilityOwnerHandle)
+    { return InAbilityOwnerHandle; }
+
+    InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_DeferredClientRequests>()._Requests.Emplace(InRequest);
 
     return InAbilityOwnerHandle;
 }
@@ -636,7 +665,7 @@ auto
         const auto AbilityHandle = UCk_Utils_Ability_UE::Cast(InRequest.Get_AbilityHandle());
         CK_ENSURE_IF_NOT(ck::IsValid(AbilityHandle),
             TEXT("AbilityHandle [{}] to Revoke on AbilityOwner [{}] is a VALID ENTITY but is MISSING ABILITY FRAGMENTS on the [{}]\n"
-                 "It's possible that the content of the Transfer requests didn't replicate fully yet"),
+                 "It's possible that the content of the Revoke request didn't replicate fully yet"),
             AbilityHandle, InAbilityOwnerHandle, UCk_Utils_Net_UE::Get_EntityNetMode(InAbilityOwnerHandle))
         { return InAbilityOwnerHandle; }
     }
@@ -651,6 +680,38 @@ auto
         InRequest.PopulateRequestHandle(InAbilityOwnerHandle), InDelegate);
 
     InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Emplace(InRequest);
+    return InAbilityOwnerHandle;
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Request_RevokeAbility_DeferUntilReadyOnClient(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Request_AbilityOwner_RevokeAbility& InRequest)
+    -> FCk_Handle_AbilityOwner
+{
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityRoleMatching(InAbilityOwnerHandle, InRequest.Get_ReplicationType()))
+    {
+        ck::ability::Verbose
+        (
+            TEXT("Skipping Revoking Ability [{}] because ReplicationType [{}] does not match for Entity [{}], meaning this ability shouldn't have have been added on this instance anyways"),
+            InRequest.Get_SearchPolicy() == ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle
+                ? ck::Format_UE(TEXT("{}"), InRequest.Get_AbilityHandle())
+                : ck::Format_UE(TEXT("{}"), InRequest.Get_AbilityClass()),
+            InRequest.Get_ReplicationType(),
+            InAbilityOwnerHandle
+        );
+
+        return InAbilityOwnerHandle;
+    }
+
+    CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_EntityNetMode(InAbilityOwnerHandle) == ECk_Net_NetModeType::Client,
+        TEXT("Trying to Revoke an Existing Ability on Owner [{}] and wait for its content to be fully replicated, but we are NOT a Client"),
+        InAbilityOwnerHandle)
+    { return InAbilityOwnerHandle; }
+
+    InAbilityOwnerHandle.AddOrGet<ck::FFragment_AbilityOwner_DeferredClientRequests>()._Requests.Emplace(InRequest);
+
     return InAbilityOwnerHandle;
 }
 

@@ -289,6 +289,11 @@ public:
         const FCk_Request_AbilityOwner_TransferExistingAbility& InRequest,
         const FCk_Delegate_AbilityOwner_OnAbilityTransferredOrNot& InDelegate);
 
+    static FCk_Handle_AbilityOwner
+    Request_TransferExistingAbility_DeferUntilReadyOnClient(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Request_AbilityOwner_TransferExistingAbility& InRequest);
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
               DisplayName="[Ck][AbilityOwner] Request Transfer Existing Ability (Replicated)",
@@ -329,6 +334,11 @@ public:
         UPARAM(ref) FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
         const FCk_Request_AbilityOwner_RevokeAbility& InRequest,
         const FCk_Delegate_AbilityOwner_OnAbilityRevokedOrNot& InDelegate);
+
+    static FCk_Handle_AbilityOwner
+    Request_RevokeAbility_DeferUntilReadyOnClient(
+        FCk_Handle_AbilityOwner& InAbilityOwnerHandle,
+        const FCk_Request_AbilityOwner_RevokeAbility& InRequest);
 
     UFUNCTION(BlueprintCallable,
               BlueprintAuthorityOnly,

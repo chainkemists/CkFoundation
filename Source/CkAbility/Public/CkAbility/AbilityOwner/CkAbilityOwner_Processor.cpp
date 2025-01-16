@@ -52,10 +52,10 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
-            const FFragment_AbilityOwner_Params& InAbilityOwnerParams) const
+            const FFragment_AbilityOwner_Params& InParams) const
         -> void
     {
-        for (const auto& Params = InAbilityOwnerParams.Get_Params(); const auto& DefaultAbility : Params.Get_DefaultAbilities())
+        for (const auto& Params = InParams.Get_Params(); const auto& DefaultAbility : Params.Get_DefaultAbilities())
         {
             CK_ENSURE_IF_NOT(ck::IsValid(DefaultAbility), TEXT("Entity [{}] has an INVALID default Ability in its Params!"), InHandle)
             { continue; }
@@ -71,7 +71,7 @@ namespace ck
             InHandle.Add<FTag_AbilityOwner_PendingSubAbilityOperation>();
         }
 
-        for (const auto& Params = InAbilityOwnerParams.Get_Params(); const auto& DefaultAbilityInstance : Params.Get_DefaultAbilities_Instanced())
+        for (const auto& Params = InParams.Get_Params(); const auto& DefaultAbilityInstance : Params.Get_DefaultAbilities_Instanced())
         {
             CK_ENSURE_IF_NOT(ck::IsValid(DefaultAbilityInstance),
                 TEXT("Entity [{}] has an INVALID default Ability INSTANCE in its Params! This can only happen for Sub-Abilities"), InHandle)
@@ -132,16 +132,16 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
-            FFragment_AbilityOwner_Current&  InAbilityOwnerComp,
-            FFragment_AbilityOwner_Requests& InAbilityRequestsComp) const
+            FFragment_AbilityOwner_Current&  InCurrent,
+            FFragment_AbilityOwner_Requests& InRequests) const
         -> void
     {
-        const auto RequestsCopy = InAbilityRequestsComp._Requests;
+        const auto RequestsCopy = InRequests._Requests;
         InHandle.Remove<MarkedDirtyBy>();
 
         algo::ForEach(RequestsCopy, ck::Visitor([&](const auto& InRequestVariant)
         {
-            DoHandleRequest(InHandle, InAbilityOwnerComp, InRequestVariant);
+            DoHandleRequest(InHandle, InCurrent, InRequestVariant);
 
             // TODO: Add formatter for each request and track which one was responsible for destroying entity
         }));
@@ -157,7 +157,7 @@ namespace ck
         FProcessor_AbilityOwner_HandleRequests::
         DoHandleRequest(
             HandleType& InAbilityOwnerEntity,
-            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            FFragment_AbilityOwner_Current& InCurrent,
             const FCk_Request_AbilityOwner_AddAndGiveExistingAbility& InRequest) const
         -> void
     {
@@ -219,7 +219,7 @@ namespace ck
         FProcessor_AbilityOwner_HandleRequests::
         DoHandleRequest(
             HandleType& InAbilityOwnerEntity,
-            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            FFragment_AbilityOwner_Current& InCurrent,
             const FCk_Request_AbilityOwner_TransferExistingAbility& InRequest) const
         -> void
     {
@@ -247,10 +247,10 @@ namespace ck
                 AbilityToTransfer, InAbilityOwnerEntity, TransferTarget)
             { return ECk_AbilityOwner_AbilityTransferredOrNot::NotTransferred; }
 
-            DoHandleRequest(InAbilityOwnerEntity, InAbilityOwnerComp,
+            DoHandleRequest(InAbilityOwnerEntity, InCurrent,
                 FCk_Request_AbilityOwner_DeactivateAbility{AbilityToTransfer});
 
-            DoHandleRequest(InAbilityOwnerEntity, InAbilityOwnerComp,
+            DoHandleRequest(InAbilityOwnerEntity, InCurrent,
                 FCk_Request_AbilityOwner_RevokeAbility{AbilityToTransfer}
                 .Set_DestructionPolicy(ECk_AbilityOwner_DestructionOnRevoke_Policy::DoNotDestroyOnRevoke));
 
@@ -485,7 +485,7 @@ namespace ck
         FProcessor_AbilityOwner_HandleRequests::
         DoHandleRequest(
             HandleType& InAbilityOwnerEntity,
-            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            FFragment_AbilityOwner_Current& InCurrent,
             const FCk_Request_AbilityOwner_GiveReplicatedAbility& InRequest) const
         -> void
     {
@@ -654,7 +654,7 @@ namespace ck
         FProcessor_AbilityOwner_HandleRequests::
         DoHandleRequest(
             HandleType& InAbilityOwnerEntity,
-            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            FFragment_AbilityOwner_Current& InCurrent,
             const FCk_Request_AbilityOwner_RevokeAbility& InRequest) const
         -> void
     {
@@ -684,7 +684,7 @@ namespace ck
                 const auto& AbilityOnGiveSettings = UCk_Utils_Ability_UE::Get_OnGiveSettings(InAbilityEntity);
                 const auto& GrantedTags = AbilityOnGiveSettings.Get_OnGiveSettingsOnOwner().Get_GrantTagsOnAbilityOwner();
 
-                InAbilityOwnerComp.RemoveTags(InAbilityOwnerEntity, GrantedTags);
+                InCurrent.RemoveTags(InAbilityOwnerEntity, GrantedTags);
             }
 
             auto RequestRevoke = ck::FFragment_Ability_RequestRevoke{InAbilityOwnerEntity, InRequest.Get_DestructionPolicy()};
@@ -725,7 +725,7 @@ namespace ck
         FProcessor_AbilityOwner_HandleRequests::
         DoHandleRequest(
             HandleType InAbilityOwnerEntity,
-            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            FFragment_AbilityOwner_Current& InCurrent,
             const FCk_Request_AbilityOwner_ActivateAbility& InRequest) const
         -> void
     {
@@ -813,7 +813,7 @@ namespace ck
                         );
 
                         if (AbilityActivationSettings.Get_ReactivationPolicy() != ECk_Ability_Reactivation_Policy::AllowActivationIfAlreadyActiveDoNotDeactivate)
-                        { DoHandleRequest(InAbilityOwnerEntity, InAbilityOwnerComp, FCk_Request_AbilityOwner_DeactivateAbility{InAbilityToActivateEntity}); }
+                        { DoHandleRequest(InAbilityOwnerEntity, InCurrent, FCk_Request_AbilityOwner_DeactivateAbility{InAbilityToActivateEntity}); }
 
                         Script->OnReactivateAbility(InRequest.Get_OptionalPayload());
 
@@ -928,7 +928,7 @@ namespace ck
         FProcessor_AbilityOwner_HandleRequests::
         DoHandleRequest(
             HandleType InAbilityOwnerEntity,
-            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            FFragment_AbilityOwner_Current& InCurrent,
             const FCk_Request_AbilityOwner_DeactivateAbility& InRequest) const
         -> void
     {
@@ -994,7 +994,7 @@ namespace ck
         FProcessor_AbilityOwner_HandleRequests::
         DoHandleRequest(
             HandleType InAbilityOwnerEntity,
-            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            FFragment_AbilityOwner_Current& InCurrent,
             const FCk_Request_AbilityOwner_CancelSubAbilities& InRequest) const
         -> void
     {
@@ -1017,7 +1017,7 @@ namespace ck
                     UCk_Utils_AbilityOwner_UE::Request_CancelAllSubAbilities(MaybeAbilityOwner);
                 }
 
-                DoHandleRequest(InAbilityOwnerEntity, InAbilityOwnerComp, FCk_Request_AbilityOwner_DeactivateAbility{InAbilityEntityToCancel});
+                DoHandleRequest(InAbilityOwnerEntity, InCurrent, FCk_Request_AbilityOwner_DeactivateAbility{InAbilityEntityToCancel});
             }
         );
     }
@@ -1080,6 +1080,8 @@ namespace ck
         -> void
     {
         Super::Tick(InDeltaT);
+
+        _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -1089,10 +1091,10 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
-            FFragment_AbilityOwner_Current& InAbilityOwnerComp) const
+            FFragment_AbilityOwner_Current& InCurrent) const
         -> void
     {
-        const auto& ActiveTags = InAbilityOwnerComp.Get_ActiveTags(InHandle);
+        const auto& ActiveTags = InCurrent.Get_ActiveTags(InHandle);
 
         // Cancel All Abilities that are cancelled by the newly granted tags
         // TODO: this is repeated multiple times in this file, move to a common function
@@ -1119,9 +1121,9 @@ namespace ck
             algo::MatchesAnyAbilityActivationCancelledTagsOnOwner{ActiveTags}
         );
 
-        if (InAbilityOwnerComp.Get_AreActiveTagsDifferentThanPreviousTags(InHandle))
+        if (InCurrent.Get_AreActiveTagsDifferentThanPreviousTags(InHandle))
         {
-            const auto& PreviousTags = InAbilityOwnerComp.Get_PreviousTags(InHandle);
+            const auto& PreviousTags = InCurrent.Get_PreviousTags(InHandle);
 
             auto ActiveTagsList = TArray<FGameplayTag>{};
             auto PreviousTagsList = TArray<FGameplayTag>{};
@@ -1136,8 +1138,7 @@ namespace ck
                 MakePayload(InHandle, PreviousTags, ActiveTags, TagsRemoved, TagsAdded));
         }
 
-        InAbilityOwnerComp.UpdatePreviousTags();
-        InHandle.Remove<MarkedDirtyBy>();
+        InCurrent.UpdatePreviousTags();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -1162,14 +1163,106 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_AbilityOwner_ResolvePendingOperationTags_DEBUG::ForEachEntity(
+        FProcessor_AbilityOwner_ResolvePendingOperationTags_DEBUG::
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
             const FTag_AbilityOwner_PendingSubAbilityOperation& InCountedTag) const
             -> void
     {
-        ck::ability::Log(TEXT("AbilityOwner [{}] has [{}] Pending Sub-Ability Operations"),
-            InHandle, InCountedTag.Get_Count());
+        ability::Log(TEXT("AbilityOwner [{}] has [{}] Pending Sub-Ability Operations"), InHandle, InCountedTag.Get_Count());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_AbilityOwner_DeferClientRequestUntilReady::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            FFragment_AbilityOwner_Current& InCurrent,
+            FFragment_AbilityOwner_DeferredClientRequests& InRequests) const
+        -> void
+    {
+        const auto RequestsCopy = InRequests._Requests;
+        InHandle.Remove<MarkedDirtyBy>();
+
+        algo::ForEach(RequestsCopy, ck::Visitor([&](const auto& InRequestVariant)
+        {
+            DoHandleRequest(InHandle, InCurrent, InRequestVariant);
+
+            // TODO: Add formatter for each request and track which one was responsible for destroying entity
+        }));
+
+        if (ck::Is_NOT_Valid(InHandle))
+        {
+            ability::Verbose(TEXT("Ability Entity [{}] was Marked Pending Kill during the handling of its requests."), InHandle);
+            return;
+        }
+    }
+
+    auto
+        FProcessor_AbilityOwner_DeferClientRequestUntilReady::
+        DoHandleRequest(
+            HandleType& InAbilityOwnerEntity,
+            FFragment_AbilityOwner_Current& InCurrent,
+            const FCk_Request_AbilityOwner_TransferExistingAbility& InRequest) const
+        -> void
+    {
+        using RecordOfAbilities_Utils = UCk_Utils_AbilityOwner_UE::RecordOfAbilities_Utils;
+
+        if (ck::Is_NOT_Valid(UCk_Utils_Ability_UE::Cast(InRequest.Get_Ability())))
+        {
+            UCk_Utils_AbilityOwner_UE::Request_TransferExistingAbility_DeferUntilReadyOnClient(InAbilityOwnerEntity, InRequest);
+            return;
+        }
+
+        if (ck::Is_NOT_Valid(UCk_Utils_AbilityOwner_UE::Cast(InRequest.Get_TransferTarget())))
+        {
+            UCk_Utils_AbilityOwner_UE::Request_TransferExistingAbility_DeferUntilReadyOnClient(InAbilityOwnerEntity, InRequest);
+            return;
+        }
+
+        if (NOT RecordOfAbilities_Utils::Get_ContainsEntry(InAbilityOwnerEntity, InRequest.Get_Ability()))
+        {
+            UCk_Utils_AbilityOwner_UE::Request_TransferExistingAbility_DeferUntilReadyOnClient(InAbilityOwnerEntity, InRequest);
+            return;
+        }
+
+        UCk_Utils_AbilityOwner_UE::Request_TransferExistingAbility(InAbilityOwnerEntity, InRequest, {});
+    }
+
+    auto
+        FProcessor_AbilityOwner_DeferClientRequestUntilReady::
+        DoHandleRequest(
+            HandleType& InAbilityOwnerEntity,
+            FFragment_AbilityOwner_Current& InCurrent,
+            const FCk_Request_AbilityOwner_RevokeAbility& InRequest) const
+        -> void
+    {
+        using RecordOfAbilities_Utils = UCk_Utils_AbilityOwner_UE::RecordOfAbilities_Utils;
+
+        CK_ENSURE_IF_NOT(InRequest.Get_SearchPolicy() == ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle,
+            TEXT("Waiting for RevokeAbility Client request to be fully replicated on [{}], but it is a request that use the Search Policy [{}] instead of [{}]!"),
+            InAbilityOwnerEntity, InRequest.Get_SearchPolicy(), ECk_AbilityOwner_AbilitySearch_Policy::SearchByHandle)
+        {
+            UCk_Utils_AbilityOwner_UE::Request_RevokeAbility(InAbilityOwnerEntity, InRequest, {});
+            return;
+        }
+
+        if (ck::Is_NOT_Valid(UCk_Utils_Ability_UE::Cast(InRequest.Get_AbilityHandle())))
+        {
+            UCk_Utils_AbilityOwner_UE::Request_RevokeAbility_DeferUntilReadyOnClient(InAbilityOwnerEntity, InRequest);
+            return;
+        }
+
+        if (NOT RecordOfAbilities_Utils::Get_ContainsEntry(InAbilityOwnerEntity, InRequest.Get_AbilityHandle()))
+        {
+            UCk_Utils_AbilityOwner_UE::Request_RevokeAbility_DeferUntilReadyOnClient(InAbilityOwnerEntity, InRequest);
+            return;
+        }
+
+        UCk_Utils_AbilityOwner_UE::Request_RevokeAbility(InAbilityOwnerEntity, InRequest, {});
     }
 
     // --------------------------------------------------------------------------------------------------------------------
