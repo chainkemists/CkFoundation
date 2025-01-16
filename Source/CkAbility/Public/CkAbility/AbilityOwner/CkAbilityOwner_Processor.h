@@ -52,7 +52,7 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
-            const FFragment_AbilityOwner_Params& InAbilityOwnerParams) const -> void;
+            const FFragment_AbilityOwner_Params& InParams) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -73,7 +73,7 @@ namespace ck
         static auto ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
-            FFragment_AbilityOwner_Events&  InAbilityOwnerEvents) -> void;
+            FFragment_AbilityOwner_Events& InAbilityOwnerEvents) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -96,20 +96,20 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
-            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
-            FFragment_AbilityOwner_Requests& InAbilityRequestsComp) const -> void;
+            FFragment_AbilityOwner_Current& InCurrent,
+            FFragment_AbilityOwner_Requests& InRequests) const -> void;
 
     private:
         auto
         DoHandleRequest(
             HandleType& InAbilityOwnerEntity,
-            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            FFragment_AbilityOwner_Current& InCurrent,
             const FCk_Request_AbilityOwner_AddAndGiveExistingAbility& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType& InAbilityOwnerEntity,
-            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            FFragment_AbilityOwner_Current& InCurrent,
             const FCk_Request_AbilityOwner_TransferExistingAbility& InRequest) const -> void;
 
         auto
@@ -121,31 +121,31 @@ namespace ck
         auto
         DoHandleRequest(
             HandleType& InAbilityOwnerEntity,
-            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            FFragment_AbilityOwner_Current& InCurrent,
             const FCk_Request_AbilityOwner_GiveReplicatedAbility& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType& InAbilityOwnerEntity,
-            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            FFragment_AbilityOwner_Current& InCurrent,
             const FCk_Request_AbilityOwner_RevokeAbility& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType InAbilityOwnerEntity,
-            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            FFragment_AbilityOwner_Current& InCurrent,
             const FCk_Request_AbilityOwner_ActivateAbility& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType InAbilityOwnerEntity,
-            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            FFragment_AbilityOwner_Current& InCurrent,
             const FCk_Request_AbilityOwner_DeactivateAbility& InRequest) const -> void;
 
         auto
         DoHandleRequest(
             HandleType InAbilityOwnerEntity,
-            FFragment_AbilityOwner_Current& InAbilityOwnerComp,
+            FFragment_AbilityOwner_Current& InCurrent,
             const FCk_Request_AbilityOwner_CancelSubAbilities& InRequest) const -> void;
 
     private:
@@ -185,7 +185,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
-            FFragment_AbilityOwner_Current& InAbilityOwnerComp) const -> void;
+            FFragment_AbilityOwner_Current& InCurrent) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -232,6 +232,44 @@ namespace ck
             TimeType InDeltaT,
             HandleType& InHandle,
             const FTag_AbilityOwner_PendingSubAbilityOperation& InCountedTag) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKABILITY_API FProcessor_AbilityOwner_DeferClientRequestUntilReady : public ck_exp::TProcessor<
+            FProcessor_AbilityOwner_DeferClientRequestUntilReady,
+            FCk_Handle_AbilityOwner,
+            FFragment_AbilityOwner_Current,
+            FFragment_AbilityOwner_DeferredClientRequests,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Super = TProcessor;
+        using MarkedDirtyBy = FFragment_AbilityOwner_DeferredClientRequests;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType& InHandle,
+            FFragment_AbilityOwner_Current& InCurrent,
+            FFragment_AbilityOwner_DeferredClientRequests& InRequests) const -> void;
+
+    private:
+        auto
+        DoHandleRequest(
+            HandleType& InAbilityOwnerEntity,
+            FFragment_AbilityOwner_Current& InCurrent,
+            const FCk_Request_AbilityOwner_TransferExistingAbility& InRequest) const -> void;
+
+        auto
+        DoHandleRequest(
+            HandleType& InAbilityOwnerEntity,
+            FFragment_AbilityOwner_Current& InCurrent,
+            const FCk_Request_AbilityOwner_RevokeAbility& InRequest) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
