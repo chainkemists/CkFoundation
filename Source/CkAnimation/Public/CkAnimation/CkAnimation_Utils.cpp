@@ -78,4 +78,23 @@ auto
     return InAnimMontage->IsValidSectionIndex(InSectionIndex);
 }
 
+auto
+    UCk_Utils_Animation_UE::
+    DoesMontageMatchMeshSkeleton(
+        UAnimMontage* InMontage,
+        USkeletalMeshComponent* InSkeletalMeshComponent)
+    -> bool
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InMontage), TEXT("Invalid Animation Montage supplied to DoesMontageMatchMeshSkeleton"))
+    { return false; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InSkeletalMeshComponent), TEXT("Invalid Skeletal Mesh Compontnt supplied to DoesMontageMatchMeshSkeleton"))
+    { return false; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(InSkeletalMeshComponent->GetSkinnedAsset()), TEXT("Mesh [{}] has NO valid Skinned Asset!"), InSkeletalMeshComponent)
+    { return false; }
+
+    return InMontage->GetSkeleton() == InSkeletalMeshComponent->GetSkinnedAsset()->GetSkeleton();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
