@@ -9,7 +9,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(DisplayName = "CkSubsystem_Ability")
 class CKABILITY_API UCk_Ability_Subsystem_UE : public UCk_Game_WorldSubsystem_Base_UE
 {
     GENERATED_BODY()

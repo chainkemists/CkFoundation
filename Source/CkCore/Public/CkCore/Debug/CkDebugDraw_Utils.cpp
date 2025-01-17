@@ -333,7 +333,7 @@ auto
     if (ck::Is_NOT_Valid(World))
     { return; }
 
-    const auto& DebugDrawSubsystem = World->GetSubsystem<UCk_DebugDraw_WorldSubsystem_UE>();
+    const auto& DebugDrawSubsystem = World->GetSubsystem<UCk_DebugDraw_Subsystem_UE>();
 
     if (ck::Is_NOT_Valid(DebugDrawSubsystem))
     { return; }
@@ -366,7 +366,7 @@ auto
     if (ck::Is_NOT_Valid(World))
     { return; }
 
-    const auto& DebugDrawSubsystem = World->GetSubsystem<UCk_DebugDraw_WorldSubsystem_UE>();
+    const auto& DebugDrawSubsystem = World->GetSubsystem<UCk_DebugDraw_Subsystem_UE>();
 
     if (ck::Is_NOT_Valid(DebugDrawSubsystem))
     { return; }
@@ -404,7 +404,7 @@ auto
     if (ck::Is_NOT_Valid(World))
     { return; }
 
-    const auto& DebugDrawSubsystem = World->GetSubsystem<UCk_DebugDraw_WorldSubsystem_UE>();
+    const auto& DebugDrawSubsystem = World->GetSubsystem<UCk_DebugDraw_Subsystem_UE>();
 
     if (ck::Is_NOT_Valid(DebugDrawSubsystem))
     { return; }
