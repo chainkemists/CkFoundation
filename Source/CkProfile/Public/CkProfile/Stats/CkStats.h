@@ -33,12 +33,15 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 #if STATS
-#define CK_DEFINE_STAT(_CounterName_, Type, GroupId)      \
-struct FStat_##_CounterName_ : public ck::TStat_Id<Type>  \
+#define CK_DEFINE_STAT(_CounterName_, Type, GroupId)    \
+struct FStat_##_CounterName_ : public ck::TStat_Id<Type>\
 {                                                       \
     using TGroup = GroupId;                             \
 };                                                      \
 static inline DEFINE_STAT(_CounterName_)
+
+#define CK_CREATE_DYNAMIC_STAT_ID(_StatGroup_, _StatNameOrDescription_)\
+    FDynamicStats::CreateStatId<STAT_GROUP_TO_FStatGroup(_StatGroup_)>(_StatNameOrDescription_)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -47,10 +50,13 @@ static inline DEFINE_STAT(_CounterName_)
 
 // --------------------------------------------------------------------------------------------------------------------
 #else
-#define CK_DEFINE_STAT(_CounterName_, Type, GroupId)      \
-struct FStat_##_CounterName_ : public ck::TStat_Id<Type>  \
+#define CK_DEFINE_STAT(_CounterName_, Type, GroupId)    \
+struct FStat_##_CounterName_ : public ck::TStat_Id<Type>\
 {                                                       \
 };                                                      \
+
+#define CK_CREATE_DYNAMIC_STAT_ID(_StatGroup_, _StatNameOrDescription_)\
+    TStatId{}
 
 // --------------------------------------------------------------------------------------------------------------------
 

@@ -7,6 +7,8 @@
 
 #include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
 
+#include "CkProfile/Stats/CkStats.h"
+
 #include "CkTimer/CkTimer_Fragment.h"
 #include "CkTimer/CkTimer_Log.h"
 
@@ -22,7 +24,7 @@ auto
     -> TStatId
 {
     const auto& StatString = ck::Format_UE(TEXT("Timer Broadcast Event [{}]"), InParams.Get_TimerName());
-    return FDynamicStats::CreateStatId<STAT_GROUP_TO_FStatGroup(STATGROUP_CkTimer_Details)>(StatString);
+    return CK_CREATE_DYNAMIC_STAT_ID(STATGROUP_CkTimer_Details, StatString);
 }
 
 auto
@@ -37,11 +39,11 @@ auto
         UCk_Utils_GameplayLabel_UE::Add(InNewEntity, InParams.Get_TimerName());
 
         InNewEntity.Add<ck::FFragment_Timer_Params>(InParams);
-        auto& Current = InNewEntity.Add<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
+        InNewEntity.Add<ck::FFragment_Timer_Current>(FCk_Chrono{InParams.Get_Duration()});
 
 #if STATS
         InNewEntity.Add<TStatId>(MakeStatIdFromParams(InParams));
-#endif // STATS
+#endif
 
         if (InParams.Get_CountDirection() == ECk_Timer_CountDirection::CountDown)
         { InNewEntity.Add<ck::FTag_Timer_Countdown>(); }
