@@ -1,17 +1,15 @@
 #pragma once
 
-#include "CkCore/Time/CkTime.h"
-
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Registry/CkRegistry.h"
 #include "CkEcs/Ticker/CkTicker.h"
 
 #include "CkCore/Macros/CkMacros.h"
 
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
-    // --------------------------------------------------------------------------------------------------------------------
-
     class CKECS_API FEcsWorld : public FTicker
     {
         CK_GENERATED_BODY(FEcsWorld);
@@ -25,6 +23,6 @@ namespace ck
 
         CK_DEFINE_CONSTRUCTORS(FEcsWorld, _Registry);
     };
-
-    // --------------------------------------------------------------------------------------------------------------------
 }
+
+// --------------------------------------------------------------------------------------------------------------------

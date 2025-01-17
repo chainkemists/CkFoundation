@@ -71,13 +71,13 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(BlueprintType)
-class CKCORE_API UCk_DebugDraw_WorldSubsystem_UE : public UCk_Game_WorldSubsystem_Base_UE
+UCLASS(DisplayName = "CkSubsystem_DebugDraw")
+class CKCORE_API UCk_DebugDraw_Subsystem_UE : public UCk_Game_WorldSubsystem_Base_UE
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_DebugDraw_WorldSubsystem_UE);
+    CK_GENERATED_BODY(UCk_DebugDraw_Subsystem_UE);
 
 public:
     using DrawRectRequestType = FCk_Request_DebugDrawOnScreen_Rect;
