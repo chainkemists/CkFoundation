@@ -10,7 +10,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS()
+UCLASS(meta= (DisplayName = "CkSubsystem_EditorAssetLoader"))
 class CKRESOURCELOADEREDITOR_API UCk_EditorAssetLoader_SubSystem_UE : public UEngineSubsystem
 {
     GENERATED_BODY()

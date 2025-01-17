@@ -107,7 +107,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(BlueprintType)
+UCLASS(DisplayName = "CkSubsystem_EcsWorld")
 class CKECS_API UCk_EcsWorld_Subsystem_UE : public UCk_Game_WorldSubsystem_Base_UE
 {
     GENERATED_BODY()

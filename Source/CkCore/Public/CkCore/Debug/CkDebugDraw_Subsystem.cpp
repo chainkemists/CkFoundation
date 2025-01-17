@@ -9,7 +9,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_DebugDraw_WorldSubsystem_UE::
+    UCk_DebugDraw_Subsystem_UE::
     Initialize(
         FSubsystemCollectionBase& InCollection)
     -> void
@@ -29,7 +29,7 @@ auto
 }
 
 auto
-    UCk_DebugDraw_WorldSubsystem_UE::
+    UCk_DebugDraw_Subsystem_UE::
     Deinitialize()
     -> void
 {
@@ -42,7 +42,7 @@ auto
 }
 
 auto
-    UCk_DebugDraw_WorldSubsystem_UE::
+    UCk_DebugDraw_Subsystem_UE::
     Request_DrawRect_OnScreen(
         const FCk_Request_DebugDrawOnScreen_Rect& InRequest)
     -> void
@@ -51,7 +51,7 @@ auto
 }
 
 auto
-    UCk_DebugDraw_WorldSubsystem_UE::
+    UCk_DebugDraw_Subsystem_UE::
     Request_DrawLine_OnScreen(
         const FCk_Request_DebugDrawOnScreen_Line& InRequest)
     -> void
@@ -60,7 +60,7 @@ auto
 }
 
 auto
-    UCk_DebugDraw_WorldSubsystem_UE::
+    UCk_DebugDraw_Subsystem_UE::
     DoOnPostRenderHUD(
         AHUD* InHUD,
         UCanvas* InCanvas)
@@ -79,7 +79,7 @@ auto
 }
 
 auto
-    UCk_DebugDraw_WorldSubsystem_UE::
+    UCk_DebugDraw_Subsystem_UE::
     DoHandleRequest(
         AHUD* InHUD,
         UCanvas* InCanvas,
@@ -93,7 +93,7 @@ auto
 }
 
 auto
-    UCk_DebugDraw_WorldSubsystem_UE::
+    UCk_DebugDraw_Subsystem_UE::
     DoHandleRequest(
         AHUD* InHUD,
         UCanvas* InCanvas,
