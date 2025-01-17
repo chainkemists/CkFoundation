@@ -7,8 +7,8 @@
 #include "CkEcs/Delegates/CkDelegates.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment.h"
-#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
 #include "CkEcs/Net/CkNet_Fragment.h"
+#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -58,11 +58,11 @@ auto
 
 auto
     UCk_Utils_EntityLifetime_UE::
-    Request_CreateEntity(
-        const FCk_Handle& InHandle)
+    Request_CreateEntity_TransientOwner(
+        const UObject* InWorldContextObject)
     -> FCk_Handle
 {
-    return Request_CreateEntity(InHandle, PostEntityCreatedFunc{});
+    return Request_CreateEntity_TransientOwner(InWorldContextObject, PostEntityCreatedFunc{});
 }
 
 auto
@@ -252,6 +252,21 @@ auto
 
 auto
     UCk_Utils_EntityLifetime_UE::
+    Request_CreateEntity_TransientOwner(
+        const UObject* InWorldContextObject,
+        PostEntityCreatedFunc InFunc)
+    -> HandleType
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InWorldContextObject), TEXT("Cannot create new Entity because an INVALID WorldContextObject was passed in"))
+    { return {}; }
+
+    const auto& TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(InWorldContextObject->GetWorld());
+
+    return Request_CreateEntity(TransientEntity, InFunc);
+}
+
+auto
+    UCk_Utils_EntityLifetime_UE::
     Request_CreateEntity(
         const FCk_Handle& InHandle,
         PostEntityCreatedFunc InFunc)
@@ -345,6 +360,21 @@ auto
         const FCk_Handle& InLifetimeOwner)
     -> void
 {
+    if (InNewEntity.Has<ck::FFragment_LifetimeOwner>())
+    {
+        const auto& CurrentLifetimeOwner = InNewEntity.Get<ck::FFragment_LifetimeOwner>().Get_Entity();
+        CK_ENSURE
+        (
+            CurrentLifetimeOwner == InLifetimeOwner,
+            TEXT("Trying to Setup Entity [{}] with LifetimeOwner [{}] but it is already setup with [{}]"),
+            InNewEntity,
+            InLifetimeOwner,
+            CurrentLifetimeOwner
+        );
+
+        return;
+    }
+
     InNewEntity.Add<ck::FFragment_LifetimeOwner>(InLifetimeOwner);
 
 #ifdef CK_COPY_NET_PARAMS_ON_EVERY_ENTITY
