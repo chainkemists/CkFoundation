@@ -46,7 +46,7 @@ public:
 
 public:
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Animation] Get Montage Section Length (By Index)",
+              DisplayName="[Ck] Get Montage Section Length (By Index)",
               Category = "Ck|Utils|Animation")
     static FCk_Animation_MontageSection_LengthInfo
     Get_MontageSectionLength_ByIndex(
@@ -54,7 +54,7 @@ public:
         int32 InSectionIndex);
 
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Animation] Get Montage Section Length (By Name)",
+              DisplayName="[Ck] Get Montage Section Length (By Name)",
               Category = "Ck|Utils|Animation")
     static FCk_Animation_MontageSection_LengthInfo
     Get_MontageSectionLength_ByName(
@@ -62,7 +62,7 @@ public:
         FName InSectionName);
 
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Animation] Get Montage Section Index (From Position)",
+              DisplayName="[Ck] Get Montage Section Index (From Position)",
               Category = "Ck|Utils|Animation")
     static int32
     Get_MontageSectionIndex_FromPosition(
@@ -70,12 +70,20 @@ public:
         float InPosition);
 
     UFUNCTION(BlueprintPure,
-              DisplayName="[Ck][Animation] Get Is Valid Montage Section Index",
+              DisplayName="[Ck] Get Is Valid Montage Section Index",
               Category = "Ck|Utils|Animation")
     static bool
     Get_IsValidMontageSectionIndex(
         UAnimMontage* InAnimMontage,
         int32 InSectionIndex);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Does Montage Match Mesh Skeleton",
+              Category = "Ck|Utils|Animation")
+    static bool
+    DoesMontageMatchMeshSkeleton(
+        UAnimMontage* InMontage,
+        USkeletalMeshComponent* InSkeletalMeshComponent);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
