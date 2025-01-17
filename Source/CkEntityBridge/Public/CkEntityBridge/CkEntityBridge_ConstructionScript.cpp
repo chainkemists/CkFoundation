@@ -160,10 +160,10 @@ auto
             EcsWorldSubsystem, ck::Context(this))
         { return; }
 
-        auto Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(EcsWorldSubsystem->Get_TransientEntity());
+        auto Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(EcsWorldSubsystem);
 
         UCk_Utils_Handle_UE::Set_DebugName(Entity, UCk_Utils_Debug_UE::Get_DebugName(OwningActor, ECk_DebugNameVerbosity_Policy::Compact));
-        Entity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
+        UCk_Utils_OwningActor_UE::Add(Entity, OwningActor);
 
         // --------------------------------------------------------------------------------------------------------------------
         // Add Net Connection Settings
@@ -290,7 +290,7 @@ auto
                     auto Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(OuterOwnerEntity, [&](FCk_Handle InEntity)
                     {
                         UCk_Utils_Handle_UE::Set_DebugName(InEntity, UCk_Utils_Debug_UE::Get_DebugName(OwningActor, ECk_DebugNameVerbosity_Policy::Compact));
-                        InEntity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
+                        UCk_Utils_OwningActor_UE::Add(InEntity, OwningActor);
                         UCk_Utils_Net_UE::Add
                         (
                             InEntity,
@@ -307,12 +307,11 @@ auto
                 }
                 case ECk_Replication::DoesNotReplicate:
                 {
-                    const auto& TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(GetWorld());
-
-                    auto Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity, [&](FCk_Handle InEntity)
+                    auto Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(GetWorld(), [&](FCk_Handle InEntity)
                     {
                         UCk_Utils_Handle_UE::Set_DebugName(InEntity, UCk_Utils_Debug_UE::Get_DebugName(OwningActor, ECk_DebugNameVerbosity_Policy::Compact));
-                        InEntity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
+                        UCk_Utils_OwningActor_UE::Add(InEntity, OwningActor);
+
                         UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Replication::DoesNotReplicate,
                             ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
                     });
@@ -374,20 +373,14 @@ auto
         if (OwningActor->bIsEditorOnlyActor)
         { return; }
 
-        auto NewEntity = [&]() -> FCk_Handle
+        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(GetWorld(), [&](FCk_Handle InEntity)
         {
-            const auto& TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(GetWorld());
+            UCk_Utils_Handle_UE::Set_DebugName(InEntity, UCk_Utils_Debug_UE::Get_DebugName(OwningActor, ECk_DebugNameVerbosity_Policy::Compact));
+            UCk_Utils_OwningActor_UE::Add(InEntity, OwningActor);
 
-            auto Entity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity, [&](FCk_Handle InEntity)
-            {
-                UCk_Utils_Handle_UE::Set_DebugName(InEntity, UCk_Utils_Debug_UE::Get_DebugName(OwningActor, ECk_DebugNameVerbosity_Policy::Compact));
-                InEntity.Add<ck::FFragment_OwningActor_Current>(OwningActor);
-                UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Replication::DoesNotReplicate,
-                    ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
-            });
-
-            return Entity;
-        }();
+            UCk_Utils_Net_UE::Add(InEntity, FCk_Net_ConnectionSettings{ECk_Replication::DoesNotReplicate,
+                ECk_Net_NetModeType::Client, ECk_Net_EntityNetRole::Authority});
+        });
 
         CK_LOG_ERROR_IF_NOT(ck::entity_bridge, ck::IsValid(NewEntity),
             TEXT("Could NOT create a NewEntity for Non-Replicated Actor [{}] based on previous errors"), OwningActor)

@@ -35,13 +35,8 @@ UCk_Fragment_EntityReplicationDriver_Rep::
     if (ck::Is_NOT_Valid(World))
     { return; }
 
-    auto EcsSubsystem = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
-
-    CK_ENSURE_IF_NOT(ck::IsValid(EcsSubsystem), TEXT("Ecs World Subsystem is NOT valid for world [{}]"),
-        World)
-    { return; }
-
-    _AssociatedEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(**EcsSubsystem->Get_TransientEntity());
+    // Creating via registry since we want 'Request_SetupEntityWithLifetimeOwner' to execute during the OnRep_XYZ
+    _AssociatedEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(**UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(World));
 }
 
 auto
@@ -257,19 +252,18 @@ auto
 
     _AssociatedEntity._ReplicationDriver = this;
 
-    const auto WorldSubsystem = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
-    UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(_AssociatedEntity, WorldSubsystem->Get_TransientEntity());
+    UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(_AssociatedEntity, UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(GetWorld()));
 
     UCk_Utils_Handle_UE::Set_DebugName(_AssociatedEntity, UCk_Utils_Debug_UE::Get_DebugName(ReplicatedActor, ECk_DebugNameVerbosity_Policy::Compact));
-    _AssociatedEntity.Add<ck::FFragment_OwningActor_Current>(ReplicatedActor);
-    UCk_Utils_Net_UE::Add(_AssociatedEntity, FCk_Net_ConnectionSettings
-        {
-            ECk_Replication::Replicates,
-            ECk_Net_NetModeType::Client,
-            ReplicatedActor->GetLocalRole() == ROLE_AutonomousProxy ? ECk_Net_EntityNetRole::Authority : ECk_Net_EntityNetRole::Proxy
-        });
+    UCk_Utils_OwningActor_UE::Add(_AssociatedEntity, ReplicatedActor);
 
-    // TODO: we need the transform
+    UCk_Utils_Net_UE::Add(_AssociatedEntity, FCk_Net_ConnectionSettings
+    {
+        ECk_Replication::Replicates,
+        ECk_Net_NetModeType::Client,
+        ReplicatedActor->GetLocalRole() == ROLE_AutonomousProxy ? ECk_Net_EntityNetRole::Authority : ECk_Net_EntityNetRole::Proxy
+    });
+
     CsWithTransform->Set_EntityInitialTransform(ReplicatedActor->GetActorTransform());
 
     const auto& EntityBridgeActorComp = ReplicatedActor->GetComponentByClass<UCk_EntityBridge_ActorComponent_Base_UE>();
