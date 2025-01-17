@@ -331,6 +331,15 @@ auto
 
 auto
     UCk_Utils_EntityLifetime_UE::
+    Get_TransientEntity(
+        const HandleType& InHandle)
+    -> HandleType
+{
+    return Get_TransientEntity(InHandle.Get_Registry());
+}
+
+auto
+    UCk_Utils_EntityLifetime_UE::
     Request_SetupEntityWithLifetimeOwner(
         FCk_Handle& InNewEntity,
         const FCk_Handle& InLifetimeOwner)
