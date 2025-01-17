@@ -63,9 +63,7 @@ namespace ck_ability_cue_subsystem
         if (ck::Is_NOT_Valid(ConstructionScript))
         { return; }
 
-        const auto TransientEntity = InSubsystem_EcsWorldSubsystem->Get_TransientEntity();
-
-        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity);
+        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(InSubsystem_EcsWorldSubsystem);
         NewEntity.Add<FCk_AbilityCue_Params>(InParams);
 
         ck::ability::Verbose(TEXT("Executing AbilityCue [{}] ConstructionScript [{}] with created Entity [{}]"), InCueName, ConstructionScript, NewEntity);

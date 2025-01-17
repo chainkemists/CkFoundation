@@ -59,9 +59,7 @@ auto
         TEXT("WorldContextObject [{}] is INVALID. Unable to Create a Transient TargetPoint Entity"), InWorldContextObject)
     { return {}; }
 
-    const auto& TransientEntity = UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(InWorldContextObject->GetWorld());
-
-    auto TargetPointEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(TransientEntity);
+    auto TargetPointEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity_TransientOwner(InWorldContextObject);
     UCk_Utils_Handle_UE::Set_DebugName(TargetPointEntity, *ck::Format_UE(TEXT("(Transient) TARGET POINT: [{}]"), InTransform));
 
     if (InLifetime == ECk_Lifetime::AfterOneFrame)
