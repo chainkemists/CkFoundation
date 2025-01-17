@@ -82,6 +82,8 @@ ACk_AbilityCueReplicator_UE::
 {
     bReplicates = true;
     bAlwaysRelevant = true;
+    this->PrimaryActorTick.bCanEverTick = false;
+    this->PrimaryActorTick.bTickEvenWhenPaused = false;
 }
 
 auto
@@ -228,7 +230,7 @@ auto
     if (AlreadyContainsPC)
     { return; }
 
-    for (auto Index = 0; Index < NumberOfReplicators; ++Index)
+    for (auto Index = 0; Index < UCk_Utils_Ability_Settings_UE::Get_NumberOfCueReplicators(); ++Index)
     {
         auto* AbilityCueReplicator = GetWorld()->SpawnActor<ACk_AbilityCueReplicator_UE>();
         _AbilityCueReplicators.Emplace(AbilityCueReplicator);
