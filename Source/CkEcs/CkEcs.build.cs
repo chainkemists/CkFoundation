@@ -35,6 +35,7 @@ public class CkEcs : CkModuleRules
                 "CkProfile",
                 "CkLog",
                 "CkMemory",
+                "CkProfile",
                 "CkSettings",
                 "CkSignal"
                 // ... add other public dependencies that you statically link with here ...
