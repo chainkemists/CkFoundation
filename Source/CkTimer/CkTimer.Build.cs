@@ -23,6 +23,7 @@ public class CkTimer : CkModuleRules
             "CkLabel",
             "CkLog",
             "CkNet",
+            "CkProfile",
             "CkSignal",
             "CkRecord",
         });
