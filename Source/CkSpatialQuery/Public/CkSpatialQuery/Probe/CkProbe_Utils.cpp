@@ -52,6 +52,23 @@ auto
 
 auto
     UCk_Utils_Probe_UE::
+    Request_OverlapPersisted(
+        FCk_Handle_Probe& InProbe,
+        const FCk_Request_Probe_OverlapPersisted& InRequest)
+        -> FCk_Handle_Probe
+{
+    CK_ENSURE_IF_NOT(InProbe.Has<ck::FTag_Probe_Overlapping>(),
+        TEXT("Cannot Request Overlap Persisted on Probe [{}] because it is NOT overlapping"), InProbe)
+    {
+        return InProbe;
+    }
+
+    InProbe.AddOrGet<ck::FFragment_Probe_Requests>()._Requests.Emplace(InRequest);
+    return InProbe;
+}
+
+auto
+    UCk_Utils_Probe_UE::
     Request_EndOverlap(
         FCk_Handle_Probe& InProbe,
         const FCk_Request_Probe_EndOverlap& InRequest)
@@ -71,7 +88,8 @@ auto
         const FCk_Delegate_Probe_OnBeginOverlap& InDelegate)
         -> FCk_Handle_Probe
 {
-    CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeBeginOverlap, InProbeEntity, InDelegate, InBindingPolicy, InPostFireBehavior);
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeBeginOverlap, InProbeEntity, InDelegate, InBindingPolicy,
+        InPostFireBehavior);
     return InProbeEntity;
 }
 
@@ -83,6 +101,31 @@ auto
         -> FCk_Handle_Probe
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeBeginOverlap, InProbeEntity, InDelegate);
+    return InProbeEntity;
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    BindTo_OnOverlapPersisted(
+        FCk_Handle_Probe& InProbeEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_Probe_OnOverlapPersisted& InDelegate)
+        -> FCk_Handle_Probe
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeOverlapPersisted, InProbeEntity, InDelegate, InBindingPolicy,
+        InPostFireBehavior);
+    return InProbeEntity;
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    UnbindFrom_OnOverlapPersisted(
+        FCk_Handle_Probe& InProbeEntity,
+        const FCk_Delegate_Probe_OnOverlapPersisted& InDelegate)
+        -> FCk_Handle_Probe
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeOverlapPersisted, InProbeEntity, InDelegate);
     return InProbeEntity;
 }
 
