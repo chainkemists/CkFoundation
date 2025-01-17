@@ -77,7 +77,8 @@ namespace ck
         friend class UCk_Utils_Probe_UE;
 
     public:
-        using RequestType = std::variant<FCk_Request_Probe_BeginOverlap, FCk_Request_Probe_EndOverlap>;
+        using RequestType = std::variant<FCk_Request_Probe_BeginOverlap, FCk_Request_Probe_OverlapPersisted,
+            FCk_Request_Probe_EndOverlap>;
         using RequestList = TArray<RequestType>;
 
     private:
@@ -98,6 +99,13 @@ namespace ck
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKSPATIALQUERY_API,
+        OnProbeOverlapPersisted,
+        FCk_Delegate_Probe_OnOverlapPersisted_MC,
+        FCk_Handle_Probe,
+        FCk_Probe_Payload_OnOverlapPersisted);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKSPATIALQUERY_API,
         OnProbeEndOverlap,
         FCk_Delegate_Probe_OnEndOverlap_MC,
         FCk_Handle_Probe,
@@ -108,7 +116,10 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck { class FProcessor_Probe_Replicate; }
+namespace ck
+{
+    class FProcessor_Probe_Replicate;
+}
 
 UCLASS(Blueprintable)
 class CKSPATIALQUERY_API UCk_Fragment_Probe_Rep : public UCk_Ecs_ReplicatedObject_UE

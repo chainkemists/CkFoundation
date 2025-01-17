@@ -131,9 +131,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent,
-            FFragment_Probe_Requests& InRequestsComp) const
+            const FFragment_Probe_Requests& InRequestsComp) const
             -> void
     {
         InHandle.CopyAndRemove(InRequestsComp, [&](
@@ -142,7 +140,7 @@ namespace ck
                 algo::ForEachRequest(InRequests._Requests, Visitor([&](
                     const auto& InRequest)
                     {
-                        DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
+                        DoHandleRequest(InHandle, InRequest);
                     }));
             });
     }
@@ -151,8 +149,6 @@ namespace ck
         FProcessor_Probe_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent,
             const FCk_Request_Probe_BeginOverlap& InRequest)
             -> void
     {
@@ -167,10 +163,24 @@ namespace ck
 
     auto
         FProcessor_Probe_HandleRequests::
+    DoHandleRequest(
+            HandleType InHandle,
+            const FCk_Request_Probe_OverlapPersisted& InRequest)
+            -> void
+    {
+        const auto Payload = FCk_Probe_Payload_OnOverlapPersisted{
+            InRequest.Get_OtherEntity(),
+            InRequest.Get_ContactPoints(),
+            InRequest.Get_ContactNormal()
+        };
+
+        UUtils_Signal_OnProbeOverlapPersisted::Broadcast(InHandle, MakePayload(InHandle, Payload));
+    }
+
+    auto
+        FProcessor_Probe_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent,
             const FCk_Request_Probe_EndOverlap& InRequest)
             -> void
     {

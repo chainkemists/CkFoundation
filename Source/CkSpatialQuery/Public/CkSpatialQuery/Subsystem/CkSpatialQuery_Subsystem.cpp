@@ -174,8 +174,6 @@ public:
 
         _BodyToHandle.Add(inBody1.GetID().GetIndexAndSequenceNumber(), Body1Entity);
         _BodyToHandle.Add(inBody2.GetID().GetIndexAndSequenceNumber(), Body2Entity);
-
-        return;
     }
 
     auto
@@ -186,7 +184,46 @@ public:
             JPH::ContactSettings& ioSettings)
             -> void override
     {
-        return;
+        auto Body1Entity = _TransientEntity.Get_ValidHandle(FCk_Entity::IdType{
+            static_cast<uint32>(inBody1.GetUserData())
+        });
+        auto Body2Entity = _TransientEntity.Get_ValidHandle(FCk_Entity::IdType{
+            static_cast<uint32>(inBody2.GetUserData())
+        });
+
+        auto Body1 = UCk_Utils_Probe_UE::Cast(Body1Entity);
+        auto Body2 = UCk_Utils_Probe_UE::Cast(Body2Entity);
+
+        if (ck::IsValid(Body1))
+        {
+            auto ContactPoints = TArray<FVector>{};
+            ContactPoints.Reserve(inManifold.mRelativeContactPointsOn1.size());
+
+            for (const auto& ContactPoint : inManifold.mRelativeContactPointsOn1)
+            {
+                ContactPoints.Emplace(ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset));
+            }
+
+            UCk_Utils_Probe_UE::Request_BeginOverlap(Body1,
+                FCk_Request_Probe_BeginOverlap{Body2, ContactPoints, ck::jolt::Conv(inManifold.mWorldSpaceNormal)});
+        }
+
+        if (ck::IsValid(Body2))
+        {
+            auto ContactPoints = TArray<FVector>{};
+            ContactPoints.Reserve(inManifold.mRelativeContactPointsOn1.size());
+
+            for (const auto& ContactPoint : inManifold.mRelativeContactPointsOn2)
+            {
+                ContactPoints.Emplace(ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset));
+            }
+
+            UCk_Utils_Probe_UE::Request_OverlapPersisted(Body2,
+                FCk_Request_Probe_OverlapPersisted{Body1, ContactPoints, ck::jolt::Conv(-inManifold.mWorldSpaceNormal)});
+        }
+
+        _BodyToHandle.Add(inBody1.GetID().GetIndexAndSequenceNumber(), Body1Entity);
+        _BodyToHandle.Add(inBody2.GetID().GetIndexAndSequenceNumber(), Body2Entity);
     }
 
     auto
