@@ -209,6 +209,11 @@ public:
     static auto
     Get_TransientEntity(
         const RegistryType& InRegistry) -> HandleType;
+
+    [[nodiscard]]
+    static auto
+    Get_TransientEntity(
+        const HandleType& InHandle) -> HandleType;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
