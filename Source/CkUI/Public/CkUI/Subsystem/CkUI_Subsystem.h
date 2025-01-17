@@ -2,18 +2,20 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkGameSession/Subsystem/CkGameSession_Subsystem.h"
+#include "CkEcs/Registry/CkRegistry.h"
+#include "CkEcs/Handle/CkHandle.h"
 
 #include "CkUI/CustomWidgets/Watermark/CkWatermark_Widget.h"
+#include "CkUI/WidgetLayerHandler/CkWidgetLayerHandler_Fragment_Data.h"
 
-#include <Subsystems/GameInstanceSubsystem.h>
+#include <Subsystems/LocalPlayerSubsystem.h>
 
 #include "CkUI_Subsystem.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(DisplayName = "CkSubsystem_UI")
-class CKUI_API UCk_UI_Subsystem_UE : public UGameInstanceSubsystem
+class CKUI_API UCk_UI_Subsystem_UE : public ULocalPlayerSubsystem
 {
     GENERATED_BODY()
 
@@ -23,25 +25,28 @@ public:
 public:
     auto Initialize(FSubsystemCollectionBase& InCollection) -> void override;
     auto Deinitialize() -> void override;
-    auto ShouldCreateSubsystem(UObject* InOuter) const -> bool override;
 
 private:
-    auto OnPlayerControllerReady(
-        TWeakObjectPtr<APlayerController> InNewPlayerController,
-        TArray<TWeakObjectPtr<APlayerController>> InAllPlayerControllers) -> void;
+    auto PlayerControllerChanged(APlayerController* InNewPlayerController) -> void override;
 
 public:
     auto Request_UpdateWatermarkDisplayPolicy(ECk_Watermark_DisplayPolicy InDisplayPolicy) const -> void;
 
+    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|UI|Subsystem")
+    FCk_Handle_WidgetLayerHandler
+    Get_WidgetLayerHandler() const;
+
 private:
-    auto DoCreateAndSetWatermarkWidget() -> void;
+    auto DoCreateAndSetWatermarkWidget(
+        APlayerController* InPlayerController) -> void;
 
 private:
     UPROPERTY(Transient)
     TObjectPtr<UCk_Watermark_UserWidget_UE> _WatermarkWidget;
 
 private:
-    ck::UUtils_Signal_OnLoginEvent_PostFireUnbind::ConnectionType _PostFireUnbind_Connection;
+    FCk_Registry _Registry;
+    FCk_Handle _SubsystemEntity;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

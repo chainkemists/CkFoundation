@@ -25,6 +25,7 @@ public class CkUI : CkModuleRules
                 "Core",
                 "CommonUI",
                 "CkCore",
+                "CkEcs",
                 // ... add other public dependencies that you statically link with here ...
             }
             );

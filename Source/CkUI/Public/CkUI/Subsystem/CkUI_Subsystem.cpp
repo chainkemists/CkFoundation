@@ -6,13 +6,13 @@
 #include "CkCore/Game/CkGame_Utils.h"
 #include "CkCore/Validation/CkIsValid.h"
 
-#include "CkGameSession/Subsystem/CkGameSession_Subsystem.h"
-#include "CkSignal/Public/CkSignal/CkSignal_Fragment_Data.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 
 #include "CkUI/CkUI_Log.h"
 #include "CkUI/CustomWidgets/Watermark/CkWatermark_Widget.h"
 
 #include "CkUI/Settings/CkUI_Settings.h"
+#include "CkUI/WidgetLayerHandler/CkWidgetLayerHandler_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -32,7 +32,12 @@ namespace ck_ui
                 if (ck::Is_NOT_Valid(GameInstance))
                 { return; }
 
-                const auto& UISubsystem = GameInstance->GetSubsystem<UCk_UI_Subsystem_UE>();
+                const auto& LocalPlayer = GameInstance->FindLocalPlayerFromControllerId(0);
+
+                if (ck::Is_NOT_Valid(LocalPlayer))
+                { return; }
+
+                const auto& UISubsystem = LocalPlayer->GetSubsystem<UCk_UI_Subsystem_UE>();
 
                 CK_ENSURE_IF_NOT(ck::IsValid(UISubsystem), TEXT("Could not retrive UI Subsystem"))
                 { return; }
@@ -52,18 +57,8 @@ auto
 {
     Super::Initialize(InCollection);
 
-    const auto& GameSessionSubsystem = InCollection.InitializeDependency<UCk_GameSession_Subsystem_UE>();
-
-    CK_ENSURE_IF_NOT(ck::IsValid(GameSessionSubsystem), TEXT("Failed to retrieve the GameSession Subsystem!"))
-    { return; }
-
-    _PostFireUnbind_Connection = ck::UUtils_Signal_OnLoginEvent::Bind<&ThisType::OnPlayerControllerReady>
-    (
-        this,
-        GameSessionSubsystem->Get_SignalHandle(),
-        ECk_Signal_BindingPolicy::FireIfPayloadInFlight,
-        ECk_Signal_PostFireBehavior::DoNothing
-    );
+    _SubsystemEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(_Registry);
+    UCk_Utils_WidgetLayerHandler_UE::Add(_SubsystemEntity, FCk_Fragment_WidgetLayerHandler_ParamsData{});
 }
 
 auto
@@ -71,8 +66,6 @@ auto
     Deinitialize()
     -> void
 {
-    _PostFireUnbind_Connection.release();
-
     if (ck::IsValid(_WatermarkWidget))
     {
         _WatermarkWidget->RemoveFromParent();
@@ -84,39 +77,29 @@ auto
 
 auto
     UCk_UI_Subsystem_UE::
-    ShouldCreateSubsystem(
-        UObject* InOuter) const
-    -> bool
-{
-    const auto& GameInstance = CastChecked<UGameInstance>(InOuter);
-    const auto& IsServerWorld = GameInstance->IsDedicatedServerInstance();
-
-    return NOT IsServerWorld;
-}
-
-auto
-    UCk_UI_Subsystem_UE::
-    OnPlayerControllerReady(
-        TWeakObjectPtr<APlayerController> InNewPlayerController,
-        TArray<TWeakObjectPtr<APlayerController>> InAllPlayerControllers)
+    PlayerControllerChanged(
+        APlayerController* InNewPlayerController)
     -> void
 {
+    if (ck::Is_NOT_Valid(InNewPlayerController))
+    { return; }
+
     if (ck::Is_NOT_Valid(_WatermarkWidget))
     {
-        DoCreateAndSetWatermarkWidget();
+        DoCreateAndSetWatermarkWidget(InNewPlayerController);
     }
 
     if (ck::Is_NOT_Valid(_WatermarkWidget))
     { return; }
 
-    const auto& GameInstance = GetGameInstance();
+    const auto& LocalPlayer = InNewPlayerController->GetLocalPlayer();
 
-    if (ck::Is_NOT_Valid(GameInstance))
+    if (ck::Is_NOT_Valid(LocalPlayer))
     { return; }
 
     _WatermarkWidget->AddToViewport();
 
-    auto* ClientGameViewport = GameInstance->GetGameViewportClient();
+    const auto& ClientGameViewport = LocalPlayer->ViewportClient;
 
     if (ck::Is_NOT_Valid(ClientGameViewport))
     { return; }
@@ -138,7 +121,16 @@ auto
 
 auto
     UCk_UI_Subsystem_UE::
-    DoCreateAndSetWatermarkWidget()
+    Get_WidgetLayerHandler() const
+    -> FCk_Handle_WidgetLayerHandler
+{
+    return UCk_Utils_WidgetLayerHandler_UE::CastChecked(_SubsystemEntity);
+}
+
+auto
+    UCk_UI_Subsystem_UE::
+    DoCreateAndSetWatermarkWidget(
+        APlayerController* InPlayerController)
     -> void
 {
     if (ck::IsValid(_WatermarkWidget))
@@ -149,8 +141,7 @@ auto
     CK_LOG_ERROR_NOTIFY_IF_NOT(ck::ui, ck::IsValid(WatermarkWidgetClass), TEXT("Invalid Watermark Widget setup in the Project Settings!"))
     { return; }
 
-    const auto& GameInstance = UCk_Utils_Game_UE::Get_GameInstance(this);
-    _WatermarkWidget = Cast<UCk_Watermark_UserWidget_UE>(CreateWidget(GameInstance, WatermarkWidgetClass));
+    _WatermarkWidget = Cast<UCk_Watermark_UserWidget_UE>(CreateWidget(InPlayerController, WatermarkWidgetClass));
 
     CK_ENSURE_IF_NOT(ck::IsValid(_WatermarkWidget), TEXT("Failed to create the Watermark Widget!"))
     { return; }

@@ -77,7 +77,7 @@ namespace ck
         TWeakObjectPtr<UCk_UserWidget_UE>,
         FName);
 
-	CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKUI_API,
         WidgetLayerHandler_OnRemoveWidgetFromLayerNamedSlot,
         FCk_Delegate_WidgetLayerHandler_OnRemoveWidgetFromLayerNamedSlot_MC,
