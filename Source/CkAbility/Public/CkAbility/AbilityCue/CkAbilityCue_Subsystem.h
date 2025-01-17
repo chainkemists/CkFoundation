@@ -107,9 +107,6 @@ private:
     UPROPERTY(Transient)
     TSet<TWeakObjectPtr<APlayerController>> _ValidPlayerControllers;
 
-    // TODO: drive this through a tuner
-    static constexpr int32 NumberOfReplicators = 4;
-
 private:
     FDelegateHandle _PostLoginDelegateHandle;
     FDelegateHandle _PostLoadMapWithWorldDelegateHandle;

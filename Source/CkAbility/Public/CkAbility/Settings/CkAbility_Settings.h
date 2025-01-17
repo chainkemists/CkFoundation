@@ -28,9 +28,14 @@ private:
               meta = (AllowPrivateAccess = true, AllowAbstract))
     TArray<TSubclassOf<UCk_Ability_Script_PDA>> _CueTypes;
 
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Cues",
+              meta = (AllowPrivateAccess = true, ClampMin = 1, UIMin = 1))
+    int32 _NumberOfCueReplicators = 4;
+
 public:
     CK_PROPERTY_GET(_AbilityRecyclingPolicy);
     CK_PROPERTY_GET(_CueTypes);
+    CK_PROPERTY_GET(_NumberOfCueReplicators);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -60,6 +65,7 @@ public:
     static auto Get_AbilityRecyclingPolicy() -> ECk_Ability_RecyclingPolicy;
     static auto Get_CueTypes() -> const TArray<TSubclassOf<UCk_Ability_Script_PDA>>&;
     static auto Get_AbilityNotActivatedDebug() -> const ECk_EnableDisable;
+    static auto Get_NumberOfCueReplicators() -> int32;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
