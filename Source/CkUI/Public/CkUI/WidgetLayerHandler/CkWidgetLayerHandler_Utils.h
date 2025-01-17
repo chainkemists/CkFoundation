@@ -72,21 +72,21 @@ public:
         UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
         const FCk_Request_WidgetLayerHandler_PushToLayer_Instanced& InRequest);
 
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
         DisplayName="[Ck][WidgetLayerHandler] Request Pop From Layer")
-	static FCk_Handle_WidgetLayerHandler
-	Request_PopFromLayer(
-		UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
-		const FCk_Request_WidgetLayerHandler_PopFromLayer& InRequest);
+    static FCk_Handle_WidgetLayerHandler
+    Request_PopFromLayer(
+        UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Request_WidgetLayerHandler_PopFromLayer& InRequest);
 
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
         DisplayName="[Ck][WidgetLayerHandler] Request Clear Layer")
-	static FCk_Handle_WidgetLayerHandler
-	Request_ClearLayer(
-		UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
-		const FCk_Request_WidgetLayerHandler_ClearLayer& InRequest);
+    static FCk_Handle_WidgetLayerHandler
+    Request_ClearLayer(
+        UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Request_WidgetLayerHandler_ClearLayer& InRequest);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
@@ -221,7 +221,7 @@ public:
         UPARAM(ref) FCk_Handle_WidgetLayerHandler& InHandle,
         const FCk_Delegate_WidgetLayerHandler_OnAddWidgetInstanceToLayerNamedSlot& InDelegate);
 
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|WidgetLayerHandler",
         DisplayName = "[Ck][WidgetLayerHandler] Bind To OnRemoveWidgetFromLayerNamedSlot")
     static FCk_Handle_WidgetLayerHandler

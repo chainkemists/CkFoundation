@@ -5,6 +5,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include <Settings/LevelEditorPlaySettings.h>
 #include <Engine/Engine.h>
 #include <Kismet/GameplayStatics.h>
 
