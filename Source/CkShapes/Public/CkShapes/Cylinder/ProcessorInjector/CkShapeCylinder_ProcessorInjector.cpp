@@ -1,0 +1,20 @@
+#include "CkShapeCylinder_ProcessorInjector.h"
+
+#include "CkShapes/Cylinder/CkShapeCylinder_Processor.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_ShapeCylinder_ProcessorInjector_UE::
+    DoInjectProcessors(
+        EcsWorldType& InWorld)
+        -> void
+{
+    InWorld.Add<ck::FProcessor_ShapeCylinder_Setup>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_ShapeCylinder_HandleRequests>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_ShapeCylinder_Teardown>(InWorld.Get_Registry());
+
+    InWorld.Add<ck::FProcessor_ShapeCylinder_Replicate>(InWorld.Get_Registry());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
