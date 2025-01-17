@@ -86,13 +86,13 @@ auto
 }
 
 auto
-	UCk_Utils_WidgetLayerHandler_UE::
-	Request_RemoveWidgetFromLayerNamedSlot(
-		FCk_Handle_WidgetLayerHandler& InHandle,
-		const FCk_Request_WidgetLayerHandler_RemoveWidgetFromLayerNamedSlot& InRequest)
-	-> FCk_Handle_WidgetLayerHandler
+    UCk_Utils_WidgetLayerHandler_UE::
+    Request_RemoveWidgetFromLayerNamedSlot(
+        FCk_Handle_WidgetLayerHandler& InHandle,
+        const FCk_Request_WidgetLayerHandler_RemoveWidgetFromLayerNamedSlot& InRequest)
+    -> FCk_Handle_WidgetLayerHandler
 {
-	ck::UUtils_Signal_WidgetLayerHandler_OnRemoveWidgetFromLayerNamedSlot::Broadcast(InHandle, ck::MakePayload(InHandle, InRequest.Get_Layer(), InRequest.Get_NamedSlotName()));
+    ck::UUtils_Signal_WidgetLayerHandler_OnRemoveWidgetFromLayerNamedSlot::Broadcast(InHandle, ck::MakePayload(InHandle, InRequest.Get_Layer(), InRequest.Get_NamedSlotName()));
     return InHandle;
 }
 
