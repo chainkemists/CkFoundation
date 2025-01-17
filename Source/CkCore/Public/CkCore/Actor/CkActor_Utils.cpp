@@ -77,9 +77,8 @@ auto
 
     while (ck::IsValid(OuterObject, ck::IsValid_Policy_IncludePendingKill{}))
     {
-        auto MaybePawn = Cast<APawn>(OuterObject);
-
-        if (ck::IsValid(MaybePawn, ck::IsValid_Policy_IncludePendingKill{}))
+        if (auto MaybePawn = Cast<APawn>(OuterObject);
+            ck::IsValid(MaybePawn, ck::IsValid_Policy_IncludePendingKill{}))
         { return MaybePawn; }
 
         OuterObject = OuterObject->GetOuter();
@@ -98,9 +97,8 @@ auto
 
     while (ck::IsValid(OuterObject, ck::IsValid_Policy_IncludePendingKill{}))
     {
-        auto MaybeActor = Cast<AActor>(OuterObject);
-
-        if (ck::IsValid(MaybeActor, ck::IsValid_Policy_IncludePendingKill{}))
+        if (auto MaybeActor = Cast<AActor>(OuterObject);
+            ck::IsValid(MaybeActor, ck::IsValid_Policy_IncludePendingKill{}))
         { return MaybeActor; }
 
         OuterObject = OuterObject->GetOuter();
@@ -119,9 +117,8 @@ auto
 
     while (ck::IsValid(OuterObject, ck::IsValid_Policy_IncludePendingKill{}))
     {
-        auto MaybeActor = Cast<AActor>(OuterObject);
-
-        if (ck::IsValid(MaybeActor, ck::IsValid_Policy_IncludePendingKill{}))
+        if (auto MaybeActor = Cast<AActor>(OuterObject);
+            ck::IsValid(MaybeActor, ck::IsValid_Policy_IncludePendingKill{}))
         {
             if (MaybeActor->GetRemoteRole() != ROLE_None)
             {
@@ -241,7 +238,7 @@ auto
     UCk_Utils_Actor_UE::
     Get_DoesBoneExistInSkeletalMesh(
         AActor* InActor,
-        FName   InBoneName)
+        FName InBoneName)
     -> bool
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to UCk_Utils_Actor_UE::Get_HasBoneInSkeletonMesh"))
