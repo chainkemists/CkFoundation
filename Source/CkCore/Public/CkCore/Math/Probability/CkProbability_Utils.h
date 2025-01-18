@@ -83,6 +83,34 @@ public:
         float InStandardDeviation,
         float InMaxRange,
         float InWeight = 0.0f);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Probability",
+        DisplayName = "[Ck] Get Random Number Normally Distributed (Seeded)")
+    static float
+    Get_Random_NormalDistribution_Seeded(
+        float InStandardDeviation,
+        int InSeed);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Probability",
+        DisplayName = "[Ck] Get Random Number Uniformly Distributed (Seeded)")
+    static float
+    Get_Random_UniformDistribution_Seeded(
+        float InMaxRange,
+        int InSeed);
+
+    // weight of 1.0f favors Uniform Distribution from 0 to MaxRange and weight of
+    // 0.0f favors Normal Distribution from 0 to (approx) StdDev * 3
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Probability",
+        DisplayName = "[Ck] Get Random Number Normally Distributed (Weighted | Seeded)")
+    static float
+    Get_Random_WeightedDistribution_Seeded(
+        float InStandardDeviation,
+        float InMaxRange,
+        float InWeight = 0.0f,
+        int InSeed = 0);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
