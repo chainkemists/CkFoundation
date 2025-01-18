@@ -4,7 +4,6 @@
 
 #include "CkECS/Handle/CkHandle.h"
 #include "CkNet/CkNet_Utils.h"
-#include "CkSignal/CkSignal_Fragment_Data.h"
 
 #include "CkShapeSphere_Utils.generated.h"
 
@@ -22,16 +21,15 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ShapeSphere",
-              DisplayName="Add ShapeSphere")
+              DisplayName="[Ck][Shapes][Sphere] Add Feature")
     static FCk_Handle_ShapeSphere
     Add(
         UPARAM(ref) FCk_Handle InHandle,
-        const FCk_Fragment_ShapeSphere_ParamsData& InParams,
-        ECk_Replication InReplicates = ECk_Replication::Replicates);
+        const FCk_Fragment_ShapeSphere_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ShapeSphere",
-              DisplayName="Has ShapeSphere")
+              DisplayName="[Ck][Shapes][Sphere] Has Feature")
     static bool
     Has(
         const FCk_Handle& InHandle);
@@ -59,9 +57,17 @@ public:
         Category = "Ck|Utils|ShapeSphere",
         DisplayName="[Ck][ShapeSphere] Request ExampleRequest")
     static FCk_Handle_ShapeSphere
-    Request_ExampleRequest(
+    Request_UpdateShape(
         UPARAM(ref) FCk_Handle_ShapeSphere& InShapeSphere,
-        const FCk_Request_ShapeSphere_ExampleRequest& InRequest);
+        const FCk_Request_ShapeSphere_UpdateShape& InRequest);
+
+public:
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|ShapeSphere",
+        DisplayName="[Ck][ShapeSphere] Request ExampleRequest")
+    static FCk_Fragment_ShapeSphere_ShapeData
+    Get_ShapeData(
+        const FCk_Handle_ShapeSphere& InShapeSphere);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

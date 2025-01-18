@@ -204,8 +204,8 @@ public:
                 ContactPoints.Emplace(ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset));
             }
 
-            UCk_Utils_Probe_UE::Request_BeginOverlap(Body1,
-                FCk_Request_Probe_BeginOverlap{Body2, ContactPoints, ck::jolt::Conv(inManifold.mWorldSpaceNormal)});
+            UCk_Utils_Probe_UE::Request_OverlapPersisted(Body1,
+                FCk_Request_Probe_OverlapPersisted{Body2, ContactPoints, ck::jolt::Conv(inManifold.mWorldSpaceNormal)});
         }
 
         if (ck::IsValid(Body2))

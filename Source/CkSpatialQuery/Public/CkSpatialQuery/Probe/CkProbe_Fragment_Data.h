@@ -53,19 +53,10 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
-    ECk_ShapeType _Shape = ECk_ShapeType::Box;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess = true))
     ECk_MotionType _MotionType = ECk_MotionType::Static;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-        meta = (AllowPrivateAccess = true))
-    FVector _HalfExtents = FVector(1.0f, 1.0f, 1.0f);
-
 public:
-    CK_PROPERTY_GET(_Shape);
-    CK_PROPERTY_GET(_HalfExtents);
+    CK_PROPERTY_GET(_MotionType);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
