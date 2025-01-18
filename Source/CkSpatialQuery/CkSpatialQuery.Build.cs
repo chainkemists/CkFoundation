@@ -31,6 +31,7 @@ public class CkSpatialQuery : CkModuleRules
             "CkProvider",
             "CkRecord",
             "CkSettings",
+            "CkShapes",
             "CkSignal",
         });
     }

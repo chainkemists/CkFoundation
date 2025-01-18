@@ -9,8 +9,7 @@ auto
     UCk_Utils_ShapeSphere_UE::
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_ShapeSphere_ParamsData& InParams,
-        ECk_Replication InReplicates)
+        const FCk_Fragment_ShapeSphere_ParamsData& InParams)
     -> FCk_Handle_ShapeSphere
 {
     InHandle.Add<ck::FFragment_ShapeSphere_Params>(InParams);
@@ -18,19 +17,6 @@ auto
 
     InHandle.Add<ck::FTag_ShapeSphere_RequiresSetup>();
 
-    if (InReplicates == ECk_Replication::DoesNotReplicate)
-    {
-        ck::shapes::VeryVerbose
-        (
-            TEXT("Skipping creation of ShapeSphere Rep Fragment on Entity [{}] because it's set to [{}]"),
-            InHandle,
-            InReplicates
-        );
-
-        return Cast(InHandle);
-    }
-
-    TryAddReplicatedFragment<UCk_Fragment_ShapeSphere_Rep>(InHandle);
     return Cast(InHandle);
 }
 
@@ -43,13 +29,27 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_ShapeSphere_UE, FCk_Handle_Sha
 
 auto
     UCk_Utils_ShapeSphere_UE::
-    Request_ExampleRequest(
+    Request_UpdateShape(
         FCk_Handle_ShapeSphere& InShapeSphere,
-        const FCk_Request_ShapeSphere_ExampleRequest& InRequest)
+        const FCk_Request_ShapeSphere_UpdateShape& InRequest)
     -> FCk_Handle_ShapeSphere
 {
     InShapeSphere.AddOrGet<ck::FFragment_ShapeSphere_Requests>()._Requests.Emplace(InRequest);
     return InShapeSphere;
+}
+
+auto
+    UCk_Utils_ShapeSphere_UE::
+    Get_ShapeData(
+        const FCk_Handle_ShapeSphere& InShapeSphere)
+        -> FCk_Fragment_ShapeSphere_ShapeData
+{
+    if (InShapeSphere.Has<ck::FTag_ShapeSphere_RequiresSetup>())
+    {
+        return InShapeSphere.Get<ck::FFragment_ShapeSphere_Params>().Get_Params().Get_Shape();
+    }
+
+    return InShapeSphere.Get<ck::FFragment_ShapeSphere_Current>().Get_CurrentShape();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

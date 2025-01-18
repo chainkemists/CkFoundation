@@ -28,7 +28,7 @@ namespace ck
             FFragment_ShapeSphere_Current& InCurrent) const
         -> void
     {
-        // Add setup logic here
+        InCurrent._CurrentShape = InParams.Get_Params().Get_Shape();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -71,10 +71,10 @@ namespace ck
             HandleType InHandle,
             const FFragment_ShapeSphere_Params& InParams,
             FFragment_ShapeSphere_Current& InCurrent,
-            const FCk_Request_ShapeSphere_ExampleRequest& InRequest)
+            const FCk_Request_ShapeSphere_UpdateShape& InRequest)
         -> void
     {
-        // Add request handling logic here
+        InCurrent._CurrentShape = InRequest.Get_NewShape();
     }
 
     // --------------------------------------------------------------------------------------------------------------------

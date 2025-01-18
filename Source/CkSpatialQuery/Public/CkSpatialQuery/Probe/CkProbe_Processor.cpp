@@ -6,6 +6,10 @@
 
 #include "CkNet/CkNet_Utils.h"
 
+#include "CkShapes/Public/CkShapes/Box/CkShapeBox_Fragment_Data.h"
+#include "CkShapes/Public/CkShapes/Box/CkShapeBox_Utils.h"
+#include "CkShapes/Sphere/CkShapeSphere_Utils.h"
+
 #include "CkSpatialQuery/CkSpatialQuery_Log.h"
 #include "CkSpatialQuery/CkSpatialQuery_Utils.h"
 #include "CkSpatialQuery/Subsystem/CkSpatialQuery_Subsystem.h"
@@ -16,6 +20,7 @@
 #include "Jolt/Physics/Body/BodyCreationSettings.h"
 #include "Jolt/Physics/Body/BodyInterface.h"
 #include "Jolt/Physics/Collision/Shape/BoxShape.h"
+#include "Jolt/Physics/Collision/Shape/SphereShape.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -48,33 +53,67 @@ namespace ck
             FFragment_Probe_Current& InCurrent)
             -> void
     {
-        const auto& HalfExtents = InParams.Get_Params().Get_HalfExtents();
+        using namespace JPH;
         const auto& EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
 
-        using namespace JPH;
+        if (auto BoxEntity = UCk_Utils_ShapeBox_UE::Cast(InHandle); ck::IsValid(BoxEntity))
+        {
+            const auto BoxParams = UCk_Utils_ShapeBox_UE::Get_ShapeData(BoxEntity);
 
-        auto Settings = BoxShapeSettings{jolt::Conv(HalfExtents)};
-        Settings.SetEmbedded();
+            const auto& HalfExtents = BoxParams.Get_Extent();
 
-        auto ShapeResult = Settings.Create();
-        auto Shape = ShapeResult.Get();
+            const auto Settings = BoxShapeSettings{jolt::Conv(HalfExtents), BoxParams.Get_ConvexRadius()};
+            Settings.SetEmbedded();
 
-        auto ShapeSettings = BodyCreationSettings{
-            Shape,
-            jolt::Conv(EntityPosition),
-            Quat::sIdentity(),
-            EMotionType::Kinematic,
-            ObjectLayer{1}
-        };
-        ShapeSettings.mIsSensor = true;
+            auto ShapeResult = Settings.Create();
+            auto Shape = ShapeResult.Get();
 
-        auto PhysicsSystem = _PhysicsSystem.Pin();
-        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+            auto ShapeSettings = BodyCreationSettings{
+                Shape,
+                jolt::Conv(EntityPosition),
+                Quat::sIdentity(),
+                EMotionType::Kinematic,
+                ObjectLayer{1}
+            };
+            ShapeSettings.mIsSensor = true;
 
-        InCurrent._RigidBody = BodyInterface.CreateBody(ShapeSettings);
-        InCurrent._RigidBody->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
-        InCurrent._RigidBody->SetCollideKinematicVsNonDynamic(true);
-        BodyInterface.AddBody(InCurrent._RigidBody->GetID(), EActivation::Activate);
+            auto PhysicsSystem = _PhysicsSystem.Pin();
+            auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+            InCurrent._RigidBody = BodyInterface.CreateBody(ShapeSettings);
+            InCurrent._RigidBody->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
+            InCurrent._RigidBody->SetCollideKinematicVsNonDynamic(true);
+            BodyInterface.AddBody(InCurrent._RigidBody->GetID(), EActivation::Activate);
+        }
+        else if (auto SphereEntity = UCk_Utils_ShapeSphere_UE::Cast(InHandle); ck::IsValid(SphereEntity))
+        {
+            const auto Params = UCk_Utils_ShapeSphere_UE::Get_ShapeData(SphereEntity);
+
+            const auto& Radius = Params.Get_Radius();
+
+            const auto Settings = SphereShapeSettings{Radius};
+            Settings.SetEmbedded();
+
+            auto ShapeResult = Settings.Create();
+            auto Shape = ShapeResult.Get();
+
+            auto ShapeSettings = BodyCreationSettings{
+                Shape,
+                jolt::Conv(EntityPosition),
+                Quat::sIdentity(),
+                EMotionType::Kinematic,
+                ObjectLayer{1}
+            };
+            ShapeSettings.mIsSensor = true;
+
+            auto PhysicsSystem = _PhysicsSystem.Pin();
+            auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+            InCurrent._RigidBody = BodyInterface.CreateBody(ShapeSettings);
+            InCurrent._RigidBody->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
+            InCurrent._RigidBody->SetCollideKinematicVsNonDynamic(true);
+            BodyInterface.AddBody(InCurrent._RigidBody->GetID(), EActivation::Activate);
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -104,7 +143,8 @@ namespace ck
         auto PhysicsSystem = _PhysicsSystem.Pin();
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
-        BodyInterface.MoveKinematic(InCurrent._RigidBody->GetID(), jolt::Conv(EntityPosition), Rot, InDeltaT.Get_Seconds());
+        BodyInterface.MoveKinematic(InCurrent._RigidBody->GetID(), jolt::Conv(EntityPosition), Rot,
+            InDeltaT.Get_Seconds());
 
         spatialquery::Log(TEXT("Actual Position in Jolt:[{}] [{}]"),
             InCurrent._RigidBody->GetID().GetIndexAndSequenceNumber(),
@@ -122,8 +162,6 @@ namespace ck
         _TransientEntity.Clear<FTag_Probe_Updated>();
 
         TProcessor::DoTick(InDeltaT);
-
-        _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
     auto
@@ -143,6 +181,8 @@ namespace ck
                         DoHandleRequest(InHandle, InRequest);
                     }));
             });
+
+        InHandle.Remove<MarkedDirtyBy>();
     }
 
     auto
@@ -163,7 +203,7 @@ namespace ck
 
     auto
         FProcessor_Probe_HandleRequests::
-    DoHandleRequest(
+        DoHandleRequest(
             HandleType InHandle,
             const FCk_Request_Probe_OverlapPersisted& InRequest)
             -> void
