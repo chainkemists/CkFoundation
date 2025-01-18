@@ -8,28 +8,28 @@
 
 namespace ck
 {
-	auto
-		FProcessor_ShapeBox_Setup::
-		DoTick(
-			TimeType InDeltaT)
-		-> void
-	{
-		TProcessor::DoTick(InDeltaT);
+    auto
+        FProcessor_ShapeBox_Setup::
+        DoTick(
+            TimeType InDeltaT)
+        -> void
+    {
+        TProcessor::DoTick(InDeltaT);
 
         _TransientEntity.Clear<MarkedDirtyBy>();
-	}
+    }
 
-	auto
-		FProcessor_ShapeBox_Setup::
-		ForEachEntity(
-			TimeType InDeltaT,
-			HandleType InHandle,
-			const FFragment_ShapeBox_Params& InParams,
-			FFragment_ShapeBox_Current& InCurrent) const
-		-> void
-	{
-		// Add setup logic here
-	}
+    auto
+        FProcessor_ShapeBox_Setup::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ShapeBox_Params& InParams,
+            FFragment_ShapeBox_Current& InCurrent) const
+        -> void
+    {
+        InCurrent._CurrentShape = InParams.Get_Params().Get_Shape();
+    }
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -56,7 +56,7 @@ namespace ck
             FFragment_ShapeBox_Requests& InRequestsComp) const
         -> void
     {
-    	InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_ShapeBox_Requests& InRequests)
+        InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_ShapeBox_Requests& InRequests)
         {
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
             {
@@ -66,29 +66,29 @@ namespace ck
     }
 
     auto
-	    FProcessor_ShapeBox_HandleRequests::
-		DoHandleRequest(
-		    HandleType InHandle,
-		    const FFragment_ShapeBox_Params& InParams,
+        FProcessor_ShapeBox_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_ShapeBox_Params& InParams,
             FFragment_ShapeBox_Current& InCurrent,
-		    const FCk_Request_ShapeBox_ExampleRequest& InRequest)
-		-> void
+            const FCk_Request_ShapeBox_UpdateShape& InRequest)
+        -> void
     {
-        // Add request handling logic here
+        InCurrent._CurrentShape = InRequest.Get_NewShape();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-	    FProcessor_ShapeBox_Teardown::
-		ForEachEntity(
-		    TimeType InDeltaT,
-		    HandleType InHandle,
-		    const FFragment_ShapeBox_Params& InParams,
-		    FFragment_ShapeBox_Current& InCurrent) const
-		-> void
+        FProcessor_ShapeBox_Teardown::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ShapeBox_Params& InParams,
+            FFragment_ShapeBox_Current& InCurrent) const
+        -> void
     {
-		// Add teardown logic here
+        // Add teardown logic here
     }
 
     // --------------------------------------------------------------------------------------------------------------------

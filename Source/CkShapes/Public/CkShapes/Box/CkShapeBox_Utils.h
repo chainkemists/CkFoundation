@@ -4,7 +4,6 @@
 
 #include "CkECS/Handle/CkHandle.h"
 #include "CkNet/CkNet_Utils.h"
-#include "CkSignal/CkSignal_Fragment_Data.h"
 
 #include "CkShapeBox_Utils.generated.h"
 
@@ -22,16 +21,15 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ShapeBox",
-              DisplayName="Add ShapeBox")
+              DisplayName="[Ck][Shapes][Box] Add Feature")
     static FCk_Handle_ShapeBox
     Add(
         UPARAM(ref) FCk_Handle InHandle,
-        const FCk_Fragment_ShapeBox_ParamsData& InParams,
-        ECk_Replication InReplicates = ECk_Replication::Replicates);
+        const FCk_Fragment_ShapeBox_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ShapeBox",
-              DisplayName="Has ShapeBox")
+              DisplayName="[Ck][Shapes][Box] Has Feature")
     static bool
     Has(
         const FCk_Handle& InHandle);
@@ -55,13 +53,21 @@ private:
         FCk_Handle InHandle);
 
 public:
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ShapeBox",
         DisplayName="[Ck][ShapeBox] Request ExampleRequest")
     static FCk_Handle_ShapeBox
-    Request_ExampleRequest(
+    Request_UpdateShape(
         UPARAM(ref) FCk_Handle_ShapeBox& InShapeBox,
-        const FCk_Request_ShapeBox_ExampleRequest& InRequest);
+        const FCk_Request_ShapeBox_UpdateShape& InRequest);
+
+public:
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|ShapeBox",
+        DisplayName="[Ck][ShapeBox] Request ExampleRequest")
+    static FCk_Fragment_ShapeBox_ShapeData
+    Get_ShapeData(
+        const FCk_Handle_ShapeBox& InShapeBox);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -9,8 +9,7 @@ auto
     UCk_Utils_ShapeBox_UE::
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_ShapeBox_ParamsData& InParams,
-        ECk_Replication InReplicates)
+        const FCk_Fragment_ShapeBox_ParamsData& InParams)
     -> FCk_Handle_ShapeBox
 {
     InHandle.Add<ck::FFragment_ShapeBox_Params>(InParams);
@@ -18,19 +17,6 @@ auto
 
     InHandle.Add<ck::FTag_ShapeBox_RequiresSetup>();
 
-    if (InReplicates == ECk_Replication::DoesNotReplicate)
-    {
-        ck::shapes::VeryVerbose
-        (
-            TEXT("Skipping creation of ShapeBox Rep Fragment on Entity [{}] because it's set to [{}]"),
-            InHandle,
-            InReplicates
-        );
-
-        return Cast(InHandle);
-    }
-
-    TryAddReplicatedFragment<UCk_Fragment_ShapeBox_Rep>(InHandle);
     return Cast(InHandle);
 }
 
@@ -43,13 +29,27 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_ShapeBox_UE, FCk_Handle_ShapeB
 
 auto
     UCk_Utils_ShapeBox_UE::
-    Request_ExampleRequest(
+    Request_UpdateShape(
         FCk_Handle_ShapeBox& InShapeBox,
-        const FCk_Request_ShapeBox_ExampleRequest& InRequest)
+        const FCk_Request_ShapeBox_UpdateShape& InRequest)
     -> FCk_Handle_ShapeBox
 {
     InShapeBox.AddOrGet<ck::FFragment_ShapeBox_Requests>()._Requests.Emplace(InRequest);
     return InShapeBox;
+}
+
+auto
+    UCk_Utils_ShapeBox_UE::
+    Get_ShapeData(
+        const FCk_Handle_ShapeBox& InShapeBox)
+        -> FCk_Fragment_ShapeBox_ShapeData
+{
+    if (InShapeBox.Has<ck::FTag_ShapeBox_RequiresSetup>())
+    {
+        return InShapeBox.Get<ck::FFragment_ShapeBox_Params>().Get_Params().Get_Shape();
+    }
+
+    return InShapeBox.Get<ck::FFragment_ShapeBox_Current>().Get_CurrentShape();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

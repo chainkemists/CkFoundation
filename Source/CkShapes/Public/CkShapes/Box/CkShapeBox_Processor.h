@@ -9,7 +9,7 @@
 
 namespace ck
 {
-	class CKSHAPES_API FProcessor_ShapeBox_Setup : public ck_exp::TProcessor<
+    class CKSHAPES_API FProcessor_ShapeBox_Setup : public ck_exp::TProcessor<
             FProcessor_ShapeBox_Setup,
             FCk_Handle_ShapeBox,
             FFragment_ShapeBox_Params,
@@ -25,12 +25,12 @@ namespace ck
 
     public:
         auto
-    	DoTick(
+        DoTick(
             TimeType InDeltaT) -> void;
 
     public:
         auto
-    	ForEachEntity(
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ShapeBox_Params& InParams,
@@ -55,12 +55,12 @@ namespace ck
 
     public:
         auto
-    	DoTick(
+        DoTick(
             TimeType InDeltaT) -> void;
 
     public:
         auto
-    	ForEachEntity(
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ShapeBox_Params& InParams,
@@ -73,12 +73,12 @@ namespace ck
             HandleType InHandle,
             const FFragment_ShapeBox_Params& InParams,
             FFragment_ShapeBox_Current& InCurrent,
-            const FCk_Request_ShapeBox_ExampleRequest& InRequest) -> void;
+            const FCk_Request_ShapeBox_UpdateShape& InRequest) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-	class CKSHAPES_API FProcessor_ShapeBox_Teardown : public ck_exp::TProcessor<
+    class CKSHAPES_API FProcessor_ShapeBox_Teardown : public ck_exp::TProcessor<
             FProcessor_ShapeBox_Teardown,
             FCk_Handle_ShapeBox,
             FFragment_ShapeBox_Params,
@@ -90,7 +90,7 @@ namespace ck
 
     public:
         auto
-    	ForEachEntity(
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ShapeBox_Params& InParams,
