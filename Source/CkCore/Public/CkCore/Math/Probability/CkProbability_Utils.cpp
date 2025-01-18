@@ -13,22 +13,27 @@ auto
     Get_RandomIndexByWeight_Stream(
         const TArray<double>& InWeights,
         const FRandomStream& InRandomStream)
-    -> FCk_Utils_Probability_RandomIndexByWeight_Result
+        -> FCk_Utils_Probability_RandomIndexByWeight_Result
 {
     if (InWeights.IsEmpty())
-    { return {}; }
+    {
+        return {};
+    }
 
     const auto& PartialSum = ck::algo::PartialSum(InWeights);
 
     const auto RandomNumber = InRandomStream.FRandRange(0, PartialSum.Last());
-    const auto FoundIndex = ck::algo::FindIndex(PartialSum, [&](double InPartialNum)
-    {
-        return InPartialNum > RandomNumber;
-    });
+    const auto FoundIndex = ck::algo::FindIndex(PartialSum, [&](
+        double InPartialNum)
+        {
+            return InPartialNum > RandomNumber;
+        });
 
     CK_ENSURE_IF_NOT(FoundIndex != INDEX_NONE,
         TEXT("We should ALWAYS find an index. If an index is NOT found, the above logic for the algorithm is faulty."))
-    { return {}; }
+    {
+        return {};
+    }
 
     return FCk_Utils_Probability_RandomIndexByWeight_Result{FoundIndex, RandomNumber};
 }
@@ -39,22 +44,27 @@ auto
     UCk_Utils_Probability_UE::
     Get_RandomIndexByWeight(
         const TArray<double>& InWeights)
-    -> FCk_Utils_Probability_RandomIndexByWeight_Result
+        -> FCk_Utils_Probability_RandomIndexByWeight_Result
 {
     if (InWeights.IsEmpty())
-    { return {}; }
+    {
+        return {};
+    }
 
     const auto& PartialSum = ck::algo::PartialSum(InWeights);
 
     const auto RandomNumber = FMath::FRandRange(0, PartialSum.Last());
-    const auto FoundIndex = ck::algo::FindIndex(PartialSum, [&](double InPartialNum)
-    {
-        return InPartialNum > RandomNumber;
-    });
+    const auto FoundIndex = ck::algo::FindIndex(PartialSum, [&](
+        double InPartialNum)
+        {
+            return InPartialNum > RandomNumber;
+        });
 
     CK_ENSURE_IF_NOT(FoundIndex != INDEX_NONE,
         TEXT("We should ALWAYS find an index. If an index is NOT found, the above logic for the algorithm is faulty."))
-    { return {}; }
+    {
+        return {};
+    }
 
     return FCk_Utils_Probability_RandomIndexByWeight_Result{FoundIndex, RandomNumber};
 }
@@ -99,7 +109,49 @@ auto
     const auto Uniform = Get_Random_UniformDistribution(InMaxRange);
 
     return (Normal * InWeight) + (Uniform * (1 - InWeight));
+}
 
+auto
+    UCk_Utils_Probability_UE::
+    Get_Random_NormalDistribution_Seeded(
+        float InStandardDeviation,
+        int InSeed)
+        -> float
+{
+    auto Gen = std::mt19937{static_cast<unsigned>(InSeed)};
+
+    auto Distribution = std::normal_distribution{0.0f, InStandardDeviation};
+
+    return Distribution(Gen);
+}
+
+auto
+    UCk_Utils_Probability_UE::
+    Get_Random_UniformDistribution_Seeded(
+        float InMaxRange,
+        int InSeed)
+        -> float
+{
+    auto Gen = std::mt19937{static_cast<unsigned>(InSeed)};
+
+    auto Distribution = std::uniform_real_distribution{-InMaxRange, InMaxRange};
+
+    return Distribution(Gen);
+}
+
+auto
+    UCk_Utils_Probability_UE::
+    Get_Random_WeightedDistribution_Seeded(
+        float InStandardDeviation,
+        float InMaxRange,
+        float InWeight,
+        int InSeed)
+        -> float
+{
+    const auto Normal = Get_Random_NormalDistribution_Seeded(InStandardDeviation, InSeed);
+    const auto Uniform = Get_Random_UniformDistribution_Seeded(InMaxRange, InSeed);
+
+    return (Normal * InWeight) + (Uniform * (1 - InWeight));
 }
 
 // --------------------------------------------------------------------------------------------------------------------
