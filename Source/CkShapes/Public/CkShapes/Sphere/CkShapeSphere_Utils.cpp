@@ -1,6 +1,5 @@
 #include "CkShapeSphere_Utils.h"
 
-#include "CkShapes/CkShapes_Log.h"
 #include "CkShapes/Sphere/CkShapeSphere_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------

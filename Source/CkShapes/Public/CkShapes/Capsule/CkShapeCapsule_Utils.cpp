@@ -1,6 +1,5 @@
 #include "CkShapeCapsule_Utils.h"
 
-#include "CkShapes/CkShapes_Log.h"
 #include "CkShapes/Capsule/CkShapeCapsule_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -9,8 +8,7 @@ auto
     UCk_Utils_ShapeCapsule_UE::
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_ShapeCapsule_ParamsData& InParams,
-        ECk_Replication InReplicates)
+        const FCk_Fragment_ShapeCapsule_ParamsData& InParams)
     -> FCk_Handle_ShapeCapsule
 {
     InHandle.Add<ck::FFragment_ShapeCapsule_Params>(InParams);
@@ -18,19 +16,6 @@ auto
 
     InHandle.Add<ck::FTag_ShapeCapsule_RequiresSetup>();
 
-    if (InReplicates == ECk_Replication::DoesNotReplicate)
-    {
-        ck::shapes::VeryVerbose
-        (
-            TEXT("Skipping creation of ShapeCapsule Rep Fragment on Entity [{}] because it's set to [{}]"),
-            InHandle,
-            InReplicates
-        );
-
-        return Cast(InHandle);
-    }
-
-    TryAddReplicatedFragment<UCk_Fragment_ShapeCapsule_Rep>(InHandle);
     return Cast(InHandle);
 }
 
@@ -43,13 +28,27 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_ShapeCapsule_UE, FCk_Handle_Sh
 
 auto
     UCk_Utils_ShapeCapsule_UE::
-    Request_ExampleRequest(
+    Request_UpdateShape(
         FCk_Handle_ShapeCapsule& InShapeCapsule,
-        const FCk_Request_ShapeCapsule_ExampleRequest& InRequest)
+        const FCk_Request_ShapeCapsule_UpdateShape& InRequest)
     -> FCk_Handle_ShapeCapsule
 {
     InShapeCapsule.AddOrGet<ck::FFragment_ShapeCapsule_Requests>()._Requests.Emplace(InRequest);
     return InShapeCapsule;
+}
+
+auto
+    UCk_Utils_ShapeCapsule_UE::
+    Get_ShapeData(
+        const FCk_Handle_ShapeCapsule& InShapeCapsule)
+        -> FCk_Fragment_ShapeCapsule_ShapeData
+{
+    if (InShapeCapsule.Has<ck::FTag_ShapeCapsule_RequiresSetup>())
+    {
+        return InShapeCapsule.Get<ck::FFragment_ShapeCapsule_Params>().Get_Params().Get_Shape();
+    }
+
+    return InShapeCapsule.Get<ck::FFragment_ShapeCapsule_Current>().Get_CurrentShape();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

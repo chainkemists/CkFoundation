@@ -51,8 +51,10 @@ namespace ck
         friend class UCk_Utils_ShapeCapsule_UE;
 
     private:
-        // Add your properties here
-        int32 _DummyProperty = 0;
+        FCk_Fragment_ShapeCapsule_ShapeData _CurrentShape;
+
+    public:
+        CK_PROPERTY_GET(_CurrentShape);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -67,10 +69,7 @@ namespace ck
         friend class UCk_Utils_ShapeCapsule_UE;
 
     public:
-    	using RequestType = std::variant
-        <
-            FCk_Request_ShapeCapsule_ExampleRequest
-        >;
+        using RequestType = std::variant<FCk_Request_ShapeCapsule_UpdateShape>;
         using RequestList = TArray<RequestType>;
 
     private:
@@ -80,12 +79,15 @@ namespace ck
         CK_PROPERTY_GET(_Requests);
     };
 
-	// --------------------------------------------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck { class FProcessor_ShapeCapsule_Replicate; }
+namespace ck
+{
+    class FProcessor_ShapeCapsule_Replicate;
+}
 
 UCLASS(Blueprintable)
 class CKSHAPES_API UCk_Fragment_ShapeCapsule_Rep : public UCk_Ecs_ReplicatedObject_UE
