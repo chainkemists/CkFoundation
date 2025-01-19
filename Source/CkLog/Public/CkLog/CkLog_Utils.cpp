@@ -1,6 +1,5 @@
 #include "CkLog_Utils.h"
 
-#include "CkLog/CkLog.h"
 #include "CkLog/CkLog_Category.h"
 
 #include <functional>
