@@ -1,7 +1,5 @@
 #include "CkObjectReplicatorComponent.h"
 
-#include "CkCore/CkCore.h"
-
 #include "CkReplicatedObject.h"
 
 #include "CkCore/CkCoreLog.h"
