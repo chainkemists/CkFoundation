@@ -9,7 +9,7 @@
 
 namespace ck
 {
-	class CKSHAPES_API FProcessor_ShapeCylinder_Setup : public ck_exp::TProcessor<
+    class CKSHAPES_API FProcessor_ShapeCylinder_Setup : public ck_exp::TProcessor<
             FProcessor_ShapeCylinder_Setup,
             FCk_Handle_ShapeCylinder,
             FFragment_ShapeCylinder_Params,
@@ -25,12 +25,12 @@ namespace ck
 
     public:
         auto
-    	DoTick(
+        DoTick(
             TimeType InDeltaT) -> void;
 
     public:
         auto
-    	ForEachEntity(
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ShapeCylinder_Params& InParams,
@@ -55,12 +55,12 @@ namespace ck
 
     public:
         auto
-    	DoTick(
+        DoTick(
             TimeType InDeltaT) -> void;
 
     public:
         auto
-    	ForEachEntity(
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ShapeCylinder_Params& InParams,
@@ -73,12 +73,12 @@ namespace ck
             HandleType InHandle,
             const FFragment_ShapeCylinder_Params& InParams,
             FFragment_ShapeCylinder_Current& InCurrent,
-            const FCk_Request_ShapeCylinder_ExampleRequest& InRequest) -> void;
+            const FCk_Request_ShapeCylinder_UpdateShape& InRequest) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-	class CKSHAPES_API FProcessor_ShapeCylinder_Teardown : public ck_exp::TProcessor<
+    class CKSHAPES_API FProcessor_ShapeCylinder_Teardown : public ck_exp::TProcessor<
             FProcessor_ShapeCylinder_Teardown,
             FCk_Handle_ShapeCylinder,
             FFragment_ShapeCylinder_Params,
@@ -90,7 +90,7 @@ namespace ck
 
     public:
         auto
-    	ForEachEntity(
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ShapeCylinder_Params& InParams,
