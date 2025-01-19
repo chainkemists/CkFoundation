@@ -1,11 +1,7 @@
 #pragma once
 
-#include "CkEcs/Handle/CkHandle.h"
-#include "CkCore/Macros/CkMacros.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
-
-#include <GameplayTagContainer.h>
 
 #include "CkShapeCylinder_Fragment_Data.generated.h"
 
@@ -19,8 +15,42 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
-struct CKSHAPES_API FCk_Handle_ShapeCylinder : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_ShapeCylinder); };
+struct CKSHAPES_API FCk_Handle_ShapeCylinder : public FCk_Handle_TypeSafe
+{
+    GENERATED_BODY()
+    CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_ShapeCylinder);
+};
+
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_ShapeCylinder);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKSHAPES_API FCk_Fragment_ShapeCylinder_ShapeData
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Fragment_ShapeCylinder_ShapeData);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
+    float _HalfHeight = 100.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
+    float _Radius = 50.0f;
+
+    // useful in some cases, example in physics engine use (Jolt) to improve collision detection
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
+    float _ConvexRadius = 0.0f;
+
+public:
+    CK_PROPERTY_GET(_HalfHeight);
+    CK_PROPERTY_GET(_Radius);
+    CK_PROPERTY(_ConvexRadius);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ShapeCylinder_ShapeData, _HalfHeight, _Radius);
+};
 
 //--------------------------------------------------------------------------------------------------------------------
 
@@ -31,34 +61,19 @@ struct CKSHAPES_API FCk_Fragment_ShapeCylinder_ParamsData
 
 public:
     CK_GENERATED_BODY(FCk_Fragment_ShapeCylinder_ParamsData);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKSHAPES_API FCk_Fragment_MultipleShapeCylinder_ParamsData
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Fragment_MultipleShapeCylinder_ParamsData);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    TArray<FCk_Fragment_ShapeCylinder_ParamsData> _ShapeCylinderParams;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
+    FCk_Fragment_ShapeCylinder_ShapeData _Shape;
 
 public:
-    CK_PROPERTY_GET(_ShapeCylinderParams)
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleShapeCylinder_ParamsData, _ShapeCylinderParams);
+    CK_PROPERTY_GET(_Shape);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKSHAPES_API FCk_Request_ShapeCylinder_ExampleRequest : public FCk_Request_Base
+struct CKSHAPES_API FCk_Request_ShapeCylinder_UpdateShape : public FCk_Request_Base
 {
     GENERATED_BODY()
 
@@ -66,7 +81,14 @@ public:
     friend class ck::FProcessor_ShapeCylinder_HandleRequests;
 
 public:
-    CK_GENERATED_BODY(FCk_Request_ShapeCylinder_ExampleRequest);
+    CK_GENERATED_BODY(FCk_Request_ShapeCylinder_UpdateShape);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
+    FCk_Fragment_ShapeCylinder_ShapeData _NewShape;
+
+public:
+    CK_PROPERTY_GET(_NewShape);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

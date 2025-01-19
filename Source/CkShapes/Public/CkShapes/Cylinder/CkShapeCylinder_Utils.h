@@ -4,7 +4,6 @@
 
 #include "CkECS/Handle/CkHandle.h"
 #include "CkNet/CkNet_Utils.h"
-#include "CkSignal/CkSignal_Fragment_Data.h"
 
 #include "CkShapeCylinder_Utils.generated.h"
 
@@ -22,16 +21,15 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ShapeCylinder",
-              DisplayName="Add ShapeCylinder")
+              DisplayName="[Ck][Shapes][Cylinder] Add Feature")
     static FCk_Handle_ShapeCylinder
     Add(
         UPARAM(ref) FCk_Handle InHandle,
-        const FCk_Fragment_ShapeCylinder_ParamsData& InParams,
-        ECk_Replication InReplicates = ECk_Replication::Replicates);
+        const FCk_Fragment_ShapeCylinder_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ShapeCylinder",
-              DisplayName="Has ShapeCylinder")
+              DisplayName="[Ck][Shapes][Cylinder] Has Feature")
     static bool
     Has(
         const FCk_Handle& InHandle);
@@ -59,9 +57,17 @@ public:
         Category = "Ck|Utils|ShapeCylinder",
         DisplayName="[Ck][ShapeCylinder] Request ExampleRequest")
     static FCk_Handle_ShapeCylinder
-    Request_ExampleRequest(
+    Request_UpdateShape(
         UPARAM(ref) FCk_Handle_ShapeCylinder& InShapeCylinder,
-        const FCk_Request_ShapeCylinder_ExampleRequest& InRequest);
+        const FCk_Request_ShapeCylinder_UpdateShape& InRequest);
+
+public:
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|ShapeCylinder",
+        DisplayName="[Ck][ShapeCylinder] Request ExampleRequest")
+    static FCk_Fragment_ShapeCylinder_ShapeData
+    Get_ShapeData(
+        const FCk_Handle_ShapeCylinder& InShapeCylinder);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
