@@ -6,6 +6,7 @@
 
 #include "CkNet/CkNet_Utils.h"
 
+#include "CkShapes/Capsule/CkShapeCapsule_Utils.h"
 #include "CkShapes/Public/CkShapes/Box/CkShapeBox_Fragment_Data.h"
 #include "CkShapes/Public/CkShapes/Box/CkShapeBox_Utils.h"
 #include "CkShapes/Sphere/CkShapeSphere_Utils.h"
@@ -20,6 +21,7 @@
 #include "Jolt/Physics/Body/BodyCreationSettings.h"
 #include "Jolt/Physics/Body/BodyInterface.h"
 #include "Jolt/Physics/Collision/Shape/BoxShape.h"
+#include "Jolt/Physics/Collision/Shape/CapsuleShape.h"
 #include "Jolt/Physics/Collision/Shape/SphereShape.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -92,6 +94,36 @@ namespace ck
             const auto& Radius = Params.Get_Radius();
 
             const auto Settings = SphereShapeSettings{Radius};
+            Settings.SetEmbedded();
+
+            auto ShapeResult = Settings.Create();
+            auto Shape = ShapeResult.Get();
+
+            auto ShapeSettings = BodyCreationSettings{
+                Shape,
+                jolt::Conv(EntityPosition),
+                Quat::sIdentity(),
+                EMotionType::Kinematic,
+                ObjectLayer{1}
+            };
+            ShapeSettings.mIsSensor = true;
+
+            auto PhysicsSystem = _PhysicsSystem.Pin();
+            auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+            InCurrent._RigidBody = BodyInterface.CreateBody(ShapeSettings);
+            InCurrent._RigidBody->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
+            InCurrent._RigidBody->SetCollideKinematicVsNonDynamic(true);
+            BodyInterface.AddBody(InCurrent._RigidBody->GetID(), EActivation::Activate);
+        }
+        else if (auto CapsuleEntity = UCk_Utils_ShapeCapsule_UE::Cast(InHandle); ck::IsValid(CapsuleEntity))
+        {
+            const auto Params = UCk_Utils_ShapeCapsule_UE::Get_ShapeData(CapsuleEntity);
+
+            const auto HalfHeight = Params.Get_HalfHeight();
+            const auto Radius = Params.Get_Radius();
+
+            const auto Settings = CapsuleShapeSettings{HalfHeight, Radius};
             Settings.SetEmbedded();
 
             auto ShapeResult = Settings.Create();
