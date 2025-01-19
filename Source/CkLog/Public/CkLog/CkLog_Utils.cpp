@@ -1,6 +1,6 @@
 #include "CkLog_Utils.h"
 
-#include "CkLog/CkLog.h"
+#include "CkLog/CkLog_Module.h"
 #include "CkLog/CkLog_Category.h"
 
 #include <functional>
@@ -161,9 +161,9 @@ namespace ck::log
         Get_BlueprintContext()
         -> TOptional<FString>
     {
-        const auto& trace = Get_StackTrace_Blueprint();
+        const auto& Trace = Get_StackTrace_Blueprint();
 
-        return trace.Num() > 0 ? trace.Last() : TOptional<FString>{};
+        return Trace.Num() > 0 ? Trace.Last() : TOptional<FString>{};
     }
 }
 
