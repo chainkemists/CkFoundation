@@ -4,7 +4,6 @@
 
 #include "CkECS/Handle/CkHandle.h"
 #include "CkNet/CkNet_Utils.h"
-#include "CkSignal/CkSignal_Fragment_Data.h"
 
 #include "CkShapeCapsule_Utils.generated.h"
 
@@ -22,16 +21,15 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|ShapeCapsule",
-              DisplayName="Add ShapeCapsule")
+              DisplayName="[Ck][Shapes][Capsule] Add Feature")
     static FCk_Handle_ShapeCapsule
     Add(
         UPARAM(ref) FCk_Handle InHandle,
-        const FCk_Fragment_ShapeCapsule_ParamsData& InParams,
-        ECk_Replication InReplicates = ECk_Replication::Replicates);
+        const FCk_Fragment_ShapeCapsule_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ShapeCapsule",
-              DisplayName="Has ShapeCapsule")
+              DisplayName="[Ck][Shapes][Capsule] Has Feature")
     static bool
     Has(
         const FCk_Handle& InHandle);
@@ -59,9 +57,17 @@ public:
         Category = "Ck|Utils|ShapeCapsule",
         DisplayName="[Ck][ShapeCapsule] Request ExampleRequest")
     static FCk_Handle_ShapeCapsule
-    Request_ExampleRequest(
+    Request_UpdateShape(
         UPARAM(ref) FCk_Handle_ShapeCapsule& InShapeCapsule,
-        const FCk_Request_ShapeCapsule_ExampleRequest& InRequest);
+        const FCk_Request_ShapeCapsule_UpdateShape& InRequest);
+
+public:
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|ShapeCapsule",
+        DisplayName="[Ck][ShapeCapsule] Request ExampleRequest")
+    static FCk_Fragment_ShapeCapsule_ShapeData
+    Get_ShapeData(
+        const FCk_Handle_ShapeCapsule& InShapeCapsule);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
