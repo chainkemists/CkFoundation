@@ -53,7 +53,7 @@ public:
     ForEachWidgetAndChildren_IncludingUserWidgets(
         UWidget* InWidget,
         T_Predicate InPred) -> void;
-    
+
     UFUNCTION(BlueprintCallable,
         DisplayName = "[Ck] Find Named Slot",
         Category = "Ck|Utils|UI")
@@ -68,7 +68,7 @@ public:
         Category = "Ck|Utils|UI")
     static bool
     IsNamedSlotOccupied(
-		UNamedSlot* InNamedSlot);
+        UNamedSlot* InNamedSlot);
 
     UFUNCTION(BlueprintCallable,
         DisplayName = "[Ck] Insert Widget To Named Slot",
@@ -77,7 +77,7 @@ public:
     InsertWidgetToNamedSlot(
         UNamedSlot* InNamedSlot,
         UUserWidget* InInsertedWidget);
-    
+
     UFUNCTION(BlueprintCallable,
         DisplayName = "[Ck] Find Named Slot And Insert Widget",
         Category = "Ck|Utils|UI",
