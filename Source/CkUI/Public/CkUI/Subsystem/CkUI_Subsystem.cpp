@@ -39,7 +39,7 @@ namespace ck_ui
 
                 const auto& UISubsystem = LocalPlayer->GetSubsystem<UCk_UI_Subsystem_UE>();
 
-                CK_ENSURE_IF_NOT(ck::IsValid(UISubsystem), TEXT("Could not retrive UI Subsystem"))
+                CK_ENSURE_IF_NOT(ck::IsValid(UISubsystem), TEXT("Could not retrieve UI Subsystem"))
                 { return; }
 
                 UISubsystem->Request_UpdateWatermarkDisplayPolicy(static_cast<ECk_Watermark_DisplayPolicy>(WatermarkDisplayPolicy));

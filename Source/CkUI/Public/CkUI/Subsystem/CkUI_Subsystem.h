@@ -31,10 +31,7 @@ private:
 
 public:
     auto Request_UpdateWatermarkDisplayPolicy(ECk_Watermark_DisplayPolicy InDisplayPolicy) const -> void;
-
-    UFUNCTION(BlueprintCallable, Category = "Ck|Utils|UI|Subsystem")
-    FCk_Handle_WidgetLayerHandler
-    Get_WidgetLayerHandler() const;
+    auto Get_WidgetLayerHandler() const -> FCk_Handle_WidgetLayerHandler;
 
 private:
     auto DoCreateAndSetWatermarkWidget(

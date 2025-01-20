@@ -19,36 +19,31 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_WidgetLayerHandler);
 
 public:
-    UFUNCTION(BlueprintCallable,
+    // Returns the WidgetLayerHandler associated with the provided PlayerController
+    UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|WidgetLayerHandler",
-        DisplayName="[Ck][WidgetLayerHandler] Add Feature")
+        DisplayName="[Ck][WidgetLayerHandler] Get Local Handler",
+        meta = (CompactNodeTitle= "WidgetLayerHandler"))
+    static FCk_Handle_WidgetLayerHandler
+    Get_WidgetLayerHandler(
+        APlayerController* InPlayerController);
+
     static FCk_Handle_WidgetLayerHandler
     Add(
-        UPARAM(ref) FCk_Handle& InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_WidgetLayerHandler_ParamsData& InParams);
 
 public:
-    UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|WidgetLayerHandler",
-        DisplayName="[Ck][WidgetLayerHandler] Has Feature")
     static bool
     Has(
         const FCk_Handle& InHandle);
 
 private:
-    UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|WidgetLayerHandler",
-        DisplayName="[Ck][WidgetLayerHandler] Cast",
-        meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_WidgetLayerHandler
     DoCast(
-        UPARAM(ref) FCk_Handle& InHandle,
+        FCk_Handle& InHandle,
         ECk_SucceededFailed& OutResult);
 
-    UFUNCTION(BlueprintPure,
-        Category = "Ck|Utils|WidgetLayerHandler",
-        DisplayName="[Ck][WidgetLayerHandler] Handle -> WidgetLayerHandler Handle",
-        meta = (CompactNodeTitle = "<AsWidgetLayerHandler>", BlueprintAutocast))
     static FCk_Handle_WidgetLayerHandler
     DoCastChecked(
         FCk_Handle InHandle);
