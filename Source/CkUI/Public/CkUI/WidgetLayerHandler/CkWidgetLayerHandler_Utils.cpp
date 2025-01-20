@@ -1,5 +1,6 @@
 #include "CkWidgetLayerHandler_Utils.h"
 
+#include "CkUI/Subsystem/CkUI_Subsystem.h"
 #include "CkUI/WidgetLayerHandler/CkWidgetLayerHandler_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -7,6 +8,29 @@
 CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_WidgetLayerHandler_UE, FCk_Handle_WidgetLayerHandler, ck::FFragment_WidgetLayerHandler_Params)
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_WidgetLayerHandler_UE::
+    Get_WidgetLayerHandler(
+        APlayerController* InPlayerController)
+    -> FCk_Handle_WidgetLayerHandler
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InPlayerController),
+        TEXT("Invalid PlayerController supplied to Get_WidgetLayerHandler"))
+    { return {}; }
+
+    const auto& LocalPlayer = InPlayerController->GetLocalPlayer();
+
+    if (ck::Is_NOT_Valid(LocalPlayer))
+    { return {}; }
+
+    const auto& UISubsystem = LocalPlayer->GetSubsystem<UCk_UI_Subsystem_UE>();
+
+    if (ck::Is_NOT_Valid(UISubsystem))
+    { return {}; }
+
+    return UISubsystem->Get_WidgetLayerHandler();
+}
 
 auto
     UCk_Utils_WidgetLayerHandler_UE::
