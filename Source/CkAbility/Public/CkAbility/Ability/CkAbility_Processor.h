@@ -66,6 +66,12 @@ namespace ck
         static auto
         DoHandleRequest(
             HandleType& InAbilityEntity,
+            const FFragment_Ability_RequestTransferExisting& InRequest)
+            -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType& InAbilityEntity,
             const FFragment_Ability_RequestGive& InRequest)
             -> void;
 
