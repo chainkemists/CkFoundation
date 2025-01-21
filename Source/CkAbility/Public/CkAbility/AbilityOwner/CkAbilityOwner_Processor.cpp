@@ -946,18 +946,6 @@ namespace ck
                 return;
             }
 
-            if (UCk_Utils_Ability_UE::Get_Status(InAbilityEntity) == ECk_Ability_Status::NotActive)
-            {
-                if (InRequest.Get_IsRequestHandleValid())
-                {
-                    UUtils_Signal_AbilityOwner_OnAbilityDeactivatedOrNot::Broadcast(
-                        InRequest.GetAndDestroyRequestHandle(),
-                        MakePayload(InAbilityOwnerEntity, InAbilityEntity, ECk_AbilityOwner_AbilityDeactivatedOrNot::NotDeactivated_FailedChecks));
-                }
-
-                return;
-            }
-
             auto RequestDeactivate = ck::FFragment_Ability_RequestDeactivate{InAbilityOwnerEntity};
             InRequest.Request_TransferHandleToOther(RequestDeactivate);
             InAbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
