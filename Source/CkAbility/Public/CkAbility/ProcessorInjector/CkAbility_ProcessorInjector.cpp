@@ -3,6 +3,7 @@
 #include "CkAbility/Ability/CkAbility_Processor.h"
 #include "CkAbility/AbilityCue/CkAbilityCue_Processor.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Processor.h"
+#include "CkAbility/Settings/CkAbility_Settings.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -26,8 +27,10 @@ auto
 {
     InWorld.Add<ck::FProcessor_AbilityOwner_ResolvePendingOperationTags>(InWorld.Get_Registry());
 
-    // Uncomment to debug Abilities that wait until all pending operations have resolved
-    //InWorld.Add<ck::FProcessor_AbilityOwner_ResolvePendingOperationTags_DEBUG>(InWorld.Get_Registry());
+    if (UCk_Utils_Ability_Settings_UE::Get_LogResolvePendingOperationTags() == ECk_EnableDisable::Enable)
+    {
+        InWorld.Add<ck::FProcessor_AbilityOwner_ResolvePendingOperationTags_DEBUG>(InWorld.Get_Registry());
+    }
 
     InWorld.Add<ck::FProcessor_Ability_AddReplicated>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AbilityOwner_EnsureAllAppended>(InWorld.Get_Registry());
