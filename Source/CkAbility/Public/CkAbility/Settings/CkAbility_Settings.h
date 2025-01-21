@@ -53,8 +53,15 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_EnableDisable _AbilityNotActivatedDebug = ECk_EnableDisable::Disable;
 
+    // Disable/Enable the Debug processor that logs Abilities that have the PendingOperation Tag
+    // every pump
+    UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "Debug",
+              meta = (AllowPrivateAccess = true, ClampMin = 1, UIMin = 1))
+    ECk_EnableDisable _LogResolvePendingOperationTags = ECk_EnableDisable::Disable;
+
 public:
     CK_PROPERTY_GET(_AbilityNotActivatedDebug);
+    CK_PROPERTY_GET(_LogResolvePendingOperationTags);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -64,8 +71,10 @@ class CKABILITY_API UCk_Utils_Ability_Settings_UE
 public:
     static auto Get_AbilityRecyclingPolicy() -> ECk_Ability_RecyclingPolicy;
     static auto Get_CueTypes() -> const TArray<TSubclassOf<UCk_Ability_Script_PDA>>&;
-    static auto Get_AbilityNotActivatedDebug() -> const ECk_EnableDisable;
     static auto Get_NumberOfCueReplicators() -> int32;
+
+    static auto Get_AbilityNotActivatedDebug() -> const ECk_EnableDisable;
+    static auto Get_LogResolvePendingOperationTags() -> ECk_EnableDisable;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
