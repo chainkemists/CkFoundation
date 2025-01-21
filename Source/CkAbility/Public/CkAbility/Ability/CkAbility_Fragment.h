@@ -67,6 +67,29 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    struct CKABILITY_API FFragment_Ability_RequestTransferExisting : FRequest_Base
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Ability_RequestTransferExisting);
+
+        friend UCk_Utils_Ability_UE;
+
+    private:
+        FCk_Handle_AbilityOwner _AbilityOwner;
+        FCk_Handle_AbilityOwner _TransferTarget;
+        FCk_Handle_Ability _AbilityToTransfer;
+
+    public:
+        CK_PROPERTY_GET(_AbilityOwner);
+        CK_PROPERTY_GET(_AbilityToTransfer);
+        CK_PROPERTY_GET(_TransferTarget);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Ability_RequestTransferExisting, _AbilityOwner, _TransferTarget, _AbilityToTransfer);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKABILITY_API FFragment_Ability_RequestGive : FFragment_Ability_RequestAddAndGive
     {
     public:
@@ -150,12 +173,13 @@ namespace ck
 
     public:
         using AddAndGive = FFragment_Ability_RequestAddAndGive;
+        using Transfer = FFragment_Ability_RequestTransferExisting;
         using Give = FFragment_Ability_RequestGive;
         using Revoke = FFragment_Ability_RequestRevoke;
         using Activate = FFragment_Ability_RequestActivate;
         using Deactivate = FFragment_Ability_RequestDeactivate;
 
-        using RequestType = std::variant<AddAndGive, Give, Revoke, Activate, Deactivate>;
+        using RequestType = std::variant<AddAndGive, Transfer, Give, Revoke, Activate, Deactivate>;
         using RequestList = TArray<RequestType>;
 
     public:
