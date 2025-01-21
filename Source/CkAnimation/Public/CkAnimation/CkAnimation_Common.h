@@ -9,6 +9,10 @@
 UENUM(BlueprintType)
 enum class ECk_PlayMontageFailureReason : uint8
 {
+    InvalidPlayRate,
+    InvalidMeshComponent,
+    InvalidMontage,
+    MissingAnimInstanceOnMeshComponent,
     SkeletonMismatch,
     MeshTickDisabled,
     MeshComponentCannotTickOnServer
