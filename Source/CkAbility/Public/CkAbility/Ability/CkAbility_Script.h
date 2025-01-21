@@ -11,6 +11,7 @@
 namespace ck
 {
     class FProcessor_Ability_HandleRequests;
+    class FProcessor_AbilityOwner_HandleRequests;
 }
 
 // This Object itself is NOT replicated. It may be 'implicitly' replicated through the Ability's replicated fragment
@@ -24,6 +25,7 @@ class CKABILITY_API UCk_Ability_Script_PDA : public UCk_DataAsset_PDA
     friend class UCk_Utils_Ability_UE;
 
     friend class ck::FProcessor_Ability_HandleRequests;
+    friend class ck::FProcessor_AbilityOwner_HandleRequests;
 
 public:
     CK_GENERATED_BODY(UCk_Ability_Script_PDA);
