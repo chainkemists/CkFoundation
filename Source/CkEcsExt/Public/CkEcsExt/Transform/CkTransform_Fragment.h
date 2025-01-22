@@ -27,9 +27,8 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_ECS_TAG(FTag_Transform_NeedsUpdate);
+    CK_DEFINE_ECS_TAG(FTag_Transform_SyncFromActor);
     CK_DEFINE_ECS_TAG(FTag_Transform_Updated);
-    CK_DEFINE_ECS_TAG(FTag_Transform_TryFireSignals);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -140,7 +139,7 @@ namespace ck
     public:
         friend class FProcessor_Transform_HandleRequests;
         friend class FProcessor_Transform_Replicate;
-        friend class FProcessor_Transform_Update;
+        friend class FProcessor_Transform_SyncFromActor;
         friend class UCk_Fragment_Transform_Rep;
         friend UCk_Utils_Transform_UE;
 

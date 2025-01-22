@@ -1,6 +1,6 @@
 #include "CkTransform_Utils.h"
 
-#include "CkTransform_Fragment.h"
+#include "Chaos/ChaosEngineInterface.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -210,7 +210,7 @@ auto
     if (NOT InHandle.Has<ck::FFragment_Transform_RootComponent>())
     { return InHandle; }
 
-    if (InHandle.Has<ck::FTag_Transform_NeedsUpdate>())
+    if (InHandle.Has<ck::FTag_Transform_SyncFromActor>())
     { return InHandle; }
 
     if (auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
@@ -220,7 +220,7 @@ auto
         // every frame through the processors. We need to set the current value NOW so that we can determine if it has changed
         // when the Update processor is ticked
         InHandle.Get<ck::FFragment_Transform>()._Transform = RootComponentFragment.Get_RootComponent()->GetComponentToWorld();
-        InHandle.Add<ck::FTag_Transform_NeedsUpdate>();
+        InHandle.Add<ck::FTag_Transform_SyncFromActor>();
     }
 
     return InHandle;
@@ -241,7 +241,7 @@ auto
     if (ck::UUtils_Signal_TransformUpdate::IsBoundToMulticast(InHandle))
     { return InHandle; }
 
-    InHandle.Remove<ck::FTag_Transform_NeedsUpdate>();
+    InHandle.Remove<ck::FTag_Transform_SyncFromActor>();
 
     return InHandle;
 }
@@ -264,6 +264,41 @@ auto
     -> void
 {
     InHandle.AddOrGet<ck::FTag_Transform_Updated>();
+}
+
+auto
+    UCk_Utils_Transform_UE::
+    Request_SetWorldTransformFastPath(
+        USceneComponent* InSceneComp,
+        const FTransform& InTransform)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InSceneComp),
+        TEXT("Invalid SceneComponent supplied to Request_SetWorldTransformFastPath"))
+    { return; }
+
+    InSceneComp->SetComponentToWorld(InTransform);
+    InSceneComp->UpdateBounds();
+
+    if (auto* PrimitiveComp = ::Cast<UPrimitiveComponent>(InSceneComp);
+        ck::IsValid(PrimitiveComp))
+    {
+        auto& BodyInstance = PrimitiveComp->BodyInstance;
+        FPhysicsCommand::ExecuteWrite(BodyInstance.ActorHandle, [&](const FPhysicsActorHandle&)
+        {
+           FPhysicsInterface::SetGlobalPose_AssumesLocked(BodyInstance.ActorHandle, InTransform);
+        });
+    }
+
+    InSceneComp->MarkRenderTransformDirty();
+
+    ck::algo::ForEachIsValid(InSceneComp->GetAttachChildren(), [&](USceneComponent* InAttachedComp)
+    {
+        // This * transforms from local space to world space!
+        const auto CompWorldTransform = InAttachedComp->GetRelativeTransform() * InTransform;
+
+        Request_SetWorldTransformFastPath(InAttachedComp,CompWorldTransform);
+    });
 }
 
 // --------------------------------------------------------------------------------------------------------------------

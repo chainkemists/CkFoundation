@@ -15,7 +15,7 @@
 namespace ck
 {
     auto
-        FProcessor_Transform_Update::
+        FProcessor_Transform_SyncFromActor::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
@@ -317,20 +317,20 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_Transform_Actor::
+        FProcessor_Transform_SyncToActor::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_OwningActor_Current& InOwningActor,
+            const FFragment_Transform_RootComponent& InTransformRootComp,
             const FFragment_Transform& InComp) const
         -> void
     {
-        const auto EntityOwningActor = InOwningActor.Get_EntityOwningActor();
+        const auto RootComponent = InTransformRootComp.Get_RootComponent().Get();
 
-        CK_ENSURE_IF_NOT(ck::IsValid(EntityOwningActor), TEXT("Entity [{}] does NOT have a valid Owning Actor. Was it destroyed?"), InHandle)
+        CK_ENSURE_IF_NOT(ck::IsValid(RootComponent), TEXT("Entity [{}] does NOT have a valid RootComponent. Was it destroyed?"), InHandle)
         { return; }
 
-        EntityOwningActor->SetActorTransform(InComp.Get_Transform());
+        UCk_Utils_Transform_UE::Request_SetWorldTransformFastPath(RootComponent, InComp.Get_Transform());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
