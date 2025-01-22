@@ -11,12 +11,12 @@
 
 namespace ck
 {
-    class CKECSEXT_API FProcessor_Transform_Update : public ck_exp::TProcessor<
-            FProcessor_Transform_Update,
+    class CKECSEXT_API FProcessor_Transform_SyncFromActor : public ck_exp::TProcessor<
+            FProcessor_Transform_SyncFromActor,
             FCk_Handle_Transform,
             FFragment_Transform,
             FFragment_Transform_RootComponent,
-            FTag_Transform_NeedsUpdate,
+            FTag_Transform_SyncFromActor,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -89,13 +89,13 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSEXT_API FProcessor_Transform_Actor : public ck_exp::TProcessor<
-            FProcessor_Transform_Actor,
+    class CKECSEXT_API FProcessor_Transform_SyncToActor : public ck_exp::TProcessor<
+            FProcessor_Transform_SyncToActor,
             FCk_Handle_Transform,
-            FFragment_OwningActor_Current,
+            FFragment_Transform_RootComponent,
             FFragment_Transform,
             FTag_Transform_Updated,
-            ck::TExclude<FFragment_Transform_RootComponent>,
+            ck::TExclude<FTag_Transform_SyncFromActor>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -108,7 +108,7 @@ namespace ck
         auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_OwningActor_Current& InOwningActor,
+            const FFragment_Transform_RootComponent& InTransformRootComp,
             const FFragment_Transform& InComp) const -> void;
     };
 

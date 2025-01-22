@@ -21,8 +21,9 @@
 
 namespace ck
 {
-    class FProcessor_Transform_Update;
+    class FProcessor_Transform_SyncFromActor;
     class FProcessor_Transform_HandleRequests;
+    class FProcessor_Transform_SyncToActor;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -37,8 +38,9 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Transform);
 
 public:
-    friend class ck::FProcessor_Transform_Update;
+    friend class ck::FProcessor_Transform_SyncFromActor;
     friend class ck::FProcessor_Transform_HandleRequests;
+    friend class ck::FProcessor_Transform_SyncToActor;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -187,6 +189,11 @@ private:
     static auto
     Request_TransformUpdated(
             FCk_Handle_Transform& InHandle) -> void;
+
+    static auto
+    Request_SetWorldTransformFastPath(
+        USceneComponent* InSceneComp,
+        const FTransform& InTransform) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

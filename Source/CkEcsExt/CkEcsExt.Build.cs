@@ -17,6 +17,7 @@ public class CkEcsExt : CkModuleRules
             "GameplayTags",
             "DeveloperSettings",
             "NetCore",
+            "PhysicsCore",
 
             "CkActor",
             "CkCore",
