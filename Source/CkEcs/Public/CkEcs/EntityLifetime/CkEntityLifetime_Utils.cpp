@@ -414,6 +414,10 @@ auto
         const FCk_Handle& InNewLifetimeOwner)
     -> void
 {
+    CK_ENSURE_IF_NOT(InEntity != InNewLifetimeOwner,
+        TEXT("Cannot TransferLifetimeOwner of Entity [{}] to itself"), InEntity)
+    { return; }
+
     const auto& CurrentLifetimeOwner = InEntity.Get<ck::FFragment_LifetimeOwner>();
     auto CurrentLifetimeOwnerEntity = CurrentLifetimeOwner.Get_Entity();
 
