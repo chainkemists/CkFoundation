@@ -101,16 +101,6 @@ namespace ck
             return;
         }
 
-        const auto& CurrentOwnerOfAbilityToAddAndGive = UCk_Utils_Ability_UE::TryGet_Owner(InAbilityEntity);
-
-        CK_ENSURE_IF_NOT(ck::Is_NOT_Valid(CurrentOwnerOfAbilityToAddAndGive),
-            TEXT("Cannot ADD and GIVE Ability [{}] to Ability Owner [{}] because it still belongs to Ability Owner [{}]"
-            ),
-            InAbilityEntity, AbilityOwnerEntity, CurrentOwnerOfAbilityToAddAndGive)
-        {
-            return;
-        }
-
         DoHandleRequest(InAbilityEntity, FFragment_Ability_RequestGive{
             AbilityOwnerEntity,
             InRequest.Get_AbilitySource(),
@@ -158,6 +148,24 @@ namespace ck
                 return ECk_AbilityOwner_AbilityTransferredOrNot::NotTransferred;
             }
 
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            // HACK: this is s fairly major hack and needs to be addressed
+            // The problem is that on Deactivate we change the AbilityOwner Handle of the Script back to new Owner
+            // which causes problems subsequently when trying to Deactivate where the Kit tries to remove
+            // extension from the Owner (which is already the new Owner) but is unable to find it because the
+            // PREVIOUS Owner was supposed to be the Owner UNTIL we have Deactivated and Revoked the Ability
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            {
+                UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(AbilityToTransfer, AbilityOwnerEntity);
+
+                auto& AbilityCurrent = AbilityToTransfer.Get<ck::FFragment_Ability_Current,
+                    ck::IsValid_Policy_IncludePendingKill>();
+                auto Script = AbilityCurrent.Get_AbilityScript().Get();
+                Script->_AbilityOwnerHandle = AbilityOwnerEntity;
+            }
+
             AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
             DoHandleRequest(AbilityToTransfer, FFragment_Ability_RequestDeactivate{AbilityOwnerEntity});
 
@@ -177,10 +185,23 @@ namespace ck
                 return ECk_AbilityOwner_AbilityTransferredOrNot::NotTransferred;
             }
 
-            UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(AbilityToTransfer, TransferTarget);
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            // HACK: see notes above on this Hack
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            {
+                UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(AbilityToTransfer, TransferTarget);
+
+                auto& AbilityCurrent = AbilityToTransfer.Get<ck::FFragment_Ability_Current,
+                    ck::IsValid_Policy_IncludePendingKill>();
+                auto Script = AbilityCurrent.Get_AbilityScript().Get();
+                Script->_AbilityOwnerHandle = TransferTarget;
+            }
 
             TransferTarget.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
-            DoHandleRequest(AbilityToTransfer, FFragment_Ability_RequestAddAndGive{TransferTarget, AbilityToTransfer, {}});
+            DoHandleRequest(AbilityToTransfer,
+                FFragment_Ability_RequestAddAndGive{TransferTarget, AbilityToTransfer, {}});
 
             if (TransferTarget == AbilityOwnerEntity)
             {
@@ -212,12 +233,26 @@ namespace ck
             const FFragment_Ability_RequestGive& InRequest)
             -> void
     {
-        auto AbilityOwnerEntity = InRequest.Get_AbilityOwner();
+        auto AbilityOwnerEntity = [&]() -> FCk_Handle_AbilityOwner
+        {
+            const auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+            auto OwnerToReturn = InRequest.Get_AbilityOwner();
 
-        CK_ENSURE(AbilityOwnerEntity.Has<FTag_AbilityOwner_PendingSubAbilityOperation>(),
-            TEXT("AbilityOwner [{}] does NOT have Pending Operations tag"), AbilityOwnerEntity);
+            CK_ENSURE_IF_NOT(InRequest.Get_AbilityOwner() == LifetimeOwner,
+                TEXT(
+                    "AbilityOwner [{}] and LifetimeOwner [{}] for [{}] MUST be the same. Forcing the change but this WILL fail in Production!"
+                ),
+                OwnerToReturn, LifetimeOwner, InHandle)
+            {
+                OwnerToReturn = UCk_Utils_AbilityOwner_UE::Cast(LifetimeOwner);
+            }
 
-        AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
+            CK_ENSURE(OwnerToReturn.Has<FTag_AbilityOwner_PendingSubAbilityOperation>(),
+                TEXT("AbilityOwner [{}] does NOT have Pending Operations tag"), OwnerToReturn);
+
+            OwnerToReturn.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
+            return OwnerToReturn;
+        }();
 
         // --------------------------------------------------------------------------------------------------------------------
 
@@ -277,12 +312,24 @@ namespace ck
     {
         using RecordOfAbilities_Utils = ck::TUtils_RecordOfEntities<ck::FFragment_RecordOfAbilities>;
 
-        auto AbilityOwnerEntity = InRequest.Get_AbilityOwner();
+        auto AbilityOwnerEntity = [&]() -> FCk_Handle_AbilityOwner
+        {
+            //const auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+            auto OwnerToReturn = InRequest.Get_AbilityOwner();
 
-        CK_ENSURE(AbilityOwnerEntity.Has<FTag_AbilityOwner_PendingSubAbilityOperation>(),
-            TEXT("AbilityOwner [{}] does NOT have Pending Operations tag"), AbilityOwnerEntity);
+            //CK_ENSURE_IF_NOT(InRequest.Get_AbilityOwner() == LifetimeOwner,
+            //    TEXT("AbilityOwner [{}] and LifetimeOwner [{}] for [{}] MUST be the same. Forcing the change but this WILL fail in Production!"),
+            //    OwnerToReturn, LifetimeOwner, InHandle)
+            //{
+            //    OwnerToReturn = UCk_Utils_AbilityOwner_UE::Cast(LifetimeOwner);
+            //}
 
-        AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
+            CK_ENSURE(OwnerToReturn.Has<FTag_AbilityOwner_PendingSubAbilityOperation>(),
+                TEXT("AbilityOwner [{}] does NOT have Pending Operations tag"), OwnerToReturn);
+
+            OwnerToReturn.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
+            return OwnerToReturn;
+        }();
 
         const auto DestructionPolicy = InRequest.Get_DestructionPolicy();
 
@@ -361,12 +408,26 @@ namespace ck
             const FFragment_Ability_RequestActivate& InRequest)
             -> void
     {
-        auto AbilityOwnerEntity = InRequest.Get_AbilityOwner();
+        auto AbilityOwnerEntity = [&]() -> FCk_Handle_AbilityOwner
+        {
+            const auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+            auto OwnerToReturn = InRequest.Get_AbilityOwner();
 
-        CK_ENSURE(AbilityOwnerEntity.Has<FTag_AbilityOwner_PendingSubAbilityOperation>(),
-            TEXT("AbilityOwner [{}] does NOT have Pending Operations tag"), AbilityOwnerEntity);
+            CK_ENSURE_IF_NOT(InRequest.Get_AbilityOwner() == LifetimeOwner,
+                TEXT(
+                    "AbilityOwner [{}] and LifetimeOwner [{}] for [{}] MUST be the same. Forcing the change but this WILL fail in Production!"
+                ),
+                OwnerToReturn, LifetimeOwner, InHandle)
+            {
+                OwnerToReturn = UCk_Utils_AbilityOwner_UE::Cast(LifetimeOwner);
+            }
 
-        AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
+            CK_ENSURE(OwnerToReturn.Has<FTag_AbilityOwner_PendingSubAbilityOperation>(),
+                TEXT("AbilityOwner [{}] does NOT have Pending Operations tag"), OwnerToReturn);
+
+            OwnerToReturn.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
+            return OwnerToReturn;
+        }();
 
         // --------------------------------------------------------------------------------------------------------------------
 
@@ -497,12 +558,24 @@ namespace ck
             const FFragment_Ability_RequestDeactivate& InRequest)
             -> void
     {
-        auto AbilityOwnerEntity = InRequest.Get_AbilityOwner();
+        const auto AbilityOwnerEntity = [&]() -> FCk_Handle_AbilityOwner
+        {
+            //const auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+            auto OwnerToReturn = InRequest.Get_AbilityOwner();
 
-        CK_ENSURE(AbilityOwnerEntity.Has<FTag_AbilityOwner_PendingSubAbilityOperation>(),
-            TEXT("AbilityOwner [{}] does NOT have Pending Operations tag"), AbilityOwnerEntity);
+            //CK_ENSURE_IF_NOT(InRequest.Get_AbilityOwner() == LifetimeOwner,
+            //    TEXT("AbilityOwner [{}] and LifetimeOwner [{}] for [{}] MUST be the same. Forcing the change but this WILL fail in Production!"),
+            //    OwnerToReturn, LifetimeOwner, InHandle)
+            //{
+            //    OwnerToReturn = UCk_Utils_AbilityOwner_UE::Cast(LifetimeOwner);
+            //}
 
-        AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
+            CK_ENSURE(OwnerToReturn.Has<FTag_AbilityOwner_PendingSubAbilityOperation>(),
+                TEXT("AbilityOwner [{}] does NOT have Pending Operations tag"), OwnerToReturn);
+
+            OwnerToReturn.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
+            return OwnerToReturn;
+        }();
 
         // --------------------------------------------------------------------------------------------------------------------
 
@@ -530,9 +603,11 @@ namespace ck
         const auto& GrantedTags = AbilityActivationSettings.Get_ActivationSettingsOnOwner().
                                                             Get_GrantTagsOnAbilityOwner();
 
-        auto& AbilityOwnerCurrent = AbilityOwnerEntity.Get<ck::FFragment_AbilityOwner_Current>();
-
-        AbilityOwnerCurrent.RemoveTags(AbilityOwnerEntity, GrantedTags);
+        {
+            auto NonConstAbilityOwner = AbilityOwnerEntity;
+            auto& AbilityOwnerCurrent = NonConstAbilityOwner.Get<ck::FFragment_AbilityOwner_Current>();
+            AbilityOwnerCurrent.RemoveTags(NonConstAbilityOwner, GrantedTags);
+        }
 
         ability::VeryVerbose
         (

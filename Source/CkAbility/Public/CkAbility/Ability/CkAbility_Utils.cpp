@@ -36,7 +36,13 @@ auto
     if (ck::Is_NOT_Valid(AbilityScript))
     { return {}; }
 
-    return AbilityScript->Get_AbilityOwnerHandle();
+    CK_ENSURE_IF_NOT(AbilityScript->Get_AbilityOwnerHandle() == UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityEntity),
+        TEXT("The Ability [{}] does NOT have the correct Owner Handle"),
+        InAbilityEntity)
+    {
+    }
+
+    return UCk_Utils_AbilityOwner_UE::Cast(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityEntity));
 }
 
 auto
