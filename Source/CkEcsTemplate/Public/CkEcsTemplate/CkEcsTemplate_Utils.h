@@ -22,16 +22,16 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EcsTemplate",
-              DisplayName="Add EcsTemplate")
+              DisplayName="[Ck][EcsTemplate] Add Feature")
     static FCk_Handle_EcsTemplate
     Add(
-        UPARAM(ref) FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_EcsTemplate_ParamsData& InParams,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|EcsTemplate",
-              DisplayName="Has EcsTemplate")
+              DisplayName="[Ck][EcsTemplate] Has Feature")
     static bool
     Has(
         const FCk_Handle& InHandle);
@@ -55,7 +55,7 @@ private:
         FCk_Handle InHandle);
 
 public:
-	UFUNCTION(BlueprintCallable,
+    UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|EcsTemplate",
         DisplayName="[Ck][EcsTemplate] Request ExampleRequest")
     static FCk_Handle_EcsTemplate
