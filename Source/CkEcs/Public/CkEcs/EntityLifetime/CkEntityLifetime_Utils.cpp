@@ -87,9 +87,12 @@ auto
         {
             return InHandle.Get<ck::FFragment_LifetimeOwner, ck::IsValid_Policy_IncludePendingKill>().Get_Entity();
         }
+        default:
+        {
+            CK_INVALID_ENUM(InPendingKillPolicy);
+            return {};
+        }
     }
-
-    return {};
 }
 
 auto
@@ -140,9 +143,12 @@ auto
         {
             return InHandle.Has_Any<ck::FTag_DestroyEntity_Initiate, ck::FTag_DestroyEntity_Await, ck::FTag_DestroyEntity_Finalize>();
         }
+        default:
+        {
+            CK_INVALID_ENUM(InDestructionPhase);
+            return {};
+        }
     }
-
-    return false;
 }
 
 auto
@@ -152,7 +158,7 @@ auto
     -> bool
 {
     if (ck::Is_NOT_Valid(InHandle))
-    { return false; }
+    { return {}; }
 
     return Get_TransientEntity(InHandle.Get_Registry()) == InHandle;
 }
@@ -164,10 +170,13 @@ auto
     -> UWorld*
 {
     if (InHandle.Has<TWeakObjectPtr<UWorld>>())
-    {
-        const auto NetMode = InHandle.Get<TWeakObjectPtr<UWorld>>().Get()->GetNetMode();
-        return InHandle.Get<TWeakObjectPtr<UWorld>>().Get();
-    }
+    { return InHandle.Get<TWeakObjectPtr<UWorld>>().Get(); }
+
+    CK_ENSURE_IF_NOT(NOT Get_IsTransientEntity(InHandle),
+        TEXT("Failed to find a valid World reference while going up an Entity lifetime ownership chain!\n"
+             "The Transient [{}] is expected to always have a valid reference to the current Game World! "),
+        InHandle)
+    {  return {}; }
 
     const auto& LifeTimeOwner = Get_LifetimeOwner(InHandle);
 
