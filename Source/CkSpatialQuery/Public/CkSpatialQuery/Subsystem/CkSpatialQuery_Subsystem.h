@@ -58,15 +58,15 @@ private:
     TWeakObjectPtr<UCk_EcsWorld_Subsystem_UE> _EcsWorldSubsystem;
 
 private:
-    TUniquePtr<JPH::TempAllocatorImpl> _TempAllocator;
-    TUniquePtr<JPH::JobSystemThreadPool> _JobSystem;
-    TUniquePtr<BPLayerInterfaceImpl> _BroadPhaseLayerInterface;
-    TUniquePtr<ObjectVsBroadPhaseLayerFilterImpl> _ObjectVsBroadPhaseLayerFilter;
-    TUniquePtr<CkObjectLayerPairFilterImpl> _ObjectVsObjectFilter;
+    TPimplPtr<JPH::TempAllocatorImpl> _TempAllocator;
+    JPH::JobSystemThreadPool* _JobSystem = nullptr;
+    TPimplPtr<BPLayerInterfaceImpl> _BroadPhaseLayerInterface;
+    TPimplPtr<ObjectVsBroadPhaseLayerFilterImpl> _ObjectVsBroadPhaseLayerFilter;
+    TPimplPtr<CkObjectLayerPairFilterImpl> _ObjectVsObjectFilter;
     TSharedPtr<JPH::PhysicsSystem> _PhysicsSystem;
 
-    TUniquePtr<CkBodyActivationListener> _BodyActivationListener;
-    TUniquePtr<CkContactListener> _ContactListener;
+    TPimplPtr<CkBodyActivationListener> _BodyActivationListener;
+    TPimplPtr<CkContactListener> _ContactListener;
 
 public:
     auto

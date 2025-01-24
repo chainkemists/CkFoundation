@@ -323,22 +323,23 @@ auto
     constexpr int MaxPhysicsBarriers = 8;
 
     // TODO: Drive through Project settings
-    _TempAllocator = MakeUnique<TempAllocatorImpl>(10 * 1024 * 1024); // 10MB
-    _JobSystem = MakeUnique<
-        JobSystemThreadPool>(MaxPhysicsJobs, MaxPhysicsBarriers, thread::hardware_concurrency() - 1);
+    _TempAllocator = MakePimpl<TempAllocatorImpl>(10 * 1024 * 1024); // 10MB
+    _JobSystem = new JobSystemThreadPool(MaxPhysicsJobs, MaxPhysicsBarriers, thread::hardware_concurrency() - 1);
 
-    _BroadPhaseLayerInterface = MakeUnique<BPLayerInterfaceImpl>();
-    _ObjectVsBroadPhaseLayerFilter = MakeUnique<ObjectVsBroadPhaseLayerFilterImpl>();
-    _ObjectVsObjectFilter = MakeUnique<CkObjectLayerPairFilterImpl>();
+    constexpr auto Alignment = alignof(JobSystemThreadPool);
+
+    _BroadPhaseLayerInterface = MakePimpl<BPLayerInterfaceImpl>();
+    _ObjectVsBroadPhaseLayerFilter = MakePimpl<ObjectVsBroadPhaseLayerFilterImpl>();
+    _ObjectVsObjectFilter = MakePimpl<CkObjectLayerPairFilterImpl>();
 
     _PhysicsSystem = MakeShared<PhysicsSystem>();
     _PhysicsSystem->Init(MaxBodies, NumBodyMutexes, MaxBodyPairs, MaxContactConstraints, *_BroadPhaseLayerInterface,
         *_ObjectVsBroadPhaseLayerFilter, *_ObjectVsObjectFilter);
 
-    _BodyActivationListener = MakeUnique<CkBodyActivationListener>();
+    _BodyActivationListener = MakePimpl<CkBodyActivationListener>();
     _PhysicsSystem->SetBodyActivationListener(_BodyActivationListener.Get());
 
-    _ContactListener = MakeUnique<CkContactListener>(_EcsWorldSubsystem->Get_TransientEntity());
+    _ContactListener = MakePimpl<CkContactListener>(_EcsWorldSubsystem->Get_TransientEntity());
     _PhysicsSystem->SetContactListener(&*_ContactListener);
 }
 
@@ -350,7 +351,7 @@ auto
 {
     Super::Tick(InDeltaTime);
 
-    _PhysicsSystem->Update(1.0f / 60.0f, 1, &*_TempAllocator, &*_JobSystem);
+    _PhysicsSystem->Update(1.0f / 60.0f, 1, &*_TempAllocator, _JobSystem);
 }
 
 auto
@@ -358,6 +359,7 @@ auto
     Deinitialize()
         -> void
 {
+    delete _JobSystem;
     Super::Deinitialize();
 }
 
