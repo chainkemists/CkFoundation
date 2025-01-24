@@ -140,24 +140,7 @@ auto
     if (GetWorld()->IsNetMode(NM_Client))
     { return; }
 
-    // We cannot create the replicated Actors right here. We need to wait until BeginPlay
-    _PostLoginDelegateHandle = FGameModeEvents::GameModePostLoginEvent.AddUObject(this, &UCk_AbilityCueReplicator_Subsystem_UE::OnLoginEvent);
-
     _PostLoadMapWithWorldDelegateHandle = FCoreUObjectDelegates::PostLoadMapWithWorld.AddUObject(this, &UCk_AbilityCueReplicator_Subsystem_UE::OnPostLoadMapWithWorld);
-
-    // TODO: GameInstance Subsystems are not ready yet. Investigate what the lifetime of Subsystems is
-    //const auto& GameSessionSubsystem = UCk_Utils_Game_UE::Get_GameInstance(this)->GetSubsystem<UCk_GameSession_Subsystem_UE>();
-
-    //CK_ENSURE_IF_NOT(ck::IsValid(GameSessionSubsystem), TEXT("Failed to retrieve the GameSession Subsystem!"))
-    //{ return; }
-
-    //_PostFireUnbind_Connection = ck::UUtils_Signal_OnLoginEvent_PostFireUnbind::Bind<&ThisType::OnPlayerControllerReady>
-    //(
-    //    this,
-    //    GameSessionSubsystem->Get_SignalHandle(),
-    //    ECk_Signal_BindingPolicy::FireIfPayloadInFlight,
-    //    ECk_Signal_PostFireBehavior::Unbind
-    //);
 }
 
 auto
@@ -167,7 +150,6 @@ auto
 {
     Super::Deinitialize();
 
-    FGameModeEvents::GameModePostLoginEvent.Remove(_PostLoginDelegateHandle);
     FCoreUObjectDelegates::PostLoadMapWithWorld.Remove(_PostLoadMapWithWorldDelegateHandle);
 }
 
@@ -233,16 +215,6 @@ auto
         auto* AbilityCueReplicator = GetWorld()->SpawnActor<ACk_AbilityCueReplicator_UE>();
         _AbilityCueReplicators.Emplace(AbilityCueReplicator);
     }
-}
-
-auto
-    UCk_AbilityCueReplicator_Subsystem_UE::
-    OnLoginEvent(
-        AGameModeBase* InGameModeBase,
-        APlayerController* InPlayerController)
-    -> void
-{
-    DoSpawnCueReplicatorActorsForPlayerController(InPlayerController);
 }
 
 auto
