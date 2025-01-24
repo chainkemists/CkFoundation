@@ -6,7 +6,6 @@
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Fragment.h"
 
 #include "CkCore/Object/CkObject_Utils.h"
-#include "CkCore/SharedValues/CkSharedValues_Utils.h"
 
 #include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
 
@@ -20,6 +19,12 @@ auto
         ECk_Replication InReplicates)
     -> FCk_Handle_AbilityOwner
 {
+    CK_ENSURE_IF_NOT(NOT Has(InHandle),
+        TEXT("Trying to Add the AbilityOwner feature to [{}] but it already has it!\n"
+             "Use 'Append_DefaultAbilities' to add more default abilities later during the construction of the Entity to avoid this issue"),
+        InHandle)
+    { return Cast(InHandle); }
+
     auto AppendedParams = InParams;
 
     if (InHandle.Has<FCk_Fragment_AbilityOwner_ParamsData>())
