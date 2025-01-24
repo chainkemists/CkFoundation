@@ -314,8 +314,6 @@ namespace ck
                         DoHandleRequest(InHandle, InRequest);
                     }));
             });
-
-        InHandle.Remove<MarkedDirtyBy>();
     }
 
     auto
