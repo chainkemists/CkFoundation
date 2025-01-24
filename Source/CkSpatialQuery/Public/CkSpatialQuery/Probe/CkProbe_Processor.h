@@ -56,6 +56,7 @@ namespace ck
             FCk_Handle_Probe,
             FFragment_Probe_Params,
             FFragment_Probe_Current,
+            TExclude<FTag_Probe_MotionType_Static>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

@@ -27,12 +27,23 @@ enum class ECk_MotionType : uint8
     Static = 0,
     Kinematic,
     Dynamic,
-
-    Count UMETA(Hidden)
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_MotionType);
-ENUM_RANGE_BY_COUNT(ECk_MotionType, ECk_MotionType::Count);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// TODO: move to a more appropriate location
+UENUM(BlueprintType)
+enum class ECk_MotionQuality : uint8
+{
+    // FAST - use this for most Probes
+    Discrete UMETA(DisplayName="Discrete"),
+    // SLOWER - avoid using this unless continuous collision detection is needed
+    LinearCast UMETA(DisplayName="LinearCast (CCD)")
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_MotionQuality);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -55,8 +66,42 @@ private:
         meta = (AllowPrivateAccess = true))
     ECk_MotionType _MotionType = ECk_MotionType::Static;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    ECk_MotionQuality _MotionQuality = ECk_MotionQuality::Discrete;
+
 public:
-    CK_PROPERTY_GET(_MotionType);
+    CK_PROPERTY(_MotionType);
+    CK_PROPERTY(_MotionQuality);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKSPATIALQUERY_API FCk_Probe_DebugInfo
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Probe_DebugInfo);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _LineThickness = 1.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FLinearColor _DebugColor = FLinearColor::White;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FLinearColor _DebugOverlapColor = FLinearColor::White;
+
+public:
+    CK_PROPERTY(_LineThickness);
+    CK_PROPERTY(_DebugColor);
+    CK_PROPERTY(_DebugOverlapColor);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

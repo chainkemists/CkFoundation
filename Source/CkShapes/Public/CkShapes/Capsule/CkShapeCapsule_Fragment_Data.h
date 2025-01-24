@@ -30,10 +30,10 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
-    float _HalfHeight;
+    float _HalfHeight = 100.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
-    float _Radius;
+    float _Radius = 50.0f;
 
 public:
     CK_PROPERTY_GET(_HalfHeight);
