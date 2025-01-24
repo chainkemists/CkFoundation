@@ -9,10 +9,12 @@ auto
     UCk_Utils_Probe_UE::
     Add(
         FCk_Handle InHandle,
-        const FCk_Fragment_Probe_ParamsData& InParams)
+        const FCk_Fragment_Probe_ParamsData& InParams,
+        const FCk_Probe_DebugInfo& InDebugInfo)
         -> FCk_Handle_Probe
 {
     InHandle.Add<ck::FFragment_Probe_Params>(InParams);
+    InHandle.Add<ck::FFragment_Probe_DebugInfo>(InDebugInfo);
     InHandle.Add<ck::FFragment_Probe_Current>();
 
     InHandle.Add<ck::FTag_Probe_RequiresSetup>();
