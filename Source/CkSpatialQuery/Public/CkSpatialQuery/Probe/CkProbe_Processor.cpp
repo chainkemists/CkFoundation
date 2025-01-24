@@ -14,6 +14,7 @@
 
 #include "CkSpatialQuery/CkSpatialQuery_Log.h"
 #include "CkSpatialQuery/CkSpatialQuery_Utils.h"
+#include "CkSpatialQuery/Probe/CkProbe_Utils.h"
 #include "CkSpatialQuery/Subsystem/CkSpatialQuery_Subsystem.h"
 
 #include "Jolt/Jolt.h"
@@ -83,6 +84,19 @@ namespace ck
             };
             ShapeSettings.mIsSensor = true;
 
+            switch(InParams.Get_MotionType())
+            {
+                case ECk_MotionType::Static: ShapeSettings.mMotionType = EMotionType::Static; InHandle.Add<FTag_Probe_MotionType_Static>(); break;
+                case ECk_MotionType::Kinematic: ShapeSettings.mMotionType = EMotionType::Kinematic; break;
+                case ECk_MotionType::Dynamic: ShapeSettings.mMotionType = EMotionType::Dynamic; break;
+            }
+
+            switch(InParams.Get_MotionQuality())
+            {
+                case ECk_MotionQuality::Discrete: ShapeSettings.mMotionQuality = EMotionQuality::Discrete; break;
+                case ECk_MotionQuality::LinearCast: ShapeSettings.mMotionQuality = EMotionQuality::LinearCast; break;
+            }
+
             auto PhysicsSystem = _PhysicsSystem.Pin();
             auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
@@ -113,6 +127,19 @@ namespace ck
                 ObjectLayer{1}
             };
             ShapeSettings.mIsSensor = true;
+
+            switch(InParams.Get_MotionType())
+            {
+                case ECk_MotionType::Static: ShapeSettings.mMotionType = EMotionType::Static; InHandle.Add<FTag_Probe_MotionType_Static>(); break;
+                case ECk_MotionType::Kinematic: ShapeSettings.mMotionType = EMotionType::Kinematic; break;
+                case ECk_MotionType::Dynamic: ShapeSettings.mMotionType = EMotionType::Dynamic; break;
+            }
+
+            switch(InParams.Get_MotionQuality())
+            {
+                case ECk_MotionQuality::Discrete: ShapeSettings.mMotionQuality = EMotionQuality::Discrete; break;
+                case ECk_MotionQuality::LinearCast: ShapeSettings.mMotionQuality = EMotionQuality::LinearCast; break;
+            }
 
             auto PhysicsSystem = _PhysicsSystem.Pin();
             auto& BodyInterface = PhysicsSystem->GetBodyInterface();
@@ -146,6 +173,19 @@ namespace ck
             };
             ShapeSettings.mIsSensor = true;
 
+            switch(InParams.Get_MotionType())
+            {
+                case ECk_MotionType::Static: ShapeSettings.mMotionType = EMotionType::Static; InHandle.Add<FTag_Probe_MotionType_Static>(); break;
+                case ECk_MotionType::Kinematic: ShapeSettings.mMotionType = EMotionType::Kinematic; break;
+                case ECk_MotionType::Dynamic: ShapeSettings.mMotionType = EMotionType::Dynamic; break;
+            }
+
+            switch(InParams.Get_MotionQuality())
+            {
+                case ECk_MotionQuality::Discrete: ShapeSettings.mMotionQuality = EMotionQuality::Discrete; break;
+                case ECk_MotionQuality::LinearCast: ShapeSettings.mMotionQuality = EMotionQuality::LinearCast; break;
+            }
+
             auto PhysicsSystem = _PhysicsSystem.Pin();
             auto& BodyInterface = PhysicsSystem->GetBodyInterface();
 
@@ -178,6 +218,19 @@ namespace ck
                 ObjectLayer{1}
             };
             ShapeSettings.mIsSensor = true;
+
+            switch(InParams.Get_MotionType())
+            {
+                case ECk_MotionType::Static: ShapeSettings.mMotionType = EMotionType::Static; InHandle.Add<FTag_Probe_MotionType_Static>(); break;
+                case ECk_MotionType::Kinematic: ShapeSettings.mMotionType = EMotionType::Kinematic; break;
+                case ECk_MotionType::Dynamic: ShapeSettings.mMotionType = EMotionType::Dynamic; break;
+            }
+
+            switch(InParams.Get_MotionQuality())
+            {
+                case ECk_MotionQuality::Discrete: ShapeSettings.mMotionQuality = EMotionQuality::Discrete; break;
+                case ECk_MotionQuality::LinearCast: ShapeSettings.mMotionQuality = EMotionQuality::LinearCast; break;
+            }
 
             auto PhysicsSystem = _PhysicsSystem.Pin();
             auto& BodyInterface = PhysicsSystem->GetBodyInterface();

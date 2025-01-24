@@ -25,25 +25,12 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_Probe_Updated);
     CK_DEFINE_ECS_TAG(FTag_Probe_Overlapping);
 
+    CK_DEFINE_ECS_TAG(FTag_Probe_MotionType_Static);
+
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKSPATIALQUERY_API FFragment_Probe_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_Probe_Params);
-
-    public:
-        using ParamsType = FCk_Fragment_Probe_ParamsData;
-
-    private:
-        ParamsType _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Probe_Params, _Params);
-    };
+    using FFragment_Probe_Params = FCk_Fragment_Probe_ParamsData;
+    using FFragment_Probe_DebugInfo = FCk_Probe_DebugInfo;
 
     // --------------------------------------------------------------------------------------------------------------------
 
