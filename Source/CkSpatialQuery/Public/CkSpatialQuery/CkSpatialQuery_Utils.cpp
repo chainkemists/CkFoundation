@@ -28,6 +28,22 @@ namespace ck::jolt
 
     auto
         Conv(
+            JoltFloat3 InVector)
+            -> FVector
+    {
+        return FVector{InVector.x, InVector.y, InVector.z};
+    }
+
+    auto
+        Conv(
+            FRotator InRotator)
+            -> JoltQuat
+    {
+        return Conv(InRotator.Quaternion());
+    }
+
+    auto
+        Conv(
             FQuat InQuat)
             -> JoltQuat
     {
