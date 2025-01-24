@@ -9,6 +9,7 @@
 
 namespace ck::jolt
 {
+    using JoltFloat3 = JPH::Float3;
     using JoltVec3 = JPH::Vec3;
     using JoltQuat = JPH::Quat;
 
@@ -26,6 +27,16 @@ namespace ck::jolt
         Conv(
             JoltVec3 InVector)
             -> FVector;
+
+    auto
+        Conv(
+            JoltFloat3 InVector)
+            -> FVector;
+
+    auto
+        Conv(
+            FRotator InRotator)
+            -> JoltQuat;
 
     auto
         Conv(
