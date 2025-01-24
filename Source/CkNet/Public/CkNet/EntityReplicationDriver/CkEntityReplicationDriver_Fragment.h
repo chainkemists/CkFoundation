@@ -11,29 +11,12 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck
-{
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
-        CKNET_API,
-        OnReplicationComplete,
-        FCk_Delegate_EntityReplicationDriver_OnReplicationComplete_MC,
-        FCk_Handle);
-
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
-        CKNET_API,
-        OnDependentsReplicationComplete,
-        FCk_Delegate_EntityReplicationDriver_OnReplicationComplete_MC,
-        FCk_Handle);
-}
+class UCk_Utils_EntityReplicationDriver_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class UCk_Utils_EntityReplicationDriver_UE;
-
 namespace ck
 {
-    // --------------------------------------------------------------------------------------------------------------------
-
     struct FFragment_ReplicationDriver_Requests
     {
     public:
@@ -56,10 +39,22 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class FProcessor_AbilityOwner_HandleRequests;
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKNET_API,
+        OnReplicationComplete,
+        FCk_Delegate_EntityReplicationDriver_OnReplicationComplete_MC,
+        FCk_Handle);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKNET_API,
+        OnDependentsReplicationComplete,
+        FCk_Delegate_EntityReplicationDriver_OnReplicationComplete_MC,
+        FCk_Handle);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+namespace ck { class FProcessor_AbilityOwner_HandleRequests; }
 
 UCLASS(Blueprintable)
 class CKNET_API UCk_Fragment_EntityReplicationDriver_Rep : public UCk_Ecs_ReplicatedObject_UE

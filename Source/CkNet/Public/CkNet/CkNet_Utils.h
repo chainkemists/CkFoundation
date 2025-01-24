@@ -12,6 +12,8 @@
 #include "CkEcs/Net/CkNet_Fragment_Data.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
+#include "CkNet/EntityReplicationChannel/CkEntityReplicationChannel_Utils.h"
+
 #include "CkNet_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -298,8 +300,7 @@ public:
     requires(std::is_base_of_v<class UCk_Ecs_ReplicatedObject_UE, T_ReplicatedFragment>)
     static auto
     TryAddReplicatedFragment(
-        FCk_Handle& InHandle,
-        UCk_Ecs_ReplicatedObject_UE* InExistingObject = nullptr) -> ECk_AddedOrNot;
+        FCk_Handle& InHandle) -> ECk_AddedOrNot;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -342,8 +343,7 @@ requires(std::is_base_of_v<class UCk_Ecs_ReplicatedObject_UE, T_ReplicatedFragme
 auto
     UCk_Utils_Ecs_Net_UE::
     TryAddReplicatedFragment(
-        FCk_Handle& InHandle,
-        UCk_Ecs_ReplicatedObject_UE* InExistingObject)
+        FCk_Handle& InHandle)
     -> ECk_AddedOrNot
 {
     if (UCk_Utils_Net_UE::Get_EntityReplication(InHandle) == ECk_Replication::DoesNotReplicate)
@@ -355,45 +355,49 @@ auto
     if (InHandle.Has<TObjectPtr<T_ReplicatedFragment>>())
     { return ECk_AddedOrNot::AlreadyExists; }
 
-    const auto EntityWithActor = UCk_Utils_EntityLifetime_UE::Get_EntityInOwnershipChain_If(InHandle,
-    [](const FCk_Handle& Handle)
+    const auto& ActorToUseForReplicationChannel = [&]() -> AActor*
     {
-        return UCk_Utils_OwningActor_UE::Has(Handle);
-    });
+        if (const auto& EntityWithActor = UCk_Utils_OwningActor_UE::TryGet_Entity_OwningActor_InOwnershipChain(InHandle);
+            ck::IsValid(EntityWithActor))
+        {
+            const auto& OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(EntityWithActor);
 
-    if (ck::Is_NOT_Valid(EntityWithActor))
-    { return ECk_AddedOrNot::NotAdded; }
+            if (const auto& OutermostActor = UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(OwningActor);
+                ck::IsValid(OutermostActor))
+            { return OutermostActor; }
+        }
 
-    const auto& BasicDetails   = UCk_Utils_OwningActor_UE::Get_EntityOwningActorBasicDetails(EntityWithActor);
-    const auto& OwningActor    = BasicDetails.Get_Actor().Get();
-    const auto& OutermostActor = UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(OwningActor);
+        auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InHandle);
+        const auto& EcsReplicationChannel = UCk_Utils_EntityReplicationChannelOwner_UE::Get_NextAvailableEcsChannel(TransientEntity);
 
-    CK_ENSURE_IF_NOT(ck::IsValid(OutermostActor),
-        TEXT("Unable to add ReplicatedFragment [{}] for Entity [{}]. We require an Entity with an Actor in the Outer chain that has remote "
-            "authority (is Replicated) to be able to add replicated fragments. During this search, we found the Entity [{}] with OwningActor [{}] "
-            "that does NOT have remote authority, nor does any owning Actor in the ownership chain. Does this Entity even require replication?"),
-        ck::Get_RuntimeTypeToString<T_ReplicatedFragment>(), InHandle,  EntityWithActor, OwningActor)
+        CK_ENSURE_IF_NOT(ck::IsValid(EcsReplicationChannel),
+            TEXT("Unable to add ReplicatedFragment [{}] for Entity [{}]. We require an Entity with an Actor in the Outer chain that has remote "
+                 "authority (is Replicated) to be able to add replicated fragments.\n"
+                 "During this search, we found no valid Actor in the ownership chain that satisfies those requirements.\n"
+                 "Does this Entity even require replication?\n"
+                 "Falling back on one of the Transient Entity [{}] Ecs Replication Channel failed as well"),
+            ck::Get_RuntimeTypeToString<T_ReplicatedFragment>(), InHandle, TransientEntity)
+        { return {}; }
+
+        return UCk_Utils_EntityReplicationChannel_UE::Get_ChannelActor(EcsReplicationChannel);
+    }();
+
+    if (ck::Is_NOT_Valid(ActorToUseForReplicationChannel))
     { return ECk_AddedOrNot::NotAdded; }
 
     auto ReplicatedFragment_Object = [&]()
     {
-        if (ck::IsValid(InExistingObject))
-        {
-            UCk_Ecs_ReplicatedObject_UE::Setup(InExistingObject, OutermostActor, InHandle);
-            return Cast<T_ReplicatedFragment>(InExistingObject);
-        }
-
         return Cast<T_ReplicatedFragment>(UCk_Ecs_ReplicatedObject_UE::Create
         (
             T_ReplicatedFragment::StaticClass(),
-            OutermostActor,
+            ActorToUseForReplicationChannel,
             NAME_None,
             InHandle
         ));
     }();
 
     CK_ENSURE_IF_NOT(ck::IsValid(ReplicatedFragment_Object),
-        TEXT("Failed to create (or convert from [{}]) Replicated Fragment Object for Entity [{}]"), InExistingObject, InHandle)
+        TEXT("Failed to create Replicated Fragment Object for Entity [{}]"), InHandle)
     { return ECk_AddedOrNot::NotAdded; }
 
     InHandle.Add<TObjectPtr<T_ReplicatedFragment>>(ReplicatedFragment_Object);

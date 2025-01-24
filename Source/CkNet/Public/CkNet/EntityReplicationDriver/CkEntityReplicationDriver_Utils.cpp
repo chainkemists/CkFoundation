@@ -47,32 +47,35 @@ auto
 auto
     UCk_Utils_EntityReplicationDriver_UE::
     Request_BuildAndReplicate(
-        FCk_Handle& InHandle,
+        const FCk_Handle& InAnyHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo)
     -> FCk_Handle
 {
-    return Request_TryBuildAndReplicate(InHandle, InConstructionInfo, [](FCk_Handle){});
+    return Request_TryBuildAndReplicate(InAnyHandle, InConstructionInfo, [](FCk_Handle){});
 }
 
 auto
     UCk_Utils_EntityReplicationDriver_UE::
     Request_TryReplicateAbility(
-        FCk_Handle& InHandle,
+        const FCk_Handle& InAnyHandle,
         const UCk_Entity_ConstructionScript_PDA* InConstructionScript,
         const TSubclassOf<UCk_DataAsset_PDA>& InAbilityScriptClass,
         const FCk_Handle& InAbilitySource,
         ECk_ConstructionPhase InAbilityConstructionPhase)
     -> FCk_Handle
 {
-    if (UCk_Utils_Net_UE::Get_EntityReplication(InHandle) == ECk_Replication::DoesNotReplicate)
+    if (UCk_Utils_Net_UE::Get_EntityReplication(InAnyHandle) == ECk_Replication::DoesNotReplicate)
     { return {}; }
 
-    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle))
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAnyHandle))
     { return {};}
 
-    CK_ENSURE_IF_NOT(InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>(),
-        TEXT("Entity [{}] does NOT have a ReplicationDriver. Unable to proceed with Replication of Entity with ConstructionScript [{}]"),
-        InHandle,
+    auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InAnyHandle);
+    //auto EcsChannel = UCk_Utils_EntityReplicationChannelOwner_UE::Get_NextAvailableEcsChannel(TransientEntity);
+
+    CK_ENSURE_IF_NOT(InAnyHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>(),
+        TEXT("Entity [{}] does NOT have a ReplicationDriver. Unable to proceed with Replication of Ability with ConstructionScript [{}]"),
+        InAnyHandle,
         InConstructionScript)
     { return {}; }
 
@@ -81,16 +84,16 @@ auto
         InConstructionScript)
     { return {}; }
 
-    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InAnyHandle);
 
-    UCk_Utils_Net_UE::Copy(InHandle, NewEntity);
+    UCk_Utils_Net_UE::Copy(InAnyHandle, NewEntity);
 
     if (Add(NewEntity) == ECk_AddedOrNot::NotAdded)
     { return {}; }
 
     InConstructionScript->Construct(NewEntity, {}, InAbilityScriptClass->ClassDefaultObject);
 
-    switch(const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(InHandle))
+    switch(const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(InAnyHandle))
     {
         case ECk_Net_NetModeType::Host:
         {
@@ -103,7 +106,7 @@ auto
                 InAbilitySource,
                 FCk_EntityReplicationDriver_ReplicateObjects_Data{ReplicatedObjects.Get_ReplicatedObjects()},
                 InAbilityConstructionPhase
-            }.Set_OwningEntityDriver(InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>()));
+            }.Set_OwningEntityDriver(InAnyHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>()));
 
             ck::UUtils_Signal_OnReplicationComplete::Broadcast(NewEntity, ck::MakePayload(NewEntity));
             ck::UUtils_Signal_OnDependentsReplicationComplete::Broadcast(NewEntity, ck::MakePayload(NewEntity));
@@ -122,20 +125,23 @@ auto
 auto
     UCk_Utils_EntityReplicationDriver_UE::
     Request_TryBuildAndReplicate(
-        FCk_Handle& InHandle,
+        const FCk_Handle& InAnyHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo,
         const std::function<void(FCk_Handle)>& InFunc_OnCreateEntityBeforeBuild)
     -> FCk_Handle
 {
-    if (UCk_Utils_Net_UE::Get_EntityReplication(InHandle) == ECk_Replication::DoesNotReplicate)
+    if (UCk_Utils_Net_UE::Get_EntityReplication(InAnyHandle) == ECk_Replication::DoesNotReplicate)
     { return {}; }
 
-    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InHandle))
+    if (NOT UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(InAnyHandle))
     { return {};}
 
-    CK_ENSURE_IF_NOT(InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>(),
-        TEXT("Entity [{}] does NOT have a ReplicationDriver. Unable to proceed with Replication of Entity with ConstructionScript [{}]"),
-        InHandle,
+    auto TransientEntity = UCk_Utils_EntityLifetime_UE::Get_TransientEntity(InAnyHandle);
+    auto EcsChannel = UCk_Utils_EntityReplicationChannelOwner_UE::Get_NextAvailableEcsChannel(TransientEntity);
+
+    CK_ENSURE_IF_NOT(EcsChannel.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>(),
+        TEXT("EcsChannel Entity [{}] does NOT have a ReplicationDriver. Unable to proceed with Replication of Entity with ConstructionScript [{}]"),
+        EcsChannel,
         InConstructionInfo.Get_ConstructionScript())
     { return {}; }
 
@@ -144,9 +150,9 @@ auto
         InConstructionInfo.Get_ConstructionScript())
     { return {}; }
 
-    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle, InFunc_OnCreateEntityBeforeBuild);
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(EcsChannel, InFunc_OnCreateEntityBeforeBuild);
 
-    UCk_Utils_Net_UE::Copy(InHandle, NewEntity);
+    UCk_Utils_Net_UE::Copy(EcsChannel, NewEntity);
 
     if (Add(NewEntity) == ECk_AddedOrNot::NotAdded)
     { return {}; }
@@ -154,13 +160,13 @@ auto
     InConstructionInfo.Get_ConstructionScript()->GetDefaultObject<UCk_Entity_ConstructionScript_PDA>()->Construct(
         NewEntity, InConstructionInfo.Get_OptionalParams());
 
-    switch(const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(InHandle))
+    switch(const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(EcsChannel))
     {
         case ECk_Net_NetModeType::Host:
         {
             const auto& RepDriver = NewEntity.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
             const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(NewEntity);
-            const auto& IsOwningEntityDriverDependentOnThis = InHandle.Has<ck::FTag_EntityJustCreated>();
+            const auto& IsOwningEntityDriverDependentOnThis = EcsChannel.Has<ck::FTag_EntityJustCreated>();
 
             const auto& DependentRepDriversAddedDuringConstruction = RepDriver->Get_ExpectedNumberOfDependentReplicationDrivers();
 
@@ -173,7 +179,7 @@ auto
                     InConstructionInfo,
                     FCk_EntityReplicationDriver_ReplicateObjects_Data{ReplicatedObjects.Get_ReplicatedObjects()}
                 }
-                .Set_OwningEntityDriver(InHandle.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
+                .Set_OwningEntityDriver(EcsChannel.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
                 .Set_IsOwningEntityDriverDependentOnThis(IsOwningEntityDriverDependentOnThis)
             );
             ck::UUtils_Signal_OnReplicationComplete::Broadcast(NewEntity, ck::MakePayload(NewEntity));

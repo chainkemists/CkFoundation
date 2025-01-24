@@ -356,7 +356,7 @@ auto
 auto
     UCk_Utils_Net_UE::
     Get_IsRoleMatching(
-        AActor*                 InActor,
+        AActor* InActor,
         ECk_Net_ReplicationType InReplicationType)
     -> bool
 {

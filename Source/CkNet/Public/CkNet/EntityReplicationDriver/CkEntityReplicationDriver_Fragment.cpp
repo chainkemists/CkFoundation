@@ -35,8 +35,13 @@ UCk_Fragment_EntityReplicationDriver_Rep::
     if (ck::Is_NOT_Valid(World))
     { return; }
 
-    // Creating via registry since we want 'Request_SetupEntityWithLifetimeOwner' to execute during the OnRep_XYZ
-    _AssociatedEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(**UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(World));
+    auto EcsSubsystem = World->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(EcsSubsystem), TEXT("Ecs World Subsystem is NOT valid for world [{}]"),
+        World)
+    { return; }
+
+    _AssociatedEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(**EcsSubsystem->Get_TransientEntity());
 }
 
 auto
@@ -187,17 +192,24 @@ auto
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    const auto OwningEntity = _ReplicationData_Ability.Get_OwningEntityDriver()->Get_AssociatedEntity();
+    const auto& OwningEntityDriver = _ReplicationData.Get_OwningEntityDriver();
+
+    CK_ENSURE_IF_NOT(ck::IsValid(OwningEntityDriver),
+        TEXT("OwningEntityDriver is NOT valid. Somehow the ReplicationDriver was NOT added to the OwningEntity but WAS "
+            "added to the child Entity.{}"), ck::Context(this))
+    { return; }
+
+    const auto OwningEntity = OwningEntityDriver->Get_AssociatedEntity();
 
     // wait on the owning entity to fully replicate
     if (ck::Is_NOT_Valid(OwningEntity))
     {
-        _ReplicationData_Ability.Get_OwningEntityDriver()->_PendingChildAbilityEntityConstructions.Emplace(this);
+        OwningEntityDriver->_PendingChildAbilityEntityConstructions.Emplace(this);
         return;
     }
 
     ck::ecs::Verbose(TEXT("Adding Ability [{}] to [{}] with Owning Entity [{}] on Client [{}].{}"),
-        _ReplicationData_Ability.Get_AbilityScriptClass(), Get_AssociatedEntity(), _ReplicationData_Ability.Get_OwningEntityDriver()->Get_AssociatedEntity(),
+        _ReplicationData_Ability.Get_AbilityScriptClass(), Get_AssociatedEntity(), OwningEntity,
         GetWorld()->GetFirstLocalPlayerFromController(), this);
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -252,7 +264,8 @@ auto
 
     _AssociatedEntity._ReplicationDriver = this;
 
-    UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(_AssociatedEntity, UCk_Utils_EcsWorld_Subsystem_UE::Get_TransientEntity(GetWorld()));
+    const auto WorldSubsystem = GetWorld()->GetSubsystem<UCk_EcsWorld_Subsystem_UE>();
+    UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(_AssociatedEntity, WorldSubsystem->Get_TransientEntity());
 
     UCk_Utils_Handle_UE::Set_DebugName(_AssociatedEntity, UCk_Utils_Debug_UE::Get_DebugName(ReplicatedActor, ECk_DebugNameVerbosity_Policy::Compact));
     UCk_Utils_OwningActor_UE::Add(_AssociatedEntity, ReplicatedActor);

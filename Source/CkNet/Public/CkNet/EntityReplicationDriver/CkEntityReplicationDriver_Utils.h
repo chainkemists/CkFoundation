@@ -32,13 +32,13 @@ public:
         DisplayName="[Ck][ReplicationDriver] Request Build and Replicate")
     static FCk_Handle
     Request_BuildAndReplicate(
-        UPARAM(ref) FCk_Handle& InHandle,
+        const FCk_Handle& InHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo);
 
 public:
     static auto
     Request_TryReplicateAbility(
-        FCk_Handle& InHandle,
+        const FCk_Handle& InAnyHandle,
         const UCk_Entity_ConstructionScript_PDA* InConstructionScript,
         // ideally, this would be UCk_Ability_Script_PDA, however we cannot depend on it in this module
         const TSubclassOf<UCk_DataAsset_PDA>& InAbilityScriptClass,
@@ -47,7 +47,7 @@ public:
 
     static auto
     Request_TryBuildAndReplicate(
-        FCk_Handle& InHandle,
+        const FCk_Handle& InAnyHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo,
         const std::function<void(FCk_Handle)>& InFunc_OnCreateEntityBeforeBuild = nullptr) -> FCk_Handle;
 
