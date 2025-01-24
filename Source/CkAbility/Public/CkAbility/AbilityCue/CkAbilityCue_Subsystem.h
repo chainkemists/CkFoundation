@@ -91,24 +91,18 @@ private:
 
 private:
     auto
-    OnLoginEvent(
-        AGameModeBase* InGameModeBase,
-        APlayerController* InPlayerController) -> void;
-
-    auto
     OnPostLoadMapWithWorld(
         UWorld* InWorld) -> void;
 
 private:
     UPROPERTY(Transient)
     TArray<TObjectPtr<ACk_AbilityCueReplicator_UE>> _AbilityCueReplicators;
-    int32                                           _NextAvailableReplicator = 0;
+    int32 _NextAvailableReplicator = 0;
 
     UPROPERTY(Transient)
     TSet<TWeakObjectPtr<APlayerController>> _ValidPlayerControllers;
 
 private:
-    FDelegateHandle _PostLoginDelegateHandle;
     FDelegateHandle _PostLoadMapWithWorldDelegateHandle;
 };
 
