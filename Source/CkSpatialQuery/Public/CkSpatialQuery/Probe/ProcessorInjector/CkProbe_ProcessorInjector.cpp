@@ -16,6 +16,7 @@ auto
 
     InWorld.Add<ck::FProcessor_Probe_Setup>(InWorld.Get_Registry(), SpatialQuerySubsystem->Get_PhysicsSystem());
     InWorld.Add<ck::FProcessor_Probe_UpdateTransform>(InWorld.Get_Registry(), SpatialQuerySubsystem->Get_PhysicsSystem());
+    InWorld.Add<ck::FProcessor_Probe_DebugDraw>(InWorld.Get_Registry());
 
     InWorld.Add<ck::FProcessor_Probe_HandleRequests>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Probe_Teardown>(InWorld.Get_Registry());

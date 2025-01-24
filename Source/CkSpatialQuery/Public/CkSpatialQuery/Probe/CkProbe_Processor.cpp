@@ -72,6 +72,8 @@ namespace ck
             auto ShapeResult = Settings.Create();
             auto Shape = ShapeResult.Get();
 
+            InHandle.Add<JPH::Ref<JPH::Shape>>(Shape);
+
             auto ShapeSettings = BodyCreationSettings{
                 Shape,
                 jolt::Conv(EntityPosition),
@@ -100,6 +102,8 @@ namespace ck
 
             auto ShapeResult = Settings.Create();
             auto Shape = ShapeResult.Get();
+
+            InHandle.Add<JPH::Ref<JPH::Shape>>(Shape);
 
             auto ShapeSettings = BodyCreationSettings{
                 Shape,
@@ -131,6 +135,8 @@ namespace ck
             auto ShapeResult = Settings.Create();
             auto Shape = ShapeResult.Get();
 
+            InHandle.Add<JPH::Ref<JPH::Shape>>(Shape);
+
             auto ShapeSettings = BodyCreationSettings{
                 Shape,
                 jolt::Conv(EntityPosition),
@@ -161,6 +167,8 @@ namespace ck
 
             auto ShapeResult = Settings.Create();
             auto Shape = ShapeResult.Get();
+
+            InHandle.Add<JPH::Ref<JPH::Shape>>(Shape);
 
             auto ShapeSettings = BodyCreationSettings{
                 Shape,
@@ -219,6 +227,61 @@ namespace ck
         spatialquery::Log(TEXT("Actual Position in Jolt:[{}] [{}]"),
             InCurrent._RigidBody->GetID().GetIndexAndSequenceNumber(),
             jolt::Conv(BodyInterface.GetPosition(InCurrent._RigidBody->GetID())));
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_Probe_DebugDraw::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Probe_DebugInfo& InDebugInfo)
+            -> void
+    {
+        using namespace JPH;
+
+        auto EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
+        auto EntityRotation = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentRotation(InHandle);
+
+        const auto& LineThickness = InDebugInfo.Get_LineThickness();
+        const auto& DebugColor = UCk_Utils_Probe_UE::Get_IsOverlapping(InHandle)
+                                 ? InDebugInfo.Get_DebugOverlapColor().ToFColor(true)
+                                 : InDebugInfo.Get_DebugColor().ToFColor(true);
+
+        const auto& Shape = InHandle.Get<Ref<JPH::Shape>>();
+
+        if (ck::Is_NOT_Valid(Shape.GetPtr(), ck::IsValid_Policy_NullptrOnly{}))
+        { return; }
+
+        Shape::GetTrianglesContext IoContext;
+        auto Mat4 = Mat44::sIdentity();
+        Mat4.SetTranslation(jolt::Conv(EntityPosition));
+        auto Bounds = Shape->GetWorldSpaceBounds(Mat4, Vec3{1.f, 1.f, 1.f});
+
+        Shape->GetTrianglesStart(IoContext, Bounds, jolt::Conv(EntityPosition), jolt::Conv(EntityRotation),
+            JPH::Vec3{1.f, 1.f, 1.f});
+
+        auto World = _TransientEntity.Get<TWeakObjectPtr<UWorld>>();
+
+        Float3 Vertices[Shape::cGetTrianglesMinTrianglesRequested * 3];
+
+        for (auto NumTris = Shape->GetTrianglesNext(IoContext, Shape->cGetTrianglesMinTrianglesRequested, Vertices);
+             NumTris != 0;)
+        {
+            for (auto Tri = 0; Tri < NumTris; ++Tri)
+            {
+                auto Index = Tri * 3;
+                DrawDebugLine(World.Get(), jolt::Conv(Vertices[Index + 0]), jolt::Conv(Vertices[Index + 1]), DebugColor,
+                    false, 0, 0, LineThickness);
+                DrawDebugLine(World.Get(), jolt::Conv(Vertices[Index + 1]), jolt::Conv(Vertices[Index + 2]), DebugColor,
+                    false, 0, 0, LineThickness);
+                DrawDebugLine(World.Get(), jolt::Conv(Vertices[Index + 2]), jolt::Conv(Vertices[Index + 0]), DebugColor,
+                    false, 0, 0, LineThickness);
+            }
+
+            NumTris = Shape->GetTrianglesNext(IoContext, Shape->cGetTrianglesMinTrianglesRequested, Vertices);
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
