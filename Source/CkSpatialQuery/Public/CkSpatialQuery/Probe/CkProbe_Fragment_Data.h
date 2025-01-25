@@ -43,6 +43,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_MotionQuality);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_ProbeResponse_Policy : uint8
+{
+    Notify,
+    Silent
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProbeResponse_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKSPATIALQUERY_API FCk_Handle_Probe : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Probe); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Probe);
@@ -60,6 +71,10 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
+    ECk_ProbeResponse_Policy _ResponsePolicy = ECk_ProbeResponse_Policy::Notify;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
     ECk_MotionType _MotionType = ECk_MotionType::Static;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -67,6 +82,7 @@ private:
     ECk_MotionQuality _MotionQuality = ECk_MotionQuality::Discrete;
 
 public:
+    CK_PROPERTY(_ResponsePolicy);
     CK_PROPERTY(_MotionType);
     CK_PROPERTY(_MotionQuality);
 };

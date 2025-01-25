@@ -13,11 +13,13 @@ auto
         FCk_Handle& InHandle,
         const FCk_Fragment_Probe_ParamsData& InParams,
         const FCk_Probe_DebugInfo& InDebugInfo)
-    -> FCk_Handle_Probe
+        -> FCk_Handle_Probe
 {
     CK_ENSURE_IF_NOT(UCk_Utils_Shapes_UE::Has_Any(InHandle),
         TEXT("Cannot Add a Probe to Entity [{}] because it does NOT have any Shape"), InHandle)
-    { return {}; }
+    {
+        return {};
+    }
 
     InHandle.Add<ck::FFragment_Probe_Params>(InParams);
     InHandle.Add<ck::FFragment_Probe_DebugInfo>(InDebugInfo);
@@ -34,6 +36,15 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Probe_UE, FCk_Handle_Probe,
     ck::FFragment_Probe_Params, ck::FFragment_Probe_Current)
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Probe_UE::
+    Get_ResponsePolicy(
+        const FCk_Handle_Probe& InProbe)
+        -> ECk_ProbeResponse_Policy
+{
+    return InProbe.Get<ck::FFragment_Probe_Params>().Get_ResponsePolicy();
+}
 
 auto
     UCk_Utils_Probe_UE::
@@ -98,6 +109,12 @@ auto
         const FCk_Delegate_Probe_OnBeginOverlap& InDelegate)
         -> FCk_Handle_Probe
 {
+    CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
+        TEXT("Cannot Bind to OnBeginOverlap for Probe [{}] because its Response Policy is NOT Notify"), InProbeEntity)
+    {
+        return InProbeEntity;
+    }
+
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeBeginOverlap, InProbeEntity, InDelegate, InBindingPolicy,
         InPostFireBehavior);
     return InProbeEntity;
@@ -110,6 +127,13 @@ auto
         const FCk_Delegate_Probe_OnBeginOverlap& InDelegate)
         -> FCk_Handle_Probe
 {
+    CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
+        TEXT("Cannot Unbind from OnBeginOverlap for Probe [{}] because its Response Policy is NOT Notify"),
+        InProbeEntity)
+    {
+        return InProbeEntity;
+    }
+
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeBeginOverlap, InProbeEntity, InDelegate);
     return InProbeEntity;
 }
@@ -123,6 +147,13 @@ auto
         const FCk_Delegate_Probe_OnOverlapPersisted& InDelegate)
         -> FCk_Handle_Probe
 {
+    CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
+        TEXT("Cannot Bind to OnOverlapPersisted for Probe [{}] because its Response Policy is NOT Notify"),
+        InProbeEntity)
+    {
+        return InProbeEntity;
+    }
+
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeOverlapPersisted, InProbeEntity, InDelegate, InBindingPolicy,
         InPostFireBehavior);
     return InProbeEntity;
@@ -135,6 +166,13 @@ auto
         const FCk_Delegate_Probe_OnOverlapPersisted& InDelegate)
         -> FCk_Handle_Probe
 {
+    CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
+        TEXT("Cannot Unbind from OnOverlapPersisted for Probe [{}] because its Response Policy is NOT Notify"),
+        InProbeEntity)
+    {
+        return InProbeEntity;
+    }
+
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeOverlapPersisted, InProbeEntity, InDelegate);
     return InProbeEntity;
 }
@@ -148,6 +186,12 @@ auto
         const FCk_Delegate_Probe_OnEndOverlap& InDelegate)
         -> FCk_Handle_Probe
 {
+    CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
+        TEXT("Cannot Bind to OnEndOverlap for Probe [{}] because its Response Policy is NOT Notify"), InProbeEntity)
+    {
+        return InProbeEntity;
+    }
+
     CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeEndOverlap, InProbeEntity, InDelegate, InBindingPolicy, InPostFireBehavior);
     return InProbeEntity;
 }
@@ -159,6 +203,12 @@ auto
         const FCk_Delegate_Probe_OnEndOverlap& InDelegate)
         -> FCk_Handle_Probe
 {
+    CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
+        TEXT("Cannot Unbind from OnEndOverlap for Probe [{}] because its Response Policy is NOT Notify"), InProbeEntity)
+    {
+        return InProbeEntity;
+    }
+
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeEndOverlap, InProbeEntity, InDelegate);
     return InProbeEntity;
 }
@@ -167,7 +217,7 @@ auto
     UCk_Utils_Probe_UE::
     Request_MarkProbe_AsOverlapping(
         FCk_Handle_Probe& InProbeEntity)
-    -> void
+        -> void
 {
     InProbeEntity.AddOrGet<ck::FTag_Probe_Overlapping>();
 }
@@ -176,7 +226,7 @@ auto
     UCk_Utils_Probe_UE::
     Request_MarkProbe_AsNotOverlapping(
         FCk_Handle_Probe& InProbeEntity)
-    -> void
+        -> void
 {
     InProbeEntity.Remove<ck::FTag_Probe_Overlapping>();
 }

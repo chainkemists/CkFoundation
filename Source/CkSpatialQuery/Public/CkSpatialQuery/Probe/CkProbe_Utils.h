@@ -66,6 +66,14 @@ private:
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Probe",
+            const FCk_Handle_Probe& InProbe);
+        DisplayName="[Ck][Probe] Get Response Policy")
+    static ECk_ProbeResponse_Policy
+    Get_ResponsePolicy(
+            const FCk_Handle_Probe& InProbe);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Probe",
         DisplayName="[Ck][Probe] Get IsOverlapping")
     static bool
     Get_IsOverlapping(
