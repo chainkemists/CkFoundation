@@ -35,7 +35,7 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-class CKOVERLAPBODY_API UCk_Utils_OverlapBody_UserSettings_UE
+class CKOVERLAPBODY_API UCk_Utils_OverlapBody_Settings_UE
 {
 public:
     static auto Get_DebugPreviewAllSensors() -> bool;
