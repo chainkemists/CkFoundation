@@ -164,7 +164,7 @@ auto
         const FCk_Handle_Timer& InTimerEntity)
     -> ECk_Timer_Behavior
 {
-    return InTimerEntity.Get<ck::FFragment_Timer_Params>().Get_Params().Get_Behavior();
+    return InTimerEntity.Get<ck::FFragment_Timer_Params>().Get_Behavior();
 }
 
 auto
