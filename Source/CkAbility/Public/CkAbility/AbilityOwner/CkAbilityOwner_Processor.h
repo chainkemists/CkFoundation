@@ -2,7 +2,6 @@
 
 #include "CkAbility/Ability/CkAbility_Fragment.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Fragment.h"
-#include "CkAbility/AbilityOwner/CkAbilityOwner_Utils.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
 
