@@ -55,7 +55,7 @@ namespace ck
             const FFragment_AbilityOwner_Params& InParams) const
         -> void
     {
-        for (const auto& Params = InParams.Get_Params(); const auto& DefaultAbility : Params.Get_DefaultAbilities())
+        for (const auto& Params = InParams; const auto& DefaultAbility : Params.Get_DefaultAbilities())
         {
             CK_ENSURE_IF_NOT(ck::IsValid(DefaultAbility), TEXT("Entity [{}] has an INVALID default Ability in its Params!"), InHandle)
             { continue; }
@@ -71,7 +71,7 @@ namespace ck
             InHandle.Add<FTag_AbilityOwner_PendingSubAbilityOperation>();
         }
 
-        for (const auto& Params = InParams.Get_Params(); const auto& DefaultAbilityInstance : Params.Get_DefaultAbilities_Instanced())
+        for (const auto& Params = InParams; const auto& DefaultAbilityInstance : Params.Get_DefaultAbilities_Instanced())
         {
             CK_ENSURE_IF_NOT(ck::IsValid(DefaultAbilityInstance),
                 TEXT("Entity [{}] has an INVALID default Ability INSTANCE in its Params! This can only happen for Sub-Abilities"), InHandle)
@@ -161,7 +161,6 @@ namespace ck
             const FCk_Request_AbilityOwner_AddAndGiveExistingAbility& InRequest) const
         -> void
     {
-        using RecordOfAbilities_Utils = UCk_Utils_AbilityOwner_UE::RecordOfAbilities_Utils;
         auto AbilityToAddAndGive = InRequest.Get_Ability();
 
         const auto AbilityGivenOrNot = [&]() -> ECk_AbilityOwner_AbilityGivenOrNot
