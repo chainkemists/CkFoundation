@@ -5,16 +5,12 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_ShapeSphere_ProcessorInjector_UE::
+    UCk_ShapeSphere_ProcessorInjector_Requests_UE::
     DoInjectProcessors(
         EcsWorldType& InWorld)
-        -> void
+    -> void
 {
-    InWorld.Add<ck::FProcessor_ShapeSphere_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_ShapeSphere_HandleRequests>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_ShapeSphere_Teardown>(InWorld.Get_Registry());
-
-    InWorld.Add<ck::FProcessor_ShapeSphere_Replicate>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -24,7 +24,7 @@ public:
               DisplayName="[Ck][Shapes][Box] Add Feature")
     static FCk_Handle_ShapeBox
     Add(
-        UPARAM(ref) FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_ShapeBox_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
@@ -37,7 +37,7 @@ public:
 private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ShapeBox",
-        DisplayName="[Ck][ShapeBox] Cast",
+        DisplayName="[Ck][Shapes][Box] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_ShapeBox
     DoCast(
@@ -46,7 +46,7 @@ private:
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ShapeBox",
-        DisplayName="[Ck][ShapeBox] Handle -> ShapeBox Handle",
+        DisplayName="[Ck][Shapes][Box] Handle -> ShapeBox Handle",
         meta = (CompactNodeTitle = "<AsShapeBox>", BlueprintAutocast))
     static FCk_Handle_ShapeBox
     DoCastChecked(
@@ -55,18 +55,18 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ShapeBox",
-        DisplayName="[Ck][ShapeBox] Request ExampleRequest")
+        DisplayName="[Ck][Shapes][Box] Request Update Dimensions")
     static FCk_Handle_ShapeBox
-    Request_UpdateShape(
+    Request_UpdateDimensions(
         UPARAM(ref) FCk_Handle_ShapeBox& InShapeBox,
-        const FCk_Request_ShapeBox_UpdateShape& InRequest);
+        const FCk_Request_ShapeBox_UpdateDimensions& InRequest);
 
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ShapeBox",
-        DisplayName="[Ck][ShapeBox] Request ExampleRequest")
-    static FCk_Fragment_ShapeBox_ShapeData
-    Get_ShapeData(
+        DisplayName="[Ck][Shapes][Box] Get Dimensions")
+    static FCk_ShapeBox_Dimensions
+    Get_Dimensions(
         const FCk_Handle_ShapeBox& InShapeBox);
 };
 

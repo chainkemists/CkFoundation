@@ -1,6 +1,7 @@
 #include "CkShapeBox_Utils.h"
 
 #include "CkShapes/CkShapes_Log.h"
+#include "CkShapes/CkShapes_Utils.h"
 #include "CkShapes/Box/CkShapeBox_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -8,14 +9,16 @@
 auto
     UCk_Utils_ShapeBox_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_ShapeBox_ParamsData& InParams)
     -> FCk_Handle_ShapeBox
 {
-    InHandle.Add<ck::FFragment_ShapeBox_Params>(InParams);
-    InHandle.Add<ck::FFragment_ShapeBox_Current>();
+    CK_ENSURE_IF_NOT(NOT UCk_Utils_Shapes_UE::Has_Any(InHandle),
+        TEXT("Trying to Add a Box Shape to [{}] but it already has an existing Shape feature!"))
+    { return {}; }
 
-    InHandle.Add<ck::FTag_ShapeBox_RequiresSetup>();
+    InHandle.Add<ck::FFragment_ShapeBox_Params>(InParams);
+    InHandle.Add<ck::FFragment_ShapeBox_Current>(InParams.Get_InitialDimensions());
 
     return Cast(InHandle);
 }
@@ -29,9 +32,9 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_ShapeBox_UE, FCk_Handle_ShapeB
 
 auto
     UCk_Utils_ShapeBox_UE::
-    Request_UpdateShape(
+    Request_UpdateDimensions(
         FCk_Handle_ShapeBox& InShapeBox,
-        const FCk_Request_ShapeBox_UpdateShape& InRequest)
+        const FCk_Request_ShapeBox_UpdateDimensions& InRequest)
     -> FCk_Handle_ShapeBox
 {
     InShapeBox.AddOrGet<ck::FFragment_ShapeBox_Requests>()._Requests.Emplace(InRequest);
@@ -40,16 +43,11 @@ auto
 
 auto
     UCk_Utils_ShapeBox_UE::
-    Get_ShapeData(
+    Get_Dimensions(
         const FCk_Handle_ShapeBox& InShapeBox)
-        -> FCk_Fragment_ShapeBox_ShapeData
+        -> FCk_ShapeBox_Dimensions
 {
-    if (InShapeBox.Has<ck::FTag_ShapeBox_RequiresSetup>())
-    {
-        return InShapeBox.Get<ck::FFragment_ShapeBox_Params>().Get_Params().Get_Shape();
-    }
-
-    return InShapeBox.Get<ck::FFragment_ShapeBox_Current>().Get_CurrentShape();
+    return InShapeBox.Get<ck::FFragment_ShapeBox_Current>().Get_Dimensions();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
