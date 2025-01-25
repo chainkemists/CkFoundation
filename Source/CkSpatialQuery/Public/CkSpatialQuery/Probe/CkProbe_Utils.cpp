@@ -44,6 +44,16 @@ auto
     return InProbe.Has<ck::FTag_Probe_Overlapping>();
 }
 
+auto
+    UCk_Utils_Probe_UE::
+    Get_IsOverlappingWith(
+        const FCk_Handle_Probe& InProbe,
+        const FCk_Handle& InOtherEntity)
+    -> bool
+{
+    return InProbe.Get<ck::FFragment_Probe_Current>().Get_CurrentOverlaps().Contains(FCk_Probe_OverlapInfo{InOtherEntity});
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

@@ -41,7 +41,11 @@ void
     DoInjectProcessors(
         EcsWorldType& InWorld)
 {
-    InWorld.Add<ck::FProcessor_Probe_Teardown>(InWorld.Get_Registry());
+    auto SpatialQuerySubsystem = GetWorld()->GetSubsystem<UCk_SpatialQuery_Subsystem>();
+    if (ck::Is_NOT_Valid(SpatialQuerySubsystem))
+    { return; }
+
+    InWorld.Add<ck::FProcessor_Probe_Teardown>(InWorld.Get_Registry(), SpatialQuerySubsystem->Get_PhysicsSystem());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
