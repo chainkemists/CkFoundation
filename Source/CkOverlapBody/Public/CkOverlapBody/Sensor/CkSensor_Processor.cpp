@@ -579,9 +579,9 @@ namespace ck
 
         // Since we are in the teardown, we are ok if the sensor object is pending kill
         constexpr auto IncludePendingKill = true;
-        const auto& Sensor = InCurrentComp.Get_Sensor().Get(IncludePendingKill);
 
-        if (ck::IsValid(Sensor, ck::IsValid_Policy_IncludePendingKill{}))
+        if (const auto& Sensor = InCurrentComp.Get_Sensor().Get(IncludePendingKill);
+            ck::IsValid(Sensor, ck::IsValid_Policy_IncludePendingKill{}))
         {
             UCk_Utils_Physics_UE::Request_SetGenerateOverlapEvents(Sensor, ECk_EnableDisable::Disable);
             UCk_Utils_Physics_UE::Request_SetCollisionEnabled(Sensor, ECollisionEnabled::NoCollision);

@@ -56,9 +56,12 @@ namespace ck
         friend class UCk_Utils_Probe_UE;
 
     private:
-        // Add your properties here
-
         JPH::Body* _RigidBody = nullptr;
+        TSet<FCk_Probe_OverlapInfo> _CurrentOverlaps;
+
+    public:
+        CK_PROPERTY_GET(_RigidBody);
+        CK_PROPERTY_GET(_CurrentOverlaps);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

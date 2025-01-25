@@ -53,7 +53,6 @@ auto
         const FCk_Request_Probe_BeginOverlap& InRequest)
         -> FCk_Handle_Probe
 {
-    InProbe.AddOrGet<ck::FTag_Probe_Overlapping>();
     InProbe.AddOrGet<ck::FFragment_Probe_Requests>()._Requests.Emplace(InRequest);
     return InProbe;
 }
@@ -65,12 +64,6 @@ auto
         const FCk_Request_Probe_OverlapPersisted& InRequest)
         -> FCk_Handle_Probe
 {
-    CK_ENSURE_IF_NOT(InProbe.Has<ck::FTag_Probe_Overlapping>(),
-        TEXT("Cannot Request Overlap Persisted on Probe [{}] because it is NOT overlapping"), InProbe)
-    {
-        return InProbe;
-    }
-
     InProbe.AddOrGet<ck::FFragment_Probe_Requests>()._Requests.Emplace(InRequest);
     return InProbe;
 }
@@ -82,7 +75,6 @@ auto
         const FCk_Request_Probe_EndOverlap& InRequest)
         -> FCk_Handle_Probe
 {
-    InProbe.Remove<ck::FTag_Probe_Overlapping>();
     InProbe.AddOrGet<ck::FFragment_Probe_Requests>()._Requests.Emplace(InRequest);
     return InProbe;
 }
@@ -159,6 +151,24 @@ auto
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeEndOverlap, InProbeEntity, InDelegate);
     return InProbeEntity;
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    Request_MarkProbe_AsOverlapping(
+        FCk_Handle_Probe& InProbeEntity)
+    -> void
+{
+    InProbeEntity.AddOrGet<ck::FTag_Probe_Overlapping>();
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    Request_MarkProbe_AsNotOverlapping(
+        FCk_Handle_Probe& InProbeEntity)
+    -> void
+{
+    InProbeEntity.Remove<ck::FTag_Probe_Overlapping>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

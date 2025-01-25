@@ -9,6 +9,13 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck
+{
+    class FProcessor_Probe_HandleRequests;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS()
 class CKSPATIALQUERY_API UCk_Utils_Probe_UE : public UCk_Utils_Ecs_Net_UE
 {
@@ -17,6 +24,9 @@ class CKSPATIALQUERY_API UCk_Utils_Probe_UE : public UCk_Utils_Ecs_Net_UE
 public:
     CK_GENERATED_BODY(UCk_Utils_Probe_UE);
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Probe);
+
+public:
+    friend class ck::FProcessor_Probe_HandleRequests;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -143,6 +153,15 @@ public:
     UnbindFrom_OnEndOverlap(
         UPARAM(ref) FCk_Handle_Probe& InProbeEntity,
         const FCk_Delegate_Probe_OnEndOverlap& InDelegate);
+
+private:
+    static auto
+    Request_MarkProbe_AsOverlapping(
+        FCk_Handle_Probe& InProbeEntity) -> void;
+
+    static auto
+    Request_MarkProbe_AsNotOverlapping(
+        FCk_Handle_Probe& InProbeEntity) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
