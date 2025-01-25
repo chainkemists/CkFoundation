@@ -70,8 +70,17 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true, Categories = "Probe"))
+    FGameplayTag _ProbeName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
     ECk_ProbeResponse_Policy _ResponsePolicy = ECk_ProbeResponse_Policy::Notify;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true, Categories = "Probe",
+            EditCondition = "_ResponsePolicy == ECk_ProbeResponse_Policy::Notify"))
+    FGameplayTagContainer _Filter;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
@@ -82,7 +91,9 @@ private:
     ECk_MotionQuality _MotionQuality = ECk_MotionQuality::Discrete;
 
 public:
+    CK_PROPERTY_GET(_ProbeName);
     CK_PROPERTY(_ResponsePolicy);
+    CK_PROPERTY(_Filter);
     CK_PROPERTY(_MotionType);
     CK_PROPERTY(_MotionQuality);
 };
