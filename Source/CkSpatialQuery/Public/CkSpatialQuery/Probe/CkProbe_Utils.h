@@ -30,8 +30,8 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Probe",
-              DisplayName="Add Probe")
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              DisplayName="[Ck][Probe] Add Feature")
     static FCk_Handle_Probe
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -40,7 +40,7 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Probe",
-              DisplayName="Has Probe")
+              DisplayName="[Ck][Probe] Has Feature")
     static bool
     Has(
         const FCk_Handle& InHandle);
