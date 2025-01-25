@@ -641,7 +641,7 @@ namespace ck
             FCk_Time)
         -> void
     {
-        if (NOT UCk_Utils_OverlapBody_UserSettings_UE::Get_DebugPreviewAllSensors())
+        if (NOT UCk_Utils_OverlapBody_Settings_UE::Get_DebugPreviewAllSensors())
         { return; }
 
         _Registry.View<FFragment_Sensor_Current, FFragment_Sensor_Params>().ForEach(

@@ -25,7 +25,7 @@ namespace ck_overlap_body_settings
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Utils_OverlapBody_UserSettings_UE::
+    UCk_Utils_OverlapBody_Settings_UE::
     Get_DebugPreviewAllSensors()
     -> bool
 {
@@ -33,7 +33,7 @@ auto
 }
 
 auto
-    UCk_Utils_OverlapBody_UserSettings_UE::
+    UCk_Utils_OverlapBody_Settings_UE::
     Get_DebugPreviewAllMarkers()
     -> bool
 {
