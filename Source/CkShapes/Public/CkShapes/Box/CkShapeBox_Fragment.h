@@ -12,23 +12,7 @@ class UCk_Utils_ShapeBox_UE;
 
 namespace ck
 {
-    struct CKSHAPES_API FFragment_ShapeBox_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_ShapeBox_Params);
-
-    public:
-        using ParamsType = FCk_Fragment_ShapeBox_ParamsData;
-
-    private:
-        ParamsType _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_ShapeBox_Params, _Params);
-    };
+    using FFragment_ShapeBox_Params = FCk_Fragment_ShapeBox_ParamsData;
 
     // --------------------------------------------------------------------------------------------------------------------
 

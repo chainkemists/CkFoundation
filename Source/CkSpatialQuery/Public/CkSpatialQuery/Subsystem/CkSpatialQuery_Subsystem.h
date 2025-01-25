@@ -30,28 +30,25 @@ namespace JPH
 
 // --------------------------------------------------------------------------------------------------------------------
 
-UCLASS(BlueprintType)
-class CKSPATIALQUERY_API UCk_SpatialQuery_Subsystem_UE : public UCk_Game_TickableWorldSubsystem_Base_UE
+UCLASS(DisplayName = "CkSubsystem_SpatialQuery")
+class CKSPATIALQUERY_API UCk_SpatialQuery_Subsystem : public UCk_Game_TickableWorldSubsystem_Base_UE
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_SpatialQuery_Subsystem_UE);
+    CK_GENERATED_BODY(UCk_SpatialQuery_Subsystem);
 
 public:
     auto
-        Initialize(
-            FSubsystemCollectionBase& InCollection)
-            -> void override;
+    Initialize(
+        FSubsystemCollectionBase& InCollection) -> void override;
 
     auto
-        Tick(
-            float InDeltaTime)
-            -> void override;
+    Tick(
+        float InDeltaTime) -> void override;
 
     auto
-        Deinitialize()
-            -> void override;
+    Deinitialize() -> void override;
 
 private:
     UPROPERTY(Transient)
@@ -70,8 +67,7 @@ private:
 
 public:
     auto
-        Get_PhysicsSystem() const
-            -> TWeakPtr<JPH::PhysicsSystem>;
+    Get_PhysicsSystem() const -> TWeakPtr<JPH::PhysicsSystem>;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -6,8 +6,6 @@
 
 #include "CkSignal/CkSignal_Macros.h"
 
-#include "CkProbe_Fragment.generated.h"
-
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace JPH
@@ -21,7 +19,15 @@ class UCk_Utils_Probe_UE;
 
 namespace ck
 {
-    CK_DEFINE_ECS_TAG(FTag_Probe_RequiresSetup);
+    namespace details
+    {
+        class FProcessor_BoxProbe_Setup;
+        class FProcessor_SphereProbe_Setup;
+        class FProcessor_CapsuleProbe_Setup;
+        class FProcessor_CylinderProbe_Setup;
+    }
+
+    CK_DEFINE_ECS_TAG(FTag_Probe_NeedsSetup);
     CK_DEFINE_ECS_TAG(FTag_Probe_Updated);
     CK_DEFINE_ECS_TAG(FTag_Probe_Overlapping);
 
@@ -40,7 +46,10 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Probe_Current);
 
     public:
-        friend class FProcessor_Probe_Setup;
+        friend class details::FProcessor_BoxProbe_Setup;
+        friend class details::FProcessor_SphereProbe_Setup;
+        friend class details::FProcessor_CapsuleProbe_Setup;
+        friend class details::FProcessor_CylinderProbe_Setup;
         friend class FProcessor_Probe_UpdateTransform;
         friend class FProcessor_Probe_HandleRequests;
         friend class FProcessor_Probe_Teardown;
@@ -64,8 +73,7 @@ namespace ck
         friend class UCk_Utils_Probe_UE;
 
     public:
-        using RequestType = std::variant<FCk_Request_Probe_BeginOverlap, FCk_Request_Probe_OverlapPersisted,
-            FCk_Request_Probe_EndOverlap>;
+        using RequestType = std::variant<FCk_Request_Probe_BeginOverlap, FCk_Request_Probe_OverlapPersisted, FCk_Request_Probe_EndOverlap>;
         using RequestList = TArray<RequestType>;
 
     private:
@@ -97,27 +105,6 @@ namespace ck
         FCk_Delegate_Probe_OnEndOverlap_MC,
         FCk_Handle_Probe,
         FCk_Probe_Payload_OnEndOverlap);
-
-    // --------------------------------------------------------------------------------------------------------------------
 }
-
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace ck
-{
-    class FProcessor_Probe_Replicate;
-}
-
-UCLASS(Blueprintable)
-class CKSPATIALQUERY_API UCk_Fragment_Probe_Rep : public UCk_Ecs_ReplicatedObject_UE
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_Probe_Rep);
-
-public:
-    friend class ck::FProcessor_Probe_Replicate;
-};
 
 // --------------------------------------------------------------------------------------------------------------------
