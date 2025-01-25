@@ -30,6 +30,10 @@ auto
     if (ck::Is_NOT_Valid(SpatialQuerySubsystem))
     { return; }
 
+#if CK_BUILD_TEST
+    InWorld.Add<ck::FProcessor_Probe_EnsureStaticNotMoved_DEBUG>(InWorld.Get_Registry());
+#endif
+
     InWorld.Add<ck::FProcessor_Probe_UpdateTransform>(InWorld.Get_Registry(), SpatialQuerySubsystem->Get_PhysicsSystem());
     InWorld.Add<ck::FProcessor_Probe_DebugDrawAll>(InWorld.Get_Registry());
 }

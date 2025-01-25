@@ -421,6 +421,24 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    auto
+        FProcessor_Probe_EnsureStaticNotMoved_DEBUG::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Probe_Params& InParams,
+            FFragment_Probe_Current& InCurrent)
+        -> void
+    {
+        CK_TRIGGER_ENSURE(TEXT("Probe [{}] with MotionType [{}] had its Transform changed.\n"
+            "If this Probe is meant to move its MotionType shouldn't be [{}]"),
+            InHandle,
+            InParams.Get_MotionType(),
+            InParams.Get_MotionType());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     FProcessor_Probe_DebugDrawAll::
     FProcessor_Probe_DebugDrawAll(
         const FCk_Registry& InRegistry)

@@ -27,10 +27,12 @@ auto
 {
     InWorld.Add<ck::FProcessor_AbilityOwner_ResolvePendingOperationTags>(InWorld.Get_Registry());
 
+#if CK_BUILD_TEST
     if (UCk_Utils_Ability_Settings_UE::Get_LogResolvePendingOperationTags() == ECk_EnableDisable::Enable)
     {
         InWorld.Add<ck::FProcessor_AbilityOwner_ResolvePendingOperationTags_DEBUG>(InWorld.Get_Registry());
     }
+#endif
 
     InWorld.Add<ck::FProcessor_Ability_AddReplicated>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_AbilityOwner_EnsureAllAppended>(InWorld.Get_Registry());

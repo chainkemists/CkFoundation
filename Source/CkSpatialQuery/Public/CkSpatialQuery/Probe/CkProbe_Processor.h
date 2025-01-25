@@ -6,6 +6,8 @@
 
 #include "CkEcs/Processor/CkProcessor.h"
 
+#include "CkEcsExt/Transform/CkTransform_Fragment.h"
+
 #include "CkShapes/Box/CkShapeBox_Fragment.h"
 #include "CkShapes/Capsule/CkShapeCapsule_Fragment.h"
 #include "CkShapes/Cylinder/CkShapeCylinder_Fragment.h"
@@ -199,6 +201,7 @@ namespace ck
             FCk_Handle_Probe,
             FFragment_Probe_Params,
             FFragment_Probe_Current,
+            FTag_Transform_Updated,
             TExclude<FTag_Probe_MotionType_Static>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -217,6 +220,29 @@ namespace ck
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKSPATIALQUERY_API FProcessor_Probe_EnsureStaticNotMoved_DEBUG : public ck_exp::TProcessor<
+            FProcessor_Probe_EnsureStaticNotMoved_DEBUG,
+            FCk_Handle_Probe,
+            FFragment_Probe_Params,
+            FFragment_Probe_Current,
+            FTag_Transform_Updated,
+            FTag_Probe_MotionType_Static,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Probe_Params& InParams,
+            FFragment_Probe_Current& InCurrent) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
