@@ -29,8 +29,22 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // declared already in the utils header
-    //using FFragment_AbilityOwner_Params = FCk_Fragment_AbilityOwner_ParamsData;
+    struct CKABILITY_API FFragment_AbilityOwner_Params
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_AbilityOwner_Params);
+
+    public:
+        using ParamsType = FCk_Fragment_AbilityOwner_ParamsData;
+
+    private:
+        ParamsType _Params;
+
+    public:
+        CK_PROPERTY_GET(_Params);
+
+        CK_DEFINE_CONSTRUCTORS(FFragment_AbilityOwner_Params, _Params);
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 

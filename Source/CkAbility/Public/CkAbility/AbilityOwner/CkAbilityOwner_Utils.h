@@ -17,7 +17,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck {  using FFragment_AbilityOwner_Params = FCk_Fragment_AbilityOwner_ParamsData; }
+namespace ck { struct FFragment_AbilityOwner_Params; }
 
 // --------------------------------------------------------------------------------------------------------------------
 
