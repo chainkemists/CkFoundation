@@ -87,6 +87,13 @@ public:
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Probe",
+        DisplayName="[Ck][Probe] Get Enabled/Disabled")
+    static ECk_EnableDisable
+    Get_IsEnabledDisabled(
+        const FCk_Handle_Probe& InProbe);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Probe",
         DisplayName="[Ck][Probe] Get IsOverlapping")
     static bool
     Get_IsOverlapping(
@@ -135,6 +142,15 @@ public:
     Request_EndOverlap(
         UPARAM(ref) FCk_Handle_Probe& InProbe,
         const FCk_Request_Probe_EndOverlap& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Probe",
+        DisplayName="[Ck][Probe] Request Enable/Disable",
+        meta=(DevelopmentOnly))
+    static FCk_Handle_Probe
+    Request_EnableDisable(
+        UPARAM(ref) FCk_Handle_Probe& InProbe,
+        ECk_EnableDisable InEnableDisable = ECk_EnableDisable::Disable);
 
 public:
     UFUNCTION(BlueprintCallable,

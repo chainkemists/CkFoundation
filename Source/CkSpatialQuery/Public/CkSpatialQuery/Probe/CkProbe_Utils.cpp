@@ -66,6 +66,20 @@ auto
 
 auto
     UCk_Utils_Probe_UE::
+    Get_IsEnabledDisabled(
+        const FCk_Handle_Probe& InProbe)
+        -> ECk_EnableDisable
+{
+    if (InProbe.Has<ck::FTag_Probe_Disabled>())
+    {
+        return ECk_EnableDisable::Disable;
+    }
+
+    return ECk_EnableDisable::Enable;
+}
+
+auto
+    UCk_Utils_Probe_UE::
     Get_IsOverlapping(
         const FCk_Handle_Probe& InProbe)
         -> bool
@@ -92,6 +106,12 @@ auto
         const FCk_Handle_Probe& InB)
         -> bool
 {
+    if (Get_IsEnabledDisabled(InA) == ECk_EnableDisable::Disable ||
+        Get_IsEnabledDisabled(InB) == ECk_EnableDisable::Disable)
+    {
+        return false;
+    }
+
     if (Get_ResponsePolicy(InA) == ECk_ProbeResponse_Policy::Silent)
     {
         return false;
@@ -135,6 +155,30 @@ auto
         -> FCk_Handle_Probe
 {
     InProbe.AddOrGet<ck::FFragment_Probe_Requests>()._Requests.Emplace(InRequest);
+    return InProbe;
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    Request_EnableDisable(
+        FCk_Handle_Probe& InProbe,
+        ECk_EnableDisable InEnableDisable)
+        -> FCk_Handle_Probe
+{
+    switch (InEnableDisable)
+    {
+        case ECk_EnableDisable::Enable:
+        {
+            InProbe.Try_Remove<ck::FTag_Probe_Disabled>();
+            break;
+        }
+        case ECk_EnableDisable::Disable:
+        {
+            InProbe.AddOrGet<ck::FTag_Probe_Disabled>();
+            break;
+        }
+    }
+
     return InProbe;
 }
 
