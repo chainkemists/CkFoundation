@@ -7,7 +7,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable, NotBlueprintType)
-class CKSHAPES_API UCk_ShapeBox_ProcessorInjector_UE : public UCk_EcsWorld_ProcessorInjector_Base_UE
+class CKSHAPES_API UCk_ShapeBox_ProcessorInjector_Requests_UE : public UCk_EcsWorld_ProcessorInjector_Base_UE
 {
     GENERATED_BODY()
 

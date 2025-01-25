@@ -24,7 +24,7 @@ public:
               DisplayName="[Ck][Shapes][Sphere] Add Feature")
     static FCk_Handle_ShapeSphere
     Add(
-        UPARAM(ref) FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_ShapeSphere_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
@@ -37,7 +37,7 @@ public:
 private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ShapeSphere",
-        DisplayName="[Ck][ShapeSphere] Cast",
+        DisplayName="[Ck][Shapes][Sphere] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_ShapeSphere
     DoCast(
@@ -46,7 +46,7 @@ private:
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ShapeSphere",
-        DisplayName="[Ck][ShapeSphere] Handle -> ShapeSphere Handle",
+        DisplayName="[Ck][Shapes][Sphere] Handle -> ShapeSphere Handle",
         meta = (CompactNodeTitle = "<AsShapeSphere>", BlueprintAutocast))
     static FCk_Handle_ShapeSphere
     DoCastChecked(
@@ -55,18 +55,18 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ShapeSphere",
-        DisplayName="[Ck][ShapeSphere] Request ExampleRequest")
+        DisplayName="[Ck][Shapes][Sphere] Request Update Dimensions")
     static FCk_Handle_ShapeSphere
-    Request_UpdateShape(
+    Request_UpdateDimensions(
         UPARAM(ref) FCk_Handle_ShapeSphere& InShapeSphere,
-        const FCk_Request_ShapeSphere_UpdateShape& InRequest);
+        const FCk_Request_ShapeSphere_UpdateDimensions& InRequest);
 
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ShapeSphere",
-        DisplayName="[Ck][ShapeSphere] Request ExampleRequest")
-    static FCk_Fragment_ShapeSphere_ShapeData
-    Get_ShapeData(
+        DisplayName="[Ck][Shapes][Sphere] Get Dimensions")
+    static FCk_ShapeSphere_Dimensions
+    Get_Dimensions(
         const FCk_Handle_ShapeSphere& InShapeSphere);
 };
 

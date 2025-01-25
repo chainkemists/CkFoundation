@@ -24,7 +24,7 @@ public:
               DisplayName="[Ck][Shapes][Capsule] Add Feature")
     static FCk_Handle_ShapeCapsule
     Add(
-        UPARAM(ref) FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_ShapeCapsule_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
@@ -37,7 +37,7 @@ public:
 private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ShapeCapsule",
-        DisplayName="[Ck][ShapeCapsule] Cast",
+        DisplayName="[Ck][Shapes][Capsule] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_ShapeCapsule
     DoCast(
@@ -46,7 +46,7 @@ private:
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ShapeCapsule",
-        DisplayName="[Ck][ShapeCapsule] Handle -> ShapeCapsule Handle",
+        DisplayName="[Ck][Shapes][Capsule] Handle -> ShapeCapsule Handle",
         meta = (CompactNodeTitle = "<AsShapeCapsule>", BlueprintAutocast))
     static FCk_Handle_ShapeCapsule
     DoCastChecked(
@@ -55,18 +55,18 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ShapeCapsule",
-        DisplayName="[Ck][ShapeCapsule] Request ExampleRequest")
+        DisplayName="[Ck][Shapes][Capsule] Request Update Dimensions")
     static FCk_Handle_ShapeCapsule
-    Request_UpdateShape(
+    Request_UpdateDimensions(
         UPARAM(ref) FCk_Handle_ShapeCapsule& InShapeCapsule,
-        const FCk_Request_ShapeCapsule_UpdateShape& InRequest);
+        const FCk_Request_ShapeCapsule_UpdateDimensions& InRequest);
 
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ShapeCapsule",
-        DisplayName="[Ck][ShapeCapsule] Request ExampleRequest")
-    static FCk_Fragment_ShapeCapsule_ShapeData
-    Get_ShapeData(
+        DisplayName="[Ck][Shapes][Capsule] Get Dimensions")
+    static FCk_ShapeCapsule_Dimensions
+    Get_Dimensions(
         const FCk_Handle_ShapeCapsule& InShapeCapsule);
 };
 

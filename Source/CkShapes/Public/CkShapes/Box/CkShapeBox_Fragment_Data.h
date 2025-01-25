@@ -7,13 +7,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck
-{
-    class FProcessor_ShapeBox_HandleRequests;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKSHAPES_API FCk_Handle_ShapeBox : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_ShapeBox); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_ShapeBox);
@@ -21,23 +14,25 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_ShapeBox);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKSHAPES_API FCk_Fragment_ShapeBox_ShapeData
+struct CKSHAPES_API FCk_ShapeBox_Dimensions
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_ShapeBox_ShapeData);
+    CK_GENERATED_BODY(FCk_ShapeBox_Dimensions);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
-    FVector _Extent = FVector(1.0f, 1.0f, 1.0f);
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    FVector _HalfExtents = FVector::OneVector;
 
-    // useful in some cases, example in physics engine use (Jolt) to improve collision detection
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
+    // Useful in some cases, example in physics engine use (Jolt) to improve collision detection
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
     float _ConvexRadius = 0.0f;
 
 public:
-    CK_PROPERTY_GET(_Extent);
+    CK_PROPERTY_GET(_HalfExtents);
     CK_PROPERTY_GET(_ConvexRadius);
 };
 
@@ -52,32 +47,31 @@ public:
     CK_GENERATED_BODY(FCk_Fragment_ShapeBox_ParamsData);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
-    FCk_Fragment_ShapeBox_ShapeData _Shape;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    FCk_ShapeBox_Dimensions _InitialDimensions;
 
 public:
-    CK_PROPERTY_GET(_Shape);
+    CK_PROPERTY_GET(_InitialDimensions);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKSHAPES_API FCk_Request_ShapeBox_UpdateShape : public FCk_Request_Base
+struct CKSHAPES_API FCk_Request_ShapeBox_UpdateDimensions : public FCk_Request_Base
 {
     GENERATED_BODY()
 
 public:
-    friend class ck::FProcessor_ShapeBox_HandleRequests;
-
-public:
-    CK_GENERATED_BODY(FCk_Request_ShapeBox_UpdateShape);
+    CK_GENERATED_BODY(FCk_Request_ShapeBox_UpdateDimensions);
 
 private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess))
-    FCk_Fragment_ShapeBox_ShapeData _NewShape;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    FCk_ShapeBox_Dimensions _NewDimensions;
 
 public:
-    CK_PROPERTY_GET(_NewShape);
+    CK_PROPERTY_GET(_NewDimensions);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
