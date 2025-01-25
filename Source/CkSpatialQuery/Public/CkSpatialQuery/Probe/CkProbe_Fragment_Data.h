@@ -100,6 +100,44 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKSPATIALQUERY_API FCk_Probe_OverlapInfo
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Probe_OverlapInfo);
+
+public:
+    auto operator==(const ThisType& InOther) const -> bool;
+    CK_DECL_AND_DEF_OPERATOR_NOT_EQUAL(ThisType);
+
+private:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    FCk_Handle _OtherEntity;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    TArray<FVector> _ContactPoints;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    FVector _ContactNormal;
+
+public:
+    CK_PROPERTY(_OtherEntity);
+    CK_PROPERTY_SET(_ContactPoints);
+    CK_PROPERTY_SET(_ContactNormal);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Probe_OverlapInfo, _OtherEntity);
+};
+
+auto CKSPATIALQUERY_API GetTypeHash(const FCk_Probe_OverlapInfo& InObj) -> uint32;
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKSPATIALQUERY_API FCk_Request_Probe_BeginOverlap : public FCk_Request_Base
 {
     GENERATED_BODY()
