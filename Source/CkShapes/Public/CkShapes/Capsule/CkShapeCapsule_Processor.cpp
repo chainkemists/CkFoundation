@@ -9,44 +9,6 @@
 namespace ck
 {
     auto
-        FProcessor_ShapeCapsule_Setup::
-        DoTick(
-            TimeType InDeltaT)
-        -> void
-    {
-        TProcessor::DoTick(InDeltaT);
-
-        _TransientEntity.Clear<MarkedDirtyBy>();
-    }
-
-    auto
-        FProcessor_ShapeCapsule_Setup::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_ShapeCapsule_Params& InParams,
-            FFragment_ShapeCapsule_Current& InCurrent) const
-        -> void
-    {
-        InCurrent._CurrentShape = InParams.Get_Params().Get_Shape();
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProcessor_ShapeCapsule_HandleRequests::
-        DoTick(
-            TimeType InDeltaT)
-        -> void
-    {
-        _TransientEntity.Clear<FTag_ShapeCapsule_Updated>();
-
-        TProcessor::DoTick(InDeltaT);
-
-        _TransientEntity.Clear<MarkedDirtyBy>();
-    }
-
-    auto
         FProcessor_ShapeCapsule_HandleRequests::
         ForEachEntity(
             TimeType InDeltaT,
@@ -71,41 +33,11 @@ namespace ck
             HandleType InHandle,
             const FFragment_ShapeCapsule_Params& InParams,
             FFragment_ShapeCapsule_Current& InCurrent,
-            const FCk_Request_ShapeCapsule_UpdateShape& InRequest)
+            const FCk_Request_ShapeCapsule_UpdateDimensions& InRequest)
         -> void
     {
-        InCurrent._CurrentShape = InRequest.Get_NewShape();
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProcessor_ShapeCapsule_Teardown::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_ShapeCapsule_Params& InParams,
-            FFragment_ShapeCapsule_Current& InCurrent) const
-        -> void
-    {
-        // Add teardown logic here
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProcessor_ShapeCapsule_Replicate::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_ShapeCapsule_Current& InCurrent,
-            const TObjectPtr<UCk_Fragment_ShapeCapsule_Rep>& InRepComp) const
-        -> void
-    {
-        UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_ShapeCapsule_Rep>(InHandle, [&](UCk_Fragment_ShapeCapsule_Rep* InLocalRepComp)
-        {
-            // Add replication logic here
-        });
+        // TODO:
+        InCurrent._Dimensions = InRequest.Get_NewDimensions();
     }
 }
 

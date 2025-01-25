@@ -63,9 +63,9 @@ namespace ck
 
         if (auto BoxEntity = UCk_Utils_ShapeBox_UE::Cast(InHandle); ck::IsValid(BoxEntity))
         {
-            const auto BoxParams = UCk_Utils_ShapeBox_UE::Get_ShapeData(BoxEntity);
+            const auto BoxParams = UCk_Utils_ShapeBox_UE::Get_Dimensions(BoxEntity);
 
-            const auto& HalfExtents = BoxParams.Get_Extent();
+            const auto& HalfExtents = BoxParams.Get_HalfExtents();
 
             const auto Settings = BoxShapeSettings{jolt::Conv(HalfExtents), BoxParams.Get_ConvexRadius()};
             Settings.SetEmbedded();
@@ -107,7 +107,7 @@ namespace ck
         }
         else if (auto SphereEntity = UCk_Utils_ShapeSphere_UE::Cast(InHandle); ck::IsValid(SphereEntity))
         {
-            const auto Params = UCk_Utils_ShapeSphere_UE::Get_ShapeData(SphereEntity);
+            const auto Params = UCk_Utils_ShapeSphere_UE::Get_Dimensions(SphereEntity);
 
             const auto& Radius = Params.Get_Radius();
 
@@ -151,7 +151,7 @@ namespace ck
         }
         else if (auto CapsuleEntity = UCk_Utils_ShapeCapsule_UE::Cast(InHandle); ck::IsValid(CapsuleEntity))
         {
-            const auto Params = UCk_Utils_ShapeCapsule_UE::Get_ShapeData(CapsuleEntity);
+            const auto Params = UCk_Utils_ShapeCapsule_UE::Get_Dimensions(CapsuleEntity);
 
             const auto HalfHeight = Params.Get_HalfHeight();
             const auto Radius = Params.Get_Radius();
@@ -196,7 +196,7 @@ namespace ck
         }
         else if (auto CylinderEntity = UCk_Utils_ShapeCylinder_UE::Cast(InHandle); ck::IsValid(CylinderEntity))
         {
-            const auto Params = UCk_Utils_ShapeCylinder_UE::Get_ShapeData(CylinderEntity);
+            const auto Params = UCk_Utils_ShapeCylinder_UE::Get_Dimensions(CylinderEntity);
 
             const auto& HalfHeight = Params.Get_HalfHeight();
             const auto& Radius = Params.Get_Radius();

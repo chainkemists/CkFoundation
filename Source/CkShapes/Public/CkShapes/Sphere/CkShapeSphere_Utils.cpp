@@ -1,5 +1,7 @@
 #include "CkShapeSphere_Utils.h"
 
+#include "CkShapes/CkShapes_Log.h"
+#include "CkShapes/CkShapes_Utils.h"
 #include "CkShapes/Sphere/CkShapeSphere_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -7,14 +9,16 @@
 auto
     UCk_Utils_ShapeSphere_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_ShapeSphere_ParamsData& InParams)
     -> FCk_Handle_ShapeSphere
 {
-    InHandle.Add<ck::FFragment_ShapeSphere_Params>(InParams);
-    InHandle.Add<ck::FFragment_ShapeSphere_Current>();
+    CK_ENSURE_IF_NOT(NOT UCk_Utils_Shapes_UE::Has_Any(InHandle),
+        TEXT("Trying to Add a Sphere Shape to [{}] but it already has an existing Shape feature!"))
+    { return {}; }
 
-    InHandle.Add<ck::FTag_ShapeSphere_RequiresSetup>();
+    InHandle.Add<ck::FFragment_ShapeSphere_Params>(InParams);
+    InHandle.Add<ck::FFragment_ShapeSphere_Current>(InParams.Get_InitialDimensions());
 
     return Cast(InHandle);
 }
@@ -28,9 +32,9 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_ShapeSphere_UE, FCk_Handle_Sha
 
 auto
     UCk_Utils_ShapeSphere_UE::
-    Request_UpdateShape(
+    Request_UpdateDimensions(
         FCk_Handle_ShapeSphere& InShapeSphere,
-        const FCk_Request_ShapeSphere_UpdateShape& InRequest)
+        const FCk_Request_ShapeSphere_UpdateDimensions& InRequest)
     -> FCk_Handle_ShapeSphere
 {
     InShapeSphere.AddOrGet<ck::FFragment_ShapeSphere_Requests>()._Requests.Emplace(InRequest);
@@ -39,16 +43,11 @@ auto
 
 auto
     UCk_Utils_ShapeSphere_UE::
-    Get_ShapeData(
+    Get_Dimensions(
         const FCk_Handle_ShapeSphere& InShapeSphere)
-        -> FCk_Fragment_ShapeSphere_ShapeData
+        -> FCk_ShapeSphere_Dimensions
 {
-    if (InShapeSphere.Has<ck::FTag_ShapeSphere_RequiresSetup>())
-    {
-        return InShapeSphere.Get<ck::FFragment_ShapeSphere_Params>().Get_Params().Get_Shape();
-    }
-
-    return InShapeSphere.Get<ck::FFragment_ShapeSphere_Current>().Get_CurrentShape();
+    return InShapeSphere.Get<ck::FFragment_ShapeSphere_Current>().Get_Dimensions();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

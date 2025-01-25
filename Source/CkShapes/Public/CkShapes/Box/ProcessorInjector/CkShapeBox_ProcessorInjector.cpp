@@ -5,16 +5,12 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_ShapeBox_ProcessorInjector_UE::
+    UCk_ShapeBox_ProcessorInjector_Requests_UE::
     DoInjectProcessors(
         EcsWorldType& InWorld)
-        -> void
+    -> void
 {
-    InWorld.Add<ck::FProcessor_ShapeBox_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_ShapeBox_HandleRequests>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_ShapeBox_Teardown>(InWorld.Get_Registry());
-
-    InWorld.Add<ck::FProcessor_ShapeBox_Replicate>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

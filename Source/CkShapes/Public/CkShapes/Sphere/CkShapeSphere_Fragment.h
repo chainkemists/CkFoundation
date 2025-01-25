@@ -4,8 +4,6 @@
 
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
 
-#include "CkShapeSphere_Fragment.generated.h"
-
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_ShapeSphere_UE;
@@ -14,11 +12,6 @@ class UCk_Utils_ShapeSphere_UE;
 
 namespace ck
 {
-    CK_DEFINE_ECS_TAG(FTag_ShapeSphere_RequiresSetup);
-    CK_DEFINE_ECS_TAG(FTag_ShapeSphere_Updated);
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     struct CKSHAPES_API FFragment_ShapeSphere_Params
     {
     public:
@@ -45,16 +38,17 @@ namespace ck
         CK_GENERATED_BODY(FFragment_ShapeSphere_Current);
 
     public:
-        friend class FProcessor_ShapeSphere_Setup;
         friend class FProcessor_ShapeSphere_HandleRequests;
-        friend class FProcessor_ShapeSphere_Teardown;
         friend class UCk_Utils_ShapeSphere_UE;
 
     private:
-        FCk_Fragment_ShapeSphere_ShapeData _CurrentShape;
+        FCk_ShapeSphere_Dimensions _Dimensions;
 
     public:
-        CK_PROPERTY_GET(_CurrentShape);
+        CK_PROPERTY_GET(_Dimensions);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_ShapeSphere_Current, _Dimensions);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -69,7 +63,7 @@ namespace ck
         friend class UCk_Utils_ShapeSphere_UE;
 
     public:
-        using RequestType = std::variant<FCk_Request_ShapeSphere_UpdateShape>;
+        using RequestType = std::variant<FCk_Request_ShapeSphere_UpdateDimensions>;
         using RequestList = TArray<RequestType>;
 
     private:
@@ -78,27 +72,6 @@ namespace ck
     public:
         CK_PROPERTY_GET(_Requests);
     };
-
-    // --------------------------------------------------------------------------------------------------------------------
 }
-
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace ck
-{
-    class FProcessor_ShapeSphere_Replicate;
-}
-
-UCLASS(Blueprintable)
-class CKSHAPES_API UCk_Fragment_ShapeSphere_Rep : public UCk_Ecs_ReplicatedObject_UE
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_ShapeSphere_Rep);
-
-public:
-    friend class ck::FProcessor_ShapeSphere_Replicate;
-};
 
 // --------------------------------------------------------------------------------------------------------------------

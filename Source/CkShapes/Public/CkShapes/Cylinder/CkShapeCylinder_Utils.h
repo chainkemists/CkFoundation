@@ -24,7 +24,7 @@ public:
               DisplayName="[Ck][Shapes][Cylinder] Add Feature")
     static FCk_Handle_ShapeCylinder
     Add(
-        UPARAM(ref) FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_ShapeCylinder_ParamsData& InParams);
 
     UFUNCTION(BlueprintPure,
@@ -37,7 +37,7 @@ public:
 private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ShapeCylinder",
-        DisplayName="[Ck][ShapeCylinder] Cast",
+        DisplayName="[Ck][Shapes][Cylinder] Cast",
         meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_ShapeCylinder
     DoCast(
@@ -46,7 +46,7 @@ private:
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ShapeCylinder",
-        DisplayName="[Ck][ShapeCylinder] Handle -> ShapeCylinder Handle",
+        DisplayName="[Ck][Shapes][Cylinder] Handle -> ShapeCylinder Handle",
         meta = (CompactNodeTitle = "<AsShapeCylinder>", BlueprintAutocast))
     static FCk_Handle_ShapeCylinder
     DoCastChecked(
@@ -55,18 +55,18 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ShapeCylinder",
-        DisplayName="[Ck][ShapeCylinder] Request ExampleRequest")
+        DisplayName="[Ck][Shapes][Cylinder] Request Update Dimensions")
     static FCk_Handle_ShapeCylinder
-    Request_UpdateShape(
+    Request_UpdateDimensions(
         UPARAM(ref) FCk_Handle_ShapeCylinder& InShapeCylinder,
-        const FCk_Request_ShapeCylinder_UpdateShape& InRequest);
+        const FCk_Request_ShapeCylinder_UpdateDimensions& InRequest);
 
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ShapeCylinder",
-        DisplayName="[Ck][ShapeCylinder] Request ExampleRequest")
-    static FCk_Fragment_ShapeCylinder_ShapeData
-    Get_ShapeData(
+        DisplayName="[Ck][Shapes][Cylinder] Get Dimensions")
+    static FCk_ShapeCylinder_Dimensions
+    Get_Dimensions(
         const FCk_Handle_ShapeCylinder& InShapeCylinder);
 };
 
