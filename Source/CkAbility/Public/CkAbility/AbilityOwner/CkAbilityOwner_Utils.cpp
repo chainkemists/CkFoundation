@@ -81,12 +81,12 @@ auto
 
     auto& Params = InHandle.Get<ck::FFragment_AbilityOwner_Params>();
 
-    auto DefaultAbilities = Params.Get_Params().Get_DefaultAbilities();
+    auto DefaultAbilities = Params.Get_DefaultAbilities();
 
     DefaultAbilities.Append(InDefaultAbilities);
     Params = ck::FFragment_AbilityOwner_Params{
         FCk_Fragment_AbilityOwner_ParamsData{DefaultAbilities}
-            .Set_DefaultAbilities_Instanced(Params.Get_Params().Get_DefaultAbilities_Instanced())};
+            .Set_DefaultAbilities_Instanced(Params.Get_DefaultAbilities_Instanced())};
 
     DoSet_ExpectedNumberOfDependentReplicationDrivers(InHandle, Params);
 
@@ -115,11 +115,11 @@ auto
 
     auto& Params = InHandle.Get<ck::FFragment_AbilityOwner_Params>();
 
-    auto DefaultAbilitiesInstanced = Params.Get_Params().Get_DefaultAbilities_Instanced();
+    auto DefaultAbilitiesInstanced = Params.Get_DefaultAbilities_Instanced();
 
     DefaultAbilitiesInstanced.Append(InInstancedAbilities);
     Params = ck::FFragment_AbilityOwner_Params{
-        FCk_Fragment_AbilityOwner_ParamsData{Params.Get_Params().Get_DefaultAbilities()}
+        FCk_Fragment_AbilityOwner_ParamsData{Params.Get_DefaultAbilities()}
             .Set_DefaultAbilities_Instanced(DefaultAbilitiesInstanced)};
 
     DoSet_ExpectedNumberOfDependentReplicationDrivers(InHandle, Params);
@@ -1120,7 +1120,7 @@ auto
         const FCk_Handle_AbilityOwner& InAbilityOwner)
     -> const TArray<TSubclassOf<UCk_Ability_Script_PDA>>&
 {
-    return InAbilityOwner.Get<ck::FFragment_AbilityOwner_Params>().Get_Params().Get_DefaultAbilities();
+    return InAbilityOwner.Get<ck::FFragment_AbilityOwner_Params>().Get_DefaultAbilities();
 }
 
 auto
@@ -1230,13 +1230,13 @@ auto
         }
     };
 
-    for (const auto Ability : InParams.Get_Params().Get_DefaultAbilities())
+    for (const auto Ability : InParams.Get_DefaultAbilities())
     {
         const auto AbilityScript = UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Ability_Script_PDA>(Ability);
         TrySettingTheExpectedNumber(AbilityScript);
     }
 
-    for (const auto Ability : InParams.Get_Params().Get_DefaultAbilities_Instanced())
+    for (const auto Ability : InParams.Get_DefaultAbilities_Instanced())
     {
         const auto AbilityScript = Ability;
         TrySettingTheExpectedNumber(AbilityScript);
