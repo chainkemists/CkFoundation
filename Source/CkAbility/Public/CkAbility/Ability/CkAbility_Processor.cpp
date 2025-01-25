@@ -446,7 +446,7 @@ namespace ck
             return;
         }
 
-        const auto& AbilityParams = InHandle.Get<ck::FFragment_Ability_Params>().Get_Params();
+        const auto& AbilityParams = InHandle.Get<ck::FFragment_Ability_Params>();
         const auto& AbilityInstancingPolicy = AbilityParams.Get_Data().Get_InstancingPolicy();
         AbilityCurrent._Status = ECk_Ability_Status::Active;
 
@@ -490,7 +490,7 @@ namespace ck
 
         AbilityOwnerCurrent.AppendTags(AbilityOwnerEntity, GrantedTags);
 
-        // Try Deactivate our own Ability if we have one
+        // Try Deactivating AbilityOwner as an Ability IFF the AbilityOwner is also an Ability
         if (UCk_Utils_Ability_UE::Has(AbilityOwnerEntity))
         {
             if (const auto Condition = algo::MatchesAnyAbilityActivationCancelledTagsOnSelf{GrantedTags}; Condition(
@@ -582,7 +582,7 @@ namespace ck
         auto& AbilityCurrent = InHandle.Get<ck::FFragment_Ability_Current,
             ck::IsValid_Policy_IncludePendingKill>();
         const auto& AbilityParams = InHandle.Get<ck::FFragment_Ability_Params,
-            ck::IsValid_Policy_IncludePendingKill>().Get_Params();
+            ck::IsValid_Policy_IncludePendingKill>();
         auto Script = AbilityCurrent.Get_AbilityScript().Get();
 
         CK_ENSURE_IF_NOT(ck::IsValid(Script),

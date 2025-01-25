@@ -60,7 +60,7 @@ auto
         const FCk_Handle_Ability& InAbilityEntity)
     -> FName
 {
-    const auto& AbilityParams = InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params().Get_Data();
+    const auto& AbilityParams = InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Data();
 
     if (AbilityParams.Get_HasDisplayName())
     { return AbilityParams.Get_DisplayName(); }
@@ -77,7 +77,7 @@ auto
         const FCk_Handle_Ability& InAbilityEntity)
     -> FCk_Ability_OnGiveSettings
 {
-    return InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params().Get_Data().Get_OnGiveSettings();
+    return InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Data().Get_OnGiveSettings();
 }
 
 auto
@@ -86,7 +86,7 @@ auto
         const FCk_Handle_Ability& InAbilityEntity)
     -> FCk_Ability_ActivationSettings
 {
-    return InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params().Get_Data().Get_ActivationSettings();
+    return InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Data().Get_ActivationSettings();
 }
 
 auto
@@ -95,7 +95,7 @@ auto
         const FCk_Handle_Ability& InAbilityEntity)
     -> FCk_Ability_NetworkSettings
 {
-    return InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params().Get_Data().Get_NetworkSettings();
+    return InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Data().Get_NetworkSettings();
 }
 
 auto
@@ -113,7 +113,7 @@ auto
         const FCk_Handle_Ability& InAbilityEntity)
     -> TSubclassOf<UCk_Ability_Script_PDA>
 {
-    return InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params().Get_AbilityScriptClass();
+    return InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_AbilityScriptClass();
 }
 
 auto
@@ -122,7 +122,7 @@ auto
         const FCk_Handle_Ability& InAbilityEntity)
     -> ECk_Ability_ActivationRequirementsResult
 {
-    const auto& AbilityParams             = InAbilityEntity.Get<ck::FFragment_Ability_Params>().Get_Params();
+    const auto& AbilityParams             = InAbilityEntity.Get<ck::FFragment_Ability_Params>();
     const auto& AbilityActivationSettings = AbilityParams.Get_Data().Get_ActivationSettings();
 
     const auto& AbilityCurrent = InAbilityEntity.Get<ck::FFragment_Ability_Current>();

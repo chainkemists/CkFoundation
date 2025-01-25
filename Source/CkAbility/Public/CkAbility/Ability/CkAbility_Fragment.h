@@ -24,23 +24,7 @@ namespace ck
 {
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKABILITY_API FFragment_Ability_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_Ability_Params);
-
-    public:
-        using ParamsType = FCk_Fragment_Ability_ParamsData;
-
-    private:
-        ParamsType _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Ability_Params, _Params)
-    };
+    using FFragment_Ability_Params = FCk_Fragment_Ability_ParamsData;
 
     // --------------------------------------------------------------------------------------------------------------------
 
