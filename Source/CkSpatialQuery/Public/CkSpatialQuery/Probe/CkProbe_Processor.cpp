@@ -512,7 +512,14 @@ namespace ck
                                     .Set_ContactPoints(InRequest.Get_ContactPoints())
                                     .Set_ContactNormal(InRequest.Get_ContactNormal());
 
-        InCurrent._CurrentOverlaps.Add(OverlapInfo);
+        auto AlreadyContainsOverlap = false;
+        InCurrent._CurrentOverlaps.Add(OverlapInfo, &AlreadyContainsOverlap);
+
+        CK_ENSURE_IF_NOT(NOT AlreadyContainsOverlap,
+            TEXT("Received BeginOverlap Request for Probe [{}] with Other Entity [{}], but it was already overlapping with it."),
+            InHandle,
+            InRequest.Get_OtherEntity())
+        { return; }
 
         UCk_Utils_Probe_UE::Request_MarkProbe_AsOverlapping(InHandle);
 
@@ -537,13 +544,19 @@ namespace ck
                                     .Set_ContactPoints(InRequest.Get_ContactPoints())
                                     .Set_ContactNormal(InRequest.Get_ContactNormal());
 
-        InCurrent._CurrentOverlaps.Add(OverlapInfo);
+        CK_ENSURE_IF_NOT(InCurrent._CurrentOverlaps.Contains(OverlapInfo),
+            TEXT("Received OverlapPersisted Request for Probe [{}] with Other Entity [{}], but it was NOT overlapping with it."),
+            InHandle,
+            InRequest.Get_OtherEntity())
+        { return; }
 
         const auto Payload = FCk_Probe_Payload_OnOverlapPersisted{
             InRequest.Get_OtherEntity(),
             InRequest.Get_ContactPoints(),
             InRequest.Get_ContactNormal()
         };
+
+        InCurrent._CurrentOverlaps.Add(OverlapInfo);
 
         UUtils_Signal_OnProbeOverlapPersisted::Broadcast(InHandle, MakePayload(InHandle, Payload));
     }
@@ -558,7 +571,13 @@ namespace ck
     {
         const auto OverlapInfo = FCk_Probe_OverlapInfo{InRequest.Get_OtherEntity()};
 
-        InCurrent._CurrentOverlaps.Remove(OverlapInfo);
+        const auto& NumRemovedItems = InCurrent._CurrentOverlaps.Remove(OverlapInfo);
+
+        CK_ENSURE_IF_NOT(NumRemovedItems > 0,
+            TEXT("Received EndOverlap Request for Probe [{}] with Other Entity [{}], but it was NOT overlapping with it."),
+            InHandle,
+            InRequest.Get_OtherEntity())
+        { return; }
 
         if (InCurrent.Get_CurrentOverlaps().IsEmpty())
         {
@@ -569,6 +588,13 @@ namespace ck
             MakePayload(InHandle, FCk_Probe_Payload_OnEndOverlap{InRequest.Get_OtherEntity()}));
     }
 
+    FProcessor_Probe_Teardown::
+        FProcessor_Probe_Teardown(
+            const RegistryType& InRegistry,
+            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
+    : TProcessor(InRegistry)
+    , _PhysicsSystem(InPhysicsSystem) {}
+
     auto
         FProcessor_Probe_Teardown::
         ForEachEntity(
@@ -578,32 +604,28 @@ namespace ck
             FFragment_Probe_Current& InCurrent) const
         -> void
     {
-        // TODO:
-
-        /*const auto& DoManuallyTriggerAllEndOverlaps = [&]() -> void
+        const auto& DoManuallyTriggerAllEndOverlaps = [&]() -> void
         {
-            for (const auto& OverlapKvp : InCurrentComp.Get_CurrentMarkerOverlaps().Get_Overlaps())
+            for (const auto& OverlapInfo : InCurrent.Get_CurrentOverlaps())
             {
-                const auto& MarkerDetails = OverlapKvp.Key;
-                const auto& OverlapDetails = OverlapKvp.Value.Get_OverlapDetails();
+                const auto& OtherEntity = OverlapInfo.Get_OtherEntity();
 
-                const auto& OnEndOverlapPayload = FCk_Sensor_Payload_OnEndOverlap
+                UUtils_Signal_OnProbeEndOverlap::Broadcast(InHandle,
+                    MakePayload(InHandle, FCk_Probe_Payload_OnEndOverlap{OtherEntity}));
+
+                if (auto OtherEntityAsProbe = UCk_Utils_Probe_UE::Cast(OtherEntity);
+                    ck::IsValid(OtherEntity) && UCk_Utils_Probe_UE::Get_IsOverlappingWith(OtherEntityAsProbe, InHandle))
                 {
-                    SensorBasicDetails,
-                    MarkerDetails,
-                    FCk_Sensor_EndOverlap_UnrealDetails
-                    {
-                        OverlapDetails.Get_OverlappedComponent().Get(),
-                        OverlapDetails.Get_OtherActor().Get(),
-                        OverlapDetails.Get_OtherComp().Get()
-                    }
-                };
-
-                UUtils_Signal_OnSensorEndOverlap::Broadcast(InSensorEntity, MakePayload(
-                    InCurrentComp.Get_AttachedEntityAndActor().Get_Handle(), OnEndOverlapPayload));
+                    UCk_Utils_Probe_UE::Request_EndOverlap(OtherEntityAsProbe, FCk_Request_Probe_EndOverlap{InHandle});
+                }
             }
         };
-        DoManuallyTriggerAllEndOverlaps();*/
+
+        DoManuallyTriggerAllEndOverlaps();
+
+        auto PhysicsSystem = _PhysicsSystem.Pin();
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+        BodyInterface.RemoveBody(InCurrent.Get_RigidBody()->GetID());
     }
 }
 

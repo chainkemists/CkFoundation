@@ -298,7 +298,9 @@ namespace ck
             CK_IF_INITIATE_CONFIRM_KILL>
     {
     public:
-        using TProcessor::TProcessor;
+        FProcessor_Probe_Teardown(
+            const RegistryType& InRegistry,
+            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
 
     public:
         auto
@@ -307,6 +309,9 @@ namespace ck
             HandleType InHandle,
             const FFragment_Probe_Params& InParams,
             FFragment_Probe_Current& InCurrent) const -> void;
+
+    private:
+        TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
     };
 }
 
