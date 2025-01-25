@@ -203,9 +203,6 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using MarkedDirtyBy = FTag_Probe_NeedsSetup;
-
-    public:
         FProcessor_Probe_UpdateTransform(
             const RegistryType& InRegistry,
             const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
