@@ -534,10 +534,7 @@ namespace ck
         auto AlreadyContainsOverlap = false;
         InCurrent._CurrentOverlaps.Add(OverlapInfo, &AlreadyContainsOverlap);
 
-        CK_ENSURE_IF_NOT(NOT AlreadyContainsOverlap,
-            TEXT("Received BeginOverlap Request for Probe [{}] with Other Entity [{}], but it was already overlapping with it."),
-            InHandle,
-            InRequest.Get_OtherEntity())
+        if (AlreadyContainsOverlap)
         { return; }
 
         UCk_Utils_Probe_UE::Request_MarkProbe_AsOverlapping(InHandle);
@@ -563,10 +560,7 @@ namespace ck
                                     .Set_ContactPoints(InRequest.Get_ContactPoints())
                                     .Set_ContactNormal(InRequest.Get_ContactNormal());
 
-        CK_ENSURE_IF_NOT(InCurrent._CurrentOverlaps.Contains(OverlapInfo),
-            TEXT("Received OverlapPersisted Request for Probe [{}] with Other Entity [{}], but it was NOT overlapping with it."),
-            InHandle,
-            InRequest.Get_OtherEntity())
+        if (NOT InCurrent._CurrentOverlaps.Contains(OverlapInfo))
         { return; }
 
         const auto Payload = FCk_Probe_Payload_OnOverlapPersisted{
@@ -590,12 +584,8 @@ namespace ck
     {
         const auto OverlapInfo = FCk_Probe_OverlapInfo{InRequest.Get_OtherEntity()};
 
-        const auto& NumRemovedItems = InCurrent._CurrentOverlaps.Remove(OverlapInfo);
-
-        CK_ENSURE_IF_NOT(NumRemovedItems > 0,
-            TEXT("Received EndOverlap Request for Probe [{}] with Other Entity [{}], but it was NOT overlapping with it."),
-            InHandle,
-            InRequest.Get_OtherEntity())
+        if (const auto& NumRemovedItems = InCurrent._CurrentOverlaps.Remove(OverlapInfo);
+            NumRemovedItems <= 0)
         { return; }
 
         if (InCurrent.Get_CurrentOverlaps().IsEmpty())
