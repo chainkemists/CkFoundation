@@ -29,222 +29,334 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck::details
+{
+    FProcessor_BoxProbe_Setup::
+    FProcessor_BoxProbe_Setup(
+        const RegistryType& InRegistry,
+        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
+    : TProcessor(InRegistry)
+    , _PhysicsSystem(InPhysicsSystem) {}
+
+    auto
+        FProcessor_BoxProbe_Setup::
+        DoTick(
+            TimeType InDeltaT)
+        -> void
+    {
+        TProcessor::DoTick(InDeltaT);
+        _TransientEntity.Clear<MarkedDirtyBy>();
+    }
+
+    auto
+        FProcessor_BoxProbe_Setup::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ShapeBox_Current& InShape,
+            const FFragment_Probe_Params& InParams,
+            FFragment_Probe_Current& InCurrent)
+        -> void
+    {
+        using namespace JPH;
+        const auto& EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
+
+        const auto BoxParams = UCk_Utils_ShapeBox_UE::Get_Dimensions(UCk_Utils_ShapeBox_UE::Cast(InHandle));
+
+        const auto& HalfExtents = BoxParams.Get_HalfExtents();
+
+        const auto Settings = BoxShapeSettings{jolt::Conv(HalfExtents), BoxParams.Get_ConvexRadius()};
+        Settings.SetEmbedded();
+
+        auto ShapeResult = Settings.Create();
+        auto Shape = ShapeResult.Get();
+
+        InHandle.Add<JPH::Ref<JPH::Shape>>(Shape);
+
+        auto ShapeSettings = BodyCreationSettings{
+            Shape,
+            jolt::Conv(EntityPosition),
+            Quat::sIdentity(),
+            EMotionType::Kinematic,
+            ObjectLayer{1}
+        };
+        ShapeSettings.mIsSensor = true;
+
+        switch(InParams.Get_MotionType())
+        {
+            case ECk_MotionType::Static: ShapeSettings.mMotionType = EMotionType::Static; InHandle.Add<FTag_Probe_MotionType_Static>(); break;
+            case ECk_MotionType::Kinematic: ShapeSettings.mMotionType = EMotionType::Kinematic; break;
+            case ECk_MotionType::Dynamic: ShapeSettings.mMotionType = EMotionType::Dynamic; break;
+        }
+
+        switch(InParams.Get_MotionQuality())
+        {
+            case ECk_MotionQuality::Discrete: ShapeSettings.mMotionQuality = EMotionQuality::Discrete; break;
+            case ECk_MotionQuality::LinearCast: ShapeSettings.mMotionQuality = EMotionQuality::LinearCast; break;
+        }
+
+        auto PhysicsSystem = _PhysicsSystem.Pin();
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+        InCurrent._RigidBody = BodyInterface.CreateBody(ShapeSettings);
+        InCurrent._RigidBody->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
+        InCurrent._RigidBody->SetCollideKinematicVsNonDynamic(true);
+        BodyInterface.AddBody(InCurrent._RigidBody->GetID(), EActivation::Activate);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    FProcessor_SphereProbe_Setup::
+    FProcessor_SphereProbe_Setup(
+        const RegistryType& InRegistry,
+        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
+    : TProcessor(InRegistry)
+    , _PhysicsSystem(InPhysicsSystem) {}
+
+    auto
+        FProcessor_SphereProbe_Setup::
+        DoTick(
+            TimeType InDeltaT)
+        -> void
+    {
+        TProcessor::DoTick(InDeltaT);
+        _TransientEntity.Clear<MarkedDirtyBy>();
+    }
+
+    auto
+        FProcessor_SphereProbe_Setup::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ShapeSphere_Current& InShape,
+            const FFragment_Probe_Params& InParams,
+            FFragment_Probe_Current& InCurrent)
+        -> void
+    {
+        using namespace JPH;
+        const auto& EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
+
+        const auto Params = UCk_Utils_ShapeSphere_UE::Get_Dimensions(UCk_Utils_ShapeSphere_UE::Cast(InHandle));
+
+        const auto& Radius = Params.Get_Radius();
+
+        const auto Settings = SphereShapeSettings{Radius};
+        Settings.SetEmbedded();
+
+        auto ShapeResult = Settings.Create();
+        auto Shape = ShapeResult.Get();
+
+        InHandle.Add<JPH::Ref<JPH::Shape>>(Shape);
+
+        auto ShapeSettings = BodyCreationSettings{
+            Shape,
+            jolt::Conv(EntityPosition),
+            Quat::sIdentity(),
+            EMotionType::Kinematic,
+            ObjectLayer{1}
+        };
+        ShapeSettings.mIsSensor = true;
+
+        switch(InParams.Get_MotionType())
+        {
+            case ECk_MotionType::Static: ShapeSettings.mMotionType = EMotionType::Static; InHandle.Add<FTag_Probe_MotionType_Static>(); break;
+            case ECk_MotionType::Kinematic: ShapeSettings.mMotionType = EMotionType::Kinematic; break;
+            case ECk_MotionType::Dynamic: ShapeSettings.mMotionType = EMotionType::Dynamic; break;
+        }
+
+        switch(InParams.Get_MotionQuality())
+        {
+            case ECk_MotionQuality::Discrete: ShapeSettings.mMotionQuality = EMotionQuality::Discrete; break;
+            case ECk_MotionQuality::LinearCast: ShapeSettings.mMotionQuality = EMotionQuality::LinearCast; break;
+        }
+
+        auto PhysicsSystem = _PhysicsSystem.Pin();
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+        InCurrent._RigidBody = BodyInterface.CreateBody(ShapeSettings);
+        InCurrent._RigidBody->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
+        InCurrent._RigidBody->SetCollideKinematicVsNonDynamic(true);
+        BodyInterface.AddBody(InCurrent._RigidBody->GetID(), EActivation::Activate);
+    }
+
+    FProcessor_CylinderProbe_Setup::
+    FProcessor_CylinderProbe_Setup(
+        const RegistryType& InRegistry,
+        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
+    : TProcessor(InRegistry)
+    , _PhysicsSystem(InPhysicsSystem) {}
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CylinderProbe_Setup::
+        DoTick(
+            TimeType InDeltaT)
+        -> void
+    {
+        TProcessor::DoTick(InDeltaT);
+        _TransientEntity.Clear<MarkedDirtyBy>();
+    }
+
+    auto
+        FProcessor_CylinderProbe_Setup::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ShapeCylinder_Current& InShape,
+            const FFragment_Probe_Params& InParams,
+            FFragment_Probe_Current& InCurrent)
+        -> void
+    {
+        using namespace JPH;
+        const auto& EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
+
+        const auto Params = UCk_Utils_ShapeCylinder_UE::Get_Dimensions(UCk_Utils_ShapeCylinder_UE::Cast(InHandle));
+
+        const auto& HalfHeight = Params.Get_HalfHeight();
+        const auto& Radius = Params.Get_Radius();
+        const auto& ConvexRadius = Params.Get_ConvexRadius();
+
+        const auto Settings = CylinderShapeSettings{HalfHeight, Radius, ConvexRadius};
+        Settings.SetEmbedded();
+
+        auto ShapeResult = Settings.Create();
+        auto Shape = ShapeResult.Get();
+
+        InHandle.Add<JPH::Ref<JPH::Shape>>(Shape);
+
+        auto ShapeSettings = BodyCreationSettings{
+            Shape,
+            jolt::Conv(EntityPosition),
+            Quat::sIdentity(),
+            EMotionType::Kinematic,
+            ObjectLayer{1}
+        };
+        ShapeSettings.mIsSensor = true;
+
+        switch(InParams.Get_MotionType())
+        {
+            case ECk_MotionType::Static: ShapeSettings.mMotionType = EMotionType::Static; InHandle.Add<FTag_Probe_MotionType_Static>(); break;
+            case ECk_MotionType::Kinematic: ShapeSettings.mMotionType = EMotionType::Kinematic; break;
+            case ECk_MotionType::Dynamic: ShapeSettings.mMotionType = EMotionType::Dynamic; break;
+        }
+
+        switch(InParams.Get_MotionQuality())
+        {
+            case ECk_MotionQuality::Discrete: ShapeSettings.mMotionQuality = EMotionQuality::Discrete; break;
+            case ECk_MotionQuality::LinearCast: ShapeSettings.mMotionQuality = EMotionQuality::LinearCast; break;
+        }
+
+        auto PhysicsSystem = _PhysicsSystem.Pin();
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+        InCurrent._RigidBody = BodyInterface.CreateBody(ShapeSettings);
+        InCurrent._RigidBody->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
+        InCurrent._RigidBody->SetCollideKinematicVsNonDynamic(true);
+        BodyInterface.AddBody(InCurrent._RigidBody->GetID(), EActivation::Activate);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    FProcessor_CapsuleProbe_Setup::
+    FProcessor_CapsuleProbe_Setup(
+        const RegistryType& InRegistry,
+        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
+    : TProcessor(InRegistry)
+    , _PhysicsSystem(InPhysicsSystem) {}
+
+    auto
+        FProcessor_CapsuleProbe_Setup::
+        DoTick(
+            TimeType InDeltaT)
+        -> void
+    {
+        TProcessor::DoTick(InDeltaT);
+        _TransientEntity.Clear<MarkedDirtyBy>();
+    }
+
+    auto
+        FProcessor_CapsuleProbe_Setup::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ShapeCapsule_Current& InShape,
+            const FFragment_Probe_Params& InParams,
+            FFragment_Probe_Current& InCurrent)
+        -> void
+    {
+        using namespace JPH;
+        const auto& EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
+
+        const auto Params = UCk_Utils_ShapeCapsule_UE::Get_Dimensions(UCk_Utils_ShapeCapsule_UE::Cast(InHandle));
+
+        const auto HalfHeight = Params.Get_HalfHeight();
+        const auto Radius = Params.Get_Radius();
+
+        const auto Settings = CapsuleShapeSettings{HalfHeight, Radius};
+        Settings.SetEmbedded();
+
+        auto ShapeResult = Settings.Create();
+        auto Shape = ShapeResult.Get();
+
+        InHandle.Add<JPH::Ref<JPH::Shape>>(Shape);
+
+        auto ShapeSettings = BodyCreationSettings{
+            Shape,
+            jolt::Conv(EntityPosition),
+            Quat::sIdentity(),
+            EMotionType::Kinematic,
+            ObjectLayer{1}
+        };
+        ShapeSettings.mIsSensor = true;
+
+        switch(InParams.Get_MotionType())
+        {
+            case ECk_MotionType::Static: ShapeSettings.mMotionType = EMotionType::Static; InHandle.Add<FTag_Probe_MotionType_Static>(); break;
+            case ECk_MotionType::Kinematic: ShapeSettings.mMotionType = EMotionType::Kinematic; break;
+            case ECk_MotionType::Dynamic: ShapeSettings.mMotionType = EMotionType::Dynamic; break;
+        }
+
+        switch(InParams.Get_MotionQuality())
+        {
+            case ECk_MotionQuality::Discrete: ShapeSettings.mMotionQuality = EMotionQuality::Discrete; break;
+            case ECk_MotionQuality::LinearCast: ShapeSettings.mMotionQuality = EMotionQuality::LinearCast; break;
+        }
+
+        auto PhysicsSystem = _PhysicsSystem.Pin();
+        auto& BodyInterface = PhysicsSystem->GetBodyInterface();
+
+        InCurrent._RigidBody = BodyInterface.CreateBody(ShapeSettings);
+        InCurrent._RigidBody->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
+        InCurrent._RigidBody->SetCollideKinematicVsNonDynamic(true);
+        BodyInterface.AddBody(InCurrent._RigidBody->GetID(), EActivation::Activate);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     FProcessor_Probe_Setup::
     FProcessor_Probe_Setup(
         const RegistryType& InRegistry,
         const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
-        : TProcessor(InRegistry)
-        , _PhysicsSystem(InPhysicsSystem) {}
+    : _Processor_BoxProbe(InRegistry, InPhysicsSystem)
+    , _Processor_SphereProbe(InRegistry, InPhysicsSystem)
+    , _Processor_CapsuleProbe(InRegistry, InPhysicsSystem)
+    , _Processor_CylinderProbe(InRegistry, InPhysicsSystem)
+    {}
 
     auto
         FProcessor_Probe_Setup::
-        DoTick(
+        Tick(
             TimeType InDeltaT)
-            -> void
+        -> void
     {
-        TProcessor::DoTick(InDeltaT);
-
-        _TransientEntity.Clear<MarkedDirtyBy>();
-    }
-
-    auto
-        FProcessor_Probe_Setup::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent)
-            -> void
-    {
-        using namespace JPH;
-        const auto& EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
-
-        if (auto BoxEntity = UCk_Utils_ShapeBox_UE::Cast(InHandle); ck::IsValid(BoxEntity))
-        {
-            const auto BoxParams = UCk_Utils_ShapeBox_UE::Get_Dimensions(BoxEntity);
-
-            const auto& HalfExtents = BoxParams.Get_HalfExtents();
-
-            const auto Settings = BoxShapeSettings{jolt::Conv(HalfExtents), BoxParams.Get_ConvexRadius()};
-            Settings.SetEmbedded();
-
-            auto ShapeResult = Settings.Create();
-            auto Shape = ShapeResult.Get();
-
-            InHandle.Add<JPH::Ref<JPH::Shape>>(Shape);
-
-            auto ShapeSettings = BodyCreationSettings{
-                Shape,
-                jolt::Conv(EntityPosition),
-                Quat::sIdentity(),
-                EMotionType::Kinematic,
-                ObjectLayer{1}
-            };
-            ShapeSettings.mIsSensor = true;
-
-            switch(InParams.Get_MotionType())
-            {
-                case ECk_MotionType::Static: ShapeSettings.mMotionType = EMotionType::Static; InHandle.Add<FTag_Probe_MotionType_Static>(); break;
-                case ECk_MotionType::Kinematic: ShapeSettings.mMotionType = EMotionType::Kinematic; break;
-                case ECk_MotionType::Dynamic: ShapeSettings.mMotionType = EMotionType::Dynamic; break;
-            }
-
-            switch(InParams.Get_MotionQuality())
-            {
-                case ECk_MotionQuality::Discrete: ShapeSettings.mMotionQuality = EMotionQuality::Discrete; break;
-                case ECk_MotionQuality::LinearCast: ShapeSettings.mMotionQuality = EMotionQuality::LinearCast; break;
-            }
-
-            auto PhysicsSystem = _PhysicsSystem.Pin();
-            auto& BodyInterface = PhysicsSystem->GetBodyInterface();
-
-            InCurrent._RigidBody = BodyInterface.CreateBody(ShapeSettings);
-            InCurrent._RigidBody->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
-            InCurrent._RigidBody->SetCollideKinematicVsNonDynamic(true);
-            BodyInterface.AddBody(InCurrent._RigidBody->GetID(), EActivation::Activate);
-        }
-        else if (auto SphereEntity = UCk_Utils_ShapeSphere_UE::Cast(InHandle); ck::IsValid(SphereEntity))
-        {
-            const auto Params = UCk_Utils_ShapeSphere_UE::Get_Dimensions(SphereEntity);
-
-            const auto& Radius = Params.Get_Radius();
-
-            const auto Settings = SphereShapeSettings{Radius};
-            Settings.SetEmbedded();
-
-            auto ShapeResult = Settings.Create();
-            auto Shape = ShapeResult.Get();
-
-            InHandle.Add<JPH::Ref<JPH::Shape>>(Shape);
-
-            auto ShapeSettings = BodyCreationSettings{
-                Shape,
-                jolt::Conv(EntityPosition),
-                Quat::sIdentity(),
-                EMotionType::Kinematic,
-                ObjectLayer{1}
-            };
-            ShapeSettings.mIsSensor = true;
-
-            switch(InParams.Get_MotionType())
-            {
-                case ECk_MotionType::Static: ShapeSettings.mMotionType = EMotionType::Static; InHandle.Add<FTag_Probe_MotionType_Static>(); break;
-                case ECk_MotionType::Kinematic: ShapeSettings.mMotionType = EMotionType::Kinematic; break;
-                case ECk_MotionType::Dynamic: ShapeSettings.mMotionType = EMotionType::Dynamic; break;
-            }
-
-            switch(InParams.Get_MotionQuality())
-            {
-                case ECk_MotionQuality::Discrete: ShapeSettings.mMotionQuality = EMotionQuality::Discrete; break;
-                case ECk_MotionQuality::LinearCast: ShapeSettings.mMotionQuality = EMotionQuality::LinearCast; break;
-            }
-
-            auto PhysicsSystem = _PhysicsSystem.Pin();
-            auto& BodyInterface = PhysicsSystem->GetBodyInterface();
-
-            InCurrent._RigidBody = BodyInterface.CreateBody(ShapeSettings);
-            InCurrent._RigidBody->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
-            InCurrent._RigidBody->SetCollideKinematicVsNonDynamic(true);
-            BodyInterface.AddBody(InCurrent._RigidBody->GetID(), EActivation::Activate);
-        }
-        else if (auto CapsuleEntity = UCk_Utils_ShapeCapsule_UE::Cast(InHandle); ck::IsValid(CapsuleEntity))
-        {
-            const auto Params = UCk_Utils_ShapeCapsule_UE::Get_Dimensions(CapsuleEntity);
-
-            const auto HalfHeight = Params.Get_HalfHeight();
-            const auto Radius = Params.Get_Radius();
-
-            const auto Settings = CapsuleShapeSettings{HalfHeight, Radius};
-            Settings.SetEmbedded();
-
-            auto ShapeResult = Settings.Create();
-            auto Shape = ShapeResult.Get();
-
-            InHandle.Add<JPH::Ref<JPH::Shape>>(Shape);
-
-            auto ShapeSettings = BodyCreationSettings{
-                Shape,
-                jolt::Conv(EntityPosition),
-                Quat::sIdentity(),
-                EMotionType::Kinematic,
-                ObjectLayer{1}
-            };
-            ShapeSettings.mIsSensor = true;
-
-            switch(InParams.Get_MotionType())
-            {
-                case ECk_MotionType::Static: ShapeSettings.mMotionType = EMotionType::Static; InHandle.Add<FTag_Probe_MotionType_Static>(); break;
-                case ECk_MotionType::Kinematic: ShapeSettings.mMotionType = EMotionType::Kinematic; break;
-                case ECk_MotionType::Dynamic: ShapeSettings.mMotionType = EMotionType::Dynamic; break;
-            }
-
-            switch(InParams.Get_MotionQuality())
-            {
-                case ECk_MotionQuality::Discrete: ShapeSettings.mMotionQuality = EMotionQuality::Discrete; break;
-                case ECk_MotionQuality::LinearCast: ShapeSettings.mMotionQuality = EMotionQuality::LinearCast; break;
-            }
-
-            auto PhysicsSystem = _PhysicsSystem.Pin();
-            auto& BodyInterface = PhysicsSystem->GetBodyInterface();
-
-            InCurrent._RigidBody = BodyInterface.CreateBody(ShapeSettings);
-            InCurrent._RigidBody->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
-            InCurrent._RigidBody->SetCollideKinematicVsNonDynamic(true);
-            BodyInterface.AddBody(InCurrent._RigidBody->GetID(), EActivation::Activate);
-        }
-        else if (auto CylinderEntity = UCk_Utils_ShapeCylinder_UE::Cast(InHandle); ck::IsValid(CylinderEntity))
-        {
-            const auto Params = UCk_Utils_ShapeCylinder_UE::Get_Dimensions(CylinderEntity);
-
-            const auto& HalfHeight = Params.Get_HalfHeight();
-            const auto& Radius = Params.Get_Radius();
-            const auto& ConvexRadius = Params.Get_ConvexRadius();
-
-            const auto Settings = CylinderShapeSettings{HalfHeight, Radius, ConvexRadius};
-            Settings.SetEmbedded();
-
-            auto ShapeResult = Settings.Create();
-            auto Shape = ShapeResult.Get();
-
-            InHandle.Add<JPH::Ref<JPH::Shape>>(Shape);
-
-            auto ShapeSettings = BodyCreationSettings{
-                Shape,
-                jolt::Conv(EntityPosition),
-                Quat::sIdentity(),
-                EMotionType::Kinematic,
-                ObjectLayer{1}
-            };
-            ShapeSettings.mIsSensor = true;
-
-            switch(InParams.Get_MotionType())
-            {
-                case ECk_MotionType::Static: ShapeSettings.mMotionType = EMotionType::Static; InHandle.Add<FTag_Probe_MotionType_Static>(); break;
-                case ECk_MotionType::Kinematic: ShapeSettings.mMotionType = EMotionType::Kinematic; break;
-                case ECk_MotionType::Dynamic: ShapeSettings.mMotionType = EMotionType::Dynamic; break;
-            }
-
-            switch(InParams.Get_MotionQuality())
-            {
-                case ECk_MotionQuality::Discrete: ShapeSettings.mMotionQuality = EMotionQuality::Discrete; break;
-                case ECk_MotionQuality::LinearCast: ShapeSettings.mMotionQuality = EMotionQuality::LinearCast; break;
-            }
-
-            auto PhysicsSystem = _PhysicsSystem.Pin();
-            auto& BodyInterface = PhysicsSystem->GetBodyInterface();
-
-            InCurrent._RigidBody = BodyInterface.CreateBody(ShapeSettings);
-            InCurrent._RigidBody->SetUserData(static_cast<uint64>(InHandle.Get_Entity().Get_ID()));
-            InCurrent._RigidBody->SetCollideKinematicVsNonDynamic(true);
-            BodyInterface.AddBody(InCurrent._RigidBody->GetID(), EActivation::Activate);
-        }
-        else
-        {
-            CK_TRIGGER_ENSURE(TEXT("No Shape found on Probe [{}]. Without a shape, a Probe cannot report overlaps"),
-                InHandle);
-        }
+        _Processor_BoxProbe.Tick(InDeltaT);
+        _Processor_SphereProbe.Tick(InDeltaT);
+        _Processor_CapsuleProbe.Tick(InDeltaT);
+        _Processor_CylinderProbe.Tick(InDeltaT);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -253,8 +365,8 @@ namespace ck
     FProcessor_Probe_UpdateTransform(
         const RegistryType& InRegistry,
         const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
-        : TProcessor(InRegistry)
-        , _PhysicsSystem(InPhysicsSystem) {}
+    : TProcessor(InRegistry)
+    , _PhysicsSystem(InPhysicsSystem) {}
 
     auto
         FProcessor_Probe_UpdateTransform::
@@ -263,7 +375,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_Probe_Params& InParams,
             FFragment_Probe_Current& InCurrent)
-            -> void
+        -> void
     {
         auto EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
         auto EntityRotation = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentRotation(InHandle);
@@ -290,7 +402,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Probe_DebugInfo& InDebugInfo)
-            -> void
+        -> void
     {
         using namespace JPH;
 
@@ -343,7 +455,7 @@ namespace ck
         FProcessor_Probe_HandleRequests::
         DoTick(
             TimeType InDeltaT)
-            -> void
+        -> void
     {
         _TransientEntity.Clear<FTag_Probe_Updated>();
 
@@ -356,17 +468,15 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Probe_Requests& InRequestsComp) const
-            -> void
+        -> void
     {
-        InHandle.CopyAndRemove(InRequestsComp, [&](
-            FFragment_Probe_Requests& InRequests)
+        InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_Probe_Requests& InRequests)
+        {
+            algo::ForEachRequest(InRequests._Requests, Visitor([&](const auto& InRequest)
             {
-                algo::ForEachRequest(InRequests._Requests, Visitor([&](
-                    const auto& InRequest)
-                    {
-                        DoHandleRequest(InHandle, InRequest);
-                    }));
-            });
+                DoHandleRequest(InHandle, InRequest);
+            }));
+        });
     }
 
     auto
@@ -374,7 +484,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FCk_Request_Probe_BeginOverlap& InRequest)
-            -> void
+        -> void
     {
         const auto Payload = FCk_Probe_Payload_OnBeginOverlap{
             InRequest.Get_OtherEntity(),
@@ -390,7 +500,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FCk_Request_Probe_OverlapPersisted& InRequest)
-            -> void
+        -> void
     {
         const auto Payload = FCk_Probe_Payload_OnOverlapPersisted{
             InRequest.Get_OtherEntity(),
@@ -406,13 +516,11 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FCk_Request_Probe_EndOverlap& InRequest)
-            -> void
+        -> void
     {
         UUtils_Signal_OnProbeEndOverlap::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Probe_Payload_OnEndOverlap{InRequest.Get_OtherEntity()}));
     }
-
-    // --------------------------------------------------------------------------------------------------------------------
 
     auto
         FProcessor_Probe_Teardown::
@@ -421,27 +529,9 @@ namespace ck
             HandleType InHandle,
             const FFragment_Probe_Params& InParams,
             FFragment_Probe_Current& InCurrent) const
-            -> void
+        -> void
     {
-        // Add teardown logic here
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProcessor_Probe_Replicate::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_Probe_Current& InCurrent,
-            const TObjectPtr<UCk_Fragment_Probe_Rep>& InRepComp) const
-            -> void
-    {
-        UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_Probe_Rep>(InHandle, [&](
-            UCk_Fragment_Probe_Rep* InLocalRepComp)
-            {
-                // Add replication logic here
-            });
+        // TODO:
     }
 }
 

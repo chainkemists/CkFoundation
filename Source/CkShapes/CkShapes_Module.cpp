@@ -1,4 +1,4 @@
-#include "CkShapes.h"
+#include "CkShapes_Module.h"
 
 #define LOCTEXT_NAMESPACE "FCkShapesModule"
 

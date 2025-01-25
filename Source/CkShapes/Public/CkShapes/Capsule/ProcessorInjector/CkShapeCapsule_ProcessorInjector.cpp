@@ -5,7 +5,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_ShapeCapsule_ProcessorInjector_Requests_UE::
+    UCk_ShapeCapsule_ProcessorInjector_Requests::
     DoInjectProcessors(
         EcsWorldType& InWorld)
     -> void

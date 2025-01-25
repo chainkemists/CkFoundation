@@ -1,4 +1,4 @@
-#include "CkSpatialQuery.h"
+#include "CkSpatialQuery_Module.h"
 
 #define LOCTEXT_NAMESPACE "FCkSpatialQueryModule"
 

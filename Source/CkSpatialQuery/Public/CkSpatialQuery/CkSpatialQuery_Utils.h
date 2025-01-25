@@ -5,7 +5,7 @@
 #include "Jolt/Jolt.h"
 #include <Jolt/Math/Vec3.h>
 
-//#include "CkSpatialQuery_Utils.generated.h"
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck::jolt
 {
@@ -13,38 +13,33 @@ namespace ck::jolt
     using JoltVec3 = JPH::Vec3;
     using JoltQuat = JPH::Quat;
 
-     auto
-        Conv(
-            FVector InVector)
-            -> JoltVec3;
+    auto
+    Conv(
+        FVector InVector) -> JoltVec3;
 
     auto
-        Conv(
-            Chaos::TVector<float, 3> InVector)
-            -> JoltVec3;
+    Conv(
+        Chaos::TVector<float, 3> InVector) -> JoltVec3;
 
     auto
-        Conv(
-            JoltVec3 InVector)
-            -> FVector;
+    Conv(
+        JoltVec3 InVector) -> FVector;
 
     auto
-        Conv(
-            JoltFloat3 InVector)
-            -> FVector;
+    Conv(
+        JoltFloat3 InVector) -> FVector;
 
     auto
-        Conv(
-            FRotator InRotator)
-            -> JoltQuat;
+    Conv(
+        FRotator InRotator) -> JoltQuat;
 
     auto
-        Conv(
-            FQuat InQuat)
-            -> JoltQuat;
+    Conv(
+        FQuat InQuat) -> JoltQuat;
 
     auto
-        Conv(
-            JoltQuat InQuad)
-            -> FQuat;
+    Conv(
+        JoltQuat InQuad) -> FQuat;
 };
+
+// --------------------------------------------------------------------------------------------------------------------

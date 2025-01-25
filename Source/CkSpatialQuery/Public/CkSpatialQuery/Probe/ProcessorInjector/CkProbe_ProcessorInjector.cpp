@@ -6,22 +6,42 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_Probe_ProcessorInjector_UE::
+    UCk_Probe_ProcessorInjector_Requests::
     DoInjectProcessors(
         EcsWorldType& InWorld)
         -> void
 {
-    auto SpatialQuerySubsystem = GetWorld()->GetSubsystem<UCk_SpatialQuery_Subsystem_UE>();
-    if (NOT ck::IsValid(SpatialQuerySubsystem)) { return; }
+    auto SpatialQuerySubsystem = GetWorld()->GetSubsystem<UCk_SpatialQuery_Subsystem>();
+    if (ck::Is_NOT_Valid(SpatialQuerySubsystem))
+    { return; }
 
     InWorld.Add<ck::FProcessor_Probe_Setup>(InWorld.Get_Registry(), SpatialQuerySubsystem->Get_PhysicsSystem());
+    InWorld.Add<ck::FProcessor_Probe_HandleRequests>(InWorld.Get_Registry());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+auto
+    UCk_Probe_ProcessorInjector_UpdateTransformAndDebug::
+    DoInjectProcessors(
+        EcsWorldType& InWorld)
+    -> void
+{
+    auto SpatialQuerySubsystem = GetWorld()->GetSubsystem<UCk_SpatialQuery_Subsystem>();
+    if (ck::Is_NOT_Valid(SpatialQuerySubsystem))
+    { return; }
+
     InWorld.Add<ck::FProcessor_Probe_UpdateTransform>(InWorld.Get_Registry(), SpatialQuerySubsystem->Get_PhysicsSystem());
     InWorld.Add<ck::FProcessor_Probe_DebugDraw>(InWorld.Get_Registry());
+}
 
-    InWorld.Add<ck::FProcessor_Probe_HandleRequests>(InWorld.Get_Registry());
+// --------------------------------------------------------------------------------------------------------------------
+
+void
+    UCk_Probe_ProcessorInjector_Teardown::
+    DoInjectProcessors(
+        EcsWorldType& InWorld)
+{
     InWorld.Add<ck::FProcessor_Probe_Teardown>(InWorld.Get_Registry());
-
-    InWorld.Add<ck::FProcessor_Probe_Replicate>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
