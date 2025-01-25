@@ -144,7 +144,7 @@ public:
         auto Body1 = UCk_Utils_Probe_UE::Cast(Body1Entity);
         auto Body2 = UCk_Utils_Probe_UE::Cast(Body2Entity);
 
-        if (ck::IsValid(Body1))
+        if (ck::IsValid(Body1) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body1, Body2))
         {
             auto ContactPoints = TArray<FVector>{};
             ContactPoints.Reserve(inManifold.mRelativeContactPointsOn1.size());
@@ -158,7 +158,7 @@ public:
                 FCk_Request_Probe_BeginOverlap{Body2, ContactPoints, ck::jolt::Conv(inManifold.mWorldSpaceNormal)});
         }
 
-        if (ck::IsValid(Body2))
+        if (ck::IsValid(Body2) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
         {
             auto ContactPoints = TArray<FVector>{};
             ContactPoints.Reserve(inManifold.mRelativeContactPointsOn1.size());
@@ -194,7 +194,7 @@ public:
         auto Body1 = UCk_Utils_Probe_UE::Cast(Body1Entity);
         auto Body2 = UCk_Utils_Probe_UE::Cast(Body2Entity);
 
-        if (ck::IsValid(Body1))
+        if (ck::IsValid(Body1) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body1, Body2))
         {
             auto ContactPoints = TArray<FVector>{};
             ContactPoints.Reserve(inManifold.mRelativeContactPointsOn1.size());
@@ -208,7 +208,7 @@ public:
                 FCk_Request_Probe_OverlapPersisted{Body2, ContactPoints, ck::jolt::Conv(inManifold.mWorldSpaceNormal)});
         }
 
-        if (ck::IsValid(Body2))
+        if (ck::IsValid(Body2) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
         {
             auto ContactPoints = TArray<FVector>{};
             ContactPoints.Reserve(inManifold.mRelativeContactPointsOn1.size());
@@ -248,12 +248,12 @@ public:
         auto Body1 = UCk_Utils_Probe_UE::Cast(*MaybeBody1Handle);
         auto Body2 = UCk_Utils_Probe_UE::Cast(*MaybeBody2Handle);
 
-        if (ck::IsValid(Body1))
+        if (ck::IsValid(Body1) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body1, Body2))
         {
             UCk_Utils_Probe_UE::Request_EndOverlap(Body1, FCk_Request_Probe_EndOverlap{Body2});
         }
 
-        if (ck::IsValid(Body2))
+        if (ck::IsValid(Body2) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
         {
             UCk_Utils_Probe_UE::Request_EndOverlap(Body2, FCk_Request_Probe_EndOverlap{Body1});
         }
