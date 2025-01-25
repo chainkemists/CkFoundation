@@ -66,10 +66,18 @@ private:
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Probe",
-        DisplayName="[Ck][Probe] IsOverlapping")
+        DisplayName="[Ck][Probe] Get IsOverlapping")
     static bool
     Get_IsOverlapping(
         const FCk_Handle_Probe& InProbe);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Probe",
+        DisplayName="[Ck][Probe] Get IsOverlapping With")
+    static bool
+    Get_IsOverlappingWith(
+        const FCk_Handle_Probe& InProbe,
+        const FCk_Handle& InOtherEntity);
 
 public:
     UFUNCTION(BlueprintCallable,
