@@ -221,20 +221,17 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKSPATIALQUERY_API FProcessor_Probe_DebugDraw : public ck_exp::TProcessor<
-            FProcessor_Probe_DebugDraw,
-            FCk_Handle_Probe,
-            FFragment_Probe_DebugInfo,
-            CK_IGNORE_PENDING_KILL>
+    class CKSPATIALQUERY_API FProcessor_Probe_DebugDrawAll
     {
-        using TProcessor::TProcessor;
+    public:
+        explicit FProcessor_Probe_DebugDrawAll(
+            const FCk_Registry& InRegistry);
 
     public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_Probe_DebugInfo& InDebugInfo) -> void;
+        auto Tick(FCk_Time) -> void;
+
+    private:
+        FCk_Registry _Registry;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
