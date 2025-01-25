@@ -15,6 +15,7 @@
 #include "CkSpatialQuery/CkSpatialQuery_Log.h"
 #include "CkSpatialQuery/CkSpatialQuery_Utils.h"
 #include "CkSpatialQuery/Probe/CkProbe_Utils.h"
+#include "CkSpatialQuery/Settings/CkSpatialQuery_Settings.h"
 #include "CkSpatialQuery/Subsystem/CkSpatialQuery_Subsystem.h"
 
 #include "Jolt/Jolt.h"
@@ -420,57 +421,71 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    FProcessor_Probe_DebugDrawAll::
+    FProcessor_Probe_DebugDrawAll(
+        const FCk_Registry& InRegistry)
+    : _Registry(InRegistry)
+    {
+    }
+
     auto
-        FProcessor_Probe_DebugDraw::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_Probe_DebugInfo& InDebugInfo)
+        FProcessor_Probe_DebugDrawAll::
+        Tick(
+            FCk_Time)
         -> void
     {
-        using namespace JPH;
-
-        auto EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
-        auto EntityRotation = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentRotation(InHandle);
-
-        const auto& LineThickness = InDebugInfo.Get_LineThickness();
-        const auto& DebugColor = UCk_Utils_Probe_UE::Get_IsOverlapping(InHandle)
-                                 ? InDebugInfo.Get_DebugOverlapColor().ToFColor(true)
-                                 : InDebugInfo.Get_DebugColor().ToFColor(true);
-
-        const auto& Shape = InHandle.Get<Ref<JPH::Shape>>();
-
-        if (ck::Is_NOT_Valid(Shape.GetPtr(), ck::IsValid_Policy_NullptrOnly{}))
+        if (NOT UCk_Utils_SpatialQuery_Settings::Get_DebugPreviewAllProbes())
         { return; }
 
-        Shape::GetTrianglesContext IoContext;
-        auto Mat4 = Mat44::sIdentity();
-        Mat4.SetTranslation(jolt::Conv(EntityPosition));
-        auto Bounds = Shape->GetWorldSpaceBounds(Mat4, Vec3{1.f, 1.f, 1.f});
-
-        Shape->GetTrianglesStart(IoContext, Bounds, jolt::Conv(EntityPosition), jolt::Conv(EntityRotation),
-            JPH::Vec3{1.f, 1.f, 1.f});
-
-        auto World = _TransientEntity.Get<TWeakObjectPtr<UWorld>>();
-
-        Float3 Vertices[Shape::cGetTrianglesMinTrianglesRequested * 3];
-
-        for (auto NumTris = Shape->GetTrianglesNext(IoContext, Shape->cGetTrianglesMinTrianglesRequested, Vertices);
-             NumTris != 0;)
+        _Registry.View<FFragment_Probe_DebugInfo>().ForEach(
+        [&](FCk_Entity InEntity, const FFragment_Probe_DebugInfo& InDebugInfo)
         {
-            for (auto Tri = 0; Tri < NumTris; ++Tri)
-            {
-                auto Index = Tri * 3;
-                DrawDebugLine(World.Get(), jolt::Conv(Vertices[Index + 0]), jolt::Conv(Vertices[Index + 1]), DebugColor,
-                    false, 0, 0, LineThickness);
-                DrawDebugLine(World.Get(), jolt::Conv(Vertices[Index + 1]), jolt::Conv(Vertices[Index + 2]), DebugColor,
-                    false, 0, 0, LineThickness);
-                DrawDebugLine(World.Get(), jolt::Conv(Vertices[Index + 2]), jolt::Conv(Vertices[Index + 0]), DebugColor,
-                    false, 0, 0, LineThickness);
-            }
+            using namespace JPH;
 
-            NumTris = Shape->GetTrianglesNext(IoContext, Shape->cGetTrianglesMinTrianglesRequested, Vertices);
-        }
+            const auto ProbeHandle = UCk_Utils_Probe_UE::CastChecked(FCk_Handle{InEntity, _Registry});
+
+            auto EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(ProbeHandle);
+            auto EntityRotation = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentRotation(ProbeHandle);
+
+            const auto& LineThickness = InDebugInfo.Get_LineThickness();
+            const auto& DebugColor = UCk_Utils_Probe_UE::Get_IsOverlapping(ProbeHandle)
+                                     ? InDebugInfo.Get_DebugOverlapColor().ToFColor(true)
+                                     : InDebugInfo.Get_DebugColor().ToFColor(true);
+
+            const auto& Shape = ProbeHandle.Get<Ref<JPH::Shape>>();
+
+            if (ck::Is_NOT_Valid(Shape.GetPtr(), ck::IsValid_Policy_NullptrOnly{}))
+            { return; }
+
+            Shape::GetTrianglesContext IoContext;
+            auto Mat4 = Mat44::sIdentity();
+            Mat4.SetTranslation(jolt::Conv(EntityPosition));
+            auto Bounds = Shape->GetWorldSpaceBounds(Mat4, Vec3{1.f, 1.f, 1.f});
+
+            Shape->GetTrianglesStart(IoContext, Bounds, jolt::Conv(EntityPosition), jolt::Conv(EntityRotation),
+                JPH::Vec3{1.f, 1.f, 1.f});
+
+            auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(ProbeHandle);
+
+            Float3 Vertices[Shape::cGetTrianglesMinTrianglesRequested * 3];
+
+            for (auto NumTris = Shape->GetTrianglesNext(IoContext, Shape->cGetTrianglesMinTrianglesRequested, Vertices);
+                 NumTris != 0;)
+            {
+                for (auto Tri = 0; Tri < NumTris; ++Tri)
+                {
+                    auto Index = Tri * 3;
+                    DrawDebugLine(World, jolt::Conv(Vertices[Index + 0]), jolt::Conv(Vertices[Index + 1]), DebugColor,
+                        false, 0, 0, LineThickness);
+                    DrawDebugLine(World, jolt::Conv(Vertices[Index + 1]), jolt::Conv(Vertices[Index + 2]), DebugColor,
+                        false, 0, 0, LineThickness);
+                    DrawDebugLine(World, jolt::Conv(Vertices[Index + 2]), jolt::Conv(Vertices[Index + 0]), DebugColor,
+                        false, 0, 0, LineThickness);
+                }
+
+                NumTris = Shape->GetTrianglesNext(IoContext, Shape->cGetTrianglesMinTrianglesRequested, Vertices);
+            }
+        });
     }
 
     // --------------------------------------------------------------------------------------------------------------------
