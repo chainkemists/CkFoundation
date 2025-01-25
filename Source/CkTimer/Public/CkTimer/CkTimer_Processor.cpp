@@ -61,7 +61,7 @@ namespace ck
                     UUtils_Signal_OnTimerReset::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
                 }
 
-                if (InParamsComp.Get_Params().Get_CountDirection() == ECk_Timer_CountDirection::CountUp)
+                if (InParamsComp.Get_CountDirection() == ECk_Timer_CountDirection::CountUp)
                 { TimerChrono.Reset(); }
                 else
                 { TimerChrono.Complete(); }
@@ -86,7 +86,7 @@ namespace ck
                     UUtils_Signal_OnTimerReset::Broadcast(InTimerEntity, MakePayload(InTimerEntity, TimerChrono, InDeltaT));
                 }
 
-                if (InParamsComp.Get_Params().Get_CountDirection() == ECk_Timer_CountDirection::CountUp)
+                if (InParamsComp.Get_CountDirection() == ECk_Timer_CountDirection::CountUp)
                 { TimerChrono.Complete(); }
                 else
                 { TimerChrono.Reset(); }
@@ -178,7 +178,7 @@ namespace ck
     {
         auto& TimerChrono = InCurrentComp._Chrono;
 
-        switch(InParamsComp.Get_Params().Get_CountDirection())
+        switch(InParamsComp.Get_CountDirection())
         {
             case ECk_Timer_CountDirection::CountUp:
             {
@@ -192,9 +192,11 @@ namespace ck
             }
         }
 
-        const auto& JumpDirection = InRequest.Get_JumpDuration().Get_Seconds() >= 0.f ? ECk_Timer_JumpDirection::Forwards : ECk_Timer_JumpDirection::Backwards;
-        const auto& JumpAmount = FCk_Time(FMath::Abs(InRequest.Get_JumpDuration().Get_Seconds()));
         {
+            const auto& JumpDirection = InRequest.Get_JumpDuration().Get_Seconds() >= 0.f
+                                        ? ECk_Timer_JumpDirection::Forwards
+                                        : ECk_Timer_JumpDirection::Backwards;
+            const auto& JumpAmount = FCk_Time(FMath::Abs(InRequest.Get_JumpDuration().Get_Seconds()));
 #if STATS
             auto TimerStatCounter = FScopeCycleCounter{InHandle.Get<TStatId>()};
 #endif // STATS
@@ -222,7 +224,7 @@ namespace ck
 
         const auto PreviousTimeElapsed = TimerChrono.Get_TimeElapsed();
 
-        switch(InParamsComp.Get_Params().Get_CountDirection())
+        switch(InParamsComp.Get_CountDirection())
         {
             case ECk_Timer_CountDirection::CountUp:
             {
@@ -294,7 +296,7 @@ namespace ck
         if (NOT TimerChrono.Get_IsDone())
         { return; }
 
-        switch (const auto& TimerBehavior = InParams.Get_Params().Get_Behavior())
+        switch (const auto& TimerBehavior = InParams.Get_Behavior())
         {
             case ECk_Timer_Behavior::StopOnDone:
             {
@@ -378,7 +380,7 @@ namespace ck
         if (NOT TimerChrono.Get_IsDepleted())
         { return; }
 
-        switch (const auto& TimerBehavior = InParams.Get_Params().Get_Behavior())
+        switch (const auto& TimerBehavior = InParams.Get_Behavior())
         {
             case ECk_Timer_Behavior::StopOnDone:
             {

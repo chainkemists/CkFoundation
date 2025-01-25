@@ -23,23 +23,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKTIMER_API FFragment_Timer_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_Timer_Params);
-
-    public:
-        using ParamsType = FCk_Fragment_Timer_ParamsData;
-
-    private:
-        ParamsType _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Timer_Params, _Params);
-    };
+    using FFragment_Timer_Params = FCk_Fragment_Timer_ParamsData;
 
     // --------------------------------------------------------------------------------------------------------------------
 
