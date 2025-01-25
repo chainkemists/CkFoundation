@@ -66,10 +66,23 @@ private:
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Probe",
+        DisplayName="[Ck][Probe] Get Name")
+    static FGameplayTag
+    Get_Name(
             const FCk_Handle_Probe& InProbe);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Probe",
         DisplayName="[Ck][Probe] Get Response Policy")
     static ECk_ProbeResponse_Policy
     Get_ResponsePolicy(
+            const FCk_Handle_Probe& InProbe);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Probe",
+        DisplayName="[Ck][Probe] Get Filter")
+    static FGameplayTagContainer
+    Get_Filter(
             const FCk_Handle_Probe& InProbe);
 
     UFUNCTION(BlueprintPure,
@@ -86,6 +99,14 @@ public:
     Get_IsOverlappingWith(
         const FCk_Handle_Probe& InProbe,
         const FCk_Handle& InOtherEntity);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Probe",
+        DisplayName="[Ck][Probe] Get Can Overlap With")
+    static bool
+    Get_CanOverlapWith(
+        const FCk_Handle_Probe& InA,
+        const FCk_Handle_Probe& InB);
 
 public:
     UFUNCTION(BlueprintCallable,

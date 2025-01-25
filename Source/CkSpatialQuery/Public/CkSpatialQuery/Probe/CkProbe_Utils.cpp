@@ -39,11 +39,29 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_Probe_UE, FCk_Handle_Probe,
 
 auto
     UCk_Utils_Probe_UE::
+    Get_Name(
+        const FCk_Handle_Probe& InProbe)
+        -> FGameplayTag
+{
+    return InProbe.Get<ck::FFragment_Probe_Params>().Get_ProbeName();
+}
+
+auto
+    UCk_Utils_Probe_UE::
     Get_ResponsePolicy(
         const FCk_Handle_Probe& InProbe)
         -> ECk_ProbeResponse_Policy
 {
     return InProbe.Get<ck::FFragment_Probe_Params>().Get_ResponsePolicy();
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    Get_Filter(
+        const FCk_Handle_Probe& InProbe)
+        -> FGameplayTagContainer
+{
+    return InProbe.Get<ck::FFragment_Probe_Params>().Get_Filter();
 }
 
 auto
@@ -60,9 +78,29 @@ auto
     Get_IsOverlappingWith(
         const FCk_Handle_Probe& InProbe,
         const FCk_Handle& InOtherEntity)
-    -> bool
+        -> bool
 {
-    return InProbe.Get<ck::FFragment_Probe_Current>().Get_CurrentOverlaps().Contains(FCk_Probe_OverlapInfo{InOtherEntity});
+    return InProbe.Get<ck::FFragment_Probe_Current>().Get_CurrentOverlaps().Contains(FCk_Probe_OverlapInfo{
+        InOtherEntity
+    });
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    Get_CanOverlapWith(
+        const FCk_Handle_Probe& InA,
+        const FCk_Handle_Probe& InB)
+        -> bool
+{
+    if (Get_ResponsePolicy(InA) == ECk_ProbeResponse_Policy::Silent)
+    {
+        return false;
+    }
+
+    const auto& Filter = Get_Filter(InA);
+    const auto& Name = Get_Name(InB);
+
+    return Name.MatchesAny(Filter);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
