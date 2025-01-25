@@ -21,6 +21,43 @@ auto
         return {};
     }
 
+    CK_ENSURE_IF_NOT(ck::IsValid(InParams.Get_ProbeName()),
+        TEXT("Cannot Add a Probe to Entity [{}] because it has INVALID Name"), InHandle)
+    {
+        return {};
+    }
+
+    switch (const auto& ResponsePolicy = InParams.Get_ResponsePolicy())
+    {
+        case ECk_ProbeResponse_Policy::Notify:
+        {
+            CK_ENSURE(
+                NOT InParams.Get_Filter().IsEmpty(),
+                TEXT("Ill Configured Probe added to Entity [{}]!\n"
+                 "A Non-Empty Filter is required for a Probe with Response Policy set to [{}]"),
+                InHandle,
+                ResponsePolicy);
+
+            break;
+        }
+        case ECk_ProbeResponse_Policy::Silent:
+        {
+            CK_ENSURE(
+                InParams.Get_Filter().IsEmpty(),
+                TEXT("Ill Configured Probe added to Entity [{}]!\n"
+                 "An Empty Filter is required for a Probe with Response Policy set to [{}]"),
+                InHandle,
+                ResponsePolicy);
+
+            break;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(ResponsePolicy);
+            break;
+        };
+    }
+
     InHandle.Add<ck::FFragment_Probe_Params>(InParams);
     InHandle.Add<ck::FFragment_Probe_DebugInfo>(InDebugInfo);
     InHandle.Add<ck::FFragment_Probe_Current>();

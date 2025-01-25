@@ -71,7 +71,7 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true, Categories = "Probe"))
-    FGameplayTag _ProbeName;
+    FGameplayTag _ProbeName = TAG_Probe;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta = (AllowPrivateAccess = true))
