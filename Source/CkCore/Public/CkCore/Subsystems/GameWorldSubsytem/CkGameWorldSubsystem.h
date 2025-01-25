@@ -13,7 +13,7 @@
  * in-game. There are several other worlds created in the Editor that are not in PIE
  *
  */
-UCLASS(BlueprintType)
+UCLASS(Abstract, BlueprintType)
 class CKCORE_API UCk_Game_WorldSubsystem_Base_UE : public UWorldSubsystem
 {
     GENERATED_BODY()
@@ -52,7 +52,7 @@ private:
  * in-game. There are several other worlds created in the Editor that are not in PIE
  *
  */
-UCLASS(BlueprintType)
+UCLASS(Abstract, BlueprintType)
 class CKCORE_API UCk_Game_TickableWorldSubsystem_Base_UE : public UTickableWorldSubsystem
 {
     GENERATED_BODY()
