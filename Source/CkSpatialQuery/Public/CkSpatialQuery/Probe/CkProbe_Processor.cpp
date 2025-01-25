@@ -45,7 +45,6 @@ namespace ck::details
         -> void
     {
         TProcessor::DoTick(InDeltaT);
-        _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
     auto
@@ -58,6 +57,8 @@ namespace ck::details
             FFragment_Probe_Current& InCurrent)
         -> void
     {
+        InHandle.Remove<MarkedDirtyBy>();
+
         using namespace JPH;
         const auto& EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
 
@@ -120,7 +121,6 @@ namespace ck::details
         -> void
     {
         TProcessor::DoTick(InDeltaT);
-        _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
     auto
@@ -133,6 +133,8 @@ namespace ck::details
             FFragment_Probe_Current& InCurrent)
         -> void
     {
+        InHandle.Remove<MarkedDirtyBy>();
+
         using namespace JPH;
         const auto& EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
 
@@ -215,7 +217,6 @@ namespace ck::details
         -> void
     {
         TProcessor::DoTick(InDeltaT);
-        _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
     auto
@@ -228,6 +229,8 @@ namespace ck::details
             FFragment_Probe_Current& InCurrent)
         -> void
     {
+        InHandle.Remove<MarkedDirtyBy>();
+
         using namespace JPH;
         const auto& EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
 
@@ -292,7 +295,6 @@ namespace ck::details
         -> void
     {
         TProcessor::DoTick(InDeltaT);
-        _TransientEntity.Clear<MarkedDirtyBy>();
     }
 
     auto
@@ -305,6 +307,8 @@ namespace ck::details
             FFragment_Probe_Current& InCurrent)
         -> void
     {
+        InHandle.Remove<MarkedDirtyBy>();
+
         using namespace JPH;
         const auto& EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(InHandle);
 
