@@ -245,6 +245,7 @@ namespace ck
     class CKSPATIALQUERY_API FProcessor_Probe_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Probe_HandleRequests,
             FCk_Handle_Probe,
+            FFragment_Probe_Current,
             FFragment_Probe_Requests,
             CK_IGNORE_PENDING_KILL>
     {
@@ -264,22 +265,26 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            FFragment_Probe_Current& InCurrent,
             const FFragment_Probe_Requests& InRequestsComp) const -> void;
 
     private:
         static auto
         DoHandleRequest(
             HandleType InHandle,
+            FFragment_Probe_Current& InCurrent,
             const FCk_Request_Probe_BeginOverlap& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
+            FFragment_Probe_Current& InCurrent,
             const FCk_Request_Probe_OverlapPersisted& InRequest) -> void;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
+            FFragment_Probe_Current& InCurrent,
             const FCk_Request_Probe_EndOverlap& InRequest) -> void;
     };
 
