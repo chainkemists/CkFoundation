@@ -31,7 +31,7 @@ auto
     { return; }
 
     InWorld.Add<ck::FProcessor_Probe_UpdateTransform>(InWorld.Get_Registry(), SpatialQuerySubsystem->Get_PhysicsSystem());
-    InWorld.Add<ck::FProcessor_Probe_DebugDraw>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Probe_DebugDrawAll>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

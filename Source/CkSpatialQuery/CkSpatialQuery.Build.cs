@@ -18,6 +18,7 @@ public class CkSpatialQuery : CkModuleRules
             "Engine",
             "StructUtils",
             "GameplayTags",
+            "DeveloperSettings",
 
             "CkThirdParty",
 
