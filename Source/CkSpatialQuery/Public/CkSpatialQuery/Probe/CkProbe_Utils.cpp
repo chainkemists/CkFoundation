@@ -1,5 +1,7 @@
 #include "CkProbe_Utils.h"
 
+#include "CkShapes/CkShapes_Utils.h"
+
 #include "CkSpatialQuery/CkSpatialQuery_Log.h"
 #include "CkSpatialQuery/Probe/CkProbe_Fragment.h"
 
@@ -8,16 +10,20 @@
 auto
     UCk_Utils_Probe_UE::
     Add(
-        FCk_Handle InHandle,
+        FCk_Handle& InHandle,
         const FCk_Fragment_Probe_ParamsData& InParams,
         const FCk_Probe_DebugInfo& InDebugInfo)
-        -> FCk_Handle_Probe
+    -> FCk_Handle_Probe
 {
+    CK_ENSURE_IF_NOT(UCk_Utils_Shapes_UE::Has_Any(InHandle),
+        TEXT("Cannot Add a Probe to Entity [{}] because it does NOT have any Shape"), InHandle)
+    { return {}; }
+
     InHandle.Add<ck::FFragment_Probe_Params>(InParams);
     InHandle.Add<ck::FFragment_Probe_DebugInfo>(InDebugInfo);
     InHandle.Add<ck::FFragment_Probe_Current>();
 
-    InHandle.Add<ck::FTag_Probe_RequiresSetup>();
+    InHandle.Add<ck::FTag_Probe_NeedsSetup>();
 
     return Cast(InHandle);
 }

@@ -300,7 +300,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    UCk_SpatialQuery_Subsystem_UE::
+    UCk_SpatialQuery_Subsystem::
     Initialize(
         FSubsystemCollectionBase& InCollection)
         -> void
@@ -344,7 +344,7 @@ auto
 }
 
 auto
-    UCk_SpatialQuery_Subsystem_UE::
+    UCk_SpatialQuery_Subsystem::
     Tick(
         float InDeltaTime)
         -> void
@@ -355,7 +355,7 @@ auto
 }
 
 auto
-    UCk_SpatialQuery_Subsystem_UE::
+    UCk_SpatialQuery_Subsystem::
     Deinitialize()
         -> void
 {
@@ -364,7 +364,7 @@ auto
 }
 
 auto
-    UCk_SpatialQuery_Subsystem_UE::
+    UCk_SpatialQuery_Subsystem::
     Get_PhysicsSystem() const
         -> TWeakPtr<JPH::PhysicsSystem>
 {

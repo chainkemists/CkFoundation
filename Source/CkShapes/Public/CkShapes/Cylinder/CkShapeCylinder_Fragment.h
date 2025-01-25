@@ -12,23 +12,7 @@ class UCk_Utils_ShapeCylinder_UE;
 
 namespace ck
 {
-    struct CKSHAPES_API FFragment_ShapeCylinder_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_ShapeCylinder_Params);
-
-    public:
-        using ParamsType = FCk_Fragment_ShapeCylinder_ParamsData;
-
-    private:
-        ParamsType _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_ShapeCylinder_Params, _Params);
-    };
+    using FFragment_ShapeCylinder_Params = FCk_Fragment_ShapeCylinder_ParamsData;
 
     // --------------------------------------------------------------------------------------------------------------------
 

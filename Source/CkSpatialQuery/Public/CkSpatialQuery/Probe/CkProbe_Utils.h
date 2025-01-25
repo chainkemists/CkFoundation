@@ -24,7 +24,7 @@ public:
               DisplayName="Add Probe")
     static FCk_Handle_Probe
     Add(
-        UPARAM(ref) FCk_Handle InHandle,
+        UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Fragment_Probe_ParamsData& InParams,
         const FCk_Probe_DebugInfo& InDebugInfo);
 

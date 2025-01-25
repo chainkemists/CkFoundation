@@ -13,13 +13,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck
-{
-    class FProcessor_Probe_HandleRequests;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 // TODO: move to a more appropriate location
 UENUM(BlueprintType)
 enum class ECk_MotionType : uint8
@@ -38,9 +31,9 @@ UENUM(BlueprintType)
 enum class ECk_MotionQuality : uint8
 {
     // FAST - use this for most Probes
-    Discrete UMETA(DisplayName="Discrete"),
+    Discrete UMETA(DisplayName = "Discrete"),
     // SLOWER - avoid using this unless continuous collision detection is needed
-    LinearCast UMETA(DisplayName="LinearCast (CCD)")
+    LinearCast UMETA(DisplayName = "LinearCast (CCD)")
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_MotionQuality);
@@ -96,7 +89,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FLinearColor _DebugOverlapColor = FLinearColor::White;
+    FLinearColor _DebugOverlapColor = FLinearColor::Yellow;
 
 public:
     CK_PROPERTY(_LineThickness);
@@ -107,34 +100,9 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKSPATIALQUERY_API FCk_Fragment_MultipleProbe_ParamsData
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY(FCk_Fragment_MultipleProbe_ParamsData);
-
-private:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true))
-    TArray<FCk_Fragment_Probe_ParamsData> _ProbeParams;
-
-public:
-    CK_PROPERTY_GET(_ProbeParams)
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_MultipleProbe_ParamsData, _ProbeParams);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
 struct CKSPATIALQUERY_API FCk_Request_Probe_BeginOverlap : public FCk_Request_Base
 {
     GENERATED_BODY()
-
-public:
-    friend class ck::FProcessor_Probe_HandleRequests;
 
 public:
     CK_GENERATED_BODY(FCk_Request_Probe_BeginOverlap);
@@ -177,9 +145,6 @@ USTRUCT(BlueprintType)
 struct CKSPATIALQUERY_API FCk_Request_Probe_EndOverlap : public FCk_Request_Base
 {
     GENERATED_BODY()
-
-public:
-    friend class ck::FProcessor_Probe_HandleRequests;
 
 public:
     CK_GENERATED_BODY(FCk_Request_Probe_EndOverlap);
@@ -296,3 +261,4 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Handle_Probe, InHandle,
     FCk_Probe_Payload_OnEndOverlap, InPayload);
 
+// --------------------------------------------------------------------------------------------------------------------
