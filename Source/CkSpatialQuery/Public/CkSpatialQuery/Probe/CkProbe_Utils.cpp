@@ -7,6 +7,7 @@
 
 #include "Jolt/Jolt.h"
 #include "Jolt/Physics/Body/Body.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -145,12 +146,6 @@ auto
         const FCk_Handle_Probe& InB)
         -> bool
 {
-    if (Get_IsEnabledDisabled(InA) == ECk_EnableDisable::Disable ||
-        Get_IsEnabledDisabled(InB) == ECk_EnableDisable::Disable)
-    {
-        return false;
-    }
-
     if (Get_ResponsePolicy(InA) == ECk_ProbeResponse_Policy::Silent)
     {
         return false;
