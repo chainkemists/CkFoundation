@@ -500,10 +500,13 @@ namespace ck
                 auto EntityPosition = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentLocation(ProbeHandle);
                 auto EntityRotation = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentRotation(ProbeHandle);
 
-            const auto& LineThickness = InDebugInfo.Get_LineThickness();
-            const auto& DebugColor = UCk_Utils_Probe_UE::Get_IsOverlapping(ProbeHandle)
-                                     ? InDebugInfo.Get_DebugOverlapColor().ToFColor(true)
-                                     : InDebugInfo.Get_DebugColor().ToFColor(true);
+                const auto& LineThickness = InDebugInfo.Get_LineThickness();
+                const auto& DebugColor =
+                    UCk_Utils_Probe_UE::Get_IsEnabledDisabled(ProbeHandle) == ECk_EnableDisable::Disable
+                    ? InDebugInfo.Get_DisabledColor().ToFColor(true)
+                    : UCk_Utils_Probe_UE::Get_IsOverlapping(ProbeHandle)
+                    ? InDebugInfo.Get_OverlapColor().ToFColor(true)
+                    : InDebugInfo.Get_Color().ToFColor(true);
 
                 const auto& Shape = ProbeHandle.Get<Ref<JPH::Shape>>();
 
