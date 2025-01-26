@@ -789,7 +789,7 @@ namespace ck
 
         {
             auto& RecordFragment = InRecordHandle.Get<RecordType>();
-            const auto& RemovalSuccess = RecordFragment._RecordEntries.Remove(InRecordEntry);
+            const auto& RemovalSuccess = RecordFragment._RecordEntries.RemoveSingle(InRecordEntry);
 
             CK_ENSURE_IF_NOT(RemovalSuccess,
                 TEXT("The Record [{}] couldn't remove the RecordEntry [{}]. Does the RecordEntry exist in the Record?"),
