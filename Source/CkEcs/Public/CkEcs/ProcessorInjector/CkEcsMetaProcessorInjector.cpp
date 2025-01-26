@@ -1,5 +1,7 @@
 #include "CkEcsMetaProcessorInjector.h"
 
+#include "Algo/Accumulate.h"
+
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Object/CkObject_Utils.h"
 
@@ -72,11 +74,78 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
+    FCk_Ecs_InheritedProcessorInjectors::
+    PostInitProperties()
+    -> void
+{
+    // We shouldn't inherit the added and removed injectors from our parents, make sure that these fields are clear
+    _ProcessorInjectors_Overriden.Reset();
+}
+
+auto
+    FCk_Ecs_InheritedProcessorInjectors::
+    UpdateInherited(
+        const ThisType* Parent)
+    -> void
+{
+    _ProcessorInjectors_Combined.Reset();
+
+    if (Parent != nullptr)
+    {
+        for (auto Itr = Parent->_ProcessorInjectors_Combined.CreateConstIterator(); Itr; ++Itr)
+        {
+            _ProcessorInjectors_Combined.Add(*Itr);
+        }
+    }
+
+    for (auto Itr = _ProcessorInjectors_Overriden.CreateConstIterator(); Itr; ++Itr)
+    {
+        _ProcessorInjectors_Combined.Add(*Itr);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
     UCk_Ecs_MetaProcessorInjector_UE::
     Get_ProcessorInjectors() const
     -> TArray<TSubclassOf<UCk_EcsWorld_ProcessorInjector_Base_UE>>
 {
-    return _ProcessorInjectors;
+    return _InheritedProcessorInjectors.Get_ProcessorInjectors_Combined();
+}
+
+auto
+    UCk_Ecs_MetaProcessorInjector_UE::
+    PostLoad()
+    -> void
+{
+    Super::PostLoad();
+
+    const auto* Parent = Get_InheritedParent();
+    _InheritedProcessorInjectors.UpdateInherited(ck::IsValid(Parent) ? &Parent->_InheritedProcessorInjectors : nullptr);
+}
+
+auto
+    UCk_Ecs_MetaProcessorInjector_UE::
+    PostInitProperties()
+    -> void
+{
+    Super::PostInitProperties();
+
+    _InheritedProcessorInjectors.PostInitProperties();
+}
+
+auto
+    UCk_Ecs_MetaProcessorInjector_UE::
+    Get_InheritedParent() const
+    -> ThisType*
+{
+    if (HasAnyFlags(RF_ClassDefaultObject))
+    {
+        return Cast<ThisType>(GetClass()->GetSuperClass()->GetDefaultObject());
+    }
+
+    return Cast<ThisType>(GetClass()->GetDefaultObject());
 }
 
 #if WITH_EDITOR
@@ -91,7 +160,7 @@ auto
     if (IsTemplate())
     { return Result; }
 
-    if (const auto& NumberOfInvalidEntries = ck::algo::CountIf(_ProcessorInjectors, ck::algo::Is_NOT_Valid{});
+    if (const auto& NumberOfInvalidEntries = ck::algo::CountIf(_InheritedProcessorInjectors.Get_ProcessorInjectors_Combined(), ck::algo::Is_NOT_Valid{});
         NumberOfInvalidEntries > 0)
     {
         InContext.AddError(FText::FromString(ck::Format_UE(TEXT("MetaProcessorInjector [{}] has [{}] INVALID ProcessorInjectors"), this, NumberOfInvalidEntries)));
@@ -100,6 +169,37 @@ auto
     }
 
     return Result;
+}
+
+auto
+    UCk_Ecs_MetaProcessorInjector_UE::
+    PostEditChangeProperty(
+        FPropertyChangedEvent& PropertyChangedEvent)
+    -> void
+{
+    Super::PostEditChangeProperty(PropertyChangedEvent);
+
+    if (const auto* PropertyThatChanged = PropertyChangedEvent.MemberProperty;
+        ck::IsValid(PropertyThatChanged))
+    {
+        if (PropertyThatChanged->GetFName() == GET_MEMBER_NAME_CHECKED(ThisType, _InheritedProcessorInjectors))
+        {
+            const auto* Parent = Get_InheritedParent();
+            _InheritedProcessorInjectors.UpdateInherited(ck::IsValid(Parent) ? &Parent->_InheritedProcessorInjectors : nullptr);
+        }
+    }
+}
+
+auto
+    UCk_Ecs_MetaProcessorInjector_UE::
+    PostCDOCompiled(
+        const FPostCDOCompiledContext& Context)
+    -> void
+{
+    Super::PostCDOCompiled(Context);
+
+    const auto* Parent = Get_InheritedParent();
+    _InheritedProcessorInjectors.UpdateInherited(ck::IsValid(Parent) ? &Parent->_InheritedProcessorInjectors : nullptr);
 }
 #endif
 
