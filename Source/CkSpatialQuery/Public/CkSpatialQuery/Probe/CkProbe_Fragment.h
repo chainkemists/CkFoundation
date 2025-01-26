@@ -6,20 +6,16 @@
 
 #include "CkSignal/CkSignal_Macros.h"
 
-// --------------------------------------------------------------------------------------------------------------------
+#include "Jolt/Jolt.h"
+#include "Jolt/Physics/Body/BodyID.h"
 
-namespace JPH
-{
-    class Body;
-}
+// --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_Probe_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck
-{
-    namespace details
+namespace ck { namespace details
     {
         class FProcessor_BoxProbe_Setup;
         class FProcessor_SphereProbe_Setup;
@@ -57,11 +53,11 @@ namespace ck
         friend class UCk_Utils_Probe_UE;
 
     private:
-        JPH::Body* _RigidBody = nullptr;
+        JPH::BodyID _BodyId;
         TSet<FCk_Probe_OverlapInfo> _CurrentOverlaps;
 
     public:
-        CK_PROPERTY_GET(_RigidBody);
+        CK_PROPERTY_GET(_BodyId);
         CK_PROPERTY_GET(_CurrentOverlaps);
     };
 
