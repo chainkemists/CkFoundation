@@ -273,7 +273,9 @@ namespace ck
         using MarkedDirtyBy = FFragment_Probe_Requests;
 
     public:
-        using TProcessor::TProcessor;
+        FProcessor_Probe_HandleRequests(
+            const RegistryType& InRegistry,
+            const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem);
 
     public:
         auto
@@ -306,6 +308,15 @@ namespace ck
             HandleType InHandle,
             FFragment_Probe_Current& InCurrent,
             const FCk_Request_Probe_EndOverlap& InRequest) -> void;
+
+        auto
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_Probe_Current& InCurrent,
+            const FCk_Request_Probe_EnableDisable& InRequest) const -> void;
+
+    private:
+        TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
