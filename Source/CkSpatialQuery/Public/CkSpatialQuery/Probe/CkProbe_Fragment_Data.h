@@ -115,16 +115,21 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FLinearColor _DebugColor = FLinearColor::White;
+    FLinearColor _Color = FLinearColor::White;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FLinearColor _DebugOverlapColor = FLinearColor::Yellow;
+    FLinearColor _OverlapColor = FLinearColor::Yellow;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FLinearColor _DisabledColor = FLinearColor::Gray;
 
 public:
     CK_PROPERTY(_LineThickness);
-    CK_PROPERTY(_DebugColor);
-    CK_PROPERTY(_DebugOverlapColor);
+    CK_PROPERTY(_Color);
+    CK_PROPERTY(_OverlapColor);
+    CK_PROPERTY(_DisabledColor);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
