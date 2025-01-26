@@ -421,6 +421,13 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    FProcessor_Probe_HandleRequests::
+    FProcessor_Probe_HandleRequests(
+        const RegistryType& InRegistry,
+        const TWeakPtr<JPH::PhysicsSystem>& InPhysicsSystem)
+        : TProcessor(InRegistry)
+        , _PhysicsSystem(InPhysicsSystem) {}
+
     auto
         FProcessor_Probe_EnsureStaticNotMoved_DEBUG::
         ForEachEntity(
@@ -512,7 +519,7 @@ namespace ck
         FProcessor_Probe_HandleRequests::
         DoTick(
             TimeType InDeltaT)
-        -> void
+            -> void
     {
         _TransientEntity.Clear<FTag_Probe_Updated>();
 
@@ -526,15 +533,17 @@ namespace ck
             HandleType InHandle,
             FFragment_Probe_Current& InCurrent,
             const FFragment_Probe_Requests& InRequestsComp) const
-        -> void
+            -> void
     {
-        InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_Probe_Requests& InRequests)
-        {
-            algo::ForEachRequest(InRequests._Requests, Visitor([&](const auto& InRequest)
+        InHandle.CopyAndRemove(InRequestsComp, [&](
+            FFragment_Probe_Requests& InRequests)
             {
-                DoHandleRequest(InHandle, InCurrent, InRequest);
-            }));
-        });
+                algo::ForEachRequest(InRequests._Requests, Visitor([&](
+                    const auto& InRequest)
+                    {
+                        DoHandleRequest(InHandle, InCurrent, InRequest);
+                    }));
+            });
     }
 
     auto
@@ -543,17 +552,24 @@ namespace ck
             HandleType InHandle,
             FFragment_Probe_Current& InCurrent,
             const FCk_Request_Probe_BeginOverlap& InRequest)
-        -> void
+            -> void
     {
         const auto OverlapInfo = FCk_Probe_OverlapInfo{InRequest.Get_OtherEntity()}
-                                    .Set_ContactPoints(InRequest.Get_ContactPoints())
-                                    .Set_ContactNormal(InRequest.Get_ContactNormal());
+                                 .Set_ContactPoints(InRequest.Get_ContactPoints())
+                                 .Set_ContactNormal(InRequest.Get_ContactNormal());
 
         auto AlreadyContainsOverlap = false;
         InCurrent._CurrentOverlaps.Add(OverlapInfo, &AlreadyContainsOverlap);
 
-        if (AlreadyContainsOverlap)
-        { return; }
+        CK_ENSURE_IF_NOT(NOT AlreadyContainsOverlap,
+            TEXT(
+                "Received BeginOverlap Request for Probe [{}] with Other Entity [{}], but it was already overlapping with it."
+            ),
+            InHandle,
+            InRequest.Get_OtherEntity())
+        {
+            return;
+        }
 
         UCk_Utils_Probe_UE::Request_MarkProbe_AsOverlapping(InHandle);
 
@@ -614,6 +630,41 @@ namespace ck
         UUtils_Signal_OnProbeEndOverlap::Broadcast(InHandle,
             MakePayload(InHandle, FCk_Probe_Payload_OnEndOverlap{InRequest.Get_OtherEntity()}));
     }
+
+    auto
+        FProcessor_Probe_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_Probe_Current& InCurrent,
+            const FCk_Request_Probe_EnableDisable& InRequest) const
+            -> void
+    {
+        auto PhysicsSystem = _PhysicsSystem.Pin();
+
+        switch (InRequest.Get_EnableDisable())
+        {
+            case ECk_EnableDisable::Enable:
+            {
+                if (NOT InHandle.Has<FTag_Probe_Disabled>())
+                { return; }
+
+                PhysicsSystem->GetBodyInterface().AddBody(InCurrent.Get_BodyId(), JPH::EActivation::Activate);
+                InHandle.Try_Remove<ck::FTag_Probe_Disabled>();
+                break;
+            }
+            case ECk_EnableDisable::Disable:
+            {
+                if (InHandle.Has<FTag_Probe_Disabled>())
+                { return; }
+
+                PhysicsSystem->GetBodyInterface().RemoveBody(InCurrent.Get_BodyId());
+                InHandle.AddOrGet<ck::FTag_Probe_Disabled>();
+                break;
+            }
+        }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     FProcessor_Probe_Teardown::
         FProcessor_Probe_Teardown(

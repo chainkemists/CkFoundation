@@ -77,7 +77,8 @@ namespace ck
         friend class UCk_Utils_Probe_UE;
 
     public:
-        using RequestType = std::variant<FCk_Request_Probe_BeginOverlap, FCk_Request_Probe_OverlapPersisted, FCk_Request_Probe_EndOverlap>;
+        using RequestType = std::variant<FCk_Request_Probe_BeginOverlap, FCk_Request_Probe_OverlapPersisted,
+            FCk_Request_Probe_EndOverlap, FCk_Request_Probe_EnableDisable>;
         using RequestList = TArray<RequestType>;
 
     private:

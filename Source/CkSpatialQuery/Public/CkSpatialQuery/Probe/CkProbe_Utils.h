@@ -149,7 +149,7 @@ public:
     static FCk_Handle_Probe
     Request_EnableDisable(
         UPARAM(ref) FCk_Handle_Probe& InProbe,
-        ECk_EnableDisable InEnableDisable = ECk_EnableDisable::Disable);
+        const FCk_Request_Probe_EnableDisable& InRequest);
 
 public:
     UFUNCTION(BlueprintCallable,
