@@ -203,6 +203,7 @@ namespace ck
             FFragment_Probe_Current,
             FTag_Transform_Updated,
             TExclude<FTag_Probe_MotionType_Static>,
+            TExclude<FTag_Probe_Disabled>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -216,7 +217,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Probe_Params& InParams,
-            FFragment_Probe_Current& InCurrent) -> void;
+            const FFragment_Probe_Current& InCurrent) -> void;
 
     private:
         TWeakPtr<JPH::PhysicsSystem> _PhysicsSystem;
