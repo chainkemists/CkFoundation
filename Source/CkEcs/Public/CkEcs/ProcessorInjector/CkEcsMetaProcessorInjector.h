@@ -63,27 +63,65 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+USTRUCT(NotBlueprintType)
+struct CKECS_API FCk_Ecs_InheritedProcessorInjectors
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Ecs_InheritedProcessorInjectors);
+
+public:
+    auto PostInitProperties() -> void;
+    auto UpdateInherited(
+        const ThisType* Parent) -> void;
+
+private:
+    UPROPERTY(VisibleDefaultsOnly, meta=(AllowPrivateAccess), DisplayName = "Processor Injectors (Combined)")
+    TArray<TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>>  _ProcessorInjectors_Combined;
+
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess), DisplayName = "Processor Injectors (New)")
+    TArray<TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>>  _ProcessorInjectors_Overriden;
+
+public:
+    CK_PROPERTY_GET(_ProcessorInjectors_Combined);
+    CK_PROPERTY_GET(_ProcessorInjectors_Overriden);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(Abstract, NotBlueprintType, Blueprintable, EditInlineNew)
 class CKECS_API UCk_Ecs_MetaProcessorInjector_UE : public UObject, public ICk_MetaProcessorInjector_Interface
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(UCk_Ecs_MetaProcessorInjectorGroup_UE);
+    CK_GENERATED_BODY(UCk_Ecs_MetaProcessorInjector_UE);
 
 public:
     auto
     Get_ProcessorInjectors() const -> TArray<TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>> override;
 
+    auto PostLoad() -> void override;
+    auto PostInitProperties() -> void override;
+
 protected:
 #if WITH_EDITOR
     auto IsDataValid(
         class FDataValidationContext& Context) const -> EDataValidationResult override;
+
+    auto PostEditChangeProperty(
+        FPropertyChangedEvent& PropertyChangedEvent) -> void override;
+
+    auto PostCDOCompiled(
+        const FPostCDOCompiledContext& Context) -> void override;
 #endif
 
+    auto Get_InheritedParent() const -> ThisType*;
+
 private:
-    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess))
-    TArray<TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>>  _ProcessorInjectors;
+    UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess, ShowOnlyInnerProperties))
+    FCk_Ecs_InheritedProcessorInjectors  _InheritedProcessorInjectors;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
