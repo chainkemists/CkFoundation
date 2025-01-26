@@ -1253,10 +1253,14 @@ namespace ck
         // If we are an EntityExtension, then inform our ExtensionOwner of potentially updated tags
         InCurrent.DoTry_TagsUpdatedOnExtensionOwner(InHandle);
 
-        UCk_Utils_AbilityOwner_UE::ForEach_Ability(InHandle, [&](FCk_Handle_Ability InAbilityHandle)
+        UCk_Utils_AbilityOwner_UE::ForEach_Ability_If(InHandle, [&](FCk_Handle_Ability InAbilityHandle)
         {
             UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(InHandle, FCk_Request_AbilityOwner_DeactivateAbility{InAbilityHandle}, {});
             UCk_Utils_AbilityOwner_UE::Request_RevokeAbility(InHandle, FCk_Request_AbilityOwner_RevokeAbility{InAbilityHandle}, {});
+        },
+        [&](FCk_Handle_Ability InAbilityHandle)
+        {
+            return UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityHandle) == InHandle;
         });
     }
 
