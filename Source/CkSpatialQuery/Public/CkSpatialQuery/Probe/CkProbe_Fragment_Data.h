@@ -232,6 +232,28 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKSPATIALQUERY_API FCk_Request_Probe_EnableDisable : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_Probe_EnableDisable);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _EnableDisable = ECk_EnableDisable::Disable;
+
+public:
+    CK_PROPERTY_GET(_EnableDisable);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Probe_EnableDisable, _EnableDisable);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKSPATIALQUERY_API FCk_Probe_Payload_OnBeginOverlap
 {
     GENERATED_BODY()

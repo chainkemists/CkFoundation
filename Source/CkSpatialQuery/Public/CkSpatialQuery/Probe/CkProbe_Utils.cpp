@@ -5,6 +5,8 @@
 #include "CkSpatialQuery/CkSpatialQuery_Log.h"
 #include "CkSpatialQuery/Probe/CkProbe_Fragment.h"
 
+#include "Jolt/Jolt.h"
+#include "Jolt/Physics/Body/Body.h"
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -199,23 +201,10 @@ auto
     UCk_Utils_Probe_UE::
     Request_EnableDisable(
         FCk_Handle_Probe& InProbe,
-        ECk_EnableDisable InEnableDisable)
+        const FCk_Request_Probe_EnableDisable& InRequest)
         -> FCk_Handle_Probe
 {
-    switch (InEnableDisable)
-    {
-        case ECk_EnableDisable::Enable:
-        {
-            InProbe.Try_Remove<ck::FTag_Probe_Disabled>();
-            break;
-        }
-        case ECk_EnableDisable::Disable:
-        {
-            InProbe.AddOrGet<ck::FTag_Probe_Disabled>();
-            break;
-        }
-    }
-
+    InProbe.AddOrGet<ck::FFragment_Probe_Requests>()._Requests.Emplace(InRequest);
     return InProbe;
 }
 
