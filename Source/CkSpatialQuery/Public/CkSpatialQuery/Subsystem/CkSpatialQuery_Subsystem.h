@@ -20,7 +20,7 @@ class CkBodyActivationListener;
 namespace JPH
 {
     class TempAllocatorImpl;
-    class JobSystemThreadPool;
+    class JobSystem;
     class ObjectLayerPairFilterImpl;
     class PhysicsSystem;
     class BodyInterface;
@@ -56,7 +56,7 @@ private:
 
 private:
     TPimplPtr<JPH::TempAllocatorImpl> _TempAllocator;
-    JPH::JobSystemThreadPool* _JobSystem = nullptr;
+    JPH::JobSystem* _JobSystem = nullptr;
     TPimplPtr<BPLayerInterfaceImpl> _BroadPhaseLayerInterface;
     TPimplPtr<ObjectVsBroadPhaseLayerFilterImpl> _ObjectVsBroadPhaseLayerFilter;
     TPimplPtr<CkObjectLayerPairFilterImpl> _ObjectVsObjectFilter;
