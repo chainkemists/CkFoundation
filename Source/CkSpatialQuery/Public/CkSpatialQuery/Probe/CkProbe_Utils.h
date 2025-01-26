@@ -145,8 +145,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Probe",
-        DisplayName="[Ck][Probe] Request Enable/Disable",
-        meta=(DevelopmentOnly))
+        DisplayName="[Ck][Probe] Request Enable/Disable")
     static FCk_Handle_Probe
     Request_EnableDisable(
         UPARAM(ref) FCk_Handle_Probe& InProbe,
