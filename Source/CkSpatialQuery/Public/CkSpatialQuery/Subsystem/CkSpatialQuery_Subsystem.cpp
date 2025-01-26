@@ -8,6 +8,8 @@
 #include "CkSpatialQuery/Probe/CkProbe_Fragment.h"
 #include "CkSpatialQuery/Probe/CkProbe_Utils.h"
 
+#include "Jolt/Core/JobSystemSingleThreaded.h"
+
 #include <Jolt/Jolt.h>
 #include <Jolt/RegisterTypes.h>
 #include <Jolt/Core/Factory.h>
@@ -324,7 +326,8 @@ auto
 
     // TODO: Drive through Project settings
     _TempAllocator = MakePimpl<TempAllocatorImpl>(10 * 1024 * 1024); // 10MB
-    _JobSystem = new JobSystemThreadPool(MaxPhysicsJobs, MaxPhysicsBarriers, thread::hardware_concurrency() - 1);
+    //_JobSystem = new JobSystemThreadPool(MaxPhysicsJobs, MaxPhysicsBarriers, thread::hardware_concurrency() - 1);
+    _JobSystem = new JPH::JobSystemSingleThreaded(MaxPhysicsJobs);
 
     constexpr auto Alignment = alignof(JobSystemThreadPool);
 
