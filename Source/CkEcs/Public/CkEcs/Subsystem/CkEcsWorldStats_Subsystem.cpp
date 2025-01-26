@@ -7,6 +7,8 @@
 
 #include <Net/UnrealNetwork.h>
 
+#include <Async/Async.h>
+#include <Engine/Classes/Engine/GameViewportClient.h>
 #include <Stats/StatsData.h>
 
 // --------------------------------------------------------------------------------------------------------------------
