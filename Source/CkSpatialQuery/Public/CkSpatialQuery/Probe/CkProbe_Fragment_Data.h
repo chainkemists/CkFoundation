@@ -303,7 +303,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKSPATIALQUERY_API FCk_Probe_Payload_OnOverlapPersisted : public FCk_Probe_Payload_OnBeginOverlap
+struct CKSPATIALQUERY_API FCk_Probe_Payload_OnOverlapUpdated : public FCk_Probe_Payload_OnBeginOverlap
 {
     GENERATED_BODY()
 
@@ -313,14 +313,14 @@ struct CKSPATIALQUERY_API FCk_Probe_Payload_OnOverlapPersisted : public FCk_Prob
 // --------------------------------------------------------------------------------------------------------------------
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(
-    FCk_Delegate_Probe_OnOverlapPersisted,
+    FCk_Delegate_Probe_OnOverlapUpdated,
     FCk_Handle_Probe, InHandle,
-    FCk_Probe_Payload_OnOverlapPersisted, InPayload);
+    FCk_Probe_Payload_OnOverlapUpdated, InPayload);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
-    FCk_Delegate_Probe_OnOverlapPersisted_MC,
+    FCk_Delegate_Probe_OnOverlapUpdated_MC,
     FCk_Handle_Probe, InHandle,
-    FCk_Probe_Payload_OnOverlapPersisted, InPayload);
+    FCk_Probe_Payload_OnOverlapUpdated, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
 

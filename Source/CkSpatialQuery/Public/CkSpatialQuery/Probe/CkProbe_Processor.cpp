@@ -633,7 +633,7 @@ namespace ck
 
         CK_ENSURE_IF_NOT(InCurrent._CurrentOverlaps.Contains(OverlapInfo),
             TEXT(
-                "Received OverlapPersisted Request for Probe [{}] with Other Entity [{}], but it was NOT overlapping with it."
+                "Received OverlapUpdated Request for Probe [{}] with Other Entity [{}], but it was NOT overlapping with it."
             ),
             InHandle,
             InRequest.Get_OtherEntity())
@@ -641,7 +641,7 @@ namespace ck
             return;
         }
 
-        const auto Payload = FCk_Probe_Payload_OnOverlapPersisted{
+        const auto Payload = FCk_Probe_Payload_OnOverlapUpdated{
             InRequest.Get_OtherEntity(),
             InRequest.Get_ContactPoints(),
             InRequest.Get_ContactNormal()
@@ -649,7 +649,7 @@ namespace ck
 
         InCurrent._CurrentOverlaps.Add(OverlapInfo);
 
-        UUtils_Signal_OnProbeOverlapPersisted::Broadcast(InHandle, MakePayload(InHandle, Payload));
+        UUtils_Signal_OnProbeOverlapUpdated::Broadcast(InHandle, MakePayload(InHandle, Payload));
     }
 
     auto

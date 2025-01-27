@@ -95,10 +95,10 @@ namespace ck { namespace details
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKSPATIALQUERY_API,
-        OnProbeOverlapPersisted,
-        FCk_Delegate_Probe_OnOverlapPersisted_MC,
+        OnProbeOverlapUpdated,
+        FCk_Delegate_Probe_OnOverlapUpdated_MC,
         FCk_Handle_Probe,
-        FCk_Probe_Payload_OnOverlapPersisted);
+        FCk_Probe_Payload_OnOverlapUpdated);
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
         CKSPATIALQUERY_API,
