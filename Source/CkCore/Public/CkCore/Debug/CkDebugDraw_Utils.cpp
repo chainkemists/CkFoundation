@@ -109,11 +109,13 @@ auto
         float InThickness)
     -> void
 {
+#if ENABLE_DRAW_DEBUG
     if (const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
         ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
     { return; }
 
     UKismetSystemLibrary::DrawDebugSphere(InWorldContextObject, InCenter, InRadius, InSegments, InLineColor, InDuration, InThickness);
+#endif
 }
 
 auto
@@ -129,11 +131,13 @@ auto
         float InThickness)
     -> void
 {
+#if ENABLE_DRAW_DEBUG
     if (const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
         ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
     { return; }
 
     UKismetSystemLibrary::DrawDebugLine(InWorldContextObject, InLineStart, InLineEnd, InLineColor, InDuration, InThickness);
+#endif
 }
 
 auto
@@ -153,11 +157,13 @@ auto
         bool InDrawAxis)
     -> void
 {
+#if ENABLE_DRAW_DEBUG
     if (const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
         ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
     { return; }
 
     UKismetSystemLibrary::DrawDebugCircle(InWorldContextObject, InCenter, InRadius, InNumSegments, InLineColor, InDuration, InThickness, InYAxis, InZAxis, InDrawAxis);
+#endif
 }
 
 auto
@@ -172,11 +178,13 @@ auto
         float InDuration)
     -> void
 {
+#if ENABLE_DRAW_DEBUG
     if (const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
         ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
     { return; }
 
     UKismetSystemLibrary::DrawDebugPoint(InWorldContextObject, InPosition, InSize, InPointColor, InDuration);
+#endif
 }
 
 auto
@@ -193,11 +201,13 @@ auto
         float InThickness)
     -> void
 {
+#if ENABLE_DRAW_DEBUG
     if (const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
         ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
     { return; }
 
     UKismetSystemLibrary::DrawDebugArrow(InWorldContextObject, InLineStart, InLineEnd, InArrowSize, InLineColor, InDuration, InThickness);
+#endif
 }
 
 auto
@@ -214,11 +224,13 @@ auto
         float InThickness)
     -> void
 {
+#if ENABLE_DRAW_DEBUG
     if (const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
         ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
     { return; }
 
     UKismetSystemLibrary::DrawDebugBox(InWorldContextObject, InCenter, InExtent, InLineColor, InRotation, InDuration, InThickness);
+#endif
 }
 
 auto
@@ -236,11 +248,13 @@ auto
         float InThickness)
     -> void
 {
+#if ENABLE_DRAW_DEBUG
     if (const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
         ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
     { return; }
 
     UKismetSystemLibrary::DrawDebugCylinder(InWorldContextObject, InStart, InEnd, InRadius, InSegments, InLineColor, InDuration, InThickness);
+#endif
 }
 
 auto
@@ -260,11 +274,13 @@ auto
         float InThickness)
     -> void
 {
+#if ENABLE_DRAW_DEBUG
     if (const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
         ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
     { return; }
 
     UKismetSystemLibrary::DrawDebugCone(InWorldContextObject, InOrigin, InDirection, InLength, InAngleWidth, InAngleHeight, InNumSides, InLineColor, InDuration, InThickness);
+#endif
 }
 
 auto
@@ -282,11 +298,13 @@ auto
         float InThickness)
     -> void
 {
+#if ENABLE_DRAW_DEBUG
     if (const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
         ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
     { return; }
 
     UKismetSystemLibrary::DrawDebugCapsule(InWorldContextObject, InCenter, InHalfHeight, InRadius, InRotation, InLineColor, InDuration, InThickness);
+#endif
 }
 
 auto
@@ -302,11 +320,57 @@ auto
         float InDuration)
     -> void
 {
+#if ENABLE_DRAW_DEBUG
     if (const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
         ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
     { return; }
 
     UKismetSystemLibrary::DrawDebugString(InWorldContextObject, InTextLocation, InText, InTestBaseActor, InTextColor, InDuration);
+#endif
+}
+
+auto
+    UCk_Utils_DebugDraw_UE::
+    DrawDebugBigArrow(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector InLocation,
+        const FRotator InDirection,
+        const FLinearColor InArrowColor,
+        float InArrowLineHeight,
+        float InArrowLineWidth,
+        float InThickness,
+        float InDuration)
+    -> void
+{
+#if ENABLE_DRAW_DEBUG
+    if (const auto& LogCategoryName = InOptionalLogCategory.Get_Name();
+        ck::IsValid(LogCategoryName) && NOT UCk_Utils_Log_UE::Get_IsLogActive_ForVerbosity(InOptionalLogCategory, InOptionalLogVerbosity))
+    { return; }
+
+    const auto ForwardVector = FRotationMatrix(InDirection).GetScaledAxis(EAxis::X);
+    const auto RightVector = FRotationMatrix(InDirection).GetScaledAxis(EAxis::Y);
+
+    const auto LeftLineStart = InLocation + RightVector * -InArrowLineWidth;
+    const auto RightLineStart = InLocation + RightVector * InArrowLineWidth;
+    const auto LeftLineEnd = LeftLineStart + ForwardVector * InArrowLineHeight;
+    const auto RightLineEnd = RightLineStart + ForwardVector * InArrowLineHeight;
+
+    DrawDebugLine(InWorldContextObject, InOptionalLogCategory, InOptionalLogVerbosity, LeftLineStart, LeftLineEnd, InArrowColor, InDuration, InThickness);
+    DrawDebugLine(InWorldContextObject, InOptionalLogCategory, InOptionalLogVerbosity, RightLineStart, RightLineEnd, InArrowColor, InDuration, InThickness);
+    DrawDebugLine(InWorldContextObject, InOptionalLogCategory, InOptionalLogVerbosity, LeftLineStart, RightLineStart, InArrowColor, InDuration, InThickness);
+
+    const auto LeftBaseArrowEnd = LeftLineEnd + RightVector * -InArrowLineWidth / 2.f;
+    const auto RightBaseArrowEnd = RightLineEnd + RightVector * InArrowLineWidth / 2.f;
+
+    DrawDebugLine(InWorldContextObject, InOptionalLogCategory, InOptionalLogVerbosity, LeftLineEnd, LeftBaseArrowEnd, InArrowColor, InDuration, InThickness);
+    DrawDebugLine(InWorldContextObject, InOptionalLogCategory, InOptionalLogVerbosity, RightLineEnd, RightBaseArrowEnd, InArrowColor, InDuration, InThickness);
+
+    const auto ArrowTip = InLocation + ForwardVector * (InArrowLineHeight + InArrowLineHeight / 3.f);
+    DrawDebugLine(InWorldContextObject, InOptionalLogCategory, InOptionalLogVerbosity, LeftBaseArrowEnd, ArrowTip, InArrowColor, InDuration, InThickness);
+    DrawDebugLine(InWorldContextObject, InOptionalLogCategory, InOptionalLogVerbosity, RightBaseArrowEnd, ArrowTip, InArrowColor, InDuration, InThickness);
+#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------
