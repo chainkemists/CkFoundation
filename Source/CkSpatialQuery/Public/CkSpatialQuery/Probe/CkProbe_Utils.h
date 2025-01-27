@@ -127,12 +127,12 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Probe",
-        DisplayName="[Ck][Probe] Request Overlap Persisted",
+        DisplayName="[Ck][Probe] Request Overlap Updated",
         meta=(DevelopmentOnly))
     static FCk_Handle_Probe
     Request_OverlapPersisted(
         UPARAM(ref) FCk_Handle_Probe& InProbe,
-        const FCk_Request_Probe_OverlapPersisted& InRequest);
+        const FCk_Request_Probe_OverlapUpdated& InRequest);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Probe",
