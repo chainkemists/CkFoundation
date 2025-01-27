@@ -357,3 +357,37 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
     FCk_Probe_Payload_OnEndOverlap, InPayload);
 
 // --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKSPATIALQUERY_API FCk_Probe_Payload_OnEnableDisable
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Probe_Payload_OnEnableDisable);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _EnableDisable;
+
+public:
+    CK_PROPERTY_GET(_EnableDisable);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Probe_Payload_OnEnableDisable, _EnableDisable);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_Probe_OnEnableDisable,
+    FCk_Handle_Probe, InHandle,
+    FCk_Probe_Payload_OnEnableDisable, InPayload);
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
+    FCk_Delegate_Probe_OnEnableDisable_MC,
+    FCk_Handle_Probe, InHandle,
+    FCk_Probe_Payload_OnEnableDisable, InPayload);
+
+// --------------------------------------------------------------------------------------------------------------------

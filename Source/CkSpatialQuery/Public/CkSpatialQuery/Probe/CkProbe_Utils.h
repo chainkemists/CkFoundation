@@ -206,6 +206,25 @@ public:
         UPARAM(ref) FCk_Handle_Probe& InProbeEntity,
         const FCk_Delegate_Probe_OnEndOverlap& InDelegate);
 
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Probe",
+              DisplayName = "[Ck][Probe] Bind To OnEnabledDisable")
+    static FCk_Handle_Probe
+    BindTo_OnEnableDisable(
+        UPARAM(ref) FCk_Handle_Probe& InProbeEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_Probe_OnEnableDisable& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Probe",
+              DisplayName = "[Ck][Probe] Unbind From OnEnabledDisable")
+    static FCk_Handle_Probe
+    UnbindFrom_OnEnableDisable(
+        UPARAM(ref) FCk_Handle_Probe& InProbeEntity,
+        const FCk_Delegate_Probe_OnEnableDisable& InDelegate);
+
 private:
     static auto
     Request_MarkProbe_AsOverlapping(

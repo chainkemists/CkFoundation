@@ -37,7 +37,7 @@ auto
             CK_ENSURE(
                 NOT InParams.Get_Filter().IsEmpty(),
                 TEXT("Ill Configured Probe added to Entity [{}]!\n"
-                 "A Non-Empty Filter is required for a Probe with Response Policy set to [{}]"),
+                    "A Non-Empty Filter is required for a Probe with Response Policy set to [{}]"),
                 InHandle,
                 ResponsePolicy);
 
@@ -48,7 +48,7 @@ auto
             CK_ENSURE(
                 InParams.Get_Filter().IsEmpty(),
                 TEXT("Ill Configured Probe added to Entity [{}]!\n"
-                 "An Empty Filter is required for a Probe with Response Policy set to [{}]"),
+                    "An Empty Filter is required for a Probe with Response Policy set to [{}]"),
                 InHandle,
                 ResponsePolicy);
 
@@ -313,6 +313,30 @@ auto
     }
 
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeEndOverlap, InProbeEntity, InDelegate);
+    return InProbeEntity;
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    BindTo_OnEnableDisable(
+        FCk_Handle_Probe& InProbeEntity,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior,
+        const FCk_Delegate_Probe_OnEnableDisable& InDelegate)
+        -> FCk_Handle_Probe
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeEnableDisable, InProbeEntity, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InProbeEntity;
+}
+
+auto
+    UCk_Utils_Probe_UE::
+    UnbindFrom_OnEnableDisable(
+        FCk_Handle_Probe& InProbeEntity,
+        const FCk_Delegate_Probe_OnEnableDisable& InDelegate)
+        -> FCk_Handle_Probe
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeEnableDisable, InProbeEntity, InDelegate);
     return InProbeEntity;
 }
 
