@@ -205,7 +205,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT()
-struct FCk_Request_Probe_OverlapPersisted : public FCk_Request_Probe_BeginOverlap
+struct FCk_Request_Probe_OverlapUpdated : public FCk_Request_Probe_BeginOverlap
 {
     GENERATED_BODY()
 

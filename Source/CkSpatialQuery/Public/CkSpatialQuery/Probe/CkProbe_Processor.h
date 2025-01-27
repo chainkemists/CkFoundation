@@ -302,7 +302,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Probe_Current& InCurrent,
-            const FCk_Request_Probe_OverlapPersisted& InRequest) -> void;
+            const FCk_Request_Probe_OverlapUpdated& InRequest) -> void;
 
         static auto
         DoHandleRequest(

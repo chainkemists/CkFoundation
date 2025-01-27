@@ -207,7 +207,7 @@ public:
             }
 
             UCk_Utils_Probe_UE::Request_OverlapPersisted(Body1,
-                FCk_Request_Probe_OverlapPersisted{Body2, ContactPoints, ck::jolt::Conv(inManifold.mWorldSpaceNormal)});
+                FCk_Request_Probe_OverlapUpdated{Body2, ContactPoints, ck::jolt::Conv(inManifold.mWorldSpaceNormal)});
         }
 
         if (ck::IsValid(Body2) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
@@ -221,7 +221,7 @@ public:
             }
 
             UCk_Utils_Probe_UE::Request_OverlapPersisted(Body2,
-                FCk_Request_Probe_OverlapPersisted{Body1, ContactPoints, ck::jolt::Conv(-inManifold.mWorldSpaceNormal)});
+                FCk_Request_Probe_OverlapUpdated{Body1, ContactPoints, ck::jolt::Conv(-inManifold.mWorldSpaceNormal)});
         }
 
         _BodyToHandle.Add(inBody1.GetID().GetIndexAndSequenceNumber(), Body1Entity);
