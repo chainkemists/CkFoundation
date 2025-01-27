@@ -624,7 +624,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             FFragment_Probe_Current& InCurrent,
-            const FCk_Request_Probe_OverlapPersisted& InRequest)
+            const FCk_Request_Probe_OverlapUpdated& InRequest)
             -> void
     {
         const auto OverlapInfo = FCk_Probe_OverlapInfo{InRequest.Get_OtherEntity()}

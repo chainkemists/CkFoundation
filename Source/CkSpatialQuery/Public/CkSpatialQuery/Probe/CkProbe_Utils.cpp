@@ -174,7 +174,7 @@ auto
     UCk_Utils_Probe_UE::
     Request_OverlapPersisted(
         FCk_Handle_Probe& InProbe,
-        const FCk_Request_Probe_OverlapPersisted& InRequest)
+        const FCk_Request_Probe_OverlapUpdated& InRequest)
         -> FCk_Handle_Probe
 {
     InProbe.AddOrGet<ck::FFragment_Probe_Requests>()._Requests.Emplace(InRequest);
