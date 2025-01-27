@@ -697,11 +697,13 @@ namespace ck
         {
             case ECk_EnableDisable::Enable:
             {
-                if (NOT InHandle.Has<FTag_Probe_Disabled>())
+                if (InHandle.Try_Remove<ck::FTag_Probe_Disabled>() == 0)
                 { return; }
 
                 PhysicsSystem->GetBodyInterface().AddBody(InCurrent.Get_BodyId(), JPH::EActivation::Activate);
-                InHandle.Try_Remove<ck::FTag_Probe_Disabled>();
+
+                UUtils_Signal_OnProbeEnableDisable::Broadcast(InHandle,
+                    MakePayload(InHandle, FCk_Probe_Payload_OnEnableDisable{ECk_EnableDisable::Enable}));
                 break;
             }
             case ECk_EnableDisable::Disable:
@@ -711,6 +713,9 @@ namespace ck
 
                 PhysicsSystem->GetBodyInterface().RemoveBody(InCurrent.Get_BodyId());
                 InHandle.AddOrGet<ck::FTag_Probe_Disabled>();
+
+                UUtils_Signal_OnProbeEnableDisable::Broadcast(InHandle,
+                    MakePayload(InHandle, FCk_Probe_Payload_OnEnableDisable{ECk_EnableDisable::Disable}));
                 break;
             }
         }
