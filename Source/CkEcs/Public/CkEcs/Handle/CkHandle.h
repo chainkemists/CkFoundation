@@ -159,10 +159,10 @@ public:
     auto CopyAndRemove(T_Fragment FragmentToCopyAndRemove, T_FragmentFunc InFunc) -> void;
 
     template <typename T_Fragment>
-    auto Try_Remove() -> void;
+    auto Try_Remove() -> bool;
 
     template <typename T_Fragment, typename T_ValidationPolicy>
-    auto Try_Remove() -> void;
+    auto Try_Remove() -> bool;
 
     template <typename... T_Fragments>
     auto Clear() -> void;
@@ -741,16 +741,16 @@ template <typename T_Fragment>
 auto
     FCk_Handle::
     Try_Remove()
-    -> void
+    -> bool
 {
-    Try_Remove<T_Fragment, ck::IsValid_Policy_Default>();
+    return Try_Remove<T_Fragment, ck::IsValid_Policy_Default>();
 }
 
 template <typename T_Fragment, typename T_ValidationPolicy>
 auto
     FCk_Handle::
     Try_Remove()
-    -> void
+    -> bool
 {
     CK_ENSURE_IF_NOT(IsValid(T_ValidationPolicy{}),
         TEXT("Unable to Remove Fragment [{}]. Handle [{}] {}."),
@@ -766,20 +766,22 @@ auto
             }
             return TEXT("does NOT have a valid Registry");
         }())
-    { return; }
+    { return false; }
 
-    _Registry->Try_Remove<T_Fragment>(_Entity);
+    const auto Result = _Registry->Try_Remove<T_Fragment>(_Entity);
 
     if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_Fragment>)
     {
         // only remove from Debug IFF the counted tag no longer exists
         if (Has<T_Fragment>())
         {
-            return;
+            return true;
         }
     }
 
     DoRemove_FragmentDebugInfo<T_Fragment>();
+
+    return Result;
 }
 
 template <typename ... T_Fragments>

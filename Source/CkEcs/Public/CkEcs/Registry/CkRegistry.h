@@ -181,7 +181,7 @@ private:
     auto Remove(EntityType InEntity) -> void;
 
     template <typename T_Fragment>
-    auto Try_Remove(EntityType InEntity) -> void;
+    auto Try_Remove(EntityType InEntity) -> bool;
 
     template <typename... T_Fragments>
     auto Clear() -> void;
@@ -416,12 +416,12 @@ auto
     FCk_Registry::
     Try_Remove(
         EntityType InEntity)
-    -> void
+    -> bool
 {
     CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to Add Fragment/Tag."), InEntity)
-    { return; }
+    { return false; }
 
-    _InternalRegistry->remove<T_Fragment>(InEntity.Get_ID());
+    return _InternalRegistry->remove<T_Fragment>(InEntity.Get_ID()) > 0;
 }
 
 template <typename ... T_Fragments>
