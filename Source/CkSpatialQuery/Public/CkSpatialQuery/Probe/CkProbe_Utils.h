@@ -130,7 +130,7 @@ public:
         DisplayName="[Ck][Probe] Request Overlap Updated",
         meta=(DevelopmentOnly))
     static FCk_Handle_Probe
-    Request_OverlapPersisted(
+    Request_OverlapUpdated(
         UPARAM(ref) FCk_Handle_Probe& InProbe,
         const FCk_Request_Probe_OverlapUpdated& InRequest);
 
@@ -172,21 +172,21 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Probe",
-              DisplayName = "[Ck][Probe] Bind To OnOverlapPersisted")
+              DisplayName = "[Ck][Probe] Bind To OnOverlapUpdated")
     static FCk_Handle_Probe
-    BindTo_OnOverlapPersisted(
+    BindTo_OnOverlapUpdated(
         UPARAM(ref) FCk_Handle_Probe& InProbeEntity,
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Probe_OnOverlapPersisted& InDelegate);
+        const FCk_Delegate_Probe_OnOverlapUpdated& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Probe",
-              DisplayName = "[Ck][Probe] Unbind From OnOverlapPersisted")
+              DisplayName = "[Ck][Probe] Unbind From OnOverlapUpdated")
     static FCk_Handle_Probe
-    UnbindFrom_OnOverlapPersisted(
+    UnbindFrom_OnOverlapUpdated(
         UPARAM(ref) FCk_Handle_Probe& InProbeEntity,
-        const FCk_Delegate_Probe_OnOverlapPersisted& InDelegate);
+        const FCk_Delegate_Probe_OnOverlapUpdated& InDelegate);
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Probe",

@@ -172,7 +172,7 @@ auto
 
 auto
     UCk_Utils_Probe_UE::
-    Request_OverlapPersisted(
+    Request_OverlapUpdated(
         FCk_Handle_Probe& InProbe,
         const FCk_Request_Probe_OverlapUpdated& InRequest)
         -> FCk_Handle_Probe
@@ -243,40 +243,40 @@ auto
 
 auto
     UCk_Utils_Probe_UE::
-    BindTo_OnOverlapPersisted(
+    BindTo_OnOverlapUpdated(
         FCk_Handle_Probe& InProbeEntity,
         ECk_Signal_BindingPolicy InBindingPolicy,
         ECk_Signal_PostFireBehavior InPostFireBehavior,
-        const FCk_Delegate_Probe_OnOverlapPersisted& InDelegate)
+        const FCk_Delegate_Probe_OnOverlapUpdated& InDelegate)
         -> FCk_Handle_Probe
 {
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
-        TEXT("Cannot Bind to OnOverlapPersisted for Probe [{}] because its Response Policy is NOT Notify"),
+        TEXT("Cannot Bind to OnOverlapUpdated for Probe [{}] because its Response Policy is NOT Notify"),
         InProbeEntity)
     {
         return InProbeEntity;
     }
 
-    CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeOverlapPersisted, InProbeEntity, InDelegate, InBindingPolicy,
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnProbeOverlapUpdated, InProbeEntity, InDelegate, InBindingPolicy,
         InPostFireBehavior);
     return InProbeEntity;
 }
 
 auto
     UCk_Utils_Probe_UE::
-    UnbindFrom_OnOverlapPersisted(
+    UnbindFrom_OnOverlapUpdated(
         FCk_Handle_Probe& InProbeEntity,
-        const FCk_Delegate_Probe_OnOverlapPersisted& InDelegate)
+        const FCk_Delegate_Probe_OnOverlapUpdated& InDelegate)
         -> FCk_Handle_Probe
 {
     CK_ENSURE_IF_NOT(Get_ResponsePolicy(InProbeEntity) == ECk_ProbeResponse_Policy::Notify,
-        TEXT("Cannot Unbind from OnOverlapPersisted for Probe [{}] because its Response Policy is NOT Notify"),
+        TEXT("Cannot Unbind from OnOverlapUpdated for Probe [{}] because its Response Policy is NOT Notify"),
         InProbeEntity)
     {
         return InProbeEntity;
     }
 
-    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeOverlapPersisted, InProbeEntity, InDelegate);
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProbeOverlapUpdated, InProbeEntity, InDelegate);
     return InProbeEntity;
 }
 
