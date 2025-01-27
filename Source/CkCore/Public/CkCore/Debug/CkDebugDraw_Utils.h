@@ -71,7 +71,7 @@ public:
         ECk_LogVerbosity InOptionalLogVerbosity,
         const FVector InLineStart,
         const FVector InLineEnd,
-        FLinearColor InLineColor,
+        FLinearColor InLineColor = FLinearColor::White,
         float InDuration = 0.0f,
         float InThickness = 5.0f);
 
@@ -120,7 +120,7 @@ public:
         const FVector InLineStart,
         const FVector InLineEnd,
         float InArrowSize,
-        FLinearColor InLineColor,
+        FLinearColor InLineColor = FLinearColor::White,
         float InDuration = 0.0f,
         float InThickness = 5.0f);
 
@@ -172,7 +172,7 @@ public:
         float InAngleWidth,
         float InAngleHeight,
         int32 InNumSides,
-        FLinearColor InLineColor,
+        FLinearColor InLineColor = FLinearColor::White,
         float InDuration = 0.0f,
         float InThickness = 5.0f);
 
@@ -206,6 +206,23 @@ public:
         const FString& InText,
         class AActor* InTestBaseActor = nullptr,
         FLinearColor InTextColor = FLinearColor::White,
+        float InDuration = 0.f);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Debug",
+              DisplayName = "[Ck] Draw Debug Big Arrow",
+              meta = (WorldContext = "InWorldContextObject", DevelopmentOnly))
+    static void
+    DrawDebugBigArrow(
+        const UObject* InWorldContextObject,
+        const FCk_LogCategory InOptionalLogCategory,
+        ECk_LogVerbosity InOptionalLogVerbosity,
+        const FVector InLocation,
+        const FRotator InDirection,
+        const FLinearColor InArrowColor = FLinearColor::White,
+        float InArrowLineHeight = 100.f,
+        float InArrowLineWidth = 15.f,
+        float InThickness = 1.5f,
         float InDuration = 0.f);
 };
 

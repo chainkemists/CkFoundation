@@ -1,14 +1,13 @@
 #include "CkEcsWorldStats_Subsystem.h"
 
 #include "CkCore/Actor/CkActor_Utils.h"
-#include "CkCore/Game/CkGame_Utils.h"
 
 #include "Net/Core/PushModel/PushModel.h"
 
 #include <Net/UnrealNetwork.h>
 
 #include <Async/Async.h>
-#include <Engine/Classes/Engine/GameViewportClient.h>
+#include <Engine/GameViewportClient.h>
 #include <Stats/StatsData.h>
 
 // --------------------------------------------------------------------------------------------------------------------

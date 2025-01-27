@@ -3,6 +3,7 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Subsystems/GameWorldSubsytem/CkGameWorldSubsystem.h"
 
+#include <GameFramework/HUD.h>
 #include <variant>
 
 #include "CkDebugDraw_Subsystem.generated.h"
