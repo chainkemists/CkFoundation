@@ -106,6 +106,13 @@ namespace ck { namespace details
         FCk_Delegate_Probe_OnEndOverlap_MC,
         FCk_Handle_Probe,
         FCk_Probe_Payload_OnEndOverlap);
+
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(
+        CKSPATIALQUERY_API,
+        OnProbeEnableDisable,
+        FCk_Delegate_Probe_OnEnableDisable_MC,
+        FCk_Handle_Probe,
+        FCk_Probe_Payload_OnEnableDisable);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
