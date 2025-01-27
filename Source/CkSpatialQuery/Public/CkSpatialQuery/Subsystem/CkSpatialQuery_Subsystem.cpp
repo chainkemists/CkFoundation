@@ -206,7 +206,7 @@ public:
                 ContactPoints.Emplace(ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset));
             }
 
-            UCk_Utils_Probe_UE::Request_OverlapPersisted(Body1,
+            UCk_Utils_Probe_UE::Request_OverlapUpdated(Body1,
                 FCk_Request_Probe_OverlapUpdated{Body2, ContactPoints, ck::jolt::Conv(inManifold.mWorldSpaceNormal)});
         }
 
@@ -220,7 +220,7 @@ public:
                 ContactPoints.Emplace(ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset));
             }
 
-            UCk_Utils_Probe_UE::Request_OverlapPersisted(Body2,
+            UCk_Utils_Probe_UE::Request_OverlapUpdated(Body2,
                 FCk_Request_Probe_OverlapUpdated{Body1, ContactPoints, ck::jolt::Conv(-inManifold.mWorldSpaceNormal)});
         }
 
