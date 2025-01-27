@@ -15,6 +15,14 @@ auto
     return {};
 }
 
+auto
+    ICk_MetaProcessorInjector_Interface::
+    Request_Refresh()
+    -> void
+{
+    return;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -116,6 +124,15 @@ auto
 
 auto
     UCk_Ecs_MetaProcessorInjector_UE::
+    Request_Refresh()
+    -> void
+{
+    const auto* Parent = Get_InheritedParent();
+    _InheritedProcessorInjectors.UpdateInherited(ck::IsValid(Parent) ? &Parent->_InheritedProcessorInjectors : nullptr);
+}
+
+auto
+    UCk_Ecs_MetaProcessorInjector_UE::
     PostLoad()
     -> void
 {
@@ -133,6 +150,9 @@ auto
     Super::PostInitProperties();
 
     _InheritedProcessorInjectors.PostInitProperties();
+
+    const auto* Parent = Get_InheritedParent();
+    _InheritedProcessorInjectors.UpdateInherited(ck::IsValid(Parent) ? &Parent->_InheritedProcessorInjectors : nullptr);
 }
 
 auto
@@ -177,8 +197,6 @@ auto
         FPropertyChangedEvent& PropertyChangedEvent)
     -> void
 {
-    Super::PostEditChangeProperty(PropertyChangedEvent);
-
     if (const auto* PropertyThatChanged = PropertyChangedEvent.MemberProperty;
         ck::IsValid(PropertyThatChanged))
     {
@@ -188,6 +206,8 @@ auto
             _InheritedProcessorInjectors.UpdateInherited(ck::IsValid(Parent) ? &Parent->_InheritedProcessorInjectors : nullptr);
         }
     }
+
+    Super::PostEditChangeProperty(PropertyChangedEvent);
 }
 
 auto
@@ -196,14 +216,26 @@ auto
         const FPostCDOCompiledContext& Context)
     -> void
 {
-    Super::PostCDOCompiled(Context);
-
     const auto* Parent = Get_InheritedParent();
     _InheritedProcessorInjectors.UpdateInherited(ck::IsValid(Parent) ? &Parent->_InheritedProcessorInjectors : nullptr);
+
+    Super::PostCDOCompiled(Context);
 }
 #endif
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    FCk_Ecs_MetaProcessorInjectors_Info::
+    Request_RefreshAllMetaProcessor()
+    -> void
+{
+    const auto& MetaInjectors = Get_MetaProcessorInjectors();
+    ck::algo::ForEachIsValid(MetaInjectors, [&](const TScriptInterface<ICk_MetaProcessorInjector_Interface>& InInjector)
+    {
+        InInjector->Request_Refresh();
+    });
+}
 
 auto
     FCk_Ecs_MetaProcessorInjectors_Info::
@@ -278,6 +310,20 @@ auto
     }
 
     return Result;
+}
+
+auto
+    UCk_Ecs_ProcessorInjectors_PDA::
+    PostCDOCompiled(
+        const FPostCDOCompiledContext& Context)
+    -> void
+{
+    for (auto& MetaProcessorInjector : _MetaProcessorInjectors)
+    {
+        MetaProcessorInjector.Request_RefreshAllMetaProcessor();
+    }
+
+    Super::PostCDOCompiled(Context);
 }
 #endif
 
