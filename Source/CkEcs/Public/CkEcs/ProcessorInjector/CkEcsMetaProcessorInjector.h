@@ -33,6 +33,9 @@ class CKECS_API ICk_MetaProcessorInjector_Interface
 public:
     virtual auto
     Get_ProcessorInjectors() const -> TArray<TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>>;
+
+    virtual auto
+    Request_Refresh() -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -102,6 +105,9 @@ public:
     auto
     Get_ProcessorInjectors() const -> TArray<TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>> override;
 
+    auto
+    Request_Refresh() -> void;
+
     auto PostLoad() -> void override;
     auto PostInitProperties() -> void override;
 
@@ -168,6 +174,8 @@ public:
     auto Get_DisplayName() const -> FName;
     auto Get_MetaProcessorInjectors() const -> TArray<TScriptInterface<ICk_MetaProcessorInjector_Interface>>;
 
+    auto Request_RefreshAllMetaProcessor() -> void;
+
 public:
     CK_PROPERTY(_EcsWorldTickingGroup);
     CK_PROPERTY(_UnrealTickingGroup);
@@ -189,6 +197,9 @@ protected:
 #if WITH_EDITOR
     auto IsDataValid(
         class FDataValidationContext& Context) const -> EDataValidationResult override;
+
+    auto PostCDOCompiled(
+        const FPostCDOCompiledContext& Context) -> void override;
 #endif
 
 private:
