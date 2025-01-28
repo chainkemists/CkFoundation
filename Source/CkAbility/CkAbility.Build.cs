@@ -5,6 +5,8 @@ public class CkAbility : CkModuleRules
 {
     public CkAbility(ReadOnlyTargetRules Target) : base(Target)
     {
+	    bUseUnity = false;
+
         PrivateIncludePaths.AddRange(new string[] {
             // ... add other private include paths required here ...
         });
