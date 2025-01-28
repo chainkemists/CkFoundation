@@ -22,7 +22,6 @@ public class CkThirdParty : ModuleRules
 
 		if (Target.Platform == UnrealTargetPlatform.Win64)
 		{
-			PublicDefinitions.Add("_HAS_EXCEPTIONS=1");
 			PublicDefinitions.Add("JPH_SHARED_LIBRARY");
 			PrivateDefinitions.Add("JPH_BUILD_SHARED_LIBRARY");
 			bUseUnity = false;
