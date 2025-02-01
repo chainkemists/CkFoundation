@@ -55,6 +55,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid Substep Handle",
+        Category = "Ck|Utils|Substep",
+        meta = (CompactNodeTitle = "INVALID_SubstepHandle", Keywords = "make"))
+    static FCk_Handle_Substep
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Substep",

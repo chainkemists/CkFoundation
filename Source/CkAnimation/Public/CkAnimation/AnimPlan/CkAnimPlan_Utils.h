@@ -84,6 +84,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid AnimPlan Handle",
+        Category = "Ck|Utils|AnimPlan",
+        meta = (CompactNodeTitle = "INVALID_AnimPlanHandle", Keywords = "make"))
+    static FCk_Handle_AnimPlan
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimPlan",

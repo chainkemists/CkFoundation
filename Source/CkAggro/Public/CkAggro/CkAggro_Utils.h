@@ -64,6 +64,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid Aggro Handle",
+        Category = "Ck|Utils|Aggro",
+        meta = (CompactNodeTitle = "INVALID_AggroHandle", Keywords = "make"))
+    static FCk_Handle_Aggro
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Aggro",

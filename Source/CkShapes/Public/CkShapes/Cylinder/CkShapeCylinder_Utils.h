@@ -52,6 +52,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid ShapeCylinder Handle",
+        Category = "Ck|Utils|ShapeCylinder",
+        meta = (CompactNodeTitle = "INVALID_ShapeCylinderHandle", Keywords = "make"))
+    static FCk_Handle_ShapeCylinder
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ShapeCylinder",

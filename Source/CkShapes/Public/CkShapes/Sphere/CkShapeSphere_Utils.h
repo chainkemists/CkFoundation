@@ -52,6 +52,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid ShapeSphere Handle",
+        Category = "Ck|Utils|ShapeSphere",
+        meta = (CompactNodeTitle = "INVALID_ShapeSphereHandle", Keywords = "make"))
+    static FCk_Handle_ShapeSphere
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ShapeSphere",
