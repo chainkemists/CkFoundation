@@ -253,9 +253,14 @@ auto
         FCk_Ability_Payload_OnActivate InOptionalPayload)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
+    CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle(), ck::IsValid_Policy_IncludePendingKill{}),
         TEXT("AbilityHandle is [{}]. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
         Get_AbilityHandle(), ck::Context(this))
+    { return; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
+        TEXT("AbilityHandle is [{}]. It is valid but is Pending Kill when trying to activate"),
+        Get_AbilityHandle())
     { return; }
 
     UCk_Utils_AbilityOwner_UE::Request_TryActivateAbility(
@@ -269,9 +274,14 @@ auto
     DoRequest_DeactivateAbility()
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
+    CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle(), ck::IsValid_Policy_IncludePendingKill{}),
         TEXT("AbilityHandle is [{}]. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
         Get_AbilityHandle(), ck::Context(this))
+    { return; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityHandle()),
+        TEXT("AbilityHandle is [{}]. It is valid but is Pending Kill when trying to deactivate"),
+        Get_AbilityHandle())
     { return; }
 
     UCk_Utils_AbilityOwner_UE::Request_DeactivateAbility(
