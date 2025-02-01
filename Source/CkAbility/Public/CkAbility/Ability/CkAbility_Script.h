@@ -275,7 +275,7 @@ private:
               DisplayName = "[Ck][AbilityScript] Get Context Entity With Actor",
               meta = (CompactNodeTitle="ContextEntityWithActor", HideSelfPin = true))
     FCk_Handle
-    DoGet_ContextEntityWithActor();
+    DoGet_ContextEntityWithActor() const;
 
     UFUNCTION(BlueprintCallable,
               BlueprintPure = false,
@@ -316,7 +316,7 @@ private:
     FCk_Handle_AbilityOwner _AbilityOwnerHandle;
 
     UPROPERTY(Transient)
-    TOptional<FCk_Handle> _ContextEntityWithActor;
+    mutable TOptional<FCk_Handle> _ContextEntityWithActor;
 
 private:
 #if NOT CK_DISABLE_ABILITY_SCRIPT_DEBUGGING
