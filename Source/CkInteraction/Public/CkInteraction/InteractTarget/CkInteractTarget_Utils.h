@@ -70,6 +70,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid InteractTarget Handle",
+        Category = "Ck|Utils|InteractTarget",
+        meta = (CompactNodeTitle = "INVALID_InteractTargetHandle", Keywords = "make"))
+    static FCk_Handle_InteractTarget
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractTarget",

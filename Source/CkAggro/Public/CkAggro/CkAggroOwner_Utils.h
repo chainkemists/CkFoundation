@@ -58,6 +58,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid AggroOwner Handle",
+        Category = "Ck|Utils|AggroOwner",
+        meta = (CompactNodeTitle = "INVALID_AggroOwnerHandle", Keywords = "make"))
+    static FCk_Handle_AggroOwner
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|AggroOwner",

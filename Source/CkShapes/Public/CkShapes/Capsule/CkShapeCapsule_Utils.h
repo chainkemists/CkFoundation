@@ -52,6 +52,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid ShapeCapsule Handle",
+        Category = "Ck|Utils|ShapeCapsule",
+        meta = (CompactNodeTitle = "INVALID_ShapeCapsuleHandle", Keywords = "make"))
+    static FCk_Handle_ShapeCapsule
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|ShapeCapsule",
