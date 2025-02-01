@@ -709,24 +709,31 @@ namespace ck
             const FFragment_Ability_Current& InCurrent) const
             -> void
     {
-        // there is nothing to teardown if the Ability is already Inactive
-        if (InCurrent.Get_Status() == ECk_Ability_Status::NotActive)
-        {
-            return;
-        }
-
         auto LifetimeOwner = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         auto AbilityOwner = UCk_Utils_AbilityOwner_UE::CastChecked(LifetimeOwner);
 
+        if (InCurrent.Get_Status() == ECk_Ability_Status::Active)
+        {
+            ability::Verbose
+            (
+                TEXT("FORCE DEACTIVATING Ability [Name: {} | Entity: {}] with AbilityOwner [{}] that is {}"),
+                UCk_Utils_GameplayLabel_UE::Get_Label(InHandle), InHandle, AbilityOwner,
+                ck::IsValid(LifetimeOwner) ? TEXT("VALID") : TEXT("PENDING DESTROY")
+            );
+
+            AbilityOwner.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+            FProcessor_Ability_HandleRequests::DoHandleRequest(InHandle, FFragment_Ability_RequestDeactivate{AbilityOwner});
+        }
+
         ability::Verbose
         (
-            TEXT("FORCE DEACTIVATING Ability [Name: {} | Entity: {}] with AbilityOwner [{}] that is {}"),
+            TEXT("FORCE REVOKING Ability [Name: {} | Entity: {}] with AbilityOwner [{}] that is {}"),
             UCk_Utils_GameplayLabel_UE::Get_Label(InHandle), InHandle, AbilityOwner,
             ck::IsValid(LifetimeOwner) ? TEXT("VALID") : TEXT("PENDING DESTROY")
         );
 
         AbilityOwner.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
-        FProcessor_Ability_HandleRequests::DoHandleRequest(InHandle, FFragment_Ability_RequestDeactivate{AbilityOwner});
+        FProcessor_Ability_HandleRequests::DoHandleRequest(InHandle, FFragment_Ability_RequestRevoke{AbilityOwner, ECk_AbilityOwner_DestructionOnRevoke_Policy::DestroyOnRevoke});
     }
 }
 
