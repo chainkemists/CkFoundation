@@ -49,7 +49,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|String",
               DisplayName = "[Ck] Get Invalid Name",
-              meta = (CompactNodeTitle = "INVALID_Name"))
+              meta = (CompactNodeTitle = "INVALID_Name", Keywords = "make"))
     static FName
     Get_InvalidName();
 

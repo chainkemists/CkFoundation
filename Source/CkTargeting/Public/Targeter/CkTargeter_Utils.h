@@ -85,6 +85,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid Targeter Handle",
+        Category = "Ck|Utils|Targeter",
+        meta = (CompactNodeTitle = "INVALID_TargeterHandle", Keywords = "make"))
+    static FCk_Handle_Targeter
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Targeter",

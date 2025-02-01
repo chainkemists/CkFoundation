@@ -74,6 +74,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid Sfx Handle",
+        Category = "Ck|Utils|Sfx",
+        meta = (CompactNodeTitle = "INVALID_SfxHandle", Keywords = "make"))
+    static FCk_Handle_Sfx
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sfx",

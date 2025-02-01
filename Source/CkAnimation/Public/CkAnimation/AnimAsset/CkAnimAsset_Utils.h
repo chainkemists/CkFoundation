@@ -70,6 +70,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid AnimAsset Handle",
+        Category = "Ck|Utils|AnimAsset",
+        meta = (CompactNodeTitle = "INVALID_AnimAssetHandle", Keywords = "make"))
+    static FCk_Handle_AnimAsset
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|AnimAsset",

@@ -160,6 +160,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid Team Handle",
+        Category = "Ck|Utils|Team",
+        meta = (CompactNodeTitle = "INVALID_TeamHandle", Keywords = "make"))
+    static FCk_Handle_Team
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Relationship|Team",

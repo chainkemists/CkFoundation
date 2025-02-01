@@ -82,6 +82,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid CameraShake Handle",
+        Category = "Ck|Utils|CameraShake",
+        meta = (CompactNodeTitle = "INVALID_CameraShakeHandle", Keywords = "make"))
+    static FCk_Handle_CameraShake
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|CameraShake",

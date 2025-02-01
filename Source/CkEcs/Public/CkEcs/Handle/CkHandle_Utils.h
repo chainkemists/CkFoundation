@@ -95,7 +95,7 @@ public:
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Get Invalid Handle",
               Category = "Ck|Utils|Handle",
-              meta = (CompactNodeTitle = "INVALID_Handle"))
+              meta = (CompactNodeTitle = "INVALID_Handle", Keywords = "make"))
     static const FCk_Handle&
     Get_InvalidHandle();
 

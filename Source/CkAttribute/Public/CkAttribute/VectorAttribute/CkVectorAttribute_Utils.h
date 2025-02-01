@@ -81,6 +81,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid VectorAttribute Handle",
+        Category = "Ck|Utils|VectorAttribute",
+        meta = (CompactNodeTitle = "INVALID_VectorAttributeHandle", Keywords = "make"))
+    static FCk_Handle_VectorAttribute
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Vector",

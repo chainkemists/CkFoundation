@@ -79,6 +79,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid Targetable Handle",
+        Category = "Ck|Utils|Targetable",
+        meta = (CompactNodeTitle = "INVALID_TargetableHandle", Keywords = "make"))
+    static FCk_Handle_Targetable
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Targetable",
@@ -193,7 +200,7 @@ private:
     static auto
     Get_TargetableIsReady(
         const FCk_Handle_Targetable& InTargetable) -> bool;
-    
+
     static auto
     Set_TargetableIsReady(
         FCk_Handle_Targetable& InTargetable) -> void;

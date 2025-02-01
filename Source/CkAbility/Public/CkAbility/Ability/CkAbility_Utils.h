@@ -68,6 +68,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid Ability Handle",
+        Category = "Ck|Utils|Ability",
+        meta = (CompactNodeTitle = "INVALID_AbilityHandle", Keywords = "make"))
+    static FCk_Handle_Ability
+    Get_InvalidHandle() { return {}; };
+
 public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_Ability);
 

@@ -56,6 +56,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid GeometryCollectionOwner Handle",
+        Category = "Ck|Utils|GeometryCollectionOwner",
+        meta = (CompactNodeTitle = "INVALID_GeometryCollectionOwnerHandle", Keywords = "make"))
+    static FCk_Handle_GeometryCollectionOwner
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Chaos|GeometryCollection|Owner",

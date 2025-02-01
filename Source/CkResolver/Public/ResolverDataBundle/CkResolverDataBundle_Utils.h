@@ -76,6 +76,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid ResolverDataBundle Handle",
+        Category = "Ck|Utils|ResolverDataBundle",
+        meta = (CompactNodeTitle = "INVALID_ResolverDataBundleHandle", Keywords = "make"))
+    static FCk_Handle_ResolverDataBundle
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ResolverDataBundle",

@@ -76,6 +76,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid Vfx Handle",
+        Category = "Ck|Utils|Vfx",
+        meta = (CompactNodeTitle = "INVALID_VfxHandle", Keywords = "make"))
+    static FCk_Handle_Vfx
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Vfx",

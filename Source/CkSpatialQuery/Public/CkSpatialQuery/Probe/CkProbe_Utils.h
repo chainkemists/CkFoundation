@@ -63,6 +63,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid Probe Handle",
+        Category = "Ck|Utils|Probe",
+        meta = (CompactNodeTitle = "INVALID_ProbeHandle", Keywords = "make"))
+    static FCk_Handle_Probe
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Probe",

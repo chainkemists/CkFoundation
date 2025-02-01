@@ -111,6 +111,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid EntityCollection Handle",
+        Category = "Ck|Utils|EntityCollection",
+        meta = (CompactNodeTitle = "INVALID_EntityCollectionHandle", Keywords = "make"))
+    static FCk_Handle_EntityCollection
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|EntityCollection",

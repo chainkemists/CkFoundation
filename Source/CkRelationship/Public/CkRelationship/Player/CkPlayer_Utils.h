@@ -146,6 +146,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid Player Handle",
+        Category = "Ck|Utils|Player",
+        meta = (CompactNodeTitle = "INVALID_PlayerHandle", Keywords = "make"))
+    static FCk_Handle_Player
+    Get_InvalidHandle() { return {}; };
+
 public:
     template <ECk_Player_ID T_ID>
     static auto

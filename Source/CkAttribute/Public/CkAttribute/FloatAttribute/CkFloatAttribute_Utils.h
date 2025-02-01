@@ -81,6 +81,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid FloatAttribute Handle",
+        Category = "Ck|Utils|FloatAttribute",
+        meta = (CompactNodeTitle = "INVALID_FloatAttributeHandle", Keywords = "make"))
+    static FCk_Handle_FloatAttribute
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Float",

@@ -79,6 +79,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid Velocity Handle",
+        Category = "Ck|Utils|Velocity",
+        meta = (CompactNodeTitle = "INVALID_VelocityHandle", Keywords = "make"))
+    static FCk_Handle_Velocity
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Velocity",

@@ -87,6 +87,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid AbilityOwner Handle",
+        Category = "Ck|Utils|AbilityOwner",
+        meta = (CompactNodeTitle = "INVALID_AbilityOwnerHandle", Keywords = "make"))
+    static FCk_Handle_AbilityOwner
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",

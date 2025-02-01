@@ -106,6 +106,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid Sensor Handle",
+        Category = "Ck|Utils|Sensor",
+        meta = (CompactNodeTitle = "INVALID_SensorHandle", Keywords = "make"))
+    static FCk_Handle_Sensor
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Sensor",
