@@ -86,6 +86,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid ResolverSource Handle",
+        Category = "Ck|Utils|ResolverSource",
+        meta = (CompactNodeTitle = "INVALID_ResolverSourceHandle", Keywords = "make"))
+    static FCk_Handle_ResolverSource
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ResolverSource",

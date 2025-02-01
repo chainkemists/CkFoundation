@@ -54,6 +54,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid EcsTemplate Handle",
+        Category = "Ck|Utils|EcsTemplate",
+        meta = (CompactNodeTitle = "INVALID_EcsTemplateHandle", Keywords = "make"))
+    static FCk_Handle_EcsTemplate
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|EcsTemplate",

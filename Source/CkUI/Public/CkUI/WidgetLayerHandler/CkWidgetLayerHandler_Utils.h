@@ -48,6 +48,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid WidgetLayerHandler Handle",
+        Category = "Ck|Utils|WidgetLayerHandler",
+        meta = (CompactNodeTitle = "INVALID_WidgetLayerHandlerHandle", Keywords = "make"))
+    static FCk_Handle_WidgetLayerHandler
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",

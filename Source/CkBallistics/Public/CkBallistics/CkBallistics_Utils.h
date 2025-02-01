@@ -53,6 +53,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid Ballistics Handle",
+        Category = "Ck|Utils|Ballistics",
+        meta = (CompactNodeTitle = "INVALID_BallisticsHandle", Keywords = "make"))
+    static FCk_Handle_Ballistics
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|Ballistics",

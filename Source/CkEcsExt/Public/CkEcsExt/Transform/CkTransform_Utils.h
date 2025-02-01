@@ -78,6 +78,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid Transform Handle",
+        Category = "Ck|Utils|Transform",
+        meta = (CompactNodeTitle = "INVALID_TransformHandle", Keywords = "make"))
+    static FCk_Handle_Transform
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
@@ -331,6 +338,13 @@ private:
     static FCk_Handle_TransformInterpolation
     DoCastChecked(
         FCk_Handle InHandle);
+
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid TransformInterpolation Handle",
+        Category = "Ck|Utils|TransformInterpolation",
+        meta = (CompactNodeTitle = "INVALID_TransformInterpolationHandle", Keywords = "make"))
+    static FCk_Handle_TransformInterpolation
+    Get_InvalidHandle() { return {}; };
 
 public:
     UFUNCTION(BlueprintCallable,

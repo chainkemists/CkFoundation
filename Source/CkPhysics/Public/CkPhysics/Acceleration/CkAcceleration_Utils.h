@@ -79,6 +79,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid Acceleration Handle",
+        Category = "Ck|Utils|Acceleration",
+        meta = (CompactNodeTitle = "INVALID_AccelerationHandle", Keywords = "make"))
+    static FCk_Handle_Acceleration
+    Get_InvalidHandle() { return {}; };
+
 
 public:
     UFUNCTION(BlueprintPure,

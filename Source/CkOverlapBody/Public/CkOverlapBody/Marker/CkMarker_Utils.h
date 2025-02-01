@@ -107,6 +107,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid Marker Handle",
+        Category = "Ck|Utils|Marker",
+        meta = (CompactNodeTitle = "INVALID_MarkerHandle", Keywords = "make"))
+    static FCk_Handle_Marker
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Marker",

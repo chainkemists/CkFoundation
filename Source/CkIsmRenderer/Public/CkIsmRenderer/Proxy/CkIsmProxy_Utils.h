@@ -59,6 +59,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid IsmProxy Handle",
+        Category = "Ck|Utils|IsmProxy",
+        meta = (CompactNodeTitle = "INVALID_IsmProxyHandle", Keywords = "make"))
+    static FCk_Handle_IsmProxy
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|IsmProxy",

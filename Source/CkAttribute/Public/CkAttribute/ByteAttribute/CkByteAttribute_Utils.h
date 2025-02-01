@@ -81,6 +81,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid ByteAttribute Handle",
+        Category = "Ck|Utils|ByteAttribute",
+        meta = (CompactNodeTitle = "INVALID_ByteAttributeHandle", Keywords = "make"))
+    static FCk_Handle_ByteAttribute
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Attribute|Byte",

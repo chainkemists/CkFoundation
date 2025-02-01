@@ -49,6 +49,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid IsmRenderer Handle",
+        Category = "Ck|Utils|IsmRenderer",
+        meta = (CompactNodeTitle = "INVALID_IsmRendererHandle", Keywords = "make"))
+    static FCk_Handle_IsmRenderer
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|IsmRenderer",

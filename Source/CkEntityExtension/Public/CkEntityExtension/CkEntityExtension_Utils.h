@@ -67,6 +67,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid EntityExtension Handle",
+        Category = "Ck|Utils|EntityExtension",
+        meta = (CompactNodeTitle = "INVALID_EntityExtensionHandle", Keywords = "make"))
+    static FCk_Handle_EntityExtension
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|EntityExtension",

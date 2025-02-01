@@ -97,6 +97,13 @@ private:
     DoCastChecked(
         FCk_Handle InHandle);
 
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Get Invalid Timer Handle",
+        Category = "Ck|Utils|Timer",
+        meta = (CompactNodeTitle = "INVALID_TimerHandle", Keywords = "make"))
+    static FCk_Handle_Timer
+    Get_InvalidHandle() { return {}; };
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Timer",
