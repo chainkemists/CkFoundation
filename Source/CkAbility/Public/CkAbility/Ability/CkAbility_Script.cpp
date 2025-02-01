@@ -541,7 +541,7 @@ auto
 
 auto
     UCk_Ability_Script_PDA::
-    DoGet_ContextEntityWithActor()
+    DoGet_ContextEntityWithActor() const
     -> FCk_Handle
 {
     if (ck::Is_NOT_Valid(_ContextEntityWithActor, ck::IsValid_Policy_OptionalEngagedOnly{}))
