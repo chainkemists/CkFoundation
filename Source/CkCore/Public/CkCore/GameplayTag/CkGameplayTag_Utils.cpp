@@ -19,6 +19,36 @@ auto
 
 auto
     UCk_Utils_GameplayTag_UE::
+    Get_DoContainersIntersect(
+        const FGameplayTagContainer& A,
+        FGameplayTagContainer B)
+    -> bool
+{
+    return A.HasAny(B);
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
+    Get_DoContainersIntersect_Exact(
+        const FGameplayTagContainer& A,
+        FGameplayTagContainer B)
+    -> bool
+{
+    return A.HasAnyExact(B);
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
+    Get_AllIntersectingTags(
+        const FGameplayTagContainer& A,
+        FGameplayTagContainer B)
+    -> FGameplayTagContainer
+{
+    return A.Filter(B);
+}
+
+auto
+    UCk_Utils_GameplayTag_UE::
     Make_LiteralGameplayTag_FromString(
         const FString& InTagNameAsString)
     -> FGameplayTag

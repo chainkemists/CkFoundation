@@ -31,6 +31,33 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Get Do GameplayTag Containers Intersect",
+              meta = (Keywords = "container, does"))
+    static bool
+    Get_DoContainersIntersect(
+        const FGameplayTagContainer& A,
+        FGameplayTagContainer B);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Get Do GameplayTag Containers Intersect (Exact)",
+              meta = (Keywords = "container, does"))
+    static bool
+    Get_DoContainersIntersect_Exact(
+        const FGameplayTagContainer& A,
+        FGameplayTagContainer B);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
+              DisplayName = "[Ck] Get All Intersecting Tags",
+              meta = (Keywords = "container, does"))
+    static FGameplayTagContainer
+    Get_AllIntersectingTags(
+        const FGameplayTagContainer& A,
+        FGameplayTagContainer B);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameplayTag",
               DisplayName = "[Ck] Make Literal GameplayTag (From String)")
     static FGameplayTag
     Make_LiteralGameplayTag_FromString(
