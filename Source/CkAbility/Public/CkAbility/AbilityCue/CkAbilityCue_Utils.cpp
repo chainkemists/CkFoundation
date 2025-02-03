@@ -59,7 +59,7 @@ auto
         FCk_Handle InEffectCauser)
     -> FCk_AbilityCue_Params
 {
-    FCk_AbilityCue_Params AbilityCueParams;
+    auto AbilityCueParams = FCk_AbilityCue_Params{};
 
     AbilityCueParams.Set_Location(InLocation);
     AbilityCueParams.Set_Normal(InNormal);
@@ -71,11 +71,6 @@ auto
 
     if (ck::IsValid(InEffectCauser))
     {
-        CK_ENSURE_IF_NOT(UCk_Utils_Net_UE::Get_EntityReplication(InEffectCauser) == ECk_Replication::Replicates,
-            TEXT("Constructing AbilityCue Params with EffectCauser Entity [{}] which is NOT replicated! AbilityCue using these params will NOT work as expected"),
-            InEffectCauser)
-        {}
-
         AbilityCueParams.Set_EffectCauser(InEffectCauser);
     }
 
