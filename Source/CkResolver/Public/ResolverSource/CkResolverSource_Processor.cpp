@@ -84,7 +84,10 @@ namespace ck
         UUtils_Signal_ResolverSource_OnNewResolverDataBundle::Broadcast(InHandle,
             MakePayload(InHandle, InNewResolution.Get_Causer(), DataBundle));
 
-        UCk_Utils_ResolverTarget_UE::Request_InitiateNewResolution(Target, FCk_Request_ResolverTarget_InitiateNewResolution{DataBundle}, {});
+        if (ck::IsValid(Target))
+        {
+            UCk_Utils_ResolverTarget_UE::Request_InitiateNewResolution(Target, FCk_Request_ResolverTarget_InitiateNewResolution{DataBundle}, {});
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
