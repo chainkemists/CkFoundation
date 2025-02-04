@@ -12,7 +12,7 @@ public class CkModuleRules : ModuleRules
     void SetBuildConfiguration()
     {
         // override this variable to change the configuration settings on a broad level
-        var BuildConfigurationOverride = BuildConfiguration.MatchWithUnreal;
+        const BuildConfiguration BuildConfigurationOverride = BuildConfiguration.MatchWithUnreal;
 
         // normally, detailed formatting is invoked using {d}, this switch will force detailed formatting (if supported by formatter)
         PublicDefinitions.Add("CK_FORMAT_FORCE_DETAILED=0");
@@ -68,7 +68,7 @@ public class CkModuleRules : ModuleRules
                             PublicDefinitions.Add("CK_COPY_NET_PARAMS_ON_EVERY_ENTITY=1");
                             PublicDefinitions.Add("CK_ENABLE_STAT_DESCRIPTION=1");
                             PublicDefinitions.Add("CK_VALIDATE_GAMEPLAYTAG_STALENESS=1");
-							PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=1");
+                            PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=1");
                         }
                         else
                         {
@@ -80,7 +80,7 @@ public class CkModuleRules : ModuleRules
                             PublicDefinitions.Add("CK_COPY_NET_PARAMS_ON_EVERY_ENTITY=1");
                             PublicDefinitions.Add("CK_ENABLE_STAT_DESCRIPTION=1");
                             PublicDefinitions.Add("CK_VALIDATE_GAMEPLAYTAG_STALENESS=0");
-							PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=0");
+                            PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=0");
                         }
                         break;
                     case UnrealTargetConfiguration.Test:
@@ -92,7 +92,7 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_COPY_NET_PARAMS_ON_EVERY_ENTITY=1");
                         PublicDefinitions.Add("CK_ENABLE_STAT_DESCRIPTION=0");
                         PublicDefinitions.Add("CK_VALIDATE_GAMEPLAYTAG_STALENESS=0");
-						PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=0");
+                        PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=0");
                         break;
                     case UnrealTargetConfiguration.Shipping:
                         PublicDefinitions.Add("CK_BYPASS_ENSURES=1");
@@ -103,13 +103,14 @@ public class CkModuleRules : ModuleRules
                         PublicDefinitions.Add("CK_COPY_NET_PARAMS_ON_EVERY_ENTITY=1");
                         PublicDefinitions.Add("CK_ENABLE_STAT_DESCRIPTION=0");
                         PublicDefinitions.Add("CK_VALIDATE_GAMEPLAYTAG_STALENESS=0");
-						PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=0");
+                        PublicDefinitions.Add("CK_DISABLE_ABILITY_SCRIPT_DEBUGGING=0");
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
                 break;
             }
+            // ReSharper disable once UnreachableSwitchCaseDueToIntegerAnalysis
             case BuildConfiguration.Profile:
                 PublicDefinitions.Add("CK_LOG_NO_CONTEXT=1");
                 PublicDefinitions.Add("CK_BYPASS_ENSURES=1");
@@ -121,10 +122,23 @@ public class CkModuleRules : ModuleRules
         }
     }
 
-    public CkModuleRules(ReadOnlyTargetRules Target) : base(Target)
+    public CkModuleRules(ReadOnlyTargetRules Target, bool UseUnityBuild = false) : base(Target)
     {
+        bUseUnity = UseUnityBuild;
         CppStandard = CppStandardVersion.Cpp20;
-        PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+        PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+
+        PrivateIncludePaths.AddRange(new string[] {
+            // ... add other private include paths required here ...
+        });
+
+        PublicDependencyModuleNames.AddRange(new string[]
+        {
+            "ApplicationCore",
+            "Core",
+            "CoreUObject",
+            "Engine",
+        });
 
         SetBuildConfiguration();
     }
@@ -134,15 +148,5 @@ public class CkBuildConfig : CkModuleRules
 {
     public CkBuildConfig(ReadOnlyTargetRules Target) : base(Target)
     {
-        PrivateIncludePaths.AddRange(new string[] {
-            // ... add other private include paths required here ...
-        });
-
-        PublicDependencyModuleNames.AddRange(new string[]
-        {
-            "Core",
-            "CoreUObject",
-            "Engine",
-        });
     }
 }
