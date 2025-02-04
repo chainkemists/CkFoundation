@@ -1,6 +1,7 @@
 #include "CkUI_Settings.h"
 
 #include "CkCore/Object/CkObject_Utils.h"
+#include "CkUI/CustomWidgets/Watermark/CkWatermark_Widget.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

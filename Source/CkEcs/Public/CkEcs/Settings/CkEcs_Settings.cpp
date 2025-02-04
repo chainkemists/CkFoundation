@@ -3,6 +3,8 @@
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Object/CkObject_Utils.h"
 
+#include "CkEcs/ProcessorInjector/CkEcsMetaProcessorInjector.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkCore/Types/DataAsset/CkDataAsset.h"
+
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
