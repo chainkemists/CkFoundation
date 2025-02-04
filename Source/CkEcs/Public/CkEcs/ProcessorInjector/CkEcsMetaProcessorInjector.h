@@ -3,24 +3,11 @@
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Types/DataAsset/CkDataAsset.h"
+#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
 
-#include <Misc/DataValidation.h>
 #include <GameplayTagContainer.h>
 
 #include "CkEcsMetaProcessorInjector.generated.h"
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UENUM(BlueprintType)
-enum class ECk_Ecs_WorldStatCollection_Policy : uint8
-{
-    DoNotCollect,
-    CollectOnLocalClientOnly,
-    CollectOnServerOnly,
-    CollectOnLocalClientAndServer
-};
-
-CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ecs_WorldStatCollection_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -32,7 +19,7 @@ class CKECS_API ICk_MetaProcessorInjector_Interface
 
 public:
     virtual auto
-    Get_ProcessorInjectors() const -> TArray<TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>>;
+    Get_ProcessorInjectors() const -> TArray<TSubclassOf<UCk_EcsWorld_ProcessorInjector_Base_UE>>;
 
     virtual auto
     Request_Refresh() -> void;
@@ -50,7 +37,7 @@ public:
 
 public:
     auto
-    Get_ProcessorInjectors() const -> TArray<TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>> override;
+    Get_ProcessorInjectors() const -> TArray<TSubclassOf<UCk_EcsWorld_ProcessorInjector_Base_UE>> override;
 
 protected:
 #if WITH_EDITOR
@@ -81,10 +68,10 @@ public:
 
 private:
     UPROPERTY(VisibleDefaultsOnly, meta=(AllowPrivateAccess), DisplayName = "Processor Injectors (Combined)")
-    TArray<TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>>  _ProcessorInjectors_Combined;
+    TArray<TSubclassOf<UCk_EcsWorld_ProcessorInjector_Base_UE>>  _ProcessorInjectors_Combined;
 
     UPROPERTY(EditDefaultsOnly, meta=(AllowPrivateAccess), DisplayName = "Processor Injectors (New)")
-    TArray<TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>>  _ProcessorInjectors_Overriden;
+    TArray<TSubclassOf<UCk_EcsWorld_ProcessorInjector_Base_UE>>  _ProcessorInjectors_Overriden;
 
 public:
     CK_PROPERTY_GET(_ProcessorInjectors_Combined);
@@ -103,7 +90,7 @@ public:
 
 public:
     auto
-    Get_ProcessorInjectors() const -> TArray<TSubclassOf<class UCk_EcsWorld_ProcessorInjector_Base_UE>> override;
+    Get_ProcessorInjectors() const -> TArray<TSubclassOf<UCk_EcsWorld_ProcessorInjector_Base_UE>> override;
 
     auto
     Request_Refresh() -> void;
@@ -174,7 +161,7 @@ public:
     auto Get_DisplayName() const -> FName;
     auto Get_MetaProcessorInjectors() const -> TArray<TScriptInterface<ICk_MetaProcessorInjector_Interface>>;
 
-    auto Request_RefreshAllMetaProcessor() -> void;
+    auto Request_RefreshAllMetaProcessor() const -> void;
 
 public:
     CK_PROPERTY(_EcsWorldTickingGroup);

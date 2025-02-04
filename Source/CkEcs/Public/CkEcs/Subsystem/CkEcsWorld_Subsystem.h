@@ -5,12 +5,28 @@
 
 #include "CkEcs/World/CkEcsWorld.h"
 #include "CkEcs/Processor/CkProcessorScript.h"
-#include "CkEcs/ProcessorInjector/CkEcsMetaProcessorInjector.h"
 
 #include <Subsystems/WorldSubsystem.h>
 #include <GameFramework/Info.h>
 
 #include "CkEcsWorld_Subsystem.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+struct FCk_Ecs_MetaProcessorInjectors_Info;
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_Ecs_WorldStatCollection_Policy : uint8
+{
+    DoNotCollect,
+    CollectOnLocalClientOnly,
+    CollectOnServerOnly,
+    CollectOnLocalClientAndServer
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ecs_WorldStatCollection_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -93,6 +109,7 @@ private:
     TStatId _TickStatId;
     FString _TickStatName;
     ETickingGroup _UnrealTickingGroup;
+
     FGameplayTag _EcsWorldTickingGroup;
     ECk_Ecs_WorldStatCollection_Policy _StatCollectionPolicy = ECk_Ecs_WorldStatCollection_Policy::DoNotCollect;
     FName _EcsWorldDisplayName;

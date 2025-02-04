@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkEcs/Handle/CkHandle.h"
 #include "CkVariables/CkVariables_Fragment.h"
 
 #include <GameplayTagContainer.h>

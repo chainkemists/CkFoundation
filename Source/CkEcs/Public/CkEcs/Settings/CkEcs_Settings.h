@@ -4,14 +4,14 @@
 #include "CkCore/Format/CkFormat.h"
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkEcs/ProcessorInjector/CkEcsMetaProcessorInjector.h"
-
 #include "CkSettings/ProjectSettings/CkProjectSettings.h"
 #include "CkSettings/UserSettings/CkUserSettings.h"
 
-#include <GameplayTagContainer.h>
-
 #include "CkEcs_Settings.generated.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+class UCk_Ecs_ProcessorInjectors_PDA;
 
 // --------------------------------------------------------------------------------------------------------------------
 

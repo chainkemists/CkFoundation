@@ -1,11 +1,10 @@
 #pragma once
 
-#include "CkEcs/Entity/CkEntity.h"
-#include "CkEcs/Registry/CkRegistry.h"
-#include "CkEcs/Handle/CkHandle_Debugging.h"
-
 #include "CkCore/Macros/CkMacros.h"
 
+#include "CkEcs/Entity/CkEntity.h"
+#include "CkEcs/Handle/CkHandle_Debugging.h"
+#include "CkEcs/Registry/CkRegistry.h"
 #include "CkEcs/Settings/CkEcs_Settings.h"
 
 #include "Iris/Serialization/NetSerializer.h"

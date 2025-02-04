@@ -1,12 +1,13 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Types/DataAsset/CkDataAsset.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/Request/CkRequest_Data.h"
 
-#include "CkChaos/GeometryCollection/CkGeometryCollection_Fragment_Data.h"
+#include <CkChaos/GeometryCollection/CkGeometryCollection_Fragment_Data.h>
 
 #include "CkGeometryCollectionOwner_Fragment_Data.generated.h"
 
