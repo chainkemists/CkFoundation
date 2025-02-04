@@ -1,13 +1,12 @@
 #include "CkEcsWorld_Subsystem.h"
 
-#include "AutomationBlueprintFunctionLibrary.h"
-
 #include "CkCore/Actor/CkActor_Utils.h"
 #include "CkCore/Object/CkObject_Utils.h"
 
 #include "CkEcs/CkEcsLog.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
+#include "CkEcs/ProcessorInjector/CkEcsMetaProcessorInjector.h"
 #include "CkEcs/Settings/CkEcs_Settings.h"
 
 #include "CkProfile/Stats/CkStats.h"

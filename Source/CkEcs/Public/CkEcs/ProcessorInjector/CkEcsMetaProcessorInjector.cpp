@@ -1,9 +1,10 @@
 #include "CkEcsMetaProcessorInjector.h"
 
-#include "Algo/Accumulate.h"
-
 #include "CkCore/Algorithms/CkAlgorithms.h"
-#include "CkCore/Object/CkObject_Utils.h"
+
+#include "Misc/DataValidation.h"
+
+#include <Algo/Accumulate.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -32,7 +33,7 @@ auto
 {
     using ProcessorInjectorListType = TArray<TSubclassOf<UCk_EcsWorld_ProcessorInjector_Base_UE>>;
 
-    const auto& TransformFunc = [](TObjectPtr<UObject> InSubProcessorInjector) -> ProcessorInjectorListType
+    const auto& TransformFunc = [](const TObjectPtr<UObject>& InSubProcessorInjector) -> ProcessorInjectorListType
     {
         const TScriptInterface<ICk_MetaProcessorInjector_Interface> MetaProcessorInjectorInterface = InSubProcessorInjector;
 
@@ -227,7 +228,7 @@ auto
 
 auto
     FCk_Ecs_MetaProcessorInjectors_Info::
-    Request_RefreshAllMetaProcessor()
+    Request_RefreshAllMetaProcessor() const
     -> void
 {
     const auto& MetaInjectors = Get_MetaProcessorInjectors();
