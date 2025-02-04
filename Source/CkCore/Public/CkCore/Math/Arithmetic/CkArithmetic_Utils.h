@@ -114,6 +114,15 @@ public:
         int32 InOffset,
         const FCk_IntRange& InRange);
 
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Default Value if Zero",
+              Category = "Ck|Utils|Math|Arithmetic")
+    static float
+    Get_DefaultIfZero(
+        float InValue,
+        float InDefaultIfZero,
+        float InTolerance = 0.0001f);
+
 public:
     static auto
     Get_IsNearlyEqual(uint8 A, uint8 B) -> bool;

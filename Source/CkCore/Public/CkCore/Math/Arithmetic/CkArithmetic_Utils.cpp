@@ -167,6 +167,20 @@ auto
 
 auto
     UCk_Utils_Arithmetic_UE::
+    Get_DefaultIfZero(
+        float InValue,
+        float InDefaultIfZero,
+        float InTolerance)
+    -> float
+{
+    if (FMath::IsNearlyZero(InValue, InTolerance))
+    { return InDefaultIfZero; }
+
+    return InValue;
+}
+
+auto
+    UCk_Utils_Arithmetic_UE::
     Get_IsNearlyEqual(
         uint8 A,
         uint8 B)
