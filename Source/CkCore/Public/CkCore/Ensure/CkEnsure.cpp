@@ -58,7 +58,7 @@ auto
         const UObject* InContext)
     -> void
 {
-    if (NOT CK_ENSURE_BP(InContext, InExpression, TEXT("{}.{}"), InMsg, ck::Context(InContext)))
+    CK_ENSURE_IF_NOT(InExpression, TEXT("{}.{}"), InMsg, ck::Context(InContext))
     {
         OutHitStatus = ECk_ValidInvalid::Invalid;
         return;
@@ -76,7 +76,7 @@ auto
         const UObject* InContext)
     -> void
 {
-    if (NOT CK_ENSURE_BP(InContext, ck::IsValid(InObject), TEXT("{}.{}"), InMsg, ck::Context(InContext)))
+    CK_ENSURE_IF_NOT(InObject, TEXT("{}.{}"), InMsg, ck::Context(InContext))
     {
         OutHitStatus = ECk_ValidInvalid::Invalid;
         return;
@@ -92,7 +92,7 @@ auto
         const UObject* InContext)
     -> void
 {
-    CK_ENSURE_BP(InContext, false, TEXT("{}.{}"), InMsg, ck::Context(InContext));
+    CK_ENSURE(false, TEXT("{}.{}"), InMsg, ck::Context(InContext));
 }
 
 auto
