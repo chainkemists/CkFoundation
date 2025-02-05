@@ -8,10 +8,11 @@
 #include "CkCore/EditorOnly/CkEditorOnly_Utils.h"
 #include "CkCore/Enums/CkEnums.h"
 #include "CkCore/Format/CkFormat.h"
-#include "CkCore/MessageDialog/CkMessageDialog.h"
+#include "CkCore/MessageDialog/CkMessageDialog_Utils.h"
 #include "CkCore/Settings/CkCore_Settings.h"
 
 #include <CoreMinimal.h>
+#include <Windows/WindowsPlatformApplicationMisc.h> // required for clipboard copy
 
 #include "CkEnsure.generated.h"
 
@@ -304,7 +305,7 @@ public:
     const auto IsMessageOnly = UCk_Utils_Core_UserSettings_UE::Get_EnsureDetailsPolicy() == ECk_EnsureDetails_Policy::MessageOnly;         \
                                                                                                                                            \
     const auto& Message = ck::Format_UE(InString, ##__VA_ARGS__);                                                                          \
-    const auto& Title = ck::Format_UE(TEXT("Frame#[{}] PIE-ID[{}]"), GFrameCounter, GPlayInEditorID - 1);             \
+    const auto& Title = ck::Format_UE(TEXT("Frame#[{}] PIE-ID[{}]"), GFrameCounter, UCk_Utils_EditorOnly_UE::Get_DebugStringForWorld());   \
     const auto& StackTraceWith2Skips = IsMessageOnly ?                                                                                     \
         TEXT("[StackTrace DISABLED]") :                                                                                                    \
         UCk_Utils_Debug_StackTrace_UE::Get_StackTrace(2);                                                                                  \
@@ -346,30 +347,45 @@ public:
     const auto& DialogMessage = FText::FromString(CallstackPlusMessage);                                                                   \
                                                                                                                                            \
     auto ReturnResult = false;                                                                                                             \
-    auto Buttons = TArray<UCk_Utils_MessageDialog_UE::DialogButton>{};                                                                     \
-    Buttons.Add({FText::FromString(TEXT("Ignore Once")), FSimpleDelegate::CreateLambda([&]()                                               \
+    using DialogButton = UCk_Utils_MessageDialog_UE::DialogButton;                                                                         \
+    auto Buttons = TArray<DialogButton>{};                                                                                                 \
+                                                                                                                                           \
+    Buttons.Add(DialogButton{FText::FromString(TEXT("Ignore Once")), FSimpleDelegate::CreateLambda([&]()                                   \
     {                                                                                                                                      \
         ReturnResult = false;                                                                                                              \
-    }), true, true});                                                                                                                      \
+    })}.Set_Color(FLinearColor{0.22f, 0.22f, 0.22f, 1.0f}));                                                                               \
                                                                                                                                            \
-    Buttons.Add({FText::FromString(TEXT("Ignore All")), FSimpleDelegate::CreateLambda([&]()                                                \
+    Buttons.Add(DialogButton{FText::FromString(TEXT("Ignore All")), FSimpleDelegate::CreateLambda([&]()                                    \
     {                                                                                                                                      \
         UCk_Utils_Ensure_UE::Request_IgnoreEnsureAtFileAndLineWithMessage(__FILE__, DialogMessage, __LINE__);                              \
         ReturnResult = false;                                                                                                              \
-    }), false, false});                                                                                                                    \
+    })}.Set_Color(FLinearColor{1.0f, 0.62f, 0.27f, 1.0f}).Set_IsPrimary(true).Set_ShouldFocus(true));                                      \
                                                                                                                                            \
-    Buttons.Add({FText::FromString(TEXT("Break")), {}, false, false});                                                                     \
+                                                                                                                                           \
+    Buttons.Add(DialogButton{FText::FromString(TEXT("Break")), {}}                                                                         \
+    .Set_Color(FLinearColor{0.22f, 0.22f, 0.22f, 1.0f})                                                                                    \
+    .Set_EnableDisable(StackTraceWith2Skips.IsEmpty() ? ECk_EnableDisable::Disable : ECk_EnableDisable::Enable));                          \
                                                                                                                                            \
     if (GIsEditor)                                                                                                                         \
     {                                                                                                                                      \
-        Buttons.Add({FText::FromString(TEXT("Abort PIE")), FSimpleDelegate::CreateLambda([&]()                                             \
+    Buttons.Add(DialogButton{FText::FromString(TEXT("Break in BP")), FSimpleDelegate::CreateLambda([&]()                                   \
+    {                                                                                                                                      \
+        UCk_Utils_Debug_StackTrace_UE::Try_BreakInScript(nullptr);                                                                         \
+    })}.Set_Color(FLinearColor{0.34f, 0.34f, 0.59f, 1.0f})                                                                                 \
+    .Set_EnableDisable(BpStackTrace.IsEmpty() ? ECk_EnableDisable::Disable : ECk_EnableDisable::Enable));                                  \
+    }                                                                                                                                      \
+                                                                                                                                           \
+    if (GIsEditor)                                                                                                                         \
+    {                                                                                                                                      \
+        Buttons.Add(DialogButton{FText::FromString(TEXT("Abort PIE")), FSimpleDelegate::CreateLambda([&]()                                 \
         {                                                                                                                                  \
             UCk_Utils_Ensure_UE::Request_IgnoreAllEnsures();                                                                               \
             UCk_Utils_EditorOnly_UE::Request_AbortPIE();                                                                                   \
-        }), false, false});                                                                                                                \
+        })}.Set_Color(FLinearColor{1.0f, 0.1f, 0.1f, 1.0f}));                                                                              \
     }                                                                                                                                      \
                                                                                                                                            \
-    if (UCk_Utils_MessageDialog_UE::CustomDialog(DialogMessage, FText::FromString(Title), Buttons) == 2)                                   \
+    auto ButtonIndex = UCk_Utils_MessageDialog_UE::CustomDialog(DialogMessage, FText::FromString(Title), Buttons);                         \
+    if (ButtonIndex == 2)                                                                                                                  \
     {                                                                                                                                      \
         ReturnResult = ensureAlwaysMsgf(false, TEXT("[DEBUG BREAK HIT]"));                                                                 \
         if (NOT BpStackTrace.IsEmpty())                                                                                                    \
