@@ -161,6 +161,27 @@ auto
 
 auto
     UCk_Utils_EditorOnly_UE::
+    Get_DebugStringForWorld(
+        const UObject* InContextObject)
+    -> FString
+{
+#if WITH_EDITOR
+    if (ck::IsValid(InContextObject))
+    {
+        if (const auto& ContextWorld = GEngine->GetWorldFromContextObject(InContextObject, EGetWorldErrorMode::ReturnNull);
+            ck::IsValid(ContextWorld))
+        {
+            return GetDebugStringForWorld(ContextWorld);
+        }
+    }
+    return GetDebugStringForWorld(GEngine->GetWorldContextFromPIEInstance(GPlayInEditorID)->World());
+#else
+    return TEXT("N/A");
+#endif
+}
+
+auto
+    UCk_Utils_EditorOnly_UE::
     Get_IsCookingByTheBook()
     -> bool
 {
