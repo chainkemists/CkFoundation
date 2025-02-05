@@ -191,6 +191,14 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|EditorOnly",
+              DisplayName = "[Ck] Get Debug String for World",
+              meta = (DevelopmentOnly, DefaultToSelf = "InContextObject"))
+    static FString
+    Get_DebugStringForWorld(
+        const UObject* InContextObject = nullptr);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|EditorOnly",
               DisplayName = "[Ck] Get Is Cooking By The Book",
               meta = (DevelopmentOnly))
     static bool
