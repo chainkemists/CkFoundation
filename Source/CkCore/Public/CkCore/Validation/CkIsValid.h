@@ -128,7 +128,7 @@ namespace ck                                                                    
     {                                                                                                                            \
     public:                                                                                                                      \
         template <typename T_Type>                                                                                               \
-        auto IsValid(typename IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool \
+        auto IsValid(typename IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool                               \
         {                                                                                                                        \
             static_assert(std::is_same_v<T_Type, void>, "IsValid for " #_type_ " is explicitly deleted");                        \
             return false;                                                                                                        \
@@ -145,7 +145,7 @@ namespace ck                                                                    
     class IsValid_Executor<T, _policy_, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, T>::value>>\
     {                                                                                                          \
     public:                                                                                                    \
-        auto IsValid(IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool         \
+        auto IsValid(IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool                      \
         {                                                                                                      \
             return _lambda_(InValue);                                                                          \
         }                                                                                                      \
@@ -162,7 +162,7 @@ namespace ck                                                                    
     class IsValid_Executor<_type_, _policy_, typename std::enable_if_t<IsValid_Executor_IsBaseOf<_type_, _t_type_>::value>>\
     {                                                                                                                      \
     public:                                                                                                                \
-        auto IsValid(typename IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool \
+        auto IsValid(typename IsValid_Executor_RefOrNoRef<_type_>::parameter_type InValue) -> bool                         \
         {                                                                                                                  \
             return _lambda_(InValue);                                                                                      \
         }                                                                                                                  \
