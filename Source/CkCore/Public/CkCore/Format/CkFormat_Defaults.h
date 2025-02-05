@@ -261,6 +261,16 @@ CK_DEFINE_CUSTOM_FORMATTER(FInstancedStruct, [&]()
 
 // --------------------------------------------------------------------------------------------------------------------
 
+CK_DEFINE_CUSTOM_FORMATTER(SWindow, [&]()
+{
+    return ck::Format(TEXT("{}"), InObj.ToString());
+});
+
+CK_DEFINE_CUSTOM_FORMATTER_PTR_FORWARDER_NULLPTR_VALIDITY(SWindow, [&]() -> const SWindow&
+{
+    return *InObj;
+});
+
 CK_DEFINE_CUSTOM_FORMATTER(UObject, [&]()
 {
     return UCk_Utils_Debug_UE::Get_DebugName(&InObj);
