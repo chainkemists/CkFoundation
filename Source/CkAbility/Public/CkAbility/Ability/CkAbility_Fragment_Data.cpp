@@ -84,7 +84,14 @@ auto
                                                     ? ECk_Replication::Replicates
                                                     : ECk_Replication::DoesNotReplicate;
 
-    UCk_Utils_AbilityOwner_UE::Add(InHandle, AbilityOwnerParamsData, AbilityOwnerFeatureReplication);
+    if (UCk_Utils_AbilityOwner_UE::Has(InHandle))
+    {
+        UCk_Utils_AbilityOwner_UE::Append_DefaultAbilities_Instanced(InHandle, _DefaultAbilities_Instanced);
+    }
+    else
+    {
+        UCk_Utils_AbilityOwner_UE::Add(InHandle, AbilityOwnerParamsData, AbilityOwnerFeatureReplication);
+    }
 }
 
 auto
