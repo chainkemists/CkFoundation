@@ -11,10 +11,24 @@ auto
     -> UCk_UserWidget_UE*
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InWidgetInstance),
-    TEXT("Try to push a widget instance that is [{}] in the Widget Stack [{}] owned by [{}]"), InWidgetInstance, this, GetOwningPlayer())
+    TEXT("Trying to push an invalid widget instance to the Widget Stack [{}] owned by [{}]"), this, GetOwningPlayer())
     { return {}; }
+
+    CK_ENSURE_IF_NOT(NOT ContainsWidgetInstance(InWidgetInstance),
+    TEXT("Trying to push a widget instance [{}] that is already contained in the Widget Stack [{}] owned by [{}]"), InWidgetInstance, this, GetOwningPlayer())
+    { return {}; }
+
     AddWidgetInstance(*InWidgetInstance);
     return InWidgetInstance;
+}
+
+auto
+    UCk_Stack_UserWidget_UE::
+    ContainsWidgetInstance(
+        UCk_UserWidget_UE* InWidgetInstance)
+    -> bool
+{
+    return WidgetList.Contains(InWidgetInstance);
 }
 
 auto
