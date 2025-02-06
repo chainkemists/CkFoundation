@@ -22,11 +22,18 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|StackWidget")
-    UCk_UserWidget_UE* PushWidgetInstance(
-            UCk_UserWidget_UE* InWidgetInstance);
+    UCk_UserWidget_UE*
+    PushWidgetInstance(
+        UCk_UserWidget_UE* InWidgetInstance);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|StackWidget")
-    void SetTransitionDetails(
+    bool
+    ContainsWidgetInstance(
+        UCk_UserWidget_UE* InWidgetInstance);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|StackWidget")
+    void
+    SetTransitionDetails(
         ECommonSwitcherTransition InTransitionType,
         ETransitionCurve InTransitionCurveType,
         FCk_Time InTransitionDuration,
