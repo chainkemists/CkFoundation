@@ -38,24 +38,6 @@ auto
 }
 
 auto
-    SCk_MessageDialog::FArguments::
-    IconBrush(
-        FName InIconBrush)
-        -> FArguments&
-{
-    auto ImageBrush = FAppStyle::Get().GetBrush(InIconBrush);
-
-    CK_ENSURE_IF_NOT(ck::IsValid(ImageBrush, ck::IsValid_Policy_NullptrOnly{}),
-        TEXT("Brush {} is unknown"), InIconBrush.ToString())
-    {
-        return *this;
-    }
-
-    _Icon = ImageBrush;
-    return *this;
-}
-
-auto
     SCk_MessageDialog::
     Construct(
         const FArguments& InArgs)
