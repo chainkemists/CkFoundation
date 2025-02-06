@@ -26,6 +26,10 @@ public:
             UCk_UserWidget_UE* InWidgetInstance);
 
     UFUNCTION(BlueprintCallable, Category = "Ck|UI|StackWidget")
+    bool ContainsWidgetInstance(
+            UCk_UserWidget_UE* InWidgetInstance);
+
+    UFUNCTION(BlueprintCallable, Category = "Ck|UI|StackWidget")
     void SetTransitionDetails(
         ECommonSwitcherTransition InTransitionType,
         ETransitionCurve InTransitionCurveType,
