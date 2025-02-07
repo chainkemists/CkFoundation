@@ -364,8 +364,15 @@ public:
     friend class UCk_Utils_MarkerAndSensor_UE;
 
 public:
-    auto Get_Type() const -> ECk_OverlapBody_Type override;
-    auto Get_OwningEntity() const -> const FCk_Handle& override;
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Marker",
+        DisplayName = "[Ck][Marker] Get Type")
+    ECk_OverlapBody_Type Get_Type() const override;
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Marker",
+        DisplayName = "[Ck][Marker] Get Owning Entity")
+    const FCk_Handle& Get_OwningEntity() const override;
 
 private:
     UPROPERTY(Transient)
@@ -387,8 +394,15 @@ public:
     friend class UCk_Utils_MarkerAndSensor_UE;
 
 public:
-    auto Get_Type() const -> ECk_OverlapBody_Type override;
-    auto Get_OwningEntity() const -> const FCk_Handle& override;
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Marker",
+        DisplayName = "[Ck][Marker] Get Type")
+    ECk_OverlapBody_Type Get_Type() const override;
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Marker",
+        DisplayName = "[Ck][Marker] Get Owning Entity")
+    const FCk_Handle& Get_OwningEntity() const override;
 
 private:
     UPROPERTY(Transient)
@@ -410,8 +424,15 @@ public:
     friend class UCk_Utils_MarkerAndSensor_UE;
 
 public:
-    auto Get_Type() const -> ECk_OverlapBody_Type override;
-    auto Get_OwningEntity() const -> const FCk_Handle& override;
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Marker",
+        DisplayName = "[Ck][Marker] Get Type")
+    ECk_OverlapBody_Type Get_Type() const override;
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|Marker",
+        DisplayName = "[Ck][Marker] Get Owning Entity")
+    const FCk_Handle& Get_OwningEntity() const override;
 
 private:
     UPROPERTY(Transient)
