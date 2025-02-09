@@ -80,7 +80,7 @@ private:
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|ResolverSource",
-        DisplayName="[Ck][ResolverSource] Handle -> ResolverDataBundle Handle",
+        DisplayName="[Ck][ResolverSource] Handle -> ResolverSource Handle",
         meta = (CompactNodeTitle = "<AsResolverSource>", BlueprintAutocast))
     static FCk_Handle_ResolverSource
     DoCastChecked(
