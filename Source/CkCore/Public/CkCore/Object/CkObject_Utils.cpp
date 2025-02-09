@@ -1,5 +1,8 @@
 #include "CkObject_Utils.h"
 
+#include <Engine/Blueprint.h>
+#include <Engine/BlueprintGeneratedClass.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -191,7 +194,7 @@ auto
 auto
     UCk_Utils_Object_UE::
     Get_ObjectNativeParentClass(
-        UObject* InObject)
+        const UObject* InObject)
     -> UClass*
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InObject), TEXT("Invalid Object supplied to Get_ObjectNativeParentClass"))
@@ -217,7 +220,7 @@ auto
 auto
     UCk_Utils_Object_UE::
     Get_BlueprintGeneratedClass(
-        UObject* InBlueprintObject)
+        const UObject* InBlueprintObject)
     -> UClass*
 {
     const auto& Blueprint = Cast<UBlueprint>(InBlueprintObject);
@@ -233,7 +236,7 @@ auto
 auto
     UCk_Utils_Object_UE::
     Get_ClassGeneratedByBlueprint(
-        UClass* InBlueprintGeneratedClass)
+        const UClass* InBlueprintGeneratedClass)
     -> UObject*
 {
 #if WITH_EDITOR
@@ -248,6 +251,18 @@ auto
 #else
     return nullptr;
 #endif
+}
+
+auto
+    UCk_Utils_Object_UE::
+    Get_DerivedClasses(
+        const UClass* InBaseClass,
+        bool InRecursive)
+    -> TArray<UClass*>
+{
+    auto Result = TArray<UClass*>{};
+    GetDerivedClasses(InBaseClass, Result, InRecursive);
+    return Result;
 }
 
 auto
