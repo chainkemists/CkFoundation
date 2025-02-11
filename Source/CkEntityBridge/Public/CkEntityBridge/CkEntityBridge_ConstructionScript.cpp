@@ -129,7 +129,7 @@ auto
 
     Super::Do_Construct_Implementation(InParams);
 
-    if (ck::Is_NOT_Valid(_ConstructionScript) && ck::IsValid(EntityConfig))
+    if (ck::Is_NOT_Valid(_ConstructionScript) && ck::IsValid(EntityConfig) && ck::IsValid(EntityConfig->Get_EntityConstructionScript()))
     {
         _ConstructionScript = EntityConfig->Get_EntityConstructionScript()->GetClass();
         ck::entity_bridge::Log(TEXT("[MIGRATE] EntityConfig with ConstructionScript [{}] migrated for [{}]"), _ConstructionScript, GetOwner());
