@@ -16,6 +16,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 struct FCk_Registry;
+class UCk_Utils_EntityTag_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -219,6 +220,16 @@ public:
     auto IsValid(EntityType InEntity) const -> bool;
     auto Orphan(EntityType InEntity) const -> bool;
     auto Get_ValidEntity(EntityType::IdType InEntity) const -> EntityType;
+
+private:
+    // TODO: exposing the storage like this is temporary - see branch feature/registry-handle-storage-support for what we really want to do
+    friend UCk_Utils_EntityTag_UE;
+
+    template <typename T_Fragment>
+    auto&& Storage(entt::id_type InHash)
+    {
+        return _InternalRegistry->storage<T_Fragment>(InHash);
+    }
 
 public:
     friend auto CKECS_API GetTypeHash(const ThisType& InRegistry) -> uint32;
