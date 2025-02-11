@@ -40,6 +40,7 @@ public:
     friend class UCk_Ability_ConstructionScript_PDA;
     friend class ck::FProcessor_AbilityOwner_Setup;
     friend class ck::FProcessor_AbilityOwner_HandleRequests;
+    friend class ck::FProcessor_Ability_HandleRequests;
     friend class ck::FProcessor_Ability_Teardown;
 
 public:
@@ -205,6 +206,18 @@ private:
         UObject* InOuter,
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass,
         UCk_Ability_Script_PDA* InAbilityArchetype);
+
+    static auto
+    Request_MarkAbility_AsGiven(
+        FCk_Handle_Ability& InAbilityEntity) -> void;
+
+    static auto
+    Request_MarkAbility_AsNotGiven(
+        FCk_Handle_Ability& InAbilityEntity) -> void;
+
+    static auto
+    Get_IsAbilityGiven(
+        FCk_Handle_Ability& InAbilityEntity) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

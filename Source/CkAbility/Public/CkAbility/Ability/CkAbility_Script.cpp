@@ -511,7 +511,8 @@ auto
     }
 
     CK_ENSURE_IF_NOT(ck::IsValid(Get_AbilityOwnerHandle(), ck::IsValid_Policy_IncludePendingKill{}),
-        TEXT("AbilityOwnerHandle is [{}]. It's possible that this was not set correctly by the Processor that Gives the Ability.{}"),
+        TEXT("AbilityOwnerHandle is [{}]. It's possible that this was not set correctly by the Processor that Gives the Ability [{}] "
+            "or the ability script is trying to run code after being revoked"),
         Get_AbilityOwnerHandle(), ck::Context(this))
     { return {}; }
 

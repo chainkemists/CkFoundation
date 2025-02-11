@@ -463,4 +463,31 @@ auto
     });
 }
 
+auto
+    UCk_Utils_Ability_UE::
+    Request_MarkAbility_AsGiven(
+        FCk_Handle_Ability& InAbilityEntity)
+    -> void
+{
+    InAbilityEntity.AddOrGet<ck::FTag_Ability_Given>();
+}
+
+auto
+    UCk_Utils_Ability_UE::
+    Request_MarkAbility_AsNotGiven(
+        FCk_Handle_Ability& InAbilityEntity)
+    -> void
+{
+    InAbilityEntity.Remove<ck::FTag_Ability_Given>();
+}
+
+auto
+    UCk_Utils_Ability_UE::
+    Get_IsAbilityGiven(
+        FCk_Handle_Ability& InAbilityEntity)
+    -> bool
+{
+    return InAbilityEntity.Has<ck::FTag_Ability_Given>();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
