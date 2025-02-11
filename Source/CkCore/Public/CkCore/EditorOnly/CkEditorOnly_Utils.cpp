@@ -174,7 +174,16 @@ auto
             return GetDebugStringForWorld(ContextWorld);
         }
     }
-    return GetDebugStringForWorld(GEngine->GetWorldContextFromPIEInstance(GPlayInEditorID)->World());
+
+    if (NOT ck::IsValid(GEngine, ck::IsValid_Policy_NullptrOnly{}))
+    { return TEXT("GEngine has been destroyed"); }
+
+    const auto WorldContextFromPie = GEngine->GetWorldContextFromPIEInstance(GPlayInEditorID);
+
+    if (NOT ck::IsValid(WorldContextFromPie, ck::IsValid_Policy_NullptrOnly{}))
+    { return TEXT("GEngine is VALID but WorldContextFromPIE is NOT valid"); }
+
+    return GetDebugStringForWorld(WorldContextFromPie->World());
 #else
     return TEXT("N/A");
 #endif
