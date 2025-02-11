@@ -78,7 +78,7 @@ public:
     using InternalRegistryPtrType = TSharedPtr<InternalRegistryType>;
 
 public:
-    template <typename T_RegistryType, typename ... T_Fragments>
+    template <typename T_RegistryOrStorageType, typename ... T_Fragments>
     class TView
     {
     public:
@@ -115,14 +115,14 @@ public:
         using FragmentsOnly = entt::type_list_cat_t<std::conditional_t<TIsExcluded<T_Args>::value || TIsEmpty<T_Args>::value, entt::type_list<>, TypeOnly_T<T_Args>>...>;
 
     public:
-        using RegistryType = T_RegistryType;
+        using RegistryOrStorageType = T_RegistryOrStorageType;
         using FragmentsAndTags = ExcludesStripped<T_Fragments...>;
         using OnlyExcludes = ExcludesOnly<T_Fragments...>;
         using OnlyFragments = FragmentsOnly<T_Fragments...>;
 
     public:
-        explicit TView(RegistryType& InRegistry)
-            : _Registry(InRegistry)
+        explicit TView(RegistryOrStorageType& InRegistryOrStorage)
+            : _RegistryOrStorage(InRegistryOrStorage)
         {
         }
 
@@ -136,16 +136,30 @@ public:
         template <typename T_Func, typename... T_FragmentsAndTags, typename... T_OnlyExcludes, typename... T_OnlyFragments>
         auto DoForEach(T_Func InFunc, entt::type_list<T_FragmentsAndTags...>, entt::type_list<T_OnlyExcludes...>, entt::type_list<T_OnlyFragments...>)
         {
-            _Registry.template view<T_FragmentsAndTags...>(entt::exclude<T_OnlyExcludes...>).each(
-            [InFunc](const EntityType::IdType InEntityId, T_OnlyFragments&... InFragments)
+            if constexpr (std::is_base_of_v<entt::registry, RegistryOrStorageType>)
             {
-                const auto TypeSafeEntity = FCk_Entity{InEntityId};
-                InFunc(TypeSafeEntity, InFragments...);
-            });
+                _RegistryOrStorage.template view<T_FragmentsAndTags...>(entt::exclude<T_OnlyExcludes...>).each(
+                [InFunc](const EntityType::IdType InEntityId, T_OnlyFragments&... InFragments)
+                {
+                    const auto TypeSafeEntity = FCk_Entity{InEntityId};
+                    InFunc(TypeSafeEntity, InFragments...);
+                });
+            }
+            else
+            {
+                auto View = entt::basic_view{_RegistryOrStorage};
+
+                View.each(
+                [InFunc](const EntityType::IdType InEntityId, T_OnlyFragments&... InFragments)
+                {
+                    const auto TypeSafeEntity = FCk_Entity{InEntityId};
+                    InFunc(TypeSafeEntity, InFragments...);
+                });
+            }
         }
 
     private:
-        RegistryType& _Registry;
+        RegistryOrStorageType& _RegistryOrStorage;
     };
 
     template <typename... T_Fragments>
@@ -169,6 +183,9 @@ private:
     auto Add(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentType&;
 
     template <typename T_FragmentType, typename... T_Args>
+    auto Add(EntityType InEntity, EntityType::IdType InHash, T_Args&&... InArgs) -> T_FragmentType&;
+
+    template <typename T_FragmentType, typename... T_Args>
     auto AddOrGet(EntityType InEntity, T_Args&&... InArgs) -> T_FragmentType&;
 
     template <typename T_FragmentType, typename... T_Args>
@@ -185,6 +202,9 @@ private:
 
     template <typename... T_Fragments>
     auto Clear() -> void;
+
+    template <typename T_Fragment>
+    auto Storage(EntityType::IdType InHash);
 
 public:
     template <typename... T_Fragments>
@@ -299,6 +319,58 @@ auto
             }
 
             auto& Fragment = _InternalRegistry->emplace<T_FragmentType>(InEntity.Get_ID(), std::forward<T_Args>(InArgs)...);
+            return Fragment;
+        }
+    }
+}
+
+template <typename T_FragmentType, typename ... T_Args>
+auto
+    FCk_Registry::
+    Add(
+        EntityType InEntity,
+        EntityType::IdType InHash,
+        T_Args&&... InArgs)
+    -> T_FragmentType&
+{
+    CK_ENSURE_IF_NOT(IsValid(InEntity), TEXT("Invalid Entity [{}]. Unable to Add Fragment/Tag."), InEntity)
+    {
+        static T_FragmentType Invalid_Fragment;
+        return Invalid_Fragment;
+    }
+
+    auto& Storage = _InternalRegistry->storage<T_FragmentType>(InHash);
+
+    if constexpr (std::is_empty_v<T_FragmentType>)
+    {
+        static_assert(std::is_base_of_v<ck::TTag<T_FragmentType>, T_FragmentType>, "Tags must derive from ck::TTag (see helper macro)");
+
+        Storage.template emplace<T_FragmentType>(InEntity.Get_ID());
+        static T_FragmentType Empty_Tag;
+        return Empty_Tag;
+    }
+    else
+    {
+        if constexpr (std::is_base_of_v<ck::FTag_CountedTag, T_FragmentType>)
+        {
+            auto& Fragment = Has<T_FragmentType>(InEntity) ?
+                Get<T_FragmentType>(InEntity) :
+                Storage.template emplace<T_FragmentType>(InEntity.Get_ID());
+
+            ++Fragment._Count;
+            return Fragment;
+        }
+        else
+        {
+            CK_ENSURE_IF_NOT(Has<T_FragmentType>(InEntity) == false && (std::is_base_of_v<ck::FTag_CountedTag, T_FragmentType>) == false,
+                TEXT("Fragment [{}] already exists in Entity [{}]."),
+                ck::TypeToString<T_FragmentType>, InEntity)
+            {
+                static T_FragmentType Invalid_Fragment;
+                return Invalid_Fragment;
+            }
+
+            auto& Fragment = Storage.template emplace<T_FragmentType>(InEntity.Get_ID(), std::forward<T_Args>(InArgs)...);
             return Fragment;
         }
     }
@@ -431,6 +503,24 @@ auto
     -> void
 {
     _InternalRegistry->clear<T_Fragments...>();
+}
+
+template <typename T_Fragment>
+auto
+    FCk_Registry::
+    Storage(
+        EntityType::IdType InHash)
+{
+    return _InternalRegistry->storage<T_Fragment>(InHash);
+}
+
+template <typename T_Fragment>
+auto
+    FCk_Registry::
+    Storage(
+        EntityType InEntity)
+{
+    return _InternalRegistry->storage<T_Fragment>();
 }
 
 template <typename... T_Fragments>
