@@ -101,6 +101,7 @@ namespace ck
             FProcessor_Ability_Teardown,
             FCk_Handle_Ability,
             FFragment_Ability_Current,
+            FTag_Ability_Given,
             CK_IF_INITIATE_CONFIRM_KILL>
     {
     public:
