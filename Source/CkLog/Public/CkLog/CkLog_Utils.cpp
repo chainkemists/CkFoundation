@@ -478,6 +478,7 @@ auto
     if (InMap.Contains(InLogger) == false)
     {
         UE_LOG(CkLogger, Error, TEXT("Could not find the Logger [%s]. Are you sure you have defined it? See CkLog.h for an example."), *InLogger.ToString());
+        UE_LOG(CkLogger, Log, TEXT("%s"), *InMsg.ToString());
         return;
     }
 
