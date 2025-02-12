@@ -144,7 +144,8 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
-              DisplayName="[Ck][AbilityOwner] Try Get Ability If")
+              DisplayName="[Ck][AbilityOwner] Try Get Ability If",
+              meta=(AutoCreateRefTerm="InOptionalPayload"))
     static FCk_Handle_Ability
     TryGet_Ability_If(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
