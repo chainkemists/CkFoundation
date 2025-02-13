@@ -36,7 +36,7 @@ auto
 
 auto
     UCk_Utils_ResourceLoader_UE::
-    Conv_SoftObjRefToSoftResourceLoaderObjectReference(
+    Conv_SoftClassRef_ToSoftResourceLoaderObjectReference(
         TSoftClassPtr<> SoftClassReference)
     -> FCk_ResourceLoader_ObjectReference_Soft
 {
@@ -46,13 +46,35 @@ auto
 
 auto
     UCk_Utils_ResourceLoader_UE::
-    TransformSoftClassReferences_ToSoftResourceLoaderObjectReferences(
+    Conv_SoftObjRef_ToSoftResourceLoaderObjectReference(
+        TSoftObjectPtr<UObject> SoftObjectReference)
+    -> FCk_ResourceLoader_ObjectReference_Soft
+{
+    const auto SoftClassPath = FSoftClassPath(SoftObjectReference.ToString());
+    return FCk_ResourceLoader_ObjectReference_Soft(SoftClassPath);
+}
+
+auto
+    UCk_Utils_ResourceLoader_UE::
+    Transform_SoftClassReferences_ToSoftResourceLoaderObjectReferences(
         const TArray<TSoftClassPtr<UObject>>& InReferences)
     -> TArray<FCk_ResourceLoader_ObjectReference_Soft>
 {
     return ck::algo::Transform<TArray<FCk_ResourceLoader_ObjectReference_Soft>>(InReferences, [](TSoftClassPtr<UObject> InSoftClass) -> FCk_ResourceLoader_ObjectReference_Soft
     {
-        return Conv_SoftObjRefToSoftResourceLoaderObjectReference(InSoftClass);
+        return Conv_SoftClassRef_ToSoftResourceLoaderObjectReference(InSoftClass);
+    });
+}
+
+auto
+    UCk_Utils_ResourceLoader_UE::
+    Transform_SoftObjectReferences_ToSoftResourceLoaderObjectReferences(
+        const TArray<TSoftObjectPtr<>>& InReferences)
+    -> TArray<FCk_ResourceLoader_ObjectReference_Soft>
+{
+    return ck::algo::Transform<TArray<FCk_ResourceLoader_ObjectReference_Soft>>(InReferences, [](TSoftObjectPtr<UObject> InSoftObject) -> FCk_ResourceLoader_ObjectReference_Soft
+    {
+        return Conv_SoftObjRef_ToSoftResourceLoaderObjectReference(InSoftObject);
     });
 }
 
