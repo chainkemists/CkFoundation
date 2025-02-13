@@ -1086,7 +1086,7 @@ namespace ck
             algo::MatchesAnyAbilityActivationCancelledTagsOnOwner{ActiveTags}
         );
 
-        if (InCurrent.Get_AreActiveTagsDifferentThanPreviousTags(InHandle))
+        if (InCurrent.Get_AreActiveTagsDifferentFromPreviousTags(InHandle))
         {
             const auto& PreviousTags = InCurrent.Get_PreviousTags(InHandle);
 

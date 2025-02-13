@@ -78,8 +78,8 @@ namespace ck
         auto Get_SpecificActiveTagCount(
             const FCk_Handle_AbilityOwner& InAbilityOwner,
             const FGameplayTag& InTag) const -> int32;
-        auto Get_AreActiveTagsDifferentThanPreviousTags() const -> bool;
-        auto Get_AreActiveTagsDifferentThanPreviousTags(
+        auto Get_AreActiveTagsDifferentFromPreviousTags() const -> bool;
+        auto Get_AreActiveTagsDifferentFromPreviousTags(
             const FCk_Handle_AbilityOwner& InAbilityOwner) const -> bool;
 
         auto AppendTags(
