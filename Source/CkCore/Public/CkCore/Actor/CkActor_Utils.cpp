@@ -10,6 +10,7 @@
 #include <Components/SkeletalMeshComponent.h>
 #include <Components/StaticMeshComponent.h>
 
+#include <Engine/BlueprintGeneratedClass.h>
 #include <Engine/World.h>
 
 #include <GameFramework/Pawn.h>
@@ -21,6 +22,7 @@
 FCk_Utils_Actor_SpawnActor_Params::
     FCk_Utils_Actor_SpawnActor_Params(
         UObject* InOwnerOrWorld,
+        // ReSharper disable once CppPassValueParameterByConstReference
         TSubclassOf<AActor> InActorClass)
     :_OwnerOrWorld(std::move(InOwnerOrWorld))
     , _ActorClass(InActorClass)
@@ -31,6 +33,7 @@ FCk_Utils_Actor_SpawnActor_Params::
 
 UCk_Utils_Actor_UE::DeferredSpawnActor_Params::
     DeferredSpawnActor_Params(
+        // ReSharper disable once CppPassValueParameterByConstReference
         const TSubclassOf<AActor> InActorClass,
         UObject* InOwnerOrWorld)
     : _ActorClass(InActorClass)
@@ -139,6 +142,38 @@ auto
 
 auto
     UCk_Utils_Actor_UE::
+    Get_ComponentsByClassFromClass(
+        TSubclassOf<AActor> InActorClass,
+        TSubclassOf<UActorComponent> ComponentClass)
+    -> TArray<UActorComponent*>
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InActorClass), TEXT("ActorClass [{}] supplied is Invalid"), InActorClass)
+    { return {}; }
+
+    CK_ENSURE_IF_NOT(ck::IsValid(ComponentClass), TEXT("ComponentClass [{}] supplied is Invalid"), ComponentClass)
+    { return {}; }
+
+    auto ActorClass = Cast<UBlueprintGeneratedClass>(InActorClass);
+
+    if (ck::Is_NOT_Valid(ActorClass))
+    { return {}; }
+
+    auto Components = TArray<const UActorComponent*>{};
+    AActor::GetActorClassDefaultComponents(InActorClass, ComponentClass, Components);
+
+    auto NonConstComponents = TArray<UActorComponent*>{};
+    NonConstComponents.Reserve(Components.Num());
+
+    for (const auto Component : Components)
+    {
+        NonConstComponents.Add(const_cast<UActorComponent*>(Component));
+    }
+
+    return NonConstComponents;
+}
+
+auto
+    UCk_Utils_Actor_UE::
     Request_CloneActor(
         AActor* InWorldContextActor,
         AActor* InOwner,
@@ -170,13 +205,14 @@ auto
     UCk_Utils_Actor_UE::
     Get_HasComponent_ByClass(
         AActor* InActor,
+        // ReSharper disable once CppPassValueParameterByConstReference
         TSubclassOf<UActorComponent> InComponent)
     -> bool
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to UCk_Utils_Actor_UE::Get_HasComponent_ByClass"))
     { return {}; }
 
-    if (const auto& HasNativeComponent = ck::IsValid(InActor->FindComponentByClass(InComponent)))
+    if (ck::IsValid(InActor->FindComponentByClass(InComponent)))
     { return true;}
 
     auto HasBlueprintComponent = false;
@@ -198,13 +234,14 @@ auto
     UCk_Utils_Actor_UE::
     Get_HasComponent_ByInterface(
         AActor* InActor,
+        // ReSharper disable once CppPassValueParameterByConstReference
         TSubclassOf<UInterface> InInterface)
     -> bool
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Invalid Actor supplied to UCk_Utils_Actor_UE::Get_HasComponent_ByInterface"))
     { return {}; }
 
-    if (const auto& HasNativeComponent = ck::IsValid(InActor->FindComponentByInterface(InInterface)))
+    if (ck::IsValid(InActor->FindComponentByInterface(InInterface)))
     { return true;}
 
     auto HasBlueprintComponent = false;
@@ -588,7 +625,7 @@ auto
         DeferredSpawnActorParams.Get_Archetype())
     { return {}; }
 
-    // If we want a replicated actor, the actor must be set to Replicate, and vice-versa.
+    // If we want a replicated actor, the actor must be set to Replicate, and vice versa.
     const auto& ReplicationMatches = (IsReplicated && SpawningActor->GetIsReplicated()) ||
         (NOT IsReplicated && NOT SpawningActor->GetIsReplicated());
 
