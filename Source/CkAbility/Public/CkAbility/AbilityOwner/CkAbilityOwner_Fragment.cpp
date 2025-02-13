@@ -94,7 +94,7 @@ namespace ck
 
     auto
         FFragment_AbilityOwner_Current::
-        Get_AreActiveTagsDifferentThanPreviousTags() const
+        Get_AreActiveTagsDifferentFromPreviousTags() const
         -> bool
     {
         return _ActiveTags_IncludingAllEntityExtensions != _PreviousTags_IncludingAllEntityExtensions;
@@ -102,7 +102,7 @@ namespace ck
 
     auto
         FFragment_AbilityOwner_Current::
-        Get_AreActiveTagsDifferentThanPreviousTags(
+        Get_AreActiveTagsDifferentFromPreviousTags(
             const FCk_Handle_AbilityOwner& InAbilityOwner) const
         -> bool
     {
@@ -181,7 +181,7 @@ namespace ck
         QUICK_SCOPE_CYCLE_COUNTER(TagsUpdated)
         _ActiveTags_IncludingAllEntityExtensions = Get_ActiveTags(InAbilityOwner);
 
-        if (Get_AreActiveTagsDifferentThanPreviousTags())
+        if (Get_AreActiveTagsDifferentFromPreviousTags())
         {
             UCk_Utils_AbilityOwner_UE::Request_TagsUpdated(InAbilityOwner);
         }
