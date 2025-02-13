@@ -50,16 +50,32 @@ public:
         Category = "Ck|Utils|ResourceLoader",
         meta = (CompactNodeTitle = "->"))
     static FCk_ResourceLoader_ObjectReference_Soft
-    Conv_SoftObjRefToSoftResourceLoaderObjectReference(
+    Conv_SoftClassRef_ToSoftResourceLoaderObjectReference(
         TSoftClassPtr<UObject> SoftClassReference);
+
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Convert Soft Object Reference To Soft Resource Loader Object Reference",
+        Category = "Ck|Utils|ResourceLoader",
+        meta = (CompactNodeTitle = "->"))
+    static FCk_ResourceLoader_ObjectReference_Soft
+    Conv_SoftObjRef_ToSoftResourceLoaderObjectReference(
+        TSoftObjectPtr<UObject> SoftObjectReference);
 
     UFUNCTION(BlueprintPure,
         DisplayName = "[Ck] Transform Soft Class References To Soft Resource Loader Object References",
         Category = "Ck|Utils|ResourceLoader",
         meta = (CompactNodeTitle = "Transform_ToSoftResourceLoaderRefs"))
     static TArray<FCk_ResourceLoader_ObjectReference_Soft>
-    TransformSoftClassReferences_ToSoftResourceLoaderObjectReferences(
+    Transform_SoftClassReferences_ToSoftResourceLoaderObjectReferences(
         const TArray<TSoftClassPtr<UObject>>& InReferences);
+
+    UFUNCTION(BlueprintPure,
+        DisplayName = "[Ck] Transform Soft Object References To Soft Resource Loader Object References",
+        Category = "Ck|Utils|ResourceLoader",
+        meta = (CompactNodeTitle = "Transform_ToSoftResourceLoaderRefs"))
+    static TArray<FCk_ResourceLoader_ObjectReference_Soft>
+    Transform_SoftObjectReferences_ToSoftResourceLoaderObjectReferences(
+        const TArray<TSoftObjectPtr<UObject>>& InReferences);
 
 private:
     static auto

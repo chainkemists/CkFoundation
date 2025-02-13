@@ -222,7 +222,7 @@ namespace ck
                     const auto& AddedComponentMobility = SceneComponent->Mobility;
 
                     CK_ENSURE_IF_NOT(AddedComponentMobility == EComponentMobility::Movable,
-                        TEXT("The created Actor Component [{}] was has its Component Mobility set to [{}], but is meant to ATTACH to the Owner [{}].\n"
+                        TEXT("The created Actor Component [{}] has its Component Mobility set to [{}], but is meant to ATTACH to the Owner [{}].\n"
                              "Change its Component Mobility to MOVABLE for it to work properly"),
                         AddedActorComponent,
                         AddedComponentMobility.GetValue(),
