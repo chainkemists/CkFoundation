@@ -1050,25 +1050,15 @@ namespace ck
 
     auto
         FProcessor_AbilityOwner_TagsUpdated::
-        Tick(
-            TimeType InDeltaT)
-        -> void
-    {
-        Super::Tick(InDeltaT);
-
-        _TransientEntity.Clear<MarkedDirtyBy>();
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProcessor_AbilityOwner_TagsUpdated::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType& InHandle,
             FFragment_AbilityOwner_Current& InCurrent) const
         -> void
     {
+        // Purposefully not in tick since this tag could be added to an entity during the tick so we shouldn't clear it from all entities
+        InHandle.Remove<MarkedDirtyBy>();
+
         const auto& ActiveTags = InCurrent.Get_ActiveTags(InHandle);
 
         // Cancel All Abilities that are cancelled by the newly granted tags
