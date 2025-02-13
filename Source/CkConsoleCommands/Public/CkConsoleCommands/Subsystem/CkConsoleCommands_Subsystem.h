@@ -43,7 +43,7 @@ private:
     auto RunConsoleCommand(
         const FString& InCommand)
         -> void;
-    
+
     UFUNCTION(NetMulticast, Reliable)
     void MC_Request_OutputOnAll(
         const FString& InCommandOutput,
