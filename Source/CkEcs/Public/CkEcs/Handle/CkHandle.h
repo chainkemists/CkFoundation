@@ -218,6 +218,13 @@ public:
     auto
     Get_DebugName() const -> FName;
 
+public:
+    auto
+    NetSerialize(
+        FArchive& Ar,
+        class UPackageMap* Map,
+        bool& bOutSuccess) -> bool;
+
 private:
     template <typename T_Fragment>
     requires(std::is_empty_v<T_Fragment>)
@@ -259,6 +266,17 @@ private:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+// Legacy
+
+template<>
+struct TStructOpsTypeTraits<FCk_Handle> : public TStructOpsTypeTraitsBase2<FCk_Handle>
+{
+    enum
+    { WithNetSerializer = true };
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+// Iris
 
 USTRUCT()
 struct FCk_HandleSerializerConfig : public FNetSerializerConfig

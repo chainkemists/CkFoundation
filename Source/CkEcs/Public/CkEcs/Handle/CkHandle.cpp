@@ -334,6 +334,46 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
+    FCk_Handle::
+    NetSerialize(
+        FArchive& Ar,
+        UPackageMap* Map,
+        bool& bOutSuccess)
+    -> bool
+{
+    if (Ar.IsSaving())
+    {
+        if (ck::IsValid(*this) && ck::Is_NOT_Valid(_ReplicationDriver))
+        {
+            if (Has<TWeakObjectPtr<class UCk_Ecs_ReplicatedObject_UE>>())
+            {
+                _ReplicationDriver = Get<TWeakObjectPtr<class UCk_Ecs_ReplicatedObject_UE>>();
+            }
+        }
+
+        Ar << _ReplicationDriver;
+    }
+
+    if (Ar.IsLoading())
+    {
+        Ar << _ReplicationDriver;
+        if (ck::IsValid(_ReplicationDriver))
+        {
+            *this = _ReplicationDriver->Get_AssociatedEntity();
+        }
+        else
+        {
+            *this = {};
+        }
+    }
+
+    bOutSuccess = true;
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
     GetTypeHash(
         const FCk_Handle& InHandle) -> uint32
 {
