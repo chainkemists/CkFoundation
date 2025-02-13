@@ -93,12 +93,20 @@ auto
 {
     CK_ENSURE_IF_NOT(ck::IsValid(GetWorld()),
         TEXT("World is INVALID"))
-    { return; }
-    
+    {
+        ck::console_commands::Warning(TEXT("Could NOT run console command [{}] because the World is INVALID"), InCommand);
+        return;
+    }
+
     CK_ENSURE_IF_NOT(ck::IsValid(GetWorld()->GetFirstPlayerController()),
         TEXT("World [{}] first player controller is INVALID"))
-    { return; }
-    
+    {
+        ck::console_commands::Warning(
+            TEXT("Could NOT run console command [{}] because the World [{}] FIRST PlayerController is INVALID"),
+            InCommand, GetWorld());
+        return;
+    }
+
     const auto& NetModeString = HasAuthority() ? TEXT("SERVER") : TEXT("CLIENT");
     const auto& ContextString = ck::Format_UE(TEXT("{}"), ck::Context(this));
 
@@ -109,7 +117,7 @@ auto
 
     constexpr auto WriteToConsole = false;
     const auto& Output = GetWorld()->GetFirstPlayerController()->ConsoleCommand(InCommand, WriteToConsole);
-    
+
     Server_Request_OutputOnAll(Output, NetModeString, ContextString);
 }
 
@@ -232,15 +240,15 @@ auto
         CK_ENSURE_IF_NOT(ck::IsValid(GetWorld()),
             TEXT("World is INVALID"))
         { return; }
-        
+
         CK_ENSURE_IF_NOT(ck::IsValid(GetWorld()->GetFirstPlayerController()),
             TEXT("World [{}] first player controller is INVALID"))
         { return; }
-        
+
         const auto& Output = GetWorld()->GetFirstPlayerController()->ConsoleCommand(InCommand, WriteToConsole);
 
         ck::console_commands::Log(TEXT("Console Command on OWNING CLIENT Output: [{}]"), Output);
-        
+
         InHelper->Server_Request_RunConsoleCommandOnServer(InCommand);
     });
 }
