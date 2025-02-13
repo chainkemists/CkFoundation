@@ -240,14 +240,17 @@ auto
     -> UObject*
 {
 #if WITH_EDITOR
-    const auto& BPGC = Cast<UBlueprintGeneratedClass>(InBlueprintGeneratedClass);
-
-    CK_ENSURE_IF_NOT(ck::IsValid(BPGC),
-        TEXT("Class [{}] supplied to Get_ClassGeneratedByBlueprint is Invalid OR is NOT of type UBlueprintGeneratedClass!"),
+    CK_ENSURE_IF_NOT(ck::IsValid(InBlueprintGeneratedClass),
+        TEXT("Class [{}] supplied to Get_ClassGeneratedByBlueprint is Invalid"),
         InBlueprintGeneratedClass)
     { return {}; }
 
-    return BPGC->ClassGeneratedBy;
+    const auto& Bpgc = Cast<UBlueprintGeneratedClass>(InBlueprintGeneratedClass);
+
+    if(ck::Is_NOT_Valid(Bpgc))
+    { return {}; }
+
+    return Bpgc->ClassGeneratedBy;
 #else
     return nullptr;
 #endif
