@@ -232,6 +232,15 @@ public:
     Get_OutermostActor_RemoteAuthority(
         UObject* InObject);
 
+    UFUNCTION(BlueprintPure,
+              DisplayName = "[Ck] Get Components by Class From Class",
+              Category = "Ck|Utils|Object")
+              //meta = (ComponentClass = "/Script/Engine.ActorComponent"), meta = (DeterminesOutputType = "ComponentClass"))
+    static TArray<UActorComponent*>
+    Get_ComponentsByClassFromClass(
+        TSubclassOf<AActor> InActorClass,
+        TSubclassOf<UActorComponent> ComponentClass);
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Actor",
               DisplayName = "[Ck] Request Clone Actor",
