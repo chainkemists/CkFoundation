@@ -63,6 +63,7 @@ auto
 
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData, Params);
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData_Ability, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData_AbilitySource, Params);
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData_ReplicatedActor, Params);
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData_NonReplicatedActor, Params);
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ExpectedNumberOfDependentReplicationDrivers, Params);
@@ -241,6 +242,15 @@ auto
     // If the replicated ability is added as an EntityExtension, any attempts to manipulate extended features (e.g., Attributes)
     // would fail because those features would not yet exist.
     //_ReplicationData_Ability.Get_OwningEntityDriver()->DoAdd_SyncedDependentReplicationDriver();
+}
+
+void
+    UCk_Fragment_EntityReplicationDriver_Rep::OnRep_ReplicationData_AbilitySource()
+{
+    QUICK_SCOPE_CYCLE_COUNTER(OnRep_ReplicationData_AbilitySource)
+    const auto& EventName = ck::Format_UE(TEXT("AbilitySource [{}]"),
+        _ReplicationData_AbilitySource);
+    TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*EventName);
 }
 
 auto
@@ -472,6 +482,9 @@ auto
     QUICK_SCOPE_CYCLE_COUNTER(Set_ReplicationData_Ability)
     _ReplicationData_Ability = InReplicationData;
     MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _ReplicationData_Ability, this);
+
+    _ReplicationData_AbilitySource = InReplicationData.Get_AbilitySource();
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _ReplicationData_AbilitySource, this);
 }
 
 auto

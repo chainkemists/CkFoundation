@@ -107,6 +107,10 @@ private:
 
     UFUNCTION()
     void
+    OnRep_ReplicationData_AbilitySource();
+
+    UFUNCTION()
+    void
     OnRep_ReplicationData_ReplicatedActor();
 
     UFUNCTION()
@@ -123,6 +127,9 @@ private:
 
     UPROPERTY(ReplicatedUsing = OnRep_ReplicationData_Ability)
     FCk_EntityReplicationDriver_AbilityData _ReplicationData_Ability;
+
+    UPROPERTY(ReplicatedUsing = OnRep_ReplicationData_AbilitySource)
+    FCk_Handle _ReplicationData_AbilitySource;
 
     UPROPERTY(ReplicatedUsing = OnRep_ReplicationData_ReplicatedActor)
     FCk_EntityReplicationDriver_ConstructionInfo_ReplicatedActor _ReplicationData_ReplicatedActor;
