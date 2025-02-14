@@ -64,6 +64,7 @@ auto
         ECk_ConstructionPhase InAbilityConstructionPhase)
     -> FCk_Handle
 {
+    QUICK_SCOPE_CYCLE_COUNTER(Request_TryReplicateAbility)
     if (UCk_Utils_Net_UE::Get_EntityReplication(InHandle) == ECk_Replication::DoesNotReplicate)
     { return {}; }
 

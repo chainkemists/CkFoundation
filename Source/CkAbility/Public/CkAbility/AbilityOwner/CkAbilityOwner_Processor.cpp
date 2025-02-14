@@ -282,6 +282,7 @@ namespace ck
             const FCk_Request_AbilityOwner_GiveAbility& InRequest) const
         -> void
     {
+        QUICK_SCOPE_CYCLE_COUNTER(FCk_Request_AbilityOwner_GiveAbility)
         const auto AbilityGivenOrNot = [&]() -> ECk_AbilityOwner_AbilityGivenOrNot
         {
             const auto& AbilityScriptClass = InRequest.Get_AbilityScriptClass();

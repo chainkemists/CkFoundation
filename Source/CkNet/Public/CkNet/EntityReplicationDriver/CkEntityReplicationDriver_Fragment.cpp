@@ -173,14 +173,25 @@ auto
     OnRep_ReplicationData_Ability()
     -> void
 {
+    const auto& EventName = ck::Format_UE(TEXT("OwningEntityDriver [{}] AbilityScriptClass [{}] AbilitySource [{}] ReplicatedObjectsData num [{}] AbilityConstructionPhase [{}]"),
+        Get_ReplicationData_Ability().Get_OwningEntityDriver(),
+        Get_ReplicationData_Ability().Get_AbilityScriptClass(),
+        Get_ReplicationData_Ability().Get_AbilitySource(),
+        Get_ReplicationData_Ability().Get_ReplicatedObjectsData().Get_Objects().Num(),
+        Get_ReplicationData_Ability().Get_AbilityConstructionPhase());
+    TRACE_CPUPROFILER_EVENT_SCOPE_TEXT(*EventName);
+
+    QUICK_SCOPE_CYCLE_COUNTER(OnRep_ReplicationData_Ability_1)
     // TODO: This is a temporary fix. We need to find a better way to handle this
     if (_AssociatedEntity.Has<ck::FFragment_LifetimeOwner>())
     { return; }
 
+    QUICK_SCOPE_CYCLE_COUNTER(OnRep_ReplicationData_Ability_2)
     // wait for the data to be fully replicated
     if (ck::Is_NOT_Valid(_ReplicationData_Ability.Get_AbilityScriptClass()))
     { return; }
 
+    QUICK_SCOPE_CYCLE_COUNTER(OnRep_ReplicationData_Ability_3)
     if ([[maybe_unused]] const auto ShouldSkipIfAllObjectsAreNotYetResolved =
         AnyOf(_ReplicationData_Ability.Get_ReplicatedObjectsData().Get_Objects(), ck::algo::Is_NOT_Valid{}))
     { return; }
@@ -189,6 +200,7 @@ auto
 
     const auto OwningEntity = _ReplicationData_Ability.Get_OwningEntityDriver()->Get_AssociatedEntity();
 
+    QUICK_SCOPE_CYCLE_COUNTER(OnRep_ReplicationData_Ability_4)
     // wait on the owning entity to fully replicate
     if (ck::Is_NOT_Valid(OwningEntity))
     {
@@ -196,6 +208,7 @@ auto
         return;
     }
 
+    QUICK_SCOPE_CYCLE_COUNTER(OnRep_ReplicationData_Ability_5)
     ck::ecs::Verbose(TEXT("Adding Ability [{}] to [{}] with Owning Entity [{}] on Client [{}].{}"),
         _ReplicationData_Ability.Get_AbilityScriptClass(), Get_AssociatedEntity(), _ReplicationData_Ability.Get_OwningEntityDriver()->Get_AssociatedEntity(),
         GetWorld()->GetFirstLocalPlayerFromController(), this);
@@ -311,6 +324,7 @@ auto
     // It's possible that some children are waiting on the parent to fully replicate
     for (const auto ChildRepDriver : _PendingChildAbilityEntityConstructions)
     {
+        QUICK_SCOPE_CYCLE_COUNTER(OnRep_ReplicationData_ReplicatedActor__OnRep_ReplicationData_Ability)
         ChildRepDriver->OnRep_ReplicationData_Ability();
     }
 
@@ -383,6 +397,7 @@ auto
     // It's possible that some children are waiting on the parent to fully replicate
     for (const auto ChildRepDriver : _PendingChildAbilityEntityConstructions)
     {
+        QUICK_SCOPE_CYCLE_COUNTER(OnRep_ReplicationData_NonReplicatedActor__OnRep_ReplicationData_Ability)
         ChildRepDriver->OnRep_ReplicationData_Ability();
     }
 
@@ -454,6 +469,7 @@ auto
         const FCk_EntityReplicationDriver_AbilityData& InReplicationData)
     -> void
 {
+    QUICK_SCOPE_CYCLE_COUNTER(Set_ReplicationData_Ability)
     _ReplicationData_Ability = InReplicationData;
     MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _ReplicationData_Ability, this);
 }
