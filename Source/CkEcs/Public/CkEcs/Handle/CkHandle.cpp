@@ -2,6 +2,7 @@
 
 #include "CkCore/Object/CkObject_Utils.h"
 
+#include "CkEcs/CkEcsLog.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Utils.h"
 #include "CkEcs/Handle/CkHandle_Debugging.h"
@@ -726,12 +727,16 @@ namespace UE::Net
             const QuantizedType& Value0 = *reinterpret_cast<const QuantizedType*>(Args.Source0);
             const QuantizedType& Value1 = *reinterpret_cast<const QuantizedType*>(Args.Source1);
 
+            ck::ecs::Log(TEXT("Handle IsEqual [{}] using QuantizedType"), Value0 == Value1);
+
             return Value0 == Value1;
         }
         else
         {
             const SourceType Value0 = *reinterpret_cast<const SourceType*>(Args.Source0);
             const SourceType Value1 = *reinterpret_cast<const SourceType*>(Args.Source1);
+
+            ck::ecs::Log(TEXT("Handle IsEqual [{}] using Non-QuantizedType"), Value0 == Value1);
 
             return Value0 == Value1;
         }
@@ -745,6 +750,8 @@ namespace UE::Net
         -> bool
     {
         const SourceType& Source = *reinterpret_cast<const SourceType*>(Args.Source);
+
+        ck::ecs::Log(TEXT("Handle Validate [{}]"), Source.IsValid(ck::IsValid_Policy_IncludePendingKill{}));
         return Source.IsValid(ck::IsValid_Policy_IncludePendingKill{});
     }
 }

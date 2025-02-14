@@ -49,6 +49,7 @@ auto
     PostLink()
     -> void
 {
+    QUICK_SCOPE_CYCLE_COUNTER(EntityCollection_PostLink)
     OnRep_Updated();
 }
 
@@ -57,6 +58,7 @@ auto
     Request_TryUpdateReplicatedEntityCollections()
     -> void
 {
+    QUICK_SCOPE_CYCLE_COUNTER(Request_TryUpdateReplicatedEntityCollections)
     OnRep_Updated();
 }
 
@@ -65,6 +67,7 @@ auto
     OnRep_Updated()
     -> void
 {
+    QUICK_SCOPE_CYCLE_COUNTER(EntityCollection_OnRep_Updated)
     if (ck::Is_NOT_Valid(Get_AssociatedEntity()))
     { return; }
 
