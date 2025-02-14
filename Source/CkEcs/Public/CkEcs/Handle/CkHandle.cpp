@@ -628,7 +628,20 @@ namespace UE::Net
             const FNetSerializeDeltaArgs& Args)
         -> void
     {
-        _WeakObjectNetSerializer->SerializeDelta(Context, Args);
+        // _WeakObjectNetSerializer->SerializeDelta(Context, Args);
+        FNetIsEqualArgs EqualArgs;
+	    EqualArgs.Version = 0;
+	    EqualArgs.NetSerializerConfig = Args.NetSerializerConfig;
+	    EqualArgs.Source0 = Args.Source;
+	    EqualArgs.Source1 = Args.Prev;
+	    EqualArgs.bStateIsQuantized = true;
+
+	    if (Context.GetBitStreamWriter()->WriteBool(IsEqual(Context, EqualArgs)))
+	    {
+		    return;
+	    }
+
+	    Serialize(Context, Args);
     }
 
     auto

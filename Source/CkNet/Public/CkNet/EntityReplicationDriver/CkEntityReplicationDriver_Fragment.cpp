@@ -59,7 +59,7 @@ auto
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-    constexpr auto Params = FDoRepLifetimeParams{COND_Custom, REPNOTIFY_Always, true};
+    constexpr auto Params = FDoRepLifetimeParams{COND_Custom, REPNOTIFY_OnChanged, true};
 
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData, Params);
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData_Ability, Params);
