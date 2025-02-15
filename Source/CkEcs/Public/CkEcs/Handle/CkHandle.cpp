@@ -674,6 +674,9 @@ namespace UE::Net
                 Source._ReplicationDriver = Cast<UCk_Ecs_ReplicatedObject_UE>(InRO.Get());
             });
         }
+
+        ck::ecs::Log(TEXT("Handle [{}] Quantized"), Source);
+
         NewArgs.Source = reinterpret_cast<NetSerializerValuePointer>(&Source._ReplicationDriver);
         NewArgs.Target = Args.Target;
 
@@ -708,6 +711,8 @@ namespace UE::Net
 
             *Handle = Entity;
         }
+
+        ck::ecs::Log(TEXT("Handle [{}] De-Quantized"), *Handle);
     }
 
     auto
