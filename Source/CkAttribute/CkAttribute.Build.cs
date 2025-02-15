@@ -5,8 +5,6 @@ public class CkAttribute : CkModuleRules
 {
     public CkAttribute(ReadOnlyTargetRules Target) : base(Target)
     {
-        SetupIrisSupport(Target);
-
         PrivateIncludePaths.AddRange(new string[] {
             // ... add other private include paths required here ...
         });
