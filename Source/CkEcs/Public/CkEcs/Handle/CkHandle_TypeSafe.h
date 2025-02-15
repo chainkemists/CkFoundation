@@ -38,6 +38,13 @@ protected:
     FCk_Handle_TypeSafe(const FCk_Handle& InOther);
 };
 
+template<>
+struct TStructOpsTypeTraits<FCk_Handle_TypeSafe> : public TStructOpsTypeTraitsBase2<FCk_Handle_TypeSafe>
+{
+    enum
+    { WithNetSerializer = true };
+};
+
 // --------------------------------------------------------------------------------------------------------------------
 // DO NOT REMOVE THIS STATIC_ASSERT
 
@@ -80,7 +87,14 @@ static_assert
         return ck::Format(TEXT("{}[{}]({})"), InObj.Get_Entity(), InObj.Get_Registry(), InObj.Get_DebugName());   \
     });                                                                                                           \
     static_assert(sizeof(_HandleType_) == sizeof(FCk_Handle),                                                     \
-        "Type-Safe Handle should be EXACTLY the same size as FCk_Handle")
+        "Type-Safe Handle should be EXACTLY the same size as FCk_Handle");                                        \
+\
+    template<> \
+    struct TStructOpsTypeTraits<_HandleType_> : public TStructOpsTypeTraitsBase2<_HandleType_> \
+    { \
+        enum \
+        { WithNetSerializer = true }; \
+    };
 
 // --------------------------------------------------------------------------------------------------------------------
 
