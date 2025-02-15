@@ -128,6 +128,8 @@ public class CkModuleRules : ModuleRules
         CppStandard = CppStandardVersion.Cpp20;
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
+        SetupIrisSupport(Target);
+
         PrivateIncludePaths.AddRange(new string[] {
             // ... add other private include paths required here ...
         });
