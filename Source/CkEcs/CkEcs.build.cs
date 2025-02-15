@@ -5,8 +5,6 @@ public class CkEcs : CkModuleRules
 {
     public CkEcs(ReadOnlyTargetRules Target) : base(Target)
     {
-        SetupIrisSupport(Target);
-
         PublicIncludePaths.AddRange(
             new string[] {
                 // ... add public include paths required here ...
