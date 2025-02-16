@@ -15,43 +15,11 @@
 namespace ck
 {
     auto
-        FProcessor_Interaction_Setup::
-        DoTick(
-            TimeType InDeltaT)
-        -> void
-    {
-        TProcessor::DoTick(InDeltaT);
-    }
-
-    auto
-        FProcessor_Interaction_Setup::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_Interaction_Params& InParams) const
-        -> void
-    {
-        if (InParams.Get_Params().Get_CompletionPolicy() == ECk_Interaction_CompletionPolicy::Timed)
-        {
-            const auto& DurationAttributeParams = FCk_Fragment_FloatAttribute_ParamsData{
-                TAG_InteractionDuration_FloatAttribute_Name,
-                InParams.Get_Params()._InteractionDuration.Get_Seconds()};
-
-            UCk_Utils_FloatAttribute_UE::Add(InHandle, DurationAttributeParams, ECk_Replication::DoesNotReplicate);
-        }
-        InHandle.Remove<MarkedDirtyBy>();
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    auto
         FProcessor_Interaction_HandleRequests::
         DoTick(
             TimeType InDeltaT)
         -> void
     {
-        _TransientEntity.Clear<FTag_Interaction_Updated>();
-
         TProcessor::DoTick(InDeltaT);
 
         _TransientEntity.Clear<MarkedDirtyBy>();
@@ -93,7 +61,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Interaction_Params& InParams) const
+            const FFragment_Interaction_Params& InParams)
         -> void
     {
     }

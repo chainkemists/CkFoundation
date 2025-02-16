@@ -10,7 +10,6 @@ auto
         EcsWorldType& InWorld)
     -> void
 {
-    InWorld.Add<ck::FProcessor_Interaction_Setup>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Interaction_HandleRequests>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Interaction_Teardown>(InWorld.Get_Registry());
 }

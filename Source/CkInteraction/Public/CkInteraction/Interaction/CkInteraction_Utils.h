@@ -122,6 +122,13 @@ public:
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Interaction",
+        DisplayName = "[Ck][Interaction] Get Interaction Distance (Source <-> Target)")
+    static float
+    Get_InteractionDistance(
+        const FCk_Handle_Interaction& InHandle);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Interaction",
         DisplayName = "[Ck][Interaction] Get Interaction Source")
     static FCk_Handle
     Get_InteractionSource(
@@ -167,21 +174,21 @@ public:
         DisplayName = "[Ck][Interaction] Get Interaction Completion Policy")
     static ECk_Interaction_CompletionPolicy
     Get_InteractionCompletionPolicy(
-        UPARAM(ref) FCk_Handle_Interaction& InHandle);
+        const FCk_Handle_Interaction& InHandle);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Interaction",
-        DisplayName = "[Ck][Interaction] Get Interaction InteractionDuration")
+        DisplayName = "[Ck][Interaction] Get Interaction Duration")
     static FCk_Time
-    Get_InteractionInteractionDuration(
-        UPARAM(ref) FCk_Handle_Interaction& InHandle);
+    Get_InteractionDuration(
+        const FCk_Handle_Interaction& InHandle);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Interaction",
-        DisplayName = "[Ck][Interaction] Get Interaction InteractionDurationAttribute")
+        DisplayName = "[Ck][Interaction] Get Interaction Duration Attribute")
     static FCk_Handle_FloatAttribute
-    Get_InteractionInteractionDurationAttribute(
-        UPARAM(ref) FCk_Handle_Interaction& InHandle);
+    Get_InteractionDurationAttribute(
+        const FCk_Handle_Interaction& InHandle);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

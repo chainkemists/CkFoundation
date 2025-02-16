@@ -29,12 +29,12 @@ namespace ck
             TimeType InDeltaT) -> void;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractTarget_Params& InParams,
-            FFragment_InteractTarget_Current& InComp) const -> void;
+            FFragment_InteractTarget_Current& InComp) -> void;
     };
 
     class CKINTERACTION_API FProcessor_InteractTarget_HandleRequests : public ck_exp::TProcessor<
@@ -100,12 +100,12 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractTarget_Params& InParams,
-            FFragment_InteractTarget_Current& InComp) const -> void;
+            FFragment_InteractTarget_Current& InComp) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

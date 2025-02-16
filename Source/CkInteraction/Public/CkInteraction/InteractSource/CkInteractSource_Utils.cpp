@@ -33,11 +33,12 @@ auto
             InInteractSourceOwner,
             InReplicates
         );
-
-        return {};
+    }
+    else
+    {
+        TryAddReplicatedFragment<UCk_Fragment_InteractSource_Rep>(InInteractSourceOwner);
     }
 
-    TryAddReplicatedFragment<UCk_Fragment_InteractSource_Rep>(InInteractSourceOwner);
     return NewInteractSourceEntity;
 }
 
@@ -80,7 +81,7 @@ auto
         FCk_Handle_InteractSource& InInteractSource)
     -> FCk_Handle_InteractSource
 {
-    auto& Requests = InInteractSource.AddOrGet<ck::FFragment_InteractSource_Requests>()._Requests;
+    InInteractSource.AddOrGet<ck::FFragment_InteractSource_Requests>()._Requests;
 
     for (const auto& SignalPair : InInteractSource.Get<ck::FFragment_InteractSource_Current>()._InteractionFinishedSignals)
     {
@@ -119,7 +120,7 @@ auto
 
 auto
     UCk_Utils_InteractSource_UE::
-    Get_InteractionCountPerSourcePolicy(
+    Get_ConcurrentInteractionsPolicy(
         const FCk_Handle_InteractSource& InHandle)
     -> ECk_InteractionSource_ConcurrentInteractionsPolicy
 {
@@ -129,12 +130,45 @@ auto
 auto
     UCk_Utils_InteractSource_UE::
     Get_CurrentInteractions(
-        const FCk_Handle_InteractSource& InHandle)
+        const FCk_Handle_InteractSource& InHandle,
+        ECk_InteractionSource_SortingPolicy InSortingPolicy)
     -> TArray<FCk_Handle_Interaction>
 {
-    auto ToRet = TArray<FCk_Handle_Interaction>{};
-    InHandle.Get<ck::FFragment_InteractSource_Current>()._InteractionFinishedSignals.GetKeys(ToRet);
-    return ToRet;
+    auto CurrentInteractions = TArray<FCk_Handle_Interaction>{};
+    InHandle.Get<ck::FFragment_InteractSource_Current>()._InteractionFinishedSignals.GetKeys(CurrentInteractions);
+
+    switch (InSortingPolicy)
+    {
+        case ECk_InteractionSource_SortingPolicy::NoSorting:
+        {
+            break;
+        }
+        case ECk_InteractionSource_SortingPolicy::ClosestToFarthest:
+        {
+            ck::algo::Sort(CurrentInteractions, [](const FCk_Handle_Interaction& InA, const FCk_Handle_Interaction& InB)
+            {
+                return UCk_Utils_Interaction_UE::Get_InteractionDistance(InA) < UCk_Utils_Interaction_UE::Get_InteractionDistance(InB);
+            });
+
+            break;
+        }
+        case ECk_InteractionSource_SortingPolicy::FarthestToClosest:
+        {
+            ck::algo::Sort(CurrentInteractions, [](const FCk_Handle_Interaction& InA, const FCk_Handle_Interaction& InB)
+            {
+                return UCk_Utils_Interaction_UE::Get_InteractionDistance(InA) > UCk_Utils_Interaction_UE::Get_InteractionDistance(InB);
+            });
+
+            break;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(InSortingPolicy);
+            break;
+        }
+    }
+
+    return CurrentInteractions;
 }
 
 auto
@@ -148,16 +182,16 @@ auto
 
 auto
     UCk_Utils_InteractSource_UE::
-    TryGet_CurrentInteractionsByTarget(
+    TryGet_CurrentInteractions_ByTarget(
         const FCk_Handle_InteractSource& InHandle,
         const FCk_Handle& InTarget)
     -> FCk_Handle_Interaction
 {
-    for (auto& InSignalPair : InHandle.Get<ck::FFragment_InteractSource_Current>()._InteractionFinishedSignals)
+    for (auto& SignalPair : InHandle.Get<ck::FFragment_InteractSource_Current>()._InteractionFinishedSignals)
     {
-        auto& InInteraction = InSignalPair.Key;
-        if (UCk_Utils_Interaction_UE::Get_InteractionTarget(InInteraction) == InTarget)
-        { return InInteraction; }
+        if (const auto& Interaction = SignalPair.Key;
+            UCk_Utils_Interaction_UE::Get_InteractionTarget(Interaction) == InTarget)
+        { return Interaction; }
     }
     return {};
 }

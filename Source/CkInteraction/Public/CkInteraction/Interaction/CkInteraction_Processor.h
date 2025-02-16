@@ -9,34 +9,6 @@
 
 namespace ck
 {
-    class CKINTERACTION_API FProcessor_Interaction_Setup : public ck_exp::TProcessor<
-            FProcessor_Interaction_Setup,
-            FCk_Handle_Interaction,
-            FFragment_Interaction_Params,
-            FTag_Interaction_RequiresSetup,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = FTag_Interaction_RequiresSetup;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto
-        DoTick(
-            TimeType InDeltaT) -> void;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            const FFragment_Interaction_Params& InParams) const -> void;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     class CKINTERACTION_API FProcessor_Interaction_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Interaction_HandleRequests,
             FCk_Handle_Interaction,
@@ -83,11 +55,11 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Interaction_Params& InParams) const -> void;
+            const FFragment_Interaction_Params& InParams) -> void;
     };
 }
 
