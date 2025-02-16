@@ -80,7 +80,7 @@ private:
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractTarget",
-        DisplayName="[Ck][InteractTarget] Request StartInteraction")
+        DisplayName="[Ck][InteractTarget] Request Start Interaction")
     static FCk_Handle_InteractTarget
     Request_StartInteraction(
         UPARAM(ref) FCk_Handle_InteractTarget& InInteractTarget,
@@ -88,7 +88,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractTarget",
-        DisplayName="[Ck][InteractTarget] Request CancelInteraction")
+        DisplayName="[Ck][InteractTarget] Request Cancel Interaction")
     static FCk_Handle_InteractTarget
     Request_CancelInteraction(
         UPARAM(ref) FCk_Handle_InteractTarget& InInteractTarget,
@@ -119,18 +119,39 @@ public:
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|InteractTarget",
-        DisplayName = "[Ck][InteractTarget] Get InteractionChannel")
+        DisplayName = "[Ck][InteractTarget] Get Interaction Channel")
     static const FGameplayTag&
     Get_InteractionChannel(
         const FCk_Handle_InteractTarget& InHandle);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|InteractTarget",
-        DisplayName = "[Ck][InteractTarget] Get CanInteractWith")
+        DisplayName = "[Ck][InteractTarget] Can Interact With")
     static ECk_CanInteractWithResult
     Get_CanInteractWith(
         const FCk_Handle_InteractTarget& InTarget,
         const FCk_Handle& InSource);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|InteractTarget",
+        DisplayName = "[Ck][InteractTarget] Get Concurrent Interactions Policy")
+    static ECk_InteractionTarget_ConcurrentInteractionsPolicy
+    Get_ConcurrentInteractionsPolicy(
+        const FCk_Handle_InteractTarget& InTarget);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|InteractTarget",
+        DisplayName = "[Ck][InteractTarget] Get Interaction Completion Policy")
+    static ECk_Interaction_CompletionPolicy
+    Get_InteractionCompletionPolicy(
+        const FCk_Handle_InteractTarget& InTarget);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|InteractTarget",
+        DisplayName = "[Ck][InteractTarget] Get Interaction Duration")
+    static FCk_Time
+    Get_InteractionDuration(
+        const FCk_Handle_InteractTarget& InTarget);
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractTarget",

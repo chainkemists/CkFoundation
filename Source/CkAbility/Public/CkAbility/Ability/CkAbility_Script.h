@@ -304,7 +304,7 @@ public:
         const FGameplayTagContainer& InRelevantTags);
 
 private:
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly,
+    UPROPERTY(EditDefaultsOnly,
               meta = (AllowPrivateAccess, ShowOnlyInnerProperties))
     FCk_Ability_Script_Data _Data;
 

@@ -22,10 +22,29 @@ auto
 
     NewInteractionEntity.Add<ck::FFragment_Interaction_Params>(InParams);
     NewInteractionEntity.Add<ck::FFragment_Interaction_Current>();
-    NewInteractionEntity.Add<ck::FTag_Interaction_RequiresSetup>();
+
+    if (InParams.Get_CompletionPolicy() == ECk_Interaction_CompletionPolicy::Timed)
+    {
+        const auto& DurationRefillAttributeParams = FCk_Fragment_FloatAttributeRefill_ParamsData{
+            TAG_InteractionDurationRefill_FloatAttribute_Name,
+            1.0f}
+            .Set_StartingState(ECk_Attribute_RefillState::Running)
+            .Set_RefillBehavior(ECk_Attribute_Refill_Policy::Variable);
+
+        const auto DurationAttributeParams = FCk_Fragment_FloatAttribute_ParamsData{
+            TAG_InteractionDuration_FloatAttribute_Name,
+            0.0f}
+            .Set_MinMax(ECk_MinMax::MinMax)
+            .Set_MinValue(0.0f)
+            .Set_MaxValue(InParams.Get_InteractionDuration().Get_Seconds())
+            .Set_EnableRefill(true)
+            .Set_RefillParams(DurationRefillAttributeParams);
+
+        UCk_Utils_FloatAttribute_UE::Add(NewInteractionEntity, DurationAttributeParams, ECk_Replication::DoesNotReplicate);
+    }
 
     UCk_Utils_GameplayLabel_UE::Add(NewInteractionEntity, InParams.Get_InteractionChannel());
-    UCk_Utils_Handle_UE::Set_DebugName(NewInteractionEntity, FName(ck::Format_UE(TEXT("Interaction: Source [{}] Target [{}]"), InParams.Get_Source(), InParams.Get_Target())));
+    UCk_Utils_Handle_UE::Set_DebugName(NewInteractionEntity, *ck::Format_UE(TEXT("Interaction: Source [{}] Target [{}]"), InParams.Get_Source(), InParams.Get_Target()));
 
     UCk_Entity_ConstructionScript_PDA::Request_Construct(NewInteractionEntity, InParams.Get_ConstructionScript(), {});
 
@@ -130,6 +149,18 @@ auto
 
 auto
     UCk_Utils_Interaction_UE::
+    Get_InteractionDistance(
+        const FCk_Handle_Interaction& InHandle)
+    -> float
+{
+    const auto& InteractionSourceActor = Get_InteractionSourceActor(InHandle);
+    const auto& InteractionTargetActor = Get_InteractionTargetActor(InHandle);
+
+    return FVector::Distance(InteractionSourceActor->GetActorLocation(), InteractionTargetActor->GetActorLocation());
+}
+
+auto
+    UCk_Utils_Interaction_UE::
     Get_InteractionSource(
         const FCk_Handle_Interaction& InHandle)
     -> FCk_Handle
@@ -205,7 +236,7 @@ auto
 auto
     UCk_Utils_Interaction_UE::
     Get_InteractionCompletionPolicy(
-        FCk_Handle_Interaction& InHandle)
+        const FCk_Handle_Interaction& InHandle)
     -> ECk_Interaction_CompletionPolicy
 {
     return InHandle.Get<ck::FFragment_Interaction_Params>().Get_Params().Get_CompletionPolicy();
@@ -213,26 +244,21 @@ auto
 
 auto
     UCk_Utils_Interaction_UE::
-    Get_InteractionInteractionDuration(
-        FCk_Handle_Interaction& InHandle)
+    Get_InteractionDuration(
+        const FCk_Handle_Interaction& InHandle)
     -> FCk_Time
 {
-    const auto& DurationAttribute = Get_InteractionInteractionDurationAttribute(InHandle);
-    if (ck::IsValid(DurationAttribute))
-    {
-        return FCk_Time(UCk_Utils_FloatAttribute_UE::Get_FinalValue(DurationAttribute));
-    }
-    // No attribute if Setup hasn't run yet
-    else
-    {
-        return InHandle.Get<ck::FFragment_Interaction_Params>().Get_Params().Get_InteractionDuration();
-    }
+    if (const auto& DurationAttribute = Get_InteractionDurationAttribute(InHandle);
+        ck::IsValid(DurationAttribute))
+    { return FCk_Time(UCk_Utils_FloatAttribute_UE::Get_FinalValue(DurationAttribute)); }
+
+    return InHandle.Get<ck::FFragment_Interaction_Params>().Get_Params().Get_InteractionDuration();
 }
 
 auto
     UCk_Utils_Interaction_UE::
-    Get_InteractionInteractionDurationAttribute(
-        FCk_Handle_Interaction& InHandle)
+    Get_InteractionDurationAttribute(
+        const FCk_Handle_Interaction& InHandle)
     -> FCk_Handle_FloatAttribute
 {
     return UCk_Utils_FloatAttribute_UE::TryGet(InHandle, TAG_InteractionDuration_FloatAttribute_Name);

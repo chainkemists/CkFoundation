@@ -106,7 +106,7 @@ namespace ck
             const FCk_Request_InteractSource_CancelInteraction& InRequest) const
         -> void
     {
-        if (auto Interaction = UCk_Utils_InteractSource_UE::TryGet_CurrentInteractionsByTarget(InHandle, InRequest.Get_InteractTarget());
+        if (auto Interaction = UCk_Utils_InteractSource_UE::TryGet_CurrentInteractions_ByTarget(InHandle, InRequest.Get_InteractTarget());
             ck::IsValid(Interaction))
         {
             UCk_Utils_Interaction_UE::Request_EndInteraction(Interaction, FCk_Request_Interaction_EndInteraction{ECk_SucceededFailed::Failed});
@@ -135,8 +135,8 @@ namespace ck
 
         auto& Current = InteractSource.Get<FFragment_InteractSource_Current>();
 
-        auto InteractionFinishedSignal = Current._InteractionFinishedSignals.Find(InteractionHandle);
-        if (IsValid(InteractionFinishedSignal, IsValid_Policy_NullptrOnly{}))
+        if (auto InteractionFinishedSignal = Current._InteractionFinishedSignals.Find(InteractionHandle);
+            ck::IsValid(InteractionFinishedSignal, IsValid_Policy_NullptrOnly{}))
         {
             InteractionFinishedSignal->release();
         }
@@ -152,7 +152,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractSource_Params& InParams,
-            FFragment_InteractSource_Current& InComp) const
+            FFragment_InteractSource_Current& InComp)
         -> void
     {
         // TODO: This processor doesn't get called, can cause issues if teardown is mid interaction!!!

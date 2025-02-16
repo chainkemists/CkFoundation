@@ -23,6 +23,7 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_InteractionDuration_FloatAttribute_Name);
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(TAG_InteractionDurationRefill_FloatAttribute_Name);
 
 // --------------------------------------------------------------------------------------------------------------------
 

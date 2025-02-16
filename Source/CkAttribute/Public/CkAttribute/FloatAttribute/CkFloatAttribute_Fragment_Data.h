@@ -150,9 +150,12 @@ private:
 
 public:
     CK_PROPERTY_GET(_RefillAttributeName);
-    CK_PROPERTY_GET(_RefillBehavior);
+    CK_PROPERTY(_RefillBehavior);
     CK_PROPERTY_GET(_FillRate);
-    CK_PROPERTY_GET(_StartingState);
+    CK_PROPERTY(_StartingState);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_FloatAttributeRefill_ParamsData, _RefillAttributeName, _FillRate);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -202,8 +205,8 @@ public:
 public:
     CK_PROPERTY_GET(_Name);
     CK_PROPERTY_GET(_BaseValue);
-    CK_PROPERTY_GET(_EnableRefill);
-    CK_PROPERTY_GET(_RefillParams);
+    CK_PROPERTY(_EnableRefill);
+    CK_PROPERTY(_RefillParams);
 
     CK_PROPERTY(_MinMax);
     CK_PROPERTY_SET(_MinValue);
