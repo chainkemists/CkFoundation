@@ -34,11 +34,12 @@ auto
             NewInteractTargetEntity,
             InReplicates
         );
-
-        return NewInteractTargetEntity;
+    }
+    else
+    {
+        TryAddReplicatedFragment<UCk_Fragment_InteractTarget_Rep>(NewInteractTargetEntity);
     }
 
-    TryAddReplicatedFragment<UCk_Fragment_InteractTarget_Rep>(NewInteractTargetEntity);
     return NewInteractTargetEntity;
 }
 
@@ -151,26 +152,26 @@ auto
     if (Get_Enabled(InTarget) == ECk_EnableDisable::Disable)
     { return ECk_CanInteractWithResult::TargetDisabled; }
 
-    const auto& InInteractSource = UCk_Utils_InteractSource_UE::Cast(InSource);
-    if (ck::IsValid(InInteractSource))
+    const auto& InteractSource = UCk_Utils_InteractSource_UE::Cast(InSource);
+    if (ck::IsValid(InteractSource))
     {
-        const auto& SourceChannel = UCk_Utils_InteractSource_UE::Get_InteractionChannel(InInteractSource);
-        const auto& TargetChannel = Get_InteractionChannel(InTarget);
+        const auto& SourceChannel = UCk_Utils_InteractSource_UE::Get_InteractionChannel(InteractSource);
 
-        if (NOT TargetChannel.MatchesTagExact(SourceChannel))
+        if (const auto& TargetChannel = Get_InteractionChannel(InTarget);
+            NOT TargetChannel.MatchesTagExact(SourceChannel))
         { return ECk_CanInteractWithResult::ChannelMismatch; }
 
         // If no multiple interactions, don't allow interactions if any are current or pending
-        if (UCk_Utils_InteractSource_UE::Get_InteractionCountPerSourcePolicy(InInteractSource) == ECk_InteractionSource_ConcurrentInteractionsPolicy::SingleInteraction)
+        if (UCk_Utils_InteractSource_UE::Get_ConcurrentInteractionsPolicy(InteractSource) == ECk_InteractionSource_ConcurrentInteractionsPolicy::SingleInteraction)
         {
-            if (UCk_Utils_InteractSource_UE::Get_CurrentInteractions(InInteractSource).Num() + UCk_Utils_InteractSource_UE::Get_PendingInteractions(InInteractSource).Num() > 0)
+            if (UCk_Utils_InteractSource_UE::Get_CurrentInteractions(InteractSource).Num() + UCk_Utils_InteractSource_UE::Get_PendingInteractions(InteractSource).Num() > 0)
             { return ECk_CanInteractWithResult::MultipleInteractionsDisabledForSource; }
         }
     }
 
     // TODO: This only works on auth currently, will need to duplicate interact targets to allow clients to filter this way
-    const auto& MatchingInteraction = UCk_Utils_Interaction_UE::TryGet(InTarget, InInteractSource, InTarget, Get_InteractionChannel(InTarget));
-    if (ck::IsValid(MatchingInteraction))
+    if (const auto& MatchingInteraction = UCk_Utils_Interaction_UE::TryGet(InTarget, InteractSource, InTarget, Get_InteractionChannel(InTarget));
+        ck::IsValid(MatchingInteraction))
     {
         // No duplicate interactions
         return ECk_CanInteractWithResult::AlreadyExists;
@@ -182,6 +183,33 @@ auto
     { return ECk_CanInteractWithResult::MultipleInteractionsDisabledForTarget; }
 
     return ECk_CanInteractWithResult::CanInteractWith;
+}
+
+auto
+    UCk_Utils_InteractTarget_UE::
+    Get_ConcurrentInteractionsPolicy(
+        const FCk_Handle_InteractTarget& InTarget)
+    -> ECk_InteractionTarget_ConcurrentInteractionsPolicy
+{
+    return InTarget.Get<ck::FFragment_InteractTarget_Params>().Get_Params().Get_ConcurrentInteractionsPolicy();
+}
+
+auto
+    UCk_Utils_InteractTarget_UE::
+    Get_InteractionCompletionPolicy(
+        const FCk_Handle_InteractTarget& InTarget)
+    -> ECk_Interaction_CompletionPolicy
+{
+    return InTarget.Get<ck::FFragment_InteractTarget_Params>().Get_Params().Get_CompletionPolicy();
+}
+
+auto
+    UCk_Utils_InteractTarget_UE::
+    Get_InteractionDuration(
+        const FCk_Handle_InteractTarget& InTarget)
+    -> FCk_Time
+{
+    return InTarget.Get<ck::FFragment_InteractTarget_Params>().Get_Params().Get_InteractionDuration();
 }
 
 auto

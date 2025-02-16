@@ -13,11 +13,6 @@ class UCk_Utils_Interaction_UE;
 
 namespace ck
 {
-    CK_DEFINE_ECS_TAG(FTag_Interaction_RequiresSetup);
-    CK_DEFINE_ECS_TAG(FTag_Interaction_Updated);
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     CK_DEFINE_RECORD_OF_ENTITIES(FFragment_RecordOfInteractions, FCk_Handle_Interaction);
 
     // --------------------------------------------------------------------------------------------------------------------

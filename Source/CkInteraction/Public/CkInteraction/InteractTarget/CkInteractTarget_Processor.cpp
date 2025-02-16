@@ -34,7 +34,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractTarget_Params& InParams,
-            FFragment_InteractTarget_Current& InComp) const
+            FFragment_InteractTarget_Current& InComp)
         -> void
     {
     }
@@ -110,8 +110,8 @@ namespace ck
         InCurrent._InteractionFinishedSignals.Add(InteractionEntity, OnInteractionFinishedConnection);
 
         // This does cause InteractTarget to rely on InteractSource which is not ideal, but works for now and matches the pattern in Resolver
-        auto InteractSource = UCk_Utils_InteractSource_UE::Cast(InteractSourceRawHandle);
-        if (ck::IsValid(InteractSource))
+        if (auto InteractSource = UCk_Utils_InteractSource_UE::Cast(InteractSourceRawHandle);
+            ck::IsValid(InteractSource))
         {
             UCk_Utils_InteractSource_UE::Request_StartInteraction(InteractSource, FCk_Request_InteractSource_StartInteraction{InteractionEntity});
         }
@@ -126,8 +126,8 @@ namespace ck
             const FCk_Request_InteractTarget_CancelInteraction& InRequest) const
         -> void
     {
-        auto MatchingInteraction = UCk_Utils_InteractTarget_UE::TryGet_Interaction(InHandle, InRequest.Get_InteractSource());
-        if (ck::IsValid(MatchingInteraction))
+        if (auto MatchingInteraction = UCk_Utils_InteractTarget_UE::TryGet_Interaction(InHandle, InRequest.Get_InteractSource());
+            ck::IsValid(MatchingInteraction))
         {
             UCk_Utils_Interaction_UE::Request_EndInteraction(MatchingInteraction, FCk_Request_Interaction_EndInteraction{ECk_SucceededFailed::Failed});
         }
@@ -155,8 +155,8 @@ namespace ck
 
         auto& Current = InteractTarget.Get<FFragment_InteractTarget_Current>();
 
-        auto InteractionFinishedSignal = Current._InteractionFinishedSignals.Find(InteractionHandle);
-        if (IsValid(InteractionFinishedSignal, IsValid_Policy_NullptrOnly{}))
+        if (auto InteractionFinishedSignal = Current._InteractionFinishedSignals.Find(InteractionHandle);
+            ck::IsValid(InteractionFinishedSignal, IsValid_Policy_NullptrOnly{}))
         {
             InteractionFinishedSignal->release();
         }
@@ -177,7 +177,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractTarget_Params& InParams,
-            FFragment_InteractTarget_Current& InComp) const
+            FFragment_InteractTarget_Current& InComp)
         -> void
     {
         // TODO: This processor doesn't get called, can cause issues if teardown is mid interaction!!!

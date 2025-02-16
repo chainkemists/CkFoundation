@@ -31,6 +31,16 @@ enum class ECk_InteractionSource_ConcurrentInteractionsPolicy : uint8
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_InteractionSource_ConcurrentInteractionsPolicy);
 
+UENUM(BlueprintType)
+enum class ECk_InteractionSource_SortingPolicy : uint8
+{
+    NoSorting,
+    ClosestToFarthest,
+    FarthestToClosest
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_InteractionSource_SortingPolicy);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))

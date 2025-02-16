@@ -101,16 +101,16 @@ public:
 public:
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|InteractSource",
-        DisplayName = "[Ck][InteractSource] Get InteractionChannel")
+        DisplayName = "[Ck][InteractSource] Get Interaction Channel")
     static const FGameplayTag&
     Get_InteractionChannel(
         const FCk_Handle_InteractSource& InHandle);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|InteractSource",
-        DisplayName = "[Ck][InteractSource] Get InteractionCountPerSourcePolicy")
+        DisplayName = "[Ck][InteractSource] Get Concurrent Interactions Policy")
     static ECk_InteractionSource_ConcurrentInteractionsPolicy
-    Get_InteractionCountPerSourcePolicy(
+    Get_ConcurrentInteractionsPolicy(
         const FCk_Handle_InteractSource& InHandle);
 
     UFUNCTION(BlueprintCallable,
@@ -118,7 +118,8 @@ public:
         DisplayName="[Ck][InteractSource] Get Current Interactions")
     static TArray<FCk_Handle_Interaction>
     Get_CurrentInteractions(
-        const FCk_Handle_InteractSource& InHandle);
+        const FCk_Handle_InteractSource& InHandle,
+        ECk_InteractionSource_SortingPolicy InSortingPolicy = ECk_InteractionSource_SortingPolicy::ClosestToFarthest);
 
     static TArray<FCk_Handle_Interaction>
     Get_PendingInteractions(
@@ -126,9 +127,9 @@ public:
 
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|InteractSource",
-        DisplayName="[Ck][InteractSource] Try Get Current Interactions By Target")
+        DisplayName="[Ck][InteractSource] Try Get Current Interactions (By Target)")
     static FCk_Handle_Interaction
-    TryGet_CurrentInteractionsByTarget(
+    TryGet_CurrentInteractions_ByTarget(
         const FCk_Handle_InteractSource& InHandle,
         const FCk_Handle& InTarget);
 
