@@ -100,12 +100,12 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_InteractSource_Params& InParams,
-            FFragment_InteractSource_Current& InComp) const -> void;
+            FFragment_InteractSource_Current& InComp) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
