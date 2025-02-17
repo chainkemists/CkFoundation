@@ -68,7 +68,12 @@ public:
     ~FEntity_FragmentMapper();
 
 private:
+    mutable DebugWrapperPtrType _DebugNameFragment;
+    mutable TArray<DebugWrapperPtrType> _AllTags;
     mutable TArray<DebugWrapperPtrType> _AllFragments;
+
+    mutable FName _DebugFName = NAME_None;
+    mutable TArray<FName> _TagNames;
     mutable TArray<FName> _FragmentNames;
 
 public:
@@ -142,18 +147,31 @@ auto
     Remove_FragmentInfo() const
     -> void
 {
-    _AllFragments.RemoveAll([&](const DebugWrapperPtrType& InDebugWrapper)
-    {
-        return InDebugWrapper->GetHash() == entt::type_id<T_Fragment>().hash();
-    });
-
     constexpr auto TypeString = ck::TypeToString<T_Fragment>;
     const auto NameToCompare = FName{TypeString.begin(), TypeString.length()};
 
-    _FragmentNames.RemoveAll([&](const FName InName)
+    if constexpr (std::is_empty_v<T_Fragment>)
     {
-        return InName == NameToCompare;
-    });
+        _AllTags.RemoveAll([&](const DebugWrapperPtrType& InDebugWrapper)
+        {
+            return InDebugWrapper->GetHash() == entt::type_id<T_Fragment>().hash();
+        });
+        _TagNames.RemoveAll([&](const FName InName)
+        {
+            return InName == NameToCompare;
+        });
+    }
+    else
+    {
+        _AllFragments.RemoveAll([&](const DebugWrapperPtrType& InDebugWrapper)
+        {
+            return InDebugWrapper->GetHash() == entt::type_id<T_Fragment>().hash();
+        });
+        _FragmentNames.RemoveAll([&](const FName InName)
+        {
+            return InName == NameToCompare;
+        });
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

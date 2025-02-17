@@ -1047,8 +1047,21 @@ auto
         { return new TCk_DebugWrapper<T_Fragment>(&InHandle.Get<T_Fragment, ck::IsValid_Policy_IncludePendingKill>()); }
     }();
 
-    _FragmentNames.Emplace(FragmentInfo->Get_FragmentName(InHandle));
-    _AllFragments.Emplace(FragmentInfo);
+    if constexpr (std::is_empty_v<T_Fragment>)
+    {
+        _AllTags.Emplace(FragmentInfo);
+        _TagNames.Emplace(FragmentInfo->Get_FragmentName(InHandle));
+    }
+    else if constexpr (std::is_same_v<DEBUG_NAME, T_Fragment>)
+    {
+        _DebugNameFragment = FragmentInfo;
+        _DebugFName = FragmentInfo->Get_FragmentName(InHandle);
+    }
+    else
+    {
+        _AllFragments.Emplace(FragmentInfo);
+        _FragmentNames.Emplace(FragmentInfo->Get_FragmentName(InHandle));
+    }
 #endif
 }
 
