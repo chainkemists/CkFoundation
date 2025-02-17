@@ -11,13 +11,25 @@
       </Item>
     </Expand>
   </Type>
+  <Type Name="TCk_DebugWrapper&lt;DEBUG_NAME&gt;">
+    <DisplayString>{{ {_Fragment->_Name} }}</DisplayString>
+  </Type>
   <Type Name="DEBUG_NAME">
     <DisplayString>{{ {_Name} }}</DisplayString>
   </Type>
-  <Type Name="FCk_Handle">
-    <DisplayString>{{ ID{_Entity} Fragments{_Mapper->_AllFragments} }}</DisplayString>
+  <Type Name="NAME_ConstructionScript">
+    <DisplayString>{{ {_Name} }}</DisplayString>
+  </Type>
+  <Type Name="FCk_Handle" Inheritable="true">
+    <DisplayString>{{ ID{_Entity}{*_Mapper->_DebugNameFragment} Tags[{_Mapper->_AllTags.ArrayNum}] Fragments[{_Mapper->_AllFragments.ArrayNum}] }}</DisplayString>
     <Expand>
-      <Item Name="[FragmentArray]">
+      <Item Name="[Name]">
+      (_Mapper->_DebugNameFragment)
+      </Item>
+      <Item Name="[Tags]">
+      (_Mapper->_AllTags)
+      </Item>
+      <Item Name="[Fragments]">
       (_Mapper->_AllFragments)
       </Item>
     </Expand>
