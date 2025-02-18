@@ -25,22 +25,22 @@ auto
 
     if (InParams.Get_CompletionPolicy() == ECk_Interaction_CompletionPolicy::Timed)
     {
-        const auto& DurationRefillAttributeParams = FCk_Fragment_FloatAttributeRefill_ParamsData{
-            TAG_InteractionDurationRefill_FloatAttribute_Name,
+        const auto& TimeRefillAttributeParams = FCk_Fragment_FloatAttributeRefill_ParamsData{
+            TAG_InteractionTimeRefill_FloatAttribute_Name,
             1.0f}
             .Set_StartingState(ECk_Attribute_RefillState::Running)
             .Set_RefillBehavior(ECk_Attribute_Refill_Policy::Variable);
 
-        const auto DurationAttributeParams = FCk_Fragment_FloatAttribute_ParamsData{
-            TAG_InteractionDuration_FloatAttribute_Name,
+        const auto TimeAttributeParams = FCk_Fragment_FloatAttribute_ParamsData{
+            TAG_InteractionTime_FloatAttribute_Name,
             0.0f}
             .Set_MinMax(ECk_MinMax::MinMax)
             .Set_MinValue(0.0f)
             .Set_MaxValue(InParams.Get_InteractionDuration().Get_Seconds())
             .Set_EnableRefill(true)
-            .Set_RefillParams(DurationRefillAttributeParams);
+            .Set_RefillParams(TimeRefillAttributeParams);
 
-        UCk_Utils_FloatAttribute_UE::Add(NewInteractionEntity, DurationAttributeParams, ECk_Replication::DoesNotReplicate);
+        UCk_Utils_FloatAttribute_UE::Add(NewInteractionEntity, TimeAttributeParams, ECk_Replication::DoesNotReplicate);
     }
 
     UCk_Utils_GameplayLabel_UE::Add(NewInteractionEntity, InParams.Get_InteractionChannel());
@@ -248,20 +248,27 @@ auto
         const FCk_Handle_Interaction& InHandle)
     -> FCk_Time
 {
-    if (const auto& DurationAttribute = Get_InteractionDurationAttribute(InHandle);
-        ck::IsValid(DurationAttribute))
-    { return FCk_Time(UCk_Utils_FloatAttribute_UE::Get_FinalValue(DurationAttribute)); }
-
-    return InHandle.Get<ck::FFragment_Interaction_Params>().Get_Params().Get_InteractionDuration();
+    const auto& TimeAttribute = Get_InteractionTimeAttribute(InHandle);
+    return FCk_Time{UCk_Utils_FloatAttribute_UE::Get_FinalValue(TimeAttribute, ECk_MinMaxCurrent::Max)};
 }
 
 auto
     UCk_Utils_Interaction_UE::
-    Get_InteractionDurationAttribute(
+    Get_InteractionTimeElapsed(
+        const FCk_Handle_Interaction& InHandle)
+    -> FCk_Time
+{
+    const auto& TimeAttribute = Get_InteractionTimeAttribute(InHandle);
+    return FCk_Time{UCk_Utils_FloatAttribute_UE::Get_FinalValue(TimeAttribute, ECk_MinMaxCurrent::Current)};
+}
+
+auto
+    UCk_Utils_Interaction_UE::
+    Get_InteractionTimeAttribute(
         const FCk_Handle_Interaction& InHandle)
     -> FCk_Handle_FloatAttribute
 {
-    return UCk_Utils_FloatAttribute_UE::TryGet(InHandle, TAG_InteractionDuration_FloatAttribute_Name);
+    return UCk_Utils_FloatAttribute_UE::TryGet(InHandle, TAG_InteractionTime_FloatAttribute_Name);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

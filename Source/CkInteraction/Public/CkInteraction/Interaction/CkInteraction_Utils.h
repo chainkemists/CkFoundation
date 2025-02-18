@@ -185,9 +185,16 @@ public:
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Interaction",
-        DisplayName = "[Ck][Interaction] Get Interaction Duration Attribute")
+        DisplayName = "[Ck][Interaction] Get Interaction Time Elapsed")
+    static FCk_Time
+    Get_InteractionTimeElapsed(
+        const FCk_Handle_Interaction& InHandle);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Interaction",
+        DisplayName = "[Ck][Interaction] Get Interaction Time Attribute")
     static FCk_Handle_FloatAttribute
-    Get_InteractionDurationAttribute(
+    Get_InteractionTimeAttribute(
         const FCk_Handle_Interaction& InHandle);
 };
 
