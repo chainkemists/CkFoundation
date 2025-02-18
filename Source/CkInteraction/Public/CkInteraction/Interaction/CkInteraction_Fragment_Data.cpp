@@ -3,7 +3,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_InteractionChannel, TEXT("InteractionChannel"));
-UE_DEFINE_GAMEPLAY_TAG(TAG_InteractionDuration_FloatAttribute_Name, TEXT("FloatAttribute.Interaction.Duration"));
-UE_DEFINE_GAMEPLAY_TAG(TAG_InteractionDurationRefill_FloatAttribute_Name, TEXT("FloatAttribute.Interaction.Duration.Refill"));
+UE_DEFINE_GAMEPLAY_TAG(TAG_InteractionTime_FloatAttribute_Name, TEXT("FloatAttribute.Interaction.Time"));
+UE_DEFINE_GAMEPLAY_TAG(TAG_InteractionTimeRefill_FloatAttribute_Name, TEXT("FloatAttribute.Interaction.Time.Refill"));
 
 // --------------------------------------------------------------------------------------------------------------------
