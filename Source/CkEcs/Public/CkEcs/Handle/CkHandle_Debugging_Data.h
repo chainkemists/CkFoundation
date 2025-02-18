@@ -14,6 +14,14 @@ class CKECS_API UCk_Handle_FragmentsDebug : public UObject
 private:
     UPROPERTY(BlueprintReadOnly,
         meta=(AllowPrivateAccess))
+    FName _DebugName;
+
+    UPROPERTY(BlueprintReadOnly,
+        meta=(AllowPrivateAccess))
+    TArray<FName> _Tags;
+
+    UPROPERTY(BlueprintReadOnly,
+        meta=(AllowPrivateAccess))
     TArray<FName> _Names;
 };
 
