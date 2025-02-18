@@ -141,6 +141,7 @@ auto
     { return; }
 
     _PostLoadMapWithWorldDelegateHandle = FCoreUObjectDelegates::PostLoadMapWithWorld.AddUObject(this, &UCk_AbilityCueReplicator_Subsystem_UE::OnPostLoadMapWithWorld);
+    _PostLoginEventDelegateHandle = FGameModeEvents::GameModePostLoginEvent.AddUObject(this, &UCk_AbilityCueReplicator_Subsystem_UE::OnPostLoginEvent);
 }
 
 auto
@@ -151,6 +152,7 @@ auto
     Super::Deinitialize();
 
     FCoreUObjectDelegates::PostLoadMapWithWorld.Remove(_PostLoadMapWithWorldDelegateHandle);
+    FGameModeEvents::GameModePostLoginEvent.Remove(_PostLoadMapWithWorldDelegateHandle);
 }
 
 auto
@@ -258,6 +260,19 @@ auto
     for (auto It = InWorld->GetPlayerControllerIterator(); It; ++It)
     {
        DoSpawnCueReplicatorActorsForPlayerController(It->Get());
+    }
+}
+
+auto
+    UCk_AbilityCueReplicator_Subsystem_UE::
+    OnPostLoginEvent(
+        AGameModeBase* GameMode,
+        APlayerController* NewPlayer)
+    -> void
+{
+    if (NOT _ValidPlayerControllers.Contains(NewPlayer))
+    {
+        DoSpawnCueReplicatorActorsForPlayerController(NewPlayer);
     }
 }
 

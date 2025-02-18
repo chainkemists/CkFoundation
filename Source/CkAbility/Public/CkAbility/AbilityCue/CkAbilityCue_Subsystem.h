@@ -94,6 +94,11 @@ private:
     OnPostLoadMapWithWorld(
         UWorld* InWorld) -> void;
 
+    auto
+    OnPostLoginEvent(
+        AGameModeBase* GameMode,
+        APlayerController* NewPlayer) -> void;
+
 private:
     UPROPERTY(Transient)
     TArray<TObjectPtr<ACk_AbilityCueReplicator_UE>> _AbilityCueReplicators;
@@ -104,6 +109,7 @@ private:
 
 private:
     FDelegateHandle _PostLoadMapWithWorldDelegateHandle;
+    FDelegateHandle _PostLoginEventDelegateHandle;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
