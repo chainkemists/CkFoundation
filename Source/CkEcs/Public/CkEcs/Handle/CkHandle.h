@@ -1055,7 +1055,7 @@ auto
     else if constexpr (std::is_same_v<DEBUG_NAME, T_Fragment>)
     {
         _DebugNameFragment = FragmentInfo;
-        _DebugFName = FragmentInfo->Get_FragmentName(InHandle);
+        _DebugFName = InHandle.Get<DEBUG_NAME>().Get_Name();
     }
     else
     {
