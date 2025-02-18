@@ -10,6 +10,7 @@
 #include <Algo/Count.h>
 #include <Algo/Sort.h>
 #include <Algo/Find.h>
+#include <Algo/RemoveIf.h>
 #include <Algo/MaxElement.h>
 #include <Algo/MinElement.h>
 
@@ -101,6 +102,28 @@ namespace ck::algo
         { return {}; }
 
         return *Found;
+    }
+
+    template <typename T_ItrType, typename T_UnaryFunction>
+    auto
+        RemoveIf(
+            T_ItrType InItrBegin,
+            T_ItrType InItrEnd,
+            T_UnaryFunction InFunc)
+        -> void
+    {
+        std::remove_if(InItrBegin, InItrEnd, InFunc);
+    }
+
+    template <typename T_ValueType, typename T_UnaryFunction>
+    auto
+        RemoveIf(
+            TArray<T_ValueType>& InArray,
+            T_UnaryFunction InFunc)
+        -> void
+    {
+        // Algo::RemoveIf is marked nodiscard but we don't need the return value
+        [[maybe_unused]] const auto NumRemoved = Algo::RemoveIf(InArray, InFunc);
     }
 
     template <typename T_Container, typename T_ProjectionType>
