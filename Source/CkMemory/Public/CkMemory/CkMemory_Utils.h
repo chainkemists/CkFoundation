@@ -4,6 +4,8 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
+#include <Subsystems/EngineSubsystem.h>
+
 #include "CkMemory_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -72,6 +74,30 @@ public:
     static FCk_Utils_Memory_MemoryCountSnapshot_Result
     Get_MemoryCountSnapshot(
         const UObject* InContext = nullptr);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(DisplayName = "CkSubsystem_Stats")
+class CKMEMORY_API UCk_Stats_Subsystem_UE : public UEngineSubsystem
+{
+    GENERATED_BODY()
+
+public:
+    auto
+        Initialize(
+            FSubsystemCollectionBase& Collection)
+            -> void override;
+    auto
+        Deinitialize()
+            -> void override;
+    static auto
+        Get_MemoryCountSnapshot(
+            const UObject* InContext) -> FCk_Utils_Memory_MemoryCountSnapshot_Result;
+
+private:
+    static TUniquePtr<class FMemoryStatsUpdateTask> _MemoryUpdateTask;
+    static FRunnableThread* _MemoryUpdateThread;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
