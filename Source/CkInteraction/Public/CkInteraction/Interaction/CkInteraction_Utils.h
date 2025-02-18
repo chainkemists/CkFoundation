@@ -181,7 +181,8 @@ public:
         DisplayName = "[Ck][Interaction] Get Interaction Duration")
     static FCk_Time
     Get_InteractionDuration(
-        const FCk_Handle_Interaction& InHandle);
+        const FCk_Handle_Interaction& InHandle,
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Max);
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Interaction",

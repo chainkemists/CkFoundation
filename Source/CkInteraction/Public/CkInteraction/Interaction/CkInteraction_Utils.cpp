@@ -245,12 +245,17 @@ auto
 auto
     UCk_Utils_Interaction_UE::
     Get_InteractionDuration(
-        const FCk_Handle_Interaction& InHandle)
+        const FCk_Handle_Interaction& InHandle,
+        ECk_MinMaxCurrent InAttributeComponent)
     -> FCk_Time
 {
     if (const auto& DurationAttribute = Get_InteractionDurationAttribute(InHandle);
         ck::IsValid(DurationAttribute))
-    { return FCk_Time(UCk_Utils_FloatAttribute_UE::Get_FinalValue(DurationAttribute)); }
+    { return FCk_Time{UCk_Utils_FloatAttribute_UE::Get_FinalValue(DurationAttribute, InAttributeComponent)}; }
+
+    CK_ENSURE_IF_NOT(InAttributeComponent == ECk_MinMaxCurrent::Max, TEXT("Trying to get interaction duration attribute from interaction [{}] before attribute has been initialized!"),
+        InHandle)
+    { return {}; }
 
     return InHandle.Get<ck::FFragment_Interaction_Params>().Get_Params().Get_InteractionDuration();
 }
