@@ -138,7 +138,28 @@ public:
     static auto
     Get_TagsWithCount_FromContainer(
         const FGameplayTagCountContainer& InTagContainer) -> TMap<FGameplayTag, int32>;
+
+    template <typename... T_Tags>
+    static auto
+    Get_GameplayTagContainerFromTags(
+        T_Tags... InTags) -> FGameplayTagContainer;
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+template <typename ... T_Tags>
+auto
+    UCk_Utils_GameplayTag_UE::
+    Get_GameplayTagContainerFromTags(
+        T_Tags... InTags)
+        -> FGameplayTagContainer
+{
+    static_assert((std::is_same_v<T_Tags, FGameplayTag> && ...), "All parameters MUST be FGameplayTag");
+
+    auto Container = FGameplayTagContainer{};
+    (Container.AddTag(InTags), ...);
+    return Container;
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
