@@ -1038,4 +1038,31 @@ auto
     }
 }
 
+auto
+    UCk_Utils_FloatAttributeModifier_UE::
+    Request_ClearAllModifiers(
+        FCk_Handle_FloatAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent)
+    -> void
+{
+    switch(InAttributeComponent)
+    {
+    case ECk_MinMaxCurrent::Current:
+    {
+        FloatAttributeModifier_Utils_Current::Request_ClearAllModifiers(InAttribute);
+        break;
+    }
+    case ECk_MinMaxCurrent::Min:
+    {
+        FloatAttributeModifier_Utils_Min::Request_ClearAllModifiers(InAttribute);
+        break;
+    }
+    case ECk_MinMaxCurrent::Max:
+    {
+        FloatAttributeModifier_Utils_Max::Request_ClearAllModifiers(InAttribute);
+        break;
+    }
+    }
+}
+
 // --------------------------------------------------------------------------------------------------------------------
