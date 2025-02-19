@@ -918,4 +918,31 @@ auto
     }
 }
 
+auto
+    UCk_Utils_ByteAttributeModifier_UE::
+    Request_ClearAllModifiers(
+        FCk_Handle_ByteAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent)
+    -> void
+{
+    switch (InAttributeComponent)
+    {
+        case ECk_MinMaxCurrent::Current:
+        {
+            ByteAttributeModifier_Utils_Current::Request_ClearAllModifiers(InAttribute);
+            break;
+        }
+        case ECk_MinMaxCurrent::Min:
+        {
+            ByteAttributeModifier_Utils_Min::Request_ClearAllModifiers(InAttribute);
+            break;
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            ByteAttributeModifier_Utils_Max::Request_ClearAllModifiers(InAttribute);
+            break;
+        }
+    }
+}
+
 // --------------------------------------------------------------------------------------------------------------------
