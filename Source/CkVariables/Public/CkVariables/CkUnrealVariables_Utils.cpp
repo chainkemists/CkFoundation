@@ -33,6 +33,17 @@ auto                                                                            
                                                                                                       \
 auto                                                                                                  \
     _UtilsName_::                                                                                     \
+    Get_Exec(                                                                                         \
+        const FCk_Handle& InHandle,                                                                   \
+        FGameplayTag InVariableName,                                                                  \
+        ECk_SucceededFailed& OutSuccessFail)                                                          \
+    -> _Type_                                                                                         \
+{                                                                                                     \
+    return Get(InHandle, InVariableName, OutSuccessFail);                                             \
+}                                                                                                     \
+                                                                                                      \
+auto                                                                                                  \
+    _UtilsName_::                                                                                     \
     Set(                                                                                              \
         FCk_Handle& InHandle,                                                                         \
         FGameplayTag InVariableName,                                                                  \
@@ -137,6 +148,19 @@ auto
 
 auto
     UCk_Utils_Variables_UObject_UE::
+    Get_Exec(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        TSubclassOf<UObject> InObject,
+        ECk_Recursion InRecursion,
+        ECk_SucceededFailed& OutSuccessFail)
+    -> UObject*
+{
+    return Get(InHandle, InVariableName, InObject, InRecursion, OutSuccessFail);
+}
+
+auto
+    UCk_Utils_Variables_UObject_UE::
     Set(
         FCk_Handle& InHandle,
         FGameplayTag InVariableName,
@@ -237,6 +261,19 @@ auto
 
 auto
     UCk_Utils_Variables_UObject_SubclassOf_UE::
+    Get_Exec(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        TSubclassOf<UObject> InObject,
+        ECk_Recursion InRecursion,
+        ECk_SucceededFailed& OutSuccessFail)
+    -> TSubclassOf<UObject>
+{
+    return Get(InHandle, InVariableName, InObject, InRecursion, OutSuccessFail);
+}
+
+auto
+    UCk_Utils_Variables_UObject_SubclassOf_UE::
     Set(
         FCk_Handle& InHandle,
         FGameplayTag InVariableName,
@@ -319,6 +356,18 @@ auto
 
     OutSuccessFail = ECk_SucceededFailed::Succeeded;
     return UtilsType::Get(MaybeEntity, InVariableName);
+}
+
+auto
+    UCk_Utils_Variables_Entity_UE::
+    Get_Exec(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
+        ECk_SucceededFailed& OutSuccessFail)
+    -> FCk_Handle
+{
+    return Get(InHandle, InVariableName, InRecursion, OutSuccessFail);
 }
 
 auto
