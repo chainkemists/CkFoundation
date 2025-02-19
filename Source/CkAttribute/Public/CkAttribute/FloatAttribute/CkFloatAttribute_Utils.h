@@ -404,6 +404,13 @@ public:
         const TFunction<void(FCk_Handle_FloatAttributeModifier)>& InFunc,
         const TFunction<bool(FCk_Handle_FloatAttributeModifier)>& InPredicate,
         ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current) -> void;
+
+public:
+    UFUNCTION(BlueprintCallable)
+    static void
+    Request_ClearAllModifiers(
+        FCk_Handle_FloatAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
