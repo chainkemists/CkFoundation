@@ -336,6 +336,12 @@ public:
         const TFunction<void(FCk_Handle_ByteAttributeModifier)>& InFunc,
         const TFunction<bool(FCk_Handle_ByteAttributeModifier)>& InPredicate,
         ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current) -> void;
+
+public:
+    static auto
+    Request_ClearAllModifiers(
+        FCk_Handle_ByteAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
