@@ -180,6 +180,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Recursion);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_CreateDestroy : uint8
+{
+    Create,
+    Destroy
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_CreateDestroy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_SucceededFailed : uint8
 {
     Succeeded,
