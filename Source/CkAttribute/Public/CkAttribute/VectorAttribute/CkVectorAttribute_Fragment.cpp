@@ -116,6 +116,7 @@ auto
             ck::attribute::Verbose(TEXT("Replicating VECTOR Attribute [{}] for the FIRST time to [{}|{}]"), AttributeToReplicate.Get_AttributeName(),
                 AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Final());
 
+            UCk_Utils_VectorAttributeModifier_UE::Request_ClearAllModifiers(AttributeEntity, AttributeToReplicate.Get_Component());
             UCk_Utils_VectorAttribute_UE::Request_Override(AttributeEntity, AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Component());
 
             const auto& MaybeModifier = UCk_Utils_VectorAttributeModifier_UE::TryGet(AttributeEntity, ck::FAttributeModifier_ReplicationTags::Get_FinalTag(),
@@ -145,6 +146,7 @@ auto
             ck::attribute::Verbose(TEXT("Replicating VECTOR Attribute [{}] and UPDATING it to [{}|{}]"), AttributeToReplicate.Get_AttributeName(),
                 AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Final());
 
+            UCk_Utils_VectorAttributeModifier_UE::Request_ClearAllModifiers(AttributeEntity, AttributeToReplicate.Get_Component());
             UCk_Utils_VectorAttribute_UE::Request_Override(
                 AttributeEntity, AttributeToReplicate.Get_Base(), AttributeToReplicate.Get_Component());
 

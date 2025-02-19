@@ -918,4 +918,31 @@ auto
     }
 }
 
+auto
+    UCk_Utils_VectorAttributeModifier_UE::
+    Request_ClearAllModifiers(
+        FCk_Handle_VectorAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent)
+    -> void
+{
+    switch (InAttributeComponent)
+    {
+        case ECk_MinMaxCurrent::Current:
+        {
+            VectorAttributeModifier_Utils_Current::Request_ClearAllModifiers(InAttribute);
+            break;
+        }
+        case ECk_MinMaxCurrent::Min:
+        {
+            VectorAttributeModifier_Utils_Min::Request_ClearAllModifiers(InAttribute);
+            break;
+        }
+        case ECk_MinMaxCurrent::Max:
+        {
+            VectorAttributeModifier_Utils_Max::Request_ClearAllModifiers(InAttribute);
+            break;
+        }
+    }
+}
+
 // --------------------------------------------------------------------------------------------------------------------

@@ -335,6 +335,12 @@ public:
         const TFunction<void(FCk_Handle_VectorAttributeModifier)>& InFunc,
         const TFunction<bool(FCk_Handle_VectorAttributeModifier)>& InPredicate,
         ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current) -> void;
+
+public:
+    static auto
+    Request_ClearAllModifiers(
+        FCk_Handle_VectorAttribute& InAttribute,
+        ECk_MinMaxCurrent InAttributeComponent = ECk_MinMaxCurrent::Current) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
