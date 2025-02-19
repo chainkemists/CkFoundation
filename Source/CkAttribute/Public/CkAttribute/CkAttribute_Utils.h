@@ -132,8 +132,7 @@ namespace ck
 
         static auto
         Request_ClearAllModifiers(
-            AttributeHandleType& InAttributeHandle,
-            ECk_AttributeValueChange_SyncPolicy InSyncPolicy = ECk_AttributeValueChange_SyncPolicy::TrySyncToClients) -> void;
+            AttributeHandleType& InAttributeHandle) -> void;
 
         static auto
         Override(
