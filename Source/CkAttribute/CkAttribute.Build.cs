@@ -17,6 +17,7 @@ public class CkAttribute : CkModuleRules
             "GameplayTags",
             "StructUtils",
             "NetCore",
+            "GameplayAbilities",
 
             "CkCore",
             "CkEcs",

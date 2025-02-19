@@ -2,6 +2,7 @@
 
 #include "CkAttribute_Utils.h"
 
+#include "CkCore/GameplayTag/CkGameplayTag_Utils.h"
 #include "CkCore/Math/Arithmetic/CkArithmetic_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -191,6 +192,30 @@ namespace ck
         { TUtils_Attribute<AttributeFragmentType>::Request_TryReplicateAttribute(InAttributeHandle); }
 
         std::ignore = DoAddNewModifierToAttribute(InAttributeHandle, InModifierDelta, InModifierOperation, ECk_ModifierOperation_RevocablePolicy::NotRevocable);
+    }
+
+    template <typename T_DerivedAttributeModifier>
+    auto
+        TUtils_AttributeModifier<T_DerivedAttributeModifier>::
+        Request_ClearAllModifiers(
+            AttributeHandleType& InAttributeHandle,
+            ECk_AttributeValueChange_SyncPolicy InSyncPolicy)
+        -> void
+    {
+        RecordOfAttributeModifiers_Utils::ForEach_Entry(InAttributeHandle, [&](AttributeModifierHandleType InAttributeModifier)
+        {
+            if (UCk_Utils_GameplayLabel_UE::Has(InAttributeModifier) &&
+                UCk_Utils_GameplayLabel_UE::MatchesAny(InAttributeModifier,
+                    UCk_Utils_GameplayTag_UE::Get_GameplayTagContainerFromTags(
+                        FAttributeModifier_ReplicationTags::Get_BaseTag(),
+                        FAttributeModifier_ReplicationTags::Get_FinalTag()
+                )))
+            { return; }
+
+            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAttributeModifier);
+        });
+
+
     }
 
     template <typename T_DerivedAttributeModifier>
