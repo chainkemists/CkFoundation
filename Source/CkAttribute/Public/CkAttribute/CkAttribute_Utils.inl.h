@@ -198,24 +198,25 @@ namespace ck
     auto
         TUtils_AttributeModifier<T_DerivedAttributeModifier>::
         Request_ClearAllModifiers(
-            AttributeHandleType& InAttributeHandle,
-            ECk_AttributeValueChange_SyncPolicy InSyncPolicy)
+            AttributeHandleType& InAttributeHandle)
         -> void
     {
-        RecordOfAttributeModifiers_Utils::ForEach_Entry(InAttributeHandle, [&](AttributeModifierHandleType InAttributeModifier)
-        {
-            if (UCk_Utils_GameplayLabel_UE::Has(InAttributeModifier) &&
-                UCk_Utils_GameplayLabel_UE::MatchesAny(InAttributeModifier,
-                    UCk_Utils_GameplayTag_UE::Get_GameplayTagContainerFromTags(
-                        FAttributeModifier_ReplicationTags::Get_BaseTag(),
-                        FAttributeModifier_ReplicationTags::Get_FinalTag()
-                )))
-            { return; }
+        static const auto TagsToIgnore = UCk_Utils_GameplayTag_UE::Get_GameplayTagContainerFromTags(
+            FAttributeModifier_ReplicationTags::Get_BaseTag(), FAttributeModifier_ReplicationTags::Get_FinalTag());
 
-            UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAttributeModifier);
-        });
+        RecordOfAttributeModifiers_Utils::ForEach_Entry_If(InAttributeHandle, [](
+            AttributeModifierHandleType InAttributeModifier)
+            {
+                UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAttributeModifier);
+            }, [](
+            AttributeModifierHandleType InAttributeModifier)
+            {
+                if (UCk_Utils_GameplayLabel_UE::Has(InAttributeModifier) &&
+                    UCk_Utils_GameplayLabel_UE::MatchesAny(InAttributeModifier, TagsToIgnore))
+                { return false; }
 
-
+                return true;
+            });
     }
 
     template <typename T_DerivedAttributeModifier>
