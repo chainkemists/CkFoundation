@@ -40,8 +40,17 @@ auto
     -> void
 {
 #if CK_BUILD_RELEASE
+    QUICK_SCOPE_CYCLE_COUNTER(AddCheats_ReleaseBuild)
     Super::AddCheats(InForce);
 #else
+    if (InForce || _AddMultiplayerCheats)
+    {
+        QUICK_SCOPE_CYCLE_COUNTER(AddCheats_NonReleaseBuild_True)
+    }
+    else
+    {
+        QUICK_SCOPE_CYCLE_COUNTER(AddCheats_NonReleaseBuild_False)
+    }
     Super::AddCheats(InForce || _AddMultiplayerCheats);
 #endif
 }

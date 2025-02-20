@@ -12,8 +12,16 @@ auto
     -> bool
 {
 #if CK_BUILD_RELEASE
+    QUICK_SCOPE_CYCLE_COUNTER(AAllowCheats_ReleaseBuild)
     return Super::AllowCheats(InPlayerController);
 #else
+    if (_AllowMultiplayerCheats ? _AllowMultiplayerCheats : Super::AllowCheats(InPlayerController))
+    {
+        QUICK_SCOPE_CYCLE_COUNTER(AAllowCheats_NonReleaseBuild_True)
+    }
+    {
+        QUICK_SCOPE_CYCLE_COUNTER(AAllowCheats_NonReleaseBuild_False)
+    }
     return _AllowMultiplayerCheats ? _AllowMultiplayerCheats : Super::AllowCheats(InPlayerController);
 #endif
 }
