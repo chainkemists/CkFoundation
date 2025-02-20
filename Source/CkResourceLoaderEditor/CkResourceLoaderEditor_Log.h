@@ -8,7 +8,7 @@ CKRESOURCELOADEREDITOR_API DECLARE_LOG_CATEGORY_EXTERN(CkResourceLoaderEditor, L
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck::resource_loader
+namespace ck::resource_loader_editor
 {
     CK_DEFINE_LOG_FUNCTIONS(CkResourceLoaderEditor);
 }

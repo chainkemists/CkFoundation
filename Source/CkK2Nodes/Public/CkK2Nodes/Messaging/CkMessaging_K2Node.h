@@ -4,7 +4,7 @@
 
 #include "CkEditorGraph/CkEditorGraph_Utils.h"
 
-#include "CkK2Nodes/CkUFunctionBase_K2Node.h"
+#include "CkEditorGraph/CkUFunctionBase_K2Node.h"
 
 #include "CkMessaging/CkMessaging_Fragment_Data.h"
 
@@ -65,10 +65,7 @@ protected:
     PURE_VIRTUAL(UCk_K2Node_Message_Base::DoGet_MessageDefinitionPinsDirection, return ECk_EditorGraph_PinDirection::Input; );
 
 public:
-    UFUNCTION()
-    void RefreshMessageDefinition();
-
-    void CreatePinsFromMessageDefinition();
+    auto CreatePinsFromMessageDefinition() -> void;
 
 public:
     UPROPERTY(EditDefaultsOnly)

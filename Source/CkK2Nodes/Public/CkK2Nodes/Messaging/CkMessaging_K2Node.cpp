@@ -163,15 +163,6 @@ auto
 
 auto
     UCk_K2Node_Message_Base::
-    RefreshMessageDefinition()
-    -> void
-{
-    ReconstructNode();
-    GetGraph()->NotifyGraphChanged();
-}
-
-auto
-    UCk_K2Node_Message_Base::
     CreatePinsFromMessageDefinition()
     -> void
 {
@@ -238,7 +229,7 @@ auto
         return CK_UTILS_IO_GET_LOCTEXT
         (
             TEXT("UCk_K2Node_Message_Broadcast"),
-            TEXT("[Ck][Messaging] Broadcast New Message (INVALID Definition)")
+            TEXT("[Ck][Messaging] Broadcast New Message\n(INVALID Message Definition)")
         );
     }
 
@@ -248,7 +239,7 @@ auto
         return CK_UTILS_IO_GET_LOCTEXT
         (
             TEXT("UCk_K2Node_Message_Broadcast"),
-            TEXT("[Ck][Messaging] Broadcast New Message (INVALID Message Name)")
+            TEXT("[Ck][Messaging] Broadcast New Message\n(INVALID Message Name)")
         );
     }
 
@@ -257,14 +248,14 @@ auto
         return CK_UTILS_IO_GET_LOCTEXT
         (
             TEXT("UCk_K2Node_Message_Broadcast"),
-            TEXT("[Ck][Messaging] Broadcast New Message (INVALID Message Payload)")
+            TEXT("[Ck][Messaging] Broadcast New Message\n(INVALID Message Payload)")
         );
     }
 
     return CK_UTILS_IO_GET_LOCTEXT
     (
         TEXT("UCk_K2Node_Message_Broadcast"),
-        *ck::Format_UE(TEXT("[Ck][Messaging] Broadcast New Message ({})"), MessageName)
+        *ck::Format_UE(TEXT("[Ck][Messaging] Broadcast New Message\n({})"), MessageName)
     );
 }
 
@@ -487,7 +478,7 @@ auto
         return CK_UTILS_IO_GET_LOCTEXT
         (
             TEXT("UCk_K2Node_Message_Listen"),
-            TEXT("[Ck][Messaging] Listen For New Message (INVALID Definition)")
+            TEXT("[Ck][Messaging] Listen For New Message\n(INVALID Message Definition)")
         );
     }
 
@@ -497,7 +488,7 @@ auto
         return CK_UTILS_IO_GET_LOCTEXT
         (
             TEXT("UCk_K2Node_Message_Listen"),
-            TEXT("[Ck][Messaging] Listen For New Message (INVALID Message Name)")
+            TEXT("[Ck][Messaging] Listen For New Message\n(INVALID Message Name)")
         );
     }
 
@@ -506,14 +497,14 @@ auto
         return CK_UTILS_IO_GET_LOCTEXT
         (
             TEXT("UCk_K2Node_Message_Listen"),
-            TEXT("[Ck][Messaging] Listen For New Message (INVALID Message Payload)")
+            TEXT("[Ck][Messaging] Listen For New Message\n(INVALID Message Payload)")
         );
     }
 
     return CK_UTILS_IO_GET_LOCTEXT
     (
         TEXT("UCk_K2Node_Message_Listen"),
-        *ck::Format_UE(TEXT("[Ck][Messaging] Listen For New Message ({})"), MessageName)
+        *ck::Format_UE(TEXT("[Ck][Messaging] Listen For New Message\n({})"), MessageName)
     );
 }
 
@@ -612,15 +603,15 @@ auto
         return;
     }
 
-    const auto& MessageName = _MessageDefinition->Get_MessageName();
-    if (ck::Is_NOT_Valid(MessageName))
+    if (const auto& MessageName = _MessageDefinition->Get_MessageName();
+        ck::Is_NOT_Valid(MessageName))
     {
         InCompilerContext.MessageLog.Error(*LOCTEXT("Invalid Message Definition Name", "Message Definition @@ has an Invalid Message Name. @@").ToString(), _MessageDefinition, this);
         return;
     }
 
-    const auto& MessagePayload = _MessageDefinition->Get_MessagePayload();
-    if (ck::Is_NOT_Valid(MessagePayload))
+    if (const auto& MessagePayload = _MessageDefinition->Get_MessagePayload();
+        ck::Is_NOT_Valid(MessagePayload))
     {
         InCompilerContext.MessageLog.Error(*LOCTEXT("Invalid Message Definition Payload", "Message Definition @@ has an Invalid Message Payload. @@").ToString(), _MessageDefinition, this);
         return;
