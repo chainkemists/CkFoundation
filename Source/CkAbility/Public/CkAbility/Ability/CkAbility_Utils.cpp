@@ -398,6 +398,9 @@ auto
     {
         return ck::algo::Transform<TArray<UCk_Ability_Script_PDA*>>(InSubAbilityClasses, [&](const TSubclassOf<UCk_Ability_Script_PDA>& InSubAbilityClass)
         {
+            CK_ENSURE_IF_NOT(ck::IsValid(InSubAbilityClass), TEXT("Encountered an INVALID sub-ability for Ability [{}]"), InAbilityScriptClass)
+            { return static_cast<UCk_Ability_Script_PDA*>(nullptr); }
+
             const auto& SubAbilityInstance = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_Ability_Script_PDA>(WorldToUse, InSubAbilityClass, nullptr, nullptr);
 
             // We do not need to track this new instance in the ability subsystem since the following will make sure it can't be garbage collected:
