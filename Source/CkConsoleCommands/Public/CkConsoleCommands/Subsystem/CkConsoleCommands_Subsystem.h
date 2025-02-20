@@ -79,12 +79,6 @@ public:
 public:
     UFUNCTION()
     void
-    OnNewPlayerControllerAdded(
-        AGameModeBase* InGameModeBase,
-        APlayerController* InPlayerController);
-
-    UFUNCTION()
-    void
     RunConsoleCommand_OnServer(
         const TArray<FString>& InCommands);
 
@@ -116,6 +110,11 @@ public:
 private:
     auto DoSpawnConsoleCommandsActor(APlayerController* InPlayerController) -> void;
     auto DoUnregisterConsoleCommand() const -> void;
+
+    auto
+    OnPostLoginEvent(
+        AGameModeBase* GameMode,
+        APlayerController* NewPlayer) -> void;
 
 private:
     UPROPERTY(Transient)
