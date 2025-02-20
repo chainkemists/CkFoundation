@@ -520,7 +520,7 @@ namespace ck
         (
             AbilityOwnerEntity,
             [&](
-            const FCk_Handle_Ability& InAbilityEntityToCancel)
+            FCk_Handle_Ability InAbilityEntityToCancel)
             {
                 ability::Verbose
                 (
@@ -533,7 +533,8 @@ namespace ck
                     AbilityOwnerEntity
                 );
 
-                DoHandleRequest(InHandle, FFragment_Ability_RequestDeactivate{AbilityOwnerEntity});
+                AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+                DoHandleRequest(InAbilityEntityToCancel, FFragment_Ability_RequestDeactivate{AbilityOwnerEntity});
             },
             algo::MatchesAnyAbilityActivationCancelledTagsOnOwner{GrantedTags}
         );
