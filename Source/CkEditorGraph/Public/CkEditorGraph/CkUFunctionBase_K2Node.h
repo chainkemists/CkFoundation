@@ -11,7 +11,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract)
-class CKK2NODES_API UCk_K2Node_UFunction_Base : public UK2Node
+class CKEDITORGRAPH_API UCk_K2Node_UFunction_Base : public UK2Node
 {
     GENERATED_BODY()
 
@@ -63,7 +63,7 @@ protected:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Transient)
-class CKK2NODES_API UCk_K2NodeSpawner_UFunction_Base : public UBlueprintNodeSpawner
+class CKEDITORGRAPH_API UCk_K2NodeSpawner_UFunction_Base : public UBlueprintNodeSpawner
 {
     GENERATED_BODY()
 
