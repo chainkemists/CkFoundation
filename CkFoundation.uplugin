@@ -177,6 +177,16 @@
 			]
 		},
 		{
+			"Name": "CkEcsEditor",
+			"Type": "UncookedOnly",
+			"LoadingPhase": "PreDefault",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
 			"Name": "CkEcsExt",
 			"Type": "Runtime",
 			"LoadingPhase": "PreDefault",
