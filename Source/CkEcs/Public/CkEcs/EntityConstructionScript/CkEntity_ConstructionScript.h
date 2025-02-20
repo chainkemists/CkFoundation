@@ -53,6 +53,15 @@ public:
         TSubclassOf<UCk_Entity_ConstructionScript_PDA> InConstructionScript,
         const FInstancedStruct& InOptionalParams);
 
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly,
+              Category = "Ck|ConstructionScript",
+              DisplayName = "[Ck] Request Construct Sub-ConstructionScript (Instanced)")
+    static FCk_Handle
+    Request_Construct_Instanced(
+        UPARAM(ref) FCk_Handle& InHandle,
+        UCk_Entity_ConstructionScript_PDA* InConstructionScript,
+        FInstancedStruct InOptionalParams);
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|ConstructionScript",
               DisplayName = "[Ck] Request Construct Sub-ConstructionScript (Multiple)")
