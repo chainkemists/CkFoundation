@@ -25,6 +25,7 @@ public:
 
 protected:
     auto BeginPlay() -> void override;
+    auto Tick(float DeltaTime) -> void override;
 
 public:
     UFUNCTION(Server, Reliable)
@@ -40,6 +41,8 @@ public:
         const FString&  InCommand);
 
 private:
+    auto CheckOwnerIsFirstController() -> void;
+
     auto RunConsoleCommand(
         const FString& InCommand)
         -> void;
