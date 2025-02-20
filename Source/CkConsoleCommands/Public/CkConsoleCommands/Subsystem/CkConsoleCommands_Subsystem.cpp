@@ -17,6 +17,7 @@ ACk_ConsoleCommandsHelper_UE::
 {
     bReplicates = true;
     bAlwaysRelevant = true;
+    PrimaryActorTick.bCanEverTick = true;
 }
 
 auto
@@ -29,11 +30,28 @@ auto
     if (IsTemplate())
     { return; }
 
-    if (GetWorld()->GetFirstPlayerController() != GetOwner())
-    { return; }
+    if (ck::Is_NOT_Valid(GetOwner()))
+    {
+        SetActorTickEnabled(true);
+        return;
+    }
+    SetActorTickEnabled(false);
+    CheckOwnerIsFirstController();
+}
 
-    const auto Subsystem = GetWorld()->GetSubsystem<UCk_ConsoleCommands_Subsystem_UE>();
-    Subsystem->_ConsoleCommandsHelper.Emplace(this);
+auto
+    ACk_ConsoleCommandsHelper_UE::
+    Tick(
+        float DeltaTime)
+    -> void
+{
+    Super::Tick(DeltaTime);
+
+    if (ck::IsValid(GetOwner()))
+    {
+        SetActorTickEnabled(false);
+        CheckOwnerIsFirstController();
+    }
 }
 
 auto
@@ -83,6 +101,18 @@ auto
     -> void
 {
     MC_Request_OutputOnAll(InCommandOutput, InNetModeName, InContext);
+}
+
+auto
+    ACk_ConsoleCommandsHelper_UE::
+    CheckOwnerIsFirstController()
+    -> void
+{
+    if (GetWorld()->GetFirstPlayerController() != GetOwner())
+    { return; }
+
+    const auto Subsystem = GetWorld()->GetSubsystem<UCk_ConsoleCommands_Subsystem_UE>();
+    Subsystem->_ConsoleCommandsHelper.Emplace(this);
 }
 
 auto
