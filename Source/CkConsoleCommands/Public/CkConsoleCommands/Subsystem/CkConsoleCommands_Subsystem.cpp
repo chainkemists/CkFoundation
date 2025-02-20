@@ -193,7 +193,7 @@ auto
     );
 
     _PostLoginDelegateHandle = FGameModeEvents::GameModePostLoginEvent.AddUObject(
-        this, &UCk_ConsoleCommands_Subsystem_UE::OnNewPlayerControllerAdded);
+        this, &UCk_ConsoleCommands_Subsystem_UE::OnPostLoginEvent);
 }
 
 auto
@@ -209,7 +209,7 @@ auto
 
 auto
     UCk_ConsoleCommands_Subsystem_UE::
-    OnNewPlayerControllerAdded(
+    OnPostLoginEvent(
         AGameModeBase*,
         APlayerController* InPlayerController)
     -> void
