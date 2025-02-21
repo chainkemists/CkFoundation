@@ -308,7 +308,7 @@ auto
 
     if (ck::IsValid(_Fragments))
     {
-        _Fragments->_DebugName = _Mapper->Get_DebugFName();
+        _Fragments->_DebugName = Get_DebugName();
         _Fragments->_Tags = _Mapper->Get_TagNames();
         _Fragments->_Names = _Mapper->Get_FragmentNames();
     }

@@ -74,6 +74,7 @@ private:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// ReSharper disable once CppInconsistentNaming
 namespace UE::Net { struct FCk_HandleNetSerializer; }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -284,6 +285,7 @@ struct FCk_HandleSerializerConfig : public FNetSerializerConfig
     GENERATED_BODY()
 };
 
+// ReSharper disable once CppInconsistentNaming
 namespace UE::Net
 {
     UE_NET_DECLARE_SERIALIZER(FCk_HandleNetSerializer, CKECS_API);
@@ -1055,7 +1057,6 @@ auto
     else if constexpr (std::is_same_v<DEBUG_NAME, T_Fragment>)
     {
         _DebugNameFragment = FragmentInfo;
-        _DebugFName = InHandle.Get<DEBUG_NAME>().Get_Name();
     }
     else
     {
