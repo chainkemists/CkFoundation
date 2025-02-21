@@ -72,12 +72,10 @@ private:
     mutable TArray<DebugWrapperPtrType> _AllTags;
     mutable TArray<DebugWrapperPtrType> _AllFragments;
 
-    mutable FName _DebugFName = NAME_None;
     mutable TArray<FName> _TagNames;
     mutable TArray<FName> _FragmentNames;
 
 public:
-    CK_PROPERTY_GET(_DebugFName);
     CK_PROPERTY_GET(_TagNames);
     CK_PROPERTY_GET(_FragmentNames);
 };
