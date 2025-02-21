@@ -491,7 +491,6 @@ namespace ck
 
         auto& AbilityOwnerCurrent = AbilityOwnerEntity.Get<ck::FFragment_AbilityOwner_Current>();
 
-        const auto& AbilityToActivateName = UCk_Utils_GameplayLabel_UE::Get_Label(InHandle);
         const auto& AbilityActivationSettings = UCk_Utils_Ability_UE::Get_ActivationSettings(InHandle);
         const auto& GrantedTags = AbilityActivationSettings.Get_ActivationSettingsOnOwner().
                                                             Get_GrantTagsOnAbilityOwner();
@@ -524,14 +523,19 @@ namespace ck
             {
                 ability::Verbose
                 (
-                    TEXT(
-                        "CANCELLING Ability [Name: {} | Entity: {}] after Activating Ability [Name: {} | Entity: {}] on Ability Owner [{}]"),
-                    UCk_Utils_GameplayLabel_UE::Get_Label(InAbilityEntityToCancel),
+                    TEXT("CANCELLING Ability [{}] after Activating Ability [{}] on Ability Owner [{}]"),
                     InAbilityEntityToCancel,
-                    AbilityToActivateName,
                     InHandle,
                     AbilityOwnerEntity
                 );
+
+                CK_ENSURE_IF_NOT(InHandle != InAbilityEntityToCancel,
+                    TEXT("Tags Granted [{}] on Ability Owner [{}] as part of the Activation of Ability [{}] are causing the Ability to Deactivated itself BEFORE it fully Activated!\n"
+                         "This is unexpected is very likely due to a configuration error"),
+                    GrantedTags,
+                    AbilityOwnerEntity,
+                    InHandle)
+                { return; }
 
                 AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
                 DoHandleRequest(InAbilityEntityToCancel, FFragment_Ability_RequestDeactivate{AbilityOwnerEntity});
