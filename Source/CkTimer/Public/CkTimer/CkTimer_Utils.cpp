@@ -14,6 +14,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UE_DEFINE_GAMEPLAY_TAG(Tag_Timer_CategoryName, TEXT("Timer"))
+
+// --------------------------------------------------------------------------------------------------------------------
+
 DECLARE_STATS_GROUP(TEXT("CkTimer"), STATGROUP_CkTimer_Details, STATCAT_Advanced);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -179,7 +183,7 @@ auto
 auto
     UCk_Utils_Timer_UE::
     ForEach_Timer(
-        FCk_Handle& InTimerOwnerEntity,
+        const FCk_Handle& InTimerOwnerEntity,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate)
     -> TArray<FCk_Handle_Timer>
@@ -200,7 +204,7 @@ auto
 auto
     UCk_Utils_Timer_UE::
     ForEach_Timer(
-        FCk_Handle& InTimerOwnerEntity,
+        const FCk_Handle& InTimerOwnerEntity,
         const TFunction<void(FCk_Handle_Timer)>& InFunc)
     -> void
 {

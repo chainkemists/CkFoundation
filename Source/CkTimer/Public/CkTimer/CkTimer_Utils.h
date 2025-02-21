@@ -14,6 +14,10 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+CKTIMER_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Tag_Timer_CategoryName);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable)
 class CKTIMER_API UCk_Utils_Timer_UE : public UCk_Utils_Ecs_Base_UE
 {
@@ -156,12 +160,12 @@ public:
               meta=(AutoCreateRefTerm="InDelegate, InOptionalPayload"))
     static TArray<FCk_Handle_Timer>
     ForEach_Timer(
-        UPARAM(ref) FCk_Handle& InTimerOwnerEntity,
+        const FCk_Handle& InTimerOwnerEntity,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_Timer(
-        FCk_Handle& InTimerOwnerEntity,
+        const FCk_Handle& InTimerOwnerEntity,
         const TFunction<void(FCk_Handle_Timer)>& InFunc) -> void;
 
 public:
