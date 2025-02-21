@@ -96,6 +96,7 @@ auto                                                                            
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_UTILS_VARIABLES_DEFINITION(UCk_Utils_Variables_Bool_UE, bool)
+CK_UTILS_VARIABLES_DEFINITION(UCk_Utils_Variables_Byte_UE, uint8)
 CK_UTILS_VARIABLES_DEFINITION(UCk_Utils_Variables_Int32_UE, int32);
 CK_UTILS_VARIABLES_DEFINITION(UCk_Utils_Variables_Int64_UE, int64);
 CK_UTILS_VARIABLES_DEFINITION(UCk_Utils_Variables_Float_UE, float);
