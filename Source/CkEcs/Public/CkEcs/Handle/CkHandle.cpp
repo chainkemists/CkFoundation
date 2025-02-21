@@ -150,8 +150,11 @@ auto
 FCk_Handle::
     ~FCk_Handle()
 {
-    if (NOT IsValid(ck::IsValid_Policy_IncludePendingKill{}))
-    { return; }
+#if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
+    _Mapper = nullptr;
+    _ReplicationDriver = nullptr;
+#endif
+
 }
 
 auto
