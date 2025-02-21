@@ -904,6 +904,11 @@ auto
         FCk_Handle_FloatAttributeModifier& InAttributeModifierEntity)
     -> FCk_Handle_FloatAttribute
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InAttributeModifierEntity),
+        TEXT("Trying to Remove and INVALID Float Attribute Modifier. Is this on a Client and targeting a Replicated Attribute?\n"
+             "If yes, then it's possible it was destroyed as a consequence of a sync from the Server"))
+    { return {}; }
+
     UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(InAttributeModifierEntity);
 
     auto AttributeModifierOwnerEntity = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAttributeModifierEntity);
