@@ -11,6 +11,7 @@
 namespace ck
 {
     struct CKVARIABLES_API FFragment_Variable_Bool : public TFragment_Variables<bool> {};
+    struct CKVARIABLES_API FFragment_Variable_Byte : public TFragment_Variables<uint8> {};
     struct CKVARIABLES_API FFragment_Variable_Int32 : public TFragment_Variables<int32> {};
     struct CKVARIABLES_API FFragment_Variable_Int64 : public TFragment_Variables<int64> {};
     struct CKVARIABLES_API FFragment_Variable_Float : public TFragment_Variables<float> {};

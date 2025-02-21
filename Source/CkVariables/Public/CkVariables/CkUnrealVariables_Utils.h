@@ -25,7 +25,8 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               DisplayName="[Ck][Bool] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Bool")
+              Category = "Ck|Utils|Variables|Bool",
+              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static bool
     Get(
         const FCk_Handle& InHandle,
@@ -81,6 +82,77 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
+class CKVARIABLES_API UCk_Utils_Variables_Byte_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_Variables_Byte_UE);
+
+public:
+    using FragmentType = ck::FFragment_Variable_Byte;
+    using UtilsType = ck::TUtils_Variables<FragmentType>;
+
+public:
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][Byte] Get Value (By GameplayTag)",
+              Category = "Ck|Utils|Variables|Byte")
+    static uint8
+    Get(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Byte] Get Value (By GameplayTag)",
+              Category = "Ck|Utils|Variables|Byte",
+              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
+    static uint8
+    Get_Exec(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Byte] Set Value (By GameplayTag)",
+              Category = "Ck|Utils|Variables|Byte")
+    static void
+    Set(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        uint8 InValue);
+
+    UFUNCTION(BlueprintPure,
+        DisplayName="[Ck][Byte] Get Value (By Name)",
+        Category = "Ck|Utils|Variables|Byte")
+    static uint8
+    Get_ByName(
+        const FCk_Handle& InHandle,
+        FName InVariableName,
+        ECk_SucceededFailed& OutSuccessFail);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Byte] Set Value (By Name)",
+              Category = "Ck|Utils|Variables|Byte",
+              meta=(DeprecatedFunction))
+    static void
+    Set_ByName(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FName InVariableName,
+        uint8 InValue);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Byte] Get All Variables",
+              Category = "Ck|Utils|Variables|Byte",
+              meta=(DevelopmentOnly))
+    static const TMap<FName, uint8>&
+    Get_All(
+        const FCk_Handle& InHandle);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable)
 class CKVARIABLES_API UCk_Utils_Variables_Int32_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
@@ -104,7 +176,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Int32] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Int32")
+              Category = "Ck|Utils|Variables|Int32",
+              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static int32
     Get_Exec(
         const FCk_Handle& InHandle,
@@ -174,7 +247,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Int64] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Int64")
+              Category = "Ck|Utils|Variables|Int64",
+              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static int64
     Get_Exec(
         const FCk_Handle& InHandle,
@@ -244,7 +318,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Float] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Float")
+              Category = "Ck|Utils|Variables|Float",
+              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static float
     Get_Exec(
         const FCk_Handle& InHandle,
@@ -314,7 +389,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Name] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Name")
+              Category = "Ck|Utils|Variables|Name",
+              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static FName
     Get_Exec(
         const FCk_Handle& InHandle,
@@ -384,7 +460,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][String] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|String")
+              Category = "Ck|Utils|Variables|String",
+              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static const FString&
     Get_Exec(
         const FCk_Handle& InHandle,
@@ -454,7 +531,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Text] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Text")
+              Category = "Ck|Utils|Variables|Text",
+              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static FText
     Get_Exec(
         const FCk_Handle& InHandle,
@@ -524,7 +602,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Vec3] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Vec3")
+              Category = "Ck|Utils|Variables|Vec3",
+              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static FVector
     Get_Exec(
         const FCk_Handle& InHandle,
@@ -594,7 +673,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Vec2] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Vec2")
+              Category = "Ck|Utils|Variables|Vec2",
+              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static FVector2D
     Get_Exec(
         const FCk_Handle& InHandle,
@@ -664,7 +744,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Rotator] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Rotator")
+              Category = "Ck|Utils|Variables|Rotator",
+              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static FRotator
     Get_Exec(
         const FCk_Handle& InHandle,
@@ -734,7 +815,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Transform] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|Transform")
+              Category = "Ck|Utils|Variables|Transform",
+              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static const FTransform&
     Get_Exec(
         const FCk_Handle& InHandle,
@@ -942,7 +1024,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][GameplayTag] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|GameplayTag")
+              Category = "Ck|Utils|Variables|GameplayTag",
+              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static const FGameplayTag
     Get_Exec(
         const FCk_Handle& InHandle,
@@ -1012,7 +1095,8 @@ public:
 
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][GameplayTagContainer] Get Value (By GameplayTag)",
-              Category = "Ck|Utils|Variables|GameplayTagContainer")
+              Category = "Ck|Utils|Variables|GameplayTagContainer",
+              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
     static const FGameplayTagContainer
     Get_Exec(
         const FCk_Handle& InHandle,
