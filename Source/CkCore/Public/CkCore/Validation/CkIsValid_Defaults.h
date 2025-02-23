@@ -63,7 +63,7 @@ CK_DEFINE_CUSTOM_IS_VALID(const FField*, ck::IsValid_Policy_Default, [=](const F
 
 CK_DEFINE_CUSTOM_IS_VALID(const UObject*, ck::IsValid_Policy_Default, [=](const UObject* InObj)
 {
-    return ::IsValid(InObj);
+    return ::IsValid(InObj) && NOT InObj->IsUnreachable();
 });
 
 CK_DEFINE_CUSTOM_IS_VALID(const UObject*, ck::IsValid_Policy_IncludePendingKill, [=](const UObject* InObj)
