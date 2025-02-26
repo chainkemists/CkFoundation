@@ -34,6 +34,7 @@ public:
     static ECk_SucceededFailed
     Request_TryRemove(
         UPARAM(ref) FCk_Handle& InHandle,
+        UPARAM(meta = (Categories = "EntityTag"))
         FGameplayTag InTag);
 
 public:
@@ -44,12 +45,14 @@ public:
     static TArray<FCk_Handle>
     ForEach_Entity(
         FCk_Handle InAnyHandle,
+        UPARAM(meta = (Categories = "EntityTag"))
         FGameplayTag InTag,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_Entity(
         FCk_Handle InAnyHandle,
+        UPARAM(meta = (Categories = "EntityTag"))
         FGameplayTag InTag,
         const TFunction<void(FCk_Handle)>& InFunc) -> void;
 };
