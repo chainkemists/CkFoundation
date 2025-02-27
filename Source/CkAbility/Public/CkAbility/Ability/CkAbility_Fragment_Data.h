@@ -18,7 +18,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UINTERFACE(Blueprintable)
-class UCk_Ability_Cue_Interface : public UInterface { GENERATED_BODY() };
+class CKABILITY_API UCk_Ability_Cue_Interface : public UInterface { GENERATED_BODY() };
 class CKABILITY_API ICk_Ability_Cue_Interface
 {
     GENERATED_BODY()
@@ -30,7 +30,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UINTERFACE(Blueprintable)
-class UCk_Ability_Cost_Interface : public UInterface { GENERATED_BODY() };
+class CKABILITY_API UCk_Ability_Cost_Interface : public UInterface { GENERATED_BODY() };
 class CKABILITY_API ICk_Ability_Cost_Interface
 {
     GENERATED_BODY()
@@ -42,7 +42,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UINTERFACE(Blueprintable)
-class UCk_Ability_Cooldown_Interface : public UInterface { GENERATED_BODY() };
+class CKABILITY_API UCk_Ability_Cooldown_Interface : public UInterface { GENERATED_BODY() };
 class CKABILITY_API ICk_Ability_Cooldown_Interface
 {
     GENERATED_BODY()
@@ -54,7 +54,7 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 UINTERFACE(Blueprintable)
-class UCk_Ability_Condition_Interface : public UInterface { GENERATED_BODY() };
+class CKABILITY_API UCk_Ability_Condition_Interface : public UInterface { GENERATED_BODY() };
 class CKABILITY_API ICk_Ability_Condition_Interface
 {
     GENERATED_BODY()
