@@ -269,10 +269,10 @@ namespace ck
             UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(AbilityToTransfer, TransferTarget);
 
             const auto& AbilityToTransferCurrent = AbilityToTransfer.Get<FFragment_Ability_Current>();
-            const auto& OwnerAbilityCurrent = InRequest.Get_TransferTarget().Get<FFragment_Ability_Current>();
 
-            AbilityToTransferCurrent.Get_AbilityScript()->_ContextEntityWithActor = OwnerAbilityCurrent.
-                Get_AbilityScript()->DoGet_ContextEntityWithActor();
+            // Get Context Entity with Actor from ownership chain instead of transfer target's ability script since transfer target's ability script may not be initialized yet
+            AbilityToTransferCurrent.Get_AbilityScript()->_ContextEntityWithActor =
+                UCk_Utils_OwningActor_UE::TryGet_Entity_OwningActor_InOwnershipChain(InRequest.Get_TransferTarget());
         }
 
         if (auto MaybeAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(AbilityToTransfer);
