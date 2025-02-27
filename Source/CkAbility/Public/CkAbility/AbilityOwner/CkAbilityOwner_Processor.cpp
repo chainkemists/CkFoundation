@@ -223,9 +223,17 @@ namespace ck
             const FCk_Request_AbilityOwner_TransferExistingAbility& InRequest) const
         -> void
     {
-        auto Impl = [](HandleType AbilityOwner, auto& ImplRef) mutable -> void
+        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        // HACK: When transferring this ability, it needs to deactivate, revoke, add, and give
+        // the ability properly even through the subability owner is the same since something
+        // in the ownership chain has changed. To do this, we request to transfer to the owner
+        // even though it is the same as before. See processor for FFragment_Ability_RequestTransferExisting
+        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        auto TransferSubabilities = [](HandleType AbilityOwner, auto& TransferSubabilitiesRef) mutable -> void
         {
-            UCk_Utils_AbilityOwner_UE::ForEach_Ability(AbilityOwner, [&](FCk_Handle_Ability InAbility)
+            UCk_Utils_AbilityOwner_UE::ForEach_Ability_If(AbilityOwner, [&](FCk_Handle_Ability InAbility)
             {
                 auto CurrOwner = UCk_Utils_Ability_UE::TryGet_Owner(InAbility);
                 auto RequestTransferExisting = ck::FFragment_Ability_RequestTransferExisting{CurrOwner, CurrOwner, InAbility};
@@ -236,8 +244,13 @@ namespace ck
 
                 if (ck::IsValid(MaybeAbilityOwner))
                 {
-                    ImplRef(MaybeAbilityOwner, ImplRef);
+                    TransferSubabilitiesRef(MaybeAbilityOwner, TransferSubabilitiesRef);
                 }
+            },
+            [&](const FCk_Handle_Ability& InAbilityEntityToCancel)
+            {
+                // Only transfer if directly owned ability, ignore abilities owned only by extension
+                return UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityEntityToCancel) == AbilityOwner;
             });
         };
 
@@ -265,7 +278,7 @@ namespace ck
         if (auto MaybeAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(AbilityToTransfer);
             ck::IsValid(MaybeAbilityOwner))
         {
-            Impl(MaybeAbilityOwner, Impl);
+            TransferSubabilities(MaybeAbilityOwner, TransferSubabilities);
         }
 
         auto RequestTransferExisting = ck::FFragment_Ability_RequestTransferExisting{InAbilityOwnerEntity, TransferTarget, AbilityToTransfer};
@@ -973,7 +986,7 @@ namespace ck
             const FCk_Request_AbilityOwner_CancelSubAbilities& InRequest) const
         -> void
     {
-        UCk_Utils_AbilityOwner_UE::ForEach_Ability
+        UCk_Utils_AbilityOwner_UE::ForEach_Ability_If
         (
             InAbilityOwnerEntity,
             [&](const FCk_Handle_Ability& InAbilityEntityToCancel)
@@ -993,6 +1006,11 @@ namespace ck
                 }
 
                 DoHandleRequest(InAbilityOwnerEntity, InCurrent, FCk_Request_AbilityOwner_DeactivateAbility{InAbilityEntityToCancel});
+            },
+            [&](const FCk_Handle_Ability& InAbilityEntityToCancel)
+            {
+                // Only cancel if directly owned ability, ignore abilities owned only by extension
+                return UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityEntityToCancel) == InAbilityOwnerEntity;
             }
         );
     }
