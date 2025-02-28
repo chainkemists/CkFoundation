@@ -14,13 +14,15 @@
 #include "CkUI/Settings/CkUI_Settings.h"
 #include "CkUI/WidgetLayerHandler/CkWidgetLayerHandler_Utils.h"
 
+#include "Kismet/GameplayStatics.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_ui
 {
     namespace cvar
     {
-        static int WatermarkDisplayPolicy = static_cast<int32>(ECk_Watermark_DisplayPolicy::Regular);
+        static auto WatermarkDisplayPolicy = static_cast<int32>(ECk_Watermark_DisplayPolicy::Regular);
         static FAutoConsoleVariableRef CVar_WatermarkDisplayPolicy(
             TEXT("ck.UI.WatermarkDisplayPolicy"),
             WatermarkDisplayPolicy,
@@ -44,6 +46,11 @@ namespace ck_ui
 
                 UISubsystem->Request_UpdateWatermarkDisplayPolicy(static_cast<ECk_Watermark_DisplayPolicy>(WatermarkDisplayPolicy));
             }));
+    }
+
+    namespace launch_option
+    {
+        static auto NoWatermark = FString(TEXT("NoWatermark"));
     }
 }
 
@@ -134,6 +141,9 @@ auto
     -> void
 {
     if (ck::IsValid(_WatermarkWidget))
+    { return; }
+
+    if (UGameplayStatics::HasLaunchOption(ck_ui::launch_option::NoWatermark))
     { return; }
 
     const auto& WatermarkWidgetClass = UCk_Utils_UI_Settings_UE::Get_WatermarkWidgetClass();
