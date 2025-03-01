@@ -8,7 +8,9 @@
 namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_HasAuthority);
-    CK_DEFINE_ECS_TAG(FTag_NetMode_IsHost);
+
+    // Defined in CkHandle.h to avoid circular dependency since it's needed for debugging purposes
+    //CK_DEFINE_ECS_TAG(FTag_NetMode_IsHost);
 
     // --------------------------------------------------------------------------------------------------------------------
 
