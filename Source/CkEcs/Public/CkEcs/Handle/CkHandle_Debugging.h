@@ -68,14 +68,21 @@ public:
     ~FEntity_FragmentMapper();
 
 private:
+    mutable bool _IsHost = false;
     mutable DebugWrapperPtrType _DebugNameFragment;
+    mutable DebugWrapperPtrType _LifetimeTag;
     mutable TArray<DebugWrapperPtrType> _AllTags;
     mutable TArray<DebugWrapperPtrType> _AllFragments;
 
+    mutable const FName* _DebugName = nullptr;
+    mutable FName _LifetimeTagName = NAME_None;
     mutable TArray<FName> _TagNames;
     mutable TArray<FName> _FragmentNames;
 
 public:
+    CK_PROPERTY_GET(_IsHost);
+    CK_PROPERTY_GET(_DebugName);
+    CK_PROPERTY_GET(_LifetimeTagName);
     CK_PROPERTY_GET(_TagNames);
     CK_PROPERTY_GET(_FragmentNames);
 };

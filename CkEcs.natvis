@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
   <Type Name="FCk_Entity">
-    <DisplayString>{{ {_EntityNumber}|{_EntityVersion} ({_ID}) }}</DisplayString>
+    <DisplayString>{{{_EntityNumber}|{_EntityVersion} ({_ID})}}</DisplayString>
   </Type>
+
   <Type Name="TCk_DebugWrapper&lt;*&gt;">
     <DisplayString>{"$T1"}</DisplayString>
     <Expand>
@@ -11,20 +12,34 @@
       </Item>
     </Expand>
   </Type>
+
   <Type Name="TCk_DebugWrapper&lt;DEBUG_NAME&gt;">
     <DisplayString>{{ {_Fragment->_Name} }}</DisplayString>
   </Type>
+
   <Type Name="DEBUG_NAME">
     <DisplayString>{{ {_Name} }}</DisplayString>
   </Type>
+
   <Type Name="NAME_ConstructionScript">
     <DisplayString>{{ {_Name} }}</DisplayString>
   </Type>
+
   <Type Name="FCk_Handle" Inheritable="true">
-    <DisplayString>{{ ID{_Entity}{*_Mapper->_DebugNameFragment} Tags[{_Mapper->_AllTags.ArrayNum}] Fragments[{_Mapper->_AllFragments.ArrayNum}] }}</DisplayString>
+    <DisplayString Condition="_Entity._ID == {,,UnrealEditor-CkEcs-Win64-DebugGame.dll}FCk_Entity::_Tombstone._ID" Optional="true">Tombstone - INVALID {_Entity}</DisplayString>
+    <DisplayString Condition="_Entity._ID == {,,UnrealEditor-CkEcs-Win64.dll}FCk_Entity::_Tombstone._ID" Optional="true">Tombstone - INVALID {_Entity}</DisplayString>
+    <DisplayString Condition="!_Registry.Value.bIsSet">{{INVALID Registry {_Entity}}}</DisplayString>
+    <DisplayString Condition="_Mapper->_IsHost">{{ID{_Entity}[Host][{_Mapper->_LifetimeTagName}][{*_Mapper->_DebugName}] Tags[{_Mapper->_AllTags.ArrayNum}] Fragments[{_Mapper->_AllFragments.ArrayNum}]}}</DisplayString>
+    <DisplayString Condition="!_Mapper->_IsHost">{{ID{_Entity}[Client][{_Mapper->_LifetimeTagName}][{*_Mapper->_DebugName}] Tags[{_Mapper->_AllTags.ArrayNum}] Fragments[{_Mapper->_AllFragments.ArrayNum}]}}</DisplayString>
     <Expand>
+      <Item Name="[Host]">
+      (_Mapper->_IsHost)
+      </Item>
       <Item Name="[Name]">
-      (_Mapper->_DebugNameFragment)
+      (*_Mapper->_DebugNameFragment)
+      </Item>
+      <Item Name="[Lifetime]">
+      (*_Mapper->_LifetimeTag)
       </Item>
       <Item Name="[Tags]">
       (_Mapper->_AllTags)
@@ -34,11 +49,31 @@
       </Item>
     </Expand>
   </Type>
-  <Type Name="FEntity_FragmentMapper">
-    <DisplayString>{{ {_AllFragments} }}</DisplayString>
+
+  <Type Name="FCk_Handle_TypeSafe" Inheritable="true">
+    <DisplayString>{(*(FCk_Handle*)(this))}</DisplayString>
     <Expand>
-      <Item Name="[FragmentArray]">
-      (_AllFragments)
+      <!--This is a workaround for the FCk_Handle natvis not working for all inheritable types even though it should. Why *? Because it takes the least amount of characters-->
+      <Item Name="*">
+      (*(FCk_Handle*)(this))
+      </Item>
+    </Expand>
+  </Type>
+
+  <Type Name="FEntity_FragmentMapper">
+    <DisplayString>{{Name{_DebugName}}}</DisplayString>
+    <Expand>
+      <Item Name="[Name]">
+      (_DebugNameFragment)
+      </Item>
+      <Item Name="[Lifetime]">
+      (_LifetimeTag)
+      </Item>
+      <Item Name="[Tags]">
+      (_AllTags)
+      </Item>
+      <Item Name="[Fragments]">
+      ({_Mapper->_AllFragments})
       </Item>
     </Expand>
   </Type>

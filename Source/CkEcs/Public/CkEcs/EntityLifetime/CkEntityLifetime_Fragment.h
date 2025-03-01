@@ -25,11 +25,13 @@
 
 namespace ck
 {
-    CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Finalize);
-    CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Initiate);
-    CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Initiate_Confirm);
-    CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Await);
-    CK_DEFINE_ECS_TAG(FTag_EntityJustCreated);
+    // Defined in CkHandle.h to avoid circular dependency since it's needed for debugging purposes
+
+    //CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Finalize);
+    //CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Initiate);
+    //CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Initiate_Confirm);
+    //CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Await);
+    //CK_DEFINE_ECS_TAG(FTag_EntityJustCreated);
 
     // 'Initialize' phase NOT part of Pending Kill as all regular Processors should still be able to complete their work
     // before the end of the frame

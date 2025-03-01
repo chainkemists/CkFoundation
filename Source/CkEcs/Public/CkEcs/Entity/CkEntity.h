@@ -50,6 +50,9 @@ public:
     Tombstone() -> const FCk_Entity&;
 
 private:
+    static FCk_Entity _Tombstone;
+
+private:
     IdType _ID;
 
 public:
