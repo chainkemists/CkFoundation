@@ -14,6 +14,44 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck
+{
+    // Defined in CkHandle.h (and commented out in CkNet_Fragment) to avoid circular dependency since it's needed for debugging purposes
+    CK_DEFINE_ECS_TAG(FTag_NetMode_IsHost);
+}
+
+namespace ck
+{
+    // Defined in CkHandle.h (and commented out in CkEntityLifetime_Fragment) to avoid circular dependency since it's needed for debugging purposes
+    CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Finalize);
+    CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Initiate);
+    CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Initiate_Confirm);
+    CK_DEFINE_ECS_TAG(FTag_DestroyEntity_Await);
+    CK_DEFINE_ECS_TAG(FTag_EntityJustCreated);
+
+    template <typename T>
+    auto
+    Get_LifetimeTagString()
+    {
+        if constexpr (std::is_same_v<T, FTag_DestroyEntity_Finalize>)
+        { return TEXT("D_Final"); }
+
+        if constexpr (std::is_same_v<T, FTag_DestroyEntity_Initiate>)
+        { return TEXT("D_Init"); }
+
+        if constexpr (std::is_same_v<T, FTag_DestroyEntity_Initiate_Confirm>)
+        { return TEXT("D_Conf"); }
+
+        if constexpr (std::is_same_v<T, FTag_DestroyEntity_Await>)
+        { return TEXT("D_Await"); }
+
+        if constexpr (std::is_same_v<T, FTag_EntityJustCreated>)
+        { return TEXT("E_New"); }
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 #if NOT CK_ECS_DISABLE_HANDLE_DEBUGGING
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -32,6 +70,7 @@ struct entt::component_traits<Type> {
 struct DEBUG_NAME
 {
     friend class UCk_Utils_Handle_UE;
+    friend struct FEntity_FragmentMapper;
 public:
     CK_GENERATED_BODY(DEBUG_NAME);
 
@@ -98,6 +137,8 @@ public:
 
 public:
     FCk_Handle() = default;
+
+
     FCk_Handle(EntityType InEntity, const RegistryType& InRegistry);
 
     FCk_Handle(ThisType&& InOther) noexcept;
@@ -393,14 +434,60 @@ CK_DEFINE_CUSTOM_FORMATTER_WITH_DETAILS(FCk_Handle,
     if (InObj.Get_Entity().Get_IsTombstone())
     { return ck::Format(TEXT("{}"), InObj.Get_Entity()); }
 
-    return ck::Format(TEXT("{}({})"), InObj.Get_Entity(), InObj.Get_DebugName());
+    const auto LifetimePhase = [&]()
+    {
+        if (InObj.Has<ck::FTag_DestroyEntity_Initiate>())
+        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Initiate>(); }
+
+        if (InObj.Has<ck::FTag_DestroyEntity_Finalize>())
+        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Finalize>(); }
+
+        if (InObj.Has<ck::FTag_DestroyEntity_Initiate_Confirm>())
+        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Initiate_Confirm>(); }
+
+        if (InObj.Has<ck::FTag_DestroyEntity_Await>())
+        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Await>(); }
+
+        if (InObj.Has<ck::FTag_EntityJustCreated>())
+        { return ck::Get_LifetimeTagString<ck::FTag_EntityJustCreated>(); }
+
+        if (InObj.IsValid(ck::IsValid_Policy_Default{}))
+        { return TEXT("Valid"); }
+
+        return TEXT("Invalid");
+    }();
+
+    return ck::Format(TEXT("{}[{}]({})"), InObj.Get_Entity(), LifetimePhase, LifetimePhase, InObj.Get_DebugName());
 },
 [&]()
 {
     if (InObj.Get_Entity().Get_IsTombstone())
     { return ck::Format(TEXT("{}"), InObj.Get_Entity()); }
 
-    return ck::Format(TEXT("{}[{}]({})"), InObj._Entity, InObj.Get_Registry(), InObj.Get_DebugName());
+    const auto LifetimePhase = [&]()
+    {
+        if (InObj.Has<ck::FTag_DestroyEntity_Initiate>())
+        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Initiate>(); }
+
+        if (InObj.Has<ck::FTag_DestroyEntity_Finalize>())
+        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Finalize>(); }
+
+        if (InObj.Has<ck::FTag_DestroyEntity_Initiate_Confirm>())
+        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Initiate_Confirm>(); }
+
+        if (InObj.Has<ck::FTag_DestroyEntity_Await>())
+        { return ck::Get_LifetimeTagString<ck::FTag_DestroyEntity_Await>(); }
+
+        if (InObj.Has<ck::FTag_EntityJustCreated>())
+        { return ck::Get_LifetimeTagString<ck::FTag_EntityJustCreated>(); }
+
+        if (InObj.IsValid(ck::IsValid_Policy_Default{}))
+        { return TEXT("Valid"); }
+
+        return TEXT("Invalid");
+    }();
+
+    return ck::Format(TEXT("{}[{}][{}]({})"), InObj._Entity, LifetimePhase, InObj.Get_Registry(), InObj.Get_DebugName());
 });
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -1057,11 +1144,32 @@ auto
     else if constexpr (std::is_same_v<DEBUG_NAME, T_Fragment>)
     {
         _DebugNameFragment = FragmentInfo;
+        _DebugName = &InHandle.Get<DEBUG_NAME>()._Name;
     }
     else
     {
         _AllFragments.Emplace(FragmentInfo);
         _FragmentNames.Emplace(FragmentInfo->Get_FragmentName(InHandle));
+    }
+
+    // We want these tags to also end up in the _AllTags section. Why? In case
+    // we have 2 tags in flight (which is a bug) which the debugger might hide
+    if constexpr (std::is_same_v<ck::FTag_DestroyEntity_Initiate, T_Fragment> ||
+        std::is_same_v<ck::FTag_DestroyEntity_Initiate_Confirm, T_Fragment> ||
+        std::is_same_v<ck::FTag_DestroyEntity_Await, T_Fragment> ||
+        std::is_same_v<ck::FTag_EntityJustCreated, T_Fragment>)
+    {
+       _LifetimeTag = FragmentInfo;
+       _LifetimeTagName = ck::Get_LifetimeTagString<T_Fragment>();
+    }
+    else
+    {
+       _LifetimeTagName = ck::IsValid(InHandle) ? TEXT("Valid") : TEXT("Invalid");
+    }
+
+    if constexpr (std::is_same_v<ck::FTag_NetMode_IsHost, T_Fragment>)
+    {
+        _IsHost = true;
     }
 #endif
 }

@@ -308,7 +308,9 @@ auto
 
     if (ck::IsValid(_Fragments))
     {
+        _Fragments->_IsHost = _Mapper->Get_IsHost();
         _Fragments->_DebugName = Get_DebugName();
+        _Fragments->_LifetimeTag = _Mapper->Get_LifetimeTagName();
         _Fragments->_Tags = _Mapper->Get_TagNames();
         _Fragments->_Names = _Mapper->Get_FragmentNames();
     }
