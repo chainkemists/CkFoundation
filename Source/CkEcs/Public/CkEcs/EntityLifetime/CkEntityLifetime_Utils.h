@@ -234,15 +234,13 @@ auto
         ECk_PendingKill_Policy InPendingKillPolicy)
     -> FCk_Handle
 {
-    auto CurrentHandle = InHandle;
-    while (CurrentHandle.Has<ck::FFragment_LifetimeOwner>())
-    {
-        if (T_Func(CurrentHandle))
-        {
-            return CurrentHandle;
-        }
+    if (T_Func(InHandle))
+    { return InHandle; }
 
-        CurrentHandle = Get_LifetimeOwner(CurrentHandle, InPendingKillPolicy);
+    if (InHandle.Has<ck::FFragment_LifetimeOwner>())
+    {
+        const auto& LifetimeOwner =  Get_LifetimeOwner(InHandle, InPendingKillPolicy);
+        return Get_EntityInOwnershipChain_If(LifetimeOwner, T_Func, InPendingKillPolicy);
     }
 
     return {};
