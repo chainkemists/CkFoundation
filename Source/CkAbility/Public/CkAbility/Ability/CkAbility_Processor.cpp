@@ -437,6 +437,9 @@ namespace ck
             return OwnerToReturn;
         }();
 
+        if (NOT UCk_Utils_Ability_UE::Get_IsAbilityGiven(InHandle))
+        { return; }
+
         // --------------------------------------------------------------------------------------------------------------------
 
         auto& AbilityCurrent = InHandle.Get<ck::FFragment_Ability_Current>();
@@ -589,6 +592,9 @@ namespace ck
             OwnerToReturn.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
             return OwnerToReturn;
         }();
+
+        if (NOT UCk_Utils_Ability_UE::Get_IsAbilityGiven(InHandle))
+        { return; }
 
         // --------------------------------------------------------------------------------------------------------------------
 
