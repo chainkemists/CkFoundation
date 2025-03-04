@@ -81,7 +81,7 @@ public:
     UFUNCTION(BlueprintCallable,
         DisplayName = "[Ck] Find Named Slot And Insert Widget",
         Category = "Ck|Utils|UI",
-        meta=(AdvancedDisplay=bEnsureSlotFound))
+        meta=(AdvancedDisplay="InEnsureSlotIsFound"))
     static UPanelSlot*
     FindNamedSlotAndInsertWidget(
         UUserWidget* InSourceWidget,
@@ -89,6 +89,13 @@ public:
         FName InNamedSlotName,
         ECk_UI_NamedSlot_SearchRecursive InIsRecursive = ECk_UI_NamedSlot_SearchRecursive::NonRecursive,
         ECk_UI_NamedSlot_EnsureSlotIsFound InEnsureSlotIsFound = ECk_UI_NamedSlot_EnsureSlotIsFound::EnsureSlotIsFound);
+
+    UFUNCTION(BlueprintCallable,
+        DisplayName = "[Ck] Get Currently Focused Widget",
+        Category = "Ck|Utils|UI")
+    static UWidget*
+    Get_CurrentlyFocusedWidget(
+        int32 InUserIndex);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

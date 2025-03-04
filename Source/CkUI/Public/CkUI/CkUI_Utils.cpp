@@ -126,4 +126,25 @@ auto
     return {};
 }
 
+auto
+    UCk_Utils_UI_UE::
+    Get_CurrentlyFocusedWidget(
+        int32 InUserIndex)
+    -> UWidget*
+{
+    const auto FocusedSlateWidget = FSlateApplication::Get().GetUserFocusedWidget(InUserIndex);
+
+    if (ck::Is_NOT_Valid(FocusedSlateWidget))
+    { return {}; }
+
+    for (TObjectIterator<UWidget> Itr; Itr; ++Itr)
+    {
+        if (auto* CandidateUMGWidget = *Itr;
+            CandidateUMGWidget->GetCachedWidget() == FocusedSlateWidget)
+        { return CandidateUMGWidget; }
+    }
+
+    return {};
+}
+
 // --------------------------------------------------------------------------------------------------------------------
