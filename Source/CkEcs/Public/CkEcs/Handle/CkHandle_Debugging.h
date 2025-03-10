@@ -182,3 +182,15 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+#define CK_BREAK_IF_HANDLE_NAME(_Handle_, _TextToFind_)\
+{ \
+    auto _DebugName_ = UCk_Utils_Handle_UE::Get_DebugName(_Handle_).ToString(); \
+    auto _ToFind_ = _TextToFind_; \
+    if (_DebugName_.Contains(_ToFind_)) \
+    { \
+        CK_TRIGGER_ENSURE(TEXT("Breaking because we FOUND [{}] in [{}]"), _ToFind_, _DebugName_); \
+    } \
+}
+
+// --------------------------------------------------------------------------------------------------------------------
