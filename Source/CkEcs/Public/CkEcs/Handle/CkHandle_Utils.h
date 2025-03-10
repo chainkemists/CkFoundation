@@ -68,6 +68,17 @@ public:
     Debug_Handle(
         const FCk_Handle& InHandle);
 
+private:
+    // C++ users should use CK_BREAK_IF_HANDLE_NAME
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Handle",
+              DisplayName = "[Ck] Break if Handle DebugName Contains",
+              meta     = (DevelopmentOnly))
+    static void
+    BreakIfHandleDebugNameContains(
+        const FCk_Handle& InHandle,
+        const FString& InTextToFind);
+
 public:
     static auto
     Set_DebugName(

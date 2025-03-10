@@ -62,6 +62,19 @@ auto
     ck::ecs::Warning(TEXT("Debugging the Handle [{}]"), InHandle);
 }
 UE_ENABLE_OPTIMIZATION_SHIP
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Handle_UE::
+    BreakIfHandleDebugNameContains(
+        const FCk_Handle& InHandle,
+        const FString& InTextToFind)
+    -> void
+{
+    CK_BREAK_IF_HANDLE_NAME(InHandle, InTextToFind);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
