@@ -271,10 +271,13 @@ auto
 auto
     UCk_Utils_Object_UE::
     Cast_ObjectToInterface(
-        UObject* InBlueprintGeneratedClass)
-    -> UInterface*
+        UObject* InInterfaceObject)
+    -> TScriptInterface<UInterface>
 {
-    return Cast<UInterface>(InBlueprintGeneratedClass);
+    TScriptInterface<UInterface> Result;
+    Result.SetObject(InInterfaceObject);
+    Result.SetInterface(InInterfaceObject ? Cast<UInterface>(InInterfaceObject) : nullptr);
+    return Result;
 }
 
 auto

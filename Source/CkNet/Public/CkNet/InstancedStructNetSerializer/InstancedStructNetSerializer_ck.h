@@ -8,7 +8,7 @@
 
 #include "UObject/ObjectMacros.h"
 
-#include "InstancedStructNetSerializer.generated.h"
+#include "InstancedStructNetSerializer_ck.generated.h"
 
 // NOTES:
 // This (and the cpp file) is cobbled together from various sources and is complete just enough to work for serializing instanced structs.
@@ -125,15 +125,15 @@ private:
 }
 
 USTRUCT()
-struct FInstancedStructNetSerializerConfig : public FNetSerializerConfig
+struct FInstancedStructNetSerializer_ckConfig : public FNetSerializerConfig
 {
 	GENERATED_BODY()
 
-	FInstancedStructNetSerializerConfig();
-	~FInstancedStructNetSerializerConfig();
+	FInstancedStructNetSerializer_ckConfig();
+	~FInstancedStructNetSerializer_ckConfig();
 
-	FInstancedStructNetSerializerConfig(const FInstancedStructNetSerializerConfig&) = delete;
-	FInstancedStructNetSerializerConfig& operator=(const FInstancedStructNetSerializerConfig&) = delete;
+	FInstancedStructNetSerializer_ckConfig(const FInstancedStructNetSerializer_ckConfig&) = delete;
+	FInstancedStructNetSerializer_ckConfig& operator=(const FInstancedStructNetSerializer_ckConfig&) = delete;
 
 	UPROPERTY()
 	TArray<TSoftObjectPtr<UScriptStruct>> SupportedTypes;
@@ -142,7 +142,7 @@ struct FInstancedStructNetSerializerConfig : public FNetSerializerConfig
 };
 
 template<>
-struct TStructOpsTypeTraits<FInstancedStructNetSerializerConfig> : public TStructOpsTypeTraitsBase2<FInstancedStructNetSerializerConfig>
+struct TStructOpsTypeTraits<FInstancedStructNetSerializer_ckConfig> : public TStructOpsTypeTraitsBase2<FInstancedStructNetSerializer_ckConfig>
 {
 	enum
 	{
@@ -153,6 +153,6 @@ struct TStructOpsTypeTraits<FInstancedStructNetSerializerConfig> : public TStruc
 namespace UE::Net
 {
 
-UE_NET_DECLARE_SERIALIZER(FInstancedStructNetSerializer, CKNET_API);
+UE_NET_DECLARE_SERIALIZER(FInstancedStructNetSerializer_ck, CKNET_API);
 
 }

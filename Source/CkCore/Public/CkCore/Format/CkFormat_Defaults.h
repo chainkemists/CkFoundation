@@ -14,7 +14,6 @@
 #include <Engine/DataTable.h>
 #include <Framework/Commands/InputChord.h>
 #include <GameFramework/Actor.h>
-#include <StructUtils.h>
 
 #if WITH_EDITOR
 #include <UnrealEdMisc.h>

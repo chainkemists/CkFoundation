@@ -1,8 +1,8 @@
-#include UE_INLINE_GENERATED_CPP_BY_NAME(InstancedStructNetSerializer)
+#include UE_INLINE_GENERATED_CPP_BY_NAME(InstancedStructNetSerializer_ck)
 
 #if UE_WITH_IRIS
 
-#include "CkNet/InstancedStructNetSerializer/InstancedStructNetSerializer.h"
+#include "CkNet/InstancedStructNetSerializer_ck/InstancedStructNetSerializer_ck.h"
 #include "CkCore/Ensure/CkEnsure.h"
 
 #include <InstancedStruct.h>
@@ -188,15 +188,15 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FInstancedStructNetSerializerConfig::
-    FInstancedStructNetSerializerConfig()
+FInstancedStructNetSerializer_ckConfig::
+    FInstancedStructNetSerializer_ckConfig()
     : FNetSerializerConfig()
 {
     ConfigTraits = ENetSerializerConfigTraits::NeedDestruction;
 }
 
-FInstancedStructNetSerializerConfig::
-    ~FInstancedStructNetSerializerConfig() = default;
+FInstancedStructNetSerializer_ckConfig::
+    ~FInstancedStructNetSerializer_ckConfig() = default;
 
 namespace UE::Net
 {
@@ -204,11 +204,11 @@ namespace UE::Net
 static auto MaxCachedInstancedStructDescriptorCount = 8;
 static FAutoConsoleVariableRef CVarMaxCachedInstancedStructDescriptors(TEXT("InstancedStruct.MaxCachedReplicationStateDescriptors"),
     MaxCachedInstancedStructDescriptorCount,
-    TEXT("How many ReplicationStateDescriptors the InstancedStructNetSerializer is allowed to cache for InstancedStructs without a type allow list. Warning: A value <= 0 means an unlimited amount of descriptors."));
+    TEXT("How many ReplicationStateDescriptors the InstancedStructNetSerializer_ck is allowed to cache for InstancedStructs without a type allow list. Warning: A value <= 0 means an unlimited amount of descriptors."));
 
-const FName NetError_InstancedStructNetSerializer_InvalidStructType("Invalid struct type");
+const FName NetError_InstancedStructNetSerializer_ck_InvalidStructType("Invalid struct type");
 
-struct FFInstancedStructNetSerializerQuantizedData
+struct FFInstancedStructNetSerializer_ckQuantizedData
 {
     FNetSerializerAlignedStorage StructData;
     FNetObjectReference StructType;
@@ -238,12 +238,12 @@ protected:
 
 }
 
-template<> struct TIsPODType<UE::Net::FFInstancedStructNetSerializerQuantizedData> { enum { Value = true }; };
+template<> struct TIsPODType<UE::Net::FFInstancedStructNetSerializer_ckQuantizedData> { enum { Value = true }; };
 
 namespace UE::Net
 {
 
-struct FInstancedStructNetSerializer
+struct FInstancedStructNetSerializer_ck
 {
     // Version
     static constexpr uint32 Version = 0;
@@ -257,8 +257,8 @@ struct FInstancedStructNetSerializer
     static constexpr bool bHasCustomNetReference = true;
 
     typedef FInstancedStruct SourceType;
-    typedef FFInstancedStructNetSerializerQuantizedData QuantizedType;
-    typedef FInstancedStructNetSerializerConfig ConfigType;
+    typedef FFInstancedStructNetSerializer_ckQuantizedData QuantizedType;
+    typedef FInstancedStructNetSerializer_ckConfig ConfigType;
 
     static auto
     Serialize(
@@ -319,19 +319,19 @@ private:
     static auto
     FreeStructInstance(
         FNetSerializationContext&,
-        FInstancedStructNetSerializerConfig*,
+        FInstancedStructNetSerializer_ckConfig*,
         QuantizedType& Value) -> void;
 
     static auto
     Reset(
         FNetSerializationContext&,
-        FInstancedStructNetSerializerConfig*,
+        FInstancedStructNetSerializer_ckConfig*,
         QuantizedType&) -> void;
 
     static auto
     InternalFreeStructInstance(
         FNetSerializationContext&,
-        FInstancedStructNetSerializerConfig*,
+        FInstancedStructNetSerializer_ckConfig*,
         QuantizedType&) -> void;
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -354,18 +354,18 @@ private:
     inline static FNetSerializerRegistryDelegates NetSerializerRegistryDelegates;
 };
 
-UE_NET_IMPLEMENT_SERIALIZER(FInstancedStructNetSerializer);
+UE_NET_IMPLEMENT_SERIALIZER(FInstancedStructNetSerializer_ck);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-FInstancedStructNetSerializer::FNetSerializerRegistryDelegates::
+FInstancedStructNetSerializer_ck::FNetSerializerRegistryDelegates::
     ~FNetSerializerRegistryDelegates()
 {
     UE_NET_UNREGISTER_NETSERIALIZER_INFO(FInstancedStructPropertyNetSerializerInfo);
 }
 
 auto
-    FInstancedStructNetSerializer::
+    FInstancedStructNetSerializer_ck::
     FNetSerializerRegistryDelegates::OnPreFreezeNetSerializerRegistry()
     -> void
 {
@@ -375,7 +375,7 @@ auto
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
-    FInstancedStructNetSerializer::
+    FInstancedStructNetSerializer_ck::
     Serialize(
         FNetSerializationContext& Context,
         const FNetSerializeArgs& Args)
@@ -383,7 +383,7 @@ auto
 {
     const QuantizedType& Value = *reinterpret_cast<QuantizedType*>(Args.Source);
 
-    FInstancedStructNetSerializerConfig* Config = const_cast<FInstancedStructNetSerializerConfig*>(static_cast<const FInstancedStructNetSerializerConfig*>(Args.NetSerializerConfig));
+    FInstancedStructNetSerializer_ckConfig* Config = const_cast<FInstancedStructNetSerializer_ckConfig*>(static_cast<const FInstancedStructNetSerializer_ckConfig*>(Args.NetSerializerConfig));
 
     FNetBitStreamWriter* Writer = Context.GetBitStreamWriter();
 
@@ -415,7 +415,7 @@ auto
 }
 
 auto
-    FInstancedStructNetSerializer::
+    FInstancedStructNetSerializer_ck::
     Deserialize(
         FNetSerializationContext& Context,
         const FNetDeserializeArgs& Args)
@@ -423,7 +423,7 @@ auto
 {
     QuantizedType& Value = *reinterpret_cast<QuantizedType*>(Args.Target);
 
-    FInstancedStructNetSerializerConfig* Config = const_cast<FInstancedStructNetSerializerConfig*>(static_cast<const FInstancedStructNetSerializerConfig*>(Args.NetSerializerConfig));
+    FInstancedStructNetSerializer_ckConfig* Config = const_cast<FInstancedStructNetSerializer_ckConfig*>(static_cast<const FInstancedStructNetSerializer_ckConfig*>(Args.NetSerializerConfig));
 
     FNetBitStreamReader* Reader = Context.GetBitStreamReader();
     // Was the instanced struct valid on the sending side?
@@ -502,7 +502,7 @@ auto
 }
 
 auto
-    FInstancedStructNetSerializer::
+    FInstancedStructNetSerializer_ck::
     SerializeDelta(
         FNetSerializationContext& Context,
         const FNetSerializeDeltaArgs& Args)
@@ -512,7 +512,7 @@ auto
 }
 
 auto
-    FInstancedStructNetSerializer::
+    FInstancedStructNetSerializer_ck::
     DeserializeDelta(
         FNetSerializationContext& Context,
         const FNetDeserializeDeltaArgs& Args)
@@ -522,7 +522,7 @@ auto
 }
 
 auto
-    FInstancedStructNetSerializer::
+    FInstancedStructNetSerializer_ck::
     Quantize(
         FNetSerializationContext& Context,
         const FNetQuantizeArgs& Args)
@@ -531,7 +531,7 @@ auto
     const auto& Source = *reinterpret_cast<SourceType*>(Args.Source);
     auto& Target = *reinterpret_cast<QuantizedType*>(Args.Target);
 
-    auto Config = const_cast<FInstancedStructNetSerializerConfig*>(static_cast<const FInstancedStructNetSerializerConfig*>(Args.NetSerializerConfig));
+    auto Config = const_cast<FInstancedStructNetSerializer_ckConfig*>(static_cast<const FInstancedStructNetSerializer_ckConfig*>(Args.NetSerializerConfig));
 
     if (Source.IsValid())
     {
@@ -583,7 +583,7 @@ auto
 }
 
 auto
-    FInstancedStructNetSerializer::
+    FInstancedStructNetSerializer_ck::
     Dequantize(
         FNetSerializationContext& Context,
         const FNetDequantizeArgs& Args)
@@ -592,7 +592,7 @@ auto
     const auto& [StructData, StructType, StructName, StructDescriptorTraits] = *reinterpret_cast<QuantizedType*>(Args.Source);
     auto& Target = *reinterpret_cast<SourceType*>(Args.Target);
 
-    FInstancedStructNetSerializerConfig* Config = const_cast<FInstancedStructNetSerializerConfig*>(static_cast<const FInstancedStructNetSerializerConfig*>(Args.NetSerializerConfig));
+    FInstancedStructNetSerializer_ckConfig* Config = const_cast<FInstancedStructNetSerializer_ckConfig*>(static_cast<const FInstancedStructNetSerializer_ckConfig*>(Args.NetSerializerConfig));
 
     if (!StructType.IsValid())
     {
@@ -640,7 +640,7 @@ auto
 }
 
 auto
-    FInstancedStructNetSerializer::
+    FInstancedStructNetSerializer_ck::
     IsEqual(
         FNetSerializationContext& Context,
         const FNetIsEqualArgs& Args)
@@ -677,7 +677,7 @@ auto
 }
 
 auto
-    FInstancedStructNetSerializer::
+    FInstancedStructNetSerializer_ck::
     Validate(
         FNetSerializationContext& Context,
         const FNetValidateArgs& Args)
@@ -689,7 +689,7 @@ auto
 }
 
 auto
-    FInstancedStructNetSerializer::
+    FInstancedStructNetSerializer_ck::
     CloneDynamicState(
         FNetSerializationContext& Context,
         const FNetCloneDynamicStateArgs& Args)
@@ -697,7 +697,7 @@ auto
 {
     const auto& Source = *reinterpret_cast<const QuantizedType*>(Args.Source);
     auto& Target = *reinterpret_cast<QuantizedType*>(Args.Target);
-    auto Config = const_cast<FInstancedStructNetSerializerConfig*>(static_cast<const FInstancedStructNetSerializerConfig*>(Args.NetSerializerConfig));
+    auto Config = const_cast<FInstancedStructNetSerializer_ckConfig*>(static_cast<const FInstancedStructNetSerializer_ckConfig*>(Args.NetSerializerConfig));
 
     Target.StructData.Clone(Context, Source.StructData);
 
@@ -719,28 +719,28 @@ auto
 }
 
 auto
-    FInstancedStructNetSerializer::
+    FInstancedStructNetSerializer_ck::
     FreeDynamicState(
         FNetSerializationContext& Context,
         const FNetFreeDynamicStateArgs& Args)
     -> void
 {
     auto& Value = *reinterpret_cast<QuantizedType*>(Args.Source);
-    const auto Config = const_cast<FInstancedStructNetSerializerConfig*>(static_cast<const FInstancedStructNetSerializerConfig*>(Args.NetSerializerConfig));
+    const auto Config = const_cast<FInstancedStructNetSerializer_ckConfig*>(static_cast<const FInstancedStructNetSerializer_ckConfig*>(Args.NetSerializerConfig));
 
     InternalFreeStructInstance(Context, Config, Value);
     Value.StructData.Free(Context);
 }
 
 auto
-    FInstancedStructNetSerializer::
+    FInstancedStructNetSerializer_ck::
     CollectNetReferences(
         FNetSerializationContext& Context,
         const FNetCollectReferencesArgs& Args)
     -> void
 {
     const auto& [StructData, StructType, StructName, StructDescriptorTraits] = *reinterpret_cast<QuantizedType*>(Args.Source);
-    const auto Config = const_cast<FInstancedStructNetSerializerConfig*>(static_cast<const FInstancedStructNetSerializerConfig*>(Args.NetSerializerConfig));
+    const auto Config = const_cast<FInstancedStructNetSerializer_ckConfig*>(static_cast<const FInstancedStructNetSerializer_ckConfig*>(Args.NetSerializerConfig));
 
     if (StructType.IsValid())
     {
@@ -768,10 +768,10 @@ auto
 }
 
 auto
-    FInstancedStructNetSerializer::
+    FInstancedStructNetSerializer_ck::
     FreeStructInstance(
         FNetSerializationContext& Context,
-        FInstancedStructNetSerializerConfig* Config,
+        FInstancedStructNetSerializer_ckConfig* Config,
         QuantizedType& Value)
     -> void
 {
@@ -783,10 +783,10 @@ auto
 }
 
 auto
-    FInstancedStructNetSerializer::
+    FInstancedStructNetSerializer_ck::
     Reset(
         FNetSerializationContext& Context,
-        FInstancedStructNetSerializerConfig* Config,
+        FInstancedStructNetSerializer_ckConfig* Config,
         QuantizedType& Value)
     -> void
 {
@@ -797,10 +797,10 @@ auto
 }
 
 auto
-    FInstancedStructNetSerializer::
+    FInstancedStructNetSerializer_ck::
     InternalFreeStructInstance(
         FNetSerializationContext& Context,
-        FInstancedStructNetSerializerConfig* Config,
+        FInstancedStructNetSerializer_ckConfig* Config,
         QuantizedType& Value)
     -> void
 {
@@ -822,7 +822,7 @@ auto
 namespace UE::Net
 {
 
-void InitInstancedStructNetSerializerConfig(FInstancedStructNetSerializerConfig* Config, const FProperty* Property)
+void InitInstancedStructNetSerializer_ckConfig(FInstancedStructNetSerializer_ckConfig* Config, const FProperty* Property)
 {
     Config->SupportedTypes.Reset();
 
@@ -857,7 +857,7 @@ void InitInstancedStructNetSerializerConfig(FInstancedStructNetSerializerConfig*
 FInstancedStructPropertyNetSerializerInfo::
     FInstancedStructPropertyNetSerializerInfo()
     : FNamedStructPropertyNetSerializerInfo(FName("InstancedStruct")
-    , UE_NET_GET_SERIALIZER(FInstancedStructNetSerializer))
+    , UE_NET_GET_SERIALIZER(FInstancedStructNetSerializer_ck))
 {
 }
 
@@ -877,8 +877,8 @@ auto
         const FProperty* Property) const
     -> FNetSerializerConfig*
 {
-    auto Config = new (NetSerializerConfigBuffer) FInstancedStructNetSerializerConfig();
-    InitInstancedStructNetSerializerConfig(Config, Property);
+    auto Config = new (NetSerializerConfigBuffer) FInstancedStructNetSerializer_ckConfig();
+    InitInstancedStructNetSerializer_ckConfig(Config, Property);
     return Config;
 }
 
