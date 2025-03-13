@@ -457,6 +457,9 @@ namespace ck
             return;
         }
 
+        if (UCk_Utils_Ability_UE::Get_CanActivate(InHandle) != ECk_Ability_ActivationRequirementsResult::RequirementsMet)
+        { return; }
+
         const auto& AbilityParams = InHandle.Get<ck::FFragment_Ability_Params>();
         const auto& AbilityInstancingPolicy = AbilityParams.Get_Data().Get_InstancingPolicy();
         AbilityCurrent._Status = ECk_Ability_Status::Active;
