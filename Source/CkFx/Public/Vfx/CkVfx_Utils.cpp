@@ -143,9 +143,8 @@ auto
         true
     );
 
-    CK_ENSURE_IF_NOT(ck::IsValid(SpawnedVfx), TEXT("Failed to create new VFX [{}] using [{}] to Play Attached"),
-        InVfxHandle,
-        ParticleSystem)
+    // This may be invalid if it is pre-culled
+    if (ck::Is_NOT_Valid(SpawnedVfx))
     { return InVfxHandle; }
 
     DoSet_NiagaraInstanceParameter(SpawnedVfx, InRequest.Get_InstanceParameterSettings());
@@ -181,9 +180,8 @@ auto
         InRequest.Get_TransformSettings().Get_Rotation()
     );
 
-    CK_ENSURE_IF_NOT(ck::IsValid(SpawnedVfx), TEXT("Failed to create new VFX [{}] using [{}] to Play At Location"),
-        InVfxHandle,
-        ParticleSystem)
+    // This may be invalid if it is pre-culled
+    if (ck::Is_NOT_Valid(SpawnedVfx))
     { return InVfxHandle; }
 
     DoSet_NiagaraInstanceParameter(SpawnedVfx, InRequest.Get_InstanceParameterSettings());
