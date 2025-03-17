@@ -39,7 +39,7 @@ auto
         return FTransform::Identity;
     }();
 
-    UCk_Utils_Transform_UE::Add(SceneNodeEntity, MaybeOwnerTransform);
+    UCk_Utils_Transform_UE::Add(SceneNodeEntity, MaybeOwnerTransform, ECk_Replication::DoesNotReplicate);
 
     auto& Current = SceneNodeEntity.Add<ck::FFragment_SceneNode_Current>();
     Current._RelativeTransform = InLocalTransform;
