@@ -66,7 +66,7 @@ namespace ck
         const auto& Transform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(ParentEntity);
 
         UCk_Utils_Transform_TypeUnsafe_UE::Request_SetTransform(InHandle,
-            FCk_Request_Transform_SetTransform{Transform * InCurrent.Get_RelativeTransform()});
+            FCk_Request_Transform_SetTransform{InCurrent.Get_RelativeTransform() * Transform});
     }
 
     // --------------------------------------------------------------------------------------------------------------------
