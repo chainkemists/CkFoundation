@@ -10,6 +10,11 @@ class UCk_Utils_IsmProxy_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(FTag_Ism_Renderer_Defaults_Gnomon);
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(FTag_Ism_Renderer_Defaults_Entity);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_IsmProxy_NeedsSetup);
