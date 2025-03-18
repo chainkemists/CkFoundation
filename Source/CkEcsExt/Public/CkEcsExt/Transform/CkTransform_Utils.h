@@ -52,6 +52,16 @@ public:
         const FTransform& InInitialTransform,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Transform",
+              DisplayName="[Ck][Transform] Add Feature (AttachTo Unreal Component)")
+    static FCk_Handle_Transform
+    AddAndAttachToUnrealComponent(
+        UPARAM(ref) FCk_Handle& InHandle,
+        USceneComponent* InAttachTo,
+        ECk_UpdatePolicy InUpdatePolicy,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Transform",
