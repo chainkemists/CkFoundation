@@ -12,28 +12,17 @@ auto
         ECk_Replication InReplicates)
     -> FCk_Handle_Transform
 {
-    InHandle.Add<ck::FFragment_Transform>(InInitialTransform);
-
     if (UCk_Utils_OwningActor_UE::Has(InHandle))
     {
         if (const auto OwningActor = UCk_Utils_OwningActor_UE::Get_EntityOwningActor(InHandle);
             ck::IsValid(OwningActor))
         {
             const auto RootComponent = OwningActor->GetRootComponent();
-            InHandle.Add<ck::FFragment_Transform_RootComponent>(RootComponent);
-
-            if (OwningActor->IsReplicatingMovement())
-            {
-                ck::ecs_extension::VeryVerbose
-                (
-                    TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it has an Owning Actor with Replicated Movement"),
-                    InHandle
-                );
-
-                return Cast(InHandle);
-            }
+            return AddAndAttachToUnrealComponent(InHandle, RootComponent, ECk_UpdatePolicy::UpdateOnDemand, InReplicates);
         }
     }
+
+    InHandle.Add<ck::FFragment_Transform>();
 
     if (InReplicates == ECk_Replication::DoesNotReplicate)
     {
@@ -48,6 +37,53 @@ auto
     }
 
     TryAddReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle);
+
+    return Cast(InHandle);
+}
+
+auto
+    UCk_Utils_Transform_UE::
+    AddAndAttachToUnrealComponent(
+        FCk_Handle& InHandle,
+        USceneComponent* InAttachTo,
+        ECk_UpdatePolicy InUpdatePolicy,
+        ECk_Replication InReplicates)
+    -> FCk_Handle_Transform
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InAttachTo),
+        TEXT("Unable to Add Transform to [{}] and AttachTo because Unreal SceneComponent [{}] is INVALID"), InHandle, InAttachTo)
+    { return {}; }
+
+    InHandle.Add<ck::FFragment_Transform>();
+    InHandle.Add<ck::FFragment_Transform_RootComponent>(InAttachTo);
+
+    if (InAttachTo->GetOwner()->IsReplicatingMovement())
+    {
+        ck::ecs_extension::VeryVerbose
+        (
+            TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it has an Owning Actor with Replicated Movement"),
+            InHandle
+        );
+
+        return Cast(InHandle);
+    }
+
+    if(InReplicates == ECk_Replication::DoesNotReplicate)
+    {
+        ck::ecs_extension::VeryVerbose
+        (
+            TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it's set to [{}]"),
+            InHandle,
+            InReplicates
+        );
+
+        return Cast(InHandle);
+    }
+
+    TryAddReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle);
+
+    if (InUpdatePolicy == ECk_UpdatePolicy::UpdateEveryFrame)
+    { InHandle.Add<ck::FTag_Transform_SyncFromActor>(); }
 
     return Cast(InHandle);
 }
