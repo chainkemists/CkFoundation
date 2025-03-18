@@ -1,8 +1,8 @@
 #pragma once
 
-#include "CkCameraShake_Fragment_Data.h"
-#include "CkSfx_Fragment_Data.h"
-#include "CkVfx_Fragment_Data.h"
+#include "CkCamera/CameraShake/CkCameraShake_Fragment_Data.h"
+#include "Sfx/CkSfx_Fragment_Data.h"
+#include "Vfx/CkVfx_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkCore/Macros/CkMacros.h"

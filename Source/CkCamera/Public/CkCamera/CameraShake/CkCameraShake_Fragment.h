@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkCameraShake_Fragment_Data.h"
+#include "CkCamera/CameraShake/CkCameraShake_Fragment_Data.h"
 
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkCore/Macros/CkMacros.h"

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkVfx_Fragment_Data.h"
+#include "Vfx/CkVfx_Fragment_Data.h"
 
 #include "CkRecord/Record/CkRecord_Fragment.h"
 
