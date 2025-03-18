@@ -4,6 +4,8 @@
 
 #include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
 
+#include "CkRecord/Record/CkRecord_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_SceneNode_UE;
@@ -75,6 +77,10 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_ENTITY_HOLDER_AND_UTILS(USceneNodeParent_Utils, SceneNodeParent);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS(FUtils_RecordOfSceneNodes, FFragment_RecordOfSceneNodes, FCk_Handle_SceneNode);
 
     // --------------------------------------------------------------------------------------------------------------------
 }

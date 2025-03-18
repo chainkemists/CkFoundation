@@ -31,7 +31,12 @@ auto
 
     ck::USceneNodeParent_Utils::AddOrReplace(InHandle, InAttachTo);
 
-    return Cast(InHandle);
+    auto SceneNodeHandle = Cast(InHandle);
+
+    ck::FUtils_RecordOfSceneNodes::AddIfMissing(InAttachTo);
+    ck::FUtils_RecordOfSceneNodes::Request_Connect(InAttachTo, SceneNodeHandle);
+
+    return SceneNodeHandle;
 }
 
 auto
@@ -84,6 +89,41 @@ auto
 {
     InSceneNode.AddOrGet<ck::FFragment_SceneNode_Requests>()._Requests.Emplace(InRequest);
     return InSceneNode;
+}
+
+auto
+    UCk_Utils_SceneNode_UE::
+    ForEach_SceneNode(
+        FCk_Handle_Transform& InHandle,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate)
+    -> TArray<FCk_Handle_SceneNode>
+{
+    auto Abilities = TArray<FCk_Handle_SceneNode>{};
+
+    ForEach_SceneNode
+    (
+        InHandle,
+        [&](const FCk_Handle_SceneNode& InSceneNode)
+        {
+            if (InDelegate.IsBound())
+            { InDelegate.Execute(InSceneNode, InOptionalPayload); }
+            else
+            { Abilities.Emplace(InSceneNode); }
+        }
+    );
+
+    return Abilities;
+}
+
+auto
+    UCk_Utils_SceneNode_UE::
+    ForEach_SceneNode(
+        FCk_Handle_Transform& InHandle,
+        const TFunction<void(FCk_Handle_SceneNode)>& InFunc)
+    -> void
+{
+    ck::FUtils_RecordOfSceneNodes::ForEach_ValidEntry(InHandle, InFunc);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
