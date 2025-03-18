@@ -112,6 +112,23 @@ public:
     ForEach_Sfx(
         FCk_Handle& InSfxOwnerEntity,
         const TFunction<void(FCk_Handle_Sfx)>& InFunc) -> void;
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              DisplayName="[Ck][Sfx] Request Play (Attached)")
+    static FCk_Handle_Sfx
+    Request_PlayAttached(
+        UPARAM(ref) FCk_Handle_Sfx& InSfxHandle,
+        const FCk_Request_Sfx_PlayAttached& InRequest);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
+              DisplayName="[Ck][Sfx] Request Play (At Location)")
+    static FCk_Handle_Sfx
+    Request_PlayAtLocation(
+        UPARAM(ref) FCk_Handle_Sfx& InSfxHandle,
+        const FCk_Request_Sfx_PlayAtLocation& InRequest);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
