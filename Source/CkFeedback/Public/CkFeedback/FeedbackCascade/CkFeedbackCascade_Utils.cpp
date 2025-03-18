@@ -1,9 +1,9 @@
 #include "CkFeedbackCascade_Utils.h"
 
-#include "CkCameraShake_Utils.h"
-#include "CkLabel_Utils.h"
-#include "CkSfx_Utils.h"
-#include "CkVfx_Utils.h"
+#include "CkCamera/CameraShake/CkCameraShake_Utils.h"
+#include "CkLabel/CkLabel_Utils.h"
+#include "Sfx/CkSfx_Utils.h"
+#include "Vfx/CkVfx_Utils.h"
 
 #include "CkFeedback/FeedbackCascade/CkFeedbackCascade_Fragment.h"
 
