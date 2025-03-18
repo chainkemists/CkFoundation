@@ -218,28 +218,23 @@ namespace ck
             {
                 auto LambdaAbilityOwner = UCk_Utils_Ability_UE::TryGet_Owner(InLambdaAbilityHandle);
 
-                LambdaAbilityOwner.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
-                InLambdaAbilityHandle.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+                UCk_Utils_Ability_UE::Request_DeactivateAbility(InLambdaAbilityHandle,
                     FFragment_Ability_RequestDeactivate{LambdaAbilityOwner});
 
-                LambdaAbilityOwner.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
-                InLambdaAbilityHandle.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+                UCk_Utils_Ability_UE::Request_RevokeAbility(InLambdaAbilityHandle,
                     FFragment_Ability_RequestRevoke{LambdaAbilityOwner, ECk_AbilityOwner_DestructionOnRevoke_Policy::DoNotDestroyOnRevoke});
 
                 SubabilitiesFragment._RevokedSubAbilitiesBeingTransferred.Add(InLambdaAbilityHandle);
             });
         }
 
-        AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
-        AbilityToTransfer.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+        UCk_Utils_Ability_UE::Request_DeactivateAbility(AbilityToTransfer,
             FFragment_Ability_RequestDeactivate{AbilityOwnerEntity});
 
-        AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
-        AbilityToTransfer.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+        UCk_Utils_Ability_UE::Request_RevokeAbility(AbilityToTransfer,
             FFragment_Ability_RequestRevoke{AbilityOwnerEntity, ECk_AbilityOwner_DestructionOnRevoke_Policy::DoNotDestroyOnRevoke});
 
-        AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
-        AbilityToTransfer.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+        UCk_Utils_Ability_UE::Request_TransferExisting_SwapOwner(AbilityToTransfer,
             FFragment_Ability_RequestTransferExisting_SwapOwner{AbilityOwnerEntity, TransferTarget, AbilityToTransfer});
 
         return EAbilityProcessor_ForEachRequestResult::Continue;
@@ -312,20 +307,17 @@ namespace ck
 
                 auto SubAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(SubAbility));
 
-                SubAbilityOwner.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
-                SubAbility.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+                UCk_Utils_Ability_UE::Request_AddAndGiveAbility(SubAbility,
                     FFragment_Ability_RequestAddAndGive{SubAbilityOwner, SubAbility, {}});
             }
 
             AbilityToTransfer.Remove<FFragment_Ability_RevokedSubAbilitiesBeingTransferred>();
         }
 
-        TransferTarget.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
-        AbilityToTransfer.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+        UCk_Utils_Ability_UE::Request_AddAndGiveAbility(AbilityToTransfer,
             FFragment_Ability_RequestAddAndGive{TransferTarget, AbilityToTransfer, {}});
 
-        TransferTarget.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
-        AbilityToTransfer.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+        UCk_Utils_Ability_UE::Request_TransferExisting_Finalize(AbilityToTransfer,
             FFragment_Ability_RequestTransferExisting_Finalize{AbilityOwnerEntity, TransferTarget, AbilityToTransfer});
 
         // Since we cleared all ability requests, we don't want to continue processing the current requests in the pump
