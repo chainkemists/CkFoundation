@@ -223,65 +223,10 @@ namespace ck
             const FCk_Request_AbilityOwner_TransferExistingAbility& InRequest) const
         -> void
     {
-        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        // HACK: When transferring this ability, it needs to deactivate, revoke, add, and give
-        // the ability properly even through the subability owner is the same since something
-        // in the ownership chain has changed. To do this, we request to transfer to the owner
-        // even though it is the same as before. See processor for FFragment_Ability_RequestTransferExisting
-        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        auto TransferSubabilities = [](HandleType AbilityOwner, auto& TransferSubabilitiesRef) mutable -> void
-        {
-            UCk_Utils_AbilityOwner_UE::ForEach_Ability_If(AbilityOwner, [&](FCk_Handle_Ability InAbility)
-            {
-                auto CurrOwner = UCk_Utils_Ability_UE::TryGet_Owner(InAbility);
-                auto RequestTransferExisting = ck::FFragment_Ability_RequestTransferExisting{CurrOwner, CurrOwner, InAbility};
-                CurrOwner.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
-                InAbility.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(RequestTransferExisting);
-
-                const auto MaybeAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(InAbility);
-
-                if (ck::IsValid(MaybeAbilityOwner))
-                {
-                    TransferSubabilitiesRef(MaybeAbilityOwner, TransferSubabilitiesRef);
-                }
-            },
-            [&](const FCk_Handle_Ability& InAbilityEntityToCancel)
-            {
-                // Only transfer if directly owned ability, ignore abilities owned only by extension
-                return UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityEntityToCancel) == AbilityOwner;
-            });
-        };
-
         auto AbilityToTransfer = InRequest.Get_Ability();
         auto TransferTarget = InRequest.Get_TransferTarget();
 
-        // We want to make sure that the Ability (that might be an Owner), when beginning the transfer, has it's OwningContext
-        // changed right away. The reason for this is to make sure that when sub-abilities are revoked and given, that they
-        // have the NEW OwningContext. Without changing it here, the sub-abilities will continue to, incorrectly, have the
-        // existing OwningContext (but that might have changed when doing the transfer on the top most parent Ability).
-        //
-        // For example: AbilityA has SubAbilityB and is owned by ContextA. We want to transfer AbilityA to ContextB.
-        // If AbilityA's OwningContext is NOT set to ContextB here, then SubAbilityB will be Revoked and Given BEFORE AbilityA
-        // has the chance to reset its Context from ContextA to ContextB.
-        {
-            UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(AbilityToTransfer, TransferTarget);
-
-            const auto& AbilityToTransferCurrent = AbilityToTransfer.Get<FFragment_Ability_Current>();
-
-            // Get Context Entity with Actor from ownership chain instead of transfer target's ability script since transfer target's ability script may not be initialized yet
-            AbilityToTransferCurrent.Get_AbilityScript()->_ContextEntityWithActor =
-                UCk_Utils_OwningActor_UE::TryGet_Entity_OwningActor_InOwnershipChain(InRequest.Get_TransferTarget());
-        }
-
-        if (auto MaybeAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(AbilityToTransfer);
-            ck::IsValid(MaybeAbilityOwner))
-        {
-            TransferSubabilities(MaybeAbilityOwner, TransferSubabilities);
-        }
-
-        auto RequestTransferExisting = ck::FFragment_Ability_RequestTransferExisting{InAbilityOwnerEntity, TransferTarget, AbilityToTransfer};
+        auto RequestTransferExisting = ck::FFragment_Ability_RequestTransferExisting_Initiate{InAbilityOwnerEntity, TransferTarget, AbilityToTransfer};
         InRequest.Request_TransferHandleToOther(RequestTransferExisting);
         InAbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
         AbilityToTransfer.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(RequestTransferExisting);
