@@ -186,6 +186,55 @@ private:
         FCk_Handle& InHandle,
         const FCk_Fragment_Ability_ParamsData& InParams) -> FCk_Handle_Ability;
 
+private:
+    static auto
+    Request_AddAndGiveAbility(
+        UPARAM(ref) FCk_Handle_Ability& InAbilityHandle,
+        const ck::FFragment_Ability_RequestAddAndGive& InRequest,
+        ECk_AbilityRequest_PendingSubabilityPolicy AddPendingSubabilityTag = ECk_AbilityRequest_PendingSubabilityPolicy::AddTag) -> void;
+
+    static auto
+    Request_TransferExisting_Initiate(
+        UPARAM(ref) FCk_Handle_Ability& InAbilityHandle,
+        const ck::FFragment_Ability_RequestTransferExisting_Initiate& InRequest,
+        ECk_AbilityRequest_PendingSubabilityPolicy AddPendingSubabilityTag = ECk_AbilityRequest_PendingSubabilityPolicy::AddTag) -> void;
+
+    static auto
+    Request_TransferExisting_SwapOwner(
+        UPARAM(ref) FCk_Handle_Ability& InAbilityHandle,
+        const ck::FFragment_Ability_RequestTransferExisting_SwapOwner& InRequest,
+        ECk_AbilityRequest_PendingSubabilityPolicy AddPendingSubabilityTag = ECk_AbilityRequest_PendingSubabilityPolicy::AddTag) -> void;
+
+    static auto
+    Request_TransferExisting_Finalize(
+        UPARAM(ref) FCk_Handle_Ability& InAbilityHandle,
+        const ck::FFragment_Ability_RequestTransferExisting_Finalize& InRequest,
+        ECk_AbilityRequest_PendingSubabilityPolicy AddPendingSubabilityTag = ECk_AbilityRequest_PendingSubabilityPolicy::AddTag) -> void;
+
+    static auto
+    Request_GiveAbility(
+        UPARAM(ref) FCk_Handle_Ability& InAbilityHandle,
+        const ck::FFragment_Ability_RequestGive& InRequest,
+        ECk_AbilityRequest_PendingSubabilityPolicy AddPendingSubabilityTag = ECk_AbilityRequest_PendingSubabilityPolicy::AddTag) -> void;
+
+    static auto
+    Request_RevokeAbility(
+        UPARAM(ref) FCk_Handle_Ability& InAbilityHandle,
+        const ck::FFragment_Ability_RequestRevoke& InRequest,
+        ECk_AbilityRequest_PendingSubabilityPolicy AddPendingSubabilityTag = ECk_AbilityRequest_PendingSubabilityPolicy::AddTag) -> void;
+
+    static auto
+    Request_ActivateAbility(
+        UPARAM(ref) FCk_Handle_Ability& InAbilityHandle,
+        const ck::FFragment_Ability_RequestActivate& InRequest,
+        ECk_AbilityRequest_PendingSubabilityPolicy AddPendingSubabilityTag = ECk_AbilityRequest_PendingSubabilityPolicy::AddTag) -> void;
+
+    static auto
+    Request_DeactivateAbility(
+        UPARAM(ref) FCk_Handle_Ability& InAbilityHandle,
+        const ck::FFragment_Ability_RequestDeactivate& InRequest,
+        ECk_AbilityRequest_PendingSubabilityPolicy AddPendingSubabilityTag = ECk_AbilityRequest_PendingSubabilityPolicy::AddTag) -> void;
+
 // TODO: Move these back to the processor ?
 private:
     static auto
