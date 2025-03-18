@@ -248,6 +248,11 @@ public:
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass,
         const TFunction<void(FCk_Handle_Ability)>& InFunc) -> void;
 
+    static auto
+    ForEach_Ability_InOwnershipHierarchy(
+        FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        const TFunction<void(FCk_Handle_Ability)>& InFunc) -> void;
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
