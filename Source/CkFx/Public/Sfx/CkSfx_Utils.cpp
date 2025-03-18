@@ -25,7 +25,7 @@ auto
 
     auto NewSfxEntity = Cast(NewEntity);
 
-    RecordOfSfx_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
+    RecordOfSfx_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::Default);
     RecordOfSfx_Utils::Request_Connect(InHandle, NewSfxEntity);
 
     return NewSfxEntity;
