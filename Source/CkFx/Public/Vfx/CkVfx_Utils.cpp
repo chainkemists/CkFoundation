@@ -26,7 +26,7 @@ auto
 
     auto NewVfxEntity = Cast(NewEntity);
 
-    RecordOfVfx_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
+    RecordOfVfx_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::Default);
     RecordOfVfx_Utils::Request_Connect(InHandle, NewVfxEntity);
 
     return NewVfxEntity;

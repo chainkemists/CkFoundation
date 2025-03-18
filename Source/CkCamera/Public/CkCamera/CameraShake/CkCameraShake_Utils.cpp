@@ -20,7 +20,7 @@ auto
 
     auto NewCameraShakeEntity = Cast(NewEntity);
 
-    RecordOfCameraShakes_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::DisallowDuplicateNames);
+    RecordOfCameraShakes_Utils::AddIfMissing(InHandle, ECk_Record_EntryHandlingPolicy::Default);
     RecordOfCameraShakes_Utils::Request_Connect(InHandle, NewCameraShakeEntity);
 
     return NewCameraShakeEntity;
