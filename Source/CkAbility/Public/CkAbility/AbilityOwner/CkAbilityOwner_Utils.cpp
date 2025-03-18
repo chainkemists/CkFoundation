@@ -436,6 +436,28 @@ auto
 }
 
 auto
+    UCk_Utils_AbilityOwner_UE::ForEach_Ability_InOwnershipHeirarchy(
+        FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
+        const TFunction<void(FCk_Handle_Ability)>& InFunc) -> void
+{
+    ForEach_Ability_If(InAbilityOwnerEntity, [&](FCk_Handle_Ability InAbility)
+    {
+        InFunc(InAbility);
+        auto MaybeAbilityOwner = Cast(InAbility);
+
+        if (ck::IsValid(MaybeAbilityOwner))
+        {
+            ForEach_Ability_InOwnershipHeirarchy(MaybeAbilityOwner, InFunc);
+        }
+    },
+    [&](const FCk_Handle_Ability& InAbilityEntityToCancel)
+    {
+        // Only run if directly owned ability, ignore abilities owned only by extension
+        return UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityEntityToCancel) == InAbilityOwnerEntity;
+    });
+}
+
+auto
     UCk_Utils_AbilityOwner_UE::
     Get_ActiveTags(
         const FCk_Handle_AbilityOwner& InAbilityOwnerHandle)

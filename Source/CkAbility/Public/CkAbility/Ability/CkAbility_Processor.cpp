@@ -5,12 +5,13 @@
 #include "CkAbility/CkAbility_Log.h"
 #include "CkAbility/Ability/CkAbility_Utils.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Fragment.h"
+#include "CkAbility/AbilityOwner/CkAbilityOwner_Processor.h"
 #include "CkAbility/AbilityOwner/CkAbilityOwner_Utils.h"
 #include "CkAbility/Settings/CkAbility_Settings.h"
 #include "CkAbility/Subsystem/CkAbility_Subsystem.h"
 
 #include "CkCore/Object/CkObject_Utils.h"
-
+PRAGMA_DISABLE_OPTIMIZATION // TODO: REMOVE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -64,12 +65,22 @@ namespace ck
     {
         const auto RequestsCopy = InAbilityRequests.Get_Requests();
         InHandle.Remove<MarkedDirtyBy>();
+        InHandle.Try_Remove<FTag_Ability_InvalidateCurrentRequestsHandled>();
 
         algo::ForEach(RequestsCopy, ck::Visitor([&](
             const auto& InRequestVariant)
             {
+                // This tag indicates that we have done something to invalidate all current requests for this processor.
+                // Since we've already made a copy of the requests to handle, we can't simply clear the requests to stop
+                //    it from continuing so we have this tag so we ignore the remaining requests.
+                // Whoever adds this tag is responsible for handling tags for PendingSubAbilityOperation
+                if (InHandle.Has<FTag_Ability_InvalidateCurrentRequestsHandled>())
+                { return; }
+
                 DoHandleRequest(InHandle, InRequestVariant);
             }));
+
+        InHandle.Try_Remove<FTag_Ability_InvalidateCurrentRequestsHandled>();
 
         if (ck::Is_NOT_Valid(InHandle))
         {
@@ -112,7 +123,7 @@ namespace ck
         FProcessor_Ability_HandleRequests::
         DoHandleRequest(
             HandleType& InAbilityEntity,
-            const FFragment_Ability_RequestTransferExisting& InRequest)
+            const FFragment_Ability_RequestTransferExisting_Initialize& InRequest)
             -> void
     {
         using RecordOfAbilities_Utils = UCk_Utils_AbilityOwner_UE::RecordOfAbilities_Utils;
@@ -123,7 +134,12 @@ namespace ck
 
         AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
 
-        const auto& AbilityTransferredOrNot = [&]() -> ECk_AbilityOwner_AbilityTransferredOrNot
+        CK_ENSURE_IF_NOT(InAbilityEntity == AbilityToTransfer,
+            TEXT("Trying to initialize an ability transfer for [{}] on the processor of a different ability [{}]"),
+            AbilityToTransfer, InAbilityEntity)
+        { return; }
+
+        const auto& AbilityCanInitializeTransferOrNot = [&]() -> ECk_AbilityOwner_AbilityTransferredOrNot
         {
             CK_ENSURE_IF_NOT(ck::IsValid(AbilityToTransfer),
                 TEXT("INVALID Ability to TRANSFER from Ability Owner [{}]"),
@@ -148,33 +164,6 @@ namespace ck
                 return ECk_AbilityOwner_AbilityTransferredOrNot::NotTransferred;
             }
 
-            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            // HACK: this is s fairly major hack and needs to be addressed
-            // The problem is that on Deactivate we change the AbilityOwner Handle of the Script back to new Owner
-            // which causes problems subsequently when trying to Deactivate where the Kit tries to remove
-            // extension from the Owner (which is already the new Owner) but is unable to find it because the
-            // PREVIOUS Owner was supposed to be the Owner UNTIL we have Deactivated and Revoked the Ability
-            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            {
-                UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(AbilityToTransfer, AbilityOwnerEntity);
-
-                auto& AbilityCurrent = AbilityToTransfer.Get<ck::FFragment_Ability_Current,
-                    ck::IsValid_Policy_IncludePendingKill>();
-                auto Script = AbilityCurrent.Get_AbilityScript().Get();
-                Script->_AbilityOwnerHandle = AbilityOwnerEntity;
-            }
-
-            AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
-            DoHandleRequest(AbilityToTransfer, FFragment_Ability_RequestDeactivate{AbilityOwnerEntity});
-
-            AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
-            DoHandleRequest(AbilityToTransfer, FFragment_Ability_RequestRevoke{
-                AbilityOwnerEntity,
-                ECk_AbilityOwner_DestructionOnRevoke_Policy::DoNotDestroyOnRevoke
-            });
-
             CK_ENSURE_IF_NOT(NOT RecordOfAbilities_Utils::Get_ContainsEntry(TransferTarget, AbilityToTransfer),
                 TEXT(
                     "Cannot TRANSFER Ability [{}] from Ability Owner [{}] to [{}] because the recipient already has this ability"
@@ -185,24 +174,6 @@ namespace ck
                 return ECk_AbilityOwner_AbilityTransferredOrNot::NotTransferred;
             }
 
-            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            // HACK: see notes above on this Hack
-            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            {
-                UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(AbilityToTransfer, TransferTarget);
-
-                auto& AbilityCurrent = AbilityToTransfer.Get<ck::FFragment_Ability_Current,
-                    ck::IsValid_Policy_IncludePendingKill>();
-                auto Script = AbilityCurrent.Get_AbilityScript().Get();
-                Script->_AbilityOwnerHandle = TransferTarget;
-            }
-
-            TransferTarget.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
-            DoHandleRequest(AbilityToTransfer,
-                FFragment_Ability_RequestAddAndGive{TransferTarget, AbilityToTransfer, {}});
-
             if (TransferTarget == AbilityOwnerEntity)
             {
                 return ECk_AbilityOwner_AbilityTransferredOrNot::NotTransferred;
@@ -211,19 +182,190 @@ namespace ck
             return ECk_AbilityOwner_AbilityTransferredOrNot::Transferred;
         }();
 
+        if (AbilityCanInitializeTransferOrNot == ECk_AbilityOwner_AbilityTransferredOrNot::NotTransferred)
+        {
+            if (InRequest.Get_IsRequestHandleValid())
+            {
+                UUtils_Signal_AbilityOwner_OnAbilityTransferredOrNot::Broadcast(
+                    InRequest.GetAndDestroyRequestHandle(),
+                    MakePayload(AbilityOwnerEntity, TransferTarget, AbilityToTransfer, AbilityCanInitializeTransferOrNot));
+            }
+
+            if (AbilityCanInitializeTransferOrNot == ECk_AbilityOwner_AbilityTransferredOrNot::Transferred)
+            {
+                UUtils_Signal_AbilityOwner_OnAbilityTransferred::Broadcast(
+                    AbilityOwnerEntity,
+                    MakePayload(AbilityOwnerEntity, TransferTarget, AbilityToTransfer));
+            }
+            return;
+        }
+
+        auto AbilityAsOwner = UCk_Utils_AbilityOwner_UE::Cast(AbilityToTransfer);
+
+        if (ck::IsValid(AbilityAsOwner))
+        {
+            UCk_Utils_AbilityOwner_UE::ForEach_Ability_InOwnershipHeirarchy(AbilityAsOwner, [&](FCk_Handle_Ability InLambdaAbilityHandle)
+            {
+                auto LambdaAbilityOwner = UCk_Utils_Ability_UE::TryGet_Owner(InLambdaAbilityHandle);
+
+                LambdaAbilityOwner.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+                InLambdaAbilityHandle.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+                    FFragment_Ability_RequestDeactivate{LambdaAbilityOwner});
+
+                LambdaAbilityOwner.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+                InLambdaAbilityHandle.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+                    FFragment_Ability_RequestRevoke{LambdaAbilityOwner, ECk_AbilityOwner_DestructionOnRevoke_Policy::DoNotDestroyOnRevoke});
+            });
+        }
+
+        AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+        AbilityToTransfer.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+            FFragment_Ability_RequestDeactivate{AbilityOwnerEntity});
+
+        AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+        AbilityToTransfer.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+            FFragment_Ability_RequestRevoke{AbilityOwnerEntity, ECk_AbilityOwner_DestructionOnRevoke_Policy::DoNotDestroyOnRevoke});
+
+        AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+        AbilityToTransfer.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+            FFragment_Ability_RequestTransferExisting_SwapOwner{AbilityOwnerEntity, TransferTarget, AbilityToTransfer});
+    }
+
+    auto
+        FProcessor_Ability_HandleRequests::
+        DoHandleRequest(
+            HandleType& InAbilityEntity,
+            const FFragment_Ability_RequestTransferExisting_SwapOwner& InRequest)
+        -> void
+    {
+        using RecordOfAbilities_Utils = UCk_Utils_AbilityOwner_UE::RecordOfAbilities_Utils;
+
+        auto AbilityOwnerEntity = InRequest.Get_AbilityOwner();
+        auto AbilityToTransfer = InRequest.Get_AbilityToTransfer();
+        auto TransferTarget = InRequest.Get_TransferTarget();
+
+            //         UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(AbilityToTransfer, TransferTarget);
+            //
+            // const auto& AbilityToTransferCurrent = AbilityToTransfer.Get<FFragment_Ability_Current>();
+            //
+            // // Get Context Entity with Actor from ownership chain instead of transfer target's ability script since transfer target's ability script may not be initialized yet
+            // AbilityToTransferCurrent.Get_AbilityScript()->_ContextEntityWithActor =
+            //     UCk_Utils_OwningActor_UE::TryGet_Entity_OwningActor_InOwnershipChain(InRequest.Get_TransferTarget());
+
+        AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
+
+        CK_ENSURE_IF_NOT(InAbilityEntity == AbilityToTransfer,
+            TEXT("Trying to swap ability owner in an ability transfer for [{}] on the processor of a different ability [{}]"),
+            AbilityToTransfer, InAbilityEntity)
+        { return; }
+
+        UCk_Utils_EntityLifetime_UE::Request_TransferLifetimeOwner(AbilityToTransfer, TransferTarget);
+
+
+        auto& AbilityCurrent = AbilityToTransfer.Get<ck::FFragment_Ability_Current,
+            ck::IsValid_Policy_IncludePendingKill>();
+        auto Script = AbilityCurrent.Get_AbilityScript().Get();
+        Script->_AbilityOwnerHandle = TransferTarget;
+
+        auto& AbilityRequests = AbilityToTransfer.AddOrGet<ck::FFragment_Ability_Requests>()._Requests;
+        for (const auto& Request : AbilityRequests)
+        {
+            AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
+        }
+        AbilityRequests.Empty();
+        AbilityToTransfer.Add<FTag_Ability_InvalidateCurrentRequestsHandled>();
+
+        if (auto AbilityAsOwner = UCk_Utils_AbilityOwner_UE::Cast(AbilityToTransfer);
+            ck::IsValid(AbilityAsOwner))
+        {
+            AbilityAsOwner.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Empty();
+
+            auto ProcessTransferOnAllDependentSubabilities = [](const FCk_Handle_AbilityOwner& InAbilityOwnerHandle, auto& SelfLambdaRef) mutable -> void
+            {
+                for (auto& Dependent : UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(InAbilityOwnerHandle))
+                {
+                    auto DependentAsAbility = UCk_Utils_Ability_UE::Cast(Dependent);
+                    if (ck::Is_NOT_Valid(DependentAsAbility))
+                    { continue; }
+
+                    auto DependentAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(DependentAsAbility));
+
+                    auto& DependentAbilityRequests = DependentAsAbility.AddOrGet<ck::FFragment_Ability_Requests>()._Requests;
+                    for (const auto& Request : DependentAbilityRequests)
+                    {
+                        DependentAbilityOwner.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
+                    }
+                    DependentAbilityRequests.Empty();
+                    DependentAsAbility.Add<FTag_Ability_InvalidateCurrentRequestsHandled>();
+
+                    auto DependentAsAbilityOwner = UCk_Utils_AbilityOwner_UE::Cast(Dependent);
+                    if (ck::IsValid(DependentAsAbilityOwner))
+                    {
+                        DependentAsAbilityOwner.AddOrGet<ck::FFragment_AbilityOwner_Requests>()._Requests.Empty();
+                    }
+
+                    DependentAbilityOwner.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+                    DependentAsAbility.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+                        FFragment_Ability_RequestAddAndGive{DependentAbilityOwner, DependentAsAbility, {}});
+
+                    if (ck::IsValid(DependentAsAbilityOwner))
+                    {
+                        SelfLambdaRef(DependentAsAbilityOwner, SelfLambdaRef);
+                    }
+                }
+            };
+
+            ProcessTransferOnAllDependentSubabilities(AbilityAsOwner, ProcessTransferOnAllDependentSubabilities);
+
+            // UCk_Utils_AbilityOwner_UE::ForEach_Ability_InOwnershipHeirarchy(AbilityAsOwner, [&](FCk_Handle_Ability InLambdaAbilityHandle)
+            // {
+            //     auto LambdaAbilityOwner = UCk_Utils_Ability_UE::TryGet_Owner(InLambdaAbilityHandle);
+            //
+            //     LambdaAbilityOwner.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+            //     InLambdaAbilityHandle.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+            //         FFragment_Ability_RequestAddAndGive{LambdaAbilityOwner, InLambdaAbilityHandle, {}});
+            // });
+        }
+
+        TransferTarget.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+        AbilityToTransfer.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+            FFragment_Ability_RequestAddAndGive{TransferTarget, AbilityToTransfer, {}});
+
+        TransferTarget.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+        AbilityToTransfer.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+            FFragment_Ability_RequestTransferExisting_Finalize{AbilityOwnerEntity, TransferTarget, AbilityToTransfer});
+    }
+
+    auto
+        FProcessor_Ability_HandleRequests::
+        DoHandleRequest(
+            HandleType& InAbilityEntity,
+            const FFragment_Ability_RequestTransferExisting_Finalize& InRequest)
+        -> void
+    {
+        using RecordOfAbilities_Utils = UCk_Utils_AbilityOwner_UE::RecordOfAbilities_Utils;
+
+        auto OriginalAbilityOwnerEntity = InRequest.Get_AbilityOwner();
+        auto AbilityToTransfer = InRequest.Get_AbilityToTransfer();
+        auto TransferTarget = InRequest.Get_TransferTarget();
+
+        TransferTarget.Add<ck::FTag_AbilityOwner_RemovePendingSubAbilityOperation>();
+
+        CK_ENSURE_IF_NOT(InAbilityEntity == AbilityToTransfer,
+            TEXT("Trying to finalize an ability transfer for [{}] on the processor of a different ability [{}]"),
+            AbilityToTransfer, InAbilityEntity)
+        { return; }
+
         if (InRequest.Get_IsRequestHandleValid())
         {
             UUtils_Signal_AbilityOwner_OnAbilityTransferredOrNot::Broadcast(
                 InRequest.GetAndDestroyRequestHandle(),
-                MakePayload(AbilityOwnerEntity, TransferTarget, AbilityToTransfer, AbilityTransferredOrNot));
+                MakePayload(OriginalAbilityOwnerEntity, TransferTarget, AbilityToTransfer, ECk_AbilityOwner_AbilityTransferredOrNot::Transferred));
         }
 
-        if (AbilityTransferredOrNot == ECk_AbilityOwner_AbilityTransferredOrNot::Transferred)
-        {
-            UUtils_Signal_AbilityOwner_OnAbilityTransferred::Broadcast(
-                AbilityOwnerEntity,
-                MakePayload(AbilityOwnerEntity, TransferTarget, AbilityToTransfer));
-        }
+        UUtils_Signal_AbilityOwner_OnAbilityTransferred::Broadcast(
+            OriginalAbilityOwnerEntity,
+            MakePayload(OriginalAbilityOwnerEntity, TransferTarget, AbilityToTransfer));
     }
 
     auto
@@ -758,5 +900,5 @@ namespace ck
         FProcessor_Ability_HandleRequests::DoHandleRequest(InHandle, FFragment_Ability_RequestRevoke{AbilityOwner, ECk_AbilityOwner_DestructionOnRevoke_Policy::DestroyOnRevoke});
     }
 }
-
+PRAGMA_ENABLE_OPTIMIZATION // TODO: REMOVE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // --------------------------------------------------------------------------------------------------------------------
