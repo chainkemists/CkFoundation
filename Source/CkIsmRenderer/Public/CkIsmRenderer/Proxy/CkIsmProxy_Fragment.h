@@ -22,23 +22,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKISMRENDERER_API FFragment_IsmProxy_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_IsmProxy_Params);
-
-    public:
-        using ParamsType = FCk_Fragment_IsmProxy_ParamsData;
-
-    private:
-        ParamsType _Params;
-
-    public:
-        CK_PROPERTY_GET(_Params);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_IsmProxy_Params, _Params);
-    };
+    using FFragment_IsmProxy_Params = FCk_Fragment_IsmProxy_ParamsData;
 
     // --------------------------------------------------------------------------------------------------------------------
 
