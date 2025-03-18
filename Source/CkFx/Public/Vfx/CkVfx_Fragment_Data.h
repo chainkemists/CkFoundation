@@ -238,6 +238,11 @@ struct CKFX_API FCk_Request_Vfx_PlayAttached
 public:
     CK_GENERATED_BODY(FCk_Request_Vfx_PlayAttached);
 
+public:
+    FCk_Request_Vfx_PlayAttached() = default;
+    explicit FCk_Request_Vfx_PlayAttached(
+        USceneComponent* InAttachComponent);
+
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -255,9 +260,6 @@ public:
     CK_PROPERTY_GET(_AttachComponent);
     CK_PROPERTY(_RelativeTransformSettings);
     CK_PROPERTY(_InstanceParameterSettings);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Vfx_PlayAttached, _AttachComponent);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -269,6 +271,12 @@ struct CKFX_API FCk_Request_Vfx_PlayAtLocation
 
 public:
     CK_GENERATED_BODY(FCk_Request_Vfx_PlayAtLocation);
+
+public:
+    FCk_Request_Vfx_PlayAtLocation() = default;
+    FCk_Request_Vfx_PlayAtLocation(
+        UObject* InOuter,
+        FCk_Vfx_TransformSettings InTransformSettings);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -287,9 +295,6 @@ public:
     CK_PROPERTY_GET(_Outer);
     CK_PROPERTY_GET(_TransformSettings);
     CK_PROPERTY(_InstanceParameterSettings);
-
-public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Vfx_PlayAtLocation, _Outer, _TransformSettings);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

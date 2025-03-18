@@ -132,6 +132,7 @@ auto
     const auto& AttachmentSettings = Get_AttachmentSettings(InVfxHandle);
     const auto& TransformRules     = AttachmentSettings.Get_TransformRules();
 
+    constexpr auto PreCull = true;
     const auto& SpawnedVfx = UNiagaraFunctionLibrary::SpawnSystemAttached
     (
         ParticleSystem,
@@ -140,7 +141,7 @@ auto
         InRequest.Get_RelativeTransformSettings().Get_Location(),
         InRequest.Get_RelativeTransformSettings().Get_Rotation(),
         EAttachLocation::Type::KeepRelativeOffset,
-        true
+        PreCull
     );
 
     // This may be invalid if it is pre-culled
