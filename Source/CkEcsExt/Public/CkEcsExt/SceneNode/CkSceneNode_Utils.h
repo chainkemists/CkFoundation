@@ -87,6 +87,21 @@ public:
     Request_UpdateOffset(
         UPARAM(ref) FCk_Handle_SceneNode& InSceneNode,
         const FCk_Request_SceneNode_UpdateRelativeTransform& InRequest);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|SceneNode",
+              DisplayName="[Ck][SceneNode] For Each SceneNode",
+              meta=(AutoCreateRefTerm="InOptionalPayload, InDelegate", KeyWords = "get,all,scenenodes"))
+    static TArray<FCk_Handle_SceneNode>
+    ForEach_SceneNode(
+        UPARAM(ref) FCk_Handle_Transform& InHandle,
+        const FInstancedStruct& InOptionalPayload,
+        const FCk_Lambda_InHandle& InDelegate);
+    static auto
+    ForEach_SceneNode(
+        FCk_Handle_Transform& InHandle,
+        const TFunction<void(FCk_Handle_SceneNode)>& InFunc) -> void;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
