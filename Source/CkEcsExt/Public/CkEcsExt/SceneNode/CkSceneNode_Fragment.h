@@ -43,6 +43,8 @@ namespace ck
 
     public:
         CK_PROPERTY_GET(_RelativeTransform);
+
+        CK_DEFINE_CONSTRUCTORS(FFragment_SceneNode_Current, _RelativeTransform);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

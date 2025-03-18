@@ -24,10 +24,19 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|SceneNode",
+              DisplayName="[Ck][SceneNode] Add Feature")
+    static FCk_Handle_SceneNode
+    Add(
+        UPARAM(ref) FCk_Handle_Transform& InHandle,
+        UPARAM(ref) FCk_Handle_Transform& InAttachTo,
+        FTransform InLocalTransform);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|SceneNode",
               DisplayName="[Ck][SceneNode] Create")
     static FCk_Handle_SceneNode
     Create(
-        UPARAM(ref) FCk_Handle_Transform& InOwner,
+        UPARAM(ref) FCk_Handle_Transform& InAttachTo,
         FTransform InLocalTransform);
 
     UFUNCTION(BlueprintPure,
