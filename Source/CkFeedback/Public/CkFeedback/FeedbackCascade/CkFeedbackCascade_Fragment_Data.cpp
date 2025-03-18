@@ -1,0 +1,9 @@
+#include "CkFeedbackCascade_Fragment_Data.h"
+
+#include <NativeGameplayTags.h>
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UE_DEFINE_GAMEPLAY_TAG_STATIC(TAG_Label_FeedbackCascade, TEXT("FeedbackCascade"));
+
+// --------------------------------------------------------------------------------------------------------------------
