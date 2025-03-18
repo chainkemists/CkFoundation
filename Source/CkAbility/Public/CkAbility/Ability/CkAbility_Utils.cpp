@@ -316,6 +316,142 @@ auto
 
 auto
     UCk_Utils_Ability_UE::
+    Request_AddAndGiveAbility(
+        FCk_Handle_Ability& InAbilityHandle,
+        const ck::FFragment_Ability_RequestAddAndGive& InRequest,
+        ECk_AbilityRequest_PendingSubabilityPolicy AddPendingSubabilityTag)
+    -> void
+{
+    if (AddPendingSubabilityTag == ECk_AbilityRequest_PendingSubabilityPolicy::AddTag)
+    {
+        auto MutableAbilityOwner = InRequest.Get_AbilityOwner();
+        MutableAbilityOwner.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+    }
+    InAbilityHandle.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+        InRequest);
+}
+
+auto
+    UCk_Utils_Ability_UE::
+    Request_TransferExisting_Initiate(
+        FCk_Handle_Ability& InAbilityHandle,
+        const ck::FFragment_Ability_RequestTransferExisting_Initiate& InRequest,
+        ECk_AbilityRequest_PendingSubabilityPolicy AddPendingSubabilityTag)
+    -> void
+{
+    if (AddPendingSubabilityTag == ECk_AbilityRequest_PendingSubabilityPolicy::AddTag)
+    {
+        auto MutableAbilityOwner = InRequest.Get_AbilityOwner();
+        MutableAbilityOwner.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+    }
+    InAbilityHandle.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+        InRequest);
+}
+
+auto
+    UCk_Utils_Ability_UE::
+    Request_TransferExisting_SwapOwner(
+        FCk_Handle_Ability& InAbilityHandle,
+        const ck::FFragment_Ability_RequestTransferExisting_SwapOwner& InRequest,
+        ECk_AbilityRequest_PendingSubabilityPolicy AddPendingSubabilityTag)
+    -> void
+{
+    if (AddPendingSubabilityTag == ECk_AbilityRequest_PendingSubabilityPolicy::AddTag)
+    {
+        auto MutableAbilityOwner = InRequest.Get_AbilityOwner();
+        MutableAbilityOwner.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+    }
+    InAbilityHandle.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+        InRequest);
+}
+
+auto
+    UCk_Utils_Ability_UE::
+    Request_TransferExisting_Finalize(
+        FCk_Handle_Ability& InAbilityHandle,
+        const ck::FFragment_Ability_RequestTransferExisting_Finalize& InRequest,
+        ECk_AbilityRequest_PendingSubabilityPolicy AddPendingSubabilityTag)
+    -> void
+{
+    if (AddPendingSubabilityTag == ECk_AbilityRequest_PendingSubabilityPolicy::AddTag)
+    {
+        auto MutableAbilityOwner = InRequest.Get_TransferTarget();
+        MutableAbilityOwner.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+    }
+    InAbilityHandle.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+        InRequest);
+}
+
+auto
+    UCk_Utils_Ability_UE::
+    Request_GiveAbility(
+        FCk_Handle_Ability& InAbilityHandle,
+        const ck::FFragment_Ability_RequestGive& InRequest,
+        ECk_AbilityRequest_PendingSubabilityPolicy AddPendingSubabilityTag)
+    -> void
+{
+    if (AddPendingSubabilityTag == ECk_AbilityRequest_PendingSubabilityPolicy::AddTag)
+    {
+        auto MutableAbilityOwner = InRequest.Get_AbilityOwner();
+        MutableAbilityOwner.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+    }
+    InAbilityHandle.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+        InRequest);
+}
+
+auto
+    UCk_Utils_Ability_UE::
+    Request_RevokeAbility(
+        FCk_Handle_Ability& InAbilityHandle,
+        const ck::FFragment_Ability_RequestRevoke& InRequest,
+        ECk_AbilityRequest_PendingSubabilityPolicy AddPendingSubabilityTag)
+    -> void
+{
+    if (AddPendingSubabilityTag == ECk_AbilityRequest_PendingSubabilityPolicy::AddTag)
+    {
+        auto MutableAbilityOwner = InRequest.Get_AbilityOwner();
+        MutableAbilityOwner.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+    }
+    InAbilityHandle.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+        InRequest);
+}
+
+auto
+    UCk_Utils_Ability_UE::
+    Request_ActivateAbility(
+        FCk_Handle_Ability& InAbilityHandle,
+        const ck::FFragment_Ability_RequestActivate& InRequest,
+        ECk_AbilityRequest_PendingSubabilityPolicy AddPendingSubabilityTag)
+    -> void
+{
+    if (AddPendingSubabilityTag == ECk_AbilityRequest_PendingSubabilityPolicy::AddTag)
+    {
+        auto MutableAbilityOwner = InRequest.Get_AbilityOwner();
+        MutableAbilityOwner.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+    }
+    InAbilityHandle.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+        InRequest);
+}
+
+auto
+    UCk_Utils_Ability_UE::
+    Request_DeactivateAbility(
+        FCk_Handle_Ability& InAbilityHandle,
+        const ck::FFragment_Ability_RequestDeactivate& InRequest,
+        ECk_AbilityRequest_PendingSubabilityPolicy AddPendingSubabilityTag)
+    -> void
+{
+    if (AddPendingSubabilityTag == ECk_AbilityRequest_PendingSubabilityPolicy::AddTag)
+    {
+        auto MutableAbilityOwner = InRequest.Get_AbilityOwner();
+        MutableAbilityOwner.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
+    }
+    InAbilityHandle.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(
+        InRequest);
+}
+
+auto
+    UCk_Utils_Ability_UE::
     DoGet_CanBeGiven(
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityScriptClass,
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,

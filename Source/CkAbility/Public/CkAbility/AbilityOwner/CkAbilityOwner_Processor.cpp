@@ -199,10 +199,10 @@ namespace ck
                 AbilityOwnerComp.AppendTags(InAbilityOwnerEntity, GrantedTags);
             }
 
-            auto RequestAddAndGive = ck::FFragment_Ability_RequestAddAndGive{InAbilityOwnerEntity, AbilitySource, OptionalPayload};
+
+            const auto& RequestAddAndGive = ck::FFragment_Ability_RequestAddAndGive{InAbilityOwnerEntity, AbilitySource, OptionalPayload};
             InRequest.Request_TransferHandleToOther(RequestAddAndGive);
-            InAbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
-            AbilityToAddAndGive.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(RequestAddAndGive);
+            UCk_Utils_Ability_UE::Request_AddAndGiveAbility(AbilityToAddAndGive, RequestAddAndGive);
 
             return ECk_AbilityOwner_AbilityGivenOrNot::Given;
         }();
@@ -228,8 +228,7 @@ namespace ck
 
         auto RequestTransferExisting = ck::FFragment_Ability_RequestTransferExisting_Initiate{InAbilityOwnerEntity, TransferTarget, AbilityToTransfer};
         InRequest.Request_TransferHandleToOther(RequestTransferExisting);
-        InAbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
-        AbilityToTransfer.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(RequestTransferExisting);
+        UCk_Utils_Ability_UE::Request_TransferExisting_Initiate(AbilityToTransfer, RequestTransferExisting);
     }
 
     auto
@@ -347,7 +346,7 @@ namespace ck
                 auto RequestGive = ck::FFragment_Ability_RequestGive{AbilityOwnerEntity, AbilitySource, OptionalPayload};
                 // not adding the tag FTag_AbilityOwner_PendingSubAbilityOperation here since it is being added below in the if statements
                 InRequest.Request_TransferHandleToOther(RequestGive);
-                AbilityEntity.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(RequestGive);
+                UCk_Utils_Ability_UE::Request_GiveAbility(AbilityEntity, RequestGive, ECk_AbilityRequest_PendingSubabilityPolicy::DontAddTag);
             };
 
             UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityEntityConfig->GetWorld())->Request_TrackAbilityEntityConfig(AbilityEntityConfig);
@@ -536,8 +535,7 @@ namespace ck
 
                 auto RequestGive = ck::FFragment_Ability_RequestGive{AbilityOwnerEntity, AbilitySource, {}};
                 InRequest.Request_TransferHandleToOther(RequestGive);
-                AbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
-                AbilityEntity.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(RequestGive);
+                UCk_Utils_Ability_UE::Request_AddAndGiveAbility(AbilityEntity, RequestGive);
             };
 
             UCk_Utils_Ability_Subsystem_UE::Get_Subsystem(AbilityEntityConfig->GetWorld())->Request_TrackAbilityEntityConfig(AbilityEntityConfig);
@@ -634,8 +632,7 @@ namespace ck
 
             auto RequestRevoke = ck::FFragment_Ability_RequestRevoke{InAbilityOwnerEntity, InRequest.Get_DestructionPolicy()};
             InRequest.Request_TransferHandleToOther(RequestRevoke);
-            InAbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
-            InAbilityEntity.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(RequestRevoke);
+            UCk_Utils_Ability_UE::Request_RevokeAbility(InAbilityEntity, RequestRevoke);
         };
 
         switch (const auto& SearchPolicy = InRequest.Get_SearchPolicy())
@@ -834,8 +831,7 @@ namespace ck
 
                 auto RequestActivate = ck::FFragment_Ability_RequestActivate{InAbilityOwnerEntity, InRequest.Get_OptionalPayload()};
                 InRequest.Request_TransferHandleToOther(RequestActivate);
-                InAbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
-                InAbilityToActivateEntity.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(RequestActivate);
+                UCk_Utils_Ability_UE::Request_ActivateAbility(InAbilityToActivateEntity, RequestActivate);
 
                 return ECk_AbilityOwner_AbilityActivatedOrNot::Activated;
             }();
@@ -893,8 +889,7 @@ namespace ck
 
             auto RequestDeactivate = ck::FFragment_Ability_RequestDeactivate{InAbilityOwnerEntity};
             InRequest.Request_TransferHandleToOther(RequestDeactivate);
-            InAbilityOwnerEntity.Add<ck::FTag_AbilityOwner_PendingSubAbilityOperation>();
-            InAbilityEntity.AddOrGet<ck::FFragment_Ability_Requests>()._Requests.Emplace(RequestDeactivate);
+            UCk_Utils_Ability_UE::Request_DeactivateAbility(InAbilityEntity, RequestDeactivate);
         };
 
         switch (const auto& SearchPolicy = InRequest.Get_SearchPolicy())
