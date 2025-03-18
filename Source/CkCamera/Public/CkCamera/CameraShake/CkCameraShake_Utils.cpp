@@ -1,4 +1,4 @@
-#include "CkCameraShake_Utils.h"
+#include "CkCamera/CameraShake/CkCameraShake_Utils.h"
 
 #include "CkEcsExt/EntityHolder/CkEntityHolder_Utils.h"
 
