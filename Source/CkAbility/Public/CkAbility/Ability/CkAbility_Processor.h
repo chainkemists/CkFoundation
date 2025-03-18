@@ -49,6 +49,13 @@ namespace ck
     public:
         using TProcessor::TProcessor;
 
+    private:
+        enum class EAbilityProcessor_ForEachRequestResult : uint8
+        {
+            Continue,
+            Stop
+        };
+
     public:
         auto
         ForEachEntity(
@@ -61,37 +68,49 @@ namespace ck
         DoHandleRequest(
             HandleType& InAbilityEntity,
             const FFragment_Ability_RequestAddAndGive& InRequest)
-            -> void;
+            -> EAbilityProcessor_ForEachRequestResult;
 
         static auto
         DoHandleRequest(
             HandleType& InAbilityEntity,
-            const FFragment_Ability_RequestTransferExisting& InRequest)
-            -> void;
+            const FFragment_Ability_RequestTransferExisting_Initiate& InRequest)
+            -> EAbilityProcessor_ForEachRequestResult;
+
+        static auto
+        DoHandleRequest(
+            HandleType& InAbilityEntity,
+            const FFragment_Ability_RequestTransferExisting_SwapOwner& InRequest)
+            -> EAbilityProcessor_ForEachRequestResult;
+
+        static auto
+        DoHandleRequest(
+            HandleType& InAbilityEntity,
+            const FFragment_Ability_RequestTransferExisting_Finalize& InRequest)
+            -> EAbilityProcessor_ForEachRequestResult;
 
         static auto
         DoHandleRequest(
             HandleType& InAbilityEntity,
             const FFragment_Ability_RequestGive& InRequest)
-            -> void;
+            -> EAbilityProcessor_ForEachRequestResult;
 
         static auto
         DoHandleRequest(
             HandleType& InAbilityEntity,
             const FFragment_Ability_RequestRevoke& InRequest)
-            -> void;
+            -> EAbilityProcessor_ForEachRequestResult;
 
         static auto
         DoHandleRequest(
             HandleType& InAbilityEntity,
             const FFragment_Ability_RequestActivate& InRequest)
-            -> void;
+            -> EAbilityProcessor_ForEachRequestResult;
 
         static auto
         DoHandleRequest(
             HandleType& InAbilityEntity,
             const FFragment_Ability_RequestDeactivate& InRequest)
-            -> void;
+            -> EAbilityProcessor_ForEachRequestResult;
     };
 
 

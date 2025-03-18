@@ -170,6 +170,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Ability_FeatureReplication_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_AbilityRequest_PendingSubabilityPolicy : uint8
+{
+    AddTag,
+    DontAddTag
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AbilityRequest_PendingSubabilityPolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKABILITY_API FCk_Handle_Ability : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Ability); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Ability);
