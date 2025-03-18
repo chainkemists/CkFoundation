@@ -4,6 +4,8 @@
 
 #include "CkFx/CkFx_Log.h"
 
+#include <Kismet/GameplayStatics.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -105,6 +107,75 @@ auto
     -> void
 {
     RecordOfSfx_Utils::ForEach_ValidEntry(InSfxOwnerEntity, InFunc);
+}
+
+auto
+    UCk_Utils_Sfx_UE::
+    Request_PlayAttached(
+        FCk_Handle_Sfx& InSfxHandle,
+        const FCk_Request_Sfx_PlayAttached& InRequest)
+    -> FCk_Handle_Sfx
+{
+    // TODO: Move this to processor
+
+    const auto& SoundCue = Get_SoundCue(InSfxHandle);
+    const auto& Params = InSfxHandle.Get<ck::FFragment_Sfx_Params>().Get_Params();
+
+    const auto& AudioSettings = InRequest.Get_OverrideAudioSettings()
+                                    ? InRequest.Get_OverridenAudioSettings()
+                                    : Params.Get_DefaultAudioSettings();
+
+    constexpr auto StartTime = 0.0f;
+    UGameplayStatics::SpawnSoundAttached
+    (
+        SoundCue,
+        InRequest.Get_AttachComponent().Get(),
+        NAME_None,
+        InRequest.Get_RelativeTransformSettings().Get_Location(),
+        InRequest.Get_RelativeTransformSettings().Get_Rotation(),
+        EAttachLocation::Type::KeepRelativeOffset,
+        InRequest.Get_StopPolicy() == ECk_Sfx_Stop_Policy::StopWhenFinishedOrDetached,
+        AudioSettings.Get_VolumeMultipler(),
+        AudioSettings.Get_PitchMultipler(),
+        StartTime,
+        Params.Get_AttenuationSettings(),
+        Params.Get_ConcurrencySettings()
+    );
+
+    return InSfxHandle;
+}
+
+auto
+    UCk_Utils_Sfx_UE::
+    Request_PlayAtLocation(
+        FCk_Handle_Sfx& InSfxHandle,
+        const FCk_Request_Sfx_PlayAtLocation& InRequest)
+    -> FCk_Handle_Sfx
+{
+    // TODO: Move this to processor
+
+    const auto& SoundCue = Get_SoundCue(InSfxHandle);
+    const auto& Params = InSfxHandle.Get<ck::FFragment_Sfx_Params>().Get_Params();
+
+    const auto& AudioSettings = InRequest.Get_OverrideAudioSettings()
+                                    ? InRequest.Get_OverridenAudioSettings()
+                                    : Params.Get_DefaultAudioSettings();
+
+    constexpr auto StartTime = 0.0f;
+    UGameplayStatics::SpawnSoundAtLocation
+    (
+        InRequest.Get_Outer().Get(),
+        SoundCue,
+        InRequest.Get_TransformSettings().Get_Location(),
+        InRequest.Get_TransformSettings().Get_Rotation(),
+        AudioSettings.Get_VolumeMultipler(),
+        AudioSettings.Get_PitchMultipler(),
+        StartTime,
+        Params.Get_AttenuationSettings(),
+        Params.Get_ConcurrencySettings()
+    );
+
+    return InSfxHandle;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
