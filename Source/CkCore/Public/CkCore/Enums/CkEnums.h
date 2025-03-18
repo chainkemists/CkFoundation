@@ -696,6 +696,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ConstructionPhase);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_UpdatePolicy : uint8
+{
+    UpdateOnDemand,
+    UpdateEveryFrame,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UpdatePolicy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_Collision : uint8
 {
     NoCollision UMETA(DisplayName = "No Collision"),
