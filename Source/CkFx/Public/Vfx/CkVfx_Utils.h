@@ -125,8 +125,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName="[Ck][Vfx] Request Play Attached",
-              meta=(AutoCreateRefTerm="InDelegate, InOptionalPayload"))
+              DisplayName="[Ck][Vfx] Request Play (Attached)")
     static FCk_Handle_Vfx
     Request_PlayAttached(
         UPARAM(ref) FCk_Handle_Vfx& InVfxHandle,
@@ -134,8 +133,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|BLUEPRINT_INTERNAL_USE_ONLY",
-              DisplayName="[Ck][Vfx] Request Play At Location",
-              meta=(AutoCreateRefTerm="InDelegate, InOptionalPayload"))
+              DisplayName="[Ck][Vfx] Request Play (At Location)")
     static FCk_Handle_Vfx
     Request_PlayAtLocation(
         UPARAM(ref) FCk_Handle_Vfx& InVfxHandle,
