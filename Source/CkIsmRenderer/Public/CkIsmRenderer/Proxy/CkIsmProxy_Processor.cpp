@@ -93,9 +93,8 @@ namespace ck
             FFragment_IsmProxy_Current& InCurrent) const
         -> void
     {
-        const auto& Params = InParams.Get_Params();
-        const auto& RendererName = Params.Get_RendererName();
-        const auto& Mobility = Params.Get_Mobility();
+        const auto& RendererName = InParams.Get_RendererName();
+        const auto& Mobility = InParams.Get_Mobility();
         const auto& IsmComp = ck_ism_proxy_processor::FindRendererIsmComp(RendererName, Mobility);
 
         if (ck::Is_NOT_Valid(IsmComp))
@@ -120,9 +119,8 @@ namespace ck
             TEXT("Ism Proxy Entity [{}] does NOT have the required Transform feature. Unable to render the IsmProxy"), InHandle)
         { return; }
 
-        const auto& Params = InParams.Get_Params();
-        const auto& RendererName = Params.Get_RendererName();
-        const auto& Mobility = Params.Get_Mobility();
+        const auto& RendererName = InParams.Get_RendererName();
+        const auto& Mobility = InParams.Get_Mobility();
         const auto& IsmComp = ck_ism_proxy_processor::FindRendererIsmComp(RendererName, Mobility);
 
         if (ck::Is_NOT_Valid(IsmComp))
@@ -131,14 +129,14 @@ namespace ck
         const auto& CurrentTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InHandle);
         const auto& CombinedTransform = [&]() -> FTransform
         {
-            const auto& CombinedLocation = CurrentTransform.GetLocation() + Params.Get_LocalLocationOffset();
-            const auto& CombinedRotation = Params.Get_LocalRotationOffset().Quaternion() * CurrentTransform.GetRotation();
+            const auto& CombinedLocation = CurrentTransform.GetLocation() + InParams.Get_LocalLocationOffset();
+            const auto& CombinedRotation = InParams.Get_LocalRotationOffset().Quaternion() * CurrentTransform.GetRotation();
 
-            CK_ENSURE_IF_NOT(NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(Params.Get_ScaleMultiplier()),
-                TEXT("IsmProxy Scale Multiplier has one or more axis nearly equal to 0. Setting it to 1 in non-shipping build"), Params.Get_ScaleMultiplier())
+            CK_ENSURE_IF_NOT(NOT UCk_Utils_Vector3_UE::Get_IsAnyAxisNearlyZero(InParams.Get_ScaleMultiplier()),
+                TEXT("IsmProxy Scale Multiplier has one or more axis nearly equal to 0. Setting it to 1 in non-shipping build"), InParams.Get_ScaleMultiplier())
             { return FTransform{ CombinedRotation.Rotator(), CombinedLocation, FVector::OneVector }; }
 
-            const auto& CombinedScale = CurrentTransform.GetScale3D() * Params.Get_ScaleMultiplier();
+            const auto& CombinedScale = CurrentTransform.GetScale3D() * InParams.Get_ScaleMultiplier();
 
             return FTransform{ CombinedRotation.Rotator(), CombinedLocation, CombinedScale };
         }();
@@ -147,7 +145,6 @@ namespace ck
         const auto& InstanceIndex = IsmComp->AddInstanceById(CombinedTransform, TransformAsWorldSpace);
         InCurrent._IsmInstanceIndex = InstanceIndex;
 
-        constexpr auto MarkRenderStateDirty = false;
         IsmComp->SetCustomDataById(InstanceIndex, InCurrent.Get_CustomDataValues());
 
         // Movable ISM instances are re-added again every tick
@@ -177,10 +174,8 @@ namespace ck
             const FFragment_IsmProxy_Current& InCurrent) const
         -> void
     {
-        const auto& Params = InParams.Get_Params();
-
-        const auto& RendererName = Params.Get_RendererName();
-        const auto& Mobility = Params.Get_Mobility();
+        const auto& RendererName = InParams.Get_RendererName();
+        const auto& Mobility = InParams.Get_Mobility();
         const auto& IsmComp = ck_ism_proxy_processor::FindRendererIsmComp(RendererName, Mobility);
 
         if (ck::Is_NOT_Valid(IsmComp))
@@ -244,14 +239,12 @@ namespace ck
         if (const auto& Mobility = UCk_Utils_IsmProxy_UE::Get_Mobility(InHandle);
             Mobility == ECk_Mobility::Movable)
         {
-            const auto& Params = InParams.Get_Params();
-            const auto& RendererName = Params.Get_RendererName();
+            const auto& RendererName = InParams.Get_RendererName();
             const auto& IsmComp = ck_ism_proxy_processor::FindRendererIsmComp(RendererName, Mobility);
 
             if (ck::Is_NOT_Valid(IsmComp))
             { return; }
 
-            constexpr auto MarkRenderStateDirty = true;
             IsmComp->SetCustomDataById(InCurrent.Get_IsmInstanceIndex(), NewCustomData);
         }
     }
@@ -283,14 +276,12 @@ namespace ck
         if (const auto& Mobility = UCk_Utils_IsmProxy_UE::Get_Mobility(InHandle);
             Mobility == ECk_Mobility::Movable)
         {
-            const auto& Params = InParams.Get_Params();
-            const auto& RendererName = Params.Get_RendererName();
+            const auto& RendererName = InParams.Get_RendererName();
             const auto& IsmComp = ck_ism_proxy_processor::FindRendererIsmComp(RendererName, Mobility);
 
             if (ck::Is_NOT_Valid(IsmComp))
             { return; }
 
-            constexpr auto MarkRenderStateDirty = true;
             IsmComp->SetCustomDataValueById(InCurrent.Get_IsmInstanceIndex(), NewCustomDataIndex, NewCustomDataValue);
         }
     }
