@@ -9,6 +9,33 @@
 
 auto
     UCk_Utils_SceneNode_UE::
+    Add(
+        FCk_Handle_Transform& InHandle,
+        FCk_Handle_Transform& InAttachTo,
+        FTransform InLocalTransform)
+    -> FCk_Handle_SceneNode
+{
+    if (InAttachTo.Has<ck::FTag_SceneNode_Layer0>()) { InHandle.Add<ck::FTag_SceneNode_Layer1>(); }
+    else if (InAttachTo.Has<ck::FTag_SceneNode_Layer1>()) { InHandle.Add<ck::FTag_SceneNode_Layer2>(); }
+    else if (InAttachTo.Has<ck::FTag_SceneNode_Layer2>()) { InHandle.Add<ck::FTag_SceneNode_Layer3>(); }
+    else if (InAttachTo.Has<ck::FTag_SceneNode_Layer3>()) { InHandle.Add<ck::FTag_SceneNode_Layer4>(); }
+    else if (InAttachTo.Has<ck::FTag_SceneNode_Layer4>()) { InHandle.Add<ck::FTag_SceneNode_Layer5>(); }
+    else if (InAttachTo.Has<ck::FTag_SceneNode_Layer5>()) { InHandle.Add<ck::FTag_SceneNode_Layer6>(); }
+    else if (InAttachTo.Has<ck::FTag_SceneNode_Layer6>()) { InHandle.Add<ck::FTag_SceneNode_Layer7>(); }
+    else if (InAttachTo.Has<ck::FTag_SceneNode_Layer7>()) { InHandle.Add<ck::FTag_SceneNode_Layer8>(); }
+    else if (InAttachTo.Has<ck::FTag_SceneNode_Layer8>()) { InHandle.Add<ck::FTag_SceneNode_Layer9>(); }
+    else if (InAttachTo.Has<ck::FTag_SceneNode_Layer9>()) { CK_TRIGGER_ENSURE(TEXT("We are the maximum number of SceneNode layers")); }
+    else { InHandle.Add<ck::FTag_SceneNode_Layer0>(); }
+
+    InHandle.Add<ck::FFragment_SceneNode_Current>(InLocalTransform);
+
+    ck::USceneNodeParent_Utils::AddOrReplace(InHandle, InAttachTo);
+
+    return Cast(InHandle);
+}
+
+auto
+    UCk_Utils_SceneNode_UE::
     Create(
         FCk_Handle_Transform& InOwner,
         FTransform InLocalTransform)
@@ -16,18 +43,6 @@ auto
 {
     auto SceneNodeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
     UCk_Utils_Handle_UE::Set_DebugName(SceneNodeEntity, *ck::Format_UE(TEXT("SCENE NODE: [{}]"), InOwner));
-
-    if (InOwner.Has<ck::FTag_SceneNode_Layer0>()) { SceneNodeEntity.Add<ck::FTag_SceneNode_Layer1>(); }
-    else if (InOwner.Has<ck::FTag_SceneNode_Layer1>()) { SceneNodeEntity.Add<ck::FTag_SceneNode_Layer2>(); }
-    else if (InOwner.Has<ck::FTag_SceneNode_Layer2>()) { SceneNodeEntity.Add<ck::FTag_SceneNode_Layer3>(); }
-    else if (InOwner.Has<ck::FTag_SceneNode_Layer3>()) { SceneNodeEntity.Add<ck::FTag_SceneNode_Layer4>(); }
-    else if (InOwner.Has<ck::FTag_SceneNode_Layer4>()) { SceneNodeEntity.Add<ck::FTag_SceneNode_Layer5>(); }
-    else if (InOwner.Has<ck::FTag_SceneNode_Layer5>()) { SceneNodeEntity.Add<ck::FTag_SceneNode_Layer6>(); }
-    else if (InOwner.Has<ck::FTag_SceneNode_Layer6>()) { SceneNodeEntity.Add<ck::FTag_SceneNode_Layer7>(); }
-    else if (InOwner.Has<ck::FTag_SceneNode_Layer7>()) { SceneNodeEntity.Add<ck::FTag_SceneNode_Layer8>(); }
-    else if (InOwner.Has<ck::FTag_SceneNode_Layer8>()) { SceneNodeEntity.Add<ck::FTag_SceneNode_Layer9>(); }
-    else if (InOwner.Has<ck::FTag_SceneNode_Layer9>()) { CK_TRIGGER_ENSURE(TEXT("We are the maximum number of SceneNode layers")); }
-    else { SceneNodeEntity.Add<ck::FTag_SceneNode_Layer0>(); }
 
     const auto MaybeOwnerTransform = [&]
     {
@@ -39,14 +54,9 @@ auto
         return FTransform::Identity;
     }();
 
-    UCk_Utils_Transform_UE::Add(SceneNodeEntity, MaybeOwnerTransform, ECk_Replication::DoesNotReplicate);
+    auto SceneNodeWithTransform = UCk_Utils_Transform_UE::Add(SceneNodeEntity, MaybeOwnerTransform, ECk_Replication::DoesNotReplicate);
 
-    auto& Current = SceneNodeEntity.Add<ck::FFragment_SceneNode_Current>();
-    Current._RelativeTransform = InLocalTransform;
-
-    ck::USceneNodeParent_Utils::AddOrReplace(SceneNodeEntity, InOwner);
-
-    return Cast(SceneNodeEntity);
+    return Add(SceneNodeWithTransform, InOwner, InLocalTransform);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
