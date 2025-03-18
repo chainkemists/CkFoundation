@@ -38,6 +38,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Ability_RequestAddAndGive);
 
         friend UCk_Utils_Ability_UE;
+        friend class FProcessor_Ability_HandleRequests;
 
     private:
         FCk_Handle_AbilityOwner _AbilityOwner;
@@ -55,12 +56,13 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKABILITY_API FFragment_Ability_RequestTransferExisting : FRequest_Base
+    struct CKABILITY_API FFragment_Ability_RequestTransferExisting_Initiate : FRequest_Base
     {
     public:
-        CK_GENERATED_BODY(FFragment_Ability_RequestTransferExisting);
+        CK_GENERATED_BODY(FFragment_Ability_RequestTransferExisting_Initiate);
 
         friend UCk_Utils_Ability_UE;
+        friend class FProcessor_Ability_HandleRequests;
 
     private:
         FCk_Handle_AbilityOwner _AbilityOwner;
@@ -73,7 +75,55 @@ namespace ck
         CK_PROPERTY_GET(_TransferTarget);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Ability_RequestTransferExisting, _AbilityOwner, _TransferTarget, _AbilityToTransfer);
+        CK_DEFINE_CONSTRUCTORS(FFragment_Ability_RequestTransferExisting_Initiate, _AbilityOwner, _TransferTarget, _AbilityToTransfer);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKABILITY_API FFragment_Ability_RequestTransferExisting_SwapOwner : FRequest_Base
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Ability_RequestTransferExisting_SwapOwner);
+
+        friend UCk_Utils_Ability_UE;
+        friend class FProcessor_Ability_HandleRequests;
+
+    private:
+        FCk_Handle_AbilityOwner _AbilityOwner;
+        FCk_Handle_AbilityOwner _TransferTarget;
+        FCk_Handle_Ability _AbilityToTransfer;
+
+    public:
+        CK_PROPERTY_GET(_AbilityOwner);
+        CK_PROPERTY_GET(_AbilityToTransfer);
+        CK_PROPERTY_GET(_TransferTarget);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Ability_RequestTransferExisting_SwapOwner, _AbilityOwner, _TransferTarget, _AbilityToTransfer);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKABILITY_API FFragment_Ability_RequestTransferExisting_Finalize : FRequest_Base
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Ability_RequestTransferExisting_Finalize);
+
+        friend UCk_Utils_Ability_UE;
+        friend class FProcessor_Ability_HandleRequests;
+
+    private:
+        FCk_Handle_AbilityOwner _AbilityOwner;
+        FCk_Handle_AbilityOwner _TransferTarget;
+        FCk_Handle_Ability _AbilityToTransfer;
+
+    public:
+        CK_PROPERTY_GET(_AbilityOwner);
+        CK_PROPERTY_GET(_AbilityToTransfer);
+        CK_PROPERTY_GET(_TransferTarget);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Ability_RequestTransferExisting_Finalize, _AbilityOwner, _TransferTarget, _AbilityToTransfer);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -96,6 +146,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Ability_RequestGive);
 
         friend UCk_Utils_Ability_UE;
+        friend class FProcessor_Ability_HandleRequests;
 
     private:
         FCk_Handle_AbilityOwner _AbilityOwner;
@@ -138,6 +189,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_Ability_RequestDeactivate);
 
         friend UCk_Utils_Ability_UE;
+        friend FProcessor_Ability_HandleRequests;
 
     private:
         FCk_Handle_AbilityOwner _AbilityOwner;
@@ -161,13 +213,15 @@ namespace ck
 
     public:
         using AddAndGive = FFragment_Ability_RequestAddAndGive;
-        using Transfer = FFragment_Ability_RequestTransferExisting;
+        using TransferInit = FFragment_Ability_RequestTransferExisting_Initiate;
+        using TransferSwap = FFragment_Ability_RequestTransferExisting_SwapOwner;
+        using TransferFinal = FFragment_Ability_RequestTransferExisting_Finalize;
         using Give = FFragment_Ability_RequestGive;
         using Revoke = FFragment_Ability_RequestRevoke;
         using Activate = FFragment_Ability_RequestActivate;
         using Deactivate = FFragment_Ability_RequestDeactivate;
 
-        using RequestType = std::variant<AddAndGive, Transfer, Give, Revoke, Activate, Deactivate>;
+        using RequestType = std::variant<AddAndGive, TransferInit, TransferSwap, TransferFinal, Give, Revoke, Activate, Deactivate>;
         using RequestList = TArray<RequestType>;
 
     public:
