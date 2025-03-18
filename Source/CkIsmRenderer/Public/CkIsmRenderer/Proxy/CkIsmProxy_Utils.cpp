@@ -50,7 +50,7 @@ auto
         const FCk_Handle_IsmProxy& InHandle)
     -> FGameplayTag
 {
-    return InHandle.Get<ck::FFragment_IsmProxy_Params>().Get_Params().Get_RendererName();
+    return InHandle.Get<ck::FFragment_IsmProxy_Params>().Get_RendererName();
 }
 
 auto
@@ -59,7 +59,7 @@ auto
         const FCk_Handle_IsmProxy& InHandle)
     -> FVector
 {
-    return InHandle.Get<ck::FFragment_IsmProxy_Params>().Get_Params().Get_LocalLocationOffset();
+    return InHandle.Get<ck::FFragment_IsmProxy_Params>().Get_LocalLocationOffset();
 }
 
 auto
@@ -68,7 +68,7 @@ auto
         const FCk_Handle_IsmProxy& InHandle)
     -> FRotator
 {
-    return InHandle.Get<ck::FFragment_IsmProxy_Params>().Get_Params().Get_LocalRotationOffset();
+    return InHandle.Get<ck::FFragment_IsmProxy_Params>().Get_LocalRotationOffset();
 }
 
 auto
@@ -77,7 +77,7 @@ auto
         const FCk_Handle_IsmProxy& InHandle)
     -> FVector
 {
-    return InHandle.Get<ck::FFragment_IsmProxy_Params>().Get_Params().Get_ScaleMultiplier();
+    return InHandle.Get<ck::FFragment_IsmProxy_Params>().Get_ScaleMultiplier();
 }
 
 auto
@@ -86,7 +86,7 @@ auto
         const FCk_Handle_IsmProxy& InHandle)
     -> ECk_Mobility
 {
-    return InHandle.Get<ck::FFragment_IsmProxy_Params>().Get_Params().Get_Mobility();
+    return InHandle.Get<ck::FFragment_IsmProxy_Params>().Get_Mobility();
 }
 
 auto
