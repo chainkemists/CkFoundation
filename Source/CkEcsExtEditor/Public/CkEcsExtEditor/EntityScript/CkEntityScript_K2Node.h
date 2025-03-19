@@ -1,16 +1,13 @@
 #pragma once
 
-#include "CkCore/IO/CkIO_Utils.h"
-
-#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Params.h"
 
 #include "CkEditorGraph/CkEditorGraph_Utils.h"
-
 #include "CkEditorGraph/CkUFunctionBase_K2Node.h"
 
 #include <K2Node_CallFunction.h>
 
-#include "CkEntityConstructionScript_K2Node.generated.h"
+#include "CkEntityScript_K2Node.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -21,13 +18,12 @@ class FBlueprintActionDatabaseRegistrar;
 
 
 UCLASS(MinimalAPI)
-class UCk_K2Node_EntityConstructionScript : public UCk_K2Node_UFunction_Base
+class UCk_K2Node_EntityScript : public UCk_K2Node_UFunction_Base
 {
     GENERATED_BODY()
 
 public:
     // UObject interface
-    auto PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent) -> void override;
     auto ShouldShowNodeProperties() const -> bool override;
     // End of UObject interface
 
@@ -36,6 +32,8 @@ public:
     auto ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*>& InOldPins) -> void override;
     auto GetMenuCategory() const -> FText override;
     auto IsCompatibleWithGraph(UEdGraph const* InGraph) const -> bool override;
+    auto PinConnectionListChanged(UEdGraphPin* InPin) -> void override;
+    auto GetPinMetaData(FName InPinName, FName InKey) -> FString override;
     // End of K2Node implementation
 
     // UEdGraphNode implementation
@@ -56,12 +54,18 @@ protected:
     auto
     DoGet_Menu_NodeTitle() const -> FText override;
 
-public:
-    auto CreatePinsFromConstructionScript() -> void;
+    auto
+    DoPinDefaultValueChanged(UEdGraphPin* InPin) -> void override;
 
 private:
-    UPROPERTY(EditDefaultsOnly)
-    TSubclassOf<UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
+    auto DoGet_EntityScriptClass(TOptional<TArray<UEdGraphPin*>> InPinsToSearch = {}) const -> UClass*;
+    auto DoCreatePinsFromEntityScript(UClass* InEntityScriptClass) -> void;
+    auto DoOnClassPinChanged() -> void;
+
+private:
+    ECk_EntityLifetime_OwnerType _LifetimeOwnerType = ECk_EntityLifetime_OwnerType::UseTransientEntity;
+    EClassFlags _DisallowedFlags = CLASS_Abstract | CLASS_None | CLASS_Deprecated;
+    TArray<UEdGraphPin*> _PinsGeneratedForEntityScript;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
