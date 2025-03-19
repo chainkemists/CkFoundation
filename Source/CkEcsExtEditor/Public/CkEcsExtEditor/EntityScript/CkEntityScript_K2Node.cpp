@@ -33,11 +33,6 @@ auto
     if (ck::Is_NOT_Valid(InEntityScriptClass))
     { return; }
 
-    for (const auto& OldPin : _PinsGeneratedForEntityScript)
-    {
-        RemovePin(OldPin);
-    }
-
     _PinsGeneratedForEntityScript.Empty();
 
     const auto& CreatePinFromProperty = [this](const FProperty* InProperty, const uint8* InContainer)
@@ -93,14 +88,12 @@ auto
     DoOnClassPinChanged()
     -> void
 {
-    UCk_Utils_EditorGraph_UE::Request_ForceRefreshNode(*this);
-
     TArray<UEdGraphPin*> OldPins = Pins;
     TArray<UEdGraphPin*> OldClassPins;
 
     for (auto* OldPin : OldPins)
     {
-        if (_PinsGeneratedForEntityScript.Contains(OldPin))
+        if (NOT _PinsGeneratedForEntityScript.Contains(OldPin))
         { continue; }
 
         Pins.Remove(OldPin);
