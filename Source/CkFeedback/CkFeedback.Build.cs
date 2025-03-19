@@ -17,7 +17,7 @@ public class CkFeedback : CkModuleRules
             "StructUtils",
             "GameplayTags",
 
-            "CkAI",
+            "CkAi",
             "CkCamera",
             "CkCore",
             "CkEcs",
