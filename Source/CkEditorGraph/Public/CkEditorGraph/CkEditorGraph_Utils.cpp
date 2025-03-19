@@ -428,13 +428,19 @@ auto
 
     if (ck::Is_NOT_Valid(InGraphPins.first))
     {
-        InCompilerContext.MessageLog.Error(*ck::Format_UE(TEXT("InSourcePin is INVALID. Subsequent operation will fail.")));
+        InCompilerContext.MessageLog.Error(
+            *ck::Format_UE(TEXT("InSourcePin is [INVALID] and InTargetIntermediatePin is [{}]. Subsequent operation will fail"),
+                ck::IsValid(InGraphPins.second) ? (*InGraphPins.second)->PinName : TEXT("INVALID")));
+
         return ECk_SucceededFailed::Failed;
     }
 
     if (ck::Is_NOT_Valid(InGraphPins.second))
     {
-        InCompilerContext.MessageLog.Error(*ck::Format_UE(TEXT("InTargetIntermediatePin is INVALID. Subsequent operation will fail.")));
+        InCompilerContext.MessageLog.Error(
+            *ck::Format_UE(TEXT("InSourcePin is [{}] and InTargetIntermediatePin is [INVALID]. Subsequent operation will fail"),
+                ck::IsValid(InGraphPins.first) ? (*InGraphPins.first)->PinName : TEXT("INVALID")));
+
         return ECk_SucceededFailed::Failed;
     }
 
