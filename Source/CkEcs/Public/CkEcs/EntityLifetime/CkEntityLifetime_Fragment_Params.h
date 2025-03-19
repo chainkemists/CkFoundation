@@ -18,6 +18,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EntityLifetime_DestructionBehavior);
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_EntityLifetime_OwnerType : uint8
+{
+    UseTransientEntity,
+    UseCustomEntity
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_EntityLifetime_OwnerType);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_EntityLifetime_DestructionPhase : uint8
 {
     // Entity is still Valid for the remainder of THIS frame
