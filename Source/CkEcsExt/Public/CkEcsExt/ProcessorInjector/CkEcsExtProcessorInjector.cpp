@@ -11,6 +11,9 @@ auto
     -> void
 {
     InWorld.Add<ck::FProcessor_Transform_SyncFromActor>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Transform_InterpolateToGoal_Location>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Transform_InterpolateToGoal_Rotation>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Transform_HandleRequests>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Transform_SyncToActor>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Transform_FireSignals>(InWorld.Get_Registry());
 }
@@ -34,9 +37,7 @@ auto
         EcsWorldType& InWorld)
     -> void
 {
-    InWorld.Add<ck::FProcessor_Transform_InterpolateToGoal_Location>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_Transform_InterpolateToGoal_Rotation>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_Transform_HandleRequests>(InWorld.Get_Registry());
+    // Empty for now
 }
 
 // --------------------------------------------------------------------------------------------------------------------
