@@ -18,6 +18,28 @@ auto
 
 auto
     UCk_Utils_Object_UE::
+    ForEach_ObjectsWithOuter(
+        const UObject* InOuterObject,
+        TFunction<void(UObject*)> InFunc)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InOuterObject),
+        TEXT("Invalid Outer Object when trying to loop over all objects with this specific outer"))
+    { return; }
+
+    auto SubObjects = TArray<UObject*>{};
+
+    constexpr auto IncludeNestedObjects = true;
+    GetObjectsWithOuter(InOuterObject, SubObjects, IncludeNestedObjects);
+
+    for (const auto SubObject : SubObjects)
+    {
+        InFunc(SubObject);
+    }
+}
+
+auto
+    UCk_Utils_Object_UE::
     Get_GeneratedUniqueName(
         UObject* InThis,
         UClass* InObj,

@@ -192,6 +192,11 @@ public:
         T InParams,
         bool InEnsureFunctionExists = true) -> ECk_SucceededFailed;
 
+    static auto
+    ForEach_ObjectsWithOuter(
+        const UObject* InOuterObject,
+        TFunction<void(UObject*)> InFunc) -> void;
+
 public:
     UFUNCTION(BlueprintCallable,
               DisplayName = "[Ck] Get Generated Unique Object Name",
