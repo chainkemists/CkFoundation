@@ -34,6 +34,7 @@ public:
     auto IsCompatibleWithGraph(UEdGraph const* InGraph) const -> bool override;
     auto PinConnectionListChanged(UEdGraphPin* InPin) -> void override;
     auto GetPinMetaData(FName InPinName, FName InKey) -> FString override;
+    auto PostReconstructNode() -> void override;
     // End of K2Node implementation
 
     // UEdGraphNode implementation
@@ -59,6 +60,8 @@ protected:
 
 private:
     auto DoGet_EntityScriptClass(TOptional<TArray<UEdGraphPin*>> InPinsToSearch = {}) const -> UClass*;
+    auto DoGet_LifetimeOwnerType() const -> ECk_EntityLifetime_OwnerType;
+
     auto DoCreatePinsFromEntityScript(UClass* InEntityScriptClass) -> void;
     auto DoOnClassPinChanged() -> void;
 
