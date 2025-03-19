@@ -18,7 +18,7 @@ auto
             ck::IsValid(OwningActor))
         {
             const auto RootComponent = OwningActor->GetRootComponent();
-            return AddAndAttachToUnrealComponent(InHandle, RootComponent, ECk_UpdatePolicy::UpdateOnDemand, InReplicates);
+            return AddAndAttachToUnrealComponent(InHandle, RootComponent, InReplicates);
         }
     }
 
@@ -46,7 +46,6 @@ auto
     AddAndAttachToUnrealComponent(
         FCk_Handle& InHandle,
         USceneComponent* InAttachTo,
-        ECk_UpdatePolicy InUpdatePolicy,
         ECk_Replication InReplicates)
     -> FCk_Handle_Transform
 {
@@ -81,9 +80,6 @@ auto
     }
 
     TryAddReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle);
-
-    if (InUpdatePolicy == ECk_UpdatePolicy::UpdateEveryFrame)
-    { InHandle.Add<ck::FTag_Transform_SyncFromActor>(); }
 
     return Cast(InHandle);
 }
@@ -246,9 +242,6 @@ auto
     if (NOT InHandle.Has<ck::FFragment_Transform_RootComponent>())
     { return InHandle; }
 
-    if (InHandle.Has<ck::FTag_Transform_SyncFromActor>())
-    { return InHandle; }
-
     if (auto& RootComponentFragment = InHandle.Get<ck::FFragment_Transform_RootComponent>();
         ck::IsValid(RootComponentFragment))
     {
@@ -256,7 +249,6 @@ auto
         // every frame through the processors. We need to set the current value NOW so that we can determine if it has changed
         // when the Update processor is ticked
         InHandle.Get<ck::FFragment_Transform>()._Transform = RootComponentFragment.Get_RootComponent()->GetComponentToWorld();
-        InHandle.Add<ck::FTag_Transform_SyncFromActor>();
     }
 
     return InHandle;
@@ -276,8 +268,6 @@ auto
 
     if (ck::UUtils_Signal_TransformUpdate::IsBoundToMulticast(InHandle))
     { return InHandle; }
-
-    InHandle.Remove<ck::FTag_Transform_SyncFromActor>();
 
     return InHandle;
 }
