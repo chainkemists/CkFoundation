@@ -1,14 +1,16 @@
 #include "CkEntityScript_K2Node.h"
 
-#include "CkEcsWorld_Subsystem.h"
+#include "CkCore/IO/CkIO_Utils.h"
 
-#include "CkEcsExt/EntityScript/CkEntityScript_Utils.h"
+#include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
+
 #include "CkEcsExt/EntityScript/CkEntityScript.h"
-
-#include "CkIO_Utils.h"
+#include "CkEcsExt/EntityScript/CkEntityScript_Utils.h"
 
 #include <GraphEditorSettings.h>
+
 #include <Kismet/GameplayStatics.h>
+
 #include <Kismet2/BlueprintEditorUtils.h>
 
 #define LOCTEXT_NAMESPACE "UCk_K2Node_EntityScript"
