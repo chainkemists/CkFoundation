@@ -22,7 +22,7 @@ public:
     UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly)
     static void
     Request_SpawnEntity(
-        FCk_Handle InLifetimeOwner,
+        UPARAM(ref) FCk_Handle& InLifetimeOwner,
         UCk_EntityScript_PDA* InEntityScript);
 };
 
