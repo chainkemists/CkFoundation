@@ -59,7 +59,6 @@ public:
     AddAndAttachToUnrealComponent(
         UPARAM(ref) FCk_Handle& InHandle,
         USceneComponent* InAttachTo,
-        ECk_UpdatePolicy InUpdatePolicy,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
 public:

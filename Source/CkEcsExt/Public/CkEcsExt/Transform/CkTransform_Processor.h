@@ -16,7 +16,6 @@ namespace ck
             FCk_Handle_Transform,
             FFragment_Transform,
             FFragment_Transform_RootComponent,
-            FTag_Transform_SyncFromActor,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -95,7 +94,6 @@ namespace ck
             FFragment_Transform_RootComponent,
             FFragment_Transform,
             FTag_Transform_Updated,
-            ck::TExclude<FTag_Transform_SyncFromActor>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
