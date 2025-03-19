@@ -5,7 +5,7 @@
 auto
     UCk_Utils_EntityScript_UE::
     Request_SpawnEntity(
-        FCk_Handle InLifetimeOwner,
+        FCk_Handle& InLifetimeOwner,
         UCk_EntityScript_PDA* InEntityScript)
     -> void
 {
