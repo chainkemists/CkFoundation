@@ -179,9 +179,10 @@ public:
     using SubsystemType = UCk_EcsWorld_Subsystem_UE;
 
 public:
-    static auto
+    UFUNCTION(BlueprintPure, BlueprintInternalUseOnly)
+    static FCk_Handle
     Get_TransientEntity(
-        const UWorld* InWorld) -> FCk_Handle;
+        const UWorld* InWorld);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
