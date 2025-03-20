@@ -3,8 +3,6 @@
 #include "CkActorModifier_Fragment.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
 
-#include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
-
 #include "CkEcs/Processor/CkProcessor.h"
 
 // --------------------------------------------------------------------------------------------------------------------

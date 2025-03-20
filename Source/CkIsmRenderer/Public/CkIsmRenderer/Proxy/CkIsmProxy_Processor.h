@@ -71,7 +71,7 @@ namespace ck
         FCk_Handle_IsmProxy,
         FFragment_IsmProxy_Params,
         FFragment_IsmProxy_Current,
-        CK_IF_PENDING_KILL>
+        CK_IF_INITIATE_CONFIRM_KILL>
     {
     public:
         using TProcessor::TProcessor;

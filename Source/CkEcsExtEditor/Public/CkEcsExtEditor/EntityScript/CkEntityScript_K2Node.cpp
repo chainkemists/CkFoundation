@@ -209,7 +209,7 @@ auto
     (
         EGPD_Input,
         UEdGraphSchema_K2::PC_Class,
-        UCk_EntityScript_PDA::StaticClass(),
+        UCk_EntityScript_UE::StaticClass(),
         PinName_Class
     );
 
@@ -408,18 +408,10 @@ auto
         auto* GetTransientEntity_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
         GetTransientEntity_Node->FunctionReference.SetExternalMember
         (
-            GET_FUNCTION_NAME_CHECKED(UCk_Utils_EcsWorld_Subsystem_UE, Get_TransientEntity),
+            GET_FUNCTION_NAME_CHECKED(UCk_Utils_EcsWorld_Subsystem_UE, Get_TransientEntity_FromContextObject),
             UCk_Utils_EcsWorld_Subsystem_UE::StaticClass()
         );
         GetTransientEntity_Node->AllocateDefaultPins();
-
-        if (auto* WorldPin = GetTransientEntity_Node->FindPin(TEXT("InWorld"));
-            ck::IsValid(WorldPin, ck::IsValid_Policy_NullptrOnly{}))
-        {
-            InCompilerContext.GetSchema()->TrySetDefaultValue(*WorldPin, InCompilerContext.Blueprint->GetWorld()->GetPathName());
-            UCk_Utils_EditorGraph_UE::Request_ForceRefreshNode(*GetTransientEntity_Node);
-        }
-
         InCompilerContext.MessageLog.NotifyIntermediateObjectCreation(GetTransientEntity_Node, this);
 
         if (UCk_Utils_EditorGraph_UE::Request_TryCreateConnection
