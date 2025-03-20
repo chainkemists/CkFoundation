@@ -7,6 +7,29 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck
+{
+    FFragment_Transform_SkeletalMeshSocket::
+        FFragment_Transform_SkeletalMeshSocket(
+            const USkeletalMeshComponent* InComponent,
+            const USkeletalMeshSocket* InSocket)
+        : _Component(InComponent)
+        , _Socket(InSocket)
+    {
+    }
+
+    FFragment_Transform_StaticMeshSocket::
+        FFragment_Transform_StaticMeshSocket(
+            const UStaticMeshComponent* InComponent,
+            const UStaticMeshSocket* InSocket)
+        : _Component(InComponent)
+        , _Socket(InSocket)
+    {
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Fragment_Transform_Rep::
     GetLifetimeReplicatedProps(
