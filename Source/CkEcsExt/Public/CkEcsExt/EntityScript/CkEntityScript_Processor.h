@@ -1,0 +1,83 @@
+#pragma once
+
+#include "CkEcsExt/EntityScript/CkEntityScript_Fragment.h"
+
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
+
+#include "CkEcs/Processor/CkProcessor.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    class CKECSEXT_API FProcessor_EntityScript_SpawnEntity_HandleRequests : public TProcessor<
+            FProcessor_EntityScript_SpawnEntity_HandleRequests,
+            FFragment_EntityScript_RequestSpawnEntity,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using MarkedDirtyBy = FFragment_EntityScript_RequestSpawnEntity;
+
+    public:
+        using TProcessor::TProcessor;
+
+   public:
+        auto
+        DoTick(
+            TimeType InDeltaT) -> void;
+
+    public:
+        static auto
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityScript_RequestSpawnEntity& InRequestFragment) -> void;
+
+    private:
+        static auto
+        DoHandleRequest(
+            HandleType InHandle,
+            const FCk_Request_EntityScript_SpawnEntity& InRequest) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKECSEXT_API FProcessor_EntityScript_BeginPlay : public TProcessor<
+            FProcessor_EntityScript_BeginPlay,
+            FFragment_EntityScript_Current,
+            FTag_EntityJustCreated,
+            TExclude<FTag_EntityScript_HasBegunPlay>,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            FFragment_EntityScript_Current& InCurrent) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKECSEXT_API FProcessor_EntityScript_EndPlay : public TProcessor<
+            FProcessor_EntityScript_EndPlay,
+            FFragment_EntityScript_Current,
+            FTag_EntityScript_HasBegunPlay,
+            CK_IF_INITIATE_CONFIRM_KILL>
+    {
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            FFragment_EntityScript_Current& InCurrent) -> void;
+    };
+}
+
+// --------------------------------------------------------------------------------------------------------------------

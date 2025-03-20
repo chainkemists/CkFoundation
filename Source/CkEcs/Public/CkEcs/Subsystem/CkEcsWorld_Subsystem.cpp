@@ -255,4 +255,16 @@ auto
     return Subsystem->Get_TransientEntity();
 }
 
+auto
+    UCk_Utils_EcsWorld_Subsystem_UE::
+    Get_TransientEntity_FromContextObject(
+        const UObject* InWorldContextObject)
+    -> FCk_Handle
+{
+    if (ck::Is_NOT_Valid(InWorldContextObject))
+    { return {}; }
+
+    return Get_TransientEntity(InWorldContextObject->GetWorld());
+}
+
 // --------------------------------------------------------------------------------------------------------------------
