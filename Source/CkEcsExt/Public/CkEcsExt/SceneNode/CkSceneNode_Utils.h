@@ -100,7 +100,7 @@ public:
         const FCk_Lambda_InHandle& InDelegate);
     static auto
     ForEach_SceneNode(
-        FCk_Handle_Transform& InHandle,
+        FCk_Handle_Transform InHandle,
         const TFunction<void(FCk_Handle_SceneNode)>& InFunc) -> void;
 };
 

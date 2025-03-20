@@ -119,7 +119,7 @@ auto
 auto
     UCk_Utils_SceneNode_UE::
     ForEach_SceneNode(
-        FCk_Handle_Transform& InHandle,
+        FCk_Handle_Transform InHandle,
         const TFunction<void(FCk_Handle_SceneNode)>& InFunc)
     -> void
 {
