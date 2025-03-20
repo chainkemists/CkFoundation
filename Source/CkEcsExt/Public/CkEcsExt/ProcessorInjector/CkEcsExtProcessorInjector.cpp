@@ -1,6 +1,7 @@
 #include "CkEcsExtProcessorInjector.h"
 
 #include "CkEcsExt/Transform/CkTransform_Processor.h"
+#include "CkEcsExt/EntityScript/CkEntityScript_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -39,7 +40,19 @@ auto
         EcsWorldType& InWorld)
     -> void
 {
-    // Empty for now
+    InWorld.Add<ck::FProcessor_EntityScript_SpawnEntity_HandleRequests>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_EntityScript_BeginPlay>(InWorld.Get_Registry());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_EcsExt_ProcessorInjector_Teardown_UE::
+    DoInjectProcessors(
+        EcsWorldType& InWorld)
+    -> void
+{
+    InWorld.Add<ck::FProcessor_EntityScript_EndPlay>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

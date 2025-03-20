@@ -130,10 +130,9 @@ namespace ck
 
                     UCk_Ecs_ReplicatedObject_UE::Destroy(EcsRO);
 
-                    const auto OutermostActor = UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(InRO.Get());
-
                     // In this case, we are one of the clients and we do NOT need to go any further
-                    if (ck::Is_NOT_Valid(OutermostActor, ck::IsValid_Policy_IncludePendingKill{}))
+                    if (const auto OutermostActor = UCk_Utils_Actor_UE::Get_OutermostActor_RemoteAuthority(InRO.Get());
+                        ck::Is_NOT_Valid(OutermostActor, ck::IsValid_Policy_IncludePendingKill{}))
                     { return; }
 
                     EcsRO->Request_TriggerDestroyAssociatedEntity();

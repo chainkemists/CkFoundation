@@ -210,7 +210,7 @@ auto
 
 auto
     UCk_Utils_EntityLifetime_UE::
-    BindTo_OnUpdate(
+    BindTo_OnDestroy(
         FCk_Handle& InHandle,
         ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_Lifetime_OnDestroy& InDelegate)
@@ -221,7 +221,7 @@ auto
 
 auto
     UCk_Utils_EntityLifetime_UE::
-    UnbindFrom_OnUpdate(
+    UnbindFrom_OnDestroy(
         FCk_Handle& InHandle,
         const FCk_Delegate_Lifetime_OnDestroy& InDelegate)
     -> void
