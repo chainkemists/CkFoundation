@@ -35,6 +35,54 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class CKECSEXT_API FProcessor_Transform_SyncFromSkeletalMeshSocket : public ck_exp::TProcessor<
+            FProcessor_Transform_SyncFromSkeletalMeshSocket,
+            FCk_Handle_Transform,
+            FFragment_Transform,
+            FFragment_Transform_SkeletalMeshSocket,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Super = TProcessor;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_Transform& InTransform,
+            const FFragment_Transform_SkeletalMeshSocket& InSocket) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKECSEXT_API FProcessor_Transform_SyncFromStaticMeshSocket : public ck_exp::TProcessor<
+            FProcessor_Transform_SyncFromStaticMeshSocket,
+            FCk_Handle_Transform,
+            FFragment_Transform,
+            FFragment_Transform_StaticMeshSocket,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Super = TProcessor;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_Transform& InTransform,
+            const FFragment_Transform_StaticMeshSocket& InSocket) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKECSEXT_API FProcessor_Transform_HandleRequests : public ck_exp::TProcessor<
             FProcessor_Transform_HandleRequests,
             FCk_Handle_Transform,
