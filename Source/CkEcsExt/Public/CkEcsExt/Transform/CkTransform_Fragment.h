@@ -13,6 +13,8 @@
 #include "CkCore/TypeTraits/CkTypeTraits.h"
 
 #include <variant>
+#include <Engine/SkeletalMeshSocket.h>
+#include <Engine/StaticMeshSocket.h>
 
 #include "CkTransform_Fragment.generated.h"
 
@@ -64,6 +66,54 @@ namespace ck
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_Transform_RootComponent, _RootComponent);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKECSEXT_API FFragment_Transform_SkeletalMeshSocket
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Transform_SkeletalMeshSocket);
+
+    public:
+        FFragment_Transform_SkeletalMeshSocket() = default;
+
+        explicit
+        FFragment_Transform_SkeletalMeshSocket(
+            const USkeletalMeshComponent* InComponent,
+            const USkeletalMeshSocket* InSocket);
+
+    private:
+        TWeakObjectPtr<const USkeletalMeshComponent> _Component;
+        TWeakObjectPtr<const USkeletalMeshSocket> _Socket;
+
+    public:
+        CK_PROPERTY_GET(_Component);
+        CK_PROPERTY_GET(_Socket);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKECSEXT_API FFragment_Transform_StaticMeshSocket
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Transform_StaticMeshSocket);
+
+    public:
+        FFragment_Transform_StaticMeshSocket() = default;
+
+        explicit
+            FFragment_Transform_StaticMeshSocket(
+                const UStaticMeshComponent* InComponent,
+                const UStaticMeshSocket* InSocket);
+
+    private:
+        TWeakObjectPtr<const UStaticMeshComponent> _Component;
+        TWeakObjectPtr<const UStaticMeshSocket> _Socket;
+
+    public:
+        CK_PROPERTY_GET(_Component);
+        CK_PROPERTY_GET(_Socket);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -138,6 +188,9 @@ namespace ck
     public:
         friend class FProcessor_Transform_HandleRequests;
         friend class FProcessor_Transform_Replicate;
+        friend class FProcessor_Transform_SyncFromActor;
+        friend class FProcessor_Transform_SyncFromSkeletalMeshSocket;
+        friend class FProcessor_Transform_SyncFromStaticMeshSocket;
         friend class FProcessor_Transform_SyncFromActor;
         friend class UCk_Fragment_Transform_Rep;
         friend UCk_Utils_Transform_UE;

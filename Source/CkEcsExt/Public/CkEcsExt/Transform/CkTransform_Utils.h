@@ -1,18 +1,16 @@
 #pragma once
 
-#include <CkEcs/Handle/CkHandle.h>
-
-#include <CkEcsExt/Transform/CkTransform_Fragment.h>
-#include <CkEcsExt/Transform/CkTransform_Fragment_Data.h>
-
-#include <CkCore/Macros/CkMacros.h>
-
-#include <CkCore/TypeTraits/CkTypeTraits.h>
-
 #include "CkCore/Actor/CkActor_Utils.h"
+#include "CkCore/Macros/CkMacros.h"
+#include "CkCore/TypeTraits/CkTypeTraits.h"
 
+#include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
+
 #include "CkEcsExt/CkEcsExt_Log.h"
+#include "CkEcsExt/Transform/CkTransform_Fragment.h"
+#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
+
 #include "CkNet/CkNet_Utils.h"
 
 #include "CkTransform_Utils.generated.h"
@@ -22,6 +20,8 @@
 namespace ck
 {
     class FProcessor_Transform_SyncFromActor;
+    class FProcessor_Transform_SyncFromSkeletalMeshSocket;
+    class FProcessor_Transform_SyncFromStaticMeshSocket;
     class FProcessor_Transform_HandleRequests;
     class FProcessor_Transform_SyncToActor;
 }
@@ -39,6 +39,8 @@ public:
 
 public:
     friend class ck::FProcessor_Transform_SyncFromActor;
+    friend class ck::FProcessor_Transform_SyncFromSkeletalMeshSocket;
+    friend class ck::FProcessor_Transform_SyncFromStaticMeshSocket;
     friend class ck::FProcessor_Transform_HandleRequests;
     friend class ck::FProcessor_Transform_SyncToActor;
 
@@ -59,6 +61,26 @@ public:
     AddAndAttachToUnrealComponent(
         UPARAM(ref) FCk_Handle& InHandle,
         USceneComponent* InAttachTo,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Transform",
+              DisplayName="[Ck][Transform] Add Feature (AttachTo Unreal SkeletalMesh Socket)")
+    static FCk_Handle_Transform
+    AddAndAttachToUnrealComponent_SkeletalMesh(
+        UPARAM(ref) FCk_Handle& InHandle,
+        USkeletalMeshComponent* InAttachTo,
+        FName InSocketName,
+        ECk_Replication InReplicates = ECk_Replication::Replicates);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Transform",
+              DisplayName="[Ck][Transform] Add Feature (AttachTo Unreal StaticMesh Socket)")
+    static FCk_Handle_Transform
+    AddAndAttachToUnrealComponent_StaticMesh(
+        UPARAM(ref) FCk_Handle& InHandle,
+        UStaticMeshComponent* InAttachTo,
+        FName InSocketName,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 
 public:
