@@ -4,8 +4,6 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
-
 #include "CkSignal/Public/CkSignal/CkSignal_Macros.h"
 
 // --------------------------------------------------------------------------------------------------------------------

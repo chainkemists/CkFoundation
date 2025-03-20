@@ -128,7 +128,7 @@ public:
               Category = "Ck|Utils|Lifetime",
               DisplayName = "[Ck][Lifetime] Bind To OnDestroy")
     static void
-    BindTo_OnUpdate(
+    BindTo_OnDestroy(
         UPARAM(ref) FCk_Handle& InHandle,
         ECk_Signal_BindingPolicy InBehavior,
         const FCk_Delegate_Lifetime_OnDestroy& InDelegate);
@@ -137,7 +137,7 @@ public:
               Category = "Ck|Utils|Lifetime",
               DisplayName = "[Ck][Lifetime] Unbind From OnDestroy")
     static void
-    UnbindFrom_OnUpdate(
+    UnbindFrom_OnDestroy(
         UPARAM(ref) FCk_Handle& InHandle,
         const FCk_Delegate_Lifetime_OnDestroy& InDelegate);
 

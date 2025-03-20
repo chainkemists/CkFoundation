@@ -20,11 +20,11 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TSubclassOf<UCk_EntityScript_PDA> _EntityScriptClass;
+    TSubclassOf<UCk_EntityScript_UE> _EntityScriptClass;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    TObjectPtr<UCk_EntityScript_PDA> _EntityScriptTemplate;
+    TObjectPtr<UCk_EntityScript_UE> _EntityScriptTemplate;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -35,5 +35,7 @@ public:
     CK_PROPERTY(_EntityScriptTemplate);
     CK_PROPERTY(_Owner);
 
-CK_DEFINE_CONSTRUCTORS(FCk_Request_EntityScript_SpawnEntity, _EntityScriptClass);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_EntityScript_SpawnEntity, _EntityScriptClass);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
