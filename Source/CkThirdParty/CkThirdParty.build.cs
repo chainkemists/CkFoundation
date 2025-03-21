@@ -20,11 +20,8 @@ public class CkThirdParty : ModuleRules
 
 		IWYUSupport = IWYUSupport.None;
 
-		//if (Target.Platform == UnrealTargetPlatform.Win64)
-		//{
-			PrivateDefinitions.Add("JPH_BUILD_SHARED_LIBRARY");
-			bUseUnity = false;
-		//}
+		PrivateDefinitions.Add("JPH_BUILD_SHARED_LIBRARY");
+		bUseUnity = false;
 
 		PublicDependencyModuleNames.AddRange(
 			new[]
