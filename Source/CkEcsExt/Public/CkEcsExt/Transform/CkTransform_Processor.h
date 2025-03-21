@@ -7,6 +7,9 @@
 
 #include "CkEcs/Processor/CkProcessor.h"
 
+#include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"
+#include "CkEcsExt/SceneNode/CkSceneNode_Fragment_Data.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -35,11 +38,11 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSEXT_API FProcessor_Transform_SyncFromSkeletalMeshSocket : public ck_exp::TProcessor<
-            FProcessor_Transform_SyncFromSkeletalMeshSocket,
+    class CKECSEXT_API FProcessor_Transform_SyncFromMeshSocket : public ck_exp::TProcessor<
+            FProcessor_Transform_SyncFromMeshSocket,
             FCk_Handle_Transform,
             FFragment_Transform,
-            FFragment_Transform_SkeletalMeshSocket,
+            FFragment_Transform_MeshSocket,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -54,31 +57,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Transform& InTransform,
-            const FFragment_Transform_SkeletalMeshSocket& InSocket) const -> void;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKECSEXT_API FProcessor_Transform_SyncFromStaticMeshSocket : public ck_exp::TProcessor<
-            FProcessor_Transform_SyncFromStaticMeshSocket,
-            FCk_Handle_Transform,
-            FFragment_Transform,
-            FFragment_Transform_StaticMeshSocket,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using Super = TProcessor;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_Transform& InTransform,
-            const FFragment_Transform_StaticMeshSocket& InSocket) const -> void;
+            const FFragment_Transform_MeshSocket& InSocket) const -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -1,7 +1,8 @@
 #include "CkTransform_Utils.h"
 
-#include <Engine/Classes/Components/SkeletalMeshComponent.h>
-#include <Engine/Classes/Components/StaticMeshComponent.h>
+#include "CkEcsExt/CkEcsExt_Log.h"
+
+#include <Components/MeshComponent.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -91,9 +92,9 @@ auto
 
 auto
     UCk_Utils_Transform_UE::
-    AddAndAttachToUnrealComponent_SkeletalMesh(
+    AddAndAttachToUnrealMesh(
         FCk_Handle& InHandle,
-        USkeletalMeshComponent* InAttachTo,
+        const UMeshComponent* InAttachTo,
         FName InSocketName,
         ECk_Replication InReplicates)
     -> FCk_Handle_Transform
@@ -106,59 +107,7 @@ auto
         TEXT("Socket [{}] does NOT exists on SkeletalMeshComponent [{}]"), InSocketName, InAttachTo)
     { return {}; }
 
-    InHandle.Add<ck::FFragment_Transform_SkeletalMeshSocket>(InAttachTo, InAttachTo->GetSocketByName(InSocketName));
-
-    if (InHandle.Has<ck::FFragment_Transform>())
-    { return Cast(InHandle); }
-
-    InHandle.Add<ck::FFragment_Transform>();
-
-    if (InAttachTo->GetOwner()->IsReplicatingMovement())
-    {
-        ck::ecs_extension::VeryVerbose
-        (
-            TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it has an Owning Actor with Replicated Movement"),
-            InHandle
-        );
-
-        return Cast(InHandle);
-    }
-
-    if(InReplicates == ECk_Replication::DoesNotReplicate)
-    {
-        ck::ecs_extension::VeryVerbose
-        (
-            TEXT("Skipping creation of Transform Rep Fragment on Entity [{}] because it's set to [{}]"),
-            InHandle,
-            InReplicates
-        );
-
-        return Cast(InHandle);
-    }
-
-    TryAddReplicatedFragment<UCk_Fragment_Transform_Rep>(InHandle);
-
-    return Cast(InHandle);
-}
-
-auto
-    UCk_Utils_Transform_UE::
-    AddAndAttachToUnrealComponent_StaticMesh(
-        FCk_Handle& InHandle,
-        UStaticMeshComponent* InAttachTo,
-        FName InSocketName,
-        ECk_Replication InReplicates)
-    -> FCk_Handle_Transform
-{
-    CK_ENSURE_IF_NOT(ck::IsValid(InAttachTo),
-        TEXT("Unable to Add Transform to [{}] and AttachTo because Unreal SceneComponent [{}] is INVALID"), InHandle, InAttachTo)
-    { return {}; }
-
-    CK_ENSURE_IF_NOT(InAttachTo->DoesSocketExist(InSocketName),
-        TEXT("Socket [{}] does NOT exists on StaticMeshComponent [{}]"), InSocketName, InAttachTo)
-    { return {}; }
-
-    InHandle.Add<ck::FFragment_Transform_StaticMeshSocket>(InAttachTo, InAttachTo->GetSocketByName(InSocketName));
+    InHandle.Add<ck::FFragment_Transform_MeshSocket>(InAttachTo, InSocketName);
 
     if (InHandle.Has<ck::FFragment_Transform>())
     { return Cast(InHandle); }

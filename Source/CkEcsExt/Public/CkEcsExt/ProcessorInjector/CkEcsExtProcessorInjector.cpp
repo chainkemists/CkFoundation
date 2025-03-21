@@ -11,8 +11,7 @@ auto
     -> void
 {
     InWorld.Add<ck::FProcessor_Transform_SyncFromActor>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_Transform_SyncFromSkeletalMeshSocket>(InWorld.Get_Registry());
-    InWorld.Add<ck::FProcessor_Transform_SyncFromStaticMeshSocket>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_Transform_SyncFromMeshSocket>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Transform_InterpolateToGoal_Location>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_Transform_InterpolateToGoal_Rotation>(InWorld.Get_Registry());
 
