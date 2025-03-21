@@ -7,7 +7,6 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/OwningActor/CkOwningActor_Utils.h"
 
-#include "CkEcsExt/CkEcsExt_Log.h"
 #include "CkEcsExt/Transform/CkTransform_Fragment.h"
 #include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 
@@ -20,8 +19,8 @@
 namespace ck
 {
     class FProcessor_Transform_SyncFromActor;
-    class FProcessor_Transform_SyncFromSkeletalMeshSocket;
-    class FProcessor_Transform_SyncFromStaticMeshSocket;
+    class FProcessor_Transform_SyncFromMeshSocket;
+    class FProcessor_Transform_SyncFromMeshSocket_SceneNode;
     class FProcessor_Transform_HandleRequests;
     class FProcessor_Transform_SyncToActor;
 }
@@ -39,8 +38,8 @@ public:
 
 public:
     friend class ck::FProcessor_Transform_SyncFromActor;
-    friend class ck::FProcessor_Transform_SyncFromSkeletalMeshSocket;
-    friend class ck::FProcessor_Transform_SyncFromStaticMeshSocket;
+    friend class ck::FProcessor_Transform_SyncFromMeshSocket;
+    friend class ck::FProcessor_Transform_SyncFromMeshSocket_SceneNode;
     friend class ck::FProcessor_Transform_HandleRequests;
     friend class ck::FProcessor_Transform_SyncToActor;
 
@@ -65,21 +64,11 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Transform",
-              DisplayName="[Ck][Transform] Add Feature (AttachTo Unreal SkeletalMesh Socket)")
+              DisplayName="[Ck][Transform] Add Feature (AttachTo Unreal Mesh Socket)")
     static FCk_Handle_Transform
-    AddAndAttachToUnrealComponent_SkeletalMesh(
+    AddAndAttachToUnrealMesh(
         UPARAM(ref) FCk_Handle& InHandle,
-        USkeletalMeshComponent* InAttachTo,
-        FName InSocketName,
-        ECk_Replication InReplicates = ECk_Replication::Replicates);
-
-    UFUNCTION(BlueprintCallable,
-              Category = "Ck|Utils|Transform",
-              DisplayName="[Ck][Transform] Add Feature (AttachTo Unreal StaticMesh Socket)")
-    static FCk_Handle_Transform
-    AddAndAttachToUnrealComponent_StaticMesh(
-        UPARAM(ref) FCk_Handle& InHandle,
-        UStaticMeshComponent* InAttachTo,
+        const UMeshComponent* InAttachTo,
         FName InSocketName,
         ECk_Replication InReplicates = ECk_Replication::Replicates);
 

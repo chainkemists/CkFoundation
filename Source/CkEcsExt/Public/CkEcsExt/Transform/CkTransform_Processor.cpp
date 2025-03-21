@@ -41,50 +41,27 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-        FProcessor_Transform_SyncFromSkeletalMeshSocket::
+        FProcessor_Transform_SyncFromMeshSocket::
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_Transform& InTransform,
-            const FFragment_Transform_SkeletalMeshSocket& InSocket) const
+            const FFragment_Transform_MeshSocket& InSocket) const
         -> void
     {
-        if (ck::Is_NOT_Valid(InSocket.Get_Socket()))
-        { return; }
+        // TODO: Differentiate between Socket and Bone and use the Bone Index to query the Bone transform more efficiently
+        // TODO: REMINDER: Bone Index can change based on LODs
+
+        const auto Component = InSocket.Get_Component();
+        const auto SocketName = InSocket.Get_Socket();
 
         if (ck::Is_NOT_Valid(InSocket.Get_Component()))
         { return; }
 
         const auto& PreviousTransform = InTransform.Get_Transform();
 
-        if (const auto& SocketTransform = InSocket.Get_Socket()->GetSocketTransform(InSocket.Get_Component().Get());
+        if (const auto& SocketTransform = Component->GetSocketTransform(SocketName);
             NOT PreviousTransform.Equals(SocketTransform))
-        {
-            InTransform._Transform = SocketTransform;
-            UCk_Utils_Transform_UE::Request_TransformUpdated(InHandle);
-        }
-    }
-
-    auto
-        FProcessor_Transform_SyncFromStaticMeshSocket::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_Transform& InTransform,
-            const FFragment_Transform_StaticMeshSocket& InSocket) const
-        -> void
-    {
-        if (ck::Is_NOT_Valid(InSocket.Get_Socket()))
-        { return; }
-
-        if (ck::Is_NOT_Valid(InSocket.Get_Component()))
-        { return; }
-
-        const auto& PreviousTransform = InTransform.Get_Transform();
-
-        auto SocketTransform = FTransform{};
-        InSocket.Get_Socket()->GetSocketTransform(SocketTransform, InSocket.Get_Component().Get());
-        if (NOT PreviousTransform.Equals(SocketTransform))
         {
             InTransform._Transform = SocketTransform;
             UCk_Utils_Transform_UE::Request_TransformUpdated(InHandle);
