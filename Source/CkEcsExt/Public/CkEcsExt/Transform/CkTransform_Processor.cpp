@@ -360,7 +360,11 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(RootComponent), TEXT("Entity [{}] does NOT have a valid RootComponent. Was it destroyed?"), InHandle)
         { return; }
 
-        UCk_Utils_Transform_UE::Request_SetWorldTransformFastPath(RootComponent, InComp.Get_Transform());
+        if (InComp.Get_Transform().Equals(RootComponent->GetComponentTransform()))
+        { return; }
+
+        constexpr auto Sweep = false;
+        RootComponent->SetWorldTransform(InComp.Get_Transform(), Sweep);
     }
 
     // --------------------------------------------------------------------------------------------------------------------

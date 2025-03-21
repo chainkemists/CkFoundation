@@ -10,11 +10,8 @@
 
 #include "CkSignal/CkSignal_Macros.h"
 
-#include "CkCore/TypeTraits/CkTypeTraits.h"
-
 #include <variant>
-#include <Engine/SkeletalMeshSocket.h>
-#include <Engine/StaticMeshSocket.h>
+#include <Components/MeshComponent.h>
 
 #include "CkTransform_Fragment.generated.h"
 
@@ -79,9 +76,9 @@ namespace ck
         FFragment_Transform_MeshSocket() = default;
 
         explicit
-            FFragment_Transform_MeshSocket(
-                const UMeshComponent* InComponent,
-                FName InSocket);
+        FFragment_Transform_MeshSocket(
+            const UMeshComponent* InComponent,
+            FName InSocket);
 
     private:
         TWeakObjectPtr<const UMeshComponent> _Component;
