@@ -49,17 +49,9 @@ auto
     auto SceneNodeEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InOwner);
     UCk_Utils_Handle_UE::Set_DebugName(SceneNodeEntity, *ck::Format_UE(TEXT("SCENE NODE: [{}]"), InOwner));
 
-    const auto MaybeOwnerTransform = [&]
-    {
-        if (UCk_Utils_Transform_UE::Has(InOwner))
-        {
-            return UCk_Utils_Transform_UE::Get_EntityCurrentTransform(InOwner);
-        }
+    const auto& OwnerTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(InOwner);
 
-        return FTransform::Identity;
-    }();
-
-    auto SceneNodeWithTransform = UCk_Utils_Transform_UE::Add(SceneNodeEntity, MaybeOwnerTransform, ECk_Replication::DoesNotReplicate);
+    auto SceneNodeWithTransform = UCk_Utils_Transform_UE::Add(SceneNodeEntity, OwnerTransform, ECk_Replication::DoesNotReplicate);
 
     return Add(SceneNodeWithTransform, InOwner, InLocalTransform);
 }

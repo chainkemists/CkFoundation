@@ -26,6 +26,7 @@ public class CkUI : CkModuleRules
                 "CommonUI",
                 "CkCore",
                 "CkEcs",
+                "CkEcsExt",
                 // ... add other public dependencies that you statically link with here ...
             }
             );
@@ -46,6 +47,7 @@ public class CkUI : CkModuleRules
                 "CkThirdParty",
                 "CkCore",
                 "CkEcs",
+                "CkEcsExt",
                 "CkLog",
                 "CkSettings",
                 "CkSignal",
@@ -53,5 +55,15 @@ public class CkUI : CkModuleRules
                 // ... add private dependencies that you statically link with here ...
             }
             );
+
+        if (Target.bBuildEditor)
+        {
+            PrivateDependencyModuleNames.AddRange(
+                new []
+                {
+                    "UnrealEd"
+                }
+            );
+        }
     }
 }
