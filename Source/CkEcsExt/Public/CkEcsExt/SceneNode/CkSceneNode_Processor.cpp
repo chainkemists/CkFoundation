@@ -45,6 +45,25 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    auto
+        FProcessor_SceneNode_UpdateLocal::
+        ForEachEntity(
+            Super::TimeType InDeltaT,
+            Super::HandleType InHandle,
+            const SceneNodeParent& InParent,
+            FFragment_SceneNode_Current& InCurrent,
+            FFragment_Transform_MeshSocket&) const
+        -> void
+    {
+        auto ParentEntity = InParent.Get_Entity();
+        const auto& Transform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(ParentEntity);
+        const auto& MyTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InHandle);
+
+        InCurrent._RelativeTransform = MyTransform.GetRelativeTransform(Transform);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     template <typename T_Layer>
     TProcessor_SceneNode_Update<T_Layer>::
         TProcessor_SceneNode_Update(

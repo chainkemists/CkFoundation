@@ -21,6 +21,7 @@ auto
         EcsWorldType& InWorld)
         -> void
 {
+    InWorld.Add<ck::FProcessor_SceneNode_UpdateLocal>(InWorld.Get_Registry());
     InWorld.Add<ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer0>>(InWorld.Get_Registry());
     InWorld.Add<ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer1>>(InWorld.Get_Registry());
     InWorld.Add<ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer2>>(InWorld.Get_Registry());

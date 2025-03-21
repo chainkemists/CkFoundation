@@ -38,6 +38,7 @@ namespace ck
         friend class FProcessor_SceneNode_Setup;
         friend class FProcessor_SceneNode_HandleRequests;
         friend class FProcessor_SceneNode_Teardown;
+        friend class FProcessor_SceneNode_UpdateLocal;
         friend class UCk_Utils_SceneNode_UE;
 
     private:
