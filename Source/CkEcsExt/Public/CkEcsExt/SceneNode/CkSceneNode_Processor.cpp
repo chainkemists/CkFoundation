@@ -52,11 +52,10 @@ namespace ck
             Super::HandleType InHandle,
             const SceneNodeParent& InParent,
             FFragment_SceneNode_Current& InCurrent,
-            FFragment_Transform_MeshSocket&) const
+            FFragment_Transform_MeshSocket&)
         -> void
     {
-        auto ParentEntity = InParent.Get_Entity();
-        const auto& Transform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(ParentEntity);
+        const auto& Transform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InParent.Get_Entity());
         const auto& MyTransform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InHandle);
 
         InCurrent._RelativeTransform = MyTransform.GetRelativeTransform(Transform);
@@ -78,11 +77,10 @@ namespace ck
             typename Super::TimeType InDeltaT,
             typename Super::HandleType InHandle,
             const SceneNodeParent& InParent,
-            const FFragment_SceneNode_Current& InCurrent) const
+            const FFragment_SceneNode_Current& InCurrent)
         -> void
     {
-        auto ParentEntity = InParent.Get_Entity();
-        const auto& Transform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(ParentEntity);
+        const auto& Transform = UCk_Utils_Transform_TypeUnsafe_UE::Get_EntityCurrentTransform(InParent.Get_Entity());
 
         UCk_Utils_Transform_TypeUnsafe_UE::Request_SetTransform(InHandle,
             FCk_Request_Transform_SetTransform{InCurrent.Get_RelativeTransform() * Transform});

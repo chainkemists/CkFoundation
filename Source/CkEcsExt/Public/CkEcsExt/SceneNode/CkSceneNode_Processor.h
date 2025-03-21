@@ -64,12 +64,12 @@ namespace ck
             const typename Super::RegistryType& InRegistry);
 
     public:
-        auto
+        static auto
         ForEachEntity(
             typename Super::TimeType InDeltaT,
             typename Super::HandleType InHandle,
             const SceneNodeParent& InParent,
-            const FFragment_SceneNode_Current& InCurrent) const -> void;
+            const FFragment_SceneNode_Current& InCurrent) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -86,13 +86,13 @@ namespace ck
         using TProcessor::TProcessor;
 
     public:
-        auto
+        static auto
         ForEachEntity(
             typename Super::TimeType InDeltaT,
             typename Super::HandleType InHandle,
             const SceneNodeParent& InParent,
             FFragment_SceneNode_Current& InCurrent,
-            FFragment_Transform_MeshSocket&) const -> void;
+            FFragment_Transform_MeshSocket&) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
