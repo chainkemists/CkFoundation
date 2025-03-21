@@ -7,6 +7,9 @@
 #include "CkCore/Ensure/CkEnsure.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include <Framework/Application/SlateApplication.h>
+#include <UObject/UObjectIterator.h>
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

@@ -74,7 +74,6 @@ auto
         const TFunction<void(FCk_Handle)>& InFunc)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InAnyHandle), TEXT("Invalid Handle passed"))
     CK_ENSURE_IF_NOT(ck::IsValid(InAnyHandle), TEXT("Invalid Handle passed. Unable to iterate over Entities with Tag [{}]"), InTag)
     { return; }
 
