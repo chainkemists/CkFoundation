@@ -125,7 +125,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Lifetime",
-              DisplayName = "[Ck][Lifetime] Bind To OnDestroy")
+              DisplayName = "[Ck][Lifetime] Bind To OnEntityDestroy")
     static void
     BindTo_OnDestroy(
         UPARAM(ref) FCk_Handle& InHandle,
@@ -134,7 +134,7 @@ public:
 
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|Lifetime",
-              DisplayName = "[Ck][Lifetime] Unbind From OnDestroy")
+              DisplayName = "[Ck][Lifetime] Unbind From OnEntityDestroy")
     static void
     UnbindFrom_OnDestroy(
         UPARAM(ref) FCk_Handle& InHandle,
