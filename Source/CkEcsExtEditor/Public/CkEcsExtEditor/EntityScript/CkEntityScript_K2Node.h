@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Params.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Data.h"
 
 #include "CkEditorGraph/CkEditorGraph_Utils.h"
 #include "CkEditorGraph/CkUFunctionBase_K2Node.h"

@@ -2,7 +2,7 @@
 
 #include "CkEcs/Handle/CkHandle.h"
 
-#include "CkEntityLifetime_Fragment_Params.generated.h"
+#include "CkEntityLifetime_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

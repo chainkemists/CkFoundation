@@ -4,7 +4,6 @@
 
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Params.h"
 #include "CkEcs/Registry/CkRegistry.h"
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Net/CkNet_Common.h"
