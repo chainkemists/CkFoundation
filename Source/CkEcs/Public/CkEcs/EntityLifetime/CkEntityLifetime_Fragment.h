@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CkEcs/Tag/CkTag.h"
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Params.h"
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment_Data.h"
 #include "CkEcs/Handle/CkHandle.h"
 
 #include "CkSignal/Public/CkSignal/CkSignal_Macros.h"
