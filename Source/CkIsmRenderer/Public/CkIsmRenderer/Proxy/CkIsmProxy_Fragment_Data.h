@@ -22,8 +22,8 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "Ism.Renderer"))
-    FGameplayTag _RendererName;
+              meta = (AllowPrivateAccess = true))
+    TObjectPtr<UStaticMesh> _Mesh;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))

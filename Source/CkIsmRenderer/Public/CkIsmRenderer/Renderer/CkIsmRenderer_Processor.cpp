@@ -46,10 +46,6 @@ namespace ck
             TEXT("The Mesh [{}] is INVALID. Unable to Setup the IsmRenderer"), InParams.Get_Params().Get_Mesh())
         { return; }
 
-        CK_ENSURE_IF_NOT(ck::IsValid(Params.Get_RendererName()),
-            TEXT("The Renderer Name [{}] is INVALID. Unable to Setup the IsmRenderer"), Params.Get_RendererName())
-        { return; }
-
         const auto AddIsmActorComponents = [&]<typename T_IsmCompTypeTag>(T_IsmCompTypeTag)
         {
             using T_IsmCompType = typename T_IsmCompTypeTag::type;

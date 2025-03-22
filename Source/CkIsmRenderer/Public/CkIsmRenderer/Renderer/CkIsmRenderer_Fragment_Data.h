@@ -123,12 +123,8 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, Categories = "Ism.Renderer"))
-    FGameplayTag _RendererName;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    ECk_Ism_RenderPolicy _RenderPolicy = ECk_Ism_RenderPolicy::ISM;
+    ECk_Mobility _Eck = ECk_Mobility::Static;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
@@ -151,11 +147,14 @@ private:
     FCk_IsmRenderer_CullingInfo _CullingInfo;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_Ism_RenderPolicy _RenderPolicy = ECk_Ism_RenderPolicy::ISM;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, UIMin = 0, ClampMin = 0))
     int32 _NumCustomData = 0;
 
 public:
-    CK_PROPERTY_GET(_RendererName);
     CK_PROPERTY_GET(_RenderPolicy);
     CK_PROPERTY_GET(_Mesh);
     CK_PROPERTY_GET(_MaterialsInfo);
@@ -163,6 +162,8 @@ public:
     CK_PROPERTY_GET(_LightingInfo);
     CK_PROPERTY_GET(_CullingInfo);
     CK_PROPERTY_GET(_NumCustomData);
+
+    CK_DEFINE_CONSTRUCTORS(_
 };
 
 // --------------------------------------------------------------------------------------------------------------------
