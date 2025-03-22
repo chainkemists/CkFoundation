@@ -25,14 +25,19 @@ namespace ck
         friend class FProcessor_WorldSpaceWidget_HandleRequests;
         friend class UCk_Utils_WorldSpaceWidget_UE;
 
+    public:
+        FFragment_WorldSpaceWidget_Current() = default;
+
+        explicit
+        FFragment_WorldSpaceWidget_Current(
+            UUserWidget* InWidget);
+
     private:
+        TStrongObjectPtr<UUserWidget> _WidgetHardRef;
         TWeakObjectPtr<APlayerController> _WidgetOwningPlayer;
 
     public:
         CK_PROPERTY_GET(_WidgetOwningPlayer);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_WorldSpaceWidget_Current, _WidgetOwningPlayer);
     };
 }
 

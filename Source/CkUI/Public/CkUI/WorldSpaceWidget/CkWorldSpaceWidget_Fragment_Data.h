@@ -5,7 +5,7 @@
 #include "CkEcs/Handle/CkHandle.h"
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
 
-#include "CkUI/UserWidget/CkUserWidget.h"
+#include "CkUI/CkUI_Utils.h"
 
 #include "CkWorldSpaceWidget_Fragment_Data.generated.h"
 
@@ -28,7 +28,11 @@ public:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess = true))
-    TWeakObjectPtr<UCk_UserWidget_UE> _Widget;
+    TWeakObjectPtr<UUserWidget> _Widget;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess = true))
+    ECk_UI_Widget_ViewportOperation _InitialViewportOperation = ECk_UI_Widget_ViewportOperation::AddToViewport;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess = true))
@@ -44,6 +48,7 @@ private:
 
 public:
     CK_PROPERTY_GET(_Widget);
+    CK_PROPERTY_GET(_InitialViewportOperation);
     CK_PROPERTY_GET(_WorldSpaceOffset);
     CK_PROPERTY_GET(_ScreenSpaceOffset);
 };

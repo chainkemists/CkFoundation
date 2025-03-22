@@ -12,6 +12,18 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_UI_Widget_ViewportOperation : uint8
+{
+    DoNothing,
+    AddToViewport,
+    RemoveFromViewport
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_UI_Widget_ViewportOperation);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_UI_NamedSlot_SearchRecursive : uint8
 {
     NonRecursive,
