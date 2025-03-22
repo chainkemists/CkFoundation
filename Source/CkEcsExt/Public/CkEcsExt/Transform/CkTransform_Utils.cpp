@@ -24,7 +24,7 @@ auto
         }
     }
 
-    InHandle.Add<ck::FFragment_Transform>();
+    InHandle.Add<ck::FFragment_Transform>(InInitialTransform);
 
     if (InReplicates == ECk_Replication::DoesNotReplicate)
     {
@@ -60,7 +60,7 @@ auto
     if (InHandle.Has<ck::FFragment_Transform>())
     { return Cast(InHandle); }
 
-    InHandle.Add<ck::FFragment_Transform>();
+    InHandle.Add<ck::FFragment_Transform>(InAttachTo->GetComponentToWorld());
 
     if (InAttachTo->GetOwner()->IsReplicatingMovement())
     {
@@ -112,7 +112,7 @@ auto
     if (InHandle.Has<ck::FFragment_Transform>())
     { return Cast(InHandle); }
 
-    InHandle.Add<ck::FFragment_Transform>();
+    InHandle.Add<ck::FFragment_Transform>(InAttachTo->GetSocketTransform(InSocketName));
 
     if (InAttachTo->GetOwner()->IsReplicatingMovement())
     {
