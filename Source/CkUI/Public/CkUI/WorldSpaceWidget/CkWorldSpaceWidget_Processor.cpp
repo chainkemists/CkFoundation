@@ -27,7 +27,10 @@ namespace ck
         }
 
         const auto& ProjectionWorldLocation = InTransform.Get_Transform().GetLocation() + InParams.Get_WorldSpaceOffset();
-        const auto& PlayerController = UGameplayStatics::GetPlayerController(Widget, 0);
+        const auto& PlayerController = InCurrent.Get_WidgetOwningPlayer().Get();
+
+        if (ck::Is_NOT_Valid(PlayerController))
+        { return; }
 
         auto ProjectedScreenPosition = FVector2D{};
         const auto& ProjectionSuccess = UGameplayStatics::ProjectWorldToScreen(
@@ -39,8 +42,6 @@ namespace ck
         { return; }
 
         const auto ScreenPosition = ProjectedScreenPosition + InParams.Get_ScreenSpaceOffset();
-
-        // TODO: More checks ?
 
         Widget->SetPositionInViewport(ScreenPosition);
     }
