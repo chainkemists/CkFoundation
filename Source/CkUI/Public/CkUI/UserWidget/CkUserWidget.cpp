@@ -15,7 +15,7 @@ auto
     CK_ENSURE_IF_NOT(ck::IsValid(InActor), TEXT("Failed to BIND UserWidget [{}] to an Actor because the Actor is INVALID"), this)
     { return; }
 
-    TArray<UCk_UserWidget_UE*> BindWidgets;
+    auto BindWidgets = TArray<UCk_UserWidget_UE*>{};
 
     const auto& DoBindWidgetToActor = [&](UCk_UserWidget_UE* InWidget) -> void
     {
@@ -116,10 +116,7 @@ auto
     DoGet_IsAlreadyBoundTo(const AActor* InActor) const
     -> bool
 {
-    if (const auto& CurrentBindActor = Get_BindActor(); CurrentBindActor == InActor)
-    { return true; }
-
-    return false;
+    return Get_BindActor() == InActor;
 }
 
 auto
@@ -184,6 +181,107 @@ auto
     _BindActor.Reset();
 }
 
+auto
+    UCk_UserWidget_UE::
+    InjectContext(
+        FCk_Handle& InContextEntity)
+    -> void
+{
+    if (Get_InjectedContext() == InContextEntity)
+    { return; }
+
+    _Context = InContextEntity;
+
+    auto UserWidgetsWithContextInjected = TArray<UCk_UserWidget_UE*>{this};
+
+    const auto& DoInjectContextIntoWidget = [&](UCk_UserWidget_UE* InWidget) -> void
+    {
+        if (ck::Is_NOT_Valid(InWidget))
+        { return; }
+
+        if (InWidget->Get_InjectedContext() == InContextEntity)
+        { return; }
+
+        InWidget->_Context = InContextEntity;
+        UserWidgetsWithContextInjected.Add(InWidget);
+    };
+
+    DoInjectContextIntoWidget(this);
+
+    UCk_Utils_UI_UE::ForEachWidgetAndChildren_IncludingUserWidgets(this, [&](UWidget* InWidget) -> bool
+    {
+        auto* DerivedWidget = Cast<UCk_UserWidget_UE>(InWidget);
+
+        if (ck::Is_NOT_Valid(DerivedWidget))
+        { return false; }
+
+        if (NOT DerivedWidget->_InheritBindActorFromParent)
+        { return true; }
+
+        DoInjectContextIntoWidget(DerivedWidget);
+        return false;
+    });
+
+    for (auto& Widget : UserWidgetsWithContextInjected)
+    {
+        CK_ENSURE_IF_NOT(ck::IsValid(Widget),
+            TEXT("Widget [{}] became invalid during context injection process of [{}]!"),
+            Widget,
+            this)
+        { continue; }
+
+        Widget->OnValidContextInjected(InContextEntity);
+    }
+}
+
+auto
+    UCk_UserWidget_UE::
+    ClearInjectedContext()
+    -> void
+{
+    if (ck::Is_NOT_Valid(_Context))
+    { return; }
+
+    auto ContextToClear = *_Context;
+    auto WidgetsWithContextCleared = TArray<UCk_UserWidget_UE*>{this};
+
+    const auto& DoClearWidgetContext = [&](UCk_UserWidget_UE* InWidget) -> void
+    {
+        if (ck::Is_NOT_Valid(InWidget))
+        { return; }
+
+        if (ck::Is_NOT_Valid(InWidget->Get_InjectedContext()))
+        { return; }
+
+        InWidget->OnInjectedContextCleared(InWidget->Get_InjectedContext());
+        WidgetsWithContextCleared.Add(InWidget);
+    };
+
+    DoClearWidgetContext(this);
+
+    UCk_Utils_UI_UE::ForEachWidgetAndChildren_IncludingUserWidgets(this, [&](UWidget* InWidget) -> bool
+    {
+        auto* DerivedWidget = Cast<UCk_UserWidget_UE>(InWidget);
+
+        if (ck::Is_NOT_Valid(DerivedWidget))
+        { return false; }
+
+        DoClearWidgetContext(DerivedWidget);
+        return false;
+    });
+
+    for (auto& Widget : WidgetsWithContextCleared)
+    {
+        CK_ENSURE_IF_NOT(ck::IsValid(Widget),
+            TEXT("Widget [{}] became invalid during context clearing process of [{}]!"),
+            Widget,
+            this)
+        { continue; }
+
+        Widget->_Context.Reset();
+    }
+}
+
 #if WITH_EDITOR
 auto
     UCk_UserWidget_UE::
@@ -207,11 +305,14 @@ auto
 
 auto
     UCk_UserWidget_UE::
-    NativeOnDeactivated() -> void
+    NativeOnDeactivated()
+    -> void
 {
     if (const auto& BindActor = Get_BindActor().Get();
         ck::IsValid(BindActor))
-    { UnbindFromActor(Get_BindActor().Get()); }
+    { UnbindFromActor(BindActor); }
+
+    ClearInjectedContext();
 
     Super::NativeOnDeactivated();
 }

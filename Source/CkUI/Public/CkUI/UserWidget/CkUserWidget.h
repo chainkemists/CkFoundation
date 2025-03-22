@@ -3,6 +3,8 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Validation/CkIsValid.h"
 
+#include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
+
 #include <CommonActivatableWidget.h>
 #include <Blueprint/WidgetTree.h>
 
@@ -18,7 +20,7 @@ namespace ck::widget_palette_categories
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, BlueprintType, Blueprintable, meta = (DisableNativeTick))
-class CKUI_API UCk_UserWidget_UE : public UCommonActivatableWidget
+class CKUI_API UCk_UserWidget_UE : public UCommonActivatableWidget, public ICk_Entity_ContextInjector_Interface
 {
     GENERATED_BODY()
 public:
@@ -41,12 +43,25 @@ public:
               Category = "Ck|UI|Widget")
     void OnUnbindFromActor(AActor* InActor);
 
+    UFUNCTION(BlueprintImplementableEvent,
+              Category = "Ck|UI|Widget")
+    void OnValidContextInjected(FCk_Handle InContext);
+
+    UFUNCTION(BlueprintImplementableEvent,
+              Category = "Ck|UI|Widget")
+    void OnInjectedContextCleared(FCk_Handle InContext);
+
 protected:
     auto DoGet_IsAlreadyBoundTo(const AActor* InActor) const -> bool;
     auto DoBindToActor(AActor* InActor) -> void;
     auto DoBindToActor_BP(AActor* InActor) -> void;
     auto DoUnbindFromActor_BP(AActor* InActor) -> void;
     auto DoUnbindFromActor(AActor* InActor) -> void;
+
+    auto InjectContext(
+        FCk_Handle& InContextEntity) -> void override;
+
+    auto ClearInjectedContext() -> void override;
 
 protected:
 #if WITH_EDITOR
