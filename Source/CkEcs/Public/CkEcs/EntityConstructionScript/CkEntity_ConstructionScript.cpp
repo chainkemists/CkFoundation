@@ -11,6 +11,37 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
+    ICk_Entity_ContextInjector_Interface::
+    InjectContext(
+        FCk_Handle& InContextEntity)
+    -> void
+{
+    CK_ENSURE_IF_NOT(ck::IsValid(InContextEntity),
+        TEXT("Trying to Inject an INVALID Context Entity"))
+    { return; }
+
+    _Context = InContextEntity;
+}
+
+auto
+    ICk_Entity_ContextInjector_Interface::
+    Get_InjectedContext() const
+    -> FCk_Handle
+{
+    return _Context.Get(FCk_Handle{});
+}
+
+auto
+    ICk_Entity_ContextInjector_Interface::
+    ClearInjectedContext()
+    -> void
+{
+    _Context.Reset();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
     UCk_Entity_ConstructionScript_PDA::
     Construct(
         FCk_Handle& InHandle,
