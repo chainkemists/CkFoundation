@@ -10,6 +10,38 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UINTERFACE(meta = (CannotImplementInterfaceInBlueprint))
+class CKECS_API UCk_Entity_ContextInjector_Interface : public UInterface { GENERATED_BODY() };
+class CKECS_API ICk_Entity_ContextInjector_Interface
+{
+    GENERATED_BODY()
+
+public:
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Entity",
+        DisplayName = "[Ck] Inject Context")
+    virtual void
+    InjectContext(
+        UPARAM(ref) FCk_Handle& InContextEntity);
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Entity",
+        DisplayName = "[Ck] Get Injected Context")
+    virtual FCk_Handle
+    Get_InjectedContext() const;
+
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Entity",
+        DisplayName = "[Ck] Clear Injected Context")
+    virtual void
+    ClearInjectedContext();
+
+protected:
+    TOptional<FCk_Handle> _Context;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UINTERFACE()
 class CKECS_API UCk_Entity_ConstructionScript_Interface : public UInterface { GENERATED_BODY() };
 class CKECS_API ICk_Entity_ConstructionScript_Interface
