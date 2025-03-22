@@ -82,10 +82,44 @@ auto
         const FCk_Fragment_WorldSpaceWidget_ParamsData& InParams)
     -> FCk_Handle_WorldSpaceWidget
 {
+    const auto& Widget = InParams.Get_Widget().Get();
     InHandle.Add<ck::FFragment_WorldSpaceWidget_Params>(InParams);
-    InHandle.Add<ck::FFragment_WorldSpaceWidget_Current>(InParams.Get_Widget()->GetOwningPlayer());
+    InHandle.Add<ck::FFragment_WorldSpaceWidget_Current>(Widget);
+
+    switch (const auto& ViewportOperation = InParams.Get_InitialViewportOperation())
+    {
+        case ECk_UI_Widget_ViewportOperation::DoNothing:
+        {
+            break;
+        }
+        case ECk_UI_Widget_ViewportOperation::AddToViewport:
+        {
+            Widget->AddToViewport();
+            break;
+        }
+        case ECk_UI_Widget_ViewportOperation::RemoveFromViewport:
+        {
+            Widget->RemoveFromParent();
+            break;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(ViewportOperation);
+            break;
+        }
+    }
 
     return Cast(InHandle);
 }
+
+auto
+    UCk_Utils_WorldSpaceWidget_UE::
+    Get_Instance(
+        const FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle)
+    -> UUserWidget*
+{
+    return InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Current>()._WidgetHardRef.Get();
+}
+
 
 // --------------------------------------------------------------------------------------------------------------------
