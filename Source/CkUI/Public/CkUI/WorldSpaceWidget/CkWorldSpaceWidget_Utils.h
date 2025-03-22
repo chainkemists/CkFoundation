@@ -53,6 +53,14 @@ public:
     Has(
         const FCk_Handle& InHandle);
 
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|WorldSpaceWidget",
+              DisplayName="[Ck][WorldSpaceWidget] Get Widget Instance")
+    static UUserWidget*
+    Get_Instance(
+        const FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle);
+
 private:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|WorldSpaceWidget",
