@@ -20,7 +20,20 @@ public class CkThirdParty : ModuleRules
 
 		IWYUSupport = IWYUSupport.None;
 
-		PrivateDefinitions.Add("JPH_BUILD_SHARED_LIBRARY");
+		// Use this conditional approach
+		if (Target.Type == TargetType.Server)
+		{
+			// Server build configuration
+			// PublicDefinitions.Add("JPH_SHARED_LIBRARY");
+			// Do NOT add JPH_BUILD_SHARED_LIBRARY for server
+		}
+		else
+		{
+			// Client and Editor configuration
+			PublicDefinitions.Add("JPH_SHARED_LIBRARY");
+			PrivateDefinitions.Add("JPH_BUILD_SHARED_LIBRARY");
+		}
+
 		bUseUnity = false;
 
 		PublicDependencyModuleNames.AddRange(
