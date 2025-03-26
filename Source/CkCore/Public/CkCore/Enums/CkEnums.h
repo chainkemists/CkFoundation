@@ -735,6 +735,32 @@ public:
     static auto
     ConvertFromECollisionEnabled(
         ECollisionEnabled::Type InEnum) -> ECk_Collision;
+
+public:
+    template <typename T_Enum>
+    static auto
+    Get_EnumFromString(
+        const FString& InEnumValueStr) -> TOptional<T_Enum>;
 };
+
+// --------------------------------------------------------------------------------------------------------------------
+
+template <typename T_Enum>
+auto
+    UCk_Utils_Enum_UE::
+    Get_EnumFromString(
+        const FString& InEnumValueStr)
+    -> TOptional<T_Enum>
+{
+    const auto EnumPtr = StaticEnum<T_Enum>();
+    if (ck::Is_NOT_Valid(EnumPtr, ck::IsValid_Policy_NullptrOnly{}))
+    { return {}; }
+
+    auto EnumValue = EnumPtr->GetValueByNameString(InEnumValueStr);
+    if (EnumValue == INDEX_NONE)
+    { return {}; }
+
+    return static_cast<T_Enum>(EnumValue);
+}
 
 // --------------------------------------------------------------------------------------------------------------------
