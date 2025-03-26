@@ -34,7 +34,6 @@ public:
     auto IsCompatibleWithGraph(UEdGraph const* InGraph) const -> bool override;
     auto PinConnectionListChanged(UEdGraphPin* InPin) -> void override;
     auto GetPinMetaData(FName InPinName, FName InKey) -> FString override;
-    auto PostReconstructNode() -> void override;
     // End of K2Node implementation
 
     // UEdGraphNode implementation
