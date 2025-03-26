@@ -1,8 +1,8 @@
 #pragma once
 
-#include "CkEcsExt/EntityScript/CkEntityScript_Fragment.h"
-
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Fragment.h"
+#include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
+#include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 
 #include "CkEcs/Processor/CkProcessor.h"
 
@@ -10,7 +10,7 @@
 
 namespace ck
 {
-    class CKECSEXT_API FProcessor_EntityScript_SpawnEntity_HandleRequests : public TProcessor<
+    class CKECS_API FProcessor_EntityScript_SpawnEntity_HandleRequests : public TProcessor<
             FProcessor_EntityScript_SpawnEntity_HandleRequests,
             FFragment_EntityScript_RequestSpawnEntity,
             CK_IGNORE_PENDING_KILL>
@@ -42,7 +42,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSEXT_API FProcessor_EntityScript_BeginPlay : public TProcessor<
+    class CKECS_API FProcessor_EntityScript_BeginPlay : public TProcessor<
             FProcessor_EntityScript_BeginPlay,
             FFragment_EntityScript_Current,
             FTag_EntityJustCreated,
@@ -62,7 +62,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    class CKECSEXT_API FProcessor_EntityScript_EndPlay : public TProcessor<
+    class CKECS_API FProcessor_EntityScript_EndPlay : public TProcessor<
             FProcessor_EntityScript_EndPlay,
             FFragment_EntityScript_Current,
             FTag_EntityScript_HasBegunPlay,

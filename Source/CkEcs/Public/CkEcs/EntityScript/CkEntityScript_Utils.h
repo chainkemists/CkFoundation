@@ -4,11 +4,11 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkEcsExt/EntityScript/CkEntityScript_Fragment_Data.h"
-
 #include "CkEntityScript_Utils.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
+
+class UCk_EntityScript_UE;
 
 namespace ck
 {
@@ -19,7 +19,7 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 UCLASS(NotBlueprintable)
-class CKECSEXT_API UCk_Utils_EntityScript_UE : public UBlueprintFunctionLibrary
+class CKECS_API UCk_Utils_EntityScript_UE : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
