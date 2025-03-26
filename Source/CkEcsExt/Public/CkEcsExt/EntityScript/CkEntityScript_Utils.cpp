@@ -10,18 +10,21 @@ auto
     Request_SpawnEntity(
         FCk_Handle& InLifetimeOwner,
         UCk_EntityScript_UE* InEntityScript)
-    -> void
+    -> FCk_Handle
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InEntityScript), TEXT("Invalid EntityScript supplied, cannot request to Spawn Entity"))
-    { return; }
+    { return {}; }
 
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
+    auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
 
-    const auto Request = FCk_Request_EntityScript_SpawnEntity{InEntityScript->GetClass()}
+    const auto Request = FCk_Request_EntityScript_SpawnEntity{InEntityScript->GetClass(), NewEntity}
                             .Set_EntityScriptTemplate(InEntityScript)
                             .Set_Owner(InLifetimeOwner);
 
     RequestEntity.Add<ck::FFragment_EntityScript_RequestSpawnEntity>(Request);
+
+    return NewEntity;
 }
 
 auto
