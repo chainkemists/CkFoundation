@@ -31,8 +31,9 @@ public:
     friend class ck::FProcessor_EntityScript_BeginPlay;
 
 public:
+    // returns the handle to the newly spawned Entity (not yet constructed)
     UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly)
-    static void
+    static FCk_Handle
     Request_SpawnEntity(
         UPARAM(ref) FCk_Handle& InLifetimeOwner,
         UCk_EntityScript_UE* InEntityScript);

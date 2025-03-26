@@ -28,14 +28,20 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
+    FCk_Handle _NewEntity;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
     FCk_Handle _Owner;
 
 public:
     CK_PROPERTY_GET(_EntityScriptClass);
+    CK_PROPERTY_GET(_NewEntity);
+
     CK_PROPERTY(_EntityScriptTemplate);
     CK_PROPERTY(_Owner);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_EntityScript_SpawnEntity, _EntityScriptClass);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_EntityScript_SpawnEntity, _EntityScriptClass, _NewEntity);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
