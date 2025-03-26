@@ -47,7 +47,7 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(NewEntityScript), TEXT("Failed to Spawn New Entity using EntityScript [{}]"), InRequest.Get_EntityScriptClass())
         { return; }
 
-        auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(LifetimeOwner);
+        auto NewEntity = InRequest.Get_NewEntity();
 
         NewEntityScript->_AssociatedEntity = NewEntity;
         UCk_Utils_EntityScript_UE::DoAdd(NewEntity, NewEntityScript);
