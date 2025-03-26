@@ -2,10 +2,9 @@
 
 #include "CkCore/IO/CkIO_Utils.h"
 
+#include "CkEcs/EntityScript/CkEntityScript.h"
+#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
-
-#include "CkEcsExt/EntityScript/CkEntityScript.h"
-#include "CkEcsExt/EntityScript/CkEntityScript_Utils.h"
 
 #include <GraphEditorSettings.h>
 

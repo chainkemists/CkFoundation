@@ -1,8 +1,9 @@
 #pragma once
 
-#include "CkEcsExt/EntityScript/CkEntityScript_Fragment_Data.h"
-
 #include "CkCore/Macros/CkMacros.h"
+
+#include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
+#include "CkEcs/Tag/CkTag.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -20,7 +21,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKECSEXT_API FFragment_EntityScript_Current
+    struct CKECS_API FFragment_EntityScript_Current
     {
     public:
         CK_GENERATED_BODY(FFragment_EntityScript_Current);
