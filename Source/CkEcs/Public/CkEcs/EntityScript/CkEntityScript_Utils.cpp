@@ -1,7 +1,8 @@
 #include "CkEntityScript_Utils.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-#include "CkEcsExt/EntityScript/CkEntityScript_Fragment.h"
+#include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
+#include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
