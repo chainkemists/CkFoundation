@@ -1,16 +1,16 @@
 #pragma once
 
-#include "CkEcs/Handle/CkHandle.h"
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkEcsExt/EntityScript/CkEntityScript.h"
+#include "CkEcs/EntityScript/CkEntityScript.h"
+#include "CkEcs/Handle/CkHandle.h"
 
 #include "CkEntityScript_Fragment_Data.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKECSEXT_API FCk_Request_EntityScript_SpawnEntity
+struct CKECS_API FCk_Request_EntityScript_SpawnEntity
 {
     GENERATED_BODY()
 

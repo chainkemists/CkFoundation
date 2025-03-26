@@ -1,7 +1,8 @@
 #include "CkEcsExtProcessorInjector.h"
 
+#include "CkEcs/EntityScript/CkEntityScript_Processor.h"
+
 #include "CkEcsExt/Transform/CkTransform_Processor.h"
-#include "CkEcsExt/EntityScript/CkEntityScript_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 

@@ -14,7 +14,7 @@ namespace ck
 // -----------------------------------------------------------------------------------------------------------
 
 UCLASS(Abstract, Blueprintable, BlueprintType)
-class CKECSEXT_API UCk_EntityScript_UE : public UObject
+class CKECS_API UCk_EntityScript_UE : public UObject
 {
     GENERATED_BODY()
 
