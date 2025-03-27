@@ -34,9 +34,16 @@ public:
     // returns the handle to the newly spawned Entity (not yet constructed)
     UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly)
     static FCk_Handle
-    Request_SpawnEntity(
+    DoRequest_SpawnEntity(
         UPARAM(ref) FCk_Handle& InLifetimeOwner,
         UCk_EntityScript_UE* InEntityScript);
+
+public:
+    static auto
+    Request_SpawnEntity(
+        const FCk_Handle& InLifetimeOwner,
+        const TSubclassOf<UCk_EntityScript_UE>& InEntityScript,
+        UCk_EntityScript_UE* InEntityScriptTemplate = nullptr) -> FCk_Handle;
 
 private:
     static auto
