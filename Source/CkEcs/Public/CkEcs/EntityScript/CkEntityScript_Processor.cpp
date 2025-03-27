@@ -37,14 +37,22 @@ namespace ck
             const FCk_Request_EntityScript_SpawnEntity& InRequest)
         -> void
     {
+        const auto EntityScriptClass = InRequest.Get_EntityScriptClass();
+
+        CK_ENSURE_IF_NOT(ck::IsValid(EntityScriptClass),
+            TEXT("Invalid EntityScript supplied, cannot Spawn Entity"))
+        { return; }
+
+        const auto OptionalEntityScriptTemplate = InRequest.Get_EntityScriptTemplate();
+
         const auto& LifetimeOwner = InRequest.Get_Owner();
 
         const auto& Outer = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(LifetimeOwner);
 
-        const auto& NewEntityScript = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_EntityScript_UE>(
-            Outer, InRequest.Get_EntityScriptClass(), InRequest.Get_EntityScriptTemplate(), nullptr);
+        const auto& NewEntityScript = UCk_Utils_Object_UE::Request_CreateNewObject<UCk_EntityScript_UE>(Outer,
+            EntityScriptClass, OptionalEntityScriptTemplate, nullptr);
 
-        CK_ENSURE_IF_NOT(ck::IsValid(NewEntityScript), TEXT("Failed to Spawn New Entity using EntityScript [{}]"), InRequest.Get_EntityScriptClass())
+        CK_ENSURE_IF_NOT(ck::IsValid(NewEntityScript), TEXT("Failed to Spawn New Entity using EntityScript [{}]"), EntityScriptClass)
         { return; }
 
         auto NewEntity = InRequest.Get_NewEntity();
@@ -53,6 +61,12 @@ namespace ck
         UCk_Utils_EntityScript_UE::DoAdd(NewEntity, NewEntityScript);
 
         NewEntityScript->Construct(NewEntity);
+
+        if (NewEntityScript->Get_Replication() == ECk_Replication::Replicates)
+        {
+            // this request is to be handled by the ReplicationDrive
+            NewEntity.Add<FCk_Request_EntityScript_Replicate>(InRequest.Get_Owner(), InRequest.Get_EntityScriptClass());
+        }
 
         // TODO: Fire signal
     }
