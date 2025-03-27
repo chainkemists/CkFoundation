@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
+
 #include "CkNet/CkNet_Utils.h"
 #include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Fragment.h"
 
@@ -50,6 +52,12 @@ public:
         FCk_Handle& InHandle,
         const FCk_EntityReplicationDriver_ConstructionInfo& InConstructionInfo,
         const std::function<void(FCk_Handle)>& InFunc_OnCreateEntityBeforeBuild = nullptr) -> FCk_Handle;
+
+    static auto
+    Request_Replicate(
+        FCk_Handle& InHandleToReplicate,
+        FCk_Handle InReplicatedOwner,
+        TSubclassOf<UCk_EntityScript_UE> InEntityScript) -> void;
 
     static auto
     Request_ReplicateEntityOnReplicatedActor(
