@@ -18,3 +18,16 @@ protected:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable, NotBlueprintType)
+class CKNET_API UCk_Net_ProcessorInjector_Replicate : public UCk_EcsWorld_ProcessorInjector_Base_UE
+{
+    GENERATED_BODY()
+
+protected:
+    auto
+    DoInjectProcessors(
+        EcsWorldType& InWorld) -> void override;
+};
+
+// --------------------------------------------------------------------------------------------------------------------
