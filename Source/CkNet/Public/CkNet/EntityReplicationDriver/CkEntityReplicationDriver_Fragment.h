@@ -103,6 +103,10 @@ private:
 
     UFUNCTION()
     void
+    OnRep_ReplicationData_EntityScript();
+
+    UFUNCTION()
+    void
     OnRep_ReplicationData_Ability();
 
     UFUNCTION()
@@ -120,6 +124,9 @@ private:
 private:
     UPROPERTY(ReplicatedUsing = OnRep_ReplicationData)
     FCk_EntityReplicationDriver_ReplicationData _ReplicationData;
+
+    UPROPERTY(ReplicatedUsing = OnRep_ReplicationData_EntityScript)
+    FCk_EntityReplicationDriver_ReplicationData_EntityScript _ReplicationData_EntityScript;
 
     UPROPERTY(ReplicatedUsing = OnRep_ReplicationData_Ability)
     FCk_EntityReplicationDriver_AbilityData _ReplicationData_Ability;
@@ -151,6 +158,10 @@ public:
     auto
     Set_ReplicationData(
         const FCk_EntityReplicationDriver_ReplicationData& InReplicationData) -> void;
+
+    auto
+    Set_ReplicationData_EntityScript(
+        const FCk_EntityReplicationDriver_ReplicationData_EntityScript& InReplicationData) -> void;
 
     auto
     Set_ReplicationData_Ability(
