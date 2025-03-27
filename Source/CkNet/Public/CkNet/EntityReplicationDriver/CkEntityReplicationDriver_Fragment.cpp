@@ -7,9 +7,10 @@
 #include "CkEcs/CkEcsLog.h"
 #include "CkEcs/EntityConstructionScript/CkEntity_ConstructionScript.h"
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
 #include "CkEcs/Handle/CkHandle_Utils.h"
-#include "CkEcs/OwningActor/CkOwningActor_Fragment.h"
 #include "CkEcs/Subsystem/CkEcsWorld_Subsystem.h"
+#include "CkEcs/EntityScript/CkEntityScript.h"
 
 #include "CkNet/CkNet_Utils.h"
 #include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
@@ -62,6 +63,7 @@ auto
     constexpr auto Params = FDoRepLifetimeParams{COND_Custom, REPNOTIFY_Always, true};
 
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData, Params);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData_EntityScript, Params);
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData_Ability, Params);
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData_ReplicatedActor, Params);
     DOREPLIFETIME_WITH_PARAMS_FAST(ThisType, _ReplicationData_NonReplicatedActor, Params);
@@ -165,6 +167,49 @@ auto
     if (_ReplicationData.Get_IsOwningEntityDriverDependentOnThis())
     {
         OwningEntityDriver->DoAdd_SyncedDependentReplicationDriver();
+    }
+}
+
+auto
+    UCk_Fragment_EntityReplicationDriver_Rep::
+    OnRep_ReplicationData_EntityScript() -> void
+{
+    if ([[maybe_unused]] const auto ShouldSkipIfAllObjectsAreNotYetResolved =
+        AnyOf(_ReplicationData_EntityScript.Get_ReplicatedObjectsData().Get_Objects(), ck::algo::Is_NOT_Valid{}))
+    {
+        return;
+    }
+    const auto EntityScriptClass = _ReplicationData_EntityScript.Get_EntityScriptClass();
+    const auto OwningEntity = _ReplicationData_EntityScript.Get_OwningEntityDriver()->Get_AssociatedEntity();
+    // wait on the owning entity to fully replicate
+    if (ck::Is_NOT_Valid(OwningEntity))
+    {
+        _ReplicationData_EntityScript.Get_OwningEntityDriver()->_PendingChildEntityConstructions.Emplace(this);
+        return;
+    }
+    // --------------------------------------------------------------------------------------------------------------------
+    _AssociatedEntity._ReplicationDriver = this;
+    UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(_AssociatedEntity, OwningEntity);
+    UCk_Utils_Net_UE::Add(_AssociatedEntity, FCk_Net_ConnectionSettings
+        {
+            ECk_Replication::Replicates,
+            ECk_Net_NetModeType::Client,
+            ECk_Net_EntityNetRole::Proxy
+        });
+
+    _AssociatedEntity = UCk_Utils_EntityScript_UE::Request_SpawnEntity(OwningEntity, EntityScriptClass);
+
+    UCk_Utils_ReplicatedObjects_UE::Add(_AssociatedEntity, FCk_ReplicatedObjects{}.
+        Set_ReplicatedObjects(_ReplicationData.Get_ReplicatedObjectsData().Get_Objects()));
+
+    // --------------------------------------------------------------------------------------------------------------------
+    // Make sure to call this on "self" since the # of dependent rep driver include "self" as well
+    DoAdd_SyncedDependentReplicationDriver();
+    // This is necessary in case this Replicated Entity was built from inside the OwningEntity's ConstructionScript.
+    // If that is the case, then this Replicated Entity is a dependent
+    if (_ReplicationData_EntityScript.Get_IsOwningEntityDriverDependentOnThis())
+    {
+        _ReplicationData_EntityScript.Get_OwningEntityDriver()->DoAdd_SyncedDependentReplicationDriver();
     }
 }
 
@@ -446,6 +491,16 @@ auto
 {
     _ReplicationData = InReplicationData;
     MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _ReplicationData, this);
+}
+
+auto
+    UCk_Fragment_EntityReplicationDriver_Rep::
+    Set_ReplicationData_EntityScript(
+        const FCk_EntityReplicationDriver_ReplicationData_EntityScript& InReplicationData)
+    -> void
+{
+    _ReplicationData_EntityScript = InReplicationData;
+    MARK_PROPERTY_DIRTY_FROM_NAME(ThisType, _ReplicationData_EntityScript, this);
 }
 
 auto
