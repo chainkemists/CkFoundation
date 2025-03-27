@@ -1,5 +1,7 @@
 #include "CkEntityReplicationDriver_Utils.h"
 
+#include "CkEcs/EntityScript/CkEntityScript_Utils.h"
+
 #include "CkLabel/CkLabel_Utils.h"
 
 #include "CkNet/CkNet_Log.h"
@@ -188,6 +190,59 @@ auto
     }
 
     return NewEntity;
+}
+
+auto
+    UCk_Utils_EntityReplicationDriver_UE::
+    Request_Replicate(
+        FCk_Handle& InHandleToReplicate,
+        FCk_Handle InReplicatedOwner,
+        TSubclassOf<UCk_EntityScript_UE> InEntityScript)
+    -> void
+{
+    CK_ENSURE_IF_NOT(InHandleToReplicate.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>(),
+        TEXT("Handle [{}] does NOT have a ReplicationDriver. Unable to proceed with Replication of the handle."),
+        InHandleToReplicate)
+    { return; }
+
+    CK_ENSURE_IF_NOT(InReplicatedOwner.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>(),
+        TEXT("Owner [{}] does NOT have a ReplicationDriver. Unable to proceed with Replication of Entity with EntityScript [{}]"),
+        InReplicatedOwner,
+        InEntityScript)
+    { return; }
+
+    switch(const auto NetMode = UCk_Utils_Net_UE::Get_EntityNetMode(InReplicatedOwner))
+    {
+        case ECk_Net_NetModeType::Host:
+        {
+            const auto& RepDriver = InHandleToReplicate.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
+            const auto& ReplicatedObjects = UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(InHandleToReplicate);
+            const auto& IsOwningEntityDriverDependentOnThis = InReplicatedOwner.Has<ck::FTag_EntityJustCreated>();
+
+            const auto& DependentRepDriversAddedDuringConstruction = RepDriver->Get_ExpectedNumberOfDependentReplicationDrivers();
+
+            RepDriver->Set_ExpectedNumberOfDependentReplicationDrivers(
+                Get_NumOfReplicationDriversIncludingDependents(InHandleToReplicate) +
+                DependentRepDriversAddedDuringConstruction);
+
+            RepDriver->Set_ReplicationData_EntityScript
+            (
+                FCk_EntityReplicationDriver_ReplicationData_EntityScript
+                {
+                    InEntityScript,
+                    InReplicatedOwner.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>(),
+                    FCk_EntityReplicationDriver_ReplicateObjects_Data{ReplicatedObjects.Get_ReplicatedObjects()}
+                }
+                .Set_IsOwningEntityDriverDependentOnThis(IsOwningEntityDriverDependentOnThis)
+            );
+
+            break;
+        }
+        case ECk_Net_NetModeType::Unknown:
+        default:
+            CK_INVALID_ENUM(NetMode);
+            break;
+    }
 }
 
 auto
