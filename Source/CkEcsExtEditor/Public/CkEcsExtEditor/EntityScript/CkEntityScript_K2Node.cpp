@@ -354,11 +354,11 @@ auto
         EntityScriptClass
     );
 
-    // Set up 'Request_SpawnEntity' function node
+    // Set up 'DoRequest_SpawnEntity' function node
     auto* SpawnEntity_Node = InCompilerContext.SpawnIntermediateNode<UK2Node_CallFunction>(this, InSourceGraph);
     SpawnEntity_Node->FunctionReference.SetExternalMember
     (
-        GET_FUNCTION_NAME_CHECKED(UCk_Utils_EntityScript_UE, Request_SpawnEntity),
+        GET_FUNCTION_NAME_CHECKED(UCk_Utils_EntityScript_UE, DoRequest_SpawnEntity),
         UCk_Utils_EntityScript_UE::StaticClass()
     );
     SpawnEntity_Node->AllocateDefaultPins();
