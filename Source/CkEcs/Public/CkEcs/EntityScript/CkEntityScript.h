@@ -55,7 +55,19 @@ protected:
     DoEndPlay();
 
 private:
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+        Category = "Ck|EntityScript",
+        meta=(AllowPrivateAccess))
+    ECk_Replication _Replication = ECk_Replication::Replicates;
+
+    UPROPERTY(BlueprintReadOnly,
+        Category = "Ck|EntityScript",
+        DisplayName = "Associated Entity",
+        meta=(AllowPrivateAccess))
     FCk_Handle _AssociatedEntity;
+
+public:
+    CK_PROPERTY_GET(_Replication);
 };
 
 // -----------------------------------------------------------------------------------------------------------
