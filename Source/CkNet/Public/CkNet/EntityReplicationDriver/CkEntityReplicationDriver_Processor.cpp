@@ -2,28 +2,26 @@
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 
+#include "CkNet/EntityReplicationDriver/CkEntityReplicationDriver_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
-//namespace ck
-//{
-//    auto
-//        FProcessor_ReplicationDriver_HandleRequests::
-//        ForEachEntity(
-//            TimeType InDeltaT,
-//            HandleType InEntity,
-//            FFragment_ReplicationDriver_Requests& InRequestsComp,
-//            const TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>& InRepDriver) const
-//        -> void
-//    {
-//        algo::ForEachRequest(InRequestsComp._Requests,
-//            [&](const FFragment_ReplicationDriver_Requests::RequestType& InRequest) -> void
-//            {
-//                InRepDriver->Request_ReplicateEntity_OnServer(InRequest.Get_ConstructionInfo());
-//            });
-//
-//        InEntity.Remove<MarkedDirtyBy>();
-//    }
-//}
+namespace ck
+{
+    auto
+        FProcessor_ReplicationDriver_ReplicateEntityScript::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FCk_Request_EntityScript_Replicate& InRequest) const
+        -> void
+    {
+        UCk_Utils_EntityReplicationDriver_UE::Add(InHandle);
+        UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(InHandle, InRequest.Get_Owner(), InRequest.Get_EntityScriptClass());
+
+        InHandle.Remove<MarkedDirtyBy>();
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
