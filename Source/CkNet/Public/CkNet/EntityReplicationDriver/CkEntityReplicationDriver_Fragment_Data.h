@@ -5,6 +5,7 @@
 
 #include "CkEcs/Entity/CkEntity.h"
 #include "CkEcs/Handle/CkHandle.h"
+#include "CkEcs/EntityScript/CkEntityScript.h"
 
 #include "CkEntityReplicationDriver_Fragment_Data.generated.h"
 
@@ -152,6 +153,39 @@ public:
     CK_PROPERTY_GET(_ReplicatedObjectsData);
 
     CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_ReplicationData, _ConstructionInfo, _ReplicatedObjectsData);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKNET_API FCk_EntityReplicationDriver_ReplicationData_EntityScript
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_EntityReplicationDriver_ReplicationData_EntityScript);
+
+private:
+    UPROPERTY()
+    TSubclassOf<UCk_EntityScript_UE> _EntityScriptClass;
+
+    UPROPERTY()
+    TObjectPtr<class UCk_Fragment_EntityReplicationDriver_Rep> _OwningEntityDriver;
+
+    UPROPERTY()
+    FCk_EntityReplicationDriver_ReplicateObjects_Data _ReplicatedObjectsData;
+
+    UPROPERTY()
+    bool _IsOwningEntityDriverDependentOnThis = false;
+
+public:
+    CK_PROPERTY_GET(_EntityScriptClass);
+    CK_PROPERTY_GET(_OwningEntityDriver);
+    CK_PROPERTY_GET(_ReplicatedObjectsData);
+    CK_PROPERTY(_IsOwningEntityDriverDependentOnThis);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_ReplicationData_EntityScript, _EntityScriptClass,
+        _OwningEntityDriver, _ReplicatedObjectsData);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
