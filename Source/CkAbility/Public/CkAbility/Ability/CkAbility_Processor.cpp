@@ -172,7 +172,15 @@ namespace ck
                 return ECk_AbilityOwner_AbilityTransferredOrNot::NotTransferred;
             }
 
-            CK_ENSURE_IF_NOT(NOT RecordOfAbilities_Utils::Get_ContainsEntry(TransferTarget, AbilityToTransfer),
+            const auto& AlreadyContainsAbilityToTransfer = RecordOfAbilities_Utils::Get_HasValidEntry_If(TransferTarget, [&](FCk_Handle_Ability InAbilityHandle) -> bool
+            {
+                if (AbilityToTransfer != InAbilityHandle)
+                { return {}; }
+
+                return UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InAbilityHandle) == TransferTarget;
+            });
+
+            CK_ENSURE_IF_NOT(NOT AlreadyContainsAbilityToTransfer,
                 TEXT(
                     "Cannot TRANSFER Ability [{}] from Ability Owner [{}] to [{}] because the recipient already has this ability"
                     "A request to remove the ability from the source was made, but the recipient somehow still has the ability (possibly by extension?)"
