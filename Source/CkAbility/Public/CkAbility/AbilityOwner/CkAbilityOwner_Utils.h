@@ -171,6 +171,30 @@ public:
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         TSubclassOf<UCk_Ability_Script_PDA> InAbilityClass);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="[Ck][AbilityOwner] Get Ability Count (Blocking Abilities)",
+              meta=(DevelopmentOnly))
+    static int32
+    Get_AbilityCount_Blocking(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="[Ck][AbilityOwner] Get Ability Count (Cost Abilities)",
+              meta=(DevelopmentOnly))
+    static int32
+    Get_AbilityCount_Cost(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|Ability|Owner",
+              DisplayName="[Ck][AbilityOwner] Get Ability Count (Cooldown Abilities)",
+              meta=(DevelopmentOnly))
+    static int32
+    Get_AbilityCount_Cooldown(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ability|Owner",
               DisplayName="[Ck][AbilityOwner] Get Ability Count If",
