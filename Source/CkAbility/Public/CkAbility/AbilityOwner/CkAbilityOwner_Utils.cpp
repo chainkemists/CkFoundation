@@ -250,6 +250,63 @@ auto
 
 auto
     UCk_Utils_AbilityOwner_UE::
+    Get_AbilityCount_Blocking(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity)
+    -> int32
+{
+    return Get_AbilityCount_If(InAbilityOwnerEntity,
+        [](const FCk_Handle_Ability& InAbilityEntity) -> bool
+        {
+            const auto& AbilityScript = UCk_Utils_Ability_UE::Get_ScriptClass(InAbilityEntity);
+
+            CK_ENSURE_IF_NOT(ck::IsValid(AbilityScript),
+                TEXT("Ability handle [{}] has no valid ability script class."), InAbilityEntity)
+            { return false; }
+
+            return AbilityScript->ImplementsInterface(UCk_Ability_Condition_Interface::StaticClass());
+        });
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Get_AbilityCount_Cost(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity)
+    -> int32
+{
+    return Get_AbilityCount_If(InAbilityOwnerEntity,
+        [](const FCk_Handle_Ability& InAbilityEntity) -> bool
+        {
+            const auto& AbilityScript = UCk_Utils_Ability_UE::Get_ScriptClass(InAbilityEntity);
+
+            CK_ENSURE_IF_NOT(ck::IsValid(AbilityScript),
+                TEXT("Ability handle [{}] has no valid ability script class."), InAbilityEntity)
+            { return false; }
+
+            return AbilityScript->ImplementsInterface(UCk_Ability_Cost_Interface::StaticClass());
+        });
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
+    Get_AbilityCount_Cooldown(
+        const FCk_Handle_AbilityOwner& InAbilityOwnerEntity)
+    -> int32
+{
+    return Get_AbilityCount_If(InAbilityOwnerEntity,
+        [](const FCk_Handle_Ability& InAbilityEntity) -> bool
+        {
+            const auto& AbilityScript = UCk_Utils_Ability_UE::Get_ScriptClass(InAbilityEntity);
+
+            CK_ENSURE_IF_NOT(ck::IsValid(AbilityScript),
+                TEXT("Ability handle [{}] has no valid ability script class."), InAbilityEntity)
+            { return false; }
+
+            return AbilityScript->ImplementsInterface(UCk_Ability_Cooldown_Interface::StaticClass());
+        });
+}
+
+auto
+    UCk_Utils_AbilityOwner_UE::
     Get_AbilityCount_If(
         const FCk_Handle_AbilityOwner& InAbilityOwnerEntity,
         const FInstancedStruct& InOptionalPayload,
