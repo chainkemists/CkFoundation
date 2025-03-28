@@ -641,37 +641,37 @@ private:
     FCk_Ability_ActivationSettings _ActivationSettings;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              Category = "SubAbilities",
+              Category = "SubAbilities|Conditions",
               DisplayName = "Blocked By",
               meta = (AllowPrivateAccess = true))
     FCk_Ability_ConditionSettings _ConditionSettings;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              Category = "SubAbilities_(Instanced)",
+              Category = "SubAbilities_(Instanced)|Conditions",
               DisplayName = "Blocked By",
               meta = (AllowPrivateAccess = true))
     FCk_Ability_ConditionSettings_Instanced _ConditionSettings_Instanced;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              Category = "SubAbilities",
+              Category = "SubAbilities|Conditions",
               DisplayName = "Costs",
               meta = (AllowPrivateAccess = true))
     FCk_Ability_CostSettings _CostSettings;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              Category = "SubAbilities_(Instanced)",
+              Category = "SubAbilities_(Instanced)|Conditions",
               DisplayName = "Costs",
               meta = (AllowPrivateAccess = true))
     FCk_Ability_CostSettings_Instanced _CostSettings_Instanced;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              Category = "SubAbilities",
+              Category = "SubAbilities|Conditions",
               DisplayName = "Cooldowns",
               meta = (AllowPrivateAccess = true))
     FCk_Ability_CooldownSettings _CooldownSettings;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              Category = "SubAbilities_(Instanced)",
+              Category = "SubAbilities_(Instanced)|Conditions",
               DisplayName = "Cooldowns",
               meta = (AllowPrivateAccess = true))
     FCk_Ability_CooldownSettings_Instanced _CooldownSettings_Instanced;
