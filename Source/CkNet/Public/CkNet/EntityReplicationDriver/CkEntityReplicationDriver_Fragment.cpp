@@ -457,8 +457,8 @@ auto
 {
     if (_NumSyncedDependentReplicationDrivers == Get_ExpectedNumberOfDependentReplicationDrivers())
     {
-        const auto AssociatedEntity = Get_AssociatedEntity();
-        ck::UUtils_Signal_OnDependentsReplicationComplete::Broadcast(AssociatedEntity, ck::MakePayload(AssociatedEntity));
+        auto AssociatedEntity = Get_AssociatedEntity();
+        AssociatedEntity.Add<ck::FTag_EntityReplicationDriver_FireOnDependentReplicationComplete>();
     }
 }
 
@@ -478,8 +478,8 @@ auto
 
     if (_ExpectedNumberOfDependentReplicationDrivers == _NumSyncedDependentReplicationDrivers)
     {
-        const auto AssociatedEntity = Get_AssociatedEntity();
-        ck::UUtils_Signal_OnDependentsReplicationComplete::Broadcast(AssociatedEntity, ck::MakePayload(AssociatedEntity));
+        auto AssociatedEntity = Get_AssociatedEntity();
+        AssociatedEntity.Add<ck::FTag_EntityReplicationDriver_FireOnDependentReplicationComplete>();
     }
 }
 

@@ -32,6 +32,8 @@ class UCk_Utils_EntityReplicationDriver_UE;
 
 namespace ck
 {
+    CK_DEFINE_ECS_TAG(FTag_EntityReplicationDriver_FireOnDependentReplicationComplete);
+
     // --------------------------------------------------------------------------------------------------------------------
 
     struct FFragment_ReplicationDriver_Requests
