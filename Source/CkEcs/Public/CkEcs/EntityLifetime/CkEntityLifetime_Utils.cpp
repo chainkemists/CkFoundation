@@ -309,9 +309,9 @@ auto
     QUICK_SCOPE_CYCLE_COUNTER(Request_Create_Entity)
 
     const auto& NewEntity = InRegistry.CreateEntity();
-    InRegistry.Add<ck::FTag_EntityJustCreated>(NewEntity);
 
     auto NewEntityHandle = HandleType{ NewEntity, InRegistry };
+    NewEntityHandle.Add<ck::FTag_EntityJustCreated>();
 
     if (InFunc)
     {
@@ -332,9 +332,9 @@ auto
     QUICK_SCOPE_CYCLE_COUNTER(Request_Create_Entity)
 
     const auto& NewEntity = InRegistry.CreateEntity(InEntityHint.Get_Entity());
-    InRegistry.Add<ck::FTag_EntityJustCreated>(NewEntity);
 
     auto NewEntityHandle = HandleType{ NewEntity, InRegistry };
+    NewEntityHandle.Add<ck::FTag_EntityJustCreated>();
 
     if (InFunc)
     {

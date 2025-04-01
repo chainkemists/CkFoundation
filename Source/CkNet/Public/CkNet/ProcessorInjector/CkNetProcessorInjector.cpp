@@ -25,6 +25,7 @@ auto
     -> void
 {
     InWorld.Add<ck::FProcessor_ReplicationDriver_ReplicateEntityScript>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_ReplicationDriver_FireOnDependentReplicationComplete>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -17,9 +17,35 @@ namespace ck
         -> void
     {
         UCk_Utils_EntityReplicationDriver_UE::Add(InHandle);
-        UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(InHandle, InRequest.Get_Owner(), InRequest.Get_EntityScriptClass());
+
+        FCk_Handle ReplicatedOwner = InRequest.Get_Owner();
+
+        if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(ReplicatedOwner))
+        {
+            const auto& ReplicationDriver = ReplicatedOwner.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
+
+            ReplicationDriver->Set_ExpectedNumberOfDependentReplicationDrivers(
+                ReplicationDriver->Get_ExpectedNumberOfDependentReplicationDrivers() + 1);
+
+            UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(InHandle, ReplicatedOwner,
+                InRequest.Get_EntityScriptClass());
+        }
 
         InHandle.Remove<MarkedDirtyBy>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_ReplicationDriver_FireOnDependentReplicationComplete::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_Signal_OnDependentsReplicationComplete&) const
+        -> void
+    {
+        InHandle.Remove<MarkedDirtyBy>();
+        UUtils_Signal_OnDependentsReplicationComplete::Broadcast(InHandle, ck::MakePayload(InHandle));
     }
 }
 
