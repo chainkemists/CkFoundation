@@ -11,6 +11,7 @@ auto
         -> void
 {
     InWorld.Add<ck::FProcessor_WorldSpaceWidget_UpdateLocation>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_WorldSpaceWidget_UpdateScaling>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
