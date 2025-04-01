@@ -12,6 +12,12 @@ class UCk_Utils_WorldSpaceWidget_UE;
 
 namespace ck
 {
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_ECS_TAG(FTag_WorldSpaceWidget_NeedsUpdateScaling);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     using FFragment_WorldSpaceWidget_Params = FCk_Fragment_WorldSpaceWidget_ParamsData;
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -30,14 +36,16 @@ namespace ck
 
         explicit
         FFragment_WorldSpaceWidget_Current(
-            UUserWidget* InWidget);
+            UCk_WorldSpaceWidget_Wrapper_UE* InWrapperWidget);
 
     private:
-        TStrongObjectPtr<UUserWidget> _WidgetHardRef;
+        TStrongObjectPtr<UUserWidget> _ContentWidgetHardRef;
+        TStrongObjectPtr<UCk_WorldSpaceWidget_Wrapper_UE> _WrapperWidget;
         TWeakObjectPtr<APlayerController> _WidgetOwningPlayer;
 
     public:
         CK_PROPERTY_GET(_WidgetOwningPlayer);
+        CK_PROPERTY_GET(_WrapperWidget);
     };
 }
 
