@@ -82,9 +82,16 @@ auto
         const FCk_Fragment_WorldSpaceWidget_ParamsData& InParams)
     -> FCk_Handle_WorldSpaceWidget
 {
-    const auto& Widget = InParams.Get_Widget().Get();
+    const auto& ContentWidget = InParams.Get_Widget().Get();
+    const auto& WrapperWidget = UCk_WorldSpaceWidget_Wrapper_UE::Request_WrapWidget(ContentWidget);
+
     InHandle.Add<ck::FFragment_WorldSpaceWidget_Params>(InParams);
-    InHandle.Add<ck::FFragment_WorldSpaceWidget_Current>(Widget);
+    InHandle.Add<ck::FFragment_WorldSpaceWidget_Current>(WrapperWidget);
+
+    if (InParams.Get_ScalingInfo().Get_ScalingPolicy() == ECk_WorldSpaceWidget_Scaling_Policy::ScaleWithDistance)
+    {
+        InHandle.Add<ck::FTag_WorldSpaceWidget_NeedsUpdateScaling>();
+    }
 
     switch (const auto& ViewportOperation = InParams.Get_InitialViewportOperation())
     {
@@ -94,12 +101,12 @@ auto
         }
         case ECk_UI_Widget_ViewportOperation::AddToViewport:
         {
-            Widget->AddToViewport();
+            ContentWidget->AddToViewport();
             break;
         }
         case ECk_UI_Widget_ViewportOperation::RemoveFromViewport:
         {
-            Widget->RemoveFromParent();
+            ContentWidget->RemoveFromParent();
             break;
         }
         default:
@@ -118,7 +125,7 @@ auto
         const FCk_Handle_WorldSpaceWidget& InWorldSpaceWidgetHandle)
     -> UUserWidget*
 {
-    return InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Current>()._WidgetHardRef.Get();
+    return InWorldSpaceWidgetHandle.Get<ck::FFragment_WorldSpaceWidget_Current>()._ContentWidgetHardRef.Get();
 }
 
 

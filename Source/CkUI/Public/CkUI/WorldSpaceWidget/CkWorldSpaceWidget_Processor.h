@@ -34,6 +34,30 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    class CKUI_API FProcessor_WorldSpaceWidget_UpdateScaling : public ck_exp::TProcessor<
+            FProcessor_WorldSpaceWidget_UpdateScaling,
+            FCk_Handle_WorldSpaceWidget,
+            FFragment_Transform,
+            FFragment_WorldSpaceWidget_Params,
+            FFragment_WorldSpaceWidget_Current,
+            FTag_WorldSpaceWidget_NeedsUpdateScaling,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+    	ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_Transform InTransform,
+            FFragment_WorldSpaceWidget_Params& InParams,
+            FFragment_WorldSpaceWidget_Current& InCurrent) const -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKUI_API FProcessor_WorldSpaceWidget_Teardown : public ck_exp::TProcessor<
             FProcessor_WorldSpaceWidget_Teardown,
             FCk_Handle_WorldSpaceWidget,

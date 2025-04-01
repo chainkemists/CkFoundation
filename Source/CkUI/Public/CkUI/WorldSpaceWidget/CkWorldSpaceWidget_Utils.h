@@ -24,7 +24,7 @@ public:
 public:
     UFUNCTION(BlueprintCallable, BlueprintCosmetic,
               Category = "Ck|Utils|WorldSpaceWidget",
-              DisplayName="[Ck][WorldSpaceWidget] Create (At Location)")
+              DisplayName="[Ck][WorldSpaceWidget] Create (At Location)", meta = (Keywords = "add"))
     static FCk_Handle_WorldSpaceWidget
     Create_AtLocation(
         FVector InLocation,
@@ -32,7 +32,7 @@ public:
 
     UFUNCTION(BlueprintCallable, BlueprintCosmetic,
               Category = "Ck|Utils|WorldSpaceWidget",
-              DisplayName="[Ck][WorldSpaceWidget] Create And Attach (To Entity)")
+              DisplayName="[Ck][WorldSpaceWidget] Create And Attach (To Entity)", meta = (Keywords = "add"))
     static FCk_Handle_WorldSpaceWidget
     CreateAndAttach_ToEntity(
         UPARAM(ref) FCk_Handle_Transform& InAttachTo,
@@ -40,7 +40,7 @@ public:
 
     UFUNCTION(BlueprintCallable, BlueprintCosmetic,
               Category = "Ck|Utils|WorldSpaceWidget",
-              DisplayName="[Ck][WorldSpaceWidget] Create And Attach (To Unreal Component)")
+              DisplayName="[Ck][WorldSpaceWidget] Create And Attach (To Unreal Component)", meta = (Keywords = "add"))
     static FCk_Handle_WorldSpaceWidget
     CreateAndAttach_ToUnrealComponent(
         USceneComponent* InAttachTo,

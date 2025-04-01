@@ -6,9 +6,10 @@ namespace ck
 {
     FFragment_WorldSpaceWidget_Current::
         FFragment_WorldSpaceWidget_Current(
-            UUserWidget* InWidget)
-        : _WidgetHardRef(InWidget)
-        , _WidgetOwningPlayer(InWidget->GetOwningPlayer())
+            UCk_WorldSpaceWidget_Wrapper_UE* InWrapperWidget)
+        : _ContentWidgetHardRef(InWrapperWidget->Get_ContentWidget())
+        , _WrapperWidget(InWrapperWidget)
+        , _WidgetOwningPlayer(InWrapperWidget->GetOwningPlayer())
     {
     }
 }
