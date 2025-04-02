@@ -18,8 +18,6 @@ auto
 
     InWorld.Add<ck::FProcessor_RaySense_HandleRequests>(InWorld.Get_Registry());
     InWorld.Add<ck::FProcessor_RaySense_Teardown>(InWorld.Get_Registry());
-
-    InWorld.Add<ck::FProcessor_RaySense_Replicate>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
