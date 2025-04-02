@@ -2,11 +2,7 @@
 
 #include "CkRaySense_Fragment_Data.h"
 
-#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
-
 #include "CkSignal/CkSignal_Macros.h"
-
-#include "CkRaySense_Fragment.generated.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -16,7 +12,6 @@ class UCk_Utils_RaySense_UE;
 
 namespace ck
 {
-    CK_DEFINE_ECS_TAG(FTag_RaySense_RequiresSetup);
     CK_DEFINE_ECS_TAG(FTag_RaySense_Updated);
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -72,21 +67,5 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 }
-
-// --------------------------------------------------------------------------------------------------------------------
-
-namespace ck { class FProcessor_RaySense_Replicate; }
-
-UCLASS(Blueprintable)
-class CKRAYSENSE_API UCk_Fragment_RaySense_Rep : public UCk_Ecs_ReplicatedObject_UE
-{
-    GENERATED_BODY()
-
-public:
-    CK_GENERATED_BODY_FRAGMENT_REP(UCk_Fragment_RaySense_Rep);
-
-public:
-    friend class ck::FProcessor_RaySense_Replicate;
-};
 
 // --------------------------------------------------------------------------------------------------------------------

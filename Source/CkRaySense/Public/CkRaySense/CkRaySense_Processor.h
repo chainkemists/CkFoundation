@@ -33,7 +33,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using MarkedDirtyBy = FTag_RaySense_RequiresSetup;
+        using MarkedDirtyBy = FTag_Transform_Updated;
 
     public:
         using TProcessor::TProcessor;
@@ -63,7 +63,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using MarkedDirtyBy = FTag_RaySense_RequiresSetup;
+        using MarkedDirtyBy = FTag_Transform_Updated;
 
     public:
         using TProcessor::TProcessor;
@@ -94,7 +94,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using MarkedDirtyBy = FTag_RaySense_RequiresSetup;
+        using MarkedDirtyBy = FTag_Transform_Updated;
 
     public:
         using TProcessor::TProcessor;
@@ -125,7 +125,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using MarkedDirtyBy = FTag_RaySense_RequiresSetup;
+        using MarkedDirtyBy = FTag_Transform_Updated;
 
     public:
         using TProcessor::TProcessor;
@@ -156,7 +156,7 @@ namespace ck
             CK_IGNORE_PENDING_KILL>
     {
     public:
-        using MarkedDirtyBy = FTag_RaySense_RequiresSetup;
+        using MarkedDirtyBy = FTag_Transform_Updated;
 
     public:
         using TProcessor::TProcessor;
@@ -229,28 +229,6 @@ namespace ck
     };
 
     // --------------------------------------------------------------------------------------------------------------------
-
-    class CKRAYSENSE_API FProcessor_RaySense_Replicate : public ck_exp::TProcessor<
-            FProcessor_RaySense_Replicate,
-            FCk_Handle_RaySense,
-            FFragment_RaySense_Current,
-            TObjectPtr<UCk_Fragment_RaySense_Rep>,
-            FTag_RaySense_Updated,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = FTag_RaySense_Updated;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_RaySense_Current& InCurrent,
-            const TObjectPtr<UCk_Fragment_RaySense_Rep>& InRepComp) const -> void;
-    };
 }
 
 // --------------------------------------------------------------------------------------------------------------------
