@@ -21,6 +21,7 @@ namespace ck
     class CKRAYSENSE_API FProcessor_RaySense_LineTrace_Update : public ck_exp::TProcessor<
             FProcessor_RaySense_LineTrace_Update,
             FCk_Handle_RaySense,
+            FFragment_RaySense_Params,
             FFragment_RaySense_Current,
             FFragment_Transform_Previous,
             FFragment_Transform,
@@ -42,6 +43,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_RaySense_Params& InParams,
             FFragment_RaySense_Current& InCurrent,
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform) const -> void;
@@ -53,6 +55,7 @@ namespace ck
             FProcessor_RaySense_BoxSweep_Update,
             FCk_Handle_RaySense,
             FFragment_ShapeBox_Current,
+            FFragment_RaySense_Params,
             FFragment_RaySense_Current,
             FFragment_Transform_Previous,
             FFragment_Transform,
@@ -71,6 +74,12 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ShapeBox_Current& InShape,
+            const FFragment_RaySense_Params& InParams,
+            FFragment_RaySense_Current& InCurrent,
+            const FFragment_Transform_Previous& InTransform_Prev,
+            const FFragment_Transform& InTransform) const -> void;
+    };
+
             FFragment_RaySense_Current& InCurrent,
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform) const -> void;
