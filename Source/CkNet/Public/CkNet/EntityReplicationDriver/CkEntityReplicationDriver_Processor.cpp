@@ -20,9 +20,15 @@ namespace ck
 
         FCk_Handle ReplicatedOwner = InRequest.Get_Owner();
 
+        InHandle.Remove<MarkedDirtyBy>();
+
         if (UCk_Utils_Net_UE::Get_IsEntityNetMode_Host(ReplicatedOwner))
         {
             const auto& ReplicationDriver = ReplicatedOwner.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>();
+
+            CK_ENSURE_IF_NOT(ck::IsValid(ReplicationDriver),
+                TEXT("Entity [{}] is missing a ReplicationDriver Fragment!"), ReplicatedOwner)
+            { return; }
 
             ReplicationDriver->Set_ExpectedNumberOfDependentReplicationDrivers(
                 ReplicationDriver->Get_ExpectedNumberOfDependentReplicationDrivers() + 1);
@@ -30,8 +36,6 @@ namespace ck
             UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(InHandle, ReplicatedOwner,
                 InRequest.Get_EntityScriptClass());
         }
-
-        InHandle.Remove<MarkedDirtyBy>();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
