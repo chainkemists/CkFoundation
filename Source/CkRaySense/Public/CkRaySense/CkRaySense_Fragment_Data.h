@@ -19,11 +19,24 @@ namespace ck
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
-enum ECk_RaySense_Async : uint8
+enum class ECk_RaySense_Async : uint8
 {
     Synchronous,
-    Asynchronous
+    Asynchronous UMETA(DisplayName = "Asynchronous (NOT yet Supported)")
 };
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_RaySense_Async);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
+enum class ECk_RaySense_CollisionQuality : uint8
+{
+    Sweep,
+    Discrete
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_RaySense_CollisionQuality);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -42,7 +55,25 @@ public:
     CK_GENERATED_BODY(FCk_Fragment_RaySense_ParamsData);
 
 private:
-    int _DummyVar = 0;
+    // Discrete does NOT work for RaySense that do not have a shape
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
+    ECk_RaySense_CollisionQuality _CollisionQuality = ECk_RaySense_CollisionQuality::Sweep;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
+    TEnumAsByte<ECollisionChannel> _CollisionChannel = ECollisionChannel::ECC_Visibility;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
+    ECk_RaySense_Async _Async = ECk_RaySense_Async::Synchronous;
+
+public:
+    CK_PROPERTY_GET(_CollisionQuality);
+    CK_PROPERTY_GET(_CollisionChannel);
+    CK_PROPERTY_GET(_Async);
+
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_RaySense_ParamsData, _CollisionChannel, _Async);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
