@@ -23,7 +23,11 @@ namespace ck
             const FFragment_Transform& InTransform) const
         -> void
     {
-        auto World = UCk_Utils_TransientEntity_UE::Get_World(InHandle);
+        auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+
+        CK_ENSURE_IF_NOT(ck::IsValid(World),
+            TEXT("Could NOT get the World for entity [{}]. RaySense will NOT work"), InHandle)
+        { return; }
 
         const auto& PrevTransform = InTransform_Prev.Get_Transform();
         const auto& CurrTransform = InTransform.Get_Transform();
@@ -60,6 +64,10 @@ namespace ck
         -> void
     {
         auto World = UCk_Utils_TransientEntity_UE::Get_World(InHandle);
+
+        CK_ENSURE_IF_NOT(ck::IsValid(World),
+            TEXT("Could NOT get the World for entity [{}]. RaySense will NOT work"), InHandle)
+        { return; }
 
         const auto& PrevTransform = InTransform_Prev.Get_Transform();
         const auto& CurrTransform = InTransform.Get_Transform();
@@ -103,6 +111,10 @@ namespace ck
     {
         auto World = UCk_Utils_TransientEntity_UE::Get_World(InHandle);
 
+        CK_ENSURE_IF_NOT(ck::IsValid(World),
+            TEXT("Could NOT get the World for entity [{}]. RaySense will NOT work"), InHandle)
+        { return; }
+
         const auto& PrevTransform = InTransform_Prev.Get_Transform();
         const auto& CurrTransform = InTransform.Get_Transform();
 
@@ -142,6 +154,10 @@ namespace ck
         -> void
     {
         auto World = UCk_Utils_TransientEntity_UE::Get_World(InHandle);
+
+        CK_ENSURE_IF_NOT(ck::IsValid(World),
+            TEXT("Could NOT get the World for entity [{}]. RaySense will NOT work"), InHandle)
+        { return; }
 
         const auto& PrevTransform = InTransform_Prev.Get_Transform();
         const auto& CurrTransform = InTransform.Get_Transform();
@@ -245,21 +261,6 @@ namespace ck
     }
 
     // --------------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProcessor_RaySense_Replicate::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_RaySense_Current& InCurrent,
-            const TObjectPtr<UCk_Fragment_RaySense_Rep>& InRepComp) const
-        -> void
-    {
-        UCk_Utils_Ecs_Net_UE::TryUpdateReplicatedFragment<UCk_Fragment_RaySense_Rep>(InHandle, [&](UCk_Fragment_RaySense_Rep* InLocalRepComp)
-        {
-            // Add replication logic here
-        });
-    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
