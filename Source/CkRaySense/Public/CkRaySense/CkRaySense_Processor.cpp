@@ -17,6 +17,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_RaySense_Params& InParams,
             FFragment_RaySense_Current& InCurrent,
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform) const
@@ -24,10 +25,12 @@ namespace ck
     {
         auto World = UCk_Utils_TransientEntity_UE::Get_World(InHandle);
 
+        const auto& PrevTransform = InTransform_Prev.Get_Transform();
+        const auto& CurrTransform = InTransform.Get_Transform();
         auto HitResult = FHitResult{};
         const auto Hit = World->LineTraceSingleByChannel(HitResult,
-            InTransform_Prev.Get_Transform().GetLocation(), InTransform.Get_Transform().GetLocation(),
-            ECollisionChannel::ECC_Visibility);
+            PrevTransform.GetLocation(), CurrTransform.GetLocation(),
+            InParams.Get_CollisionChannel());
 
         if (NOT Hit)
         { return; }

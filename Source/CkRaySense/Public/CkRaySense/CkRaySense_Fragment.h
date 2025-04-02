@@ -67,7 +67,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRAYSENSE_API, OnRaySenseTraceHit, FCk_Delegate_RaySense_LineTrace_MC, FCk_Handle_RaySense, FCk_RaySense_HitResult);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKRAYSENSE_API, OnRaySenseTraceHit, FCk_Delegate_RaySense_LineTrace_MC,
+        FCk_Handle_RaySense, FCk_RaySense_HitResult);
 
     // --------------------------------------------------------------------------------------------------------------------
 }
