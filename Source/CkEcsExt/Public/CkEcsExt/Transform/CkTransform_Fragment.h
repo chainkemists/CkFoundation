@@ -30,23 +30,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKECSEXT_API FFragment_Transform_Params
-    {
-    public:
-        CK_GENERATED_BODY(FFragment_Transform_Params);
-
-    public:
-        using ParamsType = FCk_Transform_ParamsData;
-
-    private:
-        ParamsType _Data;
-
-    public:
-        CK_PROPERTY_GET(_Data);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_Transform_Params, _Data);
-    };
+    using FFragment_Transform_Params = FCk_Transform_ParamsData;
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -149,6 +133,23 @@ namespace ck
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_TransformInterpolation_NewGoal_Rotation, _InterpolationOffset);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct FFragment_Transform_Previous
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Transform_Previous);
+
+    private:
+        FTransform _Transform;
+
+    public:
+        CK_PROPERTY_GET(_Transform);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Transform_Previous, _Transform);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
