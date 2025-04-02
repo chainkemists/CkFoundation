@@ -15,8 +15,6 @@ auto
     InHandle.Add<ck::FFragment_RaySense_Params>(InParams);
     InHandle.Add<ck::FFragment_RaySense_Current>();
 
-    InHandle.Add<ck::FTag_RaySense_RequiresSetup>();
-
     return Cast(InHandle);
 }
 
