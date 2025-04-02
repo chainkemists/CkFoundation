@@ -29,6 +29,10 @@ namespace ck
         { return; }
 
         const auto& PreviousTransform = InTransform.Get_Transform();
+        {
+            auto& PrevTransform = InHandle.AddOrGet<FFragment_Transform_Previous>();
+            PrevTransform = FFragment_Transform_Previous{PreviousTransform};
+        }
 
         if (const auto& RootCompTransform = RootComponent->GetComponentToWorld();
             NOT PreviousTransform.Equals(RootCompTransform))
@@ -92,6 +96,10 @@ namespace ck
         InComp.Set_ComponentsModified(ECk_TransformComponents::None);
 
         const auto PreviousTransform = InComp.Get_Transform();
+        {
+            auto& PrevTransform = InHandle.AddOrGet<FFragment_Transform_Previous>();
+            PrevTransform = FFragment_Transform_Previous{PreviousTransform};
+        }
 
         algo::ForEachRequest(InRequestsComp._LocationRequests, ck::Visitor(
         [&](const auto& InRequestVariant)
