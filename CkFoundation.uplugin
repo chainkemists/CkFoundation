@@ -507,6 +507,16 @@
 			]
 		},
 		{
+			"Name": "CkRaySense",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault",
+			"WhitelistPlatforms": [
+				"Win64",
+				"Mac",
+				"Linux"
+			]
+		},
+		{
 			"Name": "CkRecord",
 			"Type": "Runtime",
 			"LoadingPhase": "PreDefault",
