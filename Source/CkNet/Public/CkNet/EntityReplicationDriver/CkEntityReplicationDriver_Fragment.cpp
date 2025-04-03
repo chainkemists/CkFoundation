@@ -188,16 +188,15 @@ auto
         return;
     }
     // --------------------------------------------------------------------------------------------------------------------
+    _AssociatedEntity = UCk_Utils_EntityScript_UE::Request_SpawnEntity(OwningEntity, EntityScriptClass);
+
     _AssociatedEntity._ReplicationDriver = this;
-    UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(_AssociatedEntity, OwningEntity);
     UCk_Utils_Net_UE::Add(_AssociatedEntity, FCk_Net_ConnectionSettings
         {
             ECk_Replication::Replicates,
             ECk_Net_NetModeType::Client,
             ECk_Net_EntityNetRole::Proxy
         });
-
-    _AssociatedEntity = UCk_Utils_EntityScript_UE::Request_SpawnEntity(OwningEntity, EntityScriptClass);
 
     UCk_Utils_ReplicatedObjects_UE::Add(_AssociatedEntity, FCk_ReplicatedObjects{}.
         Set_ReplicatedObjects(_ReplicationData.Get_ReplicatedObjectsData().Get_Objects()));
