@@ -27,4 +27,12 @@ auto
     DoEndPlay();
 }
 
+auto
+    UCk_EntityScript_UE::
+    DoGet_ScriptEntity() const
+    -> FCk_Handle
+{
+    return _AssociatedEntity;
+}
+
 // -----------------------------------------------------------------------------------------------------------
