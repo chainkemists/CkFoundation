@@ -3,6 +3,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -29,6 +30,8 @@ auto
 
     auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
+
+    UCk_Utils_Handle_UE::Set_DebugName(NewEntity, *ck::Format_UE(TEXT("{}"), InEntityScript));
 
     const auto Request = FCk_Request_EntityScript_SpawnEntity{NewEntity, InLifetimeOwner, InEntityScript}
                             .Set_EntityScriptTemplate(InEntityScriptTemplate);
