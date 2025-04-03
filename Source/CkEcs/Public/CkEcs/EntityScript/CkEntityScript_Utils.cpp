@@ -3,6 +3,7 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment.h"
 #include "CkEcs/EntityScript/CkEntityScript_Fragment_Data.h"
+#include "CkEcs/Handle/CkHandle_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -24,35 +25,30 @@ auto
         UCk_EntityScript_UE* InEntityScriptTemplate)
     -> FCk_Handle
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InEntityScript), TEXT("Invalid EntityScript supplied, cannot request to Spawn Entity"))
+    { return {}; }
+
+    auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
     auto NewEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InLifetimeOwner);
 
-    return Add(NewEntity, InEntityScript, InEntityScriptTemplate);
+    UCk_Utils_Handle_UE::Set_DebugName(NewEntity, *ck::Format_UE(TEXT("{}"), InEntityScript));
+
+    const auto Request = FCk_Request_EntityScript_SpawnEntity{NewEntity, InLifetimeOwner, InEntityScript}
+                            .Set_EntityScriptTemplate(InEntityScriptTemplate);
+
+    RequestEntity.Add<ck::FFragment_EntityScript_RequestSpawnEntity>(Request);
+
+    return NewEntity;
 }
 
 auto
     UCk_Utils_EntityScript_UE::
-    Add(
-        const FCk_Handle& InHandle,
-        const TSubclassOf<UCk_EntityScript_UE>& InEntityScript,
-        UCk_EntityScript_UE* InEntityScriptTemplate,
-        FCk_EntityScript_PostConstruction_Func InOptionalFunc)
-    -> FCk_Handle
+    DoAdd(
+        FCk_Handle& InHandle,
+        UCk_EntityScript_UE* InEntityScript)
+    -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InEntityScript), TEXT("Invalid EntityScript supplied, cannot request to Spawn Entity"))
-    { return {}; }
-
-    auto RequestEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(InHandle);
-
-    const auto Request = FCk_Request_EntityScript_SpawnEntity{
-                             InHandle,
-                             UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle),
-                             InEntityScript
-                         }
-                         .Set_EntityScriptTemplate(InEntityScriptTemplate).Set_PostConstruction_Func(InOptionalFunc);
-
-    RequestEntity.Add<ck::FFragment_EntityScript_RequestSpawnEntity>(Request);
-
-    return InHandle;
+    InHandle.Add<ck::FFragment_EntityScript_Current>(InEntityScript);
 }
 
 auto
