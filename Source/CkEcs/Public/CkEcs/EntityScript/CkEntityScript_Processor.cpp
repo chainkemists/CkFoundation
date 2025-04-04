@@ -58,9 +58,14 @@ namespace ck
         auto NewEntity = InRequest.Get_NewEntity();
 
         NewEntityScript->_AssociatedEntity = NewEntity;
-        UCk_Utils_EntityScript_UE::DoAdd(NewEntity, NewEntityScript);
+        NewEntity.Add<ck::FFragment_EntityScript_Current>(NewEntityScript);
 
         NewEntityScript->Construct(NewEntity);
+
+       if (InRequest.Get_PostConstruction_Func())
+        {
+            InRequest.Get_PostConstruction_Func()(NewEntity);
+        }
 
         if (NewEntityScript->Get_Replication() == ECk_Replication::Replicates)
         {
