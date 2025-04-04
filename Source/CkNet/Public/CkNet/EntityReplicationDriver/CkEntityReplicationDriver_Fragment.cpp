@@ -180,6 +180,7 @@ auto
         return;
     }
     const auto EntityScriptClass = _ReplicationData_EntityScript.Get_EntityScriptClass();
+    const auto SpawnParams = _ReplicationData_EntityScript.Get_SpawnParams();
     const auto OwningEntity = _ReplicationData_EntityScript.Get_OwningEntityDriver()->Get_AssociatedEntity();
     // wait on the owning entity to fully replicate
     if (ck::Is_NOT_Valid(OwningEntity))
@@ -187,12 +188,13 @@ auto
         _ReplicationData_EntityScript.Get_OwningEntityDriver()->_PendingChildEntityConstructions.Emplace(this);
         return;
     }
+
     // --------------------------------------------------------------------------------------------------------------------
 
     UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(_AssociatedEntity, OwningEntity);
 
     auto ThisAsWeakPtr = TWeakObjectPtr<ThisType>{this};
-    _AssociatedEntity = UCk_Utils_EntityScript_UE::Add(_AssociatedEntity, EntityScriptClass, nullptr, [ThisAsWeakPtr](FCk_Handle InHandle)
+    _AssociatedEntity = UCk_Utils_EntityScript_UE::Add(_AssociatedEntity, EntityScriptClass, SpawnParams, nullptr, [ThisAsWeakPtr](FCk_Handle InHandle)
     {
         if (ck::Is_NOT_Valid(ThisAsWeakPtr))
         { return; }

@@ -38,6 +38,10 @@ private:
               meta = (AllowPrivateAccess = true))
     TObjectPtr<UCk_EntityScript_UE> _EntityScriptTemplate;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FInstancedStruct _SpawnParams;
+
 private:
     FCk_EntityScript_PostConstruction_Func _PostConstruction_Func;
 
@@ -47,6 +51,7 @@ public:
     CK_PROPERTY_GET(_Owner);
 
     CK_PROPERTY(_EntityScriptTemplate);
+    CK_PROPERTY(_SpawnParams);
     CK_PROPERTY(_PostConstruction_Func);
 
     CK_DEFINE_CONSTRUCTORS(FCk_Request_EntityScript_SpawnEntity, _NewEntity, _Owner, _EntityScriptClass);
@@ -71,11 +76,16 @@ private:
               meta = (AllowPrivateAccess = true))
     TSubclassOf<UCk_EntityScript_UE> _EntityScriptClass;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FInstancedStruct _SpawnParams;
+
 public:
     CK_PROPERTY_GET(_EntityScriptClass);
     CK_PROPERTY_GET(_Owner);
+    CK_PROPERTY_GET(_SpawnParams);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_EntityScript_Replicate, _Owner, _EntityScriptClass);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_EntityScript_Replicate, _Owner, _EntityScriptClass, _SpawnParams);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
