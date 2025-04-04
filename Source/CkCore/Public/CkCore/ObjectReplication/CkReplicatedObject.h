@@ -27,14 +27,14 @@ public:
 
     auto
     CallRemoteFunction(
-        UFunction* Function, 
-        void* Parms, 
-        FOutParmRec* OutParms, 
+        UFunction* Function,
+        void* Parms,
+        FOutParmRec* OutParms,
         FFrame* Stack) -> bool override;
 
     auto
     GetFunctionCallspace(
-        UFunction* Function, 
+        UFunction* Function,
         FFrame* Stack) -> int32 override;
 
     auto
@@ -45,9 +45,9 @@ public:
     IsSupportedForNetworking() const -> bool override;
 
 #if UE_WITH_IRIS
-	auto
+    auto
     RegisterReplicationFragments(
-        UE::Net::FFragmentRegistrationContext& Context, 
+        UE::Net::FFragmentRegistrationContext& Context,
         UE::Net::EFragmentRegistrationFlags RegistrationFlags) -> void override;
 #endif // UE_WITH_IRIS
 };

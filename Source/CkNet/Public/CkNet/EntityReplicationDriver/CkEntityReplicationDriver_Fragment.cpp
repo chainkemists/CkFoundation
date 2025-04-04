@@ -188,28 +188,37 @@ auto
         return;
     }
     // --------------------------------------------------------------------------------------------------------------------
-    _AssociatedEntity = UCk_Utils_EntityScript_UE::Request_SpawnEntity(OwningEntity, EntityScriptClass);
+
+    UCk_Utils_EntityLifetime_UE::Request_SetupEntityWithLifetimeOwner(_AssociatedEntity, OwningEntity);
+
+    auto ThisAsWeakPtr = TWeakObjectPtr<ThisType>{this};
+    _AssociatedEntity = UCk_Utils_EntityScript_UE::Add(_AssociatedEntity, EntityScriptClass, nullptr, [ThisAsWeakPtr](FCk_Handle InHandle)
+    {
+        if (ck::Is_NOT_Valid(ThisAsWeakPtr))
+        { return; }
+
+        UCk_Utils_ReplicatedObjects_UE::Add(ThisAsWeakPtr->_AssociatedEntity, FCk_ReplicatedObjects{}.
+            Set_ReplicatedObjects(ThisAsWeakPtr->_ReplicationData_EntityScript.Get_ReplicatedObjectsData().Get_Objects()));
+
+        // --------------------------------------------------------------------------------------------------------------------
+        // Make sure to call this on "self" since the # of dependent rep driver include "self" as well
+        ThisAsWeakPtr->DoAdd_SyncedDependentReplicationDriver();
+        // This is necessary in case this Replicated Entity was built from inside the OwningEntity's ConstructionScript.
+        // If that is the case, then this Replicated Entity is a dependent
+        if (ThisAsWeakPtr->_ReplicationData_EntityScript.Get_IsOwningEntityDriverDependentOnThis())
+        {
+            ThisAsWeakPtr->_ReplicationData_EntityScript.Get_OwningEntityDriver()->DoAdd_SyncedDependentReplicationDriver();
+        }
+    });
 
     _AssociatedEntity._ReplicationDriver = this;
+
     UCk_Utils_Net_UE::Add(_AssociatedEntity, FCk_Net_ConnectionSettings
         {
             ECk_Replication::Replicates,
             ECk_Net_NetModeType::Client,
             ECk_Net_EntityNetRole::Proxy
         });
-
-    UCk_Utils_ReplicatedObjects_UE::Add(_AssociatedEntity, FCk_ReplicatedObjects{}.
-        Set_ReplicatedObjects(_ReplicationData.Get_ReplicatedObjectsData().Get_Objects()));
-
-    // --------------------------------------------------------------------------------------------------------------------
-    // Make sure to call this on "self" since the # of dependent rep driver include "self" as well
-    DoAdd_SyncedDependentReplicationDriver();
-    // This is necessary in case this Replicated Entity was built from inside the OwningEntity's ConstructionScript.
-    // If that is the case, then this Replicated Entity is a dependent
-    if (_ReplicationData_EntityScript.Get_IsOwningEntityDriverDependentOnThis())
-    {
-        _ReplicationData_EntityScript.Get_OwningEntityDriver()->DoAdd_SyncedDependentReplicationDriver();
-    }
 }
 
 auto
