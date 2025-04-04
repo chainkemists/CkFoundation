@@ -57,7 +57,8 @@ public:
     Request_Replicate(
         FCk_Handle& InHandleToReplicate,
         FCk_Handle InReplicatedOwner,
-        TSubclassOf<UCk_EntityScript_UE> InEntityScript) -> void;
+        TSubclassOf<UCk_EntityScript_UE> InEntityScript,
+        const FInstancedStruct& InSpawnParams) -> void;
 
     static auto
     Request_ReplicateEntityOnReplicatedActor(

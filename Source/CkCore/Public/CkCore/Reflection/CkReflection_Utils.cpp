@@ -1,5 +1,7 @@
 #include "CkReflection_Utils.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
+
 #if WITH_EDITOR
 #include "Kismet2/BlueprintEditorUtils.h"
 #endif
@@ -9,18 +11,23 @@
 auto
     UCk_Utils_Reflection_UE::
     Get_SanitizedUserDefinedPropertyName(
-        const FString& InPropertyName)
+        const FProperty* InProperty)
     -> FString
 {
+    CK_ENSURE_IF_NOT(ck::IsValid(InProperty), TEXT("Invalid Property"))
+    { return {}; }
+
+    const auto& PropertyName = InProperty->GetName();
+
     int32 LastUnderscoreIndex = INDEX_NONE;
     int32 SecondLastUnderscoreIndex = INDEX_NONE;
 
-    if (InPropertyName.FindLastChar(TEXT('_'), LastUnderscoreIndex))
+    if (PropertyName.FindLastChar(TEXT('_'), LastUnderscoreIndex))
     {
         if (constexpr auto GuidLength = 32;
-            InPropertyName.Len() - LastUnderscoreIndex - 1 == GuidLength)
+            PropertyName.Len() - LastUnderscoreIndex - 1 == GuidLength)
         {
-            if (const auto& BeforeLastUnderscore = InPropertyName.Left(LastUnderscoreIndex);
+            if (const auto& BeforeLastUnderscore = PropertyName.Left(LastUnderscoreIndex);
                 BeforeLastUnderscore.FindLastChar(TEXT('_'), SecondLastUnderscoreIndex))
             {
                 return BeforeLastUnderscore.Left(SecondLastUnderscoreIndex);
@@ -28,7 +35,7 @@ auto
         }
     }
 
-    return InPropertyName;
+    return PropertyName;
 }
 
 auto
@@ -185,13 +192,13 @@ auto
     {
         if (ck::IsValid(Property, ck::IsValid_Policy_NullptrOnly{}))
         {
-            PropertiesA_Map.Add(*Get_SanitizedUserDefinedPropertyName(Property->GetName()), Property);
+            PropertiesA_Map.Add(*Get_SanitizedUserDefinedPropertyName(Property), Property);
         }
     }
 
     for (const auto* NewProperty : InPropertiesB)
     {
-        const auto& FoundExistingProperty = PropertiesA_Map.Find(*Get_SanitizedUserDefinedPropertyName(NewProperty->GetName()));
+        const auto& FoundExistingProperty = PropertiesA_Map.Find(*Get_SanitizedUserDefinedPropertyName(NewProperty));
 
         if (ck::Is_NOT_Valid(FoundExistingProperty, ck::IsValid_Policy_NullptrOnly{}))
         { return true; }

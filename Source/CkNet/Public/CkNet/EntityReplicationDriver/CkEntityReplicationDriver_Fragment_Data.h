@@ -170,6 +170,9 @@ private:
     TSubclassOf<UCk_EntityScript_UE> _EntityScriptClass;
 
     UPROPERTY()
+    FInstancedStruct _SpawnParams;
+
+    UPROPERTY()
     TObjectPtr<class UCk_Fragment_EntityReplicationDriver_Rep> _OwningEntityDriver;
 
     UPROPERTY()
@@ -180,12 +183,13 @@ private:
 
 public:
     CK_PROPERTY_GET(_EntityScriptClass);
+    CK_PROPERTY_GET(_SpawnParams);
     CK_PROPERTY_GET(_OwningEntityDriver);
     CK_PROPERTY_GET(_ReplicatedObjectsData);
     CK_PROPERTY(_IsOwningEntityDriverDependentOnThis);
 
     CK_DEFINE_CONSTRUCTORS(FCk_EntityReplicationDriver_ReplicationData_EntityScript, _EntityScriptClass,
-        _OwningEntityDriver, _ReplicatedObjectsData);
+        _SpawnParams, _OwningEntityDriver, _ReplicatedObjectsData);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
