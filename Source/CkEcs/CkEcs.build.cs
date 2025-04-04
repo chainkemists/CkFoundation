@@ -24,6 +24,8 @@ public class CkEcs : CkModuleRules
             {
                 "Core",
                 "StructUtils",
+                "CoreUObject",
+                "Engine",
 
                 "IrisCore",
                 "NetCore",
@@ -54,5 +56,20 @@ public class CkEcs : CkModuleRules
                 // ... add private dependencies that you statically link with here ...
             }
             );
+
+        if (Target.Type == TargetRules.TargetType.Editor)
+        {
+            PrivateDependencyModuleNames.AddRange(
+                new string[]
+                {
+                    "UnrealEd",
+                    "AssetTools",
+                    "Kismet",
+                    "KismetCompiler",
+                    "GraphEditor",
+                    "BlueprintGraph",
+                    "StructUtilsEngine",
+                });
+        }
     }
 }

@@ -197,7 +197,8 @@ auto
     Request_Replicate(
         FCk_Handle& InHandleToReplicate,
         FCk_Handle InReplicatedOwner,
-        TSubclassOf<UCk_EntityScript_UE> InEntityScript)
+        TSubclassOf<UCk_EntityScript_UE> InEntityScript,
+        const FInstancedStruct& InSpawnParams)
     -> void
 {
     CK_ENSURE_IF_NOT(InHandleToReplicate.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>(),
@@ -230,6 +231,7 @@ auto
                 FCk_EntityReplicationDriver_ReplicationData_EntityScript
                 {
                     InEntityScript,
+                    InSpawnParams,
                     InReplicatedOwner.Get<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>(),
                     FCk_EntityReplicationDriver_ReplicateObjects_Data{ReplicatedObjects.Get_ReplicatedObjects()}
                 }

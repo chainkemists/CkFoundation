@@ -3,6 +3,7 @@
 #include "CkCore/Object/CkWorldContextObject.h"
 
 #include "CkEcs/Handle/CkHandle.h"
+#include "CoreMinimal.h"
 
 #include "CkEntityScript.generated.h"
 
@@ -25,6 +26,7 @@ public:
 
 public:
     friend class ck::FProcessor_EntityScript_SpawnEntity_HandleRequests;
+    friend class UCk_Utils_EntityScript_UE;
 
 public:
     auto
@@ -77,4 +79,4 @@ public:
     CK_PROPERTY_GET(_Replication);
 };
 
-// -----------------------------------------------------------------------------------------------------------
+// ----------------------------------------------------------------------------------------------------------

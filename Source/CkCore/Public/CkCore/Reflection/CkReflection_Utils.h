@@ -21,7 +21,7 @@ public:
     // UserDefined struct property names user the format "MyPropertyName_SomeNumber_SomeGuid"
     static auto
     Get_SanitizedUserDefinedPropertyName(
-        const FString& InPropertyName) -> FString;
+        const FProperty* InProperty) -> FString;
 
     static auto
     Get_ArePropertiesCompatible(
