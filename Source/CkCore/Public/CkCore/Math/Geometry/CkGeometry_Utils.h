@@ -4,6 +4,8 @@
 #include "CkCore/Macros/CkMacros.h"
 
 #include <Kismet/BlueprintFunctionLibrary.h>
+#include <Math/Box.h>
+#include <Math/Box2D.h>
 
 #include "CkGeometry_Utils.generated.h"
 
@@ -188,7 +190,6 @@ public:
         const FBox2D& InBox,
         const FVector2D& InPoint);
 
-private:
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Make Box2D (With Origin)",
               Category = "Ck|Utils|Math|Geometry2D")
@@ -196,7 +197,7 @@ private:
     Make_Box_WithOrigin(
         FVector2D InOrigin,
         FVector2D InExtents);
-
+private:
     UFUNCTION(BlueprintPure,
               DisplayName = "[Ck] Break Box2D (With Center And Extents)",
               Category = "Ck|Utils|Math|Geometry2D")
