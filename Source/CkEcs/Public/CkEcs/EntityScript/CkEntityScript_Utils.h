@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkEntityScript_Fragment.h"
+
 #include "CkEcs/Handle/CkHandle.h"
 
 #include "CkCore/Macros/CkMacros.h"
@@ -45,12 +47,15 @@ public:
         const TSubclassOf<UCk_EntityScript_UE>& InEntityScript,
         UCk_EntityScript_UE* InEntityScriptTemplate = nullptr) -> FCk_Handle;
 
-private:
+public:
     static auto
-    DoAdd(
-        FCk_Handle& InHandle,
-        UCk_EntityScript_UE* InEntityScript) -> void;
+    Add(
+        const FCk_Handle& InHandle,
+        const TSubclassOf<UCk_EntityScript_UE>& InEntityScript,
+        UCk_EntityScript_UE* InEntityScriptTemplate,
+        FCk_EntityScript_PostConstruction_Func InOptionalFunc = nullptr) -> FCk_Handle;
 
+private:
     static auto
     Request_MarkEntityScript_AsHasBegunPlay(
         FCk_Handle& InHandle) -> void;

@@ -18,7 +18,7 @@ namespace ck
     {
         UCk_Utils_EntityReplicationDriver_UE::Add(InHandle);
 
-        FCk_Handle ReplicatedOwner = InRequest.Get_Owner();
+        auto ReplicatedOwner = InRequest.Get_Owner();
 
         InHandle.Remove<MarkedDirtyBy>();
 
