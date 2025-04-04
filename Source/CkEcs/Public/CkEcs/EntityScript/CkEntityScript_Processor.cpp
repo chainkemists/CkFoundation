@@ -3,6 +3,9 @@
 #include "CkEntityScript_Utils.h"
 
 #include "CkCore/Object/CkObject_Utils.h"
+#include "CkCore/Reflection/CkReflection_Utils.h"
+
+#include "Engine/UserDefinedStruct.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -55,6 +58,30 @@ namespace ck
         CK_ENSURE_IF_NOT(ck::IsValid(NewEntityScript), TEXT("Failed to Spawn New Entity using EntityScript [{}]"), EntityScriptClass)
         { return; }
 
+        if (const auto& SpawnParams = InRequest.Get_SpawnParams();
+            ck::IsValid(SpawnParams))
+        {
+            if (const auto& SpawnParamsStruct = Cast<UUserDefinedStruct>(SpawnParams.GetScriptStruct());
+                ck::IsValid(SpawnParamsStruct))
+            {
+                const auto& SpawnParamsData = SpawnParams.GetMemory();
+
+                for (TFieldIterator<FProperty> PropIt(SpawnParamsStruct, EFieldIteratorFlags::IncludeSuper); PropIt; ++PropIt)
+                {
+                    const auto* SpawnParamsProp = *PropIt;
+
+                    if (const auto* EntityScriptProp = EntityScriptClass->FindPropertyByName(*UCk_Utils_Reflection_UE::Get_SanitizedUserDefinedPropertyName(SpawnParamsProp));
+                        ck::IsValid(EntityScriptProp, ck::IsValid_Policy_NullptrOnly{}))
+                    {
+                        auto* EntityScriptPropAddr = EntityScriptProp->ContainerPtrToValuePtr<uint8>(NewEntityScript);
+                        const auto* SpawnParamsPropAddr = SpawnParamsProp->ContainerPtrToValuePtr<uint8>(SpawnParamsData);
+
+                        EntityScriptProp->CopyCompleteValue(EntityScriptPropAddr, SpawnParamsPropAddr);
+                    }
+                }
+            }
+        }
+
         auto NewEntity = InRequest.Get_NewEntity();
 
         NewEntityScript->_AssociatedEntity = NewEntity;
@@ -62,12 +89,15 @@ namespace ck
 
         NewEntityScript->Construct(NewEntity);
 
-        InRequest.Get_PostConstruction_Func()(NewEntity);
+        if (InRequest.Get_PostConstruction_Func())
+        {
+            InRequest.Get_PostConstruction_Func()(NewEntity);
+        }
 
         if (NewEntityScript->Get_Replication() == ECk_Replication::Replicates)
         {
-            // this request is to be handled by the ReplicationDrive
-            NewEntity.Add<FCk_Request_EntityScript_Replicate>(InRequest.Get_Owner(), InRequest.Get_EntityScriptClass());
+            // this request is to be handled by the ReplicationDriver
+            NewEntity.Add<FCk_Request_EntityScript_Replicate>(InRequest.Get_Owner(), InRequest.Get_EntityScriptClass(), InRequest.Get_SpawnParams());
         }
 
         // TODO: Fire signal

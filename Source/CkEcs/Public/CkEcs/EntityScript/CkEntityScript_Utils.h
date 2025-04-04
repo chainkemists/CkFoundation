@@ -38,20 +38,23 @@ public:
     static FCk_Handle
     DoRequest_SpawnEntity(
         UPARAM(ref) FCk_Handle& InLifetimeOwner,
-        UCk_EntityScript_UE* InEntityScript);
+        UCk_EntityScript_UE* InEntityScript,
+        FInstancedStruct InSpawnParams);
 
 public:
     static auto
     Request_SpawnEntity(
         const FCk_Handle& InLifetimeOwner,
         const TSubclassOf<UCk_EntityScript_UE>& InEntityScript,
+        const FInstancedStruct& InSpawnParams,
         UCk_EntityScript_UE* InEntityScriptTemplate = nullptr) -> FCk_Handle;
 
 public:
     static auto
     Add(
-        const FCk_Handle& InHandle,
+        FCk_Handle& InScriptEntity,
         const TSubclassOf<UCk_EntityScript_UE>& InEntityScript,
+        const FInstancedStruct& InSpawnParams,
         UCk_EntityScript_UE* InEntityScriptTemplate,
         FCk_EntityScript_PostConstruction_Func InOptionalFunc = nullptr) -> FCk_Handle;
 
@@ -59,6 +62,5 @@ private:
     static auto
     Request_MarkEntityScript_AsHasBegunPlay(
         FCk_Handle& InHandle) -> void;
-
 };
 // --------------------------------------------------------------------------------------------------------------------

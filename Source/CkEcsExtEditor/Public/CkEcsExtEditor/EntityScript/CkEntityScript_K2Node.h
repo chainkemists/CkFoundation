@@ -63,6 +63,9 @@ private:
 
     auto DoCreatePinsFromEntityScript(UClass* InEntityScriptClass) -> void;
     auto DoOnClassPinChanged() -> void;
+    auto DoGet_EntitySpawnParamsStruct(
+        UClass* InEntityScriptClass,
+        FKismetCompilerContext& InCompilerContext) const -> UScriptStruct*;
 
 private:
     ECk_EntityLifetime_OwnerType _LifetimeOwnerType = ECk_EntityLifetime_OwnerType::UseTransientEntity;

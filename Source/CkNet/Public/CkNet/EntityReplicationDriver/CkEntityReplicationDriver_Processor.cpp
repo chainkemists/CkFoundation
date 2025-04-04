@@ -19,6 +19,7 @@ namespace ck
         UCk_Utils_EntityReplicationDriver_UE::Add(InHandle);
 
         auto ReplicatedOwner = InRequest.Get_Owner();
+        auto SpawnParams = InRequest.Get_SpawnParams();
 
         InHandle.Remove<MarkedDirtyBy>();
 
@@ -34,7 +35,7 @@ namespace ck
                 ReplicationDriver->Get_ExpectedNumberOfDependentReplicationDrivers() + 1);
 
             UCk_Utils_EntityReplicationDriver_UE::Request_Replicate(InHandle, ReplicatedOwner,
-                InRequest.Get_EntityScriptClass());
+                InRequest.Get_EntityScriptClass(), SpawnParams);
         }
     }
 
