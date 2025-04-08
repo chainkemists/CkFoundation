@@ -79,7 +79,7 @@ public:
     bool
     Get_IsReplicationComplete() const;
 
-    UPROPERTY(EditDefaultsOnly)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
     ECk_Replication _Replication = ECk_Replication::Replicates;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
