@@ -38,6 +38,8 @@ CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TSoftObjectPtr);
 CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TStrongObjectPtr);
 CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(TInstancedStruct);
 
+CK_DEFINE_IS_VALID_EXECUTOR_ISBASEOF_T(std::function);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 CK_DEFINE_CUSTOM_IS_VALID_POLICY(IsValid_Policy_IncludePendingKill);
@@ -285,6 +287,13 @@ CK_DEFINE_CUSTOM_IS_VALID_T(T, TOptional<T>, ck::IsValid_Policy_NullptrOnly, [=]
 CK_DEFINE_CUSTOM_IS_VALID_T(T, TOptional<T>, ck::IsValid_Policy_OptionalEngagedOnly, [=](const TOptional<T>& InOptional)
 {
     return InOptional.IsSet();
+});
+
+// --------------------------------------------------------------------------------------------------------------------
+
+CK_DEFINE_CUSTOM_IS_VALID_T(T, std::function<T>, ck::IsValid_Policy_Default, [=](const std::function<T>& InFunc)
+{
+    return InFunc == nullptr;
 });
 
 // --------------------------------------------------------------------------------------------------------------------
