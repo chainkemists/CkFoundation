@@ -62,7 +62,8 @@ namespace ck
 
         NewEntityScript->Construct(NewEntity);
 
-        InRequest.Get_PostConstruction_Func()(NewEntity);
+        if (ck::IsValid(InRequest.Get_PostConstruction_Func()))
+        { InRequest.Get_PostConstruction_Func()(NewEntity); }
 
         if (NewEntityScript->Get_Replication() == ECk_Replication::Replicates)
         {
