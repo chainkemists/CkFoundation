@@ -7,8 +7,6 @@
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkVariables/CkUnrealVariables_Utils.h"
 
-UE_DISABLE_OPTIMIZATION
-
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
