@@ -5,9 +5,6 @@
 #include "CkCore/SharedValues/CkSharedValues.h"
 
 #include "CkEcs/Handle/CkHandle.h"
-
-#include "CkEntityBridge/CkEntityBridge_Fragment_Data.h"
-
 #include "CkEcs/OwningActor/CkOwningActor_Fragment_Data.h"
 
 #include "CkEntityBridge_ConstructionScript.generated.h"
@@ -79,11 +76,11 @@ public:
     bool
     Get_IsReplicationComplete() const;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+    UPROPERTY(EditDefaultsOnly)
     ECk_Replication _Replication = ECk_Replication::Replicates;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-    TSubclassOf<UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
+    TSubclassOf<class UCk_Entity_ConstructionScript_PDA> _ConstructionScript;
 
     UPROPERTY(Instanced)
     TObjectPtr<class UCk_EntityBridge_Config_WithActor_PDA> EntityConfig;
@@ -114,6 +111,7 @@ private:
 
 public:
     CK_PROPERTY(EntityConfig);
+    CK_PROPERTY_GET(_Replication);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
