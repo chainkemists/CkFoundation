@@ -17,6 +17,18 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 UENUM(BlueprintType)
+enum class ECk_Utils_Net_ActorEntityReplicationStatus : uint8
+{
+    Replicates,
+    DoesNotReplicate,
+    IsNotEcsReady,
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Utils_Net_ActorEntityReplicationStatus);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UENUM(BlueprintType)
 enum class ECk_Utils_Net_IsLocallyControlled_Result : uint8
 {
     IsLocallyControlled,
