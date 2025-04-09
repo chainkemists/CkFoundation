@@ -29,6 +29,15 @@ public:
         const FCk_Request_EntityBridge_SpawnEntity& InRequest,
         const FInstancedStruct& InOptionalPayload,
         const FCk_Delegate_EntityBridge_OnEntitySpawned& InDelegate);
+
+public:
+    // this SHOULD be in NetUtils but because it depends on EntityBridge, the function is in EntityBridge utils file
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck] Get Does Actor's Entity Replicate",
+              Category = "Ck|Utils|Net")
+    static ECk_Utils_Net_ActorEntityReplicationStatus
+    Get_DoesActorEntityReplicate(
+        AActor* InActor);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
