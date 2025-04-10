@@ -1,6 +1,7 @@
 #include "CkEcsProcessorInjector.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Processor.h"
+#include "CkEcs/EntityScript/CkEntityScript_Processor.h"
 #include "CkEcs/OwningActor/CkOwningActor_Processors.h"
 #include "CkEcs/Processor/CkProcessorScript_Subsystem.h"
 
@@ -32,6 +33,29 @@ auto
 #if CK_MEMORY_TRACKING
     InWorld.Add<ck::FProcessor_Memory_Stats>();
 #endif
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Ecs_ProcessorInjector_Requests::
+    DoInjectProcessors(
+        EcsWorldType& InWorld)
+    -> void
+{
+    InWorld.Add<ck::FProcessor_EntityScript_SpawnEntity_HandleRequests>(InWorld.Get_Registry());
+    InWorld.Add<ck::FProcessor_EntityScript_BeginPlay>(InWorld.Get_Registry());
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Ecs_ProcessorInjector_Teardown::
+    DoInjectProcessors(
+        EcsWorldType& InWorld)
+    -> void
+{
+    InWorld.Add<ck::FProcessor_EntityScript_EndPlay>(InWorld.Get_Registry());
 }
 
 // --------------------------------------------------------------------------------------------------------------------
