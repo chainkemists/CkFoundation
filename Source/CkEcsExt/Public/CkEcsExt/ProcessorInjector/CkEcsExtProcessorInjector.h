@@ -31,29 +31,3 @@ protected:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(NotBlueprintable, NotBlueprintType)
-class CKECSEXT_API UCk_EcsExt_ProcessorInjector_Requests_UE : public UCk_EcsWorld_ProcessorInjector_Base_UE
-{
-    GENERATED_BODY()
-
-protected:
-    auto
-    DoInjectProcessors(
-        EcsWorldType& InWorld) -> void override;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-UCLASS(NotBlueprintable, NotBlueprintType)
-class CKECSEXT_API UCk_EcsExt_ProcessorInjector_Teardown_UE : public UCk_EcsWorld_ProcessorInjector_Base_UE
-{
-    GENERATED_BODY()
-
-protected:
-    auto
-    DoInjectProcessors(
-        EcsWorldType& InWorld) -> void override;
-};
-
-// --------------------------------------------------------------------------------------------------------------------
