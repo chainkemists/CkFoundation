@@ -163,6 +163,25 @@ auto
 
 auto
     UCk_K2Node_Message_Base::
+    GetJumpTargetForDoubleClick() const
+    -> UObject*
+{
+    return _MessageDefinition;
+}
+
+auto
+    UCk_K2Node_Message_Base::
+    JumpToDefinition() const
+    -> void
+{
+    if (ck::IsValid(_MessageDefinition))
+    {
+        GEditor->GetEditorSubsystem<UAssetEditorSubsystem>()->OpenEditorForAsset(_MessageDefinition);
+    }
+}
+
+auto
+    UCk_K2Node_Message_Base::
     CreatePinsFromMessageDefinition()
     -> void
 {

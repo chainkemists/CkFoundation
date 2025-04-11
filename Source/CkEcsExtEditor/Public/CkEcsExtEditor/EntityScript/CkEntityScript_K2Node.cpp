@@ -313,6 +313,19 @@ auto
 
 auto
     UCk_K2Node_EntityScript::
+    GetJumpTargetForDoubleClick() const
+    -> UObject*
+{
+    const auto& EntityScriptClass = DoGet_EntityScriptClass();
+
+    if (ck::Is_NOT_Valid(EntityScriptClass))
+    { return Super::GetJumpTargetForDoubleClick(); }
+
+    return UCk_Utils_Object_UE::Get_ClassGeneratedByBlueprint(EntityScriptClass);
+}
+
+auto
+    UCk_K2Node_EntityScript::
     DoGet_EntitySpawnParamsStruct(
         UClass* InEntityScriptClass,
         FKismetCompilerContext& InCompilerContext) const
