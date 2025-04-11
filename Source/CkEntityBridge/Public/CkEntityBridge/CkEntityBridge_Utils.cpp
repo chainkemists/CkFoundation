@@ -1,10 +1,12 @@
 #include "CkEntityBridge_Utils.h"
 
-#include "CkEntityBridge_ConstructionScript.h"
-#include "CkEntityBridge_Fragment.h"
-#include "CkNet_Utils.h"
-
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
+
+#include "CkEntityBridge/CkEntityBridge_ConstructionScript.h"
+#include "CkEntityBridge/CkEntityBridge_Fragment.h"
+
+#include "CkNet/CkNet_Utils.h"
+
 #include "CkVariables/CkUnrealVariables_Utils.h"
 
 // --------------------------------------------------------------------------------------------------------------------
