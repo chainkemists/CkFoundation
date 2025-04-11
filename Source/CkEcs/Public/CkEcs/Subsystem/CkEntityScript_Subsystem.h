@@ -33,10 +33,9 @@ private:
     auto OnAssetAdded(const FAssetData& InAssetData) -> void;
     auto OnAssetRenamed(const FAssetData& InAssetData, const FString& InOldObjectPath) -> void;
     auto OnAssetRemoved(const FAssetData& InAssetData) -> void;
+    auto RegisterForBlueprintChanges() -> void;
 
     auto UpdateStructProperties(UUserDefinedStruct* InStruct, const TArray<FProperty*>& InNewProperties) const -> bool;
-    auto DeleteStructForEntityScriptClass(UClass* InEntityScriptClass) -> void;
-    auto RegisterForBlueprintChanges() -> void;
 private:
     static auto GenerateEntitySpawnParamsStructName(const UClass* InEntityScriptClass) -> FName;
     static auto IsTemporaryAsset(const FString& InAssetName) -> bool;
