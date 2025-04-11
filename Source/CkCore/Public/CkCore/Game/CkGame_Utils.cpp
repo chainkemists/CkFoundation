@@ -209,7 +209,7 @@ auto
     if (ck::Is_NOT_Valid(GameInstance))
     { return {}; }
 
-    return GameInstance->GetPrimaryPlayerController();
+    return GameInstance->GetFirstLocalPlayerController();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
