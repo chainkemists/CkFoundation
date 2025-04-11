@@ -2,7 +2,7 @@
 # define NOMINMAX
 #endif
 
-#include <entt/entt.hpp>
+#include <entt/entity/fwd.hpp>
 #include <entt/core/family.hpp>
 #include <entt/core/family.hpp>
 #include <entt/entity/registry.hpp>
