@@ -30,14 +30,7 @@ namespace ck
         CK_ENSURE_VALID_UNREAL_WORLD_IF_NOT(InVelocityRO)
         { return; }
 
-        const auto OutermostPawn = UCk_Utils_Actor_UE::Get_OutermostPawn(InVelocityRO);
-
-        CK_ENSURE_IF_NOT(OutermostPawn, TEXT("Expected ReplicatedObject [{}] to have an owning Pawn in the parent chain. "
-            "Unable to perform predictive integration."), InVelocityRO)
-        { return; }
-
-        const auto PlayerController = Cast<APlayerController>(OutermostPawn->Controller.Get());
-        const auto& Latency = UCk_Utils_NetTimeSync_UE::Get_PlayerRoundTripTime(PlayerController, InHandle);
+        const auto& Latency = UCk_Utils_Net_UE::Get_AveragePing(UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle));
 
         InDeltaT = FCk_Time{Latency};
 
