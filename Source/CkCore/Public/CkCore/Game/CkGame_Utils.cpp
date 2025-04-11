@@ -190,11 +190,6 @@ auto
 
     const auto& PlayerState = PrimaryPlayerController->PlayerState;
 
-    CK_ENSURE_IF_NOT(ck::IsValid(PlayerState),
-        TEXT("Invalid PlayerState for Primary Player Controller [{}]."),
-        PrimaryPlayerController)
-    { return {}; }
-
     return PlayerState;
 }
 
