@@ -16,7 +16,8 @@ auto
     BeginPlay()
     -> void
 {
-    DoBeginPlay();
+    auto ScriptEntity = DoGet_ScriptEntity();
+    DoBeginPlay(ScriptEntity);
 }
 
 auto
@@ -24,7 +25,8 @@ auto
     EndPlay()
     -> void
 {
-    DoEndPlay();
+    auto ScriptEntity = DoGet_ScriptEntity();
+    DoEndPlay(ScriptEntity);
 }
 
 auto
