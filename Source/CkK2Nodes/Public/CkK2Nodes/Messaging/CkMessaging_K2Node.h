@@ -58,6 +58,8 @@ public:
     // K2Node implementation
     auto IsNodePure() const -> bool override;
     auto ReallocatePinsDuringReconstruction(TArray<UEdGraphPin*>& InOldPins) -> void override;
+    auto GetJumpTargetForDoubleClick() const -> UObject* override;
+    auto JumpToDefinition() const -> void;
     // End of K2Node implementation
 
 protected:
