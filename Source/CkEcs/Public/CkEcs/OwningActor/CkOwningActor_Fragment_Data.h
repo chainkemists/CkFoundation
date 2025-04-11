@@ -1,13 +1,10 @@
 #pragma once
 
 #include "CkCore/Actor/CkActor.h"
-
-#include "CkEcs/Fragments/ReplicatedObjects/CkReplicatedObjects_Fragment_Params.h"
-#include "CkEcs/Handle/CkHandle.h"
-
+#include "CkCore/Component/CkActorComponent.h"
 #include "CkCore/Macros/CkMacros.h"
 
-#include "CkCore/Component/CkActorComponent.h"
+#include "CkEcs/Handle/CkHandle.h"
 
 #include <InstancedStruct.h>
 
