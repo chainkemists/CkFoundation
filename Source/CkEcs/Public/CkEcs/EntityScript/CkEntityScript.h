@@ -50,13 +50,15 @@ protected:
         Category = "Ck|EntityScript",
         DisplayName = "BeginPlay")
     void
-    DoBeginPlay();
+    DoBeginPlay(
+        FCk_Handle InHandle);
 
     UFUNCTION(BlueprintImplementableEvent,
         Category = "Ck|EntityScript",
         DisplayName = "EndPlay")
     void
-    DoEndPlay();
+    DoEndPlay(
+        FCk_Handle InHandle);
 
 private:
     UFUNCTION(BlueprintPure,
