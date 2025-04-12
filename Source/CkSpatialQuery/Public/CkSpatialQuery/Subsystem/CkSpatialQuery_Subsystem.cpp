@@ -368,7 +368,10 @@ auto
 {
     Super::Tick(InDeltaTime);
 
-    _PhysicsSystem->Update(1.0f / 60.0f, 1, &*_TempAllocator, _JobSystem);
+    if (GetWorld()->IsPaused())
+    { return; }
+
+    _PhysicsSystem->Update(InDeltaTime, 1, &*_TempAllocator, _JobSystem);
 }
 
 auto
