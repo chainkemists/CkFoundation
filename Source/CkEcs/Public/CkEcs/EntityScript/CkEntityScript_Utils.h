@@ -41,6 +41,13 @@ public:
         UCk_EntityScript_UE* InEntityScript,
         FInstancedStruct InSpawnParams);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|EntityScript",
+              DisplayName="[Ck][EntityScript] Try Get Entity With EntityScript In Ownership Chain")
+    static FCk_Handle
+    TryGet_Entity_EntityScript_InOwnershipChain(
+        const FCk_Handle& InHandle);
+
 public:
     static auto
     Request_SpawnEntity(
