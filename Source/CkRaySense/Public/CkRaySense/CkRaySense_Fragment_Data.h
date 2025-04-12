@@ -47,6 +47,35 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_RaySense);
 //--------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKRAYSENSE_API FCk_RaySense_DataToIgnore
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_RaySense_DataToIgnore);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
+    TArray<TObjectPtr<AActor>> _ActorsToIgnore;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
+    TArray<TObjectPtr<UPrimitiveComponent>> _ComponentsToIgnore;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
+    TArray<FCk_Handle> _EntitiesToIgnore;
+
+public:
+    CK_PROPERTY(_ActorsToIgnore);
+    CK_PROPERTY(_ComponentsToIgnore);
+    CK_PROPERTY(_EntitiesToIgnore);
+};
+
+//--------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKRAYSENSE_API FCk_Fragment_RaySense_ParamsData
 {
     GENERATED_BODY()
@@ -68,26 +97,17 @@ private:
         meta=(AllowPrivateAccess))
     ECk_RaySense_Async _Async = ECk_RaySense_Async::Synchronous;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
+    FCk_RaySense_DataToIgnore _DataToIgnore;
+
 public:
     CK_PROPERTY_GET(_CollisionQuality);
     CK_PROPERTY_GET(_CollisionChannel);
-    CK_PROPERTY_GET(_Async);
+    CK_PROPERTY(_Async);
+    CK_PROPERTY(_DataToIgnore);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_RaySense_ParamsData, _CollisionChannel, _Async);
-};
-
-// --------------------------------------------------------------------------------------------------------------------
-
-USTRUCT(BlueprintType)
-struct CKRAYSENSE_API FCk_Request_RaySense_ExampleRequest : public FCk_Request_Base
-{
-    GENERATED_BODY()
-
-public:
-    friend class ck::FProcessor_RaySense_HandleRequests;
-
-public:
-    CK_GENERATED_BODY(FCk_Request_RaySense_ExampleRequest);
+    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_RaySense_ParamsData, _CollisionQuality, _CollisionChannel);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
