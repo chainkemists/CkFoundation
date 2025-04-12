@@ -174,6 +174,9 @@ namespace ck
             const FFragment_IsmProxy_Current& InCurrent) const
         -> void
     {
+        if (UCk_Utils_Net_UE::Get_EntityNetMode(_TransientEntity) != ECk_Net_NetModeType::Client)
+        { return; }
+
         const auto& RendererName = InParams.Get_RendererName();
         const auto& Mobility = InParams.Get_Mobility();
         const auto& IsmComp = ck_ism_proxy_processor::FindRendererIsmComp(RendererName, Mobility);
