@@ -301,6 +301,18 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+void MyTraceFunction(const char *inFMT, ...)
+{
+    // Format the message
+    va_list list;
+    va_start(list, inFMT);
+    char buffer[1024];
+    vsnprintf(buffer, sizeof(buffer), inFMT, list);
+    va_end(list);
+
+    ck::spatialquery::Log(TEXT("Jolt Trace: [{}]"), FString{buffer});
+}
+
 auto
     UCk_SpatialQuery_Subsystem::
     Initialize(
@@ -344,6 +356,8 @@ auto
 
     _ContactListener = MakePimpl<CkContactListener>(_EcsWorldSubsystem->Get_TransientEntity());
     _PhysicsSystem->SetContactListener(&*_ContactListener);
+
+    JPH::Trace = MyTraceFunction;
 }
 
 auto
