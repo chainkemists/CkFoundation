@@ -8,6 +8,8 @@
 
 #include "CkNet/CkNet_Utils.h"
 
+#include "CkRaySense/CkRaySense_Utils.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -38,6 +40,9 @@ namespace ck
             InParams.Get_CollisionChannel());
 
         if (NOT Hit)
+        { return; }
+
+        if (UCk_Utils_RaySense_UE::DoGet_ShouldIgnoreTraceHit(InHandle, HitResult))
         { return; }
 
         auto Result = FCk_RaySense_HitResult{HitResult.ImpactPoint, HitResult.ImpactNormal}
@@ -86,6 +91,9 @@ namespace ck
         if (NOT Hit)
         { return; }
 
+        if (UCk_Utils_RaySense_UE::DoGet_ShouldIgnoreTraceHit(InHandle, HitResult))
+        { return; }
+
         auto Result = FCk_RaySense_HitResult{HitResult.ImpactPoint, HitResult.ImpactNormal}
         .Set_MaybeHitActor(HitResult.GetActor())
         .Set_MaybeHitComponent(HitResult.GetComponent())
@@ -132,6 +140,9 @@ namespace ck
         if (NOT Hit)
         { return; }
 
+        if (UCk_Utils_RaySense_UE::DoGet_ShouldIgnoreTraceHit(InHandle, HitResult))
+        { return; }
+
         auto Result = FCk_RaySense_HitResult{HitResult.ImpactPoint, HitResult.ImpactNormal}
         .Set_MaybeHitActor(HitResult.GetActor())
         .Set_MaybeHitComponent(HitResult.GetComponent())
@@ -176,6 +187,9 @@ namespace ck
         if (NOT Hit)
         { return; }
 
+        if (UCk_Utils_RaySense_UE::DoGet_ShouldIgnoreTraceHit(InHandle, HitResult))
+        { return; }
+
         auto Result = FCk_RaySense_HitResult{HitResult.ImpactPoint, HitResult.ImpactNormal}
         .Set_MaybeHitActor(HitResult.GetActor())
         .Set_MaybeHitComponent(HitResult.GetComponent())
@@ -202,65 +216,6 @@ namespace ck
         CK_TRIGGER_ENSURE(TEXT("Cylinder shape is NOT supported by Unreal. It is only supported by Jolt. Collisions for "
             "[{}] will NOT work"), InHandle);
     }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProcessor_RaySense_HandleRequests::
-        DoTick(
-            TimeType InDeltaT)
-        -> void
-    {
-        _TransientEntity.Clear<FTag_RaySense_Updated>();
-
-        TProcessor::DoTick(InDeltaT);
-
-        _TransientEntity.Clear<MarkedDirtyBy>();
-    }
-
-    auto
-        FProcessor_RaySense_HandleRequests::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_RaySense_Current& InCurrent,
-            FFragment_RaySense_Requests& InRequestsComp) const
-        -> void
-    {
-        InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_RaySense_Requests& InRequests)
-        {
-            algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
-            {
-                DoHandleRequest(InHandle, InCurrent, InRequest);
-            }));
-        });
-    }
-
-    auto
-        FProcessor_RaySense_HandleRequests::
-        DoHandleRequest(
-            HandleType InHandle,
-            FFragment_RaySense_Current& InCurrent,
-            const FCk_Request_RaySense_ExampleRequest& InRequest)
-        -> void
-    {
-        // Add request handling logic here
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProcessor_RaySense_Teardown::
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_RaySense_Current& InCurrent) const
-        -> void
-    {
-        // Add teardown logic here
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------

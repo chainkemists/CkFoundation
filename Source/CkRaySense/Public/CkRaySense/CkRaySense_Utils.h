@@ -10,6 +10,17 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck
+{
+    class FProcessor_RaySense_LineTrace_Update;
+    class FProcessor_RaySense_BoxSweep_Update;
+    class FProcessor_RaySense_SphereSweep_Update;
+    class FProcessor_RaySense_CapsuleSweep_Update;
+    class FProcessor_RaySense_CylinderSweep_Update;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS()
 class CKRAYSENSE_API UCk_Utils_RaySense_UE : public UCk_Utils_Ecs_Net_UE
 {
@@ -18,6 +29,13 @@ class CKRAYSENSE_API UCk_Utils_RaySense_UE : public UCk_Utils_Ecs_Net_UE
 public:
     CK_GENERATED_BODY(UCk_Utils_RaySense_UE);
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_RaySense);
+
+public:
+    friend class ck::FProcessor_RaySense_LineTrace_Update;
+    friend class ck::FProcessor_RaySense_BoxSweep_Update;
+    friend class ck::FProcessor_RaySense_SphereSweep_Update;
+    friend class ck::FProcessor_RaySense_CapsuleSweep_Update;
+    friend class ck::FProcessor_RaySense_CylinderSweep_Update;
 
 public:
     UFUNCTION(BlueprintCallable,
@@ -62,15 +80,6 @@ private:
 
 public:
     UFUNCTION(BlueprintCallable,
-        Category = "Ck|Utils|RaySense",
-        DisplayName="[Ck][RaySense] Request ExampleRequest")
-    static FCk_Handle_RaySense
-    Request_ExampleRequest(
-        UPARAM(ref) FCk_Handle_RaySense& InRaySense,
-        const FCk_Request_RaySense_ExampleRequest& InRequest);
-
-public:
-    UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|RaySense",
               DisplayName = "[Ck][RaySense] Bind To OnTraceHit")
     static FCk_Handle_RaySense
@@ -87,6 +96,12 @@ public:
     UnbindFrom_OnTraceHit(
         UPARAM(ref) FCk_Handle_RaySense& InHandle,
         const FCk_Delegate_RaySense_LineTrace& InDelegate);
+
+private:
+    static auto
+    DoGet_ShouldIgnoreTraceHit(
+        FCk_Handle_RaySense& InHandle,
+        const FHitResult& InTraceHit) -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

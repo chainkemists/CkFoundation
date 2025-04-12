@@ -172,63 +172,6 @@ namespace ck
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform) const -> void;
     };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKRAYSENSE_API FProcessor_RaySense_HandleRequests : public ck_exp::TProcessor<
-            FProcessor_RaySense_HandleRequests,
-            FCk_Handle_RaySense,
-            FFragment_RaySense_Current,
-            FFragment_RaySense_Requests,
-            CK_IGNORE_PENDING_KILL>
-    {
-    public:
-        using MarkedDirtyBy = FFragment_RaySense_Requests;
-
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto
-        DoTick(
-            TimeType InDeltaT) -> void;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_RaySense_Current& InCurrent,
-            FFragment_RaySense_Requests& InRequestsComp) const -> void;
-
-    private:
-        static auto
-        DoHandleRequest(
-            HandleType InHandle,
-            FFragment_RaySense_Current& InCurrent,
-            const FCk_Request_RaySense_ExampleRequest& InRequest) -> void;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    class CKRAYSENSE_API FProcessor_RaySense_Teardown : public ck_exp::TProcessor<
-            FProcessor_RaySense_Teardown,
-            FCk_Handle_RaySense,
-            FFragment_RaySense_Current,
-            CK_IF_INITIATE_CONFIRM_KILL>
-    {
-    public:
-        using TProcessor::TProcessor;
-
-    public:
-        auto
-        ForEachEntity(
-            TimeType InDeltaT,
-            HandleType InHandle,
-            FFragment_RaySense_Current& InCurrent) const -> void;
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
 }
 
 // --------------------------------------------------------------------------------------------------------------------
