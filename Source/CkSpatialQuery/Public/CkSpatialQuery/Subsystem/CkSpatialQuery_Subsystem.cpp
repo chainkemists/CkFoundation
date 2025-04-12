@@ -379,7 +379,15 @@ auto
     Deinitialize()
         -> void
 {
+    _ContactListener.Reset();
+    _BodyActivationListener.Reset();
+    _PhysicsSystem.Reset();
+    _ObjectVsObjectFilter.Reset();
+    _ObjectVsBroadPhaseLayerFilter.Reset();
+    _BroadPhaseLayerInterface.Reset();
     delete _JobSystem;
+    _TempAllocator.Reset();
+
     Super::Deinitialize();
 }
 
