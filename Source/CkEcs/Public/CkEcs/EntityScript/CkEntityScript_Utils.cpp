@@ -20,6 +20,19 @@ auto
 
 auto
     UCk_Utils_EntityScript_UE::
+    TryGet_Entity_EntityScript_InOwnershipChain(
+        const FCk_Handle& InHandle)
+    -> FCk_Handle
+{
+    return UCk_Utils_EntityLifetime_UE::Get_EntityInOwnershipChain_If(InHandle,
+    [&](const FCk_Handle& Handle)
+    {
+        return Handle.Has<ck::FFragment_EntityScript_Current>();
+    });
+}
+
+auto
+    UCk_Utils_EntityScript_UE::
     Request_SpawnEntity(
         const FCk_Handle& InLifetimeOwner,
         const TSubclassOf<UCk_EntityScript_UE>& InEntityScript,
