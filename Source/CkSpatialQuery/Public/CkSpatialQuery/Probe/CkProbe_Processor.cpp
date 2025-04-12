@@ -441,10 +441,6 @@ namespace ck
 
         BodyInterface.MoveKinematic(InCurrent.Get_BodyId(), jolt::Conv(EntityPosition), Rot,
             InDeltaT.Get_Seconds());
-
-        spatialquery::Log(TEXT("Actual Position in Jolt:[{}] [{}]"),
-            InCurrent.Get_BodyId().GetIndexAndSequenceNumber(),
-            jolt::Conv(BodyInterface.GetPosition(InCurrent.Get_BodyId())));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
