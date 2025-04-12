@@ -27,17 +27,6 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_RaySense_UE, FCk_Handle_RaySen
 
 auto
     UCk_Utils_RaySense_UE::
-    Request_ExampleRequest(
-        FCk_Handle_RaySense& InRaySense,
-        const FCk_Request_RaySense_ExampleRequest& InRequest)
-    -> FCk_Handle_RaySense
-{
-    InRaySense.AddOrGet<ck::FFragment_RaySense_Requests>()._Requests.Emplace(InRequest);
-    return InRaySense;
-}
-
-auto
-    UCk_Utils_RaySense_UE::
     BindTo_OnTraceHit(
         FCk_Handle_RaySense& InHandle,
         ECk_Signal_BindingPolicy InBehavior,
@@ -58,6 +47,37 @@ auto
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnRaySenseTraceHit, InHandle, InDelegate);
     return InHandle;
+}
+
+auto
+    UCk_Utils_RaySense_UE::
+    DoGet_ShouldIgnoreTraceHit(
+        FCk_Handle_RaySense& InHandle,
+        const FHitResult& InTraceHit)
+    -> bool
+{
+    const auto& RaySenseParams = InHandle.Get<ck::FFragment_RaySense_Params>();
+    const auto& DataToIgnore = RaySenseParams.Get_DataToIgnore();
+
+    if (const auto& HitComponent = InTraceHit.GetComponent();
+        ck::IsValid(HitComponent) && DataToIgnore.Get_ComponentsToIgnore().Contains(HitComponent))
+    { return true; }
+
+    const auto& HitActor = InTraceHit.GetActor();
+
+    if (ck::Is_NOT_Valid(HitActor))
+    { return false; }
+
+    if (DataToIgnore.Get_ActorsToIgnore().Contains(HitActor))
+    { return true; }
+
+    const auto& MaybeHitActorEntity = UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(HitActor) ?
+            UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(HitActor) : FCk_Handle{};
+
+    if (ck::IsValid(MaybeHitActorEntity) && DataToIgnore.Get_EntitiesToIgnore().Contains(MaybeHitActorEntity))
+    { return true; }
+
+    return false;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
