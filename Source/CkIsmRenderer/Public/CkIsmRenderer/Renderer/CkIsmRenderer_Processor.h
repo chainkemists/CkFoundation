@@ -146,6 +146,13 @@ namespace ck
         InIsmActorComp->InstanceStartCullDistance = Params.Get_CullingInfo().Get_InstanceCullDistance_Start();
         InIsmActorComp->InstanceEndCullDistance = Params.Get_CullingInfo().Get_InstanceCullDistance_End();
 
+        const auto& CustomPrimitiveDataDefaults = Params.Get_CustomPrimitiveDataDefaults().Data;
+        for (auto Index = 0; Index < CustomPrimitiveDataDefaults.Num(); ++Index)
+        {
+            InIsmActorComp->SetDefaultCustomPrimitiveDataFloat(Index, CustomPrimitiveDataDefaults[Index]);
+            InIsmActorComp->SetCustomPrimitiveDataFloat(Index, CustomPrimitiveDataDefaults[Index]);
+        }
+
         auto MaterialSlotsOverriden = TSet<int32>{};
 
         for (const auto& MaterialOverride : Params.Get_MaterialsInfo().Get_MaterialOverrides())
