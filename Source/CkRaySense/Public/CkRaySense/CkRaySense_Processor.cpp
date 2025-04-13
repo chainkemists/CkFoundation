@@ -46,6 +46,7 @@ namespace ck
         { return; }
 
         auto Result = FCk_RaySense_HitResult{HitResult.ImpactPoint, HitResult.ImpactNormal}
+        .Set_ImpactPhysMat(HitResult.PhysMaterial.Get())
         .Set_MaybeHitActor(HitResult.GetActor())
         .Set_MaybeHitComponent(HitResult.GetComponent())
         .Set_MaybeHitHandle(UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(HitResult.GetActor()) ?
@@ -95,6 +96,7 @@ namespace ck
         { return; }
 
         auto Result = FCk_RaySense_HitResult{HitResult.ImpactPoint, HitResult.ImpactNormal}
+        .Set_ImpactPhysMat(HitResult.PhysMaterial.Get())
         .Set_MaybeHitActor(HitResult.GetActor())
         .Set_MaybeHitComponent(HitResult.GetComponent())
         .Set_MaybeHitHandle(UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(HitResult.GetActor()) ?
@@ -144,6 +146,7 @@ namespace ck
         { return; }
 
         auto Result = FCk_RaySense_HitResult{HitResult.ImpactPoint, HitResult.ImpactNormal}
+        .Set_ImpactPhysMat(HitResult.PhysMaterial.Get())
         .Set_MaybeHitActor(HitResult.GetActor())
         .Set_MaybeHitComponent(HitResult.GetComponent())
         .Set_MaybeHitHandle(UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(HitResult.GetActor()) ?
@@ -191,6 +194,7 @@ namespace ck
         { return; }
 
         auto Result = FCk_RaySense_HitResult{HitResult.ImpactPoint, HitResult.ImpactNormal}
+        .Set_ImpactPhysMat(HitResult.PhysMaterial.Get())
         .Set_MaybeHitActor(HitResult.GetActor())
         .Set_MaybeHitComponent(HitResult.GetComponent())
         .Set_MaybeHitHandle(UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(HitResult.GetActor()) ?

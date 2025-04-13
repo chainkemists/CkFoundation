@@ -6,6 +6,7 @@
 #include "CkEcs/Request/CkRequest_Data.h"
 
 #include <GameplayTagContainer.h>
+#include <PhysicalMaterials/PhysicalMaterial.h>
 
 #include "CkRaySense_Fragment_Data.generated.h"
 
@@ -130,6 +131,10 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))
+    TObjectPtr<UPhysicalMaterial> _ImpactPhysMat;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
     TObjectPtr<AActor> _MaybeHitActor;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -143,7 +148,7 @@ private:
 public:
     CK_PROPERTY_GET(_ImpactPoint);
     CK_PROPERTY_GET(_ImpactNormal);
-
+    CK_PROPERTY(_ImpactPhysMat);
     CK_PROPERTY(_MaybeHitActor);
     CK_PROPERTY(_MaybeHitComponent);
     CK_PROPERTY(_MaybeHitHandle);

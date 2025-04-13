@@ -16,6 +16,7 @@ public class CkRaySense : CkModuleRules
             "Engine",
             "StructUtils",
             "GameplayTags",
+            "PhysicsCore",
 
             "CkCore",
             "CkEcs",
