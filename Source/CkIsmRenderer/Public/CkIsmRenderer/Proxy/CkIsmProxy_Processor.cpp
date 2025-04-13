@@ -101,6 +101,17 @@ namespace ck
         { return; }
 
         InCurrent._CustomDataValues.Init(0, IsmComp->NumCustomDataFloats);
+
+        const auto& DefaultCustomPrimitiveData = IsmComp->GetDefaultCustomPrimitiveData().Data;
+
+        for (auto Index  = 0; Index < DefaultCustomPrimitiveData.Num(); ++Index)
+        {
+            if (DefaultCustomPrimitiveData.IsValidIndex(Index))
+            {
+                InCurrent._CustomDataValues[Index] = DefaultCustomPrimitiveData[Index];
+            }
+        }
+
         UCk_Utils_IsmProxy_UE::Request_NeedsInstanceAdded(InHandle);
     }
 
