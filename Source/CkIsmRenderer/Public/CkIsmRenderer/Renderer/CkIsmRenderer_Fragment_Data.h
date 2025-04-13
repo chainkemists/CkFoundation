@@ -154,6 +154,10 @@ private:
               meta = (AllowPrivateAccess = true, UIMin = 0, ClampMin = 0))
     int32 _NumCustomData = 0;
 
+    UPROPERTY(EditAnywhere,
+              meta = (AllowPrivateAccess = true))
+    FCustomPrimitiveData _CustomPrimitiveDataDefaults;
+
 public:
     CK_PROPERTY_GET(_RendererName);
     CK_PROPERTY_GET(_RenderPolicy);
@@ -163,6 +167,7 @@ public:
     CK_PROPERTY_GET(_LightingInfo);
     CK_PROPERTY_GET(_CullingInfo);
     CK_PROPERTY_GET(_NumCustomData);
+    CK_PROPERTY_GET(_CustomPrimitiveDataDefaults);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
