@@ -644,8 +644,8 @@ namespace ck
         if (NOT UCk_Utils_OverlapBody_Settings_UE::Get_DebugPreviewAllSensors())
         { return; }
 
-        _Registry.View<FFragment_Sensor_Current, FFragment_Sensor_Params>().ForEach(
-        [&](FCk_Entity InSensorEntity, const FFragment_Sensor_Current& InSensorCurrent, const FFragment_Sensor_Params& InSensorParams)
+        _Registry.View<FFragment_Sensor_Current, CK_IGNORE_PENDING_KILL>().ForEach(
+        [&](FCk_Entity InSensorEntity, const FFragment_Sensor_Current& InSensorCurrent)
         {
             if (ck::Is_NOT_Valid(InSensorCurrent.Get_Sensor()))
             { return; }

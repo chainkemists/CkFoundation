@@ -375,7 +375,7 @@ namespace ck
         if (NOT UCk_Utils_OverlapBody_Settings_UE::Get_DebugPreviewAllMarkers())
         { return; }
 
-        _Registry.View<FFragment_Marker_Current>().ForEach(
+        _Registry.View<FFragment_Marker_Current, CK_IGNORE_PENDING_KILL>().ForEach(
         [&](FCk_Entity InMarkerEntity, const FFragment_Marker_Current& InMarkerCurrent)
         {
             if (ck::Is_NOT_Valid(InMarkerCurrent.Get_Marker()))

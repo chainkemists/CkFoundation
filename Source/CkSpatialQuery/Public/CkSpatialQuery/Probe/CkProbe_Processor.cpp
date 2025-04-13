@@ -486,7 +486,7 @@ namespace ck
             return;
         }
 
-        _Registry.View<FFragment_Probe_DebugInfo>().ForEach(
+        _Registry.View<FFragment_Probe_DebugInfo, CK_IGNORE_PENDING_KILL>().ForEach(
             [&](
             FCk_Entity InEntity,
             const FFragment_Probe_DebugInfo& InDebugInfo)
