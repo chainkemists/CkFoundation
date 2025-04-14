@@ -597,9 +597,7 @@ namespace ck
         InCurrent._CurrentOverlaps.Add(OverlapInfo, &AlreadyContainsOverlap);
 
         CK_ENSURE_IF_NOT(NOT AlreadyContainsOverlap,
-            TEXT(
-                "Received BeginOverlap Request for Probe [{}] with Other Entity [{}], but it was already overlapping with it."
-            ),
+            TEXT("Received BeginOverlap Request for Probe [{}] with Other Entity [{}], but it was already overlapping with it."),
             InHandle,
             InRequest.Get_OtherEntity())
         {
@@ -611,7 +609,8 @@ namespace ck
         const auto Payload = FCk_Probe_Payload_OnBeginOverlap{
             InRequest.Get_OtherEntity(),
             InRequest.Get_ContactPoints(),
-            InRequest.Get_ContactNormal()
+            InRequest.Get_ContactNormal(),
+            InRequest.Get_PhysicalMaterial()
         };
 
         UUtils_Signal_OnProbeBeginOverlap::Broadcast(InHandle, MakePayload(InHandle, Payload));
@@ -630,9 +629,7 @@ namespace ck
                                  .Set_ContactNormal(InRequest.Get_ContactNormal());
 
         CK_ENSURE_IF_NOT(InCurrent._CurrentOverlaps.Contains(OverlapInfo),
-            TEXT(
-                "Received OverlapUpdated Request for Probe [{}] with Other Entity [{}], but it was NOT overlapping with it."
-            ),
+            TEXT("Received OverlapUpdated Request for Probe [{}] with Other Entity [{}], but it was NOT overlapping with it."),
             InHandle,
             InRequest.Get_OtherEntity())
         {
@@ -642,7 +639,8 @@ namespace ck
         const auto Payload = FCk_Probe_Payload_OnOverlapUpdated{
             InRequest.Get_OtherEntity(),
             InRequest.Get_ContactPoints(),
-            InRequest.Get_ContactNormal()
+            InRequest.Get_ContactNormal(),
+            InRequest.Get_PhysicalMaterial()
         };
 
         InCurrent._CurrentOverlaps.Add(OverlapInfo);
@@ -663,9 +661,7 @@ namespace ck
         const auto& NumRemovedItems = InCurrent._CurrentOverlaps.Remove(OverlapInfo);
 
         CK_ENSURE_IF_NOT(NumRemovedItems > 0,
-            TEXT(
-                "Received EndOverlap Request for Probe [{}] with Other Entity [{}], but it was NOT overlapping with it."
-            ),
+            TEXT("Received EndOverlap Request for Probe [{}] with Other Entity [{}], but it was NOT overlapping with it."),
             InHandle,
             InRequest.Get_OtherEntity())
         {
