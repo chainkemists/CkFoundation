@@ -35,6 +35,32 @@ namespace broad_phase_layers
     static constexpr JPH::uint Num_Layers(2);
 };
 
+namespace contact_surface
+{
+    auto Get_ContactPhysicalMaterial(const FCk_Handle_Probe& InProbe) -> UPhysicalMaterial*
+    {
+        const auto& SurfaceInfo = UCk_Utils_Probe_UE::Get_SurfaceInfo(InProbe);
+
+        switch (const auto& PhysicalMaterialSource = SurfaceInfo.Get_PhysicalMaterialSource())
+        {
+            case ECk_PhysicalMaterialSource::Direct:
+            {
+                return SurfaceInfo.Get_PhysicalMaterial();
+            }
+            case ECk_PhysicalMaterialSource::Trace:
+            {
+                CK_TRIGGER_ENSURE(TEXT("Probe Physical Material Source [{}] is NOT supported yet"), PhysicalMaterialSource);
+                return {};
+            }
+            default:
+            {
+                CK_INVALID_ENUM(PhysicalMaterialSource);
+                return {};
+            }
+        }
+    };
+}
+
 class BPLayerInterfaceImpl final : public JPH::BroadPhaseLayerInterface
 {
 public:
@@ -148,30 +174,26 @@ public:
 
         if (ck::IsValid(Body1) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body1, Body2))
         {
-            auto ContactPoints = TArray<FVector>{};
-            ContactPoints.Reserve(inManifold.mRelativeContactPointsOn1.size());
-
-            for (const auto& ContactPoint : inManifold.mRelativeContactPointsOn1)
+            const auto& ContactPoints = ck::algo::Transform<TArray<FVector>>(inManifold.mRelativeContactPointsOn1.begin(), inManifold.mRelativeContactPointsOn1.end(),
+            [&](const auto& ContactPoint)
             {
-                ContactPoints.Emplace(ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset));
-            }
+                return ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset);
+            });
 
             UCk_Utils_Probe_UE::Request_BeginOverlap(Body1,
-                FCk_Request_Probe_BeginOverlap{Body2, ContactPoints, ck::jolt::Conv(-inManifold.mWorldSpaceNormal)});
+                FCk_Request_Probe_BeginOverlap{Body2, ContactPoints, ck::jolt::Conv(-inManifold.mWorldSpaceNormal), contact_surface::Get_ContactPhysicalMaterial(Body2)});
         }
 
         if (ck::IsValid(Body2) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
         {
-            auto ContactPoints = TArray<FVector>{};
-            ContactPoints.Reserve(inManifold.mRelativeContactPointsOn1.size());
-
-            for (const auto& ContactPoint : inManifold.mRelativeContactPointsOn2)
+            const auto& ContactPoints = ck::algo::Transform<TArray<FVector>>(inManifold.mRelativeContactPointsOn2.begin(), inManifold.mRelativeContactPointsOn2.end(),
+            [&](const auto& ContactPoint)
             {
-                ContactPoints.Emplace(ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset));
-            }
+                return ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset);
+            });
 
             UCk_Utils_Probe_UE::Request_BeginOverlap(Body2,
-                FCk_Request_Probe_BeginOverlap{Body1, ContactPoints, ck::jolt::Conv(inManifold.mWorldSpaceNormal)});
+                FCk_Request_Probe_BeginOverlap{Body1, ContactPoints, ck::jolt::Conv(inManifold.mWorldSpaceNormal), contact_surface::Get_ContactPhysicalMaterial(Body1)});
         }
 
         _BodyToHandle.Add(inBody1.GetID().GetIndexAndSequenceNumber(), Body1Entity);
@@ -198,30 +220,26 @@ public:
 
         if (ck::IsValid(Body1) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body1, Body2))
         {
-            auto ContactPoints = TArray<FVector>{};
-            ContactPoints.Reserve(inManifold.mRelativeContactPointsOn1.size());
-
-            for (const auto& ContactPoint : inManifold.mRelativeContactPointsOn1)
+            const auto& ContactPoints = ck::algo::Transform<TArray<FVector>>(inManifold.mRelativeContactPointsOn1.begin(), inManifold.mRelativeContactPointsOn1.end(),
+            [&](const auto& ContactPoint)
             {
-                ContactPoints.Emplace(ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset));
-            }
+                return ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset);
+            });
 
             UCk_Utils_Probe_UE::Request_OverlapUpdated(Body1,
-                FCk_Request_Probe_OverlapUpdated{Body2, ContactPoints, ck::jolt::Conv(-inManifold.mWorldSpaceNormal)});
+                FCk_Request_Probe_OverlapUpdated{Body2, ContactPoints, ck::jolt::Conv(-inManifold.mWorldSpaceNormal), contact_surface::Get_ContactPhysicalMaterial(Body2)});
         }
 
         if (ck::IsValid(Body2) && UCk_Utils_Probe_UE::Get_CanOverlapWith(Body2, Body1))
         {
-            auto ContactPoints = TArray<FVector>{};
-            ContactPoints.Reserve(inManifold.mRelativeContactPointsOn1.size());
-
-            for (const auto& ContactPoint : inManifold.mRelativeContactPointsOn2)
+            const auto& ContactPoints = ck::algo::Transform<TArray<FVector>>(inManifold.mRelativeContactPointsOn2.begin(), inManifold.mRelativeContactPointsOn2.end(),
+            [&](const auto& ContactPoint)
             {
-                ContactPoints.Emplace(ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset));
-            }
+                return ck::jolt::Conv(ContactPoint + inManifold.mBaseOffset);
+            });
 
             UCk_Utils_Probe_UE::Request_OverlapUpdated(Body2,
-                FCk_Request_Probe_OverlapUpdated{Body1, ContactPoints, ck::jolt::Conv(inManifold.mWorldSpaceNormal)});
+                FCk_Request_Probe_OverlapUpdated{Body1, ContactPoints, ck::jolt::Conv(inManifold.mWorldSpaceNormal), contact_surface::Get_ContactPhysicalMaterial(Body1)});
         }
 
         _BodyToHandle.Add(inBody1.GetID().GetIndexAndSequenceNumber(), Body1Entity);
@@ -262,8 +280,6 @@ public:
 
         _BodyToHandle.Remove(inSubShapePair.GetBody1ID().GetIndexAndSequenceNumber());
         _BodyToHandle.Remove(inSubShapePair.GetBody2ID().GetIndexAndSequenceNumber());
-
-        return;
     }
 
 private:
