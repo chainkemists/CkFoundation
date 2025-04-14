@@ -94,6 +94,13 @@ public:
 
     UFUNCTION(BlueprintPure,
         Category = "Ck|Utils|Probe",
+        DisplayName="[Ck][Probe] Get Surface Info")
+    static FCk_Probe_SurfaceInfo
+    Get_SurfaceInfo(
+            const FCk_Handle_Probe& InProbe);
+
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|Probe",
         DisplayName="[Ck][Probe] Get Enabled/Disabled")
     static ECk_EnableDisable
     Get_IsEnabledDisabled(

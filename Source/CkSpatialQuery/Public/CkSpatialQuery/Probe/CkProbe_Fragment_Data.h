@@ -8,6 +8,7 @@
 #include "CkPhysics/Public/CkPhysics/CkPhysics_Common.h"
 
 #include <GameplayTagContainer.h>
+#include <PhysicalMaterials/PhysicalMaterial.h>
 
 #include "CkProbe_Fragment_Data.generated.h"
 // --------------------------------------------------------------------------------------------------------------------
@@ -54,11 +55,46 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProbeResponse_Policy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_PhysicalMaterialSource : uint8
+{
+    Direct UMETA(DisplayName = "User Specified"),
+    Trace UMETA(DisplayName = "Trace Between Positions (Not Supported Yet)")
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_PhysicalMaterialSource);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKSPATIALQUERY_API FCk_Handle_Probe : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_Probe); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Probe);
 
 //--------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKSPATIALQUERY_API FCk_Probe_SurfaceInfo
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Probe_SurfaceInfo);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    ECk_PhysicalMaterialSource _PhysicalMaterialSource = ECk_PhysicalMaterialSource::Direct;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true, EditCondition = "_PhysicalMaterialSource == ECk_PhysicalMaterialSource::Direct"))
+    TObjectPtr<UPhysicalMaterial> _PhysicalMaterial;
+
+public:
+    CK_PROPERTY(_PhysicalMaterialSource);
+    CK_PROPERTY(_PhysicalMaterial);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
 struct CKSPATIALQUERY_API FCk_Fragment_Probe_ParamsData
@@ -90,12 +126,17 @@ private:
         meta = (AllowPrivateAccess = true))
     ECk_MotionQuality _MotionQuality = ECk_MotionQuality::Discrete;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    FCk_Probe_SurfaceInfo _SurfaceInfo;
+
 public:
     CK_PROPERTY_GET(_ProbeName);
     CK_PROPERTY(_ResponsePolicy);
     CK_PROPERTY(_Filter);
     CK_PROPERTY(_MotionType);
     CK_PROPERTY(_MotionQuality);
+    CK_PROPERTY(_SurfaceInfo);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -193,13 +234,18 @@ private:
               meta = (AllowPrivateAccess = true))
     FVector _ContactNormal;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    TObjectPtr<UPhysicalMaterial> _PhysicalMaterial;
+
 public:
     CK_PROPERTY_GET(_OtherEntity);
     CK_PROPERTY_GET(_ContactPoints);
     CK_PROPERTY_GET(_ContactNormal);
+    CK_PROPERTY_GET(_PhysicalMaterial);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_Probe_BeginOverlap, _OtherEntity, _ContactPoints, _ContactNormal);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_Probe_BeginOverlap, _OtherEntity, _ContactPoints, _ContactNormal, _PhysicalMaterial);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -279,13 +325,18 @@ private:
               meta = (AllowPrivateAccess = true))
     FVector _ContactNormal;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta = (AllowPrivateAccess = true))
+    TObjectPtr<UPhysicalMaterial> _PhysicalMaterial;
+
 public:
     CK_PROPERTY_GET(_OtherEntity);
     CK_PROPERTY_GET(_ContactPoints);
     CK_PROPERTY_GET(_ContactNormal);
+    CK_PROPERTY_GET(_PhysicalMaterial);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Probe_Payload_OnBeginOverlap, _OtherEntity, _ContactPoints, _ContactNormal);
+    CK_DEFINE_CONSTRUCTORS(FCk_Probe_Payload_OnBeginOverlap, _OtherEntity, _ContactPoints, _ContactNormal, _PhysicalMaterial);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
