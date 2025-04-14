@@ -17,9 +17,9 @@ public class CkSpatialQuery : CkModuleRules
             "StructUtils",
             "GameplayTags",
             "DeveloperSettings",
+            "PhysicsCore",
 
             "CkThirdParty",
-
             "CkCore",
             "CkEcs",
             "CkEcsExt",

@@ -106,6 +106,15 @@ auto
 
 auto
     UCk_Utils_Probe_UE::
+    Get_SurfaceInfo(
+        const FCk_Handle_Probe& InProbe)
+        -> FCk_Probe_SurfaceInfo
+{
+    return InProbe.Get<ck::FFragment_Probe_Params>().Get_SurfaceInfo();
+}
+
+auto
+    UCk_Utils_Probe_UE::
     Get_IsEnabledDisabled(
         const FCk_Handle_Probe& InProbe)
         -> ECk_EnableDisable
