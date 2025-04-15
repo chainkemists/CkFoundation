@@ -16,8 +16,6 @@
 
 namespace ck
 {
-    // --------------------------------------------------------------------------------------------------------------------
-
     class CKRAYSENSE_API FProcessor_RaySense_LineTrace_Update : public ck_exp::TProcessor<
             FProcessor_RaySense_LineTrace_Update,
             FCk_Handle_RaySense,
