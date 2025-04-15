@@ -57,7 +57,7 @@ public:
             JPH::ObjectLayer inLayer) const
             -> JPH::BroadPhaseLayer override
     {
-        JPH_ASSERT(inLayer < Layers::NUM_LAYERS);
+        JPH_ASSERT(inLayer < broad_phase_layers::Num_Layers);
         return _ObjectToBroadPhase[inLayer];
     }
 
@@ -301,16 +301,35 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-void MyTraceFunction(const char *inFMT, ...)
+namespace ck_spatialquery_subsystem
 {
-    // Format the message
-    va_list list;
-    va_start(list, inFMT);
-    char buffer[1024];
-    vsnprintf(buffer, sizeof(buffer), inFMT, list);
-    va_end(list);
+    auto
+        CustomTraceFunction(
+            const char* inFMT,
+            ...)
+        -> void
+    {
+        va_list List;
+        va_start(List, inFMT);
+        char Buffer[1024];
+        vsnprintf(Buffer, sizeof(Buffer), inFMT, List);
+        va_end(List);
 
-    ck::spatialquery::Log(TEXT("Jolt Trace: [{}]"), FString{buffer});
+        ck::spatialquery::Log(TEXT("Jolt Trace: [{}]"), FString{Buffer});
+    }
+
+    auto
+        CustomAssertFunction(
+            const char* inExpression,
+            const char* inMessage,
+            const char* inFile,
+            JPH::uint inLine)
+        -> bool
+    {
+        CK_TRIGGER_ENSURE(TEXT("Jolt FAILED [{}] with Message [{}].\n{}:{}"), FString{inExpression}, FString{inMessage},
+            FString{inFile}, inLine);
+        return false;
+    }
 }
 
 auto
@@ -357,7 +376,8 @@ auto
     _ContactListener = MakePimpl<CkContactListener>(_EcsWorldSubsystem->Get_TransientEntity());
     _PhysicsSystem->SetContactListener(&*_ContactListener);
 
-    JPH::Trace = MyTraceFunction;
+    JPH::Trace = ck_spatialquery_subsystem::CustomTraceFunction;
+    JPH::AssertFailed = ck_spatialquery_subsystem::CustomAssertFunction;
 }
 
 auto
