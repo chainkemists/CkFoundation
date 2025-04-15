@@ -9,7 +9,7 @@
 
 namespace ck
 {
-	class CKECSTEMPLATE_API FProcessor_EcsTemplate_Setup : public ck_exp::TProcessor<
+    class CKECSTEMPLATE_API FProcessor_EcsTemplate_Setup : public ck_exp::TProcessor<
             FProcessor_EcsTemplate_Setup,
             FCk_Handle_EcsTemplate,
             FFragment_EcsTemplate_Params,
@@ -25,12 +25,12 @@ namespace ck
 
     public:
         auto
-    	DoTick(
+        DoTick(
             TimeType InDeltaT) -> void;
 
     public:
         auto
-    	ForEachEntity(
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_EcsTemplate_Params& InParams,
@@ -55,12 +55,12 @@ namespace ck
 
     public:
         auto
-    	DoTick(
+        DoTick(
             TimeType InDeltaT) -> void;
 
     public:
         auto
-    	ForEachEntity(
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_EcsTemplate_Params& InParams,
@@ -78,7 +78,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-	class CKECSTEMPLATE_API FProcessor_EcsTemplate_Teardown : public ck_exp::TProcessor<
+    class CKECSTEMPLATE_API FProcessor_EcsTemplate_Teardown : public ck_exp::TProcessor<
             FProcessor_EcsTemplate_Teardown,
             FCk_Handle_EcsTemplate,
             FFragment_EcsTemplate_Params,
@@ -90,7 +90,7 @@ namespace ck
 
     public:
         auto
-    	ForEachEntity(
+        ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_EcsTemplate_Params& InParams,
