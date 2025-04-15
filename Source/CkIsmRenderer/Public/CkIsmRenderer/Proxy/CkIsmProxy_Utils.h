@@ -83,6 +83,14 @@ public:
         UPARAM(ref) FCk_Handle_IsmProxy& InHandle,
         const FCk_Request_IsmProxy_SetCustomDataValue& InRequest);
 
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|IsmProxy",
+        DisplayName="[Ck][IsmProxy] Request Enable/Disable")
+    static FCk_Handle_IsmProxy
+    Request_EnableDisable(
+        UPARAM(ref) FCk_Handle_IsmProxy& InHandle,
+        const FCk_Request_IsmProxy_EnableDisable& InRequest);
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|IsmProxy",
