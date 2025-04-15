@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkEcs/Handle/CkHandle_TypeSafe.h"
+#include "CkEcs/Request/CkRequest_Data.h"
 
 #include "CkIsmProxy_Fragment_Data.generated.h"
 
@@ -90,6 +91,28 @@ private:
 public:
     CK_PROPERTY_GET(_CustomDataIndex);
     CK_PROPERTY_GET(_CustomDataValue);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
+struct CKISMRENDERER_API FCk_Request_IsmProxy_EnableDisable : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_IsmProxy_EnableDisable);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _EnableDisable = ECk_EnableDisable::Disable;
+
+public:
+    CK_PROPERTY_GET(_EnableDisable);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_IsmProxy_EnableDisable, _EnableDisable);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
