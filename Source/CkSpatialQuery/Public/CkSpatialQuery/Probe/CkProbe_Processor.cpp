@@ -750,11 +750,15 @@ namespace ck
             }
         };
 
-        DoManuallyTriggerAllEndOverlaps();
-
-        auto PhysicsSystem = _PhysicsSystem.Pin();
+        const auto PhysicsSystem = _PhysicsSystem.Pin();
         auto& BodyInterface = PhysicsSystem->GetBodyInterface();
-        BodyInterface.RemoveBody(InCurrent.Get_BodyId());
+
+        if (UCk_Utils_Probe_UE::Get_IsEnabledDisabled(InHandle) == ECk_EnableDisable::Enable)
+        {
+            DoManuallyTriggerAllEndOverlaps();
+
+            BodyInterface.RemoveBody(InCurrent.Get_BodyId());
+        }
 
         BodyInterface.DestroyBody(InCurrent.Get_BodyId());
     }
