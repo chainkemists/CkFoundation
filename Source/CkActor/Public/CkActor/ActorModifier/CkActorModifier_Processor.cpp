@@ -129,7 +129,7 @@ namespace ck
         }
 
         UUtils_Signal_OnActorSpawned::Broadcast(InHandle, MakePayload(SpawnedActor,
-            UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag, IgnoreSucceededFailed)));
+            UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag, ECk_Recursion::NotRecursive, IgnoreSucceededFailed)));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -187,7 +187,7 @@ namespace ck
             return ck::IsValid(ComponentParent) ? ComponentParent.Get() : ComponentOwner->GetRootComponent();
         }();
 
-        const auto& OptionalPayload = UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag, IgnoreSucceededFailed);
+        const auto& OptionalPayload = UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag, ECk_Recursion::NotRecursive, IgnoreSucceededFailed);
 
         const auto AddActorCompParams  = UCk_Utils_Actor_UE::AddNewActorComponent_Params{ComponentOwner, InRequest.Get_ComponentToAdd(), ParentComponent}
                                             .Set_IsUnique(InRequest.Get_IsUnique())
@@ -311,7 +311,7 @@ namespace ck
         UCk_Utils_Actor_UE::Request_RemoveActorComponent(ComponentToRemove, PromoteChildrenComponents);
 
         UUtils_Signal_OnActorComponentRemoved::Broadcast(InHandle, MakePayload(ComponentOwner, ComponentToRemoveClass,
-            UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag, IgnoreSucceededFailed)));
+            UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag, ECk_Recursion::NotRecursive, IgnoreSucceededFailed)));
     }
 }
 

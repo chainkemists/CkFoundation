@@ -92,7 +92,7 @@ namespace ck
         const auto& B = FVector::DotProduct(TargetVel, ToTarget) * 2.0f;
         const auto& C = FVector::DotProduct(ToTarget, ToTarget);
 
-        const auto& OptionalPayload = UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag, IgnoreSucceededFailed);
+        const auto& OptionalPayload = UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag, ECk_Recursion::NotRecursive, IgnoreSucceededFailed);
 
         // If the discriminant is negative, then there is no solution
         if (const auto& Discriminant = (B * B) - (4.0f * A * C);

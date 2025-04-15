@@ -5,6 +5,8 @@
 
 #include <GameplayTagContainer.h>
 #include <InstancedStruct.h>
+#include <Materials/MaterialInterface.h>
+#include <Math/Color.h>
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -31,6 +33,7 @@ namespace ck
     struct CKVARIABLES_API FFragment_Variable_UObject : public TFragment_Variables<TWeakObjectPtr<UObject>> {};
     struct CKVARIABLES_API FFragment_Variable_UObject_SubclassOf : public TFragment_Variables<TSubclassOf<UObject>> {};
     struct CKVARIABLES_API FFragment_Variable_Entity : public TFragment_Variables<FCk_Handle> {};
+    struct CKVARIABLES_API FFragment_Variable_LinearColor : public TFragment_Variables<FLinearColor> {};
 };
 
 // --------------------------------------------------------------------------------------------------------------------
