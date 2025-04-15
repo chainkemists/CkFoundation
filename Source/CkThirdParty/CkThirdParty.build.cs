@@ -21,6 +21,7 @@ public class CkThirdParty : ModuleRules
 		IWYUSupport = IWYUSupport.None;
 
 		// Use this conditional approach
+		PublicDefinitions.Add("JPH_ENABLE_ASSERTS");
 		if (Target.Type == TargetType.Server)
 		{
 			// Server build configuration
