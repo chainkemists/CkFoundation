@@ -692,4 +692,86 @@ DEFINE_FUNCTION(UCk_Utils_Variables_InstancedStruct_UE::execINTERNAL__Get_Exec)
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    UCk_Utils_Variables_Material_UE::
+    Get(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
+        ECk_SucceededFailed& OutSuccessFail)
+    -> UMaterialInterface*
+{
+    OutSuccessFail = ECk_SucceededFailed::Failed;
+
+    auto MaybeEntity = UtilsType::Has(InHandle, InVariableName) ? InHandle : FCk_Handle{};
+
+    if (ck::Is_NOT_Valid(MaybeEntity) && InRecursion == ECk_Recursion::Recursive)
+    {
+        MaybeEntity = UCk_Utils_EntityLifetime_UE::Get_EntityInOwnershipChain_If(InHandle,
+        [&](const FCk_Handle& Handle)
+        {
+            return UtilsType::Has(Handle, InVariableName);
+        });
+    }
+
+    if (ck::Is_NOT_Valid(MaybeEntity))
+    { return {}; }
+
+    const auto& Var = UtilsType::Get(InHandle, InVariableName);
+    if (ck::Is_NOT_Valid(Var))
+    { return {}; }
+
+    OutSuccessFail = ECk_SucceededFailed::Succeeded;
+    return Var.Get();
+}
+
+auto
+    UCk_Utils_Variables_Material_UE::
+    Get_Exec(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
+        ECk_SucceededFailed& OutSuccessFail)
+    -> UMaterialInterface*
+{
+    return Get(InHandle, InVariableName, InRecursion, OutSuccessFail);
+}
+
+auto
+    UCk_Utils_Variables_Material_UE::
+    Set(
+        FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        UMaterialInterface* InValue)
+    -> void
+{
+    UtilsType::Set(InHandle, InVariableName, InValue);
+}
+
+auto
+    UCk_Utils_Variables_Material_UE::
+    Get_All(
+        const FCk_Handle& InHandle)
+    -> TMap<FName, UMaterialInterface*>
+{
+    if (NOT UtilsType::Has(InHandle))
+    {
+        static TMap<FName, UMaterialInterface*> Invalid;
+        return Invalid;
+    }
+
+    const auto& Variables = InHandle.Get<FragmentType>().Get_Variables();
+
+    auto Res = TMap<FName, UMaterialInterface*>{};
+
+    for (auto Iterator : Variables)
+    {
+        Res.Add(Iterator.Key, ck::IsValid(Iterator.Value) ? Iterator.Value.Get() : nullptr);
+    }
+
+    return Res;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 #undef LOCTEXT_NAMESPACE
