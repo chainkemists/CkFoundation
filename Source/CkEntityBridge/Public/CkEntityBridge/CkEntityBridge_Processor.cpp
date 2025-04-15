@@ -72,7 +72,7 @@ namespace ck
             NewEntity, EntityConfig, InHandle);
 
         UUtils_Signal_OnEntitySpawned::Broadcast(InHandle, MakePayload(NewEntity,
-            UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag, IgnoreSucceededFailed)));
+            UCk_Utils_Variables_InstancedStruct_UE::Get(InHandle, FGameplayTag::EmptyTag, ECk_Recursion::NotRecursive, IgnoreSucceededFailed)));
     }
 }
 
