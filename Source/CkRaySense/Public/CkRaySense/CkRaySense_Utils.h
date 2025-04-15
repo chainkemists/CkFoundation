@@ -78,6 +78,14 @@ private:
     static FCk_Handle_RaySense
     Get_InvalidHandle() { return {}; };
 
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|RaySense",
+        DisplayName="[Ck][RaySense] Request Enable/Disable")
+    static FCk_Handle_RaySense
+    Request_EnableDisable(
+        UPARAM(ref) FCk_Handle_RaySense& InHandle,
+        const FCk_Request_RaySense_EnableDisable& InRequest);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|RaySense",

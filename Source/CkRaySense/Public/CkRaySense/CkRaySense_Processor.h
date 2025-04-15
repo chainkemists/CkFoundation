@@ -30,6 +30,7 @@ namespace ck
             TExclude<FFragment_ShapeCapsule_Current>,
             TExclude<FFragment_ShapeSphere_Current>,
             TExclude<FFragment_ShapeCylinder_Current>,
+            TExclude<FTag_RaySense_Disabled>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -60,6 +61,7 @@ namespace ck
             FFragment_Transform_Previous,
             FFragment_Transform,
             FTag_Transform_Updated,
+            TExclude<FTag_RaySense_Disabled>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -91,6 +93,7 @@ namespace ck
             FFragment_Transform_Previous,
             FFragment_Transform,
             FTag_Transform_Updated,
+            TExclude<FTag_RaySense_Disabled>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -122,6 +125,7 @@ namespace ck
             FFragment_Transform_Previous,
             FFragment_Transform,
             FTag_Transform_Updated,
+            TExclude<FTag_RaySense_Disabled>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -153,6 +157,7 @@ namespace ck
             FFragment_Transform_Previous,
             FFragment_Transform,
             FTag_Transform_Updated,
+            TExclude<FTag_RaySense_Disabled>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -172,6 +177,42 @@ namespace ck
             const FFragment_Transform_Previous& InTransform_Prev,
             const FFragment_Transform& InTransform) const -> void;
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    class CKRAYSENSE_API FProcessor_RaySense_HandleRequests : public ck_exp::TProcessor<
+        FProcessor_RaySense_HandleRequests,
+        FCk_Handle_RaySense,
+        FFragment_RaySense_Params,
+        FFragment_RaySense_Current,
+        FFragment_RaySense_Requests,
+        CK_IGNORE_PENDING_KILL>
+
+    {
+    public:
+        using MarkedDirtyBy = FFragment_RaySense_Requests;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        auto
+            ForEachEntity(
+                TimeType InDeltaT,
+                HandleType InHandle,
+                const FFragment_RaySense_Params& InParams,
+                FFragment_RaySense_Current& InCurrent,
+                const FFragment_RaySense_Requests& InRaySenseComp) const -> void;
+
+    private:
+        static auto
+            DoHandleRequest(
+                HandleType InHandle,
+                FFragment_RaySense_Current& InCurrent,
+                const FCk_Request_RaySense_EnableDisable& InRequestsComp) -> void;
+    };
+
+
 }
 
 // --------------------------------------------------------------------------------------------------------------------

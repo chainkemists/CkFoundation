@@ -114,6 +114,28 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
+struct CKRAYSENSE_API FCk_Request_RaySense_EnableDisable : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_RaySense_EnableDisable);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _EnableDisable = ECk_EnableDisable::Disable;
+
+public:
+    CK_PROPERTY_GET(_EnableDisable);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_RaySense_EnableDisable, _EnableDisable);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+USTRUCT(BlueprintType)
 struct CKRAYSENSE_API FCk_RaySense_HitResult : public FCk_Request_Base
 {
     GENERATED_BODY()

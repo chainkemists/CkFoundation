@@ -13,6 +13,7 @@ class UCk_Utils_RaySense_UE;
 namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_RaySense_Updated);
+    CK_DEFINE_ECS_TAG(FTag_RaySense_Disabled);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -33,6 +34,28 @@ namespace ck
     private:
         // Add your properties here
         int32 _DummyProperty = 0;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKRAYSENSE_API FFragment_RaySense_Requests
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_RaySense_Requests);
+
+    public:
+        friend class FProcessor_RaySense_HandleRequests;
+        friend class UCk_Utils_RaySense_UE;
+
+    public:
+        using RequestType = std::variant<FCk_Request_RaySense_EnableDisable>;
+        using RequestList = TArray<RequestType>;
+
+    private:
+        RequestList _Requests;
+
+    public:
+        CK_PROPERTY_GET(_Requests);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

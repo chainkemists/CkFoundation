@@ -27,6 +27,19 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_RaySense_UE, FCk_Handle_RaySen
 
 auto
     UCk_Utils_RaySense_UE::
+    Request_EnableDisable(
+        FCk_Handle_RaySense& InHandle,
+        const FCk_Request_RaySense_EnableDisable& InRequest)
+    -> FCk_Handle_RaySense
+{
+    InHandle.AddOrGet<ck::FFragment_RaySense_Requests>()._Requests.Emplace(InRequest);
+    return InHandle;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_RaySense_UE::
     BindTo_OnTraceHit(
         FCk_Handle_RaySense& InHandle,
         ECk_Signal_BindingPolicy InBehavior,

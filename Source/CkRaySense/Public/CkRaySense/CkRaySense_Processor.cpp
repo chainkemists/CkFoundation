@@ -220,6 +220,52 @@ namespace ck
         CK_TRIGGER_ENSURE(TEXT("Cylinder shape is NOT supported by Unreal. It is only supported by Jolt. Collisions for "
             "[{}] will NOT work"), InHandle);
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_RaySense_HandleRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_RaySense_Params& InParams,
+            FFragment_RaySense_Current& InCurrent,
+            const FFragment_RaySense_Requests& InRequestsComp) const
+        -> void
+    {
+        InHandle.CopyAndRemove(InRequestsComp, [&](
+            FFragment_RaySense_Requests& InRequests)
+            {
+                algo::ForEachRequest(InRequests._Requests, Visitor([&](
+                    const auto& InRequest)
+                    {
+                        DoHandleRequest(InHandle, InCurrent, InRequest);
+                    }));
+            });
+    }
+
+    auto
+        FProcessor_RaySense_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            FFragment_RaySense_Current& InCurrent,
+            const FCk_Request_RaySense_EnableDisable& InRequest)
+        -> void
+    {
+        switch(InRequest.Get_EnableDisable())
+        {
+            case ECk_EnableDisable::Enable:
+            {
+                InHandle.Try_Remove<FTag_RaySense_Disabled>();
+                break;
+            }
+            case ECk_EnableDisable::Disable:
+            {
+                InHandle.AddOrGet<FTag_RaySense_Disabled>();
+                break;
+            }
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
