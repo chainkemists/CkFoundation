@@ -2,7 +2,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 
-#include "Jolt/Jolt.h"
+#include <Jolt/Jolt.h>
 #include <Jolt/Math/Vec3.h>
 
 // --------------------------------------------------------------------------------------------------------------------
