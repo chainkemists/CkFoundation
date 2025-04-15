@@ -19,6 +19,7 @@ namespace ck
 {
     CK_DEFINE_ECS_TAG(FTag_IsmProxy_NeedsSetup);
     CK_DEFINE_ECS_TAG(FTag_IsmProxy_NeedsInstanceAdded);
+    CK_DEFINE_ECS_TAG(FTag_IsmProxy_Disabled);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -55,8 +56,9 @@ namespace ck
     public:
         using SetCustomDataValueRequestType = FCk_Request_IsmProxy_SetCustomDataValue;
         using SetCustomDataRequestType = FCk_Request_IsmProxy_SetCustomData;
+        using EnableDisable = FCk_Request_IsmProxy_EnableDisable;
 
-        using RequestType = std::variant<SetCustomDataValueRequestType, SetCustomDataRequestType>;
+        using RequestType = std::variant<SetCustomDataValueRequestType, SetCustomDataRequestType, EnableDisable>;
         using RequestList = TArray<RequestType>;
 
     public:

@@ -299,6 +299,30 @@ namespace ck
             IsmComp->SetCustomDataValueById(InCurrent.Get_IsmInstanceIndex(), NewCustomDataIndex, NewCustomDataValue);
         }
     }
+
+    auto
+        FProcessor_IsmProxy_HandleRequests::
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_IsmProxy_Params& InParams,
+            FFragment_IsmProxy_Current& InCurrent,
+            const FCk_Request_IsmProxy_EnableDisable& InRequest)
+        -> void
+    {
+        switch(InRequest.Get_EnableDisable())
+        {
+            case ECk_EnableDisable::Enable:
+            {
+                InHandle.Try_Remove<FTag_IsmProxy_Disabled>();
+                break;
+            }
+            case ECk_EnableDisable::Disable:
+            {
+                InHandle.AddOrGet<FTag_IsmProxy_Disabled>();
+                break;
+            }
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
