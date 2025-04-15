@@ -10,28 +10,28 @@
 
 namespace ck
 {
-	auto
-		FProcessor_EcsTemplate_Setup::
-		DoTick(
-			TimeType InDeltaT)
-		-> void
-	{
-		TProcessor::DoTick(InDeltaT);
+    auto
+        FProcessor_EcsTemplate_Setup::
+        DoTick(
+            TimeType InDeltaT)
+        -> void
+    {
+        TProcessor::DoTick(InDeltaT);
 
         _TransientEntity.Clear<MarkedDirtyBy>();
-	}
+    }
 
-	auto
-		FProcessor_EcsTemplate_Setup::
-		ForEachEntity(
-			TimeType InDeltaT,
-			HandleType InHandle,
-			const FFragment_EcsTemplate_Params& InParams,
-			FFragment_EcsTemplate_Current& InCurrent) const
-		-> void
-	{
-		// Add setup logic here
-	}
+    auto
+        FProcessor_EcsTemplate_Setup::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_EcsTemplate_Params& InParams,
+            FFragment_EcsTemplate_Current& InCurrent) const
+        -> void
+    {
+        // Add setup logic here
+    }
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -58,7 +58,7 @@ namespace ck
             FFragment_EcsTemplate_Requests& InRequestsComp) const
         -> void
     {
-    	InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_EcsTemplate_Requests& InRequests)
+        InHandle.CopyAndRemove(InRequestsComp, [&](FFragment_EcsTemplate_Requests& InRequests)
         {
             algo::ForEachRequest(InRequests._Requests, ck::Visitor([&](const auto& InRequest)
             {
@@ -68,13 +68,13 @@ namespace ck
     }
 
     auto
-	    FProcessor_EcsTemplate_HandleRequests::
-		DoHandleRequest(
-		    HandleType InHandle,
-		    const FFragment_EcsTemplate_Params& InParams,
+        FProcessor_EcsTemplate_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_EcsTemplate_Params& InParams,
             FFragment_EcsTemplate_Current& InCurrent,
-		    const FCk_Request_EcsTemplate_ExampleRequest& InRequest)
-		-> void
+            const FCk_Request_EcsTemplate_ExampleRequest& InRequest)
+        -> void
     {
         // Add request handling logic here
     }
@@ -82,15 +82,15 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
-	    FProcessor_EcsTemplate_Teardown::
-		ForEachEntity(
-		    TimeType InDeltaT,
-		    HandleType InHandle,
-		    const FFragment_EcsTemplate_Params& InParams,
-		    FFragment_EcsTemplate_Current& InCurrent) const
-		-> void
+        FProcessor_EcsTemplate_Teardown::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_EcsTemplate_Params& InParams,
+            FFragment_EcsTemplate_Current& InCurrent) const
+        -> void
     {
-		// Add teardown logic here
+        // Add teardown logic here
     }
 
     // --------------------------------------------------------------------------------------------------------------------
