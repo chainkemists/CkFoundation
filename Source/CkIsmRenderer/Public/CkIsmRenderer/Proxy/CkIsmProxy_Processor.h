@@ -46,6 +46,7 @@ namespace ck
         FFragment_IsmProxy_Params,
         FFragment_IsmProxy_Current,
         TExclude<FTag_IsmProxy_NeedsSetup>,
+        TExclude<FTag_IsmProxy_Disabled>,
         FTag_IsmProxy_NeedsInstanceAdded,
         CK_IGNORE_PENDING_KILL>
     {
@@ -129,6 +130,13 @@ namespace ck
             const FFragment_IsmProxy_Params& InParams,
             FFragment_IsmProxy_Current& InCurrent,
             const FCk_Request_IsmProxy_SetCustomDataValue& InRequest) -> void;
+
+        static auto
+        DoHandleRequest(
+            HandleType& InHandle,
+            const FFragment_IsmProxy_Params& InParams,
+            FFragment_IsmProxy_Current& InCurrent,
+            const FCk_Request_IsmProxy_EnableDisable& InRequest) -> void;
     };
 }
 

@@ -46,6 +46,17 @@ auto
 
 auto
     UCk_Utils_IsmProxy_UE::
+    Request_EnableDisable(
+        FCk_Handle_IsmProxy& InHandle,
+        const FCk_Request_IsmProxy_EnableDisable& InRequest)
+    -> FCk_Handle_IsmProxy
+{
+    InHandle.AddOrGet<ck::FFragment_IsmProxy_Requests>()._Requests.Emplace(InRequest);
+    return InHandle;
+}
+
+auto
+    UCk_Utils_IsmProxy_UE::
     Get_RendererName(
         const FCk_Handle_IsmProxy& InHandle)
     -> FGameplayTag
