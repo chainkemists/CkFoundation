@@ -31,6 +31,7 @@ public:
     Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -40,6 +41,7 @@ public:
     Get_Exec(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -58,6 +60,7 @@ public:
     Get_ByName(
         const FCk_Handle& InHandle,
         FName InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -101,6 +104,7 @@ public:
     Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -111,6 +115,7 @@ public:
     Get_Exec(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -129,6 +134,7 @@ public:
     Get_ByName(
         const FCk_Handle& InHandle,
         FName InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -172,6 +178,7 @@ public:
     Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -182,6 +189,7 @@ public:
     Get_Exec(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -200,6 +208,7 @@ public:
     Get_ByName(
         const FCk_Handle& InHandle,
         FName InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -243,6 +252,7 @@ public:
     Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -253,6 +263,7 @@ public:
     Get_Exec(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -271,6 +282,7 @@ public:
     Get_ByName(
         const FCk_Handle& InHandle,
         FName InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -314,6 +326,7 @@ public:
     Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -324,6 +337,7 @@ public:
     Get_Exec(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -342,6 +356,7 @@ public:
     Get_ByName(
         const FCk_Handle& InHandle,
         FName InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -385,6 +400,7 @@ public:
     Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -395,6 +411,7 @@ public:
     Get_Exec(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -413,6 +430,7 @@ public:
     Get_ByName(
         const FCk_Handle& InHandle,
         FName InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -456,6 +474,7 @@ public:
     Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -466,6 +485,7 @@ public:
     Get_Exec(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -484,6 +504,7 @@ public:
     Get_ByName(
         const FCk_Handle& InHandle,
         FName InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -527,6 +548,7 @@ public:
     Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -537,6 +559,7 @@ public:
     Get_Exec(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -555,6 +578,7 @@ public:
     Get_ByName(
         const FCk_Handle& InHandle,
         FName InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -598,6 +622,7 @@ public:
     Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -608,6 +633,7 @@ public:
     Get_Exec(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -626,6 +652,7 @@ public:
     Get_ByName(
         const FCk_Handle& InHandle,
         FName InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -669,6 +696,7 @@ public:
     Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -679,6 +707,7 @@ public:
     Get_Exec(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -697,6 +726,7 @@ public:
     Get_ByName(
         const FCk_Handle& InHandle,
         FName InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -740,6 +770,7 @@ public:
     Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -750,6 +781,7 @@ public:
     Get_Exec(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -768,6 +800,7 @@ public:
     Get_ByName(
         const FCk_Handle& InHandle,
         FName InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -811,6 +844,7 @@ public:
     Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -821,6 +855,7 @@ public:
     Get_Exec(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -839,6 +874,7 @@ public:
     Get_ByName(
         const FCk_Handle& InHandle,
         FName InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -954,6 +990,7 @@ public:
     Get_ByName(
         const FCk_Handle& InHandle,
         FName InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
 public:
@@ -989,12 +1026,14 @@ public:
     Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     static const FInstancedStruct&
     Get_Exec(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 };
 
@@ -1020,6 +1059,7 @@ public:
     Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -1030,6 +1070,7 @@ public:
     Get_Exec(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -1048,6 +1089,7 @@ public:
     Get_ByName(
         const FCk_Handle& InHandle,
         FName InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -1091,6 +1133,7 @@ public:
     Get(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -1101,6 +1144,7 @@ public:
     Get_Exec(
         const FCk_Handle& InHandle,
         FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -1119,6 +1163,7 @@ public:
     Get_ByName(
         const FCk_Handle& InHandle,
         FName InVariableName,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -1197,6 +1242,7 @@ public:
         const FCk_Handle& InHandle,
         FName InVariableName,
         TSubclassOf<UObject> InObject,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -1272,9 +1318,10 @@ public:
               meta = (DeterminesOutputType = "InObject", DeprecatedFunction))
     static TSubclassOf<UObject>
     Get_ByName(
-        const FCk_Handle&    InHandle,
-        FName                InVariableName,
+        const FCk_Handle& InHandle,
+        FName InVariableName,
         TSubclassOf<UObject> InObject,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
     UFUNCTION(BlueprintCallable,
@@ -1332,6 +1379,13 @@ public:
         ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail);
 
+    static FCk_Handle
+    Get_ByName(
+        const FCk_Handle& InHandle,
+        FName InVariableName,
+        ECk_Recursion InRecursion,
+        ECk_SucceededFailed& OutSuccessFail);
+
     UFUNCTION(BlueprintCallable,
               DisplayName="[Ck][Entity] Set Value (By GameplayTag)",
               Category = "Ck|Utils|Variables|Entity",
@@ -1340,13 +1394,87 @@ public:
     Set(
         UPARAM(ref) FCk_Handle& InHandle,
         FGameplayTag InVariableName,
-        UPARAM(ref) FCk_Handle& InValue);
+        FCk_Handle InValue);
+
+    static void
+    Set_ByName(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FName InVariableName,
+        FCk_Handle InValue);
 
     UFUNCTION(BlueprintPure,
               DisplayName="[Ck][Entity] Get All Variables",
               Category = "Ck|Utils|Variables|Entity",
               meta=(DevelopmentOnly))
-    static TMap<FName, FCk_Handle>
+    static const TMap<FName, FCk_Handle>&
+    Get_All(
+        const FCk_Handle& InHandle);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable)
+class CKVARIABLES_API UCk_Utils_Variables_LinearColor_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_Variables_LinearColor_UE);
+
+public:
+    using FragmentType = ck::FFragment_Variable_LinearColor;
+    using UtilsType = ck::TUtils_Variables<FragmentType>;
+
+public:
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][LinearColor] Get Value (By GameplayTag)",
+              Category = "Ck|Utils|Variables|LinearColor")
+    static FLinearColor
+    Get(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
+        ECk_SucceededFailed& OutSuccessFail);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][LinearColor] Get Value (By GameplayTag)",
+              Category = "Ck|Utils|Variables|LinearColor",
+              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
+    static FLinearColor
+    Get_Exec(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
+        ECk_SucceededFailed& OutSuccessFail);
+
+    static FLinearColor
+    Get_ByName(
+        const FCk_Handle& InHandle,
+        FName InVariableName,
+        ECk_Recursion InRecursion,
+        ECk_SucceededFailed& OutSuccessFail);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][LinearColor] Set Value (By GameplayTag)",
+              Category = "Ck|Utils|Variables|LinearColor",
+              meta=(AutoCreateRefTerm="InValue"))
+    static void
+    Set(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        FLinearColor InValue);
+
+    static void
+    Set_ByName(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FName InVariableName,
+        FLinearColor InValue);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][LinearColor] Get All Variables",
+              Category = "Ck|Utils|Variables|LinearColor",
+              meta=(DevelopmentOnly))
+    static const TMap<FName, FLinearColor>&
     Get_All(
         const FCk_Handle& InHandle);
 };
