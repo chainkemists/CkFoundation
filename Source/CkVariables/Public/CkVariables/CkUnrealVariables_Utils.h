@@ -1352,3 +1352,58 @@ public:
 };
 
 // --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable)
+class CKVARIABLES_API UCk_Utils_Variables_Material_UE : public UBlueprintFunctionLibrary
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_Utils_Variables_Material_UE);
+
+public:
+    using FragmentType = ck::FFragment_Variable_Material;
+    using UtilsType = ck::TUtils_Variables<FragmentType>;
+
+public:
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][Material] Get Value (By GameplayTag)",
+              Category = "Ck|Utils|Variables|Material")
+    static UMaterialInterface*
+    Get(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
+        ECk_SucceededFailed& OutSuccessFail);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Material] Get Value (By GameplayTag)",
+              Category = "Ck|Utils|Variables|Material",
+              meta = (ExpandEnumAsExecs = "OutSuccessFail"))
+    static UMaterialInterface*
+    Get_Exec(
+        const FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        ECk_Recursion InRecursion,
+        ECk_SucceededFailed& OutSuccessFail);
+
+    UFUNCTION(BlueprintCallable,
+              DisplayName="[Ck][Material] Set Value (By GameplayTag)",
+              Category = "Ck|Utils|Variables|Material",
+              meta=(AutoCreateRefTerm="InValue"))
+    static void
+    Set(
+        UPARAM(ref) FCk_Handle& InHandle,
+        FGameplayTag InVariableName,
+        UMaterialInterface* InValue);
+
+    UFUNCTION(BlueprintPure,
+              DisplayName="[Ck][Material] Get All Variables",
+              Category = "Ck|Utils|Variables|Material",
+              meta=(DevelopmentOnly))
+    static TMap<FName, UMaterialInterface*>
+    Get_All(
+        const FCk_Handle& InHandle);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
