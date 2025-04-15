@@ -17,16 +17,28 @@ auto                                                                            
     Get(                                                                                              \
         const FCk_Handle& InHandle,                                                                   \
         FGameplayTag InVariableName,                                                                  \
+        ECk_Recursion InRecursion,                                                                    \
         ECk_SucceededFailed& OutSuccessFail)                                                          \
     -> _Type_                                                                                         \
 {                                                                                                     \
-    if (NOT UtilsType::Has(InHandle, InVariableName))                                                 \
+    OutSuccessFail = ECk_SucceededFailed::Failed;                                                     \
+                                                                                                      \
+    auto MaybeEntity = UtilsType::Has(InHandle, InVariableName) ? InHandle : FCk_Handle{};            \
+                                                                                                      \
+    if (ck::Is_NOT_Valid(MaybeEntity) && InRecursion == ECk_Recursion::Recursive)                     \
     {                                                                                                 \
-        static std::remove_cv_t<std::remove_reference_t<_Type_>> Invalid;                             \
-        OutSuccessFail = ECk_SucceededFailed::Failed;                                                 \
-        return Invalid;                                                                               \
+        MaybeEntity = UCk_Utils_EntityLifetime_UE::Get_EntityInOwnershipChain_If(InHandle,            \
+        [&](const FCk_Handle& Handle)                                                                 \
+        {                                                                                             \
+            return UtilsType::Has(Handle, InVariableName);                                            \
+        });                                                                                           \
     }                                                                                                 \
                                                                                                       \
+    if (ck::Is_NOT_Valid(MaybeEntity))                                                                \
+    {                                                                                                 \
+        static std::remove_cv_t<std::remove_reference_t<_Type_>> Invalid;                             \
+        return Invalid;                                                                               \
+    }                                                                                                 \
     OutSuccessFail = ECk_SucceededFailed::Succeeded;                                                  \
     return UtilsType::Get(InHandle, InVariableName);                                                  \
 }                                                                                                     \
@@ -36,10 +48,11 @@ auto                                                                            
     Get_Exec(                                                                                         \
         const FCk_Handle& InHandle,                                                                   \
         FGameplayTag InVariableName,                                                                  \
+        ECk_Recursion InRecursion,                                                                    \
         ECk_SucceededFailed& OutSuccessFail)                                                          \
     -> _Type_                                                                                         \
 {                                                                                                     \
-    return Get(InHandle, InVariableName, OutSuccessFail);                                             \
+    return Get(InHandle, InVariableName, InRecursion, OutSuccessFail);                                \
 }                                                                                                     \
                                                                                                       \
 auto                                                                                                  \
@@ -57,16 +70,28 @@ auto                                                                            
     Get_ByName(                                                                                       \
         const FCk_Handle& InHandle,                                                                   \
         FName InVariableName,                                                                         \
+        ECk_Recursion InRecursion,                                                                    \
         ECk_SucceededFailed& OutSuccessFail)                                                          \
     -> _Type_                                                                                         \
 {                                                                                                     \
-    if (NOT UtilsType::Has(InHandle, InVariableName))                                                 \
+    OutSuccessFail = ECk_SucceededFailed::Failed;                                                     \
+                                                                                                      \
+    auto MaybeEntity = UtilsType::Has(InHandle, InVariableName) ? InHandle : FCk_Handle{};            \
+                                                                                                      \
+    if (ck::Is_NOT_Valid(MaybeEntity) && InRecursion == ECk_Recursion::Recursive)                     \
     {                                                                                                 \
-        static std::remove_cv_t<std::remove_reference_t<_Type_>> Invalid;                             \
-        OutSuccessFail = ECk_SucceededFailed::Failed;                                                 \
-        return Invalid;                                                                               \
+        MaybeEntity = UCk_Utils_EntityLifetime_UE::Get_EntityInOwnershipChain_If(InHandle,            \
+        [&](const FCk_Handle& Handle)                                                                 \
+        {                                                                                             \
+            return UtilsType::Has(Handle, InVariableName);                                            \
+        });                                                                                           \
     }                                                                                                 \
                                                                                                       \
+    if (ck::Is_NOT_Valid(MaybeEntity))                                                                \
+    {                                                                                                 \
+        static std::remove_cv_t<std::remove_reference_t<_Type_>> Invalid;                             \
+        return Invalid;                                                                               \
+    }                                                                                                 \
     OutSuccessFail = ECk_SucceededFailed::Succeeded;                                                  \
     return UtilsType::Get(InHandle, InVariableName);                                                  \
 }                                                                                                     \
@@ -110,6 +135,8 @@ CK_UTILS_VARIABLES_DEFINITION(UCk_Utils_Variables_Transform_UE, const FTransform
 CK_UTILS_VARIABLES_DEFINITION(UCk_Utils_Variables_InstancedStruct_UE, const FInstancedStruct&);
 CK_UTILS_VARIABLES_DEFINITION(UCk_Utils_Variables_GameplayTag_UE, const FGameplayTag);
 CK_UTILS_VARIABLES_DEFINITION(UCk_Utils_Variables_GameplayTagContainer_UE, const FGameplayTagContainer);
+CK_UTILS_VARIABLES_DEFINITION(UCk_Utils_Variables_Entity_UE, FCk_Handle);
+CK_UTILS_VARIABLES_DEFINITION(UCk_Utils_Variables_LinearColor_UE, FLinearColor);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -177,12 +204,24 @@ auto
         const FCk_Handle& InHandle,
         FName InVariableName,
         TSubclassOf<UObject> InObject,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail)
     -> UObject*
 {
     OutSuccessFail = ECk_SucceededFailed::Failed;
 
-    if (NOT UtilsType::Has(InHandle, InVariableName))
+    auto MaybeEntity = UtilsType::Has(InHandle, InVariableName) ? InHandle : FCk_Handle{};
+
+    if (ck::Is_NOT_Valid(MaybeEntity) && InRecursion == ECk_Recursion::Recursive)
+    {
+        MaybeEntity = UCk_Utils_EntityLifetime_UE::Get_EntityInOwnershipChain_If(InHandle,
+        [&](const FCk_Handle& Handle)
+        {
+            return UtilsType::Has(Handle, InVariableName);
+        });
+    }
+
+    if (ck::Is_NOT_Valid(MaybeEntity))
     { return {}; }
 
     const auto& Var = UtilsType::Get(InHandle, InVariableName);
@@ -290,16 +329,28 @@ auto
         const FCk_Handle& InHandle,
         FName InVariableName,
         TSubclassOf<UObject> InObject,
+        ECk_Recursion InRecursion,
         ECk_SucceededFailed& OutSuccessFail)
     -> TSubclassOf<UObject>
 {
     OutSuccessFail = ECk_SucceededFailed::Failed;
 
-    if (NOT UtilsType::Has(InHandle, InVariableName))
+    auto MaybeEntity = UtilsType::Has(InHandle, InVariableName) ? InHandle : FCk_Handle{};
+
+    if (ck::Is_NOT_Valid(MaybeEntity) && InRecursion == ECk_Recursion::Recursive)
+    {
+        MaybeEntity = UCk_Utils_EntityLifetime_UE::Get_EntityInOwnershipChain_If(InHandle,
+        [&](const FCk_Handle& Handle)
+        {
+            return UtilsType::Has(Handle, InVariableName);
+        });
+    }
+
+    if (ck::Is_NOT_Valid(MaybeEntity))
     { return {}; }
 
     OutSuccessFail = ECk_SucceededFailed::Succeeded;
-    return UtilsType::Get(InHandle, InVariableName);
+    return UtilsType::Get(MaybeEntity, InVariableName);
 }
 
 auto
@@ -325,68 +376,6 @@ auto
         return Invalid;
     }
 
-    return InHandle.Get<FragmentType>().Get_Variables();
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_Variables_Entity_UE::
-    Get(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail)
-    -> FCk_Handle
-{
-    OutSuccessFail = ECk_SucceededFailed::Failed;
-
-    auto MaybeEntity = UtilsType::Has(InHandle, InVariableName) ? InHandle : FCk_Handle{};
-
-    if (ck::Is_NOT_Valid(MaybeEntity) && InRecursion == ECk_Recursion::Recursive)
-    {
-        MaybeEntity = UCk_Utils_EntityLifetime_UE::Get_EntityInOwnershipChain_If(InHandle,
-        [&](const FCk_Handle& Handle)
-        {
-            return UtilsType::Has(Handle, InVariableName);
-        });
-    }
-
-    if (ck::Is_NOT_Valid(MaybeEntity))
-    { return {}; }
-
-    OutSuccessFail = ECk_SucceededFailed::Succeeded;
-    return UtilsType::Get(MaybeEntity, InVariableName);
-}
-
-auto
-    UCk_Utils_Variables_Entity_UE::
-    Get_Exec(
-        const FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        ECk_Recursion InRecursion,
-        ECk_SucceededFailed& OutSuccessFail)
-    -> FCk_Handle
-{
-    return Get(InHandle, InVariableName, InRecursion, OutSuccessFail);
-}
-
-auto
-    UCk_Utils_Variables_Entity_UE::
-    Set(
-        FCk_Handle& InHandle,
-        FGameplayTag InVariableName,
-        FCk_Handle& InValue) -> void
-{
-    return UtilsType::Set(InHandle, InVariableName, InValue);
-}
-
-auto
-    UCk_Utils_Variables_Entity_UE::
-    Get_All(
-        const FCk_Handle& InHandle)
-    -> TMap<FName, FCk_Handle>
-{
     return InHandle.Get<FragmentType>().Get_Variables();
 }
 
@@ -494,7 +483,7 @@ DEFINE_FUNCTION(UCk_Utils_Variables_InstancedStruct_UE::execINTERNAL__Get_ByName
 
     while (ck::IsValid(CurrentHandle))
     {
-        const auto& InstancedStruct = Get_ByName(CurrentHandle, VariableName, SucceededFailed);
+        const auto& InstancedStruct = Get_ByName(CurrentHandle, VariableName, ECk_Recursion::NotRecursive, SucceededFailed);
 
         if (SucceededFailed == ECk_SucceededFailed::Succeeded)
         {
@@ -551,7 +540,7 @@ DEFINE_FUNCTION(UCk_Utils_Variables_InstancedStruct_UE::execINTERNAL__Get_ByName
 
     while (ck::IsValid(CurrentHandle))
     {
-        const auto& InstancedStruct = Get_ByName(CurrentHandle, VariableName, SucceededFailed);
+        const auto& InstancedStruct = Get_ByName(CurrentHandle, VariableName, ECk_Recursion::NotRecursive, SucceededFailed);
 
         if (SucceededFailed == ECk_SucceededFailed::Succeeded)
         {
@@ -608,7 +597,7 @@ DEFINE_FUNCTION(UCk_Utils_Variables_InstancedStruct_UE::execINTERNAL__Get)
 
     while (ck::IsValid(CurrentHandle))
     {
-        const auto& InstancedStruct = Get(CurrentHandle, VariableName, SucceededFailed);
+        const auto& InstancedStruct = Get(CurrentHandle, VariableName, ECk_Recursion::NotRecursive, SucceededFailed);
 
         if (SucceededFailed == ECk_SucceededFailed::Succeeded)
         {
@@ -666,7 +655,7 @@ DEFINE_FUNCTION(UCk_Utils_Variables_InstancedStruct_UE::execINTERNAL__Get_Exec)
 
     while (ck::IsValid(CurrentHandle))
     {
-        const auto& InstancedStruct = Get(CurrentHandle, VariableName, SucceededFailed);
+        const auto& InstancedStruct = Get(CurrentHandle, VariableName, ECk_Recursion::NotRecursive, SucceededFailed);
 
         if (SucceededFailed == ECk_SucceededFailed::Succeeded)
         {
