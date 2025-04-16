@@ -28,6 +28,7 @@ public class CkCore : CkModuleRules
                 "NetCore",
                 "StructUtils",
                 "ToolWidgets",
+                "Projects",
 
                 "IrisCore",
 

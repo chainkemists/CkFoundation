@@ -25,6 +25,20 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Engine_TextFontSize);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_AssetLocalRootType : uint8
+{
+    Project,
+    Engine,
+    ProjectPlugin,
+    EnginePlugin,
+    Invalid
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_AssetLocalRootType);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct FCk_Utils_IO_AssetInfoFromPath_Result
 {
@@ -105,6 +119,11 @@ public:
               DisplayName = "[Ck] Get Asset Info From Path")
     static FCk_Utils_IO_AssetInfoFromPath_Result
     Get_AssetInfoFromPath(
+        const FString& InAssetPath);
+
+    UFUNCTION(BlueprintPure)
+    static ECk_AssetLocalRootType
+    Get_AssetLocalRoot(
         const FString& InAssetPath);
 
     UFUNCTION(BlueprintPure,
