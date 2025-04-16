@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CkCore/Object/CkWorldContextObject.h"
 
@@ -16,7 +16,7 @@ namespace ck
 
 // -----------------------------------------------------------------------------------------------------------
 
-UCLASS(Abstract, Blueprintable, BlueprintType)
+UCLASS(Blueprintable, BlueprintType)
 class CKECS_API UCk_EntityScript_UE : public UCk_GameWorldContextObject_UE
 {
     GENERATED_BODY()
@@ -68,6 +68,14 @@ private:
     FCk_Handle
     DoGet_ScriptEntity() const;
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Ability|Script",
+              DisplayName = "[Ck][EntityScript] Add Task To Deactivate On EndPlay",
+              meta = (CompactNodeTitle="🛑", HideSelfPin = true, Keywords = "Register, Track"))
+    void
+    DoRequest_AddTaskToDeactivateOnDeactivate(
+        class UBlueprintTaskTemplate* InTask);
+
 private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
         Category = "Ck|EntityScript",
@@ -76,6 +84,9 @@ private:
 
     UPROPERTY(Transient)
     FCk_Handle _AssociatedEntity;
+
+private:
+    TArray<TWeakObjectPtr<class UBlueprintTaskTemplate>> _TasksToDeactivate;
 
 public:
     CK_PROPERTY_GET(_Replication);
