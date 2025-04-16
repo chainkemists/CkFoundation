@@ -49,16 +49,15 @@ public:
     CK_GENERATED_BODY(UCk_Ecs_ProjectSettings_UE);
 
 private:
-    UPROPERTY(Config, EditDefaultsOnly, Category = "Entity Script",
-              meta = (ContentDir, RelativePath, RelativeToGameContentDir))
-    FDirectoryPath _EntityScriptSpawnParamsPath = FDirectoryPath{ TEXT("/Game/EntitySpawnParams") };
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Entity Script")
+    FString _EntityScriptSpawnParamsFolderName = FString{TEXT("EntitySpawnParams")};
 
     UPROPERTY(Config, EditDefaultsOnly, BlueprintReadOnly, Category = "ECS World",
               meta = (AllowPrivateAccess = true, AllowAbstract = false, MetaClass = "/Script/CkEcs.Ck_Ecs_ProcessorInjectors_PDA"))
     FSoftClassPath _ProcessorInjectors;
 
 public:
-    CK_PROPERTY_GET(_EntityScriptSpawnParamsPath);
+    CK_PROPERTY_GET(_EntityScriptSpawnParamsFolderName);
     CK_PROPERTY_GET(_ProcessorInjectors);
 };
 
@@ -101,8 +100,8 @@ public:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ecs|Settings")
-    static FDirectoryPath
-    Get_EntityScriptSpawnParamsPath();
+    static FString
+    Get_EntityScriptSpawnParamsFolderName();
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Ecs|Settings")
