@@ -23,6 +23,11 @@ UE_DEFINE_GAMEPLAY_TAG(TAG_EcsWorldTickingGroup_GameplayWithoutPump_Name, TEXT("
 UE_DEFINE_GAMEPLAY_TAG(TAG_EcsWorldTickingGroup_Script_Name, TEXT("EcsWorldTickingGroup.Script"));
 UE_DEFINE_GAMEPLAY_TAG(TAG_EcsWorldTickingGroup_ChaosDestruction_Name, TEXT("EcsWorldTickingGroup.ChaosDestruction"));
 UE_DEFINE_GAMEPLAY_TAG(TAG_EcsWorldTickingGroup_Physics_Name, TEXT("EcsWorldTickingGroup.Physics"));
+
+UE_DEFINE_GAMEPLAY_TAG(TAG_EcsWorldTickingGroup_TransformStart_Name, TEXT("EcsWorldTickingGroup.TransformGroup.Start"));
+UE_DEFINE_GAMEPLAY_TAG(TAG_EcsWorldTickingGroup_TransformPump_Name, TEXT("EcsWorldTickingGroup.TransformGroup.Pump"));
+UE_DEFINE_GAMEPLAY_TAG(TAG_EcsWorldTickingGroup_TransformFinalize_Name, TEXT("EcsWorldTickingGroup.TransformGroup.Finalize"));
+
 UE_DEFINE_GAMEPLAY_TAG(TAG_EcsWorldTickingGroup_Misc_Name, TEXT("EcsWorldTickingGroup.Misc"));
 UE_DEFINE_GAMEPLAY_TAG(TAG_EcsWorldTickingGroup_Replication_Name, TEXT("EcsWorldTickingGroup.Replication"));
 UE_DEFINE_GAMEPLAY_TAG(TAG_EcsWorldTickingGroup_EntityCreationAndDestruction_Name, TEXT("EcsWorldTickingGroup.EntityCreationAndDestruction"));
