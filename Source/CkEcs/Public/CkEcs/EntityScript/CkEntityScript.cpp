@@ -1,5 +1,9 @@
 #include "CkEntityScript.h"
 
+#include "CkCore/Algorithms/CkAlgorithms.h"
+
+#include <BlueprintTaskTemplate.h>
+
 // -----------------------------------------------------------------------------------------------------------
 
 auto
@@ -26,6 +30,12 @@ auto
     -> void
 {
     auto ScriptEntity = DoGet_ScriptEntity();
+
+    ck::algo::ForEachIsValid(_TasksToDeactivate, [](const TWeakObjectPtr<UBlueprintTaskTemplate>& InTask)
+    {
+        InTask->Deactivate();
+    });
+
     DoEndPlay(ScriptEntity);
 }
 
@@ -35,6 +45,15 @@ auto
     -> FCk_Handle
 {
     return _AssociatedEntity;
+}
+
+auto
+    UCk_EntityScript_UE::
+    DoRequest_AddTaskToDeactivateOnDeactivate(
+        class UBlueprintTaskTemplate* InTask)
+    -> void
+{
+    _TasksToDeactivate.Emplace(InTask);
 }
 
 // -----------------------------------------------------------------------------------------------------------
