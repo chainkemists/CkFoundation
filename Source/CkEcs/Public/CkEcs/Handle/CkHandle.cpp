@@ -706,7 +706,11 @@ namespace UE::Net
             UCk_Utils_ReplicatedObjects_UE::OnFirstValidReplicatedObject(Source, ECk_PendingKill_Policy::IncludePendingKill,
             [&](const TWeakObjectPtr<UCk_ReplicatedObject_UE>& InRO)
             {
-                Source._ReplicationDriver = Cast<UCk_Ecs_ReplicatedObject_UE>(InRO.Get());
+                auto EcsRO = Cast<UCk_Ecs_ReplicatedObject_UE>(InRO.Get());
+                if (ck::IsValid(EcsRO) && ck::IsValid(EcsRO->Get_AssociatedEntity()))
+                {
+                    Source._ReplicationDriver = EcsRO;
+                }
             });
         }
         NewArgs.Source = reinterpret_cast<NetSerializerValuePointer>(&Source._ReplicationDriver);
@@ -733,16 +737,21 @@ namespace UE::Net
         _WeakObjectNetSerializer->Dequantize(Context, NewArgs);
 
         const auto Handle = reinterpret_cast<FCk_Handle*>(Args.Target);
-        if (ck::IsValid(Target))
-        {
-            Handle->_ReplicationDriver = Target;
-            const auto& Entity = Target->Get_AssociatedEntity();
-            CK_ENSURE(ck::IsValid(Entity),
-                TEXT("ReplicationDriver [{}] does NOT have a valid associated entity. It's possible that this is a bug in the ReplicationDriver"),
-                Target);
 
-            *Handle = Entity;
-        }
+        if (ck::Is_NOT_Valid(Target))
+        { return; }
+
+        Handle->_ReplicationDriver = Target;
+
+        if (NOT Target->Get_IsLinked())
+        { return; }
+
+        const auto& Entity = Target->Get_AssociatedEntity();
+        CK_ENSURE(ck::IsValid(Entity),
+            TEXT("ReplicationDriver [{}] does NOT have a valid associated entity. It's possible that this is a bug in the ReplicationDriver"),
+            Target);
+
+        *Handle = Entity;
     }
 
     auto
