@@ -110,14 +110,10 @@ auto
 
     TArray<UEdGraphPin*> NewClassPins;
 
-    if (const auto& ClassPin = UCk_Utils_EditorGraph_UE::Get_Pin(ck_k2node_entity_script::PinName_Class, ECk_EditorGraph_PinDirection::Input, Pins);
-        ck::IsValid(ClassPin))
+    if (auto* ClassToSpawn = DoGet_EntityScriptClass(Pins);
+        ck::IsValid(ClassToSpawn))
     {
-        if (auto* ClassToSpawn = Cast<UClass>((*ClassPin)->DefaultObject);
-            ck::IsValid(ClassToSpawn))
-        {
-            DoCreatePinsFromEntityScript(ClassToSpawn);
-        }
+        DoCreatePinsFromEntityScript(ClassToSpawn);
     }
 
     RestoreSplitPins(OldPins);
