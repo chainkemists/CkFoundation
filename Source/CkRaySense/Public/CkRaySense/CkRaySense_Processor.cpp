@@ -4,6 +4,8 @@
 
 #include "CkEcs/TransientEntity/CkTransientEntity_Utils.h"
 
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
+
 #include "CkRaySense/CkRaySense_Log.h"
 
 #include "CkNet/CkNet_Utils.h"
@@ -102,6 +104,17 @@ namespace ck
         .Set_MaybeHitHandle(UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(HitResult.GetActor()) ?
             UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(HitResult.GetActor()) : FCk_Handle{});
 
+        switch (InParams.Get_CollisionResponse())
+        {
+            case ECk_RaySense_CollisionResponse_Policy::Overlap: break;
+            case ECk_RaySense_CollisionResponse_Policy::Collide:
+            {
+                UCk_Utils_Transform_TypeUnsafe_UE::Request_SetLocation(InHandle,
+                    FCk_Request_Transform_SetLocation{Result.Get_ImpactPoint()});
+                break;
+            }
+        }
+
         UUtils_Signal_OnRaySenseTraceHit::Broadcast(InHandle, MakePayload(InHandle, Result));
     }
 
@@ -152,6 +165,17 @@ namespace ck
         .Set_MaybeHitHandle(UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(HitResult.GetActor()) ?
             UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(HitResult.GetActor()) : FCk_Handle{});
 
+        switch (InParams.Get_CollisionResponse())
+        {
+            case ECk_RaySense_CollisionResponse_Policy::Overlap: break;
+            case ECk_RaySense_CollisionResponse_Policy::Collide:
+            {
+                UCk_Utils_Transform_TypeUnsafe_UE::Request_SetLocation(InHandle,
+                    FCk_Request_Transform_SetLocation{Result.Get_ImpactPoint()});
+                break;
+            }
+        }
+
         UUtils_Signal_OnRaySenseTraceHit::Broadcast(InHandle, MakePayload(InHandle, Result));
     }
 
@@ -199,6 +223,17 @@ namespace ck
         .Set_MaybeHitComponent(HitResult.GetComponent())
         .Set_MaybeHitHandle(UCk_Utils_OwningActor_UE::Get_IsActorEcsReady(HitResult.GetActor()) ?
             UCk_Utils_OwningActor_UE::Get_ActorEntityHandle(HitResult.GetActor()) : FCk_Handle{});
+
+        switch (InParams.Get_CollisionResponse())
+        {
+            case ECk_RaySense_CollisionResponse_Policy::Overlap: break;
+            case ECk_RaySense_CollisionResponse_Policy::Collide:
+            {
+                UCk_Utils_Transform_TypeUnsafe_UE::Request_SetLocation(InHandle,
+                    FCk_Request_Transform_SetLocation{Result.Get_ImpactPoint()});
+                break;
+            }
+        }
 
         UUtils_Signal_OnRaySenseTraceHit::Broadcast(InHandle, MakePayload(InHandle, Result));
     }

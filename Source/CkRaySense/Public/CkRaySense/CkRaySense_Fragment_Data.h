@@ -41,6 +41,17 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_RaySense_CollisionQuality);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_RaySense_CollisionResponse_Policy : uint8
+{
+    Overlap,
+    Collide
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_RaySense_CollisionResponse_Policy);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType, meta=(HasNativeMake, HasNativeBreak))
 struct CKRAYSENSE_API FCk_Handle_RaySense : public FCk_Handle_TypeSafe { GENERATED_BODY() CK_GENERATED_BODY_HANDLE_TYPESAFE(FCk_Handle_RaySense); };
 CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_RaySense);
@@ -96,6 +107,10 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
         meta=(AllowPrivateAccess))
+    ECk_RaySense_CollisionResponse_Policy _CollisionResponse = ECk_RaySense_CollisionResponse_Policy::Overlap;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+        meta=(AllowPrivateAccess))
     ECk_RaySense_Async _Async = ECk_RaySense_Async::Synchronous;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -105,6 +120,7 @@ private:
 public:
     CK_PROPERTY_GET(_CollisionQuality);
     CK_PROPERTY_GET(_CollisionChannel);
+    CK_PROPERTY(_CollisionResponse);
     CK_PROPERTY(_Async);
     CK_PROPERTY(_DataToIgnore);
 
