@@ -36,6 +36,8 @@ private:
     auto RegisterForBlueprintChanges() -> void;
 
     auto UpdateStructProperties(UUserDefinedStruct* InStruct, const TArray<FProperty*>& InNewProperties) const -> bool;
+    auto Get_StructPathForEntityScriptPath(const FString& InEntityScriptFullPath) -> FString;
+
 private:
     static auto GenerateEntitySpawnParamsStructName(const UClass* InEntityScriptClass) -> FName;
     static auto IsTemporaryAsset(const FString& InAssetName) -> bool;
@@ -48,7 +50,7 @@ private:
 
 private:
     UPROPERTY()
-    FString _EntitySpawnParams_StructsPath;
+    FString _EntitySpawnParams_StructFolderName;
 
     UPROPERTY()
     TSet<UUserDefinedStruct*> _EntitySpawnParams_Structs;

@@ -1,11 +1,12 @@
 #include "CkEntityScript_Subsystem.h"
 
 #include "CkCore/Reflection/CkReflection_Utils.h"
+#include "CkCore/IO/CkIO_Utils.h"
 
 #include "CkEcs/EntityScript/CkEntityScript.h"
 #include "CkEcs/CkEcsLog.h"
 
-
+#include <Interfaces/IPluginManager.h>
 #include <UObject/ObjectSaveContext.h>
 #include <UObject/SavePackage.h>
 #include <EngineUtils.h>
@@ -32,10 +33,10 @@ auto
 {
     Super::Initialize(InCollection);
 
-    _EntitySpawnParams_StructsPath = UCk_Utils_Ecs_Settings_UE::Get_EntityScriptSpawnParamsPath().Path;
+    _EntitySpawnParams_StructFolderName = UCk_Utils_Ecs_Settings_UE::Get_EntityScriptSpawnParamsFolderName();
 
     auto StructObjects = TArray<UObject*>{};
-    FindOrLoadAssetsByPath(_EntitySpawnParams_StructsPath, StructObjects, EngineUtils::ATL_Regular);
+    FindOrLoadAssetsByPath(_EntitySpawnParams_StructFolderName, StructObjects, EngineUtils::ATL_Regular);
 
     _EntitySpawnParams_Structs.Reserve(StructObjects.Num());
     for (auto* StructObject : StructObjects)
@@ -158,7 +159,7 @@ auto
 
     if (ck::Is_NOT_Valid(SpawnParamsStructForEntity))
     {
-        const auto StructPackageName = _EntitySpawnParams_StructsPath / StructName.ToString();
+        const auto StructPackageName = Get_StructPathForEntityScriptPath(InEntityScriptClass->GetPackage()->GetName()) / StructName.ToString();
         auto* StructPackage = CreatePackage(*StructPackageName);
 
         SpawnParamsStructForEntity = FStructureEditorUtils::CreateUserDefinedStruct(
@@ -539,8 +540,10 @@ auto
     _EntitySpawnParams_StructsByName.Remove(OldStructName);
     _EntitySpawnParams_StructsByName.Add(NewStructName, SpawnParamsStructForOldName);
 
-    const auto NewPackagePath = _EntitySpawnParams_StructsPath / NewStructName.ToString();
-    const auto OldPackagePath = _EntitySpawnParams_StructsPath / OldStructName.ToString();
+    const auto& RenamedAssetSpawnParamsStructPath = Get_StructPathForEntityScriptPath(NewObjectPath);
+
+    const auto NewPackagePath = RenamedAssetSpawnParamsStructPath / NewStructName.ToString();
+    const auto OldPackagePath = RenamedAssetSpawnParamsStructPath / OldStructName.ToString();
 
     const auto& EditorAssetSubsystem = GEditor->GetEditorSubsystem<UEditorAssetSubsystem>();
     EditorAssetSubsystem->RenameAsset(OldPackagePath, NewPackagePath);
@@ -594,12 +597,13 @@ auto
     }
 
     const auto& DeletedObjectPath = InAssetData.GetObjectPathString();
+    const auto& DeletedAssetSpawnParamsStructPath = Get_StructPathForEntityScriptPath(DeletedObjectPath);
 
     ck::ecs::Display(TEXT("EntityScript blueprint [{}] has been deleted - Removing its associated Spawn Params struct..."), DeletedObjectPath);
 
     const auto& DeletedAssetShortName = FPaths::GetBaseFilename(DeletedObjectPath);
     const auto& DeletedAssetStructName = FName{ck::Format_UE(TEXT("{}{}"), _SpawnParamsStructName_Prefix, DeletedAssetShortName)};
-    const auto DeletedAssetStructPackagePath = _EntitySpawnParams_StructsPath / DeletedAssetStructName.ToString();
+    const auto DeletedAssetStructPackagePath = DeletedAssetSpawnParamsStructPath / DeletedAssetStructName.ToString();
 
     const auto& EditorAssetSubsystem = GEditor->GetEditorSubsystem<UEditorAssetSubsystem>();
     EditorAssetSubsystem->DeleteAsset(DeletedAssetStructPackagePath);
@@ -626,6 +630,48 @@ auto
     const auto& EditorAssetSubsystem = GEditor->GetEditorSubsystem<UEditorAssetSubsystem>();
     EditorAssetSubsystem->SaveAsset(PackageName);
 #endif
+}
+
+auto
+    UCk_EntityScript_Subsystem_UE::
+    Get_StructPathForEntityScriptPath(
+        const FString& InEntityScriptFullPath)
+    -> FString
+{
+    auto DefaultPath = ck::Format_UE(TEXT("/Game/{}"), _EntitySpawnParams_StructFolderName);
+
+    switch (const auto& AssetLocalRoot = UCk_Utils_IO_UE::Get_AssetLocalRoot(InEntityScriptFullPath))
+    {
+        case ECk_AssetLocalRootType::Project:
+        {
+            return ck::Format_UE(TEXT("/Game/{}"), _EntitySpawnParams_StructFolderName);
+        }
+        case ECk_AssetLocalRootType::Engine:
+        {
+            return ck::Format_UE(TEXT("/Engine/{}"), _EntitySpawnParams_StructFolderName);
+        }
+        case ECk_AssetLocalRootType::ProjectPlugin:
+        case ECk_AssetLocalRootType::EnginePlugin:
+        {
+            auto PackageRoot = FString{};
+            auto PackagePath = FString{};
+            auto PackageName = FString{};
+
+            constexpr auto StripRootLeadingSlash = false;
+            FPackageName::SplitLongPackageName(InEntityScriptFullPath, PackageRoot, PackagePath, PackageName, StripRootLeadingSlash);
+
+            return  ck::Format_UE(TEXT("{}{}"), PackageRoot, _EntitySpawnParams_StructFolderName);
+        }
+        case ECk_AssetLocalRootType::Invalid:
+        {
+            return DefaultPath;
+        }
+        default:
+        {
+            CK_INVALID_ENUM(AssetLocalRoot);
+            return {};
+        }
+    }
 }
 
 #if WITH_EDITOR
