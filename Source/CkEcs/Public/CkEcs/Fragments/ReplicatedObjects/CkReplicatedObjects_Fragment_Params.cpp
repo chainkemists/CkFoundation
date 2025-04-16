@@ -116,6 +116,14 @@ auto
 
 auto
     UCk_Ecs_ReplicatedObject_UE::
+    Get_IsLinked() const
+    -> bool
+{
+    return ck::IsValid(_AssociatedEntity);
+}
+
+auto
+    UCk_Ecs_ReplicatedObject_UE::
     Request_TriggerDestroyAssociatedEntity_Implementation()
     -> void
 {

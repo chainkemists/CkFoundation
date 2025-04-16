@@ -89,6 +89,10 @@ protected:
     virtual auto PostLink() -> void {};
 
 public:
+    auto
+    Get_IsLinked() const -> bool;
+
+public:
     UFUNCTION(NetMulticast, Reliable)
     void Request_TriggerDestroyAssociatedEntity();
 
