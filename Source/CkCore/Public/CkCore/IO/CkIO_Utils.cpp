@@ -2,6 +2,7 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include <Interfaces/IPluginManager.h>
 #include <Engine/AssetManager.h>
 #include <Engine/Engine.h>
 #include <Misc/ConfigCacheIni.h>
@@ -130,6 +131,51 @@ auto
                            .Set_AssetData(AssetData);
 
     return AssetInfo;
+}
+
+auto
+    UCk_Utils_IO_UE::
+    Get_AssetLocalRoot(
+        const FString& InAssetPath)
+    -> ECk_AssetLocalRootType
+{
+    auto PackageRoot = FString{};
+    auto PackagePath = FString{};
+    auto PackageName = FString{};
+
+    constexpr auto StripRootLeadingSlash = true;
+    if (FPackageName::SplitLongPackageName(InAssetPath, PackageRoot, PackagePath, PackageName, StripRootLeadingSlash))
+    {
+        constexpr auto GameRootName = TEXT("Game/");
+        constexpr auto EngineRootName = TEXT("Engine/");
+        constexpr auto ScriptRootName = TEXT("Script/");
+
+        const auto IsInGame = PackageRoot == GameRootName;
+
+        if (IsInGame)
+        { return ECk_AssetLocalRootType::Project; }
+
+        const auto IsInEngine = PackageRoot == EngineRootName;
+        const auto IsInPlugin = NOT IsInGame && NOT IsInEngine && PackageRoot != ScriptRootName;
+
+        if (IsInEngine && NOT IsInPlugin)
+        { return ECk_AssetLocalRootType::Engine; }
+
+        auto PluginName = PackageRoot;
+        PluginName.RemoveFromEnd(TEXT("/"));
+
+        if (const auto& Plugin = IPluginManager::Get().FindPlugin(PluginName);
+            Plugin.IsValid())
+        {
+            switch (Plugin->GetLoadedFrom())
+            {
+                case EPluginLoadedFrom::Engine: return ECk_AssetLocalRootType::EnginePlugin;
+                case EPluginLoadedFrom::Project: return ECk_AssetLocalRootType::ProjectPlugin;
+            }
+        }
+    }
+
+    return ECk_AssetLocalRootType::Invalid;
 }
 
 auto
