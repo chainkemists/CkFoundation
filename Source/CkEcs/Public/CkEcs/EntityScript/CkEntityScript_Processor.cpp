@@ -87,12 +87,7 @@ namespace ck
         NewEntityScript->_AssociatedEntity = NewEntity;
         NewEntity.Add<ck::FFragment_EntityScript_Current>(NewEntityScript);
 
-        NewEntityScript->Construct(NewEntity);
-
-        if (InRequest.Get_PostConstruction_Func())
-        {
-            InRequest.Get_PostConstruction_Func()(NewEntity);
-        }
+        NewEntity.Add<FFragment_EntityScript_RequestConstruct>(InRequest.Get_PostConstruction_Func());
 
         if (NewEntityScript->Get_Replication() == ECk_Replication::Replicates)
         {
@@ -106,13 +101,38 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
+        FProcessor_EntityScript_Construct::
+        ForEachEntity(
+            const TimeType& InDeltaT,
+            HandleType InHandle,
+            const FFragment_EntityScript_RequestConstruct& InRequest)
+        -> void
+    {
+        auto EntityScript = UCk_Utils_EntityScript_UE::Get_EntityScript(InHandle);
+
+        EntityScript->Construct(InHandle);
+
+        if (InRequest.Get_PostConstruction_Func())
+        {
+            InRequest.Get_PostConstruction_Func()(InHandle);
+        }
+
+        InHandle.Add<FTag_EntityScript_BeginPlay>();
+        InHandle.Remove<MarkedDirtyBy>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_EntityScript_BeginPlay::
         ForEachEntity(
             const TimeType& InDeltaT,
             HandleType InHandle,
-            FFragment_EntityScript_Current& InCurrent)
+            const FFragment_EntityScript_Current& InCurrent)
         -> void
     {
+        InHandle.Remove<MarkedDirtyBy>();
+
         const auto& EntityScript = InCurrent.Get_Script().Get();
 
         CK_ENSURE_IF_NOT(ck::IsValid(EntityScript), TEXT("EntityScript is INVALID for [{}] when attempting to invoke BeginPlay on it"), InHandle)

@@ -13,11 +13,28 @@ class UCk_Utils_EntityScript_UE;
 
 namespace ck
 {
+    CK_DEFINE_ECS_TAG(FTag_EntityScript_BeginPlay);
     CK_DEFINE_ECS_TAG(FTag_EntityScript_HasBegunPlay);
 
     // --------------------------------------------------------------------------------------------------------------------
 
     using FFragment_EntityScript_RequestSpawnEntity = FCk_Request_EntityScript_SpawnEntity;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKECS_API FFragment_EntityScript_RequestConstruct
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_EntityScript_RequestConstruct);
+
+    private:
+        FCk_EntityScript_PostConstruction_Func _PostConstruction_Func;
+
+    public:
+        CK_PROPERTY_GET(_PostConstruction_Func);
+
+        CK_DEFINE_CONSTRUCTORS(FFragment_EntityScript_RequestConstruct, _PostConstruction_Func);
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 
