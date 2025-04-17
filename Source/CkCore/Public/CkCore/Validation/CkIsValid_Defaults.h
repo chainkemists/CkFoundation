@@ -18,6 +18,7 @@
 #include <UObject/WeakInterfacePtr.h>
 
 #include <type_traits>
+#include <functional>
 
 // --------------------------------------------------------------------------------------------------------------------
 
